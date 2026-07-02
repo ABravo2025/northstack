@@ -1,0 +1,36 @@
+# Tareas de desarrollo
+
+- Fecha de creación: 2026-07-02
+- Última actualización: 2026-07-02
+
+## Checklist general
+
+- [x] Definir la visión general del proyecto
+- [x] Definir el enfoque modular y multi-tenant
+- [x] Definir el alcance inicial centrado en HR
+- [x] Definir la estrategia de autenticación inicial y futura integración con Google/Microsoft
+- [x] Crear el archivo de contexto de desarrollo
+- [x] Crear la estructura base del proyecto
+- [x] Implementar un primer servicio de HR inicial
+- [x] Implementar pruebas iniciales del módulo HR
+- [x] Definir el MVP del módulo HR
+- [x] Definir el modelo de datos base para tenants, usuarios y empleados
+- [x] Definir roles y permisos iniciales
+- [x] Definir la estructura modular del backend
+- [x] Definir los endpoints de API iniciales para HR
+- [x] Implementar autenticación básica por usuario y contraseña
+- [x] Configurar Prisma con esquema PostgreSQL compatible con Neon
+- [x] Implementar tenant registration y owner onboarding
+- [x] Implementar custom fields básicos
+- [x] Verificar `.env` con Neon `DATABASE_URL`
+- [x] Crear guía de ejecución de pruebas en `docs/run-tests.md`
+- [x] Crear una tabla de prueba en Neon para validar la conexión de la base de datos
+- [ ] Preparar el proyecto para una beta interna
+
+## Notas de avance
+
+- La prioridad actual es validar la base del sistema con HR antes de avanzar a clientes y pagos.
+- El archivo `.env` local está configurado con Neon y listo para pruebas.
+- Se creó `docs/run-tests.md` con los comandos exactos para instalar, generar Prisma, compilar y ejecutar tests.
+- La implementación debe realizarse de forma incremental y testeable.
+- Cualquier cambio importante en el alcance deberá documentarse aquí.

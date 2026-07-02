@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  owner
+  admin
+  member
+}
+
+enum EmployeeStatus {
+  active
+  inactive
+  pending
+}
+
+enum FieldType {
+  text
+  number
+  date
+  select
+}
+
+enum EntityType {
+  employee
+  client
+}
+
+model Tenant {
+  id                   String                 @id @default(uuid())
+  name                 String
+  slug                 String                 @unique
+  createdAt            DateTime               @default(now())
+  users                User[]
+  employees            Employee[]
+  customFieldDefns     CustomFieldDefinition[]
+}
+
+model User {
+  id           String    @id @default(uuid())
+  firstName    String
+  lastName     String
+  email        String    @unique
+  passwordHash String
+  role         UserRole  @default(member)
+  tenantId     String?
+  tenant       Tenant?   @relation(fields: [tenantId], references: [id])
+  sessions     Session[]
+}
+
+model Employee {
+  id              String               @id @default(uuid())
+  firstName       String
+  lastName        String
+  email           String               @unique
+  department      String
+  status          EmployeeStatus       @default(active)
+  tenantId        String?
+  tenant          Tenant?              @relation(fields: [tenantId], references: [id])
+  createdAt       DateTime             @default(now())
+  customFieldVals CustomFieldValue[]
+}
+
+model CustomFieldDefinition {
+  id          String          @id @default(uuid())
+  tenantId    String?
+  tenant      Tenant?         @relation(fields: [tenantId], references: [id])
+  name        String
+  entityType  EntityType
+  fieldType   FieldType
+  options     String?         // JSON-encoded options for select fields
+  createdAt   DateTime        @default(now())
+  values      CustomFieldValue[]
+}
+
+model CustomFieldValue {
+  id                      String                  @id @default(uuid())
+  customFieldDefinitionId String
+  customFieldDefinition   CustomFieldDefinition   @relation(fields: [customFieldDefinitionId], references: [id])
+  employeeId              String
+  employee                Employee                @relation(fields: [employeeId], references: [id])
+  value                   String
+  createdAt               DateTime                @default(now())
+}
+
+model Session {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+model TestRun {
+  id        String   @id @default(uuid())
+  name      String
+  status    String   @default("pending")
+  createdAt DateTime @default(now())
+}

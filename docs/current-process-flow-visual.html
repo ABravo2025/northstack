@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Northstack Current Process Flow</title>
+    <style>
+      body {
+        font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        margin: 0;
+        padding: 0;
+        background: #f4f6fb;
+        color: #111827;
+      }
+      .page {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      .hero {
+        padding: 24px 0;
+      }
+      h1 {
+        margin: 0;
+        font-size: 2.4rem;
+      }
+      p {
+        line-height: 1.8;
+        margin: 16px 0;
+      }
+      .card {
+        background: white;
+        border-radius: 24px;
+        padding: 24px;
+        box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+      }
+      .section {
+        margin-top: 32px;
+      }
+      .section h2 {
+        margin-bottom: 16px;
+      }
+      .box-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 16px;
+      }
+      .box {
+        background: #eef2ff;
+        border: 1px solid #dbeafe;
+        border-radius: 16px;
+        padding: 18px;
+      }
+      .box strong {
+        display: block;
+        margin-bottom: 8px;
+      }
+      .diagram {
+        margin-top: 24px;
+        padding: 18px;
+        background: #111827;
+        border-radius: 18px;
+      }
+      .diagram pre {
+        color: #e5e7eb;
+        overflow-x: auto;
+      }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: 'base',
+        themeVariables: {
+          background: '#111827',
+          primaryColor: '#1f2937',
+          primaryTextColor: '#ffffff',
+          secondaryColor: '#1f2937',
+          secondaryTextColor: '#ffffff',
+          tertiaryColor: '#1f2937',
+          tertiaryTextColor: '#ffffff',
+          textColor: '#ffffff',
+          lineColor: '#ffffff',
+          arrowheadColor: '#ffffff',
+          borderColor: '#ffffff',
+          primaryBorderColor: '#ffffff',
+          clusterBkg: '#111827',
+          clusterBorder: '#ffffff',
+          clusterTextColor: '#ffffff',
+          nodeTextColor: '#ffffff',
+        },
+      });
+    </script>
+  </head>
+  <body>
+    <div class="page">
+      <div class="hero">
+        <h1>Northstack Current Process Flow</h1>
+        <p>This page shows the current onboarding and dashboard flow for Northstack using a visual flowchart and key process notes.</p>
+      </div>
+
+      <div class="card">
+        <div class="section">
+          <h2>Current public flow</h2>
+          <div class="box-list">
+            <div class="box">
+              <strong>Login page</strong>
+              Public users can log in or register, and the current UI also exposes tenant creation.
+            </div>
+            <div class="box">
+              <strong>Tenant creation</strong>
+              Clicking <em>Create New Tenant</em> opens the tenant onboarding form and creates an owner account immediately.
+            </div>
+            <div class="box">
+              <strong>Dashboard</strong>
+              Once authenticated, users land on the dashboard with Employees and Clients tabs.
+            </div>
+            <div class="box">
+              <strong>HR / Clients</strong>
+              Employees and clients can be listed and created from the tenant-scoped dashboard.
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Current flow chart</h2>
+          <div class="diagram">
+            <div class="mermaid">
+flowchart TD
+  A[Public Access] --> B[Login Page]
+  B --> C{Has account?}
+  C -->|Yes| D[Authenticate via /api/auth/login]
+  C -->|No| E[Register page]
+  D --> F{Valid token?}
+  F -->|Yes| G[Dashboard]
+  F -->|No| H[Show auth error]
+
+  E --> I[Create account via /api/auth/register]
+  I --> J{Success?}
+  J -->|Yes| D
+  J -->|No| K[Show registration error]
+
+  B --> L[Create New Tenant button]
+  L --> M[Create Tenant page]
+  M --> N[POST /api/tenants]
+  N --> O[Create Tenant + Owner + Session]
+  O --> G
+
+  G --> P[HR Tab]
+  P --> Q[List employees via /api/hr/employees]
+  P --> R[Create employee via /api/hr/employees]
+
+  G --> S[Clients Tab]
+  S --> T[List clients via /api/clients]
+  S --> U[Create client via /api/clients]
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Proposed controlled onboarding</h2>
+          <div class="box-list">
+            <div class="box">
+              <strong>Two branches</strong>
+              Separate signup and login paths make the flow clearer for new and returning users.
+            </div>
+            <div class="box">
+              <strong>Tenant creation channels</strong>
+              Tenants can be created by self-service, by our internal team, or through an API.
+            </div>
+            <div class="box">
+              <strong>Client creation channels</strong>
+              Tenant users can create clients through the UI or via API.
+            </div>
+            <div class="box">
+              <strong>Role distinction</strong>
+              Company users and tenant users get different dashboards and permissions.
+            </div>
+          </div>
+          <div class="diagram">
+            <div class="mermaid">
+flowchart TD
+  A[Public Access] --> B{Existing user?}
+  B -->|Yes| C[Login Page]
+  B -->|No| D[Signup Page]
+
+  C --> E[POST /api/auth/login]
+  D --> F[POST /api/auth/register]
+
+  E --> G{Valid token?}
+  F --> G
+  G --> H[Dashboard]
+  G --> I[Show auth error]
+
+  H --> J{User role?}
+  J -->|Company user| K[Admin portal]
+  J -->|Tenant user| L[Tenant dashboard]
+
+  K --> M[Create tenant via internal admin]
+  K --> N[Create tenant via API]
+  K --> O[Self-service tenant creation optional]
+
+  L --> P[Create clients via UI]
+  L --> Q[Create clients via API]
+  L --> R[View tenant Employees Clients Payments]
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Important observations</h2>
+          <ul>
+            <li>The current tenant creation path is public and self-service.</li>
+            <li>Tenant onboarding is coupled with owner account creation and immediate login.</li>
+            <li>This flow is good for open signup, but not ideal if you need admin-controlled onboarding.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

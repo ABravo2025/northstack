@@ -11,7 +11,8 @@ export interface CreateCustomFieldInput {
 
 export interface CreateCustomFieldValueInput {
   customFieldDefinitionId: string;
-  employeeId: string;
+  employeeId?: string;
+  clientId?: string;
   value: string;
 }
 
@@ -48,6 +49,7 @@ export async function createCustomFieldValue(
     data: {
       customFieldDefinitionId: input.customFieldDefinitionId,
       employeeId: input.employeeId,
+      clientId: input.clientId,
       value: input.value,
     },
   });
@@ -58,5 +60,13 @@ export async function listCustomFieldValuesForEmployee(
 ): Promise<CustomFieldValue[]> {
   return prisma.customFieldValue.findMany({
     where: { employeeId },
+  });
+}
+
+export async function listCustomFieldValuesForClient(
+  clientId: string,
+): Promise<CustomFieldValue[]> {
+  return prisma.customFieldValue.findMany({
+    where: { clientId },
   });
 }

@@ -47,6 +47,7 @@ describe('auth service', () => {
       password: 'StrongPassword123',
       firstName: 'Alice',
       lastName: 'Smith',
+      phone: '+1-555-0100',
     });
 
     expect(registration.success).toBe(true);

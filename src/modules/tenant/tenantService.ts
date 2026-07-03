@@ -1,19 +1,5 @@
-import { randomUUID } from 'crypto';
 import prisma from '../../lib/prisma.js';
 import type { Tenant, User, Session } from '@prisma/client';
-
-type TenantOwnerInput = {
-  firstName: string;
-  lastName: string;
-  email: string;
-  password: string;
-};
-
-export interface CreateTenantInput {
-  name: string;
-  slug?: string;
-  owner: TenantOwnerInput;
-}
 
 export interface TenantCreationResult {
   success: boolean;
@@ -21,6 +7,100 @@ export interface TenantCreationResult {
   user?: User;
   session?: Session;
   error?: string;
+}
+
+export interface CreateTenantForUserInput {
+  userId: string;
+  name: string;
+}
+
+export interface JoinTenantForUserInput {
+  userId: string;
+  tenantId: string;
+}
+
+export async function createTenantForUser(input: CreateTenantForUserInput): Promise<TenantCreationResult> {
+  const slug = normalizeSlug(input.name);
+
+  const existingTenant = await prisma.tenant.findUnique({
+    where: { slug },
+  });
+
+  if (existingTenant) {
+    return { success: false, error: 'Tenant slug already registered' };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: input.userId },
+  });
+
+  if (!user) {
+    return { success: false, error: 'User not found' };
+  }
+
+  if (user.tenantId) {
+    return { success: false, error: 'User already belongs to a tenant' };
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    const tenant = await tx.tenant.create({
+      data: {
+        name: input.name,
+        slug,
+      },
+    });
+
+    const updatedUser = await tx.user.update({
+      where: { id: input.userId },
+      data: {
+        tenantId: tenant.id,
+        role: 'owner',
+      },
+    });
+
+    return { tenant, user: updatedUser };
+  });
+
+  return {
+    success: true,
+    tenant: result.tenant,
+    user: result.user,
+  };
+}
+
+export async function joinTenantForUser(input: JoinTenantForUserInput): Promise<TenantCreationResult> {
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: input.tenantId },
+  });
+
+  if (!tenant) {
+    return { success: false, error: 'Tenant not found' };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: input.userId },
+  });
+
+  if (!user) {
+    return { success: false, error: 'User not found' };
+  }
+
+  if (user.tenantId) {
+    return { success: false, error: 'User already belongs to a tenant' };
+  }
+
+  const updatedUser = await prisma.user.update({
+    where: { id: input.userId },
+    data: {
+      tenantId: tenant.id,
+    },
+  });
+
+  return {
+    success: true,
+    tenant,
+    user: updatedUser,
+  };
 }
 
 function normalizeSlug(value: string): string {
@@ -32,62 +112,3 @@ function normalizeSlug(value: string): string {
     .replace(/-+/g, '-');
 }
 
-function hashPassword(password: string): string {
-  return Buffer.from(password).toString('base64');
-}
-
-export async function createTenantWithOwner(input: CreateTenantInput): Promise<TenantCreationResult> {
-  const slug = normalizeSlug(input.slug ?? input.name);
-
-  const existingTenant = await prisma.tenant.findUnique({
-    where: { slug },
-  });
-
-  if (existingTenant) {
-    return { success: false, error: 'Tenant slug already registered' };
-  }
-
-  const existingUser = await prisma.user.findUnique({
-    where: { email: input.owner.email.toLowerCase() },
-  });
-
-  if (existingUser) {
-    return { success: false, error: 'Owner email already registered' };
-  }
-
-  const result = await prisma.$transaction(async (tx) => {
-    const tenant = await tx.tenant.create({
-      data: {
-        name: input.name,
-        slug,
-      },
-    });
-
-    const user = await tx.user.create({
-      data: {
-        firstName: input.owner.firstName,
-        lastName: input.owner.lastName,
-        email: input.owner.email.toLowerCase(),
-        passwordHash: hashPassword(input.owner.password),
-        role: 'owner',
-        tenantId: tenant.id,
-      },
-    });
-
-    const session = await tx.session.create({
-      data: {
-        token: randomUUID(),
-        userId: user.id,
-      },
-    });
-
-    return { tenant, user, session };
-  });
-
-  return {
-    success: true,
-    tenant: result.tenant,
-    user: result.user,
-    session: result.session,
-  };
-}

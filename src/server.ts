@@ -10,8 +10,19 @@ import {
   createCustomFieldValue,
   listCustomFieldDefinitions,
   listCustomFieldValuesForEmployee,
+  listCustomFieldValuesForClient,
 } from './modules/hr/customFieldService.js';
-import { createTenantWithOwner } from './modules/tenant/tenantService.js';
+import {
+  createTenantForUser,
+  joinTenantForUser,
+} from './modules/tenant/tenantService.js';
+import {
+  createClient,
+  listClients,
+  findClientById,
+  updateClient,
+  deleteClient,
+} from './modules/clients/clientService.js';
 
 dotenv.config();
 
@@ -25,7 +36,7 @@ function getBearerToken(req: express.Request): string | null {
   return req.headers.authorization?.replace('Bearer ', '') ?? null;
 }
 
-async function validateSession(req: express.Request, res: express.Response) {
+async function authenticateUser(req: express.Request, res: express.Response) {
   const token = getBearerToken(req);
   if (!token) {
     res.status(401).json({ error: 'Authentication required' });
@@ -35,6 +46,15 @@ async function validateSession(req: express.Request, res: express.Response) {
   const user = await authenticateToken(token);
   if (!user) {
     res.status(401).json({ error: 'Authentication required' });
+    return null;
+  }
+
+  return user;
+}
+
+async function validateSession(req: express.Request, res: express.Response) {
+  const user = await authenticateUser(req, res);
+  if (!user) {
     return null;
   }
 
@@ -57,7 +77,7 @@ app.post('/api/auth/register', async (req, res) => {
     return res.status(400).json({ error: result.error });
   }
 
-  return res.status(201).json({ user: result.user });
+  return res.status(201).json({ user: result.user, session: result.session });
 });
 
 app.post('/api/auth/login', async (req, res) => {
@@ -101,13 +121,49 @@ app.get('/api/auth/me', async (req, res) => {
 });
 
 app.post('/api/tenants', async (req, res) => {
-  const result = await createTenantWithOwner(req.body);
+  const user = await authenticateUser(req, res);
+  if (!user) {
+    return;
+  }
+
+  const name = req.body.name as string;
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Tenant name is required' });
+  }
+
+  const result = await createTenantForUser({
+    userId: user.id,
+    name: name.trim(),
+  });
 
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }
 
-  return res.status(201).json({ tenant: result.tenant, user: result.user, session: result.session });
+  return res.status(201).json({ tenant: result.tenant, user: result.user });
+});
+
+app.post('/api/tenants/join', async (req, res) => {
+  const user = await authenticateUser(req, res);
+  if (!user) {
+    return;
+  }
+
+  const tenantId = req.body.tenantId as string;
+  if (!tenantId || !tenantId.trim()) {
+    return res.status(400).json({ error: 'Tenant ID is required' });
+  }
+
+  const result = await joinTenantForUser({
+    userId: user.id,
+    tenantId: tenantId.trim(),
+  });
+
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  return res.status(200).json({ tenant: result.tenant, user: result.user });
 });
 
 app.get('/api/hr/employees', async (req, res) => {
@@ -203,6 +259,120 @@ app.get('/api/hr/employees/:employeeId/custom-fields', async (req, res) => {
   }
 
   const values = await listCustomFieldValuesForEmployee(req.params.employeeId);
+  return res.json(values);
+});
+
+// Clients endpoints
+app.get('/api/clients', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canViewHr(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const clients = await listClients(user.tenantId!);
+  return res.json(clients);
+});
+
+app.post('/api/clients', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canCreateHr(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const client = await createClient({ ...req.body, tenantId: user.tenantId! });
+  return res.status(201).json(client);
+});
+
+app.get('/api/clients/:clientId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canViewHr(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const client = await findClientById(req.params.clientId);
+  if (!client || client.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Client not found' });
+  }
+
+  return res.json(client);
+});
+
+app.patch('/api/clients/:clientId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canCreateHr(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const client = await findClientById(req.params.clientId);
+  if (!client || client.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Client not found' });
+  }
+
+  const updated = await updateClient(req.params.clientId, req.body);
+  return res.json(updated);
+});
+
+app.delete('/api/clients/:clientId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canCreateHr(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const client = await findClientById(req.params.clientId);
+  if (!client || client.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Client not found' });
+  }
+
+  await deleteClient(req.params.clientId);
+  return res.status(204).end();
+});
+
+app.post('/api/clients/:clientId/custom-fields', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageCustomFields(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const customFieldValue = await createCustomFieldValue({
+    customFieldDefinitionId: req.body.customFieldDefinitionId,
+    clientId: req.params.clientId,
+    value: req.body.value,
+  });
+
+  return res.status(201).json(customFieldValue);
+});
+
+app.get('/api/clients/:clientId/custom-fields', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  const values = await listCustomFieldValuesForClient(req.params.clientId);
   return res.json(values);
 });
 

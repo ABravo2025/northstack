@@ -7,8 +7,8 @@ export interface RegisterUserInput {
   lastName: string;
   email: string;
   password: string;
+  phone: string;
   role?: UserRole;
-  tenantId?: string;
 }
 
 export interface LoginUserInput {
@@ -36,18 +36,29 @@ export async function registerUser(input: RegisterUserInput): Promise<AuthResult
     return { success: false, error: 'Email already registered' };
   }
 
+  if (!input.phone?.trim()) {
+    return { success: false, error: 'Phone is required' };
+  }
+
   const user = await prisma.user.create({
     data: {
       firstName: input.firstName,
       lastName: input.lastName,
+      phone: input.phone.trim(),
       email: input.email.toLowerCase(),
       passwordHash: hashPassword(input.password),
       role: input.role ?? 'member',
-      tenantId: input.tenantId,
     },
   });
 
-  return { success: true, user };
+  const session = await prisma.session.create({
+    data: {
+      token: crypto.randomUUID(),
+      userId: user.id,
+    },
+  });
+
+  return { success: true, user, session };
 }
 
 export async function loginUser(input: LoginUserInput): Promise<AuthResult> {

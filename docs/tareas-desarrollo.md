@@ -25,6 +25,7 @@
 - [x] Verificar `.env` con Neon `DATABASE_URL`
 - [x] Crear guía de ejecución de pruebas en `docs/run-tests.md`
 - [x] Crear una tabla de prueba en Neon para validar la conexión de la base de datos
+- [x] Crear repositorio en GitHub y hacer push de la rama main
 - [ ] Preparar el proyecto para una beta interna
 
 ## Notas de avance

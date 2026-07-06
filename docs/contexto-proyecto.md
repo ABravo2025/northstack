@@ -1,7 +1,7 @@
 # Contexto de desarrollo del proyecto
 
 - Fecha de creación: 2026-07-02
-- Última actualización: 2026-07-02
+- Última actualización: 2026-07-06
 
 ## Resumen del proyecto
 
@@ -64,6 +64,11 @@ Crear un sistema que permita:
 
 - endpoints públicos protegidos por token
 
+### Frontend
+
+- aplicación Vite + React (`frontend/`) con páginas de login, registro, creación de tenant y dashboard
+- consume la API vía `frontend/src/api.ts`
+
 ## Estado actual del proyecto
 
 - Se definió la visión general del producto.
@@ -74,3 +79,8 @@ Crear un sistema que permita:
 - Se implementó un primer servicio de HR con creación de empleados y estados básicos.
 - Se implementó support para custom fields en HR y endpoints de definición y valores.
 - Se verificó el funcionamiento con compilación exitosa después de la integración con Prisma.
+- Se implementó el módulo de clients (CRUD completo + custom fields) y se integró en `server.ts`.
+- Se construyó el frontend inicial (Vite + React) con los flujos de login, registro, creación de tenant y dashboard.
+- Se corrigió `Employee.email` para que sea único por tenant (antes era único global, un bug de diseño multi-tenant).
+- Se eliminó código muerto (`createTenantWithOwner`) que rompía el build.
+- El repositorio en GitHub está al día (`origin/main`, commit `b75b4d3`).

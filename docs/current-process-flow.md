@@ -1,5 +1,7 @@
 # Current Process Flow
 
+- Última actualización: 2026-07-06
+
 This document describes the current onboarding and application flow for Northstack.
 
 ## Public access flow
@@ -32,6 +34,8 @@ flowchart TD
   G --> S[Clients Tab]
   S --> T[List clients via /api/clients]
   S --> U[Create client via /api/clients]
+  S --> V[Update client via PATCH /api/clients/:id]
+  S --> W[Delete client via DELETE /api/clients/:id]
 ```
 
 ## Key points
@@ -44,7 +48,13 @@ flowchart TD
 - After creating a tenant, the user lands directly in the dashboard.
 - The dashboard currently supports:
   - employee listing and creation
-  - client listing and creation
+  - client listing, creation, update and deletion
+  - custom fields for both employees and clients
+
+## Frontend implementation status
+
+- `frontend/` (Vite + React) implements this flow: `LoginPage`, `RegisterPage`, `CreateTenantPage`, `DashboardPage`.
+- Not yet browser-tested end-to-end as part of this doc update — pending a follow-up session.
 
 ## Current UI behavior
 

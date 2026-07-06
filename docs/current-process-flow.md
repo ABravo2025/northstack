@@ -51,6 +51,25 @@ flowchart TD
   - client listing, creation, update and deletion
   - custom fields for both employees and clients
 
+## Invitation flow (new, 2026-07-06)
+
+The open `POST /api/tenants/join` (any authenticated user could attach to any tenant just by knowing its `tenantId`) was removed as an insecure pattern. It's replaced by an invitation flow:
+
+```mermaid
+flowchart TD
+  A[Tenant owner/admin] --> B[POST /api/tenants/invitations]
+  B --> C[Invitation created: email + role + token, expires in 7 days]
+  C --> D[Admin shares link/token manually - no email service yet]
+  D --> E[Invited user registers or logs in]
+  E --> F[POST /api/invitations/:token/accept]
+  F --> G{Token valid, not expired, email matches?}
+  G -->|Yes| H[User attached to tenant with invited role]
+  G -->|No| I[Show error]
+```
+
+- Sending the invitation is manual for now (no email provider integrated) — flagged as a future improvement, evaluated and deliberately postponed.
+- Not yet exposed in the frontend (backend-only so far).
+
 ## Frontend implementation status
 
 - `frontend/` (Vite + React) implements this flow: `LoginPage`, `RegisterPage`, `CreateTenantPage`, `DashboardPage`.

@@ -1,8 +1,8 @@
 import type { UserRole } from '@prisma/client';
 
 export const rolePermissions: Record<UserRole, string[]> = {
-  owner: ['view_hr', 'create_hr', 'manage_custom_fields'],
-  admin: ['view_hr', 'create_hr', 'manage_custom_fields'],
+  owner: ['view_hr', 'create_hr', 'manage_custom_fields', 'invite_users'],
+  admin: ['view_hr', 'create_hr', 'manage_custom_fields', 'invite_users'],
   member: ['view_hr'],
 };
 
@@ -16,4 +16,8 @@ export function canCreateHr(role: UserRole): boolean {
 
 export function canManageCustomFields(role: UserRole): boolean {
   return rolePermissions[role].includes('manage_custom_fields');
+}
+
+export function canInviteUsers(role: UserRole): boolean {
+  return rolePermissions[role].includes('invite_users');
 }

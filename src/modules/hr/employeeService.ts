@@ -7,7 +7,7 @@ export interface CreateEmployeeInput {
   email: string;
   department: string;
   status?: EmployeeStatus;
-  tenantId?: string | null;
+  tenantId: string;
 }
 
 export async function createEmployee(input: CreateEmployeeInput): Promise<Employee> {

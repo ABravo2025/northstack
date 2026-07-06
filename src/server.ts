@@ -1,9 +1,9 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import type { EntityType, UserRole } from '@prisma/client';
+import type { EntityType } from '@prisma/client';
 import { authenticateToken, loginUser, logoutUser, registerUser } from './modules/auth/authService.js';
-import { canCreateHr, canManageCustomFields, canViewHr } from './modules/auth/permissionService.js';
+import { canCreateHr, canInviteUsers, canManageCustomFields, canViewHr } from './modules/auth/permissionService.js';
 import { createEmployee, listEmployees } from './modules/hr/employeeService.js';
 import {
   createCustomFieldDefinition,
@@ -14,7 +14,8 @@ import {
 } from './modules/hr/customFieldService.js';
 import {
   createTenantForUser,
-  joinTenantForUser,
+  createInvitation,
+  acceptInvitation,
 } from './modules/tenant/tenantService.js';
 import {
   createClient,
@@ -143,20 +144,44 @@ app.post('/api/tenants', async (req, res) => {
   return res.status(201).json({ tenant: result.tenant, user: result.user });
 });
 
-app.post('/api/tenants/join', async (req, res) => {
+app.post('/api/tenants/invitations', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canInviteUsers(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const email = req.body.email as string;
+  if (!email || !email.trim()) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+
+  const result = await createInvitation({
+    tenantId: user.tenantId!,
+    invitedByUserId: user.id,
+    email: email.trim(),
+    role: req.body.role,
+  });
+
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  return res.status(201).json({ invitation: result.invitation });
+});
+
+app.post('/api/invitations/:token/accept', async (req, res) => {
   const user = await authenticateUser(req, res);
   if (!user) {
     return;
   }
 
-  const tenantId = req.body.tenantId as string;
-  if (!tenantId || !tenantId.trim()) {
-    return res.status(400).json({ error: 'Tenant ID is required' });
-  }
-
-  const result = await joinTenantForUser({
+  const result = await acceptInvitation({
+    token: req.params.token,
     userId: user.id,
-    tenantId: tenantId.trim(),
   });
 
   if (!result.success) {
@@ -190,7 +215,7 @@ app.post('/api/hr/employees', async (req, res) => {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  const employee = await createEmployee({ ...req.body, tenantId: user.tenantId });
+  const employee = await createEmployee({ ...req.body, tenantId: user.tenantId! });
   return res.status(201).json(employee);
 });
 

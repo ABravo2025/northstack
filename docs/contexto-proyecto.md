@@ -43,10 +43,11 @@ Crear un sistema que permita:
 
 ### Core
 
-- tenants
+- tenants (con `status`: active/suspended/cancelled)
 - autenticación
-- usuarios
+- usuarios (con `status`: active/inactive)
 - permisos y roles
+- invitaciones (un admin/owner invita por email a un tenant; el usuario invitado queda adherido con el rol definido al aceptar el token — reemplaza el join libre por tenantId)
 
 ### HR
 
@@ -84,3 +85,7 @@ Crear un sistema que permita:
 - Se corrigió `Employee.email` para que sea único por tenant (antes era único global, un bug de diseño multi-tenant).
 - Se eliminó código muerto (`createTenantWithOwner`) que rompía el build.
 - El repositorio en GitHub está al día (`origin/main`, commit `b75b4d3`).
+- Se hizo `tenantId` obligatorio en Employee/Client/CustomFieldDefinition (antes opcional, permitía registros huérfanos).
+- Se agregó `status` a Tenant y User, e `isActive` a CustomFieldDefinition; se eliminó la tabla `TestRun`.
+- Se reemplazó el join libre a tenants por un flujo de invitaciones (modelo `Invitation`, sin envío de email todavía — el link se comparte manualmente).
+- Revisión de seguridad pendiente detectada: IDOR en endpoints de custom fields, y hash de contraseñas débil (base64, no es un hash real) — documentado en `tareas-desarrollo.md`, no corregido aún.

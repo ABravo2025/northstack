@@ -11,21 +11,14 @@ flowchart TD
   A[Public Access] --> B[Login Page]
   B --> C{Has account?}
   C -->|Yes| D[Authenticate via /api/auth/login]
-  C -->|No| E[Register page]
+  C -->|No| E[Register page: company + owner data]
   D --> F{Valid token?}
   F -->|Yes| G[Dashboard]
   F -->|No| H[Show auth error]
 
-  E --> I[Create account via /api/auth/register]
-  I --> J{Success?}
-  J -->|Yes| D
-  J -->|No| K[Show registration error]
-
-  B --> L[Create New Tenant button]
-  L --> M[Create Tenant page]
-  M --> N[POST /api/tenants]
-  N --> O[Create Tenant + Owner + Session]
-  O --> G
+  E --> I[POST /api/tenants/register]
+  I --> J[Create Tenant + Owner User + Session, in one step]
+  J --> G
 
   G --> P[HR Tab]
   P --> Q[List employees via /api/hr/employees]
@@ -40,12 +33,9 @@ flowchart TD
 
 ## Key points
 
-- `Create New Tenant` is currently available from the public login screen.
-- Tenant creation performs:
-  - tenant creation
-  - owner user creation
-  - session creation
-- After creating a tenant, the user lands directly in the dashboard.
+- Registration is a **single step**: the Register page asks for company (tenant) data and owner user data together, and `POST /api/tenants/register` creates the Tenant + owner User + Session atomically. This avoids ever creating a "tenant-less" user outside of the invitation flow (see below).
+- `POST /api/auth/register` (bare user, no tenant) still exists for the invitation-acceptance path: someone accepting an invite who doesn't have an account yet registers first, then accepts.
+- After registering, the user lands directly in the dashboard.
 - The dashboard currently supports:
   - employee listing and creation
   - client listing, creation, update and deletion
@@ -72,15 +62,16 @@ flowchart TD
 
 ## Frontend implementation status
 
-- `frontend/` (Vite + React) implements this flow: `LoginPage`, `RegisterPage`, `CreateTenantPage`, `DashboardPage`.
-- Not yet browser-tested end-to-end as part of this doc update — pending a follow-up session.
+- `frontend/` (Vite + React) implements this flow: `LoginPage`, `RegisterPage` (company + owner data in one form), `DashboardPage`.
+- `CreateTenantPage` was removed — it was dead code built against the deleted `createTenantWithOwner` shape and was never wired into `App.tsx`.
+- Verified end-to-end via `curl` against the running backend (`POST /api/tenants/register`); not yet clicked through in an actual browser session.
+- `frontend/tsconfig.json` is missing `jsx` config, so `npm run build` fails for the frontend (pre-existing, doesn't affect the Vite dev server).
 
 ## Current UI behavior
 
 - Public login page:
   - `Login`
-  - `Register`
-  - `Create New Tenant`
+  - `Register` (company + owner data)
 - Dashboard:
   - `Employees` tab
   - `Clients` tab

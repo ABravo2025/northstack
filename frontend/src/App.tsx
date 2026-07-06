@@ -5,6 +5,7 @@ import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import './App.css';
 
+
 type Page = 'login' | 'register' | 'dashboard';
 
 export default function App() {
@@ -49,53 +50,25 @@ export default function App() {
   };
 
   const handleRegister = async (data: {
-    email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-    tenantId?: string;
-    tenantName?: string;
-    tenantSlug?: string;
+    tenantName: string;
+    ownerFirstName: string;
+    ownerLastName: string;
+    ownerEmail: string;
+    ownerPassword: string;
+    ownerPhone: string;
   }) => {
     setLoading(true);
     try {
-      const response = await api.register(data);
+      const response = await api.registerTenant(data);
       const newToken = response.session?.token;
       if (newToken) {
         setToken(newToken);
         localStorage.setItem('token', newToken);
         setUser(response.user);
         setPage('dashboard');
-      } else {
-        alert('Registration successful! Please login.');
-        setPage('login');
       }
     } catch (error) {
       alert('Registration failed: ' + (error as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCreateTenant = async (data: {
-    name: string;
-    slug: string;
-    ownerEmail: string;
-    ownerPassword: string;
-    ownerFirstName: string;
-    ownerLastName: string;
-  }) => {
-    setLoading(true);
-    try {
-      const response = await api.createTenant(data);
-      const newToken = response.session?.token;
-      if (newToken) {
-        setToken(newToken);
-        localStorage.setItem('token', newToken);
-        setUser(response.user);
-      }
-    } catch (error) {
-      alert('Tenant creation failed: ' + (error as Error).message);
     } finally {
       setLoading(false);
     }

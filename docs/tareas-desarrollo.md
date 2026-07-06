@@ -36,14 +36,19 @@
 - [x] Eliminar tabla `TestRun` (leftover de la validación de conexión a Neon)
 - [x] Implementar modelo `Invitation` + flujo de invitación (crear invitación / aceptar por token, sin envío de email)
 - [x] Eliminar `POST /api/tenants/join` (dejaba unirse a cualquier tenant sabiendo el `tenantId`, sin invitación)
+- [x] Unificar registro en un solo paso: `POST /api/tenants/register` crea Tenant + owner User + Session juntos (evita usuarios huérfanos sin tenant)
+- [x] Arreglar formulario de Register en el frontend (pedía datos que el backend ignoraba, y no pedía `phone`, que es obligatorio)
+- [x] Eliminar `CreateTenantPage.tsx` y `api.createTenant` (código muerto, apuntaban a una ruta que nunca existió)
 - [ ] Preparar el proyecto para una beta interna
 - [ ] Revisar el frontend end-to-end en navegador
 - [ ] Implementar formularios públicos para alta de personas
 - [ ] Implementar API pública con token para integraciones externas
+- [ ] Construir en el frontend el flujo de aceptar invitaciones (hoy solo existe en el backend)
 - [ ] **Seguridad (pendiente, prioridad alta):** corregir IDOR en 4 endpoints de custom fields (`/api/hr/employees/:employeeId/custom-fields`, `/api/clients/:clientId/custom-fields`) que no verifican que el recurso pertenezca al tenant del usuario
 - [ ] **Seguridad (pendiente, prioridad alta):** reemplazar el "hash" de contraseñas (hoy es solo base64, reversible) por un hash real (bcrypt/argon2) — requiere agregar una librería nueva
 - [ ] Envío de invitaciones por email (servicio externo tipo Resend/SendGrid) — evaluado y pospuesto a propósito, hoy el link se comparte manualmente
 - [ ] Diseñar catálogo de status configurable por tenant + historial de cambios de status (iniciativa futura, separada de esta ronda)
+- [ ] **Config (pendiente):** `frontend/tsconfig.json` no tiene `"jsx"` configurado — `npm run build` del frontend falla (preexistente, Vite dev server no lo sufre porque usa esbuild)
 
 ## Notas de avance
 
@@ -54,3 +59,4 @@
 - Cualquier cambio importante en el alcance deberá documentarse aquí.
 - 2026-07-03: se corrigió `Employee.email` a único por tenant; requirió `prisma db push --force-reset` en Neon (se perdió 1 fila de prueba, autorizado). Se detectó y limpió código muerto (`createTenantWithOwner`) y un test desactualizado (`auth.test.ts` sin `phone`). Se hizo commit y push a `origin/main` (`b75b4d3`) de todo el trabajo pendiente (clients module, frontend, fixes).
 - 2026-07-06: modelo de datos v2 — `tenantId` obligatorio en Employee/Client/CustomFieldDefinition, `status` en Tenant/User, `isActive` en CustomFieldDefinition, se eliminó `TestRun`. Se implementó el flujo de invitaciones (modelo `Invitation`, endpoints `POST /api/tenants/invitations` y `POST /api/invitations/:token/accept`) y se eliminó el endpoint inseguro `POST /api/tenants/join`. `prisma db push` esta vez sincronizó sin necesitar `--force-reset`. Se hizo una revisión de seguridad: se encontraron 2 vulnerabilidades (IDOR en custom fields, hash de contraseñas débil) — quedaron documentadas arriba como pendientes, no se corrigieron en esta ronda.
+- 2026-07-06 (más tarde): al probar la app en el navegador se detectó que el formulario de Register pedía datos que el backend nunca usó (`Tenant ID`/`New Tenant Name`/`Slug`) y le faltaba `phone` (obligatorio) — el registro siempre fallaba. Causa raíz: el frontend estaba armado contra el `createTenantWithOwner` que se había borrado por código muerto días atrás, sin darse cuenta de que representaba el flujo de producto correcto. Se creó `POST /api/tenants/register` (crea Tenant + owner User + Session en un solo paso, evita usuarios huérfanos sin tenant) y se reescribió `RegisterPage.tsx`/`api.ts`/`App.tsx` para usarlo; se eliminó `CreateTenantPage.tsx` (dead code). Probado end-to-end con `curl` contra Neon (dejó 1 tenant de prueba real, "Acme Test Co", a propósito). Se detectó que `frontend/tsconfig.json` no tiene `jsx` configurado y `npm run build` del frontend falla — preexistente, no bloquea porque el dev server de Vite no lo necesita; queda pendiente.

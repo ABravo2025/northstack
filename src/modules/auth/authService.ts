@@ -23,7 +23,7 @@ export interface AuthResult {
   error?: string;
 }
 
-function hashPassword(password: string): string {
+export function hashPassword(password: string): string {
   return Buffer.from(password).toString('base64');
 }
 

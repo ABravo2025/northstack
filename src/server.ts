@@ -14,6 +14,7 @@ import {
 } from './modules/hr/customFieldService.js';
 import {
   createTenantForUser,
+  registerTenantWithOwner,
   createInvitation,
   acceptInvitation,
 } from './modules/tenant/tenantService.js';
@@ -79,6 +80,23 @@ app.post('/api/auth/register', async (req, res) => {
   }
 
   return res.status(201).json({ user: result.user, session: result.session });
+});
+
+app.post('/api/tenants/register', async (req, res) => {
+  const result = await registerTenantWithOwner({
+    tenantName: req.body.tenantName,
+    ownerFirstName: req.body.ownerFirstName,
+    ownerLastName: req.body.ownerLastName,
+    ownerEmail: req.body.ownerEmail,
+    ownerPassword: req.body.ownerPassword,
+    ownerPhone: req.body.ownerPhone,
+  });
+
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  return res.status(201).json({ tenant: result.tenant, user: result.user, session: result.session });
 });
 
 app.post('/api/auth/login', async (req, res) => {

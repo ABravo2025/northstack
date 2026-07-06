@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import prisma from '../../lib/prisma.js';
+import { hashPassword } from '../auth/authService.js';
 import type { Invitation, Tenant, User, UserRole, Session } from '@prisma/client';
 
 const INVITATION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -15,6 +16,15 @@ export interface TenantCreationResult {
 export interface CreateTenantForUserInput {
   userId: string;
   name: string;
+}
+
+export interface RegisterTenantWithOwnerInput {
+  tenantName: string;
+  ownerFirstName: string;
+  ownerLastName: string;
+  ownerEmail: string;
+  ownerPassword: string;
+  ownerPhone: string;
 }
 
 export interface CreateInvitationInput {
@@ -81,6 +91,68 @@ export async function createTenantForUser(input: CreateTenantForUserInput): Prom
     success: true,
     tenant: result.tenant,
     user: result.user,
+  };
+}
+
+export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInput): Promise<TenantCreationResult> {
+  const slug = normalizeSlug(input.tenantName);
+  const normalizedEmail = input.ownerEmail.toLowerCase().trim();
+
+  if (!input.ownerPhone?.trim()) {
+    return { success: false, error: 'Phone is required' };
+  }
+
+  const existingTenant = await prisma.tenant.findUnique({
+    where: { slug },
+  });
+
+  if (existingTenant) {
+    return { success: false, error: 'Tenant name already registered' };
+  }
+
+  const existingUser = await prisma.user.findUnique({
+    where: { email: normalizedEmail },
+  });
+
+  if (existingUser) {
+    return { success: false, error: 'Email already registered' };
+  }
+
+  const result = await prisma.$transaction(async (tx) => {
+    const tenant = await tx.tenant.create({
+      data: {
+        name: input.tenantName,
+        slug,
+      },
+    });
+
+    const user = await tx.user.create({
+      data: {
+        firstName: input.ownerFirstName,
+        lastName: input.ownerLastName,
+        phone: input.ownerPhone.trim(),
+        email: normalizedEmail,
+        passwordHash: hashPassword(input.ownerPassword),
+        role: 'owner',
+        tenantId: tenant.id,
+      },
+    });
+
+    const session = await tx.session.create({
+      data: {
+        token: randomUUID(),
+        userId: user.id,
+      },
+    });
+
+    return { tenant, user, session };
+  });
+
+  return {
+    success: true,
+    tenant: result.tenant,
+    user: result.user,
+    session: result.session,
   };
 }
 

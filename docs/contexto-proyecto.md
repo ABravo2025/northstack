@@ -67,7 +67,8 @@ Crear un sistema que permita:
 
 ### Frontend
 
-- aplicación Vite + React (`frontend/`) con páginas de login, registro, creación de tenant y dashboard
+- aplicación Vite + React (`frontend/`) con páginas de login, registro y dashboard
+- el registro es un solo paso: datos de la empresa + datos del usuario owner → crea Tenant + User + Session juntos (`POST /api/tenants/register`)
 - consume la API vía `frontend/src/api.ts`
 
 ## Estado actual del proyecto
@@ -89,3 +90,5 @@ Crear un sistema que permita:
 - Se agregó `status` a Tenant y User, e `isActive` a CustomFieldDefinition; se eliminó la tabla `TestRun`.
 - Se reemplazó el join libre a tenants por un flujo de invitaciones (modelo `Invitation`, sin envío de email todavía — el link se comparte manualmente).
 - Revisión de seguridad pendiente detectada: IDOR en endpoints de custom fields, y hash de contraseñas débil (base64, no es un hash real) — documentado en `tareas-desarrollo.md`, no corregido aún.
+- Se probó la app corriendo (frontend en `localhost:5173`, backend en `localhost:3000`) y se encontró que el formulario de Register no coincidía con el backend (pedía datos que se ignoraban, no pedía `phone`). Se unificó en un solo endpoint `POST /api/tenants/register` (Tenant + owner User + Session juntos, evita usuarios huérfanos) y se reescribió el frontend acorde. Se eliminó `CreateTenantPage.tsx` (código muerto).
+- Pendiente detectado: `frontend/tsconfig.json` no tiene `jsx` configurado, `npm run build` del frontend falla (no afecta al dev server de Vite).

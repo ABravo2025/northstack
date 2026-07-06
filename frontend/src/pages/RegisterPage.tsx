@@ -2,13 +2,12 @@ import { useState } from 'react';
 
 interface RegisterPageProps {
   onRegister: (data: {
-    email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-    tenantId?: string;
-    tenantName?: string;
-    tenantSlug?: string;
+    tenantName: string;
+    ownerFirstName: string;
+    ownerLastName: string;
+    ownerEmail: string;
+    ownerPassword: string;
+    ownerPhone: string;
   }) => void;
   onSwitchToLogin: () => void;
   loading: boolean;
@@ -19,24 +18,22 @@ export default function RegisterPage({
   onSwitchToLogin,
   loading,
 }: RegisterPageProps) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [tenantId, setTenantId] = useState('');
   const [tenantName, setTenantName] = useState('');
-  const [tenantSlug, setTenantSlug] = useState('');
+  const [ownerFirstName, setOwnerFirstName] = useState('');
+  const [ownerLastName, setOwnerLastName] = useState('');
+  const [ownerEmail, setOwnerEmail] = useState('');
+  const [ownerPhone, setOwnerPhone] = useState('');
+  const [ownerPassword, setOwnerPassword] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onRegister({
-      email,
-      password,
-      firstName,
-      lastName,
-      tenantId: tenantId || undefined,
-      tenantName: tenantName || undefined,
-      tenantSlug: tenantSlug || undefined,
+      tenantName,
+      ownerFirstName,
+      ownerLastName,
+      ownerEmail,
+      ownerPassword,
+      ownerPhone,
     });
   };
 
@@ -47,14 +44,25 @@ export default function RegisterPage({
       </div>
       <div className="container">
         <div className="card" style={{ maxWidth: '400px', margin: '40px auto' }}>
-          <h2 className="text-center">Register</h2>
+          <h2 className="text-center">Register your company</h2>
           <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label>Company Name</label>
+              <input
+                type="text"
+                value={tenantName}
+                onChange={(e) => setTenantName(e.target.value)}
+                placeholder="My Company"
+                required
+                disabled={loading}
+              />
+            </div>
             <div className="form-group">
               <label>First Name</label>
               <input
                 type="text"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
+                value={ownerFirstName}
+                onChange={(e) => setOwnerFirstName(e.target.value)}
                 placeholder="John"
                 required
                 disabled={loading}
@@ -64,8 +72,8 @@ export default function RegisterPage({
               <label>Last Name</label>
               <input
                 type="text"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
+                value={ownerLastName}
+                onChange={(e) => setOwnerLastName(e.target.value)}
                 placeholder="Doe"
                 required
                 disabled={loading}
@@ -75,9 +83,20 @@ export default function RegisterPage({
               <label>Email</label>
               <input
                 type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={ownerEmail}
+                onChange={(e) => setOwnerEmail(e.target.value)}
                 placeholder="your@email.com"
+                required
+                disabled={loading}
+              />
+            </div>
+            <div className="form-group">
+              <label>Phone</label>
+              <input
+                type="tel"
+                value={ownerPhone}
+                onChange={(e) => setOwnerPhone(e.target.value)}
+                placeholder="+1 555 0100"
                 required
                 disabled={loading}
               />
@@ -86,47 +105,12 @@ export default function RegisterPage({
               <label>Password</label>
               <input
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={ownerPassword}
+                onChange={(e) => setOwnerPassword(e.target.value)}
                 placeholder="••••••••"
                 required
                 disabled={loading}
               />
-            </div>
-            <div className="form-group">
-              <label>Tenant ID (optional)</label>
-              <input
-                type="text"
-                value={tenantId}
-                onChange={(e) => setTenantId(e.target.value)}
-                placeholder="Optional: join an existing tenant"
-                disabled={loading}
-              />
-            </div>
-            <div className="form-group">
-              <label>New Tenant Name (optional)</label>
-              <input
-                type="text"
-                value={tenantName}
-                onChange={(e) => setTenantName(e.target.value)}
-                placeholder="Create a new tenant workspace"
-                disabled={loading}
-              />
-            </div>
-            <div className="form-group">
-              <label>New Tenant Slug (optional)</label>
-              <input
-                type="text"
-                value={tenantSlug}
-                onChange={(e) => setTenantSlug(e.target.value)}
-                placeholder="Optional: my-company"
-                disabled={loading}
-              />
-            </div>
-            <div className="form-group" style={{ fontSize: '13px', color: '#475569' }}>
-              <p>
-                Provide either a Tenant ID to join an existing tenant or a Tenant Name to create a new tenant and owner account.
-              </p>
             </div>
             <div className="form-actions">
               <button type="submit" className="btn btn-primary" disabled={loading}>

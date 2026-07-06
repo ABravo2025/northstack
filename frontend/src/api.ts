@@ -9,6 +9,11 @@ interface AuthResponse {
     role: string;
     tenantId?: string;
   };
+  tenant?: {
+    id: string;
+    name: string;
+    slug: string;
+  };
   session?: {
     token: string;
   };
@@ -34,16 +39,15 @@ interface Client {
 
 export const api = {
   // Auth
-  register: async (data: {
-    email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-    tenantId?: string;
-    tenantName?: string;
-    tenantSlug?: string;
+  registerTenant: async (data: {
+    tenantName: string;
+    ownerFirstName: string;
+    ownerLastName: string;
+    ownerEmail: string;
+    ownerPassword: string;
+    ownerPhone: string;
   }): Promise<AuthResponse> => {
-    const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
+    const res = await fetch(`${API_BASE_URL}/api/tenants/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -76,24 +80,6 @@ export const api = {
   getCurrentUser: async (token: string) => {
     const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
-    });
-    if (!res.ok) throw new Error(await res.text());
-    return res.json();
-  },
-
-  // Tenants
-  createTenant: async (data: {
-    name: string;
-    slug: string;
-    ownerEmail: string;
-    ownerPassword: string;
-    ownerFirstName: string;
-    ownerLastName: string;
-  }) => {
-    const res = await fetch(`${API_BASE_URL}/api/tenants`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
     });
     if (!res.ok) throw new Error(await res.text());
     return res.json();

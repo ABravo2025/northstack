@@ -137,6 +137,31 @@ export const api = {
     return res.json();
   },
 
+  updateEmployee: async (
+    token: string,
+    employeeId: string,
+    data: Partial<Employee>,
+  ): Promise<Employee> => {
+    const res = await fetch(`${API_BASE_URL}/api/hr/employees/${employeeId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  deleteEmployee: async (token: string, employeeId: string): Promise<void> => {
+    const res = await fetch(`${API_BASE_URL}/api/hr/employees/${employeeId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+  },
+
   // Clients
   listClients: async (token: string): Promise<Client[]> => {
     const res = await fetch(`${API_BASE_URL}/api/clients`, {

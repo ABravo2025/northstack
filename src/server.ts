@@ -4,7 +4,13 @@ import dotenv from 'dotenv';
 import type { EntityType } from '@prisma/client';
 import { authenticateToken, loginUser, logoutUser, registerUser } from './modules/auth/authService.js';
 import { canCreateHr, canInviteUsers, canManageCustomFields, canViewHr } from './modules/auth/permissionService.js';
-import { createEmployee, findEmployeeById, listEmployees } from './modules/hr/employeeService.js';
+import {
+  createEmployee,
+  deleteEmployee,
+  findEmployeeById,
+  listEmployees,
+  updateEmployee,
+} from './modules/hr/employeeService.js';
 import {
   createCustomFieldDefinition,
   createCustomFieldValue,
@@ -236,6 +242,62 @@ app.post('/api/hr/employees', async (req, res) => {
 
   const employee = await createEmployee({ ...req.body, tenantId: user.tenantId! });
   return res.status(201).json(employee);
+});
+
+app.get('/api/hr/employees/:employeeId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canViewHr(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const employee = await findEmployeeById(req.params.employeeId);
+  if (!employee || employee.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Employee not found' });
+  }
+
+  return res.json(employee);
+});
+
+app.patch('/api/hr/employees/:employeeId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canCreateHr(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const employee = await findEmployeeById(req.params.employeeId);
+  if (!employee || employee.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Employee not found' });
+  }
+
+  const updated = await updateEmployee(req.params.employeeId, req.body);
+  return res.json(updated);
+});
+
+app.delete('/api/hr/employees/:employeeId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canCreateHr(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const employee = await findEmployeeById(req.params.employeeId);
+  if (!employee || employee.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Employee not found' });
+  }
+
+  await deleteEmployee(req.params.employeeId);
+  return res.status(204).end();
 });
 
 app.post('/api/hr/custom-fields', async (req, res) => {

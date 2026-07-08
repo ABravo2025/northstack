@@ -17,12 +17,21 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
   const [showClientForm, setShowClientForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
 
   const [employeeForm, setEmployeeForm] = useState({
     firstName: '',
     lastName: '',
     email: '',
     department: '',
+  });
+
+  const [editEmployeeForm, setEditEmployeeForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    department: '',
+    status: 'active',
   });
 
   const [clientForm, setClientForm] = useState({
@@ -76,6 +85,43 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
       loadEmployees();
     } catch (error) {
       setError('Failed to create employee: ' + (error as Error).message);
+    }
+  };
+
+  const handleStartEditEmployee = (emp: any) => {
+    setShowEmployeeForm(false);
+    setEditingEmployeeId(emp.id);
+    setEditEmployeeForm({
+      firstName: emp.firstName,
+      lastName: emp.lastName,
+      email: emp.email,
+      department: emp.department,
+      status: emp.status,
+    });
+  };
+
+  const handleUpdateEmployee = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEmployeeId) return;
+    setError(null);
+    try {
+      await api.updateEmployee(token, editingEmployeeId, editEmployeeForm);
+      setEditingEmployeeId(null);
+      loadEmployees();
+    } catch (error) {
+      setError('Failed to update employee: ' + (error as Error).message);
+    }
+  };
+
+  const handleDeleteEmployee = async (employeeId: string) => {
+    if (confirm('Are you sure?')) {
+      setError(null);
+      try {
+        await api.deleteEmployee(token, employeeId);
+        loadEmployees();
+      } catch (error) {
+        setError('Failed to delete employee: ' + (error as Error).message);
+      }
     }
   };
 
@@ -200,6 +246,80 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
                 </form>
               )}
 
+              {editingEmployeeId && (
+                <form onSubmit={handleUpdateEmployee} style={{ marginBottom: '20px' }}>
+                  <div className="form-group">
+                    <label>First Name</label>
+                    <input
+                      type="text"
+                      value={editEmployeeForm.firstName}
+                      onChange={(e) =>
+                        setEditEmployeeForm({ ...editEmployeeForm, firstName: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Last Name</label>
+                    <input
+                      type="text"
+                      value={editEmployeeForm.lastName}
+                      onChange={(e) =>
+                        setEditEmployeeForm({ ...editEmployeeForm, lastName: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Email</label>
+                    <input
+                      type="email"
+                      value={editEmployeeForm.email}
+                      onChange={(e) =>
+                        setEditEmployeeForm({ ...editEmployeeForm, email: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Department</label>
+                    <input
+                      type="text"
+                      value={editEmployeeForm.department}
+                      onChange={(e) =>
+                        setEditEmployeeForm({ ...editEmployeeForm, department: e.target.value })
+                      }
+                      required
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Status</label>
+                    <select
+                      value={editEmployeeForm.status}
+                      onChange={(e) =>
+                        setEditEmployeeForm({ ...editEmployeeForm, status: e.target.value })
+                      }
+                    >
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                      <option value="pending">Pending</option>
+                    </select>
+                  </div>
+                  <div className="form-actions">
+                    <button type="submit" className="btn btn-primary">
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => setEditingEmployeeId(null)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </form>
+              )}
+
               {loading ? (
                 <p>Loading...</p>
               ) : employees.length === 0 ? (
@@ -212,6 +332,7 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
                       <th>Email</th>
                       <th>Department</th>
                       <th>Status</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -223,6 +344,22 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
                         <td>{emp.email}</td>
                         <td>{emp.department}</td>
                         <td>{emp.status}</td>
+                        <td>
+                          <button
+                            className="btn btn-secondary"
+                            onClick={() => handleStartEditEmployee(emp)}
+                            style={{ padding: '4px 8px', fontSize: '12px', marginRight: '6px' }}
+                          >
+                            Edit
+                          </button>
+                          <button
+                            className="btn btn-danger"
+                            onClick={() => handleDeleteEmployee(emp.id)}
+                            style={{ padding: '4px 8px', fontSize: '12px' }}
+                          >
+                            Delete
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>

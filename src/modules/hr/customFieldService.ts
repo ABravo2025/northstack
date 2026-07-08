@@ -30,6 +30,14 @@ export async function createCustomFieldDefinition(
   });
 }
 
+export async function findCustomFieldDefinitionById(
+  id: string,
+): Promise<CustomFieldDefinition | null> {
+  return prisma.customFieldDefinition.findUnique({
+    where: { id },
+  });
+}
+
 export async function listCustomFieldDefinitions(
   tenantId: string,
   entityType: EntityType,

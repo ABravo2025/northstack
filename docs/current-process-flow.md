@@ -1,6 +1,6 @@
 # Current Process Flow
 
-- Última actualización: 2026-07-06
+- Última actualización: 2026-07-08 (sin cambios de flujo; se hardeneó seguridad por debajo: hash de contraseñas con scrypt, política de contraseñas, y verificación de tenant ownership en custom fields)
 
 This document describes the current onboarding and application flow for Northstack.
 

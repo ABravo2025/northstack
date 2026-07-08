@@ -1,7 +1,7 @@
 # Contexto de desarrollo del proyecto
 
 - Fecha de creación: 2026-07-02
-- Última actualización: 2026-07-06
+- Última actualización: 2026-07-08
 
 ## Resumen del proyecto
 
@@ -89,6 +89,6 @@ Crear un sistema que permita:
 - Se hizo `tenantId` obligatorio en Employee/Client/CustomFieldDefinition (antes opcional, permitía registros huérfanos).
 - Se agregó `status` a Tenant y User, e `isActive` a CustomFieldDefinition; se eliminó la tabla `TestRun`.
 - Se reemplazó el join libre a tenants por un flujo de invitaciones (modelo `Invitation`, sin envío de email todavía — el link se comparte manualmente).
-- Revisión de seguridad pendiente detectada: IDOR en endpoints de custom fields, y hash de contraseñas débil (base64, no es un hash real) — documentado en `tareas-desarrollo.md`, no corregido aún.
 - Se probó la app corriendo (frontend en `localhost:5173`, backend en `localhost:3000`) y se encontró que el formulario de Register no coincidía con el backend (pedía datos que se ignoraban, no pedía `phone`). Se unificó en un solo endpoint `POST /api/tenants/register` (Tenant + owner User + Session juntos, evita usuarios huérfanos) y se reescribió el frontend acorde. Se eliminó `CreateTenantPage.tsx` (código muerto).
 - Pendiente detectado: `frontend/tsconfig.json` no tiene `jsx` configurado, `npm run build` del frontend falla (no afecta al dev server de Vite).
+- Se corrigieron las 2 vulnerabilidades de seguridad pendientes: IDOR en los 4 endpoints de custom fields (ahora verifican tenant ownership), y hash de contraseñas reemplazado por `scrypt` con salt (built-in de Node, sin dependencias nuevas). Se agregó política de contraseñas (mín. 8 caracteres, 1 mayúscula, 1 número, 1 carácter especial). Los usuarios registrados antes de este cambio (hash viejo en base64) ya no pueden loguearse y necesitan registrarse de nuevo.

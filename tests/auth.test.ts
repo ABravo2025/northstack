@@ -44,7 +44,7 @@ describe('auth service', () => {
   it('registers a new user and allows login', async () => {
     const registration = await registerUser({
       email: 'owner@example.com',
-      password: 'StrongPassword123',
+      password: 'StrongPassword123!',
       firstName: 'Alice',
       lastName: 'Smith',
       phone: '+1-555-0100',
@@ -55,7 +55,7 @@ describe('auth service', () => {
 
     const login = await loginUser({
       email: 'owner@example.com',
-      password: 'StrongPassword123',
+      password: 'StrongPassword123!',
     });
 
     expect(login.success).toBe(true);

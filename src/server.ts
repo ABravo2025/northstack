@@ -4,10 +4,11 @@ import dotenv from 'dotenv';
 import type { EntityType } from '@prisma/client';
 import { authenticateToken, loginUser, logoutUser, registerUser } from './modules/auth/authService.js';
 import { canCreateHr, canInviteUsers, canManageCustomFields, canViewHr } from './modules/auth/permissionService.js';
-import { createEmployee, listEmployees } from './modules/hr/employeeService.js';
+import { createEmployee, findEmployeeById, listEmployees } from './modules/hr/employeeService.js';
 import {
   createCustomFieldDefinition,
   createCustomFieldValue,
+  findCustomFieldDefinitionById,
   listCustomFieldDefinitions,
   listCustomFieldValuesForEmployee,
   listCustomFieldValuesForClient,
@@ -286,6 +287,16 @@ app.post('/api/hr/employees/:employeeId/custom-fields', async (req, res) => {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
+  const employee = await findEmployeeById(req.params.employeeId);
+  if (!employee || employee.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Employee not found' });
+  }
+
+  const definition = await findCustomFieldDefinitionById(req.body.customFieldDefinitionId);
+  if (!definition || definition.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Custom field definition not found' });
+  }
+
   const customFieldValue = await createCustomFieldValue({
     customFieldDefinitionId: req.body.customFieldDefinitionId,
     employeeId: req.params.employeeId,
@@ -299,6 +310,11 @@ app.get('/api/hr/employees/:employeeId/custom-fields', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) {
     return;
+  }
+
+  const employee = await findEmployeeById(req.params.employeeId);
+  if (!employee || employee.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Employee not found' });
   }
 
   const values = await listCustomFieldValuesForEmployee(req.params.employeeId);
@@ -400,6 +416,16 @@ app.post('/api/clients/:clientId/custom-fields', async (req, res) => {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
+  const client = await findClientById(req.params.clientId);
+  if (!client || client.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Client not found' });
+  }
+
+  const definition = await findCustomFieldDefinitionById(req.body.customFieldDefinitionId);
+  if (!definition || definition.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Custom field definition not found' });
+  }
+
   const customFieldValue = await createCustomFieldValue({
     customFieldDefinitionId: req.body.customFieldDefinitionId,
     clientId: req.params.clientId,
@@ -413,6 +439,11 @@ app.get('/api/clients/:clientId/custom-fields', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) {
     return;
+  }
+
+  const client = await findClientById(req.params.clientId);
+  if (!client || client.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Client not found' });
   }
 
   const values = await listCustomFieldValuesForClient(req.params.clientId);

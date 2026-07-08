@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import prisma from '../../lib/prisma.js';
-import { hashPassword } from '../auth/authService.js';
+import { hashPassword, isPasswordValid, PASSWORD_POLICY_MESSAGE } from '../auth/authService.js';
 import type { Invitation, Tenant, User, UserRole, Session } from '@prisma/client';
 
 const INVITATION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -100,6 +100,10 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
 
   if (!input.ownerPhone?.trim()) {
     return { success: false, error: 'Phone is required' };
+  }
+
+  if (!isPasswordValid(input.ownerPassword)) {
+    return { success: false, error: PASSWORD_POLICY_MESSAGE };
   }
 
   const existingTenant = await prisma.tenant.findUnique({

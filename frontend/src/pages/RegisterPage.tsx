@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { FormError } from '../App';
 
 interface RegisterPageProps {
   onRegister: (data: {
@@ -11,12 +12,16 @@ interface RegisterPageProps {
   }) => void;
   onSwitchToLogin: () => void;
   loading: boolean;
+  error?: FormError | null;
 }
+
+const KNOWN_FIELDS = ['tenantName', 'ownerEmail', 'ownerPhone', 'ownerPassword'];
 
 export default function RegisterPage({
   onRegister,
   onSwitchToLogin,
   loading,
+  error,
 }: RegisterPageProps) {
   const [tenantName, setTenantName] = useState('');
   const [ownerFirstName, setOwnerFirstName] = useState('');
@@ -24,6 +29,9 @@ export default function RegisterPage({
   const [ownerEmail, setOwnerEmail] = useState('');
   const [ownerPhone, setOwnerPhone] = useState('');
   const [ownerPassword, setOwnerPassword] = useState('');
+
+  const fieldError = (name: string) => (error?.field === name ? error.message : null);
+  const generalError = error && !KNOWN_FIELDS.includes(error.field ?? '') ? error.message : null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,6 +53,7 @@ export default function RegisterPage({
       <div className="container">
         <div className="card" style={{ maxWidth: '400px', margin: '40px auto' }}>
           <h2 className="text-center">Register your company</h2>
+          {generalError && <div className="alert alert-error">{generalError}</div>}
           <form onSubmit={handleSubmit}>
             <div className="form-group">
               <label>Company Name</label>
@@ -56,6 +65,9 @@ export default function RegisterPage({
                 required
                 disabled={loading}
               />
+              {fieldError('tenantName') && (
+                <div className="field-error">{fieldError('tenantName')}</div>
+              )}
             </div>
             <div className="form-group">
               <label>First Name</label>
@@ -89,6 +101,9 @@ export default function RegisterPage({
                 required
                 disabled={loading}
               />
+              {fieldError('ownerEmail') && (
+                <div className="field-error">{fieldError('ownerEmail')}</div>
+              )}
             </div>
             <div className="form-group">
               <label>Phone</label>
@@ -100,6 +115,9 @@ export default function RegisterPage({
                 required
                 disabled={loading}
               />
+              {fieldError('ownerPhone') && (
+                <div className="field-error">{fieldError('ownerPhone')}</div>
+              )}
             </div>
             <div className="form-group">
               <label>Password</label>
@@ -111,6 +129,9 @@ export default function RegisterPage({
                 required
                 disabled={loading}
               />
+              {fieldError('ownerPassword') && (
+                <div className="field-error">{fieldError('ownerPassword')}</div>
+              )}
             </div>
             <div className="form-actions">
               <button type="submit" className="btn btn-primary" disabled={loading}>

@@ -77,7 +77,7 @@ app.post('/api/auth/register', async (req, res) => {
   const result = await registerUser(req.body);
 
   if (!result.success) {
-    return res.status(400).json({ error: result.error });
+    return res.status(400).json({ error: result.error, field: result.field });
   }
 
   return res.status(201).json({ user: result.user, session: result.session });
@@ -94,7 +94,7 @@ app.post('/api/tenants/register', async (req, res) => {
   });
 
   if (!result.success) {
-    return res.status(400).json({ error: result.error });
+    return res.status(400).json({ error: result.error, field: result.field });
   }
 
   return res.status(201).json({ tenant: result.tenant, user: result.user, session: result.session });

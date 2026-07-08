@@ -198,6 +198,12 @@
   border: 1px solid #c3e6cb;
 }
 
+.field-error {
+  color: #dc3545;
+  font-size: 13px;
+  margin-top: 4px;
+}
+
 .text-center {
   text-align: center;
 }

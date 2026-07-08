@@ -22,10 +22,12 @@ export interface AuthResult {
   user?: User;
   session?: Session;
   error?: string;
+  field?: string;
 }
 
 const SCRYPT_KEY_LENGTH = 64;
 const PASSWORD_MIN_LENGTH = 8;
+const PHONE_REGEX = /^\+?[0-9()\-\s]{7,20}$/;
 
 export function hashPassword(password: string): string {
   const salt = randomBytes(16).toString('hex');
@@ -68,21 +70,31 @@ export function isPasswordValid(password: string): boolean {
 export const PASSWORD_POLICY_MESSAGE =
   'Password must be at least 8 characters and include 1 uppercase letter, 1 number, and 1 special character';
 
+export const PHONE_POLICY_MESSAGE = 'Please enter a valid phone number';
+
+export function isPhoneValid(phone: string): boolean {
+  return PHONE_REGEX.test(phone.trim());
+}
+
 export async function registerUser(input: RegisterUserInput): Promise<AuthResult> {
   const existingUser = await prisma.user.findUnique({
     where: { email: input.email.toLowerCase() },
   });
 
   if (existingUser) {
-    return { success: false, error: 'Email already registered' };
+    return { success: false, error: 'Email already registered', field: 'email' };
   }
 
   if (!input.phone?.trim()) {
-    return { success: false, error: 'Phone is required' };
+    return { success: false, error: 'Phone is required', field: 'phone' };
+  }
+
+  if (!isPhoneValid(input.phone)) {
+    return { success: false, error: PHONE_POLICY_MESSAGE, field: 'phone' };
   }
 
   if (!isPasswordValid(input.password)) {
-    return { success: false, error: PASSWORD_POLICY_MESSAGE };
+    return { success: false, error: PASSWORD_POLICY_MESSAGE, field: 'password' };
   }
 
   const user = await prisma.user.create({

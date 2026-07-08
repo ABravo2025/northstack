@@ -1,15 +1,18 @@
 import { useState } from 'react';
+import type { FormError } from '../App';
 
 interface LoginPageProps {
   onLogin: (email: string, password: string) => void;
   onSwitchToRegister: () => void;
   loading: boolean;
+  error?: FormError | null;
 }
 
 export default function LoginPage({
   onLogin,
   onSwitchToRegister,
   loading,
+  error,
 }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,6 +30,7 @@ export default function LoginPage({
       <div className="container">
         <div className="card" style={{ maxWidth: '400px', margin: '40px auto' }}>
           <h2 className="text-center">Login</h2>
+          {error && <div className="alert alert-error">{error.message}</div>}
           <form onSubmit={handleSubmit}>
             <div className="form-group">
               <label>Email</label>

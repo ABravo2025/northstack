@@ -1,6 +1,12 @@
 import { randomUUID } from 'crypto';
 import prisma from '../../lib/prisma.js';
-import { hashPassword, isPasswordValid, PASSWORD_POLICY_MESSAGE } from '../auth/authService.js';
+import {
+  hashPassword,
+  isPasswordValid,
+  isPhoneValid,
+  PASSWORD_POLICY_MESSAGE,
+  PHONE_POLICY_MESSAGE,
+} from '../auth/authService.js';
 import type { Invitation, Tenant, User, UserRole, Session } from '@prisma/client';
 
 const INVITATION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -11,6 +17,7 @@ export interface TenantCreationResult {
   user?: User;
   session?: Session;
   error?: string;
+  field?: string;
 }
 
 export interface CreateTenantForUserInput {
@@ -99,11 +106,15 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
   const normalizedEmail = input.ownerEmail.toLowerCase().trim();
 
   if (!input.ownerPhone?.trim()) {
-    return { success: false, error: 'Phone is required' };
+    return { success: false, error: 'Phone is required', field: 'ownerPhone' };
+  }
+
+  if (!isPhoneValid(input.ownerPhone)) {
+    return { success: false, error: PHONE_POLICY_MESSAGE, field: 'ownerPhone' };
   }
 
   if (!isPasswordValid(input.ownerPassword)) {
-    return { success: false, error: PASSWORD_POLICY_MESSAGE };
+    return { success: false, error: PASSWORD_POLICY_MESSAGE, field: 'ownerPassword' };
   }
 
   const existingTenant = await prisma.tenant.findUnique({
@@ -111,7 +122,7 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
   });
 
   if (existingTenant) {
-    return { success: false, error: 'Tenant name already registered' };
+    return { success: false, error: 'Tenant name already registered', field: 'tenantName' };
   }
 
   const existingUser = await prisma.user.findUnique({
@@ -119,7 +130,7 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
   });
 
   if (existingUser) {
-    return { success: false, error: 'Email already registered' };
+    return { success: false, error: 'Email already registered', field: 'ownerEmail' };
   }
 
   const result = await prisma.$transaction(async (tx) => {

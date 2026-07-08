@@ -1,5 +1,27 @@
 const API_BASE_URL = 'http://localhost:3000';
 
+export class ApiError extends Error {
+  field?: string;
+
+  constructor(message: string, field?: string) {
+    super(message);
+    this.field = field;
+  }
+}
+
+async function throwApiError(res: Response): Promise<never> {
+  let message = res.statusText || 'Request failed';
+  let field: string | undefined;
+  try {
+    const body = await res.json();
+    if (body?.error) message = body.error;
+    if (body?.field) field = body.field;
+  } catch {
+    // response body wasn't JSON, fall back to statusText
+  }
+  throw new ApiError(message, field);
+}
+
 interface AuthResponse {
   user: {
     id: string;
@@ -52,7 +74,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) await throwApiError(res);
     return res.json();
   },
 
@@ -65,7 +87,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) await throwApiError(res);
     return res.json();
   },
 
@@ -74,14 +96,14 @@ export const api = {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) await throwApiError(res);
   },
 
   getCurrentUser: async (token: string) => {
     const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) await throwApiError(res);
     return res.json();
   },
 
@@ -90,7 +112,7 @@ export const api = {
     const res = await fetch(`${API_BASE_URL}/api/hr/employees`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) await throwApiError(res);
     return res.json();
   },
 
@@ -111,7 +133,7 @@ export const api = {
       },
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) await throwApiError(res);
     return res.json();
   },
 
@@ -120,7 +142,7 @@ export const api = {
     const res = await fetch(`${API_BASE_URL}/api/clients`, {
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) await throwApiError(res);
     return res.json();
   },
 
@@ -141,7 +163,7 @@ export const api = {
       },
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) await throwApiError(res);
     return res.json();
   },
 
@@ -158,7 +180,7 @@ export const api = {
       },
       body: JSON.stringify(data),
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) await throwApiError(res);
     return res.json();
   },
 
@@ -167,6 +189,6 @@ export const api = {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) await throwApiError(res);
   },
 };

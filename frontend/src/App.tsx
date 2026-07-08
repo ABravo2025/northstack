@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { api } from './api';
+import { api, ApiError } from './api';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
@@ -8,15 +8,22 @@ import './App.css';
 
 type Page = 'login' | 'register' | 'dashboard';
 
+export interface FormError {
+  message: string;
+  field?: string;
+}
+
 export default function App() {
   const [page, setPage] = useState<Page>('login');
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(false);
+  const [authError, setAuthError] = useState<FormError | null>(null);
 
   useEffect(() => {
     if (token) {
-      setLoading(true);
+      setCheckingSession(true);
       api
         .getCurrentUser(token)
         .then((response) => {
@@ -28,12 +35,13 @@ export default function App() {
           localStorage.removeItem('token');
           setPage('login');
         })
-        .finally(() => setLoading(false));
+        .finally(() => setCheckingSession(false));
     }
   }, [token]);
 
   const handleLogin = async (email: string, password: string) => {
     setLoading(true);
+    setAuthError(null);
     try {
       const response = await api.login({ email, password });
       const newToken = response.session?.token;
@@ -43,7 +51,10 @@ export default function App() {
         setUser(response.user);
       }
     } catch (error) {
-      alert('Login failed: ' + (error as Error).message);
+      setAuthError({
+        message: (error as Error).message,
+        field: error instanceof ApiError ? error.field : undefined,
+      });
     } finally {
       setLoading(false);
     }
@@ -58,6 +69,7 @@ export default function App() {
     ownerPhone: string;
   }) => {
     setLoading(true);
+    setAuthError(null);
     try {
       const response = await api.registerTenant(data);
       const newToken = response.session?.token;
@@ -68,7 +80,10 @@ export default function App() {
         setPage('dashboard');
       }
     } catch (error) {
-      alert('Registration failed: ' + (error as Error).message);
+      setAuthError({
+        message: (error as Error).message,
+        field: error instanceof ApiError ? error.field : undefined,
+      });
     } finally {
       setLoading(false);
     }
@@ -88,7 +103,7 @@ export default function App() {
     setPage('login');
   };
 
-  if (loading && page !== 'dashboard') {
+  if (checkingSession) {
     return <div className="container"><p>Loading...</p></div>;
   }
 
@@ -97,16 +112,24 @@ export default function App() {
       {page === 'login' && (
         <LoginPage
           onLogin={handleLogin}
-          onSwitchToRegister={() => setPage('register')}
+          onSwitchToRegister={() => {
+            setAuthError(null);
+            setPage('register');
+          }}
           loading={loading}
+          error={authError}
         />
       )}
 
       {page === 'register' && (
         <RegisterPage
           onRegister={handleRegister}
-          onSwitchToLogin={() => setPage('login')}
+          onSwitchToLogin={() => {
+            setAuthError(null);
+            setPage('login');
+          }}
           loading={loading}
+          error={authError}
         />
       )}
 

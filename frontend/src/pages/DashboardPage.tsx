@@ -16,6 +16,7 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
   const [loading, setLoading] = useState(false);
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
   const [showClientForm, setShowClientForm] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [employeeForm, setEmployeeForm] = useState({
     firstName: '',
@@ -41,11 +42,12 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
 
   const loadEmployees = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await api.listEmployees(token);
       setEmployees(data);
     } catch (error) {
-      alert('Failed to load employees: ' + (error as Error).message);
+      setError('Failed to load employees: ' + (error as Error).message);
     } finally {
       setLoading(false);
     }
@@ -53,11 +55,12 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
 
   const loadClients = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await api.listClients(token);
       setClients(data);
     } catch (error) {
-      alert('Failed to load clients: ' + (error as Error).message);
+      setError('Failed to load clients: ' + (error as Error).message);
     } finally {
       setLoading(false);
     }
@@ -65,35 +68,38 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
 
   const handleCreateEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     try {
       await api.createEmployee(token, employeeForm);
       setEmployeeForm({ firstName: '', lastName: '', email: '', department: '' });
       setShowEmployeeForm(false);
       loadEmployees();
     } catch (error) {
-      alert('Failed to create employee: ' + (error as Error).message);
+      setError('Failed to create employee: ' + (error as Error).message);
     }
   };
 
   const handleCreateClient = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     try {
       await api.createClient(token, clientForm);
       setClientForm({ firstName: '', lastName: '', email: '', company: '' });
       setShowClientForm(false);
       loadClients();
     } catch (error) {
-      alert('Failed to create client: ' + (error as Error).message);
+      setError('Failed to create client: ' + (error as Error).message);
     }
   };
 
   const handleDeleteClient = async (clientId: string) => {
     if (confirm('Are you sure?')) {
+      setError(null);
       try {
         await api.deleteClient(token, clientId);
         loadClients();
       } catch (error) {
-        alert('Failed to delete client: ' + (error as Error).message);
+        setError('Failed to delete client: ' + (error as Error).message);
       }
     }
   };
@@ -113,6 +119,7 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
       </div>
 
       <div className="container">
+        {error && <div className="alert alert-error">{error}</div>}
         <div className="nav" style={{ marginBottom: '20px' }}>
           <button
             className={`${tab === 'employees' ? 'active' : ''}`}

@@ -39,6 +39,7 @@ export interface CreateInvitationInput {
   invitedByUserId: string;
   email: string;
   role?: UserRole;
+  employeeId?: string;
 }
 
 export interface InvitationResult {
@@ -196,6 +197,7 @@ export async function createInvitation(input: CreateInvitationInput): Promise<In
       invitedByUserId: input.invitedByUserId,
       email: normalizedEmail,
       role: input.role ?? 'member',
+      employeeId: input.employeeId,
       token: randomUUID(),
       expiresAt: new Date(Date.now() + INVITATION_EXPIRY_MS),
     },
@@ -254,6 +256,13 @@ export async function acceptInvitation(input: AcceptInvitationInput): Promise<Te
       where: { id: invitation.id },
       data: { status: 'accepted' },
     });
+
+    if (invitation.employeeId) {
+      await tx.employee.update({
+        where: { id: invitation.employeeId },
+        data: { userId: updatedUser.id },
+      });
+    }
 
     const tenant = await tx.tenant.findUniqueOrThrow({
       where: { id: invitation.tenantId },

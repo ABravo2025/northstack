@@ -48,6 +48,7 @@ interface Employee {
   email: string;
   department: string;
   status: string;
+  userId?: string | null;
   customFieldVals?: {
     id: string;
     customFieldDefinitionId: string;
@@ -70,7 +71,19 @@ interface CustomFieldDefinition {
   entityType: string;
   fieldType: string;
   options: string | null;
+  required: boolean;
   isActive: boolean;
+}
+
+interface Invitation {
+  id: string;
+  tenantId: string;
+  email: string;
+  role: string;
+  token: string;
+  status: string;
+  employeeId?: string | null;
+  expiresAt: string;
 }
 
 interface CustomFieldValue {
@@ -108,6 +121,31 @@ export const api = {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  register: async (data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+    phone: string;
+  }): Promise<AuthResponse> => {
+    const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  acceptInvitation: async (token: string, invitationToken: string): Promise<AuthResponse> => {
+    const res = await fetch(`${API_BASE_URL}/api/invitations/${invitationToken}/accept`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);
     return res.json();
@@ -184,6 +222,15 @@ export const api = {
     if (!res.ok) await throwApiError(res);
   },
 
+  inviteEmployee: async (token: string, employeeId: string): Promise<{ invitation: Invitation }> => {
+    const res = await fetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/invite`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
   // Custom fields
   listCustomFieldDefinitions: async (
     token: string,
@@ -198,7 +245,13 @@ export const api = {
 
   createCustomFieldDefinition: async (
     token: string,
-    data: { name: string; entityType: 'employee' | 'client'; fieldType: string; options?: string },
+    data: {
+      name: string;
+      entityType: 'employee' | 'client';
+      fieldType: string;
+      options?: string;
+      required?: boolean;
+    },
   ): Promise<CustomFieldDefinition> => {
     const res = await fetch(`${API_BASE_URL}/api/hr/custom-fields`, {
       method: 'POST',

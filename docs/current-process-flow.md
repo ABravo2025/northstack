@@ -1,6 +1,6 @@
 # Current Process Flow
 
-- Última actualización: 2026-07-08 (sin cambios de flujo; se hardeneó seguridad por debajo: hash de contraseñas con scrypt, política de contraseñas, y verificación de tenant ownership en custom fields)
+- Última actualización: 2026-07-10 (se agregó el flujo de invitar empleados a tener acceso propio, y la pantalla de aceptar invitación que faltaba)
 
 This document describes the current onboarding and application flow for Northstack.
 
@@ -58,13 +58,38 @@ flowchart TD
 ```
 
 - Sending the invitation is manual for now (no email provider integrated) — flagged as a future improvement, evaluated and deliberately postponed.
-- Not yet exposed in the frontend (backend-only so far).
+- Now exposed in the frontend, both for tenant-level invitations and employee invitations (see below).
+
+## Employee self-access flow (new, 2026-07-10)
+
+`Employee` can optionally link to a `User` via `Employee.userId` (nullable, unique) — a link, not a merge of the two entities. An owner/admin can generate an invitation for a specific employee:
+
+```mermaid
+flowchart TD
+  A[Owner/Admin, Employees tab] --> B[Click Invite on an employee row]
+  B --> C[POST /api/hr/employees/:employeeId/invite]
+  C --> D[Invitation created with employee's email, linked to employeeId]
+  D --> E[Link copied to clipboard: /?invite=token]
+  E --> F[Admin shares link manually]
+  F --> G[Invited employee opens link -> AcceptInvitePage]
+  G --> H{Has account?}
+  H -->|No| I[Register via POST /api/auth/register]
+  H -->|Yes| J[Login via POST /api/auth/login]
+  I --> K[POST /api/invitations/:token/accept]
+  J --> K
+  K --> L[User attached to tenant + Employee.userId linked]
+  L --> M[Dashboard]
+```
+
+- The app has no router library — `?invite=token` is parsed manually in `App.tsx` to avoid adding a dependency for a single route.
+- `AcceptInvitePage` never reuses a stored session token, since the person opening the link may not be whoever last used that browser.
+- The Employees table shows "Invite" for unlinked employees and "Linked" once `Employee.userId` is set.
 
 ## Frontend implementation status
 
-- `frontend/` (Vite + React) implements this flow: `LoginPage`, `RegisterPage` (company + owner data in one form), `DashboardPage`.
+- `frontend/` (Vite + React) implements this flow: `LoginPage`, `RegisterPage` (company + owner data in one form), `DashboardPage`, `AcceptInvitePage`.
 - `CreateTenantPage` was removed — it was dead code built against the deleted `createTenantWithOwner` shape and was never wired into `App.tsx`.
-- Verified end-to-end via `curl` against the running backend (`POST /api/tenants/register`); not yet clicked through in an actual browser session.
+- Verified end-to-end via `curl` against the running backend (`POST /api/tenants/register`, and the full invite → register → accept → `Employee.userId` linked flow); not yet clicked through in an actual browser session.
 - `frontend/tsconfig.json` is missing `jsx` config, so `npm run build` fails for the frontend (pre-existing, doesn't affect the Vite dev server).
 
 ## Current UI behavior

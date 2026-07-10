@@ -18,6 +18,7 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
   const [showClientForm, setShowClientForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [inviteMessage, setInviteMessage] = useState<string | null>(null);
   const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [employeeCustomFields, setEmployeeCustomFields] = useState<any[]>([]);
@@ -27,7 +28,12 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
 
   const [settingsModule, setSettingsModule] = useState<Module>('employee');
   const [settingsCustomFields, setSettingsCustomFields] = useState<any[]>([]);
-  const [newCustomField, setNewCustomField] = useState({ name: '', fieldType: 'text', options: '' });
+  const [newCustomField, setNewCustomField] = useState({
+    name: '',
+    fieldType: 'text',
+    options: '',
+    required: false,
+  });
 
   const canManageCustomFields = user.role === 'owner' || user.role === 'admin';
   const activeEmployeeCustomFields = employeeCustomFields.filter((field) => field.isActive);
@@ -168,8 +174,9 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
         entityType: settingsModule,
         fieldType: newCustomField.fieldType,
         options,
+        required: newCustomField.required,
       });
-      setNewCustomField({ name: '', fieldType: 'text', options: '' });
+      setNewCustomField({ name: '', fieldType: 'text', options: '', required: false });
       loadSettingsCustomFields();
     } catch (error) {
       setError('Failed to create custom field: ' + (error as Error).message);
@@ -239,6 +246,20 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
     }
   };
 
+  const handleInviteEmployee = async (employeeId: string) => {
+    setError(null);
+    setInviteMessage(null);
+    try {
+      const { invitation } = await api.inviteEmployee(token, employeeId);
+      const link = `${window.location.origin}/?invite=${invitation.token}`;
+      await navigator.clipboard.writeText(link);
+      setInviteMessage(`Invite link copied to clipboard: ${link}`);
+      loadEmployees();
+    } catch (error) {
+      setError('Failed to invite employee: ' + (error as Error).message);
+    }
+  };
+
   const handleDeleteEmployee = async (employeeId: string) => {
     if (confirm('Are you sure?')) {
       setError(null);
@@ -286,6 +307,7 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
         <select
           value={values[field.id] || ''}
           onChange={(e) => setValues({ ...values, [field.id]: e.target.value })}
+          required={field.required}
         >
           <option value="">-- select --</option>
           {(JSON.parse(field.options || '[]') as string[]).map((opt) => (
@@ -311,6 +333,7 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
         type={inputType}
         value={values[field.id] || ''}
         onChange={(e) => setValues({ ...values, [field.id]: e.target.value })}
+        required={field.required}
       />
     );
   };
@@ -331,6 +354,7 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
 
       <div className="container">
         {error && <div className="alert alert-error">{error}</div>}
+        {inviteMessage && <div className="alert alert-success">{inviteMessage}</div>}
         <div className="nav" style={{ marginBottom: '20px' }}>
           <button
             className={`${tab === 'employees' ? 'active' : ''}`}
@@ -416,7 +440,7 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
 
                   {activeEmployeeCustomFields.map((field) => (
                     <div className="form-group" key={field.id}>
-                      <label>{field.name}</label>
+                      <label>{field.name}{field.required ? ' *' : ''}</label>
                       {renderCustomFieldInput(field, customFieldValues, setCustomFieldValues)}
                     </div>
                   ))}
@@ -489,7 +513,7 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
 
                   {activeEmployeeCustomFields.map((field) => (
                     <div className="form-group" key={field.id}>
-                      <label>{field.name}</label>
+                      <label>{field.name}{field.required ? ' *' : ''}</label>
                       {renderCustomFieldInput(field, editCustomFieldValues, setEditCustomFieldValues)}
                     </div>
                   ))}
@@ -570,10 +594,22 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
                           <button
                             className="btn btn-danger"
                             onClick={() => handleDeleteEmployee(emp.id)}
-                            style={{ padding: '4px 8px', fontSize: '12px' }}
+                            style={{ padding: '4px 8px', fontSize: '12px', marginRight: '6px' }}
                           >
                             Delete
                           </button>
+                          {canManageCustomFields &&
+                            (emp.userId ? (
+                              <span style={{ fontSize: '12px', color: '#28a745' }}>Linked</span>
+                            ) : (
+                              <button
+                                className="btn btn-success"
+                                onClick={() => handleInviteEmployee(emp.id)}
+                                style={{ padding: '4px 8px', fontSize: '12px' }}
+                              >
+                                Invite
+                              </button>
+                            ))}
                         </td>
                       </tr>
                     ))}
@@ -718,6 +754,7 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
                     <tr>
                       <th>Name</th>
                       <th>Type</th>
+                      <th>Required</th>
                       <th>Status</th>
                       <th>Actions</th>
                     </tr>
@@ -727,6 +764,7 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
                       <tr key={field.id}>
                         <td>{field.name}</td>
                         <td>{field.fieldType}</td>
+                        <td>{field.required ? 'Yes' : 'No'}</td>
                         <td>{field.isActive ? 'Active' : 'Inactive'}</td>
                         <td>
                           <button
@@ -783,6 +821,19 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
                     />
                   </div>
                 )}
+                <div className="form-group">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={newCustomField.required}
+                      onChange={(e) =>
+                        setNewCustomField({ ...newCustomField, required: e.target.checked })
+                      }
+                      style={{ width: 'auto', marginRight: '6px' }}
+                    />
+                    Required
+                  </label>
+                </div>
                 <button type="submit" className="btn btn-primary">
                   Add Field
                 </button>

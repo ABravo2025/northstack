@@ -84,6 +84,7 @@ model User {
   tenant           Tenant?      @relation(fields: [tenantId], references: [id])
   sessions         Session[]
   sentInvitations  Invitation[]
+  employee         Employee?
 }
 
 model Employee {
@@ -96,6 +97,9 @@ model Employee {
   tenantId        String
   tenant          Tenant               @relation(fields: [tenantId], references: [id])
   createdAt       DateTime             @default(now())
+  userId          String?              @unique
+  user            User?                @relation(fields: [userId], references: [id])
+  invitations     Invitation[]
 
   @@unique([tenantId, email])
 }
@@ -122,6 +126,7 @@ model CustomFieldDefinition {
   entityType  EntityType
   fieldType   FieldType
   options     String?            // JSON-encoded options for select fields
+  required    Boolean            @default(false)
   isActive    Boolean            @default(true)
   createdAt   DateTime           @default(now())
   values      CustomFieldValue[]
@@ -159,6 +164,8 @@ model Invitation {
   status          InvitationStatus @default(pending)
   invitedByUserId String
   invitedBy       User             @relation(fields: [invitedByUserId], references: [id])
+  employeeId      String?
+  employee        Employee?        @relation(fields: [employeeId], references: [id])
   createdAt       DateTime         @default(now())
   expiresAt       DateTime
 }

@@ -7,6 +7,7 @@ export interface CreateCustomFieldInput {
   entityType: EntityType;
   fieldType: FieldType;
   options?: string | null;
+  required?: boolean;
 }
 
 export interface CreateCustomFieldValueInput {
@@ -56,6 +57,7 @@ export async function createCustomFieldDefinition(
       entityType: input.entityType,
       fieldType: input.fieldType,
       options: input.options,
+      required: input.required ?? false,
     },
   });
 }

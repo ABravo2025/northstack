@@ -3,18 +3,21 @@ import { api, ApiError } from './api';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
+import AcceptInvitePage from './pages/AcceptInvitePage';
 import './App.css';
 
 
-type Page = 'login' | 'register' | 'dashboard';
+type Page = 'login' | 'register' | 'dashboard' | 'accept-invite';
 
 export interface FormError {
   message: string;
   field?: string;
 }
 
+const inviteTokenFromUrl = new URLSearchParams(window.location.search).get('invite');
+
 export default function App() {
-  const [page, setPage] = useState<Page>('login');
+  const [page, setPage] = useState<Page>(inviteTokenFromUrl ? 'accept-invite' : 'login');
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -22,6 +25,12 @@ export default function App() {
   const [authError, setAuthError] = useState<FormError | null>(null);
 
   useEffect(() => {
+    if (inviteTokenFromUrl) {
+      // Handling an invite link: never auto-restore a stored session, the invited
+      // person may not be whoever last used this browser.
+      return;
+    }
+
     if (token) {
       setCheckingSession(true);
       api
@@ -38,6 +47,14 @@ export default function App() {
         .finally(() => setCheckingSession(false));
     }
   }, [token]);
+
+  const handleInvitationAccepted = (newToken: string, newUser: any) => {
+    setToken(newToken);
+    localStorage.setItem('token', newToken);
+    setUser(newUser);
+    window.history.replaceState({}, '', window.location.pathname);
+    setPage('dashboard');
+  };
 
   const handleLogin = async (email: string, password: string) => {
     setLoading(true);
@@ -133,6 +150,10 @@ export default function App() {
         />
       )}
 
+
+      {page === 'accept-invite' && inviteTokenFromUrl && (
+        <AcceptInvitePage invitationToken={inviteTokenFromUrl} onAccepted={handleInvitationAccepted} />
+      )}
 
       {page === 'dashboard' && token && user && (
         <DashboardPage user={user} token={token} onLogout={handleLogout} />

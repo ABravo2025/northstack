@@ -304,6 +304,40 @@ app.delete('/api/hr/employees/:employeeId', async (req, res) => {
   return res.status(204).end();
 });
 
+app.post('/api/hr/employees/:employeeId/invite', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canInviteUsers(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const employee = await findEmployeeById(req.params.employeeId);
+  if (!employee || employee.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Employee not found' });
+  }
+
+  if (employee.userId) {
+    return res.status(400).json({ error: 'Employee is already linked to a user' });
+  }
+
+  const result = await createInvitation({
+    tenantId: user.tenantId!,
+    invitedByUserId: user.id,
+    email: employee.email,
+    role: 'member',
+    employeeId: employee.id,
+  });
+
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  return res.status(201).json({ invitation: result.invitation });
+});
+
 app.post('/api/hr/custom-fields', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) {
@@ -320,6 +354,7 @@ app.post('/api/hr/custom-fields', async (req, res) => {
     entityType: req.body.entityType,
     fieldType: req.body.fieldType,
     options: req.body.options,
+    required: Boolean(req.body.required),
   });
 
   return res.status(201).json(customField);

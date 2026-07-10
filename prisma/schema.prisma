@@ -42,6 +42,7 @@ enum FieldType {
   number
   date
   select
+  email
 }
 
 enum EntityType {

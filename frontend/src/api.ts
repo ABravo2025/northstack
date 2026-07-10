@@ -70,13 +70,14 @@ interface CustomFieldDefinition {
   entityType: string;
   fieldType: string;
   options: string | null;
+  isActive: boolean;
 }
 
 interface CustomFieldValue {
   id: string;
   customFieldDefinitionId: string;
-  employeeId?: string;
-  clientId?: string;
+  entityType?: string;
+  entityId?: string;
   value: string;
 }
 
@@ -211,6 +212,23 @@ export const api = {
     return res.json();
   },
 
+  setCustomFieldDefinitionActive: async (
+    token: string,
+    definitionId: string,
+    isActive: boolean,
+  ): Promise<CustomFieldDefinition> => {
+    const res = await fetch(`${API_BASE_URL}/api/hr/custom-fields/${definitionId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ isActive }),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
   createEmployeeCustomFieldValue: async (
     token: string,
     employeeId: string,
@@ -244,6 +262,18 @@ export const api = {
     });
     if (!res.ok) await throwApiError(res);
     return res.json();
+  },
+
+  deleteEmployeeCustomFieldValue: async (
+    token: string,
+    employeeId: string,
+    valueId: string,
+  ): Promise<void> => {
+    const res = await fetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/custom-fields/${valueId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
   },
 
   // Clients

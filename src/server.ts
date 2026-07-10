@@ -14,10 +14,13 @@ import {
 import {
   createCustomFieldDefinition,
   createCustomFieldValue,
+  deleteCustomFieldValue,
   findCustomFieldDefinitionById,
   findCustomFieldValueById,
+  isValueValidForFieldType,
   listCustomFieldDefinitions,
   listCustomFieldValuesForEntity,
+  setCustomFieldDefinitionActive,
   updateCustomFieldValue,
 } from './modules/hr/customFieldService.js';
 import {
@@ -322,6 +325,25 @@ app.post('/api/hr/custom-fields', async (req, res) => {
   return res.status(201).json(customField);
 });
 
+app.patch('/api/hr/custom-fields/:definitionId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageCustomFields(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const definition = await findCustomFieldDefinitionById(req.params.definitionId);
+  if (!definition || definition.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Custom field definition not found' });
+  }
+
+  const updated = await setCustomFieldDefinitionActive(req.params.definitionId, Boolean(req.body.isActive));
+  return res.json(updated);
+});
+
 app.get('/api/hr/custom-fields', async (req, res) => {
   const token = req.headers.authorization?.replace('Bearer ', '');
 
@@ -356,8 +378,12 @@ app.post('/api/hr/employees/:employeeId/custom-fields', async (req, res) => {
   }
 
   const definition = await findCustomFieldDefinitionById(req.body.customFieldDefinitionId);
-  if (!definition || definition.tenantId !== user.tenantId) {
+  if (!definition || definition.tenantId !== user.tenantId || definition.entityType !== 'employee') {
     return res.status(404).json({ error: 'Custom field definition not found' });
+  }
+
+  if (!isValueValidForFieldType(definition.fieldType, req.body.value, definition.options)) {
+    return res.status(400).json({ error: `Invalid value for field type '${definition.fieldType}'` });
   }
 
   const customFieldValue = await createCustomFieldValue({
@@ -396,8 +422,42 @@ app.patch('/api/hr/employees/:employeeId/custom-fields/:valueId', async (req, re
     return res.status(404).json({ error: 'Custom field value not found' });
   }
 
+  const definition = await findCustomFieldDefinitionById(existingValue.customFieldDefinitionId);
+  if (!definition || !isValueValidForFieldType(definition.fieldType, req.body.value, definition.options)) {
+    return res.status(400).json({ error: `Invalid value for field type '${definition?.fieldType}'` });
+  }
+
   const updated = await updateCustomFieldValue(req.params.valueId, req.body.value);
   return res.json(updated);
+});
+
+app.delete('/api/hr/employees/:employeeId/custom-fields/:valueId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageCustomFields(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const employee = await findEmployeeById(req.params.employeeId);
+  if (!employee || employee.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Employee not found' });
+  }
+
+  const existingValue = await findCustomFieldValueById(req.params.valueId);
+  if (
+    !existingValue ||
+    existingValue.tenantId !== user.tenantId ||
+    existingValue.entityType !== 'employee' ||
+    existingValue.entityId !== req.params.employeeId
+  ) {
+    return res.status(404).json({ error: 'Custom field value not found' });
+  }
+
+  await deleteCustomFieldValue(req.params.valueId);
+  return res.status(204).end();
 });
 
 app.get('/api/hr/employees/:employeeId/custom-fields', async (req, res) => {
@@ -516,8 +576,12 @@ app.post('/api/clients/:clientId/custom-fields', async (req, res) => {
   }
 
   const definition = await findCustomFieldDefinitionById(req.body.customFieldDefinitionId);
-  if (!definition || definition.tenantId !== user.tenantId) {
+  if (!definition || definition.tenantId !== user.tenantId || definition.entityType !== 'client') {
     return res.status(404).json({ error: 'Custom field definition not found' });
+  }
+
+  if (!isValueValidForFieldType(definition.fieldType, req.body.value, definition.options)) {
+    return res.status(400).json({ error: `Invalid value for field type '${definition.fieldType}'` });
   }
 
   const customFieldValue = await createCustomFieldValue({

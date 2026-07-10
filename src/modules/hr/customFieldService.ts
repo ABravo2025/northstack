@@ -17,6 +17,35 @@ export interface CreateCustomFieldValueInput {
   value: string;
 }
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function isValueValidForFieldType(
+  fieldType: FieldType,
+  value: string,
+  options?: string | null,
+): boolean {
+  switch (fieldType) {
+    case 'number':
+      return value.trim() !== '' && !Number.isNaN(Number(value));
+    case 'date':
+      return !Number.isNaN(Date.parse(value));
+    case 'email':
+      return EMAIL_REGEX.test(value);
+    case 'select': {
+      let allowedOptions: string[] = [];
+      try {
+        allowedOptions = JSON.parse(options || '[]');
+      } catch {
+        return false;
+      }
+      return allowedOptions.includes(value);
+    }
+    case 'text':
+    default:
+      return true;
+  }
+}
+
 export async function createCustomFieldDefinition(
   input: CreateCustomFieldInput,
 ): Promise<CustomFieldDefinition> {
@@ -28,6 +57,16 @@ export async function createCustomFieldDefinition(
       fieldType: input.fieldType,
       options: input.options,
     },
+  });
+}
+
+export async function setCustomFieldDefinitionActive(
+  id: string,
+  isActive: boolean,
+): Promise<CustomFieldDefinition> {
+  return prisma.customFieldDefinition.update({
+    where: { id },
+    data: { isActive },
   });
 }
 
@@ -75,6 +114,12 @@ export async function updateCustomFieldValue(id: string, value: string): Promise
   return prisma.customFieldValue.update({
     where: { id },
     data: { value },
+  });
+}
+
+export async function deleteCustomFieldValue(id: string): Promise<void> {
+  await prisma.customFieldValue.delete({
+    where: { id },
   });
 }
 

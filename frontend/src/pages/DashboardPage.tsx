@@ -7,7 +7,8 @@ interface DashboardPageProps {
   onLogout: () => void;
 }
 
-type Tab = 'employees' | 'clients';
+type Tab = 'employees' | 'clients' | 'settings';
+type Module = 'employee' | 'client';
 
 export default function DashboardPage({ user, token, onLogout }: DashboardPageProps) {
   const [tab, setTab] = useState<Tab>('employees');
@@ -20,13 +21,16 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
   const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [employeeCustomFields, setEmployeeCustomFields] = useState<any[]>([]);
-  const [showCustomFieldManager, setShowCustomFieldManager] = useState(false);
-  const [newCustomField, setNewCustomField] = useState({ name: '', fieldType: 'text', options: '' });
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
   const [editCustomFieldValues, setEditCustomFieldValues] = useState<Record<string, string>>({});
   const [editCustomFieldValueIds, setEditCustomFieldValueIds] = useState<Record<string, string>>({});
 
+  const [settingsModule, setSettingsModule] = useState<Module>('employee');
+  const [settingsCustomFields, setSettingsCustomFields] = useState<any[]>([]);
+  const [newCustomField, setNewCustomField] = useState({ name: '', fieldType: 'text', options: '' });
+
   const canManageCustomFields = user.role === 'owner' || user.role === 'admin';
+  const activeEmployeeCustomFields = employeeCustomFields.filter((field) => field.isActive);
 
   const filteredEmployees = employees.filter((emp) => {
     const query = employeeSearch.trim().toLowerCase();
@@ -64,15 +68,33 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
     if (tab === 'employees') {
       loadEmployees();
       loadEmployeeCustomFields();
-    } else {
+    } else if (tab === 'clients') {
       loadClients();
+    } else if (tab === 'settings') {
+      loadSettingsCustomFields();
     }
   }, [tab]);
+
+  useEffect(() => {
+    if (tab === 'settings') {
+      loadSettingsCustomFields();
+    }
+  }, [settingsModule]);
 
   const loadEmployeeCustomFields = async () => {
     try {
       const defs = await api.listCustomFieldDefinitions(token, 'employee');
       setEmployeeCustomFields(defs);
+    } catch (error) {
+      setError('Failed to load custom fields: ' + (error as Error).message);
+    }
+  };
+
+  const loadSettingsCustomFields = async () => {
+    setError(null);
+    try {
+      const defs = await api.listCustomFieldDefinitions(token, settingsModule);
+      setSettingsCustomFields(defs);
     } catch (error) {
       setError('Failed to load custom fields: ' + (error as Error).message);
     }
@@ -127,7 +149,7 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
     }
   };
 
-  const handleCreateCustomField = async (e: React.FormEvent) => {
+  const handleCreateSettingsCustomField = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     try {
@@ -143,14 +165,24 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
 
       await api.createCustomFieldDefinition(token, {
         name: newCustomField.name,
-        entityType: 'employee',
+        entityType: settingsModule,
         fieldType: newCustomField.fieldType,
         options,
       });
       setNewCustomField({ name: '', fieldType: 'text', options: '' });
-      loadEmployeeCustomFields();
+      loadSettingsCustomFields();
     } catch (error) {
       setError('Failed to create custom field: ' + (error as Error).message);
+    }
+  };
+
+  const handleToggleCustomFieldActive = async (field: any) => {
+    setError(null);
+    try {
+      await api.setCustomFieldDefinitionActive(token, field.id, !field.isActive);
+      loadSettingsCustomFields();
+    } catch (error) {
+      setError('Failed to update custom field: ' + (error as Error).message);
     }
   };
 
@@ -182,15 +214,18 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
     try {
       await api.updateEmployee(token, editingEmployeeId, editEmployeeForm);
 
-      const valueEntries = Object.entries(editCustomFieldValues).filter(([, value]) => value.trim() !== '');
-      for (const [customFieldDefinitionId, value] of valueEntries) {
-        const existingValueId = editCustomFieldValueIds[customFieldDefinitionId];
-        if (existingValueId) {
-          await api.updateEmployeeCustomFieldValue(token, editingEmployeeId, existingValueId, value);
-        } else {
+      for (const field of activeEmployeeCustomFields) {
+        const newValue = (editCustomFieldValues[field.id] || '').trim();
+        const existingValueId = editCustomFieldValueIds[field.id];
+
+        if (newValue === '' && existingValueId) {
+          await api.deleteEmployeeCustomFieldValue(token, editingEmployeeId, existingValueId);
+        } else if (newValue !== '' && existingValueId) {
+          await api.updateEmployeeCustomFieldValue(token, editingEmployeeId, existingValueId, newValue);
+        } else if (newValue !== '' && !existingValueId) {
           await api.createEmployeeCustomFieldValue(token, editingEmployeeId, {
-            customFieldDefinitionId,
-            value,
+            customFieldDefinitionId: field.id,
+            value: newValue,
           });
         }
       }
@@ -241,6 +276,45 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
     }
   };
 
+  const renderCustomFieldInput = (
+    field: any,
+    values: Record<string, string>,
+    setValues: (values: Record<string, string>) => void,
+  ) => {
+    if (field.fieldType === 'select') {
+      return (
+        <select
+          value={values[field.id] || ''}
+          onChange={(e) => setValues({ ...values, [field.id]: e.target.value })}
+        >
+          <option value="">-- select --</option>
+          {(JSON.parse(field.options || '[]') as string[]).map((opt) => (
+            <option key={opt} value={opt}>
+              {opt}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
+    const inputType =
+      field.fieldType === 'number'
+        ? 'number'
+        : field.fieldType === 'date'
+          ? 'date'
+          : field.fieldType === 'email'
+            ? 'email'
+            : 'text';
+
+    return (
+      <input
+        type={inputType}
+        value={values[field.id] || ''}
+        onChange={(e) => setValues({ ...values, [field.id]: e.target.value })}
+      />
+    );
+  };
+
   return (
     <div className="page">
       <div className="header">
@@ -270,6 +344,14 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
           >
             Clients ({clients.length})
           </button>
+          {canManageCustomFields && (
+            <button
+              className={`${tab === 'settings' ? 'active' : ''}`}
+              onClick={() => setTab('settings')}
+            >
+              Settings
+            </button>
+          )}
         </div>
 
         {tab === 'employees' && (
@@ -277,84 +359,13 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
             <div className="card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h3>Employees</h3>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  {canManageCustomFields && (
-                    <button
-                      className="btn btn-secondary"
-                      onClick={() => setShowCustomFieldManager(!showCustomFieldManager)}
-                    >
-                      {showCustomFieldManager ? 'Close' : 'Manage Custom Fields'}
-                    </button>
-                  )}
-                  <button
-                    className="btn btn-success"
-                    onClick={() => setShowEmployeeForm(!showEmployeeForm)}
-                  >
-                    {showEmployeeForm ? 'Cancel' : 'Add Employee'}
-                  </button>
-                </div>
+                <button
+                  className="btn btn-success"
+                  onClick={() => setShowEmployeeForm(!showEmployeeForm)}
+                >
+                  {showEmployeeForm ? 'Cancel' : 'Add Employee'}
+                </button>
               </div>
-
-              {showCustomFieldManager && (
-                <div className="card" style={{ background: '#f9f9f9', marginBottom: '20px' }}>
-                  <h3>Custom Fields for Employees</h3>
-                  {employeeCustomFields.length === 0 ? (
-                    <p>No custom fields defined yet.</p>
-                  ) : (
-                    <ul>
-                      {employeeCustomFields.map((field) => (
-                        <li key={field.id}>
-                          {field.name} ({field.fieldType})
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                  <form onSubmit={handleCreateCustomField}>
-                    <div className="form-group">
-                      <label>Field Name</label>
-                      <input
-                        type="text"
-                        value={newCustomField.name}
-                        onChange={(e) =>
-                          setNewCustomField({ ...newCustomField, name: e.target.value })
-                        }
-                        placeholder="e.g. Emergency Contact"
-                        required
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Field Type</label>
-                      <select
-                        value={newCustomField.fieldType}
-                        onChange={(e) =>
-                          setNewCustomField({ ...newCustomField, fieldType: e.target.value })
-                        }
-                      >
-                        <option value="text">Text</option>
-                        <option value="number">Number</option>
-                        <option value="date">Date</option>
-                        <option value="select">Select (dropdown)</option>
-                      </select>
-                    </div>
-                    {newCustomField.fieldType === 'select' && (
-                      <div className="form-group">
-                        <label>Options (comma-separated)</label>
-                        <input
-                          type="text"
-                          value={newCustomField.options}
-                          onChange={(e) =>
-                            setNewCustomField({ ...newCustomField, options: e.target.value })
-                          }
-                          placeholder="e.g. Small, Medium, Large"
-                        />
-                      </div>
-                    )}
-                    <button type="submit" className="btn btn-primary">
-                      Add Field
-                    </button>
-                  </form>
-                </div>
-              )}
 
               {showEmployeeForm && (
                 <form onSubmit={handleCreateEmployee} style={{ marginBottom: '20px' }}>
@@ -403,38 +414,10 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
                     />
                   </div>
 
-                  {employeeCustomFields.map((field) => (
+                  {activeEmployeeCustomFields.map((field) => (
                     <div className="form-group" key={field.id}>
                       <label>{field.name}</label>
-                      {field.fieldType === 'select' ? (
-                        <select
-                          value={customFieldValues[field.id] || ''}
-                          onChange={(e) =>
-                            setCustomFieldValues({ ...customFieldValues, [field.id]: e.target.value })
-                          }
-                        >
-                          <option value="">-- select --</option>
-                          {(JSON.parse(field.options || '[]') as string[]).map((opt) => (
-                            <option key={opt} value={opt}>
-                              {opt}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          type={
-                            field.fieldType === 'number'
-                              ? 'number'
-                              : field.fieldType === 'date'
-                                ? 'date'
-                                : 'text'
-                          }
-                          value={customFieldValues[field.id] || ''}
-                          onChange={(e) =>
-                            setCustomFieldValues({ ...customFieldValues, [field.id]: e.target.value })
-                          }
-                        />
-                      )}
+                      {renderCustomFieldInput(field, customFieldValues, setCustomFieldValues)}
                     </div>
                   ))}
 
@@ -504,44 +487,10 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
                     </select>
                   </div>
 
-                  {employeeCustomFields.map((field) => (
+                  {activeEmployeeCustomFields.map((field) => (
                     <div className="form-group" key={field.id}>
                       <label>{field.name}</label>
-                      {field.fieldType === 'select' ? (
-                        <select
-                          value={editCustomFieldValues[field.id] || ''}
-                          onChange={(e) =>
-                            setEditCustomFieldValues({
-                              ...editCustomFieldValues,
-                              [field.id]: e.target.value,
-                            })
-                          }
-                        >
-                          <option value="">-- select --</option>
-                          {(JSON.parse(field.options || '[]') as string[]).map((opt) => (
-                            <option key={opt} value={opt}>
-                              {opt}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <input
-                          type={
-                            field.fieldType === 'number'
-                              ? 'number'
-                              : field.fieldType === 'date'
-                                ? 'date'
-                                : 'text'
-                          }
-                          value={editCustomFieldValues[field.id] || ''}
-                          onChange={(e) =>
-                            setEditCustomFieldValues({
-                              ...editCustomFieldValues,
-                              [field.id]: e.target.value,
-                            })
-                          }
-                        />
-                      )}
+                      {renderCustomFieldInput(field, editCustomFieldValues, setEditCustomFieldValues)}
                     </div>
                   ))}
 
@@ -589,7 +538,7 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
                       <th>Email</th>
                       <th>Department</th>
                       <th>Status</th>
-                      {employeeCustomFields.map((field) => (
+                      {activeEmployeeCustomFields.map((field) => (
                         <th key={field.id}>{field.name}</th>
                       ))}
                       <th>Actions</th>
@@ -604,7 +553,7 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
                         <td>{emp.email}</td>
                         <td>{emp.department}</td>
                         <td>{emp.status}</td>
-                        {employeeCustomFields.map((field) => {
+                        {activeEmployeeCustomFields.map((field) => {
                           const fieldValue = emp.customFieldVals?.find(
                             (v: any) => v.customFieldDefinitionId === field.id,
                           );
@@ -738,6 +687,106 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
                   </tbody>
                 </table>
               )}
+            </div>
+          </div>
+        )}
+
+        {tab === 'settings' && canManageCustomFields && (
+          <div>
+            <div className="card">
+              <h3>Custom Fields</h3>
+              <div className="nav" style={{ marginBottom: '20px' }}>
+                <button
+                  className={`${settingsModule === 'employee' ? 'active' : ''}`}
+                  onClick={() => setSettingsModule('employee')}
+                >
+                  Employees
+                </button>
+                <button
+                  className={`${settingsModule === 'client' ? 'active' : ''}`}
+                  onClick={() => setSettingsModule('client')}
+                >
+                  Clients
+                </button>
+              </div>
+
+              {settingsCustomFields.length === 0 ? (
+                <p>No custom fields defined for this module yet.</p>
+              ) : (
+                <table className="table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Type</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {settingsCustomFields.map((field) => (
+                      <tr key={field.id}>
+                        <td>{field.name}</td>
+                        <td>{field.fieldType}</td>
+                        <td>{field.isActive ? 'Active' : 'Inactive'}</td>
+                        <td>
+                          <button
+                            className="btn btn-secondary"
+                            onClick={() => handleToggleCustomFieldActive(field)}
+                            style={{ padding: '4px 8px', fontSize: '12px' }}
+                          >
+                            {field.isActive ? 'Deactivate' : 'Activate'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+
+              <h3 style={{ marginTop: '20px' }}>Add Custom Field</h3>
+              <form onSubmit={handleCreateSettingsCustomField}>
+                <div className="form-group">
+                  <label>Field Name</label>
+                  <input
+                    type="text"
+                    value={newCustomField.name}
+                    onChange={(e) => setNewCustomField({ ...newCustomField, name: e.target.value })}
+                    placeholder="e.g. Emergency Contact"
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Field Type</label>
+                  <select
+                    value={newCustomField.fieldType}
+                    onChange={(e) =>
+                      setNewCustomField({ ...newCustomField, fieldType: e.target.value })
+                    }
+                  >
+                    <option value="text">Text</option>
+                    <option value="number">Number</option>
+                    <option value="date">Date</option>
+                    <option value="email">Email</option>
+                    <option value="select">Select (dropdown)</option>
+                  </select>
+                </div>
+                {newCustomField.fieldType === 'select' && (
+                  <div className="form-group">
+                    <label>Options (comma-separated)</label>
+                    <input
+                      type="text"
+                      value={newCustomField.options}
+                      onChange={(e) =>
+                        setNewCustomField({ ...newCustomField, options: e.target.value })
+                      }
+                      placeholder="e.g. Small, Medium, Large"
+                    />
+                  </div>
+                )}
+                <button type="submit" className="btn btn-primary">
+                  Add Field
+                </button>
+              </form>
             </div>
           </div>
         )}

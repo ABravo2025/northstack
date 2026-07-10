@@ -18,6 +18,25 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
   const [showClientForm, setShowClientForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
+  const [employeeSearch, setEmployeeSearch] = useState('');
+  const [employeeCustomFields, setEmployeeCustomFields] = useState<any[]>([]);
+  const [showCustomFieldManager, setShowCustomFieldManager] = useState(false);
+  const [newCustomField, setNewCustomField] = useState({ name: '', fieldType: 'text', options: '' });
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
+  const [editCustomFieldValues, setEditCustomFieldValues] = useState<Record<string, string>>({});
+  const [editCustomFieldValueIds, setEditCustomFieldValueIds] = useState<Record<string, string>>({});
+
+  const canManageCustomFields = user.role === 'owner' || user.role === 'admin';
+
+  const filteredEmployees = employees.filter((emp) => {
+    const query = employeeSearch.trim().toLowerCase();
+    if (!query) return true;
+    return (
+      `${emp.firstName} ${emp.lastName}`.toLowerCase().includes(query) ||
+      emp.email.toLowerCase().includes(query) ||
+      emp.department.toLowerCase().includes(query)
+    );
+  });
 
   const [employeeForm, setEmployeeForm] = useState({
     firstName: '',
@@ -44,10 +63,20 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
   useEffect(() => {
     if (tab === 'employees') {
       loadEmployees();
+      loadEmployeeCustomFields();
     } else {
       loadClients();
     }
   }, [tab]);
+
+  const loadEmployeeCustomFields = async () => {
+    try {
+      const defs = await api.listCustomFieldDefinitions(token, 'employee');
+      setEmployeeCustomFields(defs);
+    } catch (error) {
+      setError('Failed to load custom fields: ' + (error as Error).message);
+    }
+  };
 
   const loadEmployees = async () => {
     setLoading(true);
@@ -79,12 +108,49 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
     e.preventDefault();
     setError(null);
     try {
-      await api.createEmployee(token, employeeForm);
+      const employee = await api.createEmployee(token, employeeForm);
+
+      const valueEntries = Object.entries(customFieldValues).filter(([, value]) => value.trim() !== '');
+      for (const [customFieldDefinitionId, value] of valueEntries) {
+        await api.createEmployeeCustomFieldValue(token, employee.id, {
+          customFieldDefinitionId,
+          value,
+        });
+      }
+
       setEmployeeForm({ firstName: '', lastName: '', email: '', department: '' });
+      setCustomFieldValues({});
       setShowEmployeeForm(false);
       loadEmployees();
     } catch (error) {
       setError('Failed to create employee: ' + (error as Error).message);
+    }
+  };
+
+  const handleCreateCustomField = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    try {
+      const options =
+        newCustomField.fieldType === 'select'
+          ? JSON.stringify(
+              newCustomField.options
+                .split(',')
+                .map((o) => o.trim())
+                .filter(Boolean),
+            )
+          : undefined;
+
+      await api.createCustomFieldDefinition(token, {
+        name: newCustomField.name,
+        entityType: 'employee',
+        fieldType: newCustomField.fieldType,
+        options,
+      });
+      setNewCustomField({ name: '', fieldType: 'text', options: '' });
+      loadEmployeeCustomFields();
+    } catch (error) {
+      setError('Failed to create custom field: ' + (error as Error).message);
     }
   };
 
@@ -98,6 +164,15 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
       department: emp.department,
       status: emp.status,
     });
+
+    const values: Record<string, string> = {};
+    const valueIds: Record<string, string> = {};
+    for (const fieldValue of emp.customFieldVals || []) {
+      values[fieldValue.customFieldDefinitionId] = fieldValue.value;
+      valueIds[fieldValue.customFieldDefinitionId] = fieldValue.id;
+    }
+    setEditCustomFieldValues(values);
+    setEditCustomFieldValueIds(valueIds);
   };
 
   const handleUpdateEmployee = async (e: React.FormEvent) => {
@@ -106,7 +181,23 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
     setError(null);
     try {
       await api.updateEmployee(token, editingEmployeeId, editEmployeeForm);
+
+      const valueEntries = Object.entries(editCustomFieldValues).filter(([, value]) => value.trim() !== '');
+      for (const [customFieldDefinitionId, value] of valueEntries) {
+        const existingValueId = editCustomFieldValueIds[customFieldDefinitionId];
+        if (existingValueId) {
+          await api.updateEmployeeCustomFieldValue(token, editingEmployeeId, existingValueId, value);
+        } else {
+          await api.createEmployeeCustomFieldValue(token, editingEmployeeId, {
+            customFieldDefinitionId,
+            value,
+          });
+        }
+      }
+
       setEditingEmployeeId(null);
+      setEditCustomFieldValues({});
+      setEditCustomFieldValueIds({});
       loadEmployees();
     } catch (error) {
       setError('Failed to update employee: ' + (error as Error).message);
@@ -186,13 +277,84 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
             <div className="card">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <h3>Employees</h3>
-                <button
-                  className="btn btn-success"
-                  onClick={() => setShowEmployeeForm(!showEmployeeForm)}
-                >
-                  {showEmployeeForm ? 'Cancel' : 'Add Employee'}
-                </button>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  {canManageCustomFields && (
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => setShowCustomFieldManager(!showCustomFieldManager)}
+                    >
+                      {showCustomFieldManager ? 'Close' : 'Manage Custom Fields'}
+                    </button>
+                  )}
+                  <button
+                    className="btn btn-success"
+                    onClick={() => setShowEmployeeForm(!showEmployeeForm)}
+                  >
+                    {showEmployeeForm ? 'Cancel' : 'Add Employee'}
+                  </button>
+                </div>
               </div>
+
+              {showCustomFieldManager && (
+                <div className="card" style={{ background: '#f9f9f9', marginBottom: '20px' }}>
+                  <h3>Custom Fields for Employees</h3>
+                  {employeeCustomFields.length === 0 ? (
+                    <p>No custom fields defined yet.</p>
+                  ) : (
+                    <ul>
+                      {employeeCustomFields.map((field) => (
+                        <li key={field.id}>
+                          {field.name} ({field.fieldType})
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <form onSubmit={handleCreateCustomField}>
+                    <div className="form-group">
+                      <label>Field Name</label>
+                      <input
+                        type="text"
+                        value={newCustomField.name}
+                        onChange={(e) =>
+                          setNewCustomField({ ...newCustomField, name: e.target.value })
+                        }
+                        placeholder="e.g. Emergency Contact"
+                        required
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Field Type</label>
+                      <select
+                        value={newCustomField.fieldType}
+                        onChange={(e) =>
+                          setNewCustomField({ ...newCustomField, fieldType: e.target.value })
+                        }
+                      >
+                        <option value="text">Text</option>
+                        <option value="number">Number</option>
+                        <option value="date">Date</option>
+                        <option value="select">Select (dropdown)</option>
+                      </select>
+                    </div>
+                    {newCustomField.fieldType === 'select' && (
+                      <div className="form-group">
+                        <label>Options (comma-separated)</label>
+                        <input
+                          type="text"
+                          value={newCustomField.options}
+                          onChange={(e) =>
+                            setNewCustomField({ ...newCustomField, options: e.target.value })
+                          }
+                          placeholder="e.g. Small, Medium, Large"
+                        />
+                      </div>
+                    )}
+                    <button type="submit" className="btn btn-primary">
+                      Add Field
+                    </button>
+                  </form>
+                </div>
+              )}
 
               {showEmployeeForm && (
                 <form onSubmit={handleCreateEmployee} style={{ marginBottom: '20px' }}>
@@ -240,6 +402,42 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
                       required
                     />
                   </div>
+
+                  {employeeCustomFields.map((field) => (
+                    <div className="form-group" key={field.id}>
+                      <label>{field.name}</label>
+                      {field.fieldType === 'select' ? (
+                        <select
+                          value={customFieldValues[field.id] || ''}
+                          onChange={(e) =>
+                            setCustomFieldValues({ ...customFieldValues, [field.id]: e.target.value })
+                          }
+                        >
+                          <option value="">-- select --</option>
+                          {(JSON.parse(field.options || '[]') as string[]).map((opt) => (
+                            <option key={opt} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type={
+                            field.fieldType === 'number'
+                              ? 'number'
+                              : field.fieldType === 'date'
+                                ? 'date'
+                                : 'text'
+                          }
+                          value={customFieldValues[field.id] || ''}
+                          onChange={(e) =>
+                            setCustomFieldValues({ ...customFieldValues, [field.id]: e.target.value })
+                          }
+                        />
+                      )}
+                    </div>
+                  ))}
+
                   <button type="submit" className="btn btn-primary">
                     Create
                   </button>
@@ -305,6 +503,48 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
                       <option value="pending">Pending</option>
                     </select>
                   </div>
+
+                  {employeeCustomFields.map((field) => (
+                    <div className="form-group" key={field.id}>
+                      <label>{field.name}</label>
+                      {field.fieldType === 'select' ? (
+                        <select
+                          value={editCustomFieldValues[field.id] || ''}
+                          onChange={(e) =>
+                            setEditCustomFieldValues({
+                              ...editCustomFieldValues,
+                              [field.id]: e.target.value,
+                            })
+                          }
+                        >
+                          <option value="">-- select --</option>
+                          {(JSON.parse(field.options || '[]') as string[]).map((opt) => (
+                            <option key={opt} value={opt}>
+                              {opt}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input
+                          type={
+                            field.fieldType === 'number'
+                              ? 'number'
+                              : field.fieldType === 'date'
+                                ? 'date'
+                                : 'text'
+                          }
+                          value={editCustomFieldValues[field.id] || ''}
+                          onChange={(e) =>
+                            setEditCustomFieldValues({
+                              ...editCustomFieldValues,
+                              [field.id]: e.target.value,
+                            })
+                          }
+                        />
+                      )}
+                    </div>
+                  ))}
+
                   <div className="form-actions">
                     <button type="submit" className="btn btn-primary">
                       Save
@@ -312,7 +552,11 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
                     <button
                       type="button"
                       className="btn btn-secondary"
-                      onClick={() => setEditingEmployeeId(null)}
+                      onClick={() => {
+                        setEditingEmployeeId(null);
+                        setEditCustomFieldValues({});
+                        setEditCustomFieldValueIds({});
+                      }}
                     >
                       Cancel
                     </button>
@@ -320,10 +564,23 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
                 </form>
               )}
 
+              {employees.length > 0 && (
+                <div className="form-group">
+                  <input
+                    type="text"
+                    value={employeeSearch}
+                    onChange={(e) => setEmployeeSearch(e.target.value)}
+                    placeholder="Search by name, email or department..."
+                  />
+                </div>
+              )}
+
               {loading ? (
                 <p>Loading...</p>
               ) : employees.length === 0 ? (
                 <p>No employees yet.</p>
+              ) : filteredEmployees.length === 0 ? (
+                <p>No employees match your search.</p>
               ) : (
                 <table className="table">
                   <thead>
@@ -332,11 +589,14 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
                       <th>Email</th>
                       <th>Department</th>
                       <th>Status</th>
+                      {employeeCustomFields.map((field) => (
+                        <th key={field.id}>{field.name}</th>
+                      ))}
                       <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {employees.map((emp) => (
+                    {filteredEmployees.map((emp) => (
                       <tr key={emp.id}>
                         <td>
                           {emp.firstName} {emp.lastName}
@@ -344,6 +604,12 @@ export default function DashboardPage({ user, token, onLogout }: DashboardPagePr
                         <td>{emp.email}</td>
                         <td>{emp.department}</td>
                         <td>{emp.status}</td>
+                        {employeeCustomFields.map((field) => {
+                          const fieldValue = emp.customFieldVals?.find(
+                            (v: any) => v.customFieldDefinitionId === field.id,
+                          );
+                          return <td key={field.id}>{fieldValue?.value || '—'}</td>;
+                        })}
                         <td>
                           <button
                             className="btn btn-secondary"

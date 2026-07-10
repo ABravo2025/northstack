@@ -1,7 +1,7 @@
 # Contexto de desarrollo del proyecto
 
 - Fecha de creación: 2026-07-02
-- Última actualización: 2026-07-08
+- Última actualización: 2026-07-10
 
 ## Resumen del proyecto
 
@@ -94,3 +94,4 @@ Crear un sistema que permita:
 - Se corrigieron las 2 vulnerabilidades de seguridad pendientes: IDOR en los 4 endpoints de custom fields (ahora verifican tenant ownership), y hash de contraseñas reemplazado por `scrypt` con salt (built-in de Node, sin dependencias nuevas). Se agregó política de contraseñas (mín. 8 caracteres, 1 mayúscula, 1 número, 1 carácter especial). Los usuarios registrados antes de este cambio (hash viejo en base64) ya no pueden loguearse y necesitan registrarse de nuevo.
 - Se corrigió un bug real en `App.tsx` que vaciaba el formulario de Register/Login en cada error (desmontaba la página por un guard de loading mal alcanzado); se agregaron errores de campo posicionados junto al input y validación de formato de teléfono.
 - Employees llegó a paridad CRUD con Clients: editar y borrar, tanto en backend (`PATCH`/`DELETE /api/hr/employees/:employeeId`) como en el Dashboard. Queda pendiente que Clients tenga UI de edición en el frontend (el backend ya la soporta).
+- Se agregó búsqueda y custom fields completos (crear campo, completar valor al alta, mostrarlo en la tabla, editarlo) para Employees. `CustomFieldValue` se rediseñó de FKs por módulo (`employeeId`/`clientId`) a modelo genérico (`tenantId` + `entityType` + `entityId`), para no tener que agregar una columna nueva cada vez que se sume un módulo (ej. Payments en Fase 2). La validación de que `entityId` pertenece al tenant queda en el código, no en la base.

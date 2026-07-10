@@ -10,9 +10,10 @@ export interface CreateCustomFieldInput {
 }
 
 export interface CreateCustomFieldValueInput {
+  tenantId: string;
   customFieldDefinitionId: string;
-  employeeId?: string;
-  clientId?: string;
+  entityType: EntityType;
+  entityId: string;
   value: string;
 }
 
@@ -55,26 +56,48 @@ export async function createCustomFieldValue(
 ): Promise<CustomFieldValue> {
   return prisma.customFieldValue.create({
     data: {
+      tenantId: input.tenantId,
       customFieldDefinitionId: input.customFieldDefinitionId,
-      employeeId: input.employeeId,
-      clientId: input.clientId,
+      entityType: input.entityType,
+      entityId: input.entityId,
       value: input.value,
     },
   });
 }
 
-export async function listCustomFieldValuesForEmployee(
-  employeeId: string,
-): Promise<CustomFieldValue[]> {
-  return prisma.customFieldValue.findMany({
-    where: { employeeId },
+export async function findCustomFieldValueById(id: string): Promise<CustomFieldValue | null> {
+  return prisma.customFieldValue.findUnique({
+    where: { id },
   });
 }
 
-export async function listCustomFieldValuesForClient(
-  clientId: string,
+export async function updateCustomFieldValue(id: string, value: string): Promise<CustomFieldValue> {
+  return prisma.customFieldValue.update({
+    where: { id },
+    data: { value },
+  });
+}
+
+export async function listCustomFieldValuesForEntity(
+  tenantId: string,
+  entityType: EntityType,
+  entityId: string,
 ): Promise<CustomFieldValue[]> {
   return prisma.customFieldValue.findMany({
-    where: { clientId },
+    where: { tenantId, entityType, entityId },
+  });
+}
+
+export async function listCustomFieldValuesForEntities(
+  tenantId: string,
+  entityType: EntityType,
+  entityIds: string[],
+): Promise<CustomFieldValue[]> {
+  if (entityIds.length === 0) {
+    return [];
+  }
+
+  return prisma.customFieldValue.findMany({
+    where: { tenantId, entityType, entityId: { in: entityIds } },
   });
 }

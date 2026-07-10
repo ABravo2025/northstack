@@ -1,4 +1,5 @@
 import prisma from '../../lib/prisma.js';
+import { listCustomFieldValuesForEntities } from './customFieldService.js';
 import type { Employee, EmployeeStatus } from '@prisma/client';
 
 export interface CreateEmployeeInput {
@@ -31,14 +32,25 @@ export async function createEmployee(input: CreateEmployeeInput): Promise<Employ
   });
 }
 
-export async function listEmployees(tenantId?: string | null): Promise<Employee[]> {
+export async function listEmployees(tenantId?: string | null) {
   if (!tenantId) {
     return [];
   }
 
-  return prisma.employee.findMany({
+  const employees = await prisma.employee.findMany({
     where: { tenantId },
   });
+
+  const values = await listCustomFieldValuesForEntities(
+    tenantId,
+    'employee',
+    employees.map((employee) => employee.id),
+  );
+
+  return employees.map((employee) => ({
+    ...employee,
+    customFieldVals: values.filter((value) => value.entityId === employee.id),
+  }));
 }
 
 export async function findEmployeeById(id: string): Promise<Employee | null> {

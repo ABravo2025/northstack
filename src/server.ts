@@ -15,9 +15,10 @@ import {
   createCustomFieldDefinition,
   createCustomFieldValue,
   findCustomFieldDefinitionById,
+  findCustomFieldValueById,
   listCustomFieldDefinitions,
-  listCustomFieldValuesForEmployee,
-  listCustomFieldValuesForClient,
+  listCustomFieldValuesForEntity,
+  updateCustomFieldValue,
 } from './modules/hr/customFieldService.js';
 import {
   createTenantForUser,
@@ -360,12 +361,43 @@ app.post('/api/hr/employees/:employeeId/custom-fields', async (req, res) => {
   }
 
   const customFieldValue = await createCustomFieldValue({
+    tenantId: user.tenantId!,
     customFieldDefinitionId: req.body.customFieldDefinitionId,
-    employeeId: req.params.employeeId,
+    entityType: 'employee',
+    entityId: req.params.employeeId,
     value: req.body.value,
   });
 
   return res.status(201).json(customFieldValue);
+});
+
+app.patch('/api/hr/employees/:employeeId/custom-fields/:valueId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageCustomFields(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const employee = await findEmployeeById(req.params.employeeId);
+  if (!employee || employee.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Employee not found' });
+  }
+
+  const existingValue = await findCustomFieldValueById(req.params.valueId);
+  if (
+    !existingValue ||
+    existingValue.tenantId !== user.tenantId ||
+    existingValue.entityType !== 'employee' ||
+    existingValue.entityId !== req.params.employeeId
+  ) {
+    return res.status(404).json({ error: 'Custom field value not found' });
+  }
+
+  const updated = await updateCustomFieldValue(req.params.valueId, req.body.value);
+  return res.json(updated);
 });
 
 app.get('/api/hr/employees/:employeeId/custom-fields', async (req, res) => {
@@ -379,7 +411,7 @@ app.get('/api/hr/employees/:employeeId/custom-fields', async (req, res) => {
     return res.status(404).json({ error: 'Employee not found' });
   }
 
-  const values = await listCustomFieldValuesForEmployee(req.params.employeeId);
+  const values = await listCustomFieldValuesForEntity(user.tenantId!, 'employee', req.params.employeeId);
   return res.json(values);
 });
 
@@ -489,8 +521,10 @@ app.post('/api/clients/:clientId/custom-fields', async (req, res) => {
   }
 
   const customFieldValue = await createCustomFieldValue({
+    tenantId: user.tenantId!,
     customFieldDefinitionId: req.body.customFieldDefinitionId,
-    clientId: req.params.clientId,
+    entityType: 'client',
+    entityId: req.params.clientId,
     value: req.body.value,
   });
 
@@ -508,7 +542,7 @@ app.get('/api/clients/:clientId/custom-fields', async (req, res) => {
     return res.status(404).json({ error: 'Client not found' });
   }
 
-  const values = await listCustomFieldValuesForClient(req.params.clientId);
+  const values = await listCustomFieldValuesForEntity(user.tenantId!, 'client', req.params.clientId);
   return res.json(values);
 });
 

@@ -48,6 +48,11 @@ interface Employee {
   email: string;
   department: string;
   status: string;
+  customFieldVals?: {
+    id: string;
+    customFieldDefinitionId: string;
+    value: string;
+  }[];
 }
 
 interface Client {
@@ -57,6 +62,22 @@ interface Client {
   email: string;
   company: string;
   status: string;
+}
+
+interface CustomFieldDefinition {
+  id: string;
+  name: string;
+  entityType: string;
+  fieldType: string;
+  options: string | null;
+}
+
+interface CustomFieldValue {
+  id: string;
+  customFieldDefinitionId: string;
+  employeeId?: string;
+  clientId?: string;
+  value: string;
 }
 
 export const api = {
@@ -160,6 +181,69 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);
+  },
+
+  // Custom fields
+  listCustomFieldDefinitions: async (
+    token: string,
+    entityType: 'employee' | 'client',
+  ): Promise<CustomFieldDefinition[]> => {
+    const res = await fetch(`${API_BASE_URL}/api/hr/custom-fields?entityType=${entityType}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  createCustomFieldDefinition: async (
+    token: string,
+    data: { name: string; entityType: 'employee' | 'client'; fieldType: string; options?: string },
+  ): Promise<CustomFieldDefinition> => {
+    const res = await fetch(`${API_BASE_URL}/api/hr/custom-fields`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  createEmployeeCustomFieldValue: async (
+    token: string,
+    employeeId: string,
+    data: { customFieldDefinitionId: string; value: string },
+  ): Promise<CustomFieldValue> => {
+    const res = await fetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/custom-fields`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  updateEmployeeCustomFieldValue: async (
+    token: string,
+    employeeId: string,
+    valueId: string,
+    value: string,
+  ): Promise<CustomFieldValue> => {
+    const res = await fetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/custom-fields/${valueId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ value }),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
   },
 
   // Clients

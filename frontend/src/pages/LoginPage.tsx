@@ -25,10 +25,10 @@ export default function LoginPage({
   return (
     <div className="page">
       <div className="header">
-        <h1>Northstack</h1>
+        <img src="/logo-horizontal-light.svg" alt="Northstack" />
       </div>
       <div className="container">
-        <div className="card" style={{ maxWidth: '400px', margin: '40px auto' }}>
+        <div className="card mx-auto mt-10 max-w-md">
           <h2 className="text-center">Login</h2>
           {error && <div className="alert alert-error">{error.message}</div>}
           <form onSubmit={handleSubmit}>
@@ -64,9 +64,8 @@ export default function LoginPage({
             <p>
               Don't have an account?{' '}
               <button
-                className="btn btn-secondary"
+                className="btn btn-secondary ml-1"
                 onClick={onSwitchToRegister}
-                style={{ marginLeft: '5px' }}
               >
                 Register
               </button>

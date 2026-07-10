@@ -1,14 +1,15 @@
 import { useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { api } from '../api';
 
 interface AcceptInvitePageProps {
-  invitationToken: string;
   onAccepted: (token: string, user: any) => void;
 }
 
 type Mode = 'login' | 'register';
 
-export default function AcceptInvitePage({ invitationToken, onAccepted }: AcceptInvitePageProps) {
+export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) {
+  const { token: invitationToken } = useParams<{ token: string }>();
   const [mode, setMode] = useState<Mode>('register');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,6 +21,9 @@ export default function AcceptInvitePage({ invitationToken, onAccepted }: Accept
   const [phone, setPhone] = useState('');
 
   const acceptWithSessionToken = async (sessionToken: string) => {
+    if (!invitationToken) {
+      throw new Error('Missing invitation token');
+    }
     const result = await api.acceptInvitation(sessionToken, invitationToken);
     onAccepted(sessionToken, result.user);
   };
@@ -50,10 +54,10 @@ export default function AcceptInvitePage({ invitationToken, onAccepted }: Accept
   return (
     <div className="page">
       <div className="header">
-        <h1>Northstack</h1>
+        <img src="/logo-horizontal-light.svg" alt="Northstack" />
       </div>
       <div className="container">
-        <div className="card" style={{ maxWidth: '400px', margin: '40px auto' }}>
+        <div className="card mx-auto mt-10 max-w-md">
           <h2 className="text-center">You've been invited</h2>
           <p className="text-center">
             {mode === 'register'
@@ -129,12 +133,11 @@ export default function AcceptInvitePage({ invitationToken, onAccepted }: Accept
             <p>
               {mode === 'register' ? 'Already have an account?' : "Don't have an account?"}{' '}
               <button
-                className="btn btn-secondary"
+                className="btn btn-secondary ml-1"
                 onClick={() => {
                   setError(null);
                   setMode(mode === 'register' ? 'login' : 'register');
                 }}
-                style={{ marginLeft: '5px' }}
               >
                 {mode === 'register' ? 'Login' : 'Register'}
               </button>

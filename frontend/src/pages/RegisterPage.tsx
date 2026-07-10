@@ -48,10 +48,10 @@ export default function RegisterPage({
   return (
     <div className="page">
       <div className="header">
-        <h1>Northstack</h1>
+        <img src="/logo-horizontal-light.svg" alt="Northstack" />
       </div>
       <div className="container">
-        <div className="card" style={{ maxWidth: '400px', margin: '40px auto' }}>
+        <div className="card mx-auto mt-10 max-w-md">
           <h2 className="text-center">Register your company</h2>
           {generalError && <div className="alert alert-error">{generalError}</div>}
           <form onSubmit={handleSubmit}>
@@ -143,9 +143,8 @@ export default function RegisterPage({
             <p>
               Already have an account?{' '}
               <button
-                className="btn btn-secondary"
+                className="btn btn-secondary ml-1"
                 onClick={onSwitchToLogin}
-                style={{ marginLeft: '5px' }}
               >
                 Login
               </button>

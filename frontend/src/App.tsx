@@ -1,23 +1,30 @@
 import { useState, useEffect } from 'react';
+import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { api, ApiError } from './api';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
-import DashboardPage from './pages/DashboardPage';
 import AcceptInvitePage from './pages/AcceptInvitePage';
+import HrDashboardPage from './pages/HrDashboardPage';
+import EmployeesPage from './pages/EmployeesPage';
+import ClientsDashboardPage from './pages/ClientsDashboardPage';
+import ClientsPage from './pages/ClientsPage';
+import CustomFieldsSettingsPage from './pages/CustomFieldsSettingsPage';
+import ProfileSettingsPage from './pages/ProfileSettingsPage';
+import CompanySettingsPage from './pages/CompanySettingsPage';
+import AppLayout from './layouts/AppLayout';
+import SettingsLayout from './layouts/SettingsLayout';
 import './App.css';
-
-
-type Page = 'login' | 'register' | 'dashboard' | 'accept-invite';
 
 export interface FormError {
   message: string;
   field?: string;
 }
 
-const inviteTokenFromUrl = new URLSearchParams(window.location.search).get('invite');
-
 export default function App() {
-  const [page, setPage] = useState<Page>(inviteTokenFromUrl ? 'accept-invite' : 'login');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isAcceptInviteRoute = location.pathname.startsWith('/accept-invite');
+
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
@@ -25,7 +32,7 @@ export default function App() {
   const [authError, setAuthError] = useState<FormError | null>(null);
 
   useEffect(() => {
-    if (inviteTokenFromUrl) {
+    if (isAcceptInviteRoute) {
       // Handling an invite link: never auto-restore a stored session, the invited
       // person may not be whoever last used this browser.
       return;
@@ -37,23 +44,21 @@ export default function App() {
         .getCurrentUser(token)
         .then((response) => {
           setUser(response.user);
-          setPage('dashboard');
         })
         .catch(() => {
           setToken(null);
           localStorage.removeItem('token');
-          setPage('login');
         })
         .finally(() => setCheckingSession(false));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const handleInvitationAccepted = (newToken: string, newUser: any) => {
     setToken(newToken);
     localStorage.setItem('token', newToken);
     setUser(newUser);
-    window.history.replaceState({}, '', window.location.pathname);
-    setPage('dashboard');
+    navigate('/hr/dashboard');
   };
 
   const handleLogin = async (email: string, password: string) => {
@@ -94,7 +99,6 @@ export default function App() {
         setToken(newToken);
         localStorage.setItem('token', newToken);
         setUser(response.user);
-        setPage('dashboard');
       }
     } catch (error) {
       setAuthError({
@@ -117,47 +121,72 @@ export default function App() {
     setToken(null);
     setUser(null);
     localStorage.removeItem('token');
-    setPage('login');
   };
 
   if (checkingSession) {
-    return <div className="container"><p>Loading...</p></div>;
+    return (
+      <div className="container">
+        <p>Loading...</p>
+      </div>
+    );
   }
 
+  const isAuthenticated = Boolean(token && user);
+
   return (
-    <div className="app">
-      {page === 'login' && (
-        <LoginPage
-          onLogin={handleLogin}
-          onSwitchToRegister={() => {
-            setAuthError(null);
-            setPage('register');
-          }}
-          loading={loading}
-          error={authError}
-        />
-      )}
+    <Routes>
+      <Route
+        path="/login"
+        element={
+          isAuthenticated ? (
+            <Navigate to="/hr/dashboard" replace />
+          ) : (
+            <LoginPage
+              onLogin={handleLogin}
+              onSwitchToRegister={() => navigate('/register')}
+              loading={loading}
+              error={authError}
+            />
+          )
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          isAuthenticated ? (
+            <Navigate to="/hr/dashboard" replace />
+          ) : (
+            <RegisterPage
+              onRegister={handleRegister}
+              onSwitchToLogin={() => navigate('/login')}
+              loading={loading}
+              error={authError}
+            />
+          )
+        }
+      />
+      <Route
+        path="/accept-invite/:token"
+        element={<AcceptInvitePage onAccepted={handleInvitationAccepted} />}
+      />
 
-      {page === 'register' && (
-        <RegisterPage
-          onRegister={handleRegister}
-          onSwitchToLogin={() => {
-            setAuthError(null);
-            setPage('login');
-          }}
-          loading={loading}
-          error={authError}
-        />
-      )}
+      <Route element={<AppLayout user={user} token={token} onLogout={handleLogout} />}>
+        <Route path="/hr/dashboard" element={<HrDashboardPage />} />
+        <Route path="/hr/employees" element={<EmployeesPage user={user} token={token ?? ''} />} />
+        <Route path="/clients/dashboard" element={<ClientsDashboardPage />} />
+        <Route path="/clients" element={<ClientsPage token={token ?? ''} />} />
+        <Route path="/profile" element={<ProfileSettingsPage />} />
+        <Route path="/settings" element={<SettingsLayout />}>
+          <Route index element={<Navigate to="custom-fields" replace />} />
+          <Route path="custom-fields" element={<CustomFieldsSettingsPage token={token ?? ''} />} />
+          <Route path="company" element={<CompanySettingsPage />} />
+        </Route>
+      </Route>
 
-
-      {page === 'accept-invite' && inviteTokenFromUrl && (
-        <AcceptInvitePage invitationToken={inviteTokenFromUrl} onAccepted={handleInvitationAccepted} />
-      )}
-
-      {page === 'dashboard' && token && user && (
-        <DashboardPage user={user} token={token} onLogout={handleLogout} />
-      )}
-    </div>
+      <Route
+        path="*"
+        element={<Navigate to={isAuthenticated ? '/hr/dashboard' : '/login'} replace />}
+      />
+    </Routes>
   );
 }

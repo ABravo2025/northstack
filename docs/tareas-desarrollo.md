@@ -5,75 +5,92 @@
 
 ## Checklist general
 
+Organizado por tipo. Los ítems que tocan más de una capa quedan bajo la capa donde está el trabajo principal, con una nota de qué más tocaron.
+
+### Producto / Planificación / Setup
+
 - [x] Definir la visión general del proyecto
 - [x] Definir el enfoque modular y multi-tenant
 - [x] Definir el alcance inicial centrado en HR
 - [x] Definir la estrategia de autenticación inicial y futura integración con Google/Microsoft
 - [x] Crear el archivo de contexto de desarrollo
-- [x] Crear la estructura base del proyecto
-- [x] Implementar un primer servicio de HR inicial
-- [x] Implementar pruebas iniciales del módulo HR
 - [x] Definir el MVP del módulo HR
-- [x] Definir el modelo de datos base para tenants, usuarios y empleados
-- [x] Definir roles y permisos iniciales
-- [x] Definir la estructura modular del backend
-- [x] Definir los endpoints de API iniciales para HR
-- [x] Implementar autenticación básica por usuario y contraseña
-- [x] Configurar Prisma con esquema PostgreSQL compatible con Neon
-- [x] Implementar tenant registration y owner onboarding
-- [x] Implementar custom fields básicos
-- [x] Verificar `.env` con Neon `DATABASE_URL`
 - [x] Crear guía de ejecución de pruebas en `docs/run-tests.md`
-- [x] Crear una tabla de prueba en Neon para validar la conexión de la base de datos
 - [x] Crear repositorio en GitHub y hacer push de la rama main
-- [x] Implementar módulo de clients (CRUD + custom fields)
-- [x] Implementar frontend inicial (Vite + React: login, registro, creación de tenant, dashboard)
-- [x] Corregir `Employee.email` para que sea único por tenant (bug de diseño multi-tenant)
-- [x] Eliminar código muerto (`createTenantWithOwner`) que rompía el build
+- [ ] Preparar el proyecto para una beta interna
+- [ ] Implementar formularios públicos para alta de personas (backend + frontend, sin empezar)
+
+### Base de datos
+
+- [x] Definir el modelo de datos base para tenants, usuarios y empleados
+- [x] Configurar Prisma con esquema PostgreSQL compatible con Neon
+- [x] Verificar `.env` con Neon `DATABASE_URL`
+- [x] Crear una tabla de prueba en Neon para validar la conexión (luego eliminada, ver abajo)
+- [x] Corregir `Employee.email` para que sea único por tenant (antes único global, bug de diseño multi-tenant)
 - [x] Hacer `tenantId` obligatorio en Employee/Client/CustomFieldDefinition
 - [x] Agregar `Tenant.status` (active/suspended/cancelled) y `User.status` (active/inactive)
 - [x] Agregar `CustomFieldDefinition.isActive`
 - [x] Eliminar tabla `TestRun` (leftover de la validación de conexión a Neon)
+- [x] Rediseñar `CustomFieldValue` de FKs por módulo (`employeeId`/`clientId`) a modelo genérico (`tenantId` + `entityType` + `entityId`) — evita agregar una columna nueva cada vez que se sume un módulo (ej. Payments)
+- [x] Agregar `FieldType.email`
+- [x] Agregar `Employee.userId` (opcional, único) y `Invitation.employeeId` (opcional) — vínculo Employee ↔ User
+- [x] Agregar `CustomFieldDefinition.required`
+- [ ] Diseñar catálogo de status configurable por tenant + historial de cambios de status (iniciativa futura, separada de esta ronda)
+- [ ] Historial de valores previos de custom fields (con retención por tiempo) — evaluado, pospuesto a propósito por ahora
+
+### Backend
+
+- [x] Crear la estructura base del proyecto (TypeScript + Express + Vitest)
+- [x] Implementar un primer servicio de HR inicial
+- [x] Implementar pruebas iniciales del módulo HR
+- [x] Definir la estructura modular del backend
+- [x] Definir los endpoints de API iniciales para HR
+- [x] Implementar autenticación básica por usuario y contraseña
+- [x] Implementar tenant registration y owner onboarding
+- [x] Implementar custom fields básicos (definiciones + valores)
+- [x] Implementar módulo de clients (CRUD + custom fields)
+- [x] Eliminar código muerto (`createTenantWithOwner`) que rompía el build
 - [x] Implementar modelo `Invitation` + flujo de invitación (crear invitación / aceptar por token, sin envío de email)
 - [x] Eliminar `POST /api/tenants/join` (dejaba unirse a cualquier tenant sabiendo el `tenantId`, sin invitación)
 - [x] Unificar registro en un solo paso: `POST /api/tenants/register` crea Tenant + owner User + Session juntos (evita usuarios huérfanos sin tenant)
-- [x] Arreglar formulario de Register en el frontend (pedía datos que el backend ignoraba, y no pedía `phone`, que es obligatorio)
-- [x] Eliminar `CreateTenantPage.tsx` y `api.createTenant` (código muerto, apuntaban a una ruta que nunca existió)
-- [ ] Preparar el proyecto para una beta interna
-- [ ] Revisar el frontend end-to-end en navegador
-- [ ] Implementar formularios públicos para alta de personas
+- [x] Paridad CRUD para Employees: `PATCH`/`GET`/`DELETE /api/hr/employees/:employeeId` (+ frontend: editar/borrar en el Dashboard)
+- [x] `listEmployees` devuelve los valores de custom fields embebidos, sin N+1 (+ frontend: columnas en la tabla)
+- [x] Endpoint `PATCH` para actualizar valores de custom fields sin duplicar (+ frontend: precarga en "Edit")
+- [x] Verificar que el custom field pertenezca al módulo correcto (employee/client) antes de crear/actualizar un valor
+- [x] Endpoint `DELETE` para borrar de verdad un valor de custom field cuando se vacía (+ frontend: lógica en "Edit")
+- [x] Validar el valor de un custom field según su `fieldType` (number/date/email/select)
+- [x] Endpoint `PATCH /api/hr/custom-fields/:definitionId` para activar/desactivar custom fields (+ frontend: Settings)
+- [x] Endpoint `POST /api/hr/employees/:employeeId/invite`
+- [x] `acceptInvitation` linkea `Employee.userId` al usuario aceptado, si la invitación estaba ligada a un empleado
 - [ ] Implementar API pública con token para integraciones externas
-- [ ] Construir en el frontend el flujo de aceptar invitaciones (hoy solo existe en el backend)
-- [x] **Seguridad:** corregir IDOR en 4 endpoints de custom fields — ahora verifican que employee/client/custom field definition pertenezcan al tenant del usuario (404 si no)
-- [x] **Seguridad:** reemplazar el hash de contraseñas (era base64, reversible) por `scrypt` con salt aleatorio (built-in de Node, sin dependencias nuevas)
+- [ ] Envío de invitaciones por email (servicio externo tipo Resend/SendGrid) — evaluado y pospuesto a propósito, hoy el link se comparte manualmente
+- [ ] **A conversar (backlog, sin detalle todavía):** el validador de "empresa ya existe" en la creación de perfil (`registerTenantWithOwner`, compara por `slug` en `tenantService.ts`) está mal, según el usuario — pendiente de discutir el enfoque correcto antes de tocarlo.
+- [ ] El backend crashea por completo si Neon no responde a tiempo (ej. al "despertar" tras estar inactivo) — no hay manejo de ese error. Necesita retry/resiliencia o al menos no tumbar el proceso entero.
+
+### Frontend
+
+- [x] Implementar frontend inicial (Vite + React: login, registro, creación de tenant, dashboard)
+- [x] Eliminar `CreateTenantPage.tsx` y `api.createTenant` (código muerto, apuntaban a una ruta que nunca existió)
+- [x] Arreglar formulario de Register (pedía datos que el backend ignoraba, y no pedía `phone`, que es obligatorio)
+- [x] Reemplazar `alert()` del navegador por mensajes de error inline (en rojo, junto al campo correspondiente cuando aplica)
+- [x] Barra de búsqueda en Employees (filtra por nombre, email o departamento)
+- [x] UI de custom fields para Employees: sección "Manage Custom Fields" (crear campo: texto/número/fecha/email/select, marcar como requerido) + inputs dinámicos en alta/edición
+- [x] Nueva pestaña "Settings" (solo owner/admin) con selector de módulo (Employees/Clients) para gestionar custom fields centralizadamente
+- [x] Botón "Invite" por empleado (solo owner/admin): copia el link de invitación al portapapeles
+- [x] Pantalla "Accept Invite" (`AcceptInvitePage.tsx`) — registro o login + aceptar, con routing manual por query param (`?invite=token`) para no agregar una librería de router sin justificarla
+- [ ] Revisar el frontend end-to-end en navegador
+- [ ] UI de custom fields para Clients (los campos ya se pueden definir desde Settings, pero el alta/edición de Clients todavía no tiene los inputs dinámicos ni la tabla muestra columnas — mismo patrón que se hizo para Employees, pendiente de replicar)
+- [ ] Barra de búsqueda en Clients (solo se hizo en Employees por ahora)
+- [ ] UI de editar Client en el Dashboard (el backend ya soporta `PATCH /api/clients/:id`, pero el frontend de Clients solo tiene Delete, no Edit)
+- [ ] `frontend/tsconfig.json` no tiene `"jsx"` configurado — `npm run build` del frontend falla (preexistente, Vite dev server no lo sufre porque usa esbuild)
+
+### Seguridad
+
+- [x] Definir roles y permisos iniciales
+- [x] Corregir IDOR en 4 endpoints de custom fields — ahora verifican que employee/client/custom field definition pertenezcan al tenant del usuario (404 si no)
+- [x] Reemplazar el hash de contraseñas (era base64, reversible) por `scrypt` con salt aleatorio (built-in de Node, sin dependencias nuevas)
 - [x] Política de contraseñas: mínimo 8 caracteres, 1 mayúscula, 1 número, 1 carácter especial (aplicada en registro individual y en registro de tenant+owner)
 - [x] Validación de formato de teléfono (rechaza texto que no tenga forma de número)
-- [x] Reemplazar `alert()` del navegador por mensajes de error inline (en rojo, junto al campo correspondiente cuando aplica)
-- [x] Paridad CRUD para Employees: `PATCH`/`GET`/`DELETE /api/hr/employees/:employeeId` (backend) + editar/borrar en el Dashboard (frontend), igual que ya tenía Clients
-- [x] Barra de búsqueda en Employees (filtra por nombre, email o departamento)
-- [x] UI de custom fields para Employees: sección "Manage Custom Fields" (crear campo: texto/número/fecha/select) + inputs dinámicos en el formulario de alta que guardan el valor al crear el empleado
-- [x] Mostrar los valores de custom fields como columnas en la tabla de Employees (antes se guardaban pero no se veían en ningún lado)
-- [x] Editar custom fields de un empleado ya existente (precarga los valores actuales al abrir "Edit"; actualiza en vez de duplicar)
-- [x] Rediseñar `CustomFieldValue` de FKs por módulo (`employeeId`/`clientId`) a modelo genérico (`tenantId` + `entityType` + `entityId`) — evita agregar una columna nueva cada vez que se sume un módulo (ej. Payments)
-- [x] **Revisión de diseño de custom fields (6 hallazgos), todos corregidos:**
-  - [x] Verificar que la definición del custom field pertenezca al módulo correcto (employee/client) antes de crear o actualizar un valor
-  - [x] Borrar de verdad un valor cuando se vacía en Edit (antes quedaba huérfano) — nuevo endpoint `DELETE /api/hr/employees/:employeeId/custom-fields/:valueId`
-  - [x] Validar el valor según `fieldType` al crear/actualizar (number/date/email parseables, select dentro de las opciones) + se agregó `email` como `FieldType` nuevo
-  - [x] Activar/desactivar custom fields (`PATCH /api/hr/custom-fields/:definitionId`) — los formularios de alta/edición y las columnas de la tabla solo muestran campos activos
-  - [x] Nueva pestaña "Settings" (solo owner/admin) con selector de módulo (Employees/Clients) para gestionar custom fields centralizadamente, en vez de vivir escondido dentro de la pestaña Employees
-- [x] Vincular Employee ↔ User (`Employee.userId`, opcional y único) — un empleado puede tener acceso propio al sistema
-- [x] Botón "Invite" por empleado (solo owner/admin): genera una invitación ligada al empleado y copia el link al portapapeles; al aceptarla, `Employee.userId` se linkea automáticamente
-- [x] Pantalla "Accept Invite" (`AcceptInvitePage.tsx`) — registro o login + aceptar, con routing manual por query param (`?invite=token`) para no agregar una librería de router sin justificarla
-- [x] Custom fields: campo `required` (booleano) — checkbox en Settings, validación de navegador (`required` en el input) en alta/edición, igual que ya funciona para firstName/email
-- [ ] **A conversar (backlog, sin detalle todavía):** el usuario marcó que el validador de "empresa ya existe" en la creación de perfil (`registerTenantWithOwner`, compara por `slug` en `tenantService.ts`) está mal — pendiente de discutir el enfoque correcto antes de tocarlo.
-- [ ] Envío de invitaciones por email (servicio externo tipo Resend/SendGrid) — evaluado y pospuesto a propósito, hoy el link se comparte manualmente
-- [ ] Historial de valores previos de custom fields (con retención por tiempo) — evaluado, pospuesto a propósito por ahora
-- [ ] UI de custom fields para Clients (los campos ya se pueden definir desde Settings, pero el alta/edición de Clients todavía no tiene los inputs dinámicos ni la tabla no muestra columnas — mismo patrón que se hizo para Employees, pendiente de replicar)
-- [ ] Barra de búsqueda en Clients (solo se hizo en Employees por ahora)
-- [ ] UI de editar Client en el Dashboard (el backend ya soporta `PATCH /api/clients/:id`, pero el frontend de Clients solo tiene Delete, no Edit — mismo hueco que tenía Employees hasta hoy)
-- [ ] Diseñar catálogo de status configurable por tenant + historial de cambios de status (iniciativa futura, separada de esta ronda)
-- [ ] **Infraestructura (pendiente, encontrado hoy):** el backend crashea por completo si Neon no responde a tiempo (ej. al "despertar" tras estar inactivo) — no hay manejo de ese error. Necesita retry/resiliencia o al menos no tumbar el proceso entero.
-- [ ] **Config (pendiente):** `frontend/tsconfig.json` no tiene `"jsx"` configurado — `npm run build` del frontend falla (preexistente, Vite dev server no lo sufre porque usa esbuild)
 
 ## Notas de avance
 

@@ -5,7 +5,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
-    "noEmit": true
+    "outDir": "node_modules/.tsbuild-node"
   },
   "include": ["vite.config.ts"]
 }

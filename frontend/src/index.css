@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-brand-navy: #0d2a48;
   --color-brand-blue: #3c6da1;
@@ -19,7 +21,7 @@ body,
 }
 
 body {
-  @apply bg-brand-cream text-brand-navy font-sans antialiased;
+  @apply bg-brand-cream text-brand-navy font-sans antialiased dark:bg-gray-950 dark:text-gray-100;
 }
 
 @utility btn {

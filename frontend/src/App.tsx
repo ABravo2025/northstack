@@ -177,7 +177,7 @@ export default function App() {
         <Route path="/clients" element={<ClientsPage token={token ?? ''} />} />
         <Route path="/profile" element={<ProfileSettingsPage />} />
         <Route path="/settings" element={<SettingsLayout />}>
-          <Route index element={<Navigate to="custom-fields" replace />} />
+          <Route index element={<Navigate to="company" replace />} />
           <Route path="custom-fields" element={<CustomFieldsSettingsPage token={token ?? ''} />} />
           <Route path="company" element={<CompanySettingsPage />} />
         </Route>

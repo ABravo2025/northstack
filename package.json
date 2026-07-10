@@ -8,6 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "test": "vitest run",
+    "postinstall": "prisma generate",
     "prisma:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:studio": "prisma studio"

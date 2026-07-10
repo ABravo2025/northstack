@@ -1,4 +1,9 @@
-const API_BASE_URL = 'http://localhost:3000';
+// In production the frontend and backend are served from the same Vercel
+// deployment, so requests can be relative (''). Locally, Vite serves the
+// frontend on its own port, so we point at the Express dev server directly
+// unless VITE_API_BASE_URL overrides it.
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? (import.meta.env.DEV ? 'http://localhost:3000' : '');
 
 export class ApiError extends Error {
   field?: string;

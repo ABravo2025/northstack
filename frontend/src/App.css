@@ -23,7 +23,15 @@
 .form-group input,
 .form-group select,
 .form-group textarea {
-  @apply rounded-md border border-gray-300 px-2.5 py-2 text-sm text-brand-navy dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100;
+  @apply rounded-md border border-gray-300 bg-white px-2.5 py-2 text-sm text-brand-navy dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100;
+}
+
+.select-compact {
+  @apply rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-brand-navy dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100;
+}
+
+.select-compact option {
+  @apply bg-white text-brand-navy dark:bg-gray-800 dark:text-gray-100;
 }
 
 .form-group input:focus,
@@ -100,6 +108,26 @@
 .nav button.active,
 .nav a.active {
   @apply bg-brand-blue text-white hover:bg-brand-navy;
+}
+
+.settings-shell {
+  @apply flex items-start gap-6;
+}
+
+.settings-nav {
+  @apply flex w-44 shrink-0 flex-col gap-1;
+}
+
+.settings-nav a {
+  @apply cursor-pointer rounded-md px-3 py-2 text-sm text-brand-navy no-underline transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800;
+}
+
+.settings-nav a.active {
+  @apply bg-brand-blue/10 font-medium text-brand-blue dark:bg-brand-blue/20 dark:text-brand-blue-light;
+}
+
+.settings-content {
+  @apply min-w-0 flex-1;
 }
 
 .app-shell {

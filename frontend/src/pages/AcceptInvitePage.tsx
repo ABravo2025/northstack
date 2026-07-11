@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../api';
 
@@ -14,11 +14,36 @@ export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [invitationLoading, setInvitationLoading] = useState(true);
+  const [invitationError, setInvitationError] = useState<string | null>(null);
+  const [invitationRole, setInvitationRole] = useState<string | null>(null);
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
+
+  useEffect(() => {
+    if (!invitationToken) {
+      setInvitationError('Missing invitation token');
+      setInvitationLoading(false);
+      return;
+    }
+
+    api
+      .getInvitation(invitationToken)
+      .then((invitation) => {
+        if (invitation.status !== 'pending' || new Date(invitation.expiresAt) < new Date()) {
+          setInvitationError('This invitation is no longer valid.');
+          return;
+        }
+        setEmail(invitation.email);
+        setInvitationRole(invitation.role);
+      })
+      .catch((err) => setInvitationError((err as Error).message))
+      .finally(() => setInvitationLoading(false));
+  }, [invitationToken]);
 
   const acceptWithSessionToken = async (sessionToken: string) => {
     if (!invitationToken) {
@@ -59,90 +84,96 @@ export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) 
       <div className="container">
         <div className="card mx-auto mt-10 max-w-md">
           <h2 className="text-center">You've been invited</h2>
-          <p className="text-center">
-            {mode === 'register'
-              ? 'Create your account to join your team.'
-              : 'Log in to accept the invitation.'}
-          </p>
-          {error && <div className="alert alert-error">{error}</div>}
-          <form onSubmit={handleSubmit}>
-            {mode === 'register' && (
-              <>
+
+          {invitationLoading ? (
+            <p className="text-center">Loading invitation…</p>
+          ) : invitationError ? (
+            <div className="alert alert-error">{invitationError}</div>
+          ) : (
+            <>
+              <p className="text-center">
+                {mode === 'register'
+                  ? `Create your account to join your team${invitationRole ? ` as ${invitationRole}` : ''}.`
+                  : 'Log in to accept the invitation.'}
+              </p>
+              {error && <div className="alert alert-error">{error}</div>}
+              <form onSubmit={handleSubmit}>
+                {mode === 'register' && (
+                  <>
+                    <div className="form-group">
+                      <label>First Name</label>
+                      <input
+                        type="text"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Last Name</label>
+                      <input
+                        type="text"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>Phone</label>
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="+1 555 0100"
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                  </>
+                )}
                 <div className="form-group">
-                  <label>First Name</label>
+                  <label>Email</label>
+                  <input type="email" value={email} disabled />
+                </div>
+                <div className="form-group">
+                  <label>Password</label>
                   <input
-                    type="text"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
                     required
                     disabled={loading}
                   />
                 </div>
-                <div className="form-group">
-                  <label>Last Name</label>
-                  <input
-                    type="text"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    required
-                    disabled={loading}
-                  />
+                <div className="form-actions">
+                  <button type="submit" className="btn btn-primary" disabled={loading}>
+                    {loading
+                      ? 'Please wait...'
+                      : mode === 'register'
+                        ? 'Create account & accept'
+                        : 'Log in & accept'}
+                  </button>
                 </div>
-                <div className="form-group">
-                  <label>Phone</label>
-                  <input
-                    type="tel"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+1 555 0100"
-                    required
-                    disabled={loading}
-                  />
-                </div>
-              </>
-            )}
-            <div className="form-group">
-              <label>Email</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                required
-                disabled={loading}
-              />
-            </div>
-            <div className="form-group">
-              <label>Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                disabled={loading}
-              />
-            </div>
-            <div className="form-actions">
-              <button type="submit" className="btn btn-primary" disabled={loading}>
-                {loading ? 'Please wait...' : mode === 'register' ? 'Create account & accept' : 'Log in & accept'}
-              </button>
-            </div>
-          </form>
-          <div className="mt-20 text-center">
-            <p>
-              {mode === 'register' ? 'Already have an account?' : "Don't have an account?"}{' '}
-              <button
-                className="btn btn-secondary ml-1"
-                onClick={() => {
-                  setError(null);
-                  setMode(mode === 'register' ? 'login' : 'register');
-                }}
-              >
-                {mode === 'register' ? 'Login' : 'Register'}
-              </button>
-            </p>
-          </div>
+              </form>
+              <div className="mt-20 text-center">
+                <p>
+                  {mode === 'register' ? 'Already have an account?' : "Don't have an account?"}{' '}
+                  <button
+                    className="btn btn-secondary ml-1"
+                    onClick={() => {
+                      setError(null);
+                      setMode(mode === 'register' ? 'login' : 'register');
+                    }}
+                  >
+                    {mode === 'register' ? 'Login' : 'Register'}
+                  </button>
+                </p>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

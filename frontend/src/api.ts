@@ -68,6 +68,11 @@ interface Client {
   email: string;
   company: string;
   status: string;
+  customFieldVals?: {
+    id: string;
+    customFieldDefinitionId: string;
+    value: string;
+  }[];
 }
 
 interface CustomFieldDefinition {
@@ -97,6 +102,26 @@ interface CustomFieldValue {
   entityType?: string;
   entityId?: string;
   value: string;
+}
+
+interface TenantUser {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  role: string;
+  status: string;
+}
+
+interface TenantInvitation {
+  id: string;
+  email: string;
+  role: string;
+  status: string;
+  token: string;
+  createdAt: string;
+  expiresAt: string;
 }
 
 export const api = {
@@ -147,6 +172,14 @@ export const api = {
     return res.json();
   },
 
+  getInvitation: async (
+    invitationToken: string,
+  ): Promise<{ email: string; role: string; status: string; expiresAt: string }> => {
+    const res = await fetch(`${API_BASE_URL}/api/invitations/${invitationToken}`);
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
   acceptInvitation: async (token: string, invitationToken: string): Promise<AuthResponse> => {
     const res = await fetch(`${API_BASE_URL}/api/invitations/${invitationToken}/accept`, {
       method: 'POST',
@@ -170,6 +203,95 @@ export const api = {
     });
     if (!res.ok) await throwApiError(res);
     return res.json();
+  },
+
+  updateProfile: async (
+    token: string,
+    data: { firstName: string; lastName: string; phone: string },
+  ): Promise<{ user: TenantUser }> => {
+    const res = await fetch(`${API_BASE_URL}/api/users/me`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  changePassword: async (
+    token: string,
+    data: { currentPassword: string; newPassword: string },
+  ): Promise<void> => {
+    const res = await fetch(`${API_BASE_URL}/api/users/me/password`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+  },
+
+  // Company / tenant users
+  listTenantUsers: async (token: string): Promise<TenantUser[]> => {
+    const res = await fetch(`${API_BASE_URL}/api/tenants/users`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  updateTenantUser: async (
+    token: string,
+    userId: string,
+    data: { role?: string; status?: string },
+  ): Promise<{ user: TenantUser }> => {
+    const res = await fetch(`${API_BASE_URL}/api/tenants/users/${userId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  listTenantInvitations: async (token: string): Promise<TenantInvitation[]> => {
+    const res = await fetch(`${API_BASE_URL}/api/tenants/invitations`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  createTenantInvitation: async (
+    token: string,
+    data: { email: string; role: string },
+  ): Promise<{ invitation: Invitation }> => {
+    const res = await fetch(`${API_BASE_URL}/api/tenants/invitations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  cancelInvitation: async (token: string, invitationId: string): Promise<void> => {
+    const res = await fetch(`${API_BASE_URL}/api/tenants/invitations/${invitationId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
   },
 
   // HR Employees
@@ -383,6 +505,53 @@ export const api = {
 
   deleteClient: async (token: string, clientId: string): Promise<void> => {
     const res = await fetch(`${API_BASE_URL}/api/clients/${clientId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+  },
+
+  createClientCustomFieldValue: async (
+    token: string,
+    clientId: string,
+    data: { customFieldDefinitionId: string; value: string },
+  ): Promise<CustomFieldValue> => {
+    const res = await fetch(`${API_BASE_URL}/api/clients/${clientId}/custom-fields`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  updateClientCustomFieldValue: async (
+    token: string,
+    clientId: string,
+    valueId: string,
+    value: string,
+  ): Promise<CustomFieldValue> => {
+    const res = await fetch(`${API_BASE_URL}/api/clients/${clientId}/custom-fields/${valueId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ value }),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  deleteClientCustomFieldValue: async (
+    token: string,
+    clientId: string,
+    valueId: string,
+  ): Promise<void> => {
+    const res = await fetch(`${API_BASE_URL}/api/clients/${clientId}/custom-fields/${valueId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });

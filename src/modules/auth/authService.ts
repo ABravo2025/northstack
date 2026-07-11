@@ -153,3 +153,70 @@ export async function logoutUser(token: string): Promise<boolean> {
 
   return deleted.count > 0;
 }
+
+export function sanitizeUser<T extends { passwordHash: string }>(user: T): Omit<T, 'passwordHash'> {
+  const { passwordHash: _passwordHash, ...safeUser } = user;
+  return safeUser;
+}
+
+export interface UpdateProfileInput {
+  firstName: string;
+  lastName: string;
+  phone: string;
+}
+
+export async function updateOwnProfile(userId: string, input: UpdateProfileInput): Promise<AuthResult> {
+  if (!input.firstName?.trim()) {
+    return { success: false, error: 'First name is required', field: 'firstName' };
+  }
+
+  if (!input.lastName?.trim()) {
+    return { success: false, error: 'Last name is required', field: 'lastName' };
+  }
+
+  if (!input.phone?.trim()) {
+    return { success: false, error: 'Phone is required', field: 'phone' };
+  }
+
+  if (!isPhoneValid(input.phone)) {
+    return { success: false, error: PHONE_POLICY_MESSAGE, field: 'phone' };
+  }
+
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: {
+      firstName: input.firstName.trim(),
+      lastName: input.lastName.trim(),
+      phone: input.phone.trim(),
+    },
+  });
+
+  return { success: true, user };
+}
+
+export interface ChangePasswordInput {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export async function changeOwnPassword(userId: string, input: ChangePasswordInput): Promise<AuthResult> {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    return { success: false, error: 'User not found' };
+  }
+
+  if (!input.currentPassword || !verifyPassword(input.currentPassword, user.passwordHash)) {
+    return { success: false, error: 'Current password is incorrect', field: 'currentPassword' };
+  }
+
+  if (!isPasswordValid(input.newPassword)) {
+    return { success: false, error: PASSWORD_POLICY_MESSAGE, field: 'newPassword' };
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { passwordHash: hashPassword(input.newPassword) },
+  });
+
+  return { success: true, user: updated };
+}

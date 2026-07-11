@@ -2,8 +2,22 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import type { EntityType } from '@prisma/client';
-import { authenticateToken, loginUser, logoutUser, registerUser } from './modules/auth/authService.js';
-import { canCreateHr, canInviteUsers, canManageCustomFields, canViewHr } from './modules/auth/permissionService.js';
+import {
+  authenticateToken,
+  changeOwnPassword,
+  loginUser,
+  logoutUser,
+  registerUser,
+  sanitizeUser,
+  updateOwnProfile,
+} from './modules/auth/authService.js';
+import {
+  canCreateHr,
+  canInviteUsers,
+  canManageCustomFields,
+  canManageUsers,
+  canViewHr,
+} from './modules/auth/permissionService.js';
 import {
   createEmployee,
   deleteEmployee,
@@ -28,6 +42,11 @@ import {
   registerTenantWithOwner,
   createInvitation,
   acceptInvitation,
+  listTenantUsers,
+  listTenantInvitations,
+  updateTenantUser,
+  cancelInvitation,
+  findInvitationByToken,
 } from './modules/tenant/tenantService.js';
 import {
   createClient,
@@ -89,7 +108,7 @@ app.post('/api/auth/register', async (req, res) => {
     return res.status(400).json({ error: result.error, field: result.field });
   }
 
-  return res.status(201).json({ user: result.user, session: result.session });
+  return res.status(201).json({ user: sanitizeUser(result.user!), session: result.session });
 });
 
 app.post('/api/tenants/register', async (req, res) => {
@@ -106,7 +125,9 @@ app.post('/api/tenants/register', async (req, res) => {
     return res.status(400).json({ error: result.error, field: result.field });
   }
 
-  return res.status(201).json({ tenant: result.tenant, user: result.user, session: result.session });
+  return res
+    .status(201)
+    .json({ tenant: result.tenant, user: sanitizeUser(result.user!), session: result.session });
 });
 
 app.post('/api/auth/login', async (req, res) => {
@@ -116,7 +137,7 @@ app.post('/api/auth/login', async (req, res) => {
     return res.status(401).json({ error: result.error });
   }
 
-  return res.json({ user: result.user, session: result.session });
+  return res.json({ user: sanitizeUser(result.user!), session: result.session });
 });
 
 app.post('/api/auth/logout', async (req, res) => {
@@ -146,7 +167,35 @@ app.get('/api/auth/me', async (req, res) => {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  return res.json({ user });
+  return res.json({ user: sanitizeUser(user) });
+});
+
+app.patch('/api/users/me', async (req, res) => {
+  const user = await authenticateUser(req, res);
+  if (!user) {
+    return;
+  }
+
+  const result = await updateOwnProfile(user.id, req.body);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error, field: result.field });
+  }
+
+  return res.json({ user: sanitizeUser(result.user!) });
+});
+
+app.patch('/api/users/me/password', async (req, res) => {
+  const user = await authenticateUser(req, res);
+  if (!user) {
+    return;
+  }
+
+  const result = await changeOwnPassword(user.id, req.body);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error, field: result.field });
+  }
+
+  return res.status(204).end();
 });
 
 app.post('/api/tenants', async (req, res) => {
@@ -169,7 +218,75 @@ app.post('/api/tenants', async (req, res) => {
     return res.status(400).json({ error: result.error });
   }
 
-  return res.status(201).json({ tenant: result.tenant, user: result.user });
+  return res.status(201).json({ tenant: result.tenant, user: sanitizeUser(result.user!) });
+});
+
+app.get('/api/tenants/users', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageUsers(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const users = await listTenantUsers(user.tenantId!);
+  return res.json(users);
+});
+
+app.patch('/api/tenants/users/:userId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageUsers(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const result = await updateTenantUser(user.tenantId!, req.params.userId, user, {
+    role: req.body.role,
+    status: req.body.status,
+  });
+
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  return res.json({ user: sanitizeUser(result.user!) });
+});
+
+app.get('/api/tenants/invitations', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageUsers(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const invitations = await listTenantInvitations(user.tenantId!);
+  return res.json(invitations);
+});
+
+app.delete('/api/tenants/invitations/:invitationId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageUsers(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const result = await cancelInvitation(user.tenantId!, req.params.invitationId);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  return res.status(204).end();
 });
 
 app.post('/api/tenants/invitations', async (req, res) => {
@@ -201,6 +318,15 @@ app.post('/api/tenants/invitations', async (req, res) => {
   return res.status(201).json({ invitation: result.invitation });
 });
 
+app.get('/api/invitations/:token', async (req, res) => {
+  const invitation = await findInvitationByToken(req.params.token);
+  if (!invitation) {
+    return res.status(404).json({ error: 'Invitation not found' });
+  }
+
+  return res.json(invitation);
+});
+
 app.post('/api/invitations/:token/accept', async (req, res) => {
   const user = await authenticateUser(req, res);
   if (!user) {
@@ -216,7 +342,7 @@ app.post('/api/invitations/:token/accept', async (req, res) => {
     return res.status(400).json({ error: result.error });
   }
 
-  return res.status(200).json({ tenant: result.tenant, user: result.user });
+  return res.status(200).json({ tenant: result.tenant, user: sanitizeUser(result.user!) });
 });
 
 app.get('/api/hr/employees', async (req, res) => {
@@ -627,6 +753,69 @@ app.post('/api/clients/:clientId/custom-fields', async (req, res) => {
   });
 
   return res.status(201).json(customFieldValue);
+});
+
+app.patch('/api/clients/:clientId/custom-fields/:valueId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageCustomFields(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const client = await findClientById(req.params.clientId);
+  if (!client || client.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Client not found' });
+  }
+
+  const existingValue = await findCustomFieldValueById(req.params.valueId);
+  if (
+    !existingValue ||
+    existingValue.tenantId !== user.tenantId ||
+    existingValue.entityType !== 'client' ||
+    existingValue.entityId !== req.params.clientId
+  ) {
+    return res.status(404).json({ error: 'Custom field value not found' });
+  }
+
+  const definition = await findCustomFieldDefinitionById(existingValue.customFieldDefinitionId);
+  if (!definition || !isValueValidForFieldType(definition.fieldType, req.body.value, definition.options)) {
+    return res.status(400).json({ error: `Invalid value for field type '${definition?.fieldType}'` });
+  }
+
+  const updated = await updateCustomFieldValue(req.params.valueId, req.body.value);
+  return res.json(updated);
+});
+
+app.delete('/api/clients/:clientId/custom-fields/:valueId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageCustomFields(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const client = await findClientById(req.params.clientId);
+  if (!client || client.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Client not found' });
+  }
+
+  const existingValue = await findCustomFieldValueById(req.params.valueId);
+  if (
+    !existingValue ||
+    existingValue.tenantId !== user.tenantId ||
+    existingValue.entityType !== 'client' ||
+    existingValue.entityId !== req.params.clientId
+  ) {
+    return res.status(404).json({ error: 'Custom field value not found' });
+  }
+
+  await deleteCustomFieldValue(req.params.valueId);
+  return res.status(204).end();
 });
 
 app.get('/api/clients/:clientId/custom-fields', async (req, res) => {

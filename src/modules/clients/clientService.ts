@@ -1,5 +1,6 @@
 import prisma from "../../lib/prisma.js";
 import { ClientStatus } from "@prisma/client";
+import { listCustomFieldValuesForEntities } from "../hr/customFieldService.js";
 
 interface CreateClientInput {
   firstName: string;
@@ -31,9 +32,20 @@ export async function createClient(input: CreateClientInput) {
 }
 
 export async function listClients(tenantId: string) {
-  return prisma.client.findMany({
+  const clients = await prisma.client.findMany({
     where: { tenantId },
   });
+
+  const values = await listCustomFieldValuesForEntities(
+    tenantId,
+    'client',
+    clients.map((client) => client.id),
+  );
+
+  return clients.map((client) => ({
+    ...client,
+    customFieldVals: values.filter((value) => value.entityId === client.id),
+  }));
 }
 
 export async function findClientById(id: string) {

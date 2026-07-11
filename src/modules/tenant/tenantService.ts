@@ -7,7 +7,7 @@ import {
   PASSWORD_POLICY_MESSAGE,
   PHONE_POLICY_MESSAGE,
 } from '../auth/authService.js';
-import type { Invitation, Tenant, User, UserRole, Session } from '@prisma/client';
+import type { Invitation, Tenant, User, UserRole, UserStatus, Session } from '@prisma/client';
 
 const INVITATION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -172,6 +172,18 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
   };
 }
 
+export async function findInvitationByToken(token: string) {
+  return prisma.invitation.findUnique({
+    where: { token },
+    select: {
+      email: true,
+      role: true,
+      status: true,
+      expiresAt: true,
+    },
+  });
+}
+
 export async function createInvitation(input: CreateInvitationInput): Promise<InvitationResult> {
   const tenant = await prisma.tenant.findUnique({
     where: { id: input.tenantId },
@@ -276,6 +288,116 @@ export async function acceptInvitation(input: AcceptInvitationInput): Promise<Te
     tenant: result.tenant,
     user: result.user,
   };
+}
+
+export async function listTenantUsers(tenantId: string) {
+  return prisma.user.findMany({
+    where: { tenantId },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      email: true,
+      phone: true,
+      role: true,
+      status: true,
+    },
+    orderBy: { firstName: 'asc' },
+  });
+}
+
+export async function listTenantInvitations(tenantId: string) {
+  return prisma.invitation.findMany({
+    where: { tenantId, status: 'pending' },
+    select: {
+      id: true,
+      email: true,
+      role: true,
+      status: true,
+      token: true,
+      createdAt: true,
+      expiresAt: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+export interface UpdateTenantUserInput {
+  role?: UserRole;
+  status?: UserStatus;
+}
+
+export interface TenantUserUpdateResult {
+  success: boolean;
+  user?: User;
+  error?: string;
+}
+
+export async function updateTenantUser(
+  tenantId: string,
+  targetUserId: string,
+  actingUser: User,
+  input: UpdateTenantUserInput,
+): Promise<TenantUserUpdateResult> {
+  const target = await prisma.user.findUnique({ where: { id: targetUserId } });
+  if (!target || target.tenantId !== tenantId) {
+    return { success: false, error: 'User not found' };
+  }
+
+  if (target.id === actingUser.id) {
+    return { success: false, error: 'Use your profile page to change your own account' };
+  }
+
+  if ((input.role === 'owner' || target.role === 'owner') && actingUser.role !== 'owner') {
+    return { success: false, error: 'Only an owner can manage owner access' };
+  }
+
+  if (input.role === 'owner') {
+    // A tenant can only ever have one owner. Promoting someone to owner is a
+    // transfer: the acting owner is demoted to admin in the same transaction,
+    // so the tenant never has zero or two owners at once.
+    const targetData: { role: UserRole; status?: UserStatus } = { role: 'owner' };
+    if (input.status) {
+      targetData.status = input.status;
+    }
+
+    const [updatedTarget] = await prisma.$transaction([
+      prisma.user.update({ where: { id: targetUserId }, data: targetData }),
+      prisma.user.update({ where: { id: actingUser.id }, data: { role: 'admin' } }),
+    ]);
+
+    return { success: true, user: updatedTarget };
+  }
+
+  const data: { role?: UserRole; status?: UserStatus } = {};
+  if (input.role) {
+    data.role = input.role;
+  }
+  if (input.status) {
+    data.status = input.status;
+  }
+
+  const updated = await prisma.user.update({ where: { id: targetUserId }, data });
+  return { success: true, user: updated };
+}
+
+export interface CancelInvitationResult {
+  success: boolean;
+  error?: string;
+}
+
+export async function cancelInvitation(tenantId: string, invitationId: string): Promise<CancelInvitationResult> {
+  const invitation = await prisma.invitation.findUnique({ where: { id: invitationId } });
+  if (!invitation || invitation.tenantId !== tenantId) {
+    return { success: false, error: 'Invitation not found' };
+  }
+
+  if (invitation.status !== 'pending') {
+    return { success: false, error: 'Invitation is no longer pending' };
+  }
+
+  await prisma.invitation.update({ where: { id: invitationId }, data: { status: 'revoked' } });
+  return { success: true };
 }
 
 function normalizeSlug(value: string): string {

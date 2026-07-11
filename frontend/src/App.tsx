@@ -10,9 +10,11 @@ import ClientsDashboardPage from './pages/ClientsDashboardPage';
 import ClientsPage from './pages/ClientsPage';
 import CustomFieldsSettingsPage from './pages/CustomFieldsSettingsPage';
 import ProfileSettingsPage from './pages/ProfileSettingsPage';
-import CompanySettingsPage from './pages/CompanySettingsPage';
+import CompanyAppearancePage from './pages/CompanyAppearancePage';
+import CompanyUsersPage from './pages/CompanyUsersPage';
 import AppLayout from './layouts/AppLayout';
-import SettingsLayout from './layouts/SettingsLayout';
+import CompanySettingsLayout from './layouts/CompanySettingsLayout';
+import ModuleSettingsLayout from './layouts/ModuleSettingsLayout';
 import './App.css';
 
 export interface FormError {
@@ -175,11 +177,21 @@ export default function App() {
         <Route path="/hr/employees" element={<EmployeesPage user={user} token={token ?? ''} />} />
         <Route path="/clients/dashboard" element={<ClientsDashboardPage />} />
         <Route path="/clients" element={<ClientsPage token={token ?? ''} />} />
-        <Route path="/profile" element={<ProfileSettingsPage />} />
-        <Route path="/settings" element={<SettingsLayout />}>
-          <Route index element={<Navigate to="company" replace />} />
+        <Route
+          path="/profile"
+          element={<ProfileSettingsPage user={user} token={token ?? ''} onUserUpdated={setUser} />}
+        />
+        <Route path="/settings" element={<ModuleSettingsLayout />}>
+          <Route index element={<Navigate to="custom-fields" replace />} />
           <Route path="custom-fields" element={<CustomFieldsSettingsPage token={token ?? ''} />} />
-          <Route path="company" element={<CompanySettingsPage />} />
+        </Route>
+        <Route path="/company" element={<CompanySettingsLayout />}>
+          <Route index element={<Navigate to="appearance" replace />} />
+          <Route path="appearance" element={<CompanyAppearancePage />} />
+          <Route
+            path="users"
+            element={<CompanyUsersPage user={user} token={token ?? ''} onUserUpdated={setUser} />}
+          />
         </Route>
       </Route>
 

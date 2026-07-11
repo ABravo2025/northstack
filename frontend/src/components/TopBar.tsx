@@ -50,10 +50,10 @@ export default function TopBar({ user, onLogout }: TopBarProps) {
                 className="user-menu-item"
                 onClick={() => {
                   setOpen(false);
-                  navigate('/settings');
+                  navigate('/company');
                 }}
               >
-                Settings
+                Company Settings
               </button>
             )}
             <button

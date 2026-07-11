@@ -14,6 +14,17 @@ export class ApiError extends Error {
   }
 }
 
+async function apiFetch(url: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch {
+    // fetch() itself throws on network failures (server unreachable, DNS,
+    // CORS) before there's ever a Response to inspect — distinguish that
+    // from a normal 4xx/5xx, which throwApiError already handles.
+    throw new ApiError("Can't reach the server. Check your connection and try again.");
+  }
+}
+
 async function throwApiError(res: Response): Promise<never> {
   let message = res.statusText || 'Request failed';
   let field: string | undefined;
@@ -134,7 +145,7 @@ export const api = {
     ownerPassword: string;
     ownerPhone: string;
   }): Promise<AuthResponse> => {
-    const res = await fetch(`${API_BASE_URL}/api/tenants/register`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/tenants/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -147,7 +158,7 @@ export const api = {
     email: string;
     password: string;
   }): Promise<AuthResponse> => {
-    const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -163,7 +174,7 @@ export const api = {
     password: string;
     phone: string;
   }): Promise<AuthResponse> => {
-    const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -175,13 +186,13 @@ export const api = {
   getInvitation: async (
     invitationToken: string,
   ): Promise<{ email: string; role: string; status: string; expiresAt: string }> => {
-    const res = await fetch(`${API_BASE_URL}/api/invitations/${invitationToken}`);
+    const res = await apiFetch(`${API_BASE_URL}/api/invitations/${invitationToken}`);
     if (!res.ok) await throwApiError(res);
     return res.json();
   },
 
   acceptInvitation: async (token: string, invitationToken: string): Promise<AuthResponse> => {
-    const res = await fetch(`${API_BASE_URL}/api/invitations/${invitationToken}/accept`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/invitations/${invitationToken}/accept`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -190,7 +201,7 @@ export const api = {
   },
 
   logout: async (token: string): Promise<void> => {
-    const res = await fetch(`${API_BASE_URL}/api/auth/logout`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/auth/logout`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -198,7 +209,7 @@ export const api = {
   },
 
   getCurrentUser: async (token: string) => {
-    const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);
@@ -209,7 +220,7 @@ export const api = {
     token: string,
     data: { firstName: string; lastName: string; phone: string },
   ): Promise<{ user: TenantUser }> => {
-    const res = await fetch(`${API_BASE_URL}/api/users/me`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/users/me`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -225,7 +236,7 @@ export const api = {
     token: string,
     data: { currentPassword: string; newPassword: string },
   ): Promise<void> => {
-    const res = await fetch(`${API_BASE_URL}/api/users/me/password`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/users/me/password`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -238,7 +249,7 @@ export const api = {
 
   // Company / tenant users
   listTenantUsers: async (token: string): Promise<TenantUser[]> => {
-    const res = await fetch(`${API_BASE_URL}/api/tenants/users`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/tenants/users`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);
@@ -250,7 +261,7 @@ export const api = {
     userId: string,
     data: { role?: string; status?: string },
   ): Promise<{ user: TenantUser }> => {
-    const res = await fetch(`${API_BASE_URL}/api/tenants/users/${userId}`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/tenants/users/${userId}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -263,7 +274,7 @@ export const api = {
   },
 
   listTenantInvitations: async (token: string): Promise<TenantInvitation[]> => {
-    const res = await fetch(`${API_BASE_URL}/api/tenants/invitations`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/tenants/invitations`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);
@@ -274,7 +285,7 @@ export const api = {
     token: string,
     data: { email: string; role: string },
   ): Promise<{ invitation: Invitation }> => {
-    const res = await fetch(`${API_BASE_URL}/api/tenants/invitations`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/tenants/invitations`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -287,7 +298,7 @@ export const api = {
   },
 
   cancelInvitation: async (token: string, invitationId: string): Promise<void> => {
-    const res = await fetch(`${API_BASE_URL}/api/tenants/invitations/${invitationId}`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/tenants/invitations/${invitationId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -296,7 +307,7 @@ export const api = {
 
   // HR Employees
   listEmployees: async (token: string): Promise<Employee[]> => {
-    const res = await fetch(`${API_BASE_URL}/api/hr/employees`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);
@@ -312,7 +323,7 @@ export const api = {
       department: string;
     },
   ): Promise<Employee> => {
-    const res = await fetch(`${API_BASE_URL}/api/hr/employees`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -329,7 +340,7 @@ export const api = {
     employeeId: string,
     data: Partial<Employee>,
   ): Promise<Employee> => {
-    const res = await fetch(`${API_BASE_URL}/api/hr/employees/${employeeId}`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -342,7 +353,7 @@ export const api = {
   },
 
   deleteEmployee: async (token: string, employeeId: string): Promise<void> => {
-    const res = await fetch(`${API_BASE_URL}/api/hr/employees/${employeeId}`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -350,7 +361,7 @@ export const api = {
   },
 
   inviteEmployee: async (token: string, employeeId: string): Promise<{ invitation: Invitation }> => {
-    const res = await fetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/invite`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/invite`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -363,7 +374,7 @@ export const api = {
     token: string,
     entityType: 'employee' | 'client',
   ): Promise<CustomFieldDefinition[]> => {
-    const res = await fetch(`${API_BASE_URL}/api/hr/custom-fields?entityType=${entityType}`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/custom-fields?entityType=${entityType}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);
@@ -380,7 +391,7 @@ export const api = {
       required?: boolean;
     },
   ): Promise<CustomFieldDefinition> => {
-    const res = await fetch(`${API_BASE_URL}/api/hr/custom-fields`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/custom-fields`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -397,7 +408,7 @@ export const api = {
     definitionId: string,
     isActive: boolean,
   ): Promise<CustomFieldDefinition> => {
-    const res = await fetch(`${API_BASE_URL}/api/hr/custom-fields/${definitionId}`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/custom-fields/${definitionId}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -414,7 +425,7 @@ export const api = {
     employeeId: string,
     data: { customFieldDefinitionId: string; value: string },
   ): Promise<CustomFieldValue> => {
-    const res = await fetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/custom-fields`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/custom-fields`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -432,7 +443,7 @@ export const api = {
     valueId: string,
     value: string,
   ): Promise<CustomFieldValue> => {
-    const res = await fetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/custom-fields/${valueId}`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/custom-fields/${valueId}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -449,7 +460,7 @@ export const api = {
     employeeId: string,
     valueId: string,
   ): Promise<void> => {
-    const res = await fetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/custom-fields/${valueId}`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/custom-fields/${valueId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -458,7 +469,7 @@ export const api = {
 
   // Clients
   listClients: async (token: string): Promise<Client[]> => {
-    const res = await fetch(`${API_BASE_URL}/api/clients`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/clients`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);
@@ -474,7 +485,7 @@ export const api = {
       company: string;
     },
   ): Promise<Client> => {
-    const res = await fetch(`${API_BASE_URL}/api/clients`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/clients`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -491,7 +502,7 @@ export const api = {
     clientId: string,
     data: Partial<Client>,
   ): Promise<Client> => {
-    const res = await fetch(`${API_BASE_URL}/api/clients/${clientId}`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/clients/${clientId}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -504,7 +515,7 @@ export const api = {
   },
 
   deleteClient: async (token: string, clientId: string): Promise<void> => {
-    const res = await fetch(`${API_BASE_URL}/api/clients/${clientId}`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/clients/${clientId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -516,7 +527,7 @@ export const api = {
     clientId: string,
     data: { customFieldDefinitionId: string; value: string },
   ): Promise<CustomFieldValue> => {
-    const res = await fetch(`${API_BASE_URL}/api/clients/${clientId}/custom-fields`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/clients/${clientId}/custom-fields`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -534,7 +545,7 @@ export const api = {
     valueId: string,
     value: string,
   ): Promise<CustomFieldValue> => {
-    const res = await fetch(`${API_BASE_URL}/api/clients/${clientId}/custom-fields/${valueId}`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/clients/${clientId}/custom-fields/${valueId}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -551,7 +562,7 @@ export const api = {
     clientId: string,
     valueId: string,
   ): Promise<void> => {
-    const res = await fetch(`${API_BASE_URL}/api/clients/${clientId}/custom-fields/${valueId}`, {
+    const res = await apiFetch(`${API_BASE_URL}/api/clients/${clientId}/custom-fields/${valueId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });

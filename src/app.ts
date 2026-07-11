@@ -63,6 +63,29 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Express 4 doesn't catch rejected promises from async route handlers on its
+// own — an unhandled rejection there crashes the whole process instead of
+// producing a clean error response. Wrapping every route-registration method
+// once here means no individual route needs its own try/catch.
+//
+// `app.get` is also (confusingly) how Express reads internal settings, e.g.
+// `app.get('etag')` — a single-argument call with no handler. Only wrap
+// calls that look like an actual `(path, singleHandler)` route registration
+// and pass everything else straight through untouched.
+const routeMethods = ['get', 'post', 'patch', 'delete', 'put'] as const;
+for (const method of routeMethods) {
+  const original = app[method].bind(app);
+  app[method] = ((...args: unknown[]) => {
+    const [path, handler] = args;
+    if (args.length !== 2 || typeof path !== 'string' || typeof handler !== 'function') {
+      return (original as (...args: unknown[]) => unknown)(...args);
+    }
+    return original(path, ((req, res, next) => {
+      Promise.resolve((handler as express.RequestHandler)(req, res, next)).catch(next);
+    }) as express.RequestHandler);
+  }) as typeof app[typeof method];
+}
+
 function getBearerToken(req: express.Request): string | null {
   return req.headers.authorization?.replace('Bearer ', '') ?? null;
 }
@@ -831,6 +854,17 @@ app.get('/api/clients/:clientId/custom-fields', async (req, res) => {
 
   const values = await listCustomFieldValuesForEntity(user.tenantId!, 'client', req.params.clientId);
   return res.json(values);
+});
+
+// Catches anything an async route handler throws (e.g. Neon/Prisma dropping
+// the connection) so it becomes a clean JSON response instead of crashing
+// the process or leaking a stack trace to the client.
+app.use((err: unknown, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (res.headersSent) {
+    return next(err);
+  }
+  console.error(err);
+  return res.status(500).json({ error: 'Something went wrong. Please try again.' });
 });
 
 export default app;

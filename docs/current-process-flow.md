@@ -1,6 +1,6 @@
 # Current Process Flow
 
-- Última actualización: 2026-07-13 (sync completo: settings navigation, resiliencia, deploy, dominio propio, envío real de email)
+- Última actualización: 2026-07-13 (landing page publicada como proyecto de Vercel separado)
 
 This document describes the current architecture and flows for Northstack, kept in sync so a fresh session (or a fresh person) can recover context quickly.
 
@@ -13,7 +13,11 @@ This document describes the current architecture and flows for Northstack, kept 
 - **Database**: Neon (serverless Postgres) via Prisma, same `DATABASE_URL` in both environments.
 - **Hosting**: Vercel, one project (`northstack`) serving both the static frontend and the `/api/*` + `/health` serverless function (`vercel.json` routes accordingly; `framework: null` so Vercel doesn't auto-detect "Express" and break the hybrid build).
 - **Deploys**: every push to `main` on GitHub triggers `.github/workflows/deploy.yml`, which runs `vercel deploy --prod` using a `VERCEL_TOKEN` repo secret (Vercel's native GitHub App integration couldn't be authorized headlessly, so this is the workaround).
-- **Domain**: `joinnorthstack.com` (Cloudflare Registrar). The app is served on the subdomain `app.joinnorthstack.com` (A record → `76.76.21.21`, DNS only/no proxy), with SSL issued automatically by Vercel (Let's Encrypt, zero manual steps). The root `joinnorthstack.com` is attached to the Vercel project but has no DNS record yet — reserved for a future landing page. The root domain's DNS is also where the email records live (see below).
+- **Domain**: `joinnorthstack.com` (Cloudflare Registrar), split across **two separate Vercel projects**, both on the same account:
+  - `app.joinnorthstack.com` (A record → `76.76.21.21`, DNS only/no proxy) → the `northstack` project (the real app, static frontend + serverless backend).
+  - `joinnorthstack.com` root (A record → `76.76.21.21`, same IP, different Vercel-side routing) → the `northstack-landing` project — a static marketing page (`landing/index.html`), no backend, no sign up/login yet (deliberately left out until the beta is live).
+  - Both get SSL issued automatically by Vercel (Let's Encrypt, zero manual steps). The root domain's DNS is also where the email records live (see below).
+  - Both projects auto-deploy from the same GitHub Actions workflow (`deploy-app` and `deploy-landing` jobs in `.github/workflows/deploy.yml`), same `VERCEL_TOKEN` secret, different `VERCEL_PROJECT_ID`.
 - **Email**: `joinnorthstack.com`'s MX/SPF/DKIM point to Zoho Mail (free tier). The backend sends real transactional email via SMTP (`smtp.zoho.com:465`) from `no.reply@joinnorthstack.com`, using `nodemailer` (`src/lib/mailer.ts`).
 
 ## Backend resilience

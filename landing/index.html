@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Northstack — Plataforma modular para gestionar tu empresa</title>
+    <meta
+      name="description"
+      content="Northstack es una plataforma SaaS modular y multi-tenant para gestionar RRHH, clientes y, próximamente, pagos — todo en un solo lugar."
+    />
+
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
+    <meta name="theme-color" content="#0d2a48" />
+
+    <meta property="og:title" content="Northstack — Plataforma modular para gestionar tu empresa" />
+    <meta
+      property="og:description"
+      content="RRHH, clientes y pagos, todo en un solo lugar. Modular desde el día uno."
+    />
+    <meta property="og:image" content="https://joinnorthstack.com/og-image-1200x630.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      :root {
+        --navy: #0d2a48;
+        --blue: #3c6da1;
+        --blue-light: #8dbada;
+        --cream: #fdfcf8;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        background: var(--cream);
+        color: var(--navy);
+        line-height: 1.6;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      .container {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      header {
+        padding: 28px 0;
+      }
+
+      header .container {
+        display: flex;
+        align-items: center;
+      }
+
+      header img {
+        height: 32px;
+      }
+
+      .hero {
+        padding: 64px 0 88px;
+        text-align: center;
+      }
+
+      .hero img.icon {
+        height: 72px;
+        margin-bottom: 28px;
+      }
+
+      .hero h1 {
+        font-size: 2.75rem;
+        font-weight: 800;
+        margin: 0 0 20px;
+        letter-spacing: -0.02em;
+      }
+
+      .hero p.tagline {
+        font-size: 1.2rem;
+        color: var(--blue);
+        max-width: 620px;
+        margin: 0 auto;
+        font-weight: 500;
+      }
+
+      section {
+        padding: 64px 0;
+      }
+
+      section.alt {
+        background: white;
+      }
+
+      h2 {
+        font-size: 2rem;
+        font-weight: 700;
+        text-align: center;
+        margin: 0 0 12px;
+        letter-spacing: -0.01em;
+      }
+
+      p.section-lead {
+        text-align: center;
+        max-width: 640px;
+        margin: 0 auto 48px;
+        color: #4b5563;
+        font-size: 1.05rem;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 24px;
+      }
+
+      .card {
+        background: var(--cream);
+        border: 1px solid rgba(13, 42, 72, 0.08);
+        border-radius: 20px;
+        padding: 32px 28px;
+      }
+
+      section.alt .card {
+        background: var(--cream);
+      }
+
+      .card .badge {
+        display: inline-block;
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        padding: 4px 10px;
+        border-radius: 999px;
+        margin-bottom: 14px;
+      }
+
+      .badge.live {
+        background: rgba(60, 109, 161, 0.12);
+        color: var(--blue);
+      }
+
+      .badge.soon {
+        background: rgba(13, 42, 72, 0.08);
+        color: var(--navy);
+        opacity: 0.7;
+      }
+
+      .card h3 {
+        margin: 0 0 10px;
+        font-size: 1.2rem;
+      }
+
+      .card p {
+        margin: 0;
+        color: #4b5563;
+        font-size: 0.95rem;
+      }
+
+      .features {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 32px;
+        margin-top: 8px;
+      }
+
+      .features .feature h4 {
+        margin: 0 0 8px;
+        font-size: 1.05rem;
+      }
+
+      .features .feature p {
+        margin: 0;
+        color: #4b5563;
+        font-size: 0.95rem;
+      }
+
+      .about {
+        display: flex;
+        gap: 40px;
+        align-items: flex-start;
+        flex-wrap: wrap;
+      }
+
+      .about .avatar {
+        width: 96px;
+        height: 96px;
+        border-radius: 50%;
+        background: var(--navy);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        font-weight: 700;
+        flex-shrink: 0;
+      }
+
+      .about .about-text {
+        flex: 1;
+        min-width: 260px;
+      }
+
+      .about h2 {
+        text-align: left;
+        margin-bottom: 4px;
+      }
+
+      .about .role {
+        color: var(--blue);
+        font-weight: 600;
+        margin: 0 0 16px;
+      }
+
+      .about p {
+        color: #374151;
+      }
+
+      footer {
+        padding: 40px 0;
+        text-align: center;
+        color: #6b7280;
+        font-size: 0.85rem;
+      }
+
+      footer img {
+        height: 22px;
+        margin-bottom: 12px;
+        opacity: 0.7;
+      }
+
+      @media (max-width: 640px) {
+        .hero h1 {
+          font-size: 2.1rem;
+        }
+        h2 {
+          font-size: 1.6rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="container">
+        <img src="/logo-horizontal-light.svg" alt="Northstack" />
+      </div>
+    </header>
+
+    <div class="hero">
+      <div class="container">
+        <img class="icon" src="/icon-color.svg" alt="" />
+        <h1>Gestioná tu empresa desde un solo lugar</h1>
+        <p class="tagline">
+          Northstack es una plataforma modular pensada para crecer con vos: RRHH, clientes y, más
+          adelante, pagos — sin tener que adaptar tu operación a un sistema rígido.
+        </p>
+      </div>
+    </div>
+
+    <section class="alt">
+      <div class="container">
+        <h2>Qué es Northstack</h2>
+        <p class="section-lead">
+          Un sistema multi-tenant: cada empresa se registra con su propio espacio, con control
+          total sobre roles, permisos y campos personalizados. Nace de un problema que se repite
+          una y otra vez en startups — gestionar personas, clientes y cobros termina resuelto con
+          planillas sueltas y herramientas que no hablan entre sí. Northstack los une en una sola
+          plataforma, modular desde el día uno.
+        </p>
+        <div class="features">
+          <div class="feature">
+            <h4>Multi-tenant real</h4>
+            <p>Cada empresa administra su propia información, sus propios usuarios y sus propios permisos, de forma completamente independiente.</p>
+          </div>
+          <div class="feature">
+            <h4>Campos personalizados</h4>
+            <p>Adaptá los formularios de empleados y clientes a lo que tu empresa realmente necesita registrar, sin depender de que alguien lo programe.</p>
+          </div>
+          <div class="feature">
+            <h4>Roles y permisos</h4>
+            <p>Owner, admin y miembro, con invitaciones por email para sumar gente a tu equipo de forma controlada.</p>
+          </div>
+          <div class="feature">
+            <h4>Pensado para crecer</h4>
+            <p>La arquitectura está armada para sumar módulos nuevos sin rehacer lo que ya existe.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container">
+        <h2>Soluciones</h2>
+        <p class="section-lead">
+          Cada módulo resuelve un problema puntual de gestión — y todos comparten la misma base.
+        </p>
+        <div class="grid">
+          <div class="card">
+            <span class="badge live">Disponible</span>
+            <h3>Recursos Humanos</h3>
+            <p>
+              Alta y gestión de empleados, invitaciones para que tengan su propio acceso, campos
+              personalizados por empresa, y búsqueda para encontrar a cualquiera al instante.
+            </p>
+          </div>
+          <div class="card">
+            <span class="badge live">Disponible</span>
+            <h3>Clientes</h3>
+            <p>
+              Administrá tu cartera de clientes con el mismo nivel de personalización que
+              Recursos Humanos: campos propios, búsqueda, y estados adaptados a tu proceso
+              comercial.
+            </p>
+          </div>
+          <div class="card">
+            <span class="badge soon">Próximamente</span>
+            <h3>Pagos</h3>
+            <p>
+              Cobro de suscripciones y gestión de pagos integrada a la plataforma, pensada desde
+              el inicio para alcance internacional.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="alt">
+      <div class="container about">
+        <div class="avatar">AB</div>
+        <div class="about-text">
+          <h2>Sobre mí</h2>
+          <p class="role">Alejandro Bravo — fundador de Northstack</p>
+          <p>
+            A lo largo de mi carrera vi el mismo problema repetirse en startups distintas:
+            recursos humanos, gestión de clientes y cobros resueltos a los ponchazos, con
+            planillas sueltas y herramientas que no se hablan entre sí. Northstack nace de esa
+            frustración — una plataforma pensada para que cada empresa pueda administrarse de
+            forma autónoma, sin tener que adaptar su operación a un sistema rígido.
+          </p>
+          <p>
+            Hoy la estoy construyendo activamente, con foco en tener bases sólidas antes que
+            funcionalidades apuradas. Si te interesa el mundo SaaS multi-tenant o simplemente
+            querés seguir el progreso, es un gusto compartirlo.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="container">
+        <img src="/icon-color.svg" alt="Northstack" />
+        <p>© 2026 Northstack. Todos los derechos reservados.</p>
+      </div>
+    </footer>
+  </body>
+</html>

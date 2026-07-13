@@ -8,6 +8,7 @@ import {
   PHONE_POLICY_MESSAGE,
 } from '../auth/authService.js';
 import type { Invitation, Tenant, User, UserRole, UserStatus, Session } from '@prisma/client';
+import { sendInvitationEmail } from '../../lib/mailer.js';
 
 const INVITATION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -213,6 +214,18 @@ export async function createInvitation(input: CreateInvitationInput): Promise<In
       token: randomUUID(),
       expiresAt: new Date(Date.now() + INVITATION_EXPIRY_MS),
     },
+  });
+
+  const appBaseUrl = process.env.APP_BASE_URL ?? 'http://localhost:5173';
+  sendInvitationEmail({
+    to: invitation.email,
+    tenantName: tenant.name,
+    role: invitation.role,
+    acceptUrl: `${appBaseUrl}/accept-invite/${invitation.token}`,
+  }).catch((error) => {
+    // Best-effort: the invitation itself (and its copyable link in the UI)
+    // already exists, so a failed email shouldn't fail the whole request.
+    console.error('Failed to send invitation email:', error);
   });
 
   return { success: true, invitation };

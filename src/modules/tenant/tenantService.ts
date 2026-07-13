@@ -9,6 +9,7 @@ import {
 } from '../auth/authService.js';
 import type { Invitation, Tenant, User, UserRole, UserStatus, Session } from '@prisma/client';
 import { sendInvitationEmail } from '../../lib/mailer.js';
+import { seedDefaultStatusDefinitions } from '../hr/statusService.js';
 
 const INVITATION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -85,6 +86,8 @@ export async function createTenantForUser(input: CreateTenantForUserInput): Prom
       },
     });
 
+    await seedDefaultStatusDefinitions(tx, tenant.id);
+
     const updatedUser = await tx.user.update({
       where: { id: input.userId },
       data: {
@@ -142,6 +145,8 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
         slug,
       },
     });
+
+    await seedDefaultStatusDefinitions(tx, tenant.id);
 
     const user = await tx.user.create({
       data: {

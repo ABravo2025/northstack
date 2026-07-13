@@ -55,6 +55,11 @@ import {
   updateClient,
   deleteClient,
 } from './modules/clients/clientService.js';
+import {
+  createStatusDefinition,
+  listStatusDefinitions,
+  updateStatusDefinition,
+} from './modules/hr/statusService.js';
 
 dotenv.config();
 
@@ -429,7 +434,7 @@ app.patch('/api/hr/employees/:employeeId', async (req, res) => {
     return res.status(404).json({ error: 'Employee not found' });
   }
 
-  const updated = await updateEmployee(req.params.employeeId, req.body);
+  const updated = await updateEmployee(req.params.employeeId, req.body, user.id);
   return res.json(updated);
 });
 
@@ -543,6 +548,69 @@ app.get('/api/hr/custom-fields', async (req, res) => {
   const entityType = (req.query.entityType as EntityType) ?? 'employee';
   const customFields = await listCustomFieldDefinitions(user.tenantId!, entityType);
   return res.json(customFields);
+});
+
+app.get('/api/status-definitions', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  const entityType = (req.query.entityType as EntityType) ?? 'employee';
+  const statuses = await listStatusDefinitions(user.tenantId!, entityType);
+  return res.json(statuses);
+});
+
+app.post('/api/status-definitions', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageCustomFields(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const name = req.body.name as string;
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Name is required' });
+  }
+
+  const status = await createStatusDefinition({
+    tenantId: user.tenantId!,
+    entityType: req.body.entityType,
+    name: name.trim(),
+    color: req.body.color,
+    order: req.body.order,
+    isDefault: Boolean(req.body.isDefault),
+  });
+
+  return res.status(201).json(status);
+});
+
+app.patch('/api/status-definitions/:definitionId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageCustomFields(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const result = await updateStatusDefinition(req.params.definitionId, user.tenantId!, {
+    name: req.body.name,
+    color: req.body.color,
+    order: req.body.order,
+    isDefault: req.body.isDefault,
+    isActive: req.body.isActive,
+  });
+
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  return res.json(result.statusDefinition);
 });
 
 app.post('/api/hr/employees/:employeeId/custom-fields', async (req, res) => {
@@ -720,7 +788,7 @@ app.patch('/api/clients/:clientId', async (req, res) => {
     return res.status(404).json({ error: 'Client not found' });
   }
 
-  const updated = await updateClient(req.params.clientId, req.body);
+  const updated = await updateClient(req.params.clientId, req.body, user.id);
   return res.json(updated);
 });
 

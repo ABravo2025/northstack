@@ -63,7 +63,8 @@ interface Employee {
   lastName: string;
   email: string;
   department: string;
-  status: string;
+  statusId: string;
+  statusDefn?: { id: string; name: string; color: string | null };
   userId?: string | null;
   customFieldVals?: {
     id: string;
@@ -78,7 +79,8 @@ interface Client {
   lastName: string;
   email: string;
   company: string;
-  status: string;
+  statusId: string;
+  statusDefn?: { id: string; name: string; color: string | null };
   customFieldVals?: {
     id: string;
     customFieldDefinitionId: string;
@@ -93,6 +95,16 @@ interface CustomFieldDefinition {
   fieldType: string;
   options: string | null;
   required: boolean;
+  isActive: boolean;
+}
+
+interface StatusDefinition {
+  id: string;
+  entityType: string;
+  name: string;
+  color: string | null;
+  order: number;
+  isDefault: boolean;
   isActive: boolean;
 }
 
@@ -415,6 +427,51 @@ export const api = {
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ isActive }),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  // Status definitions
+  listStatusDefinitions: async (
+    token: string,
+    entityType: 'employee' | 'client',
+  ): Promise<StatusDefinition[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/status-definitions?entityType=${entityType}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  createStatusDefinition: async (
+    token: string,
+    data: { entityType: 'employee' | 'client'; name: string; color?: string; order?: number; isDefault?: boolean },
+  ): Promise<StatusDefinition> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/status-definitions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  updateStatusDefinition: async (
+    token: string,
+    definitionId: string,
+    data: { name?: string; color?: string; order?: number; isDefault?: boolean; isActive?: boolean },
+  ): Promise<StatusDefinition> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/status-definitions/${definitionId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
     });
     if (!res.ok) await throwApiError(res);
     return res.json();

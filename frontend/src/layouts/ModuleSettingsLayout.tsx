@@ -11,6 +11,9 @@ export default function ModuleSettingsLayout() {
           <NavLink to="custom-fields" className={linkClass}>
             Custom Fields
           </NavLink>
+          <NavLink to="statuses" className={linkClass}>
+            Statuses
+          </NavLink>
         </nav>
         <div className="settings-content">
           <Outlet />

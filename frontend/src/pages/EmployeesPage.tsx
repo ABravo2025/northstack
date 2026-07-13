@@ -15,6 +15,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [employeeCustomFields, setEmployeeCustomFields] = useState<any[]>([]);
+  const [employeeStatuses, setEmployeeStatuses] = useState<any[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
   const [editCustomFieldValues, setEditCustomFieldValues] = useState<Record<string, string>>({});
   const [editCustomFieldValueIds, setEditCustomFieldValueIds] = useState<Record<string, string>>({});
@@ -44,12 +45,13 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     lastName: '',
     email: '',
     department: '',
-    status: 'active',
+    statusId: '',
   });
 
   useEffect(() => {
     loadEmployees();
     loadEmployeeCustomFields();
+    loadEmployeeStatuses();
   }, []);
 
   const loadEmployeeCustomFields = async () => {
@@ -58,6 +60,15 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       setEmployeeCustomFields(defs);
     } catch (error) {
       setError('Failed to load custom fields: ' + (error as Error).message);
+    }
+  };
+
+  const loadEmployeeStatuses = async () => {
+    try {
+      const statuses = await api.listStatusDefinitions(token, 'employee');
+      setEmployeeStatuses(statuses.filter((s) => s.isActive));
+    } catch (error) {
+      setError('Failed to load statuses: ' + (error as Error).message);
     }
   };
 
@@ -105,7 +116,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       lastName: emp.lastName,
       email: emp.email,
       department: emp.department,
-      status: emp.status,
+      statusId: emp.statusId,
     });
 
     const values: Record<string, string> = {};
@@ -325,12 +336,14 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
             <div className="form-group">
               <label>Status</label>
               <select
-                value={editEmployeeForm.status}
-                onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, status: e.target.value })}
+                value={editEmployeeForm.statusId}
+                onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, statusId: e.target.value })}
               >
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="pending">Pending</option>
+                {employeeStatuses.map((status) => (
+                  <option key={status.id} value={status.id}>
+                    {status.name}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -402,7 +415,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                   </td>
                   <td>{emp.email}</td>
                   <td>{emp.department}</td>
-                  <td>{emp.status}</td>
+                  <td>{emp.statusDefn?.name}</td>
                   {activeEmployeeCustomFields.map((field) => {
                     const fieldValue = emp.customFieldVals?.find(
                       (v: any) => v.customFieldDefinitionId === field.id,

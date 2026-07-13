@@ -1,7 +1,7 @@
 # Contexto de desarrollo del proyecto
 
 - Fecha de creación: 2026-07-02
-- Última actualización: 2026-07-13
+- Última actualización: 2026-07-13 (Terms of Service y Privacy Policy)
 
 ## Resumen del proyecto
 
@@ -121,3 +121,23 @@ Crear un sistema que permita:
 - Se compró el dominio `joinnorthstack.com` (Cloudflare Registrar, ~USD 10/año) y se conectó como `app.joinnorthstack.com` al proyecto de Vercel, con SSL automático (Let's Encrypt, sin ningún paso manual). La raíz del dominio quedó reservada, sin usar todavía.
 - Se dio de alta Zoho Mail (plan gratis) para el dominio, con la casilla `no.reply@joinnorthstack.com`, y se configuró el DNS (MX, SPF, DKIM) en Cloudflare. Se agregó `nodemailer` (única dependencia nueva, justificada) y `src/lib/mailer.ts`, conectado dentro de `createInvitation` para que las invitaciones (tanto de tenant como de empleado) manden un email real en vez de depender de que alguien copie el link a mano — probado con un envío real que llegó a la bandeja principal de Gmail al primer intento.
 - Quedó como tema abierto sin decidir: sistema de cobro de suscripciones del propio SaaS (Payments). Evaluado Stripe (requeriría una LLC en EEUU, Argentina no tiene cuentas directas) vs Paddle (merchant of record, sin necesidad de entidad en EEUU, comisión más alta) — Paddle es la opción de referencia por ahora, sin implementar.
+
+### Terms of Service y Privacy Policy (2026-07-13)
+
+- Se redactaron `docs/legal/terms-of-service.md` y `docs/legal/privacy-policy.md` (en inglés — idioma de la app y del público objetivo, aunque la landing hoy está en español), para publicarse eventualmente en la landing y en la app. **No son documentos legales definitivos**: los redactó la IA, no un abogado matriculado, y ambos archivos tienen un bloque de nota interna al inicio (no publicable) que documenta huecos conocidos y decisiones pendientes de confirmar.
+- Decisiones de fondo, tomadas explícitamente por el usuario tras varias rondas de preguntas:
+  - **Entidad**: no hay sociedad constituida — los documentos vinculan a Alejandro Bravo como persona física (inferido de la config de git, a confirmar), no a una entidad con responsabilidad limitada. Esto significa que el contrato lo protege parcialmente (cap de responsabilidad, indemnización), pero no reemplaza el escudo legal que daría una SRL/SAS — señalado como prioridad a futuro si el producto empieza a cobrar o a manejar datos sensibles a mayor escala.
+  - **Ley aplicable y jurisdicción**: Argentina, tribunales de la Ciudad de Buenos Aires. Reconfirmado por el usuario incluso después de ver que Stripe y HighLevel usan arbitraje obligatorio como su mecanismo real para evitar litigios costosos — es un trade-off deliberado, no un descuido, pero vale la pena revisarlo si Northstack empieza a firmar clientes de EE. UU. a mayor escala.
+  - **Alcance de compliance de datos**: enfocado en EE. UU. por ahora (lenguaje tipo CCPA extendido voluntariamente, sin reclamar aplicabilidad estricta), sin cláusulas GDPR — deliberadamente pospuesto hasta que haya clientes en la UE.
+  - **Contacto**: `info@joinnorthstack.com`; domicilio solo a nivel ciudad/país (Buenos Aires, Argentina), sin dirección exacta, por privacidad.
+- Estructura clave de la Privacy Policy: distingue **Account Data** (los usuarios que usan Northstack directamente — Northstack es controller) de **Processed Data** (los empleados/clientes que un tenant carga — el tenant es controller, Northstack solo procesa por su cuenta). Esto refleja el patrón real de Stripe (End User vs. End Customer).
+- El usuario pidió agregar una cláusula al estilo Disney ("la empresa renuncia a su derecho a demandar a Northstack al aceptar los términos"). Se investigó el caso real (Piccolo v. Disney, 2024): lo que Disney tenía en realidad era una cláusula de **arbitraje obligatorio** (cambia el foro, no elimina el derecho a reclamar) de una prueba gratuita de Disney+, aplicada a una demanda por muerte injusta no relacionada — generó un escándalo público tan grande que Disney se retractó en días. Se explicó por qué una renuncia total al derecho de demandar es legalmente frágil (probable nulidad por ser irrazonable, no aplicable a dolo/negligencia grave/derechos no renunciables) y reputacionalmente riesgosa para un founder solo, y se ofrecieron alternativas reales.
+- A pedido del usuario, se leyeron a fondo los Términos y Políticas de Privacidad completos de **GoHighLevel, Stripe y comparables de HR SaaS (Gusto, BambooHR)** para calibrar qué usa realmente la industria (no solo la cláusula de responsabilidad). Hallazgos aplicados al documento:
+  - **Plazo de prescripción contractual de reclamos**: nueva Sección 12 del ToS, 12 meses (HighLevel usa 3 meses, considerado demasiado agresivo dado que el usuario es persona física sin entidad — más fácil de cuestionar como abusivo).
+  - **Terminación más flexible para Northstack** (§9.2): permite suspensión inmediata sin período de cura ante riesgo de seguridad/fraude/legal, manteniendo aviso + cura solo para infracciones ordinarias — antes exigía aviso y cura en todos los casos.
+  - **Retención post-terminación con plazo fijo** (§9.3): 90 días (antes era "período razonable", sin piso concreto).
+  - **Datos de uso agregados/anonimizados** (§3.6 nueva): Northstack puede retener y usar datos derivados/anonimizados (no el dato crudo del cliente) para mejorar el producto, incluso después de que el cliente se va.
+  - Arbitraje: evaluado y descartado (ver arriba, el usuario mantuvo tribunales de Buenos Aires).
+- Otras cláusulas de protección ya incluidas desde el primer borrador: prohibición de que los tenants carguen categorías de datos sensibles (SSN, salud, biométricos, cuentas financieras completas) vía custom fields (§3.4 ToS — importante porque los custom fields son texto libre y hoy no hay nada a nivel de producto que lo impida técnicamente); indemnización del tenant hacia Northstack por los datos que carga; disclaimers de beta (sin SLA); tope de responsabilidad (mayor entre fees de 12 meses o USD 100).
+- El usuario completó `[Effective Date]` como **13 de julio de 2026** en ambos documentos directamente en el archivo.
+- Pendiente: confirmar el nombre legal exacto a usar (hoy asume "Alejandro Bravo"), revisión por un abogado matriculado antes de publicar, y decidir cómo enlazarlos desde la landing y la app (páginas/rutas — todavía no implementado).

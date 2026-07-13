@@ -13,6 +13,7 @@ export default function ClientsPage({ token }: ClientsPageProps) {
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
   const [clientSearch, setClientSearch] = useState('');
   const [clientCustomFields, setClientCustomFields] = useState<any[]>([]);
+  const [clientStatuses, setClientStatuses] = useState<any[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
   const [editCustomFieldValues, setEditCustomFieldValues] = useState<Record<string, string>>({});
   const [editCustomFieldValueIds, setEditCustomFieldValueIds] = useState<Record<string, string>>({});
@@ -41,12 +42,13 @@ export default function ClientsPage({ token }: ClientsPageProps) {
     lastName: '',
     email: '',
     company: '',
-    status: 'prospect',
+    statusId: '',
   });
 
   useEffect(() => {
     loadClients();
     loadClientCustomFields();
+    loadClientStatuses();
   }, []);
 
   const loadClientCustomFields = async () => {
@@ -55,6 +57,15 @@ export default function ClientsPage({ token }: ClientsPageProps) {
       setClientCustomFields(defs);
     } catch (error) {
       setError('Failed to load custom fields: ' + (error as Error).message);
+    }
+  };
+
+  const loadClientStatuses = async () => {
+    try {
+      const statuses = await api.listStatusDefinitions(token, 'client');
+      setClientStatuses(statuses.filter((s) => s.isActive));
+    } catch (error) {
+      setError('Failed to load statuses: ' + (error as Error).message);
     }
   };
 
@@ -102,7 +113,7 @@ export default function ClientsPage({ token }: ClientsPageProps) {
       lastName: client.lastName,
       email: client.email,
       company: client.company,
-      status: client.status,
+      statusId: client.statusId,
     });
 
     const values: Record<string, string> = {};
@@ -307,13 +318,14 @@ export default function ClientsPage({ token }: ClientsPageProps) {
             <div className="form-group">
               <label>Status</label>
               <select
-                value={editClientForm.status}
-                onChange={(e) => setEditClientForm({ ...editClientForm, status: e.target.value })}
+                value={editClientForm.statusId}
+                onChange={(e) => setEditClientForm({ ...editClientForm, statusId: e.target.value })}
               >
-                <option value="prospect">Prospect</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-                <option value="inactive_archived">Archived</option>
+                {clientStatuses.map((status) => (
+                  <option key={status.id} value={status.id}>
+                    {status.name}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -385,7 +397,7 @@ export default function ClientsPage({ token }: ClientsPageProps) {
                   </td>
                   <td>{client.email}</td>
                   <td>{client.company}</td>
-                  <td>{client.status}</td>
+                  <td>{client.statusDefn?.name}</td>
                   {activeClientCustomFields.map((field) => {
                     const fieldValue = client.customFieldVals?.find(
                       (v: any) => v.customFieldDefinitionId === field.id,

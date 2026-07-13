@@ -1,6 +1,6 @@
 # Current Process Flow
 
-- Última actualización: 2026-07-13 (landing page publicada como proyecto de Vercel separado)
+- Última actualización: 2026-07-13 (catálogo de status configurable + historial)
 
 This document describes the current architecture and flows for Northstack, kept in sync so a fresh session (or a fresh person) can recover context quickly.
 
@@ -106,7 +106,7 @@ flowchart TD
 
 - Custom fields are generic across modules: `CustomFieldValue` has `tenantId` + `entityType` (`employee`/`client`) + `entityId`, no per-module foreign key — adding a future module (e.g. Payments) never requires a schema change here.
 - Every custom-field-value endpoint verifies the definition belongs to the right `entityType` before accepting a value (prevents using an Employee field to store a Client value via direct API calls).
-- Client statuses (`prospect`/`active`/`inactive`/`inactive_archived`) are a different enum than Employee statuses (`active`/`inactive`/`pending`) — don't assume they're interchangeable in the UI.
+- Statuses are no longer fixed enums — `Employee.statusId`/`Client.statusId` are FKs to a per-tenant, per-module `StatusDefinition` catalog (name, color, order, isDefault, isActive), managed from `/settings` → Statuses. Every tenant gets sensible defaults seeded on creation (Employee: Active/Inactive/Pending — Client: Prospect/Active/Inactive/Archived), but can add/rename/reorder/deactivate freely from there; don't assume any fixed set of status names in code. Every status change is recorded in `StatusHistoryEntry` (snapshotted status names, not live FKs, so a later rename doesn't rewrite old history) — captured today, no UI to view it yet.
 
 ## Settings navigation — two independent hubs
 

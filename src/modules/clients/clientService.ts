@@ -1,5 +1,5 @@
 import prisma from "../../lib/prisma.js";
-import { ClientStatus } from "@prisma/client";
+import { getDefaultStatusId, recordStatusChange } from "../hr/statusService.js";
 import { listCustomFieldValuesForEntities } from "../hr/customFieldService.js";
 
 interface CreateClientInput {
@@ -7,6 +7,7 @@ interface CreateClientInput {
   lastName: string;
   email: string;
   company: string;
+  statusId?: string;
   tenantId: string;
 }
 
@@ -15,18 +16,20 @@ interface UpdateClientInput {
   lastName?: string;
   email?: string;
   company?: string;
-  status?: ClientStatus;
+  statusId?: string;
 }
 
 export async function createClient(input: CreateClientInput) {
+  const statusId = input.statusId ?? (await getDefaultStatusId(input.tenantId, "client"));
+
   return prisma.client.create({
     data: {
       firstName: input.firstName,
       lastName: input.lastName,
       email: input.email,
       company: input.company,
+      statusId,
       tenantId: input.tenantId,
-      status: "prospect",
     },
   });
 }
@@ -34,6 +37,7 @@ export async function createClient(input: CreateClientInput) {
 export async function listClients(tenantId: string) {
   const clients = await prisma.client.findMany({
     where: { tenantId },
+    include: { statusDefn: true },
   });
 
   const values = await listCustomFieldValuesForEntities(
@@ -54,25 +58,34 @@ export async function findClientById(id: string) {
   });
 }
 
-export async function updateClient(id: string, input: UpdateClientInput) {
-  return prisma.client.update({
+export async function updateClient(id: string, input: UpdateClientInput, changedByUserId: string) {
+  const existing = await prisma.client.findUniqueOrThrow({
+    where: { id },
+    include: { statusDefn: true },
+  });
+
+  const updated = await prisma.client.update({
     where: { id },
     data: input,
+    include: { statusDefn: true },
   });
+
+  if (input.statusId && input.statusId !== existing.statusId) {
+    await recordStatusChange({
+      tenantId: existing.tenantId,
+      entityType: 'client',
+      entityId: id,
+      fromStatusName: existing.statusDefn.name,
+      toStatusName: updated.statusDefn.name,
+      changedByUserId,
+    });
+  }
+
+  return updated;
 }
 
 export async function deleteClient(id: string) {
   return prisma.client.delete({
     where: { id },
   });
-}
-
-export function getClientStatusLabel(status: ClientStatus): string {
-  const labels: Record<ClientStatus, string> = {
-    active: "Active",
-    inactive: "Inactive",
-    prospect: "Prospect",
-    inactive_archived: "Archived",
-  };
-  return labels[status] || status;
 }

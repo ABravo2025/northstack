@@ -6,30 +6,41 @@ vi.mock('../src/lib/prisma.js', () => ({
       create: vi.fn(async (data) => ({
         id: 'employee-id',
         createdAt: new Date().toISOString(),
-        status: data.data.status ?? 'active',
         ...data.data,
       })),
+    },
+    statusDefinition: {
+      findFirst: vi.fn(async () => ({ id: 'default-status-id', name: 'Active', isDefault: true })),
     },
   },
 }));
 
-import { createEmployee, getEmployeeStatusLabel } from '../src/modules/hr/employeeService.js';
+import { createEmployee } from '../src/modules/hr/employeeService.js';
 
 describe('HR employee service', () => {
-  it('creates an employee with a default active status', async () => {
+  it('creates an employee with the tenant default status when none is given', async () => {
     const employee = await createEmployee({
       firstName: 'Ana',
       lastName: 'Lopez',
       email: 'ana@example.com',
       department: 'Engineering',
+      tenantId: 'tenant-id',
     });
 
-    expect(employee.status).toBe('active');
+    expect(employee.statusId).toBe('default-status-id');
     expect(employee.email).toBe('ana@example.com');
   });
 
-  it('returns a readable status label', () => {
-    expect(getEmployeeStatusLabel('active')).toBe('Active');
-    expect(getEmployeeStatusLabel('pending')).toBe('Pending');
+  it('uses the explicit statusId when one is provided', async () => {
+    const employee = await createEmployee({
+      firstName: 'Ana',
+      lastName: 'Lopez',
+      email: 'ana@example.com',
+      department: 'Engineering',
+      tenantId: 'tenant-id',
+      statusId: 'custom-status-id',
+    });
+
+    expect(employee.statusId).toBe('custom-status-id');
   });
 });

@@ -1,7 +1,7 @@
 # Tareas de desarrollo
 
 - Fecha de creación: 2026-07-02
-- Última actualización: 2026-07-13 (envío real de invitaciones por email funcionando)
+- Última actualización: 2026-07-13 (backlog: landing page de engagement)
 
 ## Checklist general
 
@@ -21,6 +21,7 @@ Organizado por tipo. Los ítems que tocan más de una capa quedan bajo la capa d
 - [x] Auto-deploy en cada push a `main` — el connect nativo de Vercel (GitHub App) siguió fallando vía CLI (necesita autorización OAuth por dashboard); se resolvió con un workflow de GitHub Actions (`.github/workflows/deploy.yml`) que corre `vercel deploy --prod` en cada push, usando el secret `VERCEL_TOKEN` del repo
 - [x] Dominio propio: comprado `joinnorthstack.com` (Cloudflare Registrar), conectado como `app.joinnorthstack.com` al proyecto de Vercel, con SSL automático (Let's Encrypt vía Vercel, sin configuración manual). La raíz `joinnorthstack.com` quedó agregada al proyecto pero sin registro DNS cargado todavía — libre para usarse como landing page a futuro si se quiere
 - [ ] Preparar el proyecto para una beta interna
+- [ ] **Landing page de engagement** (sin empezar): página pública en la raíz `joinnorthstack.com` (ya reservada para esto, ver ítem de dominio propio) con información del producto, las soluciones que ofrece, una sección "About me", y botones de Sign up / Log in que redirijan a la app real (`app.joinnorthstack.com`). Separada de la app en sí — landing/marketing, no funcionalidad de producto
 - [ ] **Tema a seguir discutiendo (sin decidir todavía):** sistema de cobro de suscripciones del propio SaaS (módulo Payments). Alcance internacional. Evaluado hasta ahora: Stripe directo requeriría una LLC/entidad en EEUU porque Stripe no da cuentas directas en Argentina (a confirmar con un contador/abogado, no es consejo legal); como alternativa sin necesidad de entidad en EEUU, Paddle actúa como "merchant of record" (factura y cobra en tu nombre, maneja IVA/impuestos internacionales) a cambio de mayor comisión (~5% + USD 0.50 por transacción, a confirmar en su web) — evaluado como la opción de referencia por ahora. Se mencionó Whop como alternativa pero con menos certeza sobre si maneja impuestos internacionales igual de bien, y menos track record para SaaS B2B. Falta definir: planes/precios, si hay trial gratis, y qué pasa con el tenant si falla el pago o cancela (bloqueo total vs solo-lectura vs período de gracia)
 - [ ] **Idea (backlog, anotada por el usuario, sin detalle ni empezar):** sistema de logs por usuario — cuándo loguea, y qué movimientos/modificaciones realiza dentro del sistema (auditoría)
 - [ ] **Idea (backlog, anotada por el usuario, sin detalle ni empezar):** sistema de roles custom (hoy los roles son fijos: owner/admin/member, con permisos hardcodeados en `permissionService.ts` — relacionado con la discusión de owners que quedó pendiente de evaluar)

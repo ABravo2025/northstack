@@ -1,7 +1,7 @@
 # Contexto de desarrollo del proyecto
 
 - Fecha de creación: 2026-07-02
-- Última actualización: 2026-07-10
+- Última actualización: 2026-07-13
 
 ## Resumen del proyecto
 
@@ -97,3 +97,27 @@ Crear un sistema que permita:
 - Se agregó búsqueda y custom fields completos (crear campo, completar valor al alta, mostrarlo en la tabla, editarlo) para Employees. `CustomFieldValue` se rediseñó de FKs por módulo (`employeeId`/`clientId`) a modelo genérico (`tenantId` + `entityType` + `entityId`), para no tener que agregar una columna nueva cada vez que se sume un módulo (ej. Payments en Fase 2). La validación de que `entityId` pertenece al tenant queda en el código, no en la base.
 - Revisión de diseño de custom fields: se encontraron y corrigieron 2 bugs reales (uso cruzado de campos entre módulos vía API, y valores que no se borraban al vaciarse en Edit) más 4 mejoras (validación de valor por tipo, nuevo tipo `email`, activar/desactivar campos, pestaña "Settings" centralizada para gestionar custom fields por módulo). Se agregó también `CustomFieldDefinition.required`.
 - `Employee` ahora puede vincularse a un `User` (FK opcional, no fusión de entidades): cada empleado puede tener su propio acceso al sistema. El owner/admin genera una invitación por empleado desde el Dashboard (botón "Invite", copia el link) reutilizando el sistema de invitaciones existente; al aceptarla, el empleado queda vinculado. Se construyó la pantalla de aceptar invitación (`AcceptInvitePage.tsx`) que faltaba desde hacía varias rondas, con routing manual por query param en vez de agregar una librería de router.
+
+### Diseño visual, navegación y Fase 2 (2026-07-10 a 2026-07-11)
+
+- Se instaló Tailwind CSS v4 con la paleta de marca real (navy `#0d2a48`, azul medio `#3c6da1`, azul claro `#8dbada`, crema `#fdfcf8`) y tipografía Inter. Se armó una identidad visual completa: logo real, favicons, sidebar colapsable con grupos (Human Resources / Clients), barra superior con menú de usuario.
+- Se migró de manejo de estado a `react-router-dom` (URLs reales, botón atrás, links compartibles) — decisión justificada explícitamente al usuario antes de sumar la dependencia.
+- Se agregó un sistema de dark mode (Tailwind `dark:` basado en clase, toggle System/Light/Dark, guardado en `localStorage` por dispositivo).
+- La navegación de "Settings" pasó por 3 iteraciones hasta asentarse: primero una sola sección compartida con tabs, después una separación total sin sub-navegación (sobre-corregido), y finalmente el diseño actual: **2 hubs completamente independientes**, cada uno con su propia sub-navegación interna — `/company` (Appearance + Users, accedido desde el menú de usuario arriba a la derecha, llamado "Company Settings") y `/settings` (Custom Fields, accedido desde el engranaje del sidebar abajo a la izquierda, llamado "Settings") — sin ningún link cruzado entre ambos.
+- **Fase 2** completa: `ProfileSettingsPage` real (editar nombre/teléfono, cambiar contraseña) y gestión de usuarios del tenant (`CompanyUsersPage`: tabla de roles/status editable, invitaciones pendientes, invitar gente nueva). Se corrigió de paso una fuga real: `passwordHash` viajaba al frontend en 6 endpoints distintos (`sanitizeUser` en `authService.ts`).
+- **Ownership único garantizado**: asignar el rol `owner` a alguien es ahora una transferencia atómica (transacción de Prisma que también degrada al owner actual a `admin`) — un tenant nunca puede quedar con 0 o 2+ owners. Antes de este fix, un owner podía promover a otro sin perder su propio rol.
+- **Clients llevado a paridad con Employees**: custom fields dinámicos en alta/edición, columnas en la tabla, barra de búsqueda, edición inline con status. El backend de Clients le faltaban los endpoints `PATCH`/`DELETE` de valores de custom fields, que nunca se habían completado — se agregaron con el mismo patrón de verificación que Employees.
+
+### Resiliencia del backend (2026-07-11)
+
+- Se encontró y corrigió la causa raíz de un incidente real: el backend local (`npm run dev`) se había caído sin que nadie se diera cuenta, y el usuario recibió "Failed to fetch" al intentar registrarse. Causa: Express 4 no atrapa promesas rechazadas de handlers `async` por su cuenta — una excepción no manejada tumbaba el proceso entero.
+- Fix de 3 capas: (1) wrapper que envuelve `app.get/post/patch/delete/put` una sola vez para atrapar cualquier error async y devolver un 500 limpio en vez de crashear (con cuidado especial porque `app.get` también se usa para leer configuración interna de Express, no solo para rutas); (2) retry con backoff en Prisma (`$extends`, hasta 2 reintentos) para errores de conexión transitorios, pensado para cuando Neon tarda en "despertar"; (3) mensaje claro en el frontend (`apiFetch` en `api.ts`) cuando el backend es inalcanzable, en vez de "Failed to fetch" crudo.
+
+### Deploy a producción, dominio propio y email real (2026-07-10 a 2026-07-13)
+
+- La app está online: `https://app.joinnorthstack.com` (antes `northstack-two.vercel.app`). Un solo proyecto de Vercel sirve el frontend (build estático) y el backend (función serverless).
+- El backend se dividió para poder correr serverless: `src/app.ts` (la app de Express configurada, sin `.listen`) + `src/server.ts` (wrapper delgado, solo para `npm run dev` local) + `api/index.ts` (entrypoint que exporta la app de Express directamente, patrón oficial de Vercel).
+- Auto-deploy en cada push a `main` vía GitHub Actions (`.github/workflows/deploy.yml`) — la integración nativa de Vercel (GitHub App) no se pudo autorizar sin acceso a un navegador, así que se optó por un workflow que corre `vercel deploy --prod` con un token guardado como secret del repo.
+- Se compró el dominio `joinnorthstack.com` (Cloudflare Registrar, ~USD 10/año) y se conectó como `app.joinnorthstack.com` al proyecto de Vercel, con SSL automático (Let's Encrypt, sin ningún paso manual). La raíz del dominio quedó reservada, sin usar todavía.
+- Se dio de alta Zoho Mail (plan gratis) para el dominio, con la casilla `no.reply@joinnorthstack.com`, y se configuró el DNS (MX, SPF, DKIM) en Cloudflare. Se agregó `nodemailer` (única dependencia nueva, justificada) y `src/lib/mailer.ts`, conectado dentro de `createInvitation` para que las invitaciones (tanto de tenant como de empleado) manden un email real en vez de depender de que alguien copie el link a mano — probado con un envío real que llegó a la bandeja principal de Gmail al primer intento.
+- Quedó como tema abierto sin decidir: sistema de cobro de suscripciones del propio SaaS (Payments). Evaluado Stripe (requeriría una LLC en EEUU, Argentina no tiene cuentas directas) vs Paddle (merchant of record, sin necesidad de entidad en EEUU, comisión más alta) — Paddle es la opción de referencia por ahora, sin implementar.

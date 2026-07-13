@@ -96,123 +96,131 @@
     <div class="page">
       <div class="hero">
         <h1>Northstack Current Process Flow</h1>
-        <p>This page shows the current onboarding and dashboard flow for Northstack using a visual flowchart and key process notes.</p>
+        <p>Live at <strong>app.joinnorthstack.com</strong>. This page shows the current architecture, onboarding, and settings flows for Northstack. Last synced 2026-07-13 — see <code>docs/current-process-flow.md</code> for the full technical detail behind each diagram.</p>
       </div>
 
       <div class="card">
         <div class="section">
-          <h2>Current public flow</h2>
+          <h2>Where it lives</h2>
           <div class="box-list">
             <div class="box">
-              <strong>Login page</strong>
-              Public users can log in or register, and the current UI also exposes tenant creation.
+              <strong>Frontend + Backend</strong>
+              One Vercel project. Static React/Vite build plus an Express app running as a serverless function (<code>api/index.ts</code>).
             </div>
             <div class="box">
-              <strong>Tenant creation</strong>
-              Clicking <em>Create New Tenant</em> opens the tenant onboarding form and creates an owner account immediately.
+              <strong>Database</strong>
+              Neon (serverless Postgres) via Prisma, same connection in local dev and production.
             </div>
             <div class="box">
-              <strong>Dashboard</strong>
-              Once authenticated, users land on the dashboard with Employees and Clients tabs.
+              <strong>Domain + SSL</strong>
+              <code>app.joinnorthstack.com</code> (Cloudflare-registered domain), SSL issued automatically by Vercel.
             </div>
             <div class="box">
-              <strong>HR / Clients</strong>
-              Employees and clients can be listed and created from the tenant-scoped dashboard.
+              <strong>Deploys</strong>
+              Every push to <code>main</code> auto-deploys via GitHub Actions (<code>vercel deploy --prod</code>).
+            </div>
+            <div class="box">
+              <strong>Email</strong>
+              Real transactional email (invitations) via Zoho Mail SMTP from <code>no.reply@joinnorthstack.com</code> — no third-party ESP.
+            </div>
+            <div class="box">
+              <strong>Resilience</strong>
+              Async route errors are caught and returned cleanly instead of crashing the process; Prisma retries transient connection failures.
             </div>
           </div>
         </div>
 
         <div class="section">
-          <h2>Current flow chart</h2>
+          <h2>Auth &amp; invitation flow</h2>
           <div class="diagram">
             <div class="mermaid">
 flowchart TD
   A[Public Access] --> B[Login Page]
   B --> C{Has account?}
-  C -->|Yes| D[Authenticate via /api/auth/login]
-  C -->|No| E[Register page]
+  C -->|Yes| D[POST /api/auth/login]
+  C -->|No| E[Register: company + owner data, one step]
   D --> F{Valid token?}
-  F -->|Yes| G[Dashboard]
+  F -->|Yes| G[App shell]
   F -->|No| H[Show auth error]
+  E --> I[POST /api/tenants/register]
+  I --> J[Tenant + Owner + Session created atomically]
+  J --> G
 
-  E --> I[Create account via /api/auth/register]
-  I --> J{Success?}
-  J -->|Yes| D
-  J -->|No| K[Show registration error]
-
-  B --> L[Create New Tenant button]
-  L --> M[Create Tenant page]
-  M --> N[POST /api/tenants]
-  N --> O[Create Tenant + Owner + Session]
-  O --> G
-
-  G --> P[HR Tab]
-  P --> Q[List employees via /api/hr/employees]
-  P --> R[Create employee via /api/hr/employees]
-
-  G --> S[Clients Tab]
-  S --> T[List clients via /api/clients]
-  S --> U[Create client via /api/clients]
+  K[Owner/Admin invites someone] --> L[POST /api/tenants/invitations]
+  L --> M[Real email sent via Zoho SMTP - best effort]
+  M --> N[Invited user opens accept-invite link]
+  N --> O[Email pre-filled and locked - fetched from GET /api/invitations/:token]
+  O --> P[Register or log in]
+  P --> Q[POST /api/invitations/:token/accept]
+  Q --> G
             </div>
           </div>
         </div>
 
         <div class="section">
-          <h2>Proposed controlled onboarding</h2>
+          <h2>Settings — two independent hubs</h2>
           <div class="box-list">
             <div class="box">
-              <strong>Two branches</strong>
-              Separate signup and login paths make the flow clearer for new and returning users.
+              <strong>Company Settings</strong>
+              Reached from the TopBar user menu (<code>/company</code>): Appearance (dark mode) and Users (roles, status, invitations) — all administrative/company-level stuff.
             </div>
             <div class="box">
-              <strong>Tenant creation channels</strong>
-              Tenants can be created by self-service, by our internal team, or through an API.
+              <strong>Settings</strong>
+              Reached from the sidebar gear icon (<code>/settings</code>): Custom Fields today, structured to grow with more categories later.
             </div>
             <div class="box">
-              <strong>Client creation channels</strong>
-              Tenant users can create clients through the UI or via API.
+              <strong>No cross-navigation</strong>
+              Neither hub links to the other — this was a deliberate correction after an earlier round merged them into one shared page.
             </div>
             <div class="box">
-              <strong>Role distinction</strong>
-              Company users and tenant users get different dashboards and permissions.
+              <strong>Ownership is unique</strong>
+              Promoting someone to owner is an atomic transfer (the acting owner is demoted to admin in the same transaction) — a tenant can never have zero or multiple owners.
             </div>
           </div>
           <div class="diagram">
             <div class="mermaid">
 flowchart TD
-  A[Public Access] --> B{Existing user?}
-  B -->|Yes| C[Login Page]
-  B -->|No| D[Signup Page]
+  A[TopBar user menu] -->|Company Settings| B["route: company"]
+  B --> C[Appearance]
+  B --> D[Users: roles, status, invitations]
 
-  C --> E[POST /api/auth/login]
-  D --> F[POST /api/auth/register]
-
-  E --> G{Valid token?}
-  F --> G
-  G --> H[Dashboard]
-  G --> I[Show auth error]
-
-  H --> J{User role?}
-  J -->|Company user| K[Admin portal]
-  J -->|Tenant user| L[Tenant dashboard]
-
-  K --> M[Create tenant via internal admin]
-  K --> N[Create tenant via API]
-  K --> O[Self-service tenant creation optional]
-
-  L --> P[Create clients via UI]
-  L --> Q[Create clients via API]
-  L --> R[View tenant Employees Clients Payments]
+  E[Sidebar gear icon] -->|Settings| F["route: settings"]
+  F --> G[Custom Fields]
             </div>
           </div>
         </div>
 
         <div class="section">
-          <h2>Important observations</h2>
+          <h2>HR &amp; Clients modules</h2>
+          <div class="box-list">
+            <div class="box">
+              <strong>Parity</strong>
+              Employees and Clients share the same pattern: dynamic custom fields, client-side search, inline edit.
+            </div>
+            <div class="box">
+              <strong>Generic custom fields</strong>
+              One <code>CustomFieldValue</code> model (<code>tenantId</code> + <code>entityType</code> + <code>entityId</code>) — no schema change needed when a future module (e.g. Payments) is added.
+            </div>
+            <div class="box">
+              <strong>Employee self-access</strong>
+              An Employee can optionally link to a User via invite, giving them their own login.
+            </div>
+            <div class="box">
+              <strong>Status enums differ</strong>
+              Client statuses (prospect/active/inactive/archived) are not the same set as Employee statuses (active/inactive/pending).
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>Open topics (not decided / not started)</h2>
           <ul>
-            <li>The current tenant creation path is public and self-service.</li>
-            <li>Tenant onboarding is coupled with owner account creation and immediate login.</li>
-            <li>This flow is good for open signup, but not ideal if you need admin-controlled onboarding.</li>
+            <li><strong>Subscription billing</strong> for the SaaS itself — leaning toward Paddle (merchant of record, avoids needing a US entity) over Stripe direct, not decided yet.</li>
+            <li>Custom/configurable roles (today fixed to owner/admin/member).</li>
+            <li>Per-user audit log (logins + modifications).</li>
+            <li>PTO/vacation tracking inside HR.</li>
+            <li>Public API with token auth for external integrations.</li>
+            <li>Public self-service onboarding forms.</li>
           </ul>
         </div>
       </div>

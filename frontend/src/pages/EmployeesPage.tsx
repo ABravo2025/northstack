@@ -505,6 +505,15 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                 <tr key={emp.id}>
                   <td>
                     {emp.firstName} {emp.lastName}
+                    {emp.activePtoTag && (
+                      <span
+                        className="pto-active-tag"
+                        style={{ background: emp.activePtoTag.color || '#9ca3af' }}
+                        title={`On ${emp.activePtoTag.policyName} today`}
+                      >
+                        {emp.activePtoTag.policyName}
+                      </span>
+                    )}
                   </td>
                   <td>{emp.email}</td>
                   <td>{emp.department}</td>

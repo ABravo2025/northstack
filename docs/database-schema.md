@@ -200,6 +200,7 @@ Notas:
 - `PtoRequest.approverId` se fija **al momento de crear la solicitud**, copiando el `managerId` del empleado en ese instante — es un snapshot, no se recalcula si el manager cambia después. Si el empleado no tiene manager asignado, `approverId` queda `null` y cualquier owner/admin puede decidir la solicitud como fallback.
 - El balance de días (asignado/usado/pendiente/restante) **no se guarda en ninguna tabla** — se calcula al vuelo combinando `EmployeePtoPolicy.assignedAt`, los campos de acumulación de `PtoPolicyDefinition`, y la suma de `PtoRequest.daysRequested` por status, todo dentro del año calendario actual (`ptoBalanceService.ts`).
 - Si `PtoPolicyDefinition.requiresApproval` es `false`, la solicitud nace directo en `status: approved` (sin pasar por nadie) — `decisionNote` queda con un texto fijo indicando que fue auto-aprobada.
+- El tag visual "de licencia" que se ve en la fila del empleado (Employees) es el mismo patrón que el balance: **no es una columna**, se deriva en cada `GET /api/hr/employees` buscando si el empleado tiene una `PtoRequest` con `status: approved` cuyo rango de fechas cubre el día de hoy.
 
 ## Enums
 
@@ -219,4 +220,4 @@ Notas:
 - `Employee.department` sigue siendo texto libre, sin catálogo — a diferencia de `status`, que ya tiene `StatusDefinition`. Backlog: `DepartmentDefinition` con el mismo patrón (ver `docs/tareas-desarrollo.md`).
 - No hay historial de valores previos de `CustomFieldValue` (pospuesto a propósito).
 - `Session` no expira sola — no hay TTL ni limpieza automática de sesiones viejas.
-- Falta la pieza 7 del sistema de PTO: un tag visual no persistido en la fila del empleado quiando está de licencia activa (probablemente derivado de `PtoRequest`, no un campo nuevo en `Employee`).
+- El sistema de PTO está completo (7/7 piezas, incluyendo el tag visual en la fila del empleado — derivado en cada request desde `PtoRequest`, sin campo nuevo en `Employee`).

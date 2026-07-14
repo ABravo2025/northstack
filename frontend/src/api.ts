@@ -68,6 +68,7 @@ interface Employee {
   managerId?: string | null;
   manager?: { id: string; firstName: string; lastName: string } | null;
   ptoPolicies?: EmployeePtoPolicyAssignment[];
+  activePtoTag?: { policyName: string; color: string | null } | null;
   userId?: string | null;
   customFieldVals?: {
     id: string;

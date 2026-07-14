@@ -88,6 +88,25 @@ export async function listPendingApprovals(tenantId: string, approverEmployeeId:
   });
 }
 
+// A PTO tag on an employee's row is only ever active for the exact days a
+// request covers — this looks up "as of today" state, not the whole history.
+export async function findActivePtoRequestsForEmployees(tenantId: string, employeeIds: string[]) {
+  if (employeeIds.length === 0) {
+    return [];
+  }
+  const today = new Date(new Date().toISOString().slice(0, 10));
+  return prisma.ptoRequest.findMany({
+    where: {
+      tenantId,
+      employeeId: { in: employeeIds },
+      status: 'approved',
+      startDate: { lte: today },
+      endDate: { gte: today },
+    },
+    include: { ptoPolicy: true },
+  });
+}
+
 export async function listPtoRequestsForCalendar(tenantId: string) {
   return prisma.ptoRequest.findMany({
     where: { tenantId, status: { in: ['approved', 'pending'] } },

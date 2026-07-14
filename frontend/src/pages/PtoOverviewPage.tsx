@@ -6,7 +6,7 @@ interface PtoOverviewPageProps {
   token: string;
 }
 
-type Tab = 'assignments' | 'my-requests' | 'approvals' | 'all-requests';
+type Tab = 'assignments' | 'my-requests' | 'approvals' | 'all-requests' | 'balances';
 
 const STATUS_LABELS: Record<string, string> = {
   pending: 'Pending',
@@ -22,6 +22,8 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
   const [myRequests, setMyRequests] = useState<any[]>([]);
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
   const [allRequests, setAllRequests] = useState<any[]>([]);
+  const [myBalances, setMyBalances] = useState<any[]>([]);
+  const [tenantBalances, setTenantBalances] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [addPolicySelection, setAddPolicySelection] = useState<Record<string, string>>({});
@@ -39,18 +41,24 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
     setLoading(true);
     setError(null);
     try {
-      const [employeeData, policyData, myRequestData, approvalData, allRequestData] = await Promise.all([
-        api.listEmployees(token),
-        api.listPtoPolicies(token),
-        api.listPtoRequests(token, 'mine'),
-        api.listPtoRequests(token, 'pending-approval'),
-        canManagePolicies ? api.listPtoRequests(token, 'all') : Promise.resolve([]),
-      ]);
+      const [employeeData, policyData, myRequestData, approvalData, allRequestData, tenantBalanceData] =
+        await Promise.all([
+          api.listEmployees(token),
+          api.listPtoPolicies(token),
+          api.listPtoRequests(token, 'mine'),
+          api.listPtoRequests(token, 'pending-approval'),
+          canManagePolicies ? api.listPtoRequests(token, 'all') : Promise.resolve([]),
+          canManagePolicies ? api.listPtoBalances(token) : Promise.resolve([]),
+        ]);
       setEmployees(employeeData);
       setPtoPolicies(policyData.filter((p) => p.isActive));
       setMyRequests(myRequestData);
       setPendingApprovals(approvalData);
       setAllRequests(allRequestData);
+      setTenantBalances(tenantBalanceData);
+
+      const myEmployeeRecord = employeeData.find((emp: any) => emp.userId === user.id);
+      setMyBalances(myEmployeeRecord ? await api.getEmployeePtoBalance(token, myEmployeeRecord.id) : []);
     } catch (error) {
       setError('Failed to load PTO overview: ' + (error as Error).message);
     } finally {
@@ -137,6 +145,11 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
           {canManagePolicies && (
             <button className={tab === 'all-requests' ? 'active' : ''} onClick={() => setTab('all-requests')}>
               All Requests
+            </button>
+          )}
+          {canManagePolicies && (
+            <button className={tab === 'balances' ? 'active' : ''} onClick={() => setTab('balances')}>
+              Balances
             </button>
           )}
         </div>
@@ -252,7 +265,27 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
                 {myAssignedPolicies.length === 0 ? (
                   <p>You don't have any PTO policies assigned yet — ask an admin to assign one.</p>
                 ) : (
-                  <form onSubmit={handleCreateRequest} className="mb-5">
+                  <>
+                    {myBalances.length > 0 && (
+                      <div className="mb-4 flex flex-wrap gap-2">
+                        {myBalances.map((bal) => (
+                          <span key={bal.ptoPolicyId} className="pto-policy-chip">
+                            <span
+                              style={{
+                                display: 'inline-block',
+                                width: 8,
+                                height: 8,
+                                borderRadius: '50%',
+                                background: bal.color || '#9ca3af',
+                              }}
+                            ></span>
+                            {bal.policyName}: {bal.remaining} of {bal.allocated} days left
+                            {bal.pending > 0 ? ` (${bal.pending} pending)` : ''}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    <form onSubmit={handleCreateRequest} className="mb-5">
                     <div className="form-group">
                       <label>Policy</label>
                       <select
@@ -295,9 +328,10 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
                       />
                     </div>
                     <button type="submit" className="btn-primary">
-                      Submit Request
-                    </button>
-                  </form>
+                        Submit Request
+                      </button>
+                    </form>
+                  </>
                 )}
 
                 {myRequests.length === 0 ? (
@@ -444,6 +478,55 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
                           </>
                         )}
                       </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </>
+        )}
+
+        {!loading && tab === 'balances' && canManagePolicies && (
+          <>
+            {tenantBalances.length === 0 ? (
+              <p>No PTO policy assignments yet.</p>
+            ) : (
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Employee</th>
+                    <th>Policy</th>
+                    <th>Accrual</th>
+                    <th>Allocated ({new Date().getFullYear()})</th>
+                    <th>Used</th>
+                    <th>Pending</th>
+                    <th>Remaining</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tenantBalances.map((bal) => (
+                    <tr key={`${bal.employeeId}-${bal.ptoPolicyId}`}>
+                      <td>
+                        {bal.employeeFirstName} {bal.employeeLastName}
+                      </td>
+                      <td>
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            background: bal.color || '#9ca3af',
+                            marginRight: 8,
+                          }}
+                        ></span>
+                        {bal.policyName}
+                      </td>
+                      <td>{bal.accrualMethod === 'monthly' ? 'Monthly' : 'Fixed annual'}</td>
+                      <td>{bal.allocated}</td>
+                      <td>{bal.used}</td>
+                      <td>{bal.pending}</td>
+                      <td>{bal.remaining}</td>
                     </tr>
                   ))}
                 </tbody>

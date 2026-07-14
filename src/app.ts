@@ -80,6 +80,7 @@ import {
   listMyPtoRequests,
   listPendingApprovals,
 } from './modules/hr/ptoRequestService.js';
+import { calculateAllPtoBalances, calculateEmployeePtoBalances } from './modules/hr/ptoBalanceService.js';
 
 dotenv.config();
 
@@ -884,6 +885,40 @@ app.delete('/api/hr/pto-requests/:requestId', async (req, res) => {
   }
 
   return res.status(204).end();
+});
+
+app.get('/api/hr/pto-balances', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageCustomFields(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const balances = await calculateAllPtoBalances(user.tenantId!);
+  return res.json(balances);
+});
+
+app.get('/api/hr/employees/:employeeId/pto-balance', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  const employee = await findEmployeeById(req.params.employeeId);
+  if (!employee || employee.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Employee not found' });
+  }
+
+  const isSelf = employee.userId === user.id;
+  if (!isSelf && !canManageCustomFields(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const balances = await calculateEmployeePtoBalances(user.tenantId!, req.params.employeeId);
+  return res.json(balances);
 });
 
 app.post('/api/hr/employees/:employeeId/custom-fields', async (req, res) => {

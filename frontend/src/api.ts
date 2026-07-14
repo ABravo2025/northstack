@@ -130,6 +130,21 @@ interface EmployeePtoPolicyAssignment {
   ptoPolicy: PtoPolicy;
 }
 
+interface PtoBalance {
+  employeeId: string;
+  employeeFirstName: string;
+  employeeLastName: string;
+  ptoPolicyId: string;
+  policyName: string;
+  color: string | null;
+  accrualMethod: 'fixed_annual' | 'monthly';
+  daysPerYear: number;
+  allocated: number;
+  used: number;
+  pending: number;
+  remaining: number;
+}
+
 interface PtoRequest {
   id: string;
   employeeId: string;
@@ -658,6 +673,23 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);
+  },
+
+  // PTO balances
+  listPtoBalances: async (token: string): Promise<PtoBalance[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/pto-balances`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  getEmployeePtoBalance: async (token: string, employeeId: string): Promise<PtoBalance[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/pto-balance`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
   },
 
   createEmployeeCustomFieldValue: async (

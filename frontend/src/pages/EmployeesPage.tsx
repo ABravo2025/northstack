@@ -38,6 +38,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     lastName: '',
     email: '',
     department: '',
+    managerId: '',
   });
 
   const [editEmployeeForm, setEditEmployeeForm] = useState({
@@ -46,6 +47,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     email: '',
     department: '',
     statusId: '',
+    managerId: '',
   });
 
   useEffect(() => {
@@ -89,7 +91,10 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     e.preventDefault();
     setError(null);
     try {
-      const employee = await api.createEmployee(token, employeeForm);
+      const employee = await api.createEmployee(token, {
+        ...employeeForm,
+        managerId: employeeForm.managerId || null,
+      });
 
       const valueEntries = Object.entries(customFieldValues).filter(([, value]) => value.trim() !== '');
       for (const [customFieldDefinitionId, value] of valueEntries) {
@@ -99,7 +104,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         });
       }
 
-      setEmployeeForm({ firstName: '', lastName: '', email: '', department: '' });
+      setEmployeeForm({ firstName: '', lastName: '', email: '', department: '', managerId: '' });
       setCustomFieldValues({});
       setShowEmployeeForm(false);
       loadEmployees();
@@ -117,6 +122,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       email: emp.email,
       department: emp.department,
       statusId: emp.statusId,
+      managerId: emp.managerId || '',
     });
 
     const values: Record<string, string> = {};
@@ -134,7 +140,10 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     if (!editingEmployeeId) return;
     setError(null);
     try {
-      await api.updateEmployee(token, editingEmployeeId, editEmployeeForm);
+      await api.updateEmployee(token, editingEmployeeId, {
+        ...editEmployeeForm,
+        managerId: editEmployeeForm.managerId || null,
+      });
 
       for (const field of activeEmployeeCustomFields) {
         const newValue = (editCustomFieldValues[field.id] || '').trim();
@@ -278,6 +287,20 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                 required
               />
             </div>
+            <div className="form-group">
+              <label>Reports To</label>
+              <select
+                value={employeeForm.managerId}
+                onChange={(e) => setEmployeeForm({ ...employeeForm, managerId: e.target.value })}
+              >
+                <option value="">-- No manager --</option>
+                {employees.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.firstName} {emp.lastName}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             {activeEmployeeCustomFields.map((field) => (
               <div className="form-group" key={field.id}>
@@ -346,6 +369,22 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                 ))}
               </select>
             </div>
+            <div className="form-group">
+              <label>Reports To</label>
+              <select
+                value={editEmployeeForm.managerId}
+                onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, managerId: e.target.value })}
+              >
+                <option value="">-- No manager --</option>
+                {employees
+                  .filter((emp) => emp.id !== editingEmployeeId)
+                  .map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.firstName} {emp.lastName}
+                    </option>
+                  ))}
+              </select>
+            </div>
 
             {activeEmployeeCustomFields.map((field) => (
               <div className="form-group" key={field.id}>
@@ -401,6 +440,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                 <th>Email</th>
                 <th>Department</th>
                 <th>Status</th>
+                <th>Reports To</th>
                 {activeEmployeeCustomFields.map((field) => (
                   <th key={field.id}>{field.name}</th>
                 ))}
@@ -416,6 +456,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                   <td>{emp.email}</td>
                   <td>{emp.department}</td>
                   <td>{emp.statusDefn?.name}</td>
+                  <td>{emp.manager ? `${emp.manager.firstName} ${emp.manager.lastName}` : '—'}</td>
                   {activeEmployeeCustomFields.map((field) => {
                     const fieldValue = emp.customFieldVals?.find(
                       (v: any) => v.customFieldDefinitionId === field.id,

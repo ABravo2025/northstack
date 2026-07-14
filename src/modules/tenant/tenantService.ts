@@ -96,6 +96,22 @@ export async function createTenantForUser(input: CreateTenantForUserInput): Prom
       },
     });
 
+    const ownerDefaultStatus = await tx.statusDefinition.findFirstOrThrow({
+      where: { tenantId: tenant.id, entityType: 'employee', isDefault: true },
+    });
+
+    await tx.employee.create({
+      data: {
+        firstName: updatedUser.firstName,
+        lastName: updatedUser.lastName,
+        email: updatedUser.email,
+        department: 'Leadership',
+        statusId: ownerDefaultStatus.id,
+        tenantId: tenant.id,
+        userId: updatedUser.id,
+      },
+    });
+
     return { tenant, user: updatedUser };
   });
 
@@ -163,6 +179,22 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
     const session = await tx.session.create({
       data: {
         token: randomUUID(),
+        userId: user.id,
+      },
+    });
+
+    const ownerDefaultStatus = await tx.statusDefinition.findFirstOrThrow({
+      where: { tenantId: tenant.id, entityType: 'employee', isDefault: true },
+    });
+
+    await tx.employee.create({
+      data: {
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        department: 'Leadership',
+        statusId: ownerDefaultStatus.id,
+        tenantId: tenant.id,
         userId: user.id,
       },
     });

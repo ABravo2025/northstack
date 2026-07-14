@@ -24,6 +24,7 @@ import {
   findEmployeeById,
   listEmployees,
   updateEmployee,
+  wouldCreateManagerCycle,
 } from './modules/hr/employeeService.js';
 import {
   createCustomFieldDefinition,
@@ -397,6 +398,13 @@ app.post('/api/hr/employees', async (req, res) => {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
+  if (req.body.managerId) {
+    const manager = await findEmployeeById(req.body.managerId);
+    if (!manager || manager.tenantId !== user.tenantId) {
+      return res.status(400).json({ error: 'Manager not found' });
+    }
+  }
+
   const employee = await createEmployee({ ...req.body, tenantId: user.tenantId! });
   return res.status(201).json(employee);
 });
@@ -432,6 +440,18 @@ app.patch('/api/hr/employees/:employeeId', async (req, res) => {
   const employee = await findEmployeeById(req.params.employeeId);
   if (!employee || employee.tenantId !== user.tenantId) {
     return res.status(404).json({ error: 'Employee not found' });
+  }
+
+  if (req.body.managerId) {
+    const manager = await findEmployeeById(req.body.managerId);
+    if (!manager || manager.tenantId !== user.tenantId) {
+      return res.status(400).json({ error: 'Manager not found' });
+    }
+
+    const wouldCycle = await wouldCreateManagerCycle(req.params.employeeId, req.body.managerId);
+    if (wouldCycle) {
+      return res.status(400).json({ error: 'This would create a reporting cycle' });
+    }
   }
 
   const updated = await updateEmployee(req.params.employeeId, req.body, user.id);

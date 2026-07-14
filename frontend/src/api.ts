@@ -65,6 +65,8 @@ interface Employee {
   department: string;
   statusId: string;
   statusDefn?: { id: string; name: string; color: string | null };
+  managerId?: string | null;
+  manager?: { id: string; firstName: string; lastName: string } | null;
   userId?: string | null;
   customFieldVals?: {
     id: string;
@@ -333,6 +335,7 @@ export const api = {
       lastName: string;
       email: string;
       department: string;
+      managerId?: string | null;
     },
   ): Promise<Employee> => {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/employees`, {

@@ -85,6 +85,9 @@ model Employee {
   department      String
   statusId        String
   statusDefn      StatusDefinition     @relation(fields: [statusId], references: [id])
+  managerId       String?
+  manager         Employee?            @relation("EmployeeManager", fields: [managerId], references: [id])
+  reports         Employee[]           @relation("EmployeeManager")
   tenantId        String
   tenant          Tenant               @relation(fields: [tenantId], references: [id])
   createdAt       DateTime             @default(now())

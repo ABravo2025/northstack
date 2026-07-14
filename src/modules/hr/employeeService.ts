@@ -9,6 +9,7 @@ export interface CreateEmployeeInput {
   email: string;
   department: string;
   statusId?: string;
+  managerId?: string | null;
   tenantId: string;
 }
 
@@ -18,6 +19,7 @@ export interface UpdateEmployeeInput {
   email?: string;
   department?: string;
   statusId?: string;
+  managerId?: string | null;
 }
 
 export async function createEmployee(input: CreateEmployeeInput): Promise<Employee> {
@@ -30,9 +32,42 @@ export async function createEmployee(input: CreateEmployeeInput): Promise<Employ
       email: input.email.toLowerCase(),
       department: input.department,
       statusId,
+      managerId: input.managerId ?? null,
       tenantId: input.tenantId,
     },
   });
+}
+
+// Walks up the reporting chain from `proposedManagerId` to check whether
+// assigning it to `employeeId` would create a cycle (direct or indirect).
+export async function wouldCreateManagerCycle(
+  employeeId: string,
+  proposedManagerId: string,
+): Promise<boolean> {
+  if (employeeId === proposedManagerId) {
+    return true;
+  }
+
+  let currentId: string | null = proposedManagerId;
+  const visited = new Set<string>();
+
+  while (currentId) {
+    if (currentId === employeeId) {
+      return true;
+    }
+    if (visited.has(currentId)) {
+      return false;
+    }
+    visited.add(currentId);
+
+    const manager: { managerId: string | null } | null = await prisma.employee.findUnique({
+      where: { id: currentId },
+      select: { managerId: true },
+    });
+    currentId = manager?.managerId ?? null;
+  }
+
+  return false;
 }
 
 export async function listEmployees(tenantId?: string | null) {
@@ -42,7 +77,7 @@ export async function listEmployees(tenantId?: string | null) {
 
   const employees = await prisma.employee.findMany({
     where: { tenantId },
-    include: { statusDefn: true },
+    include: { statusDefn: true, manager: { select: { id: true, firstName: true, lastName: true } } },
   });
 
   const values = await listCustomFieldValuesForEntities(
@@ -76,7 +111,7 @@ export async function updateEmployee(
   const updated = await prisma.employee.update({
     where: { id },
     data: input,
-    include: { statusDefn: true },
+    include: { statusDefn: true, manager: { select: { id: true, firstName: true, lastName: true } } },
   });
 
   if (input.statusId && input.statusId !== existing.statusId) {

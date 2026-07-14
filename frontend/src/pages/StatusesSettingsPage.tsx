@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api';
+import ColorPicker from '../components/ColorPicker';
 
 interface StatusesSettingsPageProps {
   token: string;
@@ -187,11 +188,9 @@ export default function StatusesSettingsPage({ token }: StatusesSettingsPageProp
         </div>
         <div className="form-group">
           <label>Color</label>
-          <input
-            type="color"
+          <ColorPicker
             value={newStatus.color}
-            onChange={(e) => setNewStatus({ ...newStatus, color: e.target.value })}
-            className="w-auto"
+            onChange={(color) => setNewStatus({ ...newStatus, color })}
           />
         </div>
         <button type="submit" className="btn-primary">

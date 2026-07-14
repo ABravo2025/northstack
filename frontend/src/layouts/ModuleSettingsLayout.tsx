@@ -14,6 +14,9 @@ export default function ModuleSettingsLayout() {
           <NavLink to="statuses" className={linkClass}>
             Statuses
           </NavLink>
+          <NavLink to="pto-policies" className={linkClass}>
+            PTO Policies
+          </NavLink>
         </nav>
         <div className="settings-content">
           <Outlet />

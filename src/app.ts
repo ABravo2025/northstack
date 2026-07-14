@@ -61,6 +61,11 @@ import {
   listStatusDefinitions,
   updateStatusDefinition,
 } from './modules/hr/statusService.js';
+import {
+  createPtoPolicy,
+  listPtoPolicies,
+  updatePtoPolicy,
+} from './modules/hr/ptoPolicyService.js';
 
 dotenv.config();
 
@@ -631,6 +636,84 @@ app.patch('/api/status-definitions/:definitionId', async (req, res) => {
   }
 
   return res.json(result.statusDefinition);
+});
+
+app.get('/api/pto-policies', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  const policies = await listPtoPolicies(user.tenantId!);
+  return res.json(policies);
+});
+
+app.post('/api/pto-policies', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageCustomFields(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const name = req.body.name as string;
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Name is required' });
+  }
+
+  const daysPerYear = Number(req.body.daysPerYear);
+  if (!Number.isFinite(daysPerYear) || daysPerYear < 0) {
+    return res.status(400).json({ error: 'Days per year must be a non-negative number' });
+  }
+
+  const policy = await createPtoPolicy({
+    tenantId: user.tenantId!,
+    name: name.trim(),
+    color: req.body.color,
+    accrualMethod: req.body.accrualMethod,
+    daysPerYear,
+    isPaid: req.body.isPaid,
+    requiresApproval: req.body.requiresApproval,
+  });
+
+  return res.status(201).json(policy);
+});
+
+app.patch('/api/pto-policies/:policyId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageCustomFields(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  if (req.body.daysPerYear !== undefined) {
+    const daysPerYear = Number(req.body.daysPerYear);
+    if (!Number.isFinite(daysPerYear) || daysPerYear < 0) {
+      return res.status(400).json({ error: 'Days per year must be a non-negative number' });
+    }
+    req.body.daysPerYear = daysPerYear;
+  }
+
+  const result = await updatePtoPolicy(req.params.policyId, user.tenantId!, {
+    name: req.body.name,
+    color: req.body.color,
+    accrualMethod: req.body.accrualMethod,
+    daysPerYear: req.body.daysPerYear,
+    isPaid: req.body.isPaid,
+    requiresApproval: req.body.requiresApproval,
+    isActive: req.body.isActive,
+  });
+
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  return res.json(result.policy);
 });
 
 app.post('/api/hr/employees/:employeeId/custom-fields', async (req, res) => {

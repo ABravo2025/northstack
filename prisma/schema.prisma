@@ -44,6 +44,11 @@ enum InvitationStatus {
   revoked
 }
 
+enum PtoAccrualMethod {
+  fixed_annual
+  monthly
+}
+
 model Tenant {
   id                   String                 @id @default(uuid())
   name                 String
@@ -58,6 +63,7 @@ model Tenant {
   invitations          Invitation[]
   statusDefinitions    StatusDefinition[]
   statusHistory        StatusHistoryEntry[]
+  ptoPolicies          PtoPolicyDefinition[]
 }
 
 model User {
@@ -143,6 +149,22 @@ model StatusHistoryEntry {
   changedAt       DateTime   @default(now())
 
   @@index([tenantId, entityType, entityId])
+}
+
+model PtoPolicyDefinition {
+  id               String            @id @default(uuid())
+  tenantId         String
+  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  name             String
+  color            String?
+  accrualMethod    PtoAccrualMethod  @default(fixed_annual)
+  daysPerYear      Float
+  isPaid           Boolean           @default(true)
+  requiresApproval Boolean           @default(true)
+  isActive         Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+
+  @@index([tenantId])
 }
 
 model CustomFieldDefinition {

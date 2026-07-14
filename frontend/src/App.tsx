@@ -10,6 +10,7 @@ import ClientsDashboardPage from './pages/ClientsDashboardPage';
 import ClientsPage from './pages/ClientsPage';
 import CustomFieldsSettingsPage from './pages/CustomFieldsSettingsPage';
 import StatusesSettingsPage from './pages/StatusesSettingsPage';
+import PtoPoliciesSettingsPage from './pages/PtoPoliciesSettingsPage';
 import ProfileSettingsPage from './pages/ProfileSettingsPage';
 import CompanyAppearancePage from './pages/CompanyAppearancePage';
 import CompanyUsersPage from './pages/CompanyUsersPage';
@@ -186,6 +187,7 @@ export default function App() {
           <Route index element={<Navigate to="custom-fields" replace />} />
           <Route path="custom-fields" element={<CustomFieldsSettingsPage token={token ?? ''} />} />
           <Route path="statuses" element={<StatusesSettingsPage token={token ?? ''} />} />
+          <Route path="pto-policies" element={<PtoPoliciesSettingsPage token={token ?? ''} />} />
         </Route>
         <Route path="/company" element={<CompanySettingsLayout />}>
           <Route index element={<Navigate to="appearance" replace />} />

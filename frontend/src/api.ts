@@ -110,6 +110,17 @@ interface StatusDefinition {
   isActive: boolean;
 }
 
+interface PtoPolicy {
+  id: string;
+  name: string;
+  color: string | null;
+  accrualMethod: 'fixed_annual' | 'monthly';
+  daysPerYear: number;
+  isPaid: boolean;
+  requiresApproval: boolean;
+  isActive: boolean;
+}
+
 interface Invitation {
   id: string;
   tenantId: string;
@@ -469,6 +480,63 @@ export const api = {
     data: { name?: string; color?: string; order?: number; isDefault?: boolean; isActive?: boolean },
   ): Promise<StatusDefinition> => {
     const res = await apiFetch(`${API_BASE_URL}/api/status-definitions/${definitionId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  // PTO policies
+  listPtoPolicies: async (token: string): Promise<PtoPolicy[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/pto-policies`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  createPtoPolicy: async (
+    token: string,
+    data: {
+      name: string;
+      color?: string;
+      accrualMethod?: 'fixed_annual' | 'monthly';
+      daysPerYear: number;
+      isPaid?: boolean;
+      requiresApproval?: boolean;
+    },
+  ): Promise<PtoPolicy> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/pto-policies`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  updatePtoPolicy: async (
+    token: string,
+    policyId: string,
+    data: {
+      name?: string;
+      color?: string;
+      accrualMethod?: 'fixed_annual' | 'monthly';
+      daysPerYear?: number;
+      isPaid?: boolean;
+      requiresApproval?: boolean;
+      isActive?: boolean;
+    },
+  ): Promise<PtoPolicy> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/pto-policies/${policyId}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',

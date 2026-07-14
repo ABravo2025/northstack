@@ -4,6 +4,7 @@ import { api, ApiError } from './api';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import AcceptInvitePage from './pages/AcceptInvitePage';
+import OverviewPage from './pages/OverviewPage';
 import HrDashboardPage from './pages/HrDashboardPage';
 import EmployeesPage from './pages/EmployeesPage';
 import PtoOverviewPage from './pages/PtoOverviewPage';
@@ -63,7 +64,7 @@ export default function App() {
     setToken(newToken);
     localStorage.setItem('token', newToken);
     setUser(newUser);
-    navigate('/hr/dashboard');
+    navigate('/overview');
   };
 
   const handleLogin = async (email: string, password: string) => {
@@ -144,7 +145,7 @@ export default function App() {
         path="/login"
         element={
           isAuthenticated ? (
-            <Navigate to="/hr/dashboard" replace />
+            <Navigate to="/overview" replace />
           ) : (
             <LoginPage
               onLogin={handleLogin}
@@ -159,7 +160,7 @@ export default function App() {
         path="/register"
         element={
           isAuthenticated ? (
-            <Navigate to="/hr/dashboard" replace />
+            <Navigate to="/overview" replace />
           ) : (
             <RegisterPage
               onRegister={handleRegister}
@@ -176,6 +177,7 @@ export default function App() {
       />
 
       <Route element={<AppLayout user={user} token={token} onLogout={handleLogout} />}>
+        <Route path="/overview" element={<OverviewPage token={token ?? ''} />} />
         <Route path="/hr/dashboard" element={<HrDashboardPage />} />
         <Route path="/hr/employees" element={<EmployeesPage user={user} token={token ?? ''} />} />
         <Route path="/hr/pto" element={<PtoOverviewPage user={user} token={token ?? ''} />} />
@@ -203,7 +205,7 @@ export default function App() {
 
       <Route
         path="*"
-        element={<Navigate to={isAuthenticated ? '/hr/dashboard' : '/login'} replace />}
+        element={<Navigate to={isAuthenticated ? '/overview' : '/login'} replace />}
       />
     </Routes>
   );

@@ -88,6 +88,14 @@ export async function listPendingApprovals(tenantId: string, approverEmployeeId:
   });
 }
 
+export async function listPtoRequestsForCalendar(tenantId: string) {
+  return prisma.ptoRequest.findMany({
+    where: { tenantId, status: { in: ['approved', 'pending'] } },
+    include: { ptoPolicy: true, employee: { select: { id: true, firstName: true, lastName: true } } },
+    orderBy: { startDate: 'asc' },
+  });
+}
+
 export async function listAllPtoRequests(tenantId: string) {
   return prisma.ptoRequest.findMany({
     where: { tenantId },

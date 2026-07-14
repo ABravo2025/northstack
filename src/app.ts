@@ -77,6 +77,7 @@ import {
   createPtoRequest,
   decidePtoRequest,
   listAllPtoRequests,
+  listPtoRequestsForCalendar,
   listMyPtoRequests,
   listPendingApprovals,
 } from './modules/hr/ptoRequestService.js';
@@ -826,6 +827,11 @@ app.get('/api/hr/pto-requests', async (req, res) => {
   }
 
   const scope = (req.query.scope as string) ?? 'mine';
+
+  if (scope === 'calendar') {
+    const requests = await listPtoRequestsForCalendar(user.tenantId!);
+    return res.json(requests);
+  }
 
   if (scope === 'all') {
     if (!canManageCustomFields(user.role)) {

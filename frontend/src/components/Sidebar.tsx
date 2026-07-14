@@ -6,6 +6,7 @@ import {
   ChevronLeftIcon,
   DashboardIcon,
   GearIcon,
+  HomeIcon,
   PeopleIcon,
   TrendingIcon,
 } from './Icons';
@@ -33,6 +34,13 @@ export default function Sidebar({ showSettings }: SidebarProps) {
       </button>
 
       <div>
+        <NavLink to="/overview" className={linkClass} title="Overview">
+          <HomeIcon className="h-4 w-4 shrink-0" />
+          {label('Overview')}
+        </NavLink>
+      </div>
+
+      <div className="sidebar-divider">
         {!collapsed && <p className="sidebar-group-label">Human Resources</p>}
         <NavLink to="/hr/employees" className={linkClass} title="Employees">
           <PeopleIcon className="h-4 w-4 shrink-0" />

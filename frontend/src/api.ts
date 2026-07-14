@@ -625,7 +625,10 @@ export const api = {
   },
 
   // PTO requests
-  listPtoRequests: async (token: string, scope: 'mine' | 'pending-approval' | 'all' = 'mine'): Promise<PtoRequest[]> => {
+  listPtoRequests: async (
+    token: string,
+    scope: 'mine' | 'pending-approval' | 'all' | 'calendar' = 'mine',
+  ): Promise<PtoRequest[]> => {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/pto-requests?scope=${scope}`, {
       headers: { Authorization: `Bearer ${token}` },
     });

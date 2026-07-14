@@ -22,6 +22,7 @@ import {
   createEmployee,
   deleteEmployee,
   findEmployeeById,
+  findEmployeeByUserId,
   listEmployees,
   updateEmployee,
   wouldCreateManagerCycle,
@@ -71,6 +72,14 @@ import {
   listEmployeePtoPolicies,
   unassignPtoPolicyFromEmployee,
 } from './modules/hr/employeePtoPolicyService.js';
+import {
+  cancelPtoRequest,
+  createPtoRequest,
+  decidePtoRequest,
+  listAllPtoRequests,
+  listMyPtoRequests,
+  listPendingApprovals,
+} from './modules/hr/ptoRequestService.js';
 
 dotenv.config();
 
@@ -775,6 +784,101 @@ app.delete('/api/hr/employees/:employeeId/pto-policies/:policyId', async (req, r
   }
 
   const result = await unassignPtoPolicyFromEmployee(user.tenantId!, req.params.employeeId, req.params.policyId);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  return res.status(204).end();
+});
+
+app.post('/api/hr/pto-requests', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  const employee = await findEmployeeByUserId(user.id);
+  if (!employee) {
+    return res.status(400).json({ error: 'Your account is not linked to an employee record' });
+  }
+
+  const result = await createPtoRequest({
+    tenantId: user.tenantId!,
+    employeeId: employee.id,
+    ptoPolicyId: req.body.ptoPolicyId,
+    startDate: req.body.startDate,
+    endDate: req.body.endDate,
+    note: req.body.note,
+  });
+
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  return res.status(201).json(result.request);
+});
+
+app.get('/api/hr/pto-requests', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  const scope = (req.query.scope as string) ?? 'mine';
+
+  if (scope === 'all') {
+    if (!canManageCustomFields(user.role)) {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
+    const requests = await listAllPtoRequests(user.tenantId!);
+    return res.json(requests);
+  }
+
+  const employee = await findEmployeeByUserId(user.id);
+  if (!employee) {
+    return res.json([]);
+  }
+
+  if (scope === 'pending-approval') {
+    const requests = await listPendingApprovals(user.tenantId!, employee.id);
+    return res.json(requests);
+  }
+
+  const requests = await listMyPtoRequests(user.tenantId!, employee.id);
+  return res.json(requests);
+});
+
+app.patch('/api/hr/pto-requests/:requestId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  const decision = req.body.status;
+  if (decision !== 'approved' && decision !== 'rejected') {
+    return res.status(400).json({ error: "Status must be 'approved' or 'rejected'" });
+  }
+
+  const result = await decidePtoRequest(req.params.requestId, user.tenantId!, user, decision, req.body.decisionNote);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  return res.json(result.request);
+});
+
+app.delete('/api/hr/pto-requests/:requestId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  const employee = await findEmployeeByUserId(user.id);
+  if (!employee) {
+    return res.status(400).json({ error: 'Your account is not linked to an employee record' });
+  }
+
+  const result = await cancelPtoRequest(req.params.requestId, user.tenantId!, employee.id);
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }

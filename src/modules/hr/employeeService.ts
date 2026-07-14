@@ -102,6 +102,12 @@ export async function findEmployeeById(id: string): Promise<Employee | null> {
   });
 }
 
+export async function findEmployeeByUserId(userId: string): Promise<Employee | null> {
+  return prisma.employee.findUnique({
+    where: { userId },
+  });
+}
+
 export async function updateEmployee(
   id: string,
   input: UpdateEmployeeInput,

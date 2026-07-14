@@ -130,6 +130,24 @@ interface EmployeePtoPolicyAssignment {
   ptoPolicy: PtoPolicy;
 }
 
+interface PtoRequest {
+  id: string;
+  employeeId: string;
+  ptoPolicyId: string;
+  startDate: string;
+  endDate: string;
+  daysRequested: number;
+  note: string | null;
+  status: 'pending' | 'approved' | 'rejected' | 'cancelled';
+  approverId: string | null;
+  decidedAt: string | null;
+  decisionNote: string | null;
+  createdAt: string;
+  ptoPolicy: PtoPolicy;
+  employee?: { id: string; firstName: string; lastName: string };
+  approver?: { id: string; firstName: string; lastName: string } | null;
+}
+
 interface Invitation {
   id: string;
   tenantId: string;
@@ -585,6 +603,57 @@ export const api = {
 
   unassignPtoPolicyFromEmployee: async (token: string, employeeId: string, ptoPolicyId: string): Promise<void> => {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/pto-policies/${ptoPolicyId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+  },
+
+  // PTO requests
+  listPtoRequests: async (token: string, scope: 'mine' | 'pending-approval' | 'all' = 'mine'): Promise<PtoRequest[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/pto-requests?scope=${scope}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  createPtoRequest: async (
+    token: string,
+    data: { ptoPolicyId: string; startDate: string; endDate: string; note?: string },
+  ): Promise<PtoRequest> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/pto-requests`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  decidePtoRequest: async (
+    token: string,
+    requestId: string,
+    status: 'approved' | 'rejected',
+    decisionNote?: string,
+  ): Promise<PtoRequest> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/pto-requests/${requestId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ status, decisionNote }),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  cancelPtoRequest: async (token: string, requestId: string): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/pto-requests/${requestId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });

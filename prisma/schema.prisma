@@ -49,6 +49,13 @@ enum PtoAccrualMethod {
   monthly
 }
 
+enum PtoRequestStatus {
+  pending
+  approved
+  rejected
+  cancelled
+}
+
 model Tenant {
   id                   String                 @id @default(uuid())
   name                 String
@@ -65,6 +72,7 @@ model Tenant {
   statusHistory        StatusHistoryEntry[]
   ptoPolicies          PtoPolicyDefinition[]
   employeePtoPolicies  EmployeePtoPolicy[]
+  ptoRequests          PtoRequest[]
 }
 
 model User {
@@ -102,6 +110,8 @@ model Employee {
   user            User?                @relation(fields: [userId], references: [id])
   invitations     Invitation[]
   ptoPolicies     EmployeePtoPolicy[]
+  ptoRequestsMade PtoRequest[]         @relation("PtoRequestEmployee")
+  ptoRequestsToApprove PtoRequest[]    @relation("PtoRequestApprover")
 
   @@unique([tenantId, email])
 }
@@ -166,8 +176,32 @@ model PtoPolicyDefinition {
   isActive         Boolean           @default(true)
   createdAt        DateTime          @default(now())
   employeeAssignments EmployeePtoPolicy[]
+  requests         PtoRequest[]
 
   @@index([tenantId])
+}
+
+model PtoRequest {
+  id            String            @id @default(uuid())
+  tenantId      String
+  tenant        Tenant            @relation(fields: [tenantId], references: [id])
+  employeeId    String
+  employee      Employee          @relation("PtoRequestEmployee", fields: [employeeId], references: [id])
+  ptoPolicyId   String
+  ptoPolicy     PtoPolicyDefinition @relation(fields: [ptoPolicyId], references: [id])
+  startDate     DateTime
+  endDate       DateTime
+  daysRequested Float
+  note          String?
+  status        PtoRequestStatus  @default(pending)
+  approverId    String?
+  approver      Employee?         @relation("PtoRequestApprover", fields: [approverId], references: [id])
+  decidedAt     DateTime?
+  decisionNote  String?
+  createdAt     DateTime          @default(now())
+
+  @@index([tenantId, employeeId])
+  @@index([tenantId, status])
 }
 
 model EmployeePtoPolicy {

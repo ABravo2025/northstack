@@ -1,7 +1,8 @@
 # Contexto de desarrollo del proyecto
 
 - Fecha de creación: 2026-07-02
-- Última actualización: 2026-07-13 (Terms of Service y Privacy Policy)
+- Última actualización: 2026-07-14 (sistema de PTO completo, landing en su propia branch, esquema de base de datos documentado)
+- Ver también: `docs/current-process-flow.md` (diagramas de flujo actualizados) y `docs/database-schema.md` (esquema completo de la base de datos, nuevo).
 
 ## Resumen del proyecto
 
@@ -141,3 +142,30 @@ Crear un sistema que permita:
 - Otras cláusulas de protección ya incluidas desde el primer borrador: prohibición de que los tenants carguen categorías de datos sensibles (SSN, salud, biométricos, cuentas financieras completas) vía custom fields (§3.4 ToS — importante porque los custom fields son texto libre y hoy no hay nada a nivel de producto que lo impida técnicamente); indemnización del tenant hacia Northstack por los datos que carga; disclaimers de beta (sin SLA); tope de responsabilidad (mayor entre fees de 12 meses o USD 100).
 - El usuario completó `[Effective Date]` como **13 de julio de 2026** en ambos documentos directamente en el archivo.
 - Pendiente: confirmar el nombre legal exacto a usar (hoy asume "Alejandro Bravo"), revisión por un abogado matriculado antes de publicar, y decidir cómo enlazarlos desde la landing y la app (páginas/rutas — todavía no implementado).
+
+### Catálogo de status configurable (2026-07-13)
+
+- `Employee.status`/`Client.status` dejaron de ser enums fijos de Prisma — ahora son `statusId`, FK a un nuevo modelo `StatusDefinition` por tenant y por módulo (name, color, order, isDefault, isActive), gestionable desde `/settings` → Statuses. Cada tenant nuevo siembra automáticamente los mismos valores que existían antes (Employee: Active/Inactive/Pending — Client: Prospect/Active/Inactive/Archived), pero puede agregar/renombrar/reordenar/desactivar libremente.
+- Cada cambio de status queda en `StatusHistoryEntry`, guardando el *nombre* del status al momento del cambio (no una FK viva), para que un status renombrado después no reescriba cómo se ve el historial viejo. Se graba automático; la pantalla para verlo queda pendiente.
+- Migración real sobre los ~28 tenants ya existentes en producción (Neon), en 3 pasos (push aditivo → script de backfill → push destructivo para borrar las columnas viejas), verificada con queries directas antes de cada paso destructivo.
+
+### Landing separada a su propia branch (2026-07-14)
+
+- A pedido del usuario, `landing/` se sacó por completo de `main` y se movió a una branch nueva, `landing`, con su propio pipeline de deploy (workflow de GitHub Actions distinto, disparado por push a `landing` en vez de a `main`). La landing siguió online sin downtime durante el cambio — como el deploy nunca usó la integración nativa de Vercel (Git), sino `vercel deploy --prod` corrido a mano vía CI, no hubo que tocar ninguna configuración del lado de Vercel, solo el trigger del workflow.
+- Motivo: separar por completo el trabajo de la landing (estática, sin backend) del trabajo de la app real, que hasta ahora compartían la misma branch y el mismo historial de commits.
+
+### Sistema de PTO/vacaciones completo (2026-07-14)
+
+Construido pieza por pieza en la misma sesión, a pedido explícito del usuario ("arranca con eso nomás"), confirmando y pusheando cada pieza por separado antes de seguir con la siguiente. 6 de las 7 piezas planeadas están hechas — el detalle técnico completo (schema, endpoints, decisiones de diseño, verificación) vive en `docs/tareas-desarrollo.md` con notas fechadas por pieza, y el esquema de datos resultante está documentado en `docs/database-schema.md`.
+
+1. **Jerarquía organizacional**: `Employee.managerId`, relación auto-referencial ("reporta a"), con detección de ciclos (directos e indirectos) antes de guardar. Todo owner de tenant (nuevos y los ~30 ya existentes, migrados con un script) tiene ahora su propio registro `Employee` automático, así siempre aparece como opción de manager aunque no haya cargado ningún empleado todavía.
+2. **Motor de políticas de PTO configurables**: `PtoPolicyDefinition` por tenant — nombre, color, método de acumulación (`fixed_annual` o `monthly`, ambos soportados, no uno solo), días por año, paga/no paga, requiere aprobación. Gestionable desde `/settings` → PTO Policies.
+3. **Asignación de políticas por empleado**: tabla de unión `EmployeePtoPolicy` — una política no aplica a todos por default, se asigna puntualmente. Gestionable desde HR → PTO → Assignments, o desde el form de edición de cada empleado.
+4. **Solicitud + aprobación por jerarquía**: `PtoRequest` — el empleado pide días de una política que tiene asignada, y aprueba quien tenga configurado como su manager (no necesariamente el owner/admin, aunque owner/admin siempre pueden hacer override). Auto-aprobación instantánea si la política no requiere aprobación.
+5. **Balance de días**: calculado al vuelo (no se guarda en ninguna tabla), combinando la fecha de asignación, el método de acumulación de la política, y las solicitudes aprobadas/pendientes del año calendario en curso.
+6. **Calendario tenant-wide**: vista mensual de quién está de licencia (aprobada y pendiente, distinguidas visualmente), abierta a cualquier miembro del tenant, no solo admin.
+7. **Pendiente**: tag visual en la fila del empleado (ej. "PTO", "Leave Emergency") mientras está de licencia activa, sin tocar su `status` real.
+
+De paso, esta ronda resolvió dos ítems de backlog que llevaban tiempo abiertos:
+- **"Overview / pantalla de inicio"**: estaba anotado sin detalle desde hacía varias rondas. El usuario pidió que el calendario de PTO se mostrara "dentro del overview como main page, por encima del label Human Resources" — `OverviewPage.tsx` (`/overview`) es ahora la pantalla a la que cae cualquiera al loguearse, registrarse, o aceptar una invitación (antes caía en HR Dashboard).
+- **Selector de color pobre**: el `<input type="color">` nativo (usado en Statuses) no daba feedback claro de qué color estaba elegido. Se construyó `ColorPicker.tsx`, un componente reutilizable con colores predeterminados + un popover para agregar personalizados (persistidos en `localStorage`, compartidos entre todos los pickers de la app) — pasó por varias iteraciones de feedback del usuario probando en el navegador antes de asentarse.

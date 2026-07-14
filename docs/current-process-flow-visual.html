@@ -96,7 +96,7 @@
     <div class="page">
       <div class="hero">
         <h1>Northstack Current Process Flow</h1>
-        <p>Live at <strong>app.joinnorthstack.com</strong>. This page shows the current architecture, onboarding, and settings flows for Northstack. Last synced 2026-07-13 — see <code>docs/current-process-flow.md</code> for the full technical detail behind each diagram.</p>
+        <p>Live at <strong>app.joinnorthstack.com</strong>. This page shows the current architecture, onboarding, settings, and PTO flows for Northstack. Last synced 2026-07-14 — see <code>docs/current-process-flow.md</code> for the full technical detail behind each diagram, and <code>docs/database-schema.md</code> for the data model.</p>
       </div>
 
       <div class="card">
@@ -117,7 +117,7 @@
             </div>
             <div class="box">
               <strong>Deploys</strong>
-              Every push to <code>main</code> auto-deploys via GitHub Actions (<code>vercel deploy --prod</code>).
+              Two branches, two pipelines: push to <code>main</code> deploys the app, push to <code>landing</code> deploys the marketing site — each via its own GitHub Actions job (<code>vercel deploy --prod</code>).
             </div>
             <div class="box">
               <strong>Email</strong>
@@ -166,7 +166,7 @@ flowchart TD
             </div>
             <div class="box">
               <strong>Settings</strong>
-              Reached from the sidebar gear icon (<code>/settings</code>): Custom Fields today, structured to grow with more categories later.
+              Reached from the sidebar gear icon (<code>/settings</code>): Custom Fields, Statuses, and PTO Policies — grew from 1 category to 3 without any structural rework.
             </div>
             <div class="box">
               <strong>No cross-navigation</strong>
@@ -186,6 +186,8 @@ flowchart TD
 
   E[Sidebar gear icon] -->|Settings| F["route: settings"]
   F --> G[Custom Fields]
+  F --> H[Statuses]
+  F --> I[PTO Policies]
             </div>
           </div>
         </div>
@@ -206,8 +208,50 @@ flowchart TD
               An Employee can optionally link to a User via invite, giving them their own login.
             </div>
             <div class="box">
-              <strong>Status enums differ</strong>
-              Client statuses (prospect/active/inactive/archived) are not the same set as Employee statuses (active/inactive/pending).
+              <strong>Statuses are configurable now</strong>
+              No more fixed enums — <code>StatusDefinition</code> is a per-tenant, per-module catalog (name, color, order, default, active). Every status change is logged in <code>StatusHistoryEntry</code> as a name snapshot, not a live FK.
+            </div>
+            <div class="box">
+              <strong>Employee hierarchy</strong>
+              <code>Employee.managerId</code> ("reports to"), self-referential, with cycle detection. Every tenant owner gets an auto-created Employee record so they always appear as a manager option.
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h2>PTO / vacation system</h2>
+          <div class="box-list">
+            <div class="box">
+              <strong>Configurable policies</strong>
+              <code>PtoPolicyDefinition</code> per tenant — name, color, accrual (fixed annual or monthly), days/year, paid, requires approval.
+            </div>
+            <div class="box">
+              <strong>Per-employee assignment</strong>
+              Policies aren't tenant-wide by default — assigned per employee via <code>EmployeePtoPolicy</code>.
+            </div>
+            <div class="box">
+              <strong>Hierarchy-routed approval</strong>
+              A request's approver snapshots the employee's manager at request time; owner/admin can always override. No-approval-needed policies auto-approve instantly.
+            </div>
+            <div class="box">
+              <strong>Balance, derived</strong>
+              No balance table — computed on the fly from assignment date, accrual settings, and approved/pending requests for the current calendar year.
+            </div>
+            <div class="box">
+              <strong>Calendar on Overview</strong>
+              <code>/overview</code> is now the home screen after login, showing a month calendar of who's on approved or pending PTO — open to every tenant member, not just admins.
+            </div>
+          </div>
+          <div class="diagram">
+            <div class="mermaid">
+flowchart TD
+  A[Employee requests PTO from an assigned policy] --> B{Policy requires approval?}
+  B -->|No| C[Auto-approved instantly]
+  B -->|Yes| D[Pending, routed to their manager]
+  D --> E[Manager approves/rejects]
+  D --> F[Owner/Admin can override]
+  E --> G[Shows on the tenant-wide calendar]
+  C --> G
             </div>
           </div>
         </div>
@@ -218,9 +262,11 @@ flowchart TD
             <li><strong>Subscription billing</strong> for the SaaS itself — leaning toward Paddle (merchant of record, avoids needing a US entity) over Stripe direct, not decided yet.</li>
             <li>Custom/configurable roles (today fixed to owner/admin/member).</li>
             <li>Per-user audit log (logins + modifications).</li>
-            <li>PTO/vacation tracking inside HR.</li>
+            <li>PTO: last remaining piece — a visual "on leave" tag on an employee's row.</li>
+            <li>Platform admin panel for the Northstack owner across all tenants (needs a separate cross-tenant role system).</li>
             <li>Public API with token auth for external integrations.</li>
             <li>Public self-service onboarding forms.</li>
+            <li>Mobile/tablet responsiveness — nothing adapts to small screens today.</li>
           </ul>
         </div>
       </div>

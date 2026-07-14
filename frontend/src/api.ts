@@ -67,6 +67,7 @@ interface Employee {
   statusDefn?: { id: string; name: string; color: string | null };
   managerId?: string | null;
   manager?: { id: string; firstName: string; lastName: string } | null;
+  ptoPolicies?: EmployeePtoPolicyAssignment[];
   userId?: string | null;
   customFieldVals?: {
     id: string;
@@ -119,6 +120,14 @@ interface PtoPolicy {
   isPaid: boolean;
   requiresApproval: boolean;
   isActive: boolean;
+}
+
+interface EmployeePtoPolicyAssignment {
+  id: string;
+  employeeId: string;
+  ptoPolicyId: string;
+  assignedAt: string;
+  ptoPolicy: PtoPolicy;
 }
 
 interface Invitation {
@@ -546,6 +555,40 @@ export const api = {
     });
     if (!res.ok) await throwApiError(res);
     return res.json();
+  },
+
+  // PTO policy assignments (per employee)
+  listEmployeePtoPolicies: async (token: string, employeeId: string): Promise<EmployeePtoPolicyAssignment[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/pto-policies`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  assignPtoPolicyToEmployee: async (
+    token: string,
+    employeeId: string,
+    ptoPolicyId: string,
+  ): Promise<EmployeePtoPolicyAssignment> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/pto-policies`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ ptoPolicyId }),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  unassignPtoPolicyFromEmployee: async (token: string, employeeId: string, ptoPolicyId: string): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/pto-policies/${ptoPolicyId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
   },
 
   createEmployeeCustomFieldValue: async (

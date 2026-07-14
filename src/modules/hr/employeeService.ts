@@ -77,7 +77,11 @@ export async function listEmployees(tenantId?: string | null) {
 
   const employees = await prisma.employee.findMany({
     where: { tenantId },
-    include: { statusDefn: true, manager: { select: { id: true, firstName: true, lastName: true } } },
+    include: {
+      statusDefn: true,
+      manager: { select: { id: true, firstName: true, lastName: true } },
+      ptoPolicies: { include: { ptoPolicy: true } },
+    },
   });
 
   const values = await listCustomFieldValuesForEntities(

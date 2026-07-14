@@ -16,9 +16,12 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [employeeCustomFields, setEmployeeCustomFields] = useState<any[]>([]);
   const [employeeStatuses, setEmployeeStatuses] = useState<any[]>([]);
+  const [ptoPolicies, setPtoPolicies] = useState<any[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
   const [editCustomFieldValues, setEditCustomFieldValues] = useState<Record<string, string>>({});
   const [editCustomFieldValueIds, setEditCustomFieldValueIds] = useState<Record<string, string>>({});
+  const [editAssignedPolicyIds, setEditAssignedPolicyIds] = useState<string[]>([]);
+  const [originalAssignedPolicyIds, setOriginalAssignedPolicyIds] = useState<string[]>([]);
 
   const canManageCustomFields = user.role === 'owner' || user.role === 'admin';
   const activeEmployeeCustomFields = employeeCustomFields.filter((field) => field.isActive);
@@ -54,7 +57,17 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     loadEmployees();
     loadEmployeeCustomFields();
     loadEmployeeStatuses();
+    loadPtoPolicies();
   }, []);
+
+  const loadPtoPolicies = async () => {
+    try {
+      const policies = await api.listPtoPolicies(token);
+      setPtoPolicies(policies.filter((p) => p.isActive));
+    } catch (error) {
+      setError('Failed to load PTO policies: ' + (error as Error).message);
+    }
+  };
 
   const loadEmployeeCustomFields = async () => {
     try {
@@ -133,6 +146,16 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     }
     setEditCustomFieldValues(values);
     setEditCustomFieldValueIds(valueIds);
+
+    const assignedIds = (emp.ptoPolicies || []).map((a: any) => a.ptoPolicyId);
+    setEditAssignedPolicyIds(assignedIds);
+    setOriginalAssignedPolicyIds(assignedIds);
+  };
+
+  const handleTogglePtoPolicy = (policyId: string) => {
+    setEditAssignedPolicyIds((current) =>
+      current.includes(policyId) ? current.filter((id) => id !== policyId) : [...current, policyId],
+    );
   };
 
   const handleUpdateEmployee = async (e: React.FormEvent) => {
@@ -161,9 +184,20 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         }
       }
 
+      const policiesToAssign = editAssignedPolicyIds.filter((id) => !originalAssignedPolicyIds.includes(id));
+      const policiesToUnassign = originalAssignedPolicyIds.filter((id) => !editAssignedPolicyIds.includes(id));
+      for (const policyId of policiesToAssign) {
+        await api.assignPtoPolicyToEmployee(token, editingEmployeeId, policyId);
+      }
+      for (const policyId of policiesToUnassign) {
+        await api.unassignPtoPolicyFromEmployee(token, editingEmployeeId, policyId);
+      }
+
       setEditingEmployeeId(null);
       setEditCustomFieldValues({});
       setEditCustomFieldValueIds({});
+      setEditAssignedPolicyIds([]);
+      setOriginalAssignedPolicyIds([]);
       loadEmployees();
     } catch (error) {
       setError('Failed to update employee: ' + (error as Error).message);
@@ -386,6 +420,22 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
               </select>
             </div>
 
+            {ptoPolicies.length > 0 && (
+              <div className="form-group">
+                <label>PTO Policies</label>
+                {ptoPolicies.map((policy) => (
+                  <label key={policy.id} className="mr-3 inline-flex items-center gap-1.5 text-sm font-normal">
+                    <input
+                      type="checkbox"
+                      checked={editAssignedPolicyIds.includes(policy.id)}
+                      onChange={() => handleTogglePtoPolicy(policy.id)}
+                    />
+                    {policy.name}
+                  </label>
+                ))}
+              </div>
+            )}
+
             {activeEmployeeCustomFields.map((field) => (
               <div className="form-group" key={field.id}>
                 <label>
@@ -407,6 +457,8 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                   setEditingEmployeeId(null);
                   setEditCustomFieldValues({});
                   setEditCustomFieldValueIds({});
+                  setEditAssignedPolicyIds([]);
+                  setOriginalAssignedPolicyIds([]);
                 }}
               >
                 Cancel
@@ -441,6 +493,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                 <th>Department</th>
                 <th>Status</th>
                 <th>Reports To</th>
+                <th>PTO Policies</th>
                 {activeEmployeeCustomFields.map((field) => (
                   <th key={field.id}>{field.name}</th>
                 ))}
@@ -457,6 +510,11 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                   <td>{emp.department}</td>
                   <td>{emp.statusDefn?.name}</td>
                   <td>{emp.manager ? `${emp.manager.firstName} ${emp.manager.lastName}` : '—'}</td>
+                  <td>
+                    {emp.ptoPolicies && emp.ptoPolicies.length > 0
+                      ? emp.ptoPolicies.map((a: any) => a.ptoPolicy.name).join(', ')
+                      : '—'}
+                  </td>
                   {activeEmployeeCustomFields.map((field) => {
                     const fieldValue = emp.customFieldVals?.find(
                       (v: any) => v.customFieldDefinitionId === field.id,

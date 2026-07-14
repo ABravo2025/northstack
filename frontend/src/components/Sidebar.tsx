@@ -1,6 +1,14 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { BriefcaseIcon, ChevronLeftIcon, DashboardIcon, GearIcon, PeopleIcon, TrendingIcon } from './Icons';
+import {
+  BriefcaseIcon,
+  CalendarIcon,
+  ChevronLeftIcon,
+  DashboardIcon,
+  GearIcon,
+  PeopleIcon,
+  TrendingIcon,
+} from './Icons';
 
 interface SidebarProps {
   showSettings: boolean;
@@ -29,6 +37,10 @@ export default function Sidebar({ showSettings }: SidebarProps) {
         <NavLink to="/hr/employees" className={linkClass} title="Employees">
           <PeopleIcon className="h-4 w-4 shrink-0" />
           {label('Employees')}
+        </NavLink>
+        <NavLink to="/hr/pto" className={linkClass} title="Human Resources – PTO">
+          <CalendarIcon className="h-4 w-4 shrink-0" />
+          {label('PTO')}
         </NavLink>
         <NavLink to="/hr/dashboard" className={linkClass} title="Human Resources – Dashboard">
           <DashboardIcon className="h-4 w-4 shrink-0" />

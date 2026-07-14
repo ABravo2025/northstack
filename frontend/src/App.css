@@ -80,6 +80,14 @@
   @apply flex items-center gap-2;
 }
 
+.pto-policy-chip {
+  @apply mr-1.5 mb-1 inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs text-brand-navy dark:bg-gray-700 dark:text-gray-100;
+}
+
+.pto-policy-chip-remove {
+  @apply cursor-pointer leading-none text-gray-400 hover:text-red-500;
+}
+
 .color-swatch-preview {
   @apply relative inline-flex h-7 w-7 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-gray-300 dark:border-gray-600;
 }

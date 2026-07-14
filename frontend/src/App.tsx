@@ -6,6 +6,7 @@ import RegisterPage from './pages/RegisterPage';
 import AcceptInvitePage from './pages/AcceptInvitePage';
 import HrDashboardPage from './pages/HrDashboardPage';
 import EmployeesPage from './pages/EmployeesPage';
+import PtoOverviewPage from './pages/PtoOverviewPage';
 import ClientsDashboardPage from './pages/ClientsDashboardPage';
 import ClientsPage from './pages/ClientsPage';
 import CustomFieldsSettingsPage from './pages/CustomFieldsSettingsPage';
@@ -177,6 +178,7 @@ export default function App() {
       <Route element={<AppLayout user={user} token={token} onLogout={handleLogout} />}>
         <Route path="/hr/dashboard" element={<HrDashboardPage />} />
         <Route path="/hr/employees" element={<EmployeesPage user={user} token={token ?? ''} />} />
+        <Route path="/hr/pto" element={<PtoOverviewPage user={user} token={token ?? ''} />} />
         <Route path="/clients/dashboard" element={<ClientsDashboardPage />} />
         <Route path="/clients" element={<ClientsPage token={token ?? ''} />} />
         <Route

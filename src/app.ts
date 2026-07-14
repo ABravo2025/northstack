@@ -66,6 +66,11 @@ import {
   listPtoPolicies,
   updatePtoPolicy,
 } from './modules/hr/ptoPolicyService.js';
+import {
+  assignPtoPolicyToEmployee,
+  listEmployeePtoPolicies,
+  unassignPtoPolicyFromEmployee,
+} from './modules/hr/employeePtoPolicyService.js';
 
 dotenv.config();
 
@@ -714,6 +719,67 @@ app.patch('/api/pto-policies/:policyId', async (req, res) => {
   }
 
   return res.json(result.policy);
+});
+
+app.get('/api/hr/employees/:employeeId/pto-policies', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  const employee = await findEmployeeById(req.params.employeeId);
+  if (!employee || employee.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Employee not found' });
+  }
+
+  const assignments = await listEmployeePtoPolicies(user.tenantId!, req.params.employeeId);
+  return res.json(assignments);
+});
+
+app.post('/api/hr/employees/:employeeId/pto-policies', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageCustomFields(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const employee = await findEmployeeById(req.params.employeeId);
+  if (!employee || employee.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Employee not found' });
+  }
+
+  const result = await assignPtoPolicyToEmployee(user.tenantId!, req.params.employeeId, req.body.ptoPolicyId);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  return res.status(201).json(result.assignment);
+});
+
+app.delete('/api/hr/employees/:employeeId/pto-policies/:policyId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageCustomFields(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const employee = await findEmployeeById(req.params.employeeId);
+  if (!employee || employee.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Employee not found' });
+  }
+
+  const result = await unassignPtoPolicyFromEmployee(user.tenantId!, req.params.employeeId, req.params.policyId);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  return res.status(204).end();
 });
 
 app.post('/api/hr/employees/:employeeId/custom-fields', async (req, res) => {

@@ -13,13 +13,3 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
-
-  deploy-landing:
-    runs-on: ubuntu-latest
-    env:
-      VERCEL_ORG_ID: team_7cBA70ABi7r0BNsljeJfvQ3y
-      VERCEL_PROJECT_ID: prj_5GYxhncYaaOrxhqtO5M2CqFFgWfU
-    steps:
-      - uses: actions/checkout@v4
-      - working-directory: landing
-        run: npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --yes

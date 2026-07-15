@@ -31,6 +31,13 @@
     />
 
     <style>
+      /*
+        Brand palette — kept in sync by hand with frontend/src/index.css
+        (`@theme` block, --color-brand-*) on the main branch. This is a
+        static site with no build step and no shared module system with
+        the app, so there's no way to import one definition into both;
+        if you change a color here, update the other file too.
+      */
       :root {
         --navy: #0d2a48;
         --blue: #3c6da1;

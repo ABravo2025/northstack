@@ -1,5 +1,10 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api';
+import { useToast } from '../components/ToastProvider';
+import ConfirmDialog from '../components/ConfirmDialog';
+import Pagination, { paginate } from '../components/Pagination';
+
+const PAGE_SIZE = 20;
 
 interface EmployeesPageProps {
   user: any;
@@ -7,13 +12,14 @@ interface EmployeesPageProps {
 }
 
 export default function EmployeesPage({ user, token }: EmployeesPageProps) {
+  const toast = useToast();
   const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [inviteMessage, setInviteMessage] = useState<string | null>(null);
   const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
+  const [deletingEmployee, setDeletingEmployee] = useState<any | null>(null);
   const [employeeSearch, setEmployeeSearch] = useState('');
+  const [page, setPage] = useState(1);
   const [employeeCustomFields, setEmployeeCustomFields] = useState<any[]>([]);
   const [employeeStatuses, setEmployeeStatuses] = useState<any[]>([]);
   const [ptoPolicies, setPtoPolicies] = useState<any[]>([]);
@@ -35,6 +41,13 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       emp.department.toLowerCase().includes(query)
     );
   });
+
+  const pageCount = Math.max(1, Math.ceil(filteredEmployees.length / PAGE_SIZE));
+  const pagedEmployees = paginate(filteredEmployees, page, PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [employeeSearch]);
 
   const [employeeForm, setEmployeeForm] = useState({
     firstName: '',
@@ -65,7 +78,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       const policies = await api.listPtoPolicies(token);
       setPtoPolicies(policies.filter((p) => p.isActive));
     } catch (error) {
-      setError('Failed to load PTO policies: ' + (error as Error).message);
+      toast.error('Failed to load PTO policies: ' + (error as Error).message);
     }
   };
 
@@ -74,7 +87,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       const defs = await api.listCustomFieldDefinitions(token, 'employee');
       setEmployeeCustomFields(defs);
     } catch (error) {
-      setError('Failed to load custom fields: ' + (error as Error).message);
+      toast.error('Failed to load custom fields: ' + (error as Error).message);
     }
   };
 
@@ -83,18 +96,17 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       const statuses = await api.listStatusDefinitions(token, 'employee');
       setEmployeeStatuses(statuses.filter((s) => s.isActive));
     } catch (error) {
-      setError('Failed to load statuses: ' + (error as Error).message);
+      toast.error('Failed to load statuses: ' + (error as Error).message);
     }
   };
 
   const loadEmployees = async () => {
     setLoading(true);
-    setError(null);
     try {
       const data = await api.listEmployees(token);
       setEmployees(data);
     } catch (error) {
-      setError('Failed to load employees: ' + (error as Error).message);
+      toast.error('Failed to load employees: ' + (error as Error).message);
     } finally {
       setLoading(false);
     }
@@ -102,7 +114,6 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
 
   const handleCreateEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     try {
       const employee = await api.createEmployee(token, {
         ...employeeForm,
@@ -120,9 +131,10 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       setEmployeeForm({ firstName: '', lastName: '', email: '', department: '', managerId: '' });
       setCustomFieldValues({});
       setShowEmployeeForm(false);
+      toast.success(`${employee.firstName} ${employee.lastName} added.`);
       loadEmployees();
     } catch (error) {
-      setError('Failed to create employee: ' + (error as Error).message);
+      toast.error('Failed to create employee: ' + (error as Error).message);
     }
   };
 
@@ -161,7 +173,6 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const handleUpdateEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingEmployeeId) return;
-    setError(null);
     try {
       await api.updateEmployee(token, editingEmployeeId, {
         ...editEmployeeForm,
@@ -198,35 +209,35 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       setEditCustomFieldValueIds({});
       setEditAssignedPolicyIds([]);
       setOriginalAssignedPolicyIds([]);
+      toast.success('Employee updated.');
       loadEmployees();
     } catch (error) {
-      setError('Failed to update employee: ' + (error as Error).message);
+      toast.error('Failed to update employee: ' + (error as Error).message);
     }
   };
 
   const handleInviteEmployee = async (employeeId: string) => {
-    setError(null);
-    setInviteMessage(null);
     try {
       const { invitation } = await api.inviteEmployee(token, employeeId);
       const link = `${window.location.origin}/accept-invite/${invitation.token}`;
       await navigator.clipboard.writeText(link);
-      setInviteMessage(`Invite link copied to clipboard: ${link}`);
+      toast.success('Invite link copied to clipboard.');
       loadEmployees();
     } catch (error) {
-      setError('Failed to invite employee: ' + (error as Error).message);
+      toast.error('Failed to invite employee: ' + (error as Error).message);
     }
   };
 
-  const handleDeleteEmployee = async (employeeId: string) => {
-    if (confirm('Are you sure?')) {
-      setError(null);
-      try {
-        await api.deleteEmployee(token, employeeId);
-        loadEmployees();
-      } catch (error) {
-        setError('Failed to delete employee: ' + (error as Error).message);
-      }
+  const handleDeleteEmployee = async () => {
+    if (!deletingEmployee) return;
+    try {
+      await api.deleteEmployee(token, deletingEmployee.id);
+      toast.success(`${deletingEmployee.firstName} ${deletingEmployee.lastName} deleted.`);
+      setDeletingEmployee(null);
+      loadEmployees();
+    } catch (error) {
+      toast.error('Failed to delete employee: ' + (error as Error).message);
+      setDeletingEmployee(null);
     }
   };
 
@@ -234,10 +245,13 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     field: any,
     values: Record<string, string>,
     setValues: (values: Record<string, string>) => void,
+    idPrefix: string,
   ) => {
+    const inputId = `${idPrefix}-${field.id}`;
     if (field.fieldType === 'select') {
       return (
         <select
+          id={inputId}
           value={values[field.id] || ''}
           onChange={(e) => setValues({ ...values, [field.id]: e.target.value })}
           required={field.required}
@@ -263,6 +277,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
 
     return (
       <input
+        id={inputId}
         type={inputType}
         value={values[field.id] || ''}
         onChange={(e) => setValues({ ...values, [field.id]: e.target.value })}
@@ -273,8 +288,15 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
 
   return (
     <div>
-      {error && <div className="alert alert-error">{error}</div>}
-      {inviteMessage && <div className="alert alert-success">{inviteMessage}</div>}
+      {deletingEmployee && (
+        <ConfirmDialog
+          title="Delete employee"
+          message={`Are you sure you want to delete ${deletingEmployee.firstName} ${deletingEmployee.lastName}? This can't be undone.`}
+          confirmLabel="Delete"
+          onConfirm={handleDeleteEmployee}
+          onCancel={() => setDeletingEmployee(null)}
+        />
+      )}
       <div className="card">
         <div className="flex items-center justify-between">
           <h3>Employees</h3>
@@ -286,8 +308,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         {showEmployeeForm && (
           <form onSubmit={handleCreateEmployee} className="mb-5">
             <div className="form-group">
-              <label>First Name</label>
+              <label htmlFor="emp-firstName">First Name</label>
               <input
+                id="emp-firstName"
                 type="text"
                 value={employeeForm.firstName}
                 onChange={(e) => setEmployeeForm({ ...employeeForm, firstName: e.target.value })}
@@ -295,8 +318,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
               />
             </div>
             <div className="form-group">
-              <label>Last Name</label>
+              <label htmlFor="emp-lastName">Last Name</label>
               <input
+                id="emp-lastName"
                 type="text"
                 value={employeeForm.lastName}
                 onChange={(e) => setEmployeeForm({ ...employeeForm, lastName: e.target.value })}
@@ -304,8 +328,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
               />
             </div>
             <div className="form-group">
-              <label>Email</label>
+              <label htmlFor="emp-email">Email</label>
               <input
+                id="emp-email"
                 type="email"
                 value={employeeForm.email}
                 onChange={(e) => setEmployeeForm({ ...employeeForm, email: e.target.value })}
@@ -313,8 +338,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
               />
             </div>
             <div className="form-group">
-              <label>Department</label>
+              <label htmlFor="emp-department">Department</label>
               <input
+                id="emp-department"
                 type="text"
                 value={employeeForm.department}
                 onChange={(e) => setEmployeeForm({ ...employeeForm, department: e.target.value })}
@@ -322,8 +348,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
               />
             </div>
             <div className="form-group">
-              <label>Reports To</label>
+              <label htmlFor="emp-managerId">Reports To</label>
               <select
+                id="emp-managerId"
                 value={employeeForm.managerId}
                 onChange={(e) => setEmployeeForm({ ...employeeForm, managerId: e.target.value })}
               >
@@ -338,11 +365,11 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
 
             {activeEmployeeCustomFields.map((field) => (
               <div className="form-group" key={field.id}>
-                <label>
+                <label htmlFor={`emp-cf-${field.id}`}>
                   {field.name}
                   {field.required ? ' *' : ''}
                 </label>
-                {renderCustomFieldInput(field, customFieldValues, setCustomFieldValues)}
+                {renderCustomFieldInput(field, customFieldValues, setCustomFieldValues, 'emp-cf')}
               </div>
             ))}
 
@@ -355,8 +382,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         {editingEmployeeId && (
           <form onSubmit={handleUpdateEmployee} className="mb-5">
             <div className="form-group">
-              <label>First Name</label>
+              <label htmlFor="edit-emp-firstName">First Name</label>
               <input
+                id="edit-emp-firstName"
                 type="text"
                 value={editEmployeeForm.firstName}
                 onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, firstName: e.target.value })}
@@ -364,8 +392,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
               />
             </div>
             <div className="form-group">
-              <label>Last Name</label>
+              <label htmlFor="edit-emp-lastName">Last Name</label>
               <input
+                id="edit-emp-lastName"
                 type="text"
                 value={editEmployeeForm.lastName}
                 onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, lastName: e.target.value })}
@@ -373,8 +402,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
               />
             </div>
             <div className="form-group">
-              <label>Email</label>
+              <label htmlFor="edit-emp-email">Email</label>
               <input
+                id="edit-emp-email"
                 type="email"
                 value={editEmployeeForm.email}
                 onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, email: e.target.value })}
@@ -382,8 +412,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
               />
             </div>
             <div className="form-group">
-              <label>Department</label>
+              <label htmlFor="edit-emp-department">Department</label>
               <input
+                id="edit-emp-department"
                 type="text"
                 value={editEmployeeForm.department}
                 onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, department: e.target.value })}
@@ -391,8 +422,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
               />
             </div>
             <div className="form-group">
-              <label>Status</label>
+              <label htmlFor="edit-emp-statusId">Status</label>
               <select
+                id="edit-emp-statusId"
                 value={editEmployeeForm.statusId}
                 onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, statusId: e.target.value })}
               >
@@ -404,8 +436,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
               </select>
             </div>
             <div className="form-group">
-              <label>Reports To</label>
+              <label htmlFor="edit-emp-managerId">Reports To</label>
               <select
+                id="edit-emp-managerId"
                 value={editEmployeeForm.managerId}
                 onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, managerId: e.target.value })}
               >
@@ -422,10 +455,15 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
 
             {ptoPolicies.length > 0 && (
               <div className="form-group">
-                <label>PTO Policies</label>
+                <span>PTO Policies</span>
                 {ptoPolicies.map((policy) => (
-                  <label key={policy.id} className="mr-3 inline-flex items-center gap-1.5 text-sm font-normal">
+                  <label
+                    key={policy.id}
+                    htmlFor={`edit-emp-pto-${policy.id}`}
+                    className="mr-3 inline-flex items-center gap-1.5 text-sm font-normal"
+                  >
                     <input
+                      id={`edit-emp-pto-${policy.id}`}
                       type="checkbox"
                       checked={editAssignedPolicyIds.includes(policy.id)}
                       onChange={() => handleTogglePtoPolicy(policy.id)}
@@ -438,11 +476,11 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
 
             {activeEmployeeCustomFields.map((field) => (
               <div className="form-group" key={field.id}>
-                <label>
+                <label htmlFor={`edit-emp-cf-${field.id}`}>
                   {field.name}
                   {field.required ? ' *' : ''}
                 </label>
-                {renderCustomFieldInput(field, editCustomFieldValues, setEditCustomFieldValues)}
+                {renderCustomFieldInput(field, editCustomFieldValues, setEditCustomFieldValues, 'edit-emp-cf')}
               </div>
             ))}
 
@@ -469,7 +507,11 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
 
         {employees.length > 0 && (
           <div className="form-group">
+            <label htmlFor="employee-search" className="sr-only">
+              Search employees
+            </label>
             <input
+              id="employee-search"
               type="text"
               value={employeeSearch}
               onChange={(e) => setEmployeeSearch(e.target.value)}
@@ -481,84 +523,92 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         {loading ? (
           <p>Loading...</p>
         ) : employees.length === 0 ? (
-          <p>No employees yet.</p>
+          <div className="empty-state">
+            <p>No employees yet.</p>
+            <button className="btn btn-success" onClick={() => setShowEmployeeForm(true)}>
+              Add your first employee
+            </button>
+          </div>
         ) : filteredEmployees.length === 0 ? (
           <p>No employees match your search.</p>
         ) : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Department</th>
-                <th>Status</th>
-                <th>Reports To</th>
-                <th>PTO Policies</th>
-                {activeEmployeeCustomFields.map((field) => (
-                  <th key={field.id}>{field.name}</th>
-                ))}
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredEmployees.map((emp) => (
-                <tr key={emp.id}>
-                  <td>
-                    {emp.firstName} {emp.lastName}
-                    {emp.activePtoTag && (
-                      <span
-                        className="pto-active-tag"
-                        style={{ background: emp.activePtoTag.color || '#9ca3af' }}
-                        title={`On ${emp.activePtoTag.policyName} today`}
-                      >
-                        {emp.activePtoTag.policyName}
-                      </span>
-                    )}
-                  </td>
-                  <td>{emp.email}</td>
-                  <td>{emp.department}</td>
-                  <td>{emp.statusDefn?.name}</td>
-                  <td>{emp.manager ? `${emp.manager.firstName} ${emp.manager.lastName}` : '—'}</td>
-                  <td>
-                    {emp.ptoPolicies && emp.ptoPolicies.length > 0
-                      ? emp.ptoPolicies.map((a: any) => a.ptoPolicy.name).join(', ')
-                      : '—'}
-                  </td>
-                  {activeEmployeeCustomFields.map((field) => {
-                    const fieldValue = emp.customFieldVals?.find(
-                      (v: any) => v.customFieldDefinitionId === field.id,
-                    );
-                    return <td key={field.id}>{fieldValue?.value || '—'}</td>;
-                  })}
-                  <td>
-                    <button
-                      className="btn btn-secondary px-2 py-1 text-xs mr-1.5"
-                      onClick={() => handleStartEditEmployee(emp)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="btn btn-danger px-2 py-1 text-xs mr-1.5"
-                      onClick={() => handleDeleteEmployee(emp.id)}
-                    >
-                      Delete
-                    </button>
-                    {canManageCustomFields &&
-                      (emp.userId ? (
-                        <span className="text-xs text-emerald-600">Linked</span>
-                      ) : (
-                        <button
-                          className="btn btn-success px-2 py-1 text-xs"
-                          onClick={() => handleInviteEmployee(emp.id)}
-                        >
-                          Invite
-                        </button>
-                      ))}
-                  </td>
+          <>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Department</th>
+                  <th>Status</th>
+                  <th>Reports To</th>
+                  <th>PTO Policies</th>
+                  {activeEmployeeCustomFields.map((field) => (
+                    <th key={field.id}>{field.name}</th>
+                  ))}
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {pagedEmployees.map((emp) => (
+                  <tr key={emp.id}>
+                    <td>
+                      {emp.firstName} {emp.lastName}
+                      {emp.activePtoTag && (
+                        <span
+                          className="pto-active-tag"
+                          style={{ background: emp.activePtoTag.color || '#9ca3af' }}
+                          title={`On ${emp.activePtoTag.policyName} today`}
+                        >
+                          {emp.activePtoTag.policyName}
+                        </span>
+                      )}
+                    </td>
+                    <td>{emp.email}</td>
+                    <td>{emp.department}</td>
+                    <td>{emp.statusDefn?.name}</td>
+                    <td>{emp.manager ? `${emp.manager.firstName} ${emp.manager.lastName}` : '—'}</td>
+                    <td>
+                      {emp.ptoPolicies && emp.ptoPolicies.length > 0
+                        ? emp.ptoPolicies.map((a: any) => a.ptoPolicy.name).join(', ')
+                        : '—'}
+                    </td>
+                    {activeEmployeeCustomFields.map((field) => {
+                      const fieldValue = emp.customFieldVals?.find(
+                        (v: any) => v.customFieldDefinitionId === field.id,
+                      );
+                      return <td key={field.id}>{fieldValue?.value || '—'}</td>;
+                    })}
+                    <td>
+                      <button
+                        className="btn btn-secondary px-2 py-1 text-xs mr-1.5"
+                        onClick={() => handleStartEditEmployee(emp)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="btn btn-danger px-2 py-1 text-xs mr-1.5"
+                        onClick={() => setDeletingEmployee(emp)}
+                      >
+                        Delete
+                      </button>
+                      {canManageCustomFields &&
+                        (emp.userId ? (
+                          <span className="text-xs text-emerald-600">Linked</span>
+                        ) : (
+                          <button
+                            className="btn btn-success px-2 py-1 text-xs"
+                            onClick={() => handleInviteEmployee(emp.id)}
+                          >
+                            Invite
+                          </button>
+                        ))}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
+          </>
         )}
       </div>
     </div>

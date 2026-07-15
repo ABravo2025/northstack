@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { api } from '../api';
+import { useToast } from '../components/ToastProvider';
 
 interface OverviewPageProps {
   token: string;
@@ -42,9 +43,9 @@ function buildMonthGrid(year: number, month: number): (number | null)[][] {
 }
 
 export default function OverviewPage({ token }: OverviewPageProps) {
+  const toast = useToast();
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [cursor, setCursor] = useState(() => {
     const now = new Date();
     return { year: now.getFullYear(), month: now.getMonth() };
@@ -56,12 +57,11 @@ export default function OverviewPage({ token }: OverviewPageProps) {
 
   const loadCalendar = async () => {
     setLoading(true);
-    setError(null);
     try {
       const data = await api.listPtoRequests(token, 'calendar');
       setRequests(data);
     } catch (error) {
-      setError('Failed to load the team calendar: ' + (error as Error).message);
+      toast.error('Failed to load the team calendar: ' + (error as Error).message);
     } finally {
       setLoading(false);
     }
@@ -101,7 +101,6 @@ export default function OverviewPage({ token }: OverviewPageProps) {
 
   return (
     <div>
-      {error && <div className="alert alert-error">{error}</div>}
       <div className="card">
         <div className="flex items-center justify-between mb-4">
           <h3 className="mb-0">

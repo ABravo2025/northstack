@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api';
+import { useToast } from '../components/ToastProvider';
 
 interface CustomFieldsSettingsPageProps {
   token: string;
@@ -8,9 +9,9 @@ interface CustomFieldsSettingsPageProps {
 type Module = 'employee' | 'client';
 
 export default function CustomFieldsSettingsPage({ token }: CustomFieldsSettingsPageProps) {
+  const toast = useToast();
   const [settingsModule, setSettingsModule] = useState<Module>('employee');
   const [settingsCustomFields, setSettingsCustomFields] = useState<any[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [newCustomField, setNewCustomField] = useState({
     name: '',
     fieldType: 'text',
@@ -23,18 +24,16 @@ export default function CustomFieldsSettingsPage({ token }: CustomFieldsSettings
   }, [settingsModule]);
 
   const loadSettingsCustomFields = async () => {
-    setError(null);
     try {
       const defs = await api.listCustomFieldDefinitions(token, settingsModule);
       setSettingsCustomFields(defs);
     } catch (error) {
-      setError('Failed to load custom fields: ' + (error as Error).message);
+      toast.error('Failed to load custom fields: ' + (error as Error).message);
     }
   };
 
   const handleCreateSettingsCustomField = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     try {
       const options =
         newCustomField.fieldType === 'select'
@@ -54,19 +53,19 @@ export default function CustomFieldsSettingsPage({ token }: CustomFieldsSettings
         required: newCustomField.required,
       });
       setNewCustomField({ name: '', fieldType: 'text', options: '', required: false });
+      toast.success('Custom field added.');
       loadSettingsCustomFields();
     } catch (error) {
-      setError('Failed to create custom field: ' + (error as Error).message);
+      toast.error('Failed to create custom field: ' + (error as Error).message);
     }
   };
 
   const handleToggleCustomFieldActive = async (field: any) => {
-    setError(null);
     try {
       await api.setCustomFieldDefinitionActive(token, field.id, !field.isActive);
       loadSettingsCustomFields();
     } catch (error) {
-      setError('Failed to update custom field: ' + (error as Error).message);
+      toast.error('Failed to update custom field: ' + (error as Error).message);
     }
   };
 
@@ -87,8 +86,6 @@ export default function CustomFieldsSettingsPage({ token }: CustomFieldsSettings
           Clients
         </button>
       </div>
-
-      {error && <div className="alert alert-error">{error}</div>}
 
       {settingsCustomFields.length === 0 ? (
         <p>No custom fields defined for this module yet.</p>
@@ -127,8 +124,9 @@ export default function CustomFieldsSettingsPage({ token }: CustomFieldsSettings
       <h3 className="mt-5">Add Custom Field</h3>
       <form onSubmit={handleCreateSettingsCustomField}>
         <div className="form-group">
-          <label>Field Name</label>
+          <label htmlFor="cf-name">Field Name</label>
           <input
+            id="cf-name"
             type="text"
             value={newCustomField.name}
             onChange={(e) => setNewCustomField({ ...newCustomField, name: e.target.value })}
@@ -137,8 +135,9 @@ export default function CustomFieldsSettingsPage({ token }: CustomFieldsSettings
           />
         </div>
         <div className="form-group">
-          <label>Field Type</label>
+          <label htmlFor="cf-type">Field Type</label>
           <select
+            id="cf-type"
             value={newCustomField.fieldType}
             onChange={(e) => setNewCustomField({ ...newCustomField, fieldType: e.target.value })}
           >
@@ -151,8 +150,9 @@ export default function CustomFieldsSettingsPage({ token }: CustomFieldsSettings
         </div>
         {newCustomField.fieldType === 'select' && (
           <div className="form-group">
-            <label>Options (comma-separated)</label>
+            <label htmlFor="cf-options">Options (comma-separated)</label>
             <input
+              id="cf-options"
               type="text"
               value={newCustomField.options}
               onChange={(e) => setNewCustomField({ ...newCustomField, options: e.target.value })}

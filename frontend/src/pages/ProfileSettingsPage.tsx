@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { api } from '../api';
+import { useToast } from '../components/ToastProvider';
 
 interface ProfileSettingsPageProps {
   user: any;
@@ -8,34 +9,34 @@ interface ProfileSettingsPageProps {
 }
 
 export default function ProfileSettingsPage({ user, token, onUserUpdated }: ProfileSettingsPageProps) {
+  const toast = useToast();
   const [profileForm, setProfileForm] = useState({
     firstName: user.firstName,
     lastName: user.lastName,
     phone: user.phone,
   });
   const [profileError, setProfileError] = useState<{ message: string; field?: string } | null>(null);
-  const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
   const [profileSaving, setProfileSaving] = useState(false);
 
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '' });
   const [passwordError, setPasswordError] = useState<{ message: string; field?: string } | null>(null);
-  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
   const [passwordSaving, setPasswordSaving] = useState(false);
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setProfileError(null);
-    setProfileSuccess(null);
     setProfileSaving(true);
     try {
       const result = await api.updateProfile(token, profileForm);
       onUserUpdated(result.user);
-      setProfileSuccess('Profile updated');
+      toast.success('Profile updated.');
     } catch (error) {
-      setProfileError({
-        message: (error as Error).message,
-        field: (error as any).field,
-      });
+      const field = (error as any).field;
+      if (field) {
+        setProfileError({ message: (error as Error).message, field });
+      } else {
+        toast.error((error as Error).message);
+      }
     } finally {
       setProfileSaving(false);
     }
@@ -44,17 +45,18 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setPasswordError(null);
-    setPasswordSuccess(null);
     setPasswordSaving(true);
     try {
       await api.changePassword(token, passwordForm);
       setPasswordForm({ currentPassword: '', newPassword: '' });
-      setPasswordSuccess('Password updated');
+      toast.success('Password updated.');
     } catch (error) {
-      setPasswordError({
-        message: (error as Error).message,
-        field: (error as any).field,
-      });
+      const field = (error as any).field;
+      if (field) {
+        setPasswordError({ message: (error as Error).message, field });
+      } else {
+        toast.error((error as Error).message);
+      }
     } finally {
       setPasswordSaving(false);
     }
@@ -64,14 +66,11 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
     <>
       <div className="card">
         <h3>Profile</h3>
-        {profileError && !profileError.field && (
-          <div className="alert alert-error">{profileError.message}</div>
-        )}
-        {profileSuccess && <div className="alert alert-success">{profileSuccess}</div>}
         <form onSubmit={handleProfileSubmit}>
           <div className="form-group">
-            <label>First name</label>
+            <label htmlFor="profile-firstName">First name</label>
             <input
+              id="profile-firstName"
               value={profileForm.firstName}
               onChange={(e) => setProfileForm({ ...profileForm, firstName: e.target.value })}
             />
@@ -80,8 +79,9 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
             )}
           </div>
           <div className="form-group">
-            <label>Last name</label>
+            <label htmlFor="profile-lastName">Last name</label>
             <input
+              id="profile-lastName"
               value={profileForm.lastName}
               onChange={(e) => setProfileForm({ ...profileForm, lastName: e.target.value })}
             />
@@ -90,16 +90,17 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
             )}
           </div>
           <div className="form-group">
-            <label>Phone</label>
+            <label htmlFor="profile-phone">Phone</label>
             <input
+              id="profile-phone"
               value={profileForm.phone}
               onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
             />
             {profileError?.field === 'phone' && <p className="field-error">{profileError.message}</p>}
           </div>
           <div className="form-group">
-            <label>Email</label>
-            <input value={user.email} disabled />
+            <label htmlFor="profile-email">Email</label>
+            <input id="profile-email" value={user.email} disabled />
           </div>
           <div className="form-actions">
             <button type="submit" className="btn-primary" disabled={profileSaving}>
@@ -111,14 +112,11 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
 
       <div className="card">
         <h3>Change password</h3>
-        {passwordError && !passwordError.field && (
-          <div className="alert alert-error">{passwordError.message}</div>
-        )}
-        {passwordSuccess && <div className="alert alert-success">{passwordSuccess}</div>}
         <form onSubmit={handlePasswordSubmit}>
           <div className="form-group">
-            <label>Current password</label>
+            <label htmlFor="profile-currentPassword">Current password</label>
             <input
+              id="profile-currentPassword"
               type="password"
               value={passwordForm.currentPassword}
               onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
@@ -128,8 +126,9 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
             )}
           </div>
           <div className="form-group">
-            <label>New password</label>
+            <label htmlFor="profile-newPassword">New password</label>
             <input
+              id="profile-newPassword"
               type="password"
               value={passwordForm.newPassword}
               onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}

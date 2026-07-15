@@ -1,17 +1,24 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api';
+import { useToast } from '../components/ToastProvider';
+import ConfirmDialog from '../components/ConfirmDialog';
+import Pagination, { paginate } from '../components/Pagination';
+
+const PAGE_SIZE = 20;
 
 interface ClientsPageProps {
   token: string;
 }
 
 export default function ClientsPage({ token }: ClientsPageProps) {
+  const toast = useToast();
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [showClientForm, setShowClientForm] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
+  const [deletingClient, setDeletingClient] = useState<any | null>(null);
   const [clientSearch, setClientSearch] = useState('');
+  const [page, setPage] = useState(1);
   const [clientCustomFields, setClientCustomFields] = useState<any[]>([]);
   const [clientStatuses, setClientStatuses] = useState<any[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
@@ -29,6 +36,13 @@ export default function ClientsPage({ token }: ClientsPageProps) {
       client.company.toLowerCase().includes(query)
     );
   });
+
+  const pageCount = Math.max(1, Math.ceil(filteredClients.length / PAGE_SIZE));
+  const pagedClients = paginate(filteredClients, page, PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [clientSearch]);
 
   const [clientForm, setClientForm] = useState({
     firstName: '',
@@ -56,7 +70,7 @@ export default function ClientsPage({ token }: ClientsPageProps) {
       const defs = await api.listCustomFieldDefinitions(token, 'client');
       setClientCustomFields(defs);
     } catch (error) {
-      setError('Failed to load custom fields: ' + (error as Error).message);
+      toast.error('Failed to load custom fields: ' + (error as Error).message);
     }
   };
 
@@ -65,18 +79,17 @@ export default function ClientsPage({ token }: ClientsPageProps) {
       const statuses = await api.listStatusDefinitions(token, 'client');
       setClientStatuses(statuses.filter((s) => s.isActive));
     } catch (error) {
-      setError('Failed to load statuses: ' + (error as Error).message);
+      toast.error('Failed to load statuses: ' + (error as Error).message);
     }
   };
 
   const loadClients = async () => {
     setLoading(true);
-    setError(null);
     try {
       const data = await api.listClients(token);
       setClients(data);
     } catch (error) {
-      setError('Failed to load clients: ' + (error as Error).message);
+      toast.error('Failed to load clients: ' + (error as Error).message);
     } finally {
       setLoading(false);
     }
@@ -84,7 +97,6 @@ export default function ClientsPage({ token }: ClientsPageProps) {
 
   const handleCreateClient = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     try {
       const client = await api.createClient(token, clientForm);
 
@@ -99,9 +111,10 @@ export default function ClientsPage({ token }: ClientsPageProps) {
       setClientForm({ firstName: '', lastName: '', email: '', company: '' });
       setCustomFieldValues({});
       setShowClientForm(false);
+      toast.success(`${client.firstName} ${client.lastName} added.`);
       loadClients();
     } catch (error) {
-      setError('Failed to create client: ' + (error as Error).message);
+      toast.error('Failed to create client: ' + (error as Error).message);
     }
   };
 
@@ -129,7 +142,6 @@ export default function ClientsPage({ token }: ClientsPageProps) {
   const handleUpdateClient = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingClientId) return;
-    setError(null);
     try {
       await api.updateClient(token, editingClientId, editClientForm);
 
@@ -152,21 +164,23 @@ export default function ClientsPage({ token }: ClientsPageProps) {
       setEditingClientId(null);
       setEditCustomFieldValues({});
       setEditCustomFieldValueIds({});
+      toast.success('Client updated.');
       loadClients();
     } catch (error) {
-      setError('Failed to update client: ' + (error as Error).message);
+      toast.error('Failed to update client: ' + (error as Error).message);
     }
   };
 
-  const handleDeleteClient = async (clientId: string) => {
-    if (confirm('Are you sure?')) {
-      setError(null);
-      try {
-        await api.deleteClient(token, clientId);
-        loadClients();
-      } catch (error) {
-        setError('Failed to delete client: ' + (error as Error).message);
-      }
+  const handleDeleteClient = async () => {
+    if (!deletingClient) return;
+    try {
+      await api.deleteClient(token, deletingClient.id);
+      toast.success(`${deletingClient.firstName} ${deletingClient.lastName} deleted.`);
+      setDeletingClient(null);
+      loadClients();
+    } catch (error) {
+      toast.error('Failed to delete client: ' + (error as Error).message);
+      setDeletingClient(null);
     }
   };
 
@@ -174,10 +188,13 @@ export default function ClientsPage({ token }: ClientsPageProps) {
     field: any,
     values: Record<string, string>,
     setValues: (values: Record<string, string>) => void,
+    idPrefix: string,
   ) => {
+    const inputId = `${idPrefix}-${field.id}`;
     if (field.fieldType === 'select') {
       return (
         <select
+          id={inputId}
           value={values[field.id] || ''}
           onChange={(e) => setValues({ ...values, [field.id]: e.target.value })}
           required={field.required}
@@ -203,6 +220,7 @@ export default function ClientsPage({ token }: ClientsPageProps) {
 
     return (
       <input
+        id={inputId}
         type={inputType}
         value={values[field.id] || ''}
         onChange={(e) => setValues({ ...values, [field.id]: e.target.value })}
@@ -213,7 +231,15 @@ export default function ClientsPage({ token }: ClientsPageProps) {
 
   return (
     <div>
-      {error && <div className="alert alert-error">{error}</div>}
+      {deletingClient && (
+        <ConfirmDialog
+          title="Delete client"
+          message={`Are you sure you want to delete ${deletingClient.firstName} ${deletingClient.lastName}? This can't be undone.`}
+          confirmLabel="Delete"
+          onConfirm={handleDeleteClient}
+          onCancel={() => setDeletingClient(null)}
+        />
+      )}
       <div className="card">
         <div className="flex items-center justify-between">
           <h3>Clients</h3>
@@ -225,8 +251,9 @@ export default function ClientsPage({ token }: ClientsPageProps) {
         {showClientForm && (
           <form onSubmit={handleCreateClient} className="mb-5">
             <div className="form-group">
-              <label>First Name</label>
+              <label htmlFor="client-firstName">First Name</label>
               <input
+                id="client-firstName"
                 type="text"
                 value={clientForm.firstName}
                 onChange={(e) => setClientForm({ ...clientForm, firstName: e.target.value })}
@@ -234,8 +261,9 @@ export default function ClientsPage({ token }: ClientsPageProps) {
               />
             </div>
             <div className="form-group">
-              <label>Last Name</label>
+              <label htmlFor="client-lastName">Last Name</label>
               <input
+                id="client-lastName"
                 type="text"
                 value={clientForm.lastName}
                 onChange={(e) => setClientForm({ ...clientForm, lastName: e.target.value })}
@@ -243,8 +271,9 @@ export default function ClientsPage({ token }: ClientsPageProps) {
               />
             </div>
             <div className="form-group">
-              <label>Email</label>
+              <label htmlFor="client-email">Email</label>
               <input
+                id="client-email"
                 type="email"
                 value={clientForm.email}
                 onChange={(e) => setClientForm({ ...clientForm, email: e.target.value })}
@@ -252,8 +281,9 @@ export default function ClientsPage({ token }: ClientsPageProps) {
               />
             </div>
             <div className="form-group">
-              <label>Company</label>
+              <label htmlFor="client-company">Company</label>
               <input
+                id="client-company"
                 type="text"
                 value={clientForm.company}
                 onChange={(e) => setClientForm({ ...clientForm, company: e.target.value })}
@@ -263,11 +293,11 @@ export default function ClientsPage({ token }: ClientsPageProps) {
 
             {activeClientCustomFields.map((field) => (
               <div className="form-group" key={field.id}>
-                <label>
+                <label htmlFor={`client-cf-${field.id}`}>
                   {field.name}
                   {field.required ? ' *' : ''}
                 </label>
-                {renderCustomFieldInput(field, customFieldValues, setCustomFieldValues)}
+                {renderCustomFieldInput(field, customFieldValues, setCustomFieldValues, 'client-cf')}
               </div>
             ))}
 
@@ -280,8 +310,9 @@ export default function ClientsPage({ token }: ClientsPageProps) {
         {editingClientId && (
           <form onSubmit={handleUpdateClient} className="mb-5">
             <div className="form-group">
-              <label>First Name</label>
+              <label htmlFor="edit-client-firstName">First Name</label>
               <input
+                id="edit-client-firstName"
                 type="text"
                 value={editClientForm.firstName}
                 onChange={(e) => setEditClientForm({ ...editClientForm, firstName: e.target.value })}
@@ -289,8 +320,9 @@ export default function ClientsPage({ token }: ClientsPageProps) {
               />
             </div>
             <div className="form-group">
-              <label>Last Name</label>
+              <label htmlFor="edit-client-lastName">Last Name</label>
               <input
+                id="edit-client-lastName"
                 type="text"
                 value={editClientForm.lastName}
                 onChange={(e) => setEditClientForm({ ...editClientForm, lastName: e.target.value })}
@@ -298,8 +330,9 @@ export default function ClientsPage({ token }: ClientsPageProps) {
               />
             </div>
             <div className="form-group">
-              <label>Email</label>
+              <label htmlFor="edit-client-email">Email</label>
               <input
+                id="edit-client-email"
                 type="email"
                 value={editClientForm.email}
                 onChange={(e) => setEditClientForm({ ...editClientForm, email: e.target.value })}
@@ -307,8 +340,9 @@ export default function ClientsPage({ token }: ClientsPageProps) {
               />
             </div>
             <div className="form-group">
-              <label>Company</label>
+              <label htmlFor="edit-client-company">Company</label>
               <input
+                id="edit-client-company"
                 type="text"
                 value={editClientForm.company}
                 onChange={(e) => setEditClientForm({ ...editClientForm, company: e.target.value })}
@@ -316,8 +350,9 @@ export default function ClientsPage({ token }: ClientsPageProps) {
               />
             </div>
             <div className="form-group">
-              <label>Status</label>
+              <label htmlFor="edit-client-statusId">Status</label>
               <select
+                id="edit-client-statusId"
                 value={editClientForm.statusId}
                 onChange={(e) => setEditClientForm({ ...editClientForm, statusId: e.target.value })}
               >
@@ -331,11 +366,11 @@ export default function ClientsPage({ token }: ClientsPageProps) {
 
             {activeClientCustomFields.map((field) => (
               <div className="form-group" key={field.id}>
-                <label>
+                <label htmlFor={`edit-client-cf-${field.id}`}>
                   {field.name}
                   {field.required ? ' *' : ''}
                 </label>
-                {renderCustomFieldInput(field, editCustomFieldValues, setEditCustomFieldValues)}
+                {renderCustomFieldInput(field, editCustomFieldValues, setEditCustomFieldValues, 'edit-client-cf')}
               </div>
             ))}
 
@@ -360,7 +395,11 @@ export default function ClientsPage({ token }: ClientsPageProps) {
 
         {clients.length > 0 && (
           <div className="form-group">
+            <label htmlFor="client-search" className="sr-only">
+              Search clients
+            </label>
             <input
+              id="client-search"
               type="text"
               value={clientSearch}
               onChange={(e) => setClientSearch(e.target.value)}
@@ -372,56 +411,64 @@ export default function ClientsPage({ token }: ClientsPageProps) {
         {loading ? (
           <p>Loading...</p>
         ) : clients.length === 0 ? (
-          <p>No clients yet.</p>
+          <div className="empty-state">
+            <p>No clients yet.</p>
+            <button className="btn btn-success" onClick={() => setShowClientForm(true)}>
+              Add your first client
+            </button>
+          </div>
         ) : filteredClients.length === 0 ? (
           <p>No clients match your search.</p>
         ) : (
-          <table className="table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Email</th>
-                <th>Company</th>
-                <th>Status</th>
-                {activeClientCustomFields.map((field) => (
-                  <th key={field.id}>{field.name}</th>
-                ))}
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredClients.map((client) => (
-                <tr key={client.id}>
-                  <td>
-                    {client.firstName} {client.lastName}
-                  </td>
-                  <td>{client.email}</td>
-                  <td>{client.company}</td>
-                  <td>{client.statusDefn?.name}</td>
-                  {activeClientCustomFields.map((field) => {
-                    const fieldValue = client.customFieldVals?.find(
-                      (v: any) => v.customFieldDefinitionId === field.id,
-                    );
-                    return <td key={field.id}>{fieldValue?.value || '—'}</td>;
-                  })}
-                  <td>
-                    <button
-                      className="btn btn-secondary px-2 py-1 text-xs mr-1.5"
-                      onClick={() => handleStartEditClient(client)}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      className="btn btn-danger px-2 py-1 text-xs"
-                      onClick={() => handleDeleteClient(client.id)}
-                    >
-                      Delete
-                    </button>
-                  </td>
+          <>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Company</th>
+                  <th>Status</th>
+                  {activeClientCustomFields.map((field) => (
+                    <th key={field.id}>{field.name}</th>
+                  ))}
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {pagedClients.map((client) => (
+                  <tr key={client.id}>
+                    <td>
+                      {client.firstName} {client.lastName}
+                    </td>
+                    <td>{client.email}</td>
+                    <td>{client.company}</td>
+                    <td>{client.statusDefn?.name}</td>
+                    {activeClientCustomFields.map((field) => {
+                      const fieldValue = client.customFieldVals?.find(
+                        (v: any) => v.customFieldDefinitionId === field.id,
+                      );
+                      return <td key={field.id}>{fieldValue?.value || '—'}</td>;
+                    })}
+                    <td>
+                      <button
+                        className="btn btn-secondary px-2 py-1 text-xs mr-1.5"
+                        onClick={() => handleStartEditClient(client)}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="btn btn-danger px-2 py-1 text-xs"
+                        onClick={() => setDeletingClient(client)}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
+          </>
         )}
       </div>
     </div>

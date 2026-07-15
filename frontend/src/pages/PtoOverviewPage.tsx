@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api';
+import { useToast } from '../components/ToastProvider';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 interface PtoOverviewPageProps {
   user: any;
@@ -16,6 +18,7 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
+  const toast = useToast();
   const [tab, setTab] = useState<Tab>('assignments');
   const [employees, setEmployees] = useState<any[]>([]);
   const [ptoPolicies, setPtoPolicies] = useState<any[]>([]);
@@ -25,7 +28,7 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
   const [myBalances, setMyBalances] = useState<any[]>([]);
   const [tenantBalances, setTenantBalances] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [cancellingRequestId, setCancellingRequestId] = useState<string | null>(null);
   const [addPolicySelection, setAddPolicySelection] = useState<Record<string, string>>({});
   const [newRequest, setNewRequest] = useState({ ptoPolicyId: '', startDate: '', endDate: '', note: '' });
 
@@ -39,7 +42,6 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
 
   const loadData = async () => {
     setLoading(true);
-    setError(null);
     try {
       const [employeeData, policyData, myRequestData, approvalData, allRequestData, tenantBalanceData] =
         await Promise.all([
@@ -60,7 +62,7 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
       const myEmployeeRecord = employeeData.find((emp: any) => emp.userId === user.id);
       setMyBalances(myEmployeeRecord ? await api.getEmployeePtoBalance(token, myEmployeeRecord.id) : []);
     } catch (error) {
-      setError('Failed to load PTO overview: ' + (error as Error).message);
+      toast.error('Failed to load PTO overview: ' + (error as Error).message);
     } finally {
       setLoading(false);
     }
@@ -69,29 +71,28 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
   const handleAssign = async (employeeId: string) => {
     const policyId = addPolicySelection[employeeId];
     if (!policyId) return;
-    setError(null);
     try {
       await api.assignPtoPolicyToEmployee(token, employeeId, policyId);
       setAddPolicySelection({ ...addPolicySelection, [employeeId]: '' });
+      toast.success('Policy assigned.');
       loadData();
     } catch (error) {
-      setError('Failed to assign PTO policy: ' + (error as Error).message);
+      toast.error('Failed to assign PTO policy: ' + (error as Error).message);
     }
   };
 
   const handleUnassign = async (employeeId: string, policyId: string) => {
-    setError(null);
     try {
       await api.unassignPtoPolicyFromEmployee(token, employeeId, policyId);
+      toast.success('Policy removed.');
       loadData();
     } catch (error) {
-      setError('Failed to remove PTO policy: ' + (error as Error).message);
+      toast.error('Failed to remove PTO policy: ' + (error as Error).message);
     }
   };
 
   const handleCreateRequest = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     try {
       await api.createPtoRequest(token, {
         ptoPolicyId: newRequest.ptoPolicyId,
@@ -100,36 +101,47 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
         note: newRequest.note || undefined,
       });
       setNewRequest({ ptoPolicyId: '', startDate: '', endDate: '', note: '' });
+      toast.success('Request submitted.');
       loadData();
     } catch (error) {
-      setError('Failed to submit PTO request: ' + (error as Error).message);
+      toast.error('Failed to submit PTO request: ' + (error as Error).message);
     }
   };
 
-  const handleCancelRequest = async (requestId: string) => {
-    if (!confirm('Cancel this request?')) return;
-    setError(null);
+  const handleCancelRequest = async () => {
+    if (!cancellingRequestId) return;
     try {
-      await api.cancelPtoRequest(token, requestId);
+      await api.cancelPtoRequest(token, cancellingRequestId);
+      setCancellingRequestId(null);
+      toast.success('Request cancelled.');
       loadData();
     } catch (error) {
-      setError('Failed to cancel request: ' + (error as Error).message);
+      toast.error('Failed to cancel request: ' + (error as Error).message);
+      setCancellingRequestId(null);
     }
   };
 
   const handleDecideRequest = async (requestId: string, status: 'approved' | 'rejected') => {
-    setError(null);
     try {
       await api.decidePtoRequest(token, requestId, status);
+      toast.success(status === 'approved' ? 'Request approved.' : 'Request rejected.');
       loadData();
     } catch (error) {
-      setError('Failed to decide request: ' + (error as Error).message);
+      toast.error('Failed to decide request: ' + (error as Error).message);
     }
   };
 
   return (
     <div>
-      {error && <div className="alert alert-error">{error}</div>}
+      {cancellingRequestId && (
+        <ConfirmDialog
+          title="Cancel request"
+          message="Are you sure you want to cancel this PTO request?"
+          confirmLabel="Cancel Request"
+          onConfirm={handleCancelRequest}
+          onCancel={() => setCancellingRequestId(null)}
+        />
+      )}
       <div className="card">
         <h3>PTO</h3>
         <div className="nav mb-5">
@@ -221,7 +233,11 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
                           <td>
                             {availableToAdd.length > 0 && (
                               <div className="flex items-center gap-1.5">
+                                <label htmlFor={`add-policy-${emp.id}`} className="sr-only">
+                                  Add policy for {emp.firstName} {emp.lastName}
+                                </label>
                                 <select
+                                  id={`add-policy-${emp.id}`}
                                   className="select-compact"
                                   value={addPolicySelection[emp.id] || ''}
                                   onChange={(e) =>
@@ -286,48 +302,52 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
                       </div>
                     )}
                     <form onSubmit={handleCreateRequest} className="mb-5">
-                    <div className="form-group">
-                      <label>Policy</label>
-                      <select
-                        value={newRequest.ptoPolicyId}
-                        onChange={(e) => setNewRequest({ ...newRequest, ptoPolicyId: e.target.value })}
-                        required
-                      >
-                        <option value="">-- select --</option>
-                        {myAssignedPolicies.map((p: any) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="form-group">
-                      <label>Start date</label>
-                      <input
-                        type="date"
-                        value={newRequest.startDate}
-                        onChange={(e) => setNewRequest({ ...newRequest, startDate: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>End date</label>
-                      <input
-                        type="date"
-                        value={newRequest.endDate}
-                        onChange={(e) => setNewRequest({ ...newRequest, endDate: e.target.value })}
-                        required
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Note (optional)</label>
-                      <input
-                        type="text"
-                        value={newRequest.note}
-                        onChange={(e) => setNewRequest({ ...newRequest, note: e.target.value })}
-                      />
-                    </div>
-                    <button type="submit" className="btn-primary">
+                      <div className="form-group">
+                        <label htmlFor="pto-request-policy">Policy</label>
+                        <select
+                          id="pto-request-policy"
+                          value={newRequest.ptoPolicyId}
+                          onChange={(e) => setNewRequest({ ...newRequest, ptoPolicyId: e.target.value })}
+                          required
+                        >
+                          <option value="">-- select --</option>
+                          {myAssignedPolicies.map((p: any) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="pto-request-start">Start date</label>
+                        <input
+                          id="pto-request-start"
+                          type="date"
+                          value={newRequest.startDate}
+                          onChange={(e) => setNewRequest({ ...newRequest, startDate: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="pto-request-end">End date</label>
+                        <input
+                          id="pto-request-end"
+                          type="date"
+                          value={newRequest.endDate}
+                          onChange={(e) => setNewRequest({ ...newRequest, endDate: e.target.value })}
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="pto-request-note">Note (optional)</label>
+                        <input
+                          id="pto-request-note"
+                          type="text"
+                          value={newRequest.note}
+                          onChange={(e) => setNewRequest({ ...newRequest, note: e.target.value })}
+                        />
+                      </div>
+                      <button type="submit" className="btn-primary">
                         Submit Request
                       </button>
                     </form>
@@ -362,7 +382,7 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
                             {req.status === 'pending' && (
                               <button
                                 className="btn-danger px-2 py-1 text-xs"
-                                onClick={() => handleCancelRequest(req.id)}
+                                onClick={() => setCancellingRequestId(req.id)}
                               >
                                 Cancel
                               </button>

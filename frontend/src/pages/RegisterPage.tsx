@@ -15,8 +15,6 @@ interface RegisterPageProps {
   error?: FormError | null;
 }
 
-const KNOWN_FIELDS = ['tenantName', 'ownerEmail', 'ownerPhone', 'ownerPassword'];
-
 export default function RegisterPage({
   onRegister,
   onSwitchToLogin,
@@ -31,7 +29,6 @@ export default function RegisterPage({
   const [ownerPassword, setOwnerPassword] = useState('');
 
   const fieldError = (name: string) => (error?.field === name ? error.message : null);
-  const generalError = error && !KNOWN_FIELDS.includes(error.field ?? '') ? error.message : null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,11 +50,11 @@ export default function RegisterPage({
       <div className="container">
         <div className="card mx-auto mt-10 max-w-md">
           <h2 className="text-center">Register your company</h2>
-          {generalError && <div className="alert alert-error">{generalError}</div>}
           <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label>Company Name</label>
+              <label htmlFor="register-tenantName">Company Name</label>
               <input
+                id="register-tenantName"
                 type="text"
                 value={tenantName}
                 onChange={(e) => setTenantName(e.target.value)}
@@ -70,8 +67,9 @@ export default function RegisterPage({
               )}
             </div>
             <div className="form-group">
-              <label>First Name</label>
+              <label htmlFor="register-firstName">First Name</label>
               <input
+                id="register-firstName"
                 type="text"
                 value={ownerFirstName}
                 onChange={(e) => setOwnerFirstName(e.target.value)}
@@ -81,8 +79,9 @@ export default function RegisterPage({
               />
             </div>
             <div className="form-group">
-              <label>Last Name</label>
+              <label htmlFor="register-lastName">Last Name</label>
               <input
+                id="register-lastName"
                 type="text"
                 value={ownerLastName}
                 onChange={(e) => setOwnerLastName(e.target.value)}
@@ -92,8 +91,9 @@ export default function RegisterPage({
               />
             </div>
             <div className="form-group">
-              <label>Email</label>
+              <label htmlFor="register-email">Email</label>
               <input
+                id="register-email"
                 type="email"
                 value={ownerEmail}
                 onChange={(e) => setOwnerEmail(e.target.value)}
@@ -106,8 +106,9 @@ export default function RegisterPage({
               )}
             </div>
             <div className="form-group">
-              <label>Phone</label>
+              <label htmlFor="register-phone">Phone</label>
               <input
+                id="register-phone"
                 type="tel"
                 value={ownerPhone}
                 onChange={(e) => setOwnerPhone(e.target.value)}
@@ -120,8 +121,9 @@ export default function RegisterPage({
               )}
             </div>
             <div className="form-group">
-              <label>Password</label>
+              <label htmlFor="register-password">Password</label>
               <input
+                id="register-password"
                 type="password"
                 value={ownerPassword}
                 onChange={(e) => setOwnerPassword(e.target.value)}

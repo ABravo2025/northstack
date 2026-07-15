@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api';
 import ColorPicker from '../components/ColorPicker';
+import { useToast } from '../components/ToastProvider';
 
 interface StatusesSettingsPageProps {
   token: string;
@@ -9,9 +10,9 @@ interface StatusesSettingsPageProps {
 type Module = 'employee' | 'client';
 
 export default function StatusesSettingsPage({ token }: StatusesSettingsPageProps) {
+  const toast = useToast();
   const [settingsModule, setSettingsModule] = useState<Module>('employee');
   const [statuses, setStatuses] = useState<any[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [newStatus, setNewStatus] = useState({ name: '', color: '#3c6da1' });
 
   useEffect(() => {
@@ -19,18 +20,16 @@ export default function StatusesSettingsPage({ token }: StatusesSettingsPageProp
   }, [settingsModule]);
 
   const loadStatuses = async () => {
-    setError(null);
     try {
       const defs = await api.listStatusDefinitions(token, settingsModule);
       setStatuses(defs.sort((a, b) => a.order - b.order));
     } catch (error) {
-      setError('Failed to load statuses: ' + (error as Error).message);
+      toast.error('Failed to load statuses: ' + (error as Error).message);
     }
   };
 
   const handleCreateStatus = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     try {
       await api.createStatusDefinition(token, {
         entityType: settingsModule,
@@ -39,29 +38,28 @@ export default function StatusesSettingsPage({ token }: StatusesSettingsPageProp
         order: statuses.length,
       });
       setNewStatus({ name: '', color: '#3c6da1' });
+      toast.success('Status added.');
       loadStatuses();
     } catch (error) {
-      setError('Failed to create status: ' + (error as Error).message);
+      toast.error('Failed to create status: ' + (error as Error).message);
     }
   };
 
   const handleToggleActive = async (status: any) => {
-    setError(null);
     try {
       await api.updateStatusDefinition(token, status.id, { isActive: !status.isActive });
       loadStatuses();
     } catch (error) {
-      setError('Failed to update status: ' + (error as Error).message);
+      toast.error('Failed to update status: ' + (error as Error).message);
     }
   };
 
   const handleSetDefault = async (status: any) => {
-    setError(null);
     try {
       await api.updateStatusDefinition(token, status.id, { isDefault: true });
       loadStatuses();
     } catch (error) {
-      setError('Failed to update status: ' + (error as Error).message);
+      toast.error('Failed to update status: ' + (error as Error).message);
     }
   };
 
@@ -70,7 +68,6 @@ export default function StatusesSettingsPage({ token }: StatusesSettingsPageProp
     if (targetIndex < 0 || targetIndex >= statuses.length) {
       return;
     }
-    setError(null);
     try {
       const current = statuses[index];
       const target = statuses[targetIndex];
@@ -78,7 +75,7 @@ export default function StatusesSettingsPage({ token }: StatusesSettingsPageProp
       await api.updateStatusDefinition(token, target.id, { order: current.order });
       loadStatuses();
     } catch (error) {
-      setError('Failed to reorder statuses: ' + (error as Error).message);
+      toast.error('Failed to reorder statuses: ' + (error as Error).message);
     }
   };
 
@@ -99,8 +96,6 @@ export default function StatusesSettingsPage({ token }: StatusesSettingsPageProp
           Clients
         </button>
       </div>
-
-      {error && <div className="alert alert-error">{error}</div>}
 
       {statuses.length === 0 ? (
         <p>No statuses defined for this module yet.</p>
@@ -177,8 +172,9 @@ export default function StatusesSettingsPage({ token }: StatusesSettingsPageProp
       <h3 className="mt-5">Add Status</h3>
       <form onSubmit={handleCreateStatus}>
         <div className="form-group">
-          <label>Name</label>
+          <label htmlFor="status-name">Name</label>
           <input
+            id="status-name"
             type="text"
             value={newStatus.name}
             onChange={(e) => setNewStatus({ ...newStatus, name: e.target.value })}

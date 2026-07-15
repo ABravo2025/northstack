@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { api, ApiError } from './api';
+import { useToast } from './components/ToastProvider';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import AcceptInvitePage from './pages/AcceptInvitePage';
@@ -27,6 +28,7 @@ export interface FormError {
 }
 
 export default function App() {
+  const toast = useToast();
   const location = useLocation();
   const navigate = useNavigate();
   const isAcceptInviteRoute = location.pathname.startsWith('/accept-invite');
@@ -79,10 +81,12 @@ export default function App() {
         setUser(response.user);
       }
     } catch (error) {
-      setAuthError({
-        message: (error as Error).message,
-        field: error instanceof ApiError ? error.field : undefined,
-      });
+      const field = error instanceof ApiError ? error.field : undefined;
+      if (field) {
+        setAuthError({ message: (error as Error).message, field });
+      } else {
+        toast.error((error as Error).message);
+      }
     } finally {
       setLoading(false);
     }
@@ -107,10 +111,12 @@ export default function App() {
         setUser(response.user);
       }
     } catch (error) {
-      setAuthError({
-        message: (error as Error).message,
-        field: error instanceof ApiError ? error.field : undefined,
-      });
+      const field = error instanceof ApiError ? error.field : undefined;
+      if (field) {
+        setAuthError({ message: (error as Error).message, field });
+      } else {
+        toast.error((error as Error).message);
+      }
     } finally {
       setLoading(false);
     }
@@ -151,7 +157,6 @@ export default function App() {
               onLogin={handleLogin}
               onSwitchToRegister={() => navigate('/register')}
               loading={loading}
-              error={authError}
             />
           )
         }

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
+import { useToast } from '../components/ToastProvider';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 interface CompanyUsersPageProps {
   user: any;
@@ -8,14 +10,12 @@ interface CompanyUsersPageProps {
 }
 
 export default function CompanyUsersPage({ user, token, onUserUpdated }: CompanyUsersPageProps) {
+  const toast = useToast();
   const [users, setUsers] = useState<any[]>([]);
   const [invitations, setInvitations] = useState<any[]>([]);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
+  const [pendingOwnerTransfer, setPendingOwnerTransfer] = useState<string | null>(null);
 
   const [inviteForm, setInviteForm] = useState({ email: '', role: 'member' });
-  const [inviteError, setInviteError] = useState<string | null>(null);
-  const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
   const [inviting, setInviting] = useState(false);
 
   const isOwner = user.role === 'owner';
@@ -30,7 +30,7 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
       const data = await api.listTenantUsers(token);
       setUsers(data);
     } catch (error) {
-      setLoadError((error as Error).message);
+      toast.error((error as Error).message);
     }
   };
 
@@ -39,19 +39,11 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
       const data = await api.listTenantInvitations(token);
       setInvitations(data);
     } catch (error) {
-      setLoadError((error as Error).message);
+      toast.error((error as Error).message);
     }
   };
 
-  const handleRoleChange = async (userId: string, role: string) => {
-    if (
-      role === 'owner' &&
-      !confirm('This transfers ownership — you will be moved to admin. Continue?')
-    ) {
-      return;
-    }
-
-    setActionError(null);
+  const applyRoleChange = async (userId: string, role: string) => {
     try {
       await api.updateTenantUser(token, userId, { role });
       loadUsers();
@@ -59,36 +51,43 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
         const { user: refreshedUser } = await api.getCurrentUser(token);
         onUserUpdated(refreshedUser);
       }
+      toast.success('Role updated.');
     } catch (error) {
-      setActionError((error as Error).message);
+      toast.error((error as Error).message);
     }
   };
 
+  const handleRoleChange = (userId: string, role: string) => {
+    if (role === 'owner') {
+      setPendingOwnerTransfer(userId);
+      return;
+    }
+    applyRoleChange(userId, role);
+  };
+
   const handleStatusToggle = async (targetUser: any) => {
-    setActionError(null);
     const nextStatus = targetUser.status === 'active' ? 'inactive' : 'active';
     try {
       await api.updateTenantUser(token, targetUser.id, { status: nextStatus });
+      toast.success(`${targetUser.firstName} ${targetUser.lastName} ${nextStatus === 'active' ? 'activated' : 'deactivated'}.`);
       loadUsers();
     } catch (error) {
-      setActionError((error as Error).message);
+      toast.error((error as Error).message);
     }
   };
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    setInviteError(null);
-    setInviteSuccess(null);
     setInviting(true);
     try {
       const { invitation } = await api.createTenantInvitation(token, inviteForm);
       const link = `${window.location.origin}/accept-invite/${invitation.token}`;
       await navigator.clipboard.writeText(link);
       setInviteForm({ email: '', role: 'member' });
-      setInviteSuccess(`Invite link copied to clipboard: ${link}`);
+      toast.success('Invite sent and link copied to clipboard.');
       loadInvitations();
     } catch (error) {
-      setInviteError((error as Error).message);
+      toast.error((error as Error).message);
     } finally {
       setInviting(false);
     }
@@ -96,26 +95,41 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
 
   const handleCopyLink = async (invitationToken: string) => {
     const link = `${window.location.origin}/accept-invite/${invitationToken}`;
-    await navigator.clipboard.writeText(link);
-    setActionError(null);
+    try {
+      await navigator.clipboard.writeText(link);
+      toast.success('Invite link copied to clipboard.');
+    } catch (error) {
+      toast.error('Failed to copy link: ' + (error as Error).message);
+    }
   };
 
   const handleCancelInvitation = async (invitationId: string) => {
-    setActionError(null);
     try {
       await api.cancelInvitation(token, invitationId);
+      toast.success('Invitation cancelled.');
       loadInvitations();
     } catch (error) {
-      setActionError((error as Error).message);
+      toast.error((error as Error).message);
     }
   };
 
   return (
     <>
+      {pendingOwnerTransfer && (
+        <ConfirmDialog
+          title="Transfer ownership"
+          message="This transfers ownership to this user — you will be moved to admin. Continue?"
+          confirmLabel="Transfer"
+          onConfirm={() => {
+            const userId = pendingOwnerTransfer;
+            setPendingOwnerTransfer(null);
+            applyRoleChange(userId, 'owner');
+          }}
+          onCancel={() => setPendingOwnerTransfer(null)}
+        />
+      )}
       <div className="card">
         <h3>Users</h3>
-        {loadError && <div className="alert alert-error">{loadError}</div>}
-        {actionError && <div className="alert alert-error">{actionError}</div>}
 
         <table className="table">
           <thead>
@@ -142,15 +156,21 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
                   <td>{u.phone}</td>
                   <td>
                     {canEditRole ? (
-                      <select
-                        className="select-compact"
-                        value={u.role}
-                        onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                      >
-                        <option value="member">member</option>
-                        <option value="admin">admin</option>
-                        {isOwner && <option value="owner">owner</option>}
-                      </select>
+                      <>
+                        <label htmlFor={`role-${u.id}`} className="sr-only">
+                          Role for {u.firstName} {u.lastName}
+                        </label>
+                        <select
+                          id={`role-${u.id}`}
+                          className="select-compact"
+                          value={u.role}
+                          onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                        >
+                          <option value="member">member</option>
+                          <option value="admin">admin</option>
+                          {isOwner && <option value="owner">owner</option>}
+                        </select>
+                      </>
                     ) : (
                       u.role
                     )}
@@ -211,12 +231,11 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
 
       <div className="card">
         <h3>Invite someone</h3>
-        {inviteError && <div className="alert alert-error">{inviteError}</div>}
-        {inviteSuccess && <div className="alert alert-success">{inviteSuccess}</div>}
         <form onSubmit={handleInvite}>
           <div className="form-group">
-            <label>Email</label>
+            <label htmlFor="invite-email">Email</label>
             <input
+              id="invite-email"
               type="email"
               value={inviteForm.email}
               onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
@@ -224,8 +243,9 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
             />
           </div>
           <div className="form-group">
-            <label>Role</label>
+            <label htmlFor="invite-role">Role</label>
             <select
+              id="invite-role"
               value={inviteForm.role}
               onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value })}
             >

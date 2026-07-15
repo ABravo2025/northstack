@@ -1,14 +1,15 @@
 import { useState, useEffect } from 'react';
 import { api } from '../api';
 import ColorPicker from '../components/ColorPicker';
+import { useToast } from '../components/ToastProvider';
 
 interface PtoPoliciesSettingsPageProps {
   token: string;
 }
 
 export default function PtoPoliciesSettingsPage({ token }: PtoPoliciesSettingsPageProps) {
+  const toast = useToast();
   const [policies, setPolicies] = useState<any[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [newPolicy, setNewPolicy] = useState({
     name: '',
     color: '#3c6da1',
@@ -23,18 +24,16 @@ export default function PtoPoliciesSettingsPage({ token }: PtoPoliciesSettingsPa
   }, []);
 
   const loadPolicies = async () => {
-    setError(null);
     try {
       const defs = await api.listPtoPolicies(token);
       setPolicies(defs);
     } catch (error) {
-      setError('Failed to load PTO policies: ' + (error as Error).message);
+      toast.error('Failed to load PTO policies: ' + (error as Error).message);
     }
   };
 
   const handleCreatePolicy = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
     try {
       await api.createPtoPolicy(token, {
         name: newPolicy.name,
@@ -52,19 +51,19 @@ export default function PtoPoliciesSettingsPage({ token }: PtoPoliciesSettingsPa
         isPaid: true,
         requiresApproval: true,
       });
+      toast.success('PTO policy added.');
       loadPolicies();
     } catch (error) {
-      setError('Failed to create PTO policy: ' + (error as Error).message);
+      toast.error('Failed to create PTO policy: ' + (error as Error).message);
     }
   };
 
   const handleToggleActive = async (policy: any) => {
-    setError(null);
     try {
       await api.updatePtoPolicy(token, policy.id, { isActive: !policy.isActive });
       loadPolicies();
     } catch (error) {
-      setError('Failed to update PTO policy: ' + (error as Error).message);
+      toast.error('Failed to update PTO policy: ' + (error as Error).message);
     }
   };
 
@@ -75,8 +74,6 @@ export default function PtoPoliciesSettingsPage({ token }: PtoPoliciesSettingsPa
         Define the types of leave your company offers (e.g. PTO, Sick Leave, Leave Emergency),
         how many days each grants per year, and how those days accrue.
       </p>
-
-      {error && <div className="alert alert-error">{error}</div>}
 
       {policies.length === 0 ? (
         <p>No PTO policies defined yet.</p>
@@ -131,8 +128,9 @@ export default function PtoPoliciesSettingsPage({ token }: PtoPoliciesSettingsPa
       <h3 className="mt-5">Add PTO Policy</h3>
       <form onSubmit={handleCreatePolicy}>
         <div className="form-group">
-          <label>Name</label>
+          <label htmlFor="policy-name">Name</label>
           <input
+            id="policy-name"
             type="text"
             value={newPolicy.name}
             onChange={(e) => setNewPolicy({ ...newPolicy, name: e.target.value })}
@@ -141,8 +139,9 @@ export default function PtoPoliciesSettingsPage({ token }: PtoPoliciesSettingsPa
           />
         </div>
         <div className="form-group">
-          <label>Days per year</label>
+          <label htmlFor="policy-days">Days per year</label>
           <input
+            id="policy-days"
             type="number"
             min="0"
             step="0.5"
@@ -152,8 +151,9 @@ export default function PtoPoliciesSettingsPage({ token }: PtoPoliciesSettingsPa
           />
         </div>
         <div className="form-group">
-          <label>Accrual method</label>
+          <label htmlFor="policy-accrual">Accrual method</label>
           <select
+            id="policy-accrual"
             value={newPolicy.accrualMethod}
             onChange={(e) => setNewPolicy({ ...newPolicy, accrualMethod: e.target.value })}
           >

@@ -298,6 +298,70 @@
   @apply mt-1 text-xs text-red-600 dark:text-red-400;
 }
 
+.toast-container {
+  @apply fixed top-4 right-4 z-50 flex w-80 max-w-[90vw] flex-col gap-2;
+}
+
+.toast {
+  @apply flex items-start justify-between gap-3 rounded-md border px-4 py-3 text-sm shadow-lg;
+  animation: toast-in 0.15s ease-out;
+}
+
+.toast-success {
+  @apply border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300;
+}
+
+.toast-error {
+  @apply border-red-200 bg-red-50 text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-300;
+}
+
+.toast-close {
+  @apply shrink-0 cursor-pointer text-lg leading-none opacity-60 hover:opacity-100;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.confirm-dialog-overlay {
+  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4;
+}
+
+.confirm-dialog {
+  @apply w-full max-w-sm rounded-lg bg-white p-5 shadow-xl dark:bg-gray-900;
+}
+
+.confirm-dialog-title {
+  @apply mb-2 text-lg font-semibold text-brand-navy dark:text-gray-100;
+}
+
+.confirm-dialog-message {
+  @apply mb-5 text-sm text-gray-600 dark:text-gray-300;
+}
+
+.confirm-dialog-actions {
+  @apply flex justify-end gap-2;
+}
+
+.pagination {
+  @apply mt-4 flex items-center justify-center gap-3;
+}
+
+.pagination-status {
+  @apply text-sm text-gray-500 dark:text-gray-400;
+}
+
+.empty-state {
+  @apply flex flex-col items-center gap-3 rounded-md border border-dashed border-gray-300 py-10 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400;
+}
+
 .section-label {
   @apply mb-2 text-xs font-semibold tracking-wide text-gray-400 uppercase dark:text-gray-500;
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../api';
+import { useToast } from '../components/ToastProvider';
 
 interface AcceptInvitePageProps {
   onAccepted: (token: string, user: any) => void;
@@ -9,10 +10,10 @@ interface AcceptInvitePageProps {
 type Mode = 'login' | 'register';
 
 export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) {
+  const toast = useToast();
   const { token: invitationToken } = useParams<{ token: string }>();
   const [mode, setMode] = useState<Mode>('register');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   const [invitationLoading, setInvitationLoading] = useState(true);
   const [invitationError, setInvitationError] = useState<string | null>(null);
@@ -56,7 +57,6 @@ export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setError(null);
     try {
       const response =
         mode === 'login'
@@ -70,7 +70,7 @@ export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) 
 
       await acceptWithSessionToken(sessionToken);
     } catch (err) {
-      setError((err as Error).message);
+      toast.error((err as Error).message);
     } finally {
       setLoading(false);
     }
@@ -96,13 +96,13 @@ export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) 
                   ? `Create your account to join your team${invitationRole ? ` as ${invitationRole}` : ''}.`
                   : 'Log in to accept the invitation.'}
               </p>
-              {error && <div className="alert alert-error">{error}</div>}
               <form onSubmit={handleSubmit}>
                 {mode === 'register' && (
                   <>
                     <div className="form-group">
-                      <label>First Name</label>
+                      <label htmlFor="invite-firstName">First Name</label>
                       <input
+                        id="invite-firstName"
                         type="text"
                         value={firstName}
                         onChange={(e) => setFirstName(e.target.value)}
@@ -111,8 +111,9 @@ export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) 
                       />
                     </div>
                     <div className="form-group">
-                      <label>Last Name</label>
+                      <label htmlFor="invite-lastName">Last Name</label>
                       <input
+                        id="invite-lastName"
                         type="text"
                         value={lastName}
                         onChange={(e) => setLastName(e.target.value)}
@@ -121,8 +122,9 @@ export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) 
                       />
                     </div>
                     <div className="form-group">
-                      <label>Phone</label>
+                      <label htmlFor="invite-phone">Phone</label>
                       <input
+                        id="invite-phone"
                         type="tel"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
@@ -134,12 +136,13 @@ export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) 
                   </>
                 )}
                 <div className="form-group">
-                  <label>Email</label>
-                  <input type="email" value={email} disabled />
+                  <label htmlFor="invite-email">Email</label>
+                  <input id="invite-email" type="email" value={email} disabled />
                 </div>
                 <div className="form-group">
-                  <label>Password</label>
+                  <label htmlFor="invite-password">Password</label>
                   <input
+                    id="invite-password"
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
@@ -163,10 +166,7 @@ export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) 
                   {mode === 'register' ? 'Already have an account?' : "Don't have an account?"}{' '}
                   <button
                     className="btn btn-secondary ml-1"
-                    onClick={() => {
-                      setError(null);
-                      setMode(mode === 'register' ? 'login' : 'register');
-                    }}
+                    onClick={() => setMode(mode === 'register' ? 'login' : 'register')}
                   >
                     {mode === 'register' ? 'Login' : 'Register'}
                   </button>

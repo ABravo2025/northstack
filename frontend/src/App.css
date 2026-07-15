@@ -121,7 +121,7 @@
 }
 
 .card {
-  @apply mb-5 rounded-lg bg-white p-5 shadow-sm dark:bg-gray-900 dark:shadow-none;
+  @apply mb-5 rounded-lg border border-gray-200 bg-brand-cream p-5 dark:border-gray-800 dark:bg-gray-950;
 }
 
 .card h3 {
@@ -133,7 +133,7 @@
 }
 
 .table thead {
-  @apply bg-gray-50 dark:bg-gray-800;
+  @apply bg-brand-cream dark:bg-gray-950;
 }
 
 .table th {
@@ -181,7 +181,7 @@
 }
 
 .header {
-  @apply flex items-center justify-between border-b border-gray-200 bg-white px-5 py-4 dark:border-gray-800 dark:bg-gray-900;
+  @apply flex items-center justify-between border-b border-gray-200 bg-brand-cream px-5 py-4 dark:border-gray-800 dark:bg-gray-950;
 }
 
 .header img {
@@ -231,7 +231,7 @@
 }
 
 .sidebar {
-  @apply flex w-48 shrink-0 flex-col border-r border-gray-200 bg-white p-3 transition-all duration-200 dark:border-gray-800 dark:bg-gray-900;
+  @apply flex w-48 shrink-0 flex-col border-r border-gray-200 bg-brand-cream p-3 transition-all duration-200 dark:border-gray-800 dark:bg-gray-950;
 }
 
 .sidebar-collapsed {
@@ -372,4 +372,238 @@
 
 .mt-20 {
   @apply mt-5;
+}
+
+/*
+  Spacing scale (UX-18): 4 / 8 / 12 / 16 / 24 / 32px — Tailwind's default
+  scale already lands on these (1=4px, 2=8px, 3=12px, 4=16px, 6=24px,
+  8=32px); the new full-screen table/toolbar/slide-over below stick to
+  exactly these steps instead of odd values like `gap-2.5` (10px).
+*/
+
+.page-toolbar {
+  @apply flex items-center gap-3 border-b border-gray-200 py-4 dark:border-gray-800;
+}
+
+.page-toolbar h2 {
+  @apply m-0 shrink-0 text-lg font-semibold text-brand-navy dark:text-gray-100;
+}
+
+.toolbar-search {
+  @apply flex flex-1 items-center gap-2 rounded-md border border-gray-300 bg-brand-cream px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-950;
+}
+
+.toolbar-search svg {
+  @apply h-4 w-4 shrink-0 text-gray-400;
+}
+
+.toolbar-search input {
+  @apply w-full border-none bg-transparent p-0 text-sm text-brand-navy outline-none dark:text-gray-100;
+}
+
+.full-table-wrap {
+  @apply overflow-x-auto;
+}
+
+.full-table thead th {
+  @apply sticky top-0 bg-brand-cream dark:bg-gray-950;
+}
+
+.icon-actions {
+  @apply flex items-center gap-1;
+}
+
+.icon-btn {
+  @apply relative inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-gray-400 transition-colors hover:bg-gray-100 hover:text-brand-navy dark:hover:bg-gray-800 dark:hover:text-gray-100;
+}
+
+.icon-btn svg {
+  @apply h-4 w-4;
+}
+
+.icon-btn.danger:hover {
+  @apply bg-red-50 text-red-600 dark:bg-red-950 dark:text-red-400;
+}
+
+.icon-btn .tip {
+  @apply pointer-events-none absolute bottom-full left-1/2 mb-1.5 -translate-x-1/2 rounded bg-brand-navy px-1.5 py-0.5 text-xs whitespace-nowrap text-brand-cream opacity-0 transition-opacity dark:bg-gray-700;
+}
+
+.icon-btn:hover .tip {
+  @apply opacity-100;
+}
+
+.chip-linked {
+  @apply rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300;
+}
+
+.slideover-overlay {
+  @apply pointer-events-none fixed inset-0 z-40 bg-black/40 opacity-0 transition-opacity duration-200;
+}
+
+.slideover-overlay.open {
+  @apply pointer-events-auto opacity-100;
+}
+
+.slideover-panel {
+  @apply fixed top-0 right-0 bottom-0 z-50 flex w-full max-w-md translate-x-full flex-col border-l border-gray-200 bg-white shadow-xl transition-transform duration-300 ease-out dark:border-gray-800 dark:bg-gray-900;
+}
+
+.slideover-panel.open {
+  @apply translate-x-0;
+}
+
+.slideover-head {
+  @apply flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-800;
+}
+
+.slideover-title {
+  @apply m-0 text-base font-semibold text-brand-navy dark:text-gray-100;
+}
+
+.slideover-close {
+  @apply cursor-pointer rounded-md border-none bg-transparent p-1 text-gray-400 hover:bg-gray-100 hover:text-brand-navy dark:hover:bg-gray-800 dark:hover:text-gray-100;
+}
+
+.slideover-body {
+  @apply flex-1 overflow-y-auto px-6 py-4;
+}
+
+.slideover-foot {
+  @apply flex justify-end gap-2 border-t border-gray-200 px-6 py-4 dark:border-gray-800;
+}
+
+.password-input-wrap {
+  @apply relative flex items-center;
+}
+
+.password-input-wrap input {
+  @apply w-full pr-9;
+}
+
+.password-toggle {
+  @apply absolute right-1.5 inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded border-none bg-transparent text-gray-400 hover:text-brand-navy dark:hover:text-gray-100;
+}
+
+.password-checklist {
+  @apply mt-2 flex list-none flex-col gap-1 p-0 text-xs text-gray-500 dark:text-gray-400;
+}
+
+.password-checklist li {
+  @apply flex items-center gap-1.5;
+}
+
+.password-checklist li.met {
+  @apply text-emerald-600 dark:text-emerald-400;
+}
+
+.password-checklist-dot {
+  @apply flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border border-gray-300 text-emerald-600 dark:border-gray-600 dark:text-emerald-400;
+}
+
+.password-checklist li.met .password-checklist-dot {
+  @apply border-emerald-500 bg-emerald-50 dark:border-emerald-500 dark:bg-emerald-950;
+}
+
+.auth-screen {
+  @apply flex min-h-screen;
+}
+
+.auth-left {
+  @apply flex w-full items-center justify-center bg-brand-navy p-6 md:w-[44%] md:flex-shrink-0;
+}
+
+.auth-left-inner {
+  @apply w-full max-w-sm;
+}
+
+.auth-title {
+  @apply mb-5 text-xl font-bold text-brand-cream;
+}
+
+.auth-left .form-group label {
+  @apply text-brand-blue-light/90;
+}
+
+.auth-left .form-group input {
+  @apply border-brand-blue-light/25 bg-white/5 text-brand-cream placeholder:text-brand-blue-light/40;
+}
+
+.auth-left .form-group input:focus {
+  @apply border-brand-blue-light bg-white/10 ring-brand-blue-light/25;
+}
+
+.auth-left .field-error {
+  @apply text-red-300;
+}
+
+.auth-left .password-toggle {
+  @apply text-brand-blue-light/60 hover:bg-white/10 hover:text-brand-cream;
+}
+
+.auth-left .password-checklist {
+  @apply text-brand-blue-light/70;
+}
+
+.auth-left .password-checklist li.met {
+  @apply text-emerald-400;
+}
+
+.auth-left .password-checklist-dot {
+  @apply border-brand-blue-light/30;
+}
+
+.auth-left .password-checklist li.met .password-checklist-dot {
+  @apply border-emerald-400 bg-emerald-950;
+}
+
+.auth-submit {
+  @apply mt-1 w-full cursor-pointer rounded-md border border-brand-blue bg-transparent px-4 py-2.5 text-sm font-semibold text-brand-cream transition-colors hover:bg-brand-blue disabled:cursor-not-allowed disabled:opacity-60;
+}
+
+.auth-foot {
+  @apply mt-4 flex items-center justify-between gap-2 border-t border-brand-blue-light/15 pt-3 text-xs text-brand-blue-light/80;
+}
+
+.auth-foot button {
+  @apply cursor-pointer border-none bg-transparent p-0 text-xs font-semibold text-brand-blue-light underline-offset-2 hover:underline;
+}
+
+.auth-right {
+  @apply relative hidden flex-1 items-center justify-center overflow-hidden md:flex;
+  background: linear-gradient(160deg, #cfe0ee 0%, #a9c7dd 55%, #8dbada 100%);
+}
+
+.auth-blob {
+  @apply absolute rounded-full blur-sm;
+}
+
+.auth-blob-1 {
+  @apply -top-10 -left-16 h-72 w-72;
+  background: radial-gradient(circle, #fdfcf8 0%, transparent 70%);
+  opacity: 0.5;
+}
+
+.auth-blob-2 {
+  @apply -right-20 -bottom-16 h-96 w-96;
+  background: radial-gradient(circle, #3c6da1 0%, transparent 70%);
+  opacity: 0.2;
+}
+
+.auth-blob-3 {
+  @apply top-[6%] right-[10%] h-40 w-40;
+  background: radial-gradient(circle, #fdfcf8 0%, transparent 70%);
+  opacity: 0.35;
+}
+
+.auth-brand {
+  @apply relative z-10 text-center;
+}
+
+.auth-brand-logo {
+  @apply mx-auto h-9 w-auto;
+}
+
+.auth-tagline {
+  @apply mt-2 text-sm font-medium text-brand-navy/80;
 }

@@ -3,6 +3,8 @@ import { api } from '../api';
 import { useToast } from '../components/ToastProvider';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Pagination, { paginate } from '../components/Pagination';
+import SlideOver from '../components/SlideOver';
+import { MailIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
 
 const PAGE_SIZE = 20;
 
@@ -15,7 +17,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const toast = useToast();
   const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showEmployeeForm, setShowEmployeeForm] = useState(false);
+  const [slideOverMode, setSlideOverMode] = useState<'add' | 'edit' | null>(null);
   const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
   const [deletingEmployee, setDeletingEmployee] = useState<any | null>(null);
   const [employeeSearch, setEmployeeSearch] = useState('');
@@ -112,6 +114,22 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     }
   };
 
+  const closeSlideOver = () => {
+    setSlideOverMode(null);
+    setEditingEmployeeId(null);
+    setCustomFieldValues({});
+    setEditCustomFieldValues({});
+    setEditCustomFieldValueIds({});
+    setEditAssignedPolicyIds([]);
+    setOriginalAssignedPolicyIds([]);
+  };
+
+  const handleOpenAdd = () => {
+    setEmployeeForm({ firstName: '', lastName: '', email: '', department: '', managerId: '' });
+    setCustomFieldValues({});
+    setSlideOverMode('add');
+  };
+
   const handleCreateEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -128,10 +146,8 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         });
       }
 
-      setEmployeeForm({ firstName: '', lastName: '', email: '', department: '', managerId: '' });
-      setCustomFieldValues({});
-      setShowEmployeeForm(false);
       toast.success(`${employee.firstName} ${employee.lastName} added.`);
+      closeSlideOver();
       loadEmployees();
     } catch (error) {
       toast.error('Failed to create employee: ' + (error as Error).message);
@@ -139,7 +155,6 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   };
 
   const handleStartEditEmployee = (emp: any) => {
-    setShowEmployeeForm(false);
     setEditingEmployeeId(emp.id);
     setEditEmployeeForm({
       firstName: emp.firstName,
@@ -162,6 +177,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     const assignedIds = (emp.ptoPolicies || []).map((a: any) => a.ptoPolicyId);
     setEditAssignedPolicyIds(assignedIds);
     setOriginalAssignedPolicyIds(assignedIds);
+    setSlideOverMode('edit');
   };
 
   const handleTogglePtoPolicy = (policyId: string) => {
@@ -204,12 +220,8 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         await api.unassignPtoPolicyFromEmployee(token, editingEmployeeId, policyId);
       }
 
-      setEditingEmployeeId(null);
-      setEditCustomFieldValues({});
-      setEditCustomFieldValueIds({});
-      setEditAssignedPolicyIds([]);
-      setOriginalAssignedPolicyIds([]);
       toast.success('Employee updated.');
+      closeSlideOver();
       loadEmployees();
     } catch (error) {
       toast.error('Failed to update employee: ' + (error as Error).message);
@@ -297,16 +309,24 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
           onCancel={() => setDeletingEmployee(null)}
         />
       )}
-      <div className="card">
-        <div className="flex items-center justify-between">
-          <h3>Employees</h3>
-          <button className="btn btn-success" onClick={() => setShowEmployeeForm(!showEmployeeForm)}>
-            {showEmployeeForm ? 'Cancel' : 'Add Employee'}
-          </button>
-        </div>
 
-        {showEmployeeForm && (
-          <form onSubmit={handleCreateEmployee} className="mb-5">
+      <SlideOver
+        open={slideOverMode !== null}
+        title={slideOverMode === 'edit' ? 'Edit Employee' : 'Add Employee'}
+        onClose={closeSlideOver}
+        footer={
+          <>
+            <button type="button" className="btn-secondary" onClick={closeSlideOver}>
+              Cancel
+            </button>
+            <button type="submit" form="employee-form" className="btn-primary">
+              {slideOverMode === 'edit' ? 'Save' : 'Create'}
+            </button>
+          </>
+        }
+      >
+        {slideOverMode === 'add' && (
+          <form id="employee-form" onSubmit={handleCreateEmployee}>
             <div className="form-group">
               <label htmlFor="emp-firstName">First Name</label>
               <input
@@ -372,15 +392,11 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                 {renderCustomFieldInput(field, customFieldValues, setCustomFieldValues, 'emp-cf')}
               </div>
             ))}
-
-            <button type="submit" className="btn btn-primary">
-              Create
-            </button>
           </form>
         )}
 
-        {editingEmployeeId && (
-          <form onSubmit={handleUpdateEmployee} className="mb-5">
+        {slideOverMode === 'edit' && (
+          <form id="employee-form" onSubmit={handleUpdateEmployee}>
             <div className="form-group">
               <label htmlFor="edit-emp-firstName">First Name</label>
               <input
@@ -483,30 +499,15 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                 {renderCustomFieldInput(field, editCustomFieldValues, setEditCustomFieldValues, 'edit-emp-cf')}
               </div>
             ))}
-
-            <div className="form-actions">
-              <button type="submit" className="btn btn-primary">
-                Save
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => {
-                  setEditingEmployeeId(null);
-                  setEditCustomFieldValues({});
-                  setEditCustomFieldValueIds({});
-                  setEditAssignedPolicyIds([]);
-                  setOriginalAssignedPolicyIds([]);
-                }}
-              >
-                Cancel
-              </button>
-            </div>
           </form>
         )}
+      </SlideOver>
 
+      <div className="page-toolbar">
+        <h2>Employees</h2>
         {employees.length > 0 && (
-          <div className="form-group">
+          <div className="toolbar-search">
+            <SearchIcon />
             <label htmlFor="employee-search" className="sr-only">
               Search employees
             </label>
@@ -519,21 +520,29 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
             />
           </div>
         )}
+        <button className="btn-primary" onClick={handleOpenAdd}>
+          <span className="inline-flex items-center gap-1.5">
+            <PlusIcon className="h-4 w-4" />
+            Add Employee
+          </span>
+        </button>
+      </div>
 
-        {loading ? (
-          <p>Loading...</p>
-        ) : employees.length === 0 ? (
-          <div className="empty-state">
-            <p>No employees yet.</p>
-            <button className="btn btn-success" onClick={() => setShowEmployeeForm(true)}>
-              Add your first employee
-            </button>
-          </div>
-        ) : filteredEmployees.length === 0 ? (
-          <p>No employees match your search.</p>
-        ) : (
-          <>
-            <table className="table">
+      {loading ? (
+        <p className="mt-4">Loading...</p>
+      ) : employees.length === 0 ? (
+        <div className="empty-state">
+          <p>No employees yet.</p>
+          <button className="btn btn-success" onClick={handleOpenAdd}>
+            Add your first employee
+          </button>
+        </div>
+      ) : filteredEmployees.length === 0 ? (
+        <p className="mt-4">No employees match your search.</p>
+      ) : (
+        <>
+          <div className="full-table-wrap">
+            <table className="table full-table">
               <thead>
                 <tr>
                   <th>Name</th>
@@ -545,7 +554,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                   {activeEmployeeCustomFields.map((field) => (
                     <th key={field.id}>{field.name}</th>
                   ))}
-                  <th>Actions</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -579,38 +588,34 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                       return <td key={field.id}>{fieldValue?.value || '—'}</td>;
                     })}
                     <td>
-                      <button
-                        className="btn btn-secondary px-2 py-1 text-xs mr-1.5"
-                        onClick={() => handleStartEditEmployee(emp)}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="btn btn-danger px-2 py-1 text-xs mr-1.5"
-                        onClick={() => setDeletingEmployee(emp)}
-                      >
-                        Delete
-                      </button>
-                      {canManageCustomFields &&
-                        (emp.userId ? (
-                          <span className="text-xs text-emerald-600">Linked</span>
-                        ) : (
-                          <button
-                            className="btn btn-success px-2 py-1 text-xs"
-                            onClick={() => handleInviteEmployee(emp.id)}
-                          >
-                            Invite
-                          </button>
-                        ))}
+                      <div className="icon-actions">
+                        <button className="icon-btn" onClick={() => handleStartEditEmployee(emp)}>
+                          <span className="tip">Edit</span>
+                          <PencilIcon />
+                        </button>
+                        <button className="icon-btn danger" onClick={() => setDeletingEmployee(emp)}>
+                          <span className="tip">Delete</span>
+                          <TrashIcon />
+                        </button>
+                        {canManageCustomFields &&
+                          (emp.userId ? (
+                            <span className="chip-linked">Linked</span>
+                          ) : (
+                            <button className="icon-btn" onClick={() => handleInviteEmployee(emp.id)}>
+                              <span className="tip">Invite</span>
+                              <MailIcon />
+                            </button>
+                          ))}
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
-          </>
-        )}
-      </div>
+          </div>
+          <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
+        </>
+      )}
     </div>
   );
 }

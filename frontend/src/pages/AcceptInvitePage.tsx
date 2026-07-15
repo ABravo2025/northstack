@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../api';
 import { useToast } from '../components/ToastProvider';
+import PasswordInput from '../components/PasswordInput';
+import PasswordChecklist from '../components/PasswordChecklist';
 
 interface AcceptInvitePageProps {
   onAccepted: (token: string, user: any) => void;
@@ -141,15 +143,16 @@ export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) 
                 </div>
                 <div className="form-group">
                   <label htmlFor="invite-password">Password</label>
-                  <input
+                  <PasswordInput
                     id="invite-password"
-                    type="password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={setPassword}
                     placeholder="••••••••"
                     required
                     disabled={loading}
+                    autoComplete={mode === 'register' ? 'new-password' : 'current-password'}
                   />
+                  {mode === 'register' && <PasswordChecklist password={password} />}
                 </div>
                 <div className="form-actions">
                   <button type="submit" className="btn btn-primary" disabled={loading}>

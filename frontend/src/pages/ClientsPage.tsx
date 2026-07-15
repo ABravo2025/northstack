@@ -3,6 +3,8 @@ import { api } from '../api';
 import { useToast } from '../components/ToastProvider';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Pagination, { paginate } from '../components/Pagination';
+import SlideOver from '../components/SlideOver';
+import { PencilIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
 
 const PAGE_SIZE = 20;
 
@@ -14,7 +16,7 @@ export default function ClientsPage({ token }: ClientsPageProps) {
   const toast = useToast();
   const [clients, setClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showClientForm, setShowClientForm] = useState(false);
+  const [slideOverMode, setSlideOverMode] = useState<'add' | 'edit' | null>(null);
   const [editingClientId, setEditingClientId] = useState<string | null>(null);
   const [deletingClient, setDeletingClient] = useState<any | null>(null);
   const [clientSearch, setClientSearch] = useState('');
@@ -95,6 +97,20 @@ export default function ClientsPage({ token }: ClientsPageProps) {
     }
   };
 
+  const closeSlideOver = () => {
+    setSlideOverMode(null);
+    setEditingClientId(null);
+    setCustomFieldValues({});
+    setEditCustomFieldValues({});
+    setEditCustomFieldValueIds({});
+  };
+
+  const handleOpenAdd = () => {
+    setClientForm({ firstName: '', lastName: '', email: '', company: '' });
+    setCustomFieldValues({});
+    setSlideOverMode('add');
+  };
+
   const handleCreateClient = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -108,10 +124,8 @@ export default function ClientsPage({ token }: ClientsPageProps) {
         });
       }
 
-      setClientForm({ firstName: '', lastName: '', email: '', company: '' });
-      setCustomFieldValues({});
-      setShowClientForm(false);
       toast.success(`${client.firstName} ${client.lastName} added.`);
+      closeSlideOver();
       loadClients();
     } catch (error) {
       toast.error('Failed to create client: ' + (error as Error).message);
@@ -119,7 +133,6 @@ export default function ClientsPage({ token }: ClientsPageProps) {
   };
 
   const handleStartEditClient = (client: any) => {
-    setShowClientForm(false);
     setEditingClientId(client.id);
     setEditClientForm({
       firstName: client.firstName,
@@ -137,6 +150,7 @@ export default function ClientsPage({ token }: ClientsPageProps) {
     }
     setEditCustomFieldValues(values);
     setEditCustomFieldValueIds(valueIds);
+    setSlideOverMode('edit');
   };
 
   const handleUpdateClient = async (e: React.FormEvent) => {
@@ -161,10 +175,8 @@ export default function ClientsPage({ token }: ClientsPageProps) {
         }
       }
 
-      setEditingClientId(null);
-      setEditCustomFieldValues({});
-      setEditCustomFieldValueIds({});
       toast.success('Client updated.');
+      closeSlideOver();
       loadClients();
     } catch (error) {
       toast.error('Failed to update client: ' + (error as Error).message);
@@ -240,16 +252,24 @@ export default function ClientsPage({ token }: ClientsPageProps) {
           onCancel={() => setDeletingClient(null)}
         />
       )}
-      <div className="card">
-        <div className="flex items-center justify-between">
-          <h3>Clients</h3>
-          <button className="btn btn-success" onClick={() => setShowClientForm(!showClientForm)}>
-            {showClientForm ? 'Cancel' : 'Add Client'}
-          </button>
-        </div>
 
-        {showClientForm && (
-          <form onSubmit={handleCreateClient} className="mb-5">
+      <SlideOver
+        open={slideOverMode !== null}
+        title={slideOverMode === 'edit' ? 'Edit Client' : 'Add Client'}
+        onClose={closeSlideOver}
+        footer={
+          <>
+            <button type="button" className="btn-secondary" onClick={closeSlideOver}>
+              Cancel
+            </button>
+            <button type="submit" form="client-form" className="btn-primary">
+              {slideOverMode === 'edit' ? 'Save' : 'Create'}
+            </button>
+          </>
+        }
+      >
+        {slideOverMode === 'add' && (
+          <form id="client-form" onSubmit={handleCreateClient}>
             <div className="form-group">
               <label htmlFor="client-firstName">First Name</label>
               <input
@@ -300,15 +320,11 @@ export default function ClientsPage({ token }: ClientsPageProps) {
                 {renderCustomFieldInput(field, customFieldValues, setCustomFieldValues, 'client-cf')}
               </div>
             ))}
-
-            <button type="submit" className="btn btn-primary">
-              Create
-            </button>
           </form>
         )}
 
-        {editingClientId && (
-          <form onSubmit={handleUpdateClient} className="mb-5">
+        {slideOverMode === 'edit' && (
+          <form id="client-form" onSubmit={handleUpdateClient}>
             <div className="form-group">
               <label htmlFor="edit-client-firstName">First Name</label>
               <input
@@ -373,28 +389,15 @@ export default function ClientsPage({ token }: ClientsPageProps) {
                 {renderCustomFieldInput(field, editCustomFieldValues, setEditCustomFieldValues, 'edit-client-cf')}
               </div>
             ))}
-
-            <div className="form-actions">
-              <button type="submit" className="btn btn-primary">
-                Save
-              </button>
-              <button
-                type="button"
-                className="btn btn-secondary"
-                onClick={() => {
-                  setEditingClientId(null);
-                  setEditCustomFieldValues({});
-                  setEditCustomFieldValueIds({});
-                }}
-              >
-                Cancel
-              </button>
-            </div>
           </form>
         )}
+      </SlideOver>
 
+      <div className="page-toolbar">
+        <h2>Clients</h2>
         {clients.length > 0 && (
-          <div className="form-group">
+          <div className="toolbar-search">
+            <SearchIcon />
             <label htmlFor="client-search" className="sr-only">
               Search clients
             </label>
@@ -407,21 +410,29 @@ export default function ClientsPage({ token }: ClientsPageProps) {
             />
           </div>
         )}
+        <button className="btn-primary" onClick={handleOpenAdd}>
+          <span className="inline-flex items-center gap-1.5">
+            <PlusIcon className="h-4 w-4" />
+            Add Client
+          </span>
+        </button>
+      </div>
 
-        {loading ? (
-          <p>Loading...</p>
-        ) : clients.length === 0 ? (
-          <div className="empty-state">
-            <p>No clients yet.</p>
-            <button className="btn btn-success" onClick={() => setShowClientForm(true)}>
-              Add your first client
-            </button>
-          </div>
-        ) : filteredClients.length === 0 ? (
-          <p>No clients match your search.</p>
-        ) : (
-          <>
-            <table className="table">
+      {loading ? (
+        <p className="mt-4">Loading...</p>
+      ) : clients.length === 0 ? (
+        <div className="empty-state">
+          <p>No clients yet.</p>
+          <button className="btn btn-success" onClick={handleOpenAdd}>
+            Add your first client
+          </button>
+        </div>
+      ) : filteredClients.length === 0 ? (
+        <p className="mt-4">No clients match your search.</p>
+      ) : (
+        <>
+          <div className="full-table-wrap">
+            <table className="table full-table">
               <thead>
                 <tr>
                   <th>Name</th>
@@ -431,7 +442,7 @@ export default function ClientsPage({ token }: ClientsPageProps) {
                   {activeClientCustomFields.map((field) => (
                     <th key={field.id}>{field.name}</th>
                   ))}
-                  <th>Actions</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -450,27 +461,25 @@ export default function ClientsPage({ token }: ClientsPageProps) {
                       return <td key={field.id}>{fieldValue?.value || '—'}</td>;
                     })}
                     <td>
-                      <button
-                        className="btn btn-secondary px-2 py-1 text-xs mr-1.5"
-                        onClick={() => handleStartEditClient(client)}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        className="btn btn-danger px-2 py-1 text-xs"
-                        onClick={() => setDeletingClient(client)}
-                      >
-                        Delete
-                      </button>
+                      <div className="icon-actions">
+                        <button className="icon-btn" onClick={() => handleStartEditClient(client)}>
+                          <span className="tip">Edit</span>
+                          <PencilIcon />
+                        </button>
+                        <button className="icon-btn danger" onClick={() => setDeletingClient(client)}>
+                          <span className="tip">Delete</span>
+                          <TrashIcon />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
-          </>
-        )}
-      </div>
+          </div>
+          <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
+        </>
+      )}
     </div>
   );
 }

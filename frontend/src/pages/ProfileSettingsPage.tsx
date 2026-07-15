@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { api } from '../api';
 import { useToast } from '../components/ToastProvider';
+import PasswordInput from '../components/PasswordInput';
+import PasswordChecklist from '../components/PasswordChecklist';
 
 interface ProfileSettingsPageProps {
   user: any;
@@ -115,11 +117,11 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
         <form onSubmit={handlePasswordSubmit}>
           <div className="form-group">
             <label htmlFor="profile-currentPassword">Current password</label>
-            <input
+            <PasswordInput
               id="profile-currentPassword"
-              type="password"
               value={passwordForm.currentPassword}
-              onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+              onChange={(value) => setPasswordForm({ ...passwordForm, currentPassword: value })}
+              autoComplete="current-password"
             />
             {passwordError?.field === 'currentPassword' && (
               <p className="field-error">{passwordError.message}</p>
@@ -127,12 +129,13 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
           </div>
           <div className="form-group">
             <label htmlFor="profile-newPassword">New password</label>
-            <input
+            <PasswordInput
               id="profile-newPassword"
-              type="password"
               value={passwordForm.newPassword}
-              onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+              onChange={(value) => setPasswordForm({ ...passwordForm, newPassword: value })}
+              autoComplete="new-password"
             />
+            <PasswordChecklist password={passwordForm.newPassword} />
             {passwordError?.field === 'newPassword' && (
               <p className="field-error">{passwordError.message}</p>
             )}

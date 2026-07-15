@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import PasswordInput from '../components/PasswordInput';
+import AuthLayout from '../components/AuthLayout';
 
 interface LoginPageProps {
   onLogin: (email: string, password: string) => void;
@@ -16,54 +18,43 @@ export default function LoginPage({ onLogin, onSwitchToRegister, loading }: Logi
   };
 
   return (
-    <div className="page">
-      <div className="header">
-        <img src="/logo-horizontal-light.svg" alt="Northstack" />
-      </div>
-      <div className="container">
-        <div className="card mx-auto mt-10 max-w-md">
-          <h2 className="text-center">Login</h2>
-          <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label htmlFor="login-email">Email</label>
-              <input
-                id="login-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
-                required
-                disabled={loading}
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="login-password">Password</label>
-              <input
-                id="login-password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                disabled={loading}
-              />
-            </div>
-            <div className="form-actions">
-              <button type="submit" className="btn btn-primary" disabled={loading}>
-                {loading ? 'Logging in...' : 'Login'}
-              </button>
-            </div>
-          </form>
-          <div className="mt-20 text-center">
-            <p>
-              Don't have an account?{' '}
-              <button className="btn btn-secondary ml-1" onClick={onSwitchToRegister}>
-                Register
-              </button>
-            </p>
-          </div>
+    <AuthLayout>
+      <h2 className="auth-title">Login</h2>
+      <form onSubmit={handleSubmit}>
+        <div className="form-group">
+          <label htmlFor="login-email">Email</label>
+          <input
+            id="login-email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="your@email.com"
+            required
+            disabled={loading}
+          />
         </div>
+        <div className="form-group">
+          <label htmlFor="login-password">Password</label>
+          <PasswordInput
+            id="login-password"
+            value={password}
+            onChange={setPassword}
+            placeholder="••••••••"
+            required
+            disabled={loading}
+            autoComplete="current-password"
+          />
+        </div>
+        <button type="submit" className="auth-submit" disabled={loading}>
+          {loading ? 'Logging in...' : 'Login'}
+        </button>
+      </form>
+      <div className="auth-foot">
+        <span>Don't have an account?</span>
+        <button type="button" onClick={onSwitchToRegister}>
+          Register
+        </button>
       </div>
-    </div>
+    </AuthLayout>
   );
 }

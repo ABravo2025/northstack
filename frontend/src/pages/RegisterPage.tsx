@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import type { FormError } from '../App';
+import PasswordInput from '../components/PasswordInput';
+import PasswordChecklist from '../components/PasswordChecklist';
+import AuthLayout from '../components/AuthLayout';
 
 interface RegisterPageProps {
   onRegister: (data: {
@@ -43,117 +46,104 @@ export default function RegisterPage({
   };
 
   return (
-    <div className="page">
-      <div className="header">
-        <img src="/logo-horizontal-light.svg" alt="Northstack" />
-      </div>
-      <div className="container">
-        <div className="card mx-auto mt-10 max-w-md">
-          <h2 className="text-center">Register your company</h2>
-          <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label htmlFor="register-tenantName">Company Name</label>
-              <input
-                id="register-tenantName"
-                type="text"
-                value={tenantName}
-                onChange={(e) => setTenantName(e.target.value)}
-                placeholder="My Company"
-                required
-                disabled={loading}
-              />
-              {fieldError('tenantName') && (
-                <div className="field-error">{fieldError('tenantName')}</div>
-              )}
-            </div>
-            <div className="form-group">
-              <label htmlFor="register-firstName">First Name</label>
-              <input
-                id="register-firstName"
-                type="text"
-                value={ownerFirstName}
-                onChange={(e) => setOwnerFirstName(e.target.value)}
-                placeholder="John"
-                required
-                disabled={loading}
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="register-lastName">Last Name</label>
-              <input
-                id="register-lastName"
-                type="text"
-                value={ownerLastName}
-                onChange={(e) => setOwnerLastName(e.target.value)}
-                placeholder="Doe"
-                required
-                disabled={loading}
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="register-email">Email</label>
-              <input
-                id="register-email"
-                type="email"
-                value={ownerEmail}
-                onChange={(e) => setOwnerEmail(e.target.value)}
-                placeholder="your@email.com"
-                required
-                disabled={loading}
-              />
-              {fieldError('ownerEmail') && (
-                <div className="field-error">{fieldError('ownerEmail')}</div>
-              )}
-            </div>
-            <div className="form-group">
-              <label htmlFor="register-phone">Phone</label>
-              <input
-                id="register-phone"
-                type="tel"
-                value={ownerPhone}
-                onChange={(e) => setOwnerPhone(e.target.value)}
-                placeholder="+1 555 0100"
-                required
-                disabled={loading}
-              />
-              {fieldError('ownerPhone') && (
-                <div className="field-error">{fieldError('ownerPhone')}</div>
-              )}
-            </div>
-            <div className="form-group">
-              <label htmlFor="register-password">Password</label>
-              <input
-                id="register-password"
-                type="password"
-                value={ownerPassword}
-                onChange={(e) => setOwnerPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-                disabled={loading}
-              />
-              {fieldError('ownerPassword') && (
-                <div className="field-error">{fieldError('ownerPassword')}</div>
-              )}
-            </div>
-            <div className="form-actions">
-              <button type="submit" className="btn btn-primary" disabled={loading}>
-                {loading ? 'Registering...' : 'Register'}
-              </button>
-            </div>
-          </form>
-          <div className="mt-20 text-center">
-            <p>
-              Already have an account?{' '}
-              <button
-                className="btn btn-secondary ml-1"
-                onClick={onSwitchToLogin}
-              >
-                Login
-              </button>
-            </p>
-          </div>
+    <AuthLayout>
+      <h2 className="auth-title">Register your company</h2>
+      <form onSubmit={handleSubmit}>
+        <div className="form-group">
+          <label htmlFor="register-tenantName">Company Name</label>
+          <input
+            id="register-tenantName"
+            type="text"
+            value={tenantName}
+            onChange={(e) => setTenantName(e.target.value)}
+            placeholder="My Company"
+            required
+            disabled={loading}
+          />
+          {fieldError('tenantName') && (
+            <div className="field-error">{fieldError('tenantName')}</div>
+          )}
         </div>
+        <div className="form-group">
+          <label htmlFor="register-firstName">First Name</label>
+          <input
+            id="register-firstName"
+            type="text"
+            value={ownerFirstName}
+            onChange={(e) => setOwnerFirstName(e.target.value)}
+            placeholder="John"
+            required
+            disabled={loading}
+          />
+        </div>
+        <div className="form-group">
+          <label htmlFor="register-lastName">Last Name</label>
+          <input
+            id="register-lastName"
+            type="text"
+            value={ownerLastName}
+            onChange={(e) => setOwnerLastName(e.target.value)}
+            placeholder="Doe"
+            required
+            disabled={loading}
+          />
+        </div>
+        <div className="form-group">
+          <label htmlFor="register-email">Email</label>
+          <input
+            id="register-email"
+            type="email"
+            value={ownerEmail}
+            onChange={(e) => setOwnerEmail(e.target.value)}
+            placeholder="your@email.com"
+            required
+            disabled={loading}
+          />
+          {fieldError('ownerEmail') && (
+            <div className="field-error">{fieldError('ownerEmail')}</div>
+          )}
+        </div>
+        <div className="form-group">
+          <label htmlFor="register-phone">Phone</label>
+          <input
+            id="register-phone"
+            type="tel"
+            value={ownerPhone}
+            onChange={(e) => setOwnerPhone(e.target.value)}
+            placeholder="+1 555 0100"
+            required
+            disabled={loading}
+          />
+          {fieldError('ownerPhone') && (
+            <div className="field-error">{fieldError('ownerPhone')}</div>
+          )}
+        </div>
+        <div className="form-group">
+          <label htmlFor="register-password">Password</label>
+          <PasswordInput
+            id="register-password"
+            value={ownerPassword}
+            onChange={setOwnerPassword}
+            placeholder="••••••••"
+            required
+            disabled={loading}
+            autoComplete="new-password"
+          />
+          <PasswordChecklist password={ownerPassword} />
+          {fieldError('ownerPassword') && (
+            <div className="field-error">{fieldError('ownerPassword')}</div>
+          )}
+        </div>
+        <button type="submit" className="auth-submit" disabled={loading}>
+          {loading ? 'Registering...' : 'Register'}
+        </button>
+      </form>
+      <div className="auth-foot">
+        <span>Already have an account?</span>
+        <button type="button" onClick={onSwitchToLogin}>
+          Login
+        </button>
       </div>
-    </div>
+    </AuthLayout>
   );
 }

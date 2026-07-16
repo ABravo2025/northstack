@@ -203,6 +203,31 @@ interface TenantInvitation {
   expiresAt: string;
 }
 
+export interface ViewFilter {
+  field: string;
+  operator: string;
+  value: string;
+}
+
+export interface ViewSort {
+  field: string;
+  direction: 'asc' | 'desc';
+}
+
+export interface SavedView {
+  id: string;
+  tenantId: string;
+  entityType: 'employee' | 'client';
+  createdByUserId: string;
+  name: string;
+  type: 'grid' | 'kanban';
+  visibility: 'personal' | 'shared';
+  filters: string | null;
+  sortBy: string | null;
+  groupByField: string | null;
+  createdAt: string;
+}
+
 export const api = {
   // Auth
   registerTenant: async (data: {
@@ -839,6 +864,64 @@ export const api = {
     valueId: string,
   ): Promise<void> => {
     const res = await apiFetch(`${API_BASE_URL}/api/clients/${clientId}/custom-fields/${valueId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+  },
+
+  // Saved views
+  listViews: async (token: string, entityType: 'employee' | 'client'): Promise<SavedView[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/views?entityType=${entityType}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  createView: async (
+    token: string,
+    data: {
+      entityType: 'employee' | 'client';
+      name: string;
+      type: 'grid' | 'kanban';
+      visibility: 'personal' | 'shared';
+      filters?: ViewFilter[];
+      sortBy?: ViewSort | null;
+      groupByField?: string | null;
+    },
+  ): Promise<SavedView> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/views`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  updateView: async (
+    token: string,
+    viewId: string,
+    data: { name?: string; filters?: ViewFilter[]; sortBy?: ViewSort | null; groupByField?: string | null },
+  ): Promise<SavedView> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/views/${viewId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  deleteView: async (token: string, viewId: string): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/views/${viewId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });

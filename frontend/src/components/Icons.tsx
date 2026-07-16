@@ -90,6 +90,71 @@ export function XIcon({ className }: IconProps) {
   );
 }
 
+export function GridIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="3" y="4" width="18" height="16" rx="1" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+      <line x1="9" y1="4" x2="9" y2="20" />
+    </svg>
+  );
+}
+
+export function KanbanIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="3" y="4" width="5" height="16" rx="1" />
+      <rect x="9.5" y="4" width="5" height="10" rx="1" />
+      <rect x="16" y="4" width="5" height="13" rx="1" />
+    </svg>
+  );
+}
+
+export function LockIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="5" y="11" width="14" height="9" rx="1.5" />
+      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+    </svg>
+  );
+}
+
+export function TeamIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M17 21v-8a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v8" />
+      <path d="M7 8V6a5 5 0 0 1 10 0v2" />
+    </svg>
+  );
+}
+
+export function FilterIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M4 5h16l-6 8v6l-4 2v-8Z" />
+    </svg>
+  );
+}
+
+export function DotsVerticalIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <circle cx="12" cy="5" r="1.8" />
+      <circle cx="12" cy="12" r="1.8" />
+      <circle cx="12" cy="19" r="1.8" />
+    </svg>
+  );
+}
+
+export function CopyIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="9" y="9" width="12" height="12" rx="2" />
+      <path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" />
+    </svg>
+  );
+}
+
 export function HomeIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

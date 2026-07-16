@@ -56,6 +56,16 @@ enum PtoRequestStatus {
   cancelled
 }
 
+enum SavedViewType {
+  grid
+  kanban
+}
+
+enum SavedViewVisibility {
+  personal
+  shared
+}
+
 model Tenant {
   id                   String                 @id @default(uuid())
   name                 String
@@ -73,6 +83,7 @@ model Tenant {
   ptoPolicies          PtoPolicyDefinition[]
   employeePtoPolicies  EmployeePtoPolicy[]
   ptoRequests          PtoRequest[]
+  savedViews           SavedView[]
 }
 
 model User {
@@ -90,6 +101,7 @@ model User {
   sentInvitations  Invitation[]
   employee         Employee?
   statusChanges    StatusHistoryEntry[]
+  savedViews       SavedView[]
 }
 
 model Employee {
@@ -244,6 +256,24 @@ model CustomFieldValue {
   createdAt               DateTime                @default(now())
 
   @@index([tenantId, entityType, entityId])
+}
+
+model SavedView {
+  id              String              @id @default(uuid())
+  tenantId        String
+  tenant          Tenant              @relation(fields: [tenantId], references: [id])
+  entityType      EntityType
+  createdByUserId String
+  createdBy       User                @relation(fields: [createdByUserId], references: [id])
+  name            String
+  type            SavedViewType       @default(grid)
+  visibility      SavedViewVisibility @default(personal)
+  filters         String?             // JSON-encoded array of {field, operator, value}
+  sortBy          String?             // JSON-encoded {field, direction}
+  groupByField    String?             // kanban only: "status" or a CustomFieldDefinition id (select type)
+  createdAt       DateTime            @default(now())
+
+  @@index([tenantId, entityType])
 }
 
 model Session {

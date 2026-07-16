@@ -189,7 +189,7 @@ export default function App() {
         <Route path="/hr/employees" element={<EmployeesPage user={user} token={token ?? ''} />} />
         <Route path="/hr/pto" element={<PtoOverviewPage user={user} token={token ?? ''} />} />
         <Route path="/clients/dashboard" element={<ClientsDashboardPage />} />
-        <Route path="/clients" element={<ClientsPage token={token ?? ''} />} />
+        <Route path="/clients" element={<ClientsPage user={user} token={token ?? ''} />} />
         <Route
           path="/profile"
           element={<ProfileSettingsPage user={user} token={token ?? ''} onUserUpdated={setUser} />}

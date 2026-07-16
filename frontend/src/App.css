@@ -607,3 +607,195 @@
 .auth-tagline {
   @apply mt-2 text-sm font-medium text-brand-navy/80;
 }
+
+/* ---------- Views bar (saved views tabs) ---------- */
+
+.views-bar {
+  @apply flex items-center gap-1 overflow-x-auto border-b border-gray-200 px-1 dark:border-gray-800;
+}
+
+.view-tab {
+  @apply relative top-px flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-t-md border border-transparent border-b-0 px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-brand-navy dark:hover:bg-gray-800 dark:hover:text-gray-100;
+}
+
+.view-tab svg {
+  @apply h-3.5 w-3.5 shrink-0;
+}
+
+.view-tab.active {
+  @apply border-gray-200 bg-brand-cream font-semibold text-brand-navy dark:border-gray-800 dark:bg-gray-950 dark:text-gray-100;
+}
+
+.view-tab-menu {
+  @apply ml-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded text-gray-400 hover:bg-gray-200 hover:text-brand-navy dark:hover:bg-gray-700 dark:hover:text-gray-100;
+}
+
+.view-tab-add {
+  @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-brand-navy dark:hover:bg-gray-800 dark:hover:text-gray-100;
+}
+
+/* ---------- Popovers (filter builder, new view, tab menu) ---------- */
+
+.popover-anchor {
+  @apply relative inline-flex;
+}
+
+.popover-panel {
+  @apply absolute top-full left-0 z-30 mt-1.5 rounded-lg border border-gray-200 bg-white p-3 shadow-xl dark:border-gray-700 dark:bg-gray-900;
+}
+
+.popover-panel.align-right {
+  @apply right-0 left-auto;
+}
+
+.filter-row {
+  @apply mb-2 flex items-center gap-1.5;
+}
+
+.filter-row select,
+.filter-row input {
+  @apply rounded-md border border-gray-300 bg-white px-2 py-1.5 text-xs text-brand-navy dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100;
+}
+
+.filter-row .field-sel {
+  @apply w-28 shrink-0;
+}
+
+.filter-row .op-sel {
+  @apply w-24 shrink-0;
+}
+
+.filter-row .val-input {
+  @apply w-32 min-w-0 flex-1;
+}
+
+.filter-row .rm-filter {
+  @apply flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400;
+}
+
+.filter-row .rm-filter svg {
+  @apply h-3 w-3;
+}
+
+.add-filter-btn {
+  @apply flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0.5 text-xs font-semibold text-brand-blue hover:underline;
+}
+
+.add-filter-btn svg {
+  @apply h-3 w-3;
+}
+
+.nv-field {
+  @apply mb-2.5;
+}
+
+.nv-field label {
+  @apply mb-1 block text-xs font-semibold text-gray-500 dark:text-gray-400;
+}
+
+.nv-field input,
+.nv-field select {
+  @apply w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-xs text-brand-navy dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100;
+}
+
+.toggle-row {
+  @apply flex gap-1.5;
+}
+
+.toggle-opt {
+  @apply flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-2 py-1.5 text-xs font-medium text-gray-500 dark:border-gray-600 dark:text-gray-400;
+}
+
+.toggle-opt svg {
+  @apply h-3.5 w-3.5;
+}
+
+.toggle-opt.active {
+  @apply border-brand-blue bg-brand-blue/10 font-semibold text-brand-blue;
+}
+
+.popover-menu-item {
+  @apply cursor-pointer rounded-md px-2.5 py-1.5 text-xs text-brand-navy hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-gray-800;
+}
+
+.popover-menu-item.danger {
+  @apply text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950;
+}
+
+.popover-menu-item.disabled {
+  @apply cursor-not-allowed text-gray-300 hover:bg-transparent dark:text-gray-600 dark:hover:bg-transparent;
+}
+
+/* ---------- Toolbar filter button ---------- */
+
+.tb-btn {
+  @apply flex cursor-pointer items-center gap-1.5 rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-brand-navy hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700;
+}
+
+.tb-btn svg {
+  @apply h-3.5 w-3.5;
+}
+
+.tb-btn .filter-count {
+  @apply rounded-full bg-brand-blue px-1.5 py-0 text-[0.65rem] font-bold text-white;
+}
+
+/* ---------- Sortable grid header ---------- */
+
+.full-table th.sortable {
+  @apply cursor-pointer select-none hover:text-brand-navy dark:hover:text-gray-100;
+}
+
+.full-table th .sort-arrow {
+  @apply ml-1 inline-block w-2.5 opacity-30;
+}
+
+.full-table th.sorted .sort-arrow {
+  @apply text-brand-blue opacity-100;
+}
+
+/* ---------- Kanban board ---------- */
+
+.kanban-wrap {
+  @apply flex items-start gap-3 overflow-x-auto p-1;
+}
+
+.kanban-col {
+  @apply w-64 shrink-0 rounded-lg border border-gray-200 bg-white p-2 dark:border-gray-800 dark:bg-gray-900;
+}
+
+.kanban-col-head {
+  @apply flex items-center gap-1.5 px-1 pt-1 pb-2 text-xs font-bold text-brand-navy dark:text-gray-100;
+}
+
+.kanban-col-head .dot {
+  @apply h-2 w-2 shrink-0 rounded-full;
+}
+
+.kanban-col-head .cnt {
+  @apply ml-auto font-mono text-[0.68rem] font-normal text-gray-400;
+}
+
+.kanban-body {
+  @apply flex min-h-[40px] flex-col gap-1.5 rounded-md transition-colors;
+}
+
+.kanban-body.drag-over {
+  @apply bg-brand-blue/10 outline-dashed outline-2 outline-brand-blue/50;
+}
+
+.kcard {
+  @apply cursor-grab rounded-md border border-gray-200 bg-brand-cream p-2.5 shadow-sm active:cursor-grabbing dark:border-gray-700 dark:bg-gray-950;
+}
+
+.kcard.dragging {
+  @apply opacity-40;
+}
+
+.kcard .kc-name {
+  @apply mb-0.5 text-xs font-semibold text-brand-navy dark:text-gray-100;
+}
+
+.kcard .kc-meta {
+  @apply text-[0.68rem] text-gray-400;
+}

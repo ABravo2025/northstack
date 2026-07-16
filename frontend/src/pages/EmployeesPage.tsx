@@ -1,12 +1,25 @@
-import { useState, useEffect } from 'react';
-import { api } from '../api';
+import { useEffect, useMemo, useState } from 'react';
+import { api, type SavedView, type ViewFilter, type ViewSort } from '../api';
 import { useToast } from '../components/ToastProvider';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Pagination, { paginate } from '../components/Pagination';
 import SlideOver from '../components/SlideOver';
+import ViewsBar from '../components/ViewsBar';
+import FilterBar from '../components/FilterBar';
+import KanbanBoard from '../components/KanbanBoard';
 import { MailIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
+import {
+  applyFilters,
+  applySort,
+  buildEmployeeFields,
+  findField,
+  groupableFields,
+  parseFilters,
+  parseSort,
+} from '../lib/viewFields';
 
 const PAGE_SIZE = 20;
+const ACTIVE_VIEW_STORAGE_KEY = 'northstack:activeView:employee';
 
 interface EmployeesPageProps {
   user: any;
@@ -31,10 +44,41 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const [editAssignedPolicyIds, setEditAssignedPolicyIds] = useState<string[]>([]);
   const [originalAssignedPolicyIds, setOriginalAssignedPolicyIds] = useState<string[]>([]);
 
+  const [views, setViews] = useState<SavedView[]>([]);
+  const [activeViewId, setActiveViewId] = useState<string | null>(() =>
+    localStorage.getItem(ACTIVE_VIEW_STORAGE_KEY),
+  );
+  const [viewFilters, setViewFilters] = useState<ViewFilter[]>([]);
+  const [viewSort, setViewSort] = useState<ViewSort | null>(null);
+
   const canManageCustomFields = user.role === 'owner' || user.role === 'admin';
+  const canEditEmployees = user.role === 'owner' || user.role === 'admin';
   const activeEmployeeCustomFields = employeeCustomFields.filter((field) => field.isActive);
 
-  const filteredEmployees = employees.filter((emp) => {
+  const fields = useMemo(
+    () => buildEmployeeFields(employeeStatuses, employeeCustomFields),
+    [employeeStatuses, employeeCustomFields],
+  );
+  const groupable = useMemo(() => groupableFields(fields), [fields]);
+
+  const activeView = views.find((v) => v.id === activeViewId) ?? null;
+  const viewType = activeView?.type ?? 'grid';
+
+  useEffect(() => {
+    setViewFilters(parseFilters(activeView?.filters ?? null));
+    setViewSort(parseSort(activeView?.sortBy ?? null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeViewId, views]);
+
+  useEffect(() => {
+    if (activeViewId) {
+      localStorage.setItem(ACTIVE_VIEW_STORAGE_KEY, activeViewId);
+    } else {
+      localStorage.removeItem(ACTIVE_VIEW_STORAGE_KEY);
+    }
+  }, [activeViewId]);
+
+  const searchFilteredEmployees = employees.filter((emp) => {
     const query = employeeSearch.trim().toLowerCase();
     if (!query) return true;
     return (
@@ -44,12 +88,15 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     );
   });
 
-  const pageCount = Math.max(1, Math.ceil(filteredEmployees.length / PAGE_SIZE));
-  const pagedEmployees = paginate(filteredEmployees, page, PAGE_SIZE);
+  const viewFilteredEmployees = applyFilters(searchFilteredEmployees, fields, viewFilters);
+  const sortedEmployees = applySort(viewFilteredEmployees, fields, viewSort);
+
+  const pageCount = Math.max(1, Math.ceil(sortedEmployees.length / PAGE_SIZE));
+  const pagedEmployees = paginate(sortedEmployees, page, PAGE_SIZE);
 
   useEffect(() => {
     setPage(1);
-  }, [employeeSearch]);
+  }, [employeeSearch, activeViewId]);
 
   const [employeeForm, setEmployeeForm] = useState({
     firstName: '',
@@ -73,7 +120,17 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     loadEmployeeCustomFields();
     loadEmployeeStatuses();
     loadPtoPolicies();
+    loadViews();
   }, []);
+
+  const loadViews = async () => {
+    try {
+      const data = await api.listViews(token, 'employee');
+      setViews(data);
+    } catch (error) {
+      toast.error('Failed to load views: ' + (error as Error).message);
+    }
+  };
 
   const loadPtoPolicies = async () => {
     try {
@@ -253,6 +310,102 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     }
   };
 
+  const handleSort = (fieldKey: string) => {
+    setViewSort((current) => {
+      if (current?.field === fieldKey) {
+        return { field: fieldKey, direction: current.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { field: fieldKey, direction: 'asc' };
+    });
+  };
+
+  const handleKanbanMove = async (emp: any, newValue: string) => {
+    const groupField = activeView?.groupByField;
+    if (!groupField) return;
+    try {
+      if (groupField === 'status') {
+        const status = employeeStatuses.find((s) => s.name === newValue);
+        if (!status) return;
+        await api.updateEmployee(token, emp.id, { statusId: status.id });
+      } else if (groupField.startsWith('cf:')) {
+        const definitionId = groupField.slice(3);
+        const existing = emp.customFieldVals?.find((v: any) => v.customFieldDefinitionId === definitionId);
+        if (existing) {
+          await api.updateEmployeeCustomFieldValue(token, emp.id, existing.id, newValue);
+        } else {
+          await api.createEmployeeCustomFieldValue(token, emp.id, {
+            customFieldDefinitionId: definitionId,
+            value: newValue,
+          });
+        }
+      }
+      loadEmployees();
+    } catch (error) {
+      toast.error('Failed to move: ' + (error as Error).message);
+    }
+  };
+
+  const handleCreateView = async (input: {
+    name: string;
+    type: 'grid' | 'kanban';
+    visibility: 'personal' | 'shared';
+    groupByField?: string;
+  }) => {
+    try {
+      const view = await api.createView(token, {
+        entityType: 'employee',
+        name: input.name,
+        type: input.type,
+        visibility: input.visibility,
+        groupByField: input.groupByField,
+      });
+      setViews((current) => [...current, view]);
+      setActiveViewId(view.id);
+      toast.success(`View "${view.name}" created.`);
+    } catch (error) {
+      toast.error('Failed to create view: ' + (error as Error).message);
+    }
+  };
+
+  const handleRenameView = async (id: string, name: string) => {
+    try {
+      const updated = await api.updateView(token, id, { name });
+      setViews((current) => current.map((v) => (v.id === id ? updated : v)));
+    } catch (error) {
+      toast.error('Failed to rename view: ' + (error as Error).message);
+    }
+  };
+
+  const handleDuplicateView = async (view: SavedView) => {
+    try {
+      const created = await api.createView(token, {
+        entityType: 'employee',
+        name: `${view.name} (copy)`,
+        type: view.type,
+        visibility: 'personal',
+        filters: parseFilters(view.filters),
+        sortBy: parseSort(view.sortBy) ?? undefined,
+        groupByField: view.groupByField ?? undefined,
+      });
+      setViews((current) => [...current, created]);
+      setActiveViewId(created.id);
+      toast.success(`View duplicated as "${created.name}".`);
+    } catch (error) {
+      toast.error('Failed to duplicate view: ' + (error as Error).message);
+    }
+  };
+
+  const handleDeleteView = async (id: string) => {
+    try {
+      await api.deleteView(token, id);
+      setViews((current) => current.filter((v) => v.id !== id));
+      if (activeViewId === id) setActiveViewId(null);
+      toast.success('View deleted.');
+    } catch (error) {
+      toast.error('Failed to delete view: ' + (error as Error).message);
+    }
+  };
+
   const renderCustomFieldInput = (
     field: any,
     values: Record<string, string>,
@@ -297,6 +450,15 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       />
     );
   };
+
+  const columns = [
+    { key: 'name', label: 'Name' },
+    { key: 'email', label: 'Email' },
+    { key: 'department', label: 'Department' },
+    { key: 'status', label: 'Status' },
+  ];
+
+  const groupFieldForKanban = activeView?.groupByField ? findField(fields, activeView.groupByField) : undefined;
 
   return (
     <div>
@@ -503,6 +665,20 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         )}
       </SlideOver>
 
+      <ViewsBar
+        allLabel="All Employees"
+        views={views}
+        activeViewId={activeViewId}
+        onSelectView={setActiveViewId}
+        canCreateShared={canManageCustomFields}
+        canDeleteShared={(view) => view.createdByUserId === user.id || user.role === 'owner'}
+        groupableFields={groupable}
+        onCreateView={handleCreateView}
+        onRenameView={handleRenameView}
+        onDuplicateView={handleDuplicateView}
+        onDeleteView={handleDeleteView}
+      />
+
       <div className="page-toolbar">
         <h2>Employees</h2>
         {employees.length > 0 && (
@@ -520,6 +696,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
             />
           </div>
         )}
+        {viewType === 'grid' && <FilterBar fields={fields} filters={viewFilters} onChange={setViewFilters} />}
         <button className="btn-primary" onClick={handleOpenAdd}>
           <span className="inline-flex items-center gap-1.5">
             <PlusIcon className="h-4 w-4" />
@@ -537,22 +714,63 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
             Add your first employee
           </button>
         </div>
-      ) : filteredEmployees.length === 0 ? (
-        <p className="mt-4">No employees match your search.</p>
+      ) : viewType === 'kanban' ? (
+        !groupFieldForKanban ? (
+          <p className="mt-4">This view's group-by field no longer exists.</p>
+        ) : (
+          <KanbanBoard
+            columns={
+              groupFieldForKanban.selectOptions?.map((opt) => ({
+                key: opt.value,
+                label: opt.value,
+                color: opt.color,
+              })) ?? []
+            }
+            items={viewFilteredEmployees}
+            getItemKey={(emp) => emp.id}
+            getItemColumn={(emp) => groupFieldForKanban.getValue(emp)}
+            onMove={canEditEmployees ? handleKanbanMove : () => {}}
+            renderCard={(emp) => (
+              <>
+                <div className="kc-name">
+                  {emp.firstName} {emp.lastName}
+                </div>
+                <div className="kc-meta">{emp.department}</div>
+              </>
+            )}
+          />
+        )
+      ) : sortedEmployees.length === 0 ? (
+        <p className="mt-4">No employees match your search or filters.</p>
       ) : (
         <>
           <div className="full-table-wrap">
             <table className="table full-table">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Department</th>
-                  <th>Status</th>
+                  {columns.map((col) => (
+                    <th
+                      key={col.key}
+                      className={`sortable ${viewSort?.field === col.key ? 'sorted' : ''}`}
+                      onClick={() => handleSort(col.key)}
+                    >
+                      {col.label}
+                      <span className="sort-arrow">{viewSort?.field === col.key && viewSort.direction === 'desc' ? '▴' : '▾'}</span>
+                    </th>
+                  ))}
                   <th>Reports To</th>
                   <th>PTO Policies</th>
                   {activeEmployeeCustomFields.map((field) => (
-                    <th key={field.id}>{field.name}</th>
+                    <th
+                      key={field.id}
+                      className={`sortable ${viewSort?.field === `cf:${field.id}` ? 'sorted' : ''}`}
+                      onClick={() => handleSort(`cf:${field.id}`)}
+                    >
+                      {field.name}
+                      <span className="sort-arrow">
+                        {viewSort?.field === `cf:${field.id}` && viewSort.direction === 'desc' ? '▴' : '▾'}
+                      </span>
+                    </th>
                   ))}
                   <th></th>
                 </tr>

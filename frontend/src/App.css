@@ -853,3 +853,13 @@
 .status-manage-link {
   @apply shrink-0 cursor-pointer border-none bg-transparent p-0 text-[0.68rem] font-semibold text-brand-blue hover:underline;
 }
+
+/* ---------- PTO "Policies" popover ---------- */
+
+.policy-manage-list {
+  @apply flex max-h-52 flex-col gap-1 overflow-y-auto;
+}
+
+.policy-manage-row {
+  @apply flex items-center gap-2 rounded-md px-1 py-1 text-xs hover:bg-gray-50 dark:hover:bg-gray-800;
+}

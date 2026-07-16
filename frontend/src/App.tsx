@@ -11,13 +11,11 @@ import EmployeesPage from './pages/EmployeesPage';
 import PtoOverviewPage from './pages/PtoOverviewPage';
 import ClientsDashboardPage from './pages/ClientsDashboardPage';
 import ClientsPage from './pages/ClientsPage';
-import PtoPoliciesSettingsPage from './pages/PtoPoliciesSettingsPage';
 import ProfileSettingsPage from './pages/ProfileSettingsPage';
 import CompanyAppearancePage from './pages/CompanyAppearancePage';
 import CompanyUsersPage from './pages/CompanyUsersPage';
 import AppLayout from './layouts/AppLayout';
 import CompanySettingsLayout from './layouts/CompanySettingsLayout';
-import ModuleSettingsLayout from './layouts/ModuleSettingsLayout';
 import './App.css';
 
 export interface FormError {
@@ -192,10 +190,10 @@ export default function App() {
           path="/profile"
           element={<ProfileSettingsPage user={user} token={token ?? ''} onUserUpdated={setUser} />}
         />
-        <Route path="/settings" element={<ModuleSettingsLayout />}>
-          <Route index element={<Navigate to="pto-policies" replace />} />
-          <Route path="pto-policies" element={<PtoPoliciesSettingsPage token={token ?? ''} />} />
-        </Route>
+        {/* TODO(Workspace Settings): this bridges /settings while it's between rebrand
+            tasks — Custom Fields/Statuses/PTO Policies all moved out already, and this
+            route gets replaced with the unified Workspace Settings hub next. */}
+        <Route path="/settings" element={<Navigate to="/profile" replace />} />
         <Route path="/company" element={<CompanySettingsLayout />}>
           <Route index element={<Navigate to="appearance" replace />} />
           <Route path="appearance" element={<CompanyAppearancePage />} />

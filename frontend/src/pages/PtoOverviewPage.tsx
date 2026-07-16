@@ -1,7 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
 import { useToast } from '../components/ToastProvider';
 import ConfirmDialog from '../components/ConfirmDialog';
+import SlideOver from '../components/SlideOver';
+import Popover from '../components/Popover';
+import ColorPicker from '../components/ColorPicker';
+import { ChevronDownIcon, PencilIcon, PlusIcon } from '../components/Icons';
 
 interface PtoOverviewPageProps {
   user: any;
@@ -32,9 +36,23 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
   const [addPolicySelection, setAddPolicySelection] = useState<Record<string, string>>({});
   const [newRequest, setNewRequest] = useState({ ptoPolicyId: '', startDate: '', endDate: '', note: '' });
 
+  const [policiesMenuOpen, setPoliciesMenuOpen] = useState(false);
+  const policiesMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const [slideOverMode, setSlideOverMode] = useState<'add' | 'edit' | null>(null);
+  const [editingPolicyId, setEditingPolicyId] = useState<string | null>(null);
+  const [policyForm, setPolicyForm] = useState({
+    name: '',
+    color: '#3c6da1',
+    accrualMethod: 'fixed_annual',
+    daysPerYear: '15',
+    isPaid: true,
+    requiresApproval: true,
+  });
+
   const canManagePolicies = user.role === 'owner' || user.role === 'admin';
   const myEmployee = employees.find((emp) => emp.userId === user.id);
   const myAssignedPolicies = (myEmployee?.ptoPolicies || []).map((a: any) => a.ptoPolicy);
+  const activePtoPolicies = ptoPolicies.filter((p) => p.isActive);
 
   useEffect(() => {
     loadData();
@@ -53,7 +71,7 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
           canManagePolicies ? api.listPtoBalances(token) : Promise.resolve([]),
         ]);
       setEmployees(employeeData);
-      setPtoPolicies(policyData.filter((p) => p.isActive));
+      setPtoPolicies(policyData);
       setMyRequests(myRequestData);
       setPendingApprovals(approvalData);
       setAllRequests(allRequestData);
@@ -88,6 +106,72 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
       loadData();
     } catch (error) {
       toast.error('Failed to remove PTO policy: ' + (error as Error).message);
+    }
+  };
+
+  const closeSlideOver = () => {
+    setSlideOverMode(null);
+    setEditingPolicyId(null);
+  };
+
+  const handleOpenAddPolicy = () => {
+    setPolicyForm({
+      name: '',
+      color: '#3c6da1',
+      accrualMethod: 'fixed_annual',
+      daysPerYear: '15',
+      isPaid: true,
+      requiresApproval: true,
+    });
+    setPoliciesMenuOpen(false);
+    setSlideOverMode('add');
+  };
+
+  const handleStartEditPolicy = (policy: any) => {
+    setPolicyForm({
+      name: policy.name,
+      color: policy.color || '#3c6da1',
+      accrualMethod: policy.accrualMethod,
+      daysPerYear: String(policy.daysPerYear),
+      isPaid: policy.isPaid,
+      requiresApproval: policy.requiresApproval,
+    });
+    setEditingPolicyId(policy.id);
+    setPoliciesMenuOpen(false);
+    setSlideOverMode('edit');
+  };
+
+  const handleSubmitPolicy = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const data = {
+      name: policyForm.name,
+      color: policyForm.color,
+      accrualMethod: policyForm.accrualMethod as 'fixed_annual' | 'monthly',
+      daysPerYear: Number(policyForm.daysPerYear),
+      isPaid: policyForm.isPaid,
+      requiresApproval: policyForm.requiresApproval,
+    };
+    try {
+      if (slideOverMode === 'edit' && editingPolicyId) {
+        await api.updatePtoPolicy(token, editingPolicyId, data);
+        toast.success('PTO policy updated.');
+      } else {
+        await api.createPtoPolicy(token, data);
+        toast.success('PTO policy added.');
+      }
+      closeSlideOver();
+      loadData();
+    } catch (error) {
+      toast.error('Failed to save PTO policy: ' + (error as Error).message);
+    }
+  };
+
+  const handleTogglePolicyActive = async (policy: any) => {
+    try {
+      await api.updatePtoPolicy(token, policy.id, { isActive: !policy.isActive });
+      loadData();
+    } catch (error) {
+      toast.error('Failed to update PTO policy: ' + (error as Error).message);
     }
   };
 
@@ -142,8 +226,136 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
           onCancel={() => setCancellingRequestId(null)}
         />
       )}
+      <SlideOver
+        open={slideOverMode !== null}
+        title={slideOverMode === 'edit' ? 'Edit PTO Policy' : 'Add PTO Policy'}
+        onClose={closeSlideOver}
+        footer={
+          <>
+            <button type="button" className="btn-secondary" onClick={closeSlideOver}>
+              Cancel
+            </button>
+            <button type="submit" form="pto-policy-form" className="btn-primary">
+              {slideOverMode === 'edit' ? 'Save' : 'Create'}
+            </button>
+          </>
+        }
+      >
+        <form id="pto-policy-form" onSubmit={handleSubmitPolicy}>
+          <div className="form-group">
+            <label htmlFor="policy-name">Name</label>
+            <input
+              id="policy-name"
+              type="text"
+              value={policyForm.name}
+              onChange={(e) => setPolicyForm({ ...policyForm, name: e.target.value })}
+              placeholder="e.g. PTO, Sick Leave, Leave Emergency"
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="policy-days">Days per year</label>
+            <input
+              id="policy-days"
+              type="number"
+              min="0"
+              step="0.5"
+              value={policyForm.daysPerYear}
+              onChange={(e) => setPolicyForm({ ...policyForm, daysPerYear: e.target.value })}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="policy-accrual">Accrual method</label>
+            <select
+              id="policy-accrual"
+              value={policyForm.accrualMethod}
+              onChange={(e) => setPolicyForm({ ...policyForm, accrualMethod: e.target.value })}
+            >
+              <option value="fixed_annual">Fixed annual — all days available at once</option>
+              <option value="monthly">Monthly — days accrue progressively</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label>Color</label>
+            <ColorPicker value={policyForm.color} onChange={(color) => setPolicyForm({ ...policyForm, color })} />
+          </div>
+          <div className="form-group">
+            <label className="flex items-center gap-1.5">
+              <input
+                type="checkbox"
+                checked={policyForm.isPaid}
+                onChange={(e) => setPolicyForm({ ...policyForm, isPaid: e.target.checked })}
+                className="w-auto"
+              />
+              Paid
+            </label>
+          </div>
+          <div className="form-group">
+            <label className="flex items-center gap-1.5">
+              <input
+                type="checkbox"
+                checked={policyForm.requiresApproval}
+                onChange={(e) => setPolicyForm({ ...policyForm, requiresApproval: e.target.checked })}
+                className="w-auto"
+              />
+              Requires approval
+            </label>
+          </div>
+        </form>
+      </SlideOver>
+
       <div className="card">
-        <h3>PTO</h3>
+        <div className="page-toolbar mb-4">
+          <h3 className="m-0 shrink-0 text-lg font-semibold text-brand-navy dark:text-gray-100">PTO</h3>
+          {canManagePolicies && (
+            <>
+              <button
+                ref={policiesMenuButtonRef}
+                type="button"
+                className="btn-secondary"
+                onClick={() => setPoliciesMenuOpen((v) => !v)}
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  Policies
+                  <ChevronDownIcon className="h-3.5 w-3.5" />
+                </span>
+              </button>
+              <Popover open={policiesMenuOpen} onClose={() => setPoliciesMenuOpen(false)} anchorRef={policiesMenuButtonRef} width={260}>
+                <div className="policy-manage-list">
+                  {ptoPolicies.length === 0 && <p className="text-xs text-gray-500">No policies yet.</p>}
+                  {ptoPolicies.map((policy) => (
+                    <div className="policy-manage-row" key={policy.id}>
+                      <span className="color-dot" style={{ background: policy.color || '#9ca3af' }} />
+                      <span className={`status-manage-name ${!policy.isActive ? 'inactive' : ''}`}>{policy.name}</span>
+                      <button
+                        type="button"
+                        className="col-add-trigger"
+                        onClick={() => handleStartEditPolicy(policy)}
+                        aria-label={`Edit ${policy.name}`}
+                      >
+                        <PencilIcon />
+                      </button>
+                      <button
+                        type="button"
+                        className="status-manage-link"
+                        onClick={() => handleTogglePolicyActive(policy)}
+                      >
+                        {policy.isActive ? 'Deactivate' : 'Activate'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <button type="button" className="btn-primary mt-3 w-full text-center" onClick={handleOpenAddPolicy}>
+                  <span className="inline-flex items-center gap-1.5">
+                    <PlusIcon className="h-3.5 w-3.5" />
+                    Add Policy
+                  </span>
+                </button>
+              </Popover>
+            </>
+          )}
+        </div>
         <div className="nav mb-5">
           <button className={tab === 'assignments' ? 'active' : ''} onClick={() => setTab('assignments')}>
             Assignments
@@ -172,10 +384,10 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
           <>
             <p className="text-sm text-gray-500 mb-3">
               Which PTO policies apply to each employee. Manage the policies themselves (days per year, accrual,
-              etc.) from Settings → PTO Policies.
+              etc.) from the "Policies" button above.
             </p>
-            {ptoPolicies.length === 0 ? (
-              <p>No PTO policies defined yet. Add some from Settings → PTO Policies first.</p>
+            {activePtoPolicies.length === 0 ? (
+              <p>No PTO policies defined yet. Add one from the "Policies" button above.</p>
             ) : employees.length === 0 ? (
               <p>No employees yet.</p>
             ) : (
@@ -191,7 +403,7 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
                 <tbody>
                   {employees.map((emp) => {
                     const assignedIds = (emp.ptoPolicies || []).map((a: any) => a.ptoPolicyId);
-                    const availableToAdd = ptoPolicies.filter((p) => !assignedIds.includes(p.id));
+                    const availableToAdd = activePtoPolicies.filter((p) => !assignedIds.includes(p.id));
                     return (
                       <tr key={emp.id}>
                         <td>

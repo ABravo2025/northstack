@@ -611,7 +611,7 @@
 /* ---------- Views bar (saved views tabs) ---------- */
 
 .views-bar {
-  @apply flex items-center gap-1 overflow-x-auto border-b border-gray-200 px-1 dark:border-gray-800;
+  @apply flex items-center gap-1 overflow-x-auto overflow-y-hidden border-b border-gray-200 px-1 dark:border-gray-800;
 }
 
 .view-tab {

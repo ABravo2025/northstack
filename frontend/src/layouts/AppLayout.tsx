@@ -13,13 +13,11 @@ export default function AppLayout({ user, token, onLogout }: AppLayoutProps) {
     return <Navigate to="/login" replace />;
   }
 
-  const canManageCustomFields = user.role === 'owner' || user.role === 'admin';
-
   return (
     <div className="app">
       <TopBar user={user} onLogout={onLogout} />
       <div className="app-shell">
-        <Sidebar showSettings={canManageCustomFields} />
+        <Sidebar />
         <main className="app-main">
           <div className="container">
             <Outlet />

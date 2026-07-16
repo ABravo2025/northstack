@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ChevronDownIcon, UserCircleIcon } from './Icons';
 
 interface TopBarProps {
@@ -11,8 +10,6 @@ export default function TopBar({ user, onLogout }: TopBarProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const navigate = useNavigate();
-  const isAdmin = user.role === 'owner' || user.role === 'admin';
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -76,28 +73,6 @@ export default function TopBar({ user, onLogout }: TopBarProps) {
 
         {open && (
           <div className="user-menu-dropdown" role="menu">
-            <button
-              className="user-menu-item"
-              role="menuitem"
-              onClick={() => {
-                setOpen(false);
-                navigate('/profile');
-              }}
-            >
-              Profile
-            </button>
-            {isAdmin && (
-              <button
-                className="user-menu-item"
-                role="menuitem"
-                onClick={() => {
-                  setOpen(false);
-                  navigate('/company');
-                }}
-              >
-                Company Settings
-              </button>
-            )}
             <button
               className="user-menu-item"
               role="menuitem"

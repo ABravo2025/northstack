@@ -11,11 +11,7 @@ import {
   TrendingIcon,
 } from './Icons';
 
-interface SidebarProps {
-  showSettings: boolean;
-}
-
-export default function Sidebar({ showSettings }: SidebarProps) {
+export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -68,14 +64,12 @@ export default function Sidebar({ showSettings }: SidebarProps) {
         </NavLink>
       </div>
 
-      {showSettings && (
-        <div className="sidebar-footer">
-          <NavLink to="/settings" className={linkClass} title="Settings">
-            <GearIcon className="h-4 w-4 shrink-0" />
-            {label('Settings')}
-          </NavLink>
-        </div>
-      )}
+      <div className="sidebar-footer">
+        <NavLink to="/settings" className={linkClass} title="Settings">
+          <GearIcon className="h-4 w-4 shrink-0" />
+          {label('Settings')}
+        </NavLink>
+      </div>
     </aside>
   );
 }

@@ -11,8 +11,6 @@ import EmployeesPage from './pages/EmployeesPage';
 import PtoOverviewPage from './pages/PtoOverviewPage';
 import ClientsDashboardPage from './pages/ClientsDashboardPage';
 import ClientsPage from './pages/ClientsPage';
-import CustomFieldsSettingsPage from './pages/CustomFieldsSettingsPage';
-import StatusesSettingsPage from './pages/StatusesSettingsPage';
 import PtoPoliciesSettingsPage from './pages/PtoPoliciesSettingsPage';
 import ProfileSettingsPage from './pages/ProfileSettingsPage';
 import CompanyAppearancePage from './pages/CompanyAppearancePage';
@@ -195,9 +193,7 @@ export default function App() {
           element={<ProfileSettingsPage user={user} token={token ?? ''} onUserUpdated={setUser} />}
         />
         <Route path="/settings" element={<ModuleSettingsLayout />}>
-          <Route index element={<Navigate to="custom-fields" replace />} />
-          <Route path="custom-fields" element={<CustomFieldsSettingsPage token={token ?? ''} />} />
-          <Route path="statuses" element={<StatusesSettingsPage token={token ?? ''} />} />
+          <Route index element={<Navigate to="pto-policies" replace />} />
           <Route path="pto-policies" element={<PtoPoliciesSettingsPage token={token ?? ''} />} />
         </Route>
         <Route path="/company" element={<CompanySettingsLayout />}>

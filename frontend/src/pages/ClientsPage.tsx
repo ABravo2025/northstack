@@ -7,6 +7,9 @@ import SlideOver from '../components/SlideOver';
 import ViewsBar from '../components/ViewsBar';
 import FilterBar from '../components/FilterBar';
 import KanbanBoard from '../components/KanbanBoard';
+import CustomFieldColumnMenu from '../components/CustomFieldColumnMenu';
+import AddCustomFieldColumn from '../components/AddCustomFieldColumn';
+import StatusColumnMenu from '../components/StatusColumnMenu';
 import { PencilIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
 import {
   applyFilters,
@@ -51,6 +54,7 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
   const canManageCustomFields = user.role === 'owner' || user.role === 'admin';
   const canEditClients = user.role === 'owner' || user.role === 'admin';
   const activeClientCustomFields = clientCustomFields.filter((field) => field.isActive);
+  const activeClientStatuses = clientStatuses.filter((s) => s.isActive);
 
   const fields = useMemo(
     () => buildClientFields(clientStatuses, clientCustomFields),
@@ -135,10 +139,48 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
     }
   };
 
+  const handleCreateCustomFieldColumn = async (input: {
+    name: string;
+    fieldType: string;
+    options?: string;
+    required: boolean;
+  }) => {
+    try {
+      await api.createCustomFieldDefinition(token, { ...input, entityType: 'client' });
+      toast.success(`Field "${input.name}" added.`);
+      loadClientCustomFields();
+    } catch (error) {
+      toast.error('Failed to add field: ' + (error as Error).message);
+    }
+  };
+
+  const handleUpdateCustomFieldColumn = async (
+    id: string,
+    data: { name?: string; required?: boolean; options?: string },
+  ) => {
+    try {
+      await api.updateCustomFieldDefinition(token, id, data);
+      toast.success('Field updated.');
+      loadClientCustomFields();
+    } catch (error) {
+      toast.error('Failed to update field: ' + (error as Error).message);
+    }
+  };
+
+  const handleDeactivateCustomFieldColumn = async (id: string) => {
+    try {
+      await api.updateCustomFieldDefinition(token, id, { isActive: false });
+      toast.success('Field deleted.');
+      loadClientCustomFields();
+    } catch (error) {
+      toast.error('Failed to delete field: ' + (error as Error).message);
+    }
+  };
+
   const loadClientStatuses = async () => {
     try {
       const statuses = await api.listStatusDefinitions(token, 'client');
-      setClientStatuses(statuses.filter((s) => s.isActive));
+      setClientStatuses(statuses);
     } catch (error) {
       toast.error('Failed to load statuses: ' + (error as Error).message);
     }
@@ -536,7 +578,7 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
                 value={editClientForm.statusId}
                 onChange={(e) => setEditClientForm({ ...editClientForm, statusId: e.target.value })}
               >
-                {clientStatuses.map((status) => (
+                {activeClientStatuses.map((status) => (
                   <option key={status.id} value={status.id}>
                     {status.name}
                   </option>
@@ -648,6 +690,14 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
                     >
                       {col.label}
                       <span className="sort-arrow">{viewSort?.field === col.key && viewSort.direction === 'desc' ? '▴' : '▾'}</span>
+                      {col.key === 'status' && canManageCustomFields && (
+                        <StatusColumnMenu
+                          token={token}
+                          entityType="client"
+                          statuses={clientStatuses}
+                          onChanged={loadClientStatuses}
+                        />
+                      )}
                     </th>
                   ))}
                   {activeClientCustomFields.map((field) => (
@@ -660,8 +710,20 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
                       <span className="sort-arrow">
                         {viewSort?.field === `cf:${field.id}` && viewSort.direction === 'desc' ? '▴' : '▾'}
                       </span>
+                      {canManageCustomFields && (
+                        <CustomFieldColumnMenu
+                          field={field}
+                          onUpdate={handleUpdateCustomFieldColumn}
+                          onDeactivate={handleDeactivateCustomFieldColumn}
+                        />
+                      )}
                     </th>
                   ))}
+                  {canManageCustomFields && (
+                    <th className="col-add-header">
+                      <AddCustomFieldColumn onCreate={handleCreateCustomFieldColumn} />
+                    </th>
+                  )}
                   <th></th>
                 </tr>
               </thead>
@@ -680,6 +742,7 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
                       );
                       return <td key={field.id}>{fieldValue?.value || '—'}</td>;
                     })}
+                    {canManageCustomFields && <td></td>}
                     <td>
                       <div className="icon-actions">
                         <button className="icon-btn" onClick={() => handleStartEditClient(client)}>

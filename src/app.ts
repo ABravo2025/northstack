@@ -36,7 +36,7 @@ import {
   isValueValidForFieldType,
   listCustomFieldDefinitions,
   listCustomFieldValuesForEntity,
-  setCustomFieldDefinitionActive,
+  updateCustomFieldDefinition,
   updateCustomFieldValue,
 } from './modules/hr/customFieldService.js';
 import {
@@ -575,7 +575,12 @@ app.patch('/api/hr/custom-fields/:definitionId', async (req, res) => {
     return res.status(404).json({ error: 'Custom field definition not found' });
   }
 
-  const updated = await setCustomFieldDefinitionActive(req.params.definitionId, Boolean(req.body.isActive));
+  const updated = await updateCustomFieldDefinition(req.params.definitionId, {
+    name: req.body.name,
+    required: req.body.required,
+    options: req.body.options,
+    isActive: req.body.isActive,
+  });
   return res.json(updated);
 });
 

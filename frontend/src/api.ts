@@ -497,10 +497,10 @@ export const api = {
     return res.json();
   },
 
-  setCustomFieldDefinitionActive: async (
+  updateCustomFieldDefinition: async (
     token: string,
     definitionId: string,
-    isActive: boolean,
+    data: { name?: string; required?: boolean; options?: string; isActive?: boolean },
   ): Promise<CustomFieldDefinition> => {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/custom-fields/${definitionId}`, {
       method: 'PATCH',
@@ -508,7 +508,7 @@ export const api = {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ isActive }),
+      body: JSON.stringify(data),
     });
     if (!res.ok) await throwApiError(res);
     return res.json();

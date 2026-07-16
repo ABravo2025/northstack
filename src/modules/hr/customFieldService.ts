@@ -72,6 +72,26 @@ export async function setCustomFieldDefinitionActive(
   });
 }
 
+export interface UpdateCustomFieldDefinitionInput {
+  name?: string;
+  required?: boolean;
+  options?: string | null;
+  isActive?: boolean;
+}
+
+// fieldType is deliberately not editable here — changing it after values
+// already exist could leave stored values that no longer match the new
+// type (e.g. text -> select with options that don't include the old value).
+export async function updateCustomFieldDefinition(
+  id: string,
+  input: UpdateCustomFieldDefinitionInput,
+): Promise<CustomFieldDefinition> {
+  return prisma.customFieldDefinition.update({
+    where: { id },
+    data: input,
+  });
+}
+
 export async function findCustomFieldDefinitionById(
   id: string,
 ): Promise<CustomFieldDefinition | null> {

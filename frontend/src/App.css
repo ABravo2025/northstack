@@ -754,6 +754,26 @@
   @apply text-brand-blue opacity-100;
 }
 
+.col-menu-trigger {
+  @apply ml-1 inline-flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded text-gray-400 normal-case hover:bg-gray-200 hover:text-brand-navy dark:hover:bg-gray-700 dark:hover:text-gray-100;
+}
+
+.col-menu-trigger svg {
+  @apply h-2.5 w-2.5;
+}
+
+.col-add-header {
+  @apply w-8 text-center;
+}
+
+.col-add-trigger {
+  @apply flex h-6 w-6 cursor-pointer items-center justify-center rounded text-gray-400 normal-case hover:bg-gray-200 hover:text-brand-navy dark:hover:bg-gray-700 dark:hover:text-gray-100;
+}
+
+.col-add-trigger svg {
+  @apply h-3.5 w-3.5;
+}
+
 /* ---------- Kanban board ---------- */
 
 .kanban-wrap {
@@ -798,4 +818,38 @@
 
 .kcard .kc-meta {
   @apply text-[0.68rem] text-gray-400;
+}
+
+/* ---------- Status "Manage options" popover ---------- */
+
+.status-manage-list {
+  @apply flex max-h-52 flex-col gap-1 overflow-y-auto;
+}
+
+.status-manage-row {
+  @apply flex items-center gap-2 rounded-md px-1 py-1 text-xs hover:bg-gray-50 dark:hover:bg-gray-800;
+}
+
+.status-manage-reorder {
+  @apply flex flex-col gap-0;
+}
+
+.status-manage-reorder .col-add-trigger {
+  @apply h-3.5 w-4 text-[0.55rem];
+}
+
+.color-dot {
+  @apply h-2.5 w-2.5 shrink-0 rounded-full border border-black/10;
+}
+
+.status-manage-name {
+  @apply flex-1 truncate font-medium text-brand-navy dark:text-gray-100;
+}
+
+.status-manage-name.inactive {
+  @apply font-normal text-gray-400 line-through dark:text-gray-500;
+}
+
+.status-manage-link {
+  @apply shrink-0 cursor-pointer border-none bg-transparent p-0 text-[0.68rem] font-semibold text-brand-blue hover:underline;
 }

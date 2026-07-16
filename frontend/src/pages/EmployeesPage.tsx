@@ -7,6 +7,9 @@ import SlideOver from '../components/SlideOver';
 import ViewsBar from '../components/ViewsBar';
 import FilterBar from '../components/FilterBar';
 import KanbanBoard from '../components/KanbanBoard';
+import CustomFieldColumnMenu from '../components/CustomFieldColumnMenu';
+import AddCustomFieldColumn from '../components/AddCustomFieldColumn';
+import StatusColumnMenu from '../components/StatusColumnMenu';
 import { MailIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
 import {
   applyFilters,
@@ -54,6 +57,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const canManageCustomFields = user.role === 'owner' || user.role === 'admin';
   const canEditEmployees = user.role === 'owner' || user.role === 'admin';
   const activeEmployeeCustomFields = employeeCustomFields.filter((field) => field.isActive);
+  const activeEmployeeStatuses = employeeStatuses.filter((s) => s.isActive);
 
   const fields = useMemo(
     () => buildEmployeeFields(employeeStatuses, employeeCustomFields),
@@ -150,10 +154,48 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     }
   };
 
+  const handleCreateCustomFieldColumn = async (input: {
+    name: string;
+    fieldType: string;
+    options?: string;
+    required: boolean;
+  }) => {
+    try {
+      await api.createCustomFieldDefinition(token, { ...input, entityType: 'employee' });
+      toast.success(`Field "${input.name}" added.`);
+      loadEmployeeCustomFields();
+    } catch (error) {
+      toast.error('Failed to add field: ' + (error as Error).message);
+    }
+  };
+
+  const handleUpdateCustomFieldColumn = async (
+    id: string,
+    data: { name?: string; required?: boolean; options?: string },
+  ) => {
+    try {
+      await api.updateCustomFieldDefinition(token, id, data);
+      toast.success('Field updated.');
+      loadEmployeeCustomFields();
+    } catch (error) {
+      toast.error('Failed to update field: ' + (error as Error).message);
+    }
+  };
+
+  const handleDeactivateCustomFieldColumn = async (id: string) => {
+    try {
+      await api.updateCustomFieldDefinition(token, id, { isActive: false });
+      toast.success('Field deleted.');
+      loadEmployeeCustomFields();
+    } catch (error) {
+      toast.error('Failed to delete field: ' + (error as Error).message);
+    }
+  };
+
   const loadEmployeeStatuses = async () => {
     try {
       const statuses = await api.listStatusDefinitions(token, 'employee');
-      setEmployeeStatuses(statuses.filter((s) => s.isActive));
+      setEmployeeStatuses(statuses);
     } catch (error) {
       toast.error('Failed to load statuses: ' + (error as Error).message);
     }
@@ -606,7 +648,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                 value={editEmployeeForm.statusId}
                 onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, statusId: e.target.value })}
               >
-                {employeeStatuses.map((status) => (
+                {activeEmployeeStatuses.map((status) => (
                   <option key={status.id} value={status.id}>
                     {status.name}
                   </option>
@@ -756,6 +798,14 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                     >
                       {col.label}
                       <span className="sort-arrow">{viewSort?.field === col.key && viewSort.direction === 'desc' ? '▴' : '▾'}</span>
+                      {col.key === 'status' && canManageCustomFields && (
+                        <StatusColumnMenu
+                          token={token}
+                          entityType="employee"
+                          statuses={employeeStatuses}
+                          onChanged={loadEmployeeStatuses}
+                        />
+                      )}
                     </th>
                   ))}
                   <th>Reports To</th>
@@ -770,8 +820,20 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                       <span className="sort-arrow">
                         {viewSort?.field === `cf:${field.id}` && viewSort.direction === 'desc' ? '▴' : '▾'}
                       </span>
+                      {canManageCustomFields && (
+                        <CustomFieldColumnMenu
+                          field={field}
+                          onUpdate={handleUpdateCustomFieldColumn}
+                          onDeactivate={handleDeactivateCustomFieldColumn}
+                        />
+                      )}
                     </th>
                   ))}
+                  {canManageCustomFields && (
+                    <th className="col-add-header">
+                      <AddCustomFieldColumn onCreate={handleCreateCustomFieldColumn} />
+                    </th>
+                  )}
                   <th></th>
                 </tr>
               </thead>
@@ -805,6 +867,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                       );
                       return <td key={field.id}>{fieldValue?.value || '—'}</td>;
                     })}
+                    {canManageCustomFields && <td></td>}
                     <td>
                       <div className="icon-actions">
                         <button className="icon-btn" onClick={() => handleStartEditEmployee(emp)}>

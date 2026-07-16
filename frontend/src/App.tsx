@@ -36,7 +36,9 @@ export default function App() {
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [checkingSession, setCheckingSession] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(
+    () => !isAcceptInviteRoute && Boolean(localStorage.getItem('token')),
+  );
   const [authError, setAuthError] = useState<FormError | null>(null);
 
   useEffect(() => {

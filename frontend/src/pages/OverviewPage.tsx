@@ -101,24 +101,24 @@ export default function OverviewPage({ token }: OverviewPageProps) {
 
   return (
     <div>
-      <div className="card">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="mb-0">
-            {MONTH_LABELS[cursor.month]} {cursor.year}
-          </h3>
-          <div className="flex items-center gap-1.5">
-            <button className="btn-secondary px-2 py-1 text-xs" onClick={goToPrevMonth}>
-              ‹
-            </button>
-            <button className="btn-secondary px-2 py-1 text-xs" onClick={goToToday}>
-              Today
-            </button>
-            <button className="btn-secondary px-2 py-1 text-xs" onClick={goToNextMonth}>
-              ›
-            </button>
-          </div>
+      <div className="page-toolbar">
+        <h2>
+          {MONTH_LABELS[cursor.month]} {cursor.year}
+        </h2>
+        <div className="flex items-center gap-1.5 ml-auto">
+          <button className="btn-secondary px-2 py-1 text-xs" onClick={goToPrevMonth}>
+            ‹
+          </button>
+          <button className="btn-secondary px-2 py-1 text-xs" onClick={goToToday}>
+            Today
+          </button>
+          <button className="btn-secondary px-2 py-1 text-xs" onClick={goToNextMonth}>
+            ›
+          </button>
         </div>
+      </div>
 
+      <div className="mt-4">
         {loading ? (
           <p>Loading...</p>
         ) : (

@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { ChevronDownIcon, UserCircleIcon } from './Icons';
+import { ChevronDownIcon, MenuIcon, UserCircleIcon } from './Icons';
 
 interface TopBarProps {
   user: any;
   onLogout: () => void;
+  onMenuClick: () => void;
 }
 
-export default function TopBar({ user, onLogout }: TopBarProps) {
+export default function TopBar({ user, onLogout, onMenuClick }: TopBarProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -56,7 +57,12 @@ export default function TopBar({ user, onLogout }: TopBarProps) {
 
   return (
     <div className="header">
-      <img src="/logo-horizontal-light.svg" alt="Northstack" />
+      <div className="flex items-center gap-3">
+        <button type="button" className="menu-toggle" onClick={onMenuClick} aria-label="Open menu">
+          <MenuIcon className="h-5 w-5" />
+        </button>
+        <img src="/logo-horizontal-light.svg" alt="Northstack" />
+      </div>
 
       <div className="user-menu" ref={menuRef}>
         <button
@@ -67,7 +73,9 @@ export default function TopBar({ user, onLogout }: TopBarProps) {
           aria-expanded={open}
         >
           <UserCircleIcon className="h-5 w-5" />
-          {user.firstName} {user.lastName}
+          <span className="hidden whitespace-nowrap sm:inline">
+            {user.firstName} {user.lastName}
+          </span>
           <ChevronDownIcon className="h-4 w-4" />
         </button>
 

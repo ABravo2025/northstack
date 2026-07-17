@@ -157,6 +157,78 @@
   @apply bg-gray-50 dark:bg-gray-800/60;
 }
 
+.table-link {
+  @apply cursor-pointer border-none bg-transparent p-0 text-sm font-medium text-brand-blue hover:underline;
+}
+
+.balance-detail-block {
+  @apply mb-4 border-b border-gray-200 pb-4 last:mb-0 last:border-0 last:pb-0 dark:border-gray-800;
+}
+
+.balance-detail-head {
+  @apply flex items-center gap-2;
+}
+
+.balance-detail-toggle {
+  @apply w-full cursor-pointer rounded-md border-none bg-transparent p-1 text-left hover:bg-gray-50 dark:hover:bg-gray-800;
+}
+
+.balance-detail-body {
+  @apply mt-2.5 pl-1;
+}
+
+.balance-detail-stats {
+  @apply grid grid-cols-4 gap-2 text-center;
+}
+
+.balance-detail-stat-value {
+  @apply text-lg font-semibold text-brand-navy dark:text-gray-100;
+}
+
+.balance-detail-stat-value.highlight {
+  @apply text-brand-blue dark:text-brand-blue-light;
+}
+
+.balance-detail-stat-label {
+  @apply text-xs text-gray-500 dark:text-gray-400;
+}
+
+.balance-detail-requests {
+  @apply mt-3 flex flex-col gap-1.5 border-t border-gray-100 pt-3 dark:border-gray-800/60;
+}
+
+.balance-detail-request-row {
+  @apply flex items-center gap-2 text-xs text-brand-navy dark:text-gray-200;
+}
+
+.balance-detail-request-dates {
+  @apply flex-1 truncate;
+}
+
+.balance-detail-request-days {
+  @apply shrink-0 text-gray-400 dark:text-gray-500;
+}
+
+.status-badge {
+  @apply shrink-0 rounded-full px-2 py-0.5 text-[0.65rem] font-semibold;
+}
+
+.status-badge.status-pending {
+  @apply bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-400;
+}
+
+.status-badge.status-approved {
+  @apply bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400;
+}
+
+.status-badge.status-rejected {
+  @apply bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-400;
+}
+
+.status-badge.status-cancelled {
+  @apply bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400;
+}
+
 .calendar-table {
   @apply w-full table-fixed border-collapse;
 }
@@ -212,11 +284,11 @@
 }
 
 .settings-shell {
-  @apply flex items-start gap-6;
+  @apply flex flex-col items-start gap-6 md:flex-row;
 }
 
 .settings-nav {
-  @apply flex w-44 shrink-0 flex-col gap-1;
+  @apply flex w-full shrink-0 flex-col gap-1 md:w-44;
 }
 
 .settings-nav a {
@@ -240,18 +312,34 @@
 }
 
 .sidebar {
-  @apply flex w-48 shrink-0 flex-col border-r border-gray-200 bg-brand-cream p-3 transition-all duration-200 dark:border-gray-800 dark:bg-gray-950;
+  @apply fixed inset-y-0 left-0 z-30 flex w-64 -translate-x-full flex-col overflow-y-auto border-r border-gray-200 bg-brand-cream p-3 transition-transform duration-200 dark:border-gray-800 dark:bg-gray-950 md:static md:z-auto md:w-48 md:shrink-0 md:translate-x-0 md:overflow-visible md:transition-[width];
+}
+
+.sidebar.mobile-open {
+  @apply translate-x-0;
+}
+
+.sidebar-backdrop {
+  @apply fixed inset-0 z-20 bg-black/40 md:hidden;
 }
 
 .sidebar-collapsed {
-  @apply w-14;
+  @apply md:w-14;
 }
 
-.sidebar-toggle {
-  @apply mb-2 flex w-full cursor-pointer items-center justify-end rounded-md border-none bg-transparent p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-brand-navy dark:hover:bg-gray-800 dark:hover:text-gray-100;
+.menu-toggle {
+  @apply flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-brand-navy transition-colors hover:bg-gray-100 md:hidden dark:text-gray-100 dark:hover:bg-gray-800;
 }
 
-.sidebar-collapsed .sidebar-toggle {
+.sidebar-toggle-desktop {
+  @apply mb-2 hidden w-full cursor-pointer items-center justify-end rounded-md border-none bg-transparent p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-brand-navy md:flex dark:hover:bg-gray-800 dark:hover:text-gray-100;
+}
+
+.sidebar-toggle-mobile {
+  @apply mb-2 flex w-full cursor-pointer items-center justify-end rounded-md border-none bg-transparent p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-brand-navy md:hidden dark:hover:bg-gray-800 dark:hover:text-gray-100;
+}
+
+.sidebar-collapsed .sidebar-toggle-desktop {
   @apply justify-center;
 }
 
@@ -391,7 +479,7 @@
 */
 
 .page-toolbar {
-  @apply flex items-center gap-3 border-b border-gray-200 py-4 dark:border-gray-800;
+  @apply flex flex-wrap items-center gap-3 border-b border-gray-200 py-4 dark:border-gray-800;
 }
 
 .page-toolbar h2 {
@@ -399,7 +487,7 @@
 }
 
 .toolbar-search {
-  @apply flex flex-1 items-center gap-2 rounded-md border border-gray-300 bg-brand-cream px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-950;
+  @apply flex min-w-[160px] flex-1 items-center gap-2 rounded-md border border-gray-300 bg-brand-cream px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-950;
 }
 
 .toolbar-search svg {

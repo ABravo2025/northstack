@@ -5,7 +5,7 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import SlideOver from '../components/SlideOver';
 import Popover from '../components/Popover';
 import ColorPicker from '../components/ColorPicker';
-import { DotsVerticalIcon, PlusIcon } from '../components/Icons';
+import { ChevronDownIcon, DotsVerticalIcon, PlusIcon } from '../components/Icons';
 
 const ACCRUAL_LABELS: Record<string, string> = {
   fixed_annual: 'Fixed',
@@ -60,6 +60,8 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
   const [deletingPolicy, setDeletingPolicy] = useState<any | null>(null);
   const [deletingPolicySaving, setDeletingPolicySaving] = useState(false);
   const [policiesFilter, setPoliciesFilter] = useState<'active' | 'inactive'>('active');
+  const [balancesDetailEmployeeId, setBalancesDetailEmployeeId] = useState<string | null>(null);
+  const [expandedBalancePolicyIds, setExpandedBalancePolicyIds] = useState<Set<string>>(new Set());
 
   const canManagePolicies = user.role === 'owner' || user.role === 'admin';
   const myEmployee = employees.find((emp) => emp.userId === user.id);
@@ -69,6 +71,27 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
   const assignStepAvailableEmployees = assignStepPolicy
     ? employees.filter((emp) => !(emp.ptoPolicies || []).some((a: any) => a.ptoPolicyId === assignStepPolicy.id))
     : [];
+  const balancesByEmployee = (() => {
+    const map = new Map<string, any>();
+    for (const bal of tenantBalances) {
+      if (!map.has(bal.employeeId)) {
+        const emp = employees.find((e) => e.id === bal.employeeId);
+        map.set(bal.employeeId, {
+          employeeId: bal.employeeId,
+          employeeFirstName: bal.employeeFirstName,
+          employeeLastName: bal.employeeLastName,
+          department: emp?.department || '—',
+          policies: [] as any[],
+          totalRemaining: 0,
+        });
+      }
+      const entry = map.get(bal.employeeId);
+      entry.policies.push(bal);
+      entry.totalRemaining += bal.remaining;
+    }
+    return Array.from(map.values());
+  })();
+  const selectedBalanceEmployee = balancesByEmployee.find((row) => row.employeeId === balancesDetailEmployeeId) ?? null;
 
   useEffect(() => {
     loadData();
@@ -869,45 +892,127 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
 
         {!loading && tab === 'balances' && canManagePolicies && (
           <>
-            {tenantBalances.length === 0 ? (
+            {balancesByEmployee.length === 0 ? (
               <p>No PTO policy assignments yet.</p>
             ) : (
               <div className="full-table-wrap">
-              <table className="table full-table">
-                <thead>
-                  <tr>
-                    <th>Employee</th>
-                    <th>Policy</th>
-                    <th>Accrual</th>
-                    <th>Allocated ({new Date().getFullYear()})</th>
-                    <th>Used</th>
-                    <th>Pending</th>
-                    <th>Remaining</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tenantBalances.map((bal) => (
-                    <tr key={`${bal.employeeId}-${bal.ptoPolicyId}`}>
-                      <td>
-                        {bal.employeeFirstName} {bal.employeeLastName}
-                      </td>
-                      <td>
-                        <span className="color-dot mr-2 inline-block" style={{ background: bal.color || '#9ca3af' }} />
-                        {bal.policyName}
-                      </td>
-                      <td>{bal.accrualMethod === 'monthly' ? 'Monthly' : 'Fixed annual'}</td>
-                      <td>{bal.allocated}</td>
-                      <td>{bal.used}</td>
-                      <td>{bal.pending}</td>
-                      <td>{bal.remaining}</td>
+                <table className="table full-table">
+                  <thead>
+                    <tr>
+                      <th>Employee</th>
+                      <th>Department</th>
+                      <th>Policies</th>
+                      <th>Total remaining ({new Date().getFullYear()})</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {balancesByEmployee.map((row) => (
+                      <tr key={row.employeeId}>
+                        <td>
+                          <button
+                            type="button"
+                            className="table-link"
+                            onClick={() => setBalancesDetailEmployeeId(row.employeeId)}
+                          >
+                            {row.employeeFirstName} {row.employeeLastName}
+                          </button>
+                        </td>
+                        <td>{row.department}</td>
+                        <td>{row.policies.length}</td>
+                        <td>{row.totalRemaining}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </>
         )}
+
+        <SlideOver
+          open={balancesDetailEmployeeId !== null}
+          title={
+            selectedBalanceEmployee
+              ? `${selectedBalanceEmployee.employeeFirstName} ${selectedBalanceEmployee.employeeLastName}`
+              : 'Balances'
+          }
+          onClose={() => {
+            setBalancesDetailEmployeeId(null);
+            setExpandedBalancePolicyIds(new Set());
+          }}
+        >
+          {selectedBalanceEmployee &&
+            selectedBalanceEmployee.policies.map((bal: any) => {
+              const isExpanded = expandedBalancePolicyIds.has(bal.ptoPolicyId);
+              const policyRequests = allRequests
+                .filter((req) => req.employeeId === selectedBalanceEmployee.employeeId && req.ptoPolicyId === bal.ptoPolicyId)
+                .sort((a: any, b: any) => b.startDate.localeCompare(a.startDate));
+              return (
+                <div key={bal.ptoPolicyId} className="balance-detail-block">
+                  <button
+                    type="button"
+                    className="balance-detail-head balance-detail-toggle"
+                    onClick={() =>
+                      setExpandedBalancePolicyIds((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(bal.ptoPolicyId)) next.delete(bal.ptoPolicyId);
+                        else next.add(bal.ptoPolicyId);
+                        return next;
+                      })
+                    }
+                    aria-expanded={isExpanded}
+                  >
+                    <span className="color-dot" style={{ background: bal.color || '#9ca3af' }} />
+                    <span className="font-semibold text-brand-navy dark:text-gray-100">{bal.policyName}</span>
+                    <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">{bal.remaining} left</span>
+                    <ChevronDownIcon className={`h-3.5 w-3.5 shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                  </button>
+                  {isExpanded && (
+                    <div className="balance-detail-body">
+                      <div className="balance-detail-stats">
+                        <div>
+                          <div className="balance-detail-stat-value">{bal.allocated}</div>
+                          <div className="balance-detail-stat-label">Allocated</div>
+                        </div>
+                        <div>
+                          <div className="balance-detail-stat-value">{bal.used}</div>
+                          <div className="balance-detail-stat-label">Used</div>
+                        </div>
+                        <div>
+                          <div className="balance-detail-stat-value">{bal.pending}</div>
+                          <div className="balance-detail-stat-label">Pending</div>
+                        </div>
+                        <div>
+                          <div className="balance-detail-stat-value highlight">{bal.remaining}</div>
+                          <div className="balance-detail-stat-label">Remaining</div>
+                        </div>
+                      </div>
+                      <p className="mb-1.5 text-xs font-semibold tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                        Accrual: {bal.accrualMethod === 'monthly' ? 'Monthly' : 'Fixed annual'}
+                      </p>
+                      {policyRequests.length > 0 ? (
+                        <div className="balance-detail-requests">
+                          {policyRequests.map((req: any) => (
+                            <div key={req.id} className="balance-detail-request-row">
+                              <span className="balance-detail-request-dates">
+                                {req.startDate.slice(0, 10)} → {req.endDate.slice(0, 10)}
+                              </span>
+                              <span className="balance-detail-request-days">{req.daysRequested}d</span>
+                              <span className={`status-badge status-${req.status}`}>
+                                {STATUS_LABELS[req.status] || req.status}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-gray-400 dark:text-gray-500">No requests made under this policy yet.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+        </SlideOver>
 
         {!loading && tab === 'policies' && canManagePolicies && (
           <>

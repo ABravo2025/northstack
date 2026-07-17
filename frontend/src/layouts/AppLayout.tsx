@@ -1,4 +1,5 @@
-import { Navigate, Outlet } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import TopBar from '../components/TopBar';
 
@@ -9,15 +10,22 @@ interface AppLayoutProps {
 }
 
 export default function AppLayout({ user, token, onLogout }: AppLayoutProps) {
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    setMobileSidebarOpen(false);
+  }, [location.pathname]);
+
   if (!token || !user) {
     return <Navigate to="/login" replace />;
   }
 
   return (
     <div className="app">
-      <TopBar user={user} onLogout={onLogout} />
+      <TopBar user={user} onLogout={onLogout} onMenuClick={() => setMobileSidebarOpen(true)} />
       <div className="app-shell">
-        <Sidebar />
+        <Sidebar mobileOpen={mobileSidebarOpen} onMobileClose={() => setMobileSidebarOpen(false)} />
         <main className="app-main">
           <div className="container">
             <Outlet />

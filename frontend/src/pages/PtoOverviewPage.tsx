@@ -5,7 +5,12 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import SlideOver from '../components/SlideOver';
 import Popover from '../components/Popover';
 import ColorPicker from '../components/ColorPicker';
-import { ChevronDownIcon, PencilIcon, PlusIcon } from '../components/Icons';
+import { ChevronDownIcon, GearIcon, PencilIcon, PlusIcon } from '../components/Icons';
+
+const ACCRUAL_LABELS: Record<string, string> = {
+  fixed_annual: 'Fixed',
+  monthly: 'Monthly',
+};
 
 interface PtoOverviewPageProps {
   user: any;
@@ -317,17 +322,27 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
                 onClick={() => setPoliciesMenuOpen((v) => !v)}
               >
                 <span className="inline-flex items-center gap-1.5">
+                  <GearIcon className="h-3.5 w-3.5" />
                   Policies
                   <ChevronDownIcon className="h-3.5 w-3.5" />
                 </span>
               </button>
-              <Popover open={policiesMenuOpen} onClose={() => setPoliciesMenuOpen(false)} anchorRef={policiesMenuButtonRef} width={260}>
+              <button type="button" className="btn-outline" onClick={handleOpenAddPolicy}>
+                <span className="inline-flex items-center gap-1.5">
+                  <PlusIcon className="h-3.5 w-3.5" />
+                  Add Policy
+                </span>
+              </button>
+              <Popover open={policiesMenuOpen} onClose={() => setPoliciesMenuOpen(false)} anchorRef={policiesMenuButtonRef} width={320}>
                 <div className="policy-manage-list">
                   {ptoPolicies.length === 0 && <p className="text-xs text-gray-500">No policies yet.</p>}
                   {ptoPolicies.map((policy) => (
                     <div className="policy-manage-row" key={policy.id}>
                       <span className="color-dot" style={{ background: policy.color || '#9ca3af' }} />
                       <span className={`status-manage-name ${!policy.isActive ? 'inactive' : ''}`}>{policy.name}</span>
+                      <span className="policy-manage-meta">
+                        {ACCRUAL_LABELS[policy.accrualMethod] || policy.accrualMethod} · {policy.daysPerYear}d
+                      </span>
                       <button
                         type="button"
                         className="col-add-trigger"
@@ -346,12 +361,6 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
                     </div>
                   ))}
                 </div>
-                <button type="button" className="btn-primary mt-3 w-full text-center" onClick={handleOpenAddPolicy}>
-                  <span className="inline-flex items-center gap-1.5">
-                    <PlusIcon className="h-3.5 w-3.5" />
-                    Add Policy
-                  </span>
-                </button>
               </Popover>
             </>
           )}

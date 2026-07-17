@@ -112,6 +112,10 @@
   @apply btn bg-gray-500 text-white hover:bg-gray-600;
 }
 
+.btn-outline {
+  @apply btn border border-brand-blue bg-brand-cream text-brand-blue hover:bg-brand-blue/10 dark:bg-gray-950 dark:hover:bg-brand-blue/10;
+}
+
 .btn-danger {
   @apply btn bg-red-600 text-white hover:bg-red-700;
 }
@@ -215,7 +219,7 @@
 }
 
 .settings-nav a.active {
-  @apply bg-brand-blue/10 font-medium text-brand-blue dark:bg-brand-blue/20 dark:text-brand-blue-light;
+  @apply bg-brand-blue font-semibold text-white hover:bg-brand-blue dark:bg-brand-blue dark:text-white dark:hover:bg-brand-blue;
 }
 
 .settings-content {
@@ -862,4 +866,8 @@
 
 .policy-manage-row {
   @apply flex items-center gap-2 rounded-md px-1 py-1 text-xs hover:bg-gray-50 dark:hover:bg-gray-800;
+}
+
+.policy-manage-meta {
+  @apply shrink-0 whitespace-nowrap text-[0.65rem] text-gray-400 dark:text-gray-500;
 }

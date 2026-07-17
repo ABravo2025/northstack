@@ -317,14 +317,12 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
             <button
               ref={policiesMenuButtonRef}
               type="button"
-              className="btn-secondary"
+              className="tb-btn"
               onClick={() => setPoliciesMenuOpen((v) => !v)}
             >
-              <span className="inline-flex items-center gap-1.5">
-                <GearIcon className="h-3.5 w-3.5" />
-                Policies
-                <ChevronDownIcon className="h-3.5 w-3.5" />
-              </span>
+              <GearIcon />
+              Policies
+              <ChevronDownIcon className="h-3.5 w-3.5" />
             </button>
             <button type="button" className="btn-outline" onClick={handleOpenAddPolicy}>
               <span className="inline-flex items-center gap-1.5">

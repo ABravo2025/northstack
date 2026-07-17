@@ -399,95 +399,90 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
           ) : employees.length === 0 ? (
             <p>No employees yet.</p>
           ) : (
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Employee</th>
-                  <th>Department</th>
-                  <th>Assigned Policies</th>
-                  {canManagePolicies && <th>Add</th>}
-                </tr>
-              </thead>
-              <tbody>
-                {employees.map((emp) => {
-                  const assignedIds = (emp.ptoPolicies || []).map((a: any) => a.ptoPolicyId);
-                  const availableToAdd = activePtoPolicies.filter((p) => !assignedIds.includes(p.id));
-                  return (
-                    <tr key={emp.id}>
-                      <td>
-                        {emp.firstName} {emp.lastName}
-                      </td>
-                      <td>{emp.department}</td>
-                      <td>
-                        {(emp.ptoPolicies || []).length === 0 ? (
-                          '—'
-                        ) : (
-                          emp.ptoPolicies.map((a: any) => (
-                            <span key={a.id} className="pto-policy-chip">
-                              <span
-                                style={{
-                                  display: 'inline-block',
-                                  width: 8,
-                                  height: 8,
-                                  borderRadius: '50%',
-                                  background: a.ptoPolicy.color || '#9ca3af',
-                                }}
-                              ></span>
-                              {a.ptoPolicy.name}
-                              {canManagePolicies && (
-                                <button
-                                  type="button"
-                                  className="pto-policy-chip-remove"
-                                  onClick={() => handleUnassign(emp.id, a.ptoPolicyId)}
-                                  aria-label={`Remove ${a.ptoPolicy.name}`}
-                                  title="Remove"
-                                >
-                                  ×
-                                </button>
-                              )}
-                            </span>
-                          ))
-                        )}
-                      </td>
-                      {canManagePolicies && (
+            <div className="full-table-wrap">
+              <table className="table full-table">
+                <thead>
+                  <tr>
+                    <th>Employee</th>
+                    <th>Department</th>
+                    <th>Assigned Policies</th>
+                    {canManagePolicies && <th>Add</th>}
+                  </tr>
+                </thead>
+                <tbody>
+                  {employees.map((emp) => {
+                    const assignedIds = (emp.ptoPolicies || []).map((a: any) => a.ptoPolicyId);
+                    const availableToAdd = activePtoPolicies.filter((p) => !assignedIds.includes(p.id));
+                    return (
+                      <tr key={emp.id}>
                         <td>
-                          {availableToAdd.length > 0 && (
-                            <div className="flex items-center gap-1.5">
-                              <label htmlFor={`add-policy-${emp.id}`} className="sr-only">
-                                Add policy for {emp.firstName} {emp.lastName}
-                              </label>
-                              <select
-                                id={`add-policy-${emp.id}`}
-                                className="select-compact"
-                                value={addPolicySelection[emp.id] || ''}
-                                onChange={(e) =>
-                                  setAddPolicySelection({ ...addPolicySelection, [emp.id]: e.target.value })
-                                }
-                              >
-                                <option value="">-- policy --</option>
-                                {availableToAdd.map((p) => (
-                                  <option key={p.id} value={p.id}>
-                                    {p.name}
-                                  </option>
-                                ))}
-                              </select>
-                              <button
-                                type="button"
-                                className="btn-secondary px-2 py-1 text-xs"
-                                disabled={!addPolicySelection[emp.id]}
-                                onClick={() => handleAssign(emp.id)}
-                              >
-                                Add
-                              </button>
-                            </div>
+                          {emp.firstName} {emp.lastName}
+                        </td>
+                        <td>{emp.department}</td>
+                        <td>
+                          {(emp.ptoPolicies || []).length === 0 ? (
+                            <span className="text-gray-400 dark:text-gray-500">—</span>
+                          ) : (
+                            emp.ptoPolicies.map((a: any) => (
+                              <span key={a.id} className="pto-policy-chip">
+                                <span className="color-dot" style={{ background: a.ptoPolicy.color || '#9ca3af' }} />
+                                {a.ptoPolicy.name}
+                                {canManagePolicies && (
+                                  <button
+                                    type="button"
+                                    className="pto-policy-chip-remove"
+                                    onClick={() => handleUnassign(emp.id, a.ptoPolicyId)}
+                                    aria-label={`Remove ${a.ptoPolicy.name}`}
+                                    title="Remove"
+                                  >
+                                    ×
+                                  </button>
+                                )}
+                              </span>
+                            ))
                           )}
                         </td>
-                      )}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        {canManagePolicies && (
+                          <td>
+                            {availableToAdd.length > 0 && (
+                              <div className="assign-policy-control">
+                                <label htmlFor={`add-policy-${emp.id}`} className="sr-only">
+                                  Add policy for {emp.firstName} {emp.lastName}
+                                </label>
+                                <select
+                                  id={`add-policy-${emp.id}`}
+                                  value={addPolicySelection[emp.id] || ''}
+                                  onChange={(e) =>
+                                    setAddPolicySelection({ ...addPolicySelection, [emp.id]: e.target.value })
+                                  }
+                                >
+                                  <option value="">-- policy --</option>
+                                  {availableToAdd.map((p) => (
+                                    <option key={p.id} value={p.id}>
+                                      {p.name}
+                                    </option>
+                                  ))}
+                                </select>
+                                <button
+                                  type="button"
+                                  className="icon-btn"
+                                  disabled={!addPolicySelection[emp.id]}
+                                  onClick={() => handleAssign(emp.id)}
+                                  aria-label={`Add policy to ${emp.firstName} ${emp.lastName}`}
+                                  title="Add"
+                                >
+                                  <PlusIcon className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </>
       )}
@@ -506,15 +501,7 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
                     <div className="mb-4 flex flex-wrap gap-2">
                       {myBalances.map((bal) => (
                         <span key={bal.ptoPolicyId} className="pto-policy-chip">
-                          <span
-                            style={{
-                              display: 'inline-block',
-                              width: 8,
-                              height: 8,
-                              borderRadius: '50%',
-                              background: bal.color || '#9ca3af',
-                            }}
-                          ></span>
+                          <span className="color-dot" style={{ background: bal.color || '#9ca3af' }} />
                           {bal.policyName}: {bal.remaining} of {bal.allocated} days left
                           {bal.pending > 0 ? ` (${bal.pending} pending)` : ''}
                         </span>
@@ -577,7 +564,8 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
               {myRequests.length === 0 ? (
                 <p>You haven't requested any PTO yet.</p>
               ) : (
-                <table className="table">
+                <div className="full-table-wrap">
+                <table className="table full-table">
                   <thead>
                     <tr>
                       <th>Policy</th>
@@ -612,6 +600,7 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
                     ))}
                   </tbody>
                 </table>
+                </div>
               )}
             </>
           )}
@@ -623,7 +612,8 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
           {pendingApprovals.length === 0 ? (
             <p>No pending requests waiting on your approval.</p>
           ) : (
-            <table className="table">
+            <div className="full-table-wrap">
+            <table className="table full-table">
               <thead>
                 <tr>
                   <th>Employee</th>
@@ -664,6 +654,7 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </>
       )}
@@ -673,7 +664,8 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
           {allRequests.length === 0 ? (
             <p>No PTO requests yet.</p>
           ) : (
-            <table className="table">
+            <div className="full-table-wrap">
+            <table className="table full-table">
               <thead>
                 <tr>
                   <th>Employee</th>
@@ -722,6 +714,7 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </>
       )}
@@ -731,7 +724,8 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
           {tenantBalances.length === 0 ? (
             <p>No PTO policy assignments yet.</p>
           ) : (
-            <table className="table">
+            <div className="full-table-wrap">
+            <table className="table full-table">
               <thead>
                 <tr>
                   <th>Employee</th>
@@ -750,16 +744,7 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
                       {bal.employeeFirstName} {bal.employeeLastName}
                     </td>
                     <td>
-                      <span
-                        style={{
-                          display: 'inline-block',
-                          width: 8,
-                          height: 8,
-                          borderRadius: '50%',
-                          background: bal.color || '#9ca3af',
-                          marginRight: 8,
-                        }}
-                      ></span>
+                      <span className="color-dot mr-2 inline-block" style={{ background: bal.color || '#9ca3af' }} />
                       {bal.policyName}
                     </td>
                     <td>{bal.accrualMethod === 'monthly' ? 'Monthly' : 'Fixed annual'}</td>
@@ -771,6 +756,7 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </>
       )}

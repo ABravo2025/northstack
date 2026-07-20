@@ -1,7 +1,7 @@
 import prisma from '../../lib/prisma.js';
 import { getDefaultStatusId, recordStatusChange } from './statusService.js';
 import { listCustomFieldValuesForEntities } from './customFieldService.js';
-import { findActivePtoRequestsForEmployees } from './ptoRequestService.js';
+import { findActiveTimeOffRequestsForEmployees } from './timeOffRequestService.js';
 import type { Employee } from '@prisma/client';
 
 export interface CreateEmployeeInput {
@@ -81,21 +81,21 @@ export async function listEmployees(tenantId?: string | null) {
     include: {
       statusDefn: true,
       manager: { select: { id: true, firstName: true, lastName: true } },
-      ptoPolicies: { include: { ptoPolicy: true } },
+      timeOffPolicies: { include: { timeOffPolicy: true } },
     },
   });
 
   const employeeIds = employees.map((employee) => employee.id);
   const values = await listCustomFieldValuesForEntities(tenantId, 'employee', employeeIds);
-  const activePtoRequests = await findActivePtoRequestsForEmployees(tenantId, employeeIds);
+  const activeTimeOffRequests = await findActiveTimeOffRequestsForEmployees(tenantId, employeeIds);
 
   return employees.map((employee) => {
-    const activePto = activePtoRequests.find((request) => request.employeeId === employee.id);
+    const activeTimeOff = activeTimeOffRequests.find((request) => request.employeeId === employee.id);
     return {
       ...employee,
       customFieldVals: values.filter((value) => value.entityId === employee.id),
-      activePtoTag: activePto
-        ? { policyName: activePto.ptoPolicy.name, color: activePto.ptoPolicy.color }
+      activeTimeOffTag: activeTimeOff
+        ? { policyName: activeTimeOff.timeOffPolicy.name, color: activeTimeOff.timeOffPolicy.color }
         : null,
     };
   });

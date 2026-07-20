@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 // Brand colors first, then a general-purpose set covering common
-// category/tag colors (status dots, PTO policies, etc.) — kept generic on
+// category/tag colors (status dots, time off policies, etc.) — kept generic on
 // purpose so this component works for any future feature that needs a
 // color picker, not just the one it was built for.
 const PRESET_COLORS = [
@@ -22,7 +22,7 @@ const CUSTOM_COLORS_STORAGE_KEY = 'northstack:customColors';
 const MAX_CUSTOM_COLORS = 12;
 
 // Custom colors saved from any picker are shared across the whole app (e.g.
-// a color added while editing PTO policies shows up later in Statuses too),
+// a color added while editing time off policies shows up later in Statuses too),
 // same spirit as Google Sheets' "custom" row.
 function loadCustomColors(): string[] {
   try {

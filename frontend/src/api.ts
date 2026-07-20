@@ -67,8 +67,8 @@ interface Employee {
   statusDefn?: { id: string; name: string; color: string | null };
   managerId?: string | null;
   manager?: { id: string; firstName: string; lastName: string } | null;
-  ptoPolicies?: EmployeePtoPolicyAssignment[];
-  activePtoTag?: { policyName: string; color: string | null } | null;
+  timeOffPolicies?: EmployeeTimeOffPolicyAssignment[];
+  activeTimeOffTag?: { policyName: string; color: string | null } | null;
   userId?: string | null;
   customFieldVals?: {
     id: string;
@@ -112,7 +112,7 @@ interface StatusDefinition {
   isActive: boolean;
 }
 
-interface PtoPolicy {
+interface TimeOffPolicy {
   id: string;
   name: string;
   color: string | null;
@@ -123,19 +123,19 @@ interface PtoPolicy {
   isActive: boolean;
 }
 
-interface EmployeePtoPolicyAssignment {
+interface EmployeeTimeOffPolicyAssignment {
   id: string;
   employeeId: string;
-  ptoPolicyId: string;
+  timeOffPolicyId: string;
   assignedAt: string;
-  ptoPolicy: PtoPolicy;
+  timeOffPolicy: TimeOffPolicy;
 }
 
-interface PtoBalance {
+interface TimeOffBalance {
   employeeId: string;
   employeeFirstName: string;
   employeeLastName: string;
-  ptoPolicyId: string;
+  timeOffPolicyId: string;
   policyName: string;
   color: string | null;
   accrualMethod: 'fixed_annual' | 'monthly';
@@ -146,10 +146,10 @@ interface PtoBalance {
   remaining: number;
 }
 
-interface PtoRequest {
+interface TimeOffRequest {
   id: string;
   employeeId: string;
-  ptoPolicyId: string;
+  timeOffPolicyId: string;
   startDate: string;
   endDate: string;
   daysRequested: number;
@@ -159,7 +159,7 @@ interface PtoRequest {
   decidedAt: string | null;
   decisionNote: string | null;
   createdAt: string;
-  ptoPolicy: PtoPolicy;
+  timeOffPolicy: TimeOffPolicy;
   employee?: { id: string; firstName: string; lastName: string };
   approver?: { id: string; firstName: string; lastName: string } | null;
 }
@@ -559,16 +559,16 @@ export const api = {
     return res.json();
   },
 
-  // PTO policies
-  listPtoPolicies: async (token: string): Promise<PtoPolicy[]> => {
-    const res = await apiFetch(`${API_BASE_URL}/api/pto-policies`, {
+  // Time off policies
+  listTimeOffPolicies: async (token: string): Promise<TimeOffPolicy[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/time-off-policies`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);
     return res.json();
   },
 
-  createPtoPolicy: async (
+  createTimeOffPolicy: async (
     token: string,
     data: {
       name: string;
@@ -578,8 +578,8 @@ export const api = {
       isPaid?: boolean;
       requiresApproval?: boolean;
     },
-  ): Promise<PtoPolicy> => {
-    const res = await apiFetch(`${API_BASE_URL}/api/pto-policies`, {
+  ): Promise<TimeOffPolicy> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/time-off-policies`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -591,7 +591,7 @@ export const api = {
     return res.json();
   },
 
-  updatePtoPolicy: async (
+  updateTimeOffPolicy: async (
     token: string,
     policyId: string,
     data: {
@@ -603,8 +603,8 @@ export const api = {
       requiresApproval?: boolean;
       isActive?: boolean;
     },
-  ): Promise<PtoPolicy> => {
-    const res = await apiFetch(`${API_BASE_URL}/api/pto-policies/${policyId}`, {
+  ): Promise<TimeOffPolicy> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/time-off-policies/${policyId}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -616,57 +616,57 @@ export const api = {
     return res.json();
   },
 
-  // PTO policy assignments (per employee)
-  listEmployeePtoPolicies: async (token: string, employeeId: string): Promise<EmployeePtoPolicyAssignment[]> => {
-    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/pto-policies`, {
+  // Time off policy assignments (per employee)
+  listEmployeeTimeOffPolicies: async (token: string, employeeId: string): Promise<EmployeeTimeOffPolicyAssignment[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/time-off-policies`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);
     return res.json();
   },
 
-  assignPtoPolicyToEmployee: async (
+  assignTimeOffPolicyToEmployee: async (
     token: string,
     employeeId: string,
-    ptoPolicyId: string,
-  ): Promise<EmployeePtoPolicyAssignment> => {
-    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/pto-policies`, {
+    timeOffPolicyId: string,
+  ): Promise<EmployeeTimeOffPolicyAssignment> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/time-off-policies`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ ptoPolicyId }),
+      body: JSON.stringify({ timeOffPolicyId }),
     });
     if (!res.ok) await throwApiError(res);
     return res.json();
   },
 
-  unassignPtoPolicyFromEmployee: async (token: string, employeeId: string, ptoPolicyId: string): Promise<void> => {
-    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/pto-policies/${ptoPolicyId}`, {
+  unassignTimeOffPolicyFromEmployee: async (token: string, employeeId: string, timeOffPolicyId: string): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/time-off-policies/${timeOffPolicyId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);
   },
 
-  // PTO requests
-  listPtoRequests: async (
+  // Time off requests
+  listTimeOffRequests: async (
     token: string,
     scope: 'mine' | 'pending-approval' | 'all' | 'calendar' = 'mine',
-  ): Promise<PtoRequest[]> => {
-    const res = await apiFetch(`${API_BASE_URL}/api/hr/pto-requests?scope=${scope}`, {
+  ): Promise<TimeOffRequest[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/time-off-requests?scope=${scope}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);
     return res.json();
   },
 
-  createPtoRequest: async (
+  createTimeOffRequest: async (
     token: string,
-    data: { ptoPolicyId: string; startDate: string; endDate: string; note?: string },
-  ): Promise<PtoRequest> => {
-    const res = await apiFetch(`${API_BASE_URL}/api/hr/pto-requests`, {
+    data: { timeOffPolicyId: string; startDate: string; endDate: string; note?: string },
+  ): Promise<TimeOffRequest> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/time-off-requests`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -678,13 +678,13 @@ export const api = {
     return res.json();
   },
 
-  decidePtoRequest: async (
+  decideTimeOffRequest: async (
     token: string,
     requestId: string,
     status: 'approved' | 'rejected',
     decisionNote?: string,
-  ): Promise<PtoRequest> => {
-    const res = await apiFetch(`${API_BASE_URL}/api/hr/pto-requests/${requestId}`, {
+  ): Promise<TimeOffRequest> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/time-off-requests/${requestId}`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -696,25 +696,25 @@ export const api = {
     return res.json();
   },
 
-  cancelPtoRequest: async (token: string, requestId: string): Promise<void> => {
-    const res = await apiFetch(`${API_BASE_URL}/api/hr/pto-requests/${requestId}`, {
+  cancelTimeOffRequest: async (token: string, requestId: string): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/time-off-requests/${requestId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);
   },
 
-  // PTO balances
-  listPtoBalances: async (token: string): Promise<PtoBalance[]> => {
-    const res = await apiFetch(`${API_BASE_URL}/api/hr/pto-balances`, {
+  // Time off balances
+  listTimeOffBalances: async (token: string): Promise<TimeOffBalance[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/time-off-balances`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);
     return res.json();
   },
 
-  getEmployeePtoBalance: async (token: string, employeeId: string): Promise<PtoBalance[]> => {
-    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/pto-balance`, {
+  getEmployeeTimeOffBalance: async (token: string, employeeId: string): Promise<TimeOffBalance[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/time-off-balance`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);

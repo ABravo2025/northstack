@@ -80,15 +80,15 @@
   @apply flex items-center gap-2;
 }
 
-.pto-policy-chip {
+.time-off-policy-chip {
   @apply mr-1.5 mb-1 inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs text-brand-navy dark:bg-gray-700 dark:text-gray-100;
 }
 
-.pto-policy-chip-remove {
+.time-off-policy-chip-remove {
   @apply cursor-pointer leading-none text-gray-400 hover:text-red-500;
 }
 
-.pto-active-tag {
+.time-off-active-tag {
   @apply ml-2 inline-block rounded-full px-2 py-0.5 text-xs font-medium text-white;
 }
 
@@ -480,6 +480,12 @@
 
 .page-toolbar {
   @apply flex flex-wrap items-center gap-3 border-b border-gray-200 py-4 dark:border-gray-800;
+}
+
+/* For a .page-toolbar immediately followed by another bordered row (e.g. .views-bar) —
+   avoids two barely-separated divider lines stacked on top of each other. */
+.page-toolbar.no-border {
+  @apply border-b-0 pb-0;
 }
 
 .page-toolbar h2 {
@@ -976,7 +982,7 @@
   @apply shrink-0 cursor-pointer border-none bg-transparent p-0 text-[0.68rem] font-semibold text-brand-blue hover:underline;
 }
 
-/* ---------- PTO "Policies" popover ---------- */
+/* ---------- Time Off "Policies" popover ---------- */
 
 .policy-manage-list {
   @apply flex max-h-52 flex-col gap-1 overflow-y-auto;

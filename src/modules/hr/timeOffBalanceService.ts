@@ -1,14 +1,14 @@
 import prisma from '../../lib/prisma.js';
-import type { PtoAccrualMethod } from '@prisma/client';
+import type { TimeOffAccrualMethod } from '@prisma/client';
 
-export interface PtoBalance {
+export interface TimeOffBalance {
   employeeId: string;
   employeeFirstName: string;
   employeeLastName: string;
-  ptoPolicyId: string;
+  timeOffPolicyId: string;
   policyName: string;
   color: string | null;
-  accrualMethod: PtoAccrualMethod;
+  accrualMethod: TimeOffAccrualMethod;
   daysPerYear: number;
   allocated: number;
   used: number;
@@ -29,7 +29,7 @@ function monthsElapsed(start: Date, now: Date): number {
 }
 
 function calculateAllocatedDays(
-  accrualMethod: PtoAccrualMethod,
+  accrualMethod: TimeOffAccrualMethod,
   daysPerYear: number,
   assignedAt: Date,
   now: Date,
@@ -53,17 +53,17 @@ async function buildBalances(
   assignments: {
     employeeId: string;
     employee: { firstName: string; lastName: string };
-    ptoPolicyId: string;
-    ptoPolicy: { name: string; color: string | null; accrualMethod: PtoAccrualMethod; daysPerYear: number };
+    timeOffPolicyId: string;
+    timeOffPolicy: { name: string; color: string | null; accrualMethod: TimeOffAccrualMethod; daysPerYear: number };
     assignedAt: Date;
   }[],
   tenantId: string,
-): Promise<PtoBalance[]> {
+): Promise<TimeOffBalance[]> {
   const now = new Date();
   const yearStart = new Date(now.getFullYear(), 0, 1);
   const yearEnd = new Date(now.getFullYear() + 1, 0, 1);
 
-  const requests = await prisma.ptoRequest.findMany({
+  const requests = await prisma.timeOffRequest.findMany({
     where: {
       tenantId,
       startDate: { gte: yearStart, lt: yearEnd },
@@ -73,14 +73,14 @@ async function buildBalances(
 
   return assignments.map((assignment) => {
     const allocated = calculateAllocatedDays(
-      assignment.ptoPolicy.accrualMethod,
-      assignment.ptoPolicy.daysPerYear,
+      assignment.timeOffPolicy.accrualMethod,
+      assignment.timeOffPolicy.daysPerYear,
       assignment.assignedAt,
       now,
     );
 
     const relevantRequests = requests.filter(
-      (r) => r.employeeId === assignment.employeeId && r.ptoPolicyId === assignment.ptoPolicyId,
+      (r) => r.employeeId === assignment.employeeId && r.timeOffPolicyId === assignment.timeOffPolicyId,
     );
     const used = relevantRequests
       .filter((r) => r.status === 'approved')
@@ -93,11 +93,11 @@ async function buildBalances(
       employeeId: assignment.employeeId,
       employeeFirstName: assignment.employee.firstName,
       employeeLastName: assignment.employee.lastName,
-      ptoPolicyId: assignment.ptoPolicyId,
-      policyName: assignment.ptoPolicy.name,
-      color: assignment.ptoPolicy.color,
-      accrualMethod: assignment.ptoPolicy.accrualMethod,
-      daysPerYear: assignment.ptoPolicy.daysPerYear,
+      timeOffPolicyId: assignment.timeOffPolicyId,
+      policyName: assignment.timeOffPolicy.name,
+      color: assignment.timeOffPolicy.color,
+      accrualMethod: assignment.timeOffPolicy.accrualMethod,
+      daysPerYear: assignment.timeOffPolicy.daysPerYear,
       allocated,
       used,
       pending,
@@ -106,18 +106,18 @@ async function buildBalances(
   });
 }
 
-export async function calculateEmployeePtoBalances(tenantId: string, employeeId: string): Promise<PtoBalance[]> {
-  const assignments = await prisma.employeePtoPolicy.findMany({
+export async function calculateEmployeeTimeOffBalances(tenantId: string, employeeId: string): Promise<TimeOffBalance[]> {
+  const assignments = await prisma.employeeTimeOffPolicy.findMany({
     where: { tenantId, employeeId },
-    include: { employee: { select: { firstName: true, lastName: true } }, ptoPolicy: true },
+    include: { employee: { select: { firstName: true, lastName: true } }, timeOffPolicy: true },
   });
   return buildBalances(assignments, tenantId);
 }
 
-export async function calculateAllPtoBalances(tenantId: string): Promise<PtoBalance[]> {
-  const assignments = await prisma.employeePtoPolicy.findMany({
+export async function calculateAllTimeOffBalances(tenantId: string): Promise<TimeOffBalance[]> {
+  const assignments = await prisma.employeeTimeOffPolicy.findMany({
     where: { tenantId },
-    include: { employee: { select: { firstName: true, lastName: true } }, ptoPolicy: true },
+    include: { employee: { select: { firstName: true, lastName: true } }, timeOffPolicy: true },
   });
   return buildBalances(assignments, tenantId);
 }

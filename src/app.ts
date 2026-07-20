@@ -63,25 +63,25 @@ import {
   updateStatusDefinition,
 } from './modules/hr/statusService.js';
 import {
-  createPtoPolicy,
-  listPtoPolicies,
-  updatePtoPolicy,
-} from './modules/hr/ptoPolicyService.js';
+  createTimeOffPolicy,
+  listTimeOffPolicies,
+  updateTimeOffPolicy,
+} from './modules/hr/timeOffPolicyService.js';
 import {
-  assignPtoPolicyToEmployee,
-  listEmployeePtoPolicies,
-  unassignPtoPolicyFromEmployee,
-} from './modules/hr/employeePtoPolicyService.js';
+  assignTimeOffPolicyToEmployee,
+  listEmployeeTimeOffPolicies,
+  unassignTimeOffPolicyFromEmployee,
+} from './modules/hr/employeeTimeOffPolicyService.js';
 import {
-  cancelPtoRequest,
-  createPtoRequest,
-  decidePtoRequest,
-  listAllPtoRequests,
-  listPtoRequestsForCalendar,
-  listMyPtoRequests,
+  cancelTimeOffRequest,
+  createTimeOffRequest,
+  decideTimeOffRequest,
+  listAllTimeOffRequests,
+  listTimeOffRequestsForCalendar,
+  listMyTimeOffRequests,
   listPendingApprovals,
-} from './modules/hr/ptoRequestService.js';
-import { calculateAllPtoBalances, calculateEmployeePtoBalances } from './modules/hr/ptoBalanceService.js';
+} from './modules/hr/timeOffRequestService.js';
+import { calculateAllTimeOffBalances, calculateEmployeeTimeOffBalances } from './modules/hr/timeOffBalanceService.js';
 import {
   createSavedView,
   deleteSavedView,
@@ -742,17 +742,17 @@ app.delete('/api/views/:viewId', async (req, res) => {
   return res.status(204).send();
 });
 
-app.get('/api/pto-policies', async (req, res) => {
+app.get('/api/time-off-policies', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) {
     return;
   }
 
-  const policies = await listPtoPolicies(user.tenantId!);
+  const policies = await listTimeOffPolicies(user.tenantId!);
   return res.json(policies);
 });
 
-app.post('/api/pto-policies', async (req, res) => {
+app.post('/api/time-off-policies', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) {
     return;
@@ -772,7 +772,7 @@ app.post('/api/pto-policies', async (req, res) => {
     return res.status(400).json({ error: 'Days per year must be a non-negative number' });
   }
 
-  const policy = await createPtoPolicy({
+  const policy = await createTimeOffPolicy({
     tenantId: user.tenantId!,
     name: name.trim(),
     color: req.body.color,
@@ -785,7 +785,7 @@ app.post('/api/pto-policies', async (req, res) => {
   return res.status(201).json(policy);
 });
 
-app.patch('/api/pto-policies/:policyId', async (req, res) => {
+app.patch('/api/time-off-policies/:policyId', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) {
     return;
@@ -803,7 +803,7 @@ app.patch('/api/pto-policies/:policyId', async (req, res) => {
     req.body.daysPerYear = daysPerYear;
   }
 
-  const result = await updatePtoPolicy(req.params.policyId, user.tenantId!, {
+  const result = await updateTimeOffPolicy(req.params.policyId, user.tenantId!, {
     name: req.body.name,
     color: req.body.color,
     accrualMethod: req.body.accrualMethod,
@@ -820,7 +820,7 @@ app.patch('/api/pto-policies/:policyId', async (req, res) => {
   return res.json(result.policy);
 });
 
-app.get('/api/hr/employees/:employeeId/pto-policies', async (req, res) => {
+app.get('/api/hr/employees/:employeeId/time-off-policies', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) {
     return;
@@ -831,11 +831,11 @@ app.get('/api/hr/employees/:employeeId/pto-policies', async (req, res) => {
     return res.status(404).json({ error: 'Employee not found' });
   }
 
-  const assignments = await listEmployeePtoPolicies(user.tenantId!, req.params.employeeId);
+  const assignments = await listEmployeeTimeOffPolicies(user.tenantId!, req.params.employeeId);
   return res.json(assignments);
 });
 
-app.post('/api/hr/employees/:employeeId/pto-policies', async (req, res) => {
+app.post('/api/hr/employees/:employeeId/time-off-policies', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) {
     return;
@@ -850,7 +850,7 @@ app.post('/api/hr/employees/:employeeId/pto-policies', async (req, res) => {
     return res.status(404).json({ error: 'Employee not found' });
   }
 
-  const result = await assignPtoPolicyToEmployee(user.tenantId!, req.params.employeeId, req.body.ptoPolicyId);
+  const result = await assignTimeOffPolicyToEmployee(user.tenantId!, req.params.employeeId, req.body.timeOffPolicyId);
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }
@@ -858,7 +858,7 @@ app.post('/api/hr/employees/:employeeId/pto-policies', async (req, res) => {
   return res.status(201).json(result.assignment);
 });
 
-app.delete('/api/hr/employees/:employeeId/pto-policies/:policyId', async (req, res) => {
+app.delete('/api/hr/employees/:employeeId/time-off-policies/:policyId', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) {
     return;
@@ -873,7 +873,7 @@ app.delete('/api/hr/employees/:employeeId/pto-policies/:policyId', async (req, r
     return res.status(404).json({ error: 'Employee not found' });
   }
 
-  const result = await unassignPtoPolicyFromEmployee(user.tenantId!, req.params.employeeId, req.params.policyId);
+  const result = await unassignTimeOffPolicyFromEmployee(user.tenantId!, req.params.employeeId, req.params.policyId);
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }
@@ -881,7 +881,7 @@ app.delete('/api/hr/employees/:employeeId/pto-policies/:policyId', async (req, r
   return res.status(204).end();
 });
 
-app.post('/api/hr/pto-requests', async (req, res) => {
+app.post('/api/hr/time-off-requests', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) {
     return;
@@ -892,10 +892,10 @@ app.post('/api/hr/pto-requests', async (req, res) => {
     return res.status(400).json({ error: 'Your account is not linked to an employee record' });
   }
 
-  const result = await createPtoRequest({
+  const result = await createTimeOffRequest({
     tenantId: user.tenantId!,
     employeeId: employee.id,
-    ptoPolicyId: req.body.ptoPolicyId,
+    timeOffPolicyId: req.body.timeOffPolicyId,
     startDate: req.body.startDate,
     endDate: req.body.endDate,
     note: req.body.note,
@@ -908,7 +908,7 @@ app.post('/api/hr/pto-requests', async (req, res) => {
   return res.status(201).json(result.request);
 });
 
-app.get('/api/hr/pto-requests', async (req, res) => {
+app.get('/api/hr/time-off-requests', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) {
     return;
@@ -917,7 +917,7 @@ app.get('/api/hr/pto-requests', async (req, res) => {
   const scope = (req.query.scope as string) ?? 'mine';
 
   if (scope === 'calendar') {
-    const requests = await listPtoRequestsForCalendar(user.tenantId!);
+    const requests = await listTimeOffRequestsForCalendar(user.tenantId!);
     return res.json(requests);
   }
 
@@ -925,7 +925,7 @@ app.get('/api/hr/pto-requests', async (req, res) => {
     if (!canManageCustomFields(user.role)) {
       return res.status(403).json({ error: 'Insufficient permissions' });
     }
-    const requests = await listAllPtoRequests(user.tenantId!);
+    const requests = await listAllTimeOffRequests(user.tenantId!);
     return res.json(requests);
   }
 
@@ -939,11 +939,11 @@ app.get('/api/hr/pto-requests', async (req, res) => {
     return res.json(requests);
   }
 
-  const requests = await listMyPtoRequests(user.tenantId!, employee.id);
+  const requests = await listMyTimeOffRequests(user.tenantId!, employee.id);
   return res.json(requests);
 });
 
-app.patch('/api/hr/pto-requests/:requestId', async (req, res) => {
+app.patch('/api/hr/time-off-requests/:requestId', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) {
     return;
@@ -954,7 +954,7 @@ app.patch('/api/hr/pto-requests/:requestId', async (req, res) => {
     return res.status(400).json({ error: "Status must be 'approved' or 'rejected'" });
   }
 
-  const result = await decidePtoRequest(req.params.requestId, user.tenantId!, user, decision, req.body.decisionNote);
+  const result = await decideTimeOffRequest(req.params.requestId, user.tenantId!, user, decision, req.body.decisionNote);
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }
@@ -962,7 +962,7 @@ app.patch('/api/hr/pto-requests/:requestId', async (req, res) => {
   return res.json(result.request);
 });
 
-app.delete('/api/hr/pto-requests/:requestId', async (req, res) => {
+app.delete('/api/hr/time-off-requests/:requestId', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) {
     return;
@@ -973,7 +973,7 @@ app.delete('/api/hr/pto-requests/:requestId', async (req, res) => {
     return res.status(400).json({ error: 'Your account is not linked to an employee record' });
   }
 
-  const result = await cancelPtoRequest(req.params.requestId, user.tenantId!, employee.id);
+  const result = await cancelTimeOffRequest(req.params.requestId, user.tenantId!, employee.id);
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }
@@ -981,7 +981,7 @@ app.delete('/api/hr/pto-requests/:requestId', async (req, res) => {
   return res.status(204).end();
 });
 
-app.get('/api/hr/pto-balances', async (req, res) => {
+app.get('/api/hr/time-off-balances', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) {
     return;
@@ -991,11 +991,11 @@ app.get('/api/hr/pto-balances', async (req, res) => {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  const balances = await calculateAllPtoBalances(user.tenantId!);
+  const balances = await calculateAllTimeOffBalances(user.tenantId!);
   return res.json(balances);
 });
 
-app.get('/api/hr/employees/:employeeId/pto-balance', async (req, res) => {
+app.get('/api/hr/employees/:employeeId/time-off-balance', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) {
     return;
@@ -1011,7 +1011,7 @@ app.get('/api/hr/employees/:employeeId/pto-balance', async (req, res) => {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  const balances = await calculateEmployeePtoBalances(user.tenantId!, req.params.employeeId);
+  const balances = await calculateEmployeeTimeOffBalances(user.tenantId!, req.params.employeeId);
   return res.json(balances);
 });
 

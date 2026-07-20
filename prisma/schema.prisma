@@ -44,12 +44,12 @@ enum InvitationStatus {
   revoked
 }
 
-enum PtoAccrualMethod {
+enum TimeOffAccrualMethod {
   fixed_annual
   monthly
 }
 
-enum PtoRequestStatus {
+enum TimeOffRequestStatus {
   pending
   approved
   rejected
@@ -67,23 +67,23 @@ enum SavedViewVisibility {
 }
 
 model Tenant {
-  id                   String                 @id @default(uuid())
-  name                 String
-  slug                 String                 @unique
-  status               TenantStatus           @default(active)
-  createdAt            DateTime               @default(now())
-  users                User[]
-  employees            Employee[]
-  clients              Client[]
-  customFieldDefns     CustomFieldDefinition[]
-  customFieldValues    CustomFieldValue[]
-  invitations          Invitation[]
-  statusDefinitions    StatusDefinition[]
-  statusHistory        StatusHistoryEntry[]
-  ptoPolicies          PtoPolicyDefinition[]
-  employeePtoPolicies  EmployeePtoPolicy[]
-  ptoRequests          PtoRequest[]
-  savedViews           SavedView[]
+  id                      String                   @id @default(uuid())
+  name                    String
+  slug                    String                   @unique
+  status                  TenantStatus             @default(active)
+  createdAt               DateTime                 @default(now())
+  users                   User[]
+  employees               Employee[]
+  clients                 Client[]
+  customFieldDefns        CustomFieldDefinition[]
+  customFieldValues       CustomFieldValue[]
+  invitations             Invitation[]
+  statusDefinitions       StatusDefinition[]
+  statusHistory           StatusHistoryEntry[]
+  timeOffPolicies         TimeOffPolicyDefinition[]
+  employeeTimeOffPolicies EmployeeTimeOffPolicy[]
+  timeOffRequests         TimeOffRequest[]
+  savedViews              SavedView[]
 }
 
 model User {
@@ -105,25 +105,25 @@ model User {
 }
 
 model Employee {
-  id              String               @id @default(uuid())
-  firstName       String
-  lastName        String
-  email           String
-  department      String
-  statusId        String
-  statusDefn      StatusDefinition     @relation(fields: [statusId], references: [id])
-  managerId       String?
-  manager         Employee?            @relation("EmployeeManager", fields: [managerId], references: [id])
-  reports         Employee[]           @relation("EmployeeManager")
-  tenantId        String
-  tenant          Tenant               @relation(fields: [tenantId], references: [id])
-  createdAt       DateTime             @default(now())
-  userId          String?              @unique
-  user            User?                @relation(fields: [userId], references: [id])
-  invitations     Invitation[]
-  ptoPolicies     EmployeePtoPolicy[]
-  ptoRequestsMade PtoRequest[]         @relation("PtoRequestEmployee")
-  ptoRequestsToApprove PtoRequest[]    @relation("PtoRequestApprover")
+  id                       String                  @id @default(uuid())
+  firstName                String
+  lastName                 String
+  email                    String
+  department               String
+  statusId                 String
+  statusDefn               StatusDefinition        @relation(fields: [statusId], references: [id])
+  managerId                String?
+  manager                  Employee?               @relation("EmployeeManager", fields: [managerId], references: [id])
+  reports                  Employee[]              @relation("EmployeeManager")
+  tenantId                 String
+  tenant                   Tenant                  @relation(fields: [tenantId], references: [id])
+  createdAt                DateTime                @default(now())
+  userId                   String?                 @unique
+  user                     User?                   @relation(fields: [userId], references: [id])
+  invitations              Invitation[]
+  timeOffPolicies          EmployeeTimeOffPolicy[]
+  timeOffRequestsMade      TimeOffRequest[]         @relation("TimeOffRequestEmployee")
+  timeOffRequestsToApprove TimeOffRequest[]         @relation("TimeOffRequestApprover")
 
   @@unique([tenantId, email])
 }
@@ -175,58 +175,58 @@ model StatusHistoryEntry {
   @@index([tenantId, entityType, entityId])
 }
 
-model PtoPolicyDefinition {
-  id               String            @id @default(uuid())
-  tenantId         String
-  tenant           Tenant            @relation(fields: [tenantId], references: [id])
-  name             String
-  color            String?
-  accrualMethod    PtoAccrualMethod  @default(fixed_annual)
-  daysPerYear      Float
-  isPaid           Boolean           @default(true)
-  requiresApproval Boolean           @default(true)
-  isActive         Boolean           @default(true)
-  createdAt        DateTime          @default(now())
-  employeeAssignments EmployeePtoPolicy[]
-  requests         PtoRequest[]
+model TimeOffPolicyDefinition {
+  id                  String                  @id @default(uuid())
+  tenantId            String
+  tenant              Tenant                  @relation(fields: [tenantId], references: [id])
+  name                String
+  color               String?
+  accrualMethod       TimeOffAccrualMethod    @default(fixed_annual)
+  daysPerYear         Float
+  isPaid              Boolean                 @default(true)
+  requiresApproval    Boolean                 @default(true)
+  isActive            Boolean                 @default(true)
+  createdAt           DateTime                @default(now())
+  employeeAssignments EmployeeTimeOffPolicy[]
+  requests            TimeOffRequest[]
 
   @@index([tenantId])
 }
 
-model PtoRequest {
-  id            String            @id @default(uuid())
-  tenantId      String
-  tenant        Tenant            @relation(fields: [tenantId], references: [id])
-  employeeId    String
-  employee      Employee          @relation("PtoRequestEmployee", fields: [employeeId], references: [id])
-  ptoPolicyId   String
-  ptoPolicy     PtoPolicyDefinition @relation(fields: [ptoPolicyId], references: [id])
-  startDate     DateTime
-  endDate       DateTime
-  daysRequested Float
-  note          String?
-  status        PtoRequestStatus  @default(pending)
-  approverId    String?
-  approver      Employee?         @relation("PtoRequestApprover", fields: [approverId], references: [id])
-  decidedAt     DateTime?
-  decisionNote  String?
-  createdAt     DateTime          @default(now())
+model TimeOffRequest {
+  id             String                @id @default(uuid())
+  tenantId       String
+  tenant         Tenant                @relation(fields: [tenantId], references: [id])
+  employeeId     String
+  employee       Employee              @relation("TimeOffRequestEmployee", fields: [employeeId], references: [id])
+  timeOffPolicyId String
+  timeOffPolicy  TimeOffPolicyDefinition @relation(fields: [timeOffPolicyId], references: [id])
+  startDate      DateTime
+  endDate        DateTime
+  daysRequested  Float
+  note           String?
+  status         TimeOffRequestStatus  @default(pending)
+  approverId     String?
+  approver       Employee?             @relation("TimeOffRequestApprover", fields: [approverId], references: [id])
+  decidedAt      DateTime?
+  decisionNote   String?
+  createdAt      DateTime              @default(now())
 
   @@index([tenantId, employeeId])
   @@index([tenantId, status])
 }
 
-model EmployeePtoPolicy {
-  id          String              @id @default(uuid())
-  tenantId    String
-  tenant      Tenant              @relation(fields: [tenantId], references: [id])
-  employeeId  String
-  employee    Employee            @relation(fields: [employeeId], references: [id])
-  ptoPolicyId String
-  ptoPolicy   PtoPolicyDefinition @relation(fields: [ptoPolicyId], references: [id])
-  assignedAt  DateTime            @default(now())
+model EmployeeTimeOffPolicy {
+  id             String                  @id @default(uuid())
+  tenantId       String
+  tenant         Tenant                  @relation(fields: [tenantId], references: [id])
+  employeeId     String
+  employee       Employee                @relation(fields: [employeeId], references: [id])
+  timeOffPolicyId String
+  timeOffPolicy  TimeOffPolicyDefinition @relation(fields: [timeOffPolicyId], references: [id])
+  assignedAt     DateTime                @default(now())
 
-  @@unique([employeeId, ptoPolicyId])
+  @@unique([employeeId, timeOffPolicyId])
   @@index([tenantId])
 }
 

@@ -1,5 +1,5 @@
 import prisma from '../../lib/prisma.js';
-import type { PtoRequest, PtoRequestStatus, User } from '@prisma/client';
+import type { TimeOffRequest, TimeOffRequestStatus, User } from '@prisma/client';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -7,22 +7,22 @@ function countInclusiveDays(startDate: Date, endDate: Date): number {
   return Math.round((endDate.getTime() - startDate.getTime()) / MS_PER_DAY) + 1;
 }
 
-export interface CreatePtoRequestInput {
+export interface CreateTimeOffRequestInput {
   tenantId: string;
   employeeId: string;
-  ptoPolicyId: string;
+  timeOffPolicyId: string;
   startDate: string;
   endDate: string;
   note?: string;
 }
 
-export interface CreatePtoRequestResult {
+export interface CreateTimeOffRequestResult {
   success: boolean;
-  request?: PtoRequest;
+  request?: TimeOffRequest;
   error?: string;
 }
 
-export async function createPtoRequest(input: CreatePtoRequestInput): Promise<CreatePtoRequestResult> {
+export async function createTimeOffRequest(input: CreateTimeOffRequestInput): Promise<CreateTimeOffRequestResult> {
   const startDate = new Date(input.startDate);
   const endDate = new Date(input.endDate);
 
@@ -38,26 +38,26 @@ export async function createPtoRequest(input: CreatePtoRequestInput): Promise<Cr
     return { success: false, error: 'Employee not found' };
   }
 
-  const policy = await prisma.ptoPolicyDefinition.findUnique({ where: { id: input.ptoPolicyId } });
+  const policy = await prisma.timeOffPolicyDefinition.findUnique({ where: { id: input.timeOffPolicyId } });
   if (!policy || policy.tenantId !== input.tenantId || !policy.isActive) {
-    return { success: false, error: 'PTO policy not found' };
+    return { success: false, error: 'Time off policy not found' };
   }
 
-  const assignment = await prisma.employeePtoPolicy.findUnique({
-    where: { employeeId_ptoPolicyId: { employeeId: input.employeeId, ptoPolicyId: input.ptoPolicyId } },
+  const assignment = await prisma.employeeTimeOffPolicy.findUnique({
+    where: { employeeId_timeOffPolicyId: { employeeId: input.employeeId, timeOffPolicyId: input.timeOffPolicyId } },
   });
   if (!assignment) {
-    return { success: false, error: 'This PTO policy is not assigned to you' };
+    return { success: false, error: 'This time off policy is not assigned to you' };
   }
 
   const daysRequested = countInclusiveDays(startDate, endDate);
   const autoApprove = !policy.requiresApproval;
 
-  const request = await prisma.ptoRequest.create({
+  const request = await prisma.timeOffRequest.create({
     data: {
       tenantId: input.tenantId,
       employeeId: input.employeeId,
-      ptoPolicyId: input.ptoPolicyId,
+      timeOffPolicyId: input.timeOffPolicyId,
       startDate,
       endDate,
       daysRequested,
@@ -72,30 +72,30 @@ export async function createPtoRequest(input: CreatePtoRequestInput): Promise<Cr
   return { success: true, request };
 }
 
-export async function listMyPtoRequests(tenantId: string, employeeId: string) {
-  return prisma.ptoRequest.findMany({
+export async function listMyTimeOffRequests(tenantId: string, employeeId: string) {
+  return prisma.timeOffRequest.findMany({
     where: { tenantId, employeeId },
-    include: { ptoPolicy: true, approver: { select: { id: true, firstName: true, lastName: true } } },
+    include: { timeOffPolicy: true, approver: { select: { id: true, firstName: true, lastName: true } } },
     orderBy: { createdAt: 'desc' },
   });
 }
 
 export async function listPendingApprovals(tenantId: string, approverEmployeeId: string) {
-  return prisma.ptoRequest.findMany({
+  return prisma.timeOffRequest.findMany({
     where: { tenantId, approverId: approverEmployeeId, status: 'pending' },
-    include: { ptoPolicy: true, employee: { select: { id: true, firstName: true, lastName: true } } },
+    include: { timeOffPolicy: true, employee: { select: { id: true, firstName: true, lastName: true } } },
     orderBy: { createdAt: 'asc' },
   });
 }
 
-// A PTO tag on an employee's row is only ever active for the exact days a
+// A time off tag on an employee's row is only ever active for the exact days a
 // request covers — this looks up "as of today" state, not the whole history.
-export async function findActivePtoRequestsForEmployees(tenantId: string, employeeIds: string[]) {
+export async function findActiveTimeOffRequestsForEmployees(tenantId: string, employeeIds: string[]) {
   if (employeeIds.length === 0) {
     return [];
   }
   const today = new Date(new Date().toISOString().slice(0, 10));
-  return prisma.ptoRequest.findMany({
+  return prisma.timeOffRequest.findMany({
     where: {
       tenantId,
       employeeId: { in: employeeIds },
@@ -103,23 +103,23 @@ export async function findActivePtoRequestsForEmployees(tenantId: string, employ
       startDate: { lte: today },
       endDate: { gte: today },
     },
-    include: { ptoPolicy: true },
+    include: { timeOffPolicy: true },
   });
 }
 
-export async function listPtoRequestsForCalendar(tenantId: string) {
-  return prisma.ptoRequest.findMany({
+export async function listTimeOffRequestsForCalendar(tenantId: string) {
+  return prisma.timeOffRequest.findMany({
     where: { tenantId, status: { in: ['approved', 'pending'] } },
-    include: { ptoPolicy: true, employee: { select: { id: true, firstName: true, lastName: true } } },
+    include: { timeOffPolicy: true, employee: { select: { id: true, firstName: true, lastName: true } } },
     orderBy: { startDate: 'asc' },
   });
 }
 
-export async function listAllPtoRequests(tenantId: string) {
-  return prisma.ptoRequest.findMany({
+export async function listAllTimeOffRequests(tenantId: string) {
+  return prisma.timeOffRequest.findMany({
     where: { tenantId },
     include: {
-      ptoPolicy: true,
+      timeOffPolicy: true,
       employee: { select: { id: true, firstName: true, lastName: true } },
       approver: { select: { id: true, firstName: true, lastName: true } },
     },
@@ -127,22 +127,22 @@ export async function listAllPtoRequests(tenantId: string) {
   });
 }
 
-export interface DecidePtoRequestResult {
+export interface DecideTimeOffRequestResult {
   success: boolean;
-  request?: PtoRequest;
+  request?: TimeOffRequest;
   error?: string;
 }
 
-export async function decidePtoRequest(
+export async function decideTimeOffRequest(
   requestId: string,
   tenantId: string,
   actingUser: User,
   decision: 'approved' | 'rejected',
   decisionNote?: string,
-): Promise<DecidePtoRequestResult> {
-  const request = await prisma.ptoRequest.findUnique({ where: { id: requestId } });
+): Promise<DecideTimeOffRequestResult> {
+  const request = await prisma.timeOffRequest.findUnique({ where: { id: requestId } });
   if (!request || request.tenantId !== tenantId) {
-    return { success: false, error: 'PTO request not found' };
+    return { success: false, error: 'Time off request not found' };
   }
 
   if (request.status !== 'pending') {
@@ -157,10 +157,10 @@ export async function decidePtoRequest(
     return { success: false, error: 'You are not authorized to decide this request' };
   }
 
-  const updated = await prisma.ptoRequest.update({
+  const updated = await prisma.timeOffRequest.update({
     where: { id: requestId },
     data: {
-      status: decision as PtoRequestStatus,
+      status: decision as TimeOffRequestStatus,
       decidedAt: new Date(),
       decisionNote: decisionNote ?? null,
     },
@@ -169,19 +169,19 @@ export async function decidePtoRequest(
   return { success: true, request: updated };
 }
 
-export interface CancelPtoRequestResult {
+export interface CancelTimeOffRequestResult {
   success: boolean;
   error?: string;
 }
 
-export async function cancelPtoRequest(
+export async function cancelTimeOffRequest(
   requestId: string,
   tenantId: string,
   employeeId: string,
-): Promise<CancelPtoRequestResult> {
-  const request = await prisma.ptoRequest.findUnique({ where: { id: requestId } });
+): Promise<CancelTimeOffRequestResult> {
+  const request = await prisma.timeOffRequest.findUnique({ where: { id: requestId } });
   if (!request || request.tenantId !== tenantId) {
-    return { success: false, error: 'PTO request not found' };
+    return { success: false, error: 'Time off request not found' };
   }
 
   if (request.employeeId !== employeeId) {
@@ -192,6 +192,6 @@ export async function cancelPtoRequest(
     return { success: false, error: 'Only pending requests can be cancelled' };
   }
 
-  await prisma.ptoRequest.update({ where: { id: requestId }, data: { status: 'cancelled' } });
+  await prisma.timeOffRequest.update({ where: { id: requestId }, data: { status: 'cancelled' } });
   return { success: true };
 }

@@ -58,7 +58,7 @@ export default function OverviewPage({ token }: OverviewPageProps) {
   const loadCalendar = async () => {
     setLoading(true);
     try {
-      const data = await api.listPtoRequests(token, 'calendar');
+      const data = await api.listTimeOffRequests(token, 'calendar');
       setRequests(data);
     } catch (error) {
       toast.error('Failed to load the team calendar: ' + (error as Error).message);
@@ -146,7 +146,7 @@ export default function OverviewPage({ token }: OverviewPageProps) {
                             className={
                               req.status === 'pending' ? 'calendar-entry calendar-entry-pending' : 'calendar-entry'
                             }
-                            title={`${req.employee.firstName} ${req.employee.lastName} — ${req.ptoPolicy.name}${req.status === 'pending' ? ' (pending)' : ''}`}
+                            title={`${req.employee.firstName} ${req.employee.lastName} — ${req.timeOffPolicy.name}${req.status === 'pending' ? ' (pending)' : ''}`}
                           >
                             <span
                               style={{
@@ -154,7 +154,7 @@ export default function OverviewPage({ token }: OverviewPageProps) {
                                 width: 6,
                                 height: 6,
                                 borderRadius: '50%',
-                                background: req.ptoPolicy.color || '#9ca3af',
+                                background: req.timeOffPolicy.color || '#9ca3af',
                                 marginRight: 4,
                               }}
                             ></span>

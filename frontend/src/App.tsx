@@ -8,7 +8,7 @@ import AcceptInvitePage from './pages/AcceptInvitePage';
 import OverviewPage from './pages/OverviewPage';
 import HrDashboardPage from './pages/HrDashboardPage';
 import EmployeesPage from './pages/EmployeesPage';
-import PtoOverviewPage from './pages/PtoOverviewPage';
+import TimeOffOverviewPage from './pages/TimeOffOverviewPage';
 import ClientsDashboardPage from './pages/ClientsDashboardPage';
 import ClientsPage from './pages/ClientsPage';
 import ProfileSettingsPage from './pages/ProfileSettingsPage';
@@ -183,7 +183,7 @@ export default function App() {
         <Route path="/overview" element={<OverviewPage token={token ?? ''} />} />
         <Route path="/hr/dashboard" element={<HrDashboardPage />} />
         <Route path="/hr/employees" element={<EmployeesPage user={user} token={token ?? ''} />} />
-        <Route path="/hr/pto" element={<PtoOverviewPage user={user} token={token ?? ''} />} />
+        <Route path="/hr/time-off" element={<TimeOffOverviewPage user={user} token={token ?? ''} />} />
         <Route path="/clients/dashboard" element={<ClientsDashboardPage />} />
         <Route path="/clients" element={<ClientsPage user={user} token={token ?? ''} />} />
         <Route path="/profile" element={<Navigate to="/settings/profile" replace />} />

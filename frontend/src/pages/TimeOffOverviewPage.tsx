@@ -12,7 +12,7 @@ const ACCRUAL_LABELS: Record<string, string> = {
   monthly: 'Monthly',
 };
 
-interface PtoOverviewPageProps {
+interface TimeOffOverviewPageProps {
   user: any;
   token: string;
 }
@@ -26,11 +26,11 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: 'Cancelled',
 };
 
-export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
+export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPageProps) {
   const toast = useToast();
   const [tab, setTab] = useState<Tab>('assignments');
   const [employees, setEmployees] = useState<any[]>([]);
-  const [ptoPolicies, setPtoPolicies] = useState<any[]>([]);
+  const [timeOffPolicies, setTimeOffPolicies] = useState<any[]>([]);
   const [myRequests, setMyRequests] = useState<any[]>([]);
   const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
   const [allRequests, setAllRequests] = useState<any[]>([]);
@@ -38,7 +38,7 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
   const [tenantBalances, setTenantBalances] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [cancellingRequestId, setCancellingRequestId] = useState<string | null>(null);
-  const [newRequest, setNewRequest] = useState({ ptoPolicyId: '', startDate: '', endDate: '', note: '' });
+  const [newRequest, setNewRequest] = useState({ timeOffPolicyId: '', startDate: '', endDate: '', note: '' });
 
   const [assignMenuFor, setAssignMenuFor] = useState<string | null>(null);
   const assignMenuAnchorRef = useRef<HTMLElement | null>(null);
@@ -65,11 +65,11 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
 
   const canManagePolicies = user.role === 'owner' || user.role === 'admin';
   const myEmployee = employees.find((emp) => emp.userId === user.id);
-  const myAssignedPolicies = (myEmployee?.ptoPolicies || []).map((a: any) => a.ptoPolicy);
-  const activePtoPolicies = ptoPolicies.filter((p) => p.isActive);
-  const filteredPtoPolicies = ptoPolicies.filter((p) => (policiesFilter === 'active' ? p.isActive : !p.isActive));
+  const myAssignedPolicies = (myEmployee?.timeOffPolicies || []).map((a: any) => a.timeOffPolicy);
+  const activeTimeOffPolicies = timeOffPolicies.filter((p) => p.isActive);
+  const filteredTimeOffPolicies = timeOffPolicies.filter((p) => (policiesFilter === 'active' ? p.isActive : !p.isActive));
   const assignStepAvailableEmployees = assignStepPolicy
-    ? employees.filter((emp) => !(emp.ptoPolicies || []).some((a: any) => a.ptoPolicyId === assignStepPolicy.id))
+    ? employees.filter((emp) => !(emp.timeOffPolicies || []).some((a: any) => a.timeOffPolicyId === assignStepPolicy.id))
     : [];
   const balancesByEmployee = (() => {
     const map = new Map<string, any>();
@@ -103,23 +103,23 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
       const [employeeData, policyData, myRequestData, approvalData, allRequestData, tenantBalanceData] =
         await Promise.all([
           api.listEmployees(token),
-          api.listPtoPolicies(token),
-          api.listPtoRequests(token, 'mine'),
-          api.listPtoRequests(token, 'pending-approval'),
-          canManagePolicies ? api.listPtoRequests(token, 'all') : Promise.resolve([]),
-          canManagePolicies ? api.listPtoBalances(token) : Promise.resolve([]),
+          api.listTimeOffPolicies(token),
+          api.listTimeOffRequests(token, 'mine'),
+          api.listTimeOffRequests(token, 'pending-approval'),
+          canManagePolicies ? api.listTimeOffRequests(token, 'all') : Promise.resolve([]),
+          canManagePolicies ? api.listTimeOffBalances(token) : Promise.resolve([]),
         ]);
       setEmployees(employeeData);
-      setPtoPolicies(policyData);
+      setTimeOffPolicies(policyData);
       setMyRequests(myRequestData);
       setPendingApprovals(approvalData);
       setAllRequests(allRequestData);
       setTenantBalances(tenantBalanceData);
 
       const myEmployeeRecord = employeeData.find((emp: any) => emp.userId === user.id);
-      setMyBalances(myEmployeeRecord ? await api.getEmployeePtoBalance(token, myEmployeeRecord.id) : []);
+      setMyBalances(myEmployeeRecord ? await api.getEmployeeTimeOffBalance(token, myEmployeeRecord.id) : []);
     } catch (error) {
-      toast.error('Failed to load PTO overview: ' + (error as Error).message);
+      toast.error('Failed to load Time Off overview: ' + (error as Error).message);
     } finally {
       setLoading(false);
     }
@@ -127,22 +127,22 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
 
   const handleAssign = async (employeeId: string, policyId: string) => {
     try {
-      await api.assignPtoPolicyToEmployee(token, employeeId, policyId);
+      await api.assignTimeOffPolicyToEmployee(token, employeeId, policyId);
       setAssignMenuFor(null);
       toast.success('Policy assigned.');
       loadData();
     } catch (error) {
-      toast.error('Failed to assign PTO policy: ' + (error as Error).message);
+      toast.error('Failed to assign Time Off policy: ' + (error as Error).message);
     }
   };
 
   const handleUnassign = async (employeeId: string, policyId: string) => {
     try {
-      await api.unassignPtoPolicyFromEmployee(token, employeeId, policyId);
+      await api.unassignTimeOffPolicyFromEmployee(token, employeeId, policyId);
       toast.success('Policy removed.');
       loadData();
     } catch (error) {
-      toast.error('Failed to remove PTO policy: ' + (error as Error).message);
+      toast.error('Failed to remove Time Off policy: ' + (error as Error).message);
     }
   };
 
@@ -191,17 +191,17 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
     };
     try {
       if (slideOverMode === 'edit' && editingPolicyId) {
-        await api.updatePtoPolicy(token, editingPolicyId, data);
-        toast.success('PTO policy updated.');
+        await api.updateTimeOffPolicy(token, editingPolicyId, data);
+        toast.success('Time off policy updated.');
         closeSlideOver();
       } else {
-        const created = await api.createPtoPolicy(token, data);
-        toast.success('PTO policy added.');
+        const created = await api.createTimeOffPolicy(token, data);
+        toast.success('Time off policy added.');
         setAssignStepPolicy(created);
       }
       loadData();
     } catch (error) {
-      toast.error('Failed to save PTO policy: ' + (error as Error).message);
+      toast.error('Failed to save time off policy: ' + (error as Error).message);
     }
   };
 
@@ -223,7 +223,7 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
     try {
       const results = await Promise.allSettled(
         Array.from(assignStepSelected).map((employeeId) =>
-          api.assignPtoPolicyToEmployee(token, employeeId, assignStepPolicy.id),
+          api.assignTimeOffPolicyToEmployee(token, employeeId, assignStepPolicy.id),
         ),
       );
       const failures = results.filter((r) => r.status === 'rejected').length;
@@ -241,11 +241,11 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
 
   const handleTogglePolicyActive = async (policy: any) => {
     try {
-      await api.updatePtoPolicy(token, policy.id, { isActive: !policy.isActive });
+      await api.updateTimeOffPolicy(token, policy.id, { isActive: !policy.isActive });
       setPolicyRowMenuFor(null);
       loadData();
     } catch (error) {
-      toast.error('Failed to update PTO policy: ' + (error as Error).message);
+      toast.error('Failed to update time off policy: ' + (error as Error).message);
     }
   };
 
@@ -265,19 +265,19 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
     setDeletingPolicySaving(true);
     try {
       const assignedEmployeeIds = employees
-        .filter((emp) => (emp.ptoPolicies || []).some((a: any) => a.ptoPolicyId === deletingPolicy.id))
+        .filter((emp) => (emp.timeOffPolicies || []).some((a: any) => a.timeOffPolicyId === deletingPolicy.id))
         .map((emp) => emp.id);
       await Promise.allSettled(
         assignedEmployeeIds.map((employeeId) =>
-          api.unassignPtoPolicyFromEmployee(token, employeeId, deletingPolicy.id),
+          api.unassignTimeOffPolicyFromEmployee(token, employeeId, deletingPolicy.id),
         ),
       );
-      await api.updatePtoPolicy(token, deletingPolicy.id, { isActive: false });
+      await api.updateTimeOffPolicy(token, deletingPolicy.id, { isActive: false });
       toast.success(`"${deletingPolicy.name}" deleted and removed from ${assignedEmployeeIds.length} employee${assignedEmployeeIds.length === 1 ? '' : 's'}.`);
       setDeletingPolicy(null);
       loadData();
     } catch (error) {
-      toast.error('Failed to delete PTO policy: ' + (error as Error).message);
+      toast.error('Failed to delete time off policy: ' + (error as Error).message);
     } finally {
       setDeletingPolicySaving(false);
     }
@@ -286,24 +286,24 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
   const handleCreateRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.createPtoRequest(token, {
-        ptoPolicyId: newRequest.ptoPolicyId,
+      await api.createTimeOffRequest(token, {
+        timeOffPolicyId: newRequest.timeOffPolicyId,
         startDate: newRequest.startDate,
         endDate: newRequest.endDate,
         note: newRequest.note || undefined,
       });
-      setNewRequest({ ptoPolicyId: '', startDate: '', endDate: '', note: '' });
+      setNewRequest({ timeOffPolicyId: '', startDate: '', endDate: '', note: '' });
       toast.success('Request submitted.');
       loadData();
     } catch (error) {
-      toast.error('Failed to submit PTO request: ' + (error as Error).message);
+      toast.error('Failed to submit time off request: ' + (error as Error).message);
     }
   };
 
   const handleCancelRequest = async () => {
     if (!cancellingRequestId) return;
     try {
-      await api.cancelPtoRequest(token, cancellingRequestId);
+      await api.cancelTimeOffRequest(token, cancellingRequestId);
       setCancellingRequestId(null);
       toast.success('Request cancelled.');
       loadData();
@@ -315,7 +315,7 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
 
   const handleDecideRequest = async (requestId: string, status: 'approved' | 'rejected') => {
     try {
-      await api.decidePtoRequest(token, requestId, status);
+      await api.decideTimeOffRequest(token, requestId, status);
       toast.success(status === 'approved' ? 'Request approved.' : 'Request rejected.');
       loadData();
     } catch (error) {
@@ -328,7 +328,7 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
       {cancellingRequestId && (
         <ConfirmDialog
           title="Cancel request"
-          message="Are you sure you want to cancel this PTO request?"
+          message="Are you sure you want to cancel this time off request?"
           confirmLabel="Cancel Request"
           onConfirm={handleCancelRequest}
           onCancel={() => setCancellingRequestId(null)}
@@ -338,9 +338,9 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
         <ConfirmDialog
           title={`Delete "${deletingPolicy.name}"`}
           message={`This will remove "${deletingPolicy.name}" from all ${
-            employees.filter((emp) => (emp.ptoPolicies || []).some((a: any) => a.ptoPolicyId === deletingPolicy.id))
+            employees.filter((emp) => (emp.timeOffPolicies || []).some((a: any) => a.timeOffPolicyId === deletingPolicy.id))
               .length
-          } employee(s) currently assigned to it, then deactivate the policy. Past PTO requests made under it are not affected. Type DELETE to confirm.`}
+          } employee(s) currently assigned to it, then deactivate the policy. Past time off requests made under it are not affected. Type DELETE to confirm.`}
           confirmLabel={deletingPolicySaving ? 'Deleting…' : 'DELETE'}
           confirmText="DELETE"
           confirmDisabled={deletingPolicySaving}
@@ -354,8 +354,8 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
           assignStepPolicy
             ? `Assign "${assignStepPolicy.name}"`
             : slideOverMode === 'edit'
-              ? 'Edit PTO Policy'
-              : 'Add PTO Policy'
+              ? 'Edit Time Off Policy'
+              : 'Add Time Off Policy'
         }
         onClose={closeSlideOver}
         footer={
@@ -377,7 +377,7 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
               <button type="button" className="btn-secondary" onClick={closeSlideOver}>
                 Cancel
               </button>
-              <button type="submit" form="pto-policy-form" className="btn-primary">
+              <button type="submit" form="time-off-policy-form" className="btn-primary">
                 {slideOverMode === 'edit' ? 'Save' : 'Create'}
               </button>
             </>
@@ -427,7 +427,7 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
             )}
           </div>
         ) : (
-          <form id="pto-policy-form" onSubmit={handleSubmitPolicy}>
+          <form id="time-off-policy-form" onSubmit={handleSubmitPolicy}>
             <div className="form-group">
               <label htmlFor="policy-name">Name</label>
               <input
@@ -492,8 +492,8 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
         )}
       </SlideOver>
 
-      <div className="page-toolbar">
-        <h2>PTO</h2>
+      <div className="page-toolbar no-border">
+        <h2>Time Off</h2>
       </div>
       <div className="views-bar">
         <button
@@ -558,11 +558,11 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
         {!loading && tab === 'assignments' && (
           <>
             <p className="text-sm text-gray-500 mb-3">
-              Which PTO policies apply to each employee. Manage the policies themselves (days per year, accrual,
+              Which time off policies apply to each employee. Manage the policies themselves (days per year, accrual,
               etc.) from the Policies tab.
             </p>
-            {activePtoPolicies.length === 0 ? (
-              <p>No PTO policies defined yet. Add one from the Policies tab.</p>
+            {activeTimeOffPolicies.length === 0 ? (
+              <p>No time off policies defined yet. Add one from the Policies tab.</p>
             ) : employees.length === 0 ? (
               <p>No employees yet.</p>
             ) : (
@@ -577,8 +577,8 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
                   </thead>
                   <tbody>
                     {employees.map((emp) => {
-                      const assignedIds = (emp.ptoPolicies || []).map((a: any) => a.ptoPolicyId);
-                      const availableToAdd = activePtoPolicies.filter((p) => !assignedIds.includes(p.id));
+                      const assignedIds = (emp.timeOffPolicies || []).map((a: any) => a.timeOffPolicyId);
+                      const availableToAdd = activeTimeOffPolicies.filter((p) => !assignedIds.includes(p.id));
                       return (
                         <tr key={emp.id}>
                           <td>
@@ -587,19 +587,19 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
                           <td>{emp.department}</td>
                           <td>
                             <div className="flex flex-wrap items-center gap-1.5">
-                              {(emp.ptoPolicies || []).length === 0 && !canManagePolicies && (
+                              {(emp.timeOffPolicies || []).length === 0 && !canManagePolicies && (
                                 <span className="text-gray-400 dark:text-gray-500">—</span>
                               )}
-                              {emp.ptoPolicies?.map((a: any) => (
-                                <span key={a.id} className="pto-policy-chip">
-                                  <span className="color-dot" style={{ background: a.ptoPolicy.color || '#9ca3af' }} />
-                                  {a.ptoPolicy.name}
+                              {emp.timeOffPolicies?.map((a: any) => (
+                                <span key={a.id} className="time-off-policy-chip">
+                                  <span className="color-dot" style={{ background: a.timeOffPolicy.color || '#9ca3af' }} />
+                                  {a.timeOffPolicy.name}
                                   {canManagePolicies && (
                                     <button
                                       type="button"
-                                      className="pto-policy-chip-remove"
-                                      onClick={() => handleUnassign(emp.id, a.ptoPolicyId)}
-                                      aria-label={`Remove ${a.ptoPolicy.name}`}
+                                      className="time-off-policy-chip-remove"
+                                      onClick={() => handleUnassign(emp.id, a.timeOffPolicyId)}
+                                      aria-label={`Remove ${a.timeOffPolicy.name}`}
                                       title="Remove"
                                     >
                                       ×
@@ -638,8 +638,8 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
             {(() => {
               const menuEmployee = employees.find((e) => e.id === assignMenuFor);
               if (!menuEmployee) return null;
-              const assignedIds = (menuEmployee.ptoPolicies || []).map((a: any) => a.ptoPolicyId);
-              const menuAvailable = activePtoPolicies.filter((p) => !assignedIds.includes(p.id));
+              const assignedIds = (menuEmployee.timeOffPolicies || []).map((a: any) => a.timeOffPolicyId);
+              const menuAvailable = activeTimeOffPolicies.filter((p) => !assignedIds.includes(p.id));
               if (menuAvailable.length === 0) {
                 return <p className="text-xs text-gray-500">No more policies to assign.</p>;
               }
@@ -661,17 +661,17 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
         {!loading && tab === 'my-requests' && (
           <>
             {!myEmployee ? (
-              <p>Your account isn't linked to an employee record, so you can't submit PTO requests.</p>
+              <p>Your account isn't linked to an employee record, so you can't submit time off requests.</p>
             ) : (
               <>
                 {myAssignedPolicies.length === 0 ? (
-                  <p>You don't have any PTO policies assigned yet — ask an admin to assign one.</p>
+                  <p>You don't have any time off policies assigned yet — ask an admin to assign one.</p>
                 ) : (
                   <>
                     {myBalances.length > 0 && (
                       <div className="mb-4 flex flex-wrap gap-2">
                         {myBalances.map((bal) => (
-                          <span key={bal.ptoPolicyId} className="pto-policy-chip">
+                          <span key={bal.timeOffPolicyId} className="time-off-policy-chip">
                             <span className="color-dot" style={{ background: bal.color || '#9ca3af' }} />
                             {bal.policyName}: {bal.remaining} of {bal.allocated} days left
                             {bal.pending > 0 ? ` (${bal.pending} pending)` : ''}
@@ -681,11 +681,11 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
                     )}
                     <form onSubmit={handleCreateRequest} className="mb-5">
                       <div className="form-group">
-                        <label htmlFor="pto-request-policy">Policy</label>
+                        <label htmlFor="time-off-request-policy">Policy</label>
                         <select
-                          id="pto-request-policy"
-                          value={newRequest.ptoPolicyId}
-                          onChange={(e) => setNewRequest({ ...newRequest, ptoPolicyId: e.target.value })}
+                          id="time-off-request-policy"
+                          value={newRequest.timeOffPolicyId}
+                          onChange={(e) => setNewRequest({ ...newRequest, timeOffPolicyId: e.target.value })}
                           required
                         >
                           <option value="">-- select --</option>
@@ -697,9 +697,9 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
                         </select>
                       </div>
                       <div className="form-group">
-                        <label htmlFor="pto-request-start">Start date</label>
+                        <label htmlFor="time-off-request-start">Start date</label>
                         <input
-                          id="pto-request-start"
+                          id="time-off-request-start"
                           type="date"
                           value={newRequest.startDate}
                           onChange={(e) => setNewRequest({ ...newRequest, startDate: e.target.value })}
@@ -707,9 +707,9 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
                         />
                       </div>
                       <div className="form-group">
-                        <label htmlFor="pto-request-end">End date</label>
+                        <label htmlFor="time-off-request-end">End date</label>
                         <input
-                          id="pto-request-end"
+                          id="time-off-request-end"
                           type="date"
                           value={newRequest.endDate}
                           onChange={(e) => setNewRequest({ ...newRequest, endDate: e.target.value })}
@@ -717,9 +717,9 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
                         />
                       </div>
                       <div className="form-group">
-                        <label htmlFor="pto-request-note">Note (optional)</label>
+                        <label htmlFor="time-off-request-note">Note (optional)</label>
                         <input
-                          id="pto-request-note"
+                          id="time-off-request-note"
                           type="text"
                           value={newRequest.note}
                           onChange={(e) => setNewRequest({ ...newRequest, note: e.target.value })}
@@ -733,7 +733,7 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
                 )}
 
                 {myRequests.length === 0 ? (
-                  <p>You haven't requested any PTO yet.</p>
+                  <p>You haven't requested any time off yet.</p>
                 ) : (
                   <div className="full-table-wrap">
                   <table className="table full-table">
@@ -750,7 +750,7 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
                     <tbody>
                       {myRequests.map((req) => (
                         <tr key={req.id}>
-                          <td>{req.ptoPolicy.name}</td>
+                          <td>{req.timeOffPolicy.name}</td>
                           <td>
                             {req.startDate.slice(0, 10)} → {req.endDate.slice(0, 10)}
                           </td>
@@ -801,7 +801,7 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
                       <td>
                         {req.employee.firstName} {req.employee.lastName}
                       </td>
-                      <td>{req.ptoPolicy.name}</td>
+                      <td>{req.timeOffPolicy.name}</td>
                       <td>
                         {req.startDate.slice(0, 10)} → {req.endDate.slice(0, 10)}
                       </td>
@@ -833,7 +833,7 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
         {!loading && tab === 'all-requests' && canManagePolicies && (
           <>
             {allRequests.length === 0 ? (
-              <p>No PTO requests yet.</p>
+              <p>No time off requests yet.</p>
             ) : (
               <div className="full-table-wrap">
               <table className="table full-table">
@@ -855,7 +855,7 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
                       <td>
                         {req.employee.firstName} {req.employee.lastName}
                       </td>
-                      <td>{req.ptoPolicy.name}</td>
+                      <td>{req.timeOffPolicy.name}</td>
                       <td>
                         {req.startDate.slice(0, 10)} → {req.endDate.slice(0, 10)}
                       </td>
@@ -893,7 +893,7 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
         {!loading && tab === 'balances' && canManagePolicies && (
           <>
             {balancesByEmployee.length === 0 ? (
-              <p>No PTO policy assignments yet.</p>
+              <p>No time off policy assignments yet.</p>
             ) : (
               <div className="full-table-wrap">
                 <table className="table full-table">
@@ -943,20 +943,20 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
         >
           {selectedBalanceEmployee &&
             selectedBalanceEmployee.policies.map((bal: any) => {
-              const isExpanded = expandedBalancePolicyIds.has(bal.ptoPolicyId);
+              const isExpanded = expandedBalancePolicyIds.has(bal.timeOffPolicyId);
               const policyRequests = allRequests
-                .filter((req) => req.employeeId === selectedBalanceEmployee.employeeId && req.ptoPolicyId === bal.ptoPolicyId)
+                .filter((req) => req.employeeId === selectedBalanceEmployee.employeeId && req.timeOffPolicyId === bal.timeOffPolicyId)
                 .sort((a: any, b: any) => b.startDate.localeCompare(a.startDate));
               return (
-                <div key={bal.ptoPolicyId} className="balance-detail-block">
+                <div key={bal.timeOffPolicyId} className="balance-detail-block">
                   <button
                     type="button"
                     className="balance-detail-head balance-detail-toggle"
                     onClick={() =>
                       setExpandedBalancePolicyIds((prev) => {
                         const next = new Set(prev);
-                        if (next.has(bal.ptoPolicyId)) next.delete(bal.ptoPolicyId);
-                        else next.add(bal.ptoPolicyId);
+                        if (next.has(bal.timeOffPolicyId)) next.delete(bal.timeOffPolicyId);
+                        else next.add(bal.timeOffPolicyId);
                         return next;
                       })
                     }
@@ -1016,8 +1016,8 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
 
         {!loading && tab === 'policies' && canManagePolicies && (
           <>
-            {ptoPolicies.length === 0 ? (
-              <p>No PTO policies defined yet. Add one from the "Add Policy" button above.</p>
+            {timeOffPolicies.length === 0 ? (
+              <p>No time off policies defined yet. Add one from the "Add Policy" button above.</p>
             ) : (
               <>
                 <div className="mini-toggle-row mb-3">
@@ -1026,17 +1026,17 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
                     className={`mini-toggle-opt ${policiesFilter === 'active' ? 'active' : ''}`}
                     onClick={() => setPoliciesFilter('active')}
                   >
-                    Active ({ptoPolicies.filter((p) => p.isActive).length})
+                    Active ({timeOffPolicies.filter((p) => p.isActive).length})
                   </button>
                   <button
                     type="button"
                     className={`mini-toggle-opt ${policiesFilter === 'inactive' ? 'active' : ''}`}
                     onClick={() => setPoliciesFilter('inactive')}
                   >
-                    Deactivated ({ptoPolicies.filter((p) => !p.isActive).length})
+                    Deactivated ({timeOffPolicies.filter((p) => !p.isActive).length})
                   </button>
                 </div>
-                {filteredPtoPolicies.length === 0 ? (
+                {filteredTimeOffPolicies.length === 0 ? (
                   <p className="text-sm text-gray-500">
                     {policiesFilter === 'active' ? 'No active policies.' : 'No deactivated policies.'}
                   </p>
@@ -1055,9 +1055,9 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
                         </tr>
                       </thead>
                       <tbody>
-                        {filteredPtoPolicies.map((policy) => {
+                        {filteredTimeOffPolicies.map((policy) => {
                           const employeeCount = employees.filter((emp) =>
-                            (emp.ptoPolicies || []).some((a: any) => a.ptoPolicyId === policy.id),
+                            (emp.timeOffPolicies || []).some((a: any) => a.timeOffPolicyId === policy.id),
                           ).length;
                           return (
                             <tr key={policy.id} className={!policy.isActive ? 'table-row-inactive' : ''}>
@@ -1101,7 +1101,7 @@ export default function PtoOverviewPage({ user, token }: PtoOverviewPageProps) {
               align="right"
             >
               {(() => {
-                const menuPolicy = ptoPolicies.find((p) => p.id === policyRowMenuFor);
+                const menuPolicy = timeOffPolicies.find((p) => p.id === policyRowMenuFor);
                 if (!menuPolicy) return null;
                 return (
                   <>

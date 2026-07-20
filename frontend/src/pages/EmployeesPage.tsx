@@ -40,7 +40,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const [page, setPage] = useState(1);
   const [employeeCustomFields, setEmployeeCustomFields] = useState<any[]>([]);
   const [employeeStatuses, setEmployeeStatuses] = useState<any[]>([]);
-  const [ptoPolicies, setPtoPolicies] = useState<any[]>([]);
+  const [timeOffPolicies, setTimeOffPolicies] = useState<any[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
   const [editCustomFieldValues, setEditCustomFieldValues] = useState<Record<string, string>>({});
   const [editCustomFieldValueIds, setEditCustomFieldValueIds] = useState<Record<string, string>>({});
@@ -123,7 +123,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     loadEmployees();
     loadEmployeeCustomFields();
     loadEmployeeStatuses();
-    loadPtoPolicies();
+    loadTimeOffPolicies();
     loadViews();
   }, []);
 
@@ -136,12 +136,12 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     }
   };
 
-  const loadPtoPolicies = async () => {
+  const loadTimeOffPolicies = async () => {
     try {
-      const policies = await api.listPtoPolicies(token);
-      setPtoPolicies(policies.filter((p) => p.isActive));
+      const policies = await api.listTimeOffPolicies(token);
+      setTimeOffPolicies(policies.filter((p) => p.isActive));
     } catch (error) {
-      toast.error('Failed to load PTO policies: ' + (error as Error).message);
+      toast.error('Failed to load time off policies: ' + (error as Error).message);
     }
   };
 
@@ -273,13 +273,13 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     setEditCustomFieldValues(values);
     setEditCustomFieldValueIds(valueIds);
 
-    const assignedIds = (emp.ptoPolicies || []).map((a: any) => a.ptoPolicyId);
+    const assignedIds = (emp.timeOffPolicies || []).map((a: any) => a.timeOffPolicyId);
     setEditAssignedPolicyIds(assignedIds);
     setOriginalAssignedPolicyIds(assignedIds);
     setSlideOverMode('edit');
   };
 
-  const handleTogglePtoPolicy = (policyId: string) => {
+  const handleToggleTimeOffPolicy = (policyId: string) => {
     setEditAssignedPolicyIds((current) =>
       current.includes(policyId) ? current.filter((id) => id !== policyId) : [...current, policyId],
     );
@@ -313,10 +313,10 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       const policiesToAssign = editAssignedPolicyIds.filter((id) => !originalAssignedPolicyIds.includes(id));
       const policiesToUnassign = originalAssignedPolicyIds.filter((id) => !editAssignedPolicyIds.includes(id));
       for (const policyId of policiesToAssign) {
-        await api.assignPtoPolicyToEmployee(token, editingEmployeeId, policyId);
+        await api.assignTimeOffPolicyToEmployee(token, editingEmployeeId, policyId);
       }
       for (const policyId of policiesToUnassign) {
-        await api.unassignPtoPolicyFromEmployee(token, editingEmployeeId, policyId);
+        await api.unassignTimeOffPolicyFromEmployee(token, editingEmployeeId, policyId);
       }
 
       toast.success('Employee updated.');
@@ -673,20 +673,20 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
               </select>
             </div>
 
-            {ptoPolicies.length > 0 && (
+            {timeOffPolicies.length > 0 && (
               <div className="form-group">
-                <span>PTO Policies</span>
-                {ptoPolicies.map((policy) => (
+                <span>Time Off Policies</span>
+                {timeOffPolicies.map((policy) => (
                   <label
                     key={policy.id}
-                    htmlFor={`edit-emp-pto-${policy.id}`}
+                    htmlFor={`edit-emp-time-off-${policy.id}`}
                     className="mr-3 inline-flex items-center gap-1.5 text-sm font-normal"
                   >
                     <input
-                      id={`edit-emp-pto-${policy.id}`}
+                      id={`edit-emp-time-off-${policy.id}`}
                       type="checkbox"
                       checked={editAssignedPolicyIds.includes(policy.id)}
-                      onChange={() => handleTogglePtoPolicy(policy.id)}
+                      onChange={() => handleToggleTimeOffPolicy(policy.id)}
                     />
                     {policy.name}
                   </label>
@@ -809,7 +809,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                     </th>
                   ))}
                   <th>Reports To</th>
-                  <th>PTO Policies</th>
+                  <th>Time Off Policies</th>
                   {activeEmployeeCustomFields.map((field) => (
                     <th
                       key={field.id}
@@ -842,13 +842,13 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                   <tr key={emp.id}>
                     <td>
                       {emp.firstName} {emp.lastName}
-                      {emp.activePtoTag && (
+                      {emp.activeTimeOffTag && (
                         <span
-                          className="pto-active-tag"
-                          style={{ background: emp.activePtoTag.color || '#9ca3af' }}
-                          title={`On ${emp.activePtoTag.policyName} today`}
+                          className="time-off-active-tag"
+                          style={{ background: emp.activeTimeOffTag.color || '#9ca3af' }}
+                          title={`On ${emp.activeTimeOffTag.policyName} today`}
                         >
-                          {emp.activePtoTag.policyName}
+                          {emp.activeTimeOffTag.policyName}
                         </span>
                       )}
                     </td>
@@ -857,8 +857,8 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                     <td>{emp.statusDefn?.name}</td>
                     <td>{emp.manager ? `${emp.manager.firstName} ${emp.manager.lastName}` : '—'}</td>
                     <td>
-                      {emp.ptoPolicies && emp.ptoPolicies.length > 0
-                        ? emp.ptoPolicies.map((a: any) => a.ptoPolicy.name).join(', ')
+                      {emp.timeOffPolicies && emp.timeOffPolicies.length > 0
+                        ? emp.timeOffPolicies.map((a: any) => a.timeOffPolicy.name).join(', ')
                         : '—'}
                     </td>
                     {activeEmployeeCustomFields.map((field) => {

@@ -53,9 +53,9 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
             <PeopleIcon className="h-4 w-4 shrink-0" />
             {label('Employees')}
           </NavLink>
-          <NavLink to="/hr/pto" className={linkClass} title="Human Resources – PTO" onClick={onMobileClose}>
+          <NavLink to="/hr/time-off" className={linkClass} title="Human Resources – Time Off" onClick={onMobileClose}>
             <CalendarIcon className="h-4 w-4 shrink-0" />
-            {label('PTO')}
+            {label('Time Off')}
           </NavLink>
           <NavLink to="/hr/dashboard" className={linkClass} title="Human Resources – Dashboard" onClick={onMobileClose}>
             <DashboardIcon className="h-4 w-4 shrink-0" />

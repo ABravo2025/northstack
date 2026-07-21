@@ -2,6 +2,7 @@ import prisma from '../../lib/prisma.js';
 import { createEmployee } from './employeeService.js';
 import { createClient } from '../clients/clientService.js';
 import { createCustomFieldValue, isValueValidForFieldType } from './customFieldService.js';
+import { sendPublicFormConfirmationEmail, sendPublicFormSubmissionEmail } from '../../lib/mailer.js';
 import type { EntityType, PublicForm } from '@prisma/client';
 
 export interface PublicFormFieldConfig {
@@ -204,6 +205,27 @@ export async function submitPublicForm(
       value: rawValue,
     });
   }
+
+  const tenant = await prisma.tenant.findUnique({ where: { id: form.tenantId }, select: { name: true } });
+  const tenantName = tenant?.name ?? 'the team';
+  const submitterName = `${input.firstName.trim()} ${input.lastName.trim()}`;
+  const admins = await prisma.user.findMany({
+    where: { tenantId: form.tenantId, role: { in: ['owner', 'admin'] } },
+    select: { email: true },
+  });
+
+  for (const admin of admins) {
+    sendPublicFormSubmissionEmail({
+      to: admin.email,
+      tenantName,
+      formName: form.name,
+      submitterName,
+      submitterEmail: trimmedEmail,
+    }).catch((err) => console.error('Failed to send public form submission email:', err));
+  }
+  sendPublicFormConfirmationEmail({ to: trimmedEmail, tenantName, formName: form.name }).catch((err) =>
+    console.error('Failed to send public form confirmation email:', err),
+  );
 
   return { success: true };
 }

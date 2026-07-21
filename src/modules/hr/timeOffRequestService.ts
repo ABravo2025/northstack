@@ -1,10 +1,15 @@
 import prisma from '../../lib/prisma.js';
+import { sendTimeOffRequestDecidedEmail, sendTimeOffRequestPendingEmail } from '../../lib/mailer.js';
 import type { TimeOffRequest, TimeOffRequestStatus, User } from '@prisma/client';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 function countInclusiveDays(startDate: Date, endDate: Date): number {
   return Math.round((endDate.getTime() - startDate.getTime()) / MS_PER_DAY) + 1;
+}
+
+function formatDate(date: Date): string {
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 export interface CreateTimeOffRequestInput {
@@ -68,6 +73,43 @@ export async function createTimeOffRequest(input: CreateTimeOffRequestInput): Pr
       decisionNote: autoApprove ? 'Auto-approved — this policy does not require approval' : null,
     },
   });
+
+  const employeeName = `${employee.firstName} ${employee.lastName}`;
+  const manager = employee.managerId ? await prisma.employee.findUnique({ where: { id: employee.managerId } }) : null;
+
+  if (autoApprove) {
+    // Nobody actively approved this, so unlike a manual decision, everyone who'd
+    // otherwise want visibility gets notified: the employee, their manager, and the owner.
+    const owner = await prisma.user.findFirst({ where: { tenantId: input.tenantId, role: 'owner' } });
+    const recipients = [
+      { email: employee.email, isEmployee: true },
+      ...(manager ? [{ email: manager.email, isEmployee: false }] : []),
+      ...(owner ? [{ email: owner.email, isEmployee: false }] : []),
+    ];
+    for (const recipient of recipients) {
+      sendTimeOffRequestDecidedEmail({
+        to: recipient.email,
+        recipientIsEmployee: recipient.isEmployee,
+        employeeName,
+        policyName: policy.name,
+        startDate: formatDate(startDate),
+        endDate: formatDate(endDate),
+        daysRequested,
+        decision: 'approved',
+        autoApproved: true,
+      }).catch((err) => console.error('Failed to send time off decided email:', err));
+    }
+  } else if (manager) {
+    sendTimeOffRequestPendingEmail({
+      to: manager.email,
+      approverName: manager.firstName,
+      employeeName,
+      policyName: policy.name,
+      startDate: formatDate(startDate),
+      endDate: formatDate(endDate),
+      daysRequested,
+    }).catch((err) => console.error('Failed to send time off pending email:', err));
+  }
 
   return { success: true, request };
 }
@@ -165,6 +207,24 @@ export async function decideTimeOffRequest(
       decisionNote: decisionNote ?? null,
     },
   });
+
+  const [employee, policy] = await Promise.all([
+    prisma.employee.findUnique({ where: { id: request.employeeId } }),
+    prisma.timeOffPolicyDefinition.findUnique({ where: { id: request.timeOffPolicyId } }),
+  ]);
+  if (employee && policy) {
+    sendTimeOffRequestDecidedEmail({
+      to: employee.email,
+      recipientIsEmployee: true,
+      employeeName: `${employee.firstName} ${employee.lastName}`,
+      policyName: policy.name,
+      startDate: formatDate(request.startDate),
+      endDate: formatDate(request.endDate),
+      daysRequested: request.daysRequested,
+      decision,
+      decisionNote,
+    }).catch((err) => console.error('Failed to send time off decided email:', err));
+  }
 
   return { success: true, request: updated };
 }

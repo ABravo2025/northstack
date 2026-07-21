@@ -222,6 +222,11 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
   };
 }
 
+export async function findTenantNameById(tenantId: string): Promise<string | null> {
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true } });
+  return tenant?.name ?? null;
+}
+
 export async function findInvitationByToken(token: string) {
   return prisma.invitation.findUnique({
     where: { token },

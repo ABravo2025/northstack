@@ -1,16 +1,40 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronDownIcon, MenuIcon, UserCircleIcon } from './Icons';
+import SlideOver from './SlideOver';
+import { useToast } from './ToastProvider';
+import { api } from '../api';
 
 interface TopBarProps {
   user: any;
+  token: string;
   onLogout: () => void;
   onMenuClick: () => void;
 }
 
-export default function TopBar({ user, onLogout, onMenuClick }: TopBarProps) {
+export default function TopBar({ user, token, onLogout, onMenuClick }: TopBarProps) {
   const [open, setOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [sendingFeedback, setSendingFeedback] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const toast = useToast();
+
+  const handleSendFeedback = async () => {
+    const message = feedbackMessage.trim();
+    if (!message) return;
+    setSendingFeedback(true);
+    try {
+      await api.sendFeedback(token, { message, pageUrl: window.location.href });
+      toast.success('Thanks! Your feedback was sent.');
+      setFeedbackMessage('');
+      setFeedbackOpen(false);
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setSendingFeedback(false);
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -86,6 +110,16 @@ export default function TopBar({ user, onLogout, onMenuClick }: TopBarProps) {
               role="menuitem"
               onClick={() => {
                 setOpen(false);
+                setFeedbackOpen(true);
+              }}
+            >
+              Send feedback
+            </button>
+            <button
+              className="user-menu-item"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
                 onLogout();
               }}
             >
@@ -94,6 +128,35 @@ export default function TopBar({ user, onLogout, onMenuClick }: TopBarProps) {
           </div>
         )}
       </div>
+
+      <SlideOver
+        open={feedbackOpen}
+        title="Send feedback"
+        onClose={() => setFeedbackOpen(false)}
+        footer={
+          <button
+            type="button"
+            className="btn-primary"
+            onClick={handleSendFeedback}
+            disabled={sendingFeedback || !feedbackMessage.trim()}
+          >
+            {sendingFeedback ? 'Sending…' : 'Send'}
+          </button>
+        }
+      >
+        <div className="form-group">
+          <label htmlFor="feedback-message">Found a bug or have an idea?</label>
+          <textarea
+            id="feedback-message"
+            rows={6}
+            value={feedbackMessage}
+            onChange={(e) => setFeedbackMessage(e.target.value)}
+            placeholder="Tell us what happened or what you'd like to see."
+            disabled={sendingFeedback}
+            autoFocus
+          />
+        </div>
+      </SlideOver>
     </div>
   );
 }

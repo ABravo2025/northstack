@@ -35,6 +35,7 @@ export interface RegisterTenantWithOwnerInput {
   ownerEmail: string;
   ownerPassword: string;
   ownerPhone: string;
+  acceptedTerms?: boolean;
 }
 
 export interface CreateInvitationInput {
@@ -139,6 +140,14 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
     return { success: false, error: PASSWORD_POLICY_MESSAGE, field: 'ownerPassword' };
   }
 
+  if (input.acceptedTerms !== true) {
+    return {
+      success: false,
+      error: 'You must accept the Terms of Service and Privacy Policy',
+      field: 'acceptedTerms',
+    };
+  }
+
   const existingTenant = await prisma.tenant.findUnique({
     where: { slug },
   });
@@ -174,6 +183,7 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
         passwordHash: hashPassword(input.ownerPassword),
         role: 'owner',
         tenantId: tenant.id,
+        acceptedTermsAt: new Date(),
       },
     });
 

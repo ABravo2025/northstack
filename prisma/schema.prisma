@@ -103,6 +103,7 @@ model User {
   employee         Employee?
   statusChanges    StatusHistoryEntry[]
   savedViews       SavedView[]
+  acceptedTermsAt  DateTime?
 }
 
 model Employee {

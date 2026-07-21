@@ -10,6 +10,7 @@ export interface RegisterUserInput {
   password: string;
   phone: string;
   role?: UserRole;
+  acceptedTerms?: boolean;
 }
 
 export interface LoginUserInput {
@@ -106,6 +107,10 @@ export async function registerUser(input: RegisterUserInput): Promise<AuthResult
     return { success: false, error: PASSWORD_POLICY_MESSAGE, field: 'password' };
   }
 
+  if (input.acceptedTerms !== true) {
+    return { success: false, error: 'You must accept the Terms of Service and Privacy Policy', field: 'acceptedTerms' };
+  }
+
   const user = await prisma.user.create({
     data: {
       firstName: input.firstName,
@@ -114,6 +119,7 @@ export async function registerUser(input: RegisterUserInput): Promise<AuthResult
       email: input.email.toLowerCase(),
       passwordHash: hashPassword(input.password),
       role: input.role ?? 'member',
+      acceptedTermsAt: new Date(),
     },
   });
 

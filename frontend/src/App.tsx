@@ -99,6 +99,7 @@ export default function App() {
     ownerEmail: string;
     ownerPassword: string;
     ownerPhone: string;
+    acceptedTerms: boolean;
   }) => {
     setLoading(true);
     setAuthError(null);

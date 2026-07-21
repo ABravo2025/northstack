@@ -269,6 +269,7 @@ export const api = {
     ownerEmail: string;
     ownerPassword: string;
     ownerPhone: string;
+    acceptedTerms: boolean;
   }): Promise<AuthResponse> => {
     const res = await apiFetch(`${API_BASE_URL}/api/tenants/register`, {
       method: 'POST',
@@ -298,6 +299,7 @@ export const api = {
     email: string;
     password: string;
     phone: string;
+    acceptedTerms: boolean;
   }): Promise<AuthResponse> => {
     const res = await apiFetch(`${API_BASE_URL}/api/auth/register`, {
       method: 'POST',

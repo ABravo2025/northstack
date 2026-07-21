@@ -3,6 +3,7 @@ import type { FormError } from '../App';
 import PasswordInput from '../components/PasswordInput';
 import PasswordChecklist from '../components/PasswordChecklist';
 import AuthLayout from '../components/AuthLayout';
+import LegalDocumentModal from '../components/LegalDocumentModal';
 
 interface RegisterPageProps {
   onRegister: (data: {
@@ -12,6 +13,7 @@ interface RegisterPageProps {
     ownerEmail: string;
     ownerPassword: string;
     ownerPhone: string;
+    acceptedTerms: boolean;
   }) => void;
   onSwitchToLogin: () => void;
   loading: boolean;
@@ -30,6 +32,8 @@ export default function RegisterPage({
   const [ownerEmail, setOwnerEmail] = useState('');
   const [ownerPhone, setOwnerPhone] = useState('');
   const [ownerPassword, setOwnerPassword] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [legalDoc, setLegalDoc] = useState<'terms' | 'privacy' | null>(null);
 
   const fieldError = (name: string) => (error?.field === name ? error.message : null);
 
@@ -42,6 +46,7 @@ export default function RegisterPage({
       ownerEmail,
       ownerPassword,
       ownerPhone,
+      acceptedTerms,
     });
   };
 
@@ -134,6 +139,39 @@ export default function RegisterPage({
             <div className="field-error">{fieldError('ownerPassword')}</div>
           )}
         </div>
+        <div className="form-group">
+          <label className="flex items-start gap-1.5 text-sm font-normal">
+            <input
+              type="checkbox"
+              className="mt-0.5 w-auto"
+              checked={acceptedTerms}
+              onChange={(e) => setAcceptedTerms(e.target.checked)}
+              required
+              disabled={loading}
+            />
+            <span>
+              I agree to the{' '}
+              <button
+                type="button"
+                className="text-brand-blue underline underline-offset-2 hover:text-brand-navy dark:hover:text-brand-blue-light"
+                onClick={() => setLegalDoc('terms')}
+              >
+                Terms of Service
+              </button>{' '}
+              and{' '}
+              <button
+                type="button"
+                className="text-brand-blue underline underline-offset-2 hover:text-brand-navy dark:hover:text-brand-blue-light"
+                onClick={() => setLegalDoc('privacy')}
+              >
+                Privacy Policy
+              </button>
+            </span>
+          </label>
+          {fieldError('acceptedTerms') && (
+            <div className="field-error">{fieldError('acceptedTerms')}</div>
+          )}
+        </div>
         <button type="submit" className="auth-submit" disabled={loading}>
           {loading ? 'Registering...' : 'Register'}
         </button>
@@ -144,6 +182,7 @@ export default function RegisterPage({
           Login
         </button>
       </div>
+      {legalDoc && <LegalDocumentModal initialDoc={legalDoc} onClose={() => setLegalDoc(null)} />}
     </AuthLayout>
   );
 }

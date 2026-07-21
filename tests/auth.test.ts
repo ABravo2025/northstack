@@ -48,6 +48,7 @@ describe('auth service', () => {
       firstName: 'Alice',
       lastName: 'Smith',
       phone: '+1-555-0100',
+      acceptedTerms: true,
     });
 
     expect(registration.success).toBe(true);
@@ -69,5 +70,20 @@ describe('auth service', () => {
     });
 
     expect(login.success).toBe(false);
+  });
+
+  it('rejects registration without accepting the Terms of Service', async () => {
+    const registration = await registerUser({
+      email: 'noterms@example.com',
+      password: 'StrongPassword123!',
+      firstName: 'Bob',
+      lastName: 'Jones',
+      phone: '+1-555-0100',
+      acceptedTerms: false,
+    });
+
+    expect(registration.success).toBe(false);
+    expect(registration.field).toBe('acceptedTerms');
+    expect(users.find((u) => u.email === 'noterms@example.com')).toBeUndefined();
   });
 });

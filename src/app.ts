@@ -211,6 +211,7 @@ app.post('/api/tenants/register', async (req, res) => {
     ownerEmail: req.body.ownerEmail,
     ownerPassword: req.body.ownerPassword,
     ownerPhone: req.body.ownerPhone,
+    acceptedTerms: req.body.acceptedTerms,
   });
 
   if (!result.success) {

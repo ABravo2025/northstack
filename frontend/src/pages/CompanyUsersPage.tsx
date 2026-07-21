@@ -177,7 +177,7 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
                   </td>
                   <td>{u.status}</td>
                   <td>
-                    {!isSelf && (
+                    {canEditRole && (
                       <button className="btn-secondary" onClick={() => handleStatusToggle(u)}>
                         {u.status === 'active' ? 'Deactivate' : 'Activate'}
                       </button>

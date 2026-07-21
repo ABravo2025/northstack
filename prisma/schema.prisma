@@ -84,6 +84,7 @@ model Tenant {
   employeeTimeOffPolicies EmployeeTimeOffPolicy[]
   timeOffRequests         TimeOffRequest[]
   savedViews              SavedView[]
+  publicForms             PublicForm[]
 }
 
 model User {
@@ -256,6 +257,21 @@ model CustomFieldValue {
   createdAt               DateTime                @default(now())
 
   @@index([tenantId, entityType, entityId])
+}
+
+model PublicForm {
+  id           String     @id @default(uuid())
+  tenantId     String
+  tenant       Tenant     @relation(fields: [tenantId], references: [id])
+  entityType   EntityType
+  name         String
+  slug         String
+  fieldsConfig String     // JSON-encoded array of {key, required} — optional fields only (department/company + cf:<id>); firstName/lastName/email are always shown and required
+  isActive     Boolean    @default(true)
+  createdAt    DateTime   @default(now())
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
 }
 
 model SavedView {

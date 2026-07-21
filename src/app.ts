@@ -88,6 +88,16 @@ import {
   listSavedViews,
   updateSavedView,
 } from './modules/hr/savedViewService.js';
+import {
+  createPublicForm,
+  findActivePublicForm,
+  getTenantSlug,
+  listPublicForms,
+  submitPublicForm,
+  updatePublicForm,
+} from './modules/hr/publicFormService.js';
+import { verifyTurnstileToken } from './lib/turnstile.js';
+import { isRateLimited } from './lib/rateLimit.js';
 
 dotenv.config();
 
@@ -1324,6 +1334,135 @@ app.get('/api/clients/:clientId/custom-fields', async (req, res) => {
 
   const values = await listCustomFieldValuesForEntity(user.tenantId!, 'client', req.params.clientId);
   return res.json(values);
+});
+
+app.get('/api/public-forms', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageCustomFields(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const [forms, tenantSlug] = await Promise.all([
+    listPublicForms(user.tenantId!),
+    getTenantSlug(user.tenantId!),
+  ]);
+  return res.json({ tenantSlug, forms });
+});
+
+app.post('/api/public-forms', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageCustomFields(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const name = (req.body.name as string)?.trim();
+  const slug = (req.body.slug as string)?.trim();
+  const entityType = req.body.entityType as EntityType;
+  if (!name || !slug) {
+    return res.status(400).json({ error: 'Name and slug are required' });
+  }
+  if (entityType !== 'employee' && entityType !== 'client') {
+    return res.status(400).json({ error: "entityType must be 'employee' or 'client'" });
+  }
+
+  const result = await createPublicForm({
+    tenantId: user.tenantId!,
+    entityType,
+    name,
+    slug,
+    fields: req.body.fields ?? [],
+  });
+
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  return res.status(201).json(result.form);
+});
+
+app.patch('/api/public-forms/:formId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageCustomFields(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const result = await updatePublicForm(req.params.formId, user.tenantId!, {
+    name: req.body.name,
+    fields: req.body.fields,
+    isActive: req.body.isActive,
+  });
+
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  return res.json(result.form);
+});
+
+// Public, unauthenticated: powers the standalone /apply/:tenantSlug/:formSlug page.
+app.get('/api/public/:tenantSlug/:formSlug', async (req, res) => {
+  const form = await findActivePublicForm(req.params.tenantSlug, req.params.formSlug);
+  if (!form) {
+    return res.status(404).json({ error: 'Form not found' });
+  }
+
+  const fields = JSON.parse(form.fieldsConfig) as { key: string; required: boolean }[];
+  const customFieldIds = fields.filter((f) => f.key.startsWith('cf:')).map((f) => f.key.slice(3));
+  const customFieldDefs = (await Promise.all(customFieldIds.map((id) => findCustomFieldDefinitionById(id)))).filter(
+    (d): d is NonNullable<typeof d> => d !== null,
+  );
+
+  return res.json({
+    id: form.id,
+    name: form.name,
+    entityType: form.entityType,
+    fields,
+    customFieldDefs,
+  });
+});
+
+// Public, unauthenticated: submits the form. Turnstile + a per-IP rate limit
+// are the only guards — no session, so anyone with the link can reach this.
+app.post('/api/public/:tenantSlug/:formSlug/submit', async (req, res) => {
+  const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
+  if (isRateLimited(clientIp)) {
+    return res.status(429).json({ error: 'Too many submissions. Please try again in a minute.' });
+  }
+
+  const turnstileValid = await verifyTurnstileToken(req.body.turnstileToken, clientIp);
+  if (!turnstileValid) {
+    return res.status(400).json({ error: 'CAPTCHA verification failed. Please try again.' });
+  }
+
+  const form = await findActivePublicForm(req.params.tenantSlug, req.params.formSlug);
+  if (!form) {
+    return res.status(404).json({ error: 'Form not found' });
+  }
+
+  const result = await submitPublicForm(form, {
+    firstName: req.body.firstName ?? '',
+    lastName: req.body.lastName ?? '',
+    email: req.body.email ?? '',
+    values: req.body.values ?? {},
+  });
+
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  return res.status(201).json({ success: true });
 });
 
 // Catches anything an async route handler throws (e.g. Neon/Prisma dropping

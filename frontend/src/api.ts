@@ -228,6 +228,38 @@ export interface SavedView {
   createdAt: string;
 }
 
+export interface PublicFormFieldConfig {
+  key: string;
+  required: boolean;
+}
+
+export interface PublicForm {
+  id: string;
+  tenantId: string;
+  entityType: 'employee' | 'client';
+  name: string;
+  slug: string;
+  fieldsConfig: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface PublicFormCustomFieldDef {
+  id: string;
+  name: string;
+  fieldType: string;
+  options: string | null;
+  required: boolean;
+}
+
+export interface PublicFormConfig {
+  id: string;
+  name: string;
+  entityType: 'employee' | 'client';
+  fields: PublicFormFieldConfig[];
+  customFieldDefs: PublicFormCustomFieldDef[];
+}
+
 export const api = {
   // Auth
   registerTenant: async (data: {
@@ -924,6 +956,62 @@ export const api = {
     const res = await apiFetch(`${API_BASE_URL}/api/views/${viewId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+  },
+
+  // Public forms (admin management)
+  listPublicForms: async (token: string): Promise<{ tenantSlug: string | null; forms: PublicForm[] }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/public-forms`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  createPublicForm: async (
+    token: string,
+    data: { name: string; slug: string; entityType: 'employee' | 'client'; fields: PublicFormFieldConfig[] },
+  ): Promise<PublicForm> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/public-forms`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  updatePublicForm: async (
+    token: string,
+    formId: string,
+    data: { name?: string; fields?: PublicFormFieldConfig[]; isActive?: boolean },
+  ): Promise<PublicForm> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/public-forms/${formId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  // Public forms (unauthenticated, standalone /apply page)
+  getPublicFormConfig: async (tenantSlug: string, formSlug: string): Promise<PublicFormConfig> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/public/${tenantSlug}/${formSlug}`);
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  submitPublicForm: async (
+    tenantSlug: string,
+    formSlug: string,
+    data: { firstName: string; lastName: string; email: string; values: Record<string, string>; turnstileToken: string },
+  ): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/public/${tenantSlug}/${formSlug}/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
     });
     if (!res.ok) await throwApiError(res);
   },

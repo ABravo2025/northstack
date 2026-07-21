@@ -14,6 +14,8 @@ import ClientsPage from './pages/ClientsPage';
 import ProfileSettingsPage from './pages/ProfileSettingsPage';
 import CompanyAppearancePage from './pages/CompanyAppearancePage';
 import CompanyUsersPage from './pages/CompanyUsersPage';
+import PublicFormsSettingsPage from './pages/PublicFormsSettingsPage';
+import PublicFormPage from './pages/PublicFormPage';
 import AppLayout from './layouts/AppLayout';
 import WorkspaceSettingsLayout from './layouts/WorkspaceSettingsLayout';
 import './App.css';
@@ -178,6 +180,7 @@ export default function App() {
         path="/accept-invite/:token"
         element={<AcceptInvitePage onAccepted={handleInvitationAccepted} />}
       />
+      <Route path="/apply/:tenantSlug/:formSlug" element={<PublicFormPage />} />
 
       <Route element={<AppLayout user={user} token={token} onLogout={handleLogout} />}>
         <Route path="/overview" element={<OverviewPage token={token ?? ''} />} />
@@ -199,6 +202,7 @@ export default function App() {
             path="users"
             element={<CompanyUsersPage user={user} token={token ?? ''} onUserUpdated={setUser} />}
           />
+          <Route path="public-forms" element={<PublicFormsSettingsPage token={token ?? ''} />} />
         </Route>
       </Route>
 

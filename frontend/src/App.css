@@ -556,6 +556,22 @@
   @apply translate-x-0;
 }
 
+.slideover-panel.side-left {
+  @apply right-auto left-0 -translate-x-full border-r border-l-0;
+}
+
+/* .open and .side-left both set `translate`, with equal specificity (2 classes
+   each) — without this 3-class rule, whichever rule is later in the stylesheet
+   wins regardless of which state is actually active, leaving the left-docked
+   panel stuck off-screen even when open. */
+.slideover-panel.side-left.open {
+  @apply translate-x-0;
+}
+
+.slideover-panel.wide {
+  @apply max-w-3xl;
+}
+
 .slideover-head {
   @apply flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-800;
 }

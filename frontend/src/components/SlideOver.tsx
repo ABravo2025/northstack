@@ -7,9 +7,11 @@ interface SlideOverProps {
   onClose: () => void;
   children: React.ReactNode;
   footer?: React.ReactNode;
+  side?: 'left' | 'right';
+  wide?: boolean;
 }
 
-export default function SlideOver({ open, title, onClose, children, footer }: SlideOverProps) {
+export default function SlideOver({ open, title, onClose, children, footer, side = 'right', wide = false }: SlideOverProps) {
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -19,10 +21,19 @@ export default function SlideOver({ open, title, onClose, children, footer }: Sl
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [open, onClose]);
 
+  const panelClass = [
+    'slideover-panel',
+    open ? 'open' : '',
+    side === 'left' ? 'side-left' : '',
+    wide ? 'wide' : '',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return (
     <>
       <div className={`slideover-overlay ${open ? 'open' : ''}`} onClick={onClose} />
-      <div className={`slideover-panel ${open ? 'open' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
+      <div className={panelClass} role="dialog" aria-modal="true" aria-label={title}>
         <div className="slideover-head">
           <h3 className="slideover-title">{title}</h3>
           <button type="button" className="slideover-close" onClick={onClose} aria-label="Close">

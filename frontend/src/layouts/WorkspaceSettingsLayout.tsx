@@ -26,6 +26,9 @@ export default function WorkspaceSettingsLayout({ user }: WorkspaceSettingsLayou
               <NavLink to="users" className={linkClass}>
                 Users
               </NavLink>
+              <NavLink to="public-forms" className={linkClass}>
+                Public Forms
+              </NavLink>
             </>
           )}
         </nav>

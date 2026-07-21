@@ -10,6 +10,9 @@ interface PublicFormsSettingsPageProps {
 
 type EntityTab = 'employee' | 'client';
 
+const END_DROP_ZONE = '__end__';
+const PALETTE_DROP_ZONE = '__palette__';
+
 function slugify(raw: string): string {
   return raw
     .trim()
@@ -37,6 +40,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
   const [includedKeys, setIncludedKeys] = useState<Record<string, boolean>>({});
   const [requiredFields, setRequiredFields] = useState<Record<string, boolean>>({});
   const [draggedKey, setDraggedKey] = useState<string | null>(null);
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -137,7 +141,14 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
   };
 
   const handleDragStart = (key: string) => setDraggedKey(key);
-  const handleDragOver = (e: React.DragEvent) => e.preventDefault();
+  const handleDragEnd = () => {
+    setDraggedKey(null);
+    setDragOverKey(null);
+  };
+  const handleDragOver = (e: React.DragEvent, overKey: string) => {
+    e.preventDefault();
+    if (dragOverKey !== overKey) setDragOverKey(overKey);
+  };
 
   // Dropping onto a row in the preview inserts the dragged field just before that row
   // (or at the end, when targetKey is null — the trailing drop zone).
@@ -154,6 +165,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
       return next;
     });
     setDraggedKey(null);
+    setDragOverKey(null);
   };
 
   // Dropping back onto the available-fields palette removes the field from the form.
@@ -161,6 +173,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
     if (!draggedKey) return;
     removeField(draggedKey);
     setDraggedKey(null);
+    setDragOverKey(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -293,9 +306,13 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
             </p>
             <div className="grid grid-cols-2 gap-4">
               <div
-                onDragOver={handleDragOver}
+                onDragOver={(e) => handleDragOver(e, PALETTE_DROP_ZONE)}
                 onDrop={handleDropOnPalette}
-                className="min-h-[120px] rounded border border-dashed border-gray-300 p-2 dark:border-gray-700"
+                className={`min-h-[120px] rounded border border-dashed p-2 transition-colors ${
+                  dragOverKey === PALETTE_DROP_ZONE
+                    ? 'border-brand-blue bg-brand-blue/5'
+                    : 'border-gray-300 dark:border-gray-700'
+                }`}
               >
                 <p className="mb-2 text-xs font-semibold tracking-wide text-gray-400 uppercase dark:text-gray-500">
                   Available fields
@@ -308,6 +325,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
                       key={field.key}
                       draggable
                       onDragStart={() => handleDragStart(field.key)}
+                      onDragEnd={handleDragEnd}
                       className={`mb-1.5 flex cursor-move items-center gap-2 rounded border border-gray-200 px-2 py-1.5 dark:border-gray-700 ${draggedKey === field.key ? 'opacity-50' : ''}`}
                     >
                       <GripIcon className="h-3.5 w-3.5 shrink-0 text-gray-400" />
@@ -335,50 +353,60 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
                 </div>
 
                 {includedFields.map((field) => (
-                  <div
-                    key={field.key}
-                    draggable
-                    onDragStart={() => handleDragStart(field.key)}
-                    onDragOver={handleDragOver}
-                    onDrop={(e) => {
-                      e.stopPropagation();
-                      handleDropOnPreview(field.key);
-                    }}
-                    className={`mb-3 cursor-move rounded border border-gray-200 p-2 dark:border-gray-700 ${draggedKey === field.key ? 'opacity-50' : ''}`}
-                  >
-                    <div className="mb-1 flex items-center gap-2">
-                      <GripIcon className="h-3.5 w-3.5 shrink-0 text-gray-400" />
-                      <label className="flex-1 text-sm font-medium">
-                        {field.label}
-                        {requiredFields[field.key] ? ' *' : ''}
-                      </label>
-                      <label className="inline-flex items-center gap-1 text-xs font-normal text-gray-500">
-                        <input
-                          type="checkbox"
-                          className="w-auto"
-                          checked={Boolean(requiredFields[field.key])}
-                          onChange={() => toggleFieldRequired(field.key)}
-                        />
-                        Required
-                      </label>
-                      <button
-                        type="button"
-                        className="icon-btn"
-                        onClick={() => removeField(field.key)}
-                        aria-label={`Remove ${field.label}`}
-                        title="Remove"
-                      >
-                        <XIcon className="h-3.5 w-3.5" />
-                      </button>
+                  <div key={field.key}>
+                    {draggedKey && draggedKey !== field.key && dragOverKey === field.key && (
+                      <div className="mb-2 h-0.5 rounded-full bg-brand-blue" />
+                    )}
+                    <div
+                      draggable
+                      onDragStart={() => handleDragStart(field.key)}
+                      onDragEnd={handleDragEnd}
+                      onDragOver={(e) => handleDragOver(e, field.key)}
+                      onDrop={(e) => {
+                        e.stopPropagation();
+                        handleDropOnPreview(field.key);
+                      }}
+                      className={`mb-3 cursor-move rounded border border-gray-200 p-2 dark:border-gray-700 ${draggedKey === field.key ? 'opacity-50' : ''}`}
+                    >
+                      <div className="mb-1 flex items-center gap-2">
+                        <GripIcon className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                        <label className="flex-1 text-sm font-medium">
+                          {field.label}
+                          {requiredFields[field.key] ? ' *' : ''}
+                        </label>
+                        <label className="inline-flex items-center gap-1 text-xs font-normal text-gray-500">
+                          <input
+                            type="checkbox"
+                            className="w-auto"
+                            checked={Boolean(requiredFields[field.key])}
+                            onChange={() => toggleFieldRequired(field.key)}
+                          />
+                          Required
+                        </label>
+                        <button
+                          type="button"
+                          className="icon-btn"
+                          onClick={() => removeField(field.key)}
+                          aria-label={`Remove ${field.label}`}
+                          title="Remove"
+                        >
+                          <XIcon className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                      {renderPreviewInput(field)}
                     </div>
-                    {renderPreviewInput(field)}
                   </div>
                 ))}
 
+                {draggedKey && dragOverKey === END_DROP_ZONE && <div className="mb-2 h-0.5 rounded-full bg-brand-blue" />}
                 <div
-                  onDragOver={handleDragOver}
+                  onDragOver={(e) => handleDragOver(e, END_DROP_ZONE)}
                   onDrop={() => handleDropOnPreview(null)}
-                  className="rounded border border-dashed border-gray-300 py-3 text-center text-xs text-gray-400 dark:border-gray-700 dark:text-gray-500"
+                  className={`rounded border border-dashed py-3 text-center text-xs transition-colors ${
+                    dragOverKey === END_DROP_ZONE
+                      ? 'border-brand-blue text-brand-blue'
+                      : 'border-gray-300 text-gray-400 dark:border-gray-700 dark:text-gray-500'
+                  }`}
                 >
                   Drop here to add to the end
                 </div>

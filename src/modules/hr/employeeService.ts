@@ -2,7 +2,7 @@ import prisma from '../../lib/prisma.js';
 import { getDefaultStatusId, recordStatusChange } from './statusService.js';
 import { listCustomFieldValuesForEntities } from './customFieldService.js';
 import { findActiveTimeOffRequestsForEmployees } from './timeOffRequestService.js';
-import type { Employee } from '@prisma/client';
+import type { Employee, Prisma } from '@prisma/client';
 
 export interface CreateEmployeeInput {
   firstName: string;
@@ -123,9 +123,20 @@ export async function updateEmployee(
     include: { statusDefn: true },
   });
 
+  // Whitelist explicitly — never pass the input object straight through, since it
+  // may originate from req.body and carry extra fields (e.g. tenantId) that would
+  // otherwise reassign this row across tenants.
+  const data: Prisma.EmployeeUncheckedUpdateInput = {};
+  if (input.firstName !== undefined) data.firstName = input.firstName;
+  if (input.lastName !== undefined) data.lastName = input.lastName;
+  if (input.email !== undefined) data.email = input.email.toLowerCase();
+  if (input.department !== undefined) data.department = input.department;
+  if (input.statusId !== undefined) data.statusId = input.statusId;
+  if (input.managerId !== undefined) data.managerId = input.managerId;
+
   const updated = await prisma.employee.update({
     where: { id },
-    data: input,
+    data,
     include: { statusDefn: true, manager: { select: { id: true, firstName: true, lastName: true } } },
   });
 

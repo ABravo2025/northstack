@@ -1,6 +1,7 @@
 import prisma from "../../lib/prisma.js";
 import { getDefaultStatusId, recordStatusChange } from "../hr/statusService.js";
 import { listCustomFieldValuesForEntities } from "../hr/customFieldService.js";
+import type { Prisma } from "@prisma/client";
 
 interface CreateClientInput {
   firstName: string;
@@ -64,9 +65,19 @@ export async function updateClient(id: string, input: UpdateClientInput, changed
     include: { statusDefn: true },
   });
 
+  // Whitelist explicitly — never pass the input object straight through, since it
+  // may originate from req.body and carry extra fields (e.g. tenantId) that would
+  // otherwise reassign this row across tenants.
+  const data: Prisma.ClientUncheckedUpdateInput = {};
+  if (input.firstName !== undefined) data.firstName = input.firstName;
+  if (input.lastName !== undefined) data.lastName = input.lastName;
+  if (input.email !== undefined) data.email = input.email;
+  if (input.company !== undefined) data.company = input.company;
+  if (input.statusId !== undefined) data.statusId = input.statusId;
+
   const updated = await prisma.client.update({
     where: { id },
-    data: input,
+    data,
     include: { statusDefn: true },
   });
 

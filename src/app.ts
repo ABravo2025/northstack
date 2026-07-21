@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import dotenv from 'dotenv';
 import type { EntityType } from '@prisma/client';
 import {
@@ -59,6 +60,7 @@ import {
 } from './modules/clients/clientService.js';
 import {
   createStatusDefinition,
+  findStatusDefinitionById,
   listStatusDefinitions,
   updateStatusDefinition,
 } from './modules/hr/statusService.js';
@@ -103,6 +105,13 @@ dotenv.config();
 
 const app = express();
 
+// This is a JSON-only API, consumed cross-origin by design (the Vite dev
+// server on a different port locally, and the public /apply pages always).
+// Helmet's default Cross-Origin-Resource-Policy (`same-origin`) would have
+// the browser block those fetches outright regardless of the cors()
+// middleware below, so it's relaxed explicitly; everything else (HSTS,
+// X-Content-Type-Options, frame protections, etc.) stays at Helmet's default.
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors());
 app.use(express.json());
 
@@ -131,6 +140,10 @@ for (const method of routeMethods) {
 
 function getBearerToken(req: express.Request): string | null {
   return req.headers.authorization?.replace('Bearer ', '') ?? null;
+}
+
+function getClientIp(req: express.Request): string {
+  return (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
 }
 
 async function authenticateUser(req: express.Request, res: express.Response) {
@@ -167,7 +180,16 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 
+// Auth endpoints are prime brute-force/spam targets, so they get a tighter
+// window than the general-purpose default (5 attempts per 15 minutes vs. the
+// 5-per-minute default used elsewhere).
+const AUTH_RATE_LIMIT = { windowMs: 15 * 60_000, maxRequests: 5 };
+
 app.post('/api/auth/register', async (req, res) => {
+  if (isRateLimited(`register:${getClientIp(req)}`, AUTH_RATE_LIMIT)) {
+    return res.status(429).json({ error: 'Too many attempts. Please try again later.' });
+  }
+
   const result = await registerUser(req.body);
 
   if (!result.success) {
@@ -178,6 +200,10 @@ app.post('/api/auth/register', async (req, res) => {
 });
 
 app.post('/api/tenants/register', async (req, res) => {
+  if (isRateLimited(`tenant-register:${getClientIp(req)}`, AUTH_RATE_LIMIT)) {
+    return res.status(429).json({ error: 'Too many attempts. Please try again later.' });
+  }
+
   const result = await registerTenantWithOwner({
     tenantName: req.body.tenantName,
     ownerFirstName: req.body.ownerFirstName,
@@ -197,6 +223,10 @@ app.post('/api/tenants/register', async (req, res) => {
 });
 
 app.post('/api/auth/login', async (req, res) => {
+  if (isRateLimited(`login:${getClientIp(req)}`, AUTH_RATE_LIMIT)) {
+    return res.status(429).json({ error: 'Too many attempts. Please try again later.' });
+  }
+
   const result = await loginUser(req.body);
 
   if (!result.success) {
@@ -256,7 +286,7 @@ app.patch('/api/users/me/password', async (req, res) => {
     return;
   }
 
-  const result = await changeOwnPassword(user.id, req.body);
+  const result = await changeOwnPassword(user.id, req.body, getBearerToken(req)!);
   if (!result.success) {
     return res.status(400).json({ error: result.error, field: result.field });
   }
@@ -488,6 +518,13 @@ app.patch('/api/hr/employees/:employeeId', async (req, res) => {
     const wouldCycle = await wouldCreateManagerCycle(req.params.employeeId, req.body.managerId);
     if (wouldCycle) {
       return res.status(400).json({ error: 'This would create a reporting cycle' });
+    }
+  }
+
+  if (req.body.statusId !== undefined) {
+    const status = await findStatusDefinitionById(req.body.statusId);
+    if (!status || status.tenantId !== user.tenantId) {
+      return res.status(400).json({ error: 'Status not found' });
     }
   }
 
@@ -1200,6 +1237,13 @@ app.patch('/api/clients/:clientId', async (req, res) => {
     return res.status(404).json({ error: 'Client not found' });
   }
 
+  if (req.body.statusId !== undefined) {
+    const status = await findStatusDefinitionById(req.body.statusId);
+    if (!status || status.tenantId !== user.tenantId) {
+      return res.status(400).json({ error: 'Status not found' });
+    }
+  }
+
   const updated = await updateClient(req.params.clientId, req.body, user.id);
   return res.json(updated);
 });
@@ -1436,8 +1480,8 @@ app.get('/api/public/:tenantSlug/:formSlug', async (req, res) => {
 // Public, unauthenticated: submits the form. Turnstile + a per-IP rate limit
 // are the only guards — no session, so anyone with the link can reach this.
 app.post('/api/public/:tenantSlug/:formSlug/submit', async (req, res) => {
-  const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
-  if (isRateLimited(clientIp)) {
+  const clientIp = getClientIp(req);
+  if (isRateLimited(`public-form:${clientIp}`)) {
     return res.status(429).json({ error: 'Too many submissions. Please try again in a minute.' });
   }
 

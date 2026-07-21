@@ -29,6 +29,15 @@ const SCRYPT_KEY_LENGTH = 64;
 const PASSWORD_MIN_LENGTH = 8;
 const PHONE_REGEX = /^\+?[0-9()\-\s]{7,20}$/;
 
+// Sliding expiration: a session is valid for 30 days from its most recent
+// use, not from creation — an active user is never force-logged-out, but an
+// abandoned/stolen token stops working 30 days after its last use.
+export const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
+
+export function newSessionExpiry(): Date {
+  return new Date(Date.now() + SESSION_DURATION_MS);
+}
+
 export function hashPassword(password: string): string {
   const salt = randomBytes(16).toString('hex');
   const derivedKey = scryptSync(password, salt, SCRYPT_KEY_LENGTH).toString('hex');
@@ -112,6 +121,7 @@ export async function registerUser(input: RegisterUserInput): Promise<AuthResult
     data: {
       token: crypto.randomUUID(),
       userId: user.id,
+      expiresAt: newSessionExpiry(),
     },
   });
 
@@ -131,6 +141,7 @@ export async function loginUser(input: LoginUserInput): Promise<AuthResult> {
     data: {
       token: crypto.randomUUID(),
       userId: user.id,
+      expiresAt: newSessionExpiry(),
     },
   });
 
@@ -143,7 +154,34 @@ export async function authenticateToken(token: string): Promise<User | null> {
     include: { user: true },
   });
 
-  return session?.user ?? null;
+  if (!session) {
+    return null;
+  }
+
+  if (session.expiresAt < new Date()) {
+    return null;
+  }
+
+  if (session.user.status !== 'active') {
+    return null;
+  }
+
+  // Sliding expiration — extend on use instead of letting it count down from
+  // creation, so an active user is never force-logged-out. Only write when
+  // the extension is actually meaningful (more than a day's worth of the
+  // window has already elapsed) — every authenticated request goes through
+  // here, so unconditionally writing on each one would double the DB
+  // round-trips of the entire app for no practical benefit over a
+  // once-a-day refresh.
+  const staleBy = SESSION_DURATION_MS - (24 * 60 * 60 * 1000);
+  if (session.expiresAt.getTime() - Date.now() < staleBy) {
+    await prisma.session.update({
+      where: { id: session.id },
+      data: { expiresAt: newSessionExpiry() },
+    });
+  }
+
+  return session.user;
 }
 
 export async function logoutUser(token: string): Promise<boolean> {
@@ -199,7 +237,11 @@ export interface ChangePasswordInput {
   newPassword: string;
 }
 
-export async function changeOwnPassword(userId: string, input: ChangePasswordInput): Promise<AuthResult> {
+export async function changeOwnPassword(
+  userId: string,
+  input: ChangePasswordInput,
+  currentToken: string,
+): Promise<AuthResult> {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
     return { success: false, error: 'User not found' };
@@ -216,6 +258,13 @@ export async function changeOwnPassword(userId: string, input: ChangePasswordInp
   const updated = await prisma.user.update({
     where: { id: userId },
     data: { passwordHash: hashPassword(input.newPassword) },
+  });
+
+  // A stolen token shouldn't keep working after the account owner changes
+  // their password — but keep the session making this request alive, so
+  // whoever just changed it isn't immediately logged out themselves.
+  await prisma.session.deleteMany({
+    where: { userId, token: { not: currentToken } },
   });
 
   return { success: true, user: updated };

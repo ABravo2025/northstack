@@ -4,6 +4,7 @@ import {
   hashPassword,
   isPasswordValid,
   isPhoneValid,
+  newSessionExpiry,
   PASSWORD_POLICY_MESSAGE,
   PHONE_POLICY_MESSAGE,
 } from '../auth/authService.js';
@@ -180,6 +181,7 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
       data: {
         token: randomUUID(),
         userId: user.id,
+        expiresAt: newSessionExpiry(),
       },
     });
 

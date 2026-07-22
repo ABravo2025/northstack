@@ -36,6 +36,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
   const [formName, setFormName] = useState('');
   const [formSlug, setFormSlug] = useState('');
   const [slugTouched, setSlugTouched] = useState(false);
+  const [thankYouMessage, setThankYouMessage] = useState('');
   const [fieldOrder, setFieldOrder] = useState<string[]>([]);
   const [includedKeys, setIncludedKeys] = useState<Record<string, boolean>>({});
   const [requiredFields, setRequiredFields] = useState<Record<string, boolean>>({});
@@ -105,6 +106,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
     setFormName('');
     setFormSlug('');
     setSlugTouched(false);
+    setThankYouMessage('');
     setFieldOrder(allFields.map((f) => f.key));
     setIncludedKeys({});
     setRequiredFields({});
@@ -119,6 +121,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
     setFormName(form.name);
     setFormSlug(form.slug);
     setSlugTouched(true);
+    setThankYouMessage(form.thankYouMessage ?? '');
     setFieldOrder([...savedKeys, ...remainingKeys]);
     setIncludedKeys(Object.fromEntries(savedKeys.map((key) => [key, true])));
     setRequiredFields(Object.fromEntries(fields.map((f) => [f.key, f.required])));
@@ -185,7 +188,11 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
         .map((key) => ({ key, required: Boolean(requiredFields[key]) }));
 
       if (slideOverMode === 'edit' && editingFormId) {
-        await api.updatePublicForm(token, editingFormId, { name: formName.trim(), fields });
+        await api.updatePublicForm(token, editingFormId, {
+          name: formName.trim(),
+          fields,
+          thankYouMessage,
+        });
         toast.success('Form updated.');
       } else {
         await api.createPublicForm(token, {
@@ -193,6 +200,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
           slug: formSlug.trim(),
           entityType: tab,
           fields,
+          thankYouMessage,
         });
         toast.success('Form created.');
       }
@@ -412,6 +420,18 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="pf-thank-you">Thank you message</label>
+            <textarea
+              id="pf-thank-you"
+              rows={3}
+              value={thankYouMessage}
+              onChange={(e) => setThankYouMessage(e.target.value)}
+              placeholder="Thank you! Your submission has been received."
+            />
+            <p className="mt-1 text-xs text-gray-500">Shown after a successful submit. Leave blank to use the default above.</p>
           </div>
         </form>
       </SlideOver>

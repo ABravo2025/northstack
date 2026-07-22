@@ -240,6 +240,7 @@ export interface PublicForm {
   name: string;
   slug: string;
   fieldsConfig: string;
+  thankYouMessage: string | null;
   isActive: boolean;
   createdAt: string;
 }
@@ -258,6 +259,7 @@ export interface PublicFormConfig {
   entityType: 'employee' | 'client';
   fields: PublicFormFieldConfig[];
   customFieldDefs: PublicFormCustomFieldDef[];
+  thankYouMessage: string | null;
 }
 
 export const api = {
@@ -973,7 +975,13 @@ export const api = {
 
   createPublicForm: async (
     token: string,
-    data: { name: string; slug: string; entityType: 'employee' | 'client'; fields: PublicFormFieldConfig[] },
+    data: {
+      name: string;
+      slug: string;
+      entityType: 'employee' | 'client';
+      fields: PublicFormFieldConfig[];
+      thankYouMessage?: string;
+    },
   ): Promise<PublicForm> => {
     const res = await apiFetch(`${API_BASE_URL}/api/public-forms`, {
       method: 'POST',
@@ -987,7 +995,7 @@ export const api = {
   updatePublicForm: async (
     token: string,
     formId: string,
-    data: { name?: string; fields?: PublicFormFieldConfig[]; isActive?: boolean },
+    data: { name?: string; fields?: PublicFormFieldConfig[]; isActive?: boolean; thankYouMessage?: string },
   ): Promise<PublicForm> => {
     const res = await apiFetch(`${API_BASE_URL}/api/public-forms/${formId}`, {
       method: 'PATCH',
@@ -1008,7 +1016,14 @@ export const api = {
   submitPublicForm: async (
     tenantSlug: string,
     formSlug: string,
-    data: { firstName: string; lastName: string; email: string; values: Record<string, string>; turnstileToken: string },
+    data: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      values: Record<string, string>;
+      turnstileToken: string;
+      honeypot: string;
+    },
   ): Promise<void> => {
     const res = await apiFetch(`${API_BASE_URL}/api/public/${tenantSlug}/${formSlug}/submit`, {
       method: 'POST',

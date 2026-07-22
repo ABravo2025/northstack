@@ -1426,6 +1426,7 @@ app.post('/api/public-forms', async (req, res) => {
     name,
     slug,
     fields: req.body.fields ?? [],
+    thankYouMessage: req.body.thankYouMessage,
   });
 
   if (!result.success) {
@@ -1449,6 +1450,7 @@ app.patch('/api/public-forms/:formId', async (req, res) => {
     name: req.body.name,
     fields: req.body.fields,
     isActive: req.body.isActive,
+    thankYouMessage: req.body.thankYouMessage,
   });
 
   if (!result.success) {
@@ -1477,6 +1479,7 @@ app.get('/api/public/:tenantSlug/:formSlug', async (req, res) => {
     entityType: form.entityType,
     fields,
     customFieldDefs,
+    thankYouMessage: form.thankYouMessage,
   });
 });
 
@@ -1486,6 +1489,13 @@ app.post('/api/public/:tenantSlug/:formSlug/submit', async (req, res) => {
   const clientIp = getClientIp(req);
   if (isRateLimited(`public-form:${clientIp}`)) {
     return res.status(429).json({ error: 'Too many submissions. Please try again in a minute.' });
+  }
+
+  // Honeypot: a hidden field a real user never fills in. Any value means a bot
+  // filled the whole form — fake a normal success without creating anything or
+  // spending a Turnstile verification call, so the bot gets no signal it was caught.
+  if ((req.body.honeypot ?? '').trim()) {
+    return res.status(201).json({ success: true });
   }
 
   const turnstileValid = await verifyTurnstileToken(req.body.turnstileToken, clientIp);

@@ -16,6 +16,7 @@ export interface CreatePublicFormInput {
   name: string;
   slug: string;
   fields: PublicFormFieldConfig[];
+  thankYouMessage?: string;
 }
 
 function normalizeSlug(raw: string): string {
@@ -52,6 +53,7 @@ export async function createPublicForm(input: CreatePublicFormInput): Promise<Cr
       name: input.name,
       slug,
       fieldsConfig: JSON.stringify(input.fields),
+      thankYouMessage: input.thankYouMessage?.trim() || null,
     },
   });
   return { success: true, form };
@@ -73,6 +75,7 @@ export interface UpdatePublicFormInput {
   name?: string;
   fields?: PublicFormFieldConfig[];
   isActive?: boolean;
+  thankYouMessage?: string;
 }
 
 export interface UpdatePublicFormResult {
@@ -97,6 +100,7 @@ export async function updatePublicForm(
       name: input.name,
       isActive: input.isActive,
       fieldsConfig: input.fields ? JSON.stringify(input.fields) : undefined,
+      thankYouMessage: input.thankYouMessage !== undefined ? input.thankYouMessage.trim() || null : undefined,
     },
   });
   return { success: true, form };

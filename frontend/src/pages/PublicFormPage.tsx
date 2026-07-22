@@ -33,6 +33,7 @@ export default function PublicFormPage() {
   const [email, setEmail] = useState('');
   const [values, setValues] = useState<Record<string, string>>({});
   const [turnstileToken, setTurnstileToken] = useState('');
+  const [honeypot, setHoneypot] = useState('');
 
   const turnstileRef = useRef<HTMLDivElement | null>(null);
   const widgetIdRef = useRef<string | null>(null);
@@ -100,6 +101,7 @@ export default function PublicFormPage() {
         email,
         values,
         turnstileToken,
+        honeypot,
       });
       setSubmitted(true);
     } catch (err) {
@@ -132,7 +134,9 @@ export default function PublicFormPage() {
     return (
       <AuthLayout>
         <h2 className="auth-title">Thank you!</h2>
-        <p className="text-sm text-gray-500">Your submission has been received.</p>
+        <p className="text-sm text-gray-500">
+          {config.thankYouMessage || 'Your submission has been received.'}
+        </p>
       </AuthLayout>
     );
   }
@@ -141,6 +145,18 @@ export default function PublicFormPage() {
     <AuthLayout>
       <h2 className="auth-title">{config.name}</h2>
       <form onSubmit={handleSubmit}>
+        <div style={{ position: 'absolute', left: '-9999px' }} aria-hidden="true">
+          <label htmlFor="pf-website">Website</label>
+          <input
+            id="pf-website"
+            type="text"
+            name="website"
+            value={honeypot}
+            onChange={(e) => setHoneypot(e.target.value)}
+            tabIndex={-1}
+            autoComplete="off"
+          />
+        </div>
         <div className="form-group">
           <label htmlFor="pf-firstName">First Name *</label>
           <input

@@ -9,13 +9,14 @@ Definido en sesión de planning del 2026-07-21. Cada ítem tiene su descripción
 checklist de abajo — esto es solo el orden de ataque, no duplica el detalle. Reordenar acá cuando
 cambie la prioridad, en vez de dejarlo solo dicho en una conversación.
 
-**En ejecución ahora — brief de esta semana** (`docs/tareas/brief-semana-2026-07-21.md`, Bloques 1-4):
-seguridad (fix IDOR/mass assignment, rate limiting, Helmet, expiración de sesiones, chequeo de
-`user.status`), checkbox de ToS/Privacy al registrarse, notificaciones por email (Public Forms +
-Time Off), canal de feedback/reporte de bugs, mensaje de agradecimiento personalizable y honeypot
-en Public Forms.
+**Completado — brief de la semana del 2026-07-21** (`docs/tareas/brief-semana-2026-07-21.md`, Bloques 1-4,
+ver detalle de implementación/verificación en `docs/tareas/semana-2026-07-21.md`): seguridad
+(fix IDOR/mass assignment, rate limiting, Helmet, expiración de sesiones, chequeo de `user.status`),
+checkbox de ToS/Privacy al registrarse, notificaciones por email (Public Forms + Time Off), canal de
+feedback/reporte de bugs, mensaje de agradecimiento personalizable y honeypot en Public Forms.
+Siguiente en la cola: Tier 1.
 
-**Tier 1 — Cerrar beta-readiness** (con esto, el producto está listo para invitar al primer tester)
+**Tier 1 — Cerrar beta-readiness (próximo)** (con esto, el producto está listo para invitar al primer tester)
 - Seed de datos de ejemplo + onboarding checklist en `OverviewPage.tsx`
 - Sección de Ayuda / Contacto / FAQ
 - Changelog in-app
@@ -282,14 +283,14 @@ Hallazgos de `docs/ux-ui-audit.md` + decisiones tomadas en las sesiones de mocku
 - [x] Política de contraseñas: mínimo 8 caracteres, 1 mayúscula, 1 número, 1 carácter especial (aplicada en registro individual y en registro de tenant+owner)
 - [x] Validación de formato de teléfono (rechaza texto que no tenga forma de número)
 - [x] `passwordHash` viajaba al frontend en toda respuesta que incluyera un `user` (register, login, auth/me, tenants/register, accept-invite) — encontrado de paso al armar Fase 2. Se agregó `sanitizeUser` en `authService.ts` y se aplicó a los 6 endpoints que devolvían el objeto completo; el frontend nunca leía ese campo, así que no hubo cambios de contrato.
-- [ ] **Auditoría de seguridad (2026-07-16, `docs/informe-tecnico/auditoria-seguridad-2026-07-16.md`) — hallazgos pendientes.** Spec detallado de los primeros 5 (los de esta semana) en `docs/tareas/brief-semana-2026-07-21.md`, Bloque 1:
-  - [ ] **[ALTO]** Mass assignment/IDOR en `PATCH` employees/clients — `req.body` sin whitelist llega directo a `prisma.update` (`employeeService.ts`/`clientService.ts`), permite reasignar `tenantId`/`userId`/`statusId` de otro tenant. Ver brief 1.1.
-  - [ ] **[MEDIO]** Sesiones sin expiración ni revocación al cambiar password (`model Session` sin `expiresAt`). Ver brief 1.4.
-  - [ ] **[MEDIO]** Sin rate limiting en `/api/auth/*` (login/registro sin fricción ante fuerza bruta). Ver brief 1.2.
-  - [ ] **[MEDIO]** Sin cabeceras de seguridad HTTP (Helmet). Ver brief 1.3.
-  - [ ] **[MEDIO]** `authenticateToken` no verifica `user.status === 'active'` — un usuario desactivado sigue con acceso mientras su sesión no expire. Ver brief 1.5.
+- [ ] **Auditoría de seguridad (2026-07-16, `docs/informe-tecnico/auditoria-seguridad-2026-07-16.md`) — 5 de 7 hallazgos resueltos.** Spec detallado de los primeros 5 (los de esta semana) en `docs/tareas/brief-semana-2026-07-21.md`, Bloque 1, ejecución verificada en `docs/tareas/semana-2026-07-21.md`:
+  - [x] **[ALTO]** Mass assignment/IDOR en `PATCH` employees/clients — `req.body` sin whitelist llegaba directo a `prisma.update` (`employeeService.ts`/`clientService.ts`), permitía reasignar `tenantId`/`userId`/`statusId` de otro tenant. Resuelto 2026-07-21 (Bloque 1.1).
+  - [x] **[MEDIO]** Sesiones sin expiración ni revocación al cambiar password (`model Session` sin `expiresAt`). Resuelto 2026-07-21 (Bloque 1.4) — expiración deslizante + revocación de otras sesiones al cambiar password.
+  - [x] **[MEDIO]** Sin rate limiting en `/api/auth/*` (login/registro sin fricción ante fuerza bruta). Resuelto 2026-07-21 (Bloque 1.2).
+  - [x] **[MEDIO]** Sin cabeceras de seguridad HTTP (Helmet). Resuelto 2026-07-21 (Bloque 1.3).
+  - [x] **[MEDIO]** `authenticateToken` no verificaba `user.status === 'active'` — un usuario desactivado seguía con acceso mientras su sesión no expirara. Resuelto 2026-07-21 (Bloque 1.5).
   - [ ] **[MEDIO]** CORS abierto a cualquier origen (`app.use(cors())` sin configurar) — no incluido en el brief de esta semana, queda para una ronda siguiente.
-  - [ ] **[BAJO]** `role` arbitrario aceptado en `POST /api/auth/register`, `statusId` no validado contra tenant al actualizar (mismo fix que 1.1 lo resuelve de paso), `zod` instalado sin usar — no incluidos en el brief de esta semana.
+  - [ ] **[BAJO]** `role` arbitrario aceptado en `POST /api/auth/register`, `zod` instalado sin usar — no incluidos en el brief de esta semana. (La parte de `statusId` no validado contra tenant al actualizar sí se resolvió, de paso, dentro del fix de 1.1 de arriba.)
 
 ## Notas de avance
 
@@ -301,7 +302,8 @@ Hallazgos de `docs/ux-ui-audit.md` + decisiones tomadas en las sesiones de mocku
 
 Las entradas fechadas (el detalle día a día de qué se hizo y por qué) viven en `docs/tareas/`, un archivo por semana — este archivo se estaba volviendo enorme y poco manejable. Más reciente primero:
 
-- [`docs/tareas/semana-2026-07-13.md`](tareas/semana-2026-07-13.md) — semana actual, en curso
+- [`docs/tareas/semana-2026-07-21.md`](tareas/semana-2026-07-21.md) — semana actual, en curso
+- [`docs/tareas/semana-2026-07-13.md`](tareas/semana-2026-07-13.md)
 - [`docs/tareas/semana-2026-07-06.md`](tareas/semana-2026-07-06.md)
 - [`docs/tareas/semana-2026-06-29.md`](tareas/semana-2026-06-29.md)
 

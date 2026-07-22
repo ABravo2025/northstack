@@ -1,5 +1,10 @@
 # Brief de desarrollo — semana del 2026-07-21
 
+**Estado: completo.** Los 4 bloques se ejecutaron y verificaron el 2026-07-21 y están en producción.
+Detalle de implementación/verificación de cada tarea en
+[`docs/tareas/semana-2026-07-21.md`](semana-2026-07-21.md). Este documento queda como referencia
+del spec original.
+
 Este documento es un brief técnico explícito para que un desarrollador (o un agente de IA) lo
 ejecute sin necesitar contexto conversacional previo. Cada tarea incluye: estado actual (con
 archivo:línea), el cambio requerido, y el criterio de aceptación. Orden de ejecución sugerido:

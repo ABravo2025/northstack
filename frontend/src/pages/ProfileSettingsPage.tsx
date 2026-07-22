@@ -67,7 +67,7 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
   return (
     <>
       <div className="card">
-        <h3>Profile</h3>
+        <h3 className="card-title">Profile</h3>
         <form onSubmit={handleProfileSubmit}>
           <div className="form-group">
             <label htmlFor="profile-firstName">First name</label>
@@ -113,7 +113,7 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
       </div>
 
       <div className="card">
-        <h3>Change password</h3>
+        <h3 className="card-title">Change password</h3>
         <form onSubmit={handlePasswordSubmit}>
           <div className="form-group">
             <label htmlFor="profile-currentPassword">Current password</label>

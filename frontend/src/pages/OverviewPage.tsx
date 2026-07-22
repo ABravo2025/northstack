@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { api } from '../api';
 import { useToast } from '../components/ToastProvider';
+import { ChevronLeftIcon, ChevronRightIcon } from '../components/Icons';
 
 interface OverviewPageProps {
   token: string;
@@ -106,14 +107,14 @@ export default function OverviewPage({ token }: OverviewPageProps) {
           {MONTH_LABELS[cursor.month]} {cursor.year}
         </h2>
         <div className="flex items-center gap-1.5 ml-auto">
-          <button className="btn-secondary px-2 py-1 text-xs" onClick={goToPrevMonth}>
-            ‹
+          <button className="btn-secondary px-2 py-1 text-xs" onClick={goToPrevMonth} aria-label="Previous month">
+            <ChevronLeftIcon className="h-3.5 w-3.5" />
           </button>
           <button className="btn-secondary px-2 py-1 text-xs" onClick={goToToday}>
             Today
           </button>
-          <button className="btn-secondary px-2 py-1 text-xs" onClick={goToNextMonth}>
-            ›
+          <button className="btn-secondary px-2 py-1 text-xs" onClick={goToNextMonth} aria-label="Next month">
+            <ChevronRightIcon className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>

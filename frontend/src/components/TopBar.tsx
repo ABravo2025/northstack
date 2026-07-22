@@ -85,7 +85,8 @@ export default function TopBar({ user, token, onLogout, onMenuClick }: TopBarPro
         <button type="button" className="menu-toggle" onClick={onMenuClick} aria-label="Open menu">
           <MenuIcon className="h-5 w-5" />
         </button>
-        <img src="/logo-horizontal-light.svg" alt="Northstack" />
+        <img src="/logo-horizontal-light.svg" alt="Northstack" className="dark:hidden" />
+        <img src="/logo-horizontal-dark.svg" alt="Northstack" className="hidden dark:block" />
       </div>
 
       <div className="user-menu" ref={menuRef}>

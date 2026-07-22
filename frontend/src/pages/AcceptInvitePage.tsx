@@ -84,7 +84,8 @@ export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) 
   return (
     <div className="page">
       <div className="header">
-        <img src="/logo-horizontal-light.svg" alt="Northstack" />
+        <img src="/logo-horizontal-light.svg" alt="Northstack" className="dark:hidden" />
+        <img src="/logo-horizontal-dark.svg" alt="Northstack" className="hidden dark:block" />
       </div>
       <div className="container">
         <div className="card mx-auto mt-10 max-w-md">

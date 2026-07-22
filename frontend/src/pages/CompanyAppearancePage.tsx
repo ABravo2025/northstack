@@ -17,7 +17,7 @@ export default function CompanyAppearancePage() {
 
   return (
     <div className="card">
-      <h3>Appearance</h3>
+      <h3 className="card-title">Appearance</h3>
       <p className="mb-3 text-sm text-gray-500">Choose how Northstack looks on this device.</p>
       <div className="nav">
         {THEME_OPTIONS.map((option) => (

@@ -40,6 +40,12 @@ interface StatusLike {
   isActive: boolean;
 }
 
+interface CatalogEntryLike {
+  id: string;
+  name: string;
+  isActive: boolean;
+}
+
 interface CustomFieldLike {
   id: string;
   name: string;
@@ -76,7 +82,12 @@ function buildCustomFieldColumns(customFields: CustomFieldLike[]): ViewField[] {
     });
 }
 
-export function buildEmployeeFields(statuses: StatusLike[], customFields: CustomFieldLike[]): ViewField[] {
+export function buildEmployeeFields(
+  statuses: StatusLike[],
+  customFields: CustomFieldLike[],
+  departments: CatalogEntryLike[] = [],
+  jobTitles: CatalogEntryLike[] = [],
+): ViewField[] {
   return [
     {
       key: 'name',
@@ -86,15 +97,23 @@ export function buildEmployeeFields(statuses: StatusLike[], customFields: Custom
     },
     {
       key: 'email',
-      label: 'Email',
+      label: 'Business Email',
       valueType: 'email',
       getValue: (item: any) => item.email ?? '',
     },
     {
       key: 'department',
       label: 'Department',
-      valueType: 'text',
-      getValue: (item: any) => item.department ?? '',
+      valueType: 'select',
+      selectOptions: departments.filter((d) => d.isActive).map((d) => ({ value: d.name })),
+      getValue: (item: any) => item.departmentDefn?.name ?? '',
+    },
+    {
+      key: 'jobTitle',
+      label: 'Job Title',
+      valueType: 'select',
+      selectOptions: jobTitles.filter((j) => j.isActive).map((j) => ({ value: j.name })),
+      getValue: (item: any) => item.jobTitleDefn?.name ?? '',
     },
     {
       key: 'status',

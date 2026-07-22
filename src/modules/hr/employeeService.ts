@@ -8,7 +8,14 @@ export interface CreateEmployeeInput {
   firstName: string;
   lastName: string;
   email: string;
-  department: string;
+  departmentId?: string | null;
+  jobTitleId?: string | null;
+  hourlyRateCents?: number | null;
+  monthlyRateCents?: number | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  contractUrl?: string | null;
+  personalEmail?: string | null;
   statusId?: string;
   managerId?: string | null;
   tenantId: string;
@@ -18,7 +25,14 @@ export interface UpdateEmployeeInput {
   firstName?: string;
   lastName?: string;
   email?: string;
-  department?: string;
+  departmentId?: string | null;
+  jobTitleId?: string | null;
+  hourlyRateCents?: number | null;
+  monthlyRateCents?: number | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  contractUrl?: string | null;
+  personalEmail?: string | null;
   statusId?: string;
   managerId?: string | null;
 }
@@ -31,7 +45,14 @@ export async function createEmployee(input: CreateEmployeeInput): Promise<Employ
       firstName: input.firstName,
       lastName: input.lastName,
       email: input.email.toLowerCase(),
-      department: input.department,
+      departmentId: input.departmentId ?? null,
+      jobTitleId: input.jobTitleId ?? null,
+      hourlyRateCents: input.hourlyRateCents ?? null,
+      monthlyRateCents: input.monthlyRateCents ?? null,
+      startDate: input.startDate ? new Date(input.startDate) : null,
+      endDate: input.endDate ? new Date(input.endDate) : null,
+      contractUrl: input.contractUrl ?? null,
+      personalEmail: input.personalEmail ?? null,
       statusId,
       managerId: input.managerId ?? null,
       tenantId: input.tenantId,
@@ -71,7 +92,12 @@ export async function wouldCreateManagerCycle(
   return false;
 }
 
-export async function listEmployees(tenantId?: string | null) {
+// hourlyRateCents/monthlyRateCents are compensation data — for now, visible to
+// `owner` only (not even `admin`). This is a deliberate stopgap, not a general
+// permissions mechanism: revisit once the custom-roles system exists.
+const COMPENSATION_FIELDS = ['hourlyRateCents', 'monthlyRateCents'] as const;
+
+export async function listEmployees(tenantId: string | null | undefined, viewerRole?: string) {
   if (!tenantId) {
     return [];
   }
@@ -80,6 +106,8 @@ export async function listEmployees(tenantId?: string | null) {
     where: { tenantId },
     include: {
       statusDefn: true,
+      departmentDefn: true,
+      jobTitleDefn: true,
       manager: { select: { id: true, firstName: true, lastName: true } },
       timeOffPolicies: { include: { timeOffPolicy: true } },
     },
@@ -91,13 +119,21 @@ export async function listEmployees(tenantId?: string | null) {
 
   return employees.map((employee) => {
     const activeTimeOff = activeTimeOffRequests.find((request) => request.employeeId === employee.id);
-    return {
+    const result: any = {
       ...employee,
       customFieldVals: values.filter((value) => value.entityId === employee.id),
       activeTimeOffTag: activeTimeOff
         ? { policyName: activeTimeOff.timeOffPolicy.name, color: activeTimeOff.timeOffPolicy.color }
         : null,
     };
+
+    if (viewerRole !== 'owner') {
+      for (const field of COMPENSATION_FIELDS) {
+        delete result[field];
+      }
+    }
+
+    return result;
   });
 }
 
@@ -130,14 +166,26 @@ export async function updateEmployee(
   if (input.firstName !== undefined) data.firstName = input.firstName;
   if (input.lastName !== undefined) data.lastName = input.lastName;
   if (input.email !== undefined) data.email = input.email.toLowerCase();
-  if (input.department !== undefined) data.department = input.department;
+  if (input.departmentId !== undefined) data.departmentId = input.departmentId;
+  if (input.jobTitleId !== undefined) data.jobTitleId = input.jobTitleId;
+  if (input.hourlyRateCents !== undefined) data.hourlyRateCents = input.hourlyRateCents;
+  if (input.monthlyRateCents !== undefined) data.monthlyRateCents = input.monthlyRateCents;
+  if (input.startDate !== undefined) data.startDate = input.startDate ? new Date(input.startDate) : null;
+  if (input.endDate !== undefined) data.endDate = input.endDate ? new Date(input.endDate) : null;
+  if (input.contractUrl !== undefined) data.contractUrl = input.contractUrl;
+  if (input.personalEmail !== undefined) data.personalEmail = input.personalEmail;
   if (input.statusId !== undefined) data.statusId = input.statusId;
   if (input.managerId !== undefined) data.managerId = input.managerId;
 
   const updated = await prisma.employee.update({
     where: { id },
     data,
-    include: { statusDefn: true, manager: { select: { id: true, firstName: true, lastName: true } } },
+    include: {
+      statusDefn: true,
+      departmentDefn: true,
+      jobTitleDefn: true,
+      manager: { select: { id: true, firstName: true, lastName: true } },
+    },
   });
 
   if (input.statusId && input.statusId !== existing.statusId) {

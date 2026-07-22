@@ -167,12 +167,26 @@ export async function submitPublicForm(
   let entityId: string;
 
   if (form.entityType === 'employee') {
+    // 'department' is a dropdown of the tenant's existing catalog options (see
+    // fieldCatalogService.ts) — the submitted value is a FieldCatalogDefinition id,
+    // not free text. Validate it belongs to this tenant before trusting it; an
+    // invalid/stale id is silently dropped rather than failing the whole submit,
+    // same as the custom-field validation below.
+    const submittedDepartmentId = input.values['department']?.trim();
+    let departmentId: string | undefined;
+    if (submittedDepartmentId) {
+      const department = await prisma.fieldCatalogDefinition.findUnique({ where: { id: submittedDepartmentId } });
+      if (department && department.tenantId === form.tenantId && department.kind === 'department' && department.isActive) {
+        departmentId = department.id;
+      }
+    }
+
     const employee = await createEmployee({
       tenantId: form.tenantId,
       firstName: input.firstName.trim(),
       lastName: input.lastName.trim(),
       email: input.email.trim(),
-      department: input.values['department'] ?? '',
+      departmentId,
     });
     entityId = employee.id;
   } else {

@@ -10,6 +10,7 @@ import KanbanBoard from '../components/KanbanBoard';
 import CustomFieldColumnMenu from '../components/CustomFieldColumnMenu';
 import AddCustomFieldColumn from '../components/AddCustomFieldColumn';
 import StatusColumnMenu from '../components/StatusColumnMenu';
+import FieldCatalogMenu from '../components/FieldCatalogMenu';
 import { MailIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
 import {
   applyFilters,
@@ -23,6 +24,20 @@ import {
 
 const PAGE_SIZE = 20;
 const ACTIVE_VIEW_STORAGE_KEY = 'northstack:activeView:employee';
+
+function dollarsToCents(value: string): number | undefined {
+  if (!value.trim()) return undefined;
+  const parsed = Number.parseFloat(value);
+  return Number.isNaN(parsed) ? undefined : Math.round(parsed * 100);
+}
+
+function centsToDollars(cents: number | null | undefined): string {
+  return cents == null ? '' : (cents / 100).toFixed(2);
+}
+
+function toDateInputValue(value: string | null | undefined): string {
+  return value ? value.slice(0, 10) : '';
+}
 
 interface EmployeesPageProps {
   user: any;
@@ -40,6 +55,8 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const [page, setPage] = useState(1);
   const [employeeCustomFields, setEmployeeCustomFields] = useState<any[]>([]);
   const [employeeStatuses, setEmployeeStatuses] = useState<any[]>([]);
+  const [employeeDepartments, setEmployeeDepartments] = useState<any[]>([]);
+  const [employeeJobTitles, setEmployeeJobTitles] = useState<any[]>([]);
   const [timeOffPolicies, setTimeOffPolicies] = useState<any[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
   const [editCustomFieldValues, setEditCustomFieldValues] = useState<Record<string, string>>({});
@@ -60,8 +77,8 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const activeEmployeeStatuses = employeeStatuses.filter((s) => s.isActive);
 
   const fields = useMemo(
-    () => buildEmployeeFields(employeeStatuses, employeeCustomFields),
-    [employeeStatuses, employeeCustomFields],
+    () => buildEmployeeFields(employeeStatuses, employeeCustomFields, employeeDepartments, employeeJobTitles),
+    [employeeStatuses, employeeCustomFields, employeeDepartments, employeeJobTitles],
   );
   const groupable = useMemo(() => groupableFields(fields), [fields]);
 
@@ -88,7 +105,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     return (
       `${emp.firstName} ${emp.lastName}`.toLowerCase().includes(query) ||
       emp.email.toLowerCase().includes(query) ||
-      emp.department.toLowerCase().includes(query)
+      (emp.departmentDefn?.name ?? '').toLowerCase().includes(query)
     );
   });
 
@@ -102,30 +119,52 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     setPage(1);
   }, [employeeSearch, activeViewId]);
 
-  const [employeeForm, setEmployeeForm] = useState({
+  const emptyEmployeeForm = {
     firstName: '',
     lastName: '',
     email: '',
-    department: '',
+    personalEmail: '',
+    departmentId: '',
+    jobTitleId: '',
     managerId: '',
-  });
+    startDate: '',
+    endDate: '',
+    contractUrl: '',
+    hourlyRate: '',
+    monthlyRate: '',
+  };
 
-  const [editEmployeeForm, setEditEmployeeForm] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    department: '',
-    statusId: '',
-    managerId: '',
-  });
+  const [employeeForm, setEmployeeForm] = useState(emptyEmployeeForm);
+
+  const [editEmployeeForm, setEditEmployeeForm] = useState({ ...emptyEmployeeForm, statusId: '' });
 
   useEffect(() => {
     loadEmployees();
     loadEmployeeCustomFields();
     loadEmployeeStatuses();
+    loadEmployeeDepartments();
+    loadEmployeeJobTitles();
     loadTimeOffPolicies();
     loadViews();
   }, []);
+
+  const loadEmployeeDepartments = async () => {
+    try {
+      const defs = await api.listFieldCatalogDefinitions(token, 'department');
+      setEmployeeDepartments(defs);
+    } catch (error) {
+      toast.error('Failed to load departments: ' + (error as Error).message);
+    }
+  };
+
+  const loadEmployeeJobTitles = async () => {
+    try {
+      const defs = await api.listFieldCatalogDefinitions(token, 'jobTitle');
+      setEmployeeJobTitles(defs);
+    } catch (error) {
+      toast.error('Failed to load job titles: ' + (error as Error).message);
+    }
+  };
 
   const loadViews = async () => {
     try {
@@ -224,7 +263,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   };
 
   const handleOpenAdd = () => {
-    setEmployeeForm({ firstName: '', lastName: '', email: '', department: '', managerId: '' });
+    setEmployeeForm(emptyEmployeeForm);
     setCustomFieldValues({});
     setSlideOverMode('add');
   };
@@ -233,8 +272,18 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     e.preventDefault();
     try {
       const employee = await api.createEmployee(token, {
-        ...employeeForm,
+        firstName: employeeForm.firstName,
+        lastName: employeeForm.lastName,
+        email: employeeForm.email,
+        personalEmail: employeeForm.personalEmail || undefined,
+        departmentId: employeeForm.departmentId || null,
+        jobTitleId: employeeForm.jobTitleId || null,
         managerId: employeeForm.managerId || null,
+        startDate: employeeForm.startDate || undefined,
+        endDate: employeeForm.endDate || undefined,
+        contractUrl: employeeForm.contractUrl || undefined,
+        hourlyRateCents: dollarsToCents(employeeForm.hourlyRate),
+        monthlyRateCents: dollarsToCents(employeeForm.monthlyRate),
       });
 
       const valueEntries = Object.entries(customFieldValues).filter(([, value]) => value.trim() !== '');
@@ -259,9 +308,16 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       firstName: emp.firstName,
       lastName: emp.lastName,
       email: emp.email,
-      department: emp.department,
+      personalEmail: emp.personalEmail || '',
+      departmentId: emp.departmentId || '',
+      jobTitleId: emp.jobTitleId || '',
       statusId: emp.statusId,
       managerId: emp.managerId || '',
+      startDate: toDateInputValue(emp.startDate),
+      endDate: toDateInputValue(emp.endDate),
+      contractUrl: emp.contractUrl || '',
+      hourlyRate: centsToDollars(emp.hourlyRateCents),
+      monthlyRate: centsToDollars(emp.monthlyRateCents),
     });
 
     const values: Record<string, string> = {};
@@ -290,8 +346,23 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     if (!editingEmployeeId) return;
     try {
       await api.updateEmployee(token, editingEmployeeId, {
-        ...editEmployeeForm,
+        firstName: editEmployeeForm.firstName,
+        lastName: editEmployeeForm.lastName,
+        email: editEmployeeForm.email,
+        personalEmail: editEmployeeForm.personalEmail || undefined,
+        departmentId: editEmployeeForm.departmentId || null,
+        jobTitleId: editEmployeeForm.jobTitleId || null,
+        statusId: editEmployeeForm.statusId,
         managerId: editEmployeeForm.managerId || null,
+        startDate: editEmployeeForm.startDate || undefined,
+        endDate: editEmployeeForm.endDate || undefined,
+        contractUrl: editEmployeeForm.contractUrl || undefined,
+        ...(user.role === 'owner'
+          ? {
+              hourlyRateCents: dollarsToCents(editEmployeeForm.hourlyRate) ?? null,
+              monthlyRateCents: dollarsToCents(editEmployeeForm.monthlyRate) ?? null,
+            }
+          : {}),
       });
 
       for (const field of activeEmployeeCustomFields) {
@@ -495,8 +566,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
 
   const columns = [
     { key: 'name', label: 'Name' },
-    { key: 'email', label: 'Email' },
+    { key: 'email', label: 'Business Email' },
     { key: 'department', label: 'Department' },
+    { key: 'jobTitle', label: 'Job Title' },
     { key: 'status', label: 'Status' },
   ];
 
@@ -552,7 +624,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="emp-email">Email</label>
+              <label htmlFor="emp-email">Business Email</label>
               <input
                 id="emp-email"
                 type="email"
@@ -562,14 +634,47 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="emp-department">Department</label>
+              <label htmlFor="emp-personalEmail">Personal Email</label>
               <input
-                id="emp-department"
-                type="text"
-                value={employeeForm.department}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, department: e.target.value })}
-                required
+                id="emp-personalEmail"
+                type="email"
+                value={employeeForm.personalEmail}
+                onChange={(e) => setEmployeeForm({ ...employeeForm, personalEmail: e.target.value })}
               />
+            </div>
+            <div className="form-group">
+              <label htmlFor="emp-departmentId">Department</label>
+              <select
+                id="emp-departmentId"
+                value={employeeForm.departmentId}
+                onChange={(e) => setEmployeeForm({ ...employeeForm, departmentId: e.target.value })}
+              >
+                <option value="">-- none --</option>
+                {employeeDepartments
+                  .filter((d) => d.isActive)
+                  .map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="emp-jobTitleId">Job Title</label>
+              <select
+                id="emp-jobTitleId"
+                value={employeeForm.jobTitleId}
+                onChange={(e) => setEmployeeForm({ ...employeeForm, jobTitleId: e.target.value })}
+              >
+                <option value="">-- none --</option>
+                {employeeJobTitles
+                  .filter((j) => j.isActive)
+                  .map((j) => (
+                    <option key={j.id} value={j.id}>
+                      {j.name}
+                    </option>
+                  ))}
+              </select>
             </div>
             <div className="form-group">
               <label htmlFor="emp-managerId">Reports To</label>
@@ -586,6 +691,51 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                 ))}
               </select>
             </div>
+            <div className="form-group">
+              <label htmlFor="emp-startDate">Start Date</label>
+              <input
+                id="emp-startDate"
+                type="date"
+                value={employeeForm.startDate}
+                onChange={(e) => setEmployeeForm({ ...employeeForm, startDate: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="emp-contractUrl">Contract URL</label>
+              <input
+                id="emp-contractUrl"
+                type="url"
+                value={employeeForm.contractUrl}
+                onChange={(e) => setEmployeeForm({ ...employeeForm, contractUrl: e.target.value })}
+                placeholder="https://drive.google.com/..."
+              />
+            </div>
+            {user.role === 'owner' && (
+              <>
+                <div className="form-group">
+                  <label htmlFor="emp-hourlyRate">Hourly Rate</label>
+                  <input
+                    id="emp-hourlyRate"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={employeeForm.hourlyRate}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, hourlyRate: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="emp-monthlyRate">Monthly Rate</label>
+                  <input
+                    id="emp-monthlyRate"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={employeeForm.monthlyRate}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, monthlyRate: e.target.value })}
+                  />
+                </div>
+              </>
+            )}
 
             {activeEmployeeCustomFields.map((field) => (
               <div className="form-group" key={field.id}>
@@ -622,7 +772,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="edit-emp-email">Email</label>
+              <label htmlFor="edit-emp-email">Business Email</label>
               <input
                 id="edit-emp-email"
                 type="email"
@@ -632,14 +782,47 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="edit-emp-department">Department</label>
+              <label htmlFor="edit-emp-personalEmail">Personal Email</label>
               <input
-                id="edit-emp-department"
-                type="text"
-                value={editEmployeeForm.department}
-                onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, department: e.target.value })}
-                required
+                id="edit-emp-personalEmail"
+                type="email"
+                value={editEmployeeForm.personalEmail}
+                onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, personalEmail: e.target.value })}
               />
+            </div>
+            <div className="form-group">
+              <label htmlFor="edit-emp-departmentId">Department</label>
+              <select
+                id="edit-emp-departmentId"
+                value={editEmployeeForm.departmentId}
+                onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, departmentId: e.target.value })}
+              >
+                <option value="">-- none --</option>
+                {employeeDepartments
+                  .filter((d) => d.isActive)
+                  .map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="edit-emp-jobTitleId">Job Title</label>
+              <select
+                id="edit-emp-jobTitleId"
+                value={editEmployeeForm.jobTitleId}
+                onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, jobTitleId: e.target.value })}
+              >
+                <option value="">-- none --</option>
+                {employeeJobTitles
+                  .filter((j) => j.isActive)
+                  .map((j) => (
+                    <option key={j.id} value={j.id}>
+                      {j.name}
+                    </option>
+                  ))}
+              </select>
             </div>
             <div className="form-group">
               <label htmlFor="edit-emp-statusId">Status</label>
@@ -672,6 +855,60 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                   ))}
               </select>
             </div>
+            <div className="form-group">
+              <label htmlFor="edit-emp-startDate">Start Date</label>
+              <input
+                id="edit-emp-startDate"
+                type="date"
+                value={editEmployeeForm.startDate}
+                onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, startDate: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="edit-emp-endDate">End Date</label>
+              <input
+                id="edit-emp-endDate"
+                type="date"
+                value={editEmployeeForm.endDate}
+                onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, endDate: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="edit-emp-contractUrl">Contract URL</label>
+              <input
+                id="edit-emp-contractUrl"
+                type="url"
+                value={editEmployeeForm.contractUrl}
+                onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, contractUrl: e.target.value })}
+                placeholder="https://drive.google.com/..."
+              />
+            </div>
+            {user.role === 'owner' && (
+              <>
+                <div className="form-group">
+                  <label htmlFor="edit-emp-hourlyRate">Hourly Rate</label>
+                  <input
+                    id="edit-emp-hourlyRate"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={editEmployeeForm.hourlyRate}
+                    onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, hourlyRate: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="edit-emp-monthlyRate">Monthly Rate</label>
+                  <input
+                    id="edit-emp-monthlyRate"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={editEmployeeForm.monthlyRate}
+                    onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, monthlyRate: e.target.value })}
+                  />
+                </div>
+              </>
+            )}
 
             {timeOffPolicies.length > 0 && (
               <div className="form-group">
@@ -777,7 +1014,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                 <div className="kc-name">
                   {emp.firstName} {emp.lastName}
                 </div>
-                <div className="kc-meta">{emp.department}</div>
+                <div className="kc-meta">{emp.departmentDefn?.name}</div>
               </>
             )}
           />
@@ -804,6 +1041,24 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                           entityType="employee"
                           statuses={employeeStatuses}
                           onChanged={loadEmployeeStatuses}
+                        />
+                      )}
+                      {col.key === 'department' && canManageCustomFields && (
+                        <FieldCatalogMenu
+                          token={token}
+                          kind="department"
+                          label="Department"
+                          entries={employeeDepartments}
+                          onChanged={loadEmployeeDepartments}
+                        />
+                      )}
+                      {col.key === 'jobTitle' && canManageCustomFields && (
+                        <FieldCatalogMenu
+                          token={token}
+                          kind="jobTitle"
+                          label="Job Title"
+                          entries={employeeJobTitles}
+                          onChanged={loadEmployeeJobTitles}
                         />
                       )}
                     </th>
@@ -853,7 +1108,8 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                       )}
                     </td>
                     <td>{emp.email}</td>
-                    <td>{emp.department}</td>
+                    <td>{emp.departmentDefn?.name || '—'}</td>
+                    <td>{emp.jobTitleDefn?.name || '—'}</td>
                     <td>{emp.statusDefn?.name}</td>
                     <td>{emp.manager ? `${emp.manager.firstName} ${emp.manager.lastName}` : '—'}</td>
                     <td>

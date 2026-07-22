@@ -192,6 +192,13 @@ export default function PublicFormPage() {
         </div>
 
         {config.fields.map((field) => {
+          // Department is a dropdown of the tenant's own catalog options, not free
+          // text — if they haven't defined any departments yet, skip the field
+          // entirely rather than show an empty dropdown.
+          if (field.key === 'department' && config.departmentOptions.length === 0) {
+            return null;
+          }
+
           const customDef = findCustomFieldDef(field.key);
           const label = customDef
             ? customDef.name
@@ -202,6 +209,28 @@ export default function PublicFormPage() {
                 : field.key;
           const inputId = `pf-${field.key}`;
           const displayLabel = field.required ? `${label} *` : label;
+
+          if (field.key === 'department') {
+            return (
+              <div className="form-group" key={field.key}>
+                <label htmlFor={inputId}>{displayLabel}</label>
+                <select
+                  id={inputId}
+                  value={values[field.key] || ''}
+                  onChange={(e) => setValues({ ...values, [field.key]: e.target.value })}
+                  required={field.required}
+                  disabled={submitting}
+                >
+                  <option value="">-- select --</option>
+                  {config.departmentOptions.map((opt) => (
+                    <option key={opt.id} value={opt.id}>
+                      {opt.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            );
+          }
 
           if (customDef?.fieldType === 'select') {
             return (

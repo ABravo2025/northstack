@@ -62,7 +62,16 @@ interface Employee {
   firstName: string;
   lastName: string;
   email: string;
-  department: string;
+  personalEmail?: string | null;
+  departmentId?: string | null;
+  departmentDefn?: { id: string; name: string } | null;
+  jobTitleId?: string | null;
+  jobTitleDefn?: { id: string; name: string } | null;
+  hourlyRateCents?: number | null;
+  monthlyRateCents?: number | null;
+  startDate?: string | null;
+  endDate?: string | null;
+  contractUrl?: string | null;
   statusId: string;
   statusDefn?: { id: string; name: string; color: string | null };
   managerId?: string | null;
@@ -109,6 +118,14 @@ interface StatusDefinition {
   color: string | null;
   order: number;
   isDefault: boolean;
+  isActive: boolean;
+}
+
+export interface FieldCatalogDefinition {
+  id: string;
+  kind: 'department' | 'jobTitle';
+  name: string;
+  order: number;
   isActive: boolean;
 }
 
@@ -259,6 +276,7 @@ export interface PublicFormConfig {
   entityType: 'employee' | 'client';
   fields: PublicFormFieldConfig[];
   customFieldDefs: PublicFormCustomFieldDef[];
+  departmentOptions: { id: string; name: string }[];
   thankYouMessage: string | null;
 }
 
@@ -453,8 +471,15 @@ export const api = {
       firstName: string;
       lastName: string;
       email: string;
-      department: string;
+      personalEmail?: string;
+      departmentId?: string | null;
+      jobTitleId?: string | null;
       managerId?: string | null;
+      startDate?: string;
+      endDate?: string;
+      contractUrl?: string;
+      hourlyRateCents?: number;
+      monthlyRateCents?: number;
     },
   ): Promise<Employee> => {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/employees`, {
@@ -593,6 +618,45 @@ export const api = {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  // Field catalog (Department, Job Title — shared generic mechanism)
+  listFieldCatalogDefinitions: async (
+    token: string,
+    kind: 'department' | 'jobTitle',
+  ): Promise<FieldCatalogDefinition[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/field-catalog?kind=${kind}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  createFieldCatalogDefinition: async (
+    token: string,
+    data: { kind: 'department' | 'jobTitle'; name: string; order?: number },
+  ): Promise<FieldCatalogDefinition> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/field-catalog`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  updateFieldCatalogDefinition: async (
+    token: string,
+    definitionId: string,
+    data: { name?: string; order?: number; isActive?: boolean },
+  ): Promise<FieldCatalogDefinition> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/field-catalog/${definitionId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(data),
     });
     if (!res.ok) await throwApiError(res);

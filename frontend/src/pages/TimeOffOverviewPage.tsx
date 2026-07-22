@@ -80,7 +80,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
           employeeId: bal.employeeId,
           employeeFirstName: bal.employeeFirstName,
           employeeLastName: bal.employeeLastName,
-          department: emp?.department || '—',
+          department: emp?.departmentDefn?.name || '—',
           policies: [] as any[],
           totalRemaining: 0,
         });
@@ -419,7 +419,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                       <span className="status-manage-name">
                         {emp.firstName} {emp.lastName}
                       </span>
-                      <span className="policy-manage-meta">{emp.department}</span>
+                      <span className="policy-manage-meta">{emp.departmentDefn?.name}</span>
                     </label>
                   ))}
                 </div>
@@ -584,7 +584,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                           <td>
                             {emp.firstName} {emp.lastName}
                           </td>
-                          <td>{emp.department}</td>
+                          <td>{emp.departmentDefn?.name || '—'}</td>
                           <td>
                             <div className="flex flex-wrap items-center gap-1.5">
                               {(emp.timeOffPolicies || []).length === 0 && !canManagePolicies && (

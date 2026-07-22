@@ -23,7 +23,7 @@ describe('HR employee service', () => {
       firstName: 'Ana',
       lastName: 'Lopez',
       email: 'ana@example.com',
-      department: 'Engineering',
+      departmentId: null,
       tenantId: 'tenant-id',
     });
 
@@ -36,7 +36,7 @@ describe('HR employee service', () => {
       firstName: 'Ana',
       lastName: 'Lopez',
       email: 'ana@example.com',
-      department: 'Engineering',
+      departmentId: null,
       tenantId: 'tenant-id',
       statusId: 'custom-status-id',
     });

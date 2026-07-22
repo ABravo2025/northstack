@@ -66,6 +66,12 @@ import {
   updateStatusDefinition,
 } from './modules/hr/statusService.js';
 import {
+  createFieldCatalogDefinition,
+  findFieldCatalogDefinitionById,
+  listFieldCatalogDefinitions,
+  updateFieldCatalogDefinition,
+} from './modules/hr/fieldCatalogService.js';
+import {
   createTimeOffPolicy,
   listTimeOffPolicies,
   updateTimeOffPolicy,
@@ -464,7 +470,7 @@ app.get('/api/hr/employees', async (req, res) => {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  const employees = await listEmployees(user.tenantId);
+  const employees = await listEmployees(user.tenantId, user.role);
   return res.json(employees);
 });
 
@@ -478,10 +484,28 @@ app.post('/api/hr/employees', async (req, res) => {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
+  if ((req.body.hourlyRateCents !== undefined || req.body.monthlyRateCents !== undefined) && user.role !== 'owner') {
+    return res.status(403).json({ error: 'Only the owner can set compensation' });
+  }
+
   if (req.body.managerId) {
     const manager = await findEmployeeById(req.body.managerId);
     if (!manager || manager.tenantId !== user.tenantId) {
       return res.status(400).json({ error: 'Manager not found' });
+    }
+  }
+
+  if (req.body.departmentId) {
+    const department = await findFieldCatalogDefinitionById(req.body.departmentId);
+    if (!department || department.tenantId !== user.tenantId || department.kind !== 'department') {
+      return res.status(400).json({ error: 'Department not found' });
+    }
+  }
+
+  if (req.body.jobTitleId) {
+    const jobTitle = await findFieldCatalogDefinitionById(req.body.jobTitleId);
+    if (!jobTitle || jobTitle.tenantId !== user.tenantId || jobTitle.kind !== 'jobTitle') {
+      return res.status(400).json({ error: 'Job title not found' });
     }
   }
 
@@ -517,6 +541,10 @@ app.patch('/api/hr/employees/:employeeId', async (req, res) => {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
+  if ((req.body.hourlyRateCents !== undefined || req.body.monthlyRateCents !== undefined) && user.role !== 'owner') {
+    return res.status(403).json({ error: 'Only the owner can set compensation' });
+  }
+
   const employee = await findEmployeeById(req.params.employeeId);
   if (!employee || employee.tenantId !== user.tenantId) {
     return res.status(404).json({ error: 'Employee not found' });
@@ -538,6 +566,20 @@ app.patch('/api/hr/employees/:employeeId', async (req, res) => {
     const status = await findStatusDefinitionById(req.body.statusId);
     if (!status || status.tenantId !== user.tenantId) {
       return res.status(400).json({ error: 'Status not found' });
+    }
+  }
+
+  if (req.body.departmentId) {
+    const department = await findFieldCatalogDefinitionById(req.body.departmentId);
+    if (!department || department.tenantId !== user.tenantId || department.kind !== 'department') {
+      return res.status(400).json({ error: 'Department not found' });
+    }
+  }
+
+  if (req.body.jobTitleId) {
+    const jobTitle = await findFieldCatalogDefinitionById(req.body.jobTitleId);
+    if (!jobTitle || jobTitle.tenantId !== user.tenantId || jobTitle.kind !== 'jobTitle') {
+      return res.status(400).json({ error: 'Job title not found' });
     }
   }
 
@@ -723,6 +765,75 @@ app.patch('/api/status-definitions/:definitionId', async (req, res) => {
   }
 
   return res.json(result.statusDefinition);
+});
+
+const VALID_CATALOG_KINDS = ['department', 'jobTitle'];
+
+app.get('/api/field-catalog', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  const kind = req.query.kind as string;
+  if (!VALID_CATALOG_KINDS.includes(kind)) {
+    return res.status(400).json({ error: "kind must be 'department' or 'jobTitle'" });
+  }
+
+  const definitions = await listFieldCatalogDefinitions(user.tenantId!, kind as any);
+  return res.json(definitions);
+});
+
+app.post('/api/field-catalog', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageCustomFields(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const name = req.body.name as string;
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Name is required' });
+  }
+
+  if (!VALID_CATALOG_KINDS.includes(req.body.kind)) {
+    return res.status(400).json({ error: "kind must be 'department' or 'jobTitle'" });
+  }
+
+  const definition = await createFieldCatalogDefinition({
+    tenantId: user.tenantId!,
+    kind: req.body.kind,
+    name: name.trim(),
+    order: req.body.order,
+  });
+
+  return res.status(201).json(definition);
+});
+
+app.patch('/api/field-catalog/:definitionId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageCustomFields(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const result = await updateFieldCatalogDefinition(req.params.definitionId, user.tenantId!, {
+    name: req.body.name,
+    order: req.body.order,
+    isActive: req.body.isActive,
+  });
+
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  return res.json(result.definition);
 });
 
 app.get('/api/views', async (req, res) => {
@@ -1483,12 +1594,21 @@ app.get('/api/public/:tenantSlug/:formSlug', async (req, res) => {
     (d): d is NonNullable<typeof d> => d !== null,
   );
 
+  // Department is a catalog dropdown now, not free text — only relevant/included
+  // when this form actually has that field configured.
+  const departmentOptions = fields.some((f) => f.key === 'department')
+    ? (await listFieldCatalogDefinitions(form.tenantId, 'department' as any))
+        .filter((d) => d.isActive)
+        .map((d) => ({ id: d.id, name: d.name }))
+    : [];
+
   return res.json({
     id: form.id,
     name: form.name,
     entityType: form.entityType,
     fields,
     customFieldDefs,
+    departmentOptions,
     thankYouMessage: form.thankYouMessage,
   });
 });

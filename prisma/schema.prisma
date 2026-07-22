@@ -99,6 +99,7 @@ model Tenant {
   timeOffRequests         TimeOffRequest[]
   savedViews              SavedView[]
   publicForms             PublicForm[]
+  fieldCatalogDefinitions FieldCatalogDefinition[]
 }
 
 model User {
@@ -125,7 +126,16 @@ model Employee {
   firstName                String
   lastName                 String
   email                    String
-  department               String
+  departmentId             String?
+  departmentDefn           FieldCatalogDefinition? @relation("EmployeeDepartment", fields: [departmentId], references: [id])
+  jobTitleId               String?
+  jobTitleDefn             FieldCatalogDefinition? @relation("EmployeeJobTitle", fields: [jobTitleId], references: [id])
+  hourlyRateCents          Int? // owner-only visibility, enforced in listEmployees — not a schema-level concern
+  monthlyRateCents         Int?
+  startDate                DateTime?
+  endDate                  DateTime?
+  contractUrl              String? // link only (e.g. Drive/Dropbox) — no file upload support in the app today
+  personalEmail            String? // distinct from `email`, which the UI now labels "Business email"
   statusId                 String
   statusDefn               StatusDefinition        @relation(fields: [statusId], references: [id])
   managerId                String?
@@ -174,6 +184,32 @@ model StatusDefinition {
   clients    Client[]
 
   @@index([tenantId, entityType])
+}
+
+// Generic tenant-scoped catalog, shared by Department and Job Title (the two Employee
+// fields that needed to go from free text to a standardized dropdown). Status is
+// deliberately NOT on this mechanism — it's a live, heavily-used feature (Kanban
+// grouping, StatusHistoryEntry, isDefault/color) and retrofitting it onto a shared
+// model would be a real-data migration for comparatively low reward. See
+// docs/tareas-desarrollo.md, Tier 2, for the reasoning.
+enum CatalogKind {
+  department
+  jobTitle
+}
+
+model FieldCatalogDefinition {
+  id                    String       @id @default(uuid())
+  tenantId              String
+  tenant                Tenant       @relation(fields: [tenantId], references: [id])
+  kind                  CatalogKind
+  name                  String
+  order                 Int          @default(0)
+  isActive              Boolean      @default(true)
+  createdAt             DateTime     @default(now())
+  employeesByDepartment Employee[]   @relation("EmployeeDepartment")
+  employeesByJobTitle   Employee[]   @relation("EmployeeJobTitle")
+
+  @@index([tenantId, kind])
 }
 
 model StatusHistoryEntry {

@@ -8,11 +8,44 @@ import {
   PASSWORD_POLICY_MESSAGE,
   PHONE_POLICY_MESSAGE,
 } from '../auth/authService.js';
-import type { Invitation, Tenant, User, UserRole, UserStatus, Session } from '@prisma/client';
+import type { AcquisitionChannel, Invitation, Tenant, User, UserRole, UserStatus, Session } from '@prisma/client';
 import { sendInvitationEmail } from '../../lib/mailer.js';
 import { seedDefaultStatusDefinitions } from '../hr/statusService.js';
 
 const INVITATION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+// Personal/free email providers are excluded from the duplicate-domain check below —
+// otherwise the first person to register with @gmail.com would block every other
+// Gmail user from ever creating a tenant. example.* is IANA's reserved documentation
+// domain (RFC 2606), included here so demo/test signups aren't affected either.
+const GENERIC_EMAIL_DOMAINS = new Set([
+  'gmail.com',
+  'googlemail.com',
+  'outlook.com',
+  'hotmail.com',
+  'live.com',
+  'msn.com',
+  'yahoo.com',
+  'ymail.com',
+  'icloud.com',
+  'me.com',
+  'mac.com',
+  'aol.com',
+  'protonmail.com',
+  'proton.me',
+  'gmx.com',
+  'yandex.com',
+  'mail.com',
+  'zoho.com',
+  'hey.com',
+  'example.com',
+  'example.org',
+  'example.net',
+]);
+
+function getEmailDomain(email: string): string {
+  return email.split('@')[1]?.toLowerCase() ?? '';
+}
 
 export interface TenantCreationResult {
   success: boolean;
@@ -36,6 +69,10 @@ export interface RegisterTenantWithOwnerInput {
   ownerPassword: string;
   ownerPhone: string;
   acceptedTerms?: boolean;
+  companySize?: string;
+  industry?: string;
+  country?: string;
+  acquisitionChannel?: AcquisitionChannel;
 }
 
 export interface CreateInvitationInput {
@@ -164,11 +201,32 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
     return { success: false, error: 'Email already registered', field: 'ownerEmail' };
   }
 
+  const emailDomain = getEmailDomain(normalizedEmail);
+  if (emailDomain && !GENERIC_EMAIL_DOMAINS.has(emailDomain)) {
+    const domainAlreadyRegistered = await prisma.user.findFirst({
+      where: {
+        email: { endsWith: `@${emailDomain}` },
+        tenant: { status: 'active' },
+      },
+    });
+    if (domainAlreadyRegistered) {
+      return {
+        success: false,
+        error: 'A company with this email domain is already registered. Ask an admin there for an invite instead.',
+        field: 'ownerEmail',
+      };
+    }
+  }
+
   const result = await prisma.$transaction(async (tx) => {
     const tenant = await tx.tenant.create({
       data: {
         name: input.tenantName,
         slug,
+        companySize: input.companySize,
+        industry: input.industry,
+        country: input.country,
+        acquisitionChannel: input.acquisitionChannel,
       },
     });
 

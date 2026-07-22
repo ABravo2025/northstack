@@ -272,6 +272,10 @@ export const api = {
     ownerPassword: string;
     ownerPhone: string;
     acceptedTerms: boolean;
+    companySize?: string;
+    industry?: string;
+    country?: string;
+    acquisitionChannel?: string;
   }): Promise<AuthResponse> => {
     const res = await apiFetch(`${API_BASE_URL}/api/tenants/register`, {
       method: 'POST',

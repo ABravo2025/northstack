@@ -24,6 +24,16 @@ enum TenantStatus {
   cancelled
 }
 
+enum AcquisitionChannel {
+  organic
+  paid_ads
+  referral
+  content
+  outbound_sales
+  partnership
+  other
+}
+
 enum FieldType {
   text
   number
@@ -72,6 +82,10 @@ model Tenant {
   slug                    String                   @unique
   status                  TenantStatus             @default(active)
   createdAt               DateTime                 @default(now())
+  companySize             String?
+  industry                String?
+  country                 String?
+  acquisitionChannel      AcquisitionChannel?
   users                   User[]
   employees               Employee[]
   clients                 Client[]

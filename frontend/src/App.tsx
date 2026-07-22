@@ -100,6 +100,10 @@ export default function App() {
     ownerPassword: string;
     ownerPhone: string;
     acceptedTerms: boolean;
+    companySize?: string;
+    industry?: string;
+    country?: string;
+    acquisitionChannel?: string;
   }) => {
     setLoading(true);
     setAuthError(null);

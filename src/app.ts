@@ -201,9 +201,15 @@ app.post('/api/auth/register', async (req, res) => {
   return res.status(201).json({ user: sanitizeUser(result.user!), session: result.session });
 });
 
+const VALID_ACQUISITION_CHANNELS = ['organic', 'paid_ads', 'referral', 'content', 'outbound_sales', 'partnership', 'other'];
+
 app.post('/api/tenants/register', async (req, res) => {
   if (isRateLimited(`tenant-register:${getClientIp(req)}`, AUTH_RATE_LIMIT)) {
     return res.status(429).json({ error: 'Too many attempts. Please try again later.' });
+  }
+
+  if (req.body.acquisitionChannel !== undefined && !VALID_ACQUISITION_CHANNELS.includes(req.body.acquisitionChannel)) {
+    return res.status(400).json({ error: 'Invalid acquisition channel', field: 'acquisitionChannel' });
   }
 
   const result = await registerTenantWithOwner({
@@ -214,6 +220,10 @@ app.post('/api/tenants/register', async (req, res) => {
     ownerPassword: req.body.ownerPassword,
     ownerPhone: req.body.ownerPhone,
     acceptedTerms: req.body.acceptedTerms,
+    companySize: req.body.companySize,
+    industry: req.body.industry,
+    country: req.body.country,
+    acquisitionChannel: req.body.acquisitionChannel,
   });
 
   if (!result.success) {

@@ -566,8 +566,29 @@
   @apply overflow-x-auto;
 }
 
+.full-table {
+  @apply table-fixed;
+}
+
 .full-table thead th {
   @apply sticky top-0 bg-brand-cream dark:bg-gray-950;
+}
+
+.full-table th {
+  @apply relative overflow-hidden;
+}
+
+.full-table td {
+  @apply overflow-hidden text-ellipsis whitespace-nowrap;
+}
+
+.col-resize-handle {
+  @apply absolute top-0 right-0 z-10 h-full w-1.5 cursor-col-resize touch-none select-none border-r border-gray-300 dark:border-gray-600;
+}
+
+.col-resize-handle:hover,
+.col-resize-handle:active {
+  @apply border-brand-blue bg-brand-blue/10;
 }
 
 .icon-actions {

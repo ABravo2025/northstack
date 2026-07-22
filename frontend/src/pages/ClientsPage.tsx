@@ -10,6 +10,8 @@ import KanbanBoard from '../components/KanbanBoard';
 import CustomFieldColumnMenu from '../components/CustomFieldColumnMenu';
 import AddCustomFieldColumn from '../components/AddCustomFieldColumn';
 import StatusColumnMenu from '../components/StatusColumnMenu';
+import ColumnResizeHandle from '../components/ColumnResizeHandle';
+import { useResizableColumns } from '../hooks/useResizableColumns';
 import { PencilIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
 import {
   applyFilters,
@@ -53,6 +55,7 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
 
   const canManageCustomFields = user.role === 'owner' || user.role === 'admin';
   const canEditClients = user.role === 'owner' || user.role === 'admin';
+  const { getWidth: getColumnWidth, startResize } = useResizableColumns('northstack:columnWidths:client');
   const activeClientCustomFields = clientCustomFields.filter((field) => field.isActive);
   const activeClientStatuses = clientStatuses.filter((s) => s.isActive);
 
@@ -680,6 +683,16 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
         <>
           <div className="full-table-wrap">
             <table className="table full-table">
+              <colgroup>
+                {columns.map((col) => (
+                  <col key={col.key} style={{ width: getColumnWidth(col.key) }} />
+                ))}
+                {activeClientCustomFields.map((field) => (
+                  <col key={field.id} style={{ width: getColumnWidth(`cf:${field.id}`) }} />
+                ))}
+                {canManageCustomFields && <col style={{ width: 40 }} />}
+                <col style={{ width: 90 }} />
+              </colgroup>
               <thead>
                 <tr>
                   {columns.map((col) => (
@@ -698,6 +711,7 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
                           onChanged={loadClientStatuses}
                         />
                       )}
+                      <ColumnResizeHandle onMouseDown={(e) => startResize(col.key, e)} />
                     </th>
                   ))}
                   {activeClientCustomFields.map((field) => (
@@ -717,6 +731,7 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
                           onDeactivate={handleDeactivateCustomFieldColumn}
                         />
                       )}
+                      <ColumnResizeHandle onMouseDown={(e) => startResize(`cf:${field.id}`, e)} />
                     </th>
                   ))}
                   {canManageCustomFields && (

@@ -11,6 +11,8 @@ import CustomFieldColumnMenu from '../components/CustomFieldColumnMenu';
 import AddCustomFieldColumn from '../components/AddCustomFieldColumn';
 import StatusColumnMenu from '../components/StatusColumnMenu';
 import FieldCatalogMenu from '../components/FieldCatalogMenu';
+import ColumnResizeHandle from '../components/ColumnResizeHandle';
+import { useResizableColumns } from '../hooks/useResizableColumns';
 import { MailIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
 import {
   applyFilters,
@@ -75,6 +77,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const canEditEmployees = user.role === 'owner' || user.role === 'admin';
   const activeEmployeeCustomFields = employeeCustomFields.filter((field) => field.isActive);
   const activeEmployeeStatuses = employeeStatuses.filter((s) => s.isActive);
+  const { getWidth: getColumnWidth, startResize } = useResizableColumns('northstack:columnWidths:employee');
 
   const fields = useMemo(
     () => buildEmployeeFields(employeeStatuses, employeeCustomFields, employeeDepartments, employeeJobTitles),
@@ -1025,6 +1028,18 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         <>
           <div className="full-table-wrap">
             <table className="table full-table">
+              <colgroup>
+                {columns.map((col) => (
+                  <col key={col.key} style={{ width: getColumnWidth(col.key) }} />
+                ))}
+                <col style={{ width: getColumnWidth('managerName') }} />
+                <col style={{ width: getColumnWidth('timeOffPolicies') }} />
+                {activeEmployeeCustomFields.map((field) => (
+                  <col key={field.id} style={{ width: getColumnWidth(`cf:${field.id}`) }} />
+                ))}
+                {canManageCustomFields && <col style={{ width: 40 }} />}
+                <col style={{ width: 110 }} />
+              </colgroup>
               <thead>
                 <tr>
                   {columns.map((col) => (
@@ -1061,10 +1076,17 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                           onChanged={loadEmployeeJobTitles}
                         />
                       )}
+                      <ColumnResizeHandle onMouseDown={(e) => startResize(col.key, e)} />
                     </th>
                   ))}
-                  <th>Reports To</th>
-                  <th>Time Off Policies</th>
+                  <th>
+                    Reports To
+                    <ColumnResizeHandle onMouseDown={(e) => startResize('managerName', e)} />
+                  </th>
+                  <th>
+                    Time Off Policies
+                    <ColumnResizeHandle onMouseDown={(e) => startResize('timeOffPolicies', e)} />
+                  </th>
                   {activeEmployeeCustomFields.map((field) => (
                     <th
                       key={field.id}
@@ -1082,6 +1104,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                           onDeactivate={handleDeactivateCustomFieldColumn}
                         />
                       )}
+                      <ColumnResizeHandle onMouseDown={(e) => startResize(`cf:${field.id}`, e)} />
                     </th>
                   ))}
                   {canManageCustomFields && (

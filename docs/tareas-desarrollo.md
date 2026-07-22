@@ -19,7 +19,7 @@ Siguiente en la cola: Tier 1.
 **Tier 1 — Cerrar beta-readiness (en curso)** (con esto, el producto está listo para invitar al primer tester)
 - [x] Los 5 ítems de `### UX / Interfaz` — logo en dark mode, Company Users al patrón nuevo, 2 clases
   de tipografía, `ChevronRightIcon`, `docs/design-system.md` — completados 2026-07-22, ver detalle en
-  cada ítem más abajo.
+  cada ítem más abajo.a
 - [ ] Seed de datos de ejemplo + onboarding checklist en `OverviewPage.tsx`
 - [ ] Sección de Ayuda / Contacto / FAQ
 - [ ] Changelog in-app
@@ -274,6 +274,7 @@ Hallazgos de `docs/ux-ui-audit.md` + decisiones tomadas en las sesiones de mocku
   - [x] **2 clases de tipografía** — implementado 2026-07-22 (Tier 1). `.page-title` agregada standalone (mismos valores que `.page-toolbar h2`, sin tocar esa regla existente para no arriesgar una regresión de cascada). `.card-title` reemplaza la regla `.card h3` anterior (que no fijaba tamaño/peso explícito, solo heredaba el default del navegador) — ahora es una clase con `text-base font-bold` explícito, aplicada en los 6 `<h3>` sueltos de `ProfileSettingsPage.tsx`/`CompanyAppearancePage.tsx`/`CompanyUsersPage.tsx`.
   - [x] **`ChevronRightIcon` faltante** — implementado 2026-07-22 (Tier 1). Ícono agregado a `Icons.tsx` (mismo `viewBox`/`stroke-width` que el resto), reemplaza los caracteres `‹`/`›` en `OverviewPage.tsx` (además se agregó `aria-label` a esos 2 botones, que quedaron solo-ícono).
   - [x] **`docs/design-system.md`** — escrito 2026-07-22 (Tier 1), ver el archivo. Cubre las 5 secciones propuestas (Color, Tipografía, Botones, Espaciado, Íconos) más una 6ta sección sobre el logo de marca (distinta de los íconos de UI) documentando la conversión a 3 tonos que resolvió el usuario.
+- [x] **Columnas redimensionables por drag en las tablas (Employees/Clients/Company Users)** — implementado 2026-07-22, no venía del backlog: reporte en vivo del usuario ("las columnas no tienen auto fit y no se pueden expandir/contraer a voluntad"). Se confirmó con el usuario que pedía el resize real (arrastrar el borde de la columna, estilo Excel/Airtable), no solo un ajuste automático de ancho — esto es **distinto** de la idea ya anotada en Tier 5 ("Filtro de columnas visibles", que es mostrar/ocultar columnas, no cambiar su ancho). Mecanismo reusable: hook `useResizableColumns(storageKey)` (`frontend/src/hooks/useResizableColumns.ts`) + componente `ColumnResizeHandle.tsx` — un listener de `mousemove`/`mouseup` a nivel de `document` registrado una sola vez (no por columna), anchos guardados en `localStorage` por tabla (`northstack:columnWidths:employee`/`client`/`companyUser`/`companyUserInvite`), mismo criterio ya usado para la vista activa guardada y los swatches custom del `ColorPicker` — no se armó un modelo de backend para esto. `.full-table` pasó a `table-layout: fixed` con un `<colgroup>` por tabla y celdas que truncan con `text-ellipsis` en vez de wrappear. Aplicado a las 3 tablas que lo necesitaban (Employees, Clients, Company Users — incluida la tabla de invitaciones pendientes). Verificado con Playwright en las 3: el drag agranda la columna, el ancho se guarda en `localStorage` y persiste después de recargar la página, y un click sobre el handle (sin arrastrar) no dispara el sort de la columna (`stopPropagation` en el handle).
 
 ### Seguridad
 

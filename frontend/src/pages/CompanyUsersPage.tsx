@@ -5,6 +5,8 @@ import ConfirmDialog from '../components/ConfirmDialog';
 import Pagination, { paginate } from '../components/Pagination';
 import SlideOver from '../components/SlideOver';
 import { CheckIcon, CopyIcon, LockIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
+import ColumnResizeHandle from '../components/ColumnResizeHandle';
+import { useResizableColumns } from '../hooks/useResizableColumns';
 
 const PAGE_SIZE = 20;
 
@@ -55,6 +57,10 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const isOwner = user.role === 'owner';
+  const { getWidth: getColumnWidth, startResize } = useResizableColumns('northstack:columnWidths:companyUser');
+  const { getWidth: getInviteColumnWidth, startResize: startInviteResize } = useResizableColumns(
+    'northstack:columnWidths:companyUserInvite',
+  );
 
   useEffect(() => {
     loadUsers();
@@ -271,6 +277,12 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
         <>
           <div className="full-table-wrap">
             <table className="table full-table">
+              <colgroup>
+                {COLUMNS.map((col) => (
+                  <col key={col.key} style={{ width: getColumnWidth(col.key) }} />
+                ))}
+                <col style={{ width: 60 }} />
+              </colgroup>
               <thead>
                 <tr>
                   {COLUMNS.map((col) => (
@@ -283,6 +295,7 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
                       <span className="sort-arrow">
                         {sortField === col.key && sortDirection === 'desc' ? '▴' : '▾'}
                       </span>
+                      <ColumnResizeHandle onMouseDown={(e) => startResize(col.key, e)} />
                     </th>
                   ))}
                   <th></th>
@@ -347,11 +360,26 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
           <h3 className="page-title">Pending invitations</h3>
           <div className="full-table-wrap mt-2">
             <table className="table full-table">
+              <colgroup>
+                <col style={{ width: getInviteColumnWidth('email') }} />
+                <col style={{ width: getInviteColumnWidth('role') }} />
+                <col style={{ width: getInviteColumnWidth('expires') }} />
+                <col style={{ width: 70 }} />
+              </colgroup>
               <thead>
                 <tr>
-                  <th>Email</th>
-                  <th>Role</th>
-                  <th>Expires</th>
+                  <th>
+                    Email
+                    <ColumnResizeHandle onMouseDown={(e) => startInviteResize('email', e)} />
+                  </th>
+                  <th>
+                    Role
+                    <ColumnResizeHandle onMouseDown={(e) => startInviteResize('role', e)} />
+                  </th>
+                  <th>
+                    Expires
+                    <ColumnResizeHandle onMouseDown={(e) => startInviteResize('expires', e)} />
+                  </th>
                   <th></th>
                 </tr>
               </thead>

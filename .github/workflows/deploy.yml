@@ -32,7 +32,18 @@ jobs:
       # "Preview"-scoped vars in the Vercel dashboard, those features no-op safely on
       # staging (same best-effort pattern already used in src/lib/mailer.ts) instead of
       # breaking the deploy.
-      - run: npx vercel deploy --token="$VERCEL_TOKEN" --yes -e DATABASE_URL="$STAGING_DATABASE_URL"
+      - name: Deploy and alias to staging.joinnorthstack.com
+        run: |
+          # `domains add` is idempotent-ish for our purposes: it errors if the domain is
+          # already on the project, which we ignore — it's just a one-time registration,
+          # done here via CLI instead of the dashboard's "Add Domains" flow because that
+          # flow's "Connect to an environment" option requires linking the Vercel project
+          # to the GitHub repo natively, which this project deliberately does not use
+          # (see the deploy-app job above — CLI + token, not native Git integration).
+          npx vercel domains add staging.joinnorthstack.com --token="$VERCEL_TOKEN" || true
+          DEPLOY_URL=$(npx vercel deploy --token="$VERCEL_TOKEN" --yes -e DATABASE_URL="$STAGING_DATABASE_URL")
+          echo "Deployed to: $DEPLOY_URL"
+          npx vercel alias set "$DEPLOY_URL" staging.joinnorthstack.com --token="$VERCEL_TOKEN"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}

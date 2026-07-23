@@ -68,10 +68,6 @@
   @apply flex items-center justify-center border border-dashed border-gray-400 bg-transparent text-sm leading-none text-gray-500 dark:border-gray-500 dark:text-gray-400;
 }
 
-.color-picker-popover {
-  @apply absolute top-full left-0 z-10 mt-2 w-64 rounded-lg border border-gray-200 bg-white p-3 shadow-lg dark:border-gray-700 dark:bg-gray-800;
-}
-
 .color-picker-section-label {
   @apply mt-2 mb-1.5 text-xs font-medium tracking-wide text-gray-500 uppercase first:mt-0 dark:text-gray-400;
 }
@@ -119,6 +115,12 @@
 /* Sizes a button to match .view-tab's height/padding, for buttons that sit inline in a .views-bar row */
 .btn-tab-size {
   @apply flex items-center gap-1.5 px-3 py-2;
+}
+
+/* Sizes a .btn-primary to match .toolbar-search/.tb-btn's 40px height, for the
+   "Add X" action button that sits inline with them in a .page-toolbar row. */
+.btn-toolbar-size {
+  @apply flex h-10 items-center py-0;
 }
 
 .btn-danger {
@@ -551,7 +553,7 @@
 }
 
 .toolbar-search {
-  @apply flex min-w-[160px] flex-1 items-center gap-2 rounded-md border border-gray-300 bg-brand-cream px-3 py-2 text-sm dark:border-gray-700 dark:bg-gray-950;
+  @apply flex h-10 min-w-[160px] flex-1 items-center gap-2 rounded-md border border-gray-300 bg-brand-cream px-3 py-0 text-sm dark:border-gray-700 dark:bg-gray-950;
 }
 
 .toolbar-search svg {
@@ -575,15 +577,47 @@
 }
 
 .full-table th {
-  @apply relative overflow-hidden;
+  @apply relative overflow-hidden border-b border-gray-200 py-2.5 text-xs font-bold tracking-wide text-gray-500 uppercase dark:border-gray-800 dark:text-gray-400;
 }
 
 .full-table td {
   @apply overflow-hidden text-ellipsis whitespace-nowrap;
 }
 
+.name-cell {
+  @apply flex items-center gap-2 font-semibold;
+}
+
+.avatar {
+  @apply inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-brand-blue-light text-[0.64rem] font-bold text-brand-navy;
+}
+
+.status-chip {
+  @apply inline-flex items-center gap-1.5;
+}
+
+.status-chip .status-dot {
+  @apply h-2 w-2 shrink-0 rounded-full;
+}
+
+.role-chip {
+  @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold;
+}
+
+.role-chip.chip-good {
+  @apply bg-emerald-50 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400;
+}
+
+.role-chip.chip-blue {
+  @apply bg-brand-blue/15 text-brand-blue dark:bg-brand-blue-light/20 dark:text-brand-blue-light;
+}
+
+.role-chip.chip-neutral {
+  @apply bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300;
+}
+
 .col-resize-handle {
-  @apply absolute top-0 right-0 z-10 h-full w-1.5 cursor-col-resize touch-none select-none border-r border-gray-300 dark:border-gray-600;
+  @apply absolute top-0 right-0 z-10 h-full w-1.5 cursor-col-resize touch-none select-none border-r border-gray-500;
 }
 
 .col-resize-handle:hover,
@@ -952,15 +986,15 @@
 /* ---------- Toolbar filter button ---------- */
 
 .tb-btn {
-  @apply flex cursor-pointer items-center gap-1.5 rounded-md border border-gray-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-brand-navy hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700;
+  @apply relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white text-brand-navy hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700;
 }
 
 .tb-btn svg {
-  @apply h-3.5 w-3.5;
+  @apply h-4 w-4;
 }
 
 .tb-btn .filter-count {
-  @apply rounded-full bg-brand-blue px-1.5 py-0 text-[0.65rem] font-bold text-white;
+  @apply absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-blue px-1 text-[0.62rem] font-bold text-white;
 }
 
 /* ---------- Sortable grid header ---------- */
@@ -1075,6 +1109,18 @@
 
 .status-manage-link {
   @apply shrink-0 cursor-pointer border-none bg-transparent p-0 text-[0.68rem] font-semibold text-brand-blue hover:underline;
+}
+
+.col-visibility-list {
+  @apply flex max-h-64 flex-col gap-0.5 overflow-y-auto;
+}
+
+.col-visibility-row {
+  @apply flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 text-sm text-brand-navy hover:bg-gray-50 dark:text-gray-100 dark:hover:bg-gray-800;
+}
+
+.col-visibility-row input {
+  @apply cursor-pointer;
 }
 
 /* ---------- Time Off "Policies" popover ---------- */

@@ -19,9 +19,10 @@ interface StatusColumnMenuProps {
   entityType: 'employee' | 'client';
   statuses: StatusLike[];
   onChanged: () => void;
+  onHide?: () => void;
 }
 
-export default function StatusColumnMenu({ token, entityType, statuses, onChanged }: StatusColumnMenuProps) {
+export default function StatusColumnMenu({ token, entityType, statuses, onChanged, onHide }: StatusColumnMenuProps) {
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [newName, setNewName] = useState('');
@@ -45,6 +46,15 @@ export default function StatusColumnMenu({ token, entityType, statuses, onChange
       onChanged();
     } catch (error) {
       toast.error('Failed to update status: ' + (error as Error).message);
+    }
+  };
+
+  const handleColorChange = async (status: StatusLike, color: string) => {
+    try {
+      await api.updateStatusDefinition(token, status.id, { color });
+      onChanged();
+    } catch (error) {
+      toast.error('Failed to update status color: ' + (error as Error).message);
     }
   };
 
@@ -96,6 +106,17 @@ export default function StatusColumnMenu({ token, entityType, statuses, onChange
       </button>
       <Popover open={open} onClose={() => setOpen(false)} anchorRef={triggerRef} width={320}>
         <div onClick={(e) => e.stopPropagation()}>
+          {onHide && (
+            <div
+              className="popover-menu-item"
+              onClick={() => {
+                setOpen(false);
+                onHide();
+              }}
+            >
+              Hide column
+            </div>
+          )}
           <div className="status-manage-list">
             {sorted.map((status, index) => (
               <div className="status-manage-row" key={status.id}>
@@ -119,7 +140,7 @@ export default function StatusColumnMenu({ token, entityType, statuses, onChange
                     ▼
                   </button>
                 </div>
-                <span className="color-dot" style={{ background: status.color || '#9ca3af' }} />
+                <ColorPicker value={status.color || '#9ca3af'} onChange={(color) => handleColorChange(status, color)} />
                 <span className={`status-manage-name ${!status.isActive ? 'inactive' : ''}`}>{status.name}</span>
                 {status.isDefault ? (
                   <span className="chip-linked">Default</span>

@@ -15,9 +15,10 @@ interface CustomFieldColumnMenuProps {
   field: CustomFieldLike;
   onUpdate: (id: string, data: { name?: string; required?: boolean; options?: string }) => Promise<void>;
   onDeactivate: (id: string) => Promise<void>;
+  onHide?: () => void;
 }
 
-export default function CustomFieldColumnMenu({ field, onUpdate, onDeactivate }: CustomFieldColumnMenuProps) {
+export default function CustomFieldColumnMenu({ field, onUpdate, onDeactivate, onHide }: CustomFieldColumnMenuProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -85,6 +86,17 @@ export default function CustomFieldColumnMenu({ field, onUpdate, onDeactivate }:
             <div className="popover-menu-item" onClick={() => setEditing(true)}>
               Edit field
             </div>
+            {onHide && (
+              <div
+                className="popover-menu-item"
+                onClick={() => {
+                  setMenuOpen(false);
+                  onHide();
+                }}
+              >
+                Hide column
+              </div>
+            )}
             <div
               className="popover-menu-item danger"
               onClick={() => {

@@ -17,9 +17,10 @@ interface FieldCatalogMenuProps {
   label: string;
   entries: CatalogEntryLike[];
   onChanged: () => void;
+  onHide?: () => void;
 }
 
-export default function FieldCatalogMenu({ token, kind, label, entries, onChanged }: FieldCatalogMenuProps) {
+export default function FieldCatalogMenu({ token, kind, label, entries, onChanged, onHide }: FieldCatalogMenuProps) {
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [newName, setNewName] = useState('');
@@ -78,6 +79,17 @@ export default function FieldCatalogMenu({ token, kind, label, entries, onChange
       </button>
       <Popover open={open} onClose={() => setOpen(false)} anchorRef={triggerRef} width={280}>
         <div onClick={(e) => e.stopPropagation()}>
+          {onHide && (
+            <div
+              className="popover-menu-item"
+              onClick={() => {
+                setOpen(false);
+                onHide();
+              }}
+            >
+              Hide column
+            </div>
+          )}
           <div className="status-manage-list">
             {sorted.map((entry, index) => (
               <div className="status-manage-row" key={entry.id}>

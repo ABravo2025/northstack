@@ -13,6 +13,10 @@ import StatusColumnMenu from '../components/StatusColumnMenu';
 import FieldCatalogMenu from '../components/FieldCatalogMenu';
 import ColumnResizeHandle from '../components/ColumnResizeHandle';
 import { useResizableColumns } from '../hooks/useResizableColumns';
+import ColumnVisibilityMenu from '../components/ColumnVisibilityMenu';
+import { useColumnVisibility } from '../hooks/useColumnVisibility';
+import Avatar from '../components/Avatar';
+import StatusChip from '../components/StatusChip';
 import { MailIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
 import {
   applyFilters,
@@ -78,6 +82,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const activeEmployeeCustomFields = employeeCustomFields.filter((field) => field.isActive);
   const activeEmployeeStatuses = employeeStatuses.filter((s) => s.isActive);
   const { getWidth: getColumnWidth, startResize } = useResizableColumns('northstack:columnWidths:employee');
+  const { isHidden: isColumnHidden, toggle: toggleColumn, hide: hideColumn } = useColumnVisibility(
+    'northstack:hiddenColumns:employee',
+  );
 
   const fields = useMemo(
     () => buildEmployeeFields(employeeStatuses, employeeCustomFields, employeeDepartments, employeeJobTitles),
@@ -575,6 +582,17 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     { key: 'status', label: 'Status' },
   ];
 
+  const toggleableColumns = [
+    ...columns,
+    { key: 'managerName', label: 'Reports To' },
+    { key: 'timeOffPolicies', label: 'Time Off Policies' },
+    ...activeEmployeeCustomFields.map((field) => ({ key: `cf:${field.id}`, label: field.name })),
+  ];
+  const visibleColumns = columns.filter((col) => !isColumnHidden(col.key));
+  const showManagerColumn = !isColumnHidden('managerName');
+  const showTimeOffPoliciesColumn = !isColumnHidden('timeOffPolicies');
+  const visibleCustomFields = activeEmployeeCustomFields.filter((field) => !isColumnHidden(`cf:${field.id}`));
+
   const groupFieldForKanban = activeView?.groupByField ? findField(fields, activeView.groupByField) : undefined;
 
   return (
@@ -979,7 +997,10 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
           </div>
         )}
         {viewType === 'grid' && <FilterBar fields={fields} filters={viewFilters} onChange={setViewFilters} />}
-        <button className="btn-primary" onClick={handleOpenAdd}>
+        {viewType === 'grid' && (
+          <ColumnVisibilityMenu columns={toggleableColumns} isHidden={isColumnHidden} onToggle={toggleColumn} />
+        )}
+        <button className="btn-primary btn-toolbar-size" onClick={handleOpenAdd}>
           <span className="inline-flex items-center gap-1.5">
             <PlusIcon className="h-4 w-4" />
             Add Employee
@@ -1029,12 +1050,12 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
           <div className="full-table-wrap">
             <table className="table full-table">
               <colgroup>
-                {columns.map((col) => (
+                {visibleColumns.map((col) => (
                   <col key={col.key} style={{ width: getColumnWidth(col.key) }} />
                 ))}
-                <col style={{ width: getColumnWidth('managerName') }} />
-                <col style={{ width: getColumnWidth('timeOffPolicies') }} />
-                {activeEmployeeCustomFields.map((field) => (
+                {showManagerColumn && <col style={{ width: getColumnWidth('managerName') }} />}
+                {showTimeOffPoliciesColumn && <col style={{ width: getColumnWidth('timeOffPolicies') }} />}
+                {visibleCustomFields.map((field) => (
                   <col key={field.id} style={{ width: getColumnWidth(`cf:${field.id}`) }} />
                 ))}
                 {canManageCustomFields && <col style={{ width: 40 }} />}
@@ -1042,7 +1063,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
               </colgroup>
               <thead>
                 <tr>
-                  {columns.map((col) => (
+                  {visibleColumns.map((col) => (
                     <th
                       key={col.key}
                       className={`sortable ${viewSort?.field === col.key ? 'sorted' : ''}`}
@@ -1056,6 +1077,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                           entityType="employee"
                           statuses={employeeStatuses}
                           onChanged={loadEmployeeStatuses}
+                          onHide={() => hideColumn('status')}
                         />
                       )}
                       {col.key === 'department' && canManageCustomFields && (
@@ -1065,6 +1087,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                           label="Department"
                           entries={employeeDepartments}
                           onChanged={loadEmployeeDepartments}
+                          onHide={() => hideColumn('department')}
                         />
                       )}
                       {col.key === 'jobTitle' && canManageCustomFields && (
@@ -1074,20 +1097,25 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                           label="Job Title"
                           entries={employeeJobTitles}
                           onChanged={loadEmployeeJobTitles}
+                          onHide={() => hideColumn('jobTitle')}
                         />
                       )}
                       <ColumnResizeHandle onMouseDown={(e) => startResize(col.key, e)} />
                     </th>
                   ))}
-                  <th>
-                    Reports To
-                    <ColumnResizeHandle onMouseDown={(e) => startResize('managerName', e)} />
-                  </th>
-                  <th>
-                    Time Off Policies
-                    <ColumnResizeHandle onMouseDown={(e) => startResize('timeOffPolicies', e)} />
-                  </th>
-                  {activeEmployeeCustomFields.map((field) => (
+                  {showManagerColumn && (
+                    <th>
+                      Reports To
+                      <ColumnResizeHandle onMouseDown={(e) => startResize('managerName', e)} />
+                    </th>
+                  )}
+                  {showTimeOffPoliciesColumn && (
+                    <th>
+                      Time Off Policies
+                      <ColumnResizeHandle onMouseDown={(e) => startResize('timeOffPolicies', e)} />
+                    </th>
+                  )}
+                  {visibleCustomFields.map((field) => (
                     <th
                       key={field.id}
                       className={`sortable ${viewSort?.field === `cf:${field.id}` ? 'sorted' : ''}`}
@@ -1102,6 +1130,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                           field={field}
                           onUpdate={handleUpdateCustomFieldColumn}
                           onDeactivate={handleDeactivateCustomFieldColumn}
+                          onHide={() => hideColumn(`cf:${field.id}`)}
                         />
                       )}
                       <ColumnResizeHandle onMouseDown={(e) => startResize(`cf:${field.id}`, e)} />
@@ -1118,29 +1147,42 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
               <tbody>
                 {pagedEmployees.map((emp) => (
                   <tr key={emp.id}>
-                    <td>
-                      {emp.firstName} {emp.lastName}
-                      {emp.activeTimeOffTag && (
-                        <span
-                          className="time-off-active-tag"
-                          style={{ background: emp.activeTimeOffTag.color || '#9ca3af' }}
-                          title={`On ${emp.activeTimeOffTag.policyName} today`}
-                        >
-                          {emp.activeTimeOffTag.policyName}
-                        </span>
-                      )}
-                    </td>
-                    <td>{emp.email}</td>
-                    <td>{emp.departmentDefn?.name || '—'}</td>
-                    <td>{emp.jobTitleDefn?.name || '—'}</td>
-                    <td>{emp.statusDefn?.name}</td>
-                    <td>{emp.manager ? `${emp.manager.firstName} ${emp.manager.lastName}` : '—'}</td>
-                    <td>
-                      {emp.timeOffPolicies && emp.timeOffPolicies.length > 0
-                        ? emp.timeOffPolicies.map((a: any) => a.timeOffPolicy.name).join(', ')
-                        : '—'}
-                    </td>
-                    {activeEmployeeCustomFields.map((field) => {
+                    {!isColumnHidden('name') && (
+                      <td>
+                        <div className="name-cell">
+                          <Avatar firstName={emp.firstName} lastName={emp.lastName} />
+                          {emp.firstName} {emp.lastName}
+                          {emp.activeTimeOffTag && (
+                            <span
+                              className="time-off-active-tag"
+                              style={{ background: emp.activeTimeOffTag.color || '#9ca3af' }}
+                              title={`On ${emp.activeTimeOffTag.policyName} today`}
+                            >
+                              {emp.activeTimeOffTag.policyName}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                    )}
+                    {!isColumnHidden('email') && <td>{emp.email}</td>}
+                    {!isColumnHidden('department') && <td>{emp.departmentDefn?.name || '—'}</td>}
+                    {!isColumnHidden('jobTitle') && <td>{emp.jobTitleDefn?.name || '—'}</td>}
+                    {!isColumnHidden('status') && (
+                      <td>
+                        {emp.statusDefn && <StatusChip color={emp.statusDefn.color || '#6b7280'} label={emp.statusDefn.name} />}
+                      </td>
+                    )}
+                    {showManagerColumn && (
+                      <td>{emp.manager ? `${emp.manager.firstName} ${emp.manager.lastName}` : '—'}</td>
+                    )}
+                    {showTimeOffPoliciesColumn && (
+                      <td>
+                        {emp.timeOffPolicies && emp.timeOffPolicies.length > 0
+                          ? emp.timeOffPolicies.map((a: any) => a.timeOffPolicy.name).join(', ')
+                          : '—'}
+                      </td>
+                    )}
+                    {visibleCustomFields.map((field) => {
                       const fieldValue = emp.customFieldVals?.find(
                         (v: any) => v.customFieldDefinitionId === field.id,
                       );

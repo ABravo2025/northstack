@@ -56,7 +56,8 @@ Texto auxiliar/secundario (hints, metadata) usa `text-xs` + `text-gray-500`.
 | `.btn-danger` | Acciones destructivas irreversibles (delete, cancel invitation) | Siempre rojo semántico, nunca el acento de marca |
 | `.btn-success` | Confirmaciones positivas explícitas (ej. "Add your first employee" en un empty state) | Verde semántico |
 | `.icon-btn` (+ `.icon-actions` para agrupar, `.tip` para el tooltip) | Acciones de **fila** en una tabla (Edit/Delete/Activate) | Ícono solo + tooltip en hover, nunca texto visible en la fila — ver `EmployeesPage.tsx`/`ClientsPage.tsx`/`CompanyUsersPage.tsx` |
-| `.tb-btn` | Botones de **toolbar** que no son la acción primaria (ej. Filter) | Borde gris, texto navy, ícono + label corto |
+| `.tb-btn` | Botones de **toolbar** que no son la acción primaria (Filter, Columns) | Solo ícono, 40x40px, sin texto — corregido 2026-07-22, antes tenía label + altura menor que el resto de la fila |
+| `.btn-toolbar-size` (modificador, va junto a `.btn-primary`) | El botón "Add X"/"Invite" cuando vive en un `.page-toolbar` junto a `.toolbar-search`/`.tb-btn` | Fuerza 40px de alto para calzar con los otros dos — el `.btn-primary` de base (usado en forms/dialogs) no se tocó, mismo criterio que `.btn-tab-size` |
 
 ## 4. Espaciado
 
@@ -104,7 +105,7 @@ Reglas:
 
 Fuente única: `assets/svg/` (ver `assets/README.md` para la guía completa de qué archivo usar en
 cada caso). Para fondos oscuros, el lockup horizontal (`logo-horizontal-dark.svg`, usado en
-`TopBar.tsx`, `AcceptInvitePage.tsx`, `AuthLayout.tsx`) **no es blanco plano** — es una variante a 3
+`TopBar.tsx`/`AcceptInvitePage.tsx`, que sí renderizan sobre fondo oscuro) **no es blanco plano** — es una variante a 3
 tonos claros que conserva la profundidad del isotipo original en vez de aplanarlo a una silueta:
 
 | Tono original | Tono en fondo oscuro |
@@ -116,3 +117,70 @@ tonos claros que conserva la profundidad del isotipo original en vez de aplanarl
 Decisión confirmada por el usuario 2026-07-22 (Artifact "Northstack — Logo en fondo oscuro",
 3 opciones comparadas con los assets reales) — descartada la opción de blanco plano (`icon-white.svg`)
 porque perdía la identidad del isotipo, aunque tuviera mejor contraste bruto.
+
+`AuthLayout.tsx` usa `logo-horizontal-light.svg` (la variante navy original), no la de fondo oscuro
+— su logo vive en `.auth-right`, que tiene un gradiente celeste claro fijo, sin variante `dark:`.
+Corrección de esta línea 2026-07-22: la versión anterior de esta tabla listaba `AuthLayout.tsx`
+como consumidor de la variante oscura por error de copia, no reflejaba el código real.
+
+**Pendiente de revisar (2026-07-22):** el ícono de 3 tonos en fondo oscuro usa `#fdfcf8` y `#ffffff`
+para dos de sus tres tonos — contraste entre ambos de solo ~1.05:1 (prácticamente indistinguibles),
+así que en la práctica el ícono se lee como blanco plano + borde celeste sobre fondo oscuro, no como
+las 3 capas con profundidad que sí se ven en el ícono de fondo claro. No confirmado todavía si esto
+es el mismo hallazgo que reportó el UX/UI manager del usuario; sin fix aplicado.
+
+## 7. Tablas (`.full-table`) — Avatar, chips, tipografía de encabezado
+
+Referencia visual: Artifact "Northstack — Diseño de pantallas", pantallas "Employees — vista Grid" y
+"Settings — Users (rediseñada)" — este era el diseño ya aprobado para estas pantallas, pero la
+implementación original de Employees/Clients/Company Users no lo había seguido (texto plano en vez
+de avatar+chips). Corregido 2026-07-22 tras reporte del usuario ("el módulo se ve totalmente
+distinto, deberíamos respetar la misma estructura en toda la app").
+
+- **Encabezados de `.full-table th`**: `text-xs font-bold uppercase tracking-wide text-gray-500`
+  (antes: `text-sm font-semibold text-brand-navy`, igual que cualquier tabla `.table` genérica).
+  Este cambio de tipografía está **escopeado a `.full-table` únicamente** — no toca `.table th` de
+  base, para no afectar otras tablas más simples de la app (ej. PTO Policies) que no estaban en el
+  alcance del mockup.
+- **`Avatar.tsx`** (nuevo, `components/`) — círculo de 26px con las iniciales (primera letra de
+  nombre + apellido), fondo `brand-blue-light`, texto `brand-navy` — **sin variante `dark:`**, mismo
+  color en los dos temas (así lo define el mockup, no es una omisión). Envuelto junto al nombre en un
+  `<div className="name-cell">` (`flex items-center gap-2`). Usado en Employees/Clients/Company Users.
+- **`StatusChip.tsx`** (nuevo) — punto de color + texto, reemplaza el texto plano de la columna
+  Status. Para Employees/Clients usa el `color` real ya guardado en `StatusDefinition` (el mismo que
+  configura el usuario vía "Manage options" en el header de columna) — no un color inventado. Para
+  Company Users (que no usa `StatusDefinition`, es un enum simple `active`/`inactive`) usa colores
+  fijos: `#047857` (verde, activo) / `#6b7280` (gris, inactivo).
+- **`RoleChip.tsx`** (nuevo, solo Company Users) — pill de color según rol: `owner` → verde
+  (`chip-good`), `admin` → azul de marca (`chip-blue`), `member` → gris (`chip-neutral`). Solo se
+  muestra en la fila cuando el rol **no** es editable por el viewer actual (`canEditRole === false`)
+  — cuando sí es editable, se mantiene el `<select>` nativo existente (la interacción de edición no
+  estaba resuelta en el mockup, que solo mostraba el estado estático; se priorizó no perder la
+  funcionalidad de edición en línea ya existente antes de este cambio).
+- El Kanban de Employees (`renderCard`) **no** lleva avatar — el mockup tampoco lo muestra ahí
+  (`.kcard-real` es solo nombre + metadata), a propósito distinto del grid.
+
+## 8. Popovers / dropdowns flotantes
+
+**Regla mecánica: cualquier dropdown flotante nuevo usa `components/Popover.tsx`, nunca un
+`<div className="absolute ...">` hecho a mano.** No es solo por consistencia visual — `Popover.tsx`
+resuelve dos problemas reales que un div absoluto no resuelve solo:
+
+1. **Clamping de viewport**: `Popover` calcula su posición contra `window.innerWidth` y nunca deja
+   que el panel se salga de pantalla. Un `absolute top-full left-0` a mano no tiene ese chequeo — si
+   el trigger está cerca del borde derecho, el panel se corta o queda parcialmente invisible.
+2. **Reposicionamiento continuo**: `Popover` recalcula su posición en cada frame (`requestAnimationFrame`)
+   mientras está abierto, no solo una vez al abrir. Esto importa para cualquier layout que pueda
+   moverse mientras el popover sigue abierto — el caso encontrado fue el sidebar colapsándose/expandiéndose
+   (transición de CSS `width`, no dispara el evento `resize` de la ventana), pero cubre cualquier
+   causa de reflow, no solo esa.
+
+**Historial**: `ColorPicker.tsx` tenía su propio `<div className="color-picker-popover">` con
+posición absoluta fija (`left-0`, sin clamping) — funcionaba bien como color picker independiente,
+pero al reusarlo *anidado dentro de otro Popover* (ej. `StatusColumnMenu`, para hacer editable el
+punto de color de cada status) el panel podía salirse del viewport cuando el trigger quedaba cerca
+del borde derecho — más probable con el sidebar expandido, que le resta ancho disponible a la tabla
+y empuja las columnas de la derecha (como Status) más hacia el borde. Corregido 2026-07-22
+refactorizando `ColorPicker` para usar `Popover` en vez de su div a mano — la clase suelta
+`.color-picker-popover` se borró de `App.css`, el contenido visual ahora lo da `.popover-panel`
+(la misma clase que ya usan todos los otros popovers de la app).

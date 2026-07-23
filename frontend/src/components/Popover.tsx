@@ -21,14 +21,26 @@ export default function Popover({ open, onClose, anchorRef, children, align = 'l
   const popoverRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
 
+  // Recompute continuously (not just once on open) so the popover stays aligned
+  // with its trigger through layout shifts that don't fire a window `resize`
+  // event — e.g. the sidebar collapsing/expanding animates its width via CSS,
+  // which reflows everything to its right without changing window dimensions.
   useLayoutEffect(() => {
     if (!open || !anchorRef.current) {
       setPosition(null);
       return;
     }
-    const rect = anchorRef.current.getBoundingClientRect();
-    const left = align === 'right' ? rect.right - width : rect.left;
-    setPosition({ top: rect.bottom + 6, left: Math.max(8, Math.min(left, window.innerWidth - width - 8)) });
+    let frame: number;
+    const track = () => {
+      if (!anchorRef.current) return;
+      const rect = anchorRef.current.getBoundingClientRect();
+      const left = align === 'right' ? rect.right - width : rect.left;
+      const next = { top: rect.bottom + 6, left: Math.max(8, Math.min(left, window.innerWidth - width - 8)) };
+      setPosition((prev) => (prev && prev.top === next.top && prev.left === next.left ? prev : next));
+      frame = requestAnimationFrame(track);
+    };
+    track();
+    return () => cancelAnimationFrame(frame);
   }, [open, anchorRef, align, width]);
 
   useEffect(() => {

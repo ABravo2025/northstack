@@ -7,6 +7,11 @@ import SlideOver from '../components/SlideOver';
 import { CheckIcon, CopyIcon, LockIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
 import ColumnResizeHandle from '../components/ColumnResizeHandle';
 import { useResizableColumns } from '../hooks/useResizableColumns';
+import ColumnVisibilityMenu from '../components/ColumnVisibilityMenu';
+import { useColumnVisibility } from '../hooks/useColumnVisibility';
+import Avatar from '../components/Avatar';
+import RoleChip from '../components/RoleChip';
+import StatusChip from '../components/StatusChip';
 
 const PAGE_SIZE = 20;
 
@@ -58,6 +63,8 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
 
   const isOwner = user.role === 'owner';
   const { getWidth: getColumnWidth, startResize } = useResizableColumns('northstack:columnWidths:companyUser');
+  const { isHidden: isColumnHidden, toggle: toggleColumn } = useColumnVisibility('northstack:hiddenColumns:companyUser');
+  const visibleColumns = COLUMNS.filter((col) => !isColumnHidden(col.key));
   const { getWidth: getInviteColumnWidth, startResize: startInviteResize } = useResizableColumns(
     'northstack:columnWidths:companyUserInvite',
   );
@@ -263,7 +270,8 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
             />
           </div>
         )}
-        <button className="btn-primary" onClick={() => setInviteOpen(true)}>
+        <ColumnVisibilityMenu columns={COLUMNS} isHidden={isColumnHidden} onToggle={toggleColumn} />
+        <button className="btn-primary btn-toolbar-size" onClick={() => setInviteOpen(true)}>
           <span className="inline-flex items-center gap-1.5">
             <PlusIcon className="h-4 w-4" />
             Invite
@@ -278,14 +286,14 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
           <div className="full-table-wrap">
             <table className="table full-table">
               <colgroup>
-                {COLUMNS.map((col) => (
+                {visibleColumns.map((col) => (
                   <col key={col.key} style={{ width: getColumnWidth(col.key) }} />
                 ))}
                 <col style={{ width: 60 }} />
               </colgroup>
               <thead>
                 <tr>
-                  {COLUMNS.map((col) => (
+                  {visibleColumns.map((col) => (
                     <th
                       key={col.key}
                       className={`sortable ${sortField === col.key ? 'sorted' : ''}`}
@@ -307,34 +315,45 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
                   const canEditRole = !isSelf && (isOwner || u.role !== 'owner');
                   return (
                     <tr key={u.id}>
-                      <td>
-                        {u.firstName} {u.lastName}
-                        {isSelf && ' (you)'}
-                      </td>
-                      <td>{u.email}</td>
-                      <td>{u.phone}</td>
-                      <td>
-                        {canEditRole ? (
-                          <>
-                            <label htmlFor={`role-${u.id}`} className="sr-only">
-                              Role for {u.firstName} {u.lastName}
-                            </label>
-                            <select
-                              id={`role-${u.id}`}
-                              className="select-compact"
-                              value={u.role}
-                              onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                            >
-                              <option value="member">member</option>
-                              <option value="admin">admin</option>
-                              {isOwner && <option value="owner">owner</option>}
-                            </select>
-                          </>
-                        ) : (
-                          u.role
-                        )}
-                      </td>
-                      <td>{u.status}</td>
+                      {!isColumnHidden('name') && (
+                        <td>
+                          <div className="name-cell">
+                            <Avatar firstName={u.firstName} lastName={u.lastName} />
+                            {u.firstName} {u.lastName}
+                            {isSelf && ' (you)'}
+                          </div>
+                        </td>
+                      )}
+                      {!isColumnHidden('email') && <td>{u.email}</td>}
+                      {!isColumnHidden('phone') && <td>{u.phone}</td>}
+                      {!isColumnHidden('role') && (
+                        <td>
+                          {canEditRole ? (
+                            <>
+                              <label htmlFor={`role-${u.id}`} className="sr-only">
+                                Role for {u.firstName} {u.lastName}
+                              </label>
+                              <select
+                                id={`role-${u.id}`}
+                                className="select-compact"
+                                value={u.role}
+                                onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                              >
+                                <option value="member">member</option>
+                                <option value="admin">admin</option>
+                                {isOwner && <option value="owner">owner</option>}
+                              </select>
+                            </>
+                          ) : (
+                            <RoleChip role={u.role} />
+                          )}
+                        </td>
+                      )}
+                      {!isColumnHidden('status') && (
+                        <td>
+                          <StatusChip color={u.status === 'active' ? '#047857' : '#6b7280'} label={u.status === 'active' ? 'Active' : 'Inactive'} />
+                        </td>
+                      )}
                       <td>
                         {canEditRole && (
                           <div className="icon-actions">

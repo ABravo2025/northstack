@@ -31,9 +31,15 @@ export default function FilterBar({ fields, filters, onChange }: FilterBarProps)
 
   return (
     <>
-      <button ref={buttonRef} type="button" className="tb-btn" onClick={() => setOpen((v) => !v)}>
+      <button
+        ref={buttonRef}
+        type="button"
+        className="tb-btn"
+        onClick={() => setOpen((v) => !v)}
+        aria-label={filters.length > 0 ? `Filter (${filters.length} active)` : 'Filter'}
+        title="Filter"
+      >
         <FilterIcon />
-        Filter
         {filters.length > 0 && <span className="filter-count">{filters.length}</span>}
       </button>
       <Popover open={open} onClose={() => setOpen(false)} anchorRef={buttonRef} width={320}>

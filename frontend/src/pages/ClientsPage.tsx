@@ -12,6 +12,10 @@ import AddCustomFieldColumn from '../components/AddCustomFieldColumn';
 import StatusColumnMenu from '../components/StatusColumnMenu';
 import ColumnResizeHandle from '../components/ColumnResizeHandle';
 import { useResizableColumns } from '../hooks/useResizableColumns';
+import ColumnVisibilityMenu from '../components/ColumnVisibilityMenu';
+import { useColumnVisibility } from '../hooks/useColumnVisibility';
+import Avatar from '../components/Avatar';
+import StatusChip from '../components/StatusChip';
 import { PencilIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
 import {
   applyFilters,
@@ -56,6 +60,9 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
   const canManageCustomFields = user.role === 'owner' || user.role === 'admin';
   const canEditClients = user.role === 'owner' || user.role === 'admin';
   const { getWidth: getColumnWidth, startResize } = useResizableColumns('northstack:columnWidths:client');
+  const { isHidden: isColumnHidden, toggle: toggleColumn, hide: hideColumn } = useColumnVisibility(
+    'northstack:hiddenColumns:client',
+  );
   const activeClientCustomFields = clientCustomFields.filter((field) => field.isActive);
   const activeClientStatuses = clientStatuses.filter((s) => s.isActive);
 
@@ -448,6 +455,13 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
     { key: 'status', label: 'Status' },
   ];
 
+  const toggleableColumns = [
+    ...columns,
+    ...activeClientCustomFields.map((field) => ({ key: `cf:${field.id}`, label: field.name })),
+  ];
+  const visibleColumns = columns.filter((col) => !isColumnHidden(col.key));
+  const visibleCustomFields = activeClientCustomFields.filter((field) => !isColumnHidden(`cf:${field.id}`));
+
   const groupFieldForKanban = activeView?.groupByField ? findField(fields, activeView.groupByField) : undefined;
 
   return (
@@ -634,7 +648,10 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
           </div>
         )}
         {viewType === 'grid' && <FilterBar fields={fields} filters={viewFilters} onChange={setViewFilters} />}
-        <button className="btn-primary" onClick={handleOpenAdd}>
+        {viewType === 'grid' && (
+          <ColumnVisibilityMenu columns={toggleableColumns} isHidden={isColumnHidden} onToggle={toggleColumn} />
+        )}
+        <button className="btn-primary btn-toolbar-size" onClick={handleOpenAdd}>
           <span className="inline-flex items-center gap-1.5">
             <PlusIcon className="h-4 w-4" />
             Add Client
@@ -684,10 +701,10 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
           <div className="full-table-wrap">
             <table className="table full-table">
               <colgroup>
-                {columns.map((col) => (
+                {visibleColumns.map((col) => (
                   <col key={col.key} style={{ width: getColumnWidth(col.key) }} />
                 ))}
-                {activeClientCustomFields.map((field) => (
+                {visibleCustomFields.map((field) => (
                   <col key={field.id} style={{ width: getColumnWidth(`cf:${field.id}`) }} />
                 ))}
                 {canManageCustomFields && <col style={{ width: 40 }} />}
@@ -695,7 +712,7 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
               </colgroup>
               <thead>
                 <tr>
-                  {columns.map((col) => (
+                  {visibleColumns.map((col) => (
                     <th
                       key={col.key}
                       className={`sortable ${viewSort?.field === col.key ? 'sorted' : ''}`}
@@ -709,12 +726,13 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
                           entityType="client"
                           statuses={clientStatuses}
                           onChanged={loadClientStatuses}
+                          onHide={() => hideColumn('status')}
                         />
                       )}
                       <ColumnResizeHandle onMouseDown={(e) => startResize(col.key, e)} />
                     </th>
                   ))}
-                  {activeClientCustomFields.map((field) => (
+                  {visibleCustomFields.map((field) => (
                     <th
                       key={field.id}
                       className={`sortable ${viewSort?.field === `cf:${field.id}` ? 'sorted' : ''}`}
@@ -729,6 +747,7 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
                           field={field}
                           onUpdate={handleUpdateCustomFieldColumn}
                           onDeactivate={handleDeactivateCustomFieldColumn}
+                          onHide={() => hideColumn(`cf:${field.id}`)}
                         />
                       )}
                       <ColumnResizeHandle onMouseDown={(e) => startResize(`cf:${field.id}`, e)} />
@@ -745,13 +764,24 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
               <tbody>
                 {pagedClients.map((client) => (
                   <tr key={client.id}>
-                    <td>
-                      {client.firstName} {client.lastName}
-                    </td>
-                    <td>{client.email}</td>
-                    <td>{client.company}</td>
-                    <td>{client.statusDefn?.name}</td>
-                    {activeClientCustomFields.map((field) => {
+                    {!isColumnHidden('name') && (
+                      <td>
+                        <div className="name-cell">
+                          <Avatar firstName={client.firstName} lastName={client.lastName} />
+                          {client.firstName} {client.lastName}
+                        </div>
+                      </td>
+                    )}
+                    {!isColumnHidden('email') && <td>{client.email}</td>}
+                    {!isColumnHidden('company') && <td>{client.company}</td>}
+                    {!isColumnHidden('status') && (
+                      <td>
+                        {client.statusDefn && (
+                          <StatusChip color={client.statusDefn.color || '#6b7280'} label={client.statusDefn.name} />
+                        )}
+                      </td>
+                    )}
+                    {visibleCustomFields.map((field) => {
                       const fieldValue = client.customFieldVals?.find(
                         (v: any) => v.customFieldDefinitionId === field.id,
                       );

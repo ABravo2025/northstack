@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import Popover from './Popover';
 
 // Brand colors first, then a general-purpose set covering common
 // category/tag colors (status dots, time off policies, etc.) — kept generic on
@@ -49,22 +50,11 @@ export default function ColorPicker({ value, onChange }: ColorPickerProps) {
   const [open, setOpen] = useState(false);
   const [customColors, setCustomColors] = useState<string[]>(() => loadCustomColors());
   const [draftHex, setDraftHex] = useState(value || '#3c6da1');
-  const containerRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     setDraftHex(value || '#3c6da1');
   }, [value]);
-
-  useEffect(() => {
-    if (!open) return;
-    const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [open]);
 
   const isDraftValid = HEX_PATTERN.test(draftHex);
   const isDraftUnsaved = isDraftValid && draftHex.toLowerCase() !== value?.toLowerCase();
@@ -77,17 +67,21 @@ export default function ColorPicker({ value, onChange }: ColorPickerProps) {
   };
 
   return (
-    <div className="color-picker" ref={containerRef}>
+    <div className="color-picker">
       <button
+        ref={triggerRef}
         type="button"
         className="color-swatch color-swatch-trigger"
         style={{ background: HEX_PATTERN.test(value) ? value : '#ffffff' }}
-        onClick={() => setOpen((o) => !o)}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((o) => !o);
+        }}
         title={value}
         aria-label="Choose color"
       />
-      {open && (
-        <div className="color-picker-popover">
+      <Popover open={open} onClose={() => setOpen(false)} anchorRef={triggerRef} width={256}>
+        <div onClick={(e) => e.stopPropagation()}>
           <div className="color-picker-section-label">Standard</div>
           <div className="color-picker-swatches">
             {PRESET_COLORS.map((color) => (
@@ -160,7 +154,7 @@ export default function ColorPicker({ value, onChange }: ColorPickerProps) {
             </button>
           </div>
         </div>
-      )}
+      </Popover>
     </div>
   );
 }

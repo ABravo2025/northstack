@@ -87,6 +87,30 @@ export async function exportEmployeesToCsv(tenantId: string, viewerRole: string)
   return toCsv([headers, ...rows]);
 }
 
+export async function getEmployeesCsvTemplate(tenantId: string, viewerRole: string): Promise<string> {
+  const customFields = (await listCustomFieldDefinitions(tenantId, 'employee')).filter((f) => f.isActive);
+  const isOwner = viewerRole === 'owner';
+
+  const headers = [...EMPLOYEE_BASE_HEADERS, ...(isOwner ? EMPLOYEE_COMPENSATION_HEADERS : []), ...customFields.map((f) => f.name)];
+  const example = [
+    'Jane',
+    'Doe',
+    'jane.doe@example.com',
+    '',
+    'Engineering',
+    'Software Engineer',
+    'Active',
+    '2026-01-15',
+    '',
+    '',
+    '',
+    ...(isOwner ? ['', '7500.00'] : []),
+    ...customFields.map(() => ''),
+  ];
+
+  return toCsv([headers, example]);
+}
+
 export async function importEmployeesFromCsv(tenantId: string, csvText: string, viewerRole: string): Promise<ImportResult> {
   const records = rowsToRecords(parseCsv(csvText));
   const isOwner = viewerRole === 'owner';
@@ -193,6 +217,13 @@ export async function exportClientsToCsv(tenantId: string): Promise<string> {
   });
 
   return toCsv([headers, ...rows]);
+}
+
+export async function getClientsCsvTemplate(tenantId: string): Promise<string> {
+  const customFields = (await listCustomFieldDefinitions(tenantId, 'client')).filter((f) => f.isActive);
+  const headers = [...CLIENT_BASE_HEADERS, ...customFields.map((f) => f.name)];
+  const example = ['Jane', 'Doe', 'jane.doe@example.com', 'Acme Inc.', 'Active', ...customFields.map(() => '')];
+  return toCsv([headers, example]);
 }
 
 export async function importClientsFromCsv(tenantId: string, csvText: string): Promise<ImportResult> {

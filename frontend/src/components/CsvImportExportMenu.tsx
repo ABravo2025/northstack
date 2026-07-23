@@ -16,9 +16,21 @@ interface ImportResult {
 }
 
 const LABELS = {
-  employee: { plural: 'Employees', filename: 'employees.csv' },
-  client: { plural: 'Clients', filename: 'clients.csv' },
+  employee: { plural: 'Employees', filename: 'employees.csv', templateFilename: 'employees-import-template.csv' },
+  client: { plural: 'Clients', filename: 'clients.csv', templateFilename: 'clients-import-template.csv' },
 };
+
+function downloadCsvBlob(csv: string, filename: string) {
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
 
 export default function CsvImportExportMenu({ token, entityType, onImported }: CsvImportExportMenuProps) {
   const toast = useToast();
@@ -26,6 +38,7 @@ export default function CsvImportExportMenu({ token, entityType, onImported }: C
   const [importOpen, setImportOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
   const [fileName, setFileName] = useState('');
   const [csvText, setCsvText] = useState('');
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -35,19 +48,23 @@ export default function CsvImportExportMenu({ token, entityType, onImported }: C
     setExporting(true);
     try {
       const csv = entityType === 'employee' ? await api.exportEmployeesCsv(token) : await api.exportClientsCsv(token);
-      const blob = new Blob([csv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = label.filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      downloadCsvBlob(csv, label.filename);
     } catch (error) {
       toast.error('Failed to export CSV: ' + (error as Error).message);
     } finally {
       setExporting(false);
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    setDownloadingTemplate(true);
+    try {
+      const csv = entityType === 'employee' ? await api.employeesCsvTemplate(token) : await api.clientsCsvTemplate(token);
+      downloadCsvBlob(csv, label.templateFilename);
+    } catch (error) {
+      toast.error('Failed to download template: ' + (error as Error).message);
+    } finally {
+      setDownloadingTemplate(false);
     }
   };
 
@@ -105,9 +122,12 @@ export default function CsvImportExportMenu({ token, entityType, onImported }: C
       <SlideOver open={importOpen} title={`Import ${label.plural} from CSV`} onClose={() => setImportOpen(false)}>
         <div className="nv-field">
           <p className="text-sm text-gray-600 dark:text-gray-300">
-            Upload a CSV file. Not sure of the format? Use "Export to CSV" first — the file it downloads is a valid template,
-            even with no data yet.
+            Upload a CSV file with a header row. Not sure of the columns? Download a template below — it has the exact
+            column names and one filled-in example row showing the expected format (e.g. dates as YYYY-MM-DD).
           </p>
+          <button type="button" className="btn-secondary mt-2" onClick={handleDownloadTemplate} disabled={downloadingTemplate}>
+            {downloadingTemplate ? 'Downloading…' : 'Download CSV template'}
+          </button>
         </div>
         <div className="nv-field">
           <label htmlFor="csv-file-input">CSV file</label>

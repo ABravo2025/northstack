@@ -54,11 +54,16 @@ export function parseCsv(text: string): string[][] {
   return rows;
 }
 
+// Prefix values that a spreadsheet app would interpret as a formula (CSV/formula
+// injection) so they open as literal text instead of executing.
+const FORMULA_TRIGGER_CHARS = ['=', '+', '-', '@', '\t', '\r'];
+
 function escapeCsvField(value: string): string {
-  if (value.includes(',') || value.includes('"') || value.includes('\n')) {
-    return `"${value.replace(/"/g, '""')}"`;
+  const safeValue = FORMULA_TRIGGER_CHARS.includes(value[0]) ? `'${value}` : value;
+  if (safeValue.includes(',') || safeValue.includes('"') || safeValue.includes('\n')) {
+    return `"${safeValue.replace(/"/g, '""')}"`;
   }
-  return value;
+  return safeValue;
 }
 
 export function toCsv(rows: (string | number | null | undefined)[][]): string {

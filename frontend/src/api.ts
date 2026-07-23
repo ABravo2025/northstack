@@ -1147,8 +1147,22 @@ export const api = {
     if (!res.ok) await throwApiError(res);
     return res.json();
   },
+  employeesCsvTemplate: async (token: string): Promise<string> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/template/csv`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.text();
+  },
   exportClientsCsv: async (token: string): Promise<string> => {
     const res = await apiFetch(`${API_BASE_URL}/api/clients/export/csv`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.text();
+  },
+  clientsCsvTemplate: async (token: string): Promise<string> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/clients/template/csv`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);

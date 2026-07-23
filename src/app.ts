@@ -75,8 +75,10 @@ import { getOnboardingStatus, seedSampleData } from './modules/onboarding/onboar
 import {
   exportEmployeesToCsv,
   importEmployeesFromCsv,
+  getEmployeesCsvTemplate,
   exportClientsToCsv,
   importClientsFromCsv,
+  getClientsCsvTemplate,
 } from './modules/csv/csvService.js';
 import {
   createTimeOffPolicy,
@@ -513,6 +515,22 @@ app.post('/api/hr/employees/import/csv', async (req, res) => {
 
   const result = await importEmployeesFromCsv(user.tenantId!, req.body.csv, user.role);
   return res.json(result);
+});
+
+app.get('/api/hr/employees/template/csv', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canCreateHr(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const csv = await getEmployeesCsvTemplate(user.tenantId!, user.role);
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="employees-import-template.csv"');
+  return res.send(csv);
 });
 
 app.post('/api/hr/employees', async (req, res) => {
@@ -1411,6 +1429,22 @@ app.post('/api/clients/import/csv', async (req, res) => {
 
   const result = await importClientsFromCsv(user.tenantId!, req.body.csv);
   return res.json(result);
+});
+
+app.get('/api/clients/template/csv', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canCreateHr(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const csv = await getClientsCsvTemplate(user.tenantId!);
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="clients-import-template.csv"');
+  return res.send(csv);
 });
 
 app.post('/api/clients', async (req, res) => {

@@ -26,12 +26,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       # Preview deployment (no --prod), pointed at the Neon `staging` branch instead of
-      # production — DATABASE_URL is injected at runtime for just this deployment via -e,
-      # not set as a persistent Vercel project env var. Other secrets (SMTP, Turnstile,
-      # APP_BASE_URL) are not overridden here; if they're not already configured as
-      # "Preview"-scoped vars in the Vercel dashboard, those features no-op safely on
-      # staging (same best-effort pattern already used in src/lib/mailer.ts) instead of
-      # breaking the deploy.
+      # production — DATABASE_URL is injected at runtime for just this deployment via -e.
+      # Turnstile uses Cloudflare's official public "always passes" test keys (not real
+      # secrets, safe to hardcode) instead of production's real keys, since Turnstile
+      # sitekeys are domain-restricted and production's likely doesn't allow this host;
+      # the test keys also let QA submit Public Forms without solving a real captcha.
+      # SMTP intentionally reuses production's ZOHO_SMTP_USER/PASSWORD (same domain, no
+      # domain-restriction issue) — those must be enabled for the "Preview" scope in the
+      # Vercel dashboard's project env vars for this to actually send; if they're not,
+      # email sending no-ops safely (same best-effort pattern as src/lib/mailer.ts)
+      # instead of breaking the deploy.
       - name: Deploy and alias to staging.joinnorthstack.com
         run: |
           # `domains add` is idempotent-ish for our purposes: it errors if the domain is
@@ -41,9 +45,18 @@ jobs:
           # to the GitHub repo natively, which this project deliberately does not use
           # (see the deploy-app job above — CLI + token, not native Git integration).
           npx vercel domains add staging.joinnorthstack.com --token="$VERCEL_TOKEN" || true
-          DEPLOY_URL=$(npx vercel deploy --token="$VERCEL_TOKEN" --yes -e DATABASE_URL="$STAGING_DATABASE_URL")
+          DEPLOY_URL=$(npx vercel deploy --token="$VERCEL_TOKEN" --yes \
+            -e DATABASE_URL="$STAGING_DATABASE_URL" \
+            -e TURNSTILE_SECRET_KEY="$TURNSTILE_TEST_SECRET_KEY" \
+            --build-env VITE_TURNSTILE_SITE_KEY="$TURNSTILE_TEST_SITE_KEY")
           echo "Deployed to: $DEPLOY_URL"
           npx vercel alias set "$DEPLOY_URL" staging.joinnorthstack.com --token="$VERCEL_TOKEN"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          # Cloudflare's official, publicly documented Turnstile testing keys ("always
+          # passes") -- not secrets, safe to commit. Verify against
+          # developers.cloudflare.com/turnstile/troubleshooting/testing/ if they ever
+          # stop working.
+          TURNSTILE_TEST_SITE_KEY: 1x00000000000000000000AA
+          TURNSTILE_TEST_SECRET_KEY: 1x0000000000000000000000000000000AA

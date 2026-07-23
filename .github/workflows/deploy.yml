@@ -2,10 +2,11 @@ name: Deploy to Vercel
 
 on:
   push:
-    branches: [main]
+    branches: [main, staging]
 
 jobs:
   deploy-app:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:
       VERCEL_ORG_ID: team_7cBA70ABi7r0BNsljeJfvQ3y
@@ -13,3 +14,20 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
+
+  deploy-staging:
+    if: github.ref == 'refs/heads/staging'
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: team_7cBA70ABi7r0BNsljeJfvQ3y
+      VERCEL_PROJECT_ID: prj_toTfkIDiZvYieHem9QvyVscZt40F
+    steps:
+      - uses: actions/checkout@v4
+      # Preview deployment (no --prod), pointed at the Neon `staging` branch instead of
+      # production — DATABASE_URL is injected at runtime for just this deployment via -e,
+      # not set as a persistent Vercel project env var. Other secrets (SMTP, Turnstile,
+      # APP_BASE_URL) are not overridden here; if they're not already configured as
+      # "Preview"-scoped vars in the Vercel dashboard, those features no-op safely on
+      # staging (same best-effort pattern already used in src/lib/mailer.ts) instead of
+      # breaking the deploy.
+      - run: npx vercel deploy --token=${{ secrets.VERCEL_TOKEN }} --yes -e DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}

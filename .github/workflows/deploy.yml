@@ -13,7 +13,9 @@ jobs:
       VERCEL_PROJECT_ID: prj_toTfkIDiZvYieHem9QvyVscZt40F
     steps:
       - uses: actions/checkout@v4
-      - run: npx vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
+      - run: npx vercel deploy --prod --token="$VERCEL_TOKEN" --yes
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
   deploy-staging:
     if: github.ref == 'refs/heads/staging'
@@ -30,4 +32,7 @@ jobs:
       # "Preview"-scoped vars in the Vercel dashboard, those features no-op safely on
       # staging (same best-effort pattern already used in src/lib/mailer.ts) instead of
       # breaking the deploy.
-      - run: npx vercel deploy --token=${{ secrets.VERCEL_TOKEN }} --yes -e DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}
+      - run: npx vercel deploy --token="$VERCEL_TOKEN" --yes -e DATABASE_URL="$STAGING_DATABASE_URL"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}

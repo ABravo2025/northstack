@@ -50,13 +50,20 @@ export default function Popover({ open, onClose, anchorRef, children, align = 'l
       const target = e.target as Node;
       if (popoverRef.current?.contains(target)) return;
       if (anchorRef.current?.contains(target)) return;
+      // A nested Popover (e.g. ColorPicker opened from inside this one) portals
+      // to document.body independently, so its content isn't a DOM descendant
+      // of popoverRef — without this check, a click inside it reads as
+      // "outside" and closes this popover before the nested one can act on it.
+      if (target instanceof Element && target.closest('.popover-panel')) return;
       onClose();
     };
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     const handleScroll = (e: Event) => {
-      if (popoverRef.current?.contains(e.target as Node)) return;
+      const target = e.target as Node;
+      if (popoverRef.current?.contains(target)) return;
+      if (target instanceof Element && target.closest('.popover-panel')) return;
       onClose();
     };
 

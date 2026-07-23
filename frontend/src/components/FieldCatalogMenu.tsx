@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { api } from '../api';
 import { useToast } from './ToastProvider';
 import Popover from './Popover';
-import { DotsVerticalIcon } from './Icons';
+import { DotsVerticalIcon, GripIcon } from './Icons';
 
 interface CatalogEntryLike {
   id: string;
@@ -24,6 +24,8 @@ export default function FieldCatalogMenu({ token, kind, label, entries, onChange
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [newName, setNewName] = useState('');
+  const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
   const sorted = [...entries].sort((a, b) => a.order - b.order);
@@ -37,14 +39,37 @@ export default function FieldCatalogMenu({ token, kind, label, entries, onChange
     }
   };
 
-  const handleMove = async (index: number, direction: -1 | 1) => {
-    const targetIndex = index + direction;
-    if (targetIndex < 0 || targetIndex >= sorted.length) return;
+  const handleDragStart = (id: string) => setDraggedId(id);
+  const handleDragEnd = () => {
+    setDraggedId(null);
+    setDragOverId(null);
+  };
+  const handleDragOver = (e: React.DragEvent, overId: string) => {
+    e.preventDefault();
+    if (dragOverId !== overId) setDragOverId(overId);
+  };
+
+  const handleDrop = async (targetId: string) => {
+    setDragOverId(null);
+    if (!draggedId || draggedId === targetId) {
+      setDraggedId(null);
+      return;
+    }
+    const draggedIndex = sorted.findIndex((s) => s.id === draggedId);
+    const targetIndex = sorted.findIndex((s) => s.id === targetId);
+    setDraggedId(null);
+    if (draggedIndex === -1 || targetIndex === -1) return;
+
+    const reordered = [...sorted];
+    const [moved] = reordered.splice(draggedIndex, 1);
+    reordered.splice(targetIndex, 0, moved);
+
     try {
-      const current = sorted[index];
-      const target = sorted[targetIndex];
-      await api.updateFieldCatalogDefinition(token, current.id, { order: target.order });
-      await api.updateFieldCatalogDefinition(token, target.id, { order: current.order });
+      for (let i = 0; i < reordered.length; i++) {
+        if (reordered[i].order !== i) {
+          await api.updateFieldCatalogDefinition(token, reordered[i].id, { order: i });
+        }
+      }
       onChanged();
     } catch (error) {
       toast.error(`Failed to reorder ${label.toLowerCase()} options: ` + (error as Error).message);
@@ -91,28 +116,22 @@ export default function FieldCatalogMenu({ token, kind, label, entries, onChange
             </div>
           )}
           <div className="status-manage-list">
-            {sorted.map((entry, index) => (
-              <div className="status-manage-row" key={entry.id}>
-                <div className="status-manage-reorder">
-                  <button
-                    type="button"
-                    className="col-add-trigger"
-                    disabled={index === 0}
-                    onClick={() => handleMove(index, -1)}
-                    aria-label="Move up"
-                  >
-                    ▲
-                  </button>
-                  <button
-                    type="button"
-                    className="col-add-trigger"
-                    disabled={index === sorted.length - 1}
-                    onClick={() => handleMove(index, 1)}
-                    aria-label="Move down"
-                  >
-                    ▼
-                  </button>
-                </div>
+            {sorted.map((entry) => (
+              <div
+                className={`status-manage-row ${draggedId === entry.id ? 'dragging' : ''} ${dragOverId === entry.id && draggedId && draggedId !== entry.id ? 'drag-over' : ''}`}
+                key={entry.id}
+                onDragOver={(e) => handleDragOver(e, entry.id)}
+                onDrop={() => handleDrop(entry.id)}
+              >
+                <span
+                  className="status-manage-grip"
+                  draggable
+                  onDragStart={() => handleDragStart(entry.id)}
+                  onDragEnd={handleDragEnd}
+                  aria-label={`Drag to reorder ${entry.name}`}
+                >
+                  <GripIcon className="h-3.5 w-3.5" />
+                </span>
                 <span className={`status-manage-name ${!entry.isActive ? 'inactive' : ''}`}>{entry.name}</span>
                 <button type="button" className="status-manage-link" onClick={() => handleToggleActive(entry)}>
                   {entry.isActive ? 'Deactivate' : 'Activate'}

@@ -1084,15 +1084,19 @@
 }
 
 .status-manage-row {
-  @apply flex items-center gap-2 rounded-md px-1 py-1 text-xs hover:bg-gray-50 dark:hover:bg-gray-800;
+  @apply flex items-center gap-2 rounded-md border-t-2 border-transparent px-1 py-1 text-xs hover:bg-gray-50 dark:hover:bg-gray-800;
 }
 
-.status-manage-reorder {
-  @apply flex flex-col gap-0;
+.status-manage-row.dragging {
+  @apply opacity-40;
 }
 
-.status-manage-reorder .col-add-trigger {
-  @apply h-3.5 w-4 text-[0.55rem];
+.status-manage-row.drag-over {
+  @apply border-t-brand-blue;
+}
+
+.status-manage-grip {
+  @apply flex shrink-0 cursor-grab items-center justify-center text-gray-400 hover:text-gray-600 active:cursor-grabbing dark:hover:text-gray-200;
 }
 
 .color-dot {

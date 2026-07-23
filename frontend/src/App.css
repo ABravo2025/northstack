@@ -625,6 +625,26 @@
   @apply border-brand-blue bg-brand-blue/10;
 }
 
+.full-table th.col-dragging {
+  @apply opacity-40;
+}
+
+.full-table th.col-drag-over {
+  @apply bg-brand-blue/10;
+}
+
+.full-table .col-frozen {
+  @apply sticky bg-brand-cream dark:bg-gray-950;
+}
+
+.full-table tr:hover .col-frozen {
+  @apply bg-gray-50 dark:bg-gray-800/60;
+}
+
+.full-table .col-frozen-edge {
+  @apply border-r-2 border-gray-300 dark:border-gray-700;
+}
+
 .icon-actions {
   @apply flex items-center gap-1;
 }

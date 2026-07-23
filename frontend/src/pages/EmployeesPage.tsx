@@ -15,6 +15,7 @@ import ColumnResizeHandle from '../components/ColumnResizeHandle';
 import { useResizableColumns } from '../hooks/useResizableColumns';
 import ColumnVisibilityMenu from '../components/ColumnVisibilityMenu';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
+import { useColumnOrder } from '../hooks/useColumnOrder';
 import Avatar from '../components/Avatar';
 import StatusChip from '../components/StatusChip';
 import { MailIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
@@ -30,6 +31,9 @@ import {
 
 const PAGE_SIZE = 20;
 const ACTIVE_VIEW_STORAGE_KEY = 'northstack:activeView:employee';
+// Frozen columns stay pinned to the left through horizontal scroll and can't
+// be dragged to reorder — everything else can.
+const FROZEN_COLUMN_KEYS = ['name', 'status'];
 
 function dollarsToCents(value: string): number | undefined {
   if (!value.trim()) return undefined;
@@ -76,6 +80,8 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   );
   const [viewFilters, setViewFilters] = useState<ViewFilter[]>([]);
   const [viewSort, setViewSort] = useState<ViewSort | null>(null);
+  const [draggedColKey, setDraggedColKey] = useState<string | null>(null);
+  const [dragOverColKey, setDragOverColKey] = useState<string | null>(null);
 
   const canManageCustomFields = user.role === 'owner' || user.role === 'admin';
   const canEditEmployees = user.role === 'owner' || user.role === 'admin';
@@ -575,19 +581,69 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   };
 
   const columns = [
-    { key: 'name', label: 'Name' },
-    { key: 'email', label: 'Business Email' },
-    { key: 'personalEmail', label: 'Personal Email' },
-    { key: 'department', label: 'Department' },
-    { key: 'jobTitle', label: 'Job Title' },
-    { key: 'status', label: 'Status' },
-    { key: 'startDate', label: 'Start Date' },
-    { key: 'endDate', label: 'End Date' },
-    { key: 'contractUrl', label: 'Contract URL' },
+    {
+      key: 'name',
+      label: 'Name',
+      render: (emp: any) => (
+        <div className="name-cell">
+          <Avatar firstName={emp.firstName} lastName={emp.lastName} />
+          {emp.firstName} {emp.lastName}
+          {emp.activeTimeOffTag && (
+            <span
+              className="time-off-active-tag"
+              style={{ background: emp.activeTimeOffTag.color || '#9ca3af' }}
+              title={`On ${emp.activeTimeOffTag.policyName} today`}
+            >
+              {emp.activeTimeOffTag.policyName}
+            </span>
+          )}
+        </div>
+      ),
+    },
+    { key: 'email', label: 'Business Email', render: (emp: any) => emp.email },
+    { key: 'personalEmail', label: 'Personal Email', render: (emp: any) => emp.personalEmail || '—' },
+    { key: 'department', label: 'Department', render: (emp: any) => emp.departmentDefn?.name || '—' },
+    { key: 'jobTitle', label: 'Job Title', render: (emp: any) => emp.jobTitleDefn?.name || '—' },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (emp: any) =>
+        emp.statusDefn && <StatusChip color={emp.statusDefn.color || '#6b7280'} label={emp.statusDefn.name} />,
+    },
+    {
+      key: 'startDate',
+      label: 'Start Date',
+      render: (emp: any) => (emp.startDate ? new Date(emp.startDate).toLocaleDateString() : '—'),
+    },
+    {
+      key: 'endDate',
+      label: 'End Date',
+      render: (emp: any) => (emp.endDate ? new Date(emp.endDate).toLocaleDateString() : '—'),
+    },
+    {
+      key: 'contractUrl',
+      label: 'Contract URL',
+      render: (emp: any) =>
+        emp.contractUrl ? (
+          <a href={emp.contractUrl} target="_blank" rel="noopener noreferrer" className="table-link">
+            View
+          </a>
+        ) : (
+          '—'
+        ),
+    },
     ...(user.role === 'owner'
       ? [
-          { key: 'hourlyRate', label: 'Hourly Rate' },
-          { key: 'monthlyRate', label: 'Monthly Rate' },
+          {
+            key: 'hourlyRate',
+            label: 'Hourly Rate',
+            render: (emp: any) => (emp.hourlyRateCents != null ? `$${centsToDollars(emp.hourlyRateCents)}` : '—'),
+          },
+          {
+            key: 'monthlyRate',
+            label: 'Monthly Rate',
+            render: (emp: any) => (emp.monthlyRateCents != null ? `$${centsToDollars(emp.monthlyRateCents)}` : '—'),
+          },
         ]
       : []),
   ];
@@ -598,7 +654,26 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     { key: 'timeOffPolicies', label: 'Time Off Policies' },
     ...activeEmployeeCustomFields.map((field) => ({ key: `cf:${field.id}`, label: field.name })),
   ];
-  const visibleColumns = columns.filter((col) => !isColumnHidden(col.key));
+  const movableColumnKeys = columns.map((col) => col.key).filter((key) => !FROZEN_COLUMN_KEYS.includes(key));
+  const { orderedKeys: columnOrder, reorder: reorderColumns } = useColumnOrder(
+    'northstack:columnOrder:employee',
+    movableColumnKeys,
+  );
+  const frozenColumns: typeof columns = FROZEN_COLUMN_KEYS.map((key) => columns.find((col) => col.key === key)).filter(
+    (col: any) => !!col && !isColumnHidden(col.key),
+  ) as typeof columns;
+  const movableVisibleColumns: typeof columns = columnOrder
+    .map((key: string) => columns.find((col) => col.key === key))
+    .filter((col: any) => !!col && !isColumnHidden(col.key)) as typeof columns;
+  const visibleColumns: typeof columns = [...frozenColumns, ...movableVisibleColumns] as typeof columns;
+  const getFrozenLeft = (key: string) => {
+    let left = 0;
+    for (const col of frozenColumns) {
+      if (col.key === key) return left;
+      left += getColumnWidth(col.key);
+    }
+    return left;
+  };
   const showManagerColumn = !isColumnHidden('managerName');
   const showTimeOffPoliciesColumn = !isColumnHidden('timeOffPolicies');
   const visibleCustomFields = activeEmployeeCustomFields.filter((field) => !isColumnHidden(`cf:${field.id}`));
@@ -1073,10 +1148,41 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
               </colgroup>
               <thead>
                 <tr>
-                  {visibleColumns.map((col) => (
+                  {visibleColumns.map((col) => {
+                    const isFrozen = FROZEN_COLUMN_KEYS.includes(col.key);
+                    const isLastFrozen = isFrozen && frozenColumns[frozenColumns.length - 1]?.key === col.key;
+                    return (
                     <th
                       key={col.key}
-                      className={`sortable ${viewSort?.field === col.key ? 'sorted' : ''}`}
+                      draggable={!isFrozen}
+                      onDragStart={isFrozen ? undefined : () => setDraggedColKey(col.key)}
+                      onDragEnd={
+                        isFrozen
+                          ? undefined
+                          : () => {
+                              setDraggedColKey(null);
+                              setDragOverColKey(null);
+                            }
+                      }
+                      onDragOver={
+                        isFrozen
+                          ? undefined
+                          : (e) => {
+                              e.preventDefault();
+                              if (dragOverColKey !== col.key) setDragOverColKey(col.key);
+                            }
+                      }
+                      onDrop={
+                        isFrozen
+                          ? undefined
+                          : () => {
+                              if (draggedColKey) reorderColumns(draggedColKey, col.key);
+                              setDraggedColKey(null);
+                              setDragOverColKey(null);
+                            }
+                      }
+                      className={`sortable ${viewSort?.field === col.key ? 'sorted' : ''} ${isFrozen ? 'col-frozen' : ''} ${isLastFrozen ? 'col-frozen-edge' : ''} ${!isFrozen && draggedColKey === col.key ? 'col-dragging' : ''} ${!isFrozen && dragOverColKey === col.key && draggedColKey && draggedColKey !== col.key ? 'col-drag-over' : ''}`}
+                      style={isFrozen ? { left: getFrozenLeft(col.key), zIndex: 3 } : undefined}
                       onClick={() => handleSort(col.key)}
                     >
                       {col.label}
@@ -1112,7 +1218,8 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                       )}
                       <ColumnResizeHandle onMouseDown={(e) => startResize(col.key, e)} />
                     </th>
-                  ))}
+                    );
+                  })}
                   {showManagerColumn && (
                     <th>
                       Reports To
@@ -1157,55 +1264,19 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
               <tbody>
                 {pagedEmployees.map((emp) => (
                   <tr key={emp.id}>
-                    {!isColumnHidden('name') && (
-                      <td>
-                        <div className="name-cell">
-                          <Avatar firstName={emp.firstName} lastName={emp.lastName} />
-                          {emp.firstName} {emp.lastName}
-                          {emp.activeTimeOffTag && (
-                            <span
-                              className="time-off-active-tag"
-                              style={{ background: emp.activeTimeOffTag.color || '#9ca3af' }}
-                              title={`On ${emp.activeTimeOffTag.policyName} today`}
-                            >
-                              {emp.activeTimeOffTag.policyName}
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                    )}
-                    {!isColumnHidden('email') && <td>{emp.email}</td>}
-                    {!isColumnHidden('personalEmail') && <td>{emp.personalEmail || '—'}</td>}
-                    {!isColumnHidden('department') && <td>{emp.departmentDefn?.name || '—'}</td>}
-                    {!isColumnHidden('jobTitle') && <td>{emp.jobTitleDefn?.name || '—'}</td>}
-                    {!isColumnHidden('status') && (
-                      <td>
-                        {emp.statusDefn && <StatusChip color={emp.statusDefn.color || '#6b7280'} label={emp.statusDefn.name} />}
-                      </td>
-                    )}
-                    {!isColumnHidden('startDate') && (
-                      <td>{emp.startDate ? new Date(emp.startDate).toLocaleDateString() : '—'}</td>
-                    )}
-                    {!isColumnHidden('endDate') && (
-                      <td>{emp.endDate ? new Date(emp.endDate).toLocaleDateString() : '—'}</td>
-                    )}
-                    {!isColumnHidden('contractUrl') && (
-                      <td>
-                        {emp.contractUrl ? (
-                          <a href={emp.contractUrl} target="_blank" rel="noopener noreferrer" className="table-link">
-                            View
-                          </a>
-                        ) : (
-                          '—'
-                        )}
-                      </td>
-                    )}
-                    {user.role === 'owner' && !isColumnHidden('hourlyRate') && (
-                      <td>{emp.hourlyRateCents != null ? `$${centsToDollars(emp.hourlyRateCents)}` : '—'}</td>
-                    )}
-                    {user.role === 'owner' && !isColumnHidden('monthlyRate') && (
-                      <td>{emp.monthlyRateCents != null ? `$${centsToDollars(emp.monthlyRateCents)}` : '—'}</td>
-                    )}
+                    {visibleColumns.map((col) => {
+                      const isFrozen = FROZEN_COLUMN_KEYS.includes(col.key);
+                      const isLastFrozen = isFrozen && frozenColumns[frozenColumns.length - 1]?.key === col.key;
+                      return (
+                        <td
+                          key={col.key}
+                          className={`${isFrozen ? 'col-frozen' : ''} ${isLastFrozen ? 'col-frozen-edge' : ''}`}
+                          style={isFrozen ? { left: getFrozenLeft(col.key), zIndex: 1 } : undefined}
+                        >
+                          {col.render(emp)}
+                        </td>
+                      );
+                    })}
                     {showManagerColumn && (
                       <td>{emp.manager ? `${emp.manager.firstName} ${emp.manager.lastName}` : '—'}</td>
                     )}

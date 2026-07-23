@@ -9,11 +9,15 @@ import ColumnResizeHandle from '../components/ColumnResizeHandle';
 import { useResizableColumns } from '../hooks/useResizableColumns';
 import ColumnVisibilityMenu from '../components/ColumnVisibilityMenu';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
+import { useColumnOrder } from '../hooks/useColumnOrder';
 import Avatar from '../components/Avatar';
 import RoleChip from '../components/RoleChip';
 import StatusChip from '../components/StatusChip';
 
 const PAGE_SIZE = 20;
+// Frozen columns stay pinned to the left through horizontal scroll and can't
+// be dragged to reorder — everything else can.
+const FROZEN_COLUMN_KEYS = ['name', 'status'];
 
 interface CompanyUsersPageProps {
   user: any;
@@ -60,11 +64,32 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
   const [page, setPage] = useState(1);
   const [sortField, setSortField] = useState<SortField | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [draggedColKey, setDraggedColKey] = useState<string | null>(null);
+  const [dragOverColKey, setDragOverColKey] = useState<string | null>(null);
 
   const isOwner = user.role === 'owner';
   const { getWidth: getColumnWidth, startResize } = useResizableColumns('northstack:columnWidths:companyUser');
   const { isHidden: isColumnHidden, toggle: toggleColumn } = useColumnVisibility('northstack:hiddenColumns:companyUser');
-  const visibleColumns = COLUMNS.filter((col) => !isColumnHidden(col.key));
+  const movableColumnKeys = COLUMNS.map((col) => col.key).filter((key) => !FROZEN_COLUMN_KEYS.includes(key));
+  const { orderedKeys: columnOrder, reorder: reorderColumns } = useColumnOrder(
+    'northstack:columnOrder:companyUser',
+    movableColumnKeys,
+  );
+  const frozenColumns = FROZEN_COLUMN_KEYS.map((key) => COLUMNS.find((col) => col.key === key)).filter(
+    (col): col is (typeof COLUMNS)[number] => !!col && !isColumnHidden(col.key),
+  );
+  const movableVisibleColumns = columnOrder
+    .map((key) => COLUMNS.find((col) => col.key === key))
+    .filter((col): col is (typeof COLUMNS)[number] => !!col && !isColumnHidden(col.key));
+  const visibleColumns = [...frozenColumns, ...movableVisibleColumns];
+  const getFrozenLeft = (key: string) => {
+    let left = 0;
+    for (const col of frozenColumns) {
+      if (col.key === key) return left;
+      left += getColumnWidth(col.key);
+    }
+    return left;
+  };
   const { getWidth: getInviteColumnWidth, startResize: startInviteResize } = useResizableColumns(
     'northstack:columnWidths:companyUserInvite',
   );
@@ -293,10 +318,41 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
               </colgroup>
               <thead>
                 <tr>
-                  {visibleColumns.map((col) => (
+                  {visibleColumns.map((col) => {
+                    const isFrozen = FROZEN_COLUMN_KEYS.includes(col.key);
+                    const isLastFrozen = isFrozen && frozenColumns[frozenColumns.length - 1]?.key === col.key;
+                    return (
                     <th
                       key={col.key}
-                      className={`sortable ${sortField === col.key ? 'sorted' : ''}`}
+                      draggable={!isFrozen}
+                      onDragStart={isFrozen ? undefined : () => setDraggedColKey(col.key)}
+                      onDragEnd={
+                        isFrozen
+                          ? undefined
+                          : () => {
+                              setDraggedColKey(null);
+                              setDragOverColKey(null);
+                            }
+                      }
+                      onDragOver={
+                        isFrozen
+                          ? undefined
+                          : (e) => {
+                              e.preventDefault();
+                              if (dragOverColKey !== col.key) setDragOverColKey(col.key);
+                            }
+                      }
+                      onDrop={
+                        isFrozen
+                          ? undefined
+                          : () => {
+                              if (draggedColKey) reorderColumns(draggedColKey, col.key);
+                              setDraggedColKey(null);
+                              setDragOverColKey(null);
+                            }
+                      }
+                      className={`sortable ${sortField === col.key ? 'sorted' : ''} ${isFrozen ? 'col-frozen' : ''} ${isLastFrozen ? 'col-frozen-edge' : ''} ${!isFrozen && draggedColKey === col.key ? 'col-dragging' : ''} ${!isFrozen && dragOverColKey === col.key && draggedColKey && draggedColKey !== col.key ? 'col-drag-over' : ''}`}
+                      style={isFrozen ? { left: getFrozenLeft(col.key), zIndex: 3 } : undefined}
                       onClick={() => handleSort(col.key)}
                     >
                       {col.label}
@@ -305,7 +361,8 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
                       </span>
                       <ColumnResizeHandle onMouseDown={(e) => startResize(col.key, e)} />
                     </th>
-                  ))}
+                    );
+                  })}
                   <th></th>
                 </tr>
               </thead>
@@ -313,47 +370,57 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
                 {pagedUsers.map((u) => {
                   const isSelf = u.id === user.id;
                   const canEditRole = !isSelf && (isOwner || u.role !== 'owner');
+                  const cellByKey: Record<string, React.ReactNode> = {
+                    name: (
+                      <div className="name-cell">
+                        <Avatar firstName={u.firstName} lastName={u.lastName} />
+                        {u.firstName} {u.lastName}
+                        {isSelf && ' (you)'}
+                      </div>
+                    ),
+                    email: u.email,
+                    phone: u.phone,
+                    role: canEditRole ? (
+                      <>
+                        <label htmlFor={`role-${u.id}`} className="sr-only">
+                          Role for {u.firstName} {u.lastName}
+                        </label>
+                        <select
+                          id={`role-${u.id}`}
+                          className="select-compact"
+                          value={u.role}
+                          onChange={(e) => handleRoleChange(u.id, e.target.value)}
+                        >
+                          <option value="member">member</option>
+                          <option value="admin">admin</option>
+                          {isOwner && <option value="owner">owner</option>}
+                        </select>
+                      </>
+                    ) : (
+                      <RoleChip role={u.role} />
+                    ),
+                    status: (
+                      <StatusChip
+                        color={u.status === 'active' ? '#047857' : '#6b7280'}
+                        label={u.status === 'active' ? 'Active' : 'Inactive'}
+                      />
+                    ),
+                  };
                   return (
                     <tr key={u.id}>
-                      {!isColumnHidden('name') && (
-                        <td>
-                          <div className="name-cell">
-                            <Avatar firstName={u.firstName} lastName={u.lastName} />
-                            {u.firstName} {u.lastName}
-                            {isSelf && ' (you)'}
-                          </div>
-                        </td>
-                      )}
-                      {!isColumnHidden('email') && <td>{u.email}</td>}
-                      {!isColumnHidden('phone') && <td>{u.phone}</td>}
-                      {!isColumnHidden('role') && (
-                        <td>
-                          {canEditRole ? (
-                            <>
-                              <label htmlFor={`role-${u.id}`} className="sr-only">
-                                Role for {u.firstName} {u.lastName}
-                              </label>
-                              <select
-                                id={`role-${u.id}`}
-                                className="select-compact"
-                                value={u.role}
-                                onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                              >
-                                <option value="member">member</option>
-                                <option value="admin">admin</option>
-                                {isOwner && <option value="owner">owner</option>}
-                              </select>
-                            </>
-                          ) : (
-                            <RoleChip role={u.role} />
-                          )}
-                        </td>
-                      )}
-                      {!isColumnHidden('status') && (
-                        <td>
-                          <StatusChip color={u.status === 'active' ? '#047857' : '#6b7280'} label={u.status === 'active' ? 'Active' : 'Inactive'} />
-                        </td>
-                      )}
+                      {visibleColumns.map((col) => {
+                        const isFrozen = FROZEN_COLUMN_KEYS.includes(col.key);
+                        const isLastFrozen = isFrozen && frozenColumns[frozenColumns.length - 1]?.key === col.key;
+                        return (
+                          <td
+                            key={col.key}
+                            className={`${isFrozen ? 'col-frozen' : ''} ${isLastFrozen ? 'col-frozen-edge' : ''}`}
+                            style={isFrozen ? { left: getFrozenLeft(col.key), zIndex: 1 } : undefined}
+                          >
+                            {cellByKey[col.key]}
+                          </td>
+                        );
+                      })}
                       <td>
                         {canEditRole && (
                           <div className="icon-actions">

@@ -14,6 +14,7 @@ import ColumnResizeHandle from '../components/ColumnResizeHandle';
 import { useResizableColumns } from '../hooks/useResizableColumns';
 import ColumnVisibilityMenu from '../components/ColumnVisibilityMenu';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
+import { useColumnOrder } from '../hooks/useColumnOrder';
 import Avatar from '../components/Avatar';
 import StatusChip from '../components/StatusChip';
 import { PencilIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
@@ -28,6 +29,9 @@ import {
 } from '../lib/viewFields';
 
 const PAGE_SIZE = 20;
+// Frozen columns stay pinned to the left through horizontal scroll and can't
+// be dragged to reorder — everything else can.
+const FROZEN_COLUMN_KEYS = ['name', 'status'];
 const ACTIVE_VIEW_STORAGE_KEY = 'northstack:activeView:client';
 
 interface ClientsPageProps {
@@ -56,6 +60,8 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
   );
   const [viewFilters, setViewFilters] = useState<ViewFilter[]>([]);
   const [viewSort, setViewSort] = useState<ViewSort | null>(null);
+  const [draggedColKey, setDraggedColKey] = useState<string | null>(null);
+  const [dragOverColKey, setDragOverColKey] = useState<string | null>(null);
 
   const canManageCustomFields = user.role === 'owner' || user.role === 'admin';
   const canEditClients = user.role === 'owner' || user.role === 'admin';
@@ -449,17 +455,52 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
   };
 
   const columns = [
-    { key: 'name', label: 'Name' },
-    { key: 'email', label: 'Email' },
-    { key: 'company', label: 'Company' },
-    { key: 'status', label: 'Status' },
+    {
+      key: 'name',
+      label: 'Name',
+      render: (client: any) => (
+        <div className="name-cell">
+          <Avatar firstName={client.firstName} lastName={client.lastName} />
+          {client.firstName} {client.lastName}
+        </div>
+      ),
+    },
+    { key: 'email', label: 'Email', render: (client: any) => client.email },
+    { key: 'company', label: 'Company', render: (client: any) => client.company },
+    {
+      key: 'status',
+      label: 'Status',
+      render: (client: any) =>
+        client.statusDefn && (
+          <StatusChip color={client.statusDefn.color || '#6b7280'} label={client.statusDefn.name} />
+        ),
+    },
   ];
 
   const toggleableColumns = [
     ...columns,
     ...activeClientCustomFields.map((field) => ({ key: `cf:${field.id}`, label: field.name })),
   ];
-  const visibleColumns = columns.filter((col) => !isColumnHidden(col.key));
+  const movableColumnKeys = columns.map((col) => col.key).filter((key) => !FROZEN_COLUMN_KEYS.includes(key));
+  const { orderedKeys: columnOrder, reorder: reorderColumns } = useColumnOrder(
+    'northstack:columnOrder:client',
+    movableColumnKeys,
+  );
+  const frozenColumns: typeof columns = FROZEN_COLUMN_KEYS.map((key) => columns.find((col) => col.key === key)).filter(
+    (col: any) => !!col && !isColumnHidden(col.key),
+  ) as typeof columns;
+  const movableVisibleColumns: typeof columns = columnOrder
+    .map((key: string) => columns.find((col) => col.key === key))
+    .filter((col: any) => !!col && !isColumnHidden(col.key)) as typeof columns;
+  const visibleColumns: typeof columns = [...frozenColumns, ...movableVisibleColumns] as typeof columns;
+  const getFrozenLeft = (key: string) => {
+    let left = 0;
+    for (const col of frozenColumns) {
+      if (col.key === key) return left;
+      left += getColumnWidth(col.key);
+    }
+    return left;
+  };
   const visibleCustomFields = activeClientCustomFields.filter((field) => !isColumnHidden(`cf:${field.id}`));
 
   const groupFieldForKanban = activeView?.groupByField ? findField(fields, activeView.groupByField) : undefined;
@@ -712,10 +753,41 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
               </colgroup>
               <thead>
                 <tr>
-                  {visibleColumns.map((col) => (
+                  {visibleColumns.map((col) => {
+                    const isFrozen = FROZEN_COLUMN_KEYS.includes(col.key);
+                    const isLastFrozen = isFrozen && frozenColumns[frozenColumns.length - 1]?.key === col.key;
+                    return (
                     <th
                       key={col.key}
-                      className={`sortable ${viewSort?.field === col.key ? 'sorted' : ''}`}
+                      draggable={!isFrozen}
+                      onDragStart={isFrozen ? undefined : () => setDraggedColKey(col.key)}
+                      onDragEnd={
+                        isFrozen
+                          ? undefined
+                          : () => {
+                              setDraggedColKey(null);
+                              setDragOverColKey(null);
+                            }
+                      }
+                      onDragOver={
+                        isFrozen
+                          ? undefined
+                          : (e) => {
+                              e.preventDefault();
+                              if (dragOverColKey !== col.key) setDragOverColKey(col.key);
+                            }
+                      }
+                      onDrop={
+                        isFrozen
+                          ? undefined
+                          : () => {
+                              if (draggedColKey) reorderColumns(draggedColKey, col.key);
+                              setDraggedColKey(null);
+                              setDragOverColKey(null);
+                            }
+                      }
+                      className={`sortable ${viewSort?.field === col.key ? 'sorted' : ''} ${isFrozen ? 'col-frozen' : ''} ${isLastFrozen ? 'col-frozen-edge' : ''} ${!isFrozen && draggedColKey === col.key ? 'col-dragging' : ''} ${!isFrozen && dragOverColKey === col.key && draggedColKey && draggedColKey !== col.key ? 'col-drag-over' : ''}`}
+                      style={isFrozen ? { left: getFrozenLeft(col.key), zIndex: 3 } : undefined}
                       onClick={() => handleSort(col.key)}
                     >
                       {col.label}
@@ -731,7 +803,8 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
                       )}
                       <ColumnResizeHandle onMouseDown={(e) => startResize(col.key, e)} />
                     </th>
-                  ))}
+                    );
+                  })}
                   {visibleCustomFields.map((field) => (
                     <th
                       key={field.id}
@@ -764,23 +837,19 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
               <tbody>
                 {pagedClients.map((client) => (
                   <tr key={client.id}>
-                    {!isColumnHidden('name') && (
-                      <td>
-                        <div className="name-cell">
-                          <Avatar firstName={client.firstName} lastName={client.lastName} />
-                          {client.firstName} {client.lastName}
-                        </div>
-                      </td>
-                    )}
-                    {!isColumnHidden('email') && <td>{client.email}</td>}
-                    {!isColumnHidden('company') && <td>{client.company}</td>}
-                    {!isColumnHidden('status') && (
-                      <td>
-                        {client.statusDefn && (
-                          <StatusChip color={client.statusDefn.color || '#6b7280'} label={client.statusDefn.name} />
-                        )}
-                      </td>
-                    )}
+                    {visibleColumns.map((col) => {
+                      const isFrozen = FROZEN_COLUMN_KEYS.includes(col.key);
+                      const isLastFrozen = isFrozen && frozenColumns[frozenColumns.length - 1]?.key === col.key;
+                      return (
+                        <td
+                          key={col.key}
+                          className={`${isFrozen ? 'col-frozen' : ''} ${isLastFrozen ? 'col-frozen-edge' : ''}`}
+                          style={isFrozen ? { left: getFrozenLeft(col.key), zIndex: 1 } : undefined}
+                        >
+                          {col.render(client)}
+                        </td>
+                      );
+                    })}
                     {visibleCustomFields.map((field) => {
                       const fieldValue = client.customFieldVals?.find(
                         (v: any) => v.customFieldDefinitionId === field.id,

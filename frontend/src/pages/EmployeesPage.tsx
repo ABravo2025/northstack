@@ -577,9 +577,19 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const columns = [
     { key: 'name', label: 'Name' },
     { key: 'email', label: 'Business Email' },
+    { key: 'personalEmail', label: 'Personal Email' },
     { key: 'department', label: 'Department' },
     { key: 'jobTitle', label: 'Job Title' },
     { key: 'status', label: 'Status' },
+    { key: 'startDate', label: 'Start Date' },
+    { key: 'endDate', label: 'End Date' },
+    { key: 'contractUrl', label: 'Contract URL' },
+    ...(user.role === 'owner'
+      ? [
+          { key: 'hourlyRate', label: 'Hourly Rate' },
+          { key: 'monthlyRate', label: 'Monthly Rate' },
+        ]
+      : []),
   ];
 
   const toggleableColumns = [
@@ -1165,12 +1175,36 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                       </td>
                     )}
                     {!isColumnHidden('email') && <td>{emp.email}</td>}
+                    {!isColumnHidden('personalEmail') && <td>{emp.personalEmail || '—'}</td>}
                     {!isColumnHidden('department') && <td>{emp.departmentDefn?.name || '—'}</td>}
                     {!isColumnHidden('jobTitle') && <td>{emp.jobTitleDefn?.name || '—'}</td>}
                     {!isColumnHidden('status') && (
                       <td>
                         {emp.statusDefn && <StatusChip color={emp.statusDefn.color || '#6b7280'} label={emp.statusDefn.name} />}
                       </td>
+                    )}
+                    {!isColumnHidden('startDate') && (
+                      <td>{emp.startDate ? new Date(emp.startDate).toLocaleDateString() : '—'}</td>
+                    )}
+                    {!isColumnHidden('endDate') && (
+                      <td>{emp.endDate ? new Date(emp.endDate).toLocaleDateString() : '—'}</td>
+                    )}
+                    {!isColumnHidden('contractUrl') && (
+                      <td>
+                        {emp.contractUrl ? (
+                          <a href={emp.contractUrl} target="_blank" rel="noopener noreferrer" className="table-link">
+                            View
+                          </a>
+                        ) : (
+                          '—'
+                        )}
+                      </td>
+                    )}
+                    {user.role === 'owner' && !isColumnHidden('hourlyRate') && (
+                      <td>{emp.hourlyRateCents != null ? `$${centsToDollars(emp.hourlyRateCents)}` : '—'}</td>
+                    )}
+                    {user.role === 'owner' && !isColumnHidden('monthlyRate') && (
+                      <td>{emp.monthlyRateCents != null ? `$${centsToDollars(emp.monthlyRateCents)}` : '—'}</td>
                     )}
                     {showManagerColumn && (
                       <td>{emp.manager ? `${emp.manager.firstName} ${emp.manager.lastName}` : '—'}</td>

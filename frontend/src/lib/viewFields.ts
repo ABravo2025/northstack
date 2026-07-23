@@ -102,6 +102,12 @@ export function buildEmployeeFields(
       getValue: (item: any) => item.email ?? '',
     },
     {
+      key: 'personalEmail',
+      label: 'Personal Email',
+      valueType: 'email',
+      getValue: (item: any) => item.personalEmail ?? '',
+    },
+    {
       key: 'department',
       label: 'Department',
       valueType: 'select',
@@ -121,6 +127,36 @@ export function buildEmployeeFields(
       valueType: 'select',
       selectOptions: statuses.filter((s) => s.isActive).map((s) => ({ value: s.name, color: s.color })),
       getValue: (item: any) => item.statusDefn?.name ?? '',
+    },
+    {
+      key: 'startDate',
+      label: 'Start Date',
+      valueType: 'date',
+      getValue: (item: any) => item.startDate ?? '',
+    },
+    {
+      key: 'endDate',
+      label: 'End Date',
+      valueType: 'date',
+      getValue: (item: any) => item.endDate ?? '',
+    },
+    {
+      key: 'contractUrl',
+      label: 'Contract URL',
+      valueType: 'text',
+      getValue: (item: any) => item.contractUrl ?? '',
+    },
+    {
+      key: 'hourlyRate',
+      label: 'Hourly Rate',
+      valueType: 'number',
+      getValue: (item: any) => (item.hourlyRateCents != null ? String(item.hourlyRateCents / 100) : ''),
+    },
+    {
+      key: 'monthlyRate',
+      label: 'Monthly Rate',
+      valueType: 'number',
+      getValue: (item: any) => (item.monthlyRateCents != null ? String(item.monthlyRateCents / 100) : ''),
     },
     ...buildCustomFieldColumns(customFields),
   ];

@@ -16,6 +16,7 @@ import { useResizableColumns } from '../hooks/useResizableColumns';
 import ColumnVisibilityMenu from '../components/ColumnVisibilityMenu';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { useColumnOrder } from '../hooks/useColumnOrder';
+import CsvImportExportMenu from '../components/CsvImportExportMenu';
 import Avatar from '../components/Avatar';
 import StatusChip from '../components/StatusChip';
 import { MailIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
@@ -1085,6 +1086,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         {viewType === 'grid' && (
           <ColumnVisibilityMenu columns={toggleableColumns} isHidden={isColumnHidden} onToggle={toggleColumn} />
         )}
+        {canEditEmployees && <CsvImportExportMenu token={token} entityType="employee" onImported={loadEmployees} />}
         <button className="btn-primary btn-toolbar-size" onClick={handleOpenAdd}>
           <span className="inline-flex items-center gap-1.5">
             <PlusIcon className="h-4 w-4" />

@@ -139,6 +139,103 @@
   @apply mt-0 mb-4 text-base font-bold text-brand-navy dark:text-gray-100;
 }
 
+.onboarding-checklist {
+  @apply relative;
+}
+
+.onboarding-dismiss {
+  @apply absolute top-4 right-4 cursor-pointer border-none bg-transparent p-1 text-gray-400 hover:text-brand-navy dark:hover:text-gray-100;
+}
+
+.onboarding-list {
+  @apply flex flex-col gap-2;
+}
+
+.onboarding-item {
+  @apply flex items-center gap-2.5 text-sm;
+}
+
+.onboarding-item.done span {
+  @apply text-gray-400 line-through dark:text-gray-500;
+}
+
+.onboarding-check {
+  @apply flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-gray-300 text-emerald-600 dark:border-gray-600;
+}
+
+.onboarding-item.done .onboarding-check {
+  @apply border-emerald-600 bg-emerald-50 dark:bg-emerald-900/30;
+}
+
+.onboarding-link {
+  @apply cursor-pointer border-none bg-transparent p-0 text-sm font-medium text-brand-blue hover:underline;
+}
+
+.onboarding-sample-row {
+  @apply mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-4 dark:border-gray-800;
+}
+
+.onboarding-sample-hint {
+  @apply text-xs text-gray-500 dark:text-gray-400;
+}
+
+.faq-list {
+  @apply flex flex-col;
+}
+
+.faq-item {
+  @apply border-b border-gray-200 py-3 last:border-0 last:pb-0 dark:border-gray-800;
+}
+
+.faq-question {
+  @apply cursor-pointer list-none text-sm font-semibold text-brand-navy select-none dark:text-gray-100;
+}
+
+.faq-question::-webkit-details-marker {
+  display: none;
+}
+
+.faq-question::before {
+  content: '+';
+  @apply mr-2 inline-block w-3 text-brand-blue;
+}
+
+.faq-item[open] .faq-question::before {
+  content: '−';
+}
+
+.faq-answer {
+  @apply mt-2 pl-5 text-sm text-gray-600 dark:text-gray-300;
+}
+
+.changelog-trigger {
+  @apply relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-gray-500 hover:bg-gray-100 hover:text-brand-navy dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-100;
+}
+
+.changelog-dot {
+  @apply absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-brand-blue ring-2 ring-brand-cream dark:ring-gray-950;
+}
+
+.changelog-list {
+  @apply flex max-h-96 flex-col gap-3 overflow-y-auto;
+}
+
+.changelog-entry {
+  @apply border-b border-gray-100 pb-3 last:border-0 last:pb-0 dark:border-gray-800;
+}
+
+.changelog-entry-date {
+  @apply text-[0.68rem] font-semibold tracking-wide text-gray-400 uppercase dark:text-gray-500;
+}
+
+.changelog-entry-title {
+  @apply mt-0.5 text-sm font-semibold text-brand-navy dark:text-gray-100;
+}
+
+.changelog-entry-desc {
+  @apply mt-1 text-xs text-gray-600 dark:text-gray-300;
+}
+
 .table {
   @apply mt-4 w-full border-collapse;
 }

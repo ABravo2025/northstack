@@ -2,9 +2,11 @@ import { useState, useEffect, useMemo } from 'react';
 import { api } from '../api';
 import { useToast } from '../components/ToastProvider';
 import { ChevronLeftIcon, ChevronRightIcon } from '../components/Icons';
+import OnboardingChecklist from '../components/OnboardingChecklist';
 
 interface OverviewPageProps {
   token: string;
+  user: any;
 }
 
 const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -43,7 +45,7 @@ function buildMonthGrid(year: number, month: number): (number | null)[][] {
   return weeks;
 }
 
-export default function OverviewPage({ token }: OverviewPageProps) {
+export default function OverviewPage({ token, user }: OverviewPageProps) {
   const toast = useToast();
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -102,6 +104,7 @@ export default function OverviewPage({ token }: OverviewPageProps) {
 
   return (
     <div>
+      {(user.role === 'owner' || user.role === 'admin') && <OnboardingChecklist token={token} />}
       <div className="page-toolbar">
         <h2>
           {MONTH_LABELS[cursor.month]} {cursor.year}

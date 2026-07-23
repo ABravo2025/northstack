@@ -15,6 +15,7 @@ import { useResizableColumns } from '../hooks/useResizableColumns';
 import ColumnVisibilityMenu from '../components/ColumnVisibilityMenu';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { useColumnOrder } from '../hooks/useColumnOrder';
+import CsvImportExportMenu from '../components/CsvImportExportMenu';
 import Avatar from '../components/Avatar';
 import StatusChip from '../components/StatusChip';
 import { PencilIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
@@ -692,6 +693,7 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
         {viewType === 'grid' && (
           <ColumnVisibilityMenu columns={toggleableColumns} isHidden={isColumnHidden} onToggle={toggleColumn} />
         )}
+        {canEditClients && <CsvImportExportMenu token={token} entityType="client" onImported={loadClients} />}
         <button className="btn-primary btn-toolbar-size" onClick={handleOpenAdd}>
           <span className="inline-flex items-center gap-1.5">
             <PlusIcon className="h-4 w-4" />

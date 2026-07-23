@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ChevronDownIcon, MenuIcon, UserCircleIcon } from './Icons';
 import SlideOver from './SlideOver';
+import ChangelogMenu from './ChangelogMenu';
 import { useToast } from './ToastProvider';
 import { api } from '../api';
 
@@ -12,6 +14,7 @@ interface TopBarProps {
 }
 
 export default function TopBar({ user, token, onLogout, onMenuClick }: TopBarProps) {
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState('');
@@ -89,6 +92,8 @@ export default function TopBar({ user, token, onLogout, onMenuClick }: TopBarPro
         <img src="/logo-horizontal-dark.svg" alt="Northstack" className="hidden dark:block" />
       </div>
 
+      <div className="flex items-center gap-2">
+      <ChangelogMenu />
       <div className="user-menu" ref={menuRef}>
         <button
           ref={triggerRef}
@@ -111,6 +116,16 @@ export default function TopBar({ user, token, onLogout, onMenuClick }: TopBarPro
               role="menuitem"
               onClick={() => {
                 setOpen(false);
+                navigate('/help');
+              }}
+            >
+              Help &amp; FAQ
+            </button>
+            <button
+              className="user-menu-item"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
                 setFeedbackOpen(true);
               }}
             >
@@ -128,6 +143,7 @@ export default function TopBar({ user, token, onLogout, onMenuClick }: TopBarPro
             </button>
           </div>
         )}
+      </div>
       </div>
 
       <SlideOver

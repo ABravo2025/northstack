@@ -71,6 +71,13 @@ import {
   listFieldCatalogDefinitions,
   updateFieldCatalogDefinition,
 } from './modules/hr/fieldCatalogService.js';
+import { getOnboardingStatus, seedSampleData } from './modules/onboarding/onboardingService.js';
+import {
+  exportEmployeesToCsv,
+  importEmployeesFromCsv,
+  exportClientsToCsv,
+  importClientsFromCsv,
+} from './modules/csv/csvService.js';
 import {
   createTimeOffPolicy,
   listTimeOffPolicies,
@@ -121,7 +128,7 @@ const app = express();
 // X-Content-Type-Options, frame protections, etc.) stays at Helmet's default.
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '2mb' })); // default 100kb is too small for a CSV import body
 
 // Express 4 doesn't catch rejected promises from async route handlers on its
 // own — an unhandled rejection there crashes the whole process instead of
@@ -472,6 +479,40 @@ app.get('/api/hr/employees', async (req, res) => {
 
   const employees = await listEmployees(user.tenantId, user.role);
   return res.json(employees);
+});
+
+app.get('/api/hr/employees/export/csv', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canViewHr(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const csv = await exportEmployeesToCsv(user.tenantId!, user.role);
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="employees.csv"');
+  return res.send(csv);
+});
+
+app.post('/api/hr/employees/import/csv', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canCreateHr(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  if (typeof req.body.csv !== 'string' || !req.body.csv.trim()) {
+    return res.status(400).json({ error: 'csv is required' });
+  }
+
+  const result = await importEmployeesFromCsv(user.tenantId!, req.body.csv, user.role);
+  return res.json(result);
 });
 
 app.post('/api/hr/employees', async (req, res) => {
@@ -834,6 +875,30 @@ app.patch('/api/field-catalog/:definitionId', async (req, res) => {
   }
 
   return res.json(result.definition);
+});
+
+app.get('/api/onboarding/status', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  const status = await getOnboardingStatus(user.tenantId!);
+  return res.json(status);
+});
+
+app.post('/api/onboarding/seed-sample-data', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canCreateHr(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const result = await seedSampleData(user.tenantId!);
+  return res.status(201).json(result);
 });
 
 app.get('/api/views', async (req, res) => {
@@ -1312,6 +1377,40 @@ app.get('/api/clients', async (req, res) => {
 
   const clients = await listClients(user.tenantId!);
   return res.json(clients);
+});
+
+app.get('/api/clients/export/csv', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canViewHr(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const csv = await exportClientsToCsv(user.tenantId!);
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="clients.csv"');
+  return res.send(csv);
+});
+
+app.post('/api/clients/import/csv', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canCreateHr(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  if (typeof req.body.csv !== 'string' || !req.body.csv.trim()) {
+    return res.status(400).json({ error: 'csv is required' });
+  }
+
+  const result = await importClientsFromCsv(user.tenantId!, req.body.csv);
+  return res.json(result);
 });
 
 app.post('/api/clients', async (req, res) => {

@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import AcceptInvitePage from './pages/AcceptInvitePage';
 import OverviewPage from './pages/OverviewPage';
+import HelpPage from './pages/HelpPage';
 import HrDashboardPage from './pages/HrDashboardPage';
 import EmployeesPage from './pages/EmployeesPage';
 import TimeOffOverviewPage from './pages/TimeOffOverviewPage';
@@ -188,7 +189,8 @@ export default function App() {
       <Route path="/apply/:tenantSlug/:formSlug" element={<PublicFormPage />} />
 
       <Route element={<AppLayout user={user} token={token} onLogout={handleLogout} />}>
-        <Route path="/overview" element={<OverviewPage token={token ?? ''} />} />
+        <Route path="/overview" element={<OverviewPage token={token ?? ''} user={user} />} />
+        <Route path="/help" element={<HelpPage />} />
         <Route path="/hr/dashboard" element={<HrDashboardPage />} />
         <Route path="/hr/employees" element={<EmployeesPage user={user} token={token ?? ''} />} />
         <Route path="/hr/time-off" element={<TimeOffOverviewPage user={user} token={token ?? ''} />} />

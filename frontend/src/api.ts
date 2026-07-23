@@ -1110,4 +1110,57 @@ export const api = {
     });
     if (!res.ok) await throwApiError(res);
   },
+
+  // Onboarding
+  getOnboardingStatus: async (
+    token: string,
+  ): Promise<{ hasEmployees: boolean; hasClients: boolean; hasInvitedTeammate: boolean; hasTimeOffPolicy: boolean }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/onboarding/status`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+  seedSampleData: async (token: string): Promise<{ employees: number; clients: number }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/onboarding/seed-sample-data`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  // CSV import/export
+  exportEmployeesCsv: async (token: string): Promise<string> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/export/csv`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.text();
+  },
+  importEmployeesCsv: async (token: string, csv: string): Promise<{ created: number; errors: { row: number; message: string }[] }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/import/csv`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ csv }),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+  exportClientsCsv: async (token: string): Promise<string> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/clients/export/csv`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.text();
+  },
+  importClientsCsv: async (token: string, csv: string): Promise<{ created: number; errors: { row: number; message: string }[] }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/clients/import/csv`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ csv }),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
 };

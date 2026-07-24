@@ -2,7 +2,7 @@ import prisma from '../../lib/prisma.js';
 import { getDefaultStatusId, recordStatusChange } from './statusService.js';
 import { listCustomFieldValuesForEntities } from './customFieldService.js';
 import { findActiveTimeOffRequestsForEmployees } from './timeOffRequestService.js';
-import type { Employee, Prisma } from '@prisma/client';
+import type { CompensationType, ContractType, Employee, Prisma } from '@prisma/client';
 
 export interface CreateEmployeeInput {
   firstName: string;
@@ -12,6 +12,8 @@ export interface CreateEmployeeInput {
   jobTitleId?: string | null;
   hourlyRateCents?: number | null;
   monthlyRateCents?: number | null;
+  contractType?: ContractType | null;
+  compensationType?: CompensationType | null;
   startDate?: string | null;
   endDate?: string | null;
   contractUrl?: string | null;
@@ -29,6 +31,8 @@ export interface UpdateEmployeeInput {
   jobTitleId?: string | null;
   hourlyRateCents?: number | null;
   monthlyRateCents?: number | null;
+  contractType?: ContractType | null;
+  compensationType?: CompensationType | null;
   startDate?: string | null;
   endDate?: string | null;
   contractUrl?: string | null;
@@ -49,6 +53,8 @@ export async function createEmployee(input: CreateEmployeeInput): Promise<Employ
       jobTitleId: input.jobTitleId ?? null,
       hourlyRateCents: input.hourlyRateCents ?? null,
       monthlyRateCents: input.monthlyRateCents ?? null,
+      contractType: input.contractType ?? null,
+      compensationType: input.compensationType ?? null,
       startDate: input.startDate ? new Date(input.startDate) : null,
       endDate: input.endDate ? new Date(input.endDate) : null,
       contractUrl: input.contractUrl ?? null,
@@ -170,6 +176,8 @@ export async function updateEmployee(
   if (input.jobTitleId !== undefined) data.jobTitleId = input.jobTitleId;
   if (input.hourlyRateCents !== undefined) data.hourlyRateCents = input.hourlyRateCents;
   if (input.monthlyRateCents !== undefined) data.monthlyRateCents = input.monthlyRateCents;
+  if (input.contractType !== undefined) data.contractType = input.contractType;
+  if (input.compensationType !== undefined) data.compensationType = input.compensationType;
   if (input.startDate !== undefined) data.startDate = input.startDate ? new Date(input.startDate) : null;
   if (input.endDate !== undefined) data.endDate = input.endDate ? new Date(input.endDate) : null;
   if (input.contractUrl !== undefined) data.contractUrl = input.contractUrl;

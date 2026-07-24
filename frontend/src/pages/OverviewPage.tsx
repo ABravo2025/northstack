@@ -103,7 +103,7 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
   })();
 
   return (
-    <div>
+    <div className="container">
       {(user.role === 'owner' || user.role === 'admin') && <OnboardingChecklist token={token} />}
       <div className="page-toolbar">
         <h2>

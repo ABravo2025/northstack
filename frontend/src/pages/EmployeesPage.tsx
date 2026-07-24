@@ -29,6 +29,12 @@ import {
   parseFilters,
   parseSort,
 } from '../lib/viewFields';
+import { formatMoney } from '../lib/currencies';
+
+const CONTRACT_TYPE_LABELS: Record<string, string> = { part_time: 'Part Time', full_time: 'Full Time' };
+const COMPENSATION_TYPE_LABELS: Record<string, string> = { hourly: 'Hourly', monthly: 'Monthly' };
+const CONTRACT_TYPE_VALUE_BY_LABEL: Record<string, string> = { 'Part Time': 'part_time', 'Full Time': 'full_time' };
+const COMPENSATION_TYPE_VALUE_BY_LABEL: Record<string, string> = { Hourly: 'hourly', Monthly: 'monthly' };
 
 const PAGE_SIZE = 20;
 const ACTIVE_VIEW_STORAGE_KEY = 'northstack:activeView:employee';
@@ -74,6 +80,8 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const [editCustomFieldValueIds, setEditCustomFieldValueIds] = useState<Record<string, string>>({});
   const [editAssignedPolicyIds, setEditAssignedPolicyIds] = useState<string[]>([]);
   const [originalAssignedPolicyIds, setOriginalAssignedPolicyIds] = useState<string[]>([]);
+
+  const [tenantCurrency, setTenantCurrency] = useState('USD');
 
   const [views, setViews] = useState<SavedView[]>([]);
   const [activeViewId, setActiveViewId] = useState<string | null>(() =>
@@ -149,6 +157,8 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     contractUrl: '',
     hourlyRate: '',
     monthlyRate: '',
+    contractType: '',
+    compensationType: '',
   };
 
   const [employeeForm, setEmployeeForm] = useState(emptyEmployeeForm);
@@ -163,6 +173,13 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     loadEmployeeJobTitles();
     loadTimeOffPolicies();
     loadViews();
+    api
+      .getCurrentTenant(token)
+      .then((tenant) => setTenantCurrency(tenant.currency))
+      .catch(() => {
+        // Non-critical for this page — falls back to USD formatting if it fails.
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadEmployeeDepartments = async () => {
@@ -301,6 +318,8 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         contractUrl: employeeForm.contractUrl || undefined,
         hourlyRateCents: dollarsToCents(employeeForm.hourlyRate),
         monthlyRateCents: dollarsToCents(employeeForm.monthlyRate),
+        contractType: (employeeForm.contractType || null) as 'part_time' | 'full_time' | null,
+        compensationType: (employeeForm.compensationType || null) as 'hourly' | 'monthly' | null,
       });
 
       const valueEntries = Object.entries(customFieldValues).filter(([, value]) => value.trim() !== '');
@@ -335,6 +354,8 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       contractUrl: emp.contractUrl || '',
       hourlyRate: centsToDollars(emp.hourlyRateCents),
       monthlyRate: centsToDollars(emp.monthlyRateCents),
+      contractType: emp.contractType || '',
+      compensationType: emp.compensationType || '',
     });
 
     const values: Record<string, string> = {};
@@ -374,6 +395,8 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         startDate: editEmployeeForm.startDate || undefined,
         endDate: editEmployeeForm.endDate || undefined,
         contractUrl: editEmployeeForm.contractUrl || undefined,
+        contractType: (editEmployeeForm.contractType || null) as 'part_time' | 'full_time' | null,
+        compensationType: (editEmployeeForm.compensationType || null) as 'hourly' | 'monthly' | null,
         ...(user.role === 'owner'
           ? {
               hourlyRateCents: dollarsToCents(editEmployeeForm.hourlyRate) ?? null,
@@ -457,6 +480,14 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         const status = employeeStatuses.find((s) => s.name === newValue);
         if (!status) return;
         await api.updateEmployee(token, emp.id, { statusId: status.id });
+      } else if (groupField === 'contractType') {
+        const value = CONTRACT_TYPE_VALUE_BY_LABEL[newValue];
+        if (!value) return;
+        await api.updateEmployee(token, emp.id, { contractType: value as 'part_time' | 'full_time' });
+      } else if (groupField === 'compensationType') {
+        const value = COMPENSATION_TYPE_VALUE_BY_LABEL[newValue];
+        if (!value) return;
+        await api.updateEmployee(token, emp.id, { compensationType: value as 'hourly' | 'monthly' });
       } else if (groupField.startsWith('cf:')) {
         const definitionId = groupField.slice(3);
         const existing = emp.customFieldVals?.find((v: any) => v.customFieldDefinitionId === definitionId);
@@ -633,17 +664,29 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
           '—'
         ),
     },
+    {
+      key: 'contractType',
+      label: 'Contract Type',
+      render: (emp: any) => (emp.contractType ? CONTRACT_TYPE_LABELS[emp.contractType] : '—'),
+    },
+    {
+      key: 'compensationType',
+      label: 'Compensation Type',
+      render: (emp: any) => (emp.compensationType ? COMPENSATION_TYPE_LABELS[emp.compensationType] : '—'),
+    },
     ...(user.role === 'owner'
       ? [
           {
             key: 'hourlyRate',
             label: 'Hourly Rate',
-            render: (emp: any) => (emp.hourlyRateCents != null ? `$${centsToDollars(emp.hourlyRateCents)}` : '—'),
+            render: (emp: any) =>
+              emp.hourlyRateCents != null ? formatMoney(emp.hourlyRateCents, tenantCurrency) : '—',
           },
           {
             key: 'monthlyRate',
             label: 'Monthly Rate',
-            render: (emp: any) => (emp.monthlyRateCents != null ? `$${centsToDollars(emp.monthlyRateCents)}` : '—'),
+            render: (emp: any) =>
+              emp.monthlyRateCents != null ? formatMoney(emp.monthlyRateCents, tenantCurrency) : '—',
           },
         ]
       : []),
@@ -682,7 +725,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const groupFieldForKanban = activeView?.groupByField ? findField(fields, activeView.groupByField) : undefined;
 
   return (
-    <div>
+    <div className="page-full">
       {deletingEmployee && (
         <ConfirmDialog
           title="Delete employee"
@@ -817,30 +860,66 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                 placeholder="https://drive.google.com/..."
               />
             </div>
+            <div className="form-group">
+              <label htmlFor="emp-contractType">Contract Type</label>
+              <select
+                id="emp-contractType"
+                value={employeeForm.contractType}
+                onChange={(e) => setEmployeeForm({ ...employeeForm, contractType: e.target.value })}
+              >
+                <option value="">-- select --</option>
+                <option value="part_time">Part Time</option>
+                <option value="full_time">Full Time</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="emp-compensationType">Compensation Type</label>
+              <select
+                id="emp-compensationType"
+                value={employeeForm.compensationType}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setEmployeeForm({
+                    ...employeeForm,
+                    compensationType: value,
+                    hourlyRate: value === 'monthly' ? '' : employeeForm.hourlyRate,
+                    monthlyRate: value === 'hourly' ? '' : employeeForm.monthlyRate,
+                  });
+                }}
+              >
+                <option value="">-- select --</option>
+                <option value="hourly">Hourly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
             {user.role === 'owner' && (
               <>
-                <div className="form-group">
-                  <label htmlFor="emp-hourlyRate">Hourly Rate</label>
-                  <input
-                    id="emp-hourlyRate"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={employeeForm.hourlyRate}
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, hourlyRate: e.target.value })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="emp-monthlyRate">Monthly Rate</label>
-                  <input
-                    id="emp-monthlyRate"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={employeeForm.monthlyRate}
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, monthlyRate: e.target.value })}
-                  />
-                </div>
+                {employeeForm.compensationType !== 'monthly' && (
+                  <div className="form-group">
+                    <label htmlFor="emp-hourlyRate">Hourly Rate</label>
+                    <input
+                      id="emp-hourlyRate"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={employeeForm.hourlyRate}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, hourlyRate: e.target.value })}
+                    />
+                  </div>
+                )}
+                {employeeForm.compensationType !== 'hourly' && (
+                  <div className="form-group">
+                    <label htmlFor="emp-monthlyRate">Monthly Rate</label>
+                    <input
+                      id="emp-monthlyRate"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={employeeForm.monthlyRate}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, monthlyRate: e.target.value })}
+                    />
+                  </div>
+                )}
               </>
             )}
 
@@ -990,30 +1069,66 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                 placeholder="https://drive.google.com/..."
               />
             </div>
+            <div className="form-group">
+              <label htmlFor="edit-emp-contractType">Contract Type</label>
+              <select
+                id="edit-emp-contractType"
+                value={editEmployeeForm.contractType}
+                onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, contractType: e.target.value })}
+              >
+                <option value="">-- select --</option>
+                <option value="part_time">Part Time</option>
+                <option value="full_time">Full Time</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="edit-emp-compensationType">Compensation Type</label>
+              <select
+                id="edit-emp-compensationType"
+                value={editEmployeeForm.compensationType}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setEditEmployeeForm({
+                    ...editEmployeeForm,
+                    compensationType: value,
+                    hourlyRate: value === 'monthly' ? '' : editEmployeeForm.hourlyRate,
+                    monthlyRate: value === 'hourly' ? '' : editEmployeeForm.monthlyRate,
+                  });
+                }}
+              >
+                <option value="">-- select --</option>
+                <option value="hourly">Hourly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
             {user.role === 'owner' && (
               <>
-                <div className="form-group">
-                  <label htmlFor="edit-emp-hourlyRate">Hourly Rate</label>
-                  <input
-                    id="edit-emp-hourlyRate"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={editEmployeeForm.hourlyRate}
-                    onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, hourlyRate: e.target.value })}
-                  />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="edit-emp-monthlyRate">Monthly Rate</label>
-                  <input
-                    id="edit-emp-monthlyRate"
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={editEmployeeForm.monthlyRate}
-                    onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, monthlyRate: e.target.value })}
-                  />
-                </div>
+                {editEmployeeForm.compensationType !== 'monthly' && (
+                  <div className="form-group">
+                    <label htmlFor="edit-emp-hourlyRate">Hourly Rate</label>
+                    <input
+                      id="edit-emp-hourlyRate"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editEmployeeForm.hourlyRate}
+                      onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, hourlyRate: e.target.value })}
+                    />
+                  </div>
+                )}
+                {editEmployeeForm.compensationType !== 'hourly' && (
+                  <div className="form-group">
+                    <label htmlFor="edit-emp-monthlyRate">Monthly Rate</label>
+                    <input
+                      id="edit-emp-monthlyRate"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editEmployeeForm.monthlyRate}
+                      onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, monthlyRate: e.target.value })}
+                    />
+                  </div>
+                )}
               </>
             )}
 

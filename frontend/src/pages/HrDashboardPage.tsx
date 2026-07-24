@@ -1,6 +1,6 @@
 export default function HrDashboardPage() {
   return (
-    <div>
+    <div className="container">
       <div className="page-toolbar">
         <h2>Human Resources Dashboard</h2>
       </div>

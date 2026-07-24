@@ -507,7 +507,7 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
   const groupFieldForKanban = activeView?.groupByField ? findField(fields, activeView.groupByField) : undefined;
 
   return (
-    <div>
+    <div className="page-full">
       {deletingClient && (
         <ConfirmDialog
           title="Delete client"

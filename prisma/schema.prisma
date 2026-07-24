@@ -42,6 +42,16 @@ enum FieldType {
   email
 }
 
+enum ContractType {
+  part_time
+  full_time
+}
+
+enum CompensationType {
+  hourly
+  monthly
+}
+
 enum EntityType {
   employee
   client
@@ -86,6 +96,7 @@ model Tenant {
   industry                String?
   country                 String?
   acquisitionChannel      AcquisitionChannel?
+  currency                String                   @default("USD") // ISO-4217, one currency per tenant — applies to Employee.hourlyRateCents/monthlyRateCents
   users                   User[]
   employees               Employee[]
   clients                 Client[]
@@ -132,6 +143,8 @@ model Employee {
   jobTitleDefn             FieldCatalogDefinition? @relation("EmployeeJobTitle", fields: [jobTitleId], references: [id])
   hourlyRateCents          Int? // owner-only visibility, enforced in listEmployees — not a schema-level concern
   monthlyRateCents         Int?
+  contractType             ContractType?
+  compensationType         CompensationType? // determines which of hourlyRateCents/monthlyRateCents applies
   startDate                DateTime?
   endDate                  DateTime?
   contractUrl              String? // link only (e.g. Drive/Dropbox) — no file upload support in the app today

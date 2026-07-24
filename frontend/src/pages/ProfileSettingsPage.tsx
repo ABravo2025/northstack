@@ -65,7 +65,7 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
   };
 
   return (
-    <>
+    <div className="max-w-6xl">
       <div className="card">
         <h3 className="card-title">Profile</h3>
         <form onSubmit={handleProfileSubmit}>
@@ -147,6 +147,6 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
           </div>
         </form>
       </div>
-    </>
+    </div>
   );
 }

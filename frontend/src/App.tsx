@@ -204,7 +204,7 @@ export default function App() {
             path="profile"
             element={<ProfileSettingsPage user={user} token={token ?? ''} onUserUpdated={setUser} />}
           />
-          <Route path="appearance" element={<CompanyAppearancePage />} />
+          <Route path="appearance" element={<CompanyAppearancePage token={token ?? ''} />} />
           <Route
             path="users"
             element={<CompanyUsersPage user={user} token={token ?? ''} onUserUpdated={setUser} />}

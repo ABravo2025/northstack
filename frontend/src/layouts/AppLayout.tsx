@@ -27,9 +27,7 @@ export default function AppLayout({ user, token, onLogout }: AppLayoutProps) {
       <div className="app-shell">
         <Sidebar mobileOpen={mobileSidebarOpen} onMobileClose={() => setMobileSidebarOpen(false)} />
         <main className="app-main">
-          <div className="container">
-            <Outlet />
-          </div>
+          <Outlet />
         </main>
       </div>
     </div>

@@ -69,6 +69,8 @@ interface Employee {
   jobTitleDefn?: { id: string; name: string } | null;
   hourlyRateCents?: number | null;
   monthlyRateCents?: number | null;
+  contractType?: 'part_time' | 'full_time' | null;
+  compensationType?: 'hourly' | 'monthly' | null;
   startDate?: string | null;
   endDate?: string | null;
   contractUrl?: string | null;
@@ -398,6 +400,25 @@ export const api = {
     if (!res.ok) await throwApiError(res);
   },
 
+  getCurrentTenant: async (token: string): Promise<{ id: string; name: string; currency: string }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/tenants/current`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    const data = await res.json();
+    return data.tenant;
+  },
+  updateTenantCurrency: async (token: string, currency: string): Promise<{ id: string; name: string; currency: string }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/tenants/current`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ currency }),
+    });
+    if (!res.ok) await throwApiError(res);
+    const data = await res.json();
+    return data.tenant;
+  },
+
   // Company / tenant users
   listTenantUsers: async (token: string): Promise<TenantUser[]> => {
     const res = await apiFetch(`${API_BASE_URL}/api/tenants/users`, {
@@ -480,6 +501,8 @@ export const api = {
       contractUrl?: string;
       hourlyRateCents?: number;
       monthlyRateCents?: number;
+      contractType?: 'part_time' | 'full_time' | null;
+      compensationType?: 'hourly' | 'monthly' | null;
     },
   ): Promise<Employee> => {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/employees`, {

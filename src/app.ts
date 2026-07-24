@@ -51,6 +51,8 @@ import {
   cancelInvitation,
   findInvitationByToken,
   findTenantNameById,
+  getTenantById,
+  updateTenantCurrency,
 } from './modules/tenant/tenantService.js';
 import {
   createClient,
@@ -217,6 +219,8 @@ app.post('/api/auth/register', async (req, res) => {
 });
 
 const VALID_ACQUISITION_CHANNELS = ['organic', 'paid_ads', 'referral', 'content', 'outbound_sales', 'partnership', 'other'];
+const VALID_CONTRACT_TYPES = ['part_time', 'full_time'];
+const VALID_COMPENSATION_TYPES = ['hourly', 'monthly'];
 
 app.post('/api/tenants/register', async (req, res) => {
   if (isRateLimited(`tenant-register:${getClientIp(req)}`, AUTH_RATE_LIMIT)) {
@@ -343,6 +347,42 @@ app.post('/api/tenants', async (req, res) => {
   }
 
   return res.status(201).json({ tenant: result.tenant, user: sanitizeUser(result.user!) });
+});
+
+app.get('/api/tenants/current', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  const tenant = await getTenantById(user.tenantId!);
+  if (!tenant) {
+    return res.status(404).json({ error: 'Tenant not found' });
+  }
+
+  return res.json({ tenant });
+});
+
+app.patch('/api/tenants/current', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (user.role !== 'owner' && user.role !== 'admin') {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  if (typeof req.body.currency !== 'string') {
+    return res.status(400).json({ error: 'currency is required' });
+  }
+
+  const result = await updateTenantCurrency(user.tenantId!, req.body.currency);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  return res.json({ tenant: result.tenant });
 });
 
 app.get('/api/tenants/users', async (req, res) => {
@@ -547,6 +587,18 @@ app.post('/api/hr/employees', async (req, res) => {
     return res.status(403).json({ error: 'Only the owner can set compensation' });
   }
 
+  if (req.body.contractType !== undefined && req.body.contractType !== null && !VALID_CONTRACT_TYPES.includes(req.body.contractType)) {
+    return res.status(400).json({ error: 'Invalid contract type' });
+  }
+
+  if (
+    req.body.compensationType !== undefined &&
+    req.body.compensationType !== null &&
+    !VALID_COMPENSATION_TYPES.includes(req.body.compensationType)
+  ) {
+    return res.status(400).json({ error: 'Invalid compensation type' });
+  }
+
   if (req.body.managerId) {
     const manager = await findEmployeeById(req.body.managerId);
     if (!manager || manager.tenantId !== user.tenantId) {
@@ -602,6 +654,18 @@ app.patch('/api/hr/employees/:employeeId', async (req, res) => {
 
   if ((req.body.hourlyRateCents !== undefined || req.body.monthlyRateCents !== undefined) && user.role !== 'owner') {
     return res.status(403).json({ error: 'Only the owner can set compensation' });
+  }
+
+  if (req.body.contractType !== undefined && req.body.contractType !== null && !VALID_CONTRACT_TYPES.includes(req.body.contractType)) {
+    return res.status(400).json({ error: 'Invalid contract type' });
+  }
+
+  if (
+    req.body.compensationType !== undefined &&
+    req.body.compensationType !== null &&
+    !VALID_COMPENSATION_TYPES.includes(req.body.compensationType)
+  ) {
+    return res.status(400).json({ error: 'Invalid compensation type' });
   }
 
   const employee = await findEmployeeById(req.params.employeeId);

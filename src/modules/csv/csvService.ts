@@ -43,8 +43,23 @@ const EMPLOYEE_BASE_HEADERS = [
   'End Date',
   'Contract URL',
   'Manager Email',
+  'Contract Type',
+  'Compensation Type',
 ];
 const EMPLOYEE_COMPENSATION_HEADERS = ['Hourly Rate', 'Monthly Rate'];
+
+const CONTRACT_TYPE_LABELS: Record<string, string> = { part_time: 'Part Time', full_time: 'Full Time' };
+const COMPENSATION_TYPE_LABELS: Record<string, string> = { hourly: 'Hourly', monthly: 'Monthly' };
+
+function contractTypeFromLabel(label: string): 'part_time' | 'full_time' | undefined {
+  const normalized = label.trim().toLowerCase().replace(/\s+/g, '_');
+  return normalized === 'part_time' || normalized === 'full_time' ? normalized : undefined;
+}
+
+function compensationTypeFromLabel(label: string): 'hourly' | 'monthly' | undefined {
+  const normalized = label.trim().toLowerCase();
+  return normalized === 'hourly' || normalized === 'monthly' ? normalized : undefined;
+}
 
 export async function exportEmployeesToCsv(tenantId: string, viewerRole: string): Promise<string> {
   const employees = await prisma.employee.findMany({
@@ -76,6 +91,8 @@ export async function exportEmployeesToCsv(tenantId: string, viewerRole: string)
       emp.endDate ? emp.endDate.toISOString().slice(0, 10) : '',
       emp.contractUrl ?? '',
       emp.manager?.email ?? '',
+      emp.contractType ? CONTRACT_TYPE_LABELS[emp.contractType] : '',
+      emp.compensationType ? COMPENSATION_TYPE_LABELS[emp.compensationType] : '',
     ];
     const compensation = isOwner ? [centsToDollarsStr(emp.hourlyRateCents), centsToDollarsStr(emp.monthlyRateCents)] : [];
     const customFieldCells = activeCustomFields.map(
@@ -104,6 +121,8 @@ export async function getEmployeesCsvTemplate(tenantId: string, viewerRole: stri
     '',
     '',
     '',
+    'Full Time',
+    'Monthly',
     ...(isOwner ? ['', '7500.00'] : []),
     ...customFields.map(() => ''),
   ];
@@ -152,6 +171,9 @@ export async function importEmployeesFromCsv(tenantId: string, csvText: string, 
         ? await prisma.employee.findFirst({ where: { tenantId, email: managerEmail.toLowerCase() } })
         : null;
 
+      const contractTypeLabel = getField(record, 'Contract Type');
+      const compensationTypeLabel = getField(record, 'Compensation Type');
+
       const employee = await createEmployee({
         tenantId,
         firstName,
@@ -165,6 +187,8 @@ export async function importEmployeesFromCsv(tenantId: string, csvText: string, 
         endDate: toDateOrUndefined(getField(record, 'End Date')),
         contractUrl: getField(record, 'Contract URL') || undefined,
         managerId: manager?.id,
+        contractType: contractTypeLabel ? contractTypeFromLabel(contractTypeLabel) : undefined,
+        compensationType: compensationTypeLabel ? compensationTypeFromLabel(compensationTypeLabel) : undefined,
         ...(isOwner
           ? {
               hourlyRateCents: dollarsToCents(getField(record, 'Hourly Rate')),

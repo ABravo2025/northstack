@@ -9,7 +9,7 @@ export default function WorkspaceSettingsLayout({ user }: WorkspaceSettingsLayou
   const isAdmin = user.role === 'owner' || user.role === 'admin';
 
   return (
-    <div>
+    <div className="page-full">
       <h2 className="mb-5 text-xl font-semibold">Settings</h2>
       <div className="settings-shell">
         <nav className="settings-nav">
@@ -21,7 +21,7 @@ export default function WorkspaceSettingsLayout({ user }: WorkspaceSettingsLayou
             <>
               <p className="sidebar-group-label">Empresa</p>
               <NavLink to="appearance" className={linkClass}>
-                Appearance
+                Company
               </NavLink>
               <NavLink to="users" className={linkClass}>
                 Users

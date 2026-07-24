@@ -1,6 +1,6 @@
 export default function ClientsDashboardPage() {
   return (
-    <div>
+    <div className="container">
       <div className="page-toolbar">
         <h2>Clients Dashboard</h2>
       </div>

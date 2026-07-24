@@ -8,6 +8,13 @@
   @apply mx-auto w-full max-w-6xl p-5;
 }
 
+/* Same outer breathing room as .container, but no max-width — for full-screen
+   table pages (Employees/Clients/Company Users/Public Forms) where a capped
+   width leaves a dead gap next to the sidebar instead of using the space. */
+.page-full {
+  @apply w-full p-5;
+}
+
 .page {
   @apply flex flex-1 flex-col;
 }
@@ -674,15 +681,15 @@
 }
 
 .full-table th {
-  @apply relative overflow-hidden border-b border-gray-200 py-2.5 text-xs font-bold tracking-wide text-gray-500 uppercase dark:border-gray-800 dark:text-gray-400;
+  @apply relative overflow-hidden border-b border-gray-200 py-2.5 text-xs font-medium text-gray-500 dark:border-gray-800 dark:text-gray-400;
 }
 
 .full-table td {
-  @apply overflow-hidden text-ellipsis whitespace-nowrap;
+  @apply overflow-hidden px-3 py-4 text-ellipsis whitespace-nowrap;
 }
 
 .name-cell {
-  @apply flex items-center gap-2 font-semibold;
+  @apply flex items-center gap-2 text-base font-semibold;
 }
 
 .avatar {
@@ -734,8 +741,16 @@
   @apply sticky bg-brand-cream dark:bg-gray-950;
 }
 
+/* Hover applied per-cell (not just `tr:hover`, which the sticky/frozen columns
+   and table-fixed layout don't always paint edge-to-edge consistently across
+   browsers) — bg-gray-50 was nearly indistinguishable from the brand-cream
+   page background, bumped to gray-100/gray-800 for a clearly visible hover. */
+.full-table tbody tr:hover td {
+  @apply bg-gray-100 dark:bg-gray-800;
+}
+
 .full-table tr:hover .col-frozen {
-  @apply bg-gray-50 dark:bg-gray-800/60;
+  @apply bg-gray-100 dark:bg-gray-800;
 }
 
 .full-table .col-frozen-edge {

@@ -324,7 +324,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
   };
 
   return (
-    <div>
+    <div className="container">
       {cancellingRequestId && (
         <ConfirmDialog
           title="Cancel request"

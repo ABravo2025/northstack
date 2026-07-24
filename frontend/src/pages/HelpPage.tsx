@@ -52,7 +52,7 @@ const FAQ_ITEMS: { question: string; answer: string }[] = [
 
 export default function HelpPage() {
   return (
-    <div>
+    <div className="container">
       <div className="page-toolbar">
         <h2>Help &amp; FAQ</h2>
       </div>

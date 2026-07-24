@@ -283,6 +283,25 @@ export async function findTenantNameById(tenantId: string): Promise<string | nul
   return tenant?.name ?? null;
 }
 
+export async function getTenantById(tenantId: string) {
+  return prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true, name: true, currency: true } });
+}
+
+export interface UpdateTenantCurrencyResult {
+  success: boolean;
+  tenant?: Tenant;
+  error?: string;
+}
+
+export async function updateTenantCurrency(tenantId: string, currency: string): Promise<UpdateTenantCurrencyResult> {
+  if (!Intl.supportedValuesOf('currency').includes(currency)) {
+    return { success: false, error: 'Invalid currency code' };
+  }
+
+  const tenant = await prisma.tenant.update({ where: { id: tenantId }, data: { currency } });
+  return { success: true, tenant };
+}
+
 export async function findInvitationByToken(token: string) {
   return prisma.invitation.findUnique({
     where: { token },

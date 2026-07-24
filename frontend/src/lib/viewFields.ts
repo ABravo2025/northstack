@@ -147,6 +147,22 @@ export function buildEmployeeFields(
       getValue: (item: any) => item.contractUrl ?? '',
     },
     {
+      key: 'contractType',
+      label: 'Contract Type',
+      valueType: 'select',
+      selectOptions: [{ value: 'Part Time' }, { value: 'Full Time' }],
+      getValue: (item: any) =>
+        item.contractType === 'part_time' ? 'Part Time' : item.contractType === 'full_time' ? 'Full Time' : '',
+    },
+    {
+      key: 'compensationType',
+      label: 'Compensation Type',
+      valueType: 'select',
+      selectOptions: [{ value: 'Hourly' }, { value: 'Monthly' }],
+      getValue: (item: any) =>
+        item.compensationType === 'hourly' ? 'Hourly' : item.compensationType === 'monthly' ? 'Monthly' : '',
+    },
+    {
       key: 'hourlyRate',
       label: 'Hourly Rate',
       valueType: 'number',

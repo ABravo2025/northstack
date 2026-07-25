@@ -8,6 +8,11 @@
 const DEFAULT_WINDOW_MS = 60_000;
 const DEFAULT_MAX_REQUESTS = 5;
 
+// Auth endpoints are prime brute-force/spam targets, so they get a tighter
+// window than the general-purpose default (5 attempts per 15 minutes vs. the
+// 5-per-minute default above). Shared across auth and tenant registration.
+export const AUTH_RATE_LIMIT = { windowMs: 15 * 60_000, maxRequests: 5 };
+
 export interface RateLimitOptions {
   windowMs?: number;
   maxRequests?: number;

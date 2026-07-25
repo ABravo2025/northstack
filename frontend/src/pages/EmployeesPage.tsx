@@ -731,6 +731,14 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
 
   const groupFieldForKanban = activeView?.groupByField ? findField(fields, activeView.groupByField) : undefined;
 
+  // The ghost "Add" row/card only exists inside the rendered table/Kanban
+  // body — these are the states where that body never renders, so the add
+  // affordance would otherwise disappear entirely. Restored as a toolbar
+  // fallback only in these cases; the normal ghost-row-only UX is unchanged.
+  const groupByBroken = (viewType === 'kanban' || viewType === 'list') && !groupFieldForKanban;
+  const noResultsInGridOrList = viewType !== 'kanban' && sortedEmployees.length === 0;
+  const showAddFallback = canEditEmployees && employees.length > 0 && (groupByBroken || noResultsInGridOrList);
+
   const totalColumnCount =
     visibleColumns.length +
     (showManagerColumn ? 1 : 0) +
@@ -1309,6 +1317,14 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
           <ColumnVisibilityMenu columns={toggleableColumns} isHidden={isColumnHidden} onToggle={toggleColumn} />
         )}
         {canEditEmployees && <CsvImportExportMenu token={token} entityType="employee" onImported={loadEmployees} />}
+        {showAddFallback && (
+          <button className="btn-primary btn-toolbar-size" onClick={handleOpenAdd}>
+            <span className="inline-flex items-center gap-1.5">
+              <PlusIcon className="h-4 w-4" />
+              Add
+            </span>
+          </button>
+        )}
       </div>
 
       <div className="table-panel-row">

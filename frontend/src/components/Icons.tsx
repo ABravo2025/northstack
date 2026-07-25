@@ -123,6 +123,16 @@ export function KanbanIcon({ className }: IconProps) {
   );
 }
 
+export function ListIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="3" y="5" width="18" height="4" rx="1" />
+      <rect x="3" y="15" width="18" height="4" rx="1" />
+      <line x1="3" y1="12" x2="21" y2="12" strokeOpacity="0.5" />
+    </svg>
+  );
+}
+
 export function LockIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className}>

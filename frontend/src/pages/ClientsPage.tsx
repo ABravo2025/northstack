@@ -351,7 +351,7 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
 
   const handleCreateView = async (input: {
     name: string;
-    type: 'grid' | 'kanban';
+    type: 'grid' | 'kanban' | 'list';
     visibility: 'personal' | 'shared';
     groupByField?: string;
   }) => {

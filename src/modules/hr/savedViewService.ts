@@ -44,8 +44,8 @@ export async function createSavedView(input: CreateSavedViewInput): Promise<Save
     return { success: false, error: 'Only owner/admin can create a shared view' };
   }
 
-  if (input.type === 'kanban' && !input.groupByField) {
-    return { success: false, error: 'Kanban views need a group-by field' };
+  if ((input.type === 'kanban' || input.type === 'list') && !input.groupByField) {
+    return { success: false, error: `${input.type === 'kanban' ? 'Kanban' : 'List'} views need a group-by field` };
   }
 
   const view = await prisma.savedView.create({
@@ -58,7 +58,7 @@ export async function createSavedView(input: CreateSavedViewInput): Promise<Save
       visibility: input.visibility,
       filters: input.filters ? JSON.stringify(input.filters) : null,
       sortBy: input.sortBy ? JSON.stringify(input.sortBy) : null,
-      groupByField: input.type === 'kanban' ? input.groupByField : null,
+      groupByField: input.type === 'kanban' || input.type === 'list' ? input.groupByField : null,
     },
   });
 

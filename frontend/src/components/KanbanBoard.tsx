@@ -13,6 +13,7 @@ interface KanbanBoardProps<T> {
   getItemColumn: (item: T) => string;
   onMove: (item: T, newColumnKey: string) => void;
   renderCard: (item: T) => React.ReactNode;
+  renderColumnFooter?: (columnKey: string) => React.ReactNode;
 }
 
 export default function KanbanBoard<T>({
@@ -22,6 +23,7 @@ export default function KanbanBoard<T>({
   getItemColumn,
   onMove,
   renderCard,
+  renderColumnFooter,
 }: KanbanBoardProps<T>) {
   const [draggingKey, setDraggingKey] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
@@ -80,6 +82,7 @@ export default function KanbanBoard<T>({
                   </div>
                 );
               })}
+              {renderColumnFooter?.(col.key)}
             </div>
           </div>
         );

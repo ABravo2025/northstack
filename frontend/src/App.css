@@ -670,6 +670,23 @@
 
 .full-table-wrap {
   @apply overflow-x-auto;
+  scrollbar-width: none;
+}
+
+.full-table-wrap::-webkit-scrollbar {
+  display: none;
+}
+
+.hscrollbar-track {
+  @apply relative mt-1 h-2.5 w-full cursor-pointer rounded-full bg-gray-100 dark:bg-gray-900;
+}
+
+.hscrollbar-thumb {
+  @apply absolute top-0 h-full cursor-grab rounded-full bg-gray-400 transition-colors hover:bg-brand-blue dark:bg-gray-600 dark:hover:bg-brand-blue-light;
+}
+
+.hscrollbar-thumb.dragging {
+  @apply cursor-grabbing bg-brand-blue dark:bg-brand-blue-light;
 }
 
 .full-table {
@@ -757,6 +774,34 @@
   @apply border-r-2 border-gray-300 dark:border-gray-700;
 }
 
+.list-section-row {
+  @apply bg-gray-50 dark:bg-gray-900;
+}
+
+.full-table .list-section-header {
+  @apply flex cursor-pointer items-center gap-2 overflow-visible py-2.5 text-xs font-bold whitespace-normal text-brand-navy dark:text-gray-100;
+}
+
+.list-section-header .dot {
+  @apply h-2.5 w-2.5 shrink-0 rounded-full;
+}
+
+.list-section-label {
+  @apply text-sm;
+}
+
+.list-section-header .cnt {
+  @apply font-mono text-[0.68rem] font-normal text-gray-400;
+}
+
+.list-chevron {
+  @apply h-3.5 w-3.5 shrink-0 -rotate-90 text-gray-400 transition-transform;
+}
+
+.list-chevron.list-chevron-open {
+  @apply rotate-0;
+}
+
 .icon-actions {
   @apply flex items-center gap-1;
 }
@@ -835,6 +880,75 @@
 
 .slideover-foot {
   @apply flex justify-end gap-2 border-t border-gray-200 px-6 py-4 dark:border-gray-800;
+}
+
+/* ---------- Push panel (Employee/Client Overview) ----------
+   Distinct from SlideOver: lives in normal document flow as a flex sibling
+   next to the table, so opening it narrows the table instead of floating
+   an overlay on top of it. */
+
+.table-panel-row {
+  @apply flex items-start gap-4;
+}
+
+.table-panel-main {
+  @apply min-w-0 flex-1;
+}
+
+.overview-panel {
+  @apply flex w-[340px] shrink-0 flex-col rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900;
+}
+
+.overview-panel-head {
+  @apply relative flex flex-col items-center gap-2 border-b border-gray-200 p-5 text-center dark:border-gray-800;
+}
+
+.overview-panel-head .slideover-close {
+  @apply absolute top-3 right-3;
+}
+
+.overview-panel-heading h3 {
+  @apply m-0 text-base font-bold text-brand-navy dark:text-gray-100;
+}
+
+.overview-panel-heading p {
+  @apply m-0 text-xs text-gray-500;
+}
+
+.overview-panel-tabs {
+  @apply flex border-b border-gray-200 dark:border-gray-800;
+}
+
+.overview-panel-tabs button {
+  @apply flex-1 cursor-pointer border-none border-b-2 border-transparent bg-transparent py-2.5 text-sm font-medium text-gray-500 hover:text-brand-navy dark:hover:text-gray-100;
+}
+
+.overview-panel-tabs button.active {
+  @apply border-brand-blue font-semibold text-brand-navy dark:text-gray-100;
+}
+
+.overview-panel-body {
+  @apply flex flex-col gap-3 overflow-y-auto p-4;
+}
+
+.overview-field {
+  @apply flex flex-col gap-0.5 border-b border-gray-100 pb-2 dark:border-gray-800;
+}
+
+.overview-field-label {
+  @apply text-xs font-medium text-gray-500;
+}
+
+.overview-field-value {
+  @apply text-sm text-brand-navy dark:text-gray-100;
+}
+
+.overview-panel-placeholder {
+  @apply py-8 text-center text-sm text-gray-400;
+}
+
+.name-link {
+  @apply cursor-pointer border-none bg-transparent p-0 font-semibold text-brand-navy hover:text-brand-blue hover:underline dark:text-gray-100 dark:hover:text-brand-blue-light;
 }
 
 .password-input-wrap {
@@ -1195,6 +1309,24 @@
 
 .kcard {
   @apply cursor-grab rounded-md border border-gray-200 bg-brand-cream p-2.5 shadow-sm active:cursor-grabbing dark:border-gray-700 dark:bg-gray-950;
+}
+
+.ghost-plus-box {
+  @apply flex h-4 w-4 shrink-0 items-center justify-center rounded border border-dashed border-current;
+}
+
+/* Always-visible "Add" affordance (Airtable-style ghost row/card) — replaces
+   the toolbar's primary "Add X" button in Grid/List/Kanban. */
+.full-table .ghost-row-cell {
+  @apply cursor-pointer overflow-visible border-2 border-dashed border-gray-300 py-0 text-gray-400 transition-colors hover:border-brand-blue hover:text-brand-blue dark:border-gray-700 dark:text-gray-500 dark:hover:border-brand-blue-light dark:hover:text-brand-blue-light;
+}
+
+.ghost-row-inner {
+  @apply flex items-center gap-2 px-1 py-2.5 text-sm font-medium;
+}
+
+.kanban-ghost-card {
+  @apply flex cursor-pointer items-center gap-2 rounded-md border-2 border-dashed border-gray-300 p-2.5 text-sm font-medium text-gray-400 transition-colors hover:border-brand-blue hover:text-brand-blue dark:border-gray-700 dark:text-gray-500 dark:hover:border-brand-blue-light dark:hover:text-brand-blue-light;
 }
 
 .kcard.dragging {

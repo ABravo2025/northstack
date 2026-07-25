@@ -79,6 +79,7 @@ enum TimeOffRequestStatus {
 enum SavedViewType {
   grid
   kanban
+  list
 }
 
 enum SavedViewVisibility {
@@ -351,7 +352,7 @@ model SavedView {
   visibility      SavedViewVisibility @default(personal)
   filters         String?             // JSON-encoded array of {field, operator, value}
   sortBy          String?             // JSON-encoded {field, direction}
-  groupByField    String?             // kanban only: "status" or a CustomFieldDefinition id (select type)
+  groupByField    String?             // kanban/list only: "status" or a CustomFieldDefinition id (select type)
   createdAt       DateTime            @default(now())
 
   @@index([tenantId, entityType])

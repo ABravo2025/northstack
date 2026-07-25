@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, type SavedView, type ViewFilter, type ViewSort } from '../api';
 import { useToast } from '../components/ToastProvider';
 import ConfirmDialog from '../components/ConfirmDialog';
@@ -17,9 +17,11 @@ import ColumnVisibilityMenu from '../components/ColumnVisibilityMenu';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { useColumnOrder } from '../hooks/useColumnOrder';
 import CsvImportExportMenu from '../components/CsvImportExportMenu';
+import EmployeeOverviewPanel from '../components/EmployeeOverviewPanel';
+import HorizontalScrollbar from '../components/HorizontalScrollbar';
 import Avatar from '../components/Avatar';
 import StatusChip from '../components/StatusChip';
-import { MailIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
+import { ChevronDownIcon, MailIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
 import {
   applyFilters,
   applySort,
@@ -82,6 +84,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const [originalAssignedPolicyIds, setOriginalAssignedPolicyIds] = useState<string[]>([]);
 
   const [tenantCurrency, setTenantCurrency] = useState('USD');
+  const [collapsedListSections, setCollapsedListSections] = useState<Set<string>>(new Set());
+  const [overviewEmployeeId, setOverviewEmployeeId] = useState<string | null>(null);
+  const tableWrapRef = useRef<HTMLDivElement>(null);
 
   const [views, setViews] = useState<SavedView[]>([]);
   const [activeViewId, setActiveViewId] = useState<string | null>(() =>
@@ -508,7 +513,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
 
   const handleCreateView = async (input: {
     name: string;
-    type: 'grid' | 'kanban';
+    type: 'grid' | 'kanban' | 'list';
     visibility: 'personal' | 'shared';
     groupByField?: string;
   }) => {
@@ -619,7 +624,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       render: (emp: any) => (
         <div className="name-cell">
           <Avatar firstName={emp.firstName} lastName={emp.lastName} />
-          {emp.firstName} {emp.lastName}
+          <button type="button" className="name-link" onClick={() => setOverviewEmployeeId(emp.id)}>
+            {emp.firstName} {emp.lastName}
+          </button>
           {emp.activeTimeOffTag && (
             <span
               className="time-off-active-tag"
@@ -723,6 +730,106 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const visibleCustomFields = activeEmployeeCustomFields.filter((field) => !isColumnHidden(`cf:${field.id}`));
 
   const groupFieldForKanban = activeView?.groupByField ? findField(fields, activeView.groupByField) : undefined;
+
+  const totalColumnCount =
+    visibleColumns.length +
+    (showManagerColumn ? 1 : 0) +
+    (showTimeOffPoliciesColumn ? 1 : 0) +
+    visibleCustomFields.length +
+    (canManageCustomFields ? 1 : 0) +
+    1;
+
+  const toggleListSection = (key: string) => {
+    setCollapsedListSections((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const listSections = groupFieldForKanban
+    ? (() => {
+        const byValue = new Map<string, any[]>();
+        for (const opt of groupFieldForKanban.selectOptions ?? []) byValue.set(opt.value, []);
+        for (const emp of sortedEmployees) {
+          const value = groupFieldForKanban.getValue(emp);
+          if (!byValue.has(value)) byValue.set(value, []);
+          byValue.get(value)!.push(emp);
+        }
+        return Array.from(byValue.entries()).map(([value, items]) => ({
+          key: value || '(none)',
+          label: value || '(none)',
+          color: groupFieldForKanban.selectOptions?.find((opt) => opt.value === value)?.color ?? null,
+          items,
+        }));
+      })()
+    : [];
+
+  const renderEmployeeRow = (emp: any) => (
+    <tr key={emp.id}>
+      {visibleColumns.map((col) => {
+        const isFrozen = FROZEN_COLUMN_KEYS.includes(col.key);
+        const isLastFrozen = isFrozen && frozenColumns[frozenColumns.length - 1]?.key === col.key;
+        return (
+          <td
+            key={col.key}
+            className={`${isFrozen ? 'col-frozen' : ''} ${isLastFrozen ? 'col-frozen-edge' : ''}`}
+            style={isFrozen ? { left: getFrozenLeft(col.key), zIndex: 1 } : undefined}
+          >
+            {col.render(emp)}
+          </td>
+        );
+      })}
+      {showManagerColumn && <td>{emp.manager ? `${emp.manager.firstName} ${emp.manager.lastName}` : '—'}</td>}
+      {showTimeOffPoliciesColumn && (
+        <td>
+          {emp.timeOffPolicies && emp.timeOffPolicies.length > 0
+            ? emp.timeOffPolicies.map((a: any) => a.timeOffPolicy.name).join(', ')
+            : '—'}
+        </td>
+      )}
+      {visibleCustomFields.map((field) => {
+        const fieldValue = emp.customFieldVals?.find((v: any) => v.customFieldDefinitionId === field.id);
+        return <td key={field.id}>{fieldValue?.value || '—'}</td>;
+      })}
+      {canManageCustomFields && <td></td>}
+      <td>
+        <div className="icon-actions">
+          <button className="icon-btn" onClick={() => handleStartEditEmployee(emp)}>
+            <span className="tip">Edit</span>
+            <PencilIcon />
+          </button>
+          <button className="icon-btn danger" onClick={() => setDeletingEmployee(emp)}>
+            <span className="tip">Delete</span>
+            <TrashIcon />
+          </button>
+          {canManageCustomFields &&
+            (emp.userId ? (
+              <span className="chip-linked">Linked</span>
+            ) : (
+              <button className="icon-btn" onClick={() => handleInviteEmployee(emp.id)}>
+                <span className="tip">Invite</span>
+                <MailIcon />
+              </button>
+            ))}
+        </div>
+      </td>
+    </tr>
+  );
+
+  const ghostAddRow = canEditEmployees && (
+    <tr className="ghost-row">
+      <td colSpan={totalColumnCount} className="ghost-row-cell" onClick={handleOpenAdd}>
+        <span className="ghost-row-inner">
+          <span className="ghost-plus-box">
+            <PlusIcon className="h-3 w-3" />
+          </span>
+          Add
+        </span>
+      </td>
+    </tr>
+  );
 
   return (
     <div className="page-full">
@@ -1197,19 +1304,15 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
             />
           </div>
         )}
-        {viewType === 'grid' && <FilterBar fields={fields} filters={viewFilters} onChange={setViewFilters} />}
-        {viewType === 'grid' && (
+        {viewType !== 'kanban' && <FilterBar fields={fields} filters={viewFilters} onChange={setViewFilters} />}
+        {viewType !== 'kanban' && (
           <ColumnVisibilityMenu columns={toggleableColumns} isHidden={isColumnHidden} onToggle={toggleColumn} />
         )}
         {canEditEmployees && <CsvImportExportMenu token={token} entityType="employee" onImported={loadEmployees} />}
-        <button className="btn-primary btn-toolbar-size" onClick={handleOpenAdd}>
-          <span className="inline-flex items-center gap-1.5">
-            <PlusIcon className="h-4 w-4" />
-            Add Employee
-          </span>
-        </button>
       </div>
 
+      <div className="table-panel-row">
+      <div className="table-panel-main">
       {loading ? (
         <p className="mt-4">Loading...</p>
       ) : employees.length === 0 ? (
@@ -1243,13 +1346,27 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                 <div className="kc-meta">{emp.departmentDefn?.name}</div>
               </>
             )}
+            renderColumnFooter={
+              canEditEmployees
+                ? () => (
+                    <div className="kanban-ghost-card" onClick={handleOpenAdd}>
+                      <span className="ghost-plus-box">
+                        <PlusIcon className="h-3 w-3" />
+                      </span>
+                      Add
+                    </div>
+                  )
+                : undefined
+            }
           />
         )
+      ) : viewType === 'list' && !groupFieldForKanban ? (
+        <p className="mt-4">This view's group-by field no longer exists.</p>
       ) : sortedEmployees.length === 0 ? (
         <p className="mt-4">No employees match your search or filters.</p>
       ) : (
         <>
-          <div className="full-table-wrap">
+          <div className="full-table-wrap" ref={tableWrapRef}>
             <table className="table full-table">
               <colgroup>
                 {visibleColumns.map((col) => (
@@ -1378,68 +1495,57 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                   <th></th>
                 </tr>
               </thead>
-              <tbody>
-                {pagedEmployees.map((emp) => (
-                  <tr key={emp.id}>
-                    {visibleColumns.map((col) => {
-                      const isFrozen = FROZEN_COLUMN_KEYS.includes(col.key);
-                      const isLastFrozen = isFrozen && frozenColumns[frozenColumns.length - 1]?.key === col.key;
-                      return (
+              {viewType === 'list'
+                ? listSections.map((section) => (
+                    <tbody key={section.key}>
+                      <tr className="list-section-row">
                         <td
-                          key={col.key}
-                          className={`${isFrozen ? 'col-frozen' : ''} ${isLastFrozen ? 'col-frozen-edge' : ''}`}
-                          style={isFrozen ? { left: getFrozenLeft(col.key), zIndex: 1 } : undefined}
+                          colSpan={totalColumnCount}
+                          className="list-section-header"
+                          onClick={() => toggleListSection(section.key)}
                         >
-                          {col.render(emp)}
+                          <ChevronDownIcon
+                            className={`list-chevron ${collapsedListSections.has(section.key) ? '' : 'list-chevron-open'}`}
+                          />
+                          {section.color && <span className="dot" style={{ background: section.color }} />}
+                          <span className="list-section-label">{section.label}</span>
+                          <span className="cnt">{section.items.length}</span>
                         </td>
-                      );
-                    })}
-                    {showManagerColumn && (
-                      <td>{emp.manager ? `${emp.manager.firstName} ${emp.manager.lastName}` : '—'}</td>
-                    )}
-                    {showTimeOffPoliciesColumn && (
-                      <td>
-                        {emp.timeOffPolicies && emp.timeOffPolicies.length > 0
-                          ? emp.timeOffPolicies.map((a: any) => a.timeOffPolicy.name).join(', ')
-                          : '—'}
-                      </td>
-                    )}
-                    {visibleCustomFields.map((field) => {
-                      const fieldValue = emp.customFieldVals?.find(
-                        (v: any) => v.customFieldDefinitionId === field.id,
-                      );
-                      return <td key={field.id}>{fieldValue?.value || '—'}</td>;
-                    })}
-                    {canManageCustomFields && <td></td>}
-                    <td>
-                      <div className="icon-actions">
-                        <button className="icon-btn" onClick={() => handleStartEditEmployee(emp)}>
-                          <span className="tip">Edit</span>
-                          <PencilIcon />
-                        </button>
-                        <button className="icon-btn danger" onClick={() => setDeletingEmployee(emp)}>
-                          <span className="tip">Delete</span>
-                          <TrashIcon />
-                        </button>
-                        {canManageCustomFields &&
-                          (emp.userId ? (
-                            <span className="chip-linked">Linked</span>
-                          ) : (
-                            <button className="icon-btn" onClick={() => handleInviteEmployee(emp.id)}>
-                              <span className="tip">Invite</span>
-                              <MailIcon />
-                            </button>
-                          ))}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
+                      </tr>
+                      {!collapsedListSections.has(section.key) && section.items.map(renderEmployeeRow)}
+                      {!collapsedListSections.has(section.key) && ghostAddRow}
+                    </tbody>
+                  ))
+                : (
+                    <tbody>
+                      {pagedEmployees.map(renderEmployeeRow)}
+                      {ghostAddRow}
+                    </tbody>
+                  )}
             </table>
           </div>
-          <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
+          <HorizontalScrollbar targetRef={tableWrapRef} />
+          {viewType !== 'list' && <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />}
         </>
       )}
+      </div>
+      {overviewEmployeeId && (() => {
+        const overviewEmployee = employees.find((e) => e.id === overviewEmployeeId);
+        if (!overviewEmployee) return null;
+        return (
+          <EmployeeOverviewPanel
+            employee={overviewEmployee}
+            tenantCurrency={tenantCurrency}
+            isOwner={user.role === 'owner'}
+            onClose={() => setOverviewEmployeeId(null)}
+            onEdit={() => {
+              setOverviewEmployeeId(null);
+              handleStartEditEmployee(overviewEmployee);
+            }}
+          />
+        );
+      })()}
+      </div>
     </div>
   );
 }

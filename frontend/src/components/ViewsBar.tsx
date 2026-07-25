@@ -3,11 +3,11 @@ import type { SavedView } from '../api';
 import type { ViewField } from '../lib/viewFields';
 import ConfirmDialog from './ConfirmDialog';
 import Popover from './Popover';
-import { DotsVerticalIcon, GridIcon, KanbanIcon, LockIcon, PlusIcon, TeamIcon } from './Icons';
+import { DotsVerticalIcon, GridIcon, KanbanIcon, ListIcon, LockIcon, PlusIcon, TeamIcon } from './Icons';
 
 interface NewViewInput {
   name: string;
-  type: 'grid' | 'kanban';
+  type: 'grid' | 'kanban' | 'list';
   visibility: 'personal' | 'shared';
   groupByField?: string;
 }
@@ -46,7 +46,7 @@ export default function ViewsBar({
   const [deletingView, setDeletingView] = useState<SavedView | null>(null);
 
   const [nvName, setNvName] = useState('');
-  const [nvType, setNvType] = useState<'grid' | 'kanban'>('grid');
+  const [nvType, setNvType] = useState<'grid' | 'kanban' | 'list'>('grid');
   const [nvVisibility, setNvVisibility] = useState<'personal' | 'shared'>('personal');
   const [nvGroupBy, setNvGroupBy] = useState(groupableFields[0]?.key ?? '');
 
@@ -62,12 +62,12 @@ export default function ViewsBar({
 
   const handleCreate = async () => {
     if (!nvName.trim()) return;
-    if (nvType === 'kanban' && !nvGroupBy) return;
+    if ((nvType === 'kanban' || nvType === 'list') && !nvGroupBy) return;
     await onCreateView({
       name: nvName.trim(),
       type: nvType,
       visibility: nvVisibility,
-      groupByField: nvType === 'kanban' ? nvGroupBy : undefined,
+      groupByField: nvType === 'kanban' || nvType === 'list' ? nvGroupBy : undefined,
     });
     setNewViewOpen(false);
     resetNewViewForm();
@@ -209,13 +209,17 @@ export default function ViewsBar({
               <GridIcon />
               Grid
             </div>
+            <div className={`toggle-opt ${nvType === 'list' ? 'active' : ''}`} onClick={() => setNvType('list')}>
+              <ListIcon />
+              List
+            </div>
             <div className={`toggle-opt ${nvType === 'kanban' ? 'active' : ''}`} onClick={() => setNvType('kanban')}>
               <KanbanIcon />
               Kanban
             </div>
           </div>
         </div>
-        {nvType === 'kanban' && (
+        {(nvType === 'kanban' || nvType === 'list') && (
           <div className="nv-field">
             <label htmlFor="nv-groupby">Group by (select fields only)</label>
             <select id="nv-groupby" value={nvGroupBy} onChange={(e) => setNvGroupBy(e.target.value)}>

@@ -239,7 +239,7 @@ export interface SavedView {
   entityType: 'employee' | 'client';
   createdByUserId: string;
   name: string;
-  type: 'grid' | 'kanban';
+  type: 'grid' | 'kanban' | 'list';
   visibility: 'personal' | 'shared';
   filters: string | null;
   sortBy: string | null;
@@ -1011,7 +1011,7 @@ export const api = {
     data: {
       entityType: 'employee' | 'client';
       name: string;
-      type: 'grid' | 'kanban';
+      type: 'grid' | 'kanban' | 'list';
       visibility: 'personal' | 'shared';
       filters?: ViewFilter[];
       sortBy?: ViewSort | null;

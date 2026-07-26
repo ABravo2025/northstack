@@ -3,19 +3,32 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 const MIN_COLUMN_WIDTH = 80;
 const DEFAULT_COLUMN_WIDTH = 160;
 
-// Per-table column widths, keyed by column key (including dynamic `cf:<id>`
-// custom field keys). Persisted to localStorage only — same "not worth a
-// backend model" call already made for saved-view selection and custom
-// ColorPicker swatches elsewhere in the app.
+function readWidths(storageKey: string): Record<string, number> {
+  try {
+    const raw = localStorage.getItem(storageKey);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+// Column widths, keyed by column key (including dynamic `cf:<id>` custom
+// field keys). `storageKey` is scoped per saved view by the caller (e.g.
+// `northstack:columnWidths:employee:${activeViewId}`), so resizing a column
+// in one view doesn't leak into another. Persisted to localStorage only —
+// same "not worth a backend model" call already made for column
+// order/visibility and the active saved view.
 export function useResizableColumns(storageKey: string) {
-  const [widths, setWidths] = useState<Record<string, number>>(() => {
-    try {
-      const raw = localStorage.getItem(storageKey);
-      return raw ? JSON.parse(raw) : {};
-    } catch {
-      return {};
-    }
-  });
+  const [state, setState] = useState(() => ({ key: storageKey, widths: readWidths(storageKey) }));
+
+  // storageKey changed since the last render (switched saved view) — reload
+  // synchronously during render, not in a useEffect (see useColumnVisibility
+  // for why an effect-based reload races the persist effect below and can
+  // clobber the new view's already-saved widths).
+  const widths = state.key === storageKey ? state.widths : readWidths(storageKey);
+  if (state.key !== storageKey) {
+    setState({ key: storageKey, widths });
+  }
 
   const draggingKeyRef = useRef<string | null>(null);
   const startXRef = useRef(0);
@@ -38,7 +51,9 @@ export function useResizableColumns(storageKey: string) {
       if (!key) return;
       const delta = e.clientX - startXRef.current;
       const newWidth = Math.max(MIN_COLUMN_WIDTH, startWidthRef.current + delta);
-      setWidths((prev) => (prev[key] === newWidth ? prev : { ...prev, [key]: newWidth }));
+      setState((prev) =>
+        prev.widths[key] === newWidth ? prev : { key: storageKey, widths: { ...prev.widths, [key]: newWidth } },
+      );
     };
     const handleMouseUp = () => {
       draggingKeyRef.current = null;
@@ -49,7 +64,7 @@ export function useResizableColumns(storageKey: string) {
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, []);
+  }, [storageKey]);
 
   const startResize = useCallback(
     (key: string, e: React.MouseEvent) => {

@@ -1,19 +1,33 @@
 import { useCallback, useEffect, useState } from 'react';
 
-// Per-table column order, persisted to localStorage only, same pattern as
-// useResizableColumns/useColumnVisibility. Stores just the key sequence —
-// any key not yet seen (a new column, a newly-active custom field) is
-// appended at the end; any key no longer present (a deactivated custom
-// field) is dropped, so stale storage never hides a real column.
+function readOrder(storageKey: string): string[] {
+  try {
+    const raw = localStorage.getItem(storageKey);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+// Column order, persisted to localStorage only, same pattern as
+// useResizableColumns/useColumnVisibility — `storageKey` is scoped per saved
+// view by the caller (e.g. `northstack:columnOrder:employee:${activeViewId}`),
+// so reordering columns in one view doesn't leak into another. Stores just
+// the key sequence — any key not yet seen (a new column, a newly-active
+// custom field) is appended at the end; any key no longer present (a
+// deactivated custom field) is dropped, so stale storage never hides a real
+// column.
 export function useColumnOrder(storageKey: string, allKeys: string[]) {
-  const [order, setOrder] = useState<string[]>(() => {
-    try {
-      const raw = localStorage.getItem(storageKey);
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [state, setState] = useState(() => ({ key: storageKey, order: readOrder(storageKey) }));
+
+  // storageKey changed since the last render (switched saved view) — reload
+  // synchronously during render, not in a useEffect (see useColumnVisibility
+  // for why an effect-based reload races the persist effect below and can
+  // clobber the new view's already-saved order).
+  const order = state.key === storageKey ? state.order : readOrder(storageKey);
+  if (state.key !== storageKey) {
+    setState({ key: storageKey, order });
+  }
 
   useEffect(() => {
     try {
@@ -31,8 +45,8 @@ export function useColumnOrder(storageKey: string, allKeys: string[]) {
 
   const reorder = useCallback((draggedKey: string, targetKey: string) => {
     if (draggedKey === targetKey) return;
-    setOrder((prev) => {
-      const current = prev.length ? [...prev] : [...allKeys];
+    setState((prev) => {
+      const current = prev.order.length ? [...prev.order] : [...allKeys];
       // Make sure every known key is represented before splicing, otherwise
       // a key that was never persisted yet (order.length === 0 case aside)
       // could be missing from `current` and silently dropped.
@@ -41,12 +55,12 @@ export function useColumnOrder(storageKey: string, allKeys: string[]) {
       }
       const withoutDragged = current.filter((k) => k !== draggedKey);
       const targetIndex = withoutDragged.indexOf(targetKey);
-      if (targetIndex === -1) return current;
+      if (targetIndex === -1) return prev;
       const next = [...withoutDragged];
       next.splice(targetIndex, 0, draggedKey);
-      return next;
+      return { key: storageKey, order: next };
     });
-  }, [allKeys]);
+  }, [allKeys, storageKey]);
 
   return { orderedKeys, reorder };
 }

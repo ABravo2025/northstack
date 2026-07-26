@@ -101,9 +101,15 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const canEditEmployees = user.role === 'owner' || user.role === 'admin';
   const activeEmployeeCustomFields = employeeCustomFields.filter((field) => field.isActive);
   const activeEmployeeStatuses = employeeStatuses.filter((s) => s.isActive);
-  const { getWidth: getColumnWidth, startResize } = useResizableColumns('northstack:columnWidths:employee');
+  // Column width/visibility/order are saved-view-scoped, not shared across
+  // all views for this table — each SavedView (or the implicit "All
+  // Employees" default, activeViewId === null) gets its own bucket.
+  const columnStorageSuffix = activeViewId ?? 'default';
+  const { getWidth: getColumnWidth, startResize } = useResizableColumns(
+    `northstack:columnWidths:employee:${columnStorageSuffix}`,
+  );
   const { isHidden: isColumnHidden, toggle: toggleColumn, hide: hideColumn } = useColumnVisibility(
-    'northstack:hiddenColumns:employee',
+    `northstack:hiddenColumns:employee:${columnStorageSuffix}`,
   );
 
   const fields = useMemo(
@@ -707,7 +713,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   ];
   const movableColumnKeys = columns.map((col) => col.key).filter((key) => !FROZEN_COLUMN_KEYS.includes(key));
   const { orderedKeys: columnOrder, reorder: reorderColumns } = useColumnOrder(
-    'northstack:columnOrder:employee',
+    `northstack:columnOrder:employee:${columnStorageSuffix}`,
     movableColumnKeys,
   );
   const frozenColumns: typeof columns = FROZEN_COLUMN_KEYS.map((key) => columns.find((col) => col.key === key)).filter(

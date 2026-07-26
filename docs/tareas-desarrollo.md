@@ -31,8 +31,11 @@ Siguiente en la cola: Tier 1.
 - [x] Validador de dominio de email duplicado al registrar una empresa — 2026-07-22
 - [x] Campos nuevos en Employee (job title, hourly/monthly rate, fecha de ingreso/fin, contract URL,
   personal email + rename a business email) + catálogo de Department, hechos juntos — 2026-07-22
-- [ ] Tipo de contratación (Part Time/Full Time) + tipo de compensación (Hourly/Monthly) en Employee —
-  gap encontrado el 2026-07-23 sobre el ítem de arriba, más la moneda de los montos, sin resolver
+- [x] Tipo de contratación (Part Time/Full Time) + tipo de compensación (Hourly/Monthly) en Employee +
+  moneda por tenant (`Tenant.currency`, ISO-4217, default USD) — gap encontrado el 2026-07-23 sobre el
+  ítem de arriba, cerrado el mismo día (`ContractType`/`CompensationType` en `prisma/schema.prisma`,
+  aplicado en `EmployeesPage.tsx`/`employeeService.ts`). Este ítem había quedado marcado `[ ]` en el
+  checklist pese a estar implementado — corregido 2026-07-26 al cruzar contra el schema real.
 - [x] Import/export por CSV, genérico — 2026-07-23, ver detalle más abajo
 
 **Tier 3 — Rediseño de Clients** (Company / Contact / Opportunity, pipeline de ventas)

@@ -16,7 +16,7 @@ import { createStatusDefinition, listStatusDefinitions, updateStatusDefinition }
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 
-const VALID_CATALOG_KINDS = ['department', 'jobTitle'];
+const VALID_CATALOG_KINDS = ['department', 'jobTitle', 'leadSource', 'lossReason'];
 
 export const catalogsRouter = createAsyncRouter();
 
@@ -155,7 +155,7 @@ catalogsRouter.get('/api/field-catalog', async (req, res) => {
 
   const kind = req.query.kind as string;
   if (!VALID_CATALOG_KINDS.includes(kind)) {
-    return res.status(400).json({ error: "kind must be 'department' or 'jobTitle'" });
+    return res.status(400).json({ error: `kind must be one of: ${VALID_CATALOG_KINDS.join(', ')}` });
   }
 
   const definitions = await listFieldCatalogDefinitions(user.tenantId!, kind as any);
@@ -178,7 +178,7 @@ catalogsRouter.post('/api/field-catalog', async (req, res) => {
   }
 
   if (!VALID_CATALOG_KINDS.includes(req.body.kind)) {
-    return res.status(400).json({ error: "kind must be 'department' or 'jobTitle'" });
+    return res.status(400).json({ error: `kind must be one of: ${VALID_CATALOG_KINDS.join(', ')}` });
   }
 
   const definition = await createFieldCatalogDefinition({

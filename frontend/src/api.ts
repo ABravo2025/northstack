@@ -123,6 +123,27 @@ export interface Company {
   }[];
 }
 
+export interface Contact {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string | null;
+  companyId: string | null;
+  company?: { id: string; name: string } | null;
+  title: string | null;
+  isPrimary: boolean;
+  leadStatus: 'new' | 'contacted' | 'qualified' | 'disqualified' | null;
+  leadSourceId: string | null;
+  leadSource?: { id: string; name: string } | null;
+  createdAt: string;
+  customFieldVals?: {
+    id: string;
+    customFieldDefinitionId: string;
+    value: string;
+  }[];
+}
+
 interface CustomFieldDefinition {
   id: string;
   name: string;
@@ -145,7 +166,7 @@ interface StatusDefinition {
 
 export interface FieldCatalogDefinition {
   id: string;
-  kind: 'department' | 'jobTitle';
+  kind: 'department' | 'jobTitle' | 'leadSource' | 'lossReason';
   name: string;
   order: number;
   isActive: boolean;
@@ -670,7 +691,7 @@ export const api = {
   // Field catalog (Department, Job Title — shared generic mechanism)
   listFieldCatalogDefinitions: async (
     token: string,
-    kind: 'department' | 'jobTitle',
+    kind: 'department' | 'jobTitle' | 'leadSource' | 'lossReason',
   ): Promise<FieldCatalogDefinition[]> => {
     const res = await apiFetch(`${API_BASE_URL}/api/field-catalog?kind=${kind}`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -681,7 +702,7 @@ export const api = {
 
   createFieldCatalogDefinition: async (
     token: string,
-    data: { kind: 'department' | 'jobTitle'; name: string; order?: number },
+    data: { kind: 'department' | 'jobTitle' | 'leadSource' | 'lossReason'; name: string; order?: number },
   ): Promise<FieldCatalogDefinition> => {
     const res = await apiFetch(`${API_BASE_URL}/api/field-catalog`, {
       method: 'POST',
@@ -1116,6 +1137,113 @@ export const api = {
     valueId: string,
   ): Promise<void> => {
     const res = await apiFetch(`${API_BASE_URL}/api/companies/${companyId}/custom-fields/${valueId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+  },
+
+  // Contacts
+  listContacts: async (token: string): Promise<Contact[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/contacts`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  createContact: async (
+    token: string,
+    data: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      phone?: string;
+      companyId?: string | null;
+      title?: string;
+      isPrimary?: boolean;
+      leadStatus?: string | null;
+      leadSourceId?: string | null;
+    },
+  ): Promise<Contact> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/contacts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  updateContact: async (
+    token: string,
+    contactId: string,
+    data: Partial<Omit<Contact, 'id' | 'createdAt' | 'company' | 'leadSource'>>,
+  ): Promise<Contact> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/contacts/${contactId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  deleteContact: async (token: string, contactId: string): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/contacts/${contactId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+  },
+
+  createContactCustomFieldValue: async (
+    token: string,
+    contactId: string,
+    data: { customFieldDefinitionId: string; value: string },
+  ): Promise<CustomFieldValue> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/contacts/${contactId}/custom-fields`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  updateContactCustomFieldValue: async (
+    token: string,
+    contactId: string,
+    valueId: string,
+    value: string,
+  ): Promise<CustomFieldValue> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/contacts/${contactId}/custom-fields/${valueId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ value }),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  deleteContactCustomFieldValue: async (
+    token: string,
+    contactId: string,
+    valueId: string,
+  ): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/contacts/${contactId}/custom-fields/${valueId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });

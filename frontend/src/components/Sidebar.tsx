@@ -10,6 +10,7 @@ import {
   HomeIcon,
   PeopleIcon,
   TrendingIcon,
+  UserCircleIcon,
   XIcon,
 } from './Icons';
 
@@ -81,6 +82,10 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
           <NavLink to="/companies" className={linkClass} title="Companies" onClick={onMobileClose}>
             <BuildingIcon className="h-4 w-4 shrink-0" />
             {label('Companies')}
+          </NavLink>
+          <NavLink to="/contacts" className={linkClass} title="Contacts" onClick={onMobileClose}>
+            <UserCircleIcon className="h-4 w-4 shrink-0" />
+            {label('Contacts')}
           </NavLink>
         </div>
 

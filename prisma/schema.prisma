@@ -55,6 +55,9 @@ enum CompensationType {
 enum EntityType {
   employee
   client
+  company
+  contact
+  opportunity
 }
 
 enum InvitationStatus {
@@ -87,6 +90,23 @@ enum SavedViewVisibility {
   shared
 }
 
+enum LeadStatus {
+  new
+  contacted
+  qualified
+  disqualified
+}
+
+// Which stage of a Pipeline a given PipelineStageDefinition represents, so the
+// system can trigger business rules (Opportunity reaching a `won` stage →
+// Company.status moves to Customer; `lost` requires Opportunity.lossReasonId)
+// without matching on the stage's tenant-renameable `name`.
+enum PipelineStageOutcome {
+  open
+  won
+  lost
+}
+
 model Tenant {
   id                      String                   @id @default(uuid())
   name                    String
@@ -112,6 +132,13 @@ model Tenant {
   savedViews              SavedView[]
   publicForms             PublicForm[]
   fieldCatalogDefinitions FieldCatalogDefinition[]
+  companies               Company[]
+  contacts                Contact[]
+  pipelines               Pipeline[]
+  pipelineStages          PipelineStageDefinition[]
+  opportunities           Opportunity[]
+  opportunityContacts     OpportunityContact[]
+  opportunityStageHistory OpportunityStageHistory[]
 }
 
 model User {
@@ -131,6 +158,8 @@ model User {
   statusChanges    StatusHistoryEntry[]
   savedViews       SavedView[]
   acceptedTermsAt  DateTime?
+  accountOwnerOfCompanies Company[]
+  ownedOpportunities      Opportunity[]
 }
 
 model Employee {
@@ -183,6 +212,146 @@ model Client {
   @@unique([tenantId, email])
 }
 
+// Clients redesign (Company/Contact/Pipeline/Opportunity) — see docs/tareas-desarrollo.md
+// lines 389-411 for the full spec. Company/Contact replace the flat `Client` model
+// above (kept as-is for now — the data migration from Client to Company+Contact is
+// its own later, separate step, not part of this schema-only pass).
+
+model Company {
+  id              String           @id @default(uuid())
+  tenantId        String
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
+  name            String
+  industry        String?
+  website         String?
+  phone           String?
+  billingAddress  String? // same field the future Payments module will need — not duplicated
+  size            String? // employee-count range, free text, optional
+  accountOwnerId  String?
+  accountOwner    User?            @relation(fields: [accountOwnerId], references: [id])
+  statusId        String // lifecycle status (Prospect/Customer/Churned) — StatusDefinition-based
+  statusDefn      StatusDefinition @relation(fields: [statusId], references: [id]) // like Employee/Client, but never manually edited: derived from Opportunity/Contract events
+  createdAt       DateTime         @default(now())
+  contacts        Contact[]
+  opportunities   Opportunity[]
+
+  @@index([tenantId])
+}
+
+model Contact {
+  id               String                  @id @default(uuid())
+  tenantId         String
+  tenant           Tenant                  @relation(fields: [tenantId], references: [id])
+  firstName        String
+  lastName         String
+  email            String
+  phone            String?
+  companyId        String? // optional — a lead may not have a confirmed Company yet
+  company          Company?                @relation(fields: [companyId], references: [id])
+  title            String? // role/title within the company
+  isPrimary        Boolean                 @default(false)
+  leadStatus       LeadStatus? // only meaningful for leads captured via a public Form
+  leadSourceId     String?
+  leadSource       FieldCatalogDefinition? @relation(fields: [leadSourceId], references: [id])
+  createdAt        DateTime                @default(now())
+  opportunityLinks OpportunityContact[]
+
+  @@unique([tenantId, email])
+  @@index([tenantId, companyId])
+}
+
+model Pipeline {
+  id            String                    @id @default(uuid())
+  tenantId      String
+  tenant        Tenant                    @relation(fields: [tenantId], references: [id])
+  name          String
+  order         Int                       @default(0)
+  isActive      Boolean                   @default(true) // archived when false
+  createdAt     DateTime                  @default(now())
+  stages        PipelineStageDefinition[]
+  opportunities Opportunity[]
+
+  @@index([tenantId])
+}
+
+model PipelineStageDefinition {
+  id            String                    @id @default(uuid())
+  tenantId      String
+  tenant        Tenant                    @relation(fields: [tenantId], references: [id])
+  pipelineId    String
+  pipeline      Pipeline                  @relation(fields: [pipelineId], references: [id])
+  name          String
+  color         String?
+  order         Int                       @default(0)
+  outcome       PipelineStageOutcome      @default(open)
+  isActive      Boolean                   @default(true)
+  createdAt     DateTime                  @default(now())
+  opportunities Opportunity[]
+  stageHistory  OpportunityStageHistory[]
+
+  @@index([tenantId, pipelineId])
+}
+
+model Opportunity {
+  id                 String                    @id @default(uuid())
+  tenantId           String
+  tenant             Tenant                    @relation(fields: [tenantId], references: [id])
+  companyId          String
+  company            Company                   @relation(fields: [companyId], references: [id])
+  pipelineId         String
+  pipeline           Pipeline                  @relation(fields: [pipelineId], references: [id])
+  stageId            String
+  stage              PipelineStageDefinition   @relation(fields: [stageId], references: [id])
+  name               String
+  amountCents        Int
+  currency           String // ISO-4217, explicit per Opportunity — not the tenant-wide Employee compensation currency
+  estimatedCloseDate DateTime?
+  ownerId            String
+  owner              User                      @relation(fields: [ownerId], references: [id])
+  lossReasonId       String? // required at the application layer when stage.outcome === 'lost' — not enforced at the DB level
+  lossReason         FieldCatalogDefinition?   @relation(fields: [lossReasonId], references: [id])
+  nextStepDate       DateTime?
+  nextStepNote       String?
+  createdAt          DateTime                  @default(now())
+  contactLinks       OpportunityContact[]
+  stageHistory       OpportunityStageHistory[]
+
+  @@index([tenantId, pipelineId])
+  @@index([tenantId, companyId])
+}
+
+model OpportunityContact {
+  id            String      @id @default(uuid())
+  tenantId      String
+  tenant        Tenant      @relation(fields: [tenantId], references: [id])
+  opportunityId String
+  opportunity   Opportunity @relation(fields: [opportunityId], references: [id])
+  contactId     String
+  contact       Contact     @relation(fields: [contactId], references: [id])
+  role          String? // e.g. "decisor" — free text, not a catalog (low cardinality, per-opportunity)
+  createdAt     DateTime    @default(now())
+
+  @@unique([opportunityId, contactId])
+  @@index([tenantId])
+}
+
+// Real stageId FK (not a denormalized name snapshot like StatusHistoryEntry) —
+// deliberate: the spec asks for stageId specifically, so time-in-stage reporting
+// can join back to the live PipelineStageDefinition (color/outcome/order), unlike
+// Status's audit-log-style history which snapshots names to survive renames.
+model OpportunityStageHistory {
+  id            String                  @id @default(uuid())
+  tenantId      String
+  tenant        Tenant                  @relation(fields: [tenantId], references: [id])
+  opportunityId String
+  opportunity   Opportunity             @relation(fields: [opportunityId], references: [id])
+  stageId       String
+  stage         PipelineStageDefinition @relation(fields: [stageId], references: [id])
+  enteredAt     DateTime                @default(now())
+
+  @@index([tenantId, opportunityId])
+}
+
 model StatusDefinition {
   id         String               @id @default(uuid())
   tenantId   String
@@ -196,6 +365,7 @@ model StatusDefinition {
   createdAt  DateTime             @default(now())
   employees  Employee[]
   clients    Client[]
+  companies  Company[]
 
   @@index([tenantId, entityType])
 }
@@ -209,19 +379,23 @@ model StatusDefinition {
 enum CatalogKind {
   department
   jobTitle
+  leadSource
+  lossReason
 }
 
 model FieldCatalogDefinition {
-  id                    String       @id @default(uuid())
-  tenantId              String
-  tenant                Tenant       @relation(fields: [tenantId], references: [id])
-  kind                  CatalogKind
-  name                  String
-  order                 Int          @default(0)
-  isActive              Boolean      @default(true)
-  createdAt             DateTime     @default(now())
-  employeesByDepartment Employee[]   @relation("EmployeeDepartment")
-  employeesByJobTitle   Employee[]   @relation("EmployeeJobTitle")
+  id                        String       @id @default(uuid())
+  tenantId                  String
+  tenant                    Tenant       @relation(fields: [tenantId], references: [id])
+  kind                      CatalogKind
+  name                      String
+  order                     Int          @default(0)
+  isActive                  Boolean      @default(true)
+  createdAt                 DateTime     @default(now())
+  employeesByDepartment     Employee[]   @relation("EmployeeDepartment")
+  employeesByJobTitle       Employee[]   @relation("EmployeeJobTitle")
+  contactsByLeadSource      Contact[]
+  opportunitiesByLossReason Opportunity[]
 
   @@index([tenantId, kind])
 }

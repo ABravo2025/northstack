@@ -15,6 +15,17 @@ const DEFAULT_STATUSES: Record<EntityType, { name: string; order: number; isDefa
     { name: 'Inactive', order: 2, isDefault: false },
     { name: 'Archived', order: 3, isDefault: false },
   ],
+  company: [
+    { name: 'Prospect', order: 0, isDefault: true },
+    { name: 'Customer', order: 1, isDefault: false },
+    { name: 'Churned', order: 2, isDefault: false },
+  ],
+  // Contact/Opportunity don't use the StatusDefinition mechanism (Contact has
+  // its own `leadStatus` enum; Opportunity moves through PipelineStageDefinition
+  // instead) — empty on purpose, not a gap. They still need an entry here so
+  // this Record<EntityType, ...> stays exhaustive as EntityType grows.
+  contact: [],
+  opportunity: [],
 };
 
 export async function seedDefaultStatusDefinitions(tx: PrismaTx, tenantId: string): Promise<void> {

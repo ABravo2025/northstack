@@ -11,6 +11,7 @@ import {
 import type { AcquisitionChannel, Invitation, Tenant, User, UserRole, UserStatus, Session } from '@prisma/client';
 import { sendInvitationEmail } from '../../lib/mailer.js';
 import { seedDefaultStatusDefinitions } from '../hr/statusService.js';
+import { seedDefaultPipelines } from '../crm/pipelineService.js';
 
 const INVITATION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -126,6 +127,7 @@ export async function createTenantForUser(input: CreateTenantForUserInput): Prom
     });
 
     await seedDefaultStatusDefinitions(tx, tenant.id);
+    await seedDefaultPipelines(tx, tenant.id);
 
     const updatedUser = await tx.user.update({
       where: { id: input.userId },
@@ -151,7 +153,7 @@ export async function createTenantForUser(input: CreateTenantForUserInput): Prom
     });
 
     return { tenant, user: updatedUser };
-  });
+  }, { timeout: 15000 }); // default 5000ms is tight once seeding (statuses + pipelines) adds several round trips over Neon's network latency
 
   return {
     success: true,
@@ -230,6 +232,7 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
     });
 
     await seedDefaultStatusDefinitions(tx, tenant.id);
+    await seedDefaultPipelines(tx, tenant.id);
 
     const user = await tx.user.create({
       data: {
@@ -268,7 +271,7 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
     });
 
     return { tenant, user, session };
-  });
+  }, { timeout: 15000 }); // default 5000ms is tight once seeding (statuses + pipelines) adds several round trips over Neon's network latency
 
   return {
     success: true,
@@ -430,7 +433,7 @@ export async function acceptInvitation(input: AcceptInvitationInput): Promise<Te
     });
 
     return { tenant, user: updatedUser };
-  });
+  }, { timeout: 15000 }); // default 5000ms is tight once seeding (statuses + pipelines) adds several round trips over Neon's network latency
 
   return {
     success: true,

@@ -1,0 +1,141 @@
+import { canManageCustomFields } from '../modules/auth/permissionService.js';
+import {
+  createPipeline,
+  createPipelineStage,
+  findPipelineById,
+  findPipelineStageById,
+  listPipelines,
+  updatePipeline,
+  updatePipelineStage,
+} from '../modules/crm/pipelineService.js';
+import { validateSession } from '../lib/httpAuth.js';
+import { createAsyncRouter } from '../lib/asyncRouter.js';
+
+const VALID_OUTCOMES = ['open', 'won', 'lost'];
+
+export const pipelinesRouter = createAsyncRouter();
+
+// Read is open to any authenticated tenant member (same as status-definitions/
+// field-catalog) — pipelines are reference data needed to render Opportunity
+// forms/boards, not something that needs a stricter gate than viewing them.
+pipelinesRouter.get('/api/pipelines', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  const pipelines = await listPipelines(user.tenantId!);
+  return res.json(pipelines);
+});
+
+pipelinesRouter.post('/api/pipelines', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageCustomFields(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const name = req.body.name as string;
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Name is required' });
+  }
+
+  const pipeline = await createPipeline({ tenantId: user.tenantId!, name: name.trim(), order: req.body.order });
+  return res.status(201).json(pipeline);
+});
+
+pipelinesRouter.patch('/api/pipelines/:pipelineId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageCustomFields(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const result = await updatePipeline(req.params.pipelineId, user.tenantId!, {
+    name: req.body.name,
+    order: req.body.order,
+    isActive: req.body.isActive,
+  });
+
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  return res.json(result.pipeline);
+});
+
+pipelinesRouter.post('/api/pipelines/:pipelineId/stages', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageCustomFields(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const pipeline = await findPipelineById(req.params.pipelineId);
+  if (!pipeline || pipeline.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Pipeline not found' });
+  }
+
+  const name = req.body.name as string;
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Name is required' });
+  }
+
+  if (req.body.outcome !== undefined && !VALID_OUTCOMES.includes(req.body.outcome)) {
+    return res.status(400).json({ error: "outcome must be 'open', 'won', or 'lost'" });
+  }
+
+  const stage = await createPipelineStage({
+    tenantId: user.tenantId!,
+    pipelineId: req.params.pipelineId,
+    name: name.trim(),
+    color: req.body.color,
+    order: req.body.order,
+    outcome: req.body.outcome,
+  });
+
+  return res.status(201).json(stage);
+});
+
+pipelinesRouter.patch('/api/pipelines/:pipelineId/stages/:stageId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageCustomFields(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const stage = await findPipelineStageById(req.params.stageId);
+  if (!stage || stage.tenantId !== user.tenantId || stage.pipelineId !== req.params.pipelineId) {
+    return res.status(404).json({ error: 'Stage not found' });
+  }
+
+  if (req.body.outcome !== undefined && !VALID_OUTCOMES.includes(req.body.outcome)) {
+    return res.status(400).json({ error: "outcome must be 'open', 'won', or 'lost'" });
+  }
+
+  const result = await updatePipelineStage(req.params.stageId, user.tenantId!, {
+    name: req.body.name,
+    color: req.body.color,
+    order: req.body.order,
+    outcome: req.body.outcome,
+    isActive: req.body.isActive,
+  });
+
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  return res.json(result.stage);
+});

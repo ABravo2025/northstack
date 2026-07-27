@@ -144,6 +144,25 @@ export interface Contact {
   }[];
 }
 
+export interface PipelineStage {
+  id: string;
+  pipelineId: string;
+  name: string;
+  color: string | null;
+  order: number;
+  outcome: 'open' | 'won' | 'lost';
+  isActive: boolean;
+}
+
+export interface Pipeline {
+  id: string;
+  name: string;
+  order: number;
+  isActive: boolean;
+  createdAt: string;
+  stages: PipelineStage[];
+}
+
 interface CustomFieldDefinition {
   id: string;
   name: string;
@@ -1248,6 +1267,68 @@ export const api = {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);
+  },
+
+  // Pipelines (sales pipelines for Opportunities)
+  listPipelines: async (token: string): Promise<Pipeline[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/pipelines`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  createPipeline: async (token: string, data: { name: string; order?: number }): Promise<Pipeline> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/pipelines`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  updatePipeline: async (
+    token: string,
+    pipelineId: string,
+    data: { name?: string; order?: number; isActive?: boolean },
+  ): Promise<Pipeline> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/pipelines/${pipelineId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  createPipelineStage: async (
+    token: string,
+    pipelineId: string,
+    data: { name: string; color?: string; order?: number; outcome?: 'open' | 'won' | 'lost' },
+  ): Promise<PipelineStage> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/pipelines/${pipelineId}/stages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  updatePipelineStage: async (
+    token: string,
+    pipelineId: string,
+    stageId: string,
+    data: { name?: string; color?: string; order?: number; outcome?: 'open' | 'won' | 'lost'; isActive?: boolean },
+  ): Promise<PipelineStage> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/pipelines/${pipelineId}/stages/${stageId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
   },
 
   // Saved views

@@ -14,6 +14,7 @@ import ClientsDashboardPage from './pages/ClientsDashboardPage';
 import ClientsPage from './pages/ClientsPage';
 import CompaniesPage from './pages/CompaniesPage';
 import ContactsPage from './pages/ContactsPage';
+import PipelinesSettingsPage from './pages/PipelinesSettingsPage';
 import ProfileSettingsPage from './pages/ProfileSettingsPage';
 import CompanyAppearancePage from './pages/CompanyAppearancePage';
 import CompanyUsersPage from './pages/CompanyUsersPage';
@@ -214,6 +215,7 @@ export default function App() {
             element={<CompanyUsersPage user={user} token={token ?? ''} onUserUpdated={setUser} />}
           />
           <Route path="public-forms" element={<PublicFormsSettingsPage token={token ?? ''} />} />
+          <Route path="pipelines" element={<PipelinesSettingsPage token={token ?? ''} />} />
         </Route>
       </Route>
 

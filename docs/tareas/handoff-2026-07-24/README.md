@@ -14,6 +14,7 @@ Documento de traspaso completo del proyecto, basado en inspección real del repo
 | [`06-infraestructura-y-estructura.md`](06-infraestructura-y-estructura.md) | Estructura de carpetas explicada, infraestructura real (hosting/DB/dominio/email/CI-CD) con archivos y comandos exactos, y cómo correr el proyecto en local paso a paso. |
 | [`07-stack-tecnologico.md`](07-stack-tecnologico.md) | Lista completa de tecnologías y versiones exactas (de los `package.json` reales), y por qué se eligió cada pieza clave donde está documentado. |
 | [`08-directivas-agente-ia.md`](08-directivas-agente-ia.md) | **El más importante para trabajar en este repo.** Reglas de multi-tenancy no negociables, componentes reutilizables, protocolo de migraciones seguras, checklist antes de terminar una tarea, y antipatrones ya corregidos que no hay que reintroducir. |
+| [`09-contexto-visual-uxui.md`](09-contexto-visual-uxui.md) | **El punto de partida para cualquier trabajo de UX/UI.** Identidad visual, stack de frontend, arquitectura real de layout, inventario de componentes/hooks reutilizables, el patrón de referencia de tablas (Employees) y qué falta replicar en Clients/Company Users, gaps visuales conocidos sin resolver, y el proceso de trabajo del rol UX/UI. |
 
 ## Cómo usar este handoff
 

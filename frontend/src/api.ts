@@ -163,6 +163,34 @@ export interface Pipeline {
   stages: PipelineStage[];
 }
 
+export interface OpportunityContactLink {
+  id: string;
+  contactId: string;
+  role: string | null;
+  contact: { id: string; firstName: string; lastName: string; email: string };
+}
+
+export interface Opportunity {
+  id: string;
+  name: string;
+  companyId: string;
+  company?: { id: string; name: string };
+  pipelineId: string;
+  pipeline?: { id: string; name: string; isActive: boolean };
+  stageId: string;
+  stage?: PipelineStage;
+  amountCents: number;
+  currency: string;
+  estimatedCloseDate: string | null;
+  ownerId: string;
+  owner?: { id: string; firstName: string; lastName: string };
+  lossReasonId: string | null;
+  nextStepDate: string | null;
+  nextStepNote: string | null;
+  createdAt: string;
+  contactLinks?: OpportunityContactLink[];
+}
+
 interface CustomFieldDefinition {
   id: string;
   name: string;
@@ -1329,6 +1357,95 @@ export const api = {
     });
     if (!res.ok) await throwApiError(res);
     return res.json();
+  },
+
+  // Opportunities
+  listOpportunities: async (token: string): Promise<Opportunity[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/opportunities`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  createOpportunity: async (
+    token: string,
+    data: {
+      name: string;
+      companyId: string;
+      pipelineId: string;
+      stageId?: string;
+      amountCents: number;
+      currency: string;
+      estimatedCloseDate?: string | null;
+      ownerId: string;
+      lossReasonId?: string | null;
+      nextStepDate?: string | null;
+      nextStepNote?: string | null;
+    },
+  ): Promise<Opportunity> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/opportunities`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  updateOpportunity: async (
+    token: string,
+    opportunityId: string,
+    data: Partial<{
+      name: string;
+      companyId: string;
+      stageId: string;
+      amountCents: number;
+      currency: string;
+      estimatedCloseDate: string | null;
+      ownerId: string;
+      lossReasonId: string | null;
+      nextStepDate: string | null;
+      nextStepNote: string | null;
+    }>,
+  ): Promise<Opportunity> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/opportunities/${opportunityId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  deleteOpportunity: async (token: string, opportunityId: string): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/opportunities/${opportunityId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+  },
+
+  addOpportunityContact: async (
+    token: string,
+    opportunityId: string,
+    data: { contactId: string; role?: string },
+  ): Promise<OpportunityContactLink> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/opportunities/${opportunityId}/contacts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  removeOpportunityContact: async (token: string, opportunityId: string, contactId: string): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/opportunities/${opportunityId}/contacts/${contactId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
   },
 
   // Saved views

@@ -15,6 +15,7 @@ import ClientsPage from './pages/ClientsPage';
 import CompaniesPage from './pages/CompaniesPage';
 import ContactsPage from './pages/ContactsPage';
 import PipelinesSettingsPage from './pages/PipelinesSettingsPage';
+import OpportunitiesPage from './pages/OpportunitiesPage';
 import ProfileSettingsPage from './pages/ProfileSettingsPage';
 import CompanyAppearancePage from './pages/CompanyAppearancePage';
 import CompanyUsersPage from './pages/CompanyUsersPage';
@@ -201,6 +202,7 @@ export default function App() {
         <Route path="/clients" element={<ClientsPage user={user} token={token ?? ''} />} />
         <Route path="/companies" element={<CompaniesPage user={user} token={token ?? ''} />} />
         <Route path="/contacts" element={<ContactsPage user={user} token={token ?? ''} />} />
+        <Route path="/opportunities" element={<OpportunitiesPage user={user} token={token ?? ''} />} />
         <Route path="/profile" element={<Navigate to="/settings/profile" replace />} />
         <Route path="/company" element={<Navigate to="/settings/appearance" replace />} />
         <Route path="/settings" element={<WorkspaceSettingsLayout user={user} />}>

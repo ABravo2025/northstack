@@ -287,6 +287,13 @@ export async function getTenantById(tenantId: string) {
   return prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true, name: true, currency: true } });
 }
 
+// Unscoped by design (matches findClientById/findEmployeeById elsewhere) — the
+// caller checks `tenantId` before trusting the result, e.g. validating an
+// accountOwnerId/ownerId referenced in a request body belongs to the same tenant.
+export async function findUserById(id: string): Promise<User | null> {
+  return prisma.user.findUnique({ where: { id } });
+}
+
 export interface UpdateTenantCurrencyResult {
   success: boolean;
   tenant?: Tenant;

@@ -1,9 +1,13 @@
 import prisma from '../../lib/prisma.js';
 import { createEmployee } from './employeeService.js';
 import { createClient } from '../clients/clientService.js';
+import { createContact } from '../crm/contactService.js';
+import { addOpportunityContact, createOpportunity } from '../crm/opportunityService.js';
+import { getDefaultStatusId } from './statusService.js';
 import { createCustomFieldValue, isValueValidForFieldType } from './customFieldService.js';
+import { GENERIC_EMAIL_DOMAINS, getEmailDomain } from '../tenant/tenantService.js';
 import { sendPublicFormConfirmationEmail, sendPublicFormSubmissionEmail } from '../../lib/mailer.js';
-import type { EntityType, PublicForm } from '@prisma/client';
+import type { EntityType, FormAccessMode, PublicForm } from '@prisma/client';
 
 export interface PublicFormFieldConfig {
   key: string; // 'department' | 'company' | `cf:${customFieldDefinitionId}`
@@ -17,6 +21,8 @@ export interface CreatePublicFormInput {
   slug: string;
   fields: PublicFormFieldConfig[];
   thankYouMessage?: string;
+  accessMode?: FormAccessMode;
+  pipelineId?: string | null; // contact forms only — which Pipeline the auto-created Opportunity lands in
 }
 
 function normalizeSlug(raw: string): string {
@@ -54,6 +60,8 @@ export async function createPublicForm(input: CreatePublicFormInput): Promise<Cr
       slug,
       fieldsConfig: JSON.stringify(input.fields),
       thankYouMessage: input.thankYouMessage?.trim() || null,
+      accessMode: input.accessMode ?? 'public',
+      pipelineId: input.entityType === 'contact' ? (input.pipelineId ?? null) : null,
     },
   });
   return { success: true, form };
@@ -76,6 +84,7 @@ export interface UpdatePublicFormInput {
   fields?: PublicFormFieldConfig[];
   isActive?: boolean;
   thankYouMessage?: string;
+  pipelineId?: string | null;
 }
 
 export interface UpdatePublicFormResult {
@@ -101,6 +110,7 @@ export async function updatePublicForm(
       isActive: input.isActive,
       fieldsConfig: input.fields ? JSON.stringify(input.fields) : undefined,
       thankYouMessage: input.thankYouMessage !== undefined ? input.thankYouMessage.trim() || null : undefined,
+      pipelineId: input.pipelineId !== undefined ? input.pipelineId : undefined,
     },
   });
   return { success: true, form };
@@ -115,10 +125,48 @@ export async function findActivePublicForm(tenantSlug: string, formSlug: string)
   const form = await prisma.publicForm.findUnique({
     where: { tenantId_slug: { tenantId: tenant.id, slug: formSlug } },
   });
-  if (!form || !form.isActive) {
+  // accessMode:'internal' forms are meant to be filled by a logged-in team
+  // member, not an anonymous visitor — there's no authenticated submission
+  // path built yet, so failing closed here (never served on the anonymous
+  // /apply route) is the safe behavior until that exists, rather than
+  // exposing an internal-only form to the public because the gate was only
+  // half-built.
+  if (!form || !form.isActive || form.accessMode !== 'public') {
     return null;
   }
   return form;
+}
+
+// Matching criterion (spec's open question, resolved): match by an existing
+// Contact at this tenant sharing the submitter's email domain who's already
+// linked to a Company — reuse that Company. Generic/free email domains
+// (gmail.com, etc. — same list tenant registration already excludes for its
+// own duplicate-domain check) never match or create a Company: there's no
+// reliable signal there, so the Contact is created without one instead (spec
+// item 9, "calificación de leads sin volumen" — this is that fallback,
+// already needed here even though full lead-qualification-at-volume tooling
+// is explicitly out of scope for this tier). Deliberately never touches an
+// existing Company's fields when matched — only reuses its id — so a
+// public submission can't silently overwrite real CRM data.
+async function matchOrCreateCompanyForContact(tenantId: string, email: string): Promise<string | null> {
+  const domain = getEmailDomain(email);
+  if (!domain || GENERIC_EMAIL_DOMAINS.has(domain)) {
+    return null;
+  }
+
+  const existingContactSameDomain = await prisma.contact.findFirst({
+    where: { tenantId, companyId: { not: null }, email: { endsWith: `@${domain}` } },
+    select: { companyId: true },
+  });
+  if (existingContactSameDomain?.companyId) {
+    return existingContactSameDomain.companyId;
+  }
+
+  const statusId = await getDefaultStatusId(tenantId, 'company');
+  const domainName = domain.split('.')[0];
+  const companyName = domainName.charAt(0).toUpperCase() + domainName.slice(1);
+  const company = await prisma.company.create({ data: { tenantId, name: companyName, statusId } });
+  return company.id;
 }
 
 export interface SubmitPublicFormInput {
@@ -150,16 +198,20 @@ export async function submitPublicForm(
     }
   }
 
-  // Employee.email is stored lowercased (see createEmployee); Client.email is stored as-is.
+  // Employee.email is stored lowercased (see createEmployee); Client/Contact.email is stored as-is.
   const trimmedEmail = input.email.trim();
   const emailTaken =
     form.entityType === 'employee'
       ? await prisma.employee.findUnique({
           where: { tenantId_email: { tenantId: form.tenantId, email: trimmedEmail.toLowerCase() } },
         })
-      : await prisma.client.findUnique({
-          where: { tenantId_email: { tenantId: form.tenantId, email: trimmedEmail } },
-        });
+      : form.entityType === 'contact'
+        ? await prisma.contact.findUnique({
+            where: { tenantId_email: { tenantId: form.tenantId, email: trimmedEmail } },
+          })
+        : await prisma.client.findUnique({
+            where: { tenantId_email: { tenantId: form.tenantId, email: trimmedEmail } },
+          });
   if (emailTaken) {
     return { success: false, error: 'This email has already been submitted' };
   }
@@ -189,6 +241,48 @@ export async function submitPublicForm(
       departmentId,
     });
     entityId = employee.id;
+  } else if (form.entityType === 'contact') {
+    const companyId = await matchOrCreateCompanyForContact(form.tenantId, trimmedEmail);
+
+    const contact = await createContact({
+      tenantId: form.tenantId,
+      firstName: input.firstName.trim(),
+      lastName: input.lastName.trim(),
+      email: trimmedEmail,
+      companyId,
+      leadStatus: 'new',
+    });
+    entityId = contact.id;
+
+    // Opportunity creation needs a matched Company (required FK) and a
+    // Pipeline configured on the form. ownerId is a required field with no
+    // "unassigned" option in the schema — defaulting new inbound deals to
+    // the tenant owner is just satisfying that constraint, not the
+    // auto-assignment *rule engine* the spec explicitly deferred as an
+    // "automatización" (that's about picking an owner by e.g. territory/
+    // round-robin — a fixed fallback to a single, always-valid user isn't
+    // that).
+    if (companyId && form.pipelineId) {
+      const firstStage = await prisma.pipelineStageDefinition.findFirst({
+        where: { pipelineId: form.pipelineId, isActive: true },
+        orderBy: { order: 'asc' },
+      });
+      const owner = await prisma.user.findFirst({ where: { tenantId: form.tenantId, role: 'owner' } });
+      const tenant = await prisma.tenant.findUnique({ where: { id: form.tenantId }, select: { currency: true } });
+      if (firstStage && owner) {
+        const opportunity = await createOpportunity({
+          tenantId: form.tenantId,
+          companyId,
+          pipelineId: form.pipelineId,
+          stageId: firstStage.id,
+          name: `${input.firstName.trim()} ${input.lastName.trim()} — inbound`,
+          amountCents: 0,
+          currency: tenant?.currency ?? 'USD',
+          ownerId: owner.id,
+        });
+        await addOpportunityContact(form.tenantId, opportunity.id, contact.id);
+      }
+    }
   } else {
     const client = await createClient({
       tenantId: form.tenantId,

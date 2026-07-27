@@ -97,6 +97,15 @@ enum LeadStatus {
   disqualified
 }
 
+// public: the standalone /apply/:tenantSlug/:formSlug page, no auth (today's
+// only mode). internal: filled out by a logged-in team member instead of an
+// outside visitor — same submit logic either way, this only gates *how* the
+// form is reached, added ahead of building that reach-gate.
+enum FormAccessMode {
+  public
+  internal
+}
+
 // Which stage of a Pipeline a given PipelineStageDefinition represents, so the
 // system can trigger business rules (Opportunity reaching a `won` stage →
 // Company.status moves to Customer; `lost` requires Opportunity.lossReasonId)
@@ -270,6 +279,7 @@ model Pipeline {
   createdAt     DateTime                  @default(now())
   stages        PipelineStageDefinition[]
   opportunities Opportunity[]
+  forms         PublicForm[]
 
   @@index([tenantId])
 }
@@ -498,17 +508,25 @@ model CustomFieldValue {
   @@index([tenantId, entityType, entityId])
 }
 
+// Conceptually "Form" per the redesign spec (no longer exclusively public
+// once accessMode:internal exists) — kept as the PublicForm table name to
+// avoid a risky rename via `db push` (no real migration tooling in this
+// project, see the safe-migration protocol) for a change with no functional
+// benefit on its own.
 model PublicForm {
-  id           String     @id @default(uuid())
+  id           String         @id @default(uuid())
   tenantId     String
-  tenant       Tenant     @relation(fields: [tenantId], references: [id])
+  tenant       Tenant         @relation(fields: [tenantId], references: [id])
   entityType   EntityType
   name         String
   slug         String
-  fieldsConfig String     // JSON-encoded array of {key, required} — optional fields only (department/company + cf:<id>); firstName/lastName/email are always shown and required
-  thankYouMessage String? // shown after a successful submit; falls back to a generic message when null
-  isActive     Boolean    @default(true)
-  createdAt    DateTime   @default(now())
+  fieldsConfig String         // JSON-encoded array of {key, required} — optional fields only (department/company + cf:<id>); firstName/lastName/email are always shown and required
+  thankYouMessage String?     // shown after a successful submit; falls back to a generic message when null
+  accessMode   FormAccessMode @default(public)
+  pipelineId   String?        // contact forms only: which Pipeline the auto-created Opportunity lands in, first stage
+  pipeline     Pipeline?      @relation(fields: [pipelineId], references: [id])
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
 
   @@unique([tenantId, slug])
   @@index([tenantId])

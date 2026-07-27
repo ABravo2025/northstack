@@ -343,12 +343,14 @@ export interface PublicFormFieldConfig {
 export interface PublicForm {
   id: string;
   tenantId: string;
-  entityType: 'employee' | 'client';
+  entityType: 'employee' | 'client' | 'contact';
   name: string;
   slug: string;
   fieldsConfig: string;
   thankYouMessage: string | null;
   isActive: boolean;
+  accessMode: 'public' | 'internal';
+  pipelineId: string | null;
   createdAt: string;
 }
 
@@ -363,7 +365,7 @@ export interface PublicFormCustomFieldDef {
 export interface PublicFormConfig {
   id: string;
   name: string;
-  entityType: 'employee' | 'client';
+  entityType: 'employee' | 'client' | 'contact';
   fields: PublicFormFieldConfig[];
   customFieldDefs: PublicFormCustomFieldDef[];
   departmentOptions: { id: string; name: string }[];
@@ -1520,9 +1522,11 @@ export const api = {
     data: {
       name: string;
       slug: string;
-      entityType: 'employee' | 'client';
+      entityType: 'employee' | 'client' | 'contact';
       fields: PublicFormFieldConfig[];
       thankYouMessage?: string;
+      accessMode?: 'public' | 'internal';
+      pipelineId?: string | null;
     },
   ): Promise<PublicForm> => {
     const res = await apiFetch(`${API_BASE_URL}/api/public-forms`, {
@@ -1537,7 +1541,13 @@ export const api = {
   updatePublicForm: async (
     token: string,
     formId: string,
-    data: { name?: string; fields?: PublicFormFieldConfig[]; isActive?: boolean; thankYouMessage?: string },
+    data: {
+      name?: string;
+      fields?: PublicFormFieldConfig[];
+      isActive?: boolean;
+      thankYouMessage?: string;
+      pipelineId?: string | null;
+    },
   ): Promise<PublicForm> => {
     const res = await apiFetch(`${API_BASE_URL}/api/public-forms/${formId}`, {
       method: 'PATCH',

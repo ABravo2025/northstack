@@ -1,6 +1,7 @@
 import type { EntityType } from '@prisma/client';
 import { canManageCustomFields } from '../modules/auth/permissionService.js';
 import { createPublicForm, getTenantSlug, listPublicForms, updatePublicForm } from '../modules/hr/publicFormService.js';
+import { findPipelineById } from '../modules/crm/pipelineService.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 
@@ -39,8 +40,17 @@ publicFormsRouter.post('/api/public-forms', async (req, res) => {
   if (!name || !slug) {
     return res.status(400).json({ error: 'Name and slug are required' });
   }
-  if (entityType !== 'employee' && entityType !== 'client') {
-    return res.status(400).json({ error: "entityType must be 'employee' or 'client'" });
+  if (entityType !== 'employee' && entityType !== 'client' && entityType !== 'contact') {
+    return res.status(400).json({ error: "entityType must be 'employee', 'client', or 'contact'" });
+  }
+
+  let pipelineId: string | null = null;
+  if (entityType === 'contact' && req.body.pipelineId) {
+    const pipeline = await findPipelineById(req.body.pipelineId);
+    if (!pipeline || pipeline.tenantId !== user.tenantId!) {
+      return res.status(400).json({ error: 'Pipeline not found' });
+    }
+    pipelineId = pipeline.id;
   }
 
   const result = await createPublicForm({
@@ -50,6 +60,8 @@ publicFormsRouter.post('/api/public-forms', async (req, res) => {
     slug,
     fields: req.body.fields ?? [],
     thankYouMessage: req.body.thankYouMessage,
+    accessMode: req.body.accessMode,
+    pipelineId,
   });
 
   if (!result.success) {
@@ -69,11 +81,19 @@ publicFormsRouter.patch('/api/public-forms/:formId', async (req, res) => {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
+  if (req.body.pipelineId) {
+    const pipeline = await findPipelineById(req.body.pipelineId);
+    if (!pipeline || pipeline.tenantId !== user.tenantId!) {
+      return res.status(400).json({ error: 'Pipeline not found' });
+    }
+  }
+
   const result = await updatePublicForm(req.params.formId, user.tenantId!, {
     name: req.body.name,
     fields: req.body.fields,
     isActive: req.body.isActive,
     thankYouMessage: req.body.thankYouMessage,
+    pipelineId: req.body.pipelineId !== undefined ? req.body.pipelineId : undefined,
   });
 
   if (!result.success) {

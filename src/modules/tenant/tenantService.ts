@@ -19,7 +19,7 @@ const INVITATION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 // otherwise the first person to register with @gmail.com would block every other
 // Gmail user from ever creating a tenant. example.* is IANA's reserved documentation
 // domain (RFC 2606), included here so demo/test signups aren't affected either.
-const GENERIC_EMAIL_DOMAINS = new Set([
+export const GENERIC_EMAIL_DOMAINS = new Set([
   'gmail.com',
   'googlemail.com',
   'outlook.com',
@@ -44,7 +44,7 @@ const GENERIC_EMAIL_DOMAINS = new Set([
   'example.net',
 ]);
 
-function getEmailDomain(email: string): string {
+export function getEmailDomain(email: string): string {
   return email.split('@')[1]?.toLowerCase() ?? '';
 }
 

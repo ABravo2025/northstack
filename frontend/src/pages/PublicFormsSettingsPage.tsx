@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { api, type PublicForm, type PublicFormFieldConfig } from '../api';
+import { api, type Pipeline, type PublicForm, type PublicFormFieldConfig } from '../api';
 import { useToast } from '../components/ToastProvider';
 import SlideOver from '../components/SlideOver';
 import { GripIcon, PlusIcon, XIcon } from '../components/Icons';
@@ -8,7 +8,7 @@ interface PublicFormsSettingsPageProps {
   token: string;
 }
 
-type EntityTab = 'employee' | 'client';
+type EntityTab = 'employee' | 'client' | 'contact';
 
 const END_DROP_ZONE = '__end__';
 const PALETTE_DROP_ZONE = '__palette__';
@@ -30,6 +30,8 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
 
   const [employeeCustomFields, setEmployeeCustomFields] = useState<any[]>([]);
   const [clientCustomFields, setClientCustomFields] = useState<any[]>([]);
+  const [contactCustomFields, setContactCustomFields] = useState<any[]>([]);
+  const [pipelines, setPipelines] = useState<Pipeline[]>([]);
 
   const [slideOverMode, setSlideOverMode] = useState<'add' | 'edit' | null>(null);
   const [editingFormId, setEditingFormId] = useState<string | null>(null);
@@ -37,6 +39,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
   const [formSlug, setFormSlug] = useState('');
   const [slugTouched, setSlugTouched] = useState(false);
   const [thankYouMessage, setThankYouMessage] = useState('');
+  const [pipelineId, setPipelineId] = useState<string>('');
   const [fieldOrder, setFieldOrder] = useState<string[]>([]);
   const [includedKeys, setIncludedKeys] = useState<Record<string, boolean>>({});
   const [requiredFields, setRequiredFields] = useState<Record<string, boolean>>({});
@@ -47,6 +50,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
   useEffect(() => {
     loadForms();
     loadCustomFields();
+    loadPipelines();
   }, []);
 
   const loadForms = async () => {
@@ -64,20 +68,37 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
 
   const loadCustomFields = async () => {
     try {
-      const [employeeFields, clientFields] = await Promise.all([
+      const [employeeFields, clientFields, contactFields] = await Promise.all([
         api.listCustomFieldDefinitions(token, 'employee'),
         api.listCustomFieldDefinitions(token, 'client'),
+        api.listCustomFieldDefinitions(token, 'contact'),
       ]);
       setEmployeeCustomFields(employeeFields.filter((f) => f.isActive));
       setClientCustomFields(clientFields.filter((f) => f.isActive));
+      setContactCustomFields(contactFields.filter((f) => f.isActive));
     } catch (error) {
       toast.error('Failed to load custom fields: ' + (error as Error).message);
+    }
+  };
+
+  const loadPipelines = async () => {
+    try {
+      const data = await api.listPipelines(token);
+      setPipelines(data.filter((p) => p.isActive));
+    } catch (error) {
+      toast.error('Failed to load pipelines: ' + (error as Error).message);
     }
   };
 
   const filteredForms = forms.filter((f) => f.entityType === tab);
 
   const allFields = useMemo(() => {
+    // Contact forms don't have a hardcoded first field: unlike Department (Employee)
+    // or the free-text Company (Client), Company matching for a Contact is derived
+    // automatically from the submitted email domain, not entered by the applicant.
+    if (tab === 'contact') {
+      return contactCustomFields.map((f) => ({ key: `cf:${f.id}`, label: f.name, fieldType: f.fieldType, options: f.options }));
+    }
     const customFields = tab === 'employee' ? employeeCustomFields : clientCustomFields;
     return [
       {
@@ -88,7 +109,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
       },
       ...customFields.map((f) => ({ key: `cf:${f.id}`, label: f.name, fieldType: f.fieldType, options: f.options })),
     ];
-  }, [tab, employeeCustomFields, clientCustomFields]);
+  }, [tab, employeeCustomFields, clientCustomFields, contactCustomFields]);
 
   // Custom field definitions load asynchronously and may still be in flight when the
   // SlideOver opens (e.g. clicking "New Form" right after the page loads). Keep fieldOrder
@@ -110,6 +131,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
     setFieldOrder(allFields.map((f) => f.key));
     setIncludedKeys({});
     setRequiredFields({});
+    setPipelineId('');
     setSlideOverMode('add');
   };
 
@@ -125,6 +147,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
     setFieldOrder([...savedKeys, ...remainingKeys]);
     setIncludedKeys(Object.fromEntries(savedKeys.map((key) => [key, true])));
     setRequiredFields(Object.fromEntries(fields.map((f) => [f.key, f.required])));
+    setPipelineId(form.pipelineId ?? '');
     setSlideOverMode('edit');
   };
 
@@ -192,6 +215,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
           name: formName.trim(),
           fields,
           thankYouMessage,
+          ...(tab === 'contact' ? { pipelineId: pipelineId || null } : {}),
         });
         toast.success('Form updated.');
       } else {
@@ -201,6 +225,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
           entityType: tab,
           fields,
           thankYouMessage,
+          ...(tab === 'contact' ? { pipelineId: pipelineId || null } : {}),
         });
         toast.success('Form created.');
       }
@@ -305,6 +330,24 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
               )
             )}
           </div>
+
+          {tab === 'contact' && (
+            <div className="form-group">
+              <label htmlFor="pf-pipeline">Sales pipeline (optional)</label>
+              <select id="pf-pipeline" value={pipelineId} onChange={(e) => setPipelineId(e.target.value)}>
+                <option value="">None — just create a Contact</option>
+                {pipelines.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-gray-500">
+                If set, a submission that matches an existing Company also creates an Opportunity in this pipeline's
+                first stage.
+              </p>
+            </div>
+          )}
 
           <div className="form-group">
             <span>Fields</span>
@@ -446,6 +489,9 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
         <button type="button" className={`view-tab ${tab === 'client' ? 'active' : ''}`} onClick={() => setTab('client')}>
           Clients
         </button>
+        <button type="button" className={`view-tab ${tab === 'contact' ? 'active' : ''}`} onClick={() => setTab('contact')}>
+          Contacts
+        </button>
         <button type="button" className="btn-outline btn-tab-size ml-auto" onClick={handleOpenCreate}>
           <PlusIcon className="h-3.5 w-3.5" />
           New Form
@@ -456,8 +502,8 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
         {loading && <p>Loading...</p>}
         {!loading && filteredForms.length === 0 && (
           <p>
-            No public forms for {tab === 'employee' ? 'Employees' : 'Clients'} yet. Create one to let people apply
-            without an admin creating them manually.
+            No public forms for {tab === 'employee' ? 'Employees' : tab === 'client' ? 'Clients' : 'Contacts'} yet.
+            Create one to let people apply without an admin creating them manually.
           </p>
         )}
         {!loading && filteredForms.length > 0 && (

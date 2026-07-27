@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   BriefcaseIcon,
+  BuildingIcon,
   CalendarIcon,
   ChevronLeftIcon,
   DashboardIcon,
@@ -72,6 +73,14 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
           <NavLink to="/clients/dashboard" className={linkClass} title="Clients – Dashboard" onClick={onMobileClose}>
             <TrendingIcon className="h-4 w-4 shrink-0" />
             {label('Dashboard')}
+          </NavLink>
+        </div>
+
+        <div className="sidebar-divider">
+          {!collapsed && <p className="sidebar-group-label">Sales</p>}
+          <NavLink to="/companies" className={linkClass} title="Companies" onClick={onMobileClose}>
+            <BuildingIcon className="h-4 w-4 shrink-0" />
+            {label('Companies')}
           </NavLink>
         </div>
 

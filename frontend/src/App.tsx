@@ -12,6 +12,7 @@ import EmployeesPage from './pages/EmployeesPage';
 import TimeOffOverviewPage from './pages/TimeOffOverviewPage';
 import ClientsDashboardPage from './pages/ClientsDashboardPage';
 import ClientsPage from './pages/ClientsPage';
+import CompaniesPage from './pages/CompaniesPage';
 import ProfileSettingsPage from './pages/ProfileSettingsPage';
 import CompanyAppearancePage from './pages/CompanyAppearancePage';
 import CompanyUsersPage from './pages/CompanyUsersPage';
@@ -196,6 +197,7 @@ export default function App() {
         <Route path="/hr/time-off" element={<TimeOffOverviewPage user={user} token={token ?? ''} />} />
         <Route path="/clients/dashboard" element={<ClientsDashboardPage />} />
         <Route path="/clients" element={<ClientsPage user={user} token={token ?? ''} />} />
+        <Route path="/companies" element={<CompaniesPage user={user} token={token ?? ''} />} />
         <Route path="/profile" element={<Navigate to="/settings/profile" replace />} />
         <Route path="/company" element={<Navigate to="/settings/appearance" replace />} />
         <Route path="/settings" element={<WorkspaceSettingsLayout user={user} />}>

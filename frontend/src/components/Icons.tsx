@@ -317,3 +317,13 @@ export function BellIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+export function BuildingIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="4" y="3" width="12" height="18" rx="1" />
+      <path d="M16 9h4v12h-4" />
+      <path d="M8 7h.01M12 7h.01M8 11h.01M12 11h.01M8 15h.01M12 15h.01" />
+    </svg>
+  );
+}

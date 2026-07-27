@@ -103,6 +103,26 @@ interface Client {
   }[];
 }
 
+export interface Company {
+  id: string;
+  name: string;
+  industry: string | null;
+  website: string | null;
+  phone: string | null;
+  billingAddress: string | null;
+  size: string | null;
+  accountOwnerId: string | null;
+  accountOwner?: { id: string; firstName: string; lastName: string } | null;
+  statusId: string;
+  statusDefn?: { id: string; name: string; color: string | null };
+  createdAt: string;
+  customFieldVals?: {
+    id: string;
+    customFieldDefinitionId: string;
+    value: string;
+  }[];
+}
+
 interface CustomFieldDefinition {
   id: string;
   name: string;
@@ -554,7 +574,7 @@ export const api = {
   // Custom fields
   listCustomFieldDefinitions: async (
     token: string,
-    entityType: 'employee' | 'client',
+    entityType: 'employee' | 'client' | 'company' | 'contact' | 'opportunity',
   ): Promise<CustomFieldDefinition[]> => {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/custom-fields?entityType=${entityType}`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -567,7 +587,7 @@ export const api = {
     token: string,
     data: {
       name: string;
-      entityType: 'employee' | 'client';
+      entityType: 'employee' | 'client' | 'company' | 'contact' | 'opportunity';
       fieldType: string;
       options?: string;
       required?: boolean;
@@ -991,6 +1011,111 @@ export const api = {
     valueId: string,
   ): Promise<void> => {
     const res = await apiFetch(`${API_BASE_URL}/api/clients/${clientId}/custom-fields/${valueId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+  },
+
+  // Companies
+  listCompanies: async (token: string): Promise<Company[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/companies`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  createCompany: async (
+    token: string,
+    data: {
+      name: string;
+      industry?: string;
+      website?: string;
+      phone?: string;
+      billingAddress?: string;
+      size?: string;
+      accountOwnerId?: string | null;
+    },
+  ): Promise<Company> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/companies`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  updateCompany: async (
+    token: string,
+    companyId: string,
+    data: Partial<Omit<Company, 'id' | 'statusId' | 'statusDefn' | 'createdAt'>>,
+  ): Promise<Company> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/companies/${companyId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  deleteCompany: async (token: string, companyId: string): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/companies/${companyId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+  },
+
+  createCompanyCustomFieldValue: async (
+    token: string,
+    companyId: string,
+    data: { customFieldDefinitionId: string; value: string },
+  ): Promise<CustomFieldValue> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/companies/${companyId}/custom-fields`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  updateCompanyCustomFieldValue: async (
+    token: string,
+    companyId: string,
+    valueId: string,
+    value: string,
+  ): Promise<CustomFieldValue> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/companies/${companyId}/custom-fields/${valueId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ value }),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  deleteCompanyCustomFieldValue: async (
+    token: string,
+    companyId: string,
+    valueId: string,
+  ): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/companies/${companyId}/custom-fields/${valueId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });

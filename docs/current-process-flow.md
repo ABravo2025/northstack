@@ -1,12 +1,13 @@
 # Current Process Flow
 
-- Última actualización: 2026-07-14 (sistema de PTO completo, landing en su propia branch, Overview como pantalla de inicio)
+- Última actualización: 2026-07-27 (rediseño de Clients — Company/Contact/Pipeline/Opportunity — 10 de 11 unidades en `staging`, migración de datos pendiente de producción; backend dividido en routers por dominio; secciones de Settings/Time Off corregidas para reflejar el hub único desde el rebrand del 2026-07-16, que este documento nunca había reflejado)
 
 This document describes the current architecture and flows for Northstack, kept in sync so a fresh session (or a fresh person) can recover context quickly.
 
 ## Where the app lives
 
 - **Frontend**: React + Vite (`frontend/`), served as a static build.
+- **Backend routing**: `src/app.ts` shrunk from a single ~1900-line file to just config + middleware + router mounts (2026-07-27) — one router per domain under `src/routes/` (`auth`, `tenants`, `employees`, `catalogs`, `timeOff`, `views`, `onboarding`, `clients`, `companies`, `contacts`, `pipelines`, `opportunities`, `publicForms`, `public`, `feedback`), each built with `createAsyncRouter()` (`src/lib/asyncRouter.ts`) so every route still gets the same async-error-catching as before, without one file growing forever.
 - **Backend**: Express (`src/app.ts`), split so it can run two ways:
   - Locally: `src/server.ts` imports the app and calls `.listen()` (`npm run dev`, `tsx watch`).
   - Production: `api/index.ts` exports the same Express app for Vercel's serverless Node runtime — no `.listen()`, each request is an isolated invocation.
@@ -109,8 +110,9 @@ flowchart TD
 
 - Custom fields are generic across modules: `CustomFieldValue` has `tenantId` + `entityType` (`employee`/`client`) + `entityId`, no per-module foreign key — adding a future module (e.g. Payments) never requires a schema change here.
 - Every custom-field-value endpoint verifies the definition belongs to the right `entityType` before accepting a value (prevents using an Employee field to store a Client value via direct API calls).
-- Statuses are no longer fixed enums — `Employee.statusId`/`Client.statusId` are FKs to a per-tenant, per-module `StatusDefinition` catalog (name, color, order, isDefault, isActive), managed from `/settings` → Statuses. Every tenant gets sensible defaults seeded on creation (Employee: Active/Inactive/Pending — Client: Prospect/Active/Inactive/Archived), but can add/rename/reorder/deactivate freely from there; don't assume any fixed set of status names in code. Every status change is recorded in `StatusHistoryEntry` (snapshotted status names, not live FKs, so a later rename doesn't rewrite old history) — captured today, no UI to view it yet.
-- `Employee.managerId` is a self-referential FK ("reports to") — see the org hierarchy flow below. Every tenant's owner also gets an auto-created `Employee` record on signup (`department: "Leadership"`) so they always appear as a manager option, even before adding any real employees; a one-off `scripts/backfill-owner-employees.ts` did the same for the ~30 pre-existing production tenants.
+- Statuses are no longer fixed enums — `Employee.statusId`/`Client.statusId`/`Company.statusId` are FKs to a per-tenant, per-module `StatusDefinition` catalog (name, color, order, isDefault, isActive), managed inline via the "Manage options" popover on each table's Status column header (see Settings section above — this moved out of a dedicated Settings page on 2026-07-16). Every tenant gets sensible defaults seeded on creation (Employee: Active/Inactive/Pending — Client: Prospect/Active/Inactive/Archived — Company: Prospect/Customer/Churned), but can add/rename/reorder/deactivate freely from there; don't assume any fixed set of status names in code. Every status change is recorded in `StatusHistoryEntry` (snapshotted status names, not live FKs, so a later rename doesn't rewrite old history) — captured today, no UI to view it yet.
+- `Employee.department`/`jobTitleId` are **no longer free text** — both are FKs into `FieldCatalogDefinition` (a generic tenant-scoped catalog shared by Department/Job Title, and later reused by Contact's `leadSourceId`/Opportunity's `lossReasonId`), migrated 2026-07-22 via the project's safe-migration pattern (nullable FK added → backfill script groups existing free-text values per tenant, find-or-create a catalog entry, links every row → old text column dropped once nothing referenced it). `Status` was deliberately **not** folded into this same mechanism — it's a heavier feature (Kanban grouping, history, seeded defaults) and the migration risk outweighed the benefit.
+- `Employee.managerId` is a self-referential FK ("reports to") — see the org hierarchy flow below. Every tenant's owner also gets an auto-created `Employee` record on signup so they always appear as a manager option, even before adding any real employees; a one-off `scripts/backfill-owner-employees.ts` did the same for pre-existing production tenants.
 
 ## Employee hierarchy (org chart)
 
@@ -128,26 +130,27 @@ flowchart TD
 - Covers both direct self-reporting (`employeeId === proposedManagerId`) and indirect cycles (A reports to B, B reports to A) via the same walk-up-the-chain check.
 - This hierarchy is the routing backbone for PTO approvals (below) — a manager here is whoever an employee's requests get routed to by default.
 
-## Settings navigation — two independent hubs
+## Settings navigation — one hub, module-specific settings live inline
 
-This went through three iterations before settling; the current shape is deliberate:
+This went through several iterations before settling. The two-independent-hubs model (Company Settings vs. sidebar Settings) described in earlier revisions of this document was itself replaced on 2026-07-16 — this section documents the **current**, single-hub shape:
 
 ```mermaid
 flowchart TD
-  A[TopBar, user menu] -->|"Company Settings"| B["route: company (CompanySettingsLayout)"]
-  B --> C[Appearance: dark mode System/Light/Dark, localStorage per device]
-  B --> D[Users: team table role/status, pending invitations, invite form - all one page]
+  A[Sidebar, gear icon OR TopBar user menu] -->|both land here now| B["route: /settings (WorkspaceSettingsLayout)"]
+  B --> C["Mi cuenta: Profile (all roles)"]
+  B --> D["Empresa: Appearance, Users, Public Forms, Pipelines (owner/admin only)"]
 
-  E[Sidebar, gear icon] -->|"Settings"| F["route: settings (ModuleSettingsLayout)"]
-  F --> G[Custom Fields]
-  F --> H[Statuses]
-  F --> I[PTO Policies]
+  E[Custom Fields] -.->|lives inline, not in Settings| F["'...' menu on each custom-field column header, in Employees/Contacts/Companies/etc."]
+  G[Statuses] -.->|lives inline, not in Settings| H["'Manage options' popover on the Status column header"]
+  I[Time Off Policies] -.->|lives inline, not in Settings| J["Policies popover in the Time Off module header itself"]
 ```
 
-- **No cross-navigation** between the two hubs — none of Custom Fields/Statuses/PTO Policies are reachable from Company Settings, and Users/Appearance are not reachable from the sidebar's Settings. This was an explicit correction after an earlier round accidentally merged everything into one shared tabbed page.
-- Each hub has its own internal sub-navigation (`.settings-shell`/`.settings-nav`/`.settings-content` in `App.css`) — a left-hand category list, content on the right — built to be extensible (e.g. Company Settings could later grow a "Subscriptions" category once billing exists). `/settings` went from 1 category (Custom Fields) to 3 (Statuses, then PTO Policies) without any structural rework, confirming the layout was actually built extensible and not just described that way.
-- Both Statuses and PTO Policies use a shared `ColorPicker` component (`frontend/src/components/ColorPicker.tsx`) instead of a bare `<input type="color">` — preset swatches (brand colors + a general palette) plus a popover for custom colors, which get saved to `localStorage` (key `northstack:customColors`) and become available across every picker in the app, not just the one that added them.
-- `Profile` (edit own name/phone/password) is a separate top-level route (`/profile`), reachable from the same TopBar user menu, since it's personal, not administrative — visible to every role, unlike Company Settings/module Settings which only show for owner/admin.
+- **One hub** (`WorkspaceSettingsLayout`, `/settings`) reached from both the sidebar gear icon and the TopBar user menu — the old split between "Company Settings" (`/company`) and module "Settings" was collapsed on 2026-07-16. `/profile` and `/company` still work as redirects to the new routes, so old bookmarks don't break.
+- Two groups inside the hub: **"Mi cuenta"** (Profile — every role) and **"Empresa"** (Appearance, Users, Public Forms, Pipelines — owner/admin only, hidden for `member`).
+- **What's explicitly NOT in this hub**: Custom Fields and Statuses were deliberately moved *out* of Settings and into contextual menus on the column headers of whichever table they belong to (a "..." menu per custom-field column, a single "Manage options" popover for Status) — the reasoning was that a setting used by exactly one module doesn't need its own separate page. Time Off Policies followed the same logic, moving into a popover in the Time Off module's own header instead of a Settings page.
+- Each category inside `/settings` has its own internal sub-navigation (`.settings-shell`/`.settings-nav`/`.settings-content` in `App.css`) — a left-hand category list, content on the right — proven extensible in practice (grew from Profile+Appearance+Users to also include Public Forms and Pipelines with no structural rework).
+- Statuses, Time Off Policies, and the Pipeline-stage manager all share the same `ColorPicker` component (`frontend/src/components/ColorPicker.tsx`) instead of a bare `<input type="color">` — preset swatches plus a popover for custom colors, saved to `localStorage` (key `northstack:customColors`) and shared across every picker in the app.
+- `Profile` (edit own name/phone/password) is visible to every role; the "Empresa" group is gated to owner/admin inside the layout itself, not by hiding the sidebar entry (the gear icon is visible to everyone now, since Profile lives behind the same route).
 
 ## Company/Users management — ownership is unique by construction
 
@@ -164,34 +167,34 @@ flowchart TD
 - Admin can freely edit roles/status for members and other admins — only touching the `owner` role (either target or destination) requires being an owner yourself.
 - Promoting someone to owner is a **transfer**, not an addition: it happens in a single Prisma transaction that also demotes the acting owner to admin, so the tenant can never end up with zero or multiple owners — this replaced an earlier version where an owner could promote a second owner without losing their own role.
 
-## PTO / vacation system
+## Time Off system
 
-Built piece by piece over 2026-07-14, at the user's explicit request ("arranca con eso nomás"), each piece confirmed and pushed separately. 6 of 7 planned pieces are done — see `docs/database-schema.md` for the underlying tables and `docs/tareas-desarrollo.md` for the full dated build log. The one remaining piece (a non-status-changing visual tag on an employee's row while they're on active leave) isn't started.
+Built piece by piece over 2026-07-14, at the user's explicit request ("arranca con eso nomás"), each piece confirmed and pushed separately. **Complete, 7 of 7 planned pieces** (the last one, a visual "on leave" tag on an employee's row, shipped the same day) — see `docs/database-schema.md` for the underlying tables (renamed `Pto*` → `TimeOff*` in the schema to match the name already used everywhere else) and `docs/tareas-desarrollo.md` for the full dated build log.
 
 ### Policy setup and per-employee assignment
 
 ```mermaid
 flowchart TD
-  A[Owner/Admin, Settings -> PTO Policies] --> B[Define a policy: name, color, accrual method, days/year, paid?, requires approval?]
-  B --> C[HR -> PTO -> Assignments tab]
+  A[Owner/Admin, Time Off module -> Policies popover] --> B[Define a policy: name, color, accrual method, days/year, paid?, requires approval?]
+  B --> C[Time Off -> Assignments tab]
   C --> D[Assign specific policies to specific employees - not tenant-wide by default]
-  D --> E[EmployeePtoPolicy join row created, assignedAt = now]
+  D --> E[EmployeeTimeOffPolicy join row created, assignedAt = now]
 ```
 
-- `PtoPolicyDefinition.accrualMethod` supports two modes: `fixed_annual` (the full `daysPerYear` is available immediately) and `monthly` (accrues `daysPerYear / 12` per completed calendar month since `assignedAt`, capped at the annual total — the month a policy is assigned already counts, so nobody sees "0 days" on day one).
+- `TimeOffPolicyDefinition.accrualMethod` supports two modes: `fixed_annual` (the full `daysPerYear` is available immediately) and `monthly` (accrues `daysPerYear / 12` per completed calendar month since `assignedAt`, capped at the annual total — the month a policy is assigned already counts, so nobody sees "0 days" on day one).
 - A policy isn't automatically available to everyone — it has to be explicitly assigned per employee, which is what makes different day counts per seniority/contract type possible without needing multiple near-duplicate policies.
 
 ### Request + approval, routed by hierarchy
 
 ```mermaid
 flowchart TD
-  A[Employee, HR -> PTO -> My Requests] --> B[Pick one of their own assigned policies + date range]
-  B --> C[POST /api/hr/pto-requests]
+  A[Employee, Time Off -> My Requests] --> B[Pick one of their own assigned policies + date range]
+  B --> C[POST /api/hr/time-off-requests]
   C --> D{Policy has requiresApproval?}
   D -->|No| E[Auto-approved instantly, decisionNote records why]
   D -->|Yes| F["status: pending, approverId = employee.managerId snapshot at request time"]
   F --> G[Manager sees it under their own Approvals tab]
-  G --> H[PATCH /api/hr/pto-requests/:id - approve or reject]
+  G --> H[PATCH /api/hr/time-off-requests/:id - approve or reject]
   F --> I[Owner/Admin can also decide it from All Requests - override, even if not the assigned approver]
   I --> H
   H --> J[status/decidedAt/decisionNote updated]
@@ -199,12 +202,12 @@ flowchart TD
 
 - `approverId` is fixed at creation time from the employee's current `managerId` — it does not get recalculated if the org chart changes afterward.
 - If an employee has no manager set, `approverId` stays `null` and the request only shows up for owner/admin to decide (no manager-specific "Approvals" tab entry for anyone).
-- A requester can cancel their own request while it's still `pending` (`DELETE /api/hr/pto-requests/:id`); once decided, cancellation isn't allowed — only future pieces (or manual DB access) can undo an approved/rejected request.
+- A requester can cancel their own request while it's still `pending` (`DELETE /api/hr/time-off-requests/:id`); once decided, cancellation isn't allowed — only future pieces (or manual DB access) can undo an approved/rejected request.
 
 ### Balance (derived, not stored)
 
-- No new table — `ptoBalanceService.ts` computes `allocated`/`used`/`pending`/`remaining` on every request by combining `EmployeePtoPolicy.assignedAt`, the policy's accrual settings, and the sum of that employee+policy's `PtoRequest.daysRequested` for the current calendar year, split by status (`approved` counts as `used`, `pending` is shown separately and does **not** reduce `remaining` until it's actually approved).
-- Exposed via `GET /api/hr/employees/:employeeId/pto-balance` (self or owner/admin) and `GET /api/hr/pto-balances` (tenant-wide, owner/admin only) — shown as chips above the request form in My Requests, and as a full table in the Balances tab.
+- No new table — `timeOffBalanceService.ts` computes `allocated`/`used`/`pending`/`remaining` on every request by combining `EmployeeTimeOffPolicy.assignedAt`, the policy's accrual settings, and the sum of that employee+policy's `TimeOffRequest.daysRequested` for the current calendar year, split by status (`approved` counts as `used`, `pending` is shown separately and does **not** reduce `remaining` until it's actually approved).
+- Exposed via `GET /api/hr/employees/:employeeId/time-off-balance` (self or owner/admin) and `GET /api/hr/time-off-balances` (tenant-wide, owner/admin only) — shown as chips above the request form in My Requests, and as a full table in the Balances tab.
 
 ### Calendar — and the new Overview home screen
 
@@ -217,26 +220,93 @@ flowchart TD
   D --> F[Pending entries: dashed border, italic, labeled pending]
 ```
 
-- Unlike the other admin-facing PTO views (`scope=all`, `/api/hr/pto-balances`), the calendar scope has no role check — seeing who's out is treated as general team visibility, not an admin concern.
-- The user asked for the calendar to live "dentro del overview como main page, por encima del label Human Resources" — this **replaced** the standing, undetailed backlog item "Overview / pantalla de inicio" that had been open for several rounds. `/overview` is now the default landing route after login, register, and accepting an invitation (previously `/hr/dashboard`), with its own sidebar entry (a `HomeIcon`, deliberately different from the `CalendarIcon` already used by the HR → PTO link, to avoid two identical icons in the sidebar).
+- Unlike the other admin-facing Time Off views (`scope=all`, `/api/hr/time-off-balances`), the calendar scope has no role check — seeing who's out is treated as general team visibility, not an admin concern.
+- The user asked for the calendar to live "dentro del overview como main page, por encima del label Human Resources" — this **replaced** the standing, undetailed backlog item "Overview / pantalla de inicio" that had been open for several rounds. `/overview` is now the default landing route after login, register, and accepting an invitation (previously `/hr/dashboard`), with its own sidebar entry (a `HomeIcon`, deliberately different from the `CalendarIcon` already used by the Time Off link, to avoid two identical icons in the sidebar).
+
+## Saved Views, filters, and Kanban
+
+```mermaid
+flowchart TD
+  A[Employees / Clients / Companies / Contacts / Opportunities page loads] --> B[ViewsBar: tabs for each SavedView + a default unsaved view]
+  B --> C[FilterBar popover: build filters over any filterable field, incl. active Custom Fields]
+  C --> D[applyFilters/applySort run client-side - data already loaded in full]
+  D --> E{View type}
+  E -->|grid| F[Table, same as always]
+  E -->|kanban| G[KanbanBoard.tsx, grouped by status or a select Custom Field]
+  E -->|list| H[Grouped list variant]
+  G --> I[Drag a card to a new column]
+  I --> J[Reuses the entity's existing PATCH endpoint - no Kanban-specific endpoints]
+```
+
+- One model, `SavedView` (`entityType`/`type`/`visibility`/`filters`/`sortBy`/`groupByField` as JSON) — only owner/admin can create `shared` views; a `personal` view can only be deleted by whoever created it, not even the owner.
+- The active view per entity persists in `localStorage` (`northstack:activeView:<entityType>`), same pattern as other per-device UI state in the app (theme, custom colors, column widths).
+- Column width (drag-resize), visibility (show/hide), and order (drag-reorder) are **separate, per-view** `localStorage` keys (`northstack:columnWidths:<entityType>:<viewId>`, etc.) — this was a real bug fixed 2026-07-27: they used to be shared across all views of an entity, so hiding a column in one saved view silently hid it everywhere.
+
+## Public Forms
+
+```mermaid
+flowchart TD
+  A[Owner/Admin, Settings -> Public Forms] --> B[Build a form: entityType employee/client/contact, drag-and-drop field picker, live preview]
+  B --> C[Publish - unique tenant+slug URL: /apply/:tenantSlug/:formSlug]
+  C --> D[Anonymous visitor fills the form]
+  D --> E[Turnstile CAPTCHA + honeypot + per-IP rate limit]
+  E --> F{entityType}
+  F -->|employee| G[Creates an Employee, department shown as a catalog dropdown if any exist]
+  F -->|client| H[Creates a Client]
+  F -->|contact| I[Company-matching flow - see Clients redesign section below]
+```
+
+- `accessMode` (`public`/`internal`) exists on the model but only `public` has a working reach path today — `internal` forms fail closed (never served) on the anonymous route, since there's no authenticated submission flow built yet.
+- The builder never shows firstName/lastName/email as configurable — always present, always required. Only optional fields (`department` for Employee, `company` for Client, `cf:<id>` for any active Custom Field of that entity type) go through the drag-and-drop picker. Contact forms have no such synthetic field at all, since Company matching happens automatically from the submitted email — see below.
+- Submission notification emails go to every `owner`/`admin` of the tenant plus a confirmation to the submitter, best-effort (a failed send doesn't fail the submit).
+
+## Clients redesign — Company, Contact, Pipeline, Opportunity (sales CRM)
+
+Built 2026-07-27, 11 units, each committed and pushed to `staging` on its own — see `docs/database-schema.md` §5 for the full schema and `docs/tareas/semana-2026-07-21.md` for the unit-by-unit build log. Replaces the flat `Client` model (still fully live in parallel — see the note in `docs/database-schema.md` §2) with `Company` + `Contact`, plus a full sales pipeline (`Pipeline`/`PipelineStageDefinition`/`Opportunity`).
+
+```mermaid
+flowchart TD
+  A[Sidebar: 3 separate modules] --> B[Companies]
+  A --> C[Contacts]
+  A --> D[Opportunities - one tab per active Pipeline, plus Archived if non-empty]
+
+  E[Contact-type Public Form submitted] --> F[matchOrCreateCompanyForContact: same-tenant Contact with matching email domain?]
+  F -->|Yes, has a Company| G[Reuse that Company]
+  F -->|No match, generic domain e.g. gmail.com| H[Contact created with companyId: null - no Opportunity]
+  F -->|No match, specific domain| I[New Company created, status Prospect]
+  G --> J{Form has a pipelineId configured?}
+  I --> J
+  J -->|Yes| K[Opportunity auto-created in that Pipeline's first active stage, Contact linked]
+  J -->|No| L[Just the Contact]
+
+  M[Opportunity moved to a stage with outcome: won] --> N[Company.statusId auto-advances to Customer]
+  O[Opportunity moved to a stage with outcome: lost] --> P{lossReasonId set?}
+  P -->|No| Q[400 - blocked]
+  P -->|Yes| R[Allowed]
+```
+
+- **`PipelineStageDefinition.outcome`** (`open`/`won`/`lost`) is the mechanism that lets the system detect Won/Lost without string-matching a tenant-renameable stage name — not in the original spec, added and confirmed with the user during planning.
+- **Won → Customer is the only automated status trigger today.** Churned depends on a `Contract` entity (contract lapsing without renewal) that doesn't exist in this scope yet — `Churned` is a selectable Company status with no automatic driver, a known and accepted gap.
+- **Archived Pipelines**: their Opportunities go read-only (blocked at both the UI selector level and the API level) but keep counting in historical reporting; the pipeline disappears from every creation selector.
+- **Data migration** (`Client` → `Company`/`Contact`): `scripts/backfill-clients-to-companies-contacts.ts`, idempotent, dedupes `Client.company` free text into one `Company` per normalized name per tenant. Run and verified on `staging` (21 Companies/21 Contacts from 21 legacy Client rows); **not yet run against production** — waiting on the user reviewing staging first, same staging-first discipline as every code push. Surfaced and fixed a real bug along the way: tenants created before this schema shipped had zero `company`-entityType `StatusDefinition` rows, silently blocking Company creation entirely — the script seeds those retroactively for any tenant missing them.
+- The old `Client` module (routes, page, sidebar entry) is untouched and fully functional — this migration is additive only. Hiding/removing it is a deliberately separate, not-yet-built follow-up, to be done only after the user has verified the migrated data.
 
 ## Frontend implementation status
 
 - `frontend/src/App.tsx` holds top-level auth state (`token`, `user`) and the full route tree; `AppLayout` gates everything behind auth and renders `TopBar` + `Sidebar` + `Outlet`.
-- Pages: `LoginPage`, `RegisterPage`, `AcceptInvitePage`, `OverviewPage` (home screen, PTO calendar), `HrDashboardPage`/`ClientsDashboardPage` (placeholders), `EmployeesPage`, `ClientsPage`, `PtoOverviewPage` (HR → PTO: Assignments/My Requests/Approvals/All Requests/Balances tabs), `ProfileSettingsPage`, `CompanyAppearancePage`, `CompanyUsersPage`, `CustomFieldsSettingsPage`, `StatusesSettingsPage`, `PtoPoliciesSettingsPage`.
-- Shared components worth knowing about: `ColorPicker.tsx` (preset + custom color popover, used by Statuses and PTO Policies), `Icons.tsx` (hand-drawn inline SVGs, no icon library dependency — includes `HomeIcon`/`CalendarIcon`/`TrendingIcon` added specifically to keep every sidebar entry visually distinct).
-- Dark mode: Tailwind v4 class-based `dark:` variant (`@custom-variant dark`), toggle lives in Company Settings → Appearance, preference stored in `localStorage` per device (not synced tenant-wide — a deliberate scope call, flagged as not confirmed with the user beyond "it works").
+- Pages (current, `frontend/src/pages/`): `LoginPage`, `RegisterPage`, `AcceptInvitePage`, `OverviewPage` (home screen, Time Off calendar), `HrDashboardPage`/`ClientsDashboardPage` (placeholders), `EmployeesPage`, `ClientsPage`, `TimeOffOverviewPage` (Assignments/My Requests/Approvals/All Requests/Balances tabs), `ProfileSettingsPage`, `CompanyAppearancePage`, `CompanyUsersPage`, `PublicFormsSettingsPage`, `PipelinesSettingsPage`, `HelpPage`, `PublicFormPage` (the standalone `/apply` page) — plus, from the Clients redesign (see dedicated section below): `CompaniesPage`, `ContactsPage`, `OpportunitiesPage`. `CustomFieldsSettingsPage`/`StatusesSettingsPage`/`PtoPoliciesSettingsPage` no longer exist — deleted in the 2026-07-16 Settings rebrand when their functionality moved inline into each module's table header.
+- Shared components worth knowing about: `ColorPicker.tsx` (preset + custom color popover, used by Statuses/Time Off Policies/Pipeline stages), `Icons.tsx` (hand-drawn inline SVGs, no icon library dependency — includes `HomeIcon`/`CalendarIcon`/`TrendingIcon` added specifically to keep every sidebar entry visually distinct), `KanbanBoard.tsx` (generic drag-and-drop board — powers both SavedView Kanban and the Opportunity pipeline board), `SlideOver.tsx`/`Popover.tsx`/`ConfirmDialog.tsx`/`ToastProvider.tsx` (shared UI chrome used everywhere).
+- Dark mode: Tailwind v4 class-based `dark:` variant (`@custom-variant dark`), toggle lives in `/settings` → Appearance, preference stored in `localStorage` per device (not synced tenant-wide — a deliberate scope call, flagged as not confirmed with the user beyond "it works").
 - Verified end-to-end via `curl` against the real backend for every flow above; the user has been clicking through the actual deployed app in the browser throughout, catching several real UX/security gaps (illegible role dropdown in dark mode, editable email on the invite-accept page, missing copy-link on the Company invite form) that got fixed the same session.
 
 ## Future roadmap notes (not started)
 
+- **Clients redesign — remaining pieces**: (1) run the Client→Company/Contact backfill against production, blocked on the user reviewing staging; (2) the actual cutover (hide/remove the `Client` module) once the user has verified the migrated data — deliberately not started; (3) lead qualification without enough Form volume yet, and Opportunity automations (stage-change emails, auto-assign owner, stale-deal reminders) — both explicitly postponed by the user until there's real usage evidence to design against.
 - **Payments/subscriptions billing** — open topic, not decided. International reach is the stated goal; Stripe directly would require a US entity (Argentina isn't a Stripe direct-payout country), so Paddle (merchant-of-record, handles international tax, no US entity needed, higher fee) is the current leading option. Needs: plan/pricing definition, trial policy, and what happens to a tenant on payment failure/cancellation.
+- **Payroll module (V1)** — confirmed and scoped in the backlog (`docs/tareas-desarrollo.md`, Tier 3.5) but not started: manual pay-run data entry + derived cost metrics, distinct from Payments (which is billing the tenant's own Clients/Companies, not paying Employees).
 - **Roles**: currently fixed (`owner`/`admin`/`member`) with hardcoded permissions in `permissionService.ts`. A custom-roles system is a noted idea, not scoped.
 - **Audit logging**: per-user login + modification history. Noted idea, not scoped.
-- **PTO/vacation tracking** inside HR — 6 of 7 pieces done (see the dedicated section above). Only remaining: a visual "on leave" tag on an employee's row in `EmployeesPage.tsx` that doesn't touch their actual `status`.
 - **Platform admin panel** for the Northstack owner (not a tenant owner) to see all tenants — needs a wholly separate, cross-tenant role system, since `owner`/`admin`/`member` are all per-tenant today. Not started.
-- **`Employee.department`** is still free text — a `DepartmentDefinition` catalog (same pattern as `StatusDefinition`) is a noted idea, not started.
 - **Mobile/tablet responsiveness** — nothing in `frontend/` adapts to small screens today (fixed sidebar, no table scroll, no hamburger menu). Not started.
 - **Public API with token auth** for external integrations — not started.
-- **Public self-service forms** for onboarding people — not started.
 - Full backlog with dated notes lives in `docs/tareas-desarrollo.md` — that file is the source of truth for granular status; this file is the architectural/flow summary.

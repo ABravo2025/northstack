@@ -96,7 +96,7 @@
     <div class="page">
       <div class="hero">
         <h1>Northstack Current Process Flow</h1>
-        <p>Live at <strong>app.joinnorthstack.com</strong>. This page shows the current architecture, onboarding, settings, and PTO flows for Northstack. Last synced 2026-07-14 — see <code>docs/current-process-flow.md</code> for the full technical detail behind each diagram, and <code>docs/database-schema.md</code> for the data model.</p>
+        <p>Live at <strong>app.joinnorthstack.com</strong>. This page shows the current architecture, onboarding, settings, Time Off, and Clients-redesign (Company/Contact/Pipeline/Opportunity) flows for Northstack. Last synced 2026-07-27 — see <code>docs/current-process-flow.md</code> for the full technical detail behind each diagram, and <code>docs/database-schema.md</code> for the data model.</p>
       </div>
 
       <div class="card">
@@ -158,19 +158,19 @@ flowchart TD
         </div>
 
         <div class="section">
-          <h2>Settings — two independent hubs</h2>
+          <h2>Settings — one hub, module settings live inline</h2>
           <div class="box-list">
             <div class="box">
-              <strong>Company Settings</strong>
-              Reached from the TopBar user menu (<code>/company</code>): Appearance (dark mode) and Users (roles, status, invitations) — all administrative/company-level stuff.
+              <strong>One hub</strong>
+              Both the sidebar gear icon and the TopBar user menu land on <code>/settings</code> — the two-hub split shown in earlier versions of this page was merged 2026-07-16.
             </div>
             <div class="box">
-              <strong>Settings</strong>
-              Reached from the sidebar gear icon (<code>/settings</code>): Custom Fields, Statuses, and PTO Policies — grew from 1 category to 3 without any structural rework.
+              <strong>Mi cuenta / Empresa</strong>
+              Profile (every role) vs. Appearance/Users/Public Forms/Pipelines (owner/admin only) — two groups inside the same hub.
             </div>
             <div class="box">
-              <strong>No cross-navigation</strong>
-              Neither hub links to the other — this was a deliberate correction after an earlier round merged them into one shared page.
+              <strong>Custom Fields &amp; Statuses moved out</strong>
+              Not in Settings at all anymore — a "..." menu on each custom-field column header, and a single "Manage options" popover on the Status column, live directly in whichever table they belong to.
             </div>
             <div class="box">
               <strong>Ownership is unique</strong>
@@ -180,14 +180,12 @@ flowchart TD
           <div class="diagram">
             <div class="mermaid">
 flowchart TD
-  A[TopBar user menu] -->|Company Settings| B["route: company"]
-  B --> C[Appearance]
-  B --> D[Users: roles, status, invitations]
+  A[Sidebar gear icon OR TopBar user menu] -->|both go here| B["route: /settings"]
+  B --> C[Mi cuenta: Profile]
+  B --> D[Empresa: Appearance, Users, Public Forms, Pipelines]
 
-  E[Sidebar gear icon] -->|Settings| F["route: settings"]
-  F --> G[Custom Fields]
-  F --> H[Statuses]
-  F --> I[PTO Policies]
+  E[Custom Fields] -.-> F["'...' menu on each column header, inline in each module"]
+  G[Statuses] -.-> H["'Manage options' popover on the Status column"]
             </div>
           </div>
         </div>
@@ -219,15 +217,15 @@ flowchart TD
         </div>
 
         <div class="section">
-          <h2>PTO / vacation system</h2>
+          <h2>Time Off system — complete, 7/7 pieces</h2>
           <div class="box-list">
             <div class="box">
               <strong>Configurable policies</strong>
-              <code>PtoPolicyDefinition</code> per tenant — name, color, accrual (fixed annual or monthly), days/year, paid, requires approval.
+              <code>TimeOffPolicyDefinition</code> per tenant — name, color, accrual (fixed annual or monthly), days/year, paid, requires approval.
             </div>
             <div class="box">
               <strong>Per-employee assignment</strong>
-              Policies aren't tenant-wide by default — assigned per employee via <code>EmployeePtoPolicy</code>.
+              Policies aren't tenant-wide by default — assigned per employee via <code>EmployeeTimeOffPolicy</code>.
             </div>
             <div class="box">
               <strong>Hierarchy-routed approval</strong>
@@ -239,13 +237,13 @@ flowchart TD
             </div>
             <div class="box">
               <strong>Calendar on Overview</strong>
-              <code>/overview</code> is now the home screen after login, showing a month calendar of who's on approved or pending PTO — open to every tenant member, not just admins.
+              <code>/overview</code> is now the home screen after login, showing a month calendar of who's on approved or pending time off — open to every tenant member, not just admins.
             </div>
           </div>
           <div class="diagram">
             <div class="mermaid">
 flowchart TD
-  A[Employee requests PTO from an assigned policy] --> B{Policy requires approval?}
+  A[Employee requests time off from an assigned policy] --> B{Policy requires approval?}
   B -->|No| C[Auto-approved instantly]
   B -->|Yes| D[Pending, routed to their manager]
   D --> E[Manager approves/rejects]
@@ -257,15 +255,53 @@ flowchart TD
         </div>
 
         <div class="section">
+          <h2>Clients redesign — Company / Contact / Pipeline / Opportunity</h2>
+          <div class="box-list">
+            <div class="box">
+              <strong>3 sidebar modules</strong>
+              Companies, Contacts, Opportunities — replacing the flat <code>Client</code> model, which stays fully live in parallel until a separate future cutover.
+            </div>
+            <div class="box">
+              <strong>Won → Customer, automatic</strong>
+              An Opportunity reaching a stage with <code>outcome: won</code> auto-advances its Company to the Customer status. Churned has no automatic trigger yet (depends on a Contract entity that doesn't exist).
+            </div>
+            <div class="box">
+              <strong>Form-driven Company matching</strong>
+              A Contact-type Public Form submission matches or creates a Company by the submitter's email domain, then optionally auto-creates an Opportunity in a configured Pipeline's first stage.
+            </div>
+            <div class="box">
+              <strong>Data migration: staging only so far</strong>
+              An idempotent backfill script moved 21 legacy Clients into Companies/Contacts on <code>staging</code>. Not yet run against production — waiting on the user's review.
+            </div>
+          </div>
+          <div class="diagram">
+            <div class="mermaid">
+flowchart TD
+  A[Contact Form submitted] --> B{Email domain matches an existing Company?}
+  B -->|Yes| C[Reuse that Company]
+  B -->|No, generic domain| D[Contact only, no Company]
+  B -->|No, specific domain| E[New Company created - Prospect]
+  C --> F{Pipeline configured on the form?}
+  E --> F
+  F -->|Yes| G[Opportunity auto-created, first stage]
+  F -->|No| H[Just the Contact]
+  G --> I[Opportunity reaches a won stage]
+  I --> J[Company status auto-advances to Customer]
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
           <h2>Open topics (not decided / not started)</h2>
           <ul>
+            <li>Clients redesign: run the data migration against production (blocked on user review), then a separate future cutover to hide/remove the old <code>Client</code> module.</li>
+            <li>Clients redesign: lead qualification without enough Form volume yet, and Opportunity automations (stage-change emails, auto-assign owner, stale-deal reminders) — explicitly postponed.</li>
             <li><strong>Subscription billing</strong> for the SaaS itself — leaning toward Paddle (merchant of record, avoids needing a US entity) over Stripe direct, not decided yet.</li>
+            <li>Payroll module V1 — scoped in the backlog, not started (paying Employees, distinct from Payments, which is billing Clients/Companies).</li>
             <li>Custom/configurable roles (today fixed to owner/admin/member).</li>
             <li>Per-user audit log (logins + modifications).</li>
-            <li>PTO: last remaining piece — a visual "on leave" tag on an employee's row.</li>
             <li>Platform admin panel for the Northstack owner across all tenants (needs a separate cross-tenant role system).</li>
             <li>Public API with token auth for external integrations.</li>
-            <li>Public self-service onboarding forms.</li>
             <li>Mobile/tablet responsiveness — nothing adapts to small screens today.</li>
           </ul>
         </div>

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" translate="no">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico" />
@@ -8,6 +8,14 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
     <meta name="theme-color" content="#0d2a48" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- The app renders tenant/employee/contact data (names, addresses, custom fields) as
+         plain text throughout the UI. Browser/extension auto-translation can't distinguish
+         that from static UI copy and will rewrite it (e.g. an employee named "Ale Alfa" shown
+         as "Cerveza Alfa" under Spanish auto-translate) -- confusing at best, and a real risk
+         if a translation extension also rewrites form input values before a save. Both meta
+         tags below are the standard opt-out Chrome/Google Translate and well-behaved
+         extensions respect; this can't stop a rogue extension that ignores the convention. -->
+    <meta name="google" content="notranslate" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

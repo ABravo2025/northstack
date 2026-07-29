@@ -10,6 +10,7 @@ interface PipelinesSettingsPageProps {
 }
 
 const OUTCOME_LABELS: Record<string, string> = { open: 'Open', won: 'Won', lost: 'Lost' };
+const PIPELINE_TYPE_LABELS: Record<'lead' | 'account', string> = { lead: 'Leads', account: 'Account' };
 
 interface DraftStage {
   key: string;
@@ -34,6 +35,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState('');
+  const [createType, setCreateType] = useState<'lead' | 'account'>('lead');
   const [createStages, setCreateStages] = useState<DraftStage[]>([newDraftStage()]);
   const [creating, setCreating] = useState(false);
 
@@ -55,6 +57,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
 
   const openCreate = () => {
     setCreateName('');
+    setCreateType('lead');
     setCreateStages([newDraftStage()]);
     setCreateOpen(true);
   };
@@ -77,7 +80,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
     if (!name) return;
     setCreating(true);
     try {
-      const pipeline = await api.createPipeline(token, { name, order: pipelines.length });
+      const pipeline = await api.createPipeline(token, { name, type: createType, order: pipelines.length });
       const stagesToCreate = createStages.filter((s) => s.name.trim());
       for (let i = 0; i < stagesToCreate.length; i++) {
         const stage = stagesToCreate[i];
@@ -113,6 +116,15 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
       loadPipelines();
     } catch (error) {
       toast.error('Failed to rename pipeline: ' + (error as Error).message);
+    }
+  };
+
+  const handleTypeChange = async (pipeline: Pipeline, type: 'lead' | 'account') => {
+    try {
+      await api.updatePipeline(token, pipeline.id, { type });
+      loadPipelines();
+    } catch (error) {
+      toast.error('Failed to update pipeline type: ' + (error as Error).message);
     }
   };
 
@@ -240,6 +252,18 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
                   <span className="font-semibold flex-1">{pipeline.name}</span>
                 )}
 
+                <select
+                  className="select-compact"
+                  value={pipeline.type}
+                  onChange={(e) => handleTypeChange(pipeline, e.target.value as 'lead' | 'account')}
+                >
+                  {Object.entries(PIPELINE_TYPE_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+
                 {!pipeline.isActive && <span className="chip-linked">Archived</span>}
                 <span className="text-xs text-gray-400">{sortedStages.length} stages</span>
 
@@ -349,6 +373,14 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
               onChange={(e) => setCreateName(e.target.value)}
               placeholder="e.g. Leads, Renewals"
             />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="new-pipeline-type">Type</label>
+            <select id="new-pipeline-type" value={createType} onChange={(e) => setCreateType(e.target.value as 'lead' | 'account')}>
+              <option value="lead">Leads — unqualified prospects, company optional</option>
+              <option value="account">Account — an already-identified company</option>
+            </select>
           </div>
 
           <div className="form-group">

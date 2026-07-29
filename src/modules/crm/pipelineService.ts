@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import prisma from '../../lib/prisma.js';
-import type { Pipeline, PipelineStageDefinition, PipelineStageOutcome, Prisma } from '@prisma/client';
+import type { Pipeline, PipelineStageDefinition, PipelineStageOutcome, PipelineType, Prisma } from '@prisma/client';
 
 type PrismaTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
@@ -8,8 +8,13 @@ type PrismaTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 // two starter pipelines the tenant can rename/archive/add more of. Stage
 // names/outcomes are a generic 4-stage funnel (New/In Progress open, Won/Lost
 // terminal) since the spec didn't prescribe specific stage content, just the
-// 2 pipeline names.
-const DEFAULT_PIPELINE_NAMES = ['Leads', 'Clientes'];
+// 2 pipeline names. "Leads" seeds as type `lead` (unqualified prospects,
+// company optional), "Clientes" as type `account` (an already-identified
+// company) — see the PipelineType doc comment in schema.prisma.
+const DEFAULT_PIPELINES: { name: string; type: PipelineType }[] = [
+  { name: 'Leads', type: 'lead' },
+  { name: 'Clientes', type: 'account' },
+];
 const DEFAULT_STAGES: { name: string; order: number; outcome: PipelineStageOutcome }[] = [
   { name: 'New', order: 0, outcome: 'open' },
   { name: 'In Progress', order: 1, outcome: 'open' },
@@ -24,7 +29,13 @@ const DEFAULT_STAGES: { name: string; order: number; outcome: PipelineStageOutco
 // the stage rows' pipelineId FK is known upfront without needing the
 // pipeline creates' results back (createMany doesn't return created rows).
 export async function seedDefaultPipelines(tx: PrismaTx, tenantId: string): Promise<void> {
-  const pipelines = DEFAULT_PIPELINE_NAMES.map((name, i) => ({ id: randomUUID(), tenantId, name, order: i }));
+  const pipelines = DEFAULT_PIPELINES.map((def, i) => ({
+    id: randomUUID(),
+    tenantId,
+    name: def.name,
+    type: def.type,
+    order: i,
+  }));
   await tx.pipeline.createMany({ data: pipelines });
 
   const stages = pipelines.flatMap((pipeline) =>
@@ -42,11 +53,13 @@ export async function seedDefaultPipelines(tx: PrismaTx, tenantId: string): Prom
 export interface CreatePipelineInput {
   tenantId: string;
   name: string;
+  type: PipelineType;
   order?: number;
 }
 
 export interface UpdatePipelineInput {
   name?: string;
+  type?: PipelineType;
   order?: number;
   isActive?: boolean;
 }
@@ -62,6 +75,7 @@ export async function createPipeline(input: CreatePipelineInput): Promise<Pipeli
     data: {
       tenantId: input.tenantId,
       name: input.name,
+      type: input.type,
       order: input.order ?? 0,
     },
   });
@@ -89,6 +103,7 @@ export async function updatePipeline(id: string, tenantId: string, input: Update
 
   const data: Prisma.PipelineUncheckedUpdateInput = {};
   if (input.name !== undefined) data.name = input.name;
+  if (input.type !== undefined) data.type = input.type;
   if (input.order !== undefined) data.order = input.order;
   if (input.isActive !== undefined) data.isActive = input.isActive;
 

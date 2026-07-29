@@ -12,6 +12,7 @@ import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 
 const VALID_OUTCOMES = ['open', 'won', 'lost'];
+const VALID_PIPELINE_TYPES = ['lead', 'account'];
 
 export const pipelinesRouter = createAsyncRouter();
 
@@ -43,7 +44,16 @@ pipelinesRouter.post('/api/pipelines', async (req, res) => {
     return res.status(400).json({ error: 'Name is required' });
   }
 
-  const pipeline = await createPipeline({ tenantId: user.tenantId!, name: name.trim(), order: req.body.order });
+  if (!VALID_PIPELINE_TYPES.includes(req.body.type)) {
+    return res.status(400).json({ error: "type must be 'lead' or 'account'" });
+  }
+
+  const pipeline = await createPipeline({
+    tenantId: user.tenantId!,
+    name: name.trim(),
+    type: req.body.type,
+    order: req.body.order,
+  });
   return res.status(201).json(pipeline);
 });
 
@@ -57,8 +67,13 @@ pipelinesRouter.patch('/api/pipelines/:pipelineId', async (req, res) => {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
+  if (req.body.type !== undefined && !VALID_PIPELINE_TYPES.includes(req.body.type)) {
+    return res.status(400).json({ error: "type must be 'lead' or 'account'" });
+  }
+
   const result = await updatePipeline(req.params.pipelineId, user.tenantId!, {
     name: req.body.name,
+    type: req.body.type,
     order: req.body.order,
     isActive: req.body.isActive,
   });

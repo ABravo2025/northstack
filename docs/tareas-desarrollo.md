@@ -499,3 +499,51 @@ Settings grid, light + dark) y `npm run build`/`npm test` (7/7) verdes.
 *Pendiente: revisión del usuario en `staging` antes de promover a `main` — mismo criterio de
 staging-first vigente desde 2026-07-27. El ítem 3.1 sigue bloqueado en la migración de datos de
 Clients, ver arriba.*
+
+## Rediseño de Clients — Tier 3 (spec visual de referencia: `clients-module-mockup.html` + `rediseno-clients-brief.md`)
+
+### 1. Modelo de datos
+- [ ] `Company`: name, industry, website, phone, billingAddress, size, accountOwnerId (FK User), statusId (FK, catálogo Prospect/Customer/Churned)
+- [ ] `Pipeline`: name, type (`'lead' | 'account'`), active — seed: "Leads" (lead), "Clientes" (account)
+- [ ] Stages de Pipeline — catálogo hijo, mismo patrón que `FieldCatalogDefinition`/`StatusDefinition`
+- [ ] `Contact`: firstName, lastName, email, phone, jobTitle, companyId (FK, **opcional**), isPrimary, leadStatus, leadSourceId (FK catálogo)
+- [ ] `Opportunity`: companyId, pipelineId, name (autocompletado con `Company.name` al crear, editable), amountCents + currency, stageId, estimatedCloseDate, ownerId, lossReasonId, nextStepDate, nextStepNote
+- [ ] `OpportunityContact` (many-to-many): opportunityId, contactId, role (opcional)
+- [ ] `OpportunityStageHistory`: opportunityId, stageId, enteredAt — insertar registro en cada cambio de stage, no solo al crear
+
+### 2. Migración de `Client` existente
+- [ ] Push aditivo (tablas nuevas, sin tocar `Client`)
+- [ ] Script de backfill: `Client.company` (texto, dedupe) → `Company`; `Client` → `Contact`
+- [ ] Verificar con queries directas en `staging`
+- [ ] Recién ahí, push destructivo sobre `Client`
+
+### 3. Backend
+- [ ] CRUD Company/Contact/Opportunity/Pipeline — mismo chequeo de `tenantId` que el resto de endpoints
+- [ ] `GET /api/companies/:id/contacts` y `GET /api/companies/:id/opportunities` (con stage + `enteredAt` más reciente)
+- [ ] `GET /api/contacts/:id/opportunities` — vista condicional según `pipeline.type` la resuelve el frontend, el endpoint devuelve todo
+- [ ] Matching en submit de Form: dominio de email → `Company` existente o creación nueva
+- [ ] Gate: rechazar creación de Opportunity si `Contact.companyId` es null y `pipeline.type === 'lead'`
+- [ ] Archivado de Pipeline: soft (`active: false`) — no aparece en selectors de creación; sus Opportunities quedan `locked` (read-only, visibles, siguen en reporting)
+- [ ] Validar `pipeline.active` en el backend al crear Opportunity (capa de seguridad, aunque la UI ya lo oculte)
+- [ ] Rename `PublicForm` → `Form`: agregar `accessMode` (`public`/`internal`) y `pipelineId`
+
+### 4. Frontend
+- [ ] 3 módulos nuevos en sidebar: Companies, Contacts, Opportunities
+- [ ] Tabs dinámicos en Opportunities, uno por Pipeline activo del tenant
+- [ ] Detail de Company (`SlideOver.tsx`, mismo patrón que Employee/Client): sección "Contactos asociados" + sección "Opportunities" — ver mockup
+- [ ] Detail de Contact: vista lightweight si su Opportunity es `pipeline.type: 'lead'`, vista completa (Company + Contacts asociados al mismo deal) si es `'account'` — ver mockup
+- [ ] Botón "+ Add" en sección Opportunities → `Popover.tsx` (no armar uno a mano) con 2 pasos: elegir Pipeline → vincular Opportunity existente o crear nueva
+- [ ] Stage-track visual + indicador de tiempo-en-stage (alerta si supera promedio) — ver mockup
+- [ ] Settings: administración de Pipelines (crear/renombrar/archivar + definir stages) — archivado usa `ConfirmDialog.tsx` pidiendo escribir palabra de confirmación + mostrar cantidad de Opportunities afectadas
+- [ ] Custom Fields / Public Forms de `Client` (`entityType: 'client'`) migran a `'company'` y `'contact'`
+
+### 5. Explícitamente fuera de esta ronda — no construir
+- [ ] Automatizaciones (email por stage, auto-asignación de owner, recordatorios)
+- [ ] Calificación de leads con volumen real — solo dejar preparado el modelo (`companyId` opcional + `leadStatus`)
+
+### 6. Checklist de verificación antes de dar cada pieza por terminada
+- [ ] `npm run build` (backend)
+- [ ] `npm test` (backend)
+- [ ] `cd frontend && npm run build`
+- [ ] Verificación real con Playwright contra el dev server (no asumir que algo visual anda porque compila)
+- [ ] Confirmar con `curl` en `staging`/producción después de cada push relevante

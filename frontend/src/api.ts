@@ -157,6 +157,7 @@ export interface PipelineStage {
 export interface Pipeline {
   id: string;
   name: string;
+  type: 'lead' | 'account';
   order: number;
   isActive: boolean;
   createdAt: string;
@@ -176,7 +177,7 @@ export interface Opportunity {
   companyId: string;
   company?: { id: string; name: string };
   pipelineId: string;
-  pipeline?: { id: string; name: string; isActive: boolean };
+  pipeline?: { id: string; name: string; type: 'lead' | 'account'; isActive: boolean };
   stageId: string;
   stage?: PipelineStage;
   amountCents: number;
@@ -1308,7 +1309,10 @@ export const api = {
     return res.json();
   },
 
-  createPipeline: async (token: string, data: { name: string; order?: number }): Promise<Pipeline> => {
+  createPipeline: async (
+    token: string,
+    data: { name: string; type: 'lead' | 'account'; order?: number },
+  ): Promise<Pipeline> => {
     const res = await apiFetch(`${API_BASE_URL}/api/pipelines`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -1321,7 +1325,7 @@ export const api = {
   updatePipeline: async (
     token: string,
     pipelineId: string,
-    data: { name?: string; order?: number; isActive?: boolean },
+    data: { name?: string; type?: 'lead' | 'account'; order?: number; isActive?: boolean },
   ): Promise<Pipeline> => {
     const res = await apiFetch(`${API_BASE_URL}/api/pipelines/${pipelineId}`, {
       method: 'PATCH',

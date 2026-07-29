@@ -31,7 +31,7 @@ export interface UpdateOpportunityInput {
 
 const OPPORTUNITY_INCLUDE = {
   company: { select: { id: true, name: true } },
-  pipeline: { select: { id: true, name: true, isActive: true } },
+  pipeline: { select: { id: true, name: true, type: true, isActive: true } },
   stage: true,
   owner: { select: { id: true, firstName: true, lastName: true } },
   contactLinks: { include: { contact: { select: { id: true, firstName: true, lastName: true, email: true } } } },

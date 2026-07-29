@@ -116,6 +116,16 @@ enum PipelineStageOutcome {
   lost
 }
 
+// What kind of deal a Pipeline tracks — independent of its (renameable) name.
+// `account` pipelines manage an already-identified company (require a real
+// Company, never an ad-hoc one); `lead` pipelines are for unqualified/early
+// prospects and tolerate a looser Company match. Drives the Company-required
+// gate on Opportunity creation and which Contact detail view renders.
+enum PipelineType {
+  lead
+  account
+}
+
 model Tenant {
   id                      String                   @id @default(uuid())
   name                    String
@@ -274,6 +284,7 @@ model Pipeline {
   tenantId      String
   tenant        Tenant                    @relation(fields: [tenantId], references: [id])
   name          String
+  type          PipelineType              @default(lead)
   order         Int                       @default(0)
   isActive      Boolean                   @default(true) // archived when false
   createdAt     DateTime                  @default(now())

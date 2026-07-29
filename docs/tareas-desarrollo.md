@@ -496,54 +496,166 @@ Settings grid, light + dark) y `npm run build`/`npm test` (7/7) verdes.
   (`.settings-tile.disabled`, `pointer-events-none`), sin ir a ningún lado.
 
 ---
-*Pendiente: revisión del usuario en `staging` antes de promover a `main` — mismo criterio de
-staging-first vigente desde 2026-07-27. El ítem 3.1 sigue bloqueado en la migración de datos de
-Clients, ver arriba.*
+*Actualizado 2026-07-29: el ítem 3.1 (sacar "Clients" del sidebar) ya no está bloqueado — la
+migración de datos corrió contra producción (ver más abajo) y el grupo "Clients" salió del nav ese
+mismo día. Pendiente de revisión del usuario en `staging` sigue siendo el criterio para el resto de
+esta sección (1.1-4.3) antes de promover a `main`.*
 
 ## Rediseño de Clients — Tier 3 (spec visual de referencia: `clients-module-mockup.html` + `rediseno-clients-brief.md`)
 
+Reconciliado 2026-07-29 contra el código real — la mayor parte de este spec ya estaba construida
+(Units 1-11 del rediseño de Clients, ver más arriba); esta pasada completó los gaps genuinos
+(`Pipeline.type`, rename de `Form`, el modal de detalle con Contactos/Opportunities asociados) y
+resolvió de paso el gap abierto el 2026-07-28 ("no se puede vincular un Contact a una Opportunity
+al crearla").
+
 ### 1. Modelo de datos
-- [ ] `Company`: name, industry, website, phone, billingAddress, size, accountOwnerId (FK User), statusId (FK, catálogo Prospect/Customer/Churned)
-- [ ] `Pipeline`: name, type (`'lead' | 'account'`), active — seed: "Leads" (lead), "Clientes" (account)
-- [ ] Stages de Pipeline — catálogo hijo, mismo patrón que `FieldCatalogDefinition`/`StatusDefinition`
-- [ ] `Contact`: firstName, lastName, email, phone, jobTitle, companyId (FK, **opcional**), isPrimary, leadStatus, leadSourceId (FK catálogo)
-- [ ] `Opportunity`: companyId, pipelineId, name (autocompletado con `Company.name` al crear, editable), amountCents + currency, stageId, estimatedCloseDate, ownerId, lossReasonId, nextStepDate, nextStepNote
-- [ ] `OpportunityContact` (many-to-many): opportunityId, contactId, role (opcional)
-- [ ] `OpportunityStageHistory`: opportunityId, stageId, enteredAt — insertar registro en cada cambio de stage, no solo al crear
+- [x] `Company` — ya existía (Unidad 2), sin cambios.
+- [x] `Pipeline.type` (`'lead' | 'account'`) — agregado 2026-07-29. Campo nuevo, aditivo
+  (`@default(lead)`), backfill de los pipelines "Clientes" ya sembrados a `account` (12 en
+  `staging`, 3 en producción — `scripts/backfill-pipeline-type.ts`, idempotente).
+- [x] Stages de Pipeline — ya existía (Unidad 6).
+- [x] `Contact` — ya existía (Unidad 4).
+- [x] `Opportunity` — ya existía (Unidad 8). `Opportunity.companyId` sigue siendo un FK obligatorio
+  a nivel de schema (no se relajó) — el "crear sin compañía confirmada" del punto 4 más abajo se
+  resuelve creando una Company placeholder inline, no permitiendo un `companyId` nulo.
+- [x] `OpportunityContact` — ya existía (Unidad 8).
+- [x] `OpportunityStageHistory` — ya existía (Unidad 8), `stageHistory` ahora expuesto en la
+  respuesta de la API (antes no se incluía) para el indicador de tiempo-en-stage.
 
 ### 2. Migración de `Client` existente
-- [ ] Push aditivo (tablas nuevas, sin tocar `Client`)
-- [ ] Script de backfill: `Client.company` (texto, dedupe) → `Company`; `Client` → `Contact`
-- [ ] Verificar con queries directas en `staging`
-- [ ] Recién ahí, push destructivo sobre `Client`
+- [x] Push aditivo — ya existía (Unidad 1).
+- [x] Script de backfill — ya existía (Unidad 11), **corrido contra producción 2026-07-29**: 43
+  Companies + 43 Contacts creadas desde 43 `Client`, verificado con conteo antes/después.
+- [x] Verificado con queries directas — hecho en `staging` (Unidad 11) y en producción (hoy).
+- [ ] Push destructivo sobre `Client` (borrar la tabla/columna) — **deliberadamente no incluido en
+  esta ronda**, sigue siendo la "unidad futura separada" ya documentada. El grupo "Clients" salió
+  del sidebar (ver arriba), pero las rutas y la tabla siguen intactas.
 
 ### 3. Backend
-- [ ] CRUD Company/Contact/Opportunity/Pipeline — mismo chequeo de `tenantId` que el resto de endpoints
-- [ ] `GET /api/companies/:id/contacts` y `GET /api/companies/:id/opportunities` (con stage + `enteredAt` más reciente)
-- [ ] `GET /api/contacts/:id/opportunities` — vista condicional según `pipeline.type` la resuelve el frontend, el endpoint devuelve todo
-- [ ] Matching en submit de Form: dominio de email → `Company` existente o creación nueva
-- [ ] Gate: rechazar creación de Opportunity si `Contact.companyId` es null y `pipeline.type === 'lead'`
-- [ ] Archivado de Pipeline: soft (`active: false`) — no aparece en selectors de creación; sus Opportunities quedan `locked` (read-only, visibles, siguen en reporting)
-- [ ] Validar `pipeline.active` en el backend al crear Opportunity (capa de seguridad, aunque la UI ya lo oculte)
-- [ ] Rename `PublicForm` → `Form`: agregar `accessMode` (`public`/`internal`) y `pipelineId`
+- [x] CRUD Company/Contact/Opportunity/Pipeline — ya existía.
+- [ ] `GET /api/companies/:id/contacts` / `/opportunities`, `GET /api/contacts/:id/opportunities` —
+  **no se construyeron como endpoints dedicados**: el frontend ya traía las 3 listas completas del
+  tenant (`listContacts`/`listOpportunities`) para otras pantallas, así que los modales de detalle
+  filtran client-side en vez de sumar 3 endpoints nuevos — a la escala actual (decenas de filas por
+  tenant) no se justificaba el trabajo extra. Reconsiderar si algún tenant crece mucho.
+- [x] Matching en submit de Form — ya existía (Unidad 10).
+- [x] Gate de Company requerida — implementado 2026-07-29, **con la polaridad corregida por el
+  usuario respecto del spec pegado** (el spec decía bloquear en pipelines `'lead'`; es al revés:
+  `'account'` exige una Company ya identificada, `'lead'` tolera crear una placeholder al vuelo).
+  `Opportunity.companyId` sigue obligatorio en el schema, así que el flujo "lead sin compañía" pide
+  el nombre de una Company nueva inline en vez de dejar el campo vacío.
+- [x] Archivado de Pipeline soft + validación de `pipeline.active` — ya existía (Unidades 7-9).
+- [x] Rename `PublicForm` → `Form` — hecho 2026-07-29 vía `@@map("PublicForm")` (modelo/cliente de
+  Prisma renombrado, tabla física sin tocar — cero riesgo de DDL real sobre datos de producción).
+- [ ] Custom Fields / Public Forms de `Client` (`entityType: 'client'`) migran a `'company'`/`'contact'`
+  — no hecho, depende de decidir primero el corte del módulo `Client` (punto anterior).
 
 ### 4. Frontend
-- [ ] 3 módulos nuevos en sidebar: Companies, Contacts, Opportunities
-- [ ] Tabs dinámicos en Opportunities, uno por Pipeline activo del tenant
-- [ ] Detail de Company (`SlideOver.tsx`, mismo patrón que Employee/Client): sección "Contactos asociados" + sección "Opportunities" — ver mockup
-- [ ] Detail de Contact: vista lightweight si su Opportunity es `pipeline.type: 'lead'`, vista completa (Company + Contacts asociados al mismo deal) si es `'account'` — ver mockup
-- [ ] Botón "+ Add" en sección Opportunities → `Popover.tsx` (no armar uno a mano) con 2 pasos: elegir Pipeline → vincular Opportunity existente o crear nueva
-- [ ] Stage-track visual + indicador de tiempo-en-stage (alerta si supera promedio) — ver mockup
-- [ ] Settings: administración de Pipelines (crear/renombrar/archivar + definir stages) — archivado usa `ConfirmDialog.tsx` pidiendo escribir palabra de confirmación + mostrar cantidad de Opportunities afectadas
-- [ ] Custom Fields / Public Forms de `Client` (`entityType: 'client'`) migran a `'company'` y `'contact'`
+- [x] 3 módulos en sidebar — ya existía.
+- [x] Tabs dinámicos por Pipeline — ya existía.
+- [x] **Patrón de detalle nuevo para toda la plataforma, confirmado por el usuario**: sin botón
+  "Edit" en ningún lado — el modal de detalle abre con los campos ya editables (autosave por campo,
+  `AutoSaveField`/`AutoSaveSelect`, PATCH inmediato al cambiar/perder foco, sin botón Save). Aplica a
+  Companies/Contacts/Opportunities; **Employees se deja para una pasada aparte** (sigue con el
+  patrón viejo: modal de solo-lectura + botón Edit + SlideOver), decisión explícita para no mezclar
+  dos rondas grandes. Alta de un registro nuevo sigue con SlideOver + formulario + botón Create —
+  el patrón autosave es solo para editar algo que ya existe.
+- [x] Detail de Company: `CompanyDetailModal.tsx` — campos autosave + sección "Contacts" (listar,
+  desvincular, vincular uno existente sin compañía, o crear uno nuevo inline) + sección
+  "Opportunities" (listar, crear una nueva con Pipeline + nombre).
+- [x] Detail de Contact: `ContactDetailModal.tsx` — vista completa (Company + otros contactos de la
+  misma empresa) cuando alguna Opportunity vinculada es de un pipeline `'account'`; lightweight en
+  caso contrario.
+- [x] **Resuelto el gap del 2026-07-28** ("no se puede vincular un Contact a una Opportunity al
+  crearla"): desde `ContactDetailModal`, "+ Add" en la sección Opportunities ofrece vincular una
+  Opportunity existente de la misma Company, o crear una nueva (elegir Pipeline → nombre del deal,
+  con el gate de Company del punto 3 aplicado).
+- [x] Stage-track visual + tiempo-en-stage: fila de pills (una por stage del pipeline, la actual
+  resaltada con el color real del stage) + "N días en el stage" desde `stageHistory[0].enteredAt`.
+  **No incluye** la alerta "supera el promedio" del spec original — requeriría calcular tiempo
+  promedio por stage entre todas las Opportunities, no construido esta ronda.
+- [x] Settings: administración de Pipelines — ya existía, extendido con selector de `type` (crear +
+  cambiar en una ya existente).
+- [ ] Custom Fields / Public Forms de `Client` migran a `company`/`contact` — ver nota en Backend.
 
 ### 5. Explícitamente fuera de esta ronda — no construir
-- [ ] Automatizaciones (email por stage, auto-asignación de owner, recordatorios)
-- [ ] Calificación de leads con volumen real — solo dejar preparado el modelo (`companyId` opcional + `leadStatus`)
+- [ ] Automatizaciones (email por stage, auto-asignación de owner, recordatorios) — sigue diferido.
+- [ ] Calificación de leads con volumen real — sigue diferido; el flujo de "crear Company placeholder
+  inline" de hoy es un paso más simple que esto, no lo reemplaza.
 
-### 6. Checklist de verificación antes de dar cada pieza por terminada
-- [ ] `npm run build` (backend)
-- [ ] `npm test` (backend)
-- [ ] `cd frontend && npm run build`
-- [ ] Verificación real con Playwright contra el dev server (no asumir que algo visual anda porque compila)
-- [ ] Confirmar con `curl` en `staging`/producción después de cada push relevante
+### 6. Checklist de verificación — aplicado en cada pieza de esta ronda
+- [x] `npm run build` (backend) — verde en cada commit.
+- [x] `npm test` (backend, 7/7) — verde en cada commit.
+- [x] `cd frontend && npm run build` — verde en cada commit.
+- [x] Verificación real con Playwright contra `staging`: migración, alta de Company con custom
+  field, modal autosave (confirmado que el cambio persiste tras recargar la página), alta de
+  Contact sin compañía → Opportunity con Company placeholder creada inline → Opportunity visible
+  vía `GET /api/opportunities` directo (no solo asumido por la UI).
+
+## Ronda 2026-07-29 — migración a producción, Pipeline.type, rename, modales autosave
+
+Resumen de la sesión completa (pedido del usuario tras el checkpoint del rediseño visual ClickUp),
+en 3 commits separados, todos pusheados a `staging` — **nada de esto llegó a `main`/producción
+excepto la migración de datos y el push de schema de `Pipeline.type`** (operaciones sobre datos/DB,
+no sobre código de la app, mismo criterio que el resto del proyecto para pushes de schema aditivo).
+
+1. Migración `Client → Company/Contact` corrida contra producción (43/43, verificado) + "Clients"
+   sacado del sidebar (rutas intactas, sin borrar nada) + `Pipeline.type` (schema + backfill +
+   Settings).
+2. Rename `PublicForm` → `Form` (Prisma/TypeScript, tabla física sin tocar vía `@@map`).
+3. Paridad visual (ghost-row, scrollbar propia) + modales de detalle autosave para
+   Companies/Contacts/Opportunities, con las secciones de asociados y el gate de Company, resolviendo
+   el gap de vinculación Contact↔Opportunity abierto desde el 2026-07-28.
+
+**Pendiente, no empezado en esta ronda** (es, en tamaño, comparable a todo lo de arriba junto):
+List view y Kanban genérico (mismo mecanismo de `SavedView`/`ViewsBar`/`FilterBar` que ya tienen
+Employees/Clients) para Companies y Contacts — hoy ambos solo tienen tabla plana con
+resize/hide/reorder de columnas, sin agrupar ni guardar vistas. Opportunities mantiene su Kanban a
+medida (tabs por Pipeline + columnas por stage) sin tocar, por decisión explícita del usuario de no
+unificarlo con el sistema genérico.
+
+## 2026-07-29 — Módulo de Tasks (genérico, cross-módulo)
+
+Spec visual aprobada (mockup: `mockup-notes-tasks-activity.html`) + spec funcional completa en `docs/tareas-desarrollo.md` ("Módulo de Notes / Tasks / Activity Log"). Este archivo desglosa **solo la parte de Tasks** en tareas chicas para que Development las ejecute una por una, en orden. Notes y Activity Log quedan para entradas separadas de este mismo archivo.
+
+- [ ] **1. Schema: modelo `Task`**
+  `prisma/schema.prisma` — nuevo modelo `Task`: `id`, `tenantId` (FK), `entityType` (`EntityType`, reusar el enum ya existente), `entityId` (String, sin FK tipada — mismo patrón que `CustomFieldValue`), `title` (String), `description` (String, nullable), `assigneeId` (FK a `User`), `dueDate` (DateTime, nullable), `completedAt` (DateTime, nullable — su presencia/ausencia es el estado done/pending, no un enum aparte), `createdById` (FK a `User`), `createdAt`/`updatedAt`. Push aditivo, migración `npx prisma migrate dev`. Sin `onDelete: Cascade` en `assigneeId`/`createdById` (mismo criterio que el resto del proyecto con relaciones a `User`).
+
+- [ ] **2. Backend: validación de pertenencia a tenant**
+  Igual que el resto de entidades polimórficas: validar en código (no en la base) que `entityId` recibido efectivamente pertenece al `tenantId` del usuario autenticado, resolviendo por `entityType` (buscar en `Employee`/`Contact`/`Company`/`Opportunity` según corresponda). 404 si no coincide, mismo patrón anti-IDOR que ya usa el resto de la app.
+
+- [ ] **3. Backend: endpoints CRUD**
+  `POST /api/tasks`, `GET /api/tasks?entityType=&entityId=` (listar por entidad), `PATCH /api/tasks/:taskId` (editar campos, incluido marcar/desmarcar completada vía `completedAt`), `DELETE /api/tasks/:taskId`. Mismo middleware de auth + verificación de tenant que ya usan los endpoints de Employees/Clients.
+
+- [ ] **4. Backend: endpoint "Mis tareas"**
+  `GET /api/tasks/mine` — tareas con `assigneeId = usuario autenticado`, `completedAt: null` primero, ordenadas por `dueDate` ascendente (nulls al final). Devuelve también un resumen legible de la entidad asociada (nombre de Company/Contact/Employee/Opportunity) para no obligar al frontend a resolverlo cliente por cliente.
+
+- [ ] **5. Backend: endpoint de calendario tenant-wide**
+  Extender el endpoint que ya alimenta el calendario de Time Off en `/overview` para que también devuelva Tasks con `dueDate` dentro del rango de fechas pedido (o agregar un endpoint hermano si el actual no admite mezclar tipos fácilmente — decisión técnica de quien lo implemente, documentarla si se desvía de esto).
+
+- [ ] **6. Migración de datos: `Opportunity.nextStepDate`/`nextStepNote` → `Task`**
+  Script en `scripts/` (idempotente, mismo criterio que `backfill-clients-to-companies-contacts.ts`): por cada Opportunity con `nextStepDate` y/o `nextStepNote` no nulos, crear una `Task` (`entityType: 'opportunity'`, `entityId`, `title` = `nextStepNote` o un default tipo "Próximo paso", `dueDate` = `nextStepDate`, `assigneeId` = el owner de la Opportunity). Correr y verificar en `staging` antes de tocar producción. **No borrar las columnas viejas todavía** — el corte de `nextStepDate`/`nextStepNote` es una unidad separada posterior, una vez confirmado que el nuevo flujo funciona (mismo criterio que el corte pendiente de `Client`).
+
+- [ ] **7. Frontend: tipos + llamadas a la API**
+  `api.ts` — tipo `Task`, funciones `listTasks`, `createTask`, `updateTask`, `deleteTask`, `listMyTasks`.
+
+- [ ] **8. Frontend: tab "Tasks" en el panel de entidad**
+  Agregar la pestaña Tasks a `EmployeeOverviewPanel.tsx` (y generalizar el componente para que reciba `entityType`/`entityId` en vez de asumir Employee, de forma que sirva también para Contact/Company/Opportunity — ver ítem de backlog ya anotado sobre generalizar este panel). Lista de tasks de la entidad actual: checkbox (gris pendiente / verde completada, toggle al click via `PATCH`), título, fecha, avatar del asignado. Fila fantasma "Agregar tarea" al final, mismo patrón ya usado en Employees/Kanban (sin botón primario de toolbar).
+
+- [ ] **9. Frontend: form de alta/edición de Task**
+  Al clickear la fila fantasma o una task existente: mini-form (inline o `Popover`, no un modal pesado) con título, descripción, asignado (selector de `User` del tenant), fecha. Reusar `Popover.tsx` como mecanismo, no crear uno nuevo.
+
+- [ ] **10. Frontend: badge de contador en la pestaña Tasks**
+  El tab "Tasks" del panel muestra un contador de tasks pendientes de esa entidad (ej. "Tasks 2"), mismo estilo del mockup.
+
+- [ ] **11. Frontend: widget "Mis tareas" en `/overview`**
+  Nuevo componente en `OverviewPage.tsx`, junto al calendario existente: lista desde `GET /api/tasks/mine`, cada fila con descripción + nombre de la entidad asociada (Company/Contact/Employee/Opportunity) + fecha + checkbox gris/verde (mismo toggle que el punto 8).
+
+- [ ] **12. Frontend: Tasks en el calendario de `/overview`**
+  Agregar las Tasks con `dueDate` en el mes visible al calendario ya existente, con un color distinto al de Time Off (ámbar, según el mockup) para diferenciarlas — sin romper el render actual de Time Off.
+
+- [ ] **13. Verificación end-to-end**
+  `curl` contra un tenant de prueba real: crear Task en cada uno de los 4 `entityType`, marcar/desmarcar completada, editar, borrar, listar "mías", confirmar que aparece en el calendario del mes correcto. `npm test` y `npm run build` verdes. Todo en `staging`, nada a producción sin revisión — mismo criterio que el resto del proyecto.
+
+**Nota de alcance**: recordatorios de Task vencida (email/notificación) quedan explícitamente pospuestos a backlog, no forman parte de esta tanda de tareas.

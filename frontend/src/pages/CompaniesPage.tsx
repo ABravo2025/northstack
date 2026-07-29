@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { api, type Company } from '../api';
+import { useEffect, useRef, useState } from 'react';
+import { api, type Company, type Contact, type Opportunity, type Pipeline } from '../api';
 import { useToast } from '../components/ToastProvider';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Pagination, { paginate } from '../components/Pagination';
@@ -13,7 +13,10 @@ import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { useColumnOrder } from '../hooks/useColumnOrder';
 import Avatar from '../components/Avatar';
 import StatusChip from '../components/StatusChip';
-import { PencilIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
+import CategoryChip from '../components/CategoryChip';
+import CompanyDetailModal from '../components/CompanyDetailModal';
+import HorizontalScrollbar from '../components/HorizontalScrollbar';
+import { PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
 
 const PAGE_SIZE = 20;
 // Frozen columns stay pinned to the left through horizontal scroll and can't
@@ -39,18 +42,20 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
   const toast = useToast();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [tenantUsers, setTenantUsers] = useState<any[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [pipelines, setPipelines] = useState<Pipeline[]>([]);
+  const [tenantCurrency, setTenantCurrency] = useState('USD');
   const [loading, setLoading] = useState(false);
-  const [slideOverMode, setSlideOverMode] = useState<'add' | 'edit' | null>(null);
-  const [editingCompanyId, setEditingCompanyId] = useState<string | null>(null);
+  const [slideOverMode, setSlideOverMode] = useState<'add' | null>(null);
+  const [viewingCompanyId, setViewingCompanyId] = useState<string | null>(null);
   const [deletingCompany, setDeletingCompany] = useState<Company | null>(null);
+  const tableWrapRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [companyCustomFields, setCompanyCustomFields] = useState<any[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
-  const [editCustomFieldValues, setEditCustomFieldValues] = useState<Record<string, string>>({});
-  const [editCustomFieldValueIds, setEditCustomFieldValueIds] = useState<Record<string, string>>({});
   const [companyForm, setCompanyForm] = useState(emptyCompanyForm);
-  const [editCompanyForm, setEditCompanyForm] = useState(emptyCompanyForm);
   const [draggedColKey, setDraggedColKey] = useState<string | null>(null);
   const [dragOverColKey, setDragOverColKey] = useState<string | null>(null);
 
@@ -71,7 +76,17 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
       .catch(() => {
         // Non-critical — the account owner dropdown just falls back to empty if it fails.
       });
+    api.listContacts(token).then(setContacts).catch(() => {});
+    api.listOpportunities(token).then(setOpportunities).catch(() => {});
+    api.listPipelines(token).then(setPipelines).catch(() => {});
+    api.getCurrentTenant(token).then((tenant) => setTenantCurrency(tenant.currency)).catch(() => {});
   }, []);
+
+  const refreshAssociatedData = () => {
+    loadCompanies();
+    api.listContacts(token).then(setContacts).catch(() => {});
+    api.listOpportunities(token).then(setOpportunities).catch(() => {});
+  };
 
   const loadCompanies = async () => {
     setLoading(true);
@@ -134,10 +149,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
 
   const closeSlideOver = () => {
     setSlideOverMode(null);
-    setEditingCompanyId(null);
     setCustomFieldValues({});
-    setEditCustomFieldValues({});
-    setEditCustomFieldValueIds({});
   };
 
   const handleOpenAdd = () => {
@@ -169,67 +181,6 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
       loadCompanies();
     } catch (error) {
       toast.error('Failed to create company: ' + (error as Error).message);
-    }
-  };
-
-  const handleStartEditCompany = (company: Company) => {
-    setEditingCompanyId(company.id);
-    setEditCompanyForm({
-      name: company.name,
-      industry: company.industry || '',
-      website: company.website || '',
-      phone: company.phone || '',
-      billingAddress: company.billingAddress || '',
-      size: company.size || '',
-      accountOwnerId: company.accountOwnerId || '',
-    });
-
-    const values: Record<string, string> = {};
-    const valueIds: Record<string, string> = {};
-    for (const fieldValue of company.customFieldVals || []) {
-      values[fieldValue.customFieldDefinitionId] = fieldValue.value;
-      valueIds[fieldValue.customFieldDefinitionId] = fieldValue.id;
-    }
-    setEditCustomFieldValues(values);
-    setEditCustomFieldValueIds(valueIds);
-    setSlideOverMode('edit');
-  };
-
-  const handleUpdateCompany = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingCompanyId) return;
-    try {
-      await api.updateCompany(token, editingCompanyId, {
-        name: editCompanyForm.name,
-        industry: editCompanyForm.industry || null,
-        website: editCompanyForm.website || null,
-        phone: editCompanyForm.phone || null,
-        billingAddress: editCompanyForm.billingAddress || null,
-        size: editCompanyForm.size || null,
-        accountOwnerId: editCompanyForm.accountOwnerId || null,
-      });
-
-      for (const field of activeCompanyCustomFields) {
-        const newValue = (editCustomFieldValues[field.id] || '').trim();
-        const existingValueId = editCustomFieldValueIds[field.id];
-
-        if (newValue === '' && existingValueId) {
-          await api.deleteCompanyCustomFieldValue(token, editingCompanyId, existingValueId);
-        } else if (newValue !== '' && existingValueId) {
-          await api.updateCompanyCustomFieldValue(token, editingCompanyId, existingValueId, newValue);
-        } else if (newValue !== '' && !existingValueId) {
-          await api.createCompanyCustomFieldValue(token, editingCompanyId, {
-            customFieldDefinitionId: field.id,
-            value: newValue,
-          });
-        }
-      }
-
-      toast.success('Company updated.');
-      closeSlideOver();
-      loadCompanies();
-    } catch (error) {
-      toast.error('Failed to update company: ' + (error as Error).message);
     }
   };
 
@@ -315,7 +266,9 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
       render: (company: Company) => (
         <div className="name-cell">
           <Avatar firstName={company.name} lastName="" />
-          {company.name}
+          <button type="button" className="name-link" onClick={() => setViewingCompanyId(company.id)}>
+            {company.name}
+          </button>
         </div>
       ),
     },
@@ -387,8 +340,8 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
       )}
 
       <SlideOver
-        open={slideOverMode !== null}
-        title={slideOverMode === 'edit' ? 'Edit Company' : 'Add Company'}
+        open={slideOverMode === 'add'}
+        title="Add Company"
         onClose={closeSlideOver}
         footer={
           <>
@@ -396,115 +349,119 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
               Cancel
             </button>
             <button type="submit" form="company-form" className="btn-primary">
-              {slideOverMode === 'edit' ? 'Save' : 'Create'}
+              Create
             </button>
           </>
         }
       >
-        {(slideOverMode === 'add' || slideOverMode === 'edit') && (
-          <form
-            id="company-form"
-            onSubmit={slideOverMode === 'edit' ? handleUpdateCompany : handleCreateCompany}
-          >
-            {(() => {
-              const form = slideOverMode === 'edit' ? editCompanyForm : companyForm;
-              const setForm = slideOverMode === 'edit' ? setEditCompanyForm : setCompanyForm;
-              const idPrefix = slideOverMode === 'edit' ? 'edit-company' : 'company';
-              return (
-                <>
-                  <div className="form-group">
-                    <label htmlFor={`${idPrefix}-name`}>Name</label>
-                    <input
-                      id={`${idPrefix}-name`}
-                      type="text"
-                      value={form.name}
-                      onChange={(e) => setForm({ ...form, name: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor={`${idPrefix}-industry`}>Industry</label>
-                    <input
-                      id={`${idPrefix}-industry`}
-                      type="text"
-                      value={form.industry}
-                      onChange={(e) => setForm({ ...form, industry: e.target.value })}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor={`${idPrefix}-website`}>Website</label>
-                    <input
-                      id={`${idPrefix}-website`}
-                      type="url"
-                      value={form.website}
-                      onChange={(e) => setForm({ ...form, website: e.target.value })}
-                      placeholder="https://example.com"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor={`${idPrefix}-phone`}>Phone</label>
-                    <input
-                      id={`${idPrefix}-phone`}
-                      type="text"
-                      value={form.phone}
-                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor={`${idPrefix}-billingAddress`}>Billing Address</label>
-                    <input
-                      id={`${idPrefix}-billingAddress`}
-                      type="text"
-                      value={form.billingAddress}
-                      onChange={(e) => setForm({ ...form, billingAddress: e.target.value })}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor={`${idPrefix}-size`}>Size</label>
-                    <input
-                      id={`${idPrefix}-size`}
-                      type="text"
-                      value={form.size}
-                      onChange={(e) => setForm({ ...form, size: e.target.value })}
-                      placeholder="e.g. 11-50 employees"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor={`${idPrefix}-accountOwnerId`}>Account Owner</label>
-                    <select
-                      id={`${idPrefix}-accountOwnerId`}
-                      value={form.accountOwnerId}
-                      onChange={(e) => setForm({ ...form, accountOwnerId: e.target.value })}
-                    >
-                      <option value="">-- none --</option>
-                      {tenantUsers.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.firstName} {u.lastName}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </>
-              );
-            })()}
+        {slideOverMode === 'add' && (
+          <form id="company-form" onSubmit={handleCreateCompany}>
+            <div className="form-group">
+              <label htmlFor="company-name">Name</label>
+              <input
+                id="company-name"
+                type="text"
+                value={companyForm.name}
+                onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="company-industry">Industry</label>
+              <input
+                id="company-industry"
+                type="text"
+                value={companyForm.industry}
+                onChange={(e) => setCompanyForm({ ...companyForm, industry: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="company-website">Website</label>
+              <input
+                id="company-website"
+                type="url"
+                value={companyForm.website}
+                onChange={(e) => setCompanyForm({ ...companyForm, website: e.target.value })}
+                placeholder="https://example.com"
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="company-phone">Phone</label>
+              <input
+                id="company-phone"
+                type="text"
+                value={companyForm.phone}
+                onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="company-billingAddress">Billing Address</label>
+              <input
+                id="company-billingAddress"
+                type="text"
+                value={companyForm.billingAddress}
+                onChange={(e) => setCompanyForm({ ...companyForm, billingAddress: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="company-size">Size</label>
+              <input
+                id="company-size"
+                type="text"
+                value={companyForm.size}
+                onChange={(e) => setCompanyForm({ ...companyForm, size: e.target.value })}
+                placeholder="e.g. 11-50 employees"
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="company-accountOwnerId">Account Owner</label>
+              <select
+                id="company-accountOwnerId"
+                value={companyForm.accountOwnerId}
+                onChange={(e) => setCompanyForm({ ...companyForm, accountOwnerId: e.target.value })}
+              >
+                <option value="">-- none --</option>
+                {tenantUsers.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.firstName} {u.lastName}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             {activeCompanyCustomFields.map((field) => (
               <div className="form-group" key={field.id}>
-                <label htmlFor={`${slideOverMode === 'edit' ? 'edit-company' : 'company'}-cf-${field.id}`}>
+                <label htmlFor={`company-cf-${field.id}`}>
                   {field.name}
                   {field.required ? ' *' : ''}
                 </label>
-                {renderCustomFieldInput(
-                  field,
-                  slideOverMode === 'edit' ? editCustomFieldValues : customFieldValues,
-                  slideOverMode === 'edit' ? setEditCustomFieldValues : setCustomFieldValues,
-                  slideOverMode === 'edit' ? 'edit-company-cf' : 'company-cf',
-                )}
+                {renderCustomFieldInput(field, customFieldValues, setCustomFieldValues, 'company-cf')}
               </div>
             ))}
           </form>
         )}
       </SlideOver>
+
+      {viewingCompanyId &&
+        (() => {
+          const viewingCompany = companies.find((c) => c.id === viewingCompanyId);
+          if (!viewingCompany) return null;
+          return (
+            <CompanyDetailModal
+              company={viewingCompany}
+              token={token}
+              tenantUsers={tenantUsers}
+              contacts={contacts}
+              opportunities={opportunities}
+              pipelines={pipelines}
+              customFields={activeCompanyCustomFields}
+              tenantCurrency={tenantCurrency}
+              currentUserId={user.id}
+              onClose={() => setViewingCompanyId(null)}
+              onChanged={refreshAssociatedData}
+            />
+          );
+        })()}
 
       <div className="page-toolbar">
         <h2>Companies</h2>
@@ -524,14 +481,6 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
           </div>
         )}
         <ColumnVisibilityMenu columns={toggleableColumns} isHidden={isColumnHidden} onToggle={toggleColumn} />
-        {canEditCompanies && (
-          <button className="btn-primary btn-toolbar-size" onClick={handleOpenAdd}>
-            <span className="inline-flex items-center gap-1.5">
-              <PlusIcon className="h-4 w-4" />
-              Add Company
-            </span>
-          </button>
-        )}
       </div>
 
       {loading ? (
@@ -549,7 +498,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
         <p className="mt-4">No companies match your search.</p>
       ) : (
         <>
-          <div className="full-table-wrap">
+          <div className="full-table-wrap" ref={tableWrapRef}>
             <table className="table full-table">
               <colgroup>
                 {visibleColumns.map((col) => (
@@ -646,15 +595,24 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
                       const fieldValue = company.customFieldVals?.find(
                         (v: any) => v.customFieldDefinitionId === field.id,
                       );
-                      return <td key={field.id}>{fieldValue?.value || '—'}</td>;
+                      const value = fieldValue?.value;
+                      return (
+                        <td key={field.id}>
+                          {value ? (
+                            field.fieldType === 'select' ? (
+                              <CategoryChip label={value} seed={`${field.id}:${value}`} />
+                            ) : (
+                              value
+                            )
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                      );
                     })}
                     {canManageCustomFields && <td></td>}
                     <td>
                       <div className="icon-actions">
-                        <button className="icon-btn" onClick={() => handleStartEditCompany(company)}>
-                          <span className="tip">Edit</span>
-                          <PencilIcon />
-                        </button>
                         <button className="icon-btn danger" onClick={() => setDeletingCompany(company)}>
                           <span className="tip">Delete</span>
                           <TrashIcon />
@@ -663,9 +621,26 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
                     </td>
                   </tr>
                 ))}
+                {canEditCompanies && (
+                  <tr className="ghost-row">
+                    <td
+                      colSpan={visibleColumns.length + visibleCustomFields.length + (canManageCustomFields ? 1 : 0) + 1}
+                      className="ghost-row-cell"
+                      onClick={handleOpenAdd}
+                    >
+                      <span className="ghost-row-inner">
+                        <span className="ghost-plus-box">
+                          <PlusIcon className="h-3 w-3" />
+                        </span>
+                        Add
+                      </span>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
+          <HorizontalScrollbar targetRef={tableWrapRef} />
           <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
         </>
       )}

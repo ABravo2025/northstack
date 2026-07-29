@@ -4,6 +4,7 @@ import { useToast } from '../components/ToastProvider';
 import ConfirmDialog from '../components/ConfirmDialog';
 import SlideOver from '../components/SlideOver';
 import KanbanBoard from '../components/KanbanBoard';
+import OpportunityDetailModal from '../components/OpportunityDetailModal';
 import { formatMoney } from '../lib/currencies';
 import { PlusIcon } from '../components/Icons';
 
@@ -35,12 +36,10 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
   const [lossReasons, setLossReasons] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('');
-  const [slideOverMode, setSlideOverMode] = useState<'add' | 'edit' | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [slideOverMode, setSlideOverMode] = useState<'add' | null>(null);
+  const [viewingId, setViewingId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<Opportunity | null>(null);
   const [form, setForm] = useState(emptyForm);
-  const [newContactId, setNewContactId] = useState('');
-  const [newContactRole, setNewContactRole] = useState('');
 
   const canEdit = user.role === 'owner' || user.role === 'admin';
 
@@ -95,7 +94,6 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
 
   const closeSlideOver = () => {
     setSlideOverMode(null);
-    setEditingId(null);
     setForm((f) => ({ ...emptyForm, currency: f.currency }));
   };
 
@@ -105,56 +103,23 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
     setSlideOverMode('add');
   };
 
-  const handleStartEdit = (opp: Opportunity) => {
-    setEditingId(opp.id);
-    setForm({
-      name: opp.name,
-      companyId: opp.companyId,
-      stageId: opp.stageId,
-      amountCents: (opp.amountCents / 100).toString(),
-      currency: opp.currency,
-      estimatedCloseDate: opp.estimatedCloseDate ? opp.estimatedCloseDate.slice(0, 10) : '',
-      ownerId: opp.ownerId,
-      lossReasonId: opp.lossReasonId || '',
-      nextStepDate: opp.nextStepDate ? opp.nextStepDate.slice(0, 10) : '',
-      nextStepNote: opp.nextStepNote || '',
-    });
-    setSlideOverMode('edit');
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const amountCents = Math.round(Number.parseFloat(form.amountCents || '0') * 100);
     try {
-      if (slideOverMode === 'edit' && editingId) {
-        await api.updateOpportunity(token, editingId, {
-          name: form.name,
-          companyId: form.companyId,
-          stageId: form.stageId,
-          amountCents,
-          currency: form.currency,
-          estimatedCloseDate: form.estimatedCloseDate || null,
-          ownerId: form.ownerId,
-          lossReasonId: form.lossReasonId || null,
-          nextStepDate: form.nextStepDate || null,
-          nextStepNote: form.nextStepNote || null,
-        });
-        toast.success('Opportunity updated.');
-      } else {
-        await api.createOpportunity(token, {
-          name: form.name,
-          companyId: form.companyId,
-          pipelineId: activeTab,
-          stageId: form.stageId || undefined,
-          amountCents,
-          currency: form.currency,
-          estimatedCloseDate: form.estimatedCloseDate || undefined,
-          ownerId: form.ownerId,
-          nextStepDate: form.nextStepDate || undefined,
-          nextStepNote: form.nextStepNote || undefined,
-        });
-        toast.success('Opportunity created.');
-      }
+      await api.createOpportunity(token, {
+        name: form.name,
+        companyId: form.companyId,
+        pipelineId: activeTab,
+        stageId: form.stageId || undefined,
+        amountCents,
+        currency: form.currency,
+        estimatedCloseDate: form.estimatedCloseDate || undefined,
+        ownerId: form.ownerId,
+        nextStepDate: form.nextStepDate || undefined,
+        nextStepNote: form.nextStepNote || undefined,
+      });
+      toast.success('Opportunity created.');
       closeSlideOver();
       reloadOpportunities();
     } catch (error) {
@@ -184,29 +149,6 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
     }
   };
 
-  const handleAddContact = async () => {
-    if (!editingId || !newContactId) return;
-    try {
-      await api.addOpportunityContact(token, editingId, { contactId: newContactId, role: newContactRole || undefined });
-      setNewContactId('');
-      setNewContactRole('');
-      reloadOpportunities();
-    } catch (error) {
-      toast.error('Failed to link contact: ' + (error as Error).message);
-    }
-  };
-
-  const handleRemoveContact = async (contactId: string) => {
-    if (!editingId) return;
-    try {
-      await api.removeOpportunityContact(token, editingId, contactId);
-      reloadOpportunities();
-    } catch (error) {
-      toast.error('Failed to unlink contact: ' + (error as Error).message);
-    }
-  };
-
-  const editingOpportunity = editingId ? opportunities.find((o) => o.id === editingId) : null;
   const selectedStage = currentPipeline?.stages.find((s) => s.id === form.stageId);
 
   if (loading) {
@@ -230,8 +172,8 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
       )}
 
       <SlideOver
-        open={slideOverMode !== null}
-        title={slideOverMode === 'edit' ? 'Edit Opportunity' : 'Add Opportunity'}
+        open={slideOverMode === 'add'}
+        title="Add Opportunity"
         onClose={closeSlideOver}
         footer={
           <>
@@ -239,12 +181,12 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
               Cancel
             </button>
             <button type="submit" form="opportunity-form" className="btn-primary">
-              {slideOverMode === 'edit' ? 'Save' : 'Create'}
+              Create
             </button>
           </>
         }
       >
-        {slideOverMode !== null && (
+        {slideOverMode === 'add' && (
           <form id="opportunity-form" onSubmit={handleSubmit}>
             <div className="form-group">
               <label htmlFor="opp-name">Deal Name</label>
@@ -309,21 +251,6 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                 onChange={(e) => setForm({ ...form, estimatedCloseDate: e.target.value })}
               />
             </div>
-            {slideOverMode === 'edit' && currentPipeline && (
-              <div className="form-group">
-                <label htmlFor="opp-stageId">Stage</label>
-                <select id="opp-stageId" value={form.stageId} onChange={(e) => setForm({ ...form, stageId: e.target.value })}>
-                  {currentPipeline.stages
-                    .filter((s) => s.isActive)
-                    .sort((a, b) => a.order - b.order)
-                    .map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                </select>
-              </div>
-            )}
             {selectedStage?.outcome === 'lost' && (
               <div className="form-group">
                 <label htmlFor="opp-lossReasonId">Loss Reason</label>
@@ -361,46 +288,28 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                 placeholder="What's the next action?"
               />
             </div>
-
-            {slideOverMode === 'edit' && editingOpportunity && (
-              <div className="form-group">
-                <span>Contacts</span>
-                {(editingOpportunity.contactLinks || []).map((link) => (
-                  <div key={link.id} className="flex items-center gap-2 mb-1">
-                    <span className="text-sm flex-1">
-                      {link.contact.firstName} {link.contact.lastName}
-                      {link.role ? ` (${link.role})` : ''}
-                    </span>
-                    <button type="button" className="icon-btn danger" onClick={() => handleRemoveContact(link.contactId)}>
-                      ×
-                    </button>
-                  </div>
-                ))}
-                <div className="flex items-center gap-2 mt-2">
-                  <select value={newContactId} onChange={(e) => setNewContactId(e.target.value)} style={{ flex: 1 }}>
-                    <option value="">-- add contact --</option>
-                    {contacts.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.firstName} {c.lastName}
-                      </option>
-                    ))}
-                  </select>
-                  <input
-                    type="text"
-                    placeholder="Role (optional)"
-                    value={newContactRole}
-                    onChange={(e) => setNewContactRole(e.target.value)}
-                    style={{ maxWidth: 120 }}
-                  />
-                  <button type="button" className="btn-secondary" onClick={handleAddContact}>
-                    Add
-                  </button>
-                </div>
-              </div>
-            )}
           </form>
         )}
       </SlideOver>
+
+      {viewingId &&
+        (() => {
+          const viewingOpportunity = opportunities.find((o) => o.id === viewingId);
+          if (!viewingOpportunity) return null;
+          return (
+            <OpportunityDetailModal
+              opportunity={viewingOpportunity}
+              token={token}
+              companies={companies}
+              contacts={contacts}
+              pipelines={pipelines}
+              tenantUsers={tenantUsers}
+              lossReasons={lossReasons}
+              onClose={() => setViewingId(null)}
+              onChanged={reloadOpportunities}
+            />
+          );
+        })()}
 
       <div className="page-toolbar">
         <h2>Opportunities</h2>
@@ -456,7 +365,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
           getItemColumn={(o) => o.stageId}
           onMove={canEdit ? handleMove : () => {}}
           renderCard={(opp) => (
-            <div onClick={() => handleStartEdit(opp)} style={{ cursor: 'pointer' }}>
+            <div onClick={() => setViewingId(opp.id)} style={{ cursor: 'pointer' }}>
               <div className="kc-name">{opp.name}</div>
               <div className="kc-meta">{opp.company?.name}</div>
               <div className="kc-meta">{formatMoney(opp.amountCents, opp.currency)}</div>

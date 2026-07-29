@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { api, type Contact } from '../api';
+import { useEffect, useRef, useState } from 'react';
+import { api, type Company, type Contact, type Opportunity, type Pipeline } from '../api';
 import { useToast } from '../components/ToastProvider';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Pagination, { paginate } from '../components/Pagination';
@@ -12,7 +12,10 @@ import ColumnVisibilityMenu from '../components/ColumnVisibilityMenu';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { useColumnOrder } from '../hooks/useColumnOrder';
 import Avatar from '../components/Avatar';
-import { PencilIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
+import CategoryChip from '../components/CategoryChip';
+import ContactDetailModal from '../components/ContactDetailModal';
+import HorizontalScrollbar from '../components/HorizontalScrollbar';
+import { PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
 
 const PAGE_SIZE = 20;
 const FROZEN_COLUMN_KEYS = ['name'];
@@ -44,20 +47,21 @@ const emptyContactForm = {
 export default function ContactsPage({ user, token }: ContactsPageProps) {
   const toast = useToast();
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [companies, setCompanies] = useState<any[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [pipelines, setPipelines] = useState<Pipeline[]>([]);
+  const [tenantCurrency, setTenantCurrency] = useState('USD');
   const [leadSources, setLeadSources] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [slideOverMode, setSlideOverMode] = useState<'add' | 'edit' | null>(null);
-  const [editingContactId, setEditingContactId] = useState<string | null>(null);
+  const [slideOverMode, setSlideOverMode] = useState<'add' | null>(null);
+  const [viewingContactId, setViewingContactId] = useState<string | null>(null);
   const [deletingContact, setDeletingContact] = useState<Contact | null>(null);
+  const tableWrapRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [contactCustomFields, setContactCustomFields] = useState<any[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
-  const [editCustomFieldValues, setEditCustomFieldValues] = useState<Record<string, string>>({});
-  const [editCustomFieldValueIds, setEditCustomFieldValueIds] = useState<Record<string, string>>({});
   const [contactForm, setContactForm] = useState(emptyContactForm);
-  const [editContactForm, setEditContactForm] = useState(emptyContactForm);
   const [draggedColKey, setDraggedColKey] = useState<string | null>(null);
   const [dragOverColKey, setDragOverColKey] = useState<string | null>(null);
 
@@ -73,6 +77,9 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
     loadContacts();
     loadContactCustomFields();
     api.listCompanies(token).then(setCompanies).catch(() => {});
+    api.listOpportunities(token).then(setOpportunities).catch(() => {});
+    api.listPipelines(token).then(setPipelines).catch(() => {});
+    api.getCurrentTenant(token).then((tenant) => setTenantCurrency(tenant.currency)).catch(() => {});
     api
       .listFieldCatalogDefinitions(token, 'leadSource')
       .then((defs) => setLeadSources(defs.filter((d) => d.isActive)))
@@ -80,6 +87,12 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
         // Non-critical — the lead source dropdown just falls back to empty if it fails.
       });
   }, []);
+
+  const refreshAssociatedData = () => {
+    loadContacts();
+    api.listCompanies(token).then(setCompanies).catch(() => {});
+    api.listOpportunities(token).then(setOpportunities).catch(() => {});
+  };
 
   const loadContacts = async () => {
     setLoading(true);
@@ -142,10 +155,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
 
   const closeSlideOver = () => {
     setSlideOverMode(null);
-    setEditingContactId(null);
     setCustomFieldValues({});
-    setEditCustomFieldValues({});
-    setEditCustomFieldValueIds({});
   };
 
   const handleOpenAdd = () => {
@@ -179,71 +189,6 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
       loadContacts();
     } catch (error) {
       toast.error('Failed to create contact: ' + (error as Error).message);
-    }
-  };
-
-  const handleStartEditContact = (contact: Contact) => {
-    setEditingContactId(contact.id);
-    setEditContactForm({
-      firstName: contact.firstName,
-      lastName: contact.lastName,
-      email: contact.email,
-      phone: contact.phone || '',
-      companyId: contact.companyId || '',
-      title: contact.title || '',
-      isPrimary: contact.isPrimary,
-      leadStatus: contact.leadStatus || '',
-      leadSourceId: contact.leadSourceId || '',
-    });
-
-    const values: Record<string, string> = {};
-    const valueIds: Record<string, string> = {};
-    for (const fieldValue of contact.customFieldVals || []) {
-      values[fieldValue.customFieldDefinitionId] = fieldValue.value;
-      valueIds[fieldValue.customFieldDefinitionId] = fieldValue.id;
-    }
-    setEditCustomFieldValues(values);
-    setEditCustomFieldValueIds(valueIds);
-    setSlideOverMode('edit');
-  };
-
-  const handleUpdateContact = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingContactId) return;
-    try {
-      await api.updateContact(token, editingContactId, {
-        firstName: editContactForm.firstName,
-        lastName: editContactForm.lastName,
-        email: editContactForm.email,
-        phone: editContactForm.phone || null,
-        companyId: editContactForm.companyId || null,
-        title: editContactForm.title || null,
-        isPrimary: editContactForm.isPrimary,
-        leadStatus: (editContactForm.leadStatus || null) as Contact['leadStatus'],
-        leadSourceId: editContactForm.leadSourceId || null,
-      });
-
-      for (const field of activeContactCustomFields) {
-        const newValue = (editCustomFieldValues[field.id] || '').trim();
-        const existingValueId = editCustomFieldValueIds[field.id];
-
-        if (newValue === '' && existingValueId) {
-          await api.deleteContactCustomFieldValue(token, editingContactId, existingValueId);
-        } else if (newValue !== '' && existingValueId) {
-          await api.updateContactCustomFieldValue(token, editingContactId, existingValueId, newValue);
-        } else if (newValue !== '' && !existingValueId) {
-          await api.createContactCustomFieldValue(token, editingContactId, {
-            customFieldDefinitionId: field.id,
-            value: newValue,
-          });
-        }
-      }
-
-      toast.success('Contact updated.');
-      closeSlideOver();
-      loadContacts();
-    } catch (error) {
-      toast.error('Failed to update contact: ' + (error as Error).message);
     }
   };
 
@@ -329,7 +274,9 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
       render: (contact: Contact) => (
         <div className="name-cell">
           <Avatar firstName={contact.firstName} lastName={contact.lastName} />
-          {contact.firstName} {contact.lastName}
+          <button type="button" className="name-link" onClick={() => setViewingContactId(contact.id)}>
+            {contact.firstName} {contact.lastName}
+          </button>
           {contact.isPrimary && <span className="chip-linked">Primary</span>}
         </div>
       ),
@@ -385,8 +332,8 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
       )}
 
       <SlideOver
-        open={slideOverMode !== null}
-        title={slideOverMode === 'edit' ? 'Edit Contact' : 'Add Contact'}
+        open={slideOverMode === 'add'}
+        title="Add Contact"
         onClose={closeSlideOver}
         footer={
           <>
@@ -394,148 +341,153 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
               Cancel
             </button>
             <button type="submit" form="contact-form" className="btn-primary">
-              {slideOverMode === 'edit' ? 'Save' : 'Create'}
+              Create
             </button>
           </>
         }
       >
-        {(slideOverMode === 'add' || slideOverMode === 'edit') && (
-          <form
-            id="contact-form"
-            onSubmit={slideOverMode === 'edit' ? handleUpdateContact : handleCreateContact}
-          >
-            {(() => {
-              const form = slideOverMode === 'edit' ? editContactForm : contactForm;
-              const setForm = slideOverMode === 'edit' ? setEditContactForm : setContactForm;
-              const idPrefix = slideOverMode === 'edit' ? 'edit-contact' : 'contact';
-              return (
-                <>
-                  <div className="form-group">
-                    <label htmlFor={`${idPrefix}-firstName`}>First Name</label>
-                    <input
-                      id={`${idPrefix}-firstName`}
-                      type="text"
-                      value={form.firstName}
-                      onChange={(e) => setForm({ ...form, firstName: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor={`${idPrefix}-lastName`}>Last Name</label>
-                    <input
-                      id={`${idPrefix}-lastName`}
-                      type="text"
-                      value={form.lastName}
-                      onChange={(e) => setForm({ ...form, lastName: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor={`${idPrefix}-email`}>Email</label>
-                    <input
-                      id={`${idPrefix}-email`}
-                      type="email"
-                      value={form.email}
-                      onChange={(e) => setForm({ ...form, email: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor={`${idPrefix}-phone`}>Phone</label>
-                    <input
-                      id={`${idPrefix}-phone`}
-                      type="text"
-                      value={form.phone}
-                      onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor={`${idPrefix}-companyId`}>Company</label>
-                    <select
-                      id={`${idPrefix}-companyId`}
-                      value={form.companyId}
-                      onChange={(e) => setForm({ ...form, companyId: e.target.value })}
-                    >
-                      <option value="">-- none (lead without a confirmed company) --</option>
-                      {companies.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor={`${idPrefix}-title`}>Title</label>
-                    <input
-                      id={`${idPrefix}-title`}
-                      type="text"
-                      value={form.title}
-                      onChange={(e) => setForm({ ...form, title: e.target.value })}
-                      placeholder="Role within the company"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor={`${idPrefix}-isPrimary`} className="inline-flex items-center gap-1.5 font-normal">
-                      <input
-                        id={`${idPrefix}-isPrimary`}
-                        type="checkbox"
-                        checked={form.isPrimary}
-                        onChange={(e) => setForm({ ...form, isPrimary: e.target.checked })}
-                      />
-                      Primary contact for this company
-                    </label>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor={`${idPrefix}-leadStatus`}>Lead Status</label>
-                    <select
-                      id={`${idPrefix}-leadStatus`}
-                      value={form.leadStatus}
-                      onChange={(e) => setForm({ ...form, leadStatus: e.target.value })}
-                    >
-                      <option value="">-- none --</option>
-                      {Object.entries(LEAD_STATUS_LABELS).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor={`${idPrefix}-leadSourceId`}>Lead Source</label>
-                    <select
-                      id={`${idPrefix}-leadSourceId`}
-                      value={form.leadSourceId}
-                      onChange={(e) => setForm({ ...form, leadSourceId: e.target.value })}
-                    >
-                      <option value="">-- none --</option>
-                      {leadSources.map((ls) => (
-                        <option key={ls.id} value={ls.id}>
-                          {ls.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </>
-              );
-            })()}
+        {slideOverMode === 'add' && (
+          <form id="contact-form" onSubmit={handleCreateContact}>
+            <div className="form-group">
+              <label htmlFor="contact-firstName">First Name</label>
+              <input
+                id="contact-firstName"
+                type="text"
+                value={contactForm.firstName}
+                onChange={(e) => setContactForm({ ...contactForm, firstName: e.target.value })}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="contact-lastName">Last Name</label>
+              <input
+                id="contact-lastName"
+                type="text"
+                value={contactForm.lastName}
+                onChange={(e) => setContactForm({ ...contactForm, lastName: e.target.value })}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="contact-email">Email</label>
+              <input
+                id="contact-email"
+                type="email"
+                value={contactForm.email}
+                onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="contact-phone">Phone</label>
+              <input
+                id="contact-phone"
+                type="text"
+                value={contactForm.phone}
+                onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="contact-companyId">Company</label>
+              <select
+                id="contact-companyId"
+                value={contactForm.companyId}
+                onChange={(e) => setContactForm({ ...contactForm, companyId: e.target.value })}
+              >
+                <option value="">-- none (lead without a confirmed company) --</option>
+                {companies.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="contact-title">Title</label>
+              <input
+                id="contact-title"
+                type="text"
+                value={contactForm.title}
+                onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })}
+                placeholder="Role within the company"
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="contact-isPrimary" className="inline-flex items-center gap-1.5 font-normal">
+                <input
+                  id="contact-isPrimary"
+                  type="checkbox"
+                  checked={contactForm.isPrimary}
+                  onChange={(e) => setContactForm({ ...contactForm, isPrimary: e.target.checked })}
+                />
+                Primary contact for this company
+              </label>
+            </div>
+            <div className="form-group">
+              <label htmlFor="contact-leadStatus">Lead Status</label>
+              <select
+                id="contact-leadStatus"
+                value={contactForm.leadStatus}
+                onChange={(e) => setContactForm({ ...contactForm, leadStatus: e.target.value })}
+              >
+                <option value="">-- none --</option>
+                {Object.entries(LEAD_STATUS_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="contact-leadSourceId">Lead Source</label>
+              <select
+                id="contact-leadSourceId"
+                value={contactForm.leadSourceId}
+                onChange={(e) => setContactForm({ ...contactForm, leadSourceId: e.target.value })}
+              >
+                <option value="">-- none --</option>
+                {leadSources.map((ls) => (
+                  <option key={ls.id} value={ls.id}>
+                    {ls.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             {activeContactCustomFields.map((field) => (
               <div className="form-group" key={field.id}>
-                <label htmlFor={`${slideOverMode === 'edit' ? 'edit-contact' : 'contact'}-cf-${field.id}`}>
+                <label htmlFor={`contact-cf-${field.id}`}>
                   {field.name}
                   {field.required ? ' *' : ''}
                 </label>
-                {renderCustomFieldInput(
-                  field,
-                  slideOverMode === 'edit' ? editCustomFieldValues : customFieldValues,
-                  slideOverMode === 'edit' ? setEditCustomFieldValues : setCustomFieldValues,
-                  slideOverMode === 'edit' ? 'edit-contact-cf' : 'contact-cf',
-                )}
+                {renderCustomFieldInput(field, customFieldValues, setCustomFieldValues, 'contact-cf')}
               </div>
             ))}
           </form>
         )}
       </SlideOver>
+
+      {viewingContactId &&
+        (() => {
+          const viewingContact = contacts.find((c) => c.id === viewingContactId);
+          if (!viewingContact) return null;
+          return (
+            <ContactDetailModal
+              contact={viewingContact}
+              token={token}
+              companies={companies}
+              contacts={contacts}
+              opportunities={opportunities}
+              pipelines={pipelines}
+              leadSources={leadSources}
+              customFields={activeContactCustomFields}
+              tenantCurrency={tenantCurrency}
+              currentUserId={user.id}
+              onClose={() => setViewingContactId(null)}
+              onChanged={refreshAssociatedData}
+            />
+          );
+        })()}
 
       <div className="page-toolbar">
         <h2>Contacts</h2>
@@ -555,14 +507,6 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
           </div>
         )}
         <ColumnVisibilityMenu columns={toggleableColumns} isHidden={isColumnHidden} onToggle={toggleColumn} />
-        {canEditContacts && (
-          <button className="btn-primary btn-toolbar-size" onClick={handleOpenAdd}>
-            <span className="inline-flex items-center gap-1.5">
-              <PlusIcon className="h-4 w-4" />
-              Add Contact
-            </span>
-          </button>
-        )}
       </div>
 
       {loading ? (
@@ -580,7 +524,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
         <p className="mt-4">No contacts match your search.</p>
       ) : (
         <>
-          <div className="full-table-wrap">
+          <div className="full-table-wrap" ref={tableWrapRef}>
             <table className="table full-table">
               <colgroup>
                 {visibleColumns.map((col) => (
@@ -677,15 +621,24 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
                       const fieldValue = contact.customFieldVals?.find(
                         (v: any) => v.customFieldDefinitionId === field.id,
                       );
-                      return <td key={field.id}>{fieldValue?.value || '—'}</td>;
+                      const value = fieldValue?.value;
+                      return (
+                        <td key={field.id}>
+                          {value ? (
+                            field.fieldType === 'select' ? (
+                              <CategoryChip label={value} seed={`${field.id}:${value}`} />
+                            ) : (
+                              value
+                            )
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                      );
                     })}
                     {canManageCustomFields && <td></td>}
                     <td>
                       <div className="icon-actions">
-                        <button className="icon-btn" onClick={() => handleStartEditContact(contact)}>
-                          <span className="tip">Edit</span>
-                          <PencilIcon />
-                        </button>
                         <button className="icon-btn danger" onClick={() => setDeletingContact(contact)}>
                           <span className="tip">Delete</span>
                           <TrashIcon />
@@ -694,9 +647,26 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
                     </td>
                   </tr>
                 ))}
+                {canEditContacts && (
+                  <tr className="ghost-row">
+                    <td
+                      colSpan={visibleColumns.length + visibleCustomFields.length + (canManageCustomFields ? 1 : 0) + 1}
+                      className="ghost-row-cell"
+                      onClick={handleOpenAdd}
+                    >
+                      <span className="ghost-row-inner">
+                        <span className="ghost-plus-box">
+                          <PlusIcon className="h-3 w-3" />
+                        </span>
+                        Add
+                      </span>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
+          <HorizontalScrollbar targetRef={tableWrapRef} />
           <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
         </>
       )}

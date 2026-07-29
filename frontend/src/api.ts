@@ -190,6 +190,7 @@ export interface Opportunity {
   nextStepNote: string | null;
   createdAt: string;
   contactLinks?: OpportunityContactLink[];
+  stageHistory?: { id: string; stageId: string; enteredAt: string }[];
 }
 
 interface CustomFieldDefinition {

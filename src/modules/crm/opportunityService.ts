@@ -35,6 +35,7 @@ const OPPORTUNITY_INCLUDE = {
   stage: true,
   owner: { select: { id: true, firstName: true, lastName: true } },
   contactLinks: { include: { contact: { select: { id: true, firstName: true, lastName: true, email: true } } } },
+  stageHistory: { orderBy: { enteredAt: 'desc' } },
 } satisfies Prisma.OpportunityInclude;
 
 // Won→Customer: when an Opportunity's stage moves to a `won`-outcome stage,

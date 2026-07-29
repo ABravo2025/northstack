@@ -1,11 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
-import { api, type Company, type Contact, type Opportunity, type Pipeline } from '../api';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { api, type Company, type Contact, type Opportunity, type Pipeline, type SavedView, type ViewFilter, type ViewSort } from '../api';
 import { useToast } from '../components/ToastProvider';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Pagination, { paginate } from '../components/Pagination';
 import SlideOver from '../components/SlideOver';
+import ViewsBar from '../components/ViewsBar';
+import FilterBar from '../components/FilterBar';
+import KanbanBoard from '../components/KanbanBoard';
 import CustomFieldColumnMenu from '../components/CustomFieldColumnMenu';
 import AddCustomFieldColumn from '../components/AddCustomFieldColumn';
+import StatusColumnMenu from '../components/StatusColumnMenu';
 import ColumnResizeHandle from '../components/ColumnResizeHandle';
 import { useResizableColumns } from '../hooks/useResizableColumns';
 import ColumnVisibilityMenu from '../components/ColumnVisibilityMenu';
@@ -16,9 +20,11 @@ import StatusChip from '../components/StatusChip';
 import CategoryChip from '../components/CategoryChip';
 import CompanyDetailModal from '../components/CompanyDetailModal';
 import HorizontalScrollbar from '../components/HorizontalScrollbar';
-import { PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
+import { ChevronDownIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
+import { applyFilters, applySort, buildCompanyFields, findField, groupableFields, parseFilters, parseSort } from '../lib/viewFields';
 
 const PAGE_SIZE = 20;
+const ACTIVE_VIEW_STORAGE_KEY = 'northstack:activeView:company';
 // Frozen columns stay pinned to the left through horizontal scroll and can't
 // be dragged to reorder — everything else can. Same pattern as Employees/Clients.
 const FROZEN_COLUMN_KEYS = ['name', 'status'];
@@ -54,22 +60,52 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [companyCustomFields, setCompanyCustomFields] = useState<any[]>([]);
+  const [companyStatuses, setCompanyStatuses] = useState<any[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
   const [companyForm, setCompanyForm] = useState(emptyCompanyForm);
   const [draggedColKey, setDraggedColKey] = useState<string | null>(null);
   const [dragOverColKey, setDragOverColKey] = useState<string | null>(null);
+  const [collapsedListSections, setCollapsedListSections] = useState<Set<string>>(new Set());
+
+  const [views, setViews] = useState<SavedView[]>([]);
+  const [activeViewId, setActiveViewId] = useState<string | null>(() =>
+    localStorage.getItem(ACTIVE_VIEW_STORAGE_KEY),
+  );
+  const [viewFilters, setViewFilters] = useState<ViewFilter[]>([]);
+  const [viewSort, setViewSort] = useState<ViewSort | null>(null);
 
   const canManageCustomFields = user.role === 'owner' || user.role === 'admin';
   const canEditCompanies = user.role === 'owner' || user.role === 'admin';
-  const { getWidth: getColumnWidth, startResize } = useResizableColumns('northstack:columnWidths:company');
+  const columnStorageSuffix = activeViewId ?? 'default';
+  const { getWidth: getColumnWidth, startResize } = useResizableColumns(
+    `northstack:columnWidths:company:${columnStorageSuffix}`,
+  );
   const { isHidden: isColumnHidden, toggle: toggleColumn, hide: hideColumn } = useColumnVisibility(
-    'northstack:hiddenColumns:company',
+    `northstack:hiddenColumns:company:${columnStorageSuffix}`,
   );
   const activeCompanyCustomFields = companyCustomFields.filter((field) => field.isActive);
+
+  const fields = useMemo(() => buildCompanyFields(companyStatuses, companyCustomFields), [companyStatuses, companyCustomFields]);
+  const groupable = useMemo(() => groupableFields(fields), [fields]);
+  const activeView = views.find((v) => v.id === activeViewId) ?? null;
+  const viewType = activeView?.type ?? 'grid';
+
+  useEffect(() => {
+    setViewFilters(parseFilters(activeView?.filters ?? null));
+    setViewSort(parseSort(activeView?.sortBy ?? null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeViewId, views]);
+
+  useEffect(() => {
+    if (activeViewId) localStorage.setItem(ACTIVE_VIEW_STORAGE_KEY, activeViewId);
+    else localStorage.removeItem(ACTIVE_VIEW_STORAGE_KEY);
+  }, [activeViewId]);
 
   useEffect(() => {
     loadCompanies();
     loadCompanyCustomFields();
+    loadCompanyStatuses();
+    loadViews();
     api
       .listTenantUsers(token)
       .then(setTenantUsers)
@@ -97,6 +133,24 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
       toast.error('Failed to load companies: ' + (error as Error).message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCompanyStatuses = async () => {
+    try {
+      const statuses = await api.listStatusDefinitions(token, 'company');
+      setCompanyStatuses(statuses);
+    } catch (error) {
+      toast.error('Failed to load statuses: ' + (error as Error).message);
+    }
+  };
+
+  const loadViews = async () => {
+    try {
+      const data = await api.listViews(token, 'company');
+      setViews(data);
+    } catch (error) {
+      toast.error('Failed to load views: ' + (error as Error).message);
     }
   };
 
@@ -252,12 +306,101 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
     );
   });
 
-  const pageCount = Math.max(1, Math.ceil(searchFilteredCompanies.length / PAGE_SIZE));
-  const pagedCompanies = paginate(searchFilteredCompanies, page, PAGE_SIZE);
+  const viewFilteredCompanies = applyFilters(searchFilteredCompanies, fields, viewFilters);
+  const sortedCompanies = applySort(viewFilteredCompanies, fields, viewSort);
+
+  const pageCount = Math.max(1, Math.ceil(sortedCompanies.length / PAGE_SIZE));
+  const pagedCompanies = paginate(sortedCompanies, page, PAGE_SIZE);
 
   useEffect(() => {
     setPage(1);
-  }, [search]);
+  }, [search, activeViewId]);
+
+  const handleSort = (fieldKey: string) => {
+    setViewSort((current) => {
+      if (current?.field === fieldKey) {
+        return { field: fieldKey, direction: current.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { field: fieldKey, direction: 'asc' };
+    });
+  };
+
+  const handleKanbanMove = async (company: Company, newValue: string) => {
+    const groupField = activeView?.groupByField;
+    if (!groupField) return;
+    if (groupField === 'status') {
+      toast.error("A Company's status is derived automatically from deal outcomes — it can't be set by hand.");
+      return;
+    }
+    if (!groupField.startsWith('cf:')) return;
+    try {
+      const definitionId = groupField.slice(3);
+      const existing = company.customFieldVals?.find((v) => v.customFieldDefinitionId === definitionId);
+      if (existing) {
+        await api.updateCompanyCustomFieldValue(token, company.id, existing.id, newValue);
+      } else {
+        await api.createCompanyCustomFieldValue(token, company.id, { customFieldDefinitionId: definitionId, value: newValue });
+      }
+      loadCompanies();
+    } catch (error) {
+      toast.error('Failed to move: ' + (error as Error).message);
+    }
+  };
+
+  const handleCreateView = async (input: {
+    name: string;
+    type: 'grid' | 'kanban' | 'list';
+    visibility: 'personal' | 'shared';
+    groupByField?: string;
+  }) => {
+    try {
+      const view = await api.createView(token, { entityType: 'company', ...input });
+      setViews((current) => [...current, view]);
+      setActiveViewId(view.id);
+      toast.success(`View "${view.name}" created.`);
+    } catch (error) {
+      toast.error('Failed to create view: ' + (error as Error).message);
+    }
+  };
+
+  const handleRenameView = async (id: string, name: string) => {
+    try {
+      const updated = await api.updateView(token, id, { name });
+      setViews((current) => current.map((v) => (v.id === id ? updated : v)));
+    } catch (error) {
+      toast.error('Failed to rename view: ' + (error as Error).message);
+    }
+  };
+
+  const handleDuplicateView = async (view: SavedView) => {
+    try {
+      const created = await api.createView(token, {
+        entityType: 'company',
+        name: `${view.name} (copy)`,
+        type: view.type,
+        visibility: 'personal',
+        filters: parseFilters(view.filters),
+        sortBy: parseSort(view.sortBy) ?? undefined,
+        groupByField: view.groupByField ?? undefined,
+      });
+      setViews((current) => [...current, created]);
+      setActiveViewId(created.id);
+      toast.success(`View duplicated as "${created.name}".`);
+    } catch (error) {
+      toast.error('Failed to duplicate view: ' + (error as Error).message);
+    }
+  };
+
+  const handleDeleteView = async (id: string) => {
+    try {
+      await api.deleteView(token, id);
+      setViews((current) => current.filter((v) => v.id !== id));
+      if (activeViewId === id) setActiveViewId(null);
+      toast.success('View deleted.');
+    } catch (error) {
+      toast.error('Failed to delete view: ' + (error as Error).message);
+    }
+  };
 
   const columns = [
     {
@@ -307,7 +450,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
   ];
   const movableColumnKeys = columns.map((col) => col.key).filter((key) => !FROZEN_COLUMN_KEYS.includes(key));
   const { orderedKeys: columnOrder, reorder: reorderColumns } = useColumnOrder(
-    'northstack:columnOrder:company',
+    `northstack:columnOrder:company:${columnStorageSuffix}`,
     movableColumnKeys,
   );
   const frozenColumns: typeof columns = FROZEN_COLUMN_KEYS.map((key) => columns.find((col) => col.key === key)).filter(
@@ -326,6 +469,93 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
     return left;
   };
   const visibleCustomFields = activeCompanyCustomFields.filter((field) => !isColumnHidden(`cf:${field.id}`));
+
+  const groupFieldForKanban = activeView?.groupByField ? findField(fields, activeView.groupByField) : undefined;
+  const groupByBroken = (viewType === 'kanban' || viewType === 'list') && !groupFieldForKanban;
+  const noResultsInGridOrList = viewType !== 'kanban' && sortedCompanies.length === 0;
+  const showAddFallback = canEditCompanies && companies.length > 0 && (groupByBroken || noResultsInGridOrList);
+
+  const totalColumnCount = visibleColumns.length + visibleCustomFields.length + (canManageCustomFields ? 1 : 0) + 1;
+
+  const toggleListSection = (key: string) => {
+    setCollapsedListSections((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const listSections = groupFieldForKanban
+    ? (() => {
+        const byValue = new Map<string, Company[]>();
+        for (const opt of groupFieldForKanban.selectOptions ?? []) byValue.set(opt.value, []);
+        for (const company of sortedCompanies) {
+          const value = groupFieldForKanban.getValue(company);
+          if (!byValue.has(value)) byValue.set(value, []);
+          byValue.get(value)!.push(company);
+        }
+        return Array.from(byValue.entries()).map(([value, items]) => ({
+          key: value || '(none)',
+          label: value || '(none)',
+          color: groupFieldForKanban.selectOptions?.find((opt) => opt.value === value)?.color ?? null,
+          items,
+        }));
+      })()
+    : [];
+
+  const renderCompanyRow = (company: Company) => (
+    <tr key={company.id}>
+      {visibleColumns.map((col) => {
+        const isFrozen = FROZEN_COLUMN_KEYS.includes(col.key);
+        const isLastFrozen = isFrozen && frozenColumns[frozenColumns.length - 1]?.key === col.key;
+        return (
+          <td
+            key={col.key}
+            className={`${isFrozen ? 'col-frozen' : ''} ${isLastFrozen ? 'col-frozen-edge' : ''}`}
+            style={isFrozen ? { left: getFrozenLeft(col.key), zIndex: 1 } : undefined}
+          >
+            {col.render(company)}
+          </td>
+        );
+      })}
+      {visibleCustomFields.map((field) => {
+        const fieldValue = company.customFieldVals?.find((v: any) => v.customFieldDefinitionId === field.id);
+        const value = fieldValue?.value;
+        return (
+          <td key={field.id}>
+            {value ? (
+              field.fieldType === 'select' ? <CategoryChip label={value} seed={`${field.id}:${value}`} /> : value
+            ) : (
+              '—'
+            )}
+          </td>
+        );
+      })}
+      {canManageCustomFields && <td></td>}
+      <td>
+        <div className="icon-actions">
+          <button className="icon-btn danger" onClick={() => setDeletingCompany(company)}>
+            <span className="tip">Delete</span>
+            <TrashIcon />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+
+  const ghostAddRow = canEditCompanies && (
+    <tr className="ghost-row">
+      <td colSpan={totalColumnCount} className="ghost-row-cell" onClick={handleOpenAdd}>
+        <span className="ghost-row-inner">
+          <span className="ghost-plus-box">
+            <PlusIcon className="h-3 w-3" />
+          </span>
+          Add
+        </span>
+      </td>
+    </tr>
+  );
 
   return (
     <div className="page-full">
@@ -463,6 +693,20 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
           );
         })()}
 
+      <ViewsBar
+        allLabel="All Companies"
+        views={views}
+        activeViewId={activeViewId}
+        onSelectView={setActiveViewId}
+        canCreateShared={canManageCustomFields}
+        canDeleteShared={(view) => view.createdByUserId === user.id || user.role === 'owner'}
+        groupableFields={groupable}
+        onCreateView={handleCreateView}
+        onRenameView={handleRenameView}
+        onDuplicateView={handleDuplicateView}
+        onDeleteView={handleDeleteView}
+      />
+
       <div className="page-toolbar">
         <h2>Companies</h2>
         {companies.length > 0 && (
@@ -480,7 +724,18 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
             />
           </div>
         )}
-        <ColumnVisibilityMenu columns={toggleableColumns} isHidden={isColumnHidden} onToggle={toggleColumn} />
+        {viewType !== 'kanban' && <FilterBar fields={fields} filters={viewFilters} onChange={setViewFilters} />}
+        {viewType !== 'kanban' && (
+          <ColumnVisibilityMenu columns={toggleableColumns} isHidden={isColumnHidden} onToggle={toggleColumn} />
+        )}
+        {showAddFallback && (
+          <button className="btn-primary btn-toolbar-size" onClick={handleOpenAdd}>
+            <span className="inline-flex items-center gap-1.5">
+              <PlusIcon className="h-4 w-4" />
+              Add
+            </span>
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -494,8 +749,40 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
             </button>
           )}
         </div>
-      ) : searchFilteredCompanies.length === 0 ? (
-        <p className="mt-4">No companies match your search.</p>
+      ) : viewType === 'kanban' ? (
+        !groupFieldForKanban ? (
+          <p className="mt-4">This view's group-by field no longer exists.</p>
+        ) : (
+          <KanbanBoard
+            columns={groupFieldForKanban.selectOptions?.map((opt) => ({ key: opt.value, label: opt.value, color: opt.color })) ?? []}
+            items={viewFilteredCompanies}
+            getItemKey={(company) => company.id}
+            getItemColumn={(company) => groupFieldForKanban.getValue(company)}
+            onMove={canEditCompanies ? handleKanbanMove : () => {}}
+            renderCard={(company) => (
+              <div onClick={() => setViewingCompanyId(company.id)} style={{ cursor: 'pointer' }}>
+                <div className="kc-name">{company.name}</div>
+                <div className="kc-meta">{company.industry}</div>
+              </div>
+            )}
+            renderColumnFooter={
+              canEditCompanies
+                ? () => (
+                    <div className="kanban-ghost-card" onClick={handleOpenAdd}>
+                      <span className="ghost-plus-box">
+                        <PlusIcon className="h-3 w-3" />
+                      </span>
+                      Add
+                    </div>
+                  )
+                : undefined
+            }
+          />
+        )
+      ) : viewType === 'list' && !groupFieldForKanban ? (
+        <p className="mt-4">This view's group-by field no longer exists.</p>
+      ) : sortedCompanies.length === 0 ? (
+        <p className="mt-4">No companies match your search or filters.</p>
       ) : (
         <>
           <div className="full-table-wrap" ref={tableWrapRef}>
@@ -545,17 +832,35 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
                                 setDragOverColKey(null);
                               }
                         }
-                        className={`${isFrozen ? 'col-frozen' : ''} ${isLastFrozen ? 'col-frozen-edge' : ''} ${!isFrozen && draggedColKey === col.key ? 'col-dragging' : ''} ${!isFrozen && dragOverColKey === col.key && draggedColKey && draggedColKey !== col.key ? 'col-drag-over' : ''}`}
+                        className={`sortable ${viewSort?.field === col.key ? 'sorted' : ''} ${isFrozen ? 'col-frozen' : ''} ${isLastFrozen ? 'col-frozen-edge' : ''} ${!isFrozen && draggedColKey === col.key ? 'col-dragging' : ''} ${!isFrozen && dragOverColKey === col.key && draggedColKey && draggedColKey !== col.key ? 'col-drag-over' : ''}`}
                         style={isFrozen ? { left: getFrozenLeft(col.key), zIndex: 3 } : undefined}
+                        onClick={() => handleSort(col.key)}
                       >
                         {col.label}
+                        <span className="sort-arrow">{viewSort?.field === col.key && viewSort.direction === 'desc' ? '▴' : '▾'}</span>
+                        {col.key === 'status' && canManageCustomFields && (
+                          <StatusColumnMenu
+                            token={token}
+                            entityType="company"
+                            statuses={companyStatuses}
+                            onChanged={loadCompanyStatuses}
+                            onHide={() => hideColumn('status')}
+                          />
+                        )}
                         <ColumnResizeHandle onMouseDown={(e) => startResize(col.key, e)} />
                       </th>
                     );
                   })}
                   {visibleCustomFields.map((field) => (
-                    <th key={field.id}>
+                    <th
+                      key={field.id}
+                      className={`sortable ${viewSort?.field === `cf:${field.id}` ? 'sorted' : ''}`}
+                      onClick={() => handleSort(`cf:${field.id}`)}
+                    >
                       {field.name}
+                      <span className="sort-arrow">
+                        {viewSort?.field === `cf:${field.id}` && viewSort.direction === 'desc' ? '▴' : '▾'}
+                      </span>
                       {canManageCustomFields && (
                         <CustomFieldColumnMenu
                           field={field}
@@ -575,73 +880,33 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
                   <th></th>
                 </tr>
               </thead>
-              <tbody>
-                {pagedCompanies.map((company) => (
-                  <tr key={company.id}>
-                    {visibleColumns.map((col) => {
-                      const isFrozen = FROZEN_COLUMN_KEYS.includes(col.key);
-                      const isLastFrozen = isFrozen && frozenColumns[frozenColumns.length - 1]?.key === col.key;
-                      return (
-                        <td
-                          key={col.key}
-                          className={`${isFrozen ? 'col-frozen' : ''} ${isLastFrozen ? 'col-frozen-edge' : ''}`}
-                          style={isFrozen ? { left: getFrozenLeft(col.key), zIndex: 1 } : undefined}
-                        >
-                          {col.render(company)}
+              {viewType === 'list'
+                ? listSections.map((section) => (
+                    <tbody key={section.key}>
+                      <tr className="list-section-row">
+                        <td colSpan={totalColumnCount} className="list-section-header" onClick={() => toggleListSection(section.key)}>
+                          <ChevronDownIcon
+                            className={`list-chevron ${collapsedListSections.has(section.key) ? '' : 'list-chevron-open'}`}
+                          />
+                          {section.color && <span className="dot" style={{ background: section.color }} />}
+                          <span className="list-section-label">{section.label}</span>
+                          <span className="cnt">{section.items.length}</span>
                         </td>
-                      );
-                    })}
-                    {visibleCustomFields.map((field) => {
-                      const fieldValue = company.customFieldVals?.find(
-                        (v: any) => v.customFieldDefinitionId === field.id,
-                      );
-                      const value = fieldValue?.value;
-                      return (
-                        <td key={field.id}>
-                          {value ? (
-                            field.fieldType === 'select' ? (
-                              <CategoryChip label={value} seed={`${field.id}:${value}`} />
-                            ) : (
-                              value
-                            )
-                          ) : (
-                            '—'
-                          )}
-                        </td>
-                      );
-                    })}
-                    {canManageCustomFields && <td></td>}
-                    <td>
-                      <div className="icon-actions">
-                        <button className="icon-btn danger" onClick={() => setDeletingCompany(company)}>
-                          <span className="tip">Delete</span>
-                          <TrashIcon />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {canEditCompanies && (
-                  <tr className="ghost-row">
-                    <td
-                      colSpan={visibleColumns.length + visibleCustomFields.length + (canManageCustomFields ? 1 : 0) + 1}
-                      className="ghost-row-cell"
-                      onClick={handleOpenAdd}
-                    >
-                      <span className="ghost-row-inner">
-                        <span className="ghost-plus-box">
-                          <PlusIcon className="h-3 w-3" />
-                        </span>
-                        Add
-                      </span>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
+                      </tr>
+                      {!collapsedListSections.has(section.key) && section.items.map(renderCompanyRow)}
+                      {!collapsedListSections.has(section.key) && ghostAddRow}
+                    </tbody>
+                  ))
+                : (
+                    <tbody>
+                      {pagedCompanies.map(renderCompanyRow)}
+                      {ghostAddRow}
+                    </tbody>
+                  )}
             </table>
           </div>
           <HorizontalScrollbar targetRef={tableWrapRef} />
-          <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
+          {viewType !== 'list' && <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />}
         </>
       )}
     </div>

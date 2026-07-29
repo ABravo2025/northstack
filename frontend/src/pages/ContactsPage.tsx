@@ -1,9 +1,21 @@
-import { useEffect, useRef, useState } from 'react';
-import { api, type Company, type Contact, type Opportunity, type Pipeline } from '../api';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  api,
+  type Company,
+  type Contact,
+  type Opportunity,
+  type Pipeline,
+  type SavedView,
+  type ViewFilter,
+  type ViewSort,
+} from '../api';
 import { useToast } from '../components/ToastProvider';
 import ConfirmDialog from '../components/ConfirmDialog';
 import Pagination, { paginate } from '../components/Pagination';
 import SlideOver from '../components/SlideOver';
+import ViewsBar from '../components/ViewsBar';
+import FilterBar from '../components/FilterBar';
+import KanbanBoard from '../components/KanbanBoard';
 import CustomFieldColumnMenu from '../components/CustomFieldColumnMenu';
 import AddCustomFieldColumn from '../components/AddCustomFieldColumn';
 import ColumnResizeHandle from '../components/ColumnResizeHandle';
@@ -15,9 +27,20 @@ import Avatar from '../components/Avatar';
 import CategoryChip from '../components/CategoryChip';
 import ContactDetailModal from '../components/ContactDetailModal';
 import HorizontalScrollbar from '../components/HorizontalScrollbar';
-import { PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
+import { ChevronDownIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
+import {
+  applyFilters,
+  applySort,
+  buildContactFields,
+  findField,
+  groupableFields,
+  LEAD_STATUS_VALUE_BY_LABEL,
+  parseFilters,
+  parseSort,
+} from '../lib/viewFields';
 
 const PAGE_SIZE = 20;
+const ACTIVE_VIEW_STORAGE_KEY = 'northstack:activeView:contact';
 const FROZEN_COLUMN_KEYS = ['name'];
 
 const LEAD_STATUS_LABELS: Record<string, string> = {
@@ -64,18 +87,49 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
   const [contactForm, setContactForm] = useState(emptyContactForm);
   const [draggedColKey, setDraggedColKey] = useState<string | null>(null);
   const [dragOverColKey, setDragOverColKey] = useState<string | null>(null);
+  const [collapsedListSections, setCollapsedListSections] = useState<Set<string>>(new Set());
+
+  const [views, setViews] = useState<SavedView[]>([]);
+  const [activeViewId, setActiveViewId] = useState<string | null>(() =>
+    localStorage.getItem(ACTIVE_VIEW_STORAGE_KEY),
+  );
+  const [viewFilters, setViewFilters] = useState<ViewFilter[]>([]);
+  const [viewSort, setViewSort] = useState<ViewSort | null>(null);
 
   const canManageCustomFields = user.role === 'owner' || user.role === 'admin';
   const canEditContacts = user.role === 'owner' || user.role === 'admin';
-  const { getWidth: getColumnWidth, startResize } = useResizableColumns('northstack:columnWidths:contact');
+  const columnStorageSuffix = activeViewId ?? 'default';
+  const { getWidth: getColumnWidth, startResize } = useResizableColumns(
+    `northstack:columnWidths:contact:${columnStorageSuffix}`,
+  );
   const { isHidden: isColumnHidden, toggle: toggleColumn, hide: hideColumn } = useColumnVisibility(
-    'northstack:hiddenColumns:contact',
+    `northstack:hiddenColumns:contact:${columnStorageSuffix}`,
   );
   const activeContactCustomFields = contactCustomFields.filter((field) => field.isActive);
+
+  const fields = useMemo(
+    () => buildContactFields(contactCustomFields, leadSources),
+    [contactCustomFields, leadSources],
+  );
+  const groupable = useMemo(() => groupableFields(fields), [fields]);
+  const activeView = views.find((v) => v.id === activeViewId) ?? null;
+  const viewType = activeView?.type ?? 'grid';
+
+  useEffect(() => {
+    setViewFilters(parseFilters(activeView?.filters ?? null));
+    setViewSort(parseSort(activeView?.sortBy ?? null));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeViewId, views]);
+
+  useEffect(() => {
+    if (activeViewId) localStorage.setItem(ACTIVE_VIEW_STORAGE_KEY, activeViewId);
+    else localStorage.removeItem(ACTIVE_VIEW_STORAGE_KEY);
+  }, [activeViewId]);
 
   useEffect(() => {
     loadContacts();
     loadContactCustomFields();
+    loadViews();
     api.listCompanies(token).then(setCompanies).catch(() => {});
     api.listOpportunities(token).then(setOpportunities).catch(() => {});
     api.listPipelines(token).then(setPipelines).catch(() => {});
@@ -112,6 +166,15 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
       setContactCustomFields(defs);
     } catch (error) {
       toast.error('Failed to load custom fields: ' + (error as Error).message);
+    }
+  };
+
+  const loadViews = async () => {
+    try {
+      const data = await api.listViews(token, 'contact');
+      setViews(data);
+    } catch (error) {
+      toast.error('Failed to load views: ' + (error as Error).message);
     }
   };
 
@@ -260,12 +323,107 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
     );
   });
 
-  const pageCount = Math.max(1, Math.ceil(searchFilteredContacts.length / PAGE_SIZE));
-  const pagedContacts = paginate(searchFilteredContacts, page, PAGE_SIZE);
+  const viewFilteredContacts = applyFilters(searchFilteredContacts, fields, viewFilters);
+  const sortedContacts = applySort(viewFilteredContacts, fields, viewSort);
+
+  const pageCount = Math.max(1, Math.ceil(sortedContacts.length / PAGE_SIZE));
+  const pagedContacts = paginate(sortedContacts, page, PAGE_SIZE);
 
   useEffect(() => {
     setPage(1);
-  }, [search]);
+  }, [search, activeViewId]);
+
+  const handleSort = (fieldKey: string) => {
+    setViewSort((current) => {
+      if (current?.field === fieldKey) {
+        return { field: fieldKey, direction: current.direction === 'asc' ? 'desc' : 'asc' };
+      }
+      return { field: fieldKey, direction: 'asc' };
+    });
+  };
+
+  const handleKanbanMove = async (contact: Contact, newValue: string) => {
+    const groupField = activeView?.groupByField;
+    if (!groupField) return;
+    try {
+      if (groupField === 'leadStatus') {
+        const raw = LEAD_STATUS_VALUE_BY_LABEL[newValue];
+        if (!raw) return;
+        await api.updateContact(token, contact.id, { leadStatus: raw as Contact['leadStatus'] });
+      } else if (groupField === 'leadSource') {
+        const match = leadSources.find((s) => s.name === newValue);
+        await api.updateContact(token, contact.id, { leadSourceId: match?.id ?? null });
+      } else if (groupField.startsWith('cf:')) {
+        const definitionId = groupField.slice(3);
+        const existing = contact.customFieldVals?.find((v) => v.customFieldDefinitionId === definitionId);
+        if (existing) {
+          await api.updateContactCustomFieldValue(token, contact.id, existing.id, newValue);
+        } else {
+          await api.createContactCustomFieldValue(token, contact.id, { customFieldDefinitionId: definitionId, value: newValue });
+        }
+      } else {
+        return;
+      }
+      loadContacts();
+    } catch (error) {
+      toast.error('Failed to move: ' + (error as Error).message);
+    }
+  };
+
+  const handleCreateView = async (input: {
+    name: string;
+    type: 'grid' | 'kanban' | 'list';
+    visibility: 'personal' | 'shared';
+    groupByField?: string;
+  }) => {
+    try {
+      const view = await api.createView(token, { entityType: 'contact', ...input });
+      setViews((current) => [...current, view]);
+      setActiveViewId(view.id);
+      toast.success(`View "${view.name}" created.`);
+    } catch (error) {
+      toast.error('Failed to create view: ' + (error as Error).message);
+    }
+  };
+
+  const handleRenameView = async (id: string, name: string) => {
+    try {
+      const updated = await api.updateView(token, id, { name });
+      setViews((current) => current.map((v) => (v.id === id ? updated : v)));
+    } catch (error) {
+      toast.error('Failed to rename view: ' + (error as Error).message);
+    }
+  };
+
+  const handleDuplicateView = async (view: SavedView) => {
+    try {
+      const created = await api.createView(token, {
+        entityType: 'contact',
+        name: `${view.name} (copy)`,
+        type: view.type,
+        visibility: 'personal',
+        filters: parseFilters(view.filters),
+        sortBy: parseSort(view.sortBy) ?? undefined,
+        groupByField: view.groupByField ?? undefined,
+      });
+      setViews((current) => [...current, created]);
+      setActiveViewId(created.id);
+      toast.success(`View duplicated as "${created.name}".`);
+    } catch (error) {
+      toast.error('Failed to duplicate view: ' + (error as Error).message);
+    }
+  };
+
+  const handleDeleteView = async (id: string) => {
+    try {
+      await api.deleteView(token, id);
+      setViews((current) => current.filter((v) => v.id !== id));
+      if (activeViewId === id) setActiveViewId(null);
+      toast.success('View deleted.');
+    } catch (error) {
+      toast.error('Failed to delete view: ' + (error as Error).message);
+    }
+  };
 
   const columns = [
     {
@@ -299,7 +457,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
   ];
   const movableColumnKeys = columns.map((col) => col.key).filter((key) => !FROZEN_COLUMN_KEYS.includes(key));
   const { orderedKeys: columnOrder, reorder: reorderColumns } = useColumnOrder(
-    'northstack:columnOrder:contact',
+    `northstack:columnOrder:contact:${columnStorageSuffix}`,
     movableColumnKeys,
   );
   const frozenColumns: typeof columns = FROZEN_COLUMN_KEYS.map((key) => columns.find((col) => col.key === key)).filter(
@@ -318,6 +476,93 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
     return left;
   };
   const visibleCustomFields = activeContactCustomFields.filter((field) => !isColumnHidden(`cf:${field.id}`));
+
+  const groupFieldForKanban = activeView?.groupByField ? findField(fields, activeView.groupByField) : undefined;
+  const groupByBroken = (viewType === 'kanban' || viewType === 'list') && !groupFieldForKanban;
+  const noResultsInGridOrList = viewType !== 'kanban' && sortedContacts.length === 0;
+  const showAddFallback = canEditContacts && contacts.length > 0 && (groupByBroken || noResultsInGridOrList);
+
+  const totalColumnCount = visibleColumns.length + visibleCustomFields.length + (canManageCustomFields ? 1 : 0) + 1;
+
+  const toggleListSection = (key: string) => {
+    setCollapsedListSections((current) => {
+      const next = new Set(current);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const listSections = groupFieldForKanban
+    ? (() => {
+        const byValue = new Map<string, Contact[]>();
+        for (const opt of groupFieldForKanban.selectOptions ?? []) byValue.set(opt.value, []);
+        for (const contact of sortedContacts) {
+          const value = groupFieldForKanban.getValue(contact);
+          if (!byValue.has(value)) byValue.set(value, []);
+          byValue.get(value)!.push(contact);
+        }
+        return Array.from(byValue.entries()).map(([value, items]) => ({
+          key: value || '(none)',
+          label: value || '(none)',
+          color: groupFieldForKanban.selectOptions?.find((opt) => opt.value === value)?.color ?? null,
+          items,
+        }));
+      })()
+    : [];
+
+  const renderContactRow = (contact: Contact) => (
+    <tr key={contact.id}>
+      {visibleColumns.map((col) => {
+        const isFrozen = FROZEN_COLUMN_KEYS.includes(col.key);
+        const isLastFrozen = isFrozen && frozenColumns[frozenColumns.length - 1]?.key === col.key;
+        return (
+          <td
+            key={col.key}
+            className={`${isFrozen ? 'col-frozen' : ''} ${isLastFrozen ? 'col-frozen-edge' : ''}`}
+            style={isFrozen ? { left: getFrozenLeft(col.key), zIndex: 1 } : undefined}
+          >
+            {col.render(contact)}
+          </td>
+        );
+      })}
+      {visibleCustomFields.map((field) => {
+        const fieldValue = contact.customFieldVals?.find((v: any) => v.customFieldDefinitionId === field.id);
+        const value = fieldValue?.value;
+        return (
+          <td key={field.id}>
+            {value ? (
+              field.fieldType === 'select' ? <CategoryChip label={value} seed={`${field.id}:${value}`} /> : value
+            ) : (
+              '—'
+            )}
+          </td>
+        );
+      })}
+      {canManageCustomFields && <td></td>}
+      <td>
+        <div className="icon-actions">
+          <button className="icon-btn danger" onClick={() => setDeletingContact(contact)}>
+            <span className="tip">Delete</span>
+            <TrashIcon />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+
+  const ghostAddRow = canEditContacts && (
+    <tr className="ghost-row">
+      <td colSpan={totalColumnCount} className="ghost-row-cell" onClick={handleOpenAdd}>
+        <span className="ghost-row-inner">
+          <span className="ghost-plus-box">
+            <PlusIcon className="h-3 w-3" />
+          </span>
+          Add
+        </span>
+      </td>
+    </tr>
+  );
 
   return (
     <div className="page-full">
@@ -489,6 +734,20 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
           );
         })()}
 
+      <ViewsBar
+        allLabel="All Contacts"
+        views={views}
+        activeViewId={activeViewId}
+        onSelectView={setActiveViewId}
+        canCreateShared={canManageCustomFields}
+        canDeleteShared={(view) => view.createdByUserId === user.id || user.role === 'owner'}
+        groupableFields={groupable}
+        onCreateView={handleCreateView}
+        onRenameView={handleRenameView}
+        onDuplicateView={handleDuplicateView}
+        onDeleteView={handleDeleteView}
+      />
+
       <div className="page-toolbar">
         <h2>Contacts</h2>
         {contacts.length > 0 && (
@@ -506,7 +765,18 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
             />
           </div>
         )}
-        <ColumnVisibilityMenu columns={toggleableColumns} isHidden={isColumnHidden} onToggle={toggleColumn} />
+        {viewType !== 'kanban' && <FilterBar fields={fields} filters={viewFilters} onChange={setViewFilters} />}
+        {viewType !== 'kanban' && (
+          <ColumnVisibilityMenu columns={toggleableColumns} isHidden={isColumnHidden} onToggle={toggleColumn} />
+        )}
+        {showAddFallback && (
+          <button className="btn-primary btn-toolbar-size" onClick={handleOpenAdd}>
+            <span className="inline-flex items-center gap-1.5">
+              <PlusIcon className="h-4 w-4" />
+              Add
+            </span>
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -520,8 +790,42 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
             </button>
           )}
         </div>
-      ) : searchFilteredContacts.length === 0 ? (
-        <p className="mt-4">No contacts match your search.</p>
+      ) : viewType === 'kanban' ? (
+        !groupFieldForKanban ? (
+          <p className="mt-4">This view's group-by field no longer exists.</p>
+        ) : (
+          <KanbanBoard
+            columns={groupFieldForKanban.selectOptions?.map((opt) => ({ key: opt.value, label: opt.value, color: opt.color })) ?? []}
+            items={viewFilteredContacts}
+            getItemKey={(contact) => contact.id}
+            getItemColumn={(contact) => groupFieldForKanban.getValue(contact)}
+            onMove={canEditContacts ? handleKanbanMove : () => {}}
+            renderCard={(contact) => (
+              <div onClick={() => setViewingContactId(contact.id)} style={{ cursor: 'pointer' }}>
+                <div className="kc-name">
+                  {contact.firstName} {contact.lastName}
+                </div>
+                <div className="kc-meta">{contact.company?.name}</div>
+              </div>
+            )}
+            renderColumnFooter={
+              canEditContacts
+                ? () => (
+                    <div className="kanban-ghost-card" onClick={handleOpenAdd}>
+                      <span className="ghost-plus-box">
+                        <PlusIcon className="h-3 w-3" />
+                      </span>
+                      Add
+                    </div>
+                  )
+                : undefined
+            }
+          />
+        )
+      ) : viewType === 'list' && !groupFieldForKanban ? (
+        <p className="mt-4">This view's group-by field no longer exists.</p>
+      ) : sortedContacts.length === 0 ? (
+        <p className="mt-4">No contacts match your search or filters.</p>
       ) : (
         <>
           <div className="full-table-wrap" ref={tableWrapRef}>
@@ -571,17 +875,26 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
                                 setDragOverColKey(null);
                               }
                         }
-                        className={`${isFrozen ? 'col-frozen' : ''} ${isLastFrozen ? 'col-frozen-edge' : ''} ${!isFrozen && draggedColKey === col.key ? 'col-dragging' : ''} ${!isFrozen && dragOverColKey === col.key && draggedColKey && draggedColKey !== col.key ? 'col-drag-over' : ''}`}
+                        className={`sortable ${viewSort?.field === col.key ? 'sorted' : ''} ${isFrozen ? 'col-frozen' : ''} ${isLastFrozen ? 'col-frozen-edge' : ''} ${!isFrozen && draggedColKey === col.key ? 'col-dragging' : ''} ${!isFrozen && dragOverColKey === col.key && draggedColKey && draggedColKey !== col.key ? 'col-drag-over' : ''}`}
                         style={isFrozen ? { left: getFrozenLeft(col.key), zIndex: 3 } : undefined}
+                        onClick={() => handleSort(col.key)}
                       >
                         {col.label}
+                        <span className="sort-arrow">{viewSort?.field === col.key && viewSort.direction === 'desc' ? '▴' : '▾'}</span>
                         <ColumnResizeHandle onMouseDown={(e) => startResize(col.key, e)} />
                       </th>
                     );
                   })}
                   {visibleCustomFields.map((field) => (
-                    <th key={field.id}>
+                    <th
+                      key={field.id}
+                      className={`sortable ${viewSort?.field === `cf:${field.id}` ? 'sorted' : ''}`}
+                      onClick={() => handleSort(`cf:${field.id}`)}
+                    >
                       {field.name}
+                      <span className="sort-arrow">
+                        {viewSort?.field === `cf:${field.id}` && viewSort.direction === 'desc' ? '▴' : '▾'}
+                      </span>
                       {canManageCustomFields && (
                         <CustomFieldColumnMenu
                           field={field}
@@ -601,73 +914,33 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
                   <th></th>
                 </tr>
               </thead>
-              <tbody>
-                {pagedContacts.map((contact) => (
-                  <tr key={contact.id}>
-                    {visibleColumns.map((col) => {
-                      const isFrozen = FROZEN_COLUMN_KEYS.includes(col.key);
-                      const isLastFrozen = isFrozen && frozenColumns[frozenColumns.length - 1]?.key === col.key;
-                      return (
-                        <td
-                          key={col.key}
-                          className={`${isFrozen ? 'col-frozen' : ''} ${isLastFrozen ? 'col-frozen-edge' : ''}`}
-                          style={isFrozen ? { left: getFrozenLeft(col.key), zIndex: 1 } : undefined}
-                        >
-                          {col.render(contact)}
+              {viewType === 'list'
+                ? listSections.map((section) => (
+                    <tbody key={section.key}>
+                      <tr className="list-section-row">
+                        <td colSpan={totalColumnCount} className="list-section-header" onClick={() => toggleListSection(section.key)}>
+                          <ChevronDownIcon
+                            className={`list-chevron ${collapsedListSections.has(section.key) ? '' : 'list-chevron-open'}`}
+                          />
+                          {section.color && <span className="dot" style={{ background: section.color }} />}
+                          <span className="list-section-label">{section.label}</span>
+                          <span className="cnt">{section.items.length}</span>
                         </td>
-                      );
-                    })}
-                    {visibleCustomFields.map((field) => {
-                      const fieldValue = contact.customFieldVals?.find(
-                        (v: any) => v.customFieldDefinitionId === field.id,
-                      );
-                      const value = fieldValue?.value;
-                      return (
-                        <td key={field.id}>
-                          {value ? (
-                            field.fieldType === 'select' ? (
-                              <CategoryChip label={value} seed={`${field.id}:${value}`} />
-                            ) : (
-                              value
-                            )
-                          ) : (
-                            '—'
-                          )}
-                        </td>
-                      );
-                    })}
-                    {canManageCustomFields && <td></td>}
-                    <td>
-                      <div className="icon-actions">
-                        <button className="icon-btn danger" onClick={() => setDeletingContact(contact)}>
-                          <span className="tip">Delete</span>
-                          <TrashIcon />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {canEditContacts && (
-                  <tr className="ghost-row">
-                    <td
-                      colSpan={visibleColumns.length + visibleCustomFields.length + (canManageCustomFields ? 1 : 0) + 1}
-                      className="ghost-row-cell"
-                      onClick={handleOpenAdd}
-                    >
-                      <span className="ghost-row-inner">
-                        <span className="ghost-plus-box">
-                          <PlusIcon className="h-3 w-3" />
-                        </span>
-                        Add
-                      </span>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
+                      </tr>
+                      {!collapsedListSections.has(section.key) && section.items.map(renderContactRow)}
+                      {!collapsedListSections.has(section.key) && ghostAddRow}
+                    </tbody>
+                  ))
+                : (
+                    <tbody>
+                      {pagedContacts.map(renderContactRow)}
+                      {ghostAddRow}
+                    </tbody>
+                  )}
             </table>
           </div>
           <HorizontalScrollbar targetRef={tableWrapRef} />
-          <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
+          {viewType !== 'list' && <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />}
         </>
       )}
     </div>

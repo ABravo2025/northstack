@@ -209,6 +209,128 @@ export function buildClientFields(statuses: StatusLike[], customFields: CustomFi
   ];
 }
 
+export function buildCompanyFields(statuses: StatusLike[], customFields: CustomFieldLike[]): ViewField[] {
+  return [
+    {
+      key: 'name',
+      label: 'Name',
+      valueType: 'text',
+      getValue: (item: any) => item.name ?? '',
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      valueType: 'select',
+      selectOptions: statuses.filter((s) => s.isActive).map((s) => ({ value: s.name, color: s.color })),
+      getValue: (item: any) => item.statusDefn?.name ?? '',
+    },
+    {
+      key: 'industry',
+      label: 'Industry',
+      valueType: 'text',
+      getValue: (item: any) => item.industry ?? '',
+    },
+    {
+      key: 'website',
+      label: 'Website',
+      valueType: 'text',
+      getValue: (item: any) => item.website ?? '',
+    },
+    {
+      key: 'phone',
+      label: 'Phone',
+      valueType: 'text',
+      getValue: (item: any) => item.phone ?? '',
+    },
+    {
+      key: 'size',
+      label: 'Size',
+      valueType: 'text',
+      getValue: (item: any) => item.size ?? '',
+    },
+    {
+      key: 'accountOwner',
+      label: 'Account Owner',
+      valueType: 'text',
+      getValue: (item: any) => (item.accountOwner ? `${item.accountOwner.firstName} ${item.accountOwner.lastName}` : ''),
+    },
+    ...buildCustomFieldColumns(customFields),
+  ];
+}
+
+const LEAD_STATUS_OPTIONS = [
+  { value: 'New' },
+  { value: 'Contacted' },
+  { value: 'Qualified' },
+  { value: 'Disqualified' },
+];
+const LEAD_STATUS_VALUE_BY_LABEL: Record<string, string> = {
+  New: 'new',
+  Contacted: 'contacted',
+  Qualified: 'qualified',
+  Disqualified: 'disqualified',
+};
+const LEAD_STATUS_LABEL_BY_VALUE: Record<string, string> = {
+  new: 'New',
+  contacted: 'Contacted',
+  qualified: 'Qualified',
+  disqualified: 'Disqualified',
+};
+export { LEAD_STATUS_VALUE_BY_LABEL };
+
+export function buildContactFields(
+  customFields: CustomFieldLike[],
+  leadSources: CatalogEntryLike[] = [],
+): ViewField[] {
+  return [
+    {
+      key: 'name',
+      label: 'Name',
+      valueType: 'text',
+      getValue: (item: any) => `${item.firstName ?? ''} ${item.lastName ?? ''}`.trim(),
+    },
+    {
+      key: 'email',
+      label: 'Email',
+      valueType: 'email',
+      getValue: (item: any) => item.email ?? '',
+    },
+    {
+      key: 'phone',
+      label: 'Phone',
+      valueType: 'text',
+      getValue: (item: any) => item.phone ?? '',
+    },
+    {
+      key: 'company',
+      label: 'Company',
+      valueType: 'text',
+      getValue: (item: any) => item.company?.name ?? '',
+    },
+    {
+      key: 'title',
+      label: 'Title',
+      valueType: 'text',
+      getValue: (item: any) => item.title ?? '',
+    },
+    {
+      key: 'leadStatus',
+      label: 'Lead Status',
+      valueType: 'select',
+      selectOptions: LEAD_STATUS_OPTIONS,
+      getValue: (item: any) => (item.leadStatus ? LEAD_STATUS_LABEL_BY_VALUE[item.leadStatus] ?? '' : ''),
+    },
+    {
+      key: 'leadSource',
+      label: 'Lead Source',
+      valueType: 'select',
+      selectOptions: leadSources.filter((s) => s.isActive).map((s) => ({ value: s.name })),
+      getValue: (item: any) => item.leadSource?.name ?? '',
+    },
+    ...buildCustomFieldColumns(customFields),
+  ];
+}
+
 export function findField(fields: ViewField[], key: string): ViewField | undefined {
   return fields.find((f) => f.key === key);
 }

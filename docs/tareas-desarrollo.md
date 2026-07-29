@@ -615,6 +615,37 @@ resize/hide/reorder de columnas, sin agrupar ni guardar vistas. Opportunities ma
 medida (tabs por Pipeline + columnas por stage) sin tocar, por decisión explícita del usuario de no
 unificarlo con el sistema genérico.
 
+### Ronda 2026-07-29 (cont.) — Views/Filters/Kanban/List genérico para Companies y Contacts
+
+Cierra el pendiente de arriba. Mismo mecanismo ya usado por Employees (`SavedView`, `ViewsBar.tsx`,
+`FilterBar.tsx`, `KanbanBoard.tsx`, `lib/viewFields.ts`), replicado en `CompaniesPage.tsx` y
+`ContactsPage.tsx` sin tocar Opportunities (fuera de alcance, confirmado).
+
+- `lib/viewFields.ts`: `buildCompanyFields`/`buildContactFields` (ya existían de la ronda anterior)
+  más `LEAD_STATUS_VALUE_BY_LABEL`/`LEAD_STATUS_LABEL_BY_VALUE` para poder mapear el label mostrado
+  en Kanban/List de vuelta al valor crudo del enum `leadStatus`.
+- `CompaniesPage.tsx`/`ContactsPage.tsx`: ViewsBar + FilterBar + sort por columna (click en header,
+  flechita asc/desc) + tres vistas (grid paginado, Kanban, List agrupado con secciones colapsables)
+  + `columnStorageSuffix` para que ancho/orden/visibilidad de columnas no se pisen entre vistas
+  distintas + `showAddFallback` para el caso de filtro/agrupamiento roto sin resultados (mismo bug
+  ya corregido en Employees, replicado preventivamente acá).
+- Regla de negocio específica de Company: el Kanban/List no permite arrastrar para cambiar `status`
+  a mano (`handleKanbanMove` lo bloquea con un toast) — el status de Company se deriva de outcomes
+  de deal, igual que ya pasaba en Clients; sí se puede agrupar/mover libremente por cualquier custom
+  field tipo `select`. Contacts no tiene esa restricción — `leadStatus` y `leadSource` son campos
+  reales editables, moverlos en Kanban dispara un `PATCH /api/contacts/:id` normal.
+- `StatusColumnMenu`/`api.createStatusDefinition`/`SavedView.entityType`: los tipos de TS solo
+  incluían `'employee' | 'client'`, quedaron desactualizados desde que Company ya tenía Views en el
+  backend — ampliados a incluir `'company'` (y `'contact'` en `SavedView.entityType`); el backend ya
+  aceptaba cualquier `EntityType` sin whitelist, así que no hubo cambios de backend.
+- Verificado end-to-end con Playwright contra `staging` (no mocks): alta de Companies/Contacts real,
+  custom field `select` nuevo, Kanban con drag-and-drop real (HTML5 DnD, no el `dragTo` de Playwright
+  que no dispara los eventos nativos) moviendo una Company entre columnas de un custom field y un
+  Contact entre columnas de `leadStatus`, persistencia confirmada tras recargar la página, List view
+  con secciones colapsables, sort por columna, filtro, y CRUD completo de vistas guardadas
+  (crear/duplicar/renombrar/borrar). `npm run build`/`npm test` (backend) y `tsc --noEmit`/`npm run
+  build` (frontend) limpios.
+
 ## 2026-07-29 — Módulo de Tasks (genérico, cross-módulo)
 
 Spec visual aprobada (mockup: `mockup-notes-tasks-activity.html`) + spec funcional completa en `docs/tareas-desarrollo.md` ("Módulo de Notes / Tasks / Activity Log"). Este archivo desglosa **solo la parte de Tasks** en tareas chicas para que Development las ejecute una por una, en orden. Notes y Activity Log quedan para entradas separadas de este mismo archivo.

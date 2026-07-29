@@ -16,7 +16,7 @@ interface StatusLike {
 
 interface StatusColumnMenuProps {
   token: string;
-  entityType: 'employee' | 'client';
+  entityType: 'employee' | 'client' | 'company';
   statuses: StatusLike[];
   onChanged: () => void;
   onHide?: () => void;

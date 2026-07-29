@@ -326,7 +326,7 @@ export interface ViewSort {
 export interface SavedView {
   id: string;
   tenantId: string;
-  entityType: 'employee' | 'client';
+  entityType: 'employee' | 'client' | 'company' | 'contact';
   createdByUserId: string;
   name: string;
   type: 'grid' | 'kanban' | 'list';
@@ -697,7 +697,7 @@ export const api = {
   // Status definitions
   listStatusDefinitions: async (
     token: string,
-    entityType: 'employee' | 'client',
+    entityType: 'employee' | 'client' | 'company',
   ): Promise<StatusDefinition[]> => {
     const res = await apiFetch(`${API_BASE_URL}/api/status-definitions?entityType=${entityType}`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -708,7 +708,7 @@ export const api = {
 
   createStatusDefinition: async (
     token: string,
-    data: { entityType: 'employee' | 'client'; name: string; color?: string; order?: number; isDefault?: boolean },
+    data: { entityType: 'employee' | 'client' | 'company'; name: string; color?: string; order?: number; isDefault?: boolean },
   ): Promise<StatusDefinition> => {
     const res = await apiFetch(`${API_BASE_URL}/api/status-definitions`, {
       method: 'POST',
@@ -1456,7 +1456,7 @@ export const api = {
   },
 
   // Saved views
-  listViews: async (token: string, entityType: 'employee' | 'client'): Promise<SavedView[]> => {
+  listViews: async (token: string, entityType: 'employee' | 'client' | 'company' | 'contact'): Promise<SavedView[]> => {
     const res = await apiFetch(`${API_BASE_URL}/api/views?entityType=${entityType}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -1467,7 +1467,7 @@ export const api = {
   createView: async (
     token: string,
     data: {
-      entityType: 'employee' | 'client';
+      entityType: 'employee' | 'client' | 'company' | 'contact';
       name: string;
       type: 'grid' | 'kanban' | 'list';
       visibility: 'personal' | 'shared';

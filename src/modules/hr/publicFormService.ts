@@ -7,7 +7,7 @@ import { getDefaultStatusId } from './statusService.js';
 import { createCustomFieldValue, isValueValidForFieldType } from './customFieldService.js';
 import { GENERIC_EMAIL_DOMAINS, getEmailDomain } from '../tenant/tenantService.js';
 import { sendPublicFormConfirmationEmail, sendPublicFormSubmissionEmail } from '../../lib/mailer.js';
-import type { EntityType, FormAccessMode, PublicForm } from '@prisma/client';
+import type { EntityType, Form, FormAccessMode } from '@prisma/client';
 
 export interface PublicFormFieldConfig {
   key: string; // 'department' | 'company' | `cf:${customFieldDefinitionId}`
@@ -35,7 +35,7 @@ function normalizeSlug(raw: string): string {
 
 export interface CreatePublicFormResult {
   success: boolean;
-  form?: PublicForm;
+  form?: Form;
   error?: string;
 }
 
@@ -45,14 +45,14 @@ export async function createPublicForm(input: CreatePublicFormInput): Promise<Cr
     return { success: false, error: 'Slug is required' };
   }
 
-  const existing = await prisma.publicForm.findUnique({
+  const existing = await prisma.form.findUnique({
     where: { tenantId_slug: { tenantId: input.tenantId, slug } },
   });
   if (existing) {
     return { success: false, error: 'A form with this slug already exists' };
   }
 
-  const form = await prisma.publicForm.create({
+  const form = await prisma.form.create({
     data: {
       tenantId: input.tenantId,
       entityType: input.entityType,
@@ -67,8 +67,8 @@ export async function createPublicForm(input: CreatePublicFormInput): Promise<Cr
   return { success: true, form };
 }
 
-export async function listPublicForms(tenantId: string): Promise<PublicForm[]> {
-  return prisma.publicForm.findMany({
+export async function listPublicForms(tenantId: string): Promise<Form[]> {
+  return prisma.form.findMany({
     where: { tenantId },
     orderBy: { createdAt: 'asc' },
   });
@@ -89,7 +89,7 @@ export interface UpdatePublicFormInput {
 
 export interface UpdatePublicFormResult {
   success: boolean;
-  form?: PublicForm;
+  form?: Form;
   error?: string;
 }
 
@@ -98,12 +98,12 @@ export async function updatePublicForm(
   tenantId: string,
   input: UpdatePublicFormInput,
 ): Promise<UpdatePublicFormResult> {
-  const existing = await prisma.publicForm.findUnique({ where: { id } });
+  const existing = await prisma.form.findUnique({ where: { id } });
   if (!existing || existing.tenantId !== tenantId) {
     return { success: false, error: 'Form not found' };
   }
 
-  const form = await prisma.publicForm.update({
+  const form = await prisma.form.update({
     where: { id },
     data: {
       name: input.name,
@@ -117,12 +117,12 @@ export async function updatePublicForm(
 }
 
 // Public lookup — no tenant/auth context, only the two slugs from the URL.
-export async function findActivePublicForm(tenantSlug: string, formSlug: string): Promise<PublicForm | null> {
+export async function findActivePublicForm(tenantSlug: string, formSlug: string): Promise<Form | null> {
   const tenant = await prisma.tenant.findUnique({ where: { slug: tenantSlug } });
   if (!tenant) {
     return null;
   }
-  const form = await prisma.publicForm.findUnique({
+  const form = await prisma.form.findUnique({
     where: { tenantId_slug: { tenantId: tenant.id, slug: formSlug } },
   });
   // accessMode:'internal' forms are meant to be filled by a logged-in team
@@ -182,7 +182,7 @@ export interface SubmitPublicFormResult {
 }
 
 export async function submitPublicForm(
-  form: PublicForm,
+  form: Form,
   input: SubmitPublicFormInput,
 ): Promise<SubmitPublicFormResult> {
   if (!input.firstName.trim() || !input.lastName.trim() || !input.email.trim()) {

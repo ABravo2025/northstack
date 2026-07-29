@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { api, type Pipeline, type PublicForm, type PublicFormFieldConfig } from '../api';
+import { api, type Pipeline, type Form, type PublicFormFieldConfig } from '../api';
 import { useToast } from '../components/ToastProvider';
 import SlideOver from '../components/SlideOver';
 import { GripIcon, PlusIcon, XIcon } from '../components/Icons';
@@ -24,7 +24,7 @@ function slugify(raw: string): string {
 export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPageProps) {
   const toast = useToast();
   const [tab, setTab] = useState<EntityTab>('employee');
-  const [forms, setForms] = useState<PublicForm[]>([]);
+  const [forms, setForms] = useState<Form[]>([]);
   const [tenantSlug, setTenantSlug] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -135,7 +135,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
     setSlideOverMode('add');
   };
 
-  const handleOpenEdit = (form: PublicForm) => {
+  const handleOpenEdit = (form: Form) => {
     const fields: PublicFormFieldConfig[] = JSON.parse(form.fieldsConfig);
     const savedKeys = fields.map((f) => f.key);
     const remainingKeys = allFields.map((f) => f.key).filter((key) => !savedKeys.includes(key));
@@ -238,7 +238,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
     }
   };
 
-  const handleToggleActive = async (form: PublicForm) => {
+  const handleToggleActive = async (form: Form) => {
     try {
       await api.updatePublicForm(token, form.id, { isActive: !form.isActive });
       loadForms();
@@ -247,7 +247,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
     }
   };
 
-  const handleCopyLink = (form: PublicForm) => {
+  const handleCopyLink = (form: Form) => {
     const url = `${window.location.origin}/apply/${tenantSlug}/${form.slug}`;
     navigator.clipboard.writeText(url);
     toast.success('Link copied to clipboard.');

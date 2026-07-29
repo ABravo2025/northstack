@@ -149,7 +149,7 @@ model Tenant {
   employeeTimeOffPolicies EmployeeTimeOffPolicy[]
   timeOffRequests         TimeOffRequest[]
   savedViews              SavedView[]
-  publicForms             PublicForm[]
+  forms                   Form[]
   fieldCatalogDefinitions FieldCatalogDefinition[]
   companies               Company[]
   contacts                Contact[]
@@ -290,7 +290,7 @@ model Pipeline {
   createdAt     DateTime                  @default(now())
   stages        PipelineStageDefinition[]
   opportunities Opportunity[]
-  forms         PublicForm[]
+  forms         Form[]
 
   @@index([tenantId])
 }
@@ -519,12 +519,12 @@ model CustomFieldValue {
   @@index([tenantId, entityType, entityId])
 }
 
-// Conceptually "Form" per the redesign spec (no longer exclusively public
-// once accessMode:internal exists) — kept as the PublicForm table name to
-// avoid a risky rename via `db push` (no real migration tooling in this
-// project, see the safe-migration protocol) for a change with no functional
-// benefit on its own.
-model PublicForm {
+// @@map keeps the physical table name "PublicForm" — only the Prisma model/
+// client name changed to Form (prisma.form.*), avoiding a real ALTER TABLE
+// against production data for a purely cosmetic rename (same reasoning that
+// kept the table name during Unit 10, now applied the other way: get the
+// Form name in code without the DDL risk).
+model Form {
   id           String         @id @default(uuid())
   tenantId     String
   tenant       Tenant         @relation(fields: [tenantId], references: [id])
@@ -541,6 +541,7 @@ model PublicForm {
 
   @@unique([tenantId, slug])
   @@index([tenantId])
+  @@map("PublicForm")
 }
 
 model SavedView {

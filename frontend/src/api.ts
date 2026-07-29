@@ -341,7 +341,7 @@ export interface PublicFormFieldConfig {
   required: boolean;
 }
 
-export interface PublicForm {
+export interface Form {
   id: string;
   tenantId: string;
   entityType: 'employee' | 'client' | 'contact';
@@ -1513,7 +1513,7 @@ export const api = {
   },
 
   // Public forms (admin management)
-  listPublicForms: async (token: string): Promise<{ tenantSlug: string | null; forms: PublicForm[] }> => {
+  listPublicForms: async (token: string): Promise<{ tenantSlug: string | null; forms: Form[] }> => {
     const res = await apiFetch(`${API_BASE_URL}/api/public-forms`, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -1532,7 +1532,7 @@ export const api = {
       accessMode?: 'public' | 'internal';
       pipelineId?: string | null;
     },
-  ): Promise<PublicForm> => {
+  ): Promise<Form> => {
     const res = await apiFetch(`${API_BASE_URL}/api/public-forms`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -1552,7 +1552,7 @@ export const api = {
       thankYouMessage?: string;
       pipelineId?: string | null;
     },
-  ): Promise<PublicForm> => {
+  ): Promise<Form> => {
     const res = await apiFetch(`${API_BASE_URL}/api/public-forms/${formId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },

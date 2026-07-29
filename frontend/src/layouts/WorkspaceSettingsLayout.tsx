@@ -1,43 +1,22 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { Link, Outlet, useLocation } from 'react-router-dom';
+import { ChevronLeftIcon } from '../components/Icons';
 
-interface WorkspaceSettingsLayoutProps {
-  user: any;
-}
-
-export default function WorkspaceSettingsLayout({ user }: WorkspaceSettingsLayoutProps) {
-  const linkClass = ({ isActive }: { isActive: boolean }) => (isActive ? 'active' : '');
-  const isAdmin = user.role === 'owner' || user.role === 'admin';
+export default function WorkspaceSettingsLayout() {
+  const { pathname } = useLocation();
+  const isIndex = pathname === '/settings' || pathname === '/settings/';
 
   return (
     <div className="page-full">
-      <h2 className="mb-5 text-xl font-semibold">Settings</h2>
-      <div className="settings-shell">
-        <nav className="settings-nav">
-          <p className="sidebar-group-label">Mi cuenta</p>
-          <NavLink to="profile" className={linkClass}>
-            Profile
-          </NavLink>
-          {isAdmin && (
-            <>
-              <p className="sidebar-group-label">Empresa</p>
-              <NavLink to="appearance" className={linkClass}>
-                Company
-              </NavLink>
-              <NavLink to="users" className={linkClass}>
-                Users
-              </NavLink>
-              <NavLink to="public-forms" className={linkClass}>
-                Public Forms
-              </NavLink>
-              <NavLink to="pipelines" className={linkClass}>
-                Pipelines
-              </NavLink>
-            </>
-          )}
-        </nav>
-        <div className="settings-content">
-          <Outlet />
-        </div>
+      {isIndex ? (
+        <h2 className="mb-5 text-xl font-semibold">Settings</h2>
+      ) : (
+        <Link to="/settings" className="settings-back-link">
+          <ChevronLeftIcon className="h-3.5 w-3.5" />
+          Settings
+        </Link>
+      )}
+      <div className="settings-content">
+        <Outlet />
       </div>
     </div>
   );

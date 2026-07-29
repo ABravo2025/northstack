@@ -18,6 +18,7 @@ import { useColumnOrder } from '../hooks/useColumnOrder';
 import CsvImportExportMenu from '../components/CsvImportExportMenu';
 import Avatar from '../components/Avatar';
 import StatusChip from '../components/StatusChip';
+import CategoryChip from '../components/CategoryChip';
 import { PencilIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
 import {
   applyFilters,
@@ -856,7 +857,20 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
                       const fieldValue = client.customFieldVals?.find(
                         (v: any) => v.customFieldDefinitionId === field.id,
                       );
-                      return <td key={field.id}>{fieldValue?.value || '—'}</td>;
+                      const value = fieldValue?.value;
+                      return (
+                        <td key={field.id}>
+                          {value ? (
+                            field.fieldType === 'select' ? (
+                              <CategoryChip label={value} seed={`${field.id}:${value}`} />
+                            ) : (
+                              value
+                            )
+                          ) : (
+                            '—'
+                          )}
+                        </td>
+                      );
                     })}
                     {canManageCustomFields && <td></td>}
                     <td>

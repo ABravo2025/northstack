@@ -23,6 +23,7 @@ import PublicFormsSettingsPage from './pages/PublicFormsSettingsPage';
 import PublicFormPage from './pages/PublicFormPage';
 import AppLayout from './layouts/AppLayout';
 import WorkspaceSettingsLayout from './layouts/WorkspaceSettingsLayout';
+import SettingsHomePage from './pages/SettingsHomePage';
 import './App.css';
 
 export interface FormError {
@@ -205,8 +206,8 @@ export default function App() {
         <Route path="/opportunities" element={<OpportunitiesPage user={user} token={token ?? ''} />} />
         <Route path="/profile" element={<Navigate to="/settings/profile" replace />} />
         <Route path="/company" element={<Navigate to="/settings/appearance" replace />} />
-        <Route path="/settings" element={<WorkspaceSettingsLayout user={user} />}>
-          <Route index element={<Navigate to="profile" replace />} />
+        <Route path="/settings" element={<WorkspaceSettingsLayout />}>
+          <Route index element={<SettingsHomePage user={user} />} />
           <Route
             path="profile"
             element={<ProfileSettingsPage user={user} token={token ?? ''} onUserUpdated={setUser} />}

@@ -412,3 +412,90 @@ Las entradas fechadas (el detalle día a día de qué se hizo y por qué) viven 
 - [ ] **Rediseño de Clients — automatizaciones (backlog, explícitamente pospuesto, revisado 2026-07-27):** email al owner por cambio de stage; auto-asignación de owner en alta por Form; recordatorio por Opportunity estancada. Depende de que Opportunity y su historial de stage estén maduros primero. Cuando se retome: reglas fijas puntuales sobre eventos existentes, no un motor configurable tipo GoHighLevel — sin evidencia todavía de qué reglas repiten los tenants.
 
 - [ ] **Rediseño de Clients — notas de contexto sin acción inmediata (revisión desde óptica de Sales Manager, 2026-07-27, no bloquean nada):** cruzar probabilidad por stage con tiempo-en-stage para marcar deals "en riesgo" cuando se construya el reporting; jerarquía de Company (matriz/sucursal) — gap conocido, solo relevante si aparece un tenant B2B enterprise; UI de multi-threading — resaltar visualmente si una Opportunity tiene un solo Contact asociado.
+
+# Northstack — Dirección visual ClickUp (aprobado 90%, pendiente revisión final)
+
+Mockup de referencia: `northstack-clickup-shell.html` (`~/Downloads`, no versionado en el repo).
+Implementado 2026-07-29 — 10 de 11 ítems, `staging` (`git push origin main:staging`), **no pusheado a
+`main`/producción todavía**, pendiente de que el usuario lo revise primero. Verificado con Playwright
+contra un tenant de prueba real en `staging` (registro, alta de empleado con Department, modal,
+Settings grid, light + dark) y `npm run build`/`npm test` (7/7) verdes.
+
+## 1. Fundaciones visuales (afecta toda la app)
+
+- [x] **1.1 — Dark mode a negro puro**: `dark:bg-gray-950` → `dark:bg-black` (`#000000`) en las ~12
+  reglas que usaban ese tono (body, `.card`, `.header`, `.sidebar`, `thead`, `.full-table thead`/
+  `.col-frozen`, `.kcard`, etc.). Los ~22 `:hover` en modo oscuro que dependían de contraste contra el
+  navy viejo (`gray-800`/`gray-700` en botones de ícono, nav, popovers) pasaron a `white/5` (overlay
+  translúcido). Excepción deliberada: el hover de `.col-frozen` (columna congelada/sticky) se dejó
+  opaco (`gray-900`, no translúcido) — un overlay translúcido dejaría ver el contenido de las columnas
+  no congeladas por debajo al hacer scroll horizontal.
+- [x] **1.2 — Reducir la escala tipográfica global**: `--text-sm` redefinido a `0.8125rem` (13px) en el
+  `@theme` de `index.css` — cascada automática a toda la app (line-height se mantiene proporcional,
+  Tailwind v4 lo expresa como ratio unitless). Ajustes puntuales que no caen en la escala base:
+  `.name-cell` a `text-sm` (antes `text-base`, ahora empareja con el nuevo tamaño base), `.full-table
+  th`/`td` a 10px/11.5px explícitos, `.sidebar-link` a `text-xs` (12px), nueva clase `.modal-title`
+  (15px/bold, aplicada a `.confirm-dialog-title`/`.legal-modal-header h3`), `.role-chip`/`.status-badge`
+  a 10px.
+- [x] **1.3 — Reforzar jerarquía tipográfica en tablas/listas**: `.full-table td` ganó un color mudo
+  explícito (`text-gray-500 dark:text-gray-400`, antes heredaba el color pleno de la página sin
+  distinción); `.name-cell` gana su propio color explícito (`text-brand-navy dark:text-gray-100`) para
+  no heredar el nuevo mudo de su `td` padre. Encabezados ya eran mudos, ahora además más chicos (10px)
+  que ambos niveles.
+- [x] **1.4 — Chips de color para campos categóricos**: `CategoryChip.tsx` (nuevo, genérico) — hash
+  determinístico del id/nombre sobre una paleta fija de 4 colores (`bg-{color}-500/15` + texto sólido
+  700/300 según tema). Paleta: morado, coral (`orange`), rosa, y `teal` en vez del "verde" literal del
+  mockup — la app ya usa `emerald` para semántica de éxito/aprobado, reusar el mismo verde para un chip
+  puramente categórico hubiera leído como un estado, no como una categoría. Azul deliberadamente
+  excluido (reservado para activo/selección). Aplicado a Department y Job Title de Employee, y a
+  cualquier custom field `fieldType: 'select'` en Employees y Clients — no solo Department, como pedía
+  el ítem.
+
+## 2. Componentes reutilizables
+
+- [x] **2.1 — Dropdown/select de ancho fijo**: nueva clase `.dropdown-trigger`/`.dropdown-trigger-wrap`
+  (min 110px/max 220px, `width: max-content`, chevron superpuesto vía ícono absoluto — no un `<select>`
+  con `appearance: none` a secas, para poder mostrar el ícono sin que deje de ser un `<select>` real) +
+  variante `.dt-status` (tinte azul fijo, no color por-valor — mismo criterio de "azul reservado" de
+  1.4). Filtros y el `<select>` de rol en Company Users ya estaban correctamente acotados en ancho
+  (`.filter-row`, `.select-compact`, ninguno vive dentro de un `.form-group` que los estire) — no hizo
+  falta tocarlos. Los `<select>` de formularios largos (Sign Up, Add/Edit Employee) **no** se tocaron a
+  propósito — el ítem da como ejemplos "Estado, filtros, roles", ninguno de los cuales es un campo de
+  formulario vertical largo.
+- [x] **2.2 — Panel de detalle como popup modal**: `EmployeeOverviewPanel.tsx` pasa de panel "push"
+  (`.table-panel-row`/`.table-panel-main`, sacadas de `App.css`/`EmployeesPage.tsx`, ya sin uso) a modal
+  centrado (`.detail-modal-overlay` + `.overview-panel` como la caja, ahora con `max-w-[460px]`/
+  `max-h-[85vh]`) con click en el backdrop, botón X y `Escape` para cerrar (mismo patrón ya usado en
+  `LegalDocumentModal.tsx`). **Alcance: solo Employees** — Clients y Company Users nunca tuvieron este
+  panel construido (el ítem decía "y su equivalente en Clients/Company Users", pero no existe nada que
+  convertir ahí todavía; construirlo de cero no estaba pedido por este ítem puntual).
+
+## 3. Navegación (Sidebar)
+
+- [ ] **3.1 — Sacar el grupo "Clients"**: **bloqueado, no implementado.** Depende de que la migración
+  `Client → Company/Contact` (`scripts/backfill-clients-to-companies-contacts.ts`) haya corrido contra
+  producción — verificado contra la base real antes de tocar esto: 124 tenants, 43 `Client`, pero solo
+  1 `Company`/4 `Contact` migrados. Sacar el nav ahora dejaría a tenants reales con datos en `Client`
+  sin ninguna forma de verlos desde la UI. El usuario confirmó diferir este ítem hasta que la migración
+  corra — el resto de la ronda (1.1-2.2, 4.1-4.3) se hizo igual.
+- [x] **3.2 — Agregar grupo "Sales"**: ya estaba hecho — viene del rediseño de Clients (Unidad 3,
+  "Company frontend + Sales sidebar module"), antes de que este ítem se escribiera. Sin cambios.
+
+## 4. Settings — nuevo layout tipo grid
+
+- [x] **4.1 — Reemplazar `.settings-nav` (lista vertical) por grid de categorías**: `.settings-nav`/
+  `.settings-shell` borradas de `App.css`. Nuevo `SettingsHomePage.tsx` (tiles con ícono circular de
+  color + label, por sección con encabezado y línea divisoria vía `.settings-grid-section + .settings-
+  grid-section`).
+- [x] **4.2 — Migrar las categorías reales a tiles**: "Mi cuenta" → Profile. "Empresa" (solo
+  owner/admin) → Appearance, Users, Public Forms, Pipelines. Mismo routing existente — `WorkspaceSettingsLayout.tsx`
+  se simplificó a un wrapper sin nav propia (antes tenía la lista vertical siempre visible en cada
+  sub-página); ahora el grid es exclusivamente la landing de `/settings` (ruta `index`), y cada
+  sub-página muestra un link "← Settings" en su lugar (`useLocation` para distinguir index de subruta).
+- [x] **4.3 — Sección "Próximamente"**: tiles de Integrations y Billing, opacidad ~40%
+  (`.settings-tile.disabled`, `pointer-events-none`), sin ir a ningún lado.
+
+---
+*Pendiente: revisión del usuario en `staging` antes de promover a `main` — mismo criterio de
+staging-first vigente desde 2026-07-27. El ítem 3.1 sigue bloqueado en la migración de datos de
+Clients, ver arriba.*

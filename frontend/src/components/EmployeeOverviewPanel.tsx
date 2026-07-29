@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Avatar from './Avatar';
 import StatusChip from './StatusChip';
 import { XIcon } from './Icons';
@@ -26,15 +26,30 @@ function Field({ label, value }: { label: string; value: React.ReactNode }) {
 export default function EmployeeOverviewPanel({ employee, tenantCurrency, isOwner, onClose, onEdit }: EmployeeOverviewPanelProps) {
   const [tab, setTab] = useState<Tab>('overview');
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   return (
-    <div className="overview-panel">
+    <div className="detail-modal-overlay" onClick={onClose}>
+      <div
+        className="overview-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="employee-overview-name"
+        onClick={(e) => e.stopPropagation()}
+      >
       <div className="overview-panel-head">
         <button type="button" className="slideover-close" onClick={onClose} aria-label="Close">
           <XIcon className="h-4 w-4" />
         </button>
         <Avatar firstName={employee.firstName} lastName={employee.lastName} />
         <div className="overview-panel-heading">
-          <h3>
+          <h3 id="employee-overview-name">
             {employee.firstName} {employee.lastName}
           </h3>
           <p>{employee.email}</p>
@@ -106,6 +121,7 @@ export default function EmployeeOverviewPanel({ employee, tenantCurrency, isOwne
         )}
         {tab === 'notes' && <p className="overview-panel-placeholder">Nothing here yet.</p>}
         {tab === 'activity' && <p className="overview-panel-placeholder">Nothing here yet.</p>}
+      </div>
       </div>
     </div>
   );

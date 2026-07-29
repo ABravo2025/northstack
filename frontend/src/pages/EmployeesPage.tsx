@@ -21,6 +21,7 @@ import EmployeeOverviewPanel from '../components/EmployeeOverviewPanel';
 import HorizontalScrollbar from '../components/HorizontalScrollbar';
 import Avatar from '../components/Avatar';
 import StatusChip from '../components/StatusChip';
+import CategoryChip from '../components/CategoryChip';
 import { ChevronDownIcon, MailIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
 import {
   applyFilters,
@@ -647,8 +648,22 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     },
     { key: 'email', label: 'Business Email', render: (emp: any) => emp.email },
     { key: 'personalEmail', label: 'Personal Email', render: (emp: any) => emp.personalEmail || '—' },
-    { key: 'department', label: 'Department', render: (emp: any) => emp.departmentDefn?.name || '—' },
-    { key: 'jobTitle', label: 'Job Title', render: (emp: any) => emp.jobTitleDefn?.name || '—' },
+    {
+      key: 'department',
+      label: 'Department',
+      render: (emp: any) =>
+        emp.departmentDefn ? (
+          <CategoryChip label={emp.departmentDefn.name} seed={emp.departmentDefn.id} />
+        ) : (
+          '—'
+        ),
+    },
+    {
+      key: 'jobTitle',
+      label: 'Job Title',
+      render: (emp: any) =>
+        emp.jobTitleDefn ? <CategoryChip label={emp.jobTitleDefn.name} seed={emp.jobTitleDefn.id} /> : '—',
+    },
     {
       key: 'status',
       label: 'Status',
@@ -805,7 +820,12 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       )}
       {visibleCustomFields.map((field) => {
         const fieldValue = emp.customFieldVals?.find((v: any) => v.customFieldDefinitionId === field.id);
-        return <td key={field.id}>{fieldValue?.value || '—'}</td>;
+        const value = fieldValue?.value;
+        return (
+          <td key={field.id}>
+            {value ? field.fieldType === 'select' ? <CategoryChip label={value} seed={`${field.id}:${value}`} /> : value : '—'}
+          </td>
+        );
       })}
       {canManageCustomFields && <td></td>}
       <td>
@@ -1333,8 +1353,6 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         )}
       </div>
 
-      <div className="table-panel-row">
-      <div className="table-panel-main">
       {loading ? (
         <p className="mt-4">Loading...</p>
       ) : employees.length === 0 ? (
@@ -1550,7 +1568,6 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
           {viewType !== 'list' && <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />}
         </>
       )}
-      </div>
       {overviewEmployeeId && (() => {
         const overviewEmployee = employees.find((e) => e.id === overviewEmployeeId);
         if (!overviewEmployee) return null;
@@ -1567,7 +1584,6 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
           />
         );
       })()}
-      </div>
     </div>
   );
 }

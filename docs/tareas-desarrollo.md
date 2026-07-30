@@ -531,6 +531,13 @@ al crearla").
 - [ ] Push destructivo sobre `Client` (borrar la tabla/columna) — **deliberadamente no incluido en
   esta ronda**, sigue siendo la "unidad futura separada" ya documentada. El grupo "Clients" salió
   del sidebar (ver arriba), pero las rutas y la tabla siguen intactas.
+- *Actualizado 2026-07-30 (revisión DevOps, ver sección al final del archivo): la página huérfana
+  del frontend (`ClientsPage.tsx`/`ClientsDashboardPage.tsx`, rutas `/clients` y `/clients/dashboard`
+  en `App.tsx`) se borró — era código muerto confirmado (sin link de nav desde el 2026-07-29). El
+  backend (`src/routes/clients.ts`, `clientService.ts`, tabla `Client`) sigue intacto a propósito:
+  `onboardingService.ts` y `publicFormService.ts` todavía llaman `createClient` directo (alta de
+  tenant nuevo y Public Forms con `entityType: 'client'`), así que siguen dependiendo del módulo.
+  No confundir con el punto de arriba (push destructivo) — sigue sin tocarse.
 
 ### 3. Backend
 - [x] CRUD Company/Contact/Opportunity/Pipeline — ya existía.
@@ -936,4 +943,78 @@ resto de checkpoints).**
 **Nota de proceso**: toda la información de contexto de esta sesión (qué se preguntó, qué confirmó el
 usuario, qué bug se encontró y por qué, qué código ya se revisó) quedó volcada en las entradas de
 arriba a propósito, para que no se pierda nada al limpiar la conversación — la próxima sesión debería
+
+## 2026-07-30 — Revisión DevOps de arquitectura y calidad de código
+
+El usuario pidió actuar como DevOps y hacer una revisión de código completa de la app (estructura,
+escalabilidad, extensión de archivos, reusabilidad, buenas prácticas), y después corregir todo lo
+encontrado. Sesión separada del trabajo de Tasks/Notes/Checkpoints D-E-F de arriba — no depende de
+esa tanda ni la modifica. Todo implementado y verificado en local (`npm run build`/`npm test`/
+`npm run lint` en backend y frontend, todo verde) contra el mismo criterio del resto del proyecto;
+nada pusheado a `main` todavía, pendiente del mismo gate de siempre (staging primero, revisión del
+usuario antes de producción).
+
+**Hallazgos principales** (repo de 144 archivos TS/TSX en ese momento):
+- `frontend/src/api.ts` (1827 líneas) concentraba tipos + llamadas de *todos* los módulos en un
+  solo archivo.
+- 4 páginas de listado (Companies/Contacts/Employees/Clients, 900-1300 líneas c/u) repiten ~400-500
+  líneas de lógica casi idéntica (CRUD de saved views, columnas de custom fields, sort, kanban) — el
+  mismo problema que ya está anotado en este archivo como "unificación estructural" (Checkpoint F de
+  arriba fue la versión Employee↔Company/Contact/Opportunity de detalle; esto es el mismo patrón a
+  nivel de página de listado). **Se dejó pospuesto a propósito, confirmado con el usuario** — no se
+  tocó, sigue siendo el ítem de mayor impacto pendiente en reusabilidad.
+- Sin ESLint/Prettier en todo el repo (ni backend ni frontend).
+- El pipeline de deploy (`.github/workflows/deploy.yml`) nunca corría el `build`/`test` del backend
+  antes de deployar — el build de Vercel (`vercel.json`) solo compila el frontend, así que un backend
+  roto podía llegar a producción sin que nada lo frenara.
+- `tenantService.ts` (563 líneas) mezclaba 3 responsabilidades (tenant/invitaciones/usuarios).
+- `components/` era una carpeta plana con 45 archivos sin agrupar por dominio.
+- Módulo Clients: ver nota ya agregada más arriba (sección "Rediseño de Clients — Tier 3").
+
+**Corregido esta sesión:**
+- [x] **CI gate de backend**: job nuevo `verify-backend` en `deploy.yml` (`npm ci && npm run build &&
+  npm test`, reusando el secret `STAGING_DATABASE_URL` para que `prisma generate` resuelva
+  `env("DATABASE_URL")` — los tests mockean `src/lib/prisma.ts` directo, no pegan contra una base
+  real). `deploy-app`/`deploy-staging` ahora dependen (`needs:`) de que ese job pase.
+- [x] **ESLint** agregado en backend y frontend (`eslint.config.js` en cada uno, flat config,
+  `typescript-eslint` recommended). Deliberadamente sin Prettier ni reglas de estilo agresivas —
+  el objetivo era el gate de correctitud (unused vars, `prefer-const`, reglas de hooks), no
+  reformatear 144 archivos existentes. `eslint-plugin-react-hooks` se limitó a
+  `rules-of-hooks`/`exhaustive-deps` (su "recommended" v7 trae reglas nuevas tipo React Compiler que
+  hubieran marcado como error un patrón extendido y ya-andando en toda la app). Encontrado y
+  corregido de paso: un `let` que debía ser `const` en `routes/opportunities.ts`.
+- [x] **`tenantService.ts` dividido** en `tenantService.ts` (creación/registro/lookup de tenant),
+  `invitationService.ts` (invitaciones) y `tenantUserService.ts` (gestión de usuarios del tenant).
+  Callers (`routes/tenants.ts`, `routes/employees.ts`) actualizados.
+- [x] **`components/` reorganizado** en subcarpetas por dominio (`common/`, `entity-views/`, `crm/`,
+  `hr/`, `tasks/`, `notes/`, `layout/`) — 45 archivos movidos, ~217 imports corregidos en 69 archivos
+  vía un script puntual (no a mano). Cero cambio de comportamiento, solo organización.
+- [x] **`api.ts` dividido** en `frontend/src/api/` (`http.ts`, `types.ts`, un archivo por dominio —
+  `auth`, `employees`, `companies`, `contacts`, `opportunities`, `pipelines`, `tasks`, `notes`,
+  `timeOff*`, `customFields`, `statuses`, `fieldCatalog`, `savedViews`, `publicForms*`, `csv`,
+  `feedback`, `onboarding`, `tenantUsers`) + `index.ts` como barrel que reexporta todo bajo el mismo
+  `api`/`ApiError`/tipos de siempre. Como el archivo pasó a ser una carpeta con `index.ts`, ningún
+  import existente (`from '../api'`) tuvo que cambiar.
+- [x] **Página huérfana de Clients eliminada** del frontend — ver nota ya agregada en la sección
+  "Rediseño de Clients — Tier 3" más arriba para el detalle completo (qué se borró, qué se dejó
+  intacto a propósito y por qué).
+- [x] **Tenant-scoping — investigado, no se implementó un enforcement automático**: la idea original
+  era un `$extends` de Prisma (mismo mecanismo que ya usa `lib/prisma.ts` para el retry de Neon) que
+  tirara error si un query a un modelo con `tenantId` no lo incluía en el `where`. Auditando **todos**
+  los `findMany` del backend contra los 22 modelos con `tenantId`, se confirmó que ya están todos
+  correctamente escopeados salvo 2 casos — y esos 2 son seguros a propósito (filtran por un FK de un
+  padre ya verificado contra el tenant, ej. `companyService.ts` buscando Opportunities de una Company
+  ya cargada por `companyId`, no por `tenantId`). Además, el patrón `findXById` sin `tenantId` (
+  `findCompanyById`, `findEmployeeById`, `findUserById`, etc.) es una convención deliberada y ya
+  documentada en el código (`tenantService.ts`: "Unscoped by design... the caller checks tenantId
+  before trusting the result") — un enforcement genérico hubiera roto ese patrón en decenas de
+  call sites correctos. Conclusión: no hay bug de tenant-scoping hoy; se documentó la convención en
+  un comentario nuevo en `src/lib/prisma.ts` en vez de forzar un mecanismo que hubiera necesitado
+  excepciones para código que ya está bien.
+
+**Verificación**: `npm run build`/`npm test`/`npm run lint` en la raíz (backend) y en `frontend/`
+(`tsc -b && vite build`, más `npm run lint`) — todo verde después de cada paso y al final de la
+sesión completa. Sin Playwright (no disponible esta sesión, mismo motivo que el resto de esta
+tanda) — son cambios de estructura/build/CI, no de UI, así que el build+test+lint es la verificación
+que aplica acá.
 poder ejecutar Checkpoint D sin necesitar releer el chat.

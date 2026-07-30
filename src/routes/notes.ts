@@ -46,9 +46,9 @@ notesRouter.post('/api/notes', async (req, res) => {
     return;
   }
 
-  const { entityType, entityId, header, body } = req.body;
-  if (!entityType || !entityId || !header?.trim() || !body?.trim()) {
-    return res.status(400).json({ error: 'entityType, entityId, header, and body are required' });
+  const { entityType, entityId, title, description } = req.body;
+  if (!entityType || !entityId || !title?.trim() || !description?.trim()) {
+    return res.status(400).json({ error: 'entityType, entityId, title, and description are required' });
   }
   if (!isSupportedNoteEntityType(entityType)) {
     return res.status(400).json({ error: 'Unsupported entityType' });
@@ -63,8 +63,8 @@ notesRouter.post('/api/notes', async (req, res) => {
     tenantId: user.tenantId!,
     entityType,
     entityId,
-    header: header.trim(),
-    body: body.trim(),
+    title: title.trim(),
+    description: description.trim(),
     createdById: user.id,
   });
   return res.status(201).json(note);
@@ -82,8 +82,8 @@ notesRouter.patch('/api/notes/:noteId', async (req, res) => {
   }
 
   const updated = await updateNote(req.params.noteId, {
-    header: req.body.header,
-    body: req.body.body,
+    title: req.body.title,
+    description: req.body.description,
   });
   return res.json(updated);
 });

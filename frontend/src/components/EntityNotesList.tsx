@@ -3,7 +3,7 @@ import { api, type Note, type TaskEntityType } from '../api';
 import { useToast } from './ToastProvider';
 import NoteForm, { type NoteFormPayload } from './NoteForm';
 import Avatar from './Avatar';
-import { renderNoteBody } from '../lib/lightMarkdown';
+import { renderNoteDescription } from '../lib/lightMarkdown';
 
 interface EntityNotesListProps {
   token: string;
@@ -89,10 +89,10 @@ export default function EntityNotesList({ token, entityType, entityId, onCountCh
             onClick={() => setEditingNote(note)}
           >
             <div className="note-row-header">
-              <span className="note-row-title">{note.header}</span>
+              <span className="note-row-title">{note.title}</span>
               {note.createdBy && <Avatar firstName={note.createdBy.firstName} lastName={note.createdBy.lastName} />}
             </div>
-            <div className="note-row-body">{renderNoteBody(note.body)}</div>
+            <div className="note-row-body">{renderNoteDescription(note.description)}</div>
             <span className="note-row-date">{new Date(note.createdAt).toLocaleDateString()}</span>
           </div>
         ))}

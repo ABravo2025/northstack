@@ -8,14 +8,14 @@ export interface CreateNoteInput {
   tenantId: string;
   entityType: EntityType;
   entityId: string;
-  header: string;
-  body: string;
+  title: string;
+  description: string;
   createdById: string;
 }
 
 export interface UpdateNoteInput {
-  header?: string;
-  body?: string;
+  title?: string;
+  description?: string;
 }
 
 const noteInclude = {
@@ -28,8 +28,8 @@ export async function createNote(input: CreateNoteInput) {
       tenantId: input.tenantId,
       entityType: input.entityType,
       entityId: input.entityId,
-      header: input.header,
-      body: input.body,
+      title: input.title,
+      description: input.description,
       createdById: input.createdById,
     },
     include: noteInclude,
@@ -52,8 +52,8 @@ export async function updateNote(id: string, input: UpdateNoteInput) {
   // Whitelist explicitly — never spread req.body straight through (same rule
   // as every other update service in the app).
   const data: Prisma.NoteUncheckedUpdateInput = {};
-  if (input.header !== undefined) data.header = input.header;
-  if (input.body !== undefined) data.body = input.body;
+  if (input.title !== undefined) data.title = input.title;
+  if (input.description !== undefined) data.description = input.description;
 
   return prisma.note.update({ where: { id }, data, include: noteInclude });
 }

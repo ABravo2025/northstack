@@ -2,9 +2,9 @@ import type { ReactNode } from 'react';
 
 // Deliberately not a full markdown parser (no headers/lists/links/code) — the
 // spec asks for "resaltar partes" (highlight parts), i.e. bold/italic
-// emphasis inside an otherwise plain-text Note body. Renders to real React
-// elements (never dangerouslySetInnerHTML), so there's no XSS surface from
-// user-supplied text.
+// emphasis inside an otherwise plain-text Note description. Renders to real
+// React elements (never dangerouslySetInnerHTML), so there's no XSS surface
+// from user-supplied text.
 function renderInlineMarkdown(text: string, keyPrefix: string): ReactNode[] {
   const pattern = /\*\*(.+?)\*\*|\*(.+?)\*|_(.+?)_/g;
   const nodes: ReactNode[] = [];
@@ -22,8 +22,8 @@ function renderInlineMarkdown(text: string, keyPrefix: string): ReactNode[] {
   return nodes;
 }
 
-export function renderNoteBody(body: string): ReactNode {
-  return body.split('\n').map((line, i) => (
+export function renderNoteDescription(description: string): ReactNode {
+  return description.split('\n').map((line, i) => (
     <p key={i} className="note-body-line">
       {line.trim() ? renderInlineMarkdown(line, `l${i}`) : ' '}
     </p>

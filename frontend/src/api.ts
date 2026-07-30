@@ -222,8 +222,8 @@ export interface Note {
   tenantId: string;
   entityType: TaskEntityType;
   entityId: string;
-  header: string;
-  body: string;
+  title: string;
+  description: string;
   createdById: string;
   createdBy?: { id: string; firstName: string; lastName: string };
   createdAt: string;
@@ -1792,7 +1792,7 @@ export const api = {
 
   createNote: async (
     token: string,
-    data: { entityType: TaskEntityType; entityId: string; header: string; body: string },
+    data: { entityType: TaskEntityType; entityId: string; title: string; description: string },
   ): Promise<Note> => {
     const res = await apiFetch(`${API_BASE_URL}/api/notes`, {
       method: 'POST',
@@ -1806,7 +1806,7 @@ export const api = {
   updateNote: async (
     token: string,
     noteId: string,
-    data: Partial<{ header: string; body: string }>,
+    data: Partial<{ title: string; description: string }>,
   ): Promise<Note> => {
     const res = await apiFetch(`${API_BASE_URL}/api/notes/${noteId}`, {
       method: 'PATCH',

@@ -3,8 +3,8 @@ import type { Note } from '../api';
 import { TrashIcon, XIcon } from './Icons';
 
 export interface NoteFormPayload {
-  header: string;
-  body: string;
+  title: string;
+  description: string;
 }
 
 interface NoteFormProps {
@@ -16,37 +16,39 @@ interface NoteFormProps {
 
 // Always-expanded compose form for the right-column "Notes" tab — same
 // treatment as TaskForm (2026-07-30 redesign, no more click-to-open Popover).
+// Field names matched to TaskForm's title/description (2026-07-30) for
+// consistency between the two.
 export default function NoteForm({ note, onSubmit, onDelete, onCancelEdit }: NoteFormProps) {
-  const [header, setHeader] = useState('');
-  const [body, setBody] = useState('');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
 
   useEffect(() => {
-    setHeader(note?.header ?? '');
-    setBody(note?.body ?? '');
+    setTitle(note?.title ?? '');
+    setDescription(note?.description ?? '');
   }, [note]);
 
   const handleSubmit = async () => {
-    if (!header.trim() || !body.trim()) return;
+    if (!title.trim() || !description.trim()) return;
     const wasNew = !note;
-    await onSubmit({ header: header.trim(), body: body.trim() });
+    await onSubmit({ title: title.trim(), description: description.trim() });
     if (wasNew) {
-      setHeader('');
-      setBody('');
+      setTitle('');
+      setDescription('');
     }
   };
 
   return (
     <div className="inline-compose-form">
       <div className="nv-field">
-        <label htmlFor="note-form-header">Header</label>
-        <input id="note-form-header" value={header} onChange={(e) => setHeader(e.target.value)} placeholder="Short title" />
+        <label htmlFor="note-form-title">Title</label>
+        <input id="note-form-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Short title" />
       </div>
       <div className="nv-field">
-        <label htmlFor="note-form-body">Description</label>
+        <label htmlFor="note-form-description">Description</label>
         <textarea
-          id="note-form-body"
-          value={body}
-          onChange={(e) => setBody(e.target.value)}
+          id="note-form-description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
           rows={5}
           placeholder="Supports **bold** and *italic*"
         />
@@ -56,7 +58,7 @@ export default function NoteForm({ note, onSubmit, onDelete, onCancelEdit }: Not
           type="button"
           className="btn-primary flex-1 text-center"
           onClick={handleSubmit}
-          disabled={!header.trim() || !body.trim()}
+          disabled={!title.trim() || !description.trim()}
         >
           {note ? 'Save' : 'Add note'}
         </button>

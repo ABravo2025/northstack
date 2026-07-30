@@ -552,17 +552,19 @@ model Task {
 }
 
 // Same polymorphic tenantId+entityType+entityId pattern as Task — a short
-// header + long body (body allows markdown for emphasis, per the user
-// 2026-07-29). No assignee (unlike Task, a Note isn't owned by anyone but its
-// author) and no completed state — it's a record, not a to-do.
+// title + long description (description allows markdown for emphasis, per
+// the user 2026-07-29; field names matched to Task's title/description on
+// 2026-07-30 for consistency). No assignee (unlike Task, a Note isn't owned
+// by anyone but its author) and no completed state — it's a record, not a
+// to-do.
 model Note {
   id          String     @id @default(uuid())
   tenantId    String
   tenant      Tenant     @relation(fields: [tenantId], references: [id])
   entityType  EntityType
   entityId    String
-  header      String
-  body        String
+  title       String
+  description String
   createdById String
   createdBy   User       @relation(fields: [createdById], references: [id])
   createdAt   DateTime   @default(now())

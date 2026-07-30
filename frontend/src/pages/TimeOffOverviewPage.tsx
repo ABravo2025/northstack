@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
-import { useToast } from '../components/ToastProvider';
-import ConfirmDialog from '../components/ConfirmDialog';
-import SlideOver from '../components/SlideOver';
-import Popover from '../components/Popover';
-import ColorPicker from '../components/ColorPicker';
-import { ChevronDownIcon, DotsVerticalIcon, PlusIcon } from '../components/Icons';
+import { useToast } from '../components/common/ToastProvider';
+import ConfirmDialog from '../components/common/ConfirmDialog';
+import SlideOver from '../components/common/SlideOver';
+import Popover from '../components/common/Popover';
+import ColorPicker from '../components/common/ColorPicker';
+import { ChevronDownIcon, DotsVerticalIcon, PlusIcon } from '../components/common/Icons';
 
 const ACCRUAL_LABELS: Record<string, string> = {
   fixed_annual: 'Fixed',

@@ -1,5 +1,5 @@
 import { Link, Outlet, useLocation } from 'react-router-dom';
-import { ChevronLeftIcon } from '../components/Icons';
+import { ChevronLeftIcon } from '../components/common/Icons';
 
 export default function WorkspaceSettingsLayout() {
   const { pathname } = useLocation();

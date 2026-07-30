@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, type Opportunity, type Pipeline } from '../api';
-import { useToast } from '../components/ToastProvider';
-import ConfirmDialog from '../components/ConfirmDialog';
-import SlideOver from '../components/SlideOver';
-import KanbanBoard from '../components/KanbanBoard';
-import OpportunityDetailModal from '../components/OpportunityDetailModal';
+import { useToast } from '../components/common/ToastProvider';
+import ConfirmDialog from '../components/common/ConfirmDialog';
+import SlideOver from '../components/common/SlideOver';
+import KanbanBoard from '../components/entity-views/KanbanBoard';
+import OpportunityDetailModal from '../components/crm/OpportunityDetailModal';
 import { formatMoney } from '../lib/currencies';
-import { PlusIcon } from '../components/Icons';
+import { PlusIcon } from '../components/common/Icons';
 
 interface OpportunitiesPageProps {
   user: any;

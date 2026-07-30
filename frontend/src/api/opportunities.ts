@@ -1,0 +1,93 @@
+import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
+import type { OpportunityContactLink, Opportunity } from './types.js';
+
+export const opportunitiesApi = {
+  // Opportunities
+  listOpportunities: async (token: string): Promise<Opportunity[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/opportunities`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  createOpportunity: async (
+    token: string,
+    data: {
+      name: string;
+      companyId: string;
+      pipelineId: string;
+      stageId?: string;
+      amountCents: number;
+      currency: string;
+      estimatedCloseDate?: string | null;
+      ownerId: string;
+      lossReasonId?: string | null;
+      nextStepDate?: string | null;
+      nextStepNote?: string | null;
+    },
+  ): Promise<Opportunity> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/opportunities`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  updateOpportunity: async (
+    token: string,
+    opportunityId: string,
+    data: Partial<{
+      name: string;
+      companyId: string;
+      stageId: string;
+      amountCents: number;
+      currency: string;
+      estimatedCloseDate: string | null;
+      ownerId: string;
+      lossReasonId: string | null;
+      nextStepDate: string | null;
+      nextStepNote: string | null;
+    }>,
+  ): Promise<Opportunity> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/opportunities/${opportunityId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  deleteOpportunity: async (token: string, opportunityId: string): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/opportunities/${opportunityId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+  },
+
+  addOpportunityContact: async (
+    token: string,
+    opportunityId: string,
+    data: { contactId: string; role?: string },
+  ): Promise<OpportunityContactLink> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/opportunities/${opportunityId}/contacts`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  removeOpportunityContact: async (token: string, opportunityId: string, contactId: string): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/opportunities/${opportunityId}/contacts/${contactId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+  },
+};

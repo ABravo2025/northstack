@@ -7,7 +7,7 @@ import {
   TeamIcon,
   TrendingIcon,
   UserCircleIcon,
-} from '../components/Icons';
+} from '../components/common/Icons';
 
 interface SettingsHomePageProps {
   user: any;

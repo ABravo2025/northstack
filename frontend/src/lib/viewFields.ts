@@ -178,36 +178,6 @@ export function buildEmployeeFields(
   ];
 }
 
-export function buildClientFields(statuses: StatusLike[], customFields: CustomFieldLike[]): ViewField[] {
-  return [
-    {
-      key: 'name',
-      label: 'Name',
-      valueType: 'text',
-      getValue: (item: any) => `${item.firstName ?? ''} ${item.lastName ?? ''}`.trim(),
-    },
-    {
-      key: 'email',
-      label: 'Email',
-      valueType: 'email',
-      getValue: (item: any) => item.email ?? '',
-    },
-    {
-      key: 'company',
-      label: 'Company',
-      valueType: 'text',
-      getValue: (item: any) => item.company ?? '',
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      valueType: 'select',
-      selectOptions: statuses.filter((s) => s.isActive).map((s) => ({ value: s.name, color: s.color })),
-      getValue: (item: any) => item.statusDefn?.name ?? '',
-    },
-    ...buildCustomFieldColumns(customFields),
-  ];
-}
 
 export function buildCompanyFields(
   statuses: StatusLike[],

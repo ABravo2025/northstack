@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api, type PublicFormConfig } from '../api';
-import AuthLayout from '../components/AuthLayout';
+import AuthLayout from '../components/common/AuthLayout';
 
 declare global {
   interface Window {

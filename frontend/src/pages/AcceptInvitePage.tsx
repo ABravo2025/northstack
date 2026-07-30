@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api } from '../api';
-import { useToast } from '../components/ToastProvider';
-import PasswordInput from '../components/PasswordInput';
-import PasswordChecklist from '../components/PasswordChecklist';
-import LegalDocumentModal from '../components/LegalDocumentModal';
+import { useToast } from '../components/common/ToastProvider';
+import PasswordInput from '../components/common/PasswordInput';
+import PasswordChecklist from '../components/common/PasswordChecklist';
+import LegalDocumentModal from '../components/common/LegalDocumentModal';
 
 interface AcceptInvitePageProps {
   onAccepted: (token: string, user: any) => void;

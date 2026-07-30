@@ -1,10 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { api, type Task } from '../api';
-import { useToast } from '../components/ToastProvider';
-import { ChevronLeftIcon, ChevronRightIcon } from '../components/Icons';
-import OnboardingChecklist from '../components/OnboardingChecklist';
-import MyTasksWidget from '../components/MyTasksWidget';
-import TaskFormPopover, { type TaskFormPayload } from '../components/TaskFormPopover';
+import { useToast } from '../components/common/ToastProvider';
+import { ChevronLeftIcon, ChevronRightIcon } from '../components/common/Icons';
+import OnboardingChecklist from '../components/layout/OnboardingChecklist';
+import MyTasksWidget from '../components/tasks/MyTasksWidget';
+import TaskFormPopover, { type TaskFormPayload } from '../components/tasks/TaskFormPopover';
 
 interface OverviewPageProps {
   token: string;

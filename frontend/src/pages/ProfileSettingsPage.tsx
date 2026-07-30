@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { api } from '../api';
-import { useToast } from '../components/ToastProvider';
-import PasswordInput from '../components/PasswordInput';
-import PasswordChecklist from '../components/PasswordChecklist';
+import { useToast } from '../components/common/ToastProvider';
+import PasswordInput from '../components/common/PasswordInput';
+import PasswordChecklist from '../components/common/PasswordChecklist';
 
 interface ProfileSettingsPageProps {
   user: any;

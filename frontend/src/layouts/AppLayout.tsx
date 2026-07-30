@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import Sidebar from '../components/Sidebar';
-import TopBar from '../components/TopBar';
+import Sidebar from '../components/layout/Sidebar';
+import TopBar from '../components/layout/TopBar';
 
 interface AppLayoutProps {
   user: any;

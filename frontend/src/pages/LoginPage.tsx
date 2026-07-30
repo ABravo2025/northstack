@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import PasswordInput from '../components/PasswordInput';
-import AuthLayout from '../components/AuthLayout';
+import PasswordInput from '../components/common/PasswordInput';
+import AuthLayout from '../components/common/AuthLayout';
 
 interface LoginPageProps {
   onLogin: (email: string, password: string) => void;

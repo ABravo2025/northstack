@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { api, ApiError } from './api';
-import { useToast } from './components/ToastProvider';
+import { useToast } from './components/common/ToastProvider';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import AcceptInvitePage from './pages/AcceptInvitePage';
@@ -10,8 +10,6 @@ import HelpPage from './pages/HelpPage';
 import HrDashboardPage from './pages/HrDashboardPage';
 import EmployeesPage from './pages/EmployeesPage';
 import TimeOffOverviewPage from './pages/TimeOffOverviewPage';
-import ClientsDashboardPage from './pages/ClientsDashboardPage';
-import ClientsPage from './pages/ClientsPage';
 import CompaniesPage from './pages/CompaniesPage';
 import ContactsPage from './pages/ContactsPage';
 import PipelinesSettingsPage from './pages/PipelinesSettingsPage';
@@ -199,8 +197,6 @@ export default function App() {
         <Route path="/hr/dashboard" element={<HrDashboardPage />} />
         <Route path="/hr/employees" element={<EmployeesPage user={user} token={token ?? ''} />} />
         <Route path="/hr/time-off" element={<TimeOffOverviewPage user={user} token={token ?? ''} />} />
-        <Route path="/clients/dashboard" element={<ClientsDashboardPage />} />
-        <Route path="/clients" element={<ClientsPage user={user} token={token ?? ''} />} />
         <Route path="/companies" element={<CompaniesPage user={user} token={token ?? ''} />} />
         <Route path="/contacts" element={<ContactsPage user={user} token={token ?? ''} />} />
         <Route path="/opportunities" element={<OpportunitiesPage user={user} token={token ?? ''} />} />

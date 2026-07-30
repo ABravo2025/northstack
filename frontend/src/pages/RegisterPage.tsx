@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import type { FormError } from '../App';
-import PasswordInput from '../components/PasswordInput';
-import PasswordChecklist from '../components/PasswordChecklist';
-import AuthLayout from '../components/AuthLayout';
-import LegalDocumentModal from '../components/LegalDocumentModal';
+import PasswordInput from '../components/common/PasswordInput';
+import PasswordChecklist from '../components/common/PasswordChecklist';
+import AuthLayout from '../components/common/AuthLayout';
+import LegalDocumentModal from '../components/common/LegalDocumentModal';
 import { COUNTRIES } from '../lib/countries';
 
 const COMPANY_SIZE_OPTIONS = ['1-10', '11-50', '51-200', '201-500', '500+'];

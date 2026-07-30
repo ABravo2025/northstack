@@ -1,18 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '../api';
-import { useToast } from '../components/ToastProvider';
-import ConfirmDialog from '../components/ConfirmDialog';
-import Pagination, { paginate } from '../components/Pagination';
-import SlideOver from '../components/SlideOver';
-import { CheckIcon, CopyIcon, LockIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
-import ColumnResizeHandle from '../components/ColumnResizeHandle';
+import { useToast } from '../components/common/ToastProvider';
+import ConfirmDialog from '../components/common/ConfirmDialog';
+import Pagination, { paginate } from '../components/common/Pagination';
+import SlideOver from '../components/common/SlideOver';
+import { CheckIcon, CopyIcon, LockIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/common/Icons';
+import ColumnResizeHandle from '../components/entity-views/ColumnResizeHandle';
 import { useResizableColumns } from '../hooks/useResizableColumns';
-import ColumnVisibilityMenu from '../components/ColumnVisibilityMenu';
+import ColumnVisibilityMenu from '../components/entity-views/ColumnVisibilityMenu';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { useColumnOrder } from '../hooks/useColumnOrder';
-import Avatar from '../components/Avatar';
-import RoleChip from '../components/RoleChip';
-import StatusChip from '../components/StatusChip';
+import Avatar from '../components/common/Avatar';
+import RoleChip from '../components/common/RoleChip';
+import StatusChip from '../components/common/StatusChip';
 
 const PAGE_SIZE = 20;
 // Frozen columns stay pinned to the left through horizontal scroll and can't

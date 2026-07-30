@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api, type Pipeline, type Form, type PublicFormFieldConfig } from '../api';
-import { useToast } from '../components/ToastProvider';
-import SlideOver from '../components/SlideOver';
-import { GripIcon, PlusIcon, XIcon } from '../components/Icons';
+import { useToast } from '../components/common/ToastProvider';
+import SlideOver from '../components/common/SlideOver';
+import { GripIcon, PlusIcon, XIcon } from '../components/common/Icons';
 
 interface PublicFormsSettingsPageProps {
   token: string;

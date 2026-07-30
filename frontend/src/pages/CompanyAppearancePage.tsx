@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
-import { useToast } from '../components/ToastProvider';
+import { useToast } from '../components/common/ToastProvider';
 import { CURRENCY_CODES, currencyLabel } from '../lib/currencies';
 import { getStoredThemePreference, setThemePreference, type ThemePreference } from '../theme';
 

@@ -1,28 +1,28 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { api, type SavedView, type ViewFilter, type ViewSort } from '../api';
-import { useToast } from '../components/ToastProvider';
-import ConfirmDialog from '../components/ConfirmDialog';
-import Pagination, { paginate } from '../components/Pagination';
-import SlideOver from '../components/SlideOver';
-import ViewsBar from '../components/ViewsBar';
-import FilterBar from '../components/FilterBar';
-import KanbanBoard from '../components/KanbanBoard';
-import CustomFieldColumnMenu from '../components/CustomFieldColumnMenu';
-import AddCustomFieldColumn from '../components/AddCustomFieldColumn';
-import StatusColumnMenu from '../components/StatusColumnMenu';
-import FieldCatalogMenu from '../components/FieldCatalogMenu';
-import ColumnResizeHandle from '../components/ColumnResizeHandle';
+import { useToast } from '../components/common/ToastProvider';
+import ConfirmDialog from '../components/common/ConfirmDialog';
+import Pagination, { paginate } from '../components/common/Pagination';
+import SlideOver from '../components/common/SlideOver';
+import ViewsBar from '../components/entity-views/ViewsBar';
+import FilterBar from '../components/entity-views/FilterBar';
+import KanbanBoard from '../components/entity-views/KanbanBoard';
+import CustomFieldColumnMenu from '../components/entity-views/CustomFieldColumnMenu';
+import AddCustomFieldColumn from '../components/entity-views/AddCustomFieldColumn';
+import StatusColumnMenu from '../components/entity-views/StatusColumnMenu';
+import FieldCatalogMenu from '../components/entity-views/FieldCatalogMenu';
+import ColumnResizeHandle from '../components/entity-views/ColumnResizeHandle';
 import { useResizableColumns } from '../hooks/useResizableColumns';
-import ColumnVisibilityMenu from '../components/ColumnVisibilityMenu';
+import ColumnVisibilityMenu from '../components/entity-views/ColumnVisibilityMenu';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { useColumnOrder } from '../hooks/useColumnOrder';
-import CsvImportExportMenu from '../components/CsvImportExportMenu';
-import EmployeeOverviewPanel from '../components/EmployeeOverviewPanel';
-import HorizontalScrollbar from '../components/HorizontalScrollbar';
-import Avatar from '../components/Avatar';
-import StatusChip from '../components/StatusChip';
-import CategoryChip from '../components/CategoryChip';
-import { ChevronDownIcon, MailIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
+import CsvImportExportMenu from '../components/entity-views/CsvImportExportMenu';
+import EmployeeOverviewPanel from '../components/hr/EmployeeOverviewPanel';
+import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
+import Avatar from '../components/common/Avatar';
+import StatusChip from '../components/common/StatusChip';
+import CategoryChip from '../components/common/CategoryChip';
+import { ChevronDownIcon, MailIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/common/Icons';
 import {
   applyFilters,
   applySort,
@@ -1015,7 +1015,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         {viewType !== 'kanban' && (
           <ColumnVisibilityMenu columns={toggleableColumns} isHidden={isColumnHidden} onToggle={toggleColumn} />
         )}
-        {canEditEmployees && <CsvImportExportMenu token={token} entityType="employee" onImported={loadEmployees} />}
+        {canEditEmployees && <CsvImportExportMenu token={token} onImported={loadEmployees} />}
         {showAddFallback && (
           <button className="btn-primary btn-toolbar-size" onClick={handleOpenAdd}>
             <span className="inline-flex items-center gap-1.5">

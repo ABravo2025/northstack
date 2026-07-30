@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import { api, type Opportunity, type Pipeline, type PipelineStage } from '../api';
-import { useToast } from '../components/ToastProvider';
-import ColorPicker from '../components/ColorPicker';
-import ConfirmDialog from '../components/ConfirmDialog';
-import SlideOver from '../components/SlideOver';
-import { ChevronDownIcon, PencilIcon, PlusIcon, TrashIcon } from '../components/Icons';
+import { useToast } from '../components/common/ToastProvider';
+import ColorPicker from '../components/common/ColorPicker';
+import ConfirmDialog from '../components/common/ConfirmDialog';
+import SlideOver from '../components/common/SlideOver';
+import { ChevronDownIcon, PencilIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
 
 interface PipelinesSettingsPageProps {
   token: string;

@@ -60,7 +60,16 @@ export default function CompanyDetailModal({
   const unlinkedContacts = contacts.filter((c) => !c.companyId);
   const activePipelines = pipelines.filter((p) => p.isActive);
 
-  const save = (data: Parameters<typeof api.updateCompany>[2]) => api.updateCompany(token, company.id, data);
+  // Refreshes the parent list in the background after every save (silent, no
+  // loading flash — see refreshAssociatedData in CompaniesPage.tsx) so the
+  // row/panel shows the new value on reopen — previously only custom fields
+  // and linked-record actions did this (found by the user 2026-07-30, same
+  // bug in the Employee panel).
+  const save = async (data: Parameters<typeof api.updateCompany>[2]) => {
+    const updated = await api.updateCompany(token, company.id, data);
+    onChanged();
+    return updated;
+  };
 
   const saveCustomField = async (fieldId: string, value: string) => {
     const existing = company.customFieldVals?.find((v) => v.customFieldDefinitionId === fieldId);

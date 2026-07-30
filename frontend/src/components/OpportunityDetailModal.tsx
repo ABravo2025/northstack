@@ -57,12 +57,19 @@ export default function OpportunityDetailModal({
   const linkedContactIds = new Set((opportunity.contactLinks ?? []).map((l) => l.contactId));
   const linkableContacts = contacts.filter((c) => !linkedContactIds.has(c.id));
 
-  const save = (data: Parameters<typeof api.updateOpportunity>[2]) => api.updateOpportunity(token, opportunity.id, data);
+  // Refreshes the parent list in the background after every save (silent, no
+  // loading flash — see reloadOpportunities in OpportunitiesPage.tsx, which
+  // already did this — the other 3 panels didn't and got the same fix
+  // 2026-07-30).
+  const save = async (data: Parameters<typeof api.updateOpportunity>[2]) => {
+    const updated = await api.updateOpportunity(token, opportunity.id, data);
+    onChanged();
+    return updated;
+  };
 
   const handleStageChange = async (stageId: string) => {
     try {
       await save({ stageId });
-      onChanged();
     } catch (error) {
       // Backend rejects a move into a `lost` stage with no lossReasonId yet —
       // the field appears right below (now that the stage is 'lost') for the

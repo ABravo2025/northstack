@@ -68,7 +68,17 @@ export default function EmployeeOverviewPanel({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  const save = (data: Record<string, unknown>) => api.updateEmployee(token, employee.id, data as any);
+  // Refreshes the parent list in the background after every save (silent —
+  // no loading flash, see EmployeesPage.tsx's refreshEmployeesSilently) so
+  // the row/panel shows the new value once the user leaves and comes back —
+  // previously only custom fields and Time Off Policy changes did this, so a
+  // plain field save (e.g. Personal Email) looked like it hadn't persisted
+  // at all (found by the user 2026-07-30).
+  const save = async (data: Record<string, unknown>) => {
+    const updated = await api.updateEmployee(token, employee.id, data as any);
+    onChanged();
+    return updated;
+  };
 
   const saveCustomField = async (fieldId: string, value: string) => {
     const existing = employee.customFieldVals?.find((v: any) => v.customFieldDefinitionId === fieldId);

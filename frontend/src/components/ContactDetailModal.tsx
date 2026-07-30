@@ -72,7 +72,14 @@ export default function ContactDetailModal({
     : [];
   const activePipelines = pipelines.filter((p) => p.isActive);
 
-  const save = (data: Parameters<typeof api.updateContact>[2]) => api.updateContact(token, contact.id, data);
+  // Refreshes the parent list in the background after every save (silent, no
+  // loading flash — see refreshAssociatedData in ContactsPage.tsx), same fix
+  // as Company/Employee (found by the user 2026-07-30).
+  const save = async (data: Parameters<typeof api.updateContact>[2]) => {
+    const updated = await api.updateContact(token, contact.id, data);
+    onChanged();
+    return updated;
+  };
 
   const saveCustomField = async (fieldId: string, value: string) => {
     const existing = contact.customFieldVals?.find((v) => v.customFieldDefinitionId === fieldId);

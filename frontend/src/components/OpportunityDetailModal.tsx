@@ -18,6 +18,7 @@ interface OpportunityDetailModalProps {
   currentUserId: string;
   onClose: () => void;
   onChanged: () => void;
+  onSaved: (updatedOpportunity: Opportunity) => void;
 }
 
 function daysSince(dateStr: string): number {
@@ -36,6 +37,7 @@ export default function OpportunityDetailModal({
   currentUserId,
   onClose,
   onChanged,
+  onSaved,
 }: OpportunityDetailModalProps) {
   const toast = useToast();
   const [newContactId, setNewContactId] = useState('');
@@ -57,12 +59,17 @@ export default function OpportunityDetailModal({
   const linkedContactIds = new Set((opportunity.contactLinks ?? []).map((l) => l.contactId));
   const linkableContacts = contacts.filter((c) => !linkedContactIds.has(c.id));
 
-  // Refreshes the parent list in the background after every save (silent, no
-  // loading flash — see reloadOpportunities in OpportunitiesPage.tsx, which
-  // already did this — the other 3 panels didn't and got the same fix
-  // 2026-07-30).
+  // Two-part update: onSaved patches the row instantly with the PATCH
+  // response (found by the user 2026-07-30 — the background-refetch-only fix
+  // updated the row eventually but not "on time"), then onChanged still runs
+  // a silent background re-fetch (already existed as reloadOpportunities) —
+  // updateOpportunity's response has no relations at all (no company/
+  // pipeline/stage/owner/contactLinks/stageHistory), so anything relation-
+  // dependent (e.g. the Kanban board grouping by stage) needs that refresh
+  // to catch up.
   const save = async (data: Parameters<typeof api.updateOpportunity>[2]) => {
     const updated = await api.updateOpportunity(token, opportunity.id, data);
+    onSaved(updated);
     onChanged();
     return updated;
   };

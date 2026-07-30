@@ -23,6 +23,7 @@ interface CompanyDetailModalProps {
   currentUserId: string;
   onClose: () => void;
   onChanged: () => void;
+  onSaved: (updatedCompany: Company) => void;
 }
 
 export default function CompanyDetailModal({
@@ -38,6 +39,7 @@ export default function CompanyDetailModal({
   currentUserId,
   onClose,
   onChanged,
+  onSaved,
 }: CompanyDetailModalProps) {
   const toast = useToast();
   const [addingContact, setAddingContact] = useState(false);
@@ -60,13 +62,14 @@ export default function CompanyDetailModal({
   const unlinkedContacts = contacts.filter((c) => !c.companyId);
   const activePipelines = pipelines.filter((p) => p.isActive);
 
-  // Refreshes the parent list in the background after every save (silent, no
-  // loading flash — see refreshAssociatedData in CompaniesPage.tsx) so the
-  // row/panel shows the new value on reopen — previously only custom fields
-  // and linked-record actions did this (found by the user 2026-07-30, same
-  // bug in the Employee panel).
+  // Two-part update: onSaved patches the row instantly (no round-trip wait —
+  // found by the user 2026-07-30), then onChanged still runs a silent
+  // background re-fetch — updateCompany's response doesn't include
+  // sizeDefn/accountOwner, so an FK field would show the right id but a
+  // stale label until that refresh lands.
   const save = async (data: Parameters<typeof api.updateCompany>[2]) => {
     const updated = await api.updateCompany(token, company.id, data);
+    onSaved(updated);
     onChanged();
     return updated;
   };

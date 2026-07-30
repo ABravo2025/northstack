@@ -24,6 +24,7 @@ interface EmployeeOverviewPanelProps {
   timeOffPolicies: any[];
   onClose: () => void;
   onChanged: () => void;
+  onSaved: (updatedEmployee: any) => void;
 }
 
 function dollarsToCents(value: string): number | null {
@@ -57,6 +58,7 @@ export default function EmployeeOverviewPanel({
   timeOffPolicies,
   onClose,
   onChanged,
+  onSaved,
 }: EmployeeOverviewPanelProps) {
   const toast = useToast();
 
@@ -68,14 +70,16 @@ export default function EmployeeOverviewPanel({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  // Refreshes the parent list in the background after every save (silent —
-  // no loading flash, see EmployeesPage.tsx's refreshEmployeesSilently) so
-  // the row/panel shows the new value once the user leaves and comes back —
-  // previously only custom fields and Time Off Policy changes did this, so a
-  // plain field save (e.g. Personal Email) looked like it hadn't persisted
-  // at all (found by the user 2026-07-30).
+  // Two-part update: onSaved patches the row instantly with the PATCH
+  // response (no round-trip wait — found by the user 2026-07-30, the
+  // background-refetch-only fix updated the row eventually but not "on
+  // time"), then onChanged still runs a silent background re-fetch behind
+  // it — updateEmployee's response doesn't include departmentDefn/
+  // jobTitleDefn/statusDefn/manager, so an FK field (e.g. Department) would
+  // show the right id but a stale label until that refresh lands.
   const save = async (data: Record<string, unknown>) => {
     const updated = await api.updateEmployee(token, employee.id, data as any);
+    onSaved(updated);
     onChanged();
     return updated;
   };

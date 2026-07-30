@@ -30,6 +30,7 @@ interface ContactDetailModalProps {
   tenantUsers: { id: string; firstName: string; lastName: string }[];
   onClose: () => void;
   onChanged: () => void;
+  onSaved: (updatedContact: Contact) => void;
 }
 
 export default function ContactDetailModal({
@@ -46,6 +47,7 @@ export default function ContactDetailModal({
   tenantUsers,
   onClose,
   onChanged,
+  onSaved,
 }: ContactDetailModalProps) {
   const toast = useToast();
   const [addingOpportunity, setAddingOpportunity] = useState(false);
@@ -72,11 +74,14 @@ export default function ContactDetailModal({
     : [];
   const activePipelines = pipelines.filter((p) => p.isActive);
 
-  // Refreshes the parent list in the background after every save (silent, no
-  // loading flash — see refreshAssociatedData in ContactsPage.tsx), same fix
-  // as Company/Employee (found by the user 2026-07-30).
+  // Two-part update: onSaved patches the row instantly (no round-trip wait —
+  // found by the user 2026-07-30), then onChanged still runs a silent
+  // background re-fetch — updateContact's response doesn't include
+  // company/leadSource, so an FK field would show the right id but a stale
+  // label until that refresh lands.
   const save = async (data: Parameters<typeof api.updateContact>[2]) => {
     const updated = await api.updateContact(token, contact.id, data);
+    onSaved(updated);
     onChanged();
     return updated;
   };

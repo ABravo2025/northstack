@@ -87,6 +87,15 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
     api.listOpportunities(token).then(setOpportunities).catch(() => {});
   };
 
+  // Instant row update from a PATCH response, no round-trip wait (found
+  // 2026-07-30, same fix as Employee/Company/Contact) — paired with
+  // reloadOpportunities above, since updateOpportunity's response carries no
+  // relations at all (company/pipeline/stage/owner/contactLinks/
+  // stageHistory all come from the follow-up background refresh instead).
+  const patchOpportunityInList = (updated: Opportunity) => {
+    setOpportunities((prev) => prev.map((o) => (o.id === updated.id ? { ...o, ...updated } : o)));
+  };
+
   const activePipelines = pipelines.filter((p) => p.isActive);
   const archivedPipelineIds = new Set(pipelines.filter((p) => !p.isActive).map((p) => p.id));
   const currentPipeline = activePipelines.find((p) => p.id === activeTab);
@@ -308,6 +317,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
               currentUserId={user.id}
               onClose={() => setViewingId(null)}
               onChanged={reloadOpportunities}
+              onSaved={patchOpportunityInList}
             />
           );
         })()}

@@ -141,6 +141,14 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
     api.listOpportunities(token).then(setOpportunities).catch(() => {});
   };
 
+  // Instant row update from a PATCH response, no round-trip (found
+  // 2026-07-30: the silent-refetch fix above updated the row eventually, but
+  // not fast enough). Merged onto the existing row since updateCompany's
+  // response doesn't include customFieldVals the way listCompanies does.
+  const patchCompanyInList = (updated: Company) => {
+    setCompanies((prev) => prev.map((c) => (c.id === updated.id ? { ...c, ...updated } : c)));
+  };
+
   const loadCompanies = async () => {
     setLoading(true);
     try {
@@ -797,6 +805,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
               currentUserId={user.id}
               onClose={() => setViewingCompanyId(null)}
               onChanged={refreshAssociatedData}
+              onSaved={patchCompanyInList}
             />
           );
         })()}

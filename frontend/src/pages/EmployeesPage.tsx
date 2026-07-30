@@ -299,6 +299,16 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     api.listEmployees(token).then(setEmployees).catch(() => {});
   };
 
+  // Instant row update from a PATCH response — no network round-trip like
+  // refreshEmployeesSilently above (found 2026-07-30: the silent-refetch fix
+  // updated the row eventually, but not fast enough). Merged onto the
+  // existing row rather than replacing it outright, since updateEmployee's
+  // response doesn't include customFieldVals/timeOffPolicies the way
+  // listEmployees does — those stay as they were, everything else updates.
+  const patchEmployeeInList = (updated: any) => {
+    setEmployees((prev) => prev.map((e) => (e.id === updated.id ? { ...e, ...updated } : e)));
+  };
+
   const closeSlideOver = () => {
     setSlideOverMode(null);
     setCustomFieldValues({});
@@ -1250,6 +1260,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
             timeOffPolicies={timeOffPolicies}
             onClose={() => setOverviewEmployeeId(null)}
             onChanged={refreshEmployeesSilently}
+            onSaved={patchEmployeeInList}
           />
         );
       })()}

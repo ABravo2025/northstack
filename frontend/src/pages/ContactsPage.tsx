@@ -164,6 +164,14 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
     api.listOpportunities(token).then(setOpportunities).catch(() => {});
   };
 
+  // Instant row update from a PATCH response, no round-trip (found
+  // 2026-07-30, same fix as Company/Employee). Merged onto the existing row
+  // since updateContact's response doesn't include customFieldVals the way
+  // listContacts does.
+  const patchContactInList = (updated: Contact) => {
+    setContacts((prev) => prev.map((c) => (c.id === updated.id ? { ...c, ...updated } : c)));
+  };
+
   const loadContacts = async () => {
     setLoading(true);
     try {
@@ -795,6 +803,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
               tenantUsers={tenantUsers}
               onClose={() => setViewingContactId(null)}
               onChanged={refreshAssociatedData}
+              onSaved={patchContactInList}
             />
           );
         })()}

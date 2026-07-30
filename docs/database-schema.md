@@ -1,6 +1,6 @@
 # Database Schema
 
-- Última actualización: 2026-07-27
+- Última actualización: 2026-07-30
 - Fuente de verdad real: `prisma/schema.prisma`. Este documento es una vista legible de ese archivo — si difieren, el `.prisma` manda. Regenerar este archivo cuando el schema cambie de forma significativa (modelo nuevo, relación nueva), no hace falta para cambios chicos (un campo opcional más, un índice).
 - Todos los modelos son multi-tenant: casi todos tienen `tenantId` directo (no derivado por join), y el aislamiento entre tenants se verifica en el código de cada endpoint (ownership check), no solo por FK — ver `docs/current-process-flow.md` para el patrón de verificación.
 
@@ -13,6 +13,7 @@ Se dividen en grupos por área funcional, no uno solo gigante, para que sean leg
 3. **Time Off** — políticas, asignación por empleado, solicitudes.
 4. **Vistas y formularios** — SavedView, PublicForm.
 5. **Sales / Clients redesign** — Company, Contact, Pipeline, Opportunity y su historial.
+6. **Tasks & Notes (cross-entity)** — Task, Note, adjuntables a Employee/Company/Contact/Opportunity.
 
 ## 1. Identidad y acceso
 
@@ -304,6 +305,7 @@ erDiagram
     USER ||--o{ OPPORTUNITY : "owns"
     FIELD_CATALOG_DEFINITION ||--o{ CONTACT : "leadSource"
     FIELD_CATALOG_DEFINITION ||--o{ OPPORTUNITY : "lossReason"
+    FIELD_CATALOG_DEFINITION ||--o{ COMPANY : "size"
 
     COMPANY {
         string id PK
@@ -313,7 +315,7 @@ erDiagram
         string website "nullable"
         string phone "nullable"
         string billingAddress "nullable, shared with future Payments"
-        string size "nullable, free text"
+        string sizeId FK "nullable, FieldCatalogDefinition (kind companySize)"
         string accountOwnerId FK "nullable, User"
         string statusId FK "derived only, never manually edited"
     }
@@ -389,6 +391,52 @@ Notas — decisiones deliberadas de este rediseño:
 - `deleteOpportunity` borra `OpportunityStageHistory` + `OpportunityContact` + la `Opportunity` dentro de una `$transaction` — ninguna de esas FKs tiene `onDelete: Cascade`, así que un `delete` simple fallaría en cuanto existiera historial.
 - **Migración de datos (`Client` → `Company`/`Contact`)**: script idempotente `scripts/backfill-clients-to-companies-contacts.ts` — agrupa `Client.company` (texto libre) por nombre normalizado (trim + espacios colapsados + case-insensitive) dentro de cada tenant, crea/reutiliza una `Company` por grupo, y un `Contact` por `Client` (createdAt original preservado, salteando por email si ya existe). El status de `Client` (Prospect/Active/Inactive/Archived) mapea a Company (`Prospect→Prospect`, `Active→Customer`, `Inactive`/`Archived→Churned`; "el más avanzado gana" cuando varios `Client` comparten nombre de company). De paso descubrió y corrigió un bug real: ningún tenant creado antes de este rediseño tenía filas `StatusDefinition` de `entityType: 'company'` (el sembrado solo corre al crear un tenant nuevo) — sin eso, `Company` no se podía crear para *ningún* tenant preexistente, no solo los que tenían `Client`. El script las siembra retroactivamente para cualquier tenant que no las tenga. **Corrido y verificado en staging (21 Companies/21 Contacts, re-corrida confirmó idempotencia). Todavía no corrido contra producción** — bloqueado hasta que el usuario revise staging y dé el visto bueno (ver `docs/tareas-desarrollo.md`).
 - El `Client` legado (rutas, UI, custom fields) sigue intacto en paralelo — este es un backfill aditivo, no un corte. El corte (ocultar/borrar `Client`) es una unidad futura separada, deliberadamente no construida todavía.
+- **`Company.size` → `sizeId` (2026-07-30, Checkpoint E)**: pasó de texto libre a FK a `FieldCatalogDefinition` (`kind: 'companySize'`), mismo mecanismo que `department`/`jobTitle`/`leadSource`/`lossReason` — gestionable desde el header de la columna "Size" en `CompaniesPage.tsx`. Migrado con el patrón seguro (nullable → backfill → requerido/borrar columna vieja); `staging` no tenía ninguna Company con `size` cargado al migrar, así que el backfill no tuvo nada que mover.
+- **Company creación — Contact obligatorio (2026-07-30, Checkpoint E)**: `createCompany` ahora exige un Contact en la misma transacción — uno nuevo (`firstName`/`lastName`/`email`) o uno existente (`contactId`, usado por el flujo de "crear Company al vuelo" desde `ContactDetailModal`). No es una restricción a nivel de base de datos, se aplica en `companyService.ts`.
+- **Delete de Contact/Company — antes crasheaba con Opportunities vinculadas** (bug real encontrado por el usuario, 2026-07-30): `OpportunityContact` no tiene `onDelete: Cascade`, así que un `delete` simple de Contact o Company con Opportunities vinculadas fallaba con un error crudo de constraint. `deleteContact`/`deleteCompany` ahora aceptan un flag opcional (`deleteLinkedOpportunities`) que, si viene en `true`, borra las Opportunities vinculadas primero (reusando `deleteOpportunity`); sin el flag, siguen bloqueando con un mensaje legible. Borrar una Company **desvincula** sus Contacts (`companyId: null`), nunca los borra.
+
+## 6. Tasks & Notes (cross-entity)
+
+Genéricos, adjuntables a Employee/Company/Contact/Opportunity (no a `Client`, en vías de discontinuarse) vía el mismo patrón `tenantId`+`entityType`+`entityId` que `CustomFieldValue`/`StatusHistoryEntry` — sin FK real de Prisma, verificado en código (`src/modules/crossModule/entityLookup.ts`, compartido por los dos módulos para que la lista de entity types soportados y el chequeo de tenant no diverjan entre uno y otro). Construidos 2026-07-29/30, todavía solo en `staging`.
+
+```mermaid
+erDiagram
+    TENANT ||--o{ TASK : "has"
+    TENANT ||--o{ NOTE : "has"
+    USER ||--o{ TASK : "assigned (assigneeId)"
+    USER ||--o{ TASK : "created (createdById)"
+    USER ||--o{ NOTE : "created (createdById)"
+
+    TASK {
+        string id PK
+        string tenantId FK
+        enum entityType "employee/company/contact/opportunity"
+        string entityId "no live FK"
+        string title
+        string description "nullable"
+        string assigneeId FK "User"
+        datetime dueDate "nullable"
+        datetime completedAt "nullable - presence/absence is the done state"
+        string createdById FK "User"
+    }
+    NOTE {
+        string id PK
+        string tenantId FK
+        enum entityType "employee/company/contact/opportunity"
+        string entityId "no live FK"
+        string title
+        string description "long text, lightweight **bold**/*italic* rendering"
+        string createdById FK "User"
+    }
+```
+
+Notas:
+- **Permisos abiertos a cualquier rol del tenant** (no gateado por `canCreateHr`/`canManageCustomFields` como Employee/Opportunity) — confirmado con el usuario 2026-07-29: Tasks es una checklist operativa compartida, Notes un registro compartido, ninguno dato sensible. Anotado para revisar cuando exista el sistema de roles custom (Tier 5).
+- `Task` tiene asignado + fecha límite + estado completado (es un to-do); `Note` no tiene ninguno de los tres — es un registro, no una acción pendiente.
+- **`Note.title`/`description`** se llamaban `header`/`body` hasta el 2026-07-30 — renombrados para que coincidan con `Task.title`/`description` (consistencia entre los dos módulos gemelos). Migrado con el patrón seguro (nullable → backfill → requerido/borrar columnas viejas); preservó la única Note real que ya existía en `staging` (creada por el usuario probando la app).
+- `description` admite un subconjunto chico de markdown (**bold**, *italic*) renderizado a elementos React reales (`frontend/src/lib/lightMarkdown.tsx`, sin `dangerouslySetInnerHTML`) — no una librería de markdown completa, no se justificaba para "resaltar partes" nada más.
+- `Opportunity.nextStepDate`/`nextStepNote` (grupo 5) tienen un script de backfill a `Task` (`scripts/backfill-opportunity-nextstep-to-tasks.ts`, idempotente) — corrido en `staging`, 0 Opportunities con next step cargado todavía ahí, así que no creó nada. Las columnas viejas de `Opportunity` no se tocaron.
+- En el frontend, ambos se consumen a través de `EntityTasksList`/`EntityNotesList` — un componente compartido literal por los 4 paneles de detalle (Employee/Company/Contact/Opportunity), no 4 implementaciones separadas. El compose (crear/editar) está siempre expandido en la columna derecha del panel de detalle (`DetailSidebar.tsx`), no detrás de un popover — cambiado 2026-07-30, antes abría un `Popover` al hacer click en una fila fantasma.
 
 ## Enums
 
@@ -401,7 +449,7 @@ Notas — decisiones deliberadas de este rediseño:
 | `FieldType` | `text`, `number`, `date`, `select`, `email` | `CustomFieldDefinition.fieldType` |
 | `ContractType` | `part_time`, `full_time` | `Employee.contractType` |
 | `CompensationType` | `hourly`, `monthly` | `Employee.compensationType` |
-| `EntityType` | `employee`, `client`, `company`, `contact`, `opportunity` | `StatusDefinition`/`StatusHistoryEntry`/`CustomFieldDefinition`/`CustomFieldValue`/`SavedView`/`PublicForm`.entityType |
+| `EntityType` | `employee`, `client`, `company`, `contact`, `opportunity` | `StatusDefinition`/`StatusHistoryEntry`/`CustomFieldDefinition`/`CustomFieldValue`/`SavedView`/`PublicForm`/`Task`/`Note`.entityType (Task/Note never use `client`) |
 | `InvitationStatus` | `pending`, `accepted`, `expired`, `revoked` | `Invitation.status` |
 | `TimeOffAccrualMethod` | `fixed_annual`, `monthly` | `TimeOffPolicyDefinition.accrualMethod` |
 | `TimeOffRequestStatus` | `pending`, `approved`, `rejected`, `cancelled` | `TimeOffRequest.status` |
@@ -410,7 +458,7 @@ Notas — decisiones deliberadas de este rediseño:
 | `LeadStatus` | `new`, `contacted`, `qualified`, `disqualified` | `Contact.leadStatus` |
 | `FormAccessMode` | `public`, `internal` | `PublicForm.accessMode` |
 | `PipelineStageOutcome` | `open`, `won`, `lost` | `PipelineStageDefinition.outcome` |
-| `CatalogKind` | `department`, `jobTitle`, `leadSource`, `lossReason` | `FieldCatalogDefinition.kind` |
+| `CatalogKind` | `department`, `jobTitle`, `leadSource`, `lossReason`, `companySize` | `FieldCatalogDefinition.kind` |
 
 ## Qué falta / deuda conocida
 
@@ -421,3 +469,6 @@ Notas — decisiones deliberadas de este rediseño:
 - No hay historial de valores previos de `CustomFieldValue` (pospuesto a propósito).
 - `Session` sí expira (expiración deslizante) — no hace falta job de limpieza porque una sesión vencida simplemente deja de autenticar; no hay borrado físico de filas viejas todavía.
 - El sistema de Time Off está completo (7/7 piezas).
+- **Task/Note — permisos abiertos a cualquier rol** (ver grupo 6): revisar cuando exista el sistema de roles custom (Tier 5).
+- **Activity — layout confirmado, sin construir**: el usuario confirmó 2026-07-30 que Activity entra como tab en el panel de detalle (junto a Notes/Tasks), pero sin ningún modelo/backend real todavía — el tab hoy es un placeholder de texto. El sistema de auditoría real (quién hizo qué y cuándo) sigue en Tier 5 ("cola larga").
+- **Tasks/Notes/Company/Contact/Opportunity — nada de esto llegó a producción todavía**: todo el trabajo de esta sesión (2026-07-29/30, ver `docs/tareas-desarrollo.md`) está pusheado a `staging` únicamente, pendiente de que el usuario lo revise antes de promover a `main`.

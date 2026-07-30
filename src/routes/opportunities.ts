@@ -52,7 +52,7 @@ async function validateOpportunityRefs(
     }
   }
 
-  let resolvedLossReasonId = body.lossReasonId !== undefined ? body.lossReasonId : existingLossReasonId;
+  const resolvedLossReasonId = body.lossReasonId !== undefined ? body.lossReasonId : existingLossReasonId;
 
   if (body.stageId !== undefined) {
     const stage = await findPipelineStageById(body.stageId);

@@ -5,7 +5,30 @@ on:
     branches: [main, staging]
 
 jobs:
+  # Vercel's own build step only compiles the frontend (see vercel.json's
+  # buildCommand) — it never runs the backend's `tsc` or its vitest suite, so
+  # a broken backend could previously reach `main`/`staging` undetected. This
+  # job is the only gate for that: both deploy jobs below `need` it, so a
+  # failing backend build or test blocks the deploy instead of shipping it.
+  verify-backend:
+    runs-on: ubuntu-latest
+    env:
+      # prisma generate resolves env("DATABASE_URL") from the schema at
+      # generate time even though it never connects — reusing the staging
+      # secret avoids adding a new one. Tests mock src/lib/prisma.ts directly
+      # (see tests/*.test.ts), so nothing here touches a real database.
+      DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+
   deploy-app:
+    needs: verify-backend
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:
@@ -18,6 +41,7 @@ jobs:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
   deploy-staging:
+    needs: verify-backend
     if: github.ref == 'refs/heads/staging'
     runs-on: ubuntu-latest
     env:

@@ -1,18 +1,19 @@
 import { sanitizeUser } from '../modules/auth/authService.js';
 import { canInviteUsers, canManageUsers } from '../modules/auth/permissionService.js';
 import {
+  createTenantForUser,
+  getTenantById,
+  registerTenantWithOwner,
+  updateTenantCurrency,
+} from '../modules/tenant/tenantService.js';
+import {
   acceptInvitation,
   cancelInvitation,
   createInvitation,
-  createTenantForUser,
   findInvitationByToken,
-  getTenantById,
   listTenantInvitations,
-  listTenantUsers,
-  registerTenantWithOwner,
-  updateTenantCurrency,
-  updateTenantUser,
-} from '../modules/tenant/tenantService.js';
+} from '../modules/tenant/invitationService.js';
+import { listTenantUsers, updateTenantUser } from '../modules/tenant/tenantUserService.js';
 import { AUTH_RATE_LIMIT, isRateLimited } from '../lib/rateLimit.js';
 import { authenticateUser, getClientIp, validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';

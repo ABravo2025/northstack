@@ -23,7 +23,7 @@ import {
 import { findFieldCatalogDefinitionById } from '../modules/hr/fieldCatalogService.js';
 import { findStatusDefinitionById } from '../modules/hr/statusService.js';
 import { calculateEmployeeTimeOffBalances } from '../modules/hr/timeOffBalanceService.js';
-import { createInvitation } from '../modules/tenant/tenantService.js';
+import { createInvitation } from '../modules/tenant/invitationService.js';
 import {
   canCreateHr,
   canInviteUsers,

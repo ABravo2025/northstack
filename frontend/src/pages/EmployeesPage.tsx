@@ -22,7 +22,7 @@ import HorizontalScrollbar from '../components/HorizontalScrollbar';
 import Avatar from '../components/Avatar';
 import StatusChip from '../components/StatusChip';
 import CategoryChip from '../components/CategoryChip';
-import { ChevronDownIcon, MailIcon, PencilIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
+import { ChevronDownIcon, MailIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
 import {
   applyFilters,
   applySort,
@@ -51,14 +51,6 @@ function dollarsToCents(value: string): number | undefined {
   return Number.isNaN(parsed) ? undefined : Math.round(parsed * 100);
 }
 
-function centsToDollars(cents: number | null | undefined): string {
-  return cents == null ? '' : (cents / 100).toFixed(2);
-}
-
-function toDateInputValue(value: string | null | undefined): string {
-  return value ? value.slice(0, 10) : '';
-}
-
 interface EmployeesPageProps {
   user: any;
   token: string;
@@ -68,8 +60,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const toast = useToast();
   const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [slideOverMode, setSlideOverMode] = useState<'add' | 'edit' | null>(null);
-  const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
+  const [slideOverMode, setSlideOverMode] = useState<'add' | null>(null);
   const [deletingEmployee, setDeletingEmployee] = useState<any | null>(null);
   const [employeeSearch, setEmployeeSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -79,12 +70,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const [employeeJobTitles, setEmployeeJobTitles] = useState<any[]>([]);
   const [timeOffPolicies, setTimeOffPolicies] = useState<any[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
-  const [editCustomFieldValues, setEditCustomFieldValues] = useState<Record<string, string>>({});
-  const [editCustomFieldValueIds, setEditCustomFieldValueIds] = useState<Record<string, string>>({});
-  const [editAssignedPolicyIds, setEditAssignedPolicyIds] = useState<string[]>([]);
-  const [originalAssignedPolicyIds, setOriginalAssignedPolicyIds] = useState<string[]>([]);
 
   const [tenantCurrency, setTenantCurrency] = useState('USD');
+  const [tenantUsers, setTenantUsers] = useState<any[]>([]);
   const [collapsedListSections, setCollapsedListSections] = useState<Set<string>>(new Set());
   const [overviewEmployeeId, setOverviewEmployeeId] = useState<string | null>(null);
   const tableWrapRef = useRef<HTMLDivElement>(null);
@@ -175,8 +163,6 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
 
   const [employeeForm, setEmployeeForm] = useState(emptyEmployeeForm);
 
-  const [editEmployeeForm, setEditEmployeeForm] = useState({ ...emptyEmployeeForm, statusId: '' });
-
   useEffect(() => {
     loadEmployees();
     loadEmployeeCustomFields();
@@ -190,6 +176,12 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       .then((tenant) => setTenantCurrency(tenant.currency))
       .catch(() => {
         // Non-critical for this page — falls back to USD formatting if it fails.
+      });
+    api
+      .listTenantUsers(token)
+      .then(setTenantUsers)
+      .catch(() => {
+        // Non-critical — the Tasks assignee dropdown just falls back to empty if it fails.
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -298,14 +290,18 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     }
   };
 
+  // Silent refresh — used as the Overview panel's onChanged, fired on every
+  // autosave field/custom field/time-off-policy change while the panel stays
+  // open. Unlike loadEmployees(), this doesn't toggle the page-level loading
+  // state, which would otherwise flash the whole table behind the modal on
+  // every single field edit (found 2026-07-30 testing the autosave panel).
+  const refreshEmployeesSilently = () => {
+    api.listEmployees(token).then(setEmployees).catch(() => {});
+  };
+
   const closeSlideOver = () => {
     setSlideOverMode(null);
-    setEditingEmployeeId(null);
     setCustomFieldValues({});
-    setEditCustomFieldValues({});
-    setEditCustomFieldValueIds({});
-    setEditAssignedPolicyIds([]);
-    setOriginalAssignedPolicyIds([]);
   };
 
   const handleOpenAdd = () => {
@@ -347,106 +343,6 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       loadEmployees();
     } catch (error) {
       toast.error('Failed to create employee: ' + (error as Error).message);
-    }
-  };
-
-  const handleStartEditEmployee = (emp: any) => {
-    setEditingEmployeeId(emp.id);
-    setEditEmployeeForm({
-      firstName: emp.firstName,
-      lastName: emp.lastName,
-      email: emp.email,
-      personalEmail: emp.personalEmail || '',
-      departmentId: emp.departmentId || '',
-      jobTitleId: emp.jobTitleId || '',
-      statusId: emp.statusId,
-      managerId: emp.managerId || '',
-      startDate: toDateInputValue(emp.startDate),
-      endDate: toDateInputValue(emp.endDate),
-      contractUrl: emp.contractUrl || '',
-      hourlyRate: centsToDollars(emp.hourlyRateCents),
-      monthlyRate: centsToDollars(emp.monthlyRateCents),
-      contractType: emp.contractType || '',
-      compensationType: emp.compensationType || '',
-    });
-
-    const values: Record<string, string> = {};
-    const valueIds: Record<string, string> = {};
-    for (const fieldValue of emp.customFieldVals || []) {
-      values[fieldValue.customFieldDefinitionId] = fieldValue.value;
-      valueIds[fieldValue.customFieldDefinitionId] = fieldValue.id;
-    }
-    setEditCustomFieldValues(values);
-    setEditCustomFieldValueIds(valueIds);
-
-    const assignedIds = (emp.timeOffPolicies || []).map((a: any) => a.timeOffPolicyId);
-    setEditAssignedPolicyIds(assignedIds);
-    setOriginalAssignedPolicyIds(assignedIds);
-    setSlideOverMode('edit');
-  };
-
-  const handleToggleTimeOffPolicy = (policyId: string) => {
-    setEditAssignedPolicyIds((current) =>
-      current.includes(policyId) ? current.filter((id) => id !== policyId) : [...current, policyId],
-    );
-  };
-
-  const handleUpdateEmployee = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingEmployeeId) return;
-    try {
-      await api.updateEmployee(token, editingEmployeeId, {
-        firstName: editEmployeeForm.firstName,
-        lastName: editEmployeeForm.lastName,
-        email: editEmployeeForm.email,
-        personalEmail: editEmployeeForm.personalEmail || undefined,
-        departmentId: editEmployeeForm.departmentId || null,
-        jobTitleId: editEmployeeForm.jobTitleId || null,
-        statusId: editEmployeeForm.statusId,
-        managerId: editEmployeeForm.managerId || null,
-        startDate: editEmployeeForm.startDate || undefined,
-        endDate: editEmployeeForm.endDate || undefined,
-        contractUrl: editEmployeeForm.contractUrl || undefined,
-        contractType: (editEmployeeForm.contractType || null) as 'part_time' | 'full_time' | null,
-        compensationType: (editEmployeeForm.compensationType || null) as 'hourly' | 'monthly' | null,
-        ...(user.role === 'owner'
-          ? {
-              hourlyRateCents: dollarsToCents(editEmployeeForm.hourlyRate) ?? null,
-              monthlyRateCents: dollarsToCents(editEmployeeForm.monthlyRate) ?? null,
-            }
-          : {}),
-      });
-
-      for (const field of activeEmployeeCustomFields) {
-        const newValue = (editCustomFieldValues[field.id] || '').trim();
-        const existingValueId = editCustomFieldValueIds[field.id];
-
-        if (newValue === '' && existingValueId) {
-          await api.deleteEmployeeCustomFieldValue(token, editingEmployeeId, existingValueId);
-        } else if (newValue !== '' && existingValueId) {
-          await api.updateEmployeeCustomFieldValue(token, editingEmployeeId, existingValueId, newValue);
-        } else if (newValue !== '' && !existingValueId) {
-          await api.createEmployeeCustomFieldValue(token, editingEmployeeId, {
-            customFieldDefinitionId: field.id,
-            value: newValue,
-          });
-        }
-      }
-
-      const policiesToAssign = editAssignedPolicyIds.filter((id) => !originalAssignedPolicyIds.includes(id));
-      const policiesToUnassign = originalAssignedPolicyIds.filter((id) => !editAssignedPolicyIds.includes(id));
-      for (const policyId of policiesToAssign) {
-        await api.assignTimeOffPolicyToEmployee(token, editingEmployeeId, policyId);
-      }
-      for (const policyId of policiesToUnassign) {
-        await api.unassignTimeOffPolicyFromEmployee(token, editingEmployeeId, policyId);
-      }
-
-      toast.success('Employee updated.');
-      closeSlideOver();
-      loadEmployees();
-    } catch (error) {
-      toast.error('Failed to update employee: ' + (error as Error).message);
     }
   };
 
@@ -830,10 +726,6 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       {canManageCustomFields && <td></td>}
       <td>
         <div className="icon-actions">
-          <button className="icon-btn" onClick={() => handleStartEditEmployee(emp)}>
-            <span className="tip">Edit</span>
-            <PencilIcon />
-          </button>
           <button className="icon-btn danger" onClick={() => setDeletingEmployee(emp)}>
             <span className="tip">Delete</span>
             <TrashIcon />
@@ -879,7 +771,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
 
       <SlideOver
         open={slideOverMode !== null}
-        title={slideOverMode === 'edit' ? 'Edit Employee' : 'Add Employee'}
+        title="Add Employee"
         onClose={closeSlideOver}
         footer={
           <>
@@ -887,7 +779,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
               Cancel
             </button>
             <button type="submit" form="employee-form" className="btn-primary">
-              {slideOverMode === 'edit' ? 'Save' : 'Create'}
+              Create
             </button>
           </>
         }
@@ -1076,235 +968,6 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
           </form>
         )}
 
-        {slideOverMode === 'edit' && (
-          <form id="employee-form" onSubmit={handleUpdateEmployee}>
-            <div className="form-group">
-              <label htmlFor="edit-emp-firstName">First Name</label>
-              <input
-                id="edit-emp-firstName"
-                type="text"
-                value={editEmployeeForm.firstName}
-                onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, firstName: e.target.value })}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="edit-emp-lastName">Last Name</label>
-              <input
-                id="edit-emp-lastName"
-                type="text"
-                value={editEmployeeForm.lastName}
-                onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, lastName: e.target.value })}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="edit-emp-email">Business Email</label>
-              <input
-                id="edit-emp-email"
-                type="email"
-                value={editEmployeeForm.email}
-                onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, email: e.target.value })}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="edit-emp-personalEmail">Personal Email</label>
-              <input
-                id="edit-emp-personalEmail"
-                type="email"
-                value={editEmployeeForm.personalEmail}
-                onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, personalEmail: e.target.value })}
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="edit-emp-departmentId">Department</label>
-              <select
-                id="edit-emp-departmentId"
-                value={editEmployeeForm.departmentId}
-                onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, departmentId: e.target.value })}
-              >
-                <option value="">-- none --</option>
-                {employeeDepartments
-                  .filter((d) => d.isActive)
-                  .map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                    </option>
-                  ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="edit-emp-jobTitleId">Job Title</label>
-              <select
-                id="edit-emp-jobTitleId"
-                value={editEmployeeForm.jobTitleId}
-                onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, jobTitleId: e.target.value })}
-              >
-                <option value="">-- none --</option>
-                {employeeJobTitles
-                  .filter((j) => j.isActive)
-                  .map((j) => (
-                    <option key={j.id} value={j.id}>
-                      {j.name}
-                    </option>
-                  ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="edit-emp-statusId">Status</label>
-              <select
-                id="edit-emp-statusId"
-                value={editEmployeeForm.statusId}
-                onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, statusId: e.target.value })}
-              >
-                {activeEmployeeStatuses.map((status) => (
-                  <option key={status.id} value={status.id}>
-                    {status.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="edit-emp-managerId">Reports To</label>
-              <select
-                id="edit-emp-managerId"
-                value={editEmployeeForm.managerId}
-                onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, managerId: e.target.value })}
-              >
-                <option value="">-- No manager --</option>
-                {employees
-                  .filter((emp) => emp.id !== editingEmployeeId)
-                  .map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.firstName} {emp.lastName}
-                    </option>
-                  ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="edit-emp-startDate">Start Date</label>
-              <input
-                id="edit-emp-startDate"
-                type="date"
-                value={editEmployeeForm.startDate}
-                onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, startDate: e.target.value })}
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="edit-emp-endDate">End Date</label>
-              <input
-                id="edit-emp-endDate"
-                type="date"
-                value={editEmployeeForm.endDate}
-                onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, endDate: e.target.value })}
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="edit-emp-contractUrl">Contract URL</label>
-              <input
-                id="edit-emp-contractUrl"
-                type="url"
-                value={editEmployeeForm.contractUrl}
-                onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, contractUrl: e.target.value })}
-                placeholder="https://drive.google.com/..."
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="edit-emp-contractType">Contract Type</label>
-              <select
-                id="edit-emp-contractType"
-                value={editEmployeeForm.contractType}
-                onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, contractType: e.target.value })}
-              >
-                <option value="">-- select --</option>
-                <option value="part_time">Part Time</option>
-                <option value="full_time">Full Time</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="edit-emp-compensationType">Compensation Type</label>
-              <select
-                id="edit-emp-compensationType"
-                value={editEmployeeForm.compensationType}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setEditEmployeeForm({
-                    ...editEmployeeForm,
-                    compensationType: value,
-                    hourlyRate: value === 'monthly' ? '' : editEmployeeForm.hourlyRate,
-                    monthlyRate: value === 'hourly' ? '' : editEmployeeForm.monthlyRate,
-                  });
-                }}
-              >
-                <option value="">-- select --</option>
-                <option value="hourly">Hourly</option>
-                <option value="monthly">Monthly</option>
-              </select>
-            </div>
-            {user.role === 'owner' && (
-              <>
-                {editEmployeeForm.compensationType !== 'monthly' && (
-                  <div className="form-group">
-                    <label htmlFor="edit-emp-hourlyRate">Hourly Rate</label>
-                    <input
-                      id="edit-emp-hourlyRate"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={editEmployeeForm.hourlyRate}
-                      onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, hourlyRate: e.target.value })}
-                    />
-                  </div>
-                )}
-                {editEmployeeForm.compensationType !== 'hourly' && (
-                  <div className="form-group">
-                    <label htmlFor="edit-emp-monthlyRate">Monthly Rate</label>
-                    <input
-                      id="edit-emp-monthlyRate"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={editEmployeeForm.monthlyRate}
-                      onChange={(e) => setEditEmployeeForm({ ...editEmployeeForm, monthlyRate: e.target.value })}
-                    />
-                  </div>
-                )}
-              </>
-            )}
-
-            {timeOffPolicies.length > 0 && (
-              <div className="form-group">
-                <span>Time Off Policies</span>
-                {timeOffPolicies.map((policy) => (
-                  <label
-                    key={policy.id}
-                    htmlFor={`edit-emp-time-off-${policy.id}`}
-                    className="mr-3 inline-flex items-center gap-1.5 text-sm font-normal"
-                  >
-                    <input
-                      id={`edit-emp-time-off-${policy.id}`}
-                      type="checkbox"
-                      checked={editAssignedPolicyIds.includes(policy.id)}
-                      onChange={() => handleToggleTimeOffPolicy(policy.id)}
-                    />
-                    {policy.name}
-                  </label>
-                ))}
-              </div>
-            )}
-
-            {activeEmployeeCustomFields.map((field) => (
-              <div className="form-group" key={field.id}>
-                <label htmlFor={`edit-emp-cf-${field.id}`}>
-                  {field.name}
-                  {field.required ? ' *' : ''}
-                </label>
-                {renderCustomFieldInput(field, editCustomFieldValues, setEditCustomFieldValues, 'edit-emp-cf')}
-              </div>
-            ))}
-          </form>
-        )}
       </SlideOver>
 
       <ViewsBar
@@ -1358,7 +1021,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       ) : employees.length === 0 ? (
         <div className="empty-state">
           <p>No employees yet.</p>
-          <button className="btn btn-success" onClick={handleOpenAdd}>
+          <button className="btn btn-primary" onClick={handleOpenAdd}>
             Add your first employee
           </button>
         </div>
@@ -1574,13 +1237,19 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         return (
           <EmployeeOverviewPanel
             employee={overviewEmployee}
+            employees={employees}
             tenantCurrency={tenantCurrency}
             isOwner={user.role === 'owner'}
+            token={token}
+            tenantUsers={tenantUsers}
+            currentUserId={user.id}
+            customFields={activeEmployeeCustomFields}
+            statuses={activeEmployeeStatuses}
+            departments={employeeDepartments}
+            jobTitles={employeeJobTitles}
+            timeOffPolicies={timeOffPolicies}
             onClose={() => setOverviewEmployeeId(null)}
-            onEdit={() => {
-              setOverviewEmployeeId(null);
-              handleStartEditEmployee(overviewEmployee);
-            }}
+            onChanged={refreshEmployeesSilently}
           />
         );
       })()}

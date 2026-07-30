@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { api, type Pipeline, type PipelineStage } from '../api';
+import { api, type Opportunity, type Pipeline, type PipelineStage } from '../api';
 import { useToast } from '../components/ToastProvider';
 import ColorPicker from '../components/ColorPicker';
+import ConfirmDialog from '../components/ConfirmDialog';
 import SlideOver from '../components/SlideOver';
 import { ChevronDownIcon, PencilIcon, PlusIcon, TrashIcon } from '../components/Icons';
 
@@ -27,11 +28,17 @@ function newDraftStage(): DraftStage {
 export default function PipelinesSettingsPage({ token }: PipelinesSettingsPageProps) {
   const toast = useToast();
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [newStageName, setNewStageName] = useState<Record<string, string>>({});
+  const [archivingPipeline, setArchivingPipeline] = useState<Pipeline | null>(null);
+  const [archivingSaving, setArchivingSaving] = useState(false);
+  const [reactivatingPipeline, setReactivatingPipeline] = useState<Pipeline | null>(null);
+  const [reactivatingSaving, setReactivatingSaving] = useState(false);
+  const [pipelineTab, setPipelineTab] = useState<'active' | 'archived'>('active');
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState('');
@@ -41,6 +48,8 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
 
   useEffect(() => {
     loadPipelines();
+    api.listOpportunities(token).then(setOpportunities).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadPipelines = async () => {
@@ -128,13 +137,47 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
     }
   };
 
-  const toggleArchivePipeline = async (pipeline: Pipeline) => {
+  // Archiving affects every Opportunity in the pipeline (they become read-only
+  // until reactivated), so it goes through a type-to-confirm dialog like other
+  // destructive-ish actions in the app. Reactivating isn't destructive, but
+  // still gets a plain (no type-to-confirm) dialog per the user's request —
+  // it flips creation menus back on tenant-wide, not something to fire by
+  // accident. A lighter treatment than Archive on purpose.
+  const handleArchiveToggleClick = (pipeline: Pipeline) => {
+    if (pipeline.isActive) {
+      setArchivingPipeline(pipeline);
+    } else {
+      setReactivatingPipeline(pipeline);
+    }
+  };
+
+  const handleConfirmReactivatePipeline = async () => {
+    if (!reactivatingPipeline) return;
+    setReactivatingSaving(true);
     try {
-      await api.updatePipeline(token, pipeline.id, { isActive: !pipeline.isActive });
-      toast.success(pipeline.isActive ? 'Pipeline archived.' : 'Pipeline reactivated.');
+      await api.updatePipeline(token, reactivatingPipeline.id, { isActive: true });
+      toast.success('Pipeline reactivated.');
+      setReactivatingPipeline(null);
       loadPipelines();
     } catch (error) {
       toast.error('Failed to update pipeline: ' + (error as Error).message);
+    } finally {
+      setReactivatingSaving(false);
+    }
+  };
+
+  const handleConfirmArchivePipeline = async () => {
+    if (!archivingPipeline) return;
+    setArchivingSaving(true);
+    try {
+      await api.updatePipeline(token, archivingPipeline.id, { isActive: false });
+      toast.success('Pipeline archived.');
+      setArchivingPipeline(null);
+      loadPipelines();
+    } catch (error) {
+      toast.error('Failed to update pipeline: ' + (error as Error).message);
+    } finally {
+      setArchivingSaving(false);
     }
   };
 
@@ -202,6 +245,138 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
     return <p>Loading...</p>;
   }
 
+  const activePipelines = pipelines.filter((p) => p.isActive);
+  const archivedPipelines = pipelines.filter((p) => !p.isActive);
+
+  const renderPipelineCard = (pipeline: Pipeline) => {
+    const isExpanded = expandedId === pipeline.id;
+    const sortedStages = [...pipeline.stages].sort((a, b) => a.order - b.order);
+    return (
+      <div key={pipeline.id} className="card" style={{ padding: 0 }}>
+        <div className="flex items-center gap-2 p-3">
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={() => setExpandedId(isExpanded ? null : pipeline.id)}
+            aria-label={isExpanded ? 'Collapse' : 'Expand'}
+          >
+            <ChevronDownIcon className={`h-4 w-4 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />
+          </button>
+
+          {renamingId === pipeline.id ? (
+            <input
+              autoFocus
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onBlur={() => submitRename(pipeline.id)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') submitRename(pipeline.id);
+                if (e.key === 'Escape') setRenamingId(null);
+              }}
+              className="rounded-md border border-brand-blue px-2 py-1 text-sm"
+            />
+          ) : (
+            <span className="font-semibold flex-1">{pipeline.name}</span>
+          )}
+
+          {/* Not .dt-status — that tint is reserved for Status controls specifically. */}
+          <div className="dropdown-trigger-wrap">
+            <select
+              className="dropdown-trigger"
+              value={pipeline.type}
+              onChange={(e) => handleTypeChange(pipeline, e.target.value as 'lead' | 'account')}
+            >
+              {Object.entries(PIPELINE_TYPE_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <svg className="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </div>
+
+          <span className="text-xs text-gray-400">{sortedStages.length} stages</span>
+
+          <button type="button" className="icon-btn" onClick={() => startRename(pipeline)}>
+            <span className="tip">Rename</span>
+            <PencilIcon />
+          </button>
+          <button type="button" className="btn-secondary" onClick={() => handleArchiveToggleClick(pipeline)}>
+            {pipeline.isActive ? 'Archive' : 'Reactivate'}
+          </button>
+        </div>
+
+        {isExpanded && (
+          <div className="border-t border-gray-200 dark:border-gray-800 p-3">
+            <div className="flex flex-col gap-2">
+              {sortedStages.map((stage, i) => (
+                <div key={stage.id} className="flex items-center gap-2">
+                  <div className="flex flex-col">
+                    <button
+                      type="button"
+                      className="icon-btn"
+                      disabled={i === 0}
+                      onClick={() => moveStage(pipeline, stage, -1)}
+                      style={{ height: 16 }}
+                    >
+                      ▲
+                    </button>
+                    <button
+                      type="button"
+                      className="icon-btn"
+                      disabled={i === sortedStages.length - 1}
+                      onClick={() => moveStage(pipeline, stage, 1)}
+                      style={{ height: 16 }}
+                    >
+                      ▼
+                    </button>
+                  </div>
+                  <ColorPicker
+                    value={stage.color || '#6b7280'}
+                    onChange={(color) => handleStageColorChange(pipeline, stage, color)}
+                  />
+                  <span className={`flex-1 text-sm ${!stage.isActive ? 'inactive' : ''}`}>{stage.name}</span>
+                  <select
+                    className="select-compact"
+                    value={stage.outcome}
+                    onChange={(e) => handleStageOutcomeChange(pipeline, stage, e.target.value)}
+                  >
+                    {Object.entries(OUTCOME_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                  <button type="button" className="btn-secondary" onClick={() => toggleArchiveStage(pipeline, stage)}>
+                    {stage.isActive ? 'Archive' : 'Reactivate'}
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <form className="flex items-center gap-2 mt-3" onSubmit={(e) => handleAddStage(e, pipeline)}>
+              <input
+                type="text"
+                placeholder="New stage name"
+                value={newStageName[pipeline.id] || ''}
+                onChange={(e) => setNewStageName({ ...newStageName, [pipeline.id]: e.target.value })}
+                style={{ maxWidth: 220 }}
+              />
+              <button type="submit" className="btn-secondary">
+                <span className="inline-flex items-center gap-1.5">
+                  <PlusIcon className="h-3.5 w-3.5" />
+                  Add Stage
+                </span>
+              </button>
+            </form>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div>
       <div className="flex items-start justify-between gap-4 mb-3">
@@ -220,131 +395,54 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
         </button>
       </div>
 
+      {archivedPipelines.length > 0 && (
+        <div className="views-bar mb-3">
+          <button
+            type="button"
+            className={`view-tab ${pipelineTab === 'active' ? 'active' : ''}`}
+            onClick={() => setPipelineTab('active')}
+          >
+            Active ({activePipelines.length})
+          </button>
+          <button
+            type="button"
+            className={`view-tab ${pipelineTab === 'archived' ? 'active' : ''}`}
+            onClick={() => setPipelineTab('archived')}
+          >
+            Archived ({archivedPipelines.length})
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-col gap-3">
-        {pipelines.map((pipeline) => {
-          const isExpanded = expandedId === pipeline.id;
-          const sortedStages = [...pipeline.stages].sort((a, b) => a.order - b.order);
-          return (
-            <div key={pipeline.id} className="card" style={{ padding: 0 }}>
-              <div className="flex items-center gap-2 p-3">
-                <button
-                  type="button"
-                  className="icon-btn"
-                  onClick={() => setExpandedId(isExpanded ? null : pipeline.id)}
-                  aria-label={isExpanded ? 'Collapse' : 'Expand'}
-                >
-                  <ChevronDownIcon className={`h-4 w-4 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />
-                </button>
-
-                {renamingId === pipeline.id ? (
-                  <input
-                    autoFocus
-                    value={renameValue}
-                    onChange={(e) => setRenameValue(e.target.value)}
-                    onBlur={() => submitRename(pipeline.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') submitRename(pipeline.id);
-                      if (e.key === 'Escape') setRenamingId(null);
-                    }}
-                    className="rounded-md border border-brand-blue px-2 py-1 text-sm"
-                  />
-                ) : (
-                  <span className="font-semibold flex-1">{pipeline.name}</span>
-                )}
-
-                <select
-                  className="select-compact"
-                  value={pipeline.type}
-                  onChange={(e) => handleTypeChange(pipeline, e.target.value as 'lead' | 'account')}
-                >
-                  {Object.entries(PIPELINE_TYPE_LABELS).map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-
-                {!pipeline.isActive && <span className="chip-linked">Archived</span>}
-                <span className="text-xs text-gray-400">{sortedStages.length} stages</span>
-
-                <button type="button" className="icon-btn" onClick={() => startRename(pipeline)}>
-                  <span className="tip">Rename</span>
-                  <PencilIcon />
-                </button>
-                <button type="button" className="btn-secondary" onClick={() => toggleArchivePipeline(pipeline)}>
-                  {pipeline.isActive ? 'Archive' : 'Reactivate'}
-                </button>
-              </div>
-
-              {isExpanded && (
-                <div className="border-t border-gray-200 dark:border-gray-800 p-3">
-                  <div className="flex flex-col gap-2">
-                    {sortedStages.map((stage, i) => (
-                      <div key={stage.id} className="flex items-center gap-2">
-                        <div className="flex flex-col">
-                          <button
-                            type="button"
-                            className="icon-btn"
-                            disabled={i === 0}
-                            onClick={() => moveStage(pipeline, stage, -1)}
-                            style={{ height: 16 }}
-                          >
-                            ▲
-                          </button>
-                          <button
-                            type="button"
-                            className="icon-btn"
-                            disabled={i === sortedStages.length - 1}
-                            onClick={() => moveStage(pipeline, stage, 1)}
-                            style={{ height: 16 }}
-                          >
-                            ▼
-                          </button>
-                        </div>
-                        <ColorPicker
-                          value={stage.color || '#6b7280'}
-                          onChange={(color) => handleStageColorChange(pipeline, stage, color)}
-                        />
-                        <span className={`flex-1 text-sm ${!stage.isActive ? 'inactive' : ''}`}>{stage.name}</span>
-                        <select
-                          className="select-compact"
-                          value={stage.outcome}
-                          onChange={(e) => handleStageOutcomeChange(pipeline, stage, e.target.value)}
-                        >
-                          {Object.entries(OUTCOME_LABELS).map(([value, label]) => (
-                            <option key={value} value={value}>
-                              {label}
-                            </option>
-                          ))}
-                        </select>
-                        <button type="button" className="btn-secondary" onClick={() => toggleArchiveStage(pipeline, stage)}>
-                          {stage.isActive ? 'Archive' : 'Reactivate'}
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-
-                  <form className="flex items-center gap-2 mt-3" onSubmit={(e) => handleAddStage(e, pipeline)}>
-                    <input
-                      type="text"
-                      placeholder="New stage name"
-                      value={newStageName[pipeline.id] || ''}
-                      onChange={(e) => setNewStageName({ ...newStageName, [pipeline.id]: e.target.value })}
-                      style={{ maxWidth: 220 }}
-                    />
-                    <button type="submit" className="btn-secondary">
-                      <span className="inline-flex items-center gap-1.5">
-                        <PlusIcon className="h-3.5 w-3.5" />
-                        Add Stage
-                      </span>
-                    </button>
-                  </form>
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {(pipelineTab === 'archived' ? archivedPipelines : activePipelines).map(renderPipelineCard)}
       </div>
+
+      {archivingPipeline && (
+        <ConfirmDialog
+          title={`Archive "${archivingPipeline.name}"`}
+          message={`This pipeline has ${
+            opportunities.filter((o) => o.pipelineId === archivingPipeline.id).length
+          } Opportunity(ies). They'll stay visible but become read-only until this pipeline is reactivated, and the pipeline will disappear from creation menus. Type ARCHIVE to confirm.`}
+          confirmLabel={archivingSaving ? 'Archiving…' : 'ARCHIVE'}
+          confirmText="ARCHIVE"
+          confirmDisabled={archivingSaving}
+          onConfirm={handleConfirmArchivePipeline}
+          onCancel={() => setArchivingPipeline(null)}
+        />
+      )}
+
+      {reactivatingPipeline && (
+        <ConfirmDialog
+          title={`Reactivate "${reactivatingPipeline.name}"`}
+          message="This pipeline will reappear in creation menus and its Opportunities become editable again."
+          confirmLabel={reactivatingSaving ? 'Reactivating…' : 'Reactivate'}
+          danger={false}
+          confirmDisabled={reactivatingSaving}
+          onConfirm={handleConfirmReactivatePipeline}
+          onCancel={() => setReactivatingPipeline(null)}
+        />
+      )}
 
       <SlideOver
         open={createOpen}

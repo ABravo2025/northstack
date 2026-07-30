@@ -9,6 +9,10 @@ interface ConfirmDialogProps {
   confirmText?: string;
   /** Extra external condition (e.g. an in-flight save) that also disables the confirm button. */
   confirmDisabled?: boolean;
+  /** If set, renders an opt-in checkbox above the actions (e.g. "also delete N linked records"). */
+  checkboxLabel?: string;
+  checkboxChecked?: boolean;
+  onCheckboxChange?: (checked: boolean) => void;
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -20,6 +24,9 @@ export default function ConfirmDialog({
   danger = true,
   confirmText,
   confirmDisabled = false,
+  checkboxLabel,
+  checkboxChecked = false,
+  onCheckboxChange,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -33,6 +40,16 @@ export default function ConfirmDialog({
           {title}
         </h3>
         <p className="confirm-dialog-message">{message}</p>
+        {checkboxLabel && (
+          <label className="flex items-center gap-2 text-sm mb-2">
+            <input
+              type="checkbox"
+              checked={checkboxChecked}
+              onChange={(e) => onCheckboxChange?.(e.target.checked)}
+            />
+            {checkboxLabel}
+          </label>
+        )}
         {confirmText && (
           <div className="form-group">
             <label htmlFor="confirm-dialog-type-input" className="sr-only">

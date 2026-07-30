@@ -16,7 +16,7 @@ import { createStatusDefinition, listStatusDefinitions, updateStatusDefinition }
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 
-const VALID_CATALOG_KINDS = ['department', 'jobTitle', 'leadSource', 'lossReason'];
+const VALID_CATALOG_KINDS = ['department', 'jobTitle', 'leadSource', 'lossReason', 'companySize'];
 
 export const catalogsRouter = createAsyncRouter();
 

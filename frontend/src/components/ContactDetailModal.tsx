@@ -4,6 +4,8 @@ import { useToast } from './ToastProvider';
 import Avatar from './Avatar';
 import AutoSaveField from './AutoSaveField';
 import AutoSaveSelect from './AutoSaveSelect';
+import DetailSidebar from './DetailSidebar';
+import Field from './Field';
 import { PlusIcon, XIcon } from './Icons';
 import { formatMoney } from '../lib/currencies';
 
@@ -25,17 +27,9 @@ interface ContactDetailModalProps {
   customFields: any[];
   tenantCurrency: string;
   currentUserId: string;
+  tenantUsers: { id: string; firstName: string; lastName: string }[];
   onClose: () => void;
   onChanged: () => void;
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="overview-field">
-      <span className="overview-field-label">{label}</span>
-      {children}
-    </div>
-  );
 }
 
 export default function ContactDetailModal({
@@ -49,6 +43,7 @@ export default function ContactDetailModal({
   customFields,
   tenantCurrency,
   currentUserId,
+  tenantUsers,
   onClose,
   onChanged,
 }: ContactDetailModalProps) {
@@ -134,9 +129,11 @@ export default function ContactDetailModal({
     try {
       let companyId = contact.companyId;
       if (!companyId) {
-        const created = await api.createCompany(token, { name: newOppCompanyName.trim() });
+        const created = await api.createCompany(token, {
+          name: newOppCompanyName.trim(),
+          contact: { contactId: contact.id },
+        });
         companyId = created.id;
-        await api.updateContact(token, contact.id, { companyId });
       }
 
       const opportunity = await api.createOpportunity(token, {
@@ -178,7 +175,8 @@ export default function ContactDetailModal({
           </div>
         </div>
 
-        <div className="overview-panel-body">
+        <div className="overview-panel-main">
+        <div className="overview-panel-left">
           <Field label="Phone">
             <AutoSaveField label="Phone" value={contact.phone || ''} onSave={(v) => save({ phone: v || null })} />
           </Field>
@@ -235,7 +233,7 @@ export default function ContactDetailModal({
           })}
 
           {isFullView && coContacts.length > 0 && (
-            <div className="overview-field">
+            <div className="overview-field overview-field-full">
               <span className="overview-field-label">Other contacts at {company?.name}</span>
               {coContacts.map((c) => (
                 <div key={c.id} className="py-1 text-sm">
@@ -245,7 +243,7 @@ export default function ContactDetailModal({
             </div>
           )}
 
-          <div className="overview-field">
+          <div className="overview-field overview-field-full">
             <div className="flex items-center justify-between">
               <span className="overview-field-label">Opportunities ({linkedOpportunities.length})</span>
               <button type="button" className="icon-btn" onClick={openAddOpportunity}>
@@ -261,6 +259,7 @@ export default function ContactDetailModal({
                 <span>{opp.name}</span>
                 <span className="text-xs text-gray-400">
                   {opp.stage?.name} · {formatMoney(opp.amountCents, opp.currency)}
+                  {opp.pipeline?.isActive === false && ' · Archived'}
                 </span>
               </div>
             ))}
@@ -330,6 +329,16 @@ export default function ContactDetailModal({
               </div>
             )}
           </div>
+
+        </div>
+
+        <DetailSidebar
+          token={token}
+          entityType="contact"
+          entityId={contact.id}
+          tenantUsers={tenantUsers}
+          currentUserId={currentUserId}
+        />
         </div>
       </div>
     </div>

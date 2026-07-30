@@ -5,6 +5,8 @@ import Avatar from './Avatar';
 import StatusChip from './StatusChip';
 import AutoSaveField from './AutoSaveField';
 import AutoSaveSelect from './AutoSaveSelect';
+import DetailSidebar from './DetailSidebar';
+import Field from './Field';
 import { PlusIcon, TrashIcon, XIcon } from './Icons';
 import { formatMoney } from '../lib/currencies';
 
@@ -16,19 +18,11 @@ interface CompanyDetailModalProps {
   opportunities: Opportunity[];
   pipelines: Pipeline[];
   customFields: any[];
+  companySizes: any[];
   tenantCurrency: string;
   currentUserId: string;
   onClose: () => void;
   onChanged: () => void;
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="overview-field">
-      <span className="overview-field-label">{label}</span>
-      {children}
-    </div>
-  );
 }
 
 export default function CompanyDetailModal({
@@ -39,6 +33,7 @@ export default function CompanyDetailModal({
   opportunities,
   pipelines,
   customFields,
+  companySizes,
   tenantCurrency,
   currentUserId,
   onClose,
@@ -162,20 +157,21 @@ export default function CompanyDetailModal({
           <div className="overview-panel-heading">
             <h3 id="company-detail-name">{company.name}</h3>
             <p>{company.industry || 'Company'}</p>
+            {company.statusDefn && (
+              <StatusChip color={company.statusDefn.color || '#6b7280'} label={company.statusDefn.name} />
+            )}
           </div>
-          {company.statusDefn && (
-            <StatusChip color={company.statusDefn.color || '#6b7280'} label={company.statusDefn.name} />
-          )}
         </div>
 
-        <div className="overview-panel-body">
+        <div className="overview-panel-main">
+        <div className="overview-panel-left">
           <Field label="Industry">
             <AutoSaveField label="Industry" value={company.industry || ''} onSave={(v) => save({ industry: v || null })} />
           </Field>
           <Field label="Website">
             <AutoSaveField
               label="Website"
-              type="url"
+              type="text"
               value={company.website || ''}
               onSave={(v) => save({ website: v || null })}
               placeholder="https://example.com"
@@ -184,7 +180,7 @@ export default function CompanyDetailModal({
           <Field label="Phone">
             <AutoSaveField label="Phone" value={company.phone || ''} onSave={(v) => save({ phone: v || null })} />
           </Field>
-          <Field label="Billing Address">
+          <Field label="Billing Address" full>
             <AutoSaveField
               label="Billing Address"
               value={company.billingAddress || ''}
@@ -192,11 +188,12 @@ export default function CompanyDetailModal({
             />
           </Field>
           <Field label="Size">
-            <AutoSaveField
+            <AutoSaveSelect
               label="Size"
-              value={company.size || ''}
-              onSave={(v) => save({ size: v || null })}
-              placeholder="e.g. 11-50 employees"
+              value={company.sizeId || ''}
+              onSave={(v) => save({ sizeId: v || null })}
+              options={companySizes.filter((s) => s.isActive).map((s) => ({ value: s.id, label: s.name }))}
+              emptyLabel="-- none --"
             />
           </Field>
           <Field label="Account Owner">
@@ -231,7 +228,7 @@ export default function CompanyDetailModal({
             );
           })}
 
-          <div className="overview-field">
+          <div className="overview-field overview-field-full">
             <div className="flex items-center justify-between">
               <span className="overview-field-label">Contacts ({companyContacts.length})</span>
               <button type="button" className="icon-btn" onClick={() => setAddingContact((v) => !v)}>
@@ -306,7 +303,7 @@ export default function CompanyDetailModal({
             )}
           </div>
 
-          <div className="overview-field">
+          <div className="overview-field overview-field-full">
             <div className="flex items-center justify-between">
               <span className="overview-field-label">Opportunities ({companyOpportunities.length})</span>
               <button type="button" className="icon-btn" onClick={openAddOpportunity}>
@@ -322,6 +319,7 @@ export default function CompanyDetailModal({
                 <span>{opp.name}</span>
                 <span className="text-xs text-gray-400">
                   {opp.stage?.name} · {formatMoney(opp.amountCents, opp.currency)}
+                  {opp.pipeline?.isActive === false && ' · Archived'}
                 </span>
               </div>
             ))}
@@ -361,6 +359,16 @@ export default function CompanyDetailModal({
               </div>
             )}
           </div>
+
+        </div>
+
+        <DetailSidebar
+          token={token}
+          entityType="company"
+          entityId={company.id}
+          tenantUsers={tenantUsers}
+          currentUserId={currentUserId}
+        />
         </div>
       </div>
     </div>

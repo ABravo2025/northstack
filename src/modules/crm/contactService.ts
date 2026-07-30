@@ -1,5 +1,6 @@
 import prisma from '../../lib/prisma.js';
 import { listCustomFieldValuesForEntities } from '../hr/customFieldService.js';
+import { deleteOpportunity } from './opportunityService.js';
 import type { Contact, LeadStatus, Prisma } from '@prisma/client';
 
 export interface CreateContactInput {
@@ -96,8 +97,31 @@ export async function updateContact(id: string, input: UpdateContactInput): Prom
   });
 }
 
-export async function deleteContact(id: string): Promise<void> {
-  await prisma.contact.delete({
-    where: { id },
-  });
+export interface DeleteContactResult {
+  success: boolean;
+  error?: string;
+}
+
+export interface DeleteContactOptions {
+  // Opt-in cascade: an Opportunity isn't owned by a Contact (companyId is the
+  // required parent), so by default a linked Contact just blocks deletion —
+  // same guard-not-cascade pattern as companyService.ts's deleteCompany. The
+  // user can explicitly choose to take the linked Opportunities down with it.
+  deleteLinkedOpportunities?: boolean;
+}
+
+export async function deleteContact(id: string, options: DeleteContactOptions = {}): Promise<DeleteContactResult> {
+  const links = await prisma.opportunityContact.findMany({ where: { contactId: id }, select: { opportunityId: true } });
+  if (links.length > 0) {
+    if (!options.deleteLinkedOpportunities) {
+      return { success: false, error: 'Cannot delete a contact linked to existing opportunities' };
+    }
+    const opportunityIds = [...new Set(links.map((link) => link.opportunityId))];
+    for (const opportunityId of opportunityIds) {
+      await deleteOpportunity(opportunityId);
+    }
+  }
+
+  await prisma.contact.delete({ where: { id } });
+  return { success: true };
 }

@@ -158,6 +158,8 @@ model Tenant {
   opportunities           Opportunity[]
   opportunityContacts     OpportunityContact[]
   opportunityStageHistory OpportunityStageHistory[]
+  tasks                   Task[]
+  notes                   Note[]
 }
 
 model User {
@@ -179,6 +181,9 @@ model User {
   acceptedTermsAt  DateTime?
   accountOwnerOfCompanies Company[]
   ownedOpportunities      Opportunity[]
+  tasksAssigned           Task[]        @relation("TaskAssignee")
+  tasksCreated            Task[]        @relation("TaskCreatedBy")
+  notesCreated            Note[]
 }
 
 model Employee {
@@ -245,7 +250,8 @@ model Company {
   website         String?
   phone           String?
   billingAddress  String? // same field the future Payments module will need — not duplicated
-  size            String? // employee-count range, free text, optional
+  sizeId          String?
+  sizeDefn        FieldCatalogDefinition? @relation(fields: [sizeId], references: [id])
   accountOwnerId  String?
   accountOwner    User?            @relation(fields: [accountOwnerId], references: [id])
   statusId        String // lifecycle status (Prospect/Customer/Churned) — StatusDefinition-based
@@ -402,6 +408,7 @@ enum CatalogKind {
   jobTitle
   leadSource
   lossReason
+  companySize
 }
 
 model FieldCatalogDefinition {
@@ -417,6 +424,7 @@ model FieldCatalogDefinition {
   employeesByJobTitle       Employee[]   @relation("EmployeeJobTitle")
   contactsByLeadSource      Contact[]
   opportunitiesByLossReason Opportunity[]
+  companiesBySize           Company[]
 
   @@index([tenantId, kind])
 }
@@ -515,6 +523,50 @@ model CustomFieldValue {
   entityId                String
   value                   String
   createdAt               DateTime                @default(now())
+
+  @@index([tenantId, entityType, entityId])
+}
+
+// Generic cross-module task, attachable to any entity via the same
+// tenantId + entityType + entityId pattern already used by CustomFieldValue —
+// no per-module FK. See docs/tareas-desarrollo.md, "Módulo de Tasks", item 1.
+model Task {
+  id          String     @id @default(uuid())
+  tenantId    String
+  tenant      Tenant     @relation(fields: [tenantId], references: [id])
+  entityType  EntityType
+  entityId    String
+  title       String
+  description String?
+  assigneeId  String
+  assignee    User       @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  dueDate     DateTime?
+  completedAt DateTime? // presence/absence is the done/pending state, not a separate enum
+  createdById String
+  createdBy   User       @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([tenantId, entityType, entityId])
+  @@index([tenantId, assigneeId])
+}
+
+// Same polymorphic tenantId+entityType+entityId pattern as Task — a short
+// header + long body (body allows markdown for emphasis, per the user
+// 2026-07-29). No assignee (unlike Task, a Note isn't owned by anyone but its
+// author) and no completed state — it's a record, not a to-do.
+model Note {
+  id          String     @id @default(uuid())
+  tenantId    String
+  tenant      Tenant     @relation(fields: [tenantId], references: [id])
+  entityType  EntityType
+  entityId    String
+  header      String
+  body        String
+  createdById String
+  createdBy   User       @relation(fields: [createdById], references: [id])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 
   @@index([tenantId, entityType, entityId])
 }

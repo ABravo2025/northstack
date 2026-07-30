@@ -708,7 +708,7 @@ export default function ClientsPage({ user, token }: ClientsPageProps) {
       ) : clients.length === 0 ? (
         <div className="empty-state">
           <p>No clients yet.</p>
-          <button className="btn btn-success" onClick={handleOpenAdd}>
+          <button className="btn btn-primary" onClick={handleOpenAdd}>
             Add your first client
           </button>
         </div>

@@ -17,6 +17,8 @@ import { opportunitiesRouter } from './routes/opportunities.js';
 import { publicFormsRouter } from './routes/publicForms.js';
 import { publicRouter } from './routes/public.js';
 import { feedbackRouter } from './routes/feedback.js';
+import { tasksRouter } from './routes/tasks.js';
+import { notesRouter } from './routes/notes.js';
 
 dotenv.config();
 
@@ -56,6 +58,8 @@ app.use(opportunitiesRouter);
 app.use(publicFormsRouter);
 app.use(publicRouter);
 app.use(feedbackRouter);
+app.use(tasksRouter);
+app.use(notesRouter);
 
 // Catches anything an async route handler throws (e.g. Neon/Prisma dropping
 // the connection) so it becomes a clean JSON response instead of crashing

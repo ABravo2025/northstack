@@ -26,6 +26,7 @@ import { useColumnOrder } from '../hooks/useColumnOrder';
 import Avatar from '../components/Avatar';
 import CategoryChip from '../components/CategoryChip';
 import ContactDetailModal from '../components/ContactDetailModal';
+import SearchableSelect from '../components/SearchableSelect';
 import HorizontalScrollbar from '../components/HorizontalScrollbar';
 import { ChevronDownIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/Icons';
 import {
@@ -61,6 +62,10 @@ const emptyContactForm = {
   email: '',
   phone: '',
   companyId: '',
+  // Radio gate for whether this Contact gets assigned to an existing Company
+  // at creation — defaults to "no" (a lead without a confirmed company yet
+  // is a valid state, companyId stays nullable).
+  assignToCompany: false,
   title: '',
   isPrimary: false,
   leadStatus: '',
@@ -75,10 +80,12 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [tenantCurrency, setTenantCurrency] = useState('USD');
   const [leadSources, setLeadSources] = useState<any[]>([]);
+  const [tenantUsers, setTenantUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [slideOverMode, setSlideOverMode] = useState<'add' | null>(null);
   const [viewingContactId, setViewingContactId] = useState<string | null>(null);
   const [deletingContact, setDeletingContact] = useState<Contact | null>(null);
+  const [deleteLinkedOpportunities, setDeleteLinkedOpportunities] = useState(false);
   const tableWrapRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -140,10 +147,19 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
       .catch(() => {
         // Non-critical — the lead source dropdown just falls back to empty if it fails.
       });
+    api
+      .listTenantUsers(token)
+      .then(setTenantUsers)
+      .catch(() => {
+        // Non-critical — the Tasks assignee dropdown just falls back to empty if it fails.
+      });
   }, []);
 
+  // Silent refresh (no setLoading) — same fix as Companies/Employees
+  // (2026-07-30): a loud loadContacts() here flashed the whole table behind
+  // an open ContactDetailModal on every field/linked-record change.
   const refreshAssociatedData = () => {
-    loadContacts();
+    api.listContacts(token).then(setContacts).catch(() => {});
     api.listCompanies(token).then(setCompanies).catch(() => {});
     api.listOpportunities(token).then(setOpportunities).catch(() => {});
   };
@@ -258,13 +274,15 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
   const handleDeleteContact = async () => {
     if (!deletingContact) return;
     try {
-      await api.deleteContact(token, deletingContact.id);
+      await api.deleteContact(token, deletingContact.id, { deleteLinkedOpportunities });
       toast.success(`${deletingContact.firstName} ${deletingContact.lastName} deleted.`);
       setDeletingContact(null);
-      loadContacts();
+      setDeleteLinkedOpportunities(false);
+      refreshAssociatedData();
     } catch (error) {
       toast.error('Failed to delete contact: ' + (error as Error).message);
       setDeletingContact(null);
+      setDeleteLinkedOpportunities(false);
     }
   };
 
@@ -542,7 +560,13 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
       {canManageCustomFields && <td></td>}
       <td>
         <div className="icon-actions">
-          <button className="icon-btn danger" onClick={() => setDeletingContact(contact)}>
+          <button
+            className="icon-btn danger"
+            onClick={() => {
+              setDeletingContact(contact);
+              setDeleteLinkedOpportunities(false);
+            }}
+          >
             <span className="tip">Delete</span>
             <TrashIcon />
           </button>
@@ -566,15 +590,35 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
 
   return (
     <div className="page-full">
-      {deletingContact && (
-        <ConfirmDialog
-          title="Delete contact"
-          message={`Are you sure you want to delete ${deletingContact.firstName} ${deletingContact.lastName}? This can't be undone.`}
-          confirmLabel="Delete"
-          onConfirm={handleDeleteContact}
-          onCancel={() => setDeletingContact(null)}
-        />
-      )}
+      {deletingContact && (() => {
+        const linkedOpportunities = opportunities.filter((o) =>
+          o.contactLinks?.some((link) => link.contactId === deletingContact.id),
+        );
+        return (
+          <ConfirmDialog
+            title="Delete contact"
+            message={
+              linkedOpportunities.length > 0
+                ? `${deletingContact.firstName} ${deletingContact.lastName} is linked to ${linkedOpportunities.length} opportunity(ies) (${linkedOpportunities.map((o) => o.name).join(', ')}). Deleting the contact requires deleting those too — this can't be undone.`
+                : `Are you sure you want to delete ${deletingContact.firstName} ${deletingContact.lastName}? This can't be undone.`
+            }
+            confirmLabel="Delete"
+            confirmDisabled={linkedOpportunities.length > 0 && !deleteLinkedOpportunities}
+            checkboxLabel={
+              linkedOpportunities.length > 0
+                ? `Also delete ${linkedOpportunities.length} linked opportunity(ies)`
+                : undefined
+            }
+            checkboxChecked={deleteLinkedOpportunities}
+            onCheckboxChange={setDeleteLinkedOpportunities}
+            onConfirm={handleDeleteContact}
+            onCancel={() => {
+              setDeletingContact(null);
+              setDeleteLinkedOpportunities(false);
+            }}
+          />
+        );
+      })()}
 
       <SlideOver
         open={slideOverMode === 'add'}
@@ -633,20 +677,40 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="contact-companyId">Company</label>
-              <select
-                id="contact-companyId"
-                value={contactForm.companyId}
-                onChange={(e) => setContactForm({ ...contactForm, companyId: e.target.value })}
-              >
-                <option value="">-- none (lead without a confirmed company) --</option>
-                {companies.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+              <label>Assign to an existing company?</label>
+              <div className="flex items-center gap-4 text-sm">
+                <label className="inline-flex items-center gap-1.5 font-normal">
+                  <input
+                    type="radio"
+                    name="contact-assign-company"
+                    checked={!contactForm.assignToCompany}
+                    onChange={() => setContactForm({ ...contactForm, assignToCompany: false, companyId: '' })}
+                  />
+                  No — lead without a confirmed company
+                </label>
+                <label className="inline-flex items-center gap-1.5 font-normal">
+                  <input
+                    type="radio"
+                    name="contact-assign-company"
+                    checked={contactForm.assignToCompany}
+                    onChange={() => setContactForm({ ...contactForm, assignToCompany: true })}
+                  />
+                  Yes
+                </label>
+              </div>
             </div>
+            {contactForm.assignToCompany && (
+              <div className="form-group">
+                <label htmlFor="contact-companyId">Company</label>
+                <SearchableSelect
+                  id="contact-companyId"
+                  options={companies.map((c) => ({ value: c.id, label: c.name }))}
+                  value={contactForm.companyId}
+                  onChange={(v) => setContactForm({ ...contactForm, companyId: v })}
+                  placeholder="Search companies…"
+                />
+              </div>
+            )}
             <div className="form-group">
               <label htmlFor="contact-title">Title</label>
               <input
@@ -728,6 +792,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
               customFields={activeContactCustomFields}
               tenantCurrency={tenantCurrency}
               currentUserId={user.id}
+              tenantUsers={tenantUsers}
               onClose={() => setViewingContactId(null)}
               onChanged={refreshAssociatedData}
             />
@@ -785,7 +850,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
         <div className="empty-state">
           <p>No contacts yet.</p>
           {canEditContacts && (
-            <button className="btn btn-success" onClick={handleOpenAdd}>
+            <button className="btn btn-primary" onClick={handleOpenAdd}>
               Add your first contact
             </button>
           )}

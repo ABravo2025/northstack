@@ -209,7 +209,11 @@ export function buildClientFields(statuses: StatusLike[], customFields: CustomFi
   ];
 }
 
-export function buildCompanyFields(statuses: StatusLike[], customFields: CustomFieldLike[]): ViewField[] {
+export function buildCompanyFields(
+  statuses: StatusLike[],
+  customFields: CustomFieldLike[],
+  sizes: CatalogEntryLike[] = [],
+): ViewField[] {
   return [
     {
       key: 'name',
@@ -245,8 +249,9 @@ export function buildCompanyFields(statuses: StatusLike[], customFields: CustomF
     {
       key: 'size',
       label: 'Size',
-      valueType: 'text',
-      getValue: (item: any) => item.size ?? '',
+      valueType: 'select',
+      selectOptions: sizes.filter((s) => s.isActive).map((s) => ({ value: s.name })),
+      getValue: (item: any) => item.sizeDefn?.name ?? '',
     },
     {
       key: 'accountOwner',

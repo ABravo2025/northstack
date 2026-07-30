@@ -305,6 +305,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
               pipelines={pipelines}
               tenantUsers={tenantUsers}
               lossReasons={lossReasons}
+              currentUserId={user.id}
               onClose={() => setViewingId(null)}
               onChanged={reloadOpportunities}
             />

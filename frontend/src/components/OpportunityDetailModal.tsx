@@ -3,6 +3,8 @@ import { api, type Company, type Contact, type Opportunity, type Pipeline } from
 import { useToast } from './ToastProvider';
 import AutoSaveField from './AutoSaveField';
 import AutoSaveSelect from './AutoSaveSelect';
+import DetailSidebar from './DetailSidebar';
+import Field from './Field';
 import { PlusIcon, XIcon } from './Icons';
 
 interface OpportunityDetailModalProps {
@@ -13,17 +15,9 @@ interface OpportunityDetailModalProps {
   pipelines: Pipeline[];
   tenantUsers: any[];
   lossReasons: any[];
+  currentUserId: string;
   onClose: () => void;
   onChanged: () => void;
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="overview-field">
-      <span className="overview-field-label">{label}</span>
-      {children}
-    </div>
-  );
 }
 
 function daysSince(dateStr: string): number {
@@ -39,6 +33,7 @@ export default function OpportunityDetailModal({
   pipelines,
   tenantUsers,
   lossReasons,
+  currentUserId,
   onClose,
   onChanged,
 }: OpportunityDetailModalProps) {
@@ -140,7 +135,8 @@ export default function OpportunityDetailModal({
           </div>
         )}
 
-        <div className="overview-panel-body">
+        <div className="overview-panel-main">
+        <div className="overview-panel-left">
           <Field label="Deal Name">
             <AutoSaveField label="Deal Name" value={opportunity.name} onSave={(v) => save({ name: v })} />
           </Field>
@@ -230,7 +226,7 @@ export default function OpportunityDetailModal({
             />
           </Field>
 
-          <div className="overview-field">
+          <div className="overview-field overview-field-full">
             <span className="overview-field-label">Contacts ({opportunity.contactLinks?.length ?? 0})</span>
             {(opportunity.contactLinks ?? []).map((link) => (
               <div key={link.id} className="flex items-center justify-between gap-2 py-1 text-sm">
@@ -266,6 +262,16 @@ export default function OpportunityDetailModal({
               </button>
             </div>
           </div>
+
+        </div>
+
+        <DetailSidebar
+          token={token}
+          entityType="opportunity"
+          entityId={opportunity.id}
+          tenantUsers={tenantUsers}
+          currentUserId={currentUserId}
+        />
         </div>
       </div>
     </div>

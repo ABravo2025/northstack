@@ -1,8 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
-import { api } from '../api';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { api, type Task } from '../api';
 import { useToast } from '../components/ToastProvider';
 import { ChevronLeftIcon, ChevronRightIcon } from '../components/Icons';
 import OnboardingChecklist from '../components/OnboardingChecklist';
+import MyTasksWidget from '../components/MyTasksWidget';
+import TaskFormPopover, { type TaskFormPayload } from '../components/TaskFormPopover';
 
 interface OverviewPageProps {
   token: string;
@@ -48,25 +50,66 @@ function buildMonthGrid(year: number, month: number): (number | null)[][] {
 export default function OverviewPage({ token, user }: OverviewPageProps) {
   const toast = useToast();
   const [requests, setRequests] = useState<any[]>([]);
+  const [calendarTasks, setCalendarTasks] = useState<Task[]>([]);
+  const [tenantUsers, setTenantUsers] = useState<{ id: string; firstName: string; lastName: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [cursor, setCursor] = useState(() => {
     const now = new Date();
     return { year: now.getFullYear(), month: now.getMonth() };
   });
+  const [formOpen, setFormOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const taskAnchorRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     loadCalendar();
+    api.listTenantUsers(token).then(setTenantUsers).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadCalendar = async () => {
     setLoading(true);
     try {
-      const data = await api.listTimeOffRequests(token, 'calendar');
+      const [data, tasks] = await Promise.all([
+        api.listTimeOffRequests(token, 'calendar'),
+        api.listTasksForCalendar(token),
+      ]);
       setRequests(data);
+      setCalendarTasks(tasks);
     } catch (error) {
       toast.error('Failed to load the team calendar: ' + (error as Error).message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openTaskForm = (e: React.MouseEvent<HTMLDivElement>, task: Task) => {
+    taskAnchorRef.current = e.currentTarget;
+    setEditingTask(task);
+    setFormOpen(true);
+  };
+
+  const handleTaskSubmit = async (payload: TaskFormPayload) => {
+    if (!editingTask) return;
+    try {
+      await api.updateTask(token, editingTask.id, payload);
+      toast.success('Task updated.');
+      setFormOpen(false);
+      await loadCalendar();
+    } catch (error) {
+      toast.error('Failed to save task: ' + (error as Error).message);
+    }
+  };
+
+  const handleTaskDelete = async () => {
+    if (!editingTask) return;
+    try {
+      await api.deleteTask(token, editingTask.id);
+      toast.success('Task deleted.');
+      setFormOpen(false);
+      await loadCalendar();
+    } catch (error) {
+      toast.error('Failed to delete task: ' + (error as Error).message);
     }
   };
 
@@ -83,6 +126,18 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
     }
     return map;
   }, [grid, requests, cursor]);
+
+  const tasksByDay = useMemo(() => {
+    const map: Record<string, Task[]> = {};
+    for (let week = 0; week < grid.length; week++) {
+      for (const day of grid[week]) {
+        if (day === null) continue;
+        const key = dateKey(cursor.year, cursor.month, day);
+        map[key] = calendarTasks.filter((t) => t.dueDate && t.dueDate.slice(0, 10) === key);
+      }
+    }
+    return map;
+  }, [grid, calendarTasks, cursor]);
 
   const goToPrevMonth = () => {
     setCursor((c) => (c.month === 0 ? { year: c.year - 1, month: 11 } : { year: c.year, month: c.month - 1 }));
@@ -105,76 +160,106 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
   return (
     <div className="container">
       {(user.role === 'owner' || user.role === 'admin') && <OnboardingChecklist token={token} />}
-      <div className="page-toolbar">
-        <h2>
-          {MONTH_LABELS[cursor.month]} {cursor.year}
-        </h2>
-        <div className="flex items-center gap-1.5 ml-auto">
-          <button className="btn-secondary px-2 py-1 text-xs" onClick={goToPrevMonth} aria-label="Previous month">
-            <ChevronLeftIcon className="h-3.5 w-3.5" />
-          </button>
-          <button className="btn-secondary px-2 py-1 text-xs" onClick={goToToday}>
-            Today
-          </button>
-          <button className="btn-secondary px-2 py-1 text-xs" onClick={goToNextMonth} aria-label="Next month">
-            <ChevronRightIcon className="h-3.5 w-3.5" />
-          </button>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+        <div className="min-w-0 flex-1">
+          <div className="page-toolbar">
+            <h2>
+              {MONTH_LABELS[cursor.month]} {cursor.year}
+            </h2>
+            <div className="flex items-center gap-1.5 ml-auto">
+              <button className="btn-secondary px-2 py-1 text-xs" onClick={goToPrevMonth} aria-label="Previous month">
+                <ChevronLeftIcon className="h-3.5 w-3.5" />
+              </button>
+              <button className="btn-secondary px-2 py-1 text-xs" onClick={goToToday}>
+                Today
+              </button>
+              <button className="btn-secondary px-2 py-1 text-xs" onClick={goToNextMonth} aria-label="Next month">
+                <ChevronRightIcon className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-4">
+            {loading ? (
+              <p>Loading...</p>
+            ) : (
+              <table className="calendar-table">
+                <thead>
+                  <tr>
+                    {WEEKDAY_LABELS.map((label) => (
+                      <th key={label}>{label}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {grid.map((week, i) => (
+                    <tr key={i}>
+                      {week.map((day, j) => {
+                        if (day === null) return <td key={j} className="calendar-cell-empty"></td>;
+                        const key = dateKey(cursor.year, cursor.month, day);
+                        const dayRequests = requestsByDay[key] || [];
+                        const dayTasks = tasksByDay[key] || [];
+                        return (
+                          <td key={j} className={key === todayKey ? 'calendar-cell calendar-cell-today' : 'calendar-cell'}>
+                            <div className="calendar-cell-date">{day}</div>
+                            {dayRequests.map((req) => (
+                              <div
+                                key={req.id}
+                                className={
+                                  req.status === 'pending' ? 'calendar-entry calendar-entry-pending' : 'calendar-entry'
+                                }
+                                title={`${req.employee.firstName} ${req.employee.lastName} — ${req.timeOffPolicy.name}${req.status === 'pending' ? ' (pending)' : ''}`}
+                              >
+                                <span
+                                  style={{
+                                    display: 'inline-block',
+                                    width: 6,
+                                    height: 6,
+                                    borderRadius: '50%',
+                                    background: req.timeOffPolicy.color || '#9ca3af',
+                                    marginRight: 4,
+                                  }}
+                                ></span>
+                                {req.employee.firstName} {req.employee.lastName[0]}.
+                                {req.status === 'pending' ? ' (pending)' : ''}
+                              </div>
+                            ))}
+                            {dayTasks.map((task) => (
+                              <div
+                                key={task.id}
+                                className="calendar-entry-task"
+                                title={`${task.title}${task.entitySummary ? ` — ${task.entitySummary}` : ''}`}
+                                onClick={(e) => openTaskForm(e, task)}
+                              >
+                                {task.title}
+                              </div>
+                            ))}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+
+        <div className="w-full lg:w-80 lg:shrink-0">
+          <MyTasksWidget token={token} tenantUsers={tenantUsers} currentUserId={user.id} />
         </div>
       </div>
 
-      <div className="mt-4">
-        {loading ? (
-          <p>Loading...</p>
-        ) : (
-          <table className="calendar-table">
-            <thead>
-              <tr>
-                {WEEKDAY_LABELS.map((label) => (
-                  <th key={label}>{label}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {grid.map((week, i) => (
-                <tr key={i}>
-                  {week.map((day, j) => {
-                    if (day === null) return <td key={j} className="calendar-cell-empty"></td>;
-                    const key = dateKey(cursor.year, cursor.month, day);
-                    const dayRequests = requestsByDay[key] || [];
-                    return (
-                      <td key={j} className={key === todayKey ? 'calendar-cell calendar-cell-today' : 'calendar-cell'}>
-                        <div className="calendar-cell-date">{day}</div>
-                        {dayRequests.map((req) => (
-                          <div
-                            key={req.id}
-                            className={
-                              req.status === 'pending' ? 'calendar-entry calendar-entry-pending' : 'calendar-entry'
-                            }
-                            title={`${req.employee.firstName} ${req.employee.lastName} — ${req.timeOffPolicy.name}${req.status === 'pending' ? ' (pending)' : ''}`}
-                          >
-                            <span
-                              style={{
-                                display: 'inline-block',
-                                width: 6,
-                                height: 6,
-                                borderRadius: '50%',
-                                background: req.timeOffPolicy.color || '#9ca3af',
-                                marginRight: 4,
-                              }}
-                            ></span>
-                            {req.employee.firstName} {req.employee.lastName[0]}.
-                            {req.status === 'pending' ? ' (pending)' : ''}
-                          </div>
-                        ))}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+      <TaskFormPopover
+        open={formOpen}
+        onClose={() => setFormOpen(false)}
+        anchorRef={taskAnchorRef}
+        tenantUsers={tenantUsers}
+        task={editingTask}
+        defaultAssigneeId={user.id}
+        onSubmit={handleTaskSubmit}
+        onDelete={handleTaskDelete}
+      />
     </div>
   );
 }

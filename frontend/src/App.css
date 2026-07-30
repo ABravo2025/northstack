@@ -372,6 +372,12 @@
   @apply border border-dashed border-gray-400 bg-transparent text-gray-500 italic dark:border-gray-500 dark:text-gray-400;
 }
 
+/* Task due dates on the /overview calendar — amber, distinct from the
+   gray/dashed Time Off entries above (per the Módulo de Tasks mockup). */
+.calendar-entry-task {
+  @apply mb-0.5 cursor-pointer truncate rounded bg-amber-100 px-1 py-0.5 text-xs text-amber-800 transition-colors hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:hover:bg-amber-900/70;
+}
+
 .header {
   @apply flex items-center justify-between border-b border-gray-200 bg-brand-cream px-5 py-4 dark:border-gray-800 dark:bg-black;
 }
@@ -947,35 +953,47 @@
   @apply flex justify-end gap-2 border-t border-gray-200 px-6 py-4 dark:border-gray-800;
 }
 
-/* ---------- Detail overview modal (Employee Overview) ----------
+/* ---------- Detail overview modal (Employee/Company/Contact/Opportunity) ----------
    ClickUp visual direction (2.2): a centered popup with a backdrop, not a
    panel that pushes/narrows the table. Accepted tradeoff: the table behind
-   it is hidden while the modal is open. */
+   it is hidden while the modal is open.
+   Widened 2026-07-30 to a 70vw x 70vh, 2-column layout (left: fields, right:
+   Notes/Tasks/Activity tabs) — same shell for all 4 entities, confirmed by
+   the user against the narrow single-column version built in Checkpoint F. */
 
 .detail-modal-overlay {
   @apply fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4;
 }
 
 .overview-panel {
-  @apply flex max-h-[85vh] w-full max-w-[460px] flex-col overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900;
+  @apply flex h-[70vh] max-h-[70vh] w-[70vw] max-w-[70vw] min-w-[720px] flex-col overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900;
 }
 
+/* Single line, left-to-right: avatar, then "Name — subtitle — status" —
+   changed 2026-07-30 from a centered/stacked header (the 460px-wide version
+   had room to stack; the 70vw version doesn't need to). */
 .overview-panel-head {
-  @apply relative flex flex-col items-center gap-2 border-b border-gray-200 p-5 text-center dark:border-gray-800;
+  @apply relative flex items-center gap-3 border-b border-gray-200 p-4 text-left dark:border-gray-800;
 }
 
 .overview-panel-head .slideover-close {
   @apply absolute top-3 right-3;
 }
 
+.overview-panel-heading {
+  @apply flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1;
+}
+
 .overview-panel-heading h3 {
-  @apply m-0 text-base font-bold text-brand-navy dark:text-gray-100;
+  @apply m-0 shrink-0 text-base font-bold text-brand-navy dark:text-gray-100;
 }
 
 .overview-panel-heading p {
-  @apply m-0 text-xs text-gray-500;
+  @apply m-0 truncate text-xs text-gray-500 before:mr-2 before:text-gray-300 before:content-['—'] dark:before:text-gray-700;
 }
 
+/* Generic tab bar — used both by the (legacy) top-level tabs and the new
+   right-column Notes/Tasks/Activity tabs, same visual language. */
 .overview-panel-tabs {
   @apply flex border-b border-gray-200 dark:border-gray-800;
 }
@@ -988,6 +1006,35 @@
   @apply border-brand-blue font-semibold text-brand-navy dark:text-gray-100;
 }
 
+/* 2-column split below the header: fields on the left (scrolls
+   independently), Notes/Tasks/Activity on the right (fixed width). */
+.overview-panel-main {
+  @apply flex min-h-0 flex-1 overflow-hidden;
+}
+
+/* Grid, not a single vertical stack (2026-07-30) — a 70vw-wide column of
+   short fields (name, email, a handful of dropdowns) one-per-row wasted most
+   of the width. Two columns; a field that's genuinely long (an address, a
+   linked-record list with its own add-form) opts into .overview-field-full
+   to span both. */
+.overview-panel-left {
+  @apply grid min-h-0 min-w-0 flex-1 auto-rows-min grid-cols-2 gap-x-4 gap-y-3 overflow-y-auto p-4;
+}
+
+.overview-field-full {
+  @apply col-span-2;
+}
+
+.overview-panel-right {
+  @apply flex h-full w-[360px] shrink-0 flex-col overflow-hidden border-l border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-black/20;
+}
+
+.overview-panel-right-body {
+  @apply flex min-h-0 flex-1 flex-col overflow-y-auto p-4;
+}
+
+/* Legacy single-column body — still used wherever a detail surface hasn't
+   been split into the 2-column layout above. */
 .overview-panel-body {
   @apply flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4;
 }
@@ -1014,6 +1061,21 @@
 
 .overview-panel-placeholder {
   @apply py-8 text-center text-sm text-gray-400;
+}
+
+/* Always-expanded Task/Note compose form (right-column tabs) — replaces the
+   old click-to-open Popover now that there's a dedicated, tall column to put
+   it in instead of a small anchored flyout. Explicit white/dark-panel
+   background + a visible border so it reads as its own card against the
+   tinted .overview-panel-right behind it (2026-07-30 — the plain-border,
+   no-background version didn't stand out enough). */
+.inline-compose-form {
+  @apply flex flex-col gap-2 rounded-md border border-gray-300 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-900;
+}
+
+.task-row-active,
+.note-row-active {
+  @apply border-brand-blue bg-brand-blue/5 dark:border-brand-blue-light dark:bg-brand-blue/10;
 }
 
 /* ---------- Fixed-width dropdown trigger (2.1) ----------
@@ -1211,7 +1273,11 @@
 }
 
 .popover-panel {
-  @apply absolute top-full left-0 z-30 mt-1.5 rounded-lg border border-gray-200 bg-white p-3 shadow-xl dark:border-gray-700 dark:bg-gray-900;
+  /* z-[60]: has to clear the highest overlay it can be opened from — the Tasks
+     popover (EntityTasksList) opens from inside .detail-modal-overlay/
+     .slideover-panel, both z-50; a plain z-30 here left the popover rendered
+     behind the modal's backdrop, which then stole its clicks. */
+  @apply absolute top-full left-0 z-[60] mt-1.5 rounded-lg border border-gray-200 bg-white p-3 shadow-xl dark:border-gray-700 dark:bg-gray-900;
 }
 
 .popover-panel.align-right {
@@ -1264,7 +1330,8 @@
 }
 
 .nv-field input,
-.nv-field select {
+.nv-field select,
+.nv-field textarea {
   @apply w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-xs text-brand-navy dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100;
 }
 
@@ -1419,6 +1486,66 @@
 
 .kanban-ghost-card {
   @apply flex cursor-pointer items-center gap-2 rounded-md border-2 border-dashed border-gray-300 p-2.5 text-sm font-medium text-gray-400 transition-colors hover:border-brand-blue hover:text-brand-blue dark:border-gray-700 dark:text-gray-500 dark:hover:border-brand-blue-light dark:hover:text-brand-blue-light;
+}
+
+/* ---------- Tasks (EntityTasksList) ---------- */
+
+.task-list {
+  @apply flex flex-col gap-1;
+}
+
+.task-row {
+  @apply flex items-center gap-2 rounded-md px-1 py-1.5;
+}
+
+.task-row-clickable {
+  @apply cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-white/5;
+}
+
+.task-checkbox {
+  @apply h-3.5 w-3.5 shrink-0 accent-brand-blue;
+}
+
+.task-row-title {
+  @apply flex-1 truncate text-left text-sm text-brand-navy dark:text-gray-100;
+}
+
+.task-row-title.completed {
+  @apply text-gray-400 line-through dark:text-gray-500;
+}
+
+.task-row-date {
+  @apply shrink-0 text-xs text-gray-400;
+}
+
+/* ---------- Notes (EntityNotesList) ---------- */
+
+.note-list {
+  @apply flex flex-col gap-2;
+}
+
+.note-row {
+  @apply cursor-pointer rounded-md border border-gray-200 bg-white p-2.5 transition-colors hover:border-brand-blue/50 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-blue-light/50;
+}
+
+.note-row-header {
+  @apply mb-1 flex items-center justify-between gap-2;
+}
+
+.note-row-title {
+  @apply truncate text-sm font-semibold text-brand-navy dark:text-gray-100;
+}
+
+.note-row-body {
+  @apply line-clamp-3 text-xs text-gray-600 dark:text-gray-300;
+}
+
+.note-body-line {
+  @apply m-0;
+}
+
+.note-row-date {
+  @apply mt-1 block text-[11px] text-gray-400;
 }
 
 .kcard.dragging {

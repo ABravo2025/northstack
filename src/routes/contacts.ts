@@ -137,7 +137,13 @@ contactsRouter.delete('/api/contacts/:contactId', async (req, res) => {
     return res.status(404).json({ error: 'Contact not found' });
   }
 
-  await deleteContact(req.params.contactId);
+  const result = await deleteContact(req.params.contactId, {
+    deleteLinkedOpportunities: req.body?.deleteLinkedOpportunities === true,
+  });
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
   return res.status(204).end();
 });
 

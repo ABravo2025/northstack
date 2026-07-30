@@ -1,30 +1,64 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { api } from '../api';
+import { useToast } from './ToastProvider';
 import Avatar from './Avatar';
 import StatusChip from './StatusChip';
+import AutoSaveField from './AutoSaveField';
+import AutoSaveSelect from './AutoSaveSelect';
+import DetailSidebar from './DetailSidebar';
+import Field from './Field';
 import { XIcon } from './Icons';
-import { formatMoney } from '../lib/currencies';
-
-type Tab = 'overview' | 'notes' | 'activity';
 
 interface EmployeeOverviewPanelProps {
   employee: any;
+  employees: any[]; // full tenant roster, for the "Reports To" dropdown (excluding self)
   tenantCurrency: string;
   isOwner: boolean;
+  token: string;
+  tenantUsers: { id: string; firstName: string; lastName: string }[];
+  currentUserId: string;
+  customFields: any[];
+  statuses: any[];
+  departments: any[];
+  jobTitles: any[];
+  timeOffPolicies: any[];
   onClose: () => void;
-  onEdit: () => void;
+  onChanged: () => void;
 }
 
-function Field({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="overview-field">
-      <span className="overview-field-label">{label}</span>
-      <span className="overview-field-value">{value ?? '—'}</span>
-    </div>
-  );
+function dollarsToCents(value: string): number | null {
+  if (!value.trim()) return null;
+  const parsed = Number.parseFloat(value);
+  return Number.isNaN(parsed) ? null : Math.round(parsed * 100);
 }
 
-export default function EmployeeOverviewPanel({ employee, tenantCurrency, isOwner, onClose, onEdit }: EmployeeOverviewPanelProps) {
-  const [tab, setTab] = useState<Tab>('overview');
+function centsToDollars(cents: number | null | undefined): string {
+  return cents == null ? '' : (cents / 100).toFixed(2);
+}
+
+// Unified with the Company/Contact/Opportunity detail pattern (Checkpoint F,
+// docs/tareas-desarrollo.md): no tabs, no "Edit employee" button — every field
+// is editable in place via AutoSaveField/AutoSaveSelect. Name/business email
+// stay editable here (unlike Company/Contact, which have no inline rename at
+// all today) — a deliberate exception confirmed with the user rather than a
+// silent capability loss.
+export default function EmployeeOverviewPanel({
+  employee,
+  employees,
+  tenantCurrency,
+  isOwner,
+  token,
+  tenantUsers,
+  currentUserId,
+  customFields,
+  statuses,
+  departments,
+  jobTitles,
+  timeOffPolicies,
+  onClose,
+  onChanged,
+}: EmployeeOverviewPanelProps) {
+  const toast = useToast();
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -33,6 +67,43 @@ export default function EmployeeOverviewPanel({ employee, tenantCurrency, isOwne
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
+
+  const save = (data: Record<string, unknown>) => api.updateEmployee(token, employee.id, data as any);
+
+  const saveCustomField = async (fieldId: string, value: string) => {
+    const existing = employee.customFieldVals?.find((v: any) => v.customFieldDefinitionId === fieldId);
+    if (!value.trim() && existing) {
+      await api.deleteEmployeeCustomFieldValue(token, employee.id, existing.id);
+    } else if (value.trim() && existing) {
+      await api.updateEmployeeCustomFieldValue(token, employee.id, existing.id, value.trim());
+    } else if (value.trim() && !existing) {
+      await api.createEmployeeCustomFieldValue(token, employee.id, { customFieldDefinitionId: fieldId, value: value.trim() });
+    }
+    onChanged();
+  };
+
+  const assignedPolicyIds = new Set((employee.timeOffPolicies || []).map((a: any) => a.timeOffPolicyId));
+  const assignedPolicies = timeOffPolicies.filter((p) => assignedPolicyIds.has(p.id));
+  const unassignedPolicies = timeOffPolicies.filter((p) => !assignedPolicyIds.has(p.id));
+
+  const handleUnassignPolicy = async (policyId: string) => {
+    try {
+      await api.unassignTimeOffPolicyFromEmployee(token, employee.id, policyId);
+      onChanged();
+    } catch (error) {
+      toast.error('Failed to unassign policy: ' + (error as Error).message);
+    }
+  };
+
+  const handleAssignPolicy = async (policyId: string) => {
+    if (!policyId) return;
+    try {
+      await api.assignTimeOffPolicyToEmployee(token, employee.id, policyId);
+      onChanged();
+    } catch (error) {
+      toast.error('Failed to assign policy: ' + (error as Error).message);
+    }
+  };
 
   return (
     <div className="detail-modal-overlay" onClick={onClose}>
@@ -43,85 +114,209 @@ export default function EmployeeOverviewPanel({ employee, tenantCurrency, isOwne
         aria-labelledby="employee-overview-name"
         onClick={(e) => e.stopPropagation()}
       >
-      <div className="overview-panel-head">
-        <button type="button" className="slideover-close" onClick={onClose} aria-label="Close">
-          <XIcon className="h-4 w-4" />
-        </button>
-        <Avatar firstName={employee.firstName} lastName={employee.lastName} />
-        <div className="overview-panel-heading">
-          <h3 id="employee-overview-name">
-            {employee.firstName} {employee.lastName}
-          </h3>
-          <p>{employee.email}</p>
+        <div className="overview-panel-head">
+          <button type="button" className="slideover-close" onClick={onClose} aria-label="Close">
+            <XIcon className="h-4 w-4" />
+          </button>
+          <Avatar firstName={employee.firstName} lastName={employee.lastName} />
+          <div className="overview-panel-heading">
+            <h3 id="employee-overview-name">
+              {employee.firstName} {employee.lastName}
+            </h3>
+            <p>{employee.email}</p>
+            {employee.statusDefn && (
+              <StatusChip color={employee.statusDefn.color || '#6b7280'} label={employee.statusDefn.name} />
+            )}
+          </div>
         </div>
-        {employee.statusDefn && (
-          <StatusChip color={employee.statusDefn.color || '#6b7280'} label={employee.statusDefn.name} />
-        )}
-      </div>
 
-      <div className="overview-panel-tabs">
-        <button type="button" className={tab === 'overview' ? 'active' : ''} onClick={() => setTab('overview')}>
-          Overview
-        </button>
-        <button type="button" className={tab === 'notes' ? 'active' : ''} onClick={() => setTab('notes')}>
-          Notes
-        </button>
-        <button type="button" className={tab === 'activity' ? 'active' : ''} onClick={() => setTab('activity')}>
-          Activity
-        </button>
-      </div>
-
-      <div className="overview-panel-body">
-        {tab === 'overview' && (
-          <>
-            <Field label="Personal Email" value={employee.personalEmail} />
-            <Field label="Department" value={employee.departmentDefn?.name} />
-            <Field label="Job Title" value={employee.jobTitleDefn?.name} />
-            <Field label="Reports To" value={employee.manager ? `${employee.manager.firstName} ${employee.manager.lastName}` : undefined} />
-            <Field
+        <div className="overview-panel-main">
+        <div className="overview-panel-left">
+          <Field label="First Name">
+            <AutoSaveField label="First Name" value={employee.firstName} onSave={(v) => save({ firstName: v })} />
+          </Field>
+          <Field label="Last Name">
+            <AutoSaveField label="Last Name" value={employee.lastName} onSave={(v) => save({ lastName: v })} />
+          </Field>
+          <Field label="Business Email">
+            <AutoSaveField label="Business Email" type="email" value={employee.email} onSave={(v) => save({ email: v })} />
+          </Field>
+          <Field label="Personal Email">
+            <AutoSaveField
+              label="Personal Email"
+              type="email"
+              value={employee.personalEmail || ''}
+              onSave={(v) => save({ personalEmail: v || null })}
+            />
+          </Field>
+          <Field label="Status">
+            <AutoSaveSelect
+              label="Status"
+              value={employee.statusId}
+              onSave={(v) => save({ statusId: v })}
+              options={statuses.map((s) => ({ value: s.id, label: s.name }))}
+              emptyLabel="-- select --"
+            />
+          </Field>
+          <Field label="Department">
+            <AutoSaveSelect
+              label="Department"
+              value={employee.departmentId || ''}
+              onSave={(v) => save({ departmentId: v || null })}
+              options={departments.filter((d) => d.isActive).map((d) => ({ value: d.id, label: d.name }))}
+            />
+          </Field>
+          <Field label="Job Title">
+            <AutoSaveSelect
+              label="Job Title"
+              value={employee.jobTitleId || ''}
+              onSave={(v) => save({ jobTitleId: v || null })}
+              options={jobTitles.filter((j) => j.isActive).map((j) => ({ value: j.id, label: j.name }))}
+            />
+          </Field>
+          <Field label="Reports To">
+            <AutoSaveSelect
+              label="Reports To"
+              value={employee.managerId || ''}
+              onSave={(v) => save({ managerId: v || null })}
+              emptyLabel="-- no manager --"
+              options={employees
+                .filter((e) => e.id !== employee.id)
+                .map((e) => ({ value: e.id, label: `${e.firstName} ${e.lastName}` }))}
+            />
+          </Field>
+          <Field label="Contract Type">
+            <AutoSaveSelect
               label="Contract Type"
-              value={
-                employee.contractType === 'part_time' ? 'Part Time' : employee.contractType === 'full_time' ? 'Full Time' : undefined
-              }
+              value={employee.contractType || ''}
+              onSave={(v) => save({ contractType: v || null })}
+              options={[
+                { value: 'part_time', label: 'Part Time' },
+                { value: 'full_time', label: 'Full Time' },
+              ]}
             />
-            <Field
+          </Field>
+          <Field label="Compensation Type">
+            <AutoSaveSelect
               label="Compensation Type"
-              value={
-                employee.compensationType === 'hourly' ? 'Hourly' : employee.compensationType === 'monthly' ? 'Monthly' : undefined
-              }
+              value={employee.compensationType || ''}
+              onSave={(v) => save({ compensationType: v || null })}
+              options={[
+                { value: 'hourly', label: 'Hourly' },
+                { value: 'monthly', label: 'Monthly' },
+              ]}
             />
-            {isOwner && (
-              <Field
+          </Field>
+          {isOwner && (
+            <Field label={`Hourly Rate (${tenantCurrency})`}>
+              <AutoSaveField
                 label="Hourly Rate"
-                value={employee.hourlyRateCents != null ? formatMoney(employee.hourlyRateCents, tenantCurrency) : undefined}
+                type="number"
+                value={centsToDollars(employee.hourlyRateCents)}
+                onSave={(v) => save({ hourlyRateCents: dollarsToCents(v) })}
               />
-            )}
-            {isOwner && (
-              <Field
+            </Field>
+          )}
+          {isOwner && (
+            <Field label={`Monthly Rate (${tenantCurrency})`}>
+              <AutoSaveField
                 label="Monthly Rate"
-                value={employee.monthlyRateCents != null ? formatMoney(employee.monthlyRateCents, tenantCurrency) : undefined}
+                type="number"
+                value={centsToDollars(employee.monthlyRateCents)}
+                onSave={(v) => save({ monthlyRateCents: dollarsToCents(v) })}
               />
-            )}
-            <Field label="Start Date" value={employee.startDate ? new Date(employee.startDate).toLocaleDateString() : undefined} />
-            <Field label="End Date" value={employee.endDate ? new Date(employee.endDate).toLocaleDateString() : undefined} />
-            <Field
-              label="Contract URL"
-              value={
-                employee.contractUrl ? (
-                  <a href={employee.contractUrl} target="_blank" rel="noopener noreferrer" className="table-link">
-                    View
-                  </a>
-                ) : undefined
-              }
+            </Field>
+          )}
+          <Field label="Start Date">
+            <AutoSaveField
+              label="Start Date"
+              type="date"
+              value={employee.startDate ? employee.startDate.slice(0, 10) : ''}
+              onSave={(v) => save({ startDate: v || null })}
             />
-            <button type="button" className="btn-secondary w-full text-center" style={{ marginTop: 8 }} onClick={onEdit}>
-              Edit employee
-            </button>
-          </>
-        )}
-        {tab === 'notes' && <p className="overview-panel-placeholder">Nothing here yet.</p>}
-        {tab === 'activity' && <p className="overview-panel-placeholder">Nothing here yet.</p>}
-      </div>
+          </Field>
+          <Field label="End Date">
+            <AutoSaveField
+              label="End Date"
+              type="date"
+              value={employee.endDate ? employee.endDate.slice(0, 10) : ''}
+              onSave={(v) => save({ endDate: v || null })}
+            />
+          </Field>
+          <Field label="Contract URL">
+            <AutoSaveField
+              label="Contract URL"
+              type="url"
+              value={employee.contractUrl || ''}
+              onSave={(v) => save({ contractUrl: v || null })}
+            />
+          </Field>
+
+          {customFields.map((field) => {
+            const existing = employee.customFieldVals?.find((v: any) => v.customFieldDefinitionId === field.id);
+            return (
+              <Field key={field.id} label={field.name}>
+                {field.fieldType === 'select' ? (
+                  <AutoSaveSelect
+                    label={field.name}
+                    value={existing?.value || ''}
+                    onSave={(v) => saveCustomField(field.id, v)}
+                    options={(JSON.parse(field.options || '[]') as string[]).map((opt) => ({ value: opt, label: opt }))}
+                  />
+                ) : (
+                  <AutoSaveField
+                    label={field.name}
+                    type={
+                      field.fieldType === 'number'
+                        ? 'number'
+                        : field.fieldType === 'date'
+                          ? 'date'
+                          : field.fieldType === 'email'
+                            ? 'email'
+                            : 'text'
+                    }
+                    value={existing?.value || ''}
+                    onSave={(v) => saveCustomField(field.id, v)}
+                  />
+                )}
+              </Field>
+            );
+          })}
+
+          <div className="overview-field overview-field-full">
+            <span className="overview-field-label">Time Off Policies ({assignedPolicies.length})</span>
+            {assignedPolicies.length === 0 && <p className="text-xs text-gray-400">No policies assigned.</p>}
+            {assignedPolicies.map((policy) => (
+              <div key={policy.id} className="flex items-center justify-between gap-2 py-1 text-sm">
+                <span>{policy.name}</span>
+                <button type="button" className="icon-btn" onClick={() => handleUnassignPolicy(policy.id)}>
+                  <span className="tip">Unassign</span>
+                  <XIcon className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            ))}
+            {unassignedPolicies.length > 0 && (
+              <select value="" onChange={(e) => handleAssignPolicy(e.target.value)} aria-label="Assign a time off policy">
+                <option value="">+ Assign a policy…</option>
+                {unassignedPolicies.map((policy) => (
+                  <option key={policy.id} value={policy.id}>
+                    {policy.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+
+        </div>
+
+        <DetailSidebar
+          token={token}
+          entityType="employee"
+          entityId={employee.id}
+          tenantUsers={tenantUsers}
+          currentUserId={currentUserId}
+        />
+        </div>
       </div>
     </div>
   );

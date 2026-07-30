@@ -110,7 +110,8 @@ export interface Company {
   website: string | null;
   phone: string | null;
   billingAddress: string | null;
-  size: string | null;
+  sizeId: string | null;
+  sizeDefn?: { id: string; name: string } | null;
   accountOwnerId: string | null;
   accountOwner?: { id: string; firstName: string; lastName: string } | null;
   statusId: string;
@@ -193,6 +194,42 @@ export interface Opportunity {
   stageHistory?: { id: string; stageId: string; enteredAt: string }[];
 }
 
+export type TaskEntityType = 'employee' | 'company' | 'contact' | 'opportunity';
+
+export interface Task {
+  id: string;
+  tenantId: string;
+  entityType: TaskEntityType;
+  entityId: string;
+  title: string;
+  description: string | null;
+  assigneeId: string;
+  assignee?: { id: string; firstName: string; lastName: string };
+  dueDate: string | null;
+  completedAt: string | null;
+  createdById: string;
+  createdBy?: { id: string; firstName: string; lastName: string };
+  createdAt: string;
+  updatedAt: string;
+  // Only present on listMyTasks/listTasksForCalendar — a readable label for
+  // the entity the task is about, so the frontend doesn't have to resolve
+  // Company/Contact/Employee/Opportunity separately just to display it.
+  entitySummary?: string | null;
+}
+
+export interface Note {
+  id: string;
+  tenantId: string;
+  entityType: TaskEntityType;
+  entityId: string;
+  header: string;
+  body: string;
+  createdById: string;
+  createdBy?: { id: string; firstName: string; lastName: string };
+  createdAt: string;
+  updatedAt: string;
+}
+
 interface CustomFieldDefinition {
   id: string;
   name: string;
@@ -213,9 +250,11 @@ interface StatusDefinition {
   isActive: boolean;
 }
 
+export type CatalogKind = 'department' | 'jobTitle' | 'leadSource' | 'lossReason' | 'companySize';
+
 export interface FieldCatalogDefinition {
   id: string;
-  kind: 'department' | 'jobTitle' | 'leadSource' | 'lossReason';
+  kind: CatalogKind;
   name: string;
   order: number;
   isActive: boolean;
@@ -740,10 +779,7 @@ export const api = {
   },
 
   // Field catalog (Department, Job Title — shared generic mechanism)
-  listFieldCatalogDefinitions: async (
-    token: string,
-    kind: 'department' | 'jobTitle' | 'leadSource' | 'lossReason',
-  ): Promise<FieldCatalogDefinition[]> => {
+  listFieldCatalogDefinitions: async (token: string, kind: CatalogKind): Promise<FieldCatalogDefinition[]> => {
     const res = await apiFetch(`${API_BASE_URL}/api/field-catalog?kind=${kind}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -753,7 +789,7 @@ export const api = {
 
   createFieldCatalogDefinition: async (
     token: string,
-    data: { kind: 'department' | 'jobTitle' | 'leadSource' | 'lossReason'; name: string; order?: number },
+    data: { kind: CatalogKind; name: string; order?: number },
   ): Promise<FieldCatalogDefinition> => {
     const res = await apiFetch(`${API_BASE_URL}/api/field-catalog`, {
       method: 'POST',
@@ -1106,8 +1142,9 @@ export const api = {
       website?: string;
       phone?: string;
       billingAddress?: string;
-      size?: string;
+      sizeId?: string;
       accountOwnerId?: string | null;
+      contact: { firstName: string; lastName: string; email: string } | { contactId: string };
     },
   ): Promise<Company> => {
     const res = await apiFetch(`${API_BASE_URL}/api/companies`, {
@@ -1139,10 +1176,11 @@ export const api = {
     return res.json();
   },
 
-  deleteCompany: async (token: string, companyId: string): Promise<void> => {
+  deleteCompany: async (token: string, companyId: string, options?: { deleteLinkedOpportunities?: boolean }): Promise<void> => {
     const res = await apiFetch(`${API_BASE_URL}/api/companies/${companyId}`, {
       method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(options ?? {}),
     });
     if (!res.ok) await throwApiError(res);
   },
@@ -1246,10 +1284,11 @@ export const api = {
     return res.json();
   },
 
-  deleteContact: async (token: string, contactId: string): Promise<void> => {
+  deleteContact: async (token: string, contactId: string, options?: { deleteLinkedOpportunities?: boolean }): Promise<void> => {
     const res = await apiFetch(`${API_BASE_URL}/api/contacts/${contactId}`, {
       method: 'DELETE',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(options ?? {}),
     });
     if (!res.ok) await throwApiError(res);
   },
@@ -1665,5 +1704,124 @@ export const api = {
     });
     if (!res.ok) await throwApiError(res);
     return res.json();
+  },
+
+  // Tasks
+  listTasks: async (token: string, entityType: TaskEntityType, entityId: string): Promise<Task[]> => {
+    const res = await apiFetch(
+      `${API_BASE_URL}/api/tasks?entityType=${entityType}&entityId=${entityId}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  listMyTasks: async (token: string): Promise<Task[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/tasks/mine`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  listTasksForCalendar: async (token: string): Promise<Task[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/tasks/calendar`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  createTask: async (
+    token: string,
+    data: {
+      entityType: TaskEntityType;
+      entityId: string;
+      title: string;
+      description?: string | null;
+      assigneeId: string;
+      dueDate?: string | null;
+    },
+  ): Promise<Task> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/tasks`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  updateTask: async (
+    token: string,
+    taskId: string,
+    data: Partial<{
+      title: string;
+      description: string | null;
+      assigneeId: string;
+      dueDate: string | null;
+      completedAt: string | null;
+    }>,
+  ): Promise<Task> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  deleteTask: async (token: string, taskId: string): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+  },
+
+  // Notes
+  listNotes: async (token: string, entityType: TaskEntityType, entityId: string): Promise<Note[]> => {
+    const res = await apiFetch(
+      `${API_BASE_URL}/api/notes?entityType=${entityType}&entityId=${entityId}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  createNote: async (
+    token: string,
+    data: { entityType: TaskEntityType; entityId: string; header: string; body: string },
+  ): Promise<Note> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  updateNote: async (
+    token: string,
+    noteId: string,
+    data: Partial<{ header: string; body: string }>,
+  ): Promise<Note> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/notes/${noteId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  deleteNote: async (token: string, noteId: string): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/notes/${noteId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
   },
 };

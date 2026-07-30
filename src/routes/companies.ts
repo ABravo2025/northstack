@@ -1,5 +1,6 @@
 import { canCreateHr, canManageCustomFields, canViewHr } from '../modules/auth/permissionService.js';
 import { createCompany, deleteCompany, findCompanyById, listCompanies, updateCompany } from '../modules/crm/companyService.js';
+import { findContactById } from '../modules/crm/contactService.js';
 import {
   createCustomFieldValue,
   deleteCustomFieldValue,
@@ -43,6 +44,20 @@ companiesRouter.post('/api/companies', async (req, res) => {
     return res.status(400).json({ error: 'Name is required' });
   }
 
+  const rawContact = req.body.contact;
+  let contact: { firstName: string; lastName: string; email: string } | { contactId: string };
+  if (rawContact?.contactId) {
+    const existing = await findContactById(rawContact.contactId);
+    if (!existing || existing.tenantId !== user.tenantId) {
+      return res.status(404).json({ error: 'Contact not found' });
+    }
+    contact = { contactId: rawContact.contactId };
+  } else if (rawContact?.firstName?.trim() && rawContact?.lastName?.trim() && rawContact?.email?.trim()) {
+    contact = { firstName: rawContact.firstName, lastName: rawContact.lastName, email: rawContact.email };
+  } else {
+    return res.status(400).json({ error: 'A contact (new or existing) is required to create a company' });
+  }
+
   if (req.body.accountOwnerId) {
     const owner = await findUserById(req.body.accountOwnerId);
     if (!owner || owner.tenantId !== user.tenantId) {
@@ -50,7 +65,7 @@ companiesRouter.post('/api/companies', async (req, res) => {
     }
   }
 
-  const company = await createCompany({ ...req.body, tenantId: user.tenantId! });
+  const company = await createCompany({ ...req.body, contact, tenantId: user.tenantId! });
   return res.status(201).json(company);
 });
 
@@ -113,7 +128,9 @@ companiesRouter.delete('/api/companies/:companyId', async (req, res) => {
     return res.status(404).json({ error: 'Company not found' });
   }
 
-  const result = await deleteCompany(req.params.companyId);
+  const result = await deleteCompany(req.params.companyId, {
+    deleteLinkedOpportunities: req.body?.deleteLinkedOpportunities === true,
+  });
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }

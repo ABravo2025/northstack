@@ -1,6 +1,7 @@
 import prisma from '../../lib/prisma.js';
 import { getDefaultStatusId } from '../hr/statusService.js';
 import { listCustomFieldValuesForEntities } from '../hr/customFieldService.js';
+import { deleteOpportunity } from './opportunityService.js';
 import type { Company, Prisma } from '@prisma/client';
 
 export interface CreateCompanyInput {
@@ -9,10 +10,17 @@ export interface CreateCompanyInput {
   website?: string | null;
   phone?: string | null;
   billingAddress?: string | null;
-  size?: string | null;
+  sizeId?: string | null;
   accountOwnerId?: string | null;
   statusId?: string;
   tenantId: string;
+  // A Company can't exist without a linked Contact (confirmed business rule,
+  // not just a form nicety) — resolved in the same transaction as creation so
+  // the two can never drift apart. Either a brand-new Contact (the "Add
+  // Company" form) or an existing one this Company is being spun up for (e.g.
+  // ContactDetailModal creating an ad-hoc Company for a Contact that doesn't
+  // have one yet) — both satisfy the same invariant.
+  contact: { firstName: string; lastName: string; email: string } | { contactId: string };
 }
 
 // statusId deliberately excluded — Company.status is derived from business
@@ -25,35 +33,57 @@ export interface UpdateCompanyInput {
   website?: string | null;
   phone?: string | null;
   billingAddress?: string | null;
-  size?: string | null;
+  sizeId?: string | null;
   accountOwnerId?: string | null;
 }
+
+const COMPANY_INCLUDE = {
+  statusDefn: true,
+  accountOwner: { select: { id: true, firstName: true, lastName: true } },
+  sizeDefn: true,
+} satisfies Prisma.CompanyInclude;
 
 export async function createCompany(input: CreateCompanyInput): Promise<Company> {
   const statusId = input.statusId ?? (await getDefaultStatusId(input.tenantId, 'company'));
 
-  return prisma.company.create({
-    data: {
-      name: input.name,
-      industry: input.industry ?? null,
-      website: input.website ?? null,
-      phone: input.phone ?? null,
-      billingAddress: input.billingAddress ?? null,
-      size: input.size ?? null,
-      accountOwnerId: input.accountOwnerId ?? null,
-      statusId,
-      tenantId: input.tenantId,
-    },
+  return prisma.$transaction(async (tx) => {
+    const company = await tx.company.create({
+      data: {
+        name: input.name,
+        industry: input.industry ?? null,
+        website: input.website ?? null,
+        phone: input.phone ?? null,
+        billingAddress: input.billingAddress ?? null,
+        sizeId: input.sizeId ?? null,
+        accountOwnerId: input.accountOwnerId ?? null,
+        statusId,
+        tenantId: input.tenantId,
+      },
+      include: COMPANY_INCLUDE,
+    });
+
+    if ('contactId' in input.contact) {
+      await tx.contact.update({ where: { id: input.contact.contactId }, data: { companyId: company.id } });
+    } else {
+      await tx.contact.create({
+        data: {
+          tenantId: input.tenantId,
+          firstName: input.contact.firstName,
+          lastName: input.contact.lastName,
+          email: input.contact.email,
+          companyId: company.id,
+        },
+      });
+    }
+
+    return company;
   });
 }
 
 export async function listCompanies(tenantId: string) {
   const companies = await prisma.company.findMany({
     where: { tenantId },
-    include: {
-      statusDefn: true,
-      accountOwner: { select: { id: true, firstName: true, lastName: true } },
-    },
+    include: COMPANY_INCLUDE,
   });
 
   const values = await listCustomFieldValuesForEntities(
@@ -85,16 +115,13 @@ export async function updateCompany(id: string, input: UpdateCompanyInput): Prom
   if (input.website !== undefined) data.website = input.website;
   if (input.phone !== undefined) data.phone = input.phone;
   if (input.billingAddress !== undefined) data.billingAddress = input.billingAddress;
-  if (input.size !== undefined) data.size = input.size;
+  if (input.sizeId !== undefined) data.sizeId = input.sizeId;
   if (input.accountOwnerId !== undefined) data.accountOwnerId = input.accountOwnerId;
 
   return prisma.company.update({
     where: { id },
     data,
-    include: {
-      statusDefn: true,
-      accountOwner: { select: { id: true, firstName: true, lastName: true } },
-    },
+    include: COMPANY_INCLUDE,
   });
 }
 
@@ -103,19 +130,32 @@ export interface DeleteCompanyResult {
   error?: string;
 }
 
-// Unlike Client (no children today), a Company can have Contacts/Opportunities
-// hanging off it — deleting it out from under them would orphan real pipeline
-// data, so this guards instead of relying on a DB-level cascade.
-export async function deleteCompany(id: string): Promise<DeleteCompanyResult> {
-  const [contactCount, opportunityCount] = await Promise.all([
-    prisma.contact.count({ where: { companyId: id } }),
-    prisma.opportunity.count({ where: { companyId: id } }),
-  ]);
+export interface DeleteCompanyOptions {
+  // Opportunity.companyId is a required FK (unlike Contact.companyId, which is
+  // nullable) — an Opportunity structurally cannot survive its Company being
+  // deleted, so this is opt-in cascade, same shape as contactService.ts's
+  // deleteContact. Contacts are handled differently: they're unlinked
+  // (companyId -> null), never deleted, so no opt-in is needed for them —
+  // deleting a Company should never take a Contact down with it.
+  deleteLinkedOpportunities?: boolean;
+}
 
-  if (contactCount > 0 || opportunityCount > 0) {
-    return { success: false, error: 'Cannot delete a company with existing contacts or opportunities' };
+export async function deleteCompany(id: string, options: DeleteCompanyOptions = {}): Promise<DeleteCompanyResult> {
+  const opportunityCount = await prisma.opportunity.count({ where: { companyId: id } });
+  if (opportunityCount > 0 && !options.deleteLinkedOpportunities) {
+    return { success: false, error: 'Cannot delete a company with existing opportunities' };
   }
 
-  await prisma.company.delete({ where: { id } });
+  if (opportunityCount > 0) {
+    const opportunities = await prisma.opportunity.findMany({ where: { companyId: id }, select: { id: true } });
+    for (const opportunity of opportunities) {
+      await deleteOpportunity(opportunity.id);
+    }
+  }
+
+  await prisma.$transaction([
+    prisma.contact.updateMany({ where: { companyId: id }, data: { companyId: null } }),
+    prisma.company.delete({ where: { id } }),
+  ]);
   return { success: true };
 }

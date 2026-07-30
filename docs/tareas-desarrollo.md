@@ -1,7 +1,7 @@
 # Tareas de desarrollo
 
 - Fecha de creación: 2026-07-02
-- Última actualización: 2026-07-21 (sesión de planning enfocada en preparar el MVP para beta con testers externos: 6 ideas nuevas anotadas — notificaciones por email de eventos accionables, seed de datos de ejemplo, onboarding checklist en Overview, import/export CSV de Employees/Clients, y changelog in-app; además se definió el alcance inicial del módulo Payments — Stripe Connect + QuickBooks, cada tenant factura a sus propios Clients, explícitamente no bloqueante para el beta — y se anotó OAuth de Google para login y sync de Time Off a Google Calendar; separado de esto, Public Forms se terminó de pulir — builder de drag-and-drop con preview en vivo, pestañas por módulo, edit — y se corrigió un bug de permisos en Company Users, ver `docs/tareas/semana-2026-07-13.md`; revisión de Public Forms contra estándares actuales de form builders: 3 mejoras confirmadas para agendar — notificación por email de submissions nuevas, mensaje de agradecimiento personalizable, honeypot anti-spam — branding del tenant en la página pública descartado a propósito, el uso es interno; se agregó el Panel de Integraciones como hub único para Google/Stripe/QuickBooks/Slack + webhooks salientes, Slack confirmado como app instalable vía OAuth, no un webhook simple — todo no bloqueante para el beta; se cerró el diseño del validador de dominio de email duplicado al registrar una empresa nueva — bloqueo duro, excluyendo dominios genéricos de email — resolviendo el ítem que estaba abierto desde antes sobre el validador de "empresa ya existe"; se amplió el tema de suscripciones del propio SaaS con 2 piezas nuevas: pantalla de gestión autónoma de la suscripción, y ofrecer pago-de-entrada vs. 15 días de prueba gratuita al crear un tenant nuevo; se sumaron 3 ideas más al cierre de la sesión: canal de feedback/reporte de bugs para testers, sección de Ayuda/Contacto/FAQ, e ícono de notificaciones in-app — con la nota de diseñar un solo modelo de "evento" de backend compartido entre email/Slack/webhooks/in-app en vez de 4 implementaciones sueltas; en paralelo, recorrido completo de interfaz sobre el código real (20 páginas/20 componentes) — 5 tareas nuevas en `### UX / Interfaz`: logo ilegible en dark mode, Company Users sin migrar al patrón nuevo, 2 clases de tipografía faltantes, `ChevronRightIcon` faltante, y `docs/design-system.md` como estándar escrito de botones/tipografía/color/espaciado/íconos; se confirmaron campos nuevos para el Sign Up — tamaño de empresa, industria, acquisitionChannel, país, confirmar contraseña — y que el flujo post-registro pasa por una pantalla de suscripción antes de entrar a la app; los 5 hallazgos de seguridad de la auditoría del 07-16 se pasaron a ítems formales del checklist, con puntero al brief de la semana; se confirmaron 6 campos nuevos para Employee — job title como catálogo configurable, hourly/monthly rate visible solo para owner por ahora, fecha de ingreso/fin, contract URL, personal email + rename de email a business email — encontrado de paso que `view_hr` hoy es todo-o-nada para toda la tabla, hace falta gating a nivel de campo para compensación; se confirmó la dirección de un rediseño grande de Clients — separar en Company/Contact/Opportunity para soportar pipeline de ventas, sin spec técnico todavía, mismo criterio pieza-por-pieza que Time Off/Payments; Stripe/QuickBooks se consolidaron dentro del Panel de Integraciones en vez de como módulo aparte, sumando Mercado Pago a evaluar para tenants argentinos; API pública entrante agrupada con el mismo Panel; y se agregó la sección "Prioridades (tiers)" al principio del archivo con el orden de ataque completo acordado en la sesión — Tier 1 beta-readiness, Tier 2 data models chicos, Tier 3 Clients, Tier 4 suscripciones/integraciones/admin panel, Tier 5 cola larga con permisología al final a propósito; 2026-07-23: sesión de brainstorm con capturas de ClickUp como referencia — 6 tareas nuevas en `### UX / Interfaz` bajo "Referencia de diseño ClickUp para las tablas": sacar el ancho fijo de `AppLayout.tsx`, vista "List" agrupada nueva, tipografía compacta con jerarquía de columnas, panel Overview a la izquierda tipo "push" al click del nombre, fila/card fantasma siempre visible reemplazando el botón "Add" del toolbar, y hover de fila completo — más scroll horizontal con Shift+rueda sumado a la tarea de scrollbar propia ya existente. Ver Artifact "Northstack — Tablas full-screen + panel Overview"); 2026-07-27: Tier 1/Tier 2 cerrados (ver `docs/tareas/semana-2026-07-21.md`), backend dividido en routers por dominio (`src/routes/`, `app.ts` de 1901 a ~60 líneas), y Tier 3 (rediseño de Clients) avanzó de spec a 10/11 unidades construidas y verificadas en `staging` en una sola sesión — Company/Contact/Pipeline/Opportunity/Form-matching completos, migración de datos existentes (`Client`→`Company`/`Contact`) construida y verificada en `staging`, pendiente correr contra producción (bloqueado en revisión del usuario). Corrección de proceso en medio de la sesión: un push de schema llegó a producción sin que el usuario revisara `staging` primero — el gate de staging-first (vigente desde este mismo día) se aplicó mal esa vez, corregido de inmediato y respetado sin excepciones el resto de la sesión.
+- Última actualización: 2026-07-30 (Módulo de Tasks genérico, cross-módulo — 13/13 ítems implementados en `staging` únicamente, ver sección "2026-07-29 — Módulo de Tasks" más abajo para el detalle completo, incluidos 3 bugs reales encontrados y corregidos en `Popover.tsx` durante la verificación con Playwright; pendiente de revisión del usuario antes de cualquier push. Inmediatamente después, el usuario revisó el resultado contra la app real y dejó una lista grande de bugs/regresiones/features nuevas/una unificación estructural pendiente — **explícitamente sin empezar, registrada en la sección "2026-07-29 — Feedback de revisión UX post-Tasks" para la próxima sesión**, en 3 checkpoints ya acordados: D bugs/regresiones, E features confirmadas, F unificación Employee↔Company/Contact/Opportunity). Resto del historial de esta fecha (última entrada previa era 2026-07-21): 6 ideas nuevas anotadas — notificaciones por email de eventos accionables, seed de datos de ejemplo, onboarding checklist en Overview, import/export CSV de Employees/Clients, y changelog in-app; además se definió el alcance inicial del módulo Payments — Stripe Connect + QuickBooks, cada tenant factura a sus propios Clients, explícitamente no bloqueante para el beta — y se anotó OAuth de Google para login y sync de Time Off a Google Calendar; separado de esto, Public Forms se terminó de pulir — builder de drag-and-drop con preview en vivo, pestañas por módulo, edit — y se corrigió un bug de permisos en Company Users, ver `docs/tareas/semana-2026-07-13.md`; revisión de Public Forms contra estándares actuales de form builders: 3 mejoras confirmadas para agendar — notificación por email de submissions nuevas, mensaje de agradecimiento personalizable, honeypot anti-spam — branding del tenant en la página pública descartado a propósito, el uso es interno; se agregó el Panel de Integraciones como hub único para Google/Stripe/QuickBooks/Slack + webhooks salientes, Slack confirmado como app instalable vía OAuth, no un webhook simple — todo no bloqueante para el beta; se cerró el diseño del validador de dominio de email duplicado al registrar una empresa nueva — bloqueo duro, excluyendo dominios genéricos de email — resolviendo el ítem que estaba abierto desde antes sobre el validador de "empresa ya existe"; se amplió el tema de suscripciones del propio SaaS con 2 piezas nuevas: pantalla de gestión autónoma de la suscripción, y ofrecer pago-de-entrada vs. 15 días de prueba gratuita al crear un tenant nuevo; se sumaron 3 ideas más al cierre de la sesión: canal de feedback/reporte de bugs para testers, sección de Ayuda/Contacto/FAQ, e ícono de notificaciones in-app — con la nota de diseñar un solo modelo de "evento" de backend compartido entre email/Slack/webhooks/in-app en vez de 4 implementaciones sueltas; en paralelo, recorrido completo de interfaz sobre el código real (20 páginas/20 componentes) — 5 tareas nuevas en `### UX / Interfaz`: logo ilegible en dark mode, Company Users sin migrar al patrón nuevo, 2 clases de tipografía faltantes, `ChevronRightIcon` faltante, y `docs/design-system.md` como estándar escrito de botones/tipografía/color/espaciado/íconos; se confirmaron campos nuevos para el Sign Up — tamaño de empresa, industria, acquisitionChannel, país, confirmar contraseña — y que el flujo post-registro pasa por una pantalla de suscripción antes de entrar a la app; los 5 hallazgos de seguridad de la auditoría del 07-16 se pasaron a ítems formales del checklist, con puntero al brief de la semana; se confirmaron 6 campos nuevos para Employee — job title como catálogo configurable, hourly/monthly rate visible solo para owner por ahora, fecha de ingreso/fin, contract URL, personal email + rename de email a business email — encontrado de paso que `view_hr` hoy es todo-o-nada para toda la tabla, hace falta gating a nivel de campo para compensación; se confirmó la dirección de un rediseño grande de Clients — separar en Company/Contact/Opportunity para soportar pipeline de ventas, sin spec técnico todavía, mismo criterio pieza-por-pieza que Time Off/Payments; Stripe/QuickBooks se consolidaron dentro del Panel de Integraciones en vez de como módulo aparte, sumando Mercado Pago a evaluar para tenants argentinos; API pública entrante agrupada con el mismo Panel; y se agregó la sección "Prioridades (tiers)" al principio del archivo con el orden de ataque completo acordado en la sesión — Tier 1 beta-readiness, Tier 2 data models chicos, Tier 3 Clients, Tier 4 suscripciones/integraciones/admin panel, Tier 5 cola larga con permisología al final a propósito; 2026-07-23: sesión de brainstorm con capturas de ClickUp como referencia — 6 tareas nuevas en `### UX / Interfaz` bajo "Referencia de diseño ClickUp para las tablas": sacar el ancho fijo de `AppLayout.tsx`, vista "List" agrupada nueva, tipografía compacta con jerarquía de columnas, panel Overview a la izquierda tipo "push" al click del nombre, fila/card fantasma siempre visible reemplazando el botón "Add" del toolbar, y hover de fila completo — más scroll horizontal con Shift+rueda sumado a la tarea de scrollbar propia ya existente. Ver Artifact "Northstack — Tablas full-screen + panel Overview"); 2026-07-27: Tier 1/Tier 2 cerrados (ver `docs/tareas/semana-2026-07-21.md`), backend dividido en routers por dominio (`src/routes/`, `app.ts` de 1901 a ~60 líneas), y Tier 3 (rediseño de Clients) avanzó de spec a 10/11 unidades construidas y verificadas en `staging` en una sola sesión — Company/Contact/Pipeline/Opportunity/Form-matching completos, migración de datos existentes (`Client`→`Company`/`Contact`) construida y verificada en `staging`, pendiente correr contra producción (bloqueado en revisión del usuario). Corrección de proceso en medio de la sesión: un push de schema llegó a producción sin que el usuario revisara `staging` primero — el gate de staging-first (vigente desde este mismo día) se aplicó mal esa vez, corregido de inmediato y respetado sin excepciones el resto de la sesión. **Sesión nueva, mismo día:** Checkpoint D (10/10 bugs/regresiones de "Feedback de revisión UX post-Tasks") implementado en local contra `staging`, build/tests verdes — **sin verificación por Playwright** (no había herramienta de automatización de navegador disponible esta sesión), a diferencia del resto de checkpoints de este archivo; pendiente que el usuario lo revise en el navegador antes de promover. Nada pusheado. Checkpoints E (features) y F (unificación estructural) quedan para después, en ese orden ya acordado. **Mismo día, continuación:** el usuario probó Checkpoint D en local y encontró un bug real (delete de Contact roto, sin guard contra Opportunities vinculadas — corregido, mismo patrón que ya tenía `deleteCompany`) más 3 ajustes de UX en Pipeline/texto de archivado, todos implementados y verificados por build/tests; después "continua con el resto de los checkpoints" → Checkpoint E (4/4 ítems: catálogo de Company.size, Contact obligatorio al crear Company, flujo de asignación Contact→Company, módulo Notes completo) implementado y verificado con un smoke test real por `curl` contra `staging` (server local temporal). Checkpoint F (unificación estructural, la pieza más grande) queda para la próxima tanda de esta misma sesión. Nada pusheado todavía — sigue todo en local, pendiente de revisión visual del usuario (sin Playwright disponible esta sesión). **Cruzando medianoche a 2026-07-30, misma sesión:** el usuario pidió agregar la misma opción de "borrar Opportunities vinculadas" al delete de Company (no solo Contact) — implementado (`deleteCompany` con `deleteLinkedOpportunities` opcional; los Contacts de la Company se desvinculan siempre, nunca se borran) y verificado por curl. Con eso confirmado, "seguí con F ahora" → Checkpoint F (3/3 ítems) completo: `EmployeeOverviewPanel.tsx` migrado al patrón autosave (sin tabs, sin botón Edit — excepción confirmada: nombre/email de Employee siguen editables, a diferencia de Company/Contact que no lo son en ningún lado hoy), componente `Field` extraído a un archivo compartido entre los 4 (fue lo único genuinamente idéntico — el resto tiene variación real, no se forzó una abstracción mayor), y la restricción de layout de Activity (panel lateral futuro, no tab) queda respetada sin construir ningún placeholder. Build/tests verdes + smoke test por curl de los endpoints que el panel nuevo llama. **Con esto, los 3 checkpoints de "Feedback de revisión UX post-Tasks" (D, E, F) están completos en local — nada pusheado a `staging`/`main` todavía, pendiente de revisión visual del usuario (sin Playwright disponible en toda la sesión).** El usuario reportó que el local "no andaba" — resultó ser que los servers no estaban corriendo (los había apagado yo al terminar el smoke test anterior); levantados de nuevo y confirmados sanos por curl. Con la app corriendo, el usuario probó el panel de Employee y reportó 2 cosas: (1) bug real — el autosave de campos de texto (ej. Personal Email) parecía no guardar hasta tocar un dropdown/Time Off Policy, y de paso refrescaba toda la pantalla; causa real encontrada: el campo SÍ se guardaba solo al perder foco, pero sin ninguna confirmación visual, y el `onChanged` de Time Off Policies/custom fields llamaba a un `loadEmployees()`/`loadCompanies()`/`loadContacts()` que ponía `setLoading(true)`, flasheando toda la tabla de atrás del modal en cada cambio — mismo bug preexistente ya en Company/Contact (Opportunity ya lo tenía bien resuelto, sin loading). Corregido en los 3 con un refresh silencioso, mismo patrón que Opportunity. (2) Pedido de rediseño grande con mockup anotado: el panel de detalle (los 4 módulos) pasa de un popup angosto centrado a **70vw x 70vh, 2 columnas** — izquierda los campos, derecha tabs de Notes/Tasks/Activity con el compose ya desplegado (no detrás de un click). Esto contradecía la decisión del 29/07 de que Activity fuera un panel lateral (no tab) y sin placeholder — el usuario confirmó explícitamente revertir esa decisión: Activity entra como tab ya, sigue sin funcionalidad real. Implementado para los 4 módulos: CSS del shell rediseñada, `EntityTasksList`/`EntityNotesList` pasaron de popover-al-click a formulario inline siempre expandido (componentes nuevos `TaskForm.tsx`/`NoteForm.tsx`; `TaskFormPopover.tsx` quedó como wrapper delgado sobre `TaskForm` para los 2 usos que sí siguen siendo popover — `MyTasksWidget` y el calendario de `/overview`, que nunca abren en modo "nuevo" así que no hay riesgo de salto de tamaño; `NoteFormPopover.tsx` se borró, no tenía otro consumidor), y componente nuevo `DetailSidebar.tsx` (tabs Notes/Tasks/Activity) compartido literal por los 4 detail panels — la reutilización cross-entidad real que Checkpoint F ya había buscado con `Field`, ahora también acá. Build/tests verdes. Sin verificación visual propia (mismo motivo de toda la sesión) — pendiente que el usuario lo mire en el navegador, servers corriendo en `localhost:3000`/`localhost:5173`.
 
 ## Prioridades (tiers)
 
@@ -650,43 +650,290 @@ Cierra el pendiente de arriba. Mismo mecanismo ya usado por Employees (`SavedVie
 
 Spec visual aprobada (mockup: `mockup-notes-tasks-activity.html`) + spec funcional completa en `docs/tareas-desarrollo.md` ("Módulo de Notes / Tasks / Activity Log"). Este archivo desglosa **solo la parte de Tasks** en tareas chicas para que Development las ejecute una por una, en orden. Notes y Activity Log quedan para entradas separadas de este mismo archivo.
 
-- [ ] **1. Schema: modelo `Task`**
-  `prisma/schema.prisma` — nuevo modelo `Task`: `id`, `tenantId` (FK), `entityType` (`EntityType`, reusar el enum ya existente), `entityId` (String, sin FK tipada — mismo patrón que `CustomFieldValue`), `title` (String), `description` (String, nullable), `assigneeId` (FK a `User`), `dueDate` (DateTime, nullable), `completedAt` (DateTime, nullable — su presencia/ausencia es el estado done/pending, no un enum aparte), `createdById` (FK a `User`), `createdAt`/`updatedAt`. Push aditivo, migración `npx prisma migrate dev`. Sin `onDelete: Cascade` en `assigneeId`/`createdById` (mismo criterio que el resto del proyecto con relaciones a `User`).
+Implementado 2026-07-29 — 13/13 ítems, en `staging` únicamente (`DATABASE_URL` local apuntado
+temporalmente a `STAGING_DATABASE_URL` para todo el desarrollo/verificación, a pedido explícito del
+usuario — se vuelve a producción recién cuando se apruebe promover). **Nada pusheado a `staging`/`main`
+todavía (ni git push ni el schema contra producción) — pendiente de que el usuario revise el resultado
+antes de cualquier push**, siguiendo el gate de staging-first vigente desde el 2026-07-27.
 
-- [ ] **2. Backend: validación de pertenencia a tenant**
-  Igual que el resto de entidades polimórficas: validar en código (no en la base) que `entityId` recibido efectivamente pertenece al `tenantId` del usuario autenticado, resolviendo por `entityType` (buscar en `Employee`/`Contact`/`Company`/`Opportunity` según corresponda). 404 si no coincide, mismo patrón anti-IDOR que ya usa el resto de la app.
+- [x] **1. Schema: modelo `Task`**
+  `prisma/schema.prisma` — modelo `Task` con exactamente los campos spec-eados. `prisma db push` (no `migrate dev` — este proyecto no usa migraciones versionadas, ver el resto de modelos) corrido contra `staging`.
 
-- [ ] **3. Backend: endpoints CRUD**
-  `POST /api/tasks`, `GET /api/tasks?entityType=&entityId=` (listar por entidad), `PATCH /api/tasks/:taskId` (editar campos, incluido marcar/desmarcar completada vía `completedAt`), `DELETE /api/tasks/:taskId`. Mismo middleware de auth + verificación de tenant que ya usan los endpoints de Employees/Clients.
+- [x] **2. Backend: validación de pertenencia a tenant**
+  `src/modules/tasks/taskService.ts` — `findEntityTenantId(entityType, entityId)`, switch sobre Employee/Company/Contact/Opportunity (Client deliberadamente excluido — módulo en vías de discontinuarse). 404 si no coincide con el tenant de la sesión, mismo patrón que el resto de la app. Verificado con curl: crear/listar Tasks apuntando a una entidad de *otro* tenant da 404/"Entity not found" en los 3 casos probados (`PATCH`, `POST`, `GET ?entityType&entityId`).
 
-- [ ] **4. Backend: endpoint "Mis tareas"**
-  `GET /api/tasks/mine` — tareas con `assigneeId = usuario autenticado`, `completedAt: null` primero, ordenadas por `dueDate` ascendente (nulls al final). Devuelve también un resumen legible de la entidad asociada (nombre de Company/Contact/Employee/Opportunity) para no obligar al frontend a resolverlo cliente por cliente.
+- [x] **3. Backend: endpoints CRUD**
+  `src/routes/tasks.ts` — `POST/GET/PATCH/DELETE /api/tasks`, montado en `app.ts`. **Permisos, decisión confirmada con el usuario 2026-07-29** (el spec original no lo cubría): abierto a cualquier rol autenticado del tenant, no solo owner/admin — Tasks se trata como checklist operativa compartida, no dato sensible. Queda anotado en el backlog (más abajo) para revisar cuando se construya el sistema de roles custom.
 
-- [ ] **5. Backend: endpoint de calendario tenant-wide**
-  Extender el endpoint que ya alimenta el calendario de Time Off en `/overview` para que también devuelva Tasks con `dueDate` dentro del rango de fechas pedido (o agregar un endpoint hermano si el actual no admite mezclar tipos fácilmente — decisión técnica de quien lo implemente, documentarla si se desvía de esto).
+- [x] **4. Backend: endpoint "Mis tareas"**
+  `GET /api/tasks/mine` — pendientes primero, por `dueDate` ascendente (nulls al final), ordenado en código (no vía `orderBy` con `nulls` de Prisma, para no introducir un patrón nuevo sin usar todavía en el proyecto). Incluye `entitySummary` (nombre legible de Company/Contact/Employee/Opportunity, resuelto server-side).
 
-- [ ] **6. Migración de datos: `Opportunity.nextStepDate`/`nextStepNote` → `Task`**
-  Script en `scripts/` (idempotente, mismo criterio que `backfill-clients-to-companies-contacts.ts`): por cada Opportunity con `nextStepDate` y/o `nextStepNote` no nulos, crear una `Task` (`entityType: 'opportunity'`, `entityId`, `title` = `nextStepNote` o un default tipo "Próximo paso", `dueDate` = `nextStepDate`, `assigneeId` = el owner de la Opportunity). Correr y verificar en `staging` antes de tocar producción. **No borrar las columnas viejas todavía** — el corte de `nextStepDate`/`nextStepNote` es una unidad separada posterior, una vez confirmado que el nuevo flujo funciona (mismo criterio que el corte pendiente de `Client`).
+- [x] **5. Backend: endpoint de calendario tenant-wide**
+  **Decisión tomada al implementar**: endpoint hermano (`GET /api/tasks/calendar`), no se extendió la forma de respuesta de `GET /api/hr/time-off-requests?scope=calendar` — ese endpoint devuelve un array plano hoy, envolverlo en un objeto para sumar `tasks` hubiera sido un cambio de contrato sobre un endpoint ya en uso. Mismo criterio que el calendario de Time Off: devuelve todas las Tasks con `dueDate` no nulo del tenant, sin filtro de rango — el frontend ya filtra por mes visible.
 
-- [ ] **7. Frontend: tipos + llamadas a la API**
-  `api.ts` — tipo `Task`, funciones `listTasks`, `createTask`, `updateTask`, `deleteTask`, `listMyTasks`.
+- [x] **6. Migración de datos: `Opportunity.nextStepDate`/`nextStepNote` → `Task`**
+  `scripts/backfill-opportunity-nextstep-to-tasks.ts`, idempotente (dedup por tenant+entityId+title+dueDate, sin columna marcadora nueva). Corrido en `--dry-run` y en real contra `staging`: 0 Opportunities con next step cargado todavía en los tenants de `staging`, así que no creó nada — el script en sí quedó verificado (no crashea, query correcta), pendiente ver corridas reales cuando haya datos. Columnas viejas intactas, sin tocar.
 
-- [ ] **8. Frontend: tab "Tasks" en el panel de entidad**
-  Agregar la pestaña Tasks a `EmployeeOverviewPanel.tsx` (y generalizar el componente para que reciba `entityType`/`entityId` en vez de asumir Employee, de forma que sirva también para Contact/Company/Opportunity — ver ítem de backlog ya anotado sobre generalizar este panel). Lista de tasks de la entidad actual: checkbox (gris pendiente / verde completada, toggle al click via `PATCH`), título, fecha, avatar del asignado. Fila fantasma "Agregar tarea" al final, mismo patrón ya usado en Employees/Kanban (sin botón primario de toolbar).
+- [x] **7. Frontend: tipos + llamadas a la API**
+  `frontend/src/api.ts` — tipo `Task` + `TaskEntityType`, funciones `listTasks`/`listMyTasks`/`listTasksForCalendar`/`createTask`/`updateTask`/`deleteTask`, mismo patrón que el resto del archivo.
 
-- [ ] **9. Frontend: form de alta/edición de Task**
-  Al clickear la fila fantasma o una task existente: mini-form (inline o `Popover`, no un modal pesado) con título, descripción, asignado (selector de `User` del tenant), fecha. Reusar `Popover.tsx` como mecanismo, no crear uno nuevo.
+- [x] **8. Frontend: tab "Tasks" en el panel de entidad**
+  **Decisión de arquitectura, no cubierta por el ítem original**: `EmployeeOverviewPanel.tsx` (patrón con tabs Overview/Notes/Activity) y los modales de Company/Contact/Opportunity (patrón autosave más nuevo, sin tabs) son dos contenedores visualmente distintos — no un único componente genérico. Se extrajo lo que sí es genuinamente compartido a `EntityTasksList.tsx` (nuevo, recibe `entityType`/`entityId`/`tenantUsers`/`currentUserId`), consumido como tab en Employee y como sección "Tasks" (mismo estilo que "Contacts"/"Opportunities") en los otros 3. Fila fantasma "+ Add task" al final de la lista, checkbox toggle, avatar del asignado.
 
-- [ ] **10. Frontend: badge de contador en la pestaña Tasks**
-  El tab "Tasks" del panel muestra un contador de tasks pendientes de esa entidad (ej. "Tasks 2"), mismo estilo del mockup.
+- [x] **9. Frontend: form de alta/edición de Task**
+  Popover chico (reusa `Popover.tsx`) con título/descripción/asignado/fecha, anclado a la fila fantasma o a la fila de la task clickeada — un botón "Delete" aparece solo en modo edición.
 
-- [ ] **11. Frontend: widget "Mis tareas" en `/overview`**
-  Nuevo componente en `OverviewPage.tsx`, junto al calendario existente: lista desde `GET /api/tasks/mine`, cada fila con descripción + nombre de la entidad asociada (Company/Contact/Employee/Opportunity) + fecha + checkbox gris/verde (mismo toggle que el punto 8).
+- [x] **10. Frontend: badge de contador en la pestaña Tasks**
+  "Tasks (N)" en el tab de Employee y en el label de la sección en Company/Contact/Opportunity, contando pendientes (`completedAt: null`).
 
-- [ ] **12. Frontend: Tasks en el calendario de `/overview`**
-  Agregar las Tasks con `dueDate` en el mes visible al calendario ya existente, con un color distinto al de Time Off (ámbar, según el mockup) para diferenciarlas — sin romper el render actual de Time Off.
+- [x] **11. Frontend: widget "Mis tareas" en `/overview`**
+  `MyTasksWidget.tsx` (nuevo), tarjeta al costado del calendario (layout de 2 columnas, calendario + widget en `lg:flex-row`, apilado en mobile). Checkbox toggle inline vía `PATCH`.
 
-- [ ] **13. Verificación end-to-end**
-  `curl` contra un tenant de prueba real: crear Task en cada uno de los 4 `entityType`, marcar/desmarcar completada, editar, borrar, listar "mías", confirmar que aparece en el calendario del mes correcto. `npm test` y `npm run build` verdes. Todo en `staging`, nada a producción sin revisión — mismo criterio que el resto del proyecto.
+- [x] **12. Frontend: Tasks en el calendario de `/overview`**
+  `.calendar-entry-task` (ámbar, `bg-amber-100`/`dark:bg-amber-900/40`) agregado junto a las entradas grises de Time Off ya existentes, sin tocar su render.
+
+- [x] **13. Verificación end-to-end**
+  `npm test` (backend, 7/7) y `npm run build` (backend + frontend) verdes. Verificado con Playwright contra `staging` (no mocks): registro de tenant nuevo, alta/completar/editar/borrar Task desde el tab de Employee y desde las 3 secciones de Company/Contact/Opportunity, badge de contador, widget "Mis tareas" con los 4 tasks creados, entrada ámbar visible en el día correcto del calendario — todo también revisado en dark mode. `console --errors` limpio en toda la corrida.
+  - **3 bugs reales encontrados y corregidos durante la verificación, los 3 en `Popover.tsx` (primera vez que un `Popover` se abre desde dentro de un modal de detalle, no desde un header/toolbar de tabla — nunca se había ejercitado esa combinación antes)**:
+    1. `.popover-panel` tenía `z-30`, por debajo de `.detail-modal-overlay`/`.slideover-panel` (`z-50`) — el overlay del modal le robaba los clicks al popover. Subido a `z-[60]`.
+    2. El popover y el modal de detalle escuchaban `Escape` cada uno por su cuenta (`document`/`window`) sin detener la propagación — un solo `Escape` cerraba el popover *y* el modal entero de un tiro. Corregido con `e.stopPropagation()` en el handler del popover.
+    3. `Popover.tsx` no clampeaba verticalmente (solo horizontal) y además cerraba ante *cualquier* evento de scroll — con la fila fantasma de Tasks más abajo en modales largos (Opportunity, con muchos campos arriba), el popover podía abrir fuera del viewport, y al escribir en el form el navegador auto-scrolleaba el campo a la vista, lo cual disparaba el cierre por scroll antes de terminar de cargar. Corregido con clamp vertical (abre hacia arriba si no hay lugar abajo) + el cierre por scroll ahora solo dispara si el anchor quedó realmente fuera del viewport, no en cualquier scroll (el loop de reposicionamiento ya existente se encarga de seguir al anchor).
 
 **Nota de alcance**: recordatorios de Task vencida (email/notificación) quedan explícitamente pospuestos a backlog, no forman parte de esta tanda de tareas.
+
+- [ ] **Idea (backlog, anotada 2026-07-29):** revisar los permisos de Task (punto 3 arriba) cuando se construya el sistema de roles custom (Tier 5) — hoy cualquier rol puede crear/editar/borrar/completar cualquier Task del tenant, decisión deliberada por simplicidad mientras no exista permisología granular.
+
+## 2026-07-29 — Feedback de revisión UX post-Tasks (backlog, explícitamente sin empezar)
+
+El usuario revisó el módulo de Tasks recién terminado (sección de arriba) contra la app real y, de paso,
+encontró una lista grande de bugs, una regresión real, y pidió features nuevas + una unificación
+estructural grande entre Employee y Company/Contact/Opportunity. **Nada de esto se implementó
+todavía** — el usuario pidió explícitamente dejarlo registrado acá y limpiar la conversación para que
+la próxima sesión arranque leyendo este archivo, no el historial de chat. Orden de ataque ya acordado
+con el usuario (bugs primero, después features nuevas, la unificación estructural al final por ser lo
+más grande/riesgoso) — mismo criterio de checkpoints que se usó para Tasks arriba (construir todo en
+local contra `staging`, verificar con Playwright, no pushear nada hasta revisión del usuario).
+
+### Checkpoint D — Bugs y regresiones (chico, sin ambigüedad, hacer primero)
+
+**Implementado 2026-07-29 (22:00-22:10), los 10/10 ítems, en local contra `staging` (mismo
+`DATABASE_URL` apuntado a `STAGING_DATABASE_URL` de la sesión de Tasks). `npm run build` (backend +
+frontend) y `npm test` (backend, 7/7) verdes. `git status` sigue mostrando todo sin commitear, mismo
+criterio que el resto de esta tanda — nada pusheado todavía.**
+
+**Nota de proceso — verificación incompleta esta sesión:** a diferencia de la sesión de Tasks, esta
+sesión **no tuvo acceso a Playwright/ninguna herramienta de automatización de navegador** (se probó
+`chromium-cli` y no está instalado en esta máquina, tampoco hay `@playwright/test` como dependencia del
+repo). Por lo tanto estos 10 ítems están verificados solo por tipo (TypeScript) y build/test — **no
+hay verificación visual/interactiva real todavía**, a diferencia del resto de checkpoints de este
+archivo que sí pasaron por Playwright antes de reportarse como hechos. Revisar en el navegador antes de
+promover a `staging`.
+
+- [x] **Employee → tab Overview no muestra custom fields**: `EmployeeOverviewPanel.tsx` ahora itera
+  sobre las `CustomFieldDefinition` activas del módulo Employee (misma prop `activeEmployeeCustomFields`
+  que ya usaba la tabla, pasada como `customFields` nuevo) y las renderiza como `Field` de solo lectura
+  al final de la lista — mismo criterio visual que el resto del tab (no editable ahí, el botón "Edit
+  employee" sigue siendo el único punto de edición de ese panel).
+- [x] **Popover de Task: descripción muy chica y el popup cambia de tamaño**: `rows={2}` → `rows={4}`
+  en el textarea. El salto de tamaño entre "new"/"edit" era el botón de borrar, que solo existía en modo
+  edición — ahora se renderiza siempre y se oculta con `visibility: hidden` (+ `tabIndex={-1}`) en modo
+  "new", así el popover mide lo mismo en los dos modos.
+- [x] **Widget "Mis tareas" no es clickeable**: se extrajo el formulario del popover (título/
+  descripción/asignado/fecha/borrar) a un componente nuevo, `TaskFormPopover.tsx`, consumido tanto por
+  `EntityTasksList.tsx` como por `MyTasksWidget.tsx` — no quedaron dos implementaciones del mismo form.
+  Cada fila de "Mis tareas" ahora abre ese popover en modo edición (checkbox sigue funcionando aparte,
+  con `stopPropagation` para no disparar los dos al mismo tiempo). De paso, las entradas de Task del
+  calendario de `/overview` quedaron con el mismo mecanismo (ver ítem de abajo) — comparten el mismo
+  componente, no una tercera implementación.
+- [x] **Company → campo Website usa `type="url"` nativo**: cambiado a `type="text"` en
+  `CompanyDetailModal.tsx`, sin tocar validación de backend (no la había).
+- [x] **Calendario de `/overview`: las entradas de Task no son clickeables**: ahora abren
+  `TaskFormPopover` en modo edición (mismo componente que el punto de arriba). **Time Off quedó
+  explícitamente sin tocar** — el alcance no estaba confirmado para esa entidad, no se tocó
+  `calendar-entry`, solo `calendar-entry-task`.
+- [x] **Botón "Add your first X" verde en vez de primary**: los 4 usos (`EmployeesPage.tsx`,
+  `CompaniesPage.tsx`, `ContactsPage.tsx`, y también `ClientsPage.tsx` — el módulo viejo sigue en el
+  repo aunque fuera del nav, se corrigió igual por consistencia de código) pasaron de `btn btn-success`
+  a `btn btn-primary`. `TimeOffOverviewPage.tsx` no se tocó (uso semánticamente correcto, confirmado).
+- [x] **Pipeline — regresión del `ConfirmDialog` al archivar**: repuesto. Solo al archivar (no al
+  reactivar, que no es destructivo) se abre un `ConfirmDialog` con `confirmText="ARCHIVE"` mostrando la
+  cantidad real de Opportunities de ese pipeline (`opportunities` ahora se carga también en
+  `PipelinesSettingsPage.tsx`, mismo patrón `api.listOpportunities` que el resto de la app) — mismo
+  criterio visual que el `DELETE` de policies de Time Off (`TimeOffOverviewPage.tsx`), no un patrón
+  nuevo.
+- [x] **Pipeline: archivados sin separar visualmente**: la lista se partió en `activePipelines`/
+  `archivedPipelines`; los archivados ahora viven en su propia sección "Archived pipelines (N)" debajo,
+  con heading propio — se sacó el chip "Archived" inline (ya no hace falta, la sección lo dice).
+- [x] **Pipeline: selector Leads/Account no usaba el dropdown estándar**: migrado a
+  `.dropdown-trigger-wrap`/`.dropdown-trigger` (sin `.dt-status`, tal como pedía el ítem — ese tinte
+  queda reservado a Status).
+- [x] **Company/Contact sin indicar pipeline archivado en Opportunities vinculadas**: agregado
+  `{opp.pipeline?.isActive === false && ' · Archived'}` en `CompanyDetailModal.tsx` y
+  `ContactDetailModal.tsx`. El backend ya incluía `pipeline.isActive` en `Opportunity`
+  (`opportunityService.ts`), no hizo falta tocar nada del lado del servidor.
+
+**Ronda 2 de Checkpoint D — feedback del usuario tras probar los 10 ítems de arriba en local (2026-07-29,
+22:15-22:25), antes de seguir con Checkpoint E:**
+
+- [x] **Bug nuevo, encontrado por el usuario probando D6: el botón de eliminar un Contact no
+  funcionaba.** Causa real: `deleteContact` (`contactService.ts`) hacía `prisma.contact.delete()`
+  directo, sin guardia — cualquier Contact con al menos un `OpportunityContact` (FK real, sin
+  `onDelete: Cascade` en el schema) rompía con un error de constraint de la base, mostrado como un
+  toast de error genérico ("no funciona" desde la perspectiva del usuario). `deleteCompany`
+  (`companyService.ts`) ya tenía exactamente este problema resuelto — mismo patrón aplicado ahora a
+  Contact: cuenta `OpportunityContact` vinculados antes de borrar, devuelve
+  `{ success: false, error: 'Cannot delete a contact linked to existing opportunities' }` en vez de
+  dejar que la base tire el error crudo. Ruta (`routes/contacts.ts`) actualizada para devolver 400 con
+  ese mensaje, mismo patrón que `routes/companies.ts`.
+- [x] **Pipeline: Reactivate también pide confirmación**, no solo Archive — a pedido del usuario ("que
+  no sea por error", con la nota explícita de que el mecanismo en sí se va a rediseñar más adelante).
+  `ConfirmDialog` simple (`danger={false}`, sin `confirmText` — no hace falta escribir una palabra, a
+  diferencia de Archive) en `PipelinesSettingsPage.tsx`.
+- [x] **Pipeline: Active/Archived pasaron de sección apilada a tabs separadas** — reemplaza el diseño
+  de la primera ronda (heading "Archived pipelines" debajo de la lista activa). Mismo componente
+  `views-bar`/`view-tab` que ya usa `OpportunitiesPage.tsx` para su propio tab "Archived"; el tab
+  Archived solo aparece si hay al menos un pipeline archivado.
+- [x] **Company/Contact: texto de Opportunity con pipeline archivado simplificado a solo "Archived"**
+  (antes: "(read-only, pipeline archived)", copiado literal de `OpportunitiesPage.tsx` — el usuario
+  pidió acortarlo específicamente acá). `OpportunitiesPage.tsx` no se tocó, sigue con su propio texto
+  original en su tab Archived.
+
+`npm run build` (backend + frontend) y `npm test` (backend, 7/7) verdes después de esta ronda también.
+
+**Ronda 3 — feedback inmediato sobre el fix del delete de Contact:** el usuario probó el bloqueo nuevo
+("Cannot delete a contact linked to existing opportunities") y pidió una salida real, no solo un
+bloqueo: "habría que dar la opción de eliminar opportunity también". Implementado: `deleteContact`
+(`contactService.ts`) ahora acepta `{ deleteLinkedOpportunities?: boolean }` — si el Contact tiene
+Opportunities vinculadas y la opción no viene en `true`, sigue bloqueando igual que antes; si viene en
+`true`, borra cada Opportunity vinculada reusando `deleteOpportunity` (que ya limpia
+`OpportunityStageHistory`/`OpportunityContact` antes de borrar la fila) y recién ahí borra el Contact.
+`ConfirmDialog.tsx` ganó un `checkboxLabel`/`checkboxChecked`/`onCheckboxChange` opcional genérico (no
+específico de Contact) para poder ofrecer este tipo de acción opcional en cualquier lado que lo necesite
+a futuro. `ContactsPage.tsx`: el diálogo de borrado ahora lista las Opportunities vinculadas por nombre y
+el checkbox "Also delete N linked opportunity(ies)" tiene que tildarse para habilitar "Delete" cuando hay
+vínculos — sin vínculos, el flujo queda exactamente igual que antes. `DELETE /api/contacts/:contactId`
+ahora lee `deleteLinkedOpportunities` del body (Express ya parseaba JSON global, sin cambios de
+middleware). Build/tests verdes después de este fix también.
+
+**Ronda 4 — mismo problema en Company, más 2 reglas de borrado confirmadas por el usuario:** pidió el
+mismo tratamiento en `deleteCompany` (listar todo lo relacionado — Contacts y Opportunities — en vez de
+solo bloquear), y dejó 2 reglas explícitas:
+1. Si se borra un Contact, no afecta al lado de la Company — **ya era así** (el cascade opt-in de la
+   Ronda 3 solo toca Opportunities, nunca Company), confirmado sin necesitar cambios.
+2. Si se borra una Company, sus Contacts no deberían perderse — quedan, solo sin company.
+
+Implementado en `companyService.ts`: `deleteCompany(id, { deleteLinkedOpportunities? })`. Los Contacts
+de la Company se desvinculan siempre (`companyId: null`, dentro de la misma transacción que el
+`company.delete`) — **no** es opt-in, es automático, porque nunca es destructivo (el Contact sigue
+existiendo). Las Opportunities sí requieren el mismo opt-in que ya tiene Contact — no pueden sobrevivir
+sin `companyId` (FK obligatoria a diferencia de `Contact.companyId`, que es nullable), así que si hay
+alguna y `deleteLinkedOpportunities` no viene en `true`, sigue bloqueando con error. `CompaniesPage.tsx`:
+mismo patrón visual que Contact — el diálogo de borrado lista los Contacts que se van a desvincular
+(informativo, no bloquea) y las Opportunities que se van a borrar (checkbox obligatorio si hay alguna).
+`routes/companies.ts`/`api.ts` actualizados igual que el trío de Contact. Build/tests verdes.
+
+**Pendiente, fuera de alcance de esta ronda a propósito:** el usuario pidió que, al borrar una Company,
+el Contact que queda huérfano muestre "la company vieja... con el label delete en Activity y Notes". Ni
+Activity ni Notes existen todavía como módulos reales (Notes es justamente el próximo ítem de Checkpoint
+E; Activity es Tier 5, con el layout ya confirmado — panel lateral, no tab — pero sin backend). No se
+armó ningún mecanismo provisorio para esto — hubiera sido diseñar a ciegas un sistema que se va a
+construir en breve con su propio spec. Queda anotado para resolverse como parte del modelo de Notes
+cuando se lo construya (mismo patrón polimórfico `entityType`/`entityId` que ya usa `Task`): al borrar
+una Company, crear una Note automática en cada Contact desvinculado con el nombre de la company perdida.
+
+Seguimos sin verificación por Playwright (mismo motivo que las rondas anteriores). El usuario pidió aviso
+explícito antes de arrancar Checkpoint E — no arrancar sin ese aviso.
+
+### Checkpoint E — Features confirmadas (alcance ya cerrado con el usuario, hacer después de D)
+
+**Implementado 2026-07-29/30, los 4/4 ítems, en local contra `staging`. `npm run build` (backend +
+frontend) y `npm test` (backend, 7/7) verdes. Además, smoke test real por `curl` contra un tenant nuevo
+registrado en `staging` (server local temporal, apagado al terminar) — cubrió los 4 ítems de punta a
+punta, incluidos los casos de borde de las reglas de borrado de la Ronda 3/4 (ver sección de arriba).
+Sigue sin haber verificación visual por Playwright (no disponible esta sesión) — el smoke test confirma
+que el backend hace exactamente lo que dice hacer, pero no reemplaza mirar la UI real.**
+
+- [x] **`Company.size` → catálogo configurable por tenant**: `sizeId` (FK a `FieldCatalogDefinition`,
+  `CatalogKind.companySize` nuevo) reemplaza el `size: String?` viejo — mismo mecanismo que Department/
+  Job Title, gestionable desde el header de la columna "Size" en `CompaniesPage.tsx`
+  (`FieldCatalogMenu`, ya genérico, solo se le agregó el kind nuevo). Migración: `scripts/backfill-
+  company-size-catalog.ts` corrido contra `staging` (0 companies tenían `size` cargado — nada que
+  migrar), columna vieja borrada del schema en el mismo push (mismo patrón nullable→backfill→verificar→
+  drop que Employee.department). `VALID_CATALOG_KINDS` en `routes/catalogs.ts` actualizado (el mismo
+  punto que ya había causado un bug real con `leadSource`, según la nota de la sesión del 07-27).
+- [x] **Company: Contact obligatorio al crear**: `createCompany` (`companyService.ts`) ahora exige un
+  `contact` en la misma transacción — o los datos de uno nuevo (`firstName`/`lastName`/`email`, el caso
+  del form "Add Company") o el id de uno ya existente (`contactId`, para el caso encontrado al
+  implementar: `ContactDetailModal.tsx` ya creaba una Company al vuelo al agregar una Opportunity sin
+  compañía confirmada, y linkeaba el Contact actual después — se unificó en el mismo endpoint en vez de
+  dejar 2 caminos distintos para crear una Company). `POST /api/companies` valida el contact antes de
+  llamar al service y devuelve 400 si falta. Verificado por curl: sin contact → 400; con contact nuevo →
+  Company + Contact creados y linkeados; con `contactId` existente → Company creada, el Contact existente
+  se linkea (sin duplicarlo).
+- [x] **Contact: flujo de asignación a Company al crear**: radio "¿Asignar a una company existente?" en
+  `ContactsPage.tsx` (default No — un lead sin company confirmada sigue siendo válido); al elegir Sí,
+  aparece `SearchableSelect` (componente nuevo, genérico — input + dropdown filtrado, construido sobre
+  `Popover` ya existente, sin agregar ninguna librería) en vez de un `<select>` con todas las companies
+  sin filtro.
+- [x] **Notes**: modelo `Note` nuevo (mismo patrón polimórfico `tenantId`+`entityType`+`entityId` que
+  `Task`, sin asignado ni estado completado — es un registro, no un to-do). Backend: `noteService.ts` +
+  `routes/notes.ts`, mismos permisos que Tasks (abierto a cualquier rol del tenant). La verificación de
+  pertenencia a tenant (`findEntityTenantId`) se extrajo de `taskService.ts` a un módulo compartido
+  nuevo (`src/modules/crossModule/entityLookup.ts`) para que Task y Note no mantengan 2 copias de la
+  misma lógica — mismo tipo de duplicación que ya causó el bug de `leadSource` mencionado arriba.
+  Frontend: `EntityNotesList.tsx` + `NoteFormPopover.tsx` (mismo mecanismo compartido que
+  `EntityTasksList.tsx`/`TaskFormPopover.tsx`), reemplaza el placeholder "Nothing here yet" del tab
+  Notes en `EmployeeOverviewPanel.tsx` y se agregó como sección nueva en Company/Contact/Opportunity
+  (mismo criterio que Tasks: cualquier pieza cross-entidad va a los 4 módulos, no solo a Employee).
+  El body soporta **bold**/*italic* vía un renderer chico propio (`lib/lightMarkdown.tsx`, regex a
+  elementos React reales — sin `dangerouslySetInnerHTML`, sin superficie de XSS) en vez de sumar una
+  librería de markdown nueva — "resaltar partes" no pedía la lista completa de features de markdown
+  (headers/listas/links/código), así que no se justificaba la dependencia nueva.
+
+### Checkpoint F — Unificación estructural (la pieza más grande, hacer al final)
+
+**Implementado 2026-07-30, los 3/3 ítems, en local. `npm run build`/`npm test` (backend) y `npm run
+build` (frontend) verdes. Smoke test por `curl` de los endpoints que el panel nuevo llama (update de
+campos, assign/unassign de Time Off policy) contra un tenant de prueba en `staging`, server local
+apagado al terminar. Sin verificación por Playwright (no disponible esta sesión, mismo motivo que el
+resto de checkpoints).**
+
+- [x] **Unificar el patrón de detalle de Employee con Company/Contact/Opportunity**:
+  `EmployeeOverviewPanel.tsx` reescrito — sin tabs, sin botón "Edit employee", los ~14 campos que antes
+  vivían en un SlideOver de edición separado (`EmployeesPage.tsx`) ahora son `AutoSaveField`/
+  `AutoSaveSelect` directo en el panel, más Time Off Policies como una lista con asignar/desasignar
+  (mismo criterio visual que "Contacts" en `CompanyDetailModal.tsx`). Se retiró por completo el
+  SlideOver de edición, su botón de lápiz en la fila de la tabla, y ~230 líneas de handlers/estado que
+  quedaron sin uso (`handleStartEditEmployee`, `handleUpdateEmployee`, `editEmployeeForm`, etc.) —
+  `EmployeesPage.tsx` bajó de slideOverMode `'add' | 'edit' | null` a `'add' | null`, mismo shape que
+  Companies/Contacts.
+  - **Excepción confirmada con el usuario antes de implementar**: a diferencia de Company/Contact
+    (donde nombre/email no son editables desde el modal de detalle — un gap real que ya existía, no se
+    tocó), Employee **sí** mantiene firstName/lastName/business email editables in-place, para no perder
+    una capacidad que hoy existe. Company/Contact quedan igual que antes.
+  - Verificado por curl contra `staging`: `PATCH` con el shape exacto que manda el panel nuevo
+    (`contractType`/`compensationType`/`hourlyRateCents`/fechas/`contractUrl`) responde 200 con los
+    valores aplicados; assign/unassign de Time Off Policy responde 201/204. Backend no cambió (0 líneas
+    tocadas en `employeeService.ts`/`routes/employees.ts`) — el 403 owner-only sobre
+    `hourlyRateCents`/`monthlyRateCents` ya estaba verificado en una sesión anterior y no se tocó.
+- [x] **Componente de detalle compartido entre los 4 — evaluado, extraído lo que era genuinamente
+  compartible**: el sub-componente `Field` (label + children, el wrapper de cada campo) resultó ser
+  **byte-idéntico** en los 4 archivos — se extrajo a `components/Field.tsx`, importado por los 4 en vez
+  de redefinirse. El resto (el contenido del header — subtítulo distinto por entidad, Opportunity con un
+  indicador de tiempo-en-stage que los otros 3 no tienen —, y los campos en sí) tiene variación real
+  entre entidades; forzarlo a un único componente hoy hubiera significado una API de props creciendo sin
+  límite para papelar esas diferencias, contra el criterio del proyecto de no abstraer prematuramente.
+  La reutilización real cross-entidad (el objetivo de fondo del ítem) ya está lograda por otro lado:
+  `EntityTasksList`/`TaskFormPopover`/`EntityNotesList`/`NoteFormPopover` son los mismos 4 componentes
+  consumidos por los 4 módulos, no 4 implementaciones paralelas.
+- [x] **Activity — restricción de layout respetada, sin placeholder construido**: al sacar los tabs de
+  Employee, el tab "Activity" (que no tenía funcionalidad real detrás) se retiró junto con el resto —
+  ahora ningún módulo tiene un placeholder de Activity, ni como tab ni de ninguna otra forma, consistente
+  con que Company/Contact/Opportunity tampoco lo tenían. La restricción de layout (panel lateral, no tab,
+  cuando se construya el sistema de auditoría real en Tier 5) queda anotada acá para esa sesión futura,
+  sin código nuevo ahora.
+
+**Nota de proceso**: toda la información de contexto de esta sesión (qué se preguntó, qué confirmó el
+usuario, qué bug se encontró y por qué, qué código ya se revisó) quedó volcada en las entradas de
+arriba a propósito, para que no se pierda nada al limpiar la conversación — la próxima sesión debería
+poder ejecutar Checkpoint D sin necesitar releer el chat.

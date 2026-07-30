@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { api } from '../api';
+import { api, type CatalogKind } from '../api';
 import { useToast } from './ToastProvider';
 import Popover from './Popover';
 import { DotsVerticalIcon, GripIcon } from './Icons';
@@ -13,7 +13,7 @@ interface CatalogEntryLike {
 
 interface FieldCatalogMenuProps {
   token: string;
-  kind: 'department' | 'jobTitle';
+  kind: CatalogKind;
   label: string;
   entries: CatalogEntryLike[];
   onChanged: () => void;
@@ -147,7 +147,7 @@ export default function FieldCatalogMenu({ token, kind, label, entries, onChange
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              placeholder={kind === 'department' ? 'e.g. Engineering' : 'e.g. Account Executive'}
+              placeholder={kind === 'department' ? 'e.g. Engineering' : kind === 'companySize' ? 'e.g. 11-50 employees' : 'e.g. Account Executive'}
             />
           </div>
           <div className="nv-field">

@@ -35,7 +35,24 @@ export default function Popover({ open, onClose, anchorRef, children, align = 'l
       if (!anchorRef.current) return;
       const rect = anchorRef.current.getBoundingClientRect();
       const left = align === 'right' ? rect.right - width : rect.left;
-      const next = { top: rect.bottom + 6, left: Math.max(8, Math.min(left, window.innerWidth - width - 8)) };
+      const clampedLeft = Math.max(8, Math.min(left, window.innerWidth - width - 8));
+
+      // Only horizontal clamping existed before — fine while every Popover
+      // trigger lived near the top of the page (table headers/toolbars). The
+      // Tasks "+ Add task" ghost row (EntityTasksList) can sit near the
+      // bottom of a long, scrollable detail modal, where `rect.bottom + 6`
+      // pushes the panel below the viewport entirely. Flip to opening above
+      // the anchor when there isn't room below; on the very first frame the
+      // panel hasn't rendered yet (height reads 0) and briefly opens below by
+      // default, self-correcting next frame once popoverRef has a real size.
+      const panelHeight = popoverRef.current?.offsetHeight ?? 0;
+      let top = rect.bottom + 6;
+      if (panelHeight > 0 && top + panelHeight > window.innerHeight - 8) {
+        const openAbove = rect.top - 6 - panelHeight;
+        top = openAbove >= 8 ? openAbove : Math.max(8, window.innerHeight - panelHeight - 8);
+      }
+
+      const next = { top, left: clampedLeft };
       setPosition((prev) => (prev && prev.top === next.top && prev.left === next.left ? prev : next));
       frame = requestAnimationFrame(track);
     };
@@ -58,12 +75,31 @@ export default function Popover({ open, onClose, anchorRef, children, align = 'l
       onClose();
     };
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key !== 'Escape') return;
+      // Stop the Escape from also reaching a parent modal's own Escape
+      // listener (e.g. EmployeeOverviewPanel/CompanyDetailModal each close on
+      // Escape too, listening on window) — without this, opening a Popover
+      // from inside one of those and pressing Escape closed both layers at
+      // once instead of just the popover on top.
+      e.stopPropagation();
+      onClose();
     };
     const handleScroll = (e: Event) => {
       const target = e.target as Node;
       if (popoverRef.current?.contains(target)) return;
       if (target instanceof Element && target.closest('.popover-panel')) return;
+      // The tracking loop above already keeps the popover glued to its anchor
+      // through a scroll (a scrollable modal body, the sidebar collapsing,
+      // etc.) — closing unconditionally here fought that: e.g. filling a
+      // field inside the popover made the browser auto-scroll it into view,
+      // which then closed the very popover being filled in. Only close if the
+      // anchor has scrolled fully out of view — there's nothing sensible left
+      // to point the popover at.
+      if (anchorRef.current) {
+        const rect = anchorRef.current.getBoundingClientRect();
+        const anchorStillVisible = rect.bottom > 0 && rect.top < window.innerHeight;
+        if (anchorStillVisible) return;
+      }
       onClose();
     };
 

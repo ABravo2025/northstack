@@ -10,6 +10,7 @@ import KanbanBoard from '../components/KanbanBoard';
 import CustomFieldColumnMenu from '../components/CustomFieldColumnMenu';
 import AddCustomFieldColumn from '../components/AddCustomFieldColumn';
 import StatusColumnMenu from '../components/StatusColumnMenu';
+import FieldCatalogMenu from '../components/FieldCatalogMenu';
 import ColumnResizeHandle from '../components/ColumnResizeHandle';
 import { useResizableColumns } from '../hooks/useResizableColumns';
 import ColumnVisibilityMenu from '../components/ColumnVisibilityMenu';
@@ -40,8 +41,14 @@ const emptyCompanyForm = {
   website: '',
   phone: '',
   billingAddress: '',
-  size: '',
+  sizeId: '',
   accountOwnerId: '',
+  // A Company can't be created without a founding Contact — confirmed
+  // business rule, not just a form nicety (see docs/tareas-desarrollo.md,
+  // Checkpoint E). Required alongside Name in the same step.
+  contactFirstName: '',
+  contactLastName: '',
+  contactEmail: '',
 };
 
 export default function CompaniesPage({ user, token }: CompaniesPageProps) {
@@ -56,11 +63,13 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
   const [slideOverMode, setSlideOverMode] = useState<'add' | null>(null);
   const [viewingCompanyId, setViewingCompanyId] = useState<string | null>(null);
   const [deletingCompany, setDeletingCompany] = useState<Company | null>(null);
+  const [deleteLinkedOpportunities, setDeleteLinkedOpportunities] = useState(false);
   const tableWrapRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [companyCustomFields, setCompanyCustomFields] = useState<any[]>([]);
   const [companyStatuses, setCompanyStatuses] = useState<any[]>([]);
+  const [companySizes, setCompanySizes] = useState<any[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
   const [companyForm, setCompanyForm] = useState(emptyCompanyForm);
   const [draggedColKey, setDraggedColKey] = useState<string | null>(null);
@@ -85,7 +94,10 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
   );
   const activeCompanyCustomFields = companyCustomFields.filter((field) => field.isActive);
 
-  const fields = useMemo(() => buildCompanyFields(companyStatuses, companyCustomFields), [companyStatuses, companyCustomFields]);
+  const fields = useMemo(
+    () => buildCompanyFields(companyStatuses, companyCustomFields, companySizes),
+    [companyStatuses, companyCustomFields, companySizes],
+  );
   const groupable = useMemo(() => groupableFields(fields), [fields]);
   const activeView = views.find((v) => v.id === activeViewId) ?? null;
   const viewType = activeView?.type ?? 'grid';
@@ -105,6 +117,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
     loadCompanies();
     loadCompanyCustomFields();
     loadCompanyStatuses();
+    loadCompanySizes();
     loadViews();
     api
       .listTenantUsers(token)
@@ -118,8 +131,12 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
     api.getCurrentTenant(token).then((tenant) => setTenantCurrency(tenant.currency)).catch(() => {});
   }, []);
 
+  // Silent refresh (no setLoading) — a loud loadCompanies() here would flash
+  // the whole table behind an open CompanyDetailModal on every field/custom
+  // field/linked-record change, same class of bug found 2026-07-30 in the
+  // Employee panel. Matches the pattern OpportunitiesPage.tsx already used.
   const refreshAssociatedData = () => {
-    loadCompanies();
+    api.listCompanies(token).then(setCompanies).catch(() => {});
     api.listContacts(token).then(setContacts).catch(() => {});
     api.listOpportunities(token).then(setOpportunities).catch(() => {});
   };
@@ -142,6 +159,15 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
       setCompanyStatuses(statuses);
     } catch (error) {
       toast.error('Failed to load statuses: ' + (error as Error).message);
+    }
+  };
+
+  const loadCompanySizes = async () => {
+    try {
+      const sizes = await api.listFieldCatalogDefinitions(token, 'companySize');
+      setCompanySizes(sizes);
+    } catch (error) {
+      toast.error('Failed to load company sizes: ' + (error as Error).message);
     }
   };
 
@@ -221,8 +247,13 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
         website: companyForm.website || undefined,
         phone: companyForm.phone || undefined,
         billingAddress: companyForm.billingAddress || undefined,
-        size: companyForm.size || undefined,
+        sizeId: companyForm.sizeId || undefined,
         accountOwnerId: companyForm.accountOwnerId || undefined,
+        contact: {
+          firstName: companyForm.contactFirstName.trim(),
+          lastName: companyForm.contactLastName.trim(),
+          email: companyForm.contactEmail.trim(),
+        },
       });
 
       const valueEntries = Object.entries(customFieldValues).filter(([, value]) => value.trim() !== '');
@@ -232,7 +263,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
 
       toast.success(`${company.name} added.`);
       closeSlideOver();
-      loadCompanies();
+      refreshAssociatedData();
     } catch (error) {
       toast.error('Failed to create company: ' + (error as Error).message);
     }
@@ -241,13 +272,15 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
   const handleDeleteCompany = async () => {
     if (!deletingCompany) return;
     try {
-      await api.deleteCompany(token, deletingCompany.id);
+      await api.deleteCompany(token, deletingCompany.id, { deleteLinkedOpportunities });
       toast.success(`${deletingCompany.name} deleted.`);
       setDeletingCompany(null);
-      loadCompanies();
+      setDeleteLinkedOpportunities(false);
+      refreshAssociatedData();
     } catch (error) {
       toast.error('Failed to delete company: ' + (error as Error).message);
       setDeletingCompany(null);
+      setDeleteLinkedOpportunities(false);
     }
   };
 
@@ -435,7 +468,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
         ),
     },
     { key: 'phone', label: 'Phone', render: (company: Company) => company.phone || '—' },
-    { key: 'size', label: 'Size', render: (company: Company) => company.size || '—' },
+    { key: 'size', label: 'Size', render: (company: Company) => company.sizeDefn?.name || '—' },
     {
       key: 'accountOwner',
       label: 'Account Owner',
@@ -535,7 +568,13 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
       {canManageCustomFields && <td></td>}
       <td>
         <div className="icon-actions">
-          <button className="icon-btn danger" onClick={() => setDeletingCompany(company)}>
+          <button
+            className="icon-btn danger"
+            onClick={() => {
+              setDeletingCompany(company);
+              setDeleteLinkedOpportunities(false);
+            }}
+          >
             <span className="tip">Delete</span>
             <TrashIcon />
           </button>
@@ -559,15 +598,41 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
 
   return (
     <div className="page-full">
-      {deletingCompany && (
-        <ConfirmDialog
-          title="Delete company"
-          message={`Are you sure you want to delete ${deletingCompany.name}? This can't be undone.`}
-          confirmLabel="Delete"
-          onConfirm={handleDeleteCompany}
-          onCancel={() => setDeletingCompany(null)}
-        />
-      )}
+      {deletingCompany && (() => {
+        const linkedContacts = contacts.filter((c) => c.companyId === deletingCompany.id);
+        const linkedOpportunities = opportunities.filter((o) => o.companyId === deletingCompany.id);
+        const messageParts = [`Are you sure you want to delete ${deletingCompany.name}? This can't be undone.`];
+        if (linkedContacts.length > 0) {
+          messageParts.push(
+            `${linkedContacts.length} contact(s) (${linkedContacts.map((c) => `${c.firstName} ${c.lastName}`).join(', ')}) will be unlinked — they stay, just without a company.`,
+          );
+        }
+        if (linkedOpportunities.length > 0) {
+          messageParts.push(
+            `${linkedOpportunities.length} opportunity(ies) (${linkedOpportunities.map((o) => o.name).join(', ')}) can't exist without a company and will be deleted too.`,
+          );
+        }
+        return (
+          <ConfirmDialog
+            title="Delete company"
+            message={messageParts.join(' ')}
+            confirmLabel="Delete"
+            confirmDisabled={linkedOpportunities.length > 0 && !deleteLinkedOpportunities}
+            checkboxLabel={
+              linkedOpportunities.length > 0
+                ? `Also delete ${linkedOpportunities.length} linked opportunity(ies)`
+                : undefined
+            }
+            checkboxChecked={deleteLinkedOpportunities}
+            onCheckboxChange={setDeleteLinkedOpportunities}
+            onConfirm={handleDeleteCompany}
+            onCancel={() => {
+              setDeletingCompany(null);
+              setDeleteLinkedOpportunities(false);
+            }}
+          />
+        );
+      })()}
 
       <SlideOver
         open={slideOverMode === 'add'}
@@ -596,6 +661,41 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
                 required
               />
             </div>
+
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mt-2 mb-1">
+              Founding contact
+            </p>
+            <div className="form-group">
+              <label htmlFor="company-contact-firstName">First Name</label>
+              <input
+                id="company-contact-firstName"
+                type="text"
+                value={companyForm.contactFirstName}
+                onChange={(e) => setCompanyForm({ ...companyForm, contactFirstName: e.target.value })}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="company-contact-lastName">Last Name</label>
+              <input
+                id="company-contact-lastName"
+                type="text"
+                value={companyForm.contactLastName}
+                onChange={(e) => setCompanyForm({ ...companyForm, contactLastName: e.target.value })}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="company-contact-email">Email</label>
+              <input
+                id="company-contact-email"
+                type="email"
+                value={companyForm.contactEmail}
+                onChange={(e) => setCompanyForm({ ...companyForm, contactEmail: e.target.value })}
+                required
+              />
+            </div>
+
             <div className="form-group">
               <label htmlFor="company-industry">Industry</label>
               <input
@@ -634,14 +734,21 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
               />
             </div>
             <div className="form-group">
-              <label htmlFor="company-size">Size</label>
-              <input
-                id="company-size"
-                type="text"
-                value={companyForm.size}
-                onChange={(e) => setCompanyForm({ ...companyForm, size: e.target.value })}
-                placeholder="e.g. 11-50 employees"
-              />
+              <label htmlFor="company-sizeId">Size</label>
+              <select
+                id="company-sizeId"
+                value={companyForm.sizeId}
+                onChange={(e) => setCompanyForm({ ...companyForm, sizeId: e.target.value })}
+              >
+                <option value="">-- none --</option>
+                {companySizes
+                  .filter((s) => s.isActive)
+                  .map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.name}
+                    </option>
+                  ))}
+              </select>
             </div>
             <div className="form-group">
               <label htmlFor="company-accountOwnerId">Account Owner</label>
@@ -685,6 +792,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
               opportunities={opportunities}
               pipelines={pipelines}
               customFields={activeCompanyCustomFields}
+              companySizes={companySizes}
               tenantCurrency={tenantCurrency}
               currentUserId={user.id}
               onClose={() => setViewingCompanyId(null)}
@@ -744,7 +852,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
         <div className="empty-state">
           <p>No companies yet.</p>
           {canEditCompanies && (
-            <button className="btn btn-success" onClick={handleOpenAdd}>
+            <button className="btn btn-primary" onClick={handleOpenAdd}>
               Add your first company
             </button>
           )}
@@ -845,6 +953,16 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
                             statuses={companyStatuses}
                             onChanged={loadCompanyStatuses}
                             onHide={() => hideColumn('status')}
+                          />
+                        )}
+                        {col.key === 'size' && canManageCustomFields && (
+                          <FieldCatalogMenu
+                            token={token}
+                            kind="companySize"
+                            label="Size"
+                            entries={companySizes}
+                            onChanged={loadCompanySizes}
+                            onHide={() => hideColumn('size')}
                           />
                         )}
                         <ColumnResizeHandle onMouseDown={(e) => startResize(col.key, e)} />

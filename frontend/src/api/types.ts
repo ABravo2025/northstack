@@ -302,6 +302,7 @@ export interface PayrollRun {
 export interface PayrollRunEmployeeGroup {
   employee: { id: string; firstName: string; lastName: string; statusDefn: { id: string; name: string; color: string | null } };
   compensationType: 'hourly' | 'fixed' | null;
+  hourlyRateCents: number | null;
   base: PayrollEntry | null;
   adjustments: PayrollEntry[];
   total: number;

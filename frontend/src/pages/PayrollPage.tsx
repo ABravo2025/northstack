@@ -500,6 +500,27 @@ function RunDetailView({ token, runId, onBack }: RunDetailViewProps) {
     }
   };
 
+  // Patches the row in place (server response has the recalculated
+  // amountCents) instead of a full reload, same instant-patch pattern used
+  // by the Employee/Company/Contact/Opportunity detail panels.
+  const handleHoursSaved = (updatedEntry: NonNullable<PayrollRunDetail['employeeGroups'][number]['base']>) => {
+    setRun((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        employeeGroups: prev.employeeGroups.map((g) =>
+          g.employee.id === updatedEntry.employeeId
+            ? {
+                ...g,
+                base: updatedEntry,
+                total: updatedEntry.amountCents + g.adjustments.reduce((sum, a) => sum + a.amountCents, 0),
+              }
+            : g,
+        ),
+      };
+    });
+  };
+
   return (
     <div className="container">
       <div className="page-toolbar no-border">
@@ -552,8 +573,16 @@ function RunDetailView({ token, runId, onBack }: RunDetailViewProps) {
                     </td>
                     <td>{group.compensationType === 'hourly' ? 'Hourly' : group.compensationType === 'fixed' ? 'Fixed' : '—'}</td>
                     <td>
-                      {group.base ? formatMoney(group.base.amountCents, group.base.currency) : '—'}
-                      {group.base?.hoursQty != null ? ` (${group.base.hoursQty}h)` : ''}
+                      {group.compensationType === 'hourly' && group.base && run.status === 'draft' ? (
+                        <HourlyBaseCell token={token} group={group} onSaved={handleHoursSaved} />
+                      ) : group.base ? (
+                        <>
+                          {formatMoney(group.base.amountCents, group.base.currency)}
+                          {group.base.hoursQty != null ? ` (${group.base.hoursQty}h)` : ''}
+                        </>
+                      ) : (
+                        '—'
+                      )}
                     </td>
                     <td>
                       <button type="button" className="table-link" onClick={(e) => openAdjustments(e, group.employee.id)}>
@@ -646,6 +675,66 @@ function RunDetailView({ token, runId, onBack }: RunDetailViewProps) {
           </div>
         )}
       </Popover>
+    </div>
+  );
+}
+
+interface HourlyBaseCellProps {
+  token: string;
+  group: PayrollRunDetail['employeeGroups'][number];
+  onSaved: (entry: NonNullable<PayrollRunDetail['employeeGroups'][number]['base']>) => void;
+}
+
+// Unidad 9 — editable hours input for hourly base entries, with a live
+// "hours × rate" preview as the user types (not just after saving).
+function HourlyBaseCell({ token, group, onSaved }: HourlyBaseCellProps) {
+  const toast = useToast();
+  const [hours, setHours] = useState(group.base?.hoursQty != null ? String(group.base.hoursQty) : '');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setHours(group.base?.hoursQty != null ? String(group.base.hoursQty) : '');
+  }, [group.base?.hoursQty]);
+
+  const parsedHours = Number.parseFloat(hours);
+  const preview =
+    group.hourlyRateCents != null && Number.isFinite(parsedHours)
+      ? formatMoney(Math.round(parsedHours * group.hourlyRateCents), group.base?.currency ?? 'USD')
+      : null;
+
+  const commit = async () => {
+    if (!group.base) return;
+    const hoursQty = Number.parseFloat(hours || '0');
+    if (Number.isNaN(hoursQty) || hoursQty === (group.base.hoursQty ?? -1)) return;
+    setSaving(true);
+    try {
+      const updated = await api.updatePayrollEntryHours(token, group.base.id, hoursQty);
+      onSaved(updated);
+    } catch (error) {
+      toast.error('Failed to update hours: ' + (error as Error).message);
+      setHours(group.base?.hoursQty != null ? String(group.base.hoursQty) : '');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <input
+        type="number"
+        min="0"
+        step="0.25"
+        className="w-16"
+        value={hours}
+        disabled={saving}
+        onChange={(e) => setHours(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+        }}
+        aria-label={`Hours for ${group.employee.firstName} ${group.employee.lastName}`}
+      />
+      <span className="text-xs text-ink-faint">h{preview ? ` = ${preview}` : ''}</span>
     </div>
   );
 }

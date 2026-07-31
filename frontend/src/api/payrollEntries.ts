@@ -31,4 +31,17 @@ export const payrollEntriesApi = {
     });
     if (!res.ok) await throwApiError(res);
   },
+
+  updatePayrollEntryHours: async (token: string, entryId: string, hoursQty: number): Promise<PayrollEntry> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/entries/${entryId}/hours`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ hoursQty }),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
 };

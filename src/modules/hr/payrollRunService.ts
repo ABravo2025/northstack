@@ -74,6 +74,10 @@ export async function findRunById(id: string): Promise<PayrollRun | null> {
 export interface RunEmployeeGroup {
   employee: { id: string; firstName: string; lastName: string; statusDefn: { id: string; name: string; color: string | null } };
   compensationType: 'hourly' | 'fixed' | null;
+  // Only meaningful (non-null) when compensationType is 'hourly' — lets the
+  // frontend show a live "hours × rate" preview (Unidad 9) without a second
+  // round trip.
+  hourlyRateCents: number | null;
   base: PayrollEntry | null;
   adjustments: PayrollEntry[];
   total: number;
@@ -113,6 +117,9 @@ export async function getRunDetail(tenantId: string, runId: string) {
         })
       : [];
   const compensationTypeByEmployeeId = new Map(compensations.map((c) => [c.employeeId, c.compensationType]));
+  const hourlyRateByEmployeeId = new Map(
+    compensations.filter((c) => c.compensationType === 'hourly').map((c) => [c.employeeId, c.rateCents]),
+  );
 
   const groupsByEmployeeId = new Map<string, RunEmployeeGroup>();
   for (const entry of entries) {
@@ -125,6 +132,7 @@ export async function getRunDetail(tenantId: string, runId: string) {
           statusDefn: entry.employee.statusDefn,
         },
         compensationType: compensationTypeByEmployeeId.get(entry.employeeId) ?? null,
+        hourlyRateCents: hourlyRateByEmployeeId.get(entry.employeeId) ?? null,
         base: null,
         adjustments: [],
         total: 0,

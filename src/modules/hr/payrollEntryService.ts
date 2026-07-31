@@ -83,3 +83,49 @@ export async function deleteAdjustment(id: string, tenantId: string): Promise<De
   await prisma.payrollEntry.delete({ where: { id } });
   return { success: true };
 }
+
+// Not explicitly named as its own endpoint in the spec, but required for
+// Unidad 9's "input de horas editable" to actually persist anything — the
+// spec's own backend bullet for Unidad 9 only describes Unidad 11's confirm
+// guard, so this fills the gap. Recomputes amountCents from the employee's
+// hourly rate (vigente when the run was created, same lookup as
+// getRunDetail) rather than trusting a client-sent amount.
+export async function updateHourlyBaseEntryHours(
+  id: string,
+  tenantId: string,
+  hoursQty: number,
+): Promise<AdjustmentResult> {
+  if (!Number.isFinite(hoursQty) || hoursQty < 0) {
+    return { success: false, error: 'Hours must be a non-negative number' };
+  }
+
+  const entry = await prisma.payrollEntry.findUnique({ where: { id }, include: { run: true } });
+  if (!entry || entry.tenantId !== tenantId) {
+    return { success: false, error: 'Payroll entry not found' };
+  }
+  if (entry.type !== 'base') {
+    return { success: false, error: 'Only the base entry accepts hours' };
+  }
+  if (!entry.run || entry.run.status !== 'draft') {
+    return { success: false, error: 'Only entries on a draft run can be edited' };
+  }
+
+  const compensation = await prisma.employeeCompensation.findFirst({
+    where: {
+      tenantId,
+      employeeId: entry.employeeId,
+      effectiveFrom: { lte: entry.run.createdAt },
+      OR: [{ effectiveTo: null }, { effectiveTo: { gte: entry.run.createdAt } }],
+    },
+  });
+  if (!compensation || compensation.compensationType !== 'hourly') {
+    return { success: false, error: 'This entry is not tied to an hourly compensation record' };
+  }
+
+  const updated = await prisma.payrollEntry.update({
+    where: { id },
+    data: { hoursQty, amountCents: Math.round(hoursQty * compensation.rateCents) },
+  });
+
+  return { success: true, entry: updated };
+}

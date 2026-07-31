@@ -300,9 +300,15 @@ export interface PayrollRun {
 }
 
 export interface PayrollRunEmployeeGroup {
-  employee: { id: string; firstName: string; lastName: string; statusDefn: { id: string; name: string; color: string | null } };
+  employee: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    statusDefn: { id: string; name: string; color: string | null; isDefault: boolean };
+  };
   compensationType: 'hourly' | 'fixed' | null;
   hourlyRateCents: number | null;
+  statusSince: string | null;
   base: PayrollEntry | null;
   adjustments: PayrollEntry[];
   total: number;

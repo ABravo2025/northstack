@@ -72,12 +72,22 @@ export async function findRunById(id: string): Promise<PayrollRun | null> {
 }
 
 export interface RunEmployeeGroup {
-  employee: { id: string; firstName: string; lastName: string; statusDefn: { id: string; name: string; color: string | null } };
+  employee: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    statusDefn: { id: string; name: string; color: string | null; isDefault: boolean };
+  };
   compensationType: 'hourly' | 'fixed' | null;
   // Only meaningful (non-null) when compensationType is 'hourly' — lets the
   // frontend show a live "hours × rate" preview (Unidad 9) without a second
   // round trip.
   hourlyRateCents: number | null;
+  // Unidad 10 — set only when the employee's current status isn't the
+  // tenant's default Employee status ("isDefault" is the closest structural
+  // proxy for "activo" — status names are tenant-renameable, so matching on
+  // the literal string "Active" would break for a tenant that renamed it).
+  statusSince: Date | null;
   base: PayrollEntry | null;
   adjustments: PayrollEntry[];
   total: number;
@@ -121,6 +131,24 @@ export async function getRunDetail(tenantId: string, runId: string) {
     compensations.filter((c) => c.compensationType === 'hourly').map((c) => [c.employeeId, c.rateCents]),
   );
 
+  const nonDefaultEmployeeIds = [
+    ...new Set(entries.filter((e) => !e.employee.statusDefn.isDefault).map((e) => e.employeeId)),
+  ];
+  const statusSinceByEmployeeId = new Map<string, Date>();
+  if (nonDefaultEmployeeIds.length > 0) {
+    await Promise.all(
+      nonDefaultEmployeeIds.map(async (employeeId) => {
+        const lastChange = await prisma.statusHistoryEntry.findFirst({
+          where: { tenantId, entityType: 'employee', entityId: employeeId },
+          orderBy: { changedAt: 'desc' },
+        });
+        if (lastChange) {
+          statusSinceByEmployeeId.set(employeeId, lastChange.changedAt);
+        }
+      }),
+    );
+  }
+
   const groupsByEmployeeId = new Map<string, RunEmployeeGroup>();
   for (const entry of entries) {
     if (!groupsByEmployeeId.has(entry.employeeId)) {
@@ -133,6 +161,7 @@ export async function getRunDetail(tenantId: string, runId: string) {
         },
         compensationType: compensationTypeByEmployeeId.get(entry.employeeId) ?? null,
         hourlyRateCents: hourlyRateByEmployeeId.get(entry.employeeId) ?? null,
+        statusSince: statusSinceByEmployeeId.get(entry.employeeId) ?? null,
         base: null,
         adjustments: [],
         total: 0,

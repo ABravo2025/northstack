@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { api } from '../api';
 import type { PayFrequency, PayrollRun, PayrollRunDetail } from '../api';
 import { useToast } from '../components/common/ToastProvider';
@@ -560,13 +560,15 @@ function RunDetailView({ token, runId, onBack }: RunDetailViewProps) {
               )}
               {run.employeeGroups.map((group) => {
                 const adjustmentsTotal = group.adjustments.reduce((sum, a) => sum + a.amountCents, 0);
+                const isInactive = group.statusSince !== null;
                 return (
-                  <tr key={group.employee.id}>
+                <Fragment key={group.employee.id}>
+                  <tr>
                     <td>
                       <div className="flex items-center gap-2">
                         {group.employee.firstName} {group.employee.lastName}
                         <StatusChip
-                          color={group.employee.statusDefn.color || '#9ca3af'}
+                          color={isInactive ? '#dc2626' : group.employee.statusDefn.color || '#9ca3af'}
                           label={group.employee.statusDefn.name}
                         />
                       </div>
@@ -593,6 +595,15 @@ function RunDetailView({ token, runId, onBack }: RunDetailViewProps) {
                     </td>
                     <td>{group.base ? formatMoney(group.total, group.base.currency) : '—'}</td>
                   </tr>
+                  {isInactive && (
+                    <tr>
+                      <td colSpan={5} className="bg-amber-100 px-3 py-1.5 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-400">
+                        Figura {group.employee.statusDefn.name.toLowerCase()} desde {group.statusSince!.slice(0, 10)} — revisar
+                        antes de confirmar.
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
                 );
               })}
             </tbody>

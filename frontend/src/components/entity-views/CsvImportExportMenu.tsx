@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { api } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import SlideOver from '../common/SlideOver';
@@ -7,6 +7,10 @@ import { DownloadIcon, UploadIcon } from '../common/Icons';
 interface CsvImportExportMenuProps {
   token: string;
   onImported: () => void;
+}
+
+export interface CsvImportExportMenuHandle {
+  openImport: () => void;
 }
 
 interface ImportResult {
@@ -28,7 +32,10 @@ function downloadCsvBlob(csv: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-export default function CsvImportExportMenu({ token, onImported }: CsvImportExportMenuProps) {
+const CsvImportExportMenu = forwardRef<CsvImportExportMenuHandle, CsvImportExportMenuProps>(function CsvImportExportMenu(
+  { token, onImported },
+  ref,
+) {
   const toast = useToast();
   const [importOpen, setImportOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -38,6 +45,13 @@ export default function CsvImportExportMenu({ token, onImported }: CsvImportExpo
   const [csvText, setCsvText] = useState('');
   const [result, setResult] = useState<ImportResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    openImport: () => {
+      resetImportState();
+      setImportOpen(true);
+    },
+  }));
 
   const handleExport = async () => {
     setExporting(true);
@@ -156,4 +170,6 @@ export default function CsvImportExportMenu({ token, onImported }: CsvImportExpo
       </SlideOver>
     </>
   );
-}
+});
+
+export default CsvImportExportMenu;

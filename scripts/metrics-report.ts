@@ -66,9 +66,23 @@ async function main() {
   // -- Team size --
   console.log('-- Team size per tenant (active tenants only) --');
   console.log('(Employee counts include the auto-created owner record — every tenant has >=1.)');
-  const userCounts = await Promise.all(activeTenants.map((t) => prisma.user.count({ where: { tenantId: t.id } })));
-  const employeeCounts = await Promise.all(activeTenants.map((t) => prisma.employee.count({ where: { tenantId: t.id } })));
-  const clientCounts = await Promise.all(activeTenants.map((t) => prisma.client.count({ where: { tenantId: t.id } })));
+  // One groupBy per entity instead of one count() per tenant (was O(n) round-trips
+  // to the DB for n active tenants — found 2026-07-23 reviewing this script, see
+  // docs/tareas-desarrollo.md "Fix de patrón N+1"). groupBy omits tenants with zero
+  // rows, so countsByTenant fills those back in as 0 to keep avg/median/max exact.
+  const activeTenantIdList = [...activeTenantIds];
+  const [userGroups, employeeGroups, clientGroups] = await Promise.all([
+    prisma.user.groupBy({ by: ['tenantId'], where: { tenantId: { in: activeTenantIdList } }, _count: true }),
+    prisma.employee.groupBy({ by: ['tenantId'], where: { tenantId: { in: activeTenantIdList } }, _count: true }),
+    prisma.client.groupBy({ by: ['tenantId'], where: { tenantId: { in: activeTenantIdList } }, _count: true }),
+  ]);
+  const countsByTenant = (groups: { tenantId: string; _count: number }[]): number[] => {
+    const byTenantId = new Map(groups.map((g) => [g.tenantId, g._count]));
+    return activeTenantIdList.map((id) => byTenantId.get(id) ?? 0);
+  };
+  const userCounts = countsByTenant(userGroups);
+  const employeeCounts = countsByTenant(employeeGroups);
+  const clientCounts = countsByTenant(clientGroups);
   console.log(`Users per tenant: avg ${avg(userCounts).toFixed(1)}, median ${median(userCounts)}, max ${Math.max(0, ...userCounts)}`);
   console.log(`Employees per tenant: avg ${avg(employeeCounts).toFixed(1)}, median ${median(employeeCounts)}, max ${Math.max(0, ...employeeCounts)}`);
   console.log(`Clients per tenant: avg ${avg(clientCounts).toFixed(1)}, median ${median(clientCounts)}, max ${Math.max(0, ...clientCounts)}\n`);

@@ -16,22 +16,22 @@ interface SettingsHomePageProps {
 interface Tile {
   to: string;
   label: string;
+  desc: string;
   icon: React.ReactNode;
-  color: string;
 }
 
 export default function SettingsHomePage({ user }: SettingsHomePageProps) {
   const isAdmin = user.role === 'owner' || user.role === 'admin';
 
   const accountTiles: Tile[] = [
-    { to: 'profile', label: 'Profile', icon: <UserCircleIcon />, color: 'bg-brand-blue' },
+    { to: 'profile', label: 'Profile', desc: 'Name, phone and password.', icon: <UserCircleIcon /> },
   ];
 
   const companyTiles: Tile[] = [
-    { to: 'appearance', label: 'Appearance', icon: <BuildingIcon />, color: 'bg-purple-500' },
-    { to: 'users', label: 'Users', icon: <TeamIcon />, color: 'bg-teal-500' },
-    { to: 'public-forms', label: 'Public Forms', icon: <ListIcon />, color: 'bg-orange-500' },
-    { to: 'pipelines', label: 'Pipelines', icon: <TrendingIcon />, color: 'bg-pink-500' },
+    { to: 'appearance', label: 'Appearance', desc: 'Currency and theme for the workspace.', icon: <BuildingIcon /> },
+    { to: 'users', label: 'Users', desc: 'Invite people and manage roles.', icon: <TeamIcon /> },
+    { to: 'public-forms', label: 'Public Forms', desc: 'External intake forms per module.', icon: <ListIcon /> },
+    { to: 'pipelines', label: 'Pipelines', desc: 'Sales stages and their outcomes.', icon: <TrendingIcon /> },
   ];
 
   return (
@@ -41,8 +41,9 @@ export default function SettingsHomePage({ user }: SettingsHomePageProps) {
         <div className="settings-grid">
           {accountTiles.map((tile) => (
             <Link key={tile.to} to={tile.to} className="settings-tile">
-              <span className={`settings-tile-icon ${tile.color}`}>{tile.icon}</span>
+              <span className="settings-tile-icon">{tile.icon}</span>
               <span className="settings-tile-label">{tile.label}</span>
+              <span className="settings-tile-desc">{tile.desc}</span>
             </Link>
           ))}
         </div>
@@ -55,8 +56,9 @@ export default function SettingsHomePage({ user }: SettingsHomePageProps) {
             <div className="settings-grid">
               {companyTiles.map((tile) => (
                 <Link key={tile.to} to={tile.to} className="settings-tile">
-                  <span className={`settings-tile-icon ${tile.color}`}>{tile.icon}</span>
+                  <span className="settings-tile-icon">{tile.icon}</span>
                   <span className="settings-tile-label">{tile.label}</span>
+                  <span className="settings-tile-desc">{tile.desc}</span>
                 </Link>
               ))}
             </div>
@@ -66,16 +68,18 @@ export default function SettingsHomePage({ user }: SettingsHomePageProps) {
             <p className="settings-grid-section-title">Coming soon</p>
             <div className="settings-grid">
               <span className="settings-tile disabled" aria-disabled="true">
-                <span className="settings-tile-icon bg-gray-400">
+                <span className="settings-tile-icon">
                   <GridIcon />
                 </span>
                 <span className="settings-tile-label">Integrations</span>
+                <span className="settings-tile-desc">Connect Northstack to other tools.</span>
               </span>
               <span className="settings-tile disabled" aria-disabled="true">
-                <span className="settings-tile-icon bg-gray-400">
+                <span className="settings-tile-icon">
                   <BriefcaseIcon />
                 </span>
                 <span className="settings-tile-label">Billing</span>
+                <span className="settings-tile-desc">Plan, invoices and payment method.</span>
               </span>
             </div>
           </div>

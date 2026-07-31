@@ -5,7 +5,8 @@ import ConfirmDialog from '../components/common/ConfirmDialog';
 import SlideOver from '../components/common/SlideOver';
 import Popover from '../components/common/Popover';
 import ColorPicker from '../components/common/ColorPicker';
-import { ChevronDownIcon, DotsVerticalIcon, PlusIcon } from '../components/common/Icons';
+import EmptyState from '../components/common/EmptyState';
+import { CalendarIcon, ChevronDownIcon, DotsVerticalIcon, PlusIcon } from '../components/common/Icons';
 
 const ACCRUAL_LABELS: Record<string, string> = {
   fixed_annual: 'Fixed',
@@ -545,7 +546,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
           </button>
         )}
         {canManagePolicies && (
-          <button type="button" className="btn-outline btn-tab-size ml-auto" onClick={handleOpenAddPolicy}>
+          <button type="button" className="btn-outline gap-1.5 ml-auto" onClick={handleOpenAddPolicy}>
             <PlusIcon className="h-3.5 w-3.5" />
             Add Policy
           </button>
@@ -1017,7 +1018,13 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
         {!loading && tab === 'policies' && canManagePolicies && (
           <>
             {timeOffPolicies.length === 0 ? (
-              <p>No time off policies defined yet. Add one from the "Add Policy" button above.</p>
+              <EmptyState
+                icon={<CalendarIcon />}
+                title="No time off policies yet"
+                body="A policy defines how days are earned and whether requests need approval."
+                primaryLabel="Create a policy"
+                onPrimary={handleOpenAddPolicy}
+              />
             ) : (
               <>
                 <div className="mini-toggle-row mb-3">

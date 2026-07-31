@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { api, ApiError } from './api';
 import { useToast } from './components/common/ToastProvider';
+import TableSkeleton from './components/common/TableSkeleton';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import AcceptInvitePage from './pages/AcceptInvitePage';
@@ -147,7 +148,7 @@ export default function App() {
   if (checkingSession) {
     return (
       <div className="container">
-        <p>Loading...</p>
+        <TableSkeleton rows={4} />
       </div>
     );
   }

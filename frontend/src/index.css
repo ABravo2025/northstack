@@ -3,10 +3,50 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
+  /* --- marca, sin cambios --- */
   --color-brand-navy: #0d2a48;
   --color-brand-blue: #3c6da1;
   --color-brand-blue-light: #8dbada;
-  --color-brand-cream: #fdfcf8;
+  --color-brand-cream: #f8f5f0; /* alias de --color-surface-0 durante la migración */
+
+  /* --- ground / superficies cálidas (reemplazan brand-cream + gray-50/100) --- */
+  --color-surface-0: #f8f5f0; /* fondo de página, topbar, sidebar, thead */
+  --color-surface-1: #fffefb; /* tarjetas, popovers, inputs, filas de tabla */
+  --color-surface-2: #f3efe8; /* celdas vacías de calendario, hover de fila */
+
+  /* --- bordes y líneas (reemplazan gray-200/300) --- */
+  --color-line-strong: #d8d1c5; /* borde de input, botón secundario, dashed */
+  --color-line: #e6e0d6; /* borde de tarjeta, divisores de sección */
+  --color-line-soft: #f0eae1; /* separador de fila de tabla */
+
+  /* --- texto (reemplazan gray-400/500/600) --- */
+  --color-ink: #0d2a48; /* = brand-navy */
+  --color-ink-muted: #6f6a62; /* celdas secundarias, descripciones */
+  --color-ink-faint: #a09a90; /* labels, placeholders, metadata */
+
+  /* --- acento de acción --- */
+  --color-accent: #b8502f;
+  --color-accent-hover: #9c4227;
+  --color-accent-tint: rgba(184, 80, 47, 0.14); /* fondo de estado activo */
+  --color-accent-soft: rgba(184, 80, 47, 0.06); /* celda "hoy" del calendario */
+
+  /* --- avatar --- */
+  --color-avatar-bg: #e8c9a0; /* reemplaza brand-blue-light como fondo de .avatar */
+
+  /* --- dark mode: tres planos cálidos (reemplazan bg-black/gray-900 parejos) --- */
+  --color-dark-page: #16130f; /* fondo de página (negro cálido, no gris azulado) */
+  --color-dark-surface: #1e1a16; /* tarjetas, tabla, panel, popover */
+  --color-dark-raised: #221d18; /* thead, header de sección */
+  --color-dark-line: #2e2823;
+  --color-dark-line-soft: #262019;
+  --color-dark-ink: #efe8df;
+  --color-dark-ink-muted: #a89e92;
+  --color-dark-ink-faint: #8b8177;
+
+  /* --- alturas de control --- */
+  --size-control-lg: 36px; /* toolbar: search, Filter, Columns, export, botón primario */
+  --size-control-md: 32px; /* dentro de tarjeta o panel: Add note, Review, Cancel, iconos de contenido */
+  --size-control-sm: 28px; /* inline: acciones de fila, paginación, nav de calendario, dropdown de panel */
 
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 
@@ -25,9 +65,15 @@ body,
 }
 
 body {
-  @apply bg-brand-cream text-brand-navy font-sans antialiased dark:bg-black dark:text-gray-100;
+  @apply bg-surface-0 text-brand-navy font-sans antialiased dark:bg-dark-page dark:text-dark-ink;
 }
 
 @utility btn {
-  @apply cursor-pointer rounded-md px-5 py-2.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60;
+  @apply inline-flex cursor-pointer items-center justify-center rounded-md px-3.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60;
+  height: var(--size-control-lg);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }

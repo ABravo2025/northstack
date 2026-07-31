@@ -91,7 +91,7 @@ export default function OnboardingChecklist({ token }: OnboardingChecklistProps)
       </ul>
       <div className="onboarding-sample-row">
         <span className="onboarding-sample-hint">New here? Explore the app with sample data instead.</span>
-        <button type="button" className="btn-secondary" onClick={handleLoadSampleData} disabled={seeding}>
+        <button type="button" className="btn-ghost" onClick={handleLoadSampleData} disabled={seeding}>
           {seeding ? 'Loading…' : 'Load sample data'}
         </button>
       </div>

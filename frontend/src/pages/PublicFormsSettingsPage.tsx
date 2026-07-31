@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { api, type Pipeline, type Form, type PublicFormFieldConfig } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import SlideOver from '../components/common/SlideOver';
-import { GripIcon, PlusIcon, XIcon } from '../components/common/Icons';
+import EmptyState from '../components/common/EmptyState';
+import { GripIcon, ListIcon, PlusIcon, XIcon } from '../components/common/Icons';
 
 interface PublicFormsSettingsPageProps {
   token: string;
@@ -492,7 +493,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
         <button type="button" className={`view-tab ${tab === 'contact' ? 'active' : ''}`} onClick={() => setTab('contact')}>
           Contacts
         </button>
-        <button type="button" className="btn-outline btn-tab-size ml-auto" onClick={handleOpenCreate}>
+        <button type="button" className="btn-outline gap-1.5 ml-auto" onClick={handleOpenCreate}>
           <PlusIcon className="h-3.5 w-3.5" />
           New Form
         </button>
@@ -501,10 +502,13 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
       <div className="mt-4">
         {loading && <p>Loading...</p>}
         {!loading && filteredForms.length === 0 && (
-          <p>
-            No public forms for {tab === 'employee' ? 'Employees' : tab === 'client' ? 'Clients' : 'Contacts'} yet.
-            Create one to let people apply without an admin creating them manually.
-          </p>
+          <EmptyState
+            icon={<ListIcon />}
+            title="No public forms yet"
+            body="A public form captures people from outside the app, with no login."
+            primaryLabel="Build a form"
+            onPrimary={handleOpenCreate}
+          />
         )}
         {!loading && filteredForms.length > 0 && (
           <div className="full-table-wrap">

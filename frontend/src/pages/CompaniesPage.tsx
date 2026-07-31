@@ -4,6 +4,9 @@ import { useToast } from '../components/common/ToastProvider';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Pagination, { paginate } from '../components/common/Pagination';
 import SlideOver from '../components/common/SlideOver';
+import EmptyState from '../components/common/EmptyState';
+import TableSkeleton from '../components/common/TableSkeleton';
+import EntityCardList from '../components/common/EntityCardList';
 import ViewsBar from '../components/entity-views/ViewsBar';
 import FilterBar from '../components/entity-views/FilterBar';
 import KanbanBoard from '../components/entity-views/KanbanBoard';
@@ -16,12 +19,12 @@ import { useResizableColumns } from '../hooks/useResizableColumns';
 import ColumnVisibilityMenu from '../components/entity-views/ColumnVisibilityMenu';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { useColumnOrder } from '../hooks/useColumnOrder';
-import Avatar from '../components/common/Avatar';
+import Avatar, { getInitials } from '../components/common/Avatar';
 import StatusChip from '../components/common/StatusChip';
 import CategoryChip from '../components/common/CategoryChip';
 import CompanyDetailModal from '../components/crm/CompanyDetailModal';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
-import { ChevronDownIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/common/Icons';
+import { BuildingIcon, ChevronDownIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/common/Icons';
 import { applyFilters, applySort, buildCompanyFields, findField, groupableFields, parseFilters, parseSort } from '../lib/viewFields';
 
 const PAGE_SIZE = 20;
@@ -806,6 +809,11 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
               onClose={() => setViewingCompanyId(null)}
               onChanged={refreshAssociatedData}
               onSaved={patchCompanyInList}
+              onRequestDelete={() => {
+                setViewingCompanyId(null);
+                setDeletingCompany(viewingCompany);
+                setDeleteLinkedOpportunities(false);
+              }}
             />
           );
         })()}
@@ -846,7 +854,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
           <ColumnVisibilityMenu columns={toggleableColumns} isHidden={isColumnHidden} onToggle={toggleColumn} />
         )}
         {showAddFallback && (
-          <button className="btn-primary btn-toolbar-size" onClick={handleOpenAdd}>
+          <button className="btn-primary" onClick={handleOpenAdd}>
             <span className="inline-flex items-center gap-1.5">
               <PlusIcon className="h-4 w-4" />
               Add
@@ -856,16 +864,19 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
       </div>
 
       {loading ? (
-        <p className="mt-4">Loading...</p>
+        <TableSkeleton />
       ) : companies.length === 0 ? (
-        <div className="empty-state">
-          <p>No companies yet.</p>
-          {canEditCompanies && (
-            <button className="btn btn-primary" onClick={handleOpenAdd}>
-              Add your first company
-            </button>
-          )}
-        </div>
+        canEditCompanies ? (
+          <EmptyState
+            icon={<BuildingIcon />}
+            title="No companies yet"
+            body="Add the companies you work with to start tracking deals and contacts."
+            primaryLabel="Add company"
+            onPrimary={handleOpenAdd}
+          />
+        ) : (
+          <p className="mt-4">No companies yet.</p>
+        )
       ) : viewType === 'kanban' ? (
         !groupFieldForKanban ? (
           <p className="mt-4">This view's group-by field no longer exists.</p>
@@ -899,10 +910,29 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
       ) : viewType === 'list' && !groupFieldForKanban ? (
         <p className="mt-4">This view's group-by field no longer exists.</p>
       ) : sortedCompanies.length === 0 ? (
-        <p className="mt-4">No companies match your search or filters.</p>
+        <EmptyState
+          icon={<SearchIcon />}
+          title={`No matches for "${search}"`}
+          body="Try a different term, or clear the filters."
+          primaryLabel="Clear filters"
+          primaryVariant="secondary"
+          onPrimary={() => {
+            setSearch('');
+            setViewFilters([]);
+          }}
+        />
       ) : (
         <>
-          <div className="full-table-wrap" ref={tableWrapRef}>
+          <EntityCardList
+            items={pagedCompanies}
+            getKey={(company) => company.id}
+            getInitials={(company) => getInitials(company.name, '')}
+            getName={(company) => company.name}
+            getMeta={(company) => company.industry || ''}
+            getStatusColor={(company) => company.statusDefn?.color || '#6b7280'}
+            onSelect={(company) => setViewingCompanyId(company.id)}
+          />
+          <div className="full-table-wrap has-mobile-cards" ref={tableWrapRef}>
             <table className="table full-table">
               <colgroup>
                 {visibleColumns.map((col) => (

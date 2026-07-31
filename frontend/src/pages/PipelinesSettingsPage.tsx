@@ -387,7 +387,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
             Opportunities visible read-only, it just disappears from creation menus.
           </p>
         </div>
-        <button type="button" className="btn-primary btn-toolbar-size" onClick={openCreate}>
+        <button type="button" className="btn-primary" onClick={openCreate}>
           <span className="inline-flex items-center gap-1.5">
             <PlusIcon className="h-4 w-4" />
             New Pipeline

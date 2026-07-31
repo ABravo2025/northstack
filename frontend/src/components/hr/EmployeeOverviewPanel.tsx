@@ -7,6 +7,7 @@ import AutoSaveField from '../common/AutoSaveField';
 import AutoSaveSelect from '../common/AutoSaveSelect';
 import DetailSidebar from '../layout/DetailSidebar';
 import Field from '../common/Field';
+import OverviewActionsMenu from '../common/OverviewActionsMenu';
 import { XIcon } from '../common/Icons';
 
 interface EmployeeOverviewPanelProps {
@@ -22,9 +23,12 @@ interface EmployeeOverviewPanelProps {
   departments: any[];
   jobTitles: any[];
   timeOffPolicies: any[];
+  canManageEmployees: boolean;
   onClose: () => void;
   onChanged: () => void;
   onSaved: (updatedEmployee: any) => void;
+  onRequestDelete: () => void;
+  onInvite: () => void;
 }
 
 function dollarsToCents(value: string): number | null {
@@ -56,9 +60,12 @@ export default function EmployeeOverviewPanel({
   departments,
   jobTitles,
   timeOffPolicies,
+  canManageEmployees,
   onClose,
   onChanged,
   onSaved,
+  onRequestDelete,
+  onInvite,
 }: EmployeeOverviewPanelProps) {
   const toast = useToast();
 
@@ -129,6 +136,13 @@ export default function EmployeeOverviewPanel({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="overview-panel-head">
+          <OverviewActionsMenu
+            className="overview-actions-trigger"
+            items={[
+              ...(canManageEmployees && !employee.userId ? [{ label: 'Invite to app', onClick: onInvite }] : []),
+              { label: 'Delete', onClick: onRequestDelete, danger: true },
+            ]}
+          />
           <button type="button" className="slideover-close" onClick={onClose} aria-label="Close">
             <XIcon className="h-4 w-4" />
           </button>
@@ -146,181 +160,206 @@ export default function EmployeeOverviewPanel({
 
         <div className="overview-panel-main">
         <div className="overview-panel-left">
-          <Field label="First Name">
-            <AutoSaveField label="First Name" value={employee.firstName} onSave={(v) => save({ firstName: v })} />
-          </Field>
-          <Field label="Last Name">
-            <AutoSaveField label="Last Name" value={employee.lastName} onSave={(v) => save({ lastName: v })} />
-          </Field>
-          <Field label="Business Email">
-            <AutoSaveField label="Business Email" type="email" value={employee.email} onSave={(v) => save({ email: v })} />
-          </Field>
-          <Field label="Personal Email">
-            <AutoSaveField
-              label="Personal Email"
-              type="email"
-              value={employee.personalEmail || ''}
-              onSave={(v) => save({ personalEmail: v || null })}
-            />
-          </Field>
-          <Field label="Status">
-            <AutoSaveSelect
-              label="Status"
-              value={employee.statusId}
-              onSave={(v) => save({ statusId: v })}
-              options={statuses.map((s) => ({ value: s.id, label: s.name }))}
-              emptyLabel="-- select --"
-            />
-          </Field>
-          <Field label="Department">
-            <AutoSaveSelect
-              label="Department"
-              value={employee.departmentId || ''}
-              onSave={(v) => save({ departmentId: v || null })}
-              options={departments.filter((d) => d.isActive).map((d) => ({ value: d.id, label: d.name }))}
-            />
-          </Field>
-          <Field label="Job Title">
-            <AutoSaveSelect
-              label="Job Title"
-              value={employee.jobTitleId || ''}
-              onSave={(v) => save({ jobTitleId: v || null })}
-              options={jobTitles.filter((j) => j.isActive).map((j) => ({ value: j.id, label: j.name }))}
-            />
-          </Field>
-          <Field label="Reports To">
-            <AutoSaveSelect
-              label="Reports To"
-              value={employee.managerId || ''}
-              onSave={(v) => save({ managerId: v || null })}
-              emptyLabel="-- no manager --"
-              options={employees
-                .filter((e) => e.id !== employee.id)
-                .map((e) => ({ value: e.id, label: `${e.firstName} ${e.lastName}` }))}
-            />
-          </Field>
-          <Field label="Contract Type">
-            <AutoSaveSelect
-              label="Contract Type"
-              value={employee.contractType || ''}
-              onSave={(v) => save({ contractType: v || null })}
-              options={[
-                { value: 'part_time', label: 'Part Time' },
-                { value: 'full_time', label: 'Full Time' },
-              ]}
-            />
-          </Field>
-          <Field label="Compensation Type">
-            <AutoSaveSelect
-              label="Compensation Type"
-              value={employee.compensationType || ''}
-              onSave={(v) => save({ compensationType: v || null })}
-              options={[
-                { value: 'hourly', label: 'Hourly' },
-                { value: 'monthly', label: 'Monthly' },
-              ]}
-            />
-          </Field>
-          {isOwner && (
-            <Field label={`Hourly Rate (${tenantCurrency})`}>
-              <AutoSaveField
-                label="Hourly Rate"
-                type="number"
-                value={centsToDollars(employee.hourlyRateCents)}
-                onSave={(v) => save({ hourlyRateCents: dollarsToCents(v) })}
-              />
-            </Field>
-          )}
-          {isOwner && (
-            <Field label={`Monthly Rate (${tenantCurrency})`}>
-              <AutoSaveField
-                label="Monthly Rate"
-                type="number"
-                value={centsToDollars(employee.monthlyRateCents)}
-                onSave={(v) => save({ monthlyRateCents: dollarsToCents(v) })}
-              />
-            </Field>
-          )}
-          <Field label="Start Date">
-            <AutoSaveField
-              label="Start Date"
-              type="date"
-              value={employee.startDate ? employee.startDate.slice(0, 10) : ''}
-              onSave={(v) => save({ startDate: v || null })}
-            />
-          </Field>
-          <Field label="End Date">
-            <AutoSaveField
-              label="End Date"
-              type="date"
-              value={employee.endDate ? employee.endDate.slice(0, 10) : ''}
-              onSave={(v) => save({ endDate: v || null })}
-            />
-          </Field>
-          <Field label="Contract URL">
-            <AutoSaveField
-              label="Contract URL"
-              type="url"
-              value={employee.contractUrl || ''}
-              onSave={(v) => save({ contractUrl: v || null })}
-            />
-          </Field>
-
-          {customFields.map((field) => {
-            const existing = employee.customFieldVals?.find((v: any) => v.customFieldDefinitionId === field.id);
-            return (
-              <Field key={field.id} label={field.name}>
-                {field.fieldType === 'select' ? (
-                  <AutoSaveSelect
-                    label={field.name}
-                    value={existing?.value || ''}
-                    onSave={(v) => saveCustomField(field.id, v)}
-                    options={(JSON.parse(field.options || '[]') as string[]).map((opt) => ({ value: opt, label: opt }))}
-                  />
-                ) : (
-                  <AutoSaveField
-                    label={field.name}
-                    type={
-                      field.fieldType === 'number'
-                        ? 'number'
-                        : field.fieldType === 'date'
-                          ? 'date'
-                          : field.fieldType === 'email'
-                            ? 'email'
-                            : 'text'
-                    }
-                    value={existing?.value || ''}
-                    onSave={(v) => saveCustomField(field.id, v)}
-                  />
-                )}
+          <div className="field-group">
+            <h4 className="field-group-title">Identity</h4>
+            <div className="field-group-body">
+              <Field label="First Name">
+                <AutoSaveField label="First Name" value={employee.firstName} onSave={(v) => save({ firstName: v })} />
               </Field>
-            );
-          })}
-
-          <div className="overview-field overview-field-full">
-            <span className="overview-field-label">Time Off Policies ({assignedPolicies.length})</span>
-            {assignedPolicies.length === 0 && <p className="text-xs text-gray-400">No policies assigned.</p>}
-            {assignedPolicies.map((policy) => (
-              <div key={policy.id} className="flex items-center justify-between gap-2 py-1 text-sm">
-                <span>{policy.name}</span>
-                <button type="button" className="icon-btn" onClick={() => handleUnassignPolicy(policy.id)}>
-                  <span className="tip">Unassign</span>
-                  <XIcon className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            ))}
-            {unassignedPolicies.length > 0 && (
-              <select value="" onChange={(e) => handleAssignPolicy(e.target.value)} aria-label="Assign a time off policy">
-                <option value="">+ Assign a policy…</option>
-                {unassignedPolicies.map((policy) => (
-                  <option key={policy.id} value={policy.id}>
-                    {policy.name}
-                  </option>
-                ))}
-              </select>
-            )}
+              <Field label="Last Name">
+                <AutoSaveField label="Last Name" value={employee.lastName} onSave={(v) => save({ lastName: v })} />
+              </Field>
+              <Field label="Business Email">
+                <AutoSaveField label="Business Email" type="email" value={employee.email} onSave={(v) => save({ email: v })} />
+              </Field>
+              <Field label="Personal Email">
+                <AutoSaveField
+                  label="Personal Email"
+                  type="email"
+                  value={employee.personalEmail || ''}
+                  onSave={(v) => save({ personalEmail: v || null })}
+                />
+              </Field>
+            </div>
           </div>
 
+          <div className="field-group">
+            <h4 className="field-group-title">Role</h4>
+            <div className="field-group-body">
+              <Field label="Status">
+                <AutoSaveSelect
+                  label="Status"
+                  value={employee.statusId}
+                  onSave={(v) => save({ statusId: v })}
+                  options={statuses.map((s) => ({ value: s.id, label: s.name }))}
+                  emptyLabel="-- select --"
+                />
+              </Field>
+              <Field label="Department">
+                <AutoSaveSelect
+                  label="Department"
+                  value={employee.departmentId || ''}
+                  onSave={(v) => save({ departmentId: v || null })}
+                  options={departments.filter((d) => d.isActive).map((d) => ({ value: d.id, label: d.name }))}
+                />
+              </Field>
+              <Field label="Job Title">
+                <AutoSaveSelect
+                  label="Job Title"
+                  value={employee.jobTitleId || ''}
+                  onSave={(v) => save({ jobTitleId: v || null })}
+                  options={jobTitles.filter((j) => j.isActive).map((j) => ({ value: j.id, label: j.name }))}
+                />
+              </Field>
+              <Field label="Reports To">
+                <AutoSaveSelect
+                  label="Reports To"
+                  value={employee.managerId || ''}
+                  onSave={(v) => save({ managerId: v || null })}
+                  emptyLabel="-- no manager --"
+                  options={employees
+                    .filter((e) => e.id !== employee.id)
+                    .map((e) => ({ value: e.id, label: `${e.firstName} ${e.lastName}` }))}
+                />
+              </Field>
+            </div>
+          </div>
+
+          <div className="field-group">
+            <h4 className="field-group-title">Contract &amp; compensation</h4>
+            <div className="field-group-body">
+              <Field label="Contract Type">
+                <AutoSaveSelect
+                  label="Contract Type"
+                  value={employee.contractType || ''}
+                  onSave={(v) => save({ contractType: v || null })}
+                  options={[
+                    { value: 'part_time', label: 'Part Time' },
+                    { value: 'full_time', label: 'Full Time' },
+                  ]}
+                />
+              </Field>
+              <Field label="Compensation Type">
+                <AutoSaveSelect
+                  label="Compensation Type"
+                  value={employee.compensationType || ''}
+                  onSave={(v) => save({ compensationType: v || null })}
+                  options={[
+                    { value: 'hourly', label: 'Hourly' },
+                    { value: 'monthly', label: 'Monthly' },
+                  ]}
+                />
+              </Field>
+              {isOwner && (
+                <Field label={`Hourly Rate (${tenantCurrency})`}>
+                  <AutoSaveField
+                    label="Hourly Rate"
+                    type="number"
+                    value={centsToDollars(employee.hourlyRateCents)}
+                    onSave={(v) => save({ hourlyRateCents: dollarsToCents(v) })}
+                  />
+                </Field>
+              )}
+              {isOwner && (
+                <Field label={`Monthly Rate (${tenantCurrency})`}>
+                  <AutoSaveField
+                    label="Monthly Rate"
+                    type="number"
+                    value={centsToDollars(employee.monthlyRateCents)}
+                    onSave={(v) => save({ monthlyRateCents: dollarsToCents(v) })}
+                  />
+                </Field>
+              )}
+              <Field label="Start Date">
+                <AutoSaveField
+                  label="Start Date"
+                  type="date"
+                  value={employee.startDate ? employee.startDate.slice(0, 10) : ''}
+                  onSave={(v) => save({ startDate: v || null })}
+                />
+              </Field>
+              <Field label="End Date">
+                <AutoSaveField
+                  label="End Date"
+                  type="date"
+                  value={employee.endDate ? employee.endDate.slice(0, 10) : ''}
+                  onSave={(v) => save({ endDate: v || null })}
+                />
+              </Field>
+              <Field label="Contract URL">
+                <AutoSaveField
+                  label="Contract URL"
+                  type="url"
+                  value={employee.contractUrl || ''}
+                  onSave={(v) => save({ contractUrl: v || null })}
+                />
+              </Field>
+
+              <div className="overview-field overview-field-full">
+                <span className="overview-field-label">Time Off Policies ({assignedPolicies.length})</span>
+                <div className="min-w-0 flex-1">
+                  {assignedPolicies.length === 0 && <p className="text-xs text-ink-faint">No policies assigned.</p>}
+                  {assignedPolicies.map((policy) => (
+                    <div key={policy.id} className="flex items-center justify-between gap-2 py-1 text-sm">
+                      <span>{policy.name}</span>
+                      <button type="button" className="icon-btn" onClick={() => handleUnassignPolicy(policy.id)}>
+                        <span className="tip">Unassign</span>
+                        <XIcon className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                  {unassignedPolicies.length > 0 && (
+                    <select value="" onChange={(e) => handleAssignPolicy(e.target.value)} aria-label="Assign a time off policy">
+                      <option value="">+ Assign a policy…</option>
+                      {unassignedPolicies.map((policy) => (
+                        <option key={policy.id} value={policy.id}>
+                          {policy.name}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {customFields.length > 0 && (
+            <div className="field-group">
+              <h4 className="field-group-title">Custom fields</h4>
+              <div className="field-group-body">
+                {customFields.map((field) => {
+                  const existing = employee.customFieldVals?.find((v: any) => v.customFieldDefinitionId === field.id);
+                  return (
+                    <Field key={field.id} label={field.name}>
+                      {field.fieldType === 'select' ? (
+                        <AutoSaveSelect
+                          label={field.name}
+                          value={existing?.value || ''}
+                          onSave={(v) => saveCustomField(field.id, v)}
+                          options={(JSON.parse(field.options || '[]') as string[]).map((opt) => ({ value: opt, label: opt }))}
+                        />
+                      ) : (
+                        <AutoSaveField
+                          label={field.name}
+                          type={
+                            field.fieldType === 'number'
+                              ? 'number'
+                              : field.fieldType === 'date'
+                                ? 'date'
+                                : field.fieldType === 'email'
+                                  ? 'email'
+                                  : 'text'
+                          }
+                          value={existing?.value || ''}
+                          onSave={(v) => saveCustomField(field.id, v)}
+                        />
+                      )}
+                    </Field>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         <DetailSidebar

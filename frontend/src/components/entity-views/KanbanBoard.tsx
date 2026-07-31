@@ -14,6 +14,8 @@ interface KanbanBoardProps<T> {
   onMove: (item: T, newColumnKey: string) => void;
   renderCard: (item: T) => React.ReactNode;
   renderColumnFooter?: (columnKey: string) => React.ReactNode;
+  /** Optional total shown right of the item count in the column header (e.g. "USD 84k"). */
+  renderColumnTotal?: (columnItems: T[]) => React.ReactNode;
 }
 
 export default function KanbanBoard<T>({
@@ -24,6 +26,7 @@ export default function KanbanBoard<T>({
   onMove,
   renderCard,
   renderColumnFooter,
+  renderColumnTotal,
 }: KanbanBoardProps<T>) {
   const [draggingKey, setDraggingKey] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
@@ -55,6 +58,7 @@ export default function KanbanBoard<T>({
               {col.color && <span className="dot" style={{ background: col.color }} />}
               {col.label}
               <span className="cnt">{colItems.length}</span>
+              {renderColumnTotal && <span className="kanban-col-total">{renderColumnTotal(colItems)}</span>}
             </div>
             <div
               className={`kanban-body ${dragOverColumn === col.key ? 'drag-over' : ''}`}

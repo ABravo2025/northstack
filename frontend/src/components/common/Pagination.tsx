@@ -11,25 +11,17 @@ export default function Pagination({ page, pageCount, onPageChange }: Pagination
 
   return (
     <div className="pagination" role="navigation" aria-label="Table pagination">
-      <button
-        type="button"
-        className="btn-secondary px-2 py-1 text-xs"
-        disabled={page <= 1}
-        onClick={() => onPageChange(page - 1)}
-      >
-        Previous
-      </button>
-      <span className="pagination-status">
-        Page {page} of {pageCount}
-      </span>
-      <button
-        type="button"
-        className="btn-secondary px-2 py-1 text-xs"
-        disabled={page >= pageCount}
-        onClick={() => onPageChange(page + 1)}
-      >
-        Next
-      </button>
+      <div className="seg-nav">
+        <button type="button" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
+          Previous
+        </button>
+        <span className="seg-nav-status">
+          Page {page} of {pageCount}
+        </span>
+        <button type="button" disabled={page >= pageCount} onClick={() => onPageChange(page + 1)}>
+          Next
+        </button>
+      </div>
     </div>
   );
 }

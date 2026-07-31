@@ -6,6 +6,7 @@ import AutoSaveField from '../common/AutoSaveField';
 import AutoSaveSelect from '../common/AutoSaveSelect';
 import DetailSidebar from '../layout/DetailSidebar';
 import Field from '../common/Field';
+import OverviewActionsMenu from '../common/OverviewActionsMenu';
 import { PlusIcon, XIcon } from '../common/Icons';
 import { formatMoney } from '../../lib/currencies';
 
@@ -31,6 +32,7 @@ interface ContactDetailModalProps {
   onClose: () => void;
   onChanged: () => void;
   onSaved: (updatedContact: Contact) => void;
+  onRequestDelete: () => void;
 }
 
 export default function ContactDetailModal({
@@ -48,6 +50,7 @@ export default function ContactDetailModal({
   onClose,
   onChanged,
   onSaved,
+  onRequestDelete,
 }: ContactDetailModalProps) {
   const toast = useToast();
   const [addingOpportunity, setAddingOpportunity] = useState(false);
@@ -175,6 +178,10 @@ export default function ContactDetailModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="overview-panel-head">
+          <OverviewActionsMenu
+            className="overview-actions-trigger"
+            items={[{ label: 'Delete', onClick: onRequestDelete, danger: true }]}
+          />
           <button type="button" className="slideover-close" onClick={onClose} aria-label="Close">
             <XIcon className="h-4 w-4" />
           </button>
@@ -189,157 +196,185 @@ export default function ContactDetailModal({
 
         <div className="overview-panel-main">
         <div className="overview-panel-left">
-          <Field label="Phone">
-            <AutoSaveField label="Phone" value={contact.phone || ''} onSave={(v) => save({ phone: v || null })} />
-          </Field>
-          <Field label="Company">
-            <AutoSaveSelect
-              label="Company"
-              value={contact.companyId || ''}
-              onSave={(v) => save({ companyId: v || null })}
-              options={companies.map((c) => ({ value: c.id, label: c.name }))}
-              emptyLabel="-- none (lead without a confirmed company) --"
-            />
-          </Field>
-          <Field label="Title">
-            <AutoSaveField label="Title" value={contact.title || ''} onSave={(v) => save({ title: v || null })} />
-          </Field>
-          <Field label="Lead Status">
-            <AutoSaveSelect
-              label="Lead Status"
-              value={contact.leadStatus || ''}
-              onSave={(v) => save({ leadStatus: (v || null) as Contact['leadStatus'] })}
-              options={Object.entries(LEAD_STATUS_LABELS).map(([value, label]) => ({ value, label }))}
-            />
-          </Field>
-          <Field label="Lead Source">
-            <AutoSaveSelect
-              label="Lead Source"
-              value={contact.leadSourceId || ''}
-              onSave={(v) => save({ leadSourceId: v || null })}
-              options={leadSources.map((ls) => ({ value: ls.id, label: ls.name }))}
-            />
-          </Field>
-
-          {customFields.map((field) => {
-            const existing = contact.customFieldVals?.find((v) => v.customFieldDefinitionId === field.id);
-            return (
-              <Field key={field.id} label={field.name}>
-                {field.fieldType === 'select' ? (
-                  <AutoSaveSelect
-                    label={field.name}
-                    value={existing?.value || ''}
-                    onSave={(v) => saveCustomField(field.id, v)}
-                    options={(JSON.parse(field.options || '[]') as string[]).map((opt) => ({ value: opt, label: opt }))}
-                  />
-                ) : (
-                  <AutoSaveField
-                    label={field.name}
-                    type={field.fieldType === 'number' ? 'number' : field.fieldType === 'date' ? 'date' : field.fieldType === 'email' ? 'email' : 'text'}
-                    value={existing?.value || ''}
-                    onSave={(v) => saveCustomField(field.id, v)}
-                  />
-                )}
+          <div className="field-group">
+            <h4 className="field-group-title">Identity</h4>
+            <div className="field-group-body">
+              <Field label="Phone">
+                <AutoSaveField label="Phone" value={contact.phone || ''} onSave={(v) => save({ phone: v || null })} />
               </Field>
-            );
-          })}
+              <Field label="Company">
+                <AutoSaveSelect
+                  label="Company"
+                  value={contact.companyId || ''}
+                  onSave={(v) => save({ companyId: v || null })}
+                  options={companies.map((c) => ({ value: c.id, label: c.name }))}
+                  emptyLabel="-- none (lead without a confirmed company) --"
+                />
+              </Field>
+            </div>
+          </div>
+
+          <div className="field-group">
+            <h4 className="field-group-title">Role</h4>
+            <div className="field-group-body">
+              <Field label="Title">
+                <AutoSaveField label="Title" value={contact.title || ''} onSave={(v) => save({ title: v || null })} />
+              </Field>
+              <Field label="Lead Status">
+                <AutoSaveSelect
+                  label="Lead Status"
+                  value={contact.leadStatus || ''}
+                  onSave={(v) => save({ leadStatus: (v || null) as Contact['leadStatus'] })}
+                  options={Object.entries(LEAD_STATUS_LABELS).map(([value, label]) => ({ value, label }))}
+                />
+              </Field>
+            </div>
+          </div>
+
+          <div className="field-group">
+            <h4 className="field-group-title">Source</h4>
+            <div className="field-group-body">
+              <Field label="Lead Source">
+                <AutoSaveSelect
+                  label="Lead Source"
+                  value={contact.leadSourceId || ''}
+                  onSave={(v) => save({ leadSourceId: v || null })}
+                  options={leadSources.map((ls) => ({ value: ls.id, label: ls.name }))}
+                />
+              </Field>
+            </div>
+          </div>
+
+          {customFields.length > 0 && (
+            <div className="field-group">
+              <h4 className="field-group-title">Custom fields</h4>
+              <div className="field-group-body">
+                {customFields.map((field) => {
+                  const existing = contact.customFieldVals?.find((v) => v.customFieldDefinitionId === field.id);
+                  return (
+                    <Field key={field.id} label={field.name}>
+                      {field.fieldType === 'select' ? (
+                        <AutoSaveSelect
+                          label={field.name}
+                          value={existing?.value || ''}
+                          onSave={(v) => saveCustomField(field.id, v)}
+                          options={(JSON.parse(field.options || '[]') as string[]).map((opt) => ({ value: opt, label: opt }))}
+                        />
+                      ) : (
+                        <AutoSaveField
+                          label={field.name}
+                          type={field.fieldType === 'number' ? 'number' : field.fieldType === 'date' ? 'date' : field.fieldType === 'email' ? 'email' : 'text'}
+                          value={existing?.value || ''}
+                          onSave={(v) => saveCustomField(field.id, v)}
+                        />
+                      )}
+                    </Field>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {isFullView && coContacts.length > 0 && (
             <div className="overview-field overview-field-full">
-              <span className="overview-field-label">Other contacts at {company?.name}</span>
-              {coContacts.map((c) => (
-                <div key={c.id} className="py-1 text-sm">
-                  {c.firstName} {c.lastName} {c.isPrimary ? '★' : ''}
-                </div>
-              ))}
+              <div className="min-w-0 flex-1">
+                <span className="overview-field-label">Other contacts at {company?.name}</span>
+                {coContacts.map((c) => (
+                  <div key={c.id} className="py-1 text-sm">
+                    {c.firstName} {c.lastName} {c.isPrimary ? '★' : ''}
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
           <div className="overview-field overview-field-full">
-            <div className="flex items-center justify-between">
-              <span className="overview-field-label">Opportunities ({linkedOpportunities.length})</span>
-              <button type="button" className="icon-btn" onClick={openAddOpportunity}>
-                <span className="tip">Add opportunity</span>
-                <PlusIcon className="h-3.5 w-3.5" />
-              </button>
-            </div>
-            {linkedOpportunities.length === 0 && !addingOpportunity && (
-              <p className="text-xs text-gray-400">No opportunities linked yet.</p>
-            )}
-            {linkedOpportunities.map((opp) => (
-              <div key={opp.id} className="flex items-center justify-between gap-2 py-1 text-sm">
-                <span>{opp.name}</span>
-                <span className="text-xs text-gray-400">
-                  {opp.stage?.name} · {formatMoney(opp.amountCents, opp.currency)}
-                  {opp.pipeline?.isActive === false && ' · Archived'}
-                </span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between">
+                <span className="overview-field-label">Opportunities ({linkedOpportunities.length})</span>
+                <button type="button" className="icon-btn" onClick={openAddOpportunity}>
+                  <span className="tip">Add opportunity</span>
+                  <PlusIcon className="h-3.5 w-3.5" />
+                </button>
               </div>
-            ))}
-            {addingOpportunity && (
-              <div className="mt-2 flex flex-col gap-2 rounded-md border border-gray-200 p-2 dark:border-gray-800">
-                {linkableOpportunities.length > 0 && (
-                  <>
-                    <div className="flex items-center gap-1.5">
-                      <select className="select-compact flex-1" value={linkOppId} onChange={(e) => setLinkOppId(e.target.value)}>
-                        <option value="">Link existing opportunity…</option>
-                        {linkableOpportunities.map((o) => (
-                          <option key={o.id} value={o.id}>
-                            {o.name} ({o.stage?.name})
-                          </option>
-                        ))}
-                      </select>
-                      <button type="button" className="btn-secondary" onClick={handleLinkOpportunity} disabled={!linkOppId}>
-                        Link
-                      </button>
-                    </div>
-                    <p className="text-xs text-gray-400">or create a new one:</p>
-                  </>
-                )}
-                <label className="text-xs text-gray-500" htmlFor="new-contact-opp-pipeline">
-                  Pipeline
-                </label>
-                <select
-                  id="new-contact-opp-pipeline"
-                  value={newOppPipelineId}
-                  onChange={(e) => setNewOppPipelineId(e.target.value)}
-                >
-                  {activePipelines.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name} {p.type === 'account' ? '(needs a Company)' : ''}
-                    </option>
-                  ))}
-                </select>
-                {!company && activePipelines.find((p) => p.id === newOppPipelineId)?.type === 'lead' && (
-                  <>
-                    <label className="text-xs text-gray-500" htmlFor="new-contact-opp-company">
-                      Company name (this contact has none yet)
-                    </label>
-                    <input
-                      id="new-contact-opp-company"
-                      value={newOppCompanyName}
-                      onChange={(e) => setNewOppCompanyName(e.target.value)}
-                      placeholder="e.g. Acme Inc."
-                    />
-                  </>
-                )}
-                <label className="text-xs text-gray-500" htmlFor="new-contact-opp-name">
-                  Deal name
-                </label>
-                <input
-                  id="new-contact-opp-name"
-                  value={newOppName}
-                  onChange={(e) => setNewOppName(e.target.value)}
-                />
-                <div className="flex justify-end gap-2">
-                  <button type="button" className="btn-secondary" onClick={() => setAddingOpportunity(false)}>
-                    Cancel
-                  </button>
-                  <button type="button" className="btn-primary" onClick={handleCreateOpportunity}>
-                    Create opportunity
-                  </button>
+              {linkedOpportunities.length === 0 && !addingOpportunity && (
+                <p className="text-xs text-ink-faint">No opportunities linked yet.</p>
+              )}
+              {linkedOpportunities.map((opp) => (
+                <div key={opp.id} className="flex items-center justify-between gap-2 py-1 text-sm">
+                  <span>{opp.name}</span>
+                  <span className="text-xs text-ink-faint">
+                    {opp.stage?.name} · {formatMoney(opp.amountCents, opp.currency)}
+                    {opp.pipeline?.isActive === false && ' · Archived'}
+                  </span>
                 </div>
-              </div>
-            )}
+              ))}
+              {addingOpportunity && (
+                <div className="mt-2 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-gray-800">
+                  {linkableOpportunities.length > 0 && (
+                    <>
+                      <div className="flex items-center gap-1.5">
+                        <select className="select-compact flex-1" value={linkOppId} onChange={(e) => setLinkOppId(e.target.value)}>
+                          <option value="">Link existing opportunity…</option>
+                          {linkableOpportunities.map((o) => (
+                            <option key={o.id} value={o.id}>
+                              {o.name} ({o.stage?.name})
+                            </option>
+                          ))}
+                        </select>
+                        <button type="button" className="btn-secondary" onClick={handleLinkOpportunity} disabled={!linkOppId}>
+                          Link
+                        </button>
+                      </div>
+                      <p className="text-xs text-ink-faint">or create a new one:</p>
+                    </>
+                  )}
+                  <label className="text-xs text-ink-muted" htmlFor="new-contact-opp-pipeline">
+                    Pipeline
+                  </label>
+                  <select
+                    id="new-contact-opp-pipeline"
+                    value={newOppPipelineId}
+                    onChange={(e) => setNewOppPipelineId(e.target.value)}
+                  >
+                    {activePipelines.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} {p.type === 'account' ? '(needs a Company)' : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {!company && activePipelines.find((p) => p.id === newOppPipelineId)?.type === 'lead' && (
+                    <>
+                      <label className="text-xs text-ink-muted" htmlFor="new-contact-opp-company">
+                        Company name (this contact has none yet)
+                      </label>
+                      <input
+                        id="new-contact-opp-company"
+                        value={newOppCompanyName}
+                        onChange={(e) => setNewOppCompanyName(e.target.value)}
+                        placeholder="e.g. Acme Inc."
+                      />
+                    </>
+                  )}
+                  <label className="text-xs text-ink-muted" htmlFor="new-contact-opp-name">
+                    Deal name
+                  </label>
+                  <input
+                    id="new-contact-opp-name"
+                    value={newOppName}
+                    onChange={(e) => setNewOppName(e.target.value)}
+                  />
+                  <div className="flex justify-end gap-2">
+                    <button type="button" className="btn-secondary" onClick={() => setAddingOpportunity(false)}>
+                      Cancel
+                    </button>
+                    <button type="button" className="btn-primary" onClick={handleCreateOpportunity}>
+                      Create opportunity
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
         </div>

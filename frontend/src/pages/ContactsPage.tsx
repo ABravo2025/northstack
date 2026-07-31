@@ -13,6 +13,9 @@ import { useToast } from '../components/common/ToastProvider';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Pagination, { paginate } from '../components/common/Pagination';
 import SlideOver from '../components/common/SlideOver';
+import EmptyState from '../components/common/EmptyState';
+import TableSkeleton from '../components/common/TableSkeleton';
+import EntityCardList from '../components/common/EntityCardList';
 import ViewsBar from '../components/entity-views/ViewsBar';
 import FilterBar from '../components/entity-views/FilterBar';
 import KanbanBoard from '../components/entity-views/KanbanBoard';
@@ -23,12 +26,12 @@ import { useResizableColumns } from '../hooks/useResizableColumns';
 import ColumnVisibilityMenu from '../components/entity-views/ColumnVisibilityMenu';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { useColumnOrder } from '../hooks/useColumnOrder';
-import Avatar from '../components/common/Avatar';
+import Avatar, { getInitials } from '../components/common/Avatar';
 import CategoryChip from '../components/common/CategoryChip';
 import ContactDetailModal from '../components/crm/ContactDetailModal';
 import SearchableSelect from '../components/common/SearchableSelect';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
-import { ChevronDownIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/common/Icons';
+import { ChevronDownIcon, PlusIcon, SearchIcon, TrashIcon, UserCircleIcon } from '../components/common/Icons';
 import {
   applyFilters,
   applySort,
@@ -804,6 +807,11 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
               onClose={() => setViewingContactId(null)}
               onChanged={refreshAssociatedData}
               onSaved={patchContactInList}
+              onRequestDelete={() => {
+                setViewingContactId(null);
+                setDeletingContact(viewingContact);
+                setDeleteLinkedOpportunities(false);
+              }}
             />
           );
         })()}
@@ -844,7 +852,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
           <ColumnVisibilityMenu columns={toggleableColumns} isHidden={isColumnHidden} onToggle={toggleColumn} />
         )}
         {showAddFallback && (
-          <button className="btn-primary btn-toolbar-size" onClick={handleOpenAdd}>
+          <button className="btn-primary" onClick={handleOpenAdd}>
             <span className="inline-flex items-center gap-1.5">
               <PlusIcon className="h-4 w-4" />
               Add
@@ -854,16 +862,19 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
       </div>
 
       {loading ? (
-        <p className="mt-4">Loading...</p>
+        <TableSkeleton />
       ) : contacts.length === 0 ? (
-        <div className="empty-state">
-          <p>No contacts yet.</p>
-          {canEditContacts && (
-            <button className="btn btn-primary" onClick={handleOpenAdd}>
-              Add your first contact
-            </button>
-          )}
-        </div>
+        canEditContacts ? (
+          <EmptyState
+            icon={<UserCircleIcon />}
+            title="No contacts yet"
+            body="Add the people you work with at your companies."
+            primaryLabel="Add contact"
+            onPrimary={handleOpenAdd}
+          />
+        ) : (
+          <p className="mt-4">No contacts yet.</p>
+        )
       ) : viewType === 'kanban' ? (
         !groupFieldForKanban ? (
           <p className="mt-4">This view's group-by field no longer exists.</p>
@@ -899,10 +910,28 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
       ) : viewType === 'list' && !groupFieldForKanban ? (
         <p className="mt-4">This view's group-by field no longer exists.</p>
       ) : sortedContacts.length === 0 ? (
-        <p className="mt-4">No contacts match your search or filters.</p>
+        <EmptyState
+          icon={<SearchIcon />}
+          title={`No matches for "${search}"`}
+          body="Try a different term, or clear the filters."
+          primaryLabel="Clear filters"
+          primaryVariant="secondary"
+          onPrimary={() => {
+            setSearch('');
+            setViewFilters([]);
+          }}
+        />
       ) : (
         <>
-          <div className="full-table-wrap" ref={tableWrapRef}>
+          <EntityCardList
+            items={pagedContacts}
+            getKey={(contact) => contact.id}
+            getInitials={(contact) => getInitials(contact.firstName, contact.lastName)}
+            getName={(contact) => `${contact.firstName} ${contact.lastName}`}
+            getMeta={(contact) => [contact.title, contact.company?.name].filter(Boolean).join(' · ')}
+            onSelect={(contact) => setViewingContactId(contact.id)}
+          />
+          <div className="full-table-wrap has-mobile-cards" ref={tableWrapRef}>
             <table className="table full-table">
               <colgroup>
                 {visibleColumns.map((col) => (

@@ -4,6 +4,9 @@ import { useToast } from '../components/common/ToastProvider';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Pagination, { paginate } from '../components/common/Pagination';
 import SlideOver from '../components/common/SlideOver';
+import EmptyState from '../components/common/EmptyState';
+import TableSkeleton from '../components/common/TableSkeleton';
+import EntityCardList from '../components/common/EntityCardList';
 import ViewsBar from '../components/entity-views/ViewsBar';
 import FilterBar from '../components/entity-views/FilterBar';
 import KanbanBoard from '../components/entity-views/KanbanBoard';
@@ -16,13 +19,13 @@ import { useResizableColumns } from '../hooks/useResizableColumns';
 import ColumnVisibilityMenu from '../components/entity-views/ColumnVisibilityMenu';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { useColumnOrder } from '../hooks/useColumnOrder';
-import CsvImportExportMenu from '../components/entity-views/CsvImportExportMenu';
+import CsvImportExportMenu, { type CsvImportExportMenuHandle } from '../components/entity-views/CsvImportExportMenu';
 import EmployeeOverviewPanel from '../components/hr/EmployeeOverviewPanel';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
-import Avatar from '../components/common/Avatar';
+import Avatar, { getInitials } from '../components/common/Avatar';
 import StatusChip from '../components/common/StatusChip';
 import CategoryChip from '../components/common/CategoryChip';
-import { ChevronDownIcon, MailIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/common/Icons';
+import { ChevronDownIcon, MailIcon, PeopleIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/common/Icons';
 import {
   applyFilters,
   applySort,
@@ -75,7 +78,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const [tenantUsers, setTenantUsers] = useState<any[]>([]);
   const [collapsedListSections, setCollapsedListSections] = useState<Set<string>>(new Set());
   const [overviewEmployeeId, setOverviewEmployeeId] = useState<string | null>(null);
+  const [seedingSample, setSeedingSample] = useState(false);
   const tableWrapRef = useRef<HTMLDivElement>(null);
+  const csvMenuRef = useRef<CsvImportExportMenuHandle>(null);
 
   const [views, setViews] = useState<SavedView[]>([]);
   const [activeViewId, setActiveViewId] = useState<string | null>(() =>
@@ -318,6 +323,19 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     setEmployeeForm(emptyEmployeeForm);
     setCustomFieldValues({});
     setSlideOverMode('add');
+  };
+
+  const handleLoadSampleData = async () => {
+    setSeedingSample(true);
+    try {
+      const result = await api.seedSampleData(token);
+      toast.success(`Added ${result.employees} sample employees and ${result.clients} sample clients.`);
+      await loadEmployees();
+    } catch (error) {
+      toast.error('Failed to load sample data: ' + (error as Error).message);
+    } finally {
+      setSeedingSample(false);
+    }
   };
 
   const handleCreateEmployee = async (e: React.FormEvent) => {
@@ -1015,9 +1033,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         {viewType !== 'kanban' && (
           <ColumnVisibilityMenu columns={toggleableColumns} isHidden={isColumnHidden} onToggle={toggleColumn} />
         )}
-        {canEditEmployees && <CsvImportExportMenu token={token} onImported={loadEmployees} />}
+        {canEditEmployees && <CsvImportExportMenu ref={csvMenuRef} token={token} onImported={loadEmployees} />}
         {showAddFallback && (
-          <button className="btn-primary btn-toolbar-size" onClick={handleOpenAdd}>
+          <button className="btn-primary" onClick={handleOpenAdd}>
             <span className="inline-flex items-center gap-1.5">
               <PlusIcon className="h-4 w-4" />
               Add
@@ -1027,14 +1045,21 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       </div>
 
       {loading ? (
-        <p className="mt-4">Loading...</p>
+        <TableSkeleton />
       ) : employees.length === 0 ? (
-        <div className="empty-state">
-          <p>No employees yet.</p>
-          <button className="btn btn-primary" onClick={handleOpenAdd}>
-            Add your first employee
+        <EmptyState
+          icon={<PeopleIcon />}
+          title="No employees yet"
+          body="Add your team one by one, import a CSV, or load sample data."
+          primaryLabel="Add employee"
+          onPrimary={handleOpenAdd}
+          secondaryLabel={canEditEmployees ? 'Import CSV' : undefined}
+          onSecondary={canEditEmployees ? () => csvMenuRef.current?.openImport() : undefined}
+        >
+          <button type="button" className="btn-ghost btn-md" onClick={handleLoadSampleData} disabled={seedingSample}>
+            {seedingSample ? 'Loading…' : 'Load sample data'}
           </button>
-        </div>
+        </EmptyState>
       ) : viewType === 'kanban' ? (
         !groupFieldForKanban ? (
           <p className="mt-4">This view's group-by field no longer exists.</p>
@@ -1056,7 +1081,12 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                 <div className="kc-name">
                   {emp.firstName} {emp.lastName}
                 </div>
-                <div className="kc-meta">{emp.departmentDefn?.name}</div>
+                <div className="kc-meta">{emp.jobTitleDefn?.name}</div>
+                {emp.manager && (
+                  <div className="kcard-foot">
+                    <span className="kc-owner">{getInitials(emp.manager.firstName, emp.manager.lastName)}</span>
+                  </div>
+                )}
               </>
             )}
             renderColumnFooter={
@@ -1076,10 +1106,29 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       ) : viewType === 'list' && !groupFieldForKanban ? (
         <p className="mt-4">This view's group-by field no longer exists.</p>
       ) : sortedEmployees.length === 0 ? (
-        <p className="mt-4">No employees match your search or filters.</p>
+        <EmptyState
+          icon={<SearchIcon />}
+          title={`No matches for "${employeeSearch}"`}
+          body="Try a different term, or clear the filters."
+          primaryLabel="Clear filters"
+          primaryVariant="secondary"
+          onPrimary={() => {
+            setEmployeeSearch('');
+            setViewFilters([]);
+          }}
+        />
       ) : (
         <>
-          <div className="full-table-wrap" ref={tableWrapRef}>
+          <EntityCardList
+            items={pagedEmployees}
+            getKey={(emp) => emp.id}
+            getInitials={(emp) => getInitials(emp.firstName, emp.lastName)}
+            getName={(emp) => `${emp.firstName} ${emp.lastName}`}
+            getMeta={(emp) => [emp.jobTitleDefn?.name, emp.departmentDefn?.name].filter(Boolean).join(' · ')}
+            getStatusColor={(emp) => emp.statusDefn?.color || '#6b7280'}
+            onSelect={(emp) => setOverviewEmployeeId(emp.id)}
+          />
+          <div className="full-table-wrap has-mobile-cards" ref={tableWrapRef}>
             <table className="table full-table">
               <colgroup>
                 {visibleColumns.map((col) => (
@@ -1258,9 +1307,15 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
             departments={employeeDepartments}
             jobTitles={employeeJobTitles}
             timeOffPolicies={timeOffPolicies}
+            canManageEmployees={canManageCustomFields}
             onClose={() => setOverviewEmployeeId(null)}
             onChanged={refreshEmployeesSilently}
             onSaved={patchEmployeeInList}
+            onRequestDelete={() => {
+              setOverviewEmployeeId(null);
+              setDeletingEmployee(overviewEmployee);
+            }}
+            onInvite={() => handleInviteEmployee(overviewEmployee.id)}
           />
         );
       })()}

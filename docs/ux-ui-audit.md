@@ -34,8 +34,10 @@ Los mensajes de error/éxito son bloques `.alert` fijos arriba de la card (`Empl
 **UX-07 — Dos hubs de configuración con puntos de entrada distintos**
 `/settings` (ícono de engranaje, abajo a la izquierda del sidebar → Custom Fields, Statuses) vs. `/company` (avatar de usuario, arriba a la derecha → Appearance, Users). Está documentado que pasó por 3 iteraciones explícitas con el usuario antes de asentarse en este diseño (`docs/tareas-desarrollo.md`, entradas del 2026-07-11). Lo anoto igual: 3 rondas de ajuste sobre el mismo problema es una señal de que el modelo mental de "dónde vive cada configuración" todavía no calzó con una intuición estable, más que evidencia de que ya está resuelto. Antes de invertir más en esto, valdría más una prueba con alguien nuevo al producto que una cuarta iteración a ciegas.
 
-**UX-08 — Estados de carga y vacíos sin diseñar**
+**UX-08 — Estados de carga y vacíos sin diseñar — ✅ Resuelto 2026-07-31**
 "Loading...", "No employees yet.", "No custom fields defined for this module yet." son texto plano sin estructura — sin skeleton, sin ilustración, sin CTA contextual (ej. "No employees yet" podría llevar directo al form de alta).
+
+*Resuelto en `docs/tareas-ux-ui.md` Tarea 4: `EmptyState.tsx` (ícono + título + body + CTA primario/secundario, con `children` para acciones extra) y `TableSkeleton.tsx` (avatar + barras, con pulso opcional) reemplazan el texto plano en Employees, Companies, Contacts, Opportunities, Public Forms, Time Off Policies, Overview y el chequeo de sesión inicial (`App.tsx`). Ver `design-system.md` §9.*
 
 ## Hallazgos — Impacto bajo / pulido
 

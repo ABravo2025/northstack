@@ -5,8 +5,19 @@ import ConfirmDialog from '../components/common/ConfirmDialog';
 import SlideOver from '../components/common/SlideOver';
 import KanbanBoard from '../components/entity-views/KanbanBoard';
 import OpportunityDetailModal from '../components/crm/OpportunityDetailModal';
+import EmptyState from '../components/common/EmptyState';
+import TableSkeleton from '../components/common/TableSkeleton';
 import { formatMoney } from '../lib/currencies';
-import { PlusIcon } from '../components/common/Icons';
+import { getInitials } from '../components/common/Avatar';
+import { PlusIcon, TargetIcon } from '../components/common/Icons';
+
+// A deal that hasn't moved stage in this many days shows its age in red (.kc-age.late).
+const LATE_STAGE_DAYS_THRESHOLD = 14;
+
+function daysSince(dateStr: string): number {
+  const ms = Date.now() - new Date(dateStr).getTime();
+  return Math.max(0, Math.floor(ms / (1000 * 60 * 60 * 24)));
+}
 
 interface OpportunitiesPageProps {
   user: any;
@@ -163,7 +174,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
   if (loading) {
     return (
       <div className="page-full">
-        <p className="mt-4">Loading...</p>
+        <TableSkeleton />
       </div>
     );
   }
@@ -318,6 +329,10 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
               onClose={() => setViewingId(null)}
               onChanged={reloadOpportunities}
               onSaved={patchOpportunityInList}
+              onRequestDelete={() => {
+                setViewingId(null);
+                setDeleting(viewingOpportunity);
+              }}
             />
           );
         })()}
@@ -325,7 +340,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
       <div className="page-toolbar">
         <h2>Opportunities</h2>
         {canEdit && currentPipeline && (
-          <button className="btn-primary btn-toolbar-size" onClick={handleOpenAdd}>
+          <button className="btn-primary" onClick={handleOpenAdd}>
             <span className="inline-flex items-center gap-1.5">
               <PlusIcon className="h-4 w-4" />
               Add Opportunity
@@ -365,7 +380,19 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
             </div>
           ))}
         </div>
-      ) : currentPipeline ? (
+      ) : currentPipeline ? opportunities.filter((o) => o.pipelineId === currentPipeline.id).length === 0 ? (
+        canEdit ? (
+          <EmptyState
+            icon={<TargetIcon />}
+            title="No opportunities here"
+            body="Opportunities move deals through your pipeline stages."
+            primaryLabel="Add opportunity"
+            onPrimary={handleOpenAdd}
+          />
+        ) : (
+          <p className="mt-4">No opportunities here.</p>
+        )
+      ) : (
         <KanbanBoard
           columns={currentPipeline.stages
             .filter((s) => s.isActive)
@@ -375,14 +402,36 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
           getItemKey={(o) => o.id}
           getItemColumn={(o) => o.stageId}
           onMove={canEdit ? handleMove : () => {}}
-          renderCard={(opp) => (
-            <div onClick={() => setViewingId(opp.id)} style={{ cursor: 'pointer' }}>
-              <div className="kc-name">{opp.name}</div>
-              <div className="kc-meta">{opp.company?.name}</div>
-              <div className="kc-meta">{formatMoney(opp.amountCents, opp.currency)}</div>
-              {opp.nextStepNote && <div className="kc-meta">Next: {opp.nextStepNote}</div>}
-            </div>
-          )}
+          renderCard={(opp) => {
+            const mostRecentEntry = opp.stageHistory?.[0];
+            const stageDays = mostRecentEntry ? daysSince(mostRecentEntry.enteredAt) : null;
+            const isLate = stageDays !== null && stageDays > LATE_STAGE_DAYS_THRESHOLD;
+            return (
+              <div onClick={() => setViewingId(opp.id)} style={{ cursor: 'pointer' }}>
+                <div className="kcard-top">
+                  <div className="kc-name">{opp.name}</div>
+                  <div className="kc-amount">{formatMoney(opp.amountCents, opp.currency)}</div>
+                </div>
+                <div className="kc-meta">{opp.company?.name}</div>
+                <div className="kcard-foot">
+                  <span className="kc-owner">{getInitials(opp.owner?.firstName, opp.owner?.lastName)}</span>
+                  {stageDays !== null && (
+                    <span className={`kc-age ${isLate ? 'late' : ''}`}>
+                      {stageDays === 0 ? 'Entered today' : `${stageDays}d in stage`}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          }}
+          renderColumnTotal={(colItems) =>
+            colItems.length === 0
+              ? null
+              : formatMoney(
+                  colItems.reduce((sum, o) => sum + o.amountCents, 0),
+                  colItems[0].currency,
+                )
+          }
           renderColumnFooter={
             canEdit
               ? () => (

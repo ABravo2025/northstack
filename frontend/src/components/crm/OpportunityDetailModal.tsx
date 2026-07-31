@@ -5,6 +5,7 @@ import AutoSaveField from '../common/AutoSaveField';
 import AutoSaveSelect from '../common/AutoSaveSelect';
 import DetailSidebar from '../layout/DetailSidebar';
 import Field from '../common/Field';
+import OverviewActionsMenu from '../common/OverviewActionsMenu';
 import { PlusIcon, XIcon } from '../common/Icons';
 
 interface OpportunityDetailModalProps {
@@ -19,6 +20,7 @@ interface OpportunityDetailModalProps {
   onClose: () => void;
   onChanged: () => void;
   onSaved: (updatedOpportunity: Opportunity) => void;
+  onRequestDelete: () => void;
 }
 
 function daysSince(dateStr: string): number {
@@ -38,6 +40,7 @@ export default function OpportunityDetailModal({
   onClose,
   onChanged,
   onSaved,
+  onRequestDelete,
 }: OpportunityDetailModalProps) {
   const toast = useToast();
   const [newContactId, setNewContactId] = useState('');
@@ -116,6 +119,10 @@ export default function OpportunityDetailModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="overview-panel-head">
+          <OverviewActionsMenu
+            className="overview-actions-trigger"
+            items={[{ label: 'Delete', onClick: onRequestDelete, danger: true }]}
+          />
           <button type="button" className="slideover-close" onClick={onClose} aria-label="Close">
             <XIcon className="h-4 w-4" />
           </button>
@@ -133,7 +140,7 @@ export default function OpportunityDetailModal({
                 <div
                   key={stage.id}
                   className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${
-                    isCurrent ? 'text-white' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                    isCurrent ? 'text-white' : 'bg-surface-2 text-ink-muted dark:bg-gray-800 dark:text-gray-400'
                   }`}
                   style={isCurrent ? { backgroundColor: stage.color || '#3c6da1' } : undefined}
                 >
@@ -142,7 +149,7 @@ export default function OpportunityDetailModal({
               );
             })}
             {timeInStage !== null && (
-              <span className="ml-auto shrink-0 text-xs text-gray-400">
+              <span className="ml-auto shrink-0 text-xs text-ink-faint">
                 {timeInStage === 0 ? 'Entered today' : `${timeInStage}d in stage`}
               </span>
             )}
@@ -151,129 +158,148 @@ export default function OpportunityDetailModal({
 
         <div className="overview-panel-main">
         <div className="overview-panel-left">
-          <Field label="Deal Name">
-            <AutoSaveField label="Deal Name" value={opportunity.name} onSave={(v) => save({ name: v })} />
-          </Field>
-          <Field label="Company">
-            <AutoSaveSelect
-              label="Company"
-              value={opportunity.companyId}
-              onSave={(v) => save({ companyId: v })}
-              options={companies.map((c) => ({ value: c.id, label: c.name }))}
-              emptyLabel="-- select --"
-            />
-          </Field>
-          <Field label="Stage">
-            <div className="dropdown-trigger-wrap">
-              <select
-                className="dropdown-trigger dt-status"
-                value={opportunity.stageId}
-                onChange={(e) => handleStageChange(e.target.value).catch(() => {})}
-              >
-                {sortedStages.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-              <svg className="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M6 9l6 6 6-6" />
-              </svg>
+          <div className="field-group">
+            <h4 className="field-group-title">Deal</h4>
+            <div className="field-group-body">
+              <Field label="Deal Name">
+                <AutoSaveField label="Deal Name" value={opportunity.name} onSave={(v) => save({ name: v })} />
+              </Field>
+              <Field label="Company">
+                <AutoSaveSelect
+                  label="Company"
+                  value={opportunity.companyId}
+                  onSave={(v) => save({ companyId: v })}
+                  options={companies.map((c) => ({ value: c.id, label: c.name }))}
+                  emptyLabel="-- select --"
+                />
+              </Field>
+              <Field label="Amount">
+                <AutoSaveField
+                  label="Amount"
+                  type="number"
+                  value={(opportunity.amountCents / 100).toString()}
+                  onSave={(v) => save({ amountCents: Math.round(Number.parseFloat(v || '0') * 100) })}
+                />
+              </Field>
+              <Field label="Currency">
+                <AutoSaveField
+                  label="Currency"
+                  value={opportunity.currency}
+                  onSave={(v) => save({ currency: v.toUpperCase() })}
+                />
+              </Field>
+              <Field label="Owner">
+                <AutoSaveSelect
+                  label="Owner"
+                  value={opportunity.ownerId}
+                  onSave={(v) => save({ ownerId: v })}
+                  options={tenantUsers.map((u) => ({ value: u.id, label: `${u.firstName} ${u.lastName}` }))}
+                  emptyLabel="-- select --"
+                />
+              </Field>
             </div>
-          </Field>
-          {currentStage?.outcome === 'lost' && (
-            <Field label="Loss Reason">
-              <AutoSaveSelect
-                label="Loss Reason"
-                value={opportunity.lossReasonId || ''}
-                onSave={(v) => save({ lossReasonId: v || null })}
-                options={lossReasons.map((lr) => ({ value: lr.id, label: lr.name }))}
-              />
-            </Field>
-          )}
-          <Field label="Amount">
-            <AutoSaveField
-              label="Amount"
-              type="number"
-              value={(opportunity.amountCents / 100).toString()}
-              onSave={(v) => save({ amountCents: Math.round(Number.parseFloat(v || '0') * 100) })}
-            />
-          </Field>
-          <Field label="Currency">
-            <AutoSaveField
-              label="Currency"
-              value={opportunity.currency}
-              onSave={(v) => save({ currency: v.toUpperCase() })}
-            />
-          </Field>
-          <Field label="Owner">
-            <AutoSaveSelect
-              label="Owner"
-              value={opportunity.ownerId}
-              onSave={(v) => save({ ownerId: v })}
-              options={tenantUsers.map((u) => ({ value: u.id, label: `${u.firstName} ${u.lastName}` }))}
-              emptyLabel="-- select --"
-            />
-          </Field>
-          <Field label="Estimated Close Date">
-            <AutoSaveField
-              label="Estimated Close Date"
-              type="date"
-              value={opportunity.estimatedCloseDate ? opportunity.estimatedCloseDate.slice(0, 10) : ''}
-              onSave={(v) => save({ estimatedCloseDate: v || null })}
-            />
-          </Field>
-          <Field label="Next Step Date">
-            <AutoSaveField
-              label="Next Step Date"
-              type="date"
-              value={opportunity.nextStepDate ? opportunity.nextStepDate.slice(0, 10) : ''}
-              onSave={(v) => save({ nextStepDate: v || null })}
-            />
-          </Field>
-          <Field label="Next Step">
-            <AutoSaveField
-              label="Next Step"
-              value={opportunity.nextStepNote || ''}
-              onSave={(v) => save({ nextStepNote: v || null })}
-              placeholder="What's the next action?"
-            />
-          </Field>
+          </div>
+
+          <div className="field-group">
+            <h4 className="field-group-title">Stage</h4>
+            <div className="field-group-body">
+              <Field label="Stage">
+                <div className="dropdown-trigger-wrap">
+                  <select
+                    className="dropdown-trigger dt-status"
+                    value={opportunity.stageId}
+                    onChange={(e) => handleStageChange(e.target.value).catch(() => {})}
+                  >
+                    {sortedStages.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                  <svg className="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </div>
+              </Field>
+              {currentStage?.outcome === 'lost' && (
+                <Field label="Loss Reason">
+                  <AutoSaveSelect
+                    label="Loss Reason"
+                    value={opportunity.lossReasonId || ''}
+                    onSave={(v) => save({ lossReasonId: v || null })}
+                    options={lossReasons.map((lr) => ({ value: lr.id, label: lr.name }))}
+                  />
+                </Field>
+              )}
+            </div>
+          </div>
+
+          <div className="field-group">
+            <h4 className="field-group-title">Next step</h4>
+            <div className="field-group-body">
+              <Field label="Estimated Close Date">
+                <AutoSaveField
+                  label="Estimated Close Date"
+                  type="date"
+                  value={opportunity.estimatedCloseDate ? opportunity.estimatedCloseDate.slice(0, 10) : ''}
+                  onSave={(v) => save({ estimatedCloseDate: v || null })}
+                />
+              </Field>
+              <Field label="Next Step Date">
+                <AutoSaveField
+                  label="Next Step Date"
+                  type="date"
+                  value={opportunity.nextStepDate ? opportunity.nextStepDate.slice(0, 10) : ''}
+                  onSave={(v) => save({ nextStepDate: v || null })}
+                />
+              </Field>
+              <Field label="Next Step" full>
+                <AutoSaveField
+                  label="Next Step"
+                  value={opportunity.nextStepNote || ''}
+                  onSave={(v) => save({ nextStepNote: v || null })}
+                  placeholder="What's the next action?"
+                />
+              </Field>
+            </div>
+          </div>
 
           <div className="overview-field overview-field-full">
-            <span className="overview-field-label">Contacts ({opportunity.contactLinks?.length ?? 0})</span>
-            {(opportunity.contactLinks ?? []).map((link) => (
-              <div key={link.id} className="flex items-center justify-between gap-2 py-1 text-sm">
-                <span>
-                  {link.contact.firstName} {link.contact.lastName}
-                  {link.role ? ` (${link.role})` : ''}
-                </span>
-                <button type="button" className="icon-btn danger" onClick={() => handleRemoveContact(link.contactId)}>
-                  <span className="tip">Unlink</span>
-                  <XIcon className="h-3.5 w-3.5" />
+            <div className="min-w-0 flex-1">
+              <span className="overview-field-label">Contacts ({opportunity.contactLinks?.length ?? 0})</span>
+              {(opportunity.contactLinks ?? []).map((link) => (
+                <div key={link.id} className="flex items-center justify-between gap-2 py-1 text-sm">
+                  <span>
+                    {link.contact.firstName} {link.contact.lastName}
+                    {link.role ? ` (${link.role})` : ''}
+                  </span>
+                  <button type="button" className="icon-btn danger" onClick={() => handleRemoveContact(link.contactId)}>
+                    <span className="tip">Unlink</span>
+                    <XIcon className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+              <div className="mt-2 flex items-center gap-1.5">
+                <select className="select-compact flex-1" value={newContactId} onChange={(e) => setNewContactId(e.target.value)}>
+                  <option value="">-- add contact --</option>
+                  {linkableContacts.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.firstName} {c.lastName}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  className="w-24"
+                  type="text"
+                  placeholder="Role"
+                  value={newContactRole}
+                  onChange={(e) => setNewContactRole(e.target.value)}
+                />
+                <button type="button" className="icon-btn" onClick={handleAddContact} disabled={!newContactId}>
+                  <span className="tip">Add</span>
+                  <PlusIcon className="h-3.5 w-3.5" />
                 </button>
               </div>
-            ))}
-            <div className="mt-2 flex items-center gap-1.5">
-              <select className="select-compact flex-1" value={newContactId} onChange={(e) => setNewContactId(e.target.value)}>
-                <option value="">-- add contact --</option>
-                {linkableContacts.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.firstName} {c.lastName}
-                  </option>
-                ))}
-              </select>
-              <input
-                className="w-24"
-                type="text"
-                placeholder="Role"
-                value={newContactRole}
-                onChange={(e) => setNewContactRole(e.target.value)}
-              />
-              <button type="button" className="icon-btn" onClick={handleAddContact} disabled={!newContactId}>
-                <span className="tip">Add</span>
-                <PlusIcon className="h-3.5 w-3.5" />
-              </button>
             </div>
           </div>
 

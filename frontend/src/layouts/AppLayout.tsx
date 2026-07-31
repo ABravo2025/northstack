@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 import TopBar from '../components/layout/TopBar';
+import MobileTabbar from '../components/layout/MobileTabbar';
 
 interface AppLayoutProps {
   user: any;
@@ -30,6 +31,7 @@ export default function AppLayout({ user, token, onLogout }: AppLayoutProps) {
           <Outlet />
         </main>
       </div>
+      <MobileTabbar />
     </div>
   );
 }

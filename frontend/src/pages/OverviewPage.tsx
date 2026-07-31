@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { api, type Task } from '../api';
 import { useToast } from '../components/common/ToastProvider';
+import TableSkeleton from '../components/common/TableSkeleton';
 import { ChevronLeftIcon, ChevronRightIcon } from '../components/common/Icons';
 import OnboardingChecklist from '../components/layout/OnboardingChecklist';
 import MyTasksWidget from '../components/tasks/MyTasksWidget';
@@ -166,14 +167,14 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
             <h2>
               {MONTH_LABELS[cursor.month]} {cursor.year}
             </h2>
-            <div className="flex items-center gap-1.5 ml-auto">
-              <button className="btn-secondary px-2 py-1 text-xs" onClick={goToPrevMonth} aria-label="Previous month">
+            <div className="seg-nav ml-auto">
+              <button type="button" onClick={goToPrevMonth} aria-label="Previous month">
                 <ChevronLeftIcon className="h-3.5 w-3.5" />
               </button>
-              <button className="btn-secondary px-2 py-1 text-xs" onClick={goToToday}>
+              <button type="button" onClick={goToToday}>
                 Today
               </button>
-              <button className="btn-secondary px-2 py-1 text-xs" onClick={goToNextMonth} aria-label="Next month">
+              <button type="button" onClick={goToNextMonth} aria-label="Next month">
                 <ChevronRightIcon className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -181,7 +182,7 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
 
           <div className="mt-4">
             {loading ? (
-              <p>Loading...</p>
+              <TableSkeleton rows={5} columns={7} />
             ) : (
               <table className="calendar-table">
                 <thead>

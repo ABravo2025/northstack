@@ -67,12 +67,12 @@ export default function ConfirmDialog({
           </div>
         )}
         <div className="confirm-dialog-actions">
-          <button type="button" className="btn-secondary" onClick={onCancel}>
+          <button type="button" className="btn-ghost" onClick={onCancel}>
             Cancel
           </button>
           <button
             type="button"
-            className={danger ? 'btn-danger' : 'btn-primary'}
+            className={danger ? 'btn-danger-solid' : 'btn-primary'}
             onClick={onConfirm}
             disabled={!canConfirm}
             autoFocus={!confirmText}

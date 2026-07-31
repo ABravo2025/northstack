@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import ConfirmDialog from '../components/common/ConfirmDialog';
@@ -6,13 +6,15 @@ import Pagination, { paginate } from '../components/common/Pagination';
 import SlideOver from '../components/common/SlideOver';
 import { CheckIcon, CopyIcon, LockIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/common/Icons';
 import ColumnResizeHandle from '../components/entity-views/ColumnResizeHandle';
+import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
 import { useResizableColumns } from '../hooks/useResizableColumns';
 import ColumnVisibilityMenu from '../components/entity-views/ColumnVisibilityMenu';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { useColumnOrder } from '../hooks/useColumnOrder';
-import Avatar from '../components/common/Avatar';
+import Avatar, { getInitials } from '../components/common/Avatar';
 import RoleChip from '../components/common/RoleChip';
 import StatusChip from '../components/common/StatusChip';
+import EntityCardList from '../components/common/EntityCardList';
 
 const PAGE_SIZE = 20;
 // Frozen columns stay pinned to the left through horizontal scroll and can't
@@ -93,6 +95,7 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
   const { getWidth: getInviteColumnWidth, startResize: startInviteResize } = useResizableColumns(
     'northstack:columnWidths:companyUserInvite',
   );
+  const tableWrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadUsers();
@@ -296,7 +299,7 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
           </div>
         )}
         <ColumnVisibilityMenu columns={COLUMNS} isHidden={isColumnHidden} onToggle={toggleColumn} />
-        <button className="btn-primary btn-toolbar-size" onClick={() => setInviteOpen(true)}>
+        <button className="btn-primary" onClick={() => setInviteOpen(true)}>
           <span className="inline-flex items-center gap-1.5">
             <PlusIcon className="h-4 w-4" />
             Invite
@@ -308,7 +311,15 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
         <p className="mt-4">No users match your search.</p>
       ) : (
         <>
-          <div className="full-table-wrap">
+          <EntityCardList
+            items={pagedUsers}
+            getKey={(u) => u.id}
+            getInitials={(u) => getInitials(u.firstName, u.lastName)}
+            getName={(u) => `${u.firstName} ${u.lastName}`}
+            getMeta={(u) => u.role.charAt(0).toUpperCase() + u.role.slice(1)}
+            getStatusColor={(u) => (u.status === 'active' ? '#047857' : '#6b7280')}
+          />
+          <div className="full-table-wrap has-mobile-cards" ref={tableWrapRef}>
             <table className="table full-table">
               <colgroup>
                 {visibleColumns.map((col) => (
@@ -434,9 +445,20 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
                     </tr>
                   );
                 })}
+                <tr className="ghost-row">
+                  <td colSpan={visibleColumns.length + 1} className="ghost-row-cell" onClick={() => setInviteOpen(true)}>
+                    <span className="ghost-row-inner">
+                      <span className="ghost-plus-box">
+                        <PlusIcon className="h-3 w-3" />
+                      </span>
+                      Invite
+                    </span>
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
+          <HorizontalScrollbar targetRef={tableWrapRef} />
           <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
         </>
       )}

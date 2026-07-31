@@ -30,15 +30,15 @@
 .form-group input,
 .form-group select,
 .form-group textarea {
-  @apply rounded-md border border-gray-300 bg-white px-2.5 py-2 text-sm text-brand-navy dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100;
+  @apply rounded-md border border-line-strong bg-surface-1 px-2.5 py-2 text-sm text-brand-navy dark:border-gray-600 dark:bg-gray-800 dark:text-dark-ink;
 }
 
 .select-compact {
-  @apply rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-brand-navy dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100;
+  @apply rounded-md border border-line-strong bg-surface-1 px-2 py-1 text-xs text-brand-navy dark:border-gray-600 dark:bg-gray-800 dark:text-dark-ink;
 }
 
 .select-compact option {
-  @apply bg-white text-brand-navy dark:bg-gray-800 dark:text-gray-100;
+  @apply bg-surface-1 text-brand-navy dark:bg-gray-800 dark:text-dark-ink;
 }
 
 .form-group input:focus,
@@ -68,15 +68,15 @@
 }
 
 .color-swatch-trigger {
-  @apply border border-gray-300 dark:border-gray-600;
+  @apply border border-line-strong dark:border-gray-600;
 }
 
 .color-swatch-custom {
-  @apply flex items-center justify-center border border-dashed border-gray-400 bg-transparent text-sm leading-none text-gray-500 dark:border-gray-500 dark:text-gray-400;
+  @apply flex items-center justify-center border border-dashed border-gray-400 bg-transparent text-sm leading-none text-ink-muted dark:border-gray-500 dark:text-dark-ink-muted;
 }
 
 .color-picker-section-label {
-  @apply mt-2 mb-1.5 text-xs font-medium tracking-wide text-gray-500 uppercase first:mt-0 dark:text-gray-400;
+  @apply mt-2 mb-1.5 text-xs font-medium tracking-wide text-ink-muted uppercase first:mt-0 dark:text-dark-ink-muted;
 }
 
 .color-picker-custom-row {
@@ -84,11 +84,11 @@
 }
 
 .time-off-policy-chip {
-  @apply mr-1.5 mb-1 inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-xs text-brand-navy dark:bg-gray-700 dark:text-gray-100;
+  @apply mr-1.5 mb-1 inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-2.5 py-1 text-xs text-brand-navy dark:bg-gray-700 dark:text-dark-ink;
 }
 
 .time-off-policy-chip-remove {
-  @apply cursor-pointer leading-none text-gray-400 hover:text-red-500;
+  @apply cursor-pointer leading-none text-ink-faint hover:text-red-500;
 }
 
 .time-off-active-tag {
@@ -96,7 +96,7 @@
 }
 
 .color-swatch-preview {
-  @apply relative inline-flex h-7 w-7 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-gray-300 dark:border-gray-600;
+  @apply relative inline-flex h-7 w-7 cursor-pointer items-center justify-center overflow-hidden rounded-full border border-line-strong dark:border-gray-600;
 }
 
 .color-swatch-preview input[type='color'] {
@@ -104,33 +104,48 @@
 }
 
 .color-hex-input {
-  @apply w-24 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs text-brand-navy dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100;
+  @apply w-24 rounded-md border border-line-strong bg-surface-1 px-2 py-1 text-xs text-brand-navy dark:border-gray-600 dark:bg-gray-800 dark:text-dark-ink;
 }
 
 .btn-primary {
-  @apply btn bg-brand-blue text-white hover:bg-brand-navy;
+  @apply btn bg-accent text-white hover:bg-accent-hover;
 }
 
 .btn-secondary {
-  @apply btn bg-gray-500 text-white hover:bg-gray-600;
+  @apply btn border border-line-strong bg-surface-1 text-ink hover:bg-surface-2 dark:border-dark-line dark:bg-dark-surface dark:text-dark-ink dark:hover:bg-white/[0.06];
+}
+
+/* Lower-weight action than .btn-secondary — Dismiss, Load sample data,
+   Cancel inside a popover. No border, no fill until hover. */
+.btn-ghost {
+  @apply btn bg-transparent text-ink-muted hover:bg-surface-2 hover:text-ink dark:text-dark-ink-muted dark:hover:bg-white/[0.06] dark:hover:text-dark-ink;
 }
 
 .btn-outline {
-  @apply btn border border-brand-blue bg-brand-cream text-brand-blue hover:bg-brand-blue/10 dark:bg-black dark:hover:bg-brand-blue/10;
+  @apply btn border border-accent bg-surface-0 text-accent hover:bg-accent/10 dark:bg-dark-page dark:hover:bg-accent/10;
 }
 
-/* Sizes a button to match .view-tab's height/padding, for buttons that sit inline in a .views-bar row */
-.btn-tab-size {
-  @apply flex items-center gap-1.5 px-3 py-2;
+/* Size modifiers — .btn defaults to --size-control-lg (36px, toolbar rows).
+   Use these when a button sits inside a card/panel (md) or inline (sm) instead. */
+.btn-md {
+  height: var(--size-control-md);
+  @apply px-3 text-xs;
 }
 
-/* Sizes a .btn-primary to match .toolbar-search/.tb-btn's 40px height, for the
-   "Add X" action button that sits inline with them in a .page-toolbar row. */
-.btn-toolbar-size {
-  @apply flex h-10 items-center py-0;
+.btn-sm {
+  height: var(--size-control-sm);
+  @apply px-2.5 text-xs;
 }
 
+/* Outline red — for row-level destructive actions (delete row, cancel
+   invitation). The solid fill (.btn-danger-solid) is reserved for the
+   confirm button inside ConfirmDialog, so a solid-red button always means
+   "this is the point of no return", never a merely destructive-flavored row action. */
 .btn-danger {
+  @apply btn border border-red-200 bg-surface-1 text-red-700 hover:bg-red-50 dark:border-red-900 dark:bg-dark-surface dark:text-red-400 dark:hover:bg-red-950;
+}
+
+.btn-danger-solid {
   @apply btn bg-red-600 text-white hover:bg-red-700;
 }
 
@@ -139,16 +154,16 @@
 }
 
 .card {
-  @apply mb-5 rounded-lg border border-gray-200 bg-brand-cream p-5 dark:border-gray-800 dark:bg-black;
+  @apply mb-5 rounded-lg border border-line bg-surface-0 p-5 dark:border-dark-line dark:bg-dark-page;
 }
 
 .card-title {
-  @apply mt-0 mb-4 text-base font-bold text-brand-navy dark:text-gray-100;
+  @apply mt-0 mb-4 text-base font-bold text-brand-navy dark:text-dark-ink;
 }
 
 /* ClickUp visual direction (1.2): title of a centered modal/dialog — 18px -> 15px. */
 .modal-title {
-  @apply m-0 text-[15px] font-bold text-brand-navy dark:text-gray-100;
+  @apply m-0 text-[15px] font-bold text-brand-navy dark:text-dark-ink;
 }
 
 .onboarding-checklist {
@@ -156,7 +171,7 @@
 }
 
 .onboarding-dismiss {
-  @apply absolute top-4 right-4 cursor-pointer border-none bg-transparent p-1 text-gray-400 hover:text-brand-navy dark:hover:text-gray-100;
+  @apply absolute top-4 right-4 cursor-pointer border-none bg-transparent p-1 text-ink-faint hover:text-brand-navy dark:hover:text-gray-100;
 }
 
 .onboarding-list {
@@ -168,11 +183,11 @@
 }
 
 .onboarding-item.done span {
-  @apply text-gray-400 line-through dark:text-gray-500;
+  @apply text-ink-faint line-through dark:text-dark-ink-faint;
 }
 
 .onboarding-check {
-  @apply flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-gray-300 text-emerald-600 dark:border-gray-600;
+  @apply flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-line-strong text-emerald-600 dark:border-gray-600;
 }
 
 .onboarding-item.done .onboarding-check {
@@ -180,15 +195,15 @@
 }
 
 .onboarding-link {
-  @apply cursor-pointer border-none bg-transparent p-0 text-sm font-medium text-brand-blue hover:underline;
+  @apply cursor-pointer border-none bg-transparent p-0 text-sm font-medium text-accent hover:underline;
 }
 
 .onboarding-sample-row {
-  @apply mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-gray-200 pt-4 dark:border-gray-800;
+  @apply mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4 dark:border-dark-line;
 }
 
 .onboarding-sample-hint {
-  @apply text-xs text-gray-500 dark:text-gray-400;
+  @apply text-xs text-ink-muted dark:text-dark-ink-muted;
 }
 
 .faq-list {
@@ -196,11 +211,11 @@
 }
 
 .faq-item {
-  @apply border-b border-gray-200 py-3 last:border-0 last:pb-0 dark:border-gray-800;
+  @apply border-b border-line py-3 last:border-0 last:pb-0 dark:border-dark-line;
 }
 
 .faq-question {
-  @apply cursor-pointer list-none text-sm font-semibold text-brand-navy select-none dark:text-gray-100;
+  @apply cursor-pointer list-none text-sm font-semibold text-brand-navy select-none dark:text-dark-ink;
 }
 
 .faq-question::-webkit-details-marker {
@@ -209,7 +224,7 @@
 
 .faq-question::before {
   content: '+';
-  @apply mr-2 inline-block w-3 text-brand-blue;
+  @apply mr-2 inline-block w-3 text-accent;
 }
 
 .faq-item[open] .faq-question::before {
@@ -217,15 +232,15 @@
 }
 
 .faq-answer {
-  @apply mt-2 pl-5 text-sm text-gray-600 dark:text-gray-300;
+  @apply mt-2 pl-5 text-sm text-ink-muted dark:text-dark-ink-muted;
 }
 
 .changelog-trigger {
-  @apply relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-gray-500 hover:bg-gray-100 hover:text-brand-navy dark:text-gray-400 dark:hover:bg-white/5 dark:hover:text-gray-100;
+  @apply relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-ink-muted hover:bg-surface-2 hover:text-brand-navy dark:text-dark-ink-muted dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
 }
 
 .changelog-dot {
-  @apply absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-brand-blue ring-2 ring-brand-cream dark:ring-black;
+  @apply absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-accent ring-2 ring-brand-cream dark:ring-black;
 }
 
 .changelog-list {
@@ -233,19 +248,19 @@
 }
 
 .changelog-entry {
-  @apply border-b border-gray-100 pb-3 last:border-0 last:pb-0 dark:border-gray-800;
+  @apply border-b border-line-soft pb-3 last:border-0 last:pb-0 dark:border-dark-line;
 }
 
 .changelog-entry-date {
-  @apply text-[0.68rem] font-semibold tracking-wide text-gray-400 uppercase dark:text-gray-500;
+  @apply text-[0.68rem] font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint;
 }
 
 .changelog-entry-title {
-  @apply mt-0.5 text-sm font-semibold text-brand-navy dark:text-gray-100;
+  @apply mt-0.5 text-sm font-semibold text-brand-navy dark:text-dark-ink;
 }
 
 .changelog-entry-desc {
-  @apply mt-1 text-xs text-gray-600 dark:text-gray-300;
+  @apply mt-1 text-xs text-ink-muted dark:text-dark-ink-muted;
 }
 
 .table {
@@ -253,27 +268,27 @@
 }
 
 .table thead {
-  @apply bg-brand-cream dark:bg-black;
+  @apply bg-surface-0 dark:bg-dark-page;
 }
 
 .table th {
-  @apply border-b-2 border-gray-200 p-3 text-left text-sm font-semibold text-brand-navy dark:border-gray-700 dark:text-gray-100;
+  @apply border-b-2 border-line p-3 text-left text-sm font-semibold text-brand-navy dark:border-dark-line dark:text-dark-ink;
 }
 
 .table td {
-  @apply border-b border-gray-200 p-3 text-sm text-brand-navy dark:border-gray-800 dark:text-gray-200;
+  @apply border-b border-line p-3 text-sm text-brand-navy dark:border-dark-line dark:text-gray-200;
 }
 
 .table tr:hover {
-  @apply bg-gray-50 dark:bg-white/5;
+  @apply bg-surface-2 dark:bg-white/5;
 }
 
 .table-link {
-  @apply cursor-pointer border-none bg-transparent p-0 text-sm font-medium text-brand-blue hover:underline;
+  @apply cursor-pointer border-none bg-transparent p-0 text-sm font-medium text-accent hover:underline;
 }
 
 .balance-detail-block {
-  @apply mb-4 border-b border-gray-200 pb-4 last:mb-0 last:border-0 last:pb-0 dark:border-gray-800;
+  @apply mb-4 border-b border-line pb-4 last:mb-0 last:border-0 last:pb-0 dark:border-dark-line;
 }
 
 .balance-detail-head {
@@ -281,7 +296,7 @@
 }
 
 .balance-detail-toggle {
-  @apply w-full cursor-pointer rounded-md border-none bg-transparent p-1 text-left hover:bg-gray-50 dark:hover:bg-white/5;
+  @apply w-full cursor-pointer rounded-md border-none bg-transparent p-1 text-left hover:bg-surface-2 dark:hover:bg-white/[0.06];
 }
 
 .balance-detail-body {
@@ -293,7 +308,7 @@
 }
 
 .balance-detail-stat-value {
-  @apply text-lg font-semibold text-brand-navy dark:text-gray-100;
+  @apply text-lg font-semibold text-brand-navy dark:text-dark-ink;
 }
 
 .balance-detail-stat-value.highlight {
@@ -301,11 +316,11 @@
 }
 
 .balance-detail-stat-label {
-  @apply text-xs text-gray-500 dark:text-gray-400;
+  @apply text-xs text-ink-muted dark:text-dark-ink-muted;
 }
 
 .balance-detail-requests {
-  @apply mt-3 flex flex-col gap-1.5 border-t border-gray-100 pt-3 dark:border-gray-800/60;
+  @apply mt-3 flex flex-col gap-1.5 border-t border-line-soft pt-3 dark:border-dark-line/60;
 }
 
 .balance-detail-request-row {
@@ -317,7 +332,7 @@
 }
 
 .balance-detail-request-days {
-  @apply shrink-0 text-gray-400 dark:text-gray-500;
+  @apply shrink-0 text-ink-faint dark:text-dark-ink-faint;
 }
 
 .status-badge {
@@ -337,7 +352,7 @@
 }
 
 .status-badge.status-cancelled {
-  @apply bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400;
+  @apply bg-surface-2 text-ink-muted dark:bg-gray-800 dark:text-dark-ink-muted;
 }
 
 .calendar-table {
@@ -345,15 +360,15 @@
 }
 
 .calendar-table th {
-  @apply border-b-2 border-gray-200 p-2 text-center text-xs font-semibold text-gray-500 dark:border-gray-700 dark:text-gray-400;
+  @apply border-b-2 border-line p-2 text-center text-xs font-semibold text-ink-muted dark:border-dark-line dark:text-dark-ink-muted;
 }
 
 .calendar-cell {
-  @apply h-24 min-w-24 border border-gray-200 p-1.5 align-top dark:border-gray-800;
+  @apply h-24 min-w-24 border border-line p-1.5 align-top dark:border-dark-line;
 }
 
 .calendar-cell-empty {
-  @apply h-24 min-w-24 border border-gray-100 bg-gray-50 dark:border-gray-800 dark:bg-gray-900/40;
+  @apply h-24 min-w-24 border border-line-soft bg-surface-2 dark:border-dark-line dark:bg-dark-surface/40;
 }
 
 .calendar-cell-today {
@@ -361,15 +376,15 @@
 }
 
 .calendar-cell-date {
-  @apply mb-1 text-xs font-medium text-gray-500 dark:text-gray-400;
+  @apply mb-1 text-xs font-medium text-ink-muted dark:text-dark-ink-muted;
 }
 
 .calendar-entry {
-  @apply mb-0.5 truncate rounded bg-gray-100 px-1 py-0.5 text-xs text-brand-navy dark:bg-gray-800 dark:text-gray-100;
+  @apply mb-0.5 truncate rounded bg-surface-2 px-1 py-0.5 text-xs text-brand-navy dark:bg-gray-800 dark:text-dark-ink;
 }
 
 .calendar-entry-pending {
-  @apply border border-dashed border-gray-400 bg-transparent text-gray-500 italic dark:border-gray-500 dark:text-gray-400;
+  @apply border border-dashed border-gray-400 bg-transparent text-ink-muted italic dark:border-gray-500 dark:text-dark-ink-muted;
 }
 
 /* Task due dates on the /overview calendar — amber, distinct from the
@@ -379,7 +394,7 @@
 }
 
 .header {
-  @apply flex items-center justify-between border-b border-gray-200 bg-brand-cream px-5 py-4 dark:border-gray-800 dark:bg-black;
+  @apply flex items-center justify-between border-b border-line bg-surface-0 px-5 py-4 dark:border-dark-line dark:bg-dark-page;
 }
 
 .header img {
@@ -392,7 +407,7 @@
 
 .nav button,
 .nav a {
-  @apply cursor-pointer rounded-md border-none bg-gray-100 px-4 py-2 text-sm text-brand-navy no-underline transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-white/5;
+  @apply cursor-pointer rounded-md border-none bg-surface-2 px-4 py-2 text-sm text-brand-navy no-underline transition-colors hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-200 dark:hover:bg-white/[0.06];
 }
 
 .nav button.active,
@@ -405,7 +420,7 @@
 }
 
 .settings-back-link {
-  @apply mb-4 inline-flex cursor-pointer items-center gap-1 text-sm font-medium text-gray-500 no-underline hover:text-brand-navy dark:text-gray-400 dark:hover:text-gray-100;
+  @apply mb-4 inline-flex cursor-pointer items-center gap-1 text-sm font-medium text-ink-muted no-underline hover:text-brand-navy dark:text-dark-ink-muted dark:hover:text-gray-100;
 }
 
 /* ---------- Settings home — grid of category tiles (ClickUp visual direction, 4.1-4.3) ----------
@@ -417,35 +432,43 @@
 }
 
 .settings-grid-section + .settings-grid-section {
-  @apply mt-2 border-t border-gray-200 pt-6 dark:border-gray-800;
+  @apply mt-2 border-t border-line pt-6 dark:border-dark-line;
 }
 
 .settings-grid-section-title {
-  @apply mb-3 text-xs font-semibold tracking-wide text-gray-400 uppercase dark:text-gray-500;
+  @apply mb-3 text-xs font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint;
 }
 
 .settings-grid {
-  @apply grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4;
+  @apply grid grid-cols-2 gap-px border border-line bg-line sm:grid-cols-3 dark:border-dark-line dark:bg-gray-800;
 }
 
 .settings-tile {
-  @apply flex cursor-pointer flex-col items-center gap-2 rounded-lg border border-transparent p-4 text-center no-underline transition-colors hover:border-gray-200 hover:bg-gray-50 dark:hover:border-gray-800 dark:hover:bg-white/5;
+  @apply block cursor-pointer bg-surface-1 p-4 no-underline transition-colors hover:bg-surface-2 dark:bg-dark-surface dark:hover:bg-white/[0.06];
 }
 
 .settings-tile-icon {
-  @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white;
+  @apply inline-flex text-ink dark:text-gray-200;
 }
 
 .settings-tile-icon svg {
-  @apply h-5 w-5;
+  @apply h-[17px] w-[17px];
 }
 
 .settings-tile-label {
-  @apply text-xs font-medium text-brand-navy dark:text-gray-200;
+  @apply mt-2.5 block text-[13px] font-semibold text-ink dark:text-dark-ink;
+}
+
+.settings-tile-desc {
+  @apply mt-0.5 block text-[11.5px] leading-snug text-ink-muted dark:text-dark-ink-muted;
 }
 
 .settings-tile.disabled {
-  @apply pointer-events-none cursor-default opacity-40;
+  @apply pointer-events-none opacity-45;
+}
+
+.settings-tile.disabled .settings-tile-icon {
+  @apply text-ink-faint dark:text-dark-ink-faint;
 }
 
 .app-shell {
@@ -457,7 +480,7 @@
 }
 
 .sidebar {
-  @apply fixed inset-y-0 left-0 z-30 flex w-64 -translate-x-full flex-col overflow-y-auto border-r border-gray-200 bg-brand-cream p-3 transition-transform duration-200 dark:border-gray-800 dark:bg-black md:static md:z-auto md:w-48 md:shrink-0 md:translate-x-0 md:overflow-visible md:transition-[width];
+  @apply fixed inset-y-0 left-0 z-30 flex w-64 -translate-x-full flex-col overflow-y-auto border-r border-line bg-surface-0 p-3 transition-transform duration-200 dark:border-dark-line dark:bg-dark-page md:static md:z-auto md:w-48 md:shrink-0 md:translate-x-0 md:overflow-visible md:transition-[width];
 }
 
 .sidebar.mobile-open {
@@ -473,15 +496,15 @@
 }
 
 .menu-toggle {
-  @apply flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-brand-navy transition-colors hover:bg-gray-100 md:hidden dark:text-gray-100 dark:hover:bg-white/5;
+  @apply flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-brand-navy transition-colors hover:bg-surface-2 md:hidden dark:text-dark-ink dark:hover:bg-white/[0.06];
 }
 
 .sidebar-toggle-desktop {
-  @apply mb-2 hidden w-full cursor-pointer items-center justify-end rounded-md border-none bg-transparent p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-brand-navy md:flex dark:hover:bg-white/5 dark:hover:text-gray-100;
+  @apply mb-2 hidden w-full cursor-pointer items-center justify-end rounded-md border-none bg-transparent p-1.5 text-ink-faint transition-colors hover:bg-surface-2 hover:text-brand-navy md:flex dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
 }
 
 .sidebar-toggle-mobile {
-  @apply mb-2 flex w-full cursor-pointer items-center justify-end rounded-md border-none bg-transparent p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-brand-navy md:hidden dark:hover:bg-white/5 dark:hover:text-gray-100;
+  @apply mb-2 flex w-full cursor-pointer items-center justify-end rounded-md border-none bg-transparent p-1.5 text-ink-faint transition-colors hover:bg-surface-2 hover:text-brand-navy md:hidden dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
 }
 
 .sidebar-collapsed .sidebar-toggle-desktop {
@@ -489,23 +512,28 @@
 }
 
 .sidebar-group-label {
-  @apply mt-4 mb-1 truncate px-3 text-xs font-semibold tracking-wide text-gray-400 uppercase first:mt-0 dark:text-gray-500;
+  @apply mt-4 mb-1 truncate px-3 text-xs font-semibold tracking-wide text-ink-faint uppercase first:mt-0 dark:text-dark-ink-faint;
 }
 
 .sidebar-divider {
-  @apply mt-3 border-t border-gray-200 pt-3 dark:border-gray-800;
+  @apply mt-3 border-t border-line pt-3 dark:border-dark-line;
 }
 
 .sidebar-link {
-  @apply flex items-center gap-2 overflow-hidden rounded-md px-3 py-2 text-xs whitespace-nowrap text-brand-navy no-underline transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/5;
+  @apply flex items-center gap-2 overflow-hidden rounded-md px-3 py-2 text-xs whitespace-nowrap text-brand-navy no-underline transition-colors hover:bg-surface-2 dark:text-gray-200 dark:hover:bg-white/[0.06];
 }
 
 .sidebar-link.active {
-  @apply bg-brand-blue/10 font-medium text-brand-blue dark:bg-brand-blue/20 dark:text-brand-blue-light;
+  @apply bg-brand-blue/10 font-medium text-brand-blue dark:text-[#f2c8b4];
+  /* dark override below the @apply so the rgba alpha wins over the utility's opacity handling */
+}
+
+.dark .sidebar-link.active {
+  background: rgba(184, 80, 47, 0.28);
 }
 
 .sidebar-footer {
-  @apply mt-auto border-t border-gray-200 pt-3 dark:border-gray-800;
+  @apply mt-auto border-t border-line pt-3 dark:border-dark-line;
 }
 
 .user-menu {
@@ -513,15 +541,15 @@
 }
 
 .user-menu-trigger {
-  @apply flex cursor-pointer items-center gap-2 rounded-md border-none bg-transparent px-2 py-1.5 text-sm text-brand-navy transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/5;
+  @apply flex cursor-pointer items-center gap-2 rounded-md border-none bg-transparent px-2 py-1.5 text-sm text-brand-navy transition-colors hover:bg-surface-2 dark:text-gray-200 dark:hover:bg-white/[0.06];
 }
 
 .user-menu-dropdown {
-  @apply absolute top-full right-0 z-10 mt-1 w-48 rounded-md border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-900;
+  @apply absolute top-full right-0 z-10 mt-1 w-48 rounded-md border border-line bg-surface-1 py-1 shadow-lg dark:border-dark-line dark:bg-dark-surface;
 }
 
 .user-menu-item {
-  @apply block w-full cursor-pointer border-none bg-transparent px-3 py-2 text-left text-sm text-brand-navy no-underline transition-colors hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/5;
+  @apply block w-full cursor-pointer border-none bg-transparent px-3 py-2 text-left text-sm text-brand-navy no-underline transition-colors hover:bg-surface-2 dark:text-gray-200 dark:hover:bg-white/[0.06];
 }
 
 .alert {
@@ -577,15 +605,15 @@
 }
 
 .confirm-dialog {
-  @apply w-full max-w-sm rounded-lg bg-white p-5 shadow-xl dark:bg-gray-900;
+  @apply w-full max-w-sm rounded-lg bg-surface-1 p-5 shadow-xl dark:bg-dark-surface;
 }
 
 .confirm-dialog-title {
-  @apply mb-2 text-[15px] font-bold text-brand-navy dark:text-gray-100;
+  @apply mb-2 text-[15px] font-bold text-brand-navy dark:text-dark-ink;
 }
 
 .confirm-dialog-message {
-  @apply mb-5 text-sm text-gray-600 dark:text-gray-300;
+  @apply mb-5 text-sm text-ink-muted dark:text-dark-ink-muted;
 }
 
 .confirm-dialog-actions {
@@ -597,40 +625,40 @@
 }
 
 .legal-modal {
-  @apply flex max-h-[85vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl dark:bg-gray-900;
+  @apply flex max-h-[85vh] w-full max-w-2xl flex-col rounded-lg bg-surface-1 shadow-xl dark:bg-dark-surface;
 }
 
 .legal-modal-header {
-  @apply flex items-center justify-between border-b border-gray-200 px-5 py-4 dark:border-gray-800;
+  @apply flex items-center justify-between border-b border-line px-5 py-4 dark:border-dark-line;
 }
 
 .legal-modal-header h3 {
-  @apply text-[15px] font-bold text-brand-navy dark:text-gray-100;
+  @apply text-[15px] font-bold text-brand-navy dark:text-dark-ink;
 }
 
 .legal-modal-close {
-  @apply cursor-pointer border-none bg-transparent p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200;
+  @apply cursor-pointer border-none bg-transparent p-1 text-ink-faint hover:text-gray-700 dark:hover:text-gray-200;
 }
 
 .legal-modal-body {
-  @apply overflow-y-auto px-6 py-5 text-sm leading-relaxed text-gray-700 dark:text-gray-300;
+  @apply overflow-y-auto px-6 py-5 text-sm leading-relaxed text-gray-700 dark:text-dark-ink-muted;
 }
 
 .legal-modal-body h1 {
-  @apply mb-2 text-xl font-semibold text-brand-navy dark:text-gray-100;
+  @apply mb-2 text-xl font-semibold text-brand-navy dark:text-dark-ink;
 }
 
 .legal-modal-body h2 {
-  @apply mb-2 mt-8 text-base font-semibold text-brand-navy dark:text-gray-100;
+  @apply mb-2 mt-8 text-base font-semibold text-brand-navy dark:text-dark-ink;
 }
 
 .legal-modal-body h3 {
-  @apply mb-1 mt-4 text-sm font-semibold text-brand-navy dark:text-gray-100;
+  @apply mb-1 mt-4 text-sm font-semibold text-brand-navy dark:text-dark-ink;
 }
 
 .legal-modal-body p,
 .legal-modal-body li {
-  @apply text-sm text-gray-700 dark:text-gray-300;
+  @apply text-sm text-gray-700 dark:text-dark-ink-muted;
 }
 
 .legal-modal-body table {
@@ -642,23 +670,77 @@
 }
 
 .legal-modal-status {
-  @apply text-sm text-gray-500 dark:text-gray-400;
+  @apply text-sm text-ink-muted dark:text-dark-ink-muted;
 }
 
 .pagination {
   @apply mt-4 flex items-center justify-center gap-3;
 }
 
-.pagination-status {
-  @apply text-sm text-gray-500 dark:text-gray-400;
+.empty-state {
+  @apply grid justify-items-center gap-0 border border-line bg-surface-1 text-center dark:border-dark-line dark:bg-dark-surface;
+  grid-template-rows: 44px auto 1fr var(--size-control-md) 16px;
+  padding: 36px 20px 28px;
 }
 
-.empty-state {
-  @apply flex flex-col items-center gap-3 rounded-md border border-dashed border-gray-300 py-10 text-center text-gray-500 dark:border-gray-700 dark:text-gray-400;
+.empty-state-icon {
+  @apply flex h-11 w-11 items-center justify-center rounded-full text-accent;
+  background: var(--color-accent-tint);
+}
+
+.empty-state-icon svg {
+  @apply h-5 w-5;
+}
+
+.empty-state-title {
+  @apply mt-3.5 mb-1 text-sm font-bold text-ink dark:text-dark-ink;
+}
+
+.empty-state-body {
+  @apply mx-auto max-w-[240px] text-xs leading-relaxed text-ink-muted dark:text-dark-ink-muted;
+}
+
+.empty-state-actions {
+  @apply mt-5 flex items-center gap-2;
+}
+
+.empty-state-hint {
+  @apply mt-2.5 text-[11px] text-ink-faint dark:text-dark-ink-faint;
+}
+
+/* ---------- Loading skeleton (TableSkeleton.tsx) ---------- */
+
+.skeleton-head {
+  height: 36px;
+  @apply border-b border-line bg-surface-0 dark:border-dark-line dark:bg-dark-page;
+}
+
+.skeleton-row {
+  height: 48px;
+  @apply flex items-center gap-3.5 border-b border-line-soft px-3.5 dark:border-dark-line-soft;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-avatar {
+  @apply h-[26px] w-[26px] shrink-0 rounded-full bg-[#ece5da] dark:bg-[#2e2823];
+}
+
+.skeleton-bar {
+  @apply h-[9px] rounded-none bg-[#ece5da] dark:bg-[#2e2823];
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 .section-label {
-  @apply mb-2 text-xs font-semibold tracking-wide text-gray-400 uppercase dark:text-gray-500;
+  @apply mb-2 text-xs font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint;
 }
 
 .text-center {
@@ -677,7 +759,7 @@
 */
 
 .page-toolbar {
-  @apply flex flex-wrap items-center gap-3 border-b border-gray-200 py-4 dark:border-gray-800;
+  @apply flex flex-wrap items-center gap-3 border-b border-line py-4 dark:border-dark-line;
 }
 
 /* For a .page-toolbar immediately followed by another bordered row (e.g. .views-bar) —
@@ -687,24 +769,25 @@
 }
 
 .page-toolbar h2 {
-  @apply m-0 shrink-0 text-lg font-semibold text-brand-navy dark:text-gray-100;
+  @apply m-0 shrink-0 text-lg font-semibold text-brand-navy dark:text-dark-ink;
 }
 
 /* Same visual result as .page-toolbar h2, named for reuse outside that toolbar. */
 .page-title {
-  @apply m-0 shrink-0 text-lg font-semibold text-brand-navy dark:text-gray-100;
+  @apply m-0 shrink-0 text-lg font-semibold text-brand-navy dark:text-dark-ink;
 }
 
 .toolbar-search {
-  @apply flex h-10 min-w-[160px] flex-1 items-center gap-2 rounded-md border border-gray-300 bg-brand-cream px-3 py-0 text-sm dark:border-gray-700 dark:bg-black;
+  height: var(--size-control-lg);
+  @apply flex min-w-[160px] flex-1 items-center gap-2 rounded-md border border-line-strong bg-surface-0 px-3 py-0 text-sm dark:border-dark-line dark:bg-dark-page;
 }
 
 .toolbar-search svg {
-  @apply h-4 w-4 shrink-0 text-gray-400;
+  @apply h-4 w-4 shrink-0 text-ink-faint;
 }
 
 .toolbar-search input {
-  @apply w-full border-none bg-transparent p-0 text-sm text-brand-navy outline-none dark:text-gray-100;
+  @apply w-full border-none bg-transparent p-0 text-sm text-brand-navy outline-none dark:text-dark-ink;
 }
 
 .full-table-wrap {
@@ -712,12 +795,49 @@
   scrollbar-width: none;
 }
 
+/* Pages with a mobile card-list alternative (.entity-card-list) hide the
+   table below md instead of leaving it to scroll horizontally — added as a
+   modifier, not on the base class, so pages that don't have a card-list yet
+   keep their current (scrollable table) mobile behavior. */
+.full-table-wrap.has-mobile-cards {
+  @apply hidden md:block;
+}
+
+.entity-card-list {
+  @apply flex flex-col gap-2 md:hidden;
+}
+
+.entity-card {
+  @apply flex items-center gap-3 border border-line bg-surface-1 p-3 dark:border-dark-line dark:bg-dark-surface;
+  min-height: 64px;
+}
+
+.entity-card.clickable {
+  @apply cursor-pointer;
+}
+
+.entity-card-avatar {
+  @apply inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-avatar-bg text-[11px] font-bold text-brand-navy dark:bg-[#3b2f26] dark:text-[#e8c9a0];
+}
+
+.entity-card-body {
+  @apply min-w-0 flex-1;
+}
+
+.entity-card-name {
+  @apply block truncate text-sm font-semibold text-ink dark:text-dark-ink;
+}
+
+.entity-card-meta {
+  @apply block truncate text-xs text-ink-muted dark:text-dark-ink-muted;
+}
+
 .full-table-wrap::-webkit-scrollbar {
   display: none;
 }
 
 .hscrollbar-track {
-  @apply relative mt-1 h-2.5 w-full cursor-pointer rounded-full bg-gray-100 dark:bg-gray-900;
+  @apply relative mt-1 h-2.5 w-full cursor-pointer rounded-full bg-surface-2 dark:bg-dark-surface;
 }
 
 .hscrollbar-thumb {
@@ -733,25 +853,25 @@
 }
 
 .full-table thead th {
-  @apply sticky top-0 bg-brand-cream dark:bg-black;
+  @apply sticky top-0 bg-surface-0 dark:bg-dark-raised;
 }
 
 .full-table th {
-  @apply relative overflow-hidden border-b border-gray-200 py-2.5 text-[10px] font-medium text-gray-500 dark:border-gray-800 dark:text-gray-400;
+  @apply relative overflow-hidden border-b border-line py-2.5 text-[10px] font-medium text-ink-muted dark:border-dark-line dark:text-dark-ink-muted;
 }
 
 /* Secondary columns get an explicit muted color (ClickUp visual direction, 1.3) —
    .name-cell below overrides this back to full-strength text for the name column. */
 .full-table td {
-  @apply overflow-hidden px-3 py-4 text-[11.5px] text-ellipsis whitespace-nowrap text-gray-500 dark:text-gray-400;
+  @apply overflow-hidden px-3 py-4 text-[11.5px] text-ellipsis whitespace-nowrap text-ink-muted dark:text-dark-ink-muted;
 }
 
 .name-cell {
-  @apply flex items-center gap-2 text-sm font-semibold text-brand-navy dark:text-gray-100;
+  @apply flex items-center gap-2 text-sm font-semibold text-brand-navy dark:text-dark-ink;
 }
 
 .avatar {
-  @apply inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-brand-blue-light text-[0.64rem] font-bold text-brand-navy;
+  @apply inline-flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-full bg-avatar-bg text-[0.64rem] font-bold text-brand-navy dark:bg-[#3b2f26] dark:text-[#e8c9a0];
 }
 
 .status-chip {
@@ -778,19 +898,19 @@
 }
 
 .category-chip.chip-purple {
-  @apply bg-purple-500/15 text-purple-700 dark:text-purple-300;
+  @apply bg-purple-500/15 text-purple-700 dark:bg-[#332a45] dark:text-[#d6bcfb];
 }
 
 .category-chip.chip-coral {
-  @apply bg-orange-500/15 text-orange-700 dark:text-orange-300;
+  @apply bg-orange-500/15 text-orange-700 dark:bg-[#3d2a1c] dark:text-[#f5c19b];
 }
 
 .category-chip.chip-pink {
-  @apply bg-pink-500/15 text-pink-700 dark:text-pink-300;
+  @apply bg-pink-500/15 text-pink-700 dark:bg-[#3b2331] dark:text-[#f6b6d3];
 }
 
 .category-chip.chip-teal {
-  @apply bg-teal-500/15 text-teal-700 dark:text-teal-300;
+  @apply bg-teal-500/15 text-teal-700 dark:bg-[#1c332f] dark:text-[#8fd8cd];
 }
 
 .role-chip.chip-good {
@@ -802,7 +922,7 @@
 }
 
 .role-chip.chip-neutral {
-  @apply bg-gray-200 text-gray-600 dark:bg-gray-800 dark:text-gray-300;
+  @apply bg-gray-200 text-ink-muted dark:bg-gray-800 dark:text-dark-ink-muted;
 }
 
 .col-resize-handle {
@@ -823,34 +943,33 @@
 }
 
 .full-table .col-frozen {
-  @apply sticky bg-brand-cream dark:bg-black;
+  @apply sticky bg-surface-0 dark:bg-dark-page;
 }
 
 /* Hover applied per-cell (not just `tr:hover`, which the sticky/frozen columns
    and table-fixed layout don't always paint edge-to-edge consistently across
-   browsers) — bg-gray-50 was nearly indistinguishable from the brand-cream
-   page background, bumped to gray-100/gray-800 for a clearly visible hover. */
+   browsers). */
 .full-table tbody tr:hover td {
-  @apply bg-gray-100 dark:bg-white/5;
+  @apply bg-surface-2 dark:bg-white/5;
 }
 
 /* Frozen (sticky) columns need an opaque hover fill, not the translucent
    overlay used elsewhere — a see-through background would let the
    non-frozen cells scrolling underneath show through the sticky column. */
 .full-table tr:hover .col-frozen {
-  @apply bg-gray-100 dark:bg-gray-900;
+  @apply bg-surface-2 dark:bg-dark-surface;
 }
 
 .full-table .col-frozen-edge {
-  @apply border-r-2 border-gray-300 dark:border-gray-700;
+  @apply border-r-2 border-line-strong dark:border-dark-line;
 }
 
 .list-section-row {
-  @apply bg-gray-50 dark:bg-gray-900;
+  @apply bg-surface-2 dark:bg-dark-raised;
 }
 
 .full-table .list-section-header {
-  @apply flex cursor-pointer items-center gap-2 overflow-visible py-2.5 text-xs font-bold whitespace-normal text-brand-navy dark:text-gray-100;
+  @apply flex cursor-pointer items-center gap-2 overflow-visible py-2.5 text-xs font-bold whitespace-normal text-brand-navy dark:text-dark-ink;
 }
 
 .list-section-header .dot {
@@ -862,11 +981,11 @@
 }
 
 .list-section-header .cnt {
-  @apply font-mono text-[0.68rem] font-normal text-gray-400;
+  @apply font-mono text-[0.68rem] font-normal text-ink-faint;
 }
 
 .list-chevron {
-  @apply h-3.5 w-3.5 shrink-0 -rotate-90 text-gray-400 transition-transform;
+  @apply h-3.5 w-3.5 shrink-0 -rotate-90 text-ink-faint transition-transform;
 }
 
 .list-chevron.list-chevron-open {
@@ -878,11 +997,13 @@
 }
 
 .icon-btn {
-  @apply relative inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-gray-400 transition-colors hover:bg-gray-100 hover:text-brand-navy dark:hover:bg-white/5 dark:hover:text-gray-100;
+  height: var(--size-control-md);
+  width: var(--size-control-md);
+  @apply relative inline-flex cursor-pointer items-center justify-center rounded-md border-none bg-transparent text-ink-faint transition-colors hover:bg-surface-2 hover:text-brand-navy dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
 }
 
 .icon-btn svg {
-  @apply h-4 w-4;
+  @apply h-[15px] w-[15px];
 }
 
 .icon-btn.danger:hover {
@@ -910,7 +1031,7 @@
 }
 
 .slideover-panel {
-  @apply fixed top-0 right-0 bottom-0 z-50 flex w-full max-w-md translate-x-full flex-col border-l border-gray-200 bg-white shadow-xl transition-transform duration-300 ease-out dark:border-gray-800 dark:bg-gray-900;
+  @apply fixed top-0 right-0 bottom-0 z-50 flex w-full max-w-md translate-x-full flex-col border-l border-line bg-surface-1 shadow-xl transition-transform duration-300 ease-out dark:border-dark-line dark:bg-dark-surface;
 }
 
 .slideover-panel.open {
@@ -934,15 +1055,15 @@
 }
 
 .slideover-head {
-  @apply flex items-center justify-between border-b border-gray-200 px-6 py-4 dark:border-gray-800;
+  @apply flex items-center justify-between border-b border-line px-6 py-4 dark:border-dark-line;
 }
 
 .slideover-title {
-  @apply m-0 text-base font-semibold text-brand-navy dark:text-gray-100;
+  @apply m-0 text-base font-semibold text-brand-navy dark:text-dark-ink;
 }
 
 .slideover-close {
-  @apply cursor-pointer rounded-md border-none bg-transparent p-1 text-gray-400 hover:bg-gray-100 hover:text-brand-navy dark:hover:bg-white/5 dark:hover:text-gray-100;
+  @apply cursor-pointer rounded-md border-none bg-transparent p-1 text-ink-faint hover:bg-surface-2 hover:text-brand-navy dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
 }
 
 .slideover-body {
@@ -950,7 +1071,7 @@
 }
 
 .slideover-foot {
-  @apply flex justify-end gap-2 border-t border-gray-200 px-6 py-4 dark:border-gray-800;
+  @apply flex justify-end gap-2 border-t border-line px-6 py-4 dark:border-dark-line;
 }
 
 /* ---------- Detail overview modal (Employee/Company/Contact/Opportunity) ----------
@@ -966,18 +1087,23 @@
 }
 
 .overview-panel {
-  @apply flex h-[70vh] max-h-[70vh] w-[70vw] max-w-[70vw] min-w-[720px] flex-col overflow-hidden rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900;
+  @apply flex h-[70vh] max-h-[70vh] w-[70vw] max-w-[70vw] min-w-[720px] flex-col overflow-hidden rounded-lg border border-line bg-surface-1 dark:border-dark-line dark:bg-dark-surface;
 }
 
 /* Single line, left-to-right: avatar, then "Name — subtitle — status" —
    changed 2026-07-30 from a centered/stacked header (the 460px-wide version
    had room to stack; the 70vw version doesn't need to). */
 .overview-panel-head {
-  @apply relative flex items-center gap-3 border-b border-gray-200 p-4 text-left dark:border-gray-800;
+  @apply relative flex items-center gap-3 border-b border-line p-4 text-left dark:border-dark-line;
 }
 
 .overview-panel-head .slideover-close {
   @apply absolute top-3 right-3;
+}
+
+/* "Actions" trigger (OverviewActionsMenu) — sits left of the close button. */
+.overview-panel-head .overview-actions-trigger {
+  @apply absolute top-2.5 right-11;
 }
 
 .overview-panel-heading {
@@ -985,25 +1111,25 @@
 }
 
 .overview-panel-heading h3 {
-  @apply m-0 shrink-0 text-base font-bold text-brand-navy dark:text-gray-100;
+  @apply m-0 shrink-0 text-base font-bold text-brand-navy dark:text-dark-ink;
 }
 
 .overview-panel-heading p {
-  @apply m-0 truncate text-xs text-gray-500 before:mr-2 before:text-gray-300 before:content-['—'] dark:before:text-gray-700;
+  @apply m-0 truncate text-xs text-ink-muted before:mr-2 before:text-gray-300 before:content-['—'] dark:before:text-gray-700;
 }
 
 /* Generic tab bar — used both by the (legacy) top-level tabs and the new
    right-column Notes/Tasks/Activity tabs, same visual language. */
 .overview-panel-tabs {
-  @apply flex border-b border-gray-200 dark:border-gray-800;
+  @apply flex border-b border-line dark:border-dark-line;
 }
 
 .overview-panel-tabs button {
-  @apply flex-1 cursor-pointer border-none border-b-2 border-transparent bg-transparent py-2.5 text-sm font-medium text-gray-500 hover:text-brand-navy dark:hover:text-gray-100;
+  @apply flex-1 cursor-pointer border-none border-b-2 border-transparent bg-transparent py-2.5 text-sm font-medium text-ink-muted hover:text-brand-navy dark:hover:text-gray-100;
 }
 
 .overview-panel-tabs button.active {
-  @apply border-brand-blue font-semibold text-brand-navy dark:text-gray-100;
+  @apply border-brand-blue font-semibold text-brand-navy dark:text-dark-ink;
 }
 
 /* 2-column split below the header: fields on the left (scrolls
@@ -1018,15 +1144,29 @@
    linked-record list with its own add-form) opts into .overview-field-full
    to span both. */
 .overview-panel-left {
-  @apply grid min-h-0 min-w-0 flex-1 auto-rows-min grid-cols-2 gap-x-4 gap-y-3 overflow-y-auto p-4;
+  @apply flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto;
 }
 
 .overview-field-full {
   @apply col-span-2;
 }
 
+/* Section wrapper inside .overview-panel-left — groups related fields under
+   a label instead of one flat 18-field wall (Tarea 5, tareas-ux-ui.md). */
+.field-group {
+  @apply border-b border-line-soft dark:border-dark-line-soft;
+}
+
+.field-group-title {
+  @apply m-0 px-4 pt-3 pb-2 text-[10px] font-bold tracking-[0.09em] text-ink-faint uppercase dark:text-dark-ink-faint;
+}
+
+.field-group-body {
+  @apply grid grid-cols-2 gap-x-6 px-4 pb-3;
+}
+
 .overview-panel-right {
-  @apply flex h-full w-[360px] shrink-0 flex-col overflow-hidden border-l border-gray-200 bg-gray-50 dark:border-gray-800 dark:bg-black/20;
+  @apply flex h-full w-[360px] shrink-0 flex-col overflow-hidden border-l border-line bg-surface-2 dark:border-dark-line dark:bg-dark-page/20;
 }
 
 .overview-panel-right-body {
@@ -1040,15 +1180,19 @@
 }
 
 .overview-field {
-  @apply flex flex-col gap-0.5 border-b border-gray-100 pb-2 dark:border-gray-800;
+  @apply flex items-center gap-3 border-b border-line-soft dark:border-dark-line;
+  min-height: 34px;
+  min-width: 0; /* CRITICAL: sin esto, un valor largo con white-space:nowrap
+                   fija un min-content y rompe el reparto 1fr 1fr, desbordando
+                   la columna derecha fuera del panel. */
 }
 
 .overview-field-label {
-  @apply text-xs font-medium text-gray-500;
+  @apply w-28 shrink-0 text-[11.5px] text-ink-faint dark:text-dark-ink-faint;
 }
 
 .overview-field-value {
-  @apply text-sm text-brand-navy dark:text-gray-100;
+  @apply min-w-0 flex-1 truncate text-[12.5px] text-ink dark:text-dark-ink;
 }
 
 /* Inline-editable field inside a detail modal (Company/Contact/Opportunity) —
@@ -1056,11 +1200,11 @@
    focused, autosaves per field (AutoSaveField/AutoSaveSelect), no Save button
    anywhere. */
 .overview-field-input {
-  @apply -mx-1.5 -my-1 w-full rounded-md border border-transparent bg-transparent px-1.5 py-1 text-sm text-brand-navy transition-colors hover:bg-gray-50 focus:border-brand-blue focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue/25 disabled:opacity-60 dark:text-gray-100 dark:hover:bg-white/5 dark:focus:bg-gray-900;
+  @apply -mx-1.5 -my-1 min-w-0 flex-1 truncate rounded-md border border-transparent bg-transparent px-1.5 py-1 text-[12.5px] text-ink transition-colors hover:bg-surface-2 focus:border-brand-blue focus:bg-surface-1 focus:outline-none focus:ring-2 focus:ring-brand-blue/25 disabled:opacity-60 dark:text-dark-ink dark:hover:bg-white/[0.06] dark:focus:bg-gray-900;
 }
 
 .overview-panel-placeholder {
-  @apply py-8 text-center text-sm text-gray-400;
+  @apply py-8 text-center text-sm text-ink-faint;
 }
 
 /* Always-expanded Task/Note compose form (right-column tabs) — replaces the
@@ -1070,7 +1214,7 @@
    tinted .overview-panel-right behind it (2026-07-30 — the plain-border,
    no-background version didn't stand out enough). */
 .inline-compose-form {
-  @apply flex flex-col gap-2 rounded-md border border-gray-300 bg-white p-3 shadow-sm dark:border-gray-700 dark:bg-gray-900;
+  @apply flex flex-col gap-2 rounded-md border border-line-strong bg-surface-1 p-3 shadow-sm dark:border-dark-line dark:bg-dark-surface;
 }
 
 .task-row-active,
@@ -1088,11 +1232,11 @@
 }
 
 .dropdown-trigger {
-  @apply h-7 w-max min-w-[110px] max-w-[220px] cursor-pointer appearance-none rounded-md border border-gray-300 bg-transparent py-0 pr-7 pl-2.5 text-[11px] font-semibold text-brand-navy dark:border-gray-700 dark:text-gray-100;
+  @apply h-7 w-max min-w-[110px] max-w-[220px] cursor-pointer appearance-none rounded-md border border-line-strong bg-transparent py-0 pr-7 pl-2.5 text-[11px] font-semibold text-brand-navy dark:border-dark-line dark:text-dark-ink;
 }
 
 .dropdown-trigger-wrap .chev {
-  @apply pointer-events-none absolute top-1/2 right-2 h-2.5 w-2.5 -translate-y-1/2 text-gray-400;
+  @apply pointer-events-none absolute top-1/2 right-2 h-2.5 w-2.5 -translate-y-1/2 text-ink-faint;
 }
 
 /* Status-type trigger — always the reserved brand-blue tint (1.4's rule: blue
@@ -1102,7 +1246,7 @@
 }
 
 .name-link {
-  @apply cursor-pointer border-none bg-transparent p-0 font-semibold text-brand-navy hover:text-brand-blue hover:underline dark:text-gray-100 dark:hover:text-brand-blue-light;
+  @apply cursor-pointer border-none bg-transparent p-0 font-semibold text-brand-navy hover:text-brand-blue hover:underline dark:text-dark-ink dark:hover:text-brand-blue-light;
 }
 
 .password-input-wrap {
@@ -1114,11 +1258,11 @@
 }
 
 .password-toggle {
-  @apply absolute right-1.5 inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded border-none bg-transparent text-gray-400 hover:text-brand-navy dark:hover:text-gray-100;
+  @apply absolute right-1.5 inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded border-none bg-transparent text-ink-faint hover:text-brand-navy dark:hover:text-gray-100;
 }
 
 .password-checklist {
-  @apply mt-2 flex list-none flex-col gap-1 p-0 text-xs text-gray-500 dark:text-gray-400;
+  @apply mt-2 flex list-none flex-col gap-1 p-0 text-xs text-ink-muted dark:text-dark-ink-muted;
 }
 
 .password-checklist li {
@@ -1130,7 +1274,7 @@
 }
 
 .password-checklist-dot {
-  @apply flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border border-gray-300 text-emerald-600 dark:border-gray-600 dark:text-emerald-400;
+  @apply flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border border-line-strong text-emerald-600 dark:border-gray-600 dark:text-emerald-400;
 }
 
 .password-checklist li.met .password-checklist-dot {
@@ -1243,11 +1387,12 @@
 /* ---------- Views bar (saved views tabs) ---------- */
 
 .views-bar {
-  @apply flex items-center gap-1 overflow-x-auto overflow-y-hidden border-b border-gray-200 px-1 dark:border-gray-800;
+  @apply flex items-center gap-1 overflow-x-auto overflow-y-hidden border-b border-line px-1 dark:border-dark-line;
 }
 
 .view-tab {
-  @apply relative top-px flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-t-md border border-transparent border-b-0 px-3 py-2 text-sm font-medium text-gray-500 hover:bg-gray-100 hover:text-brand-navy dark:hover:bg-white/5 dark:hover:text-gray-100;
+  height: var(--size-control-lg);
+  @apply relative top-px flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-t-md border border-transparent border-b-0 px-3 py-0 text-sm font-medium text-ink-muted hover:bg-surface-2 hover:text-brand-navy dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
 }
 
 .view-tab svg {
@@ -1255,15 +1400,15 @@
 }
 
 .view-tab.active {
-  @apply border-gray-200 bg-brand-cream font-semibold text-brand-navy dark:border-gray-800 dark:bg-black dark:text-gray-100;
+  @apply border-line bg-surface-0 font-semibold text-brand-navy dark:border-dark-line dark:bg-dark-page dark:text-dark-ink;
 }
 
 .view-tab-menu {
-  @apply ml-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded text-gray-400 hover:bg-gray-200 hover:text-brand-navy dark:hover:bg-white/5 dark:hover:text-gray-100;
+  @apply ml-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded text-ink-faint hover:bg-gray-200 hover:text-brand-navy dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
 }
 
 .view-tab-add {
-  @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-brand-navy dark:hover:bg-white/5 dark:hover:text-gray-100;
+  @apply flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-ink-faint hover:bg-surface-2 hover:text-brand-navy dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
 }
 
 /* ---------- Popovers (filter builder, new view, tab menu) ---------- */
@@ -1277,7 +1422,7 @@
      popover (EntityTasksList) opens from inside .detail-modal-overlay/
      .slideover-panel, both z-50; a plain z-30 here left the popover rendered
      behind the modal's backdrop, which then stole its clicks. */
-  @apply absolute top-full left-0 z-[60] mt-1.5 rounded-lg border border-gray-200 bg-white p-3 shadow-xl dark:border-gray-700 dark:bg-gray-900;
+  @apply absolute top-full left-0 z-[60] mt-1.5 rounded-lg border border-line bg-surface-1 p-3 shadow-xl dark:border-dark-line dark:bg-dark-surface;
 }
 
 .popover-panel.align-right {
@@ -1290,7 +1435,7 @@
 
 .filter-row select,
 .filter-row input {
-  @apply rounded-md border border-gray-300 bg-white px-2 py-1.5 text-xs text-brand-navy dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100;
+  @apply rounded-md border border-line-strong bg-surface-1 px-2 py-1.5 text-xs text-brand-navy dark:border-gray-600 dark:bg-gray-800 dark:text-dark-ink;
 }
 
 .filter-row .field-sel {
@@ -1306,7 +1451,7 @@
 }
 
 .filter-row .rm-filter {
-  @apply flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400;
+  @apply flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded text-ink-faint hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950 dark:hover:text-red-400;
 }
 
 .filter-row .rm-filter svg {
@@ -1314,7 +1459,7 @@
 }
 
 .add-filter-btn {
-  @apply flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0.5 text-xs font-semibold text-brand-blue hover:underline;
+  @apply flex cursor-pointer items-center gap-1.5 border-none bg-transparent p-0.5 text-xs font-semibold text-accent hover:underline;
 }
 
 .add-filter-btn svg {
@@ -1326,13 +1471,13 @@
 }
 
 .nv-field label {
-  @apply mb-1 block text-xs font-semibold text-gray-500 dark:text-gray-400;
+  @apply mb-1 block text-xs font-semibold text-ink-muted dark:text-dark-ink-muted;
 }
 
 .nv-field input,
 .nv-field select,
 .nv-field textarea {
-  @apply w-full rounded-md border border-gray-300 bg-white px-2 py-1.5 text-xs text-brand-navy dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100;
+  @apply w-full rounded-md border border-line-strong bg-surface-1 px-2 py-1.5 text-xs text-brand-navy dark:border-gray-600 dark:bg-gray-800 dark:text-dark-ink;
 }
 
 .toggle-row {
@@ -1340,7 +1485,7 @@
 }
 
 .toggle-opt {
-  @apply flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-gray-300 px-2 py-1.5 text-xs font-medium text-gray-500 dark:border-gray-600 dark:text-gray-400;
+  @apply flex flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-md border border-line-strong px-2 py-1.5 text-xs font-medium text-ink-muted dark:border-gray-600 dark:text-dark-ink-muted;
 }
 
 .toggle-opt svg {
@@ -1353,19 +1498,41 @@
 
 /* Compact segmented control (e.g. Active/Deactivated filter above a table) */
 .mini-toggle-row {
-  @apply inline-flex gap-1 rounded-md border border-gray-300 p-0.5 dark:border-gray-600;
+  @apply inline-flex gap-1 rounded-md border border-line-strong p-0.5 dark:border-gray-600;
 }
 
 .mini-toggle-opt {
-  @apply cursor-pointer rounded px-2.5 py-1 text-xs font-medium text-gray-500 hover:text-brand-navy dark:text-gray-400 dark:hover:text-gray-100;
+  @apply cursor-pointer rounded px-2.5 py-1 text-xs font-medium text-ink-muted hover:text-brand-navy dark:text-dark-ink-muted dark:hover:text-gray-100;
 }
 
 .mini-toggle-opt.active {
   @apply bg-brand-blue text-white hover:text-white;
 }
 
+/* Compact segmented nav control (calendar prev/today/next, pagination) — three
+   buttons sharing one 28px-tall bordered pill, replacing loose .btn-secondary
+   trios that each carried their own border/height. */
+.seg-nav {
+  @apply inline-flex items-center overflow-hidden rounded-md border border-line-strong bg-surface-1 dark:border-dark-line dark:bg-dark-surface;
+}
+
+.seg-nav button {
+  height: var(--size-control-sm);
+  @apply cursor-pointer border-none bg-transparent px-3 text-xs font-medium text-ink transition-colors hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-transparent dark:text-dark-ink dark:hover:bg-white/[0.06];
+}
+
+.seg-nav > * + * {
+  @apply border-l border-line dark:border-dark-line;
+}
+
+/* Non-interactive middle segment (e.g. "Page 2 of 5" between Previous/Next) */
+.seg-nav-status {
+  height: var(--size-control-sm);
+  @apply inline-flex items-center px-3 text-xs font-medium text-ink-muted dark:text-dark-ink-muted;
+}
+
 .table-row-inactive td {
-  @apply text-gray-400 dark:text-gray-500;
+  @apply text-ink-faint dark:text-dark-ink-faint;
 }
 
 .table-row-inactive .color-dot {
@@ -1373,7 +1540,7 @@
 }
 
 .popover-menu-item {
-  @apply cursor-pointer rounded-md px-2.5 py-1.5 text-xs text-brand-navy hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-white/5;
+  @apply cursor-pointer rounded-md px-2.5 py-1.5 text-xs text-brand-navy hover:bg-surface-2 dark:text-gray-200 dark:hover:bg-white/[0.06];
 }
 
 .popover-menu-item.danger {
@@ -1391,7 +1558,9 @@
 /* ---------- Toolbar filter button ---------- */
 
 .tb-btn {
-  @apply relative flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-md border border-gray-300 bg-white text-brand-navy hover:bg-gray-100 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-white/5;
+  height: var(--size-control-lg);
+  width: var(--size-control-lg);
+  @apply relative flex shrink-0 cursor-pointer items-center justify-center rounded-md border border-line-strong bg-surface-1 text-brand-navy hover:bg-surface-2 dark:border-gray-600 dark:bg-gray-800 dark:text-dark-ink dark:hover:bg-white/[0.06];
 }
 
 .tb-btn svg {
@@ -1399,7 +1568,7 @@
 }
 
 .tb-btn .filter-count {
-  @apply absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-blue px-1 text-[0.62rem] font-bold text-white;
+  @apply absolute -top-1.5 -right-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[0.62rem] font-bold text-white;
 }
 
 /* ---------- Sortable grid header ---------- */
@@ -1417,7 +1586,7 @@
 }
 
 .col-menu-trigger {
-  @apply ml-1 inline-flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded text-gray-400 normal-case hover:bg-gray-200 hover:text-brand-navy dark:hover:bg-white/5 dark:hover:text-gray-100;
+  @apply ml-1 inline-flex h-4 w-4 shrink-0 cursor-pointer items-center justify-center rounded text-ink-faint normal-case hover:bg-gray-200 hover:text-brand-navy dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
 }
 
 .col-menu-trigger svg {
@@ -1429,7 +1598,7 @@
 }
 
 .col-add-trigger {
-  @apply flex h-6 w-6 cursor-pointer items-center justify-center rounded text-gray-400 normal-case hover:bg-gray-200 hover:text-brand-navy dark:hover:bg-white/5 dark:hover:text-gray-100;
+  @apply flex h-6 w-6 cursor-pointer items-center justify-center rounded text-ink-faint normal-case hover:bg-gray-200 hover:text-brand-navy dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
 }
 
 .col-add-trigger svg {
@@ -1443,11 +1612,11 @@
 }
 
 .kanban-col {
-  @apply w-64 shrink-0 rounded-lg border border-gray-200 bg-white p-2 dark:border-gray-800 dark:bg-gray-900;
+  @apply w-64 shrink-0 rounded-lg border border-line bg-surface-1 p-2 dark:border-dark-line dark:bg-dark-surface;
 }
 
 .kanban-col-head {
-  @apply flex items-center gap-1.5 px-1 pt-1 pb-2 text-xs font-bold text-brand-navy dark:text-gray-100;
+  @apply flex items-center gap-1.5 px-1 pt-1 pb-2 text-xs font-bold text-brand-navy dark:text-dark-ink;
 }
 
 .kanban-col-head .dot {
@@ -1455,7 +1624,11 @@
 }
 
 .kanban-col-head .cnt {
-  @apply ml-auto font-mono text-[0.68rem] font-normal text-gray-400;
+  @apply ml-auto font-mono text-[0.68rem] font-normal text-ink-faint;
+}
+
+.kanban-col-head .kanban-col-total {
+  @apply ml-1 font-mono text-[0.68rem] font-normal text-ink-faint before:mr-1 before:content-['·'] [font-variant-numeric:tabular-nums];
 }
 
 .kanban-body {
@@ -1467,7 +1640,35 @@
 }
 
 .kcard {
-  @apply cursor-grab rounded-md border border-gray-200 bg-brand-cream p-2.5 shadow-sm active:cursor-grabbing dark:border-gray-700 dark:bg-black;
+  @apply cursor-grab rounded-md border border-line bg-surface-0 p-2.5 shadow-sm active:cursor-grabbing dark:border-dark-line dark:bg-dark-page;
+}
+
+.kcard-top {
+  @apply flex items-start justify-between gap-2;
+}
+
+.kc-amount {
+  @apply shrink-0 text-[12.5px] font-bold text-ink [font-variant-numeric:tabular-nums] dark:text-dark-ink;
+}
+
+.kcard-foot {
+  @apply flex items-center gap-2;
+}
+
+.kc-owner {
+  @apply inline-flex h-5 w-5 items-center justify-center rounded-full bg-avatar-bg text-[9px] font-bold text-ink dark:bg-[#3b2f26] dark:text-[#e8c9a0];
+}
+
+.kc-age {
+  @apply text-[10.5px] font-semibold text-ink-faint dark:text-dark-ink-faint;
+}
+
+.kc-age.late {
+  @apply text-red-700 dark:text-red-400;
+}
+
+.kc-tasks {
+  @apply ml-auto inline-flex items-center gap-1 text-[10.5px] text-ink-faint dark:text-dark-ink-faint;
 }
 
 .ghost-plus-box {
@@ -1477,7 +1678,7 @@
 /* Always-visible "Add" affordance (Airtable-style ghost row/card) — replaces
    the toolbar's primary "Add X" button in Grid/List/Kanban. */
 .full-table .ghost-row-cell {
-  @apply cursor-pointer overflow-visible border-2 border-dashed border-gray-300 py-0 text-gray-400 transition-colors hover:border-brand-blue hover:text-brand-blue dark:border-gray-700 dark:text-gray-500 dark:hover:border-brand-blue-light dark:hover:text-brand-blue-light;
+  @apply cursor-pointer overflow-visible border-2 border-dashed border-line-strong py-0 text-ink-faint transition-colors hover:border-accent hover:text-accent dark:border-dark-line dark:text-dark-ink-faint dark:hover:border-brand-blue-light dark:hover:text-brand-blue-light;
 }
 
 .ghost-row-inner {
@@ -1485,7 +1686,7 @@
 }
 
 .kanban-ghost-card {
-  @apply flex cursor-pointer items-center gap-2 rounded-md border-2 border-dashed border-gray-300 p-2.5 text-sm font-medium text-gray-400 transition-colors hover:border-brand-blue hover:text-brand-blue dark:border-gray-700 dark:text-gray-500 dark:hover:border-brand-blue-light dark:hover:text-brand-blue-light;
+  @apply flex cursor-pointer items-center gap-2 rounded-md border-2 border-dashed border-line-strong p-2.5 text-sm font-medium text-ink-faint transition-colors hover:border-accent hover:text-accent dark:border-dark-line dark:text-dark-ink-faint dark:hover:border-brand-blue-light dark:hover:text-brand-blue-light;
 }
 
 /* ---------- Tasks (EntityTasksList) ---------- */
@@ -1499,7 +1700,7 @@
 }
 
 .task-row-clickable {
-  @apply cursor-pointer transition-colors hover:bg-gray-50 dark:hover:bg-white/5;
+  @apply cursor-pointer transition-colors hover:bg-surface-2 dark:hover:bg-white/[0.06];
 }
 
 .task-checkbox {
@@ -1507,15 +1708,15 @@
 }
 
 .task-row-title {
-  @apply flex-1 truncate text-left text-sm text-brand-navy dark:text-gray-100;
+  @apply flex-1 truncate text-left text-sm text-brand-navy dark:text-dark-ink;
 }
 
 .task-row-title.completed {
-  @apply text-gray-400 line-through dark:text-gray-500;
+  @apply text-ink-faint line-through dark:text-dark-ink-faint;
 }
 
 .task-row-date {
-  @apply shrink-0 text-xs text-gray-400;
+  @apply shrink-0 text-xs text-ink-faint;
 }
 
 /* ---------- Notes (EntityNotesList) ---------- */
@@ -1525,7 +1726,7 @@
 }
 
 .note-row {
-  @apply cursor-pointer rounded-md border border-gray-200 bg-white p-2.5 transition-colors hover:border-brand-blue/50 dark:border-gray-800 dark:bg-gray-900 dark:hover:border-brand-blue-light/50;
+  @apply cursor-pointer rounded-md border border-line bg-surface-1 p-2.5 transition-colors hover:border-brand-blue/50 dark:border-dark-line dark:bg-dark-surface dark:hover:border-brand-blue-light/50;
 }
 
 .note-row-header {
@@ -1533,11 +1734,11 @@
 }
 
 .note-row-title {
-  @apply truncate text-sm font-semibold text-brand-navy dark:text-gray-100;
+  @apply truncate text-sm font-semibold text-brand-navy dark:text-dark-ink;
 }
 
 .note-row-body {
-  @apply line-clamp-3 text-xs text-gray-600 dark:text-gray-300;
+  @apply line-clamp-3 text-xs text-ink-muted dark:text-dark-ink-muted;
 }
 
 .note-body-line {
@@ -1545,7 +1746,7 @@
 }
 
 .note-row-date {
-  @apply mt-1 block text-[11px] text-gray-400;
+  @apply mt-1 block text-[11px] text-ink-faint;
 }
 
 .kcard.dragging {
@@ -1553,11 +1754,11 @@
 }
 
 .kcard .kc-name {
-  @apply mb-0.5 text-xs font-semibold text-brand-navy dark:text-gray-100;
+  @apply text-[12.5px] leading-tight font-bold text-ink dark:text-dark-ink;
 }
 
 .kcard .kc-meta {
-  @apply text-[0.68rem] text-gray-400;
+  @apply mt-[3px] mb-2 text-[11px] text-ink-muted dark:text-dark-ink-muted;
 }
 
 /* ---------- Status "Manage options" popover ---------- */
@@ -1567,7 +1768,7 @@
 }
 
 .status-manage-row {
-  @apply flex items-center gap-2 rounded-md border-t-2 border-transparent px-1 py-1 text-xs hover:bg-gray-50 dark:hover:bg-white/5;
+  @apply flex items-center gap-2 rounded-md border-t-2 border-transparent px-1 py-1 text-xs hover:bg-surface-2 dark:hover:bg-white/[0.06];
 }
 
 .status-manage-row.dragging {
@@ -1579,7 +1780,7 @@
 }
 
 .status-manage-grip {
-  @apply flex shrink-0 cursor-grab items-center justify-center text-gray-400 hover:text-gray-600 active:cursor-grabbing dark:hover:text-gray-200;
+  @apply flex shrink-0 cursor-grab items-center justify-center text-ink-faint hover:text-ink-muted active:cursor-grabbing dark:hover:text-gray-200;
 }
 
 .color-dot {
@@ -1587,15 +1788,15 @@
 }
 
 .status-manage-name {
-  @apply flex-1 truncate font-medium text-brand-navy dark:text-gray-100;
+  @apply flex-1 truncate font-medium text-brand-navy dark:text-dark-ink;
 }
 
 .status-manage-name.inactive {
-  @apply font-normal text-gray-400 line-through dark:text-gray-500;
+  @apply font-normal text-ink-faint line-through dark:text-dark-ink-faint;
 }
 
 .status-manage-link {
-  @apply shrink-0 cursor-pointer border-none bg-transparent p-0 text-[0.68rem] font-semibold text-brand-blue hover:underline;
+  @apply shrink-0 cursor-pointer border-none bg-transparent p-0 text-[0.68rem] font-semibold text-accent hover:underline;
 }
 
 .col-visibility-list {
@@ -1603,7 +1804,7 @@
 }
 
 .col-visibility-row {
-  @apply flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 text-sm text-brand-navy hover:bg-gray-50 dark:text-gray-100 dark:hover:bg-white/5;
+  @apply flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1.5 text-sm text-brand-navy hover:bg-surface-2 dark:text-dark-ink dark:hover:bg-white/[0.06];
 }
 
 .col-visibility-row input {
@@ -1617,9 +1818,92 @@
 }
 
 .policy-manage-row {
-  @apply flex items-center gap-2 rounded-md px-1 py-1 text-xs hover:bg-gray-50 dark:hover:bg-white/5;
+  @apply flex items-center gap-2 rounded-md px-1 py-1 text-xs hover:bg-surface-2 dark:hover:bg-white/[0.06];
 }
 
 .policy-manage-meta {
-  @apply shrink-0 whitespace-nowrap text-[0.65rem] text-gray-400 dark:text-gray-500;
+  @apply shrink-0 whitespace-nowrap text-[0.65rem] text-ink-faint dark:text-dark-ink-faint;
+}
+
+/* ---------- Mobile pattern (Tarea 9, tareas-ux-ui.md) — everything below applies < md (768px) ---------- */
+
+.mobile-tabbar {
+  @apply fixed inset-x-0 bottom-0 z-30 flex items-center justify-around border-t border-line bg-surface-0 md:hidden dark:border-dark-line dark:bg-dark-page;
+  height: 60px;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.mobile-tabbar a {
+  @apply flex min-w-[56px] flex-col items-center justify-center text-[11px] font-semibold text-ink-faint no-underline dark:text-dark-ink-faint;
+  height: 44px;
+}
+
+.mobile-tabbar a.active {
+  @apply text-accent dark:text-accent;
+}
+
+.app-main {
+  @apply pb-[60px] md:pb-0;
+}
+
+@media (max-width: 767px) {
+  .icon-btn {
+    height: 44px;
+    width: 44px;
+  }
+
+  .menu-toggle {
+    height: 44px;
+    width: 44px;
+  }
+
+  .seg-nav button {
+    height: 40px;
+    @apply px-4;
+  }
+
+  .task-checkbox {
+    @apply h-5 w-5;
+  }
+
+  .slideover-panel {
+    @apply max-w-none;
+    width: 100%;
+  }
+
+  .overview-panel {
+    @apply h-full max-h-none w-full max-w-none min-w-0 rounded-none;
+  }
+
+  .overview-panel-main {
+    @apply flex-col;
+  }
+
+  .overview-panel-right {
+    @apply h-auto w-full border-t border-l-0 border-line dark:border-dark-line;
+  }
+
+  .detail-modal-overlay {
+    @apply p-0;
+  }
+
+  .field-group-body {
+    @apply grid-cols-1;
+  }
+
+  .overview-field-label {
+    @apply w-24;
+  }
+
+  .page-toolbar {
+    @apply flex-col items-stretch gap-2;
+  }
+
+  .toolbar-search {
+    @apply w-full flex-none;
+  }
+
+  .views-bar {
+    @apply -mx-5 px-5;
+  }
 }

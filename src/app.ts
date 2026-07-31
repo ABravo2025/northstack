@@ -24,14 +24,44 @@ dotenv.config();
 
 const app = express();
 
-// This is a JSON-only API, consumed cross-origin by design (the Vite dev
-// server on a different port locally, and the public /apply pages always).
+// Known Northstack origins — the SPA (Vercel rewrites /api/* to this same
+// function in prod/staging, so the app itself is same-origin there; this
+// list matters for local dev, where frontend/backend run on separate ports).
+const ALLOWED_ORIGINS = new Set(['https://app.joinnorthstack.com', 'https://staging.joinnorthstack.com']);
+const LOCALHOST_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/;
+
+function isAllowedOrigin(origin: string): boolean {
+  return ALLOWED_ORIGINS.has(origin) || LOCALHOST_ORIGIN.test(origin);
+}
+
+// This is a JSON-only API. Session-token-bearing routes (everything except
+// /api/public/*) were open to any origin (`cors()` with no options) — found
+// 2026-07-16 security audit, [MEDIO], unfixed until now. Restricted to
+// Northstack's own origins + localhost (any port, for local dev), decided
+// per-request rather than with a single static allowlist so the one
+// deliberate exception below doesn't get lost in a blanket relaxation:
+// /api/public/:tenantSlug/:formSlug(/submit) (routes/public.ts) backs the
+// public, unauthenticated Form page (`/apply/...`) — the original cors()
+// call's own comment says this needs to stay open to any origin "always",
+// not just for local dev, so it's carved out explicitly rather than folded
+// into the origin allowlist above (kept permissive on purpose, not an oversight).
+app.use(
+  cors((req, callback) => {
+    if (req.path.startsWith('/api/public/')) {
+      return callback(null, { origin: true });
+    }
+    const requestOrigin = req.headers.origin;
+    // No Origin header at all (curl, server-to-server, the Vercel rewrite
+    // hitting this function same-origin) isn't a browser CORS request —
+    // nothing to restrict.
+    return callback(null, { origin: !requestOrigin || isAllowedOrigin(requestOrigin) });
+  }),
+);
 // Helmet's default Cross-Origin-Resource-Policy (`same-origin`) would have
-// the browser block those fetches outright regardless of the cors()
-// middleware below, so it's relaxed explicitly; everything else (HSTS,
+// the browser block cross-origin fetches outright regardless of the cors()
+// middleware above, so it's relaxed explicitly; everything else (HSTS,
 // X-Content-Type-Options, frame protections, etc.) stays at Helmet's default.
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-app.use(cors());
 app.use(express.json({ limit: '2mb' })); // default 100kb is too small for a CSV import body
 
 app.get('/health', (_req, res) => {

@@ -5,7 +5,6 @@ import {
   CalendarIcon,
   ChevronLeftIcon,
   DashboardIcon,
-  DollarIcon,
   GearIcon,
   HomeIcon,
   PeopleIcon,
@@ -58,10 +57,6 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
           <NavLink to="/hr/time-off" className={linkClass} title="Human Resources – Time Off" onClick={onMobileClose}>
             <CalendarIcon className="h-4 w-4 shrink-0" />
             {label('Time Off')}
-          </NavLink>
-          <NavLink to="/hr/payroll" className={linkClass} title="Human Resources – Payroll" onClick={onMobileClose}>
-            <DollarIcon className="h-4 w-4 shrink-0" />
-            {label('Payroll')}
           </NavLink>
           <NavLink to="/hr/dashboard" className={linkClass} title="Human Resources – Dashboard" onClick={onMobileClose}>
             <DashboardIcon className="h-4 w-4 shrink-0" />

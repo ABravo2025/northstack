@@ -197,57 +197,8 @@ también — es una feature completa (Tasks/Notes) inutilizable, no un detalle v
 
 ---
 
-## QA-04 — Módulo Payroll V1 (push pendiente, 2026-07-31, exclusivamente a `staging`)
-
-**Por qué existe esta tarea:** primer módulo nuevo desde cero (schema + backend + frontend) del
-Tier 3.5. Alcance V1 deliberadamente chico — solo carga manual de datos de pago, sin métricas
-derivadas (recortadas del alcance original a pedido explícito del usuario, quedan para después).
-4 decisiones de producto se confirmaron con el usuario antes de construir (ver
-`docs/tareas-desarrollo.md`, sección Tier 3.5): visibilidad abierta a cualquier rol (no owner-only,
-a diferencia de `hourlyRateCents`/`monthlyRateCents` — decisión explícita, no el default
-recomendado), período como rango de fechas, carga una entrada por vez. Verificado con smoke test
-por `curl` contra un tenant descartable en `staging` (CRUD completo, validaciones, aislamiento entre
-tenants) pero **sin verificación visual/Playwright** — sin herramienta de navegador disponible en
-esta sesión. Esta tarea es esa verificación visual pendiente.
-
-### A. Flujo básico (`/hr/payroll`, cualquier rol del tenant — owner/admin/member deberían ver lo mismo)
-
-| # | Caso | Resultado esperado |
-|---|---|---|
-| 1 | Entrar a `/hr/payroll` con un tenant sin entradas de payroll | `EmptyState` con ícono de dólar, título "No payroll entries yet" y botón "Add entry" — no una tabla vacía ni un error. |
-| 2 | Click en "Add entry" (o el botón del header) | Se abre un `SlideOver` con 5 campos: Employee (buscador, no `<select>` plano), Period start, Period end, Amount (con el código de moneda del tenant en el label, ej. "Amount (USD)"), Payment date. |
-| 3 | Completar el form con un empleado real, período válido (ej. 2026-07-01 → 2026-07-31), monto positivo, fecha de pago, y guardar | Toast de éxito, el `SlideOver` se cierra, la nueva fila aparece en la tabla sin recargar la página. |
-| 4 | Click en el ícono de editar (lápiz) de una fila | El `SlideOver` se abre pre-cargado con los valores exactos de esa entrada (incluyendo el monto convertido de centavos a la unidad mostrada, ej. 500000 centavos → "5000.00"). |
-| 5 | Editar el monto y guardar | La fila se actualiza en la tabla con el nuevo monto formateado en la moneda del tenant (ej. "$5,500.00"). |
-| 6 | Click en el ícono de borrar (tacho) de una fila | `ConfirmDialog` con el nombre del empleado y el monto en el mensaje — no un `confirm()` nativo del navegador. Confirmar borra la fila de la tabla. |
-| 7 | Con un tenant que tiene ≥ 2 empleados, iniciar "Add entry" y escribir en el buscador de empleado | La lista se filtra a medida que se tipea (por nombre), no hace falta scrollear un `<select>` largo. |
-
-### B. Validación
-
-| # | Caso | Resultado esperado |
-|---|---|---|
-| 8 | Intentar guardar con Period end anterior a Period start | Error visible (toast), la entrada no se crea. |
-| 9 | Intentar guardar con Amount en 0 o negativo (si el input del navegador lo permite escribir) | Error visible (toast) — el backend rechaza montos que no sean positivos. |
-
-### C. Sidebar / navegación
-
-| # | Caso | Resultado esperado |
-|---|---|---|
-| 10 | Mirar el grupo "Human Resources" del sidebar | "Payroll" aparece entre "Employees" y "Time Off" (o "Dashboard"), con ícono de dólar — mismo estilo visual que el resto de los links del grupo (activo = pill terracota, no azul). |
-| 11 | Colapsar el sidebar (botón de flecha) | El ícono de Payroll se sigue viendo, sin el label — igual que el resto de los links. |
-
-### Al encontrar una falla
-
-Si el bug es de que un dato de payroll queda visible o editable para el tenant equivocado, es
-severidad alta (dato de compensación real cruzando tenants) — reportar con los 2 tenants
-involucrados. Si es un problema puramente visual (alineación, el ícono no carga, el `SlideOver` no
-cierra bien), es severidad baja/media — anotar la diferencia en el reporte.
-
----
-
 ## Próximas tareas de QA (a definir)
 
-Cuando se construyan los módulos grandes en curso (rediseño de Clients), esta tabla de
+Cuando se construyan los módulos grandes en curso (rediseño de Clients, Payroll), esta tabla de
 casos va a necesitar extenderse con sus endpoints nuevos — no asumir que quedan cubiertos por los
-casos de Employee/Client de arriba. Las métricas derivadas de Payroll (costo de nómina por
-mes/departamento) también van a necesitar su propia tarea de QA cuando se construyan.
+casos de Employee/Client de arriba.

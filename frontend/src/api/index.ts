@@ -20,7 +20,6 @@ import { onboardingApi } from './onboarding.js';
 import { csvApi } from './csv.js';
 import { tasksApi } from './tasks.js';
 import { notesApi } from './notes.js';
-import { payrollApi } from './payroll.js';
 
 export { ApiError } from './http.js';
 export * from './types.js';
@@ -48,5 +47,4 @@ export const api = {
   ...csvApi,
   ...tasksApi,
   ...notesApi,
-  ...payrollApi,
 };

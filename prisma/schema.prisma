@@ -160,7 +160,6 @@ model Tenant {
   opportunityStageHistory OpportunityStageHistory[]
   tasks                   Task[]
   notes                   Note[]
-  payrollEntries          PayrollEntry[]
 }
 
 model User {
@@ -218,7 +217,6 @@ model Employee {
   timeOffPolicies          EmployeeTimeOffPolicy[]
   timeOffRequestsMade      TimeOffRequest[]         @relation("TimeOffRequestEmployee")
   timeOffRequestsToApprove TimeOffRequest[]         @relation("TimeOffRequestApprover")
-  payrollEntries           PayrollEntry[]
 
   @@unique([tenantId, email])
 }
@@ -499,31 +497,6 @@ model EmployeeTimeOffPolicy {
 
   @@unique([employeeId, timeOffPolicyId])
   @@index([tenantId])
-}
-
-// Payroll V1 (Tier 3.5) — manual data entry only, no real payment processing.
-// Visibility deliberately open to any authenticated tenant member for now
-// (confirmed with the user 2026-07-31, unlike Employee.hourlyRateCents/
-// monthlyRateCents which are owner-only) — revisit once custom roles exist.
-// periodStart/periodEnd is a date range rather than a fixed calendar month so
-// weekly/biweekly cadences don't need a schema change later. Amount is in the
-// tenant's single currency (Tenant.currency), same as the other compensation
-// fields — no separate currency column.
-model PayrollEntry {
-  id          String   @id @default(uuid())
-  tenantId    String
-  tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  employeeId  String
-  employee    Employee @relation(fields: [employeeId], references: [id])
-  periodStart DateTime
-  periodEnd   DateTime
-  amountCents Int
-  paymentDate DateTime
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([tenantId, employeeId])
-  @@index([tenantId, paymentDate])
 }
 
 model CustomFieldDefinition {

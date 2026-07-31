@@ -11,7 +11,6 @@ import HelpPage from './pages/HelpPage';
 import HrDashboardPage from './pages/HrDashboardPage';
 import EmployeesPage from './pages/EmployeesPage';
 import TimeOffOverviewPage from './pages/TimeOffOverviewPage';
-import PayrollPage from './pages/PayrollPage';
 import CompaniesPage from './pages/CompaniesPage';
 import ContactsPage from './pages/ContactsPage';
 import PipelinesSettingsPage from './pages/PipelinesSettingsPage';
@@ -199,7 +198,6 @@ export default function App() {
         <Route path="/hr/dashboard" element={<HrDashboardPage />} />
         <Route path="/hr/employees" element={<EmployeesPage user={user} token={token ?? ''} />} />
         <Route path="/hr/time-off" element={<TimeOffOverviewPage user={user} token={token ?? ''} />} />
-        <Route path="/hr/payroll" element={<PayrollPage token={token ?? ''} />} />
         <Route path="/companies" element={<CompaniesPage user={user} token={token ?? ''} />} />
         <Route path="/contacts" element={<ContactsPage user={user} token={token ?? ''} />} />
         <Route path="/opportunities" element={<OpportunitiesPage user={user} token={token ?? ''} />} />

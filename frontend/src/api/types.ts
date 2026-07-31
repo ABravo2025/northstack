@@ -257,6 +257,16 @@ export interface TimeOffRequest {
   approver?: { id: string; firstName: string; lastName: string } | null;
 }
 
+export interface PayFrequency {
+  id: string;
+  name: string;
+  cadence: 'weekly' | 'biweekly' | 'monthly';
+  payAnchor: string;
+  isActive: boolean;
+  order: number;
+  assignedCount: number;
+}
+
 export interface Invitation {
   id: string;
   tenantId: string;

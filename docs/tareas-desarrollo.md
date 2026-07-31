@@ -168,7 +168,7 @@ Organizado por tipo. Los ítems que tocan más de una capa quedan bajo la capa d
 
 - [ ] Revisar el frontend end-to-end en navegador (pendiente que el usuario lo haga — no tengo forma de ver la UI)
 - [ ] **Idea (backlog, anotada por el usuario 2026-07-20, sin detalle ni empezar):** edición inline en la tabla de Employees — cada celda de cada fila editable directamente sin abrir el SlideOver de edición, excepto `email` y nombre (`firstName`/`lastName`), que quedan de solo lectura en la tabla. Aplicaría a `department`, `statusId`, `managerId`, y los custom fields ya embebidos en la tabla. A definir: patrón de edición (click-to-edit por celda vs. una fila entera en modo edición a la vez), qué pasa con el guardado (autosave por campo vs. confirmar), y si Clients recibe el mismo tratamiento por consistencia.
-- [ ] **Idea (backlog, anotada por el usuario 2026-07-20, sin detalle ni empezar):** filtro de columnas visibles en las tablas (útil con muchos custom fields). A definir: dónde vive el control (cerca de Filter en `.page-toolbar`), y si la preferencia se guarda (por usuario, localStorage) o es solo de la sesión.
+- [x] **Filtro de columnas visibles en las tablas** — **encontrado ya implementado 2026-07-31** al cruzar este checklist contra el código real (el ítem había quedado sin tachar). `ColumnVisibilityMenu.tsx` + hook `useColumnVisibility` (persistido en `localStorage`, por dispositivo) ya están en uso en `EmployeesPage.tsx`, `ContactsPage.tsx` y `CompaniesPage.tsx`, junto al control de Filter en `.page-toolbar`.
 
 ### UX / Interfaz
 

@@ -1,0 +1,88 @@
+import {
+  createPayFrequency,
+  findPayFrequencyById,
+  listPayFrequencies,
+  updatePayFrequency,
+} from '../modules/hr/payFrequencyService.js';
+import { validateSession } from '../lib/httpAuth.js';
+import { createAsyncRouter } from '../lib/asyncRouter.js';
+
+export const payrollRouter = createAsyncRouter();
+
+// Payroll V1 (Tier 3.5) — see docs/tareas-desarrollo.md, "Payroll (Tier 3.5) —
+// spec técnico completo". Visibility is owner-only across the whole section
+// by default (compensation data), except an employee viewing their own
+// EmployeeCompensation history (added in Unidad 4) — not a blanket rule for
+// every endpoint in this router.
+
+const PAY_FREQUENCY_CADENCES = ['weekly', 'biweekly', 'monthly'];
+
+payrollRouter.get('/api/hr/pay-frequencies', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (user.role !== 'owner') {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const frequencies = await listPayFrequencies(user.tenantId!);
+  return res.json(frequencies);
+});
+
+payrollRouter.post('/api/hr/pay-frequencies', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (user.role !== 'owner') {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
+  const cadence = req.body.cadence;
+  const payAnchor = typeof req.body.payAnchor === 'string' ? req.body.payAnchor.trim() : '';
+  if (!name || !PAY_FREQUENCY_CADENCES.includes(cadence) || !payAnchor) {
+    return res.status(400).json({ error: 'name, a valid cadence, and payAnchor are required' });
+  }
+
+  const frequency = await createPayFrequency({
+    tenantId: user.tenantId!,
+    name,
+    cadence,
+    payAnchor,
+    order: req.body.order,
+  });
+  return res.status(201).json(frequency);
+});
+
+payrollRouter.patch('/api/hr/pay-frequencies/:frequencyId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (user.role !== 'owner') {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const existing = await findPayFrequencyById(req.params.frequencyId);
+  if (!existing || existing.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Pay frequency not found' });
+  }
+
+  if (req.body.cadence !== undefined && !PAY_FREQUENCY_CADENCES.includes(req.body.cadence)) {
+    return res.status(400).json({ error: 'Invalid cadence' });
+  }
+
+  const result = await updatePayFrequency(req.params.frequencyId, user.tenantId!, {
+    name: req.body.name,
+    cadence: req.body.cadence,
+    payAnchor: req.body.payAnchor,
+    isActive: req.body.isActive,
+    order: req.body.order,
+  });
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  return res.json(result.frequency);
+});

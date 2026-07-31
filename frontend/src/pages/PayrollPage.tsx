@@ -1,11 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api } from '../api';
 import type { PayFrequency, PayrollRun, PayrollRunDetail } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import SlideOver from '../components/common/SlideOver';
+import Popover from '../components/common/Popover';
 import StatusChip from '../components/common/StatusChip';
-import { ChevronLeftIcon, PencilIcon, PlusIcon } from '../components/common/Icons';
+import { ChevronLeftIcon, PencilIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
 import { formatMoney } from '../lib/currencies';
+
+const ADJUSTMENT_TYPE_LABELS: Record<string, string> = {
+  bonus: 'Bonus',
+  commission: 'Commission',
+  reimbursement: 'Reimbursement',
+  deduction: 'Deduction',
+};
 
 interface PayrollPageProps {
   token: string;
@@ -424,6 +432,15 @@ function RunDetailView({ token, runId, onBack }: RunDetailViewProps) {
   const [run, setRun] = useState<PayrollRunDetail | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const [adjustmentsMenuFor, setAdjustmentsMenuFor] = useState<string | null>(null);
+  const adjustmentsMenuAnchorRef = useRef<HTMLElement | null>(null);
+  const [newAdjustment, setNewAdjustment] = useState({
+    type: 'bonus' as 'bonus' | 'commission' | 'reimbursement' | 'deduction',
+    amount: '',
+    label: '',
+  });
+  const [savingAdjustment, setSavingAdjustment] = useState(false);
+
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -438,6 +455,48 @@ function RunDetailView({ token, runId, onBack }: RunDetailViewProps) {
       toast.error('Failed to load run: ' + (error as Error).message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openAdjustments = (e: React.MouseEvent, employeeId: string) => {
+    adjustmentsMenuAnchorRef.current = e.currentTarget as HTMLElement;
+    setNewAdjustment({ type: 'bonus', amount: '', label: '' });
+    setAdjustmentsMenuFor(employeeId);
+  };
+
+  const activeGroup = run?.employeeGroups.find((g) => g.employee.id === adjustmentsMenuFor) ?? null;
+
+  const handleAddAdjustment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeGroup || !run) return;
+    const amountCents = Math.round(Number.parseFloat(newAdjustment.amount || '0') * 100);
+    setSavingAdjustment(true);
+    try {
+      await api.createPayrollAdjustment(token, {
+        runId: run.id,
+        employeeId: activeGroup.employee.id,
+        type: newAdjustment.type,
+        amountCents,
+        currency: activeGroup.base?.currency ?? activeGroup.adjustments[0]?.currency ?? 'USD',
+        label: newAdjustment.label || undefined,
+      });
+      setNewAdjustment({ type: 'bonus', amount: '', label: '' });
+      toast.success('Adjustment added.');
+      load();
+    } catch (error) {
+      toast.error('Failed to add adjustment: ' + (error as Error).message);
+    } finally {
+      setSavingAdjustment(false);
+    }
+  };
+
+  const handleDeleteAdjustment = async (entryId: string) => {
+    try {
+      await api.deletePayrollAdjustment(token, entryId);
+      toast.success('Adjustment removed.');
+      load();
+    } catch (error) {
+      toast.error('Failed to remove adjustment: ' + (error as Error).message);
     }
   };
 
@@ -497,9 +556,11 @@ function RunDetailView({ token, runId, onBack }: RunDetailViewProps) {
                       {group.base?.hoursQty != null ? ` (${group.base.hoursQty}h)` : ''}
                     </td>
                     <td>
-                      {group.adjustments.length === 0
-                        ? '—'
-                        : `${adjustmentsTotal >= 0 ? '+' : ''}${formatMoney(adjustmentsTotal, group.adjustments[0].currency)} (${group.adjustments.length})`}
+                      <button type="button" className="table-link" onClick={(e) => openAdjustments(e, group.employee.id)}>
+                        {group.adjustments.length === 0
+                          ? '+ Add'
+                          : `${adjustmentsTotal >= 0 ? '+' : ''}${formatMoney(adjustmentsTotal, group.adjustments[0].currency)} (${group.adjustments.length})`}
+                      </button>
                     </td>
                     <td>{group.base ? formatMoney(group.total, group.base.currency) : '—'}</td>
                   </tr>
@@ -509,6 +570,82 @@ function RunDetailView({ token, runId, onBack }: RunDetailViewProps) {
           </table>
         </div>
       )}
+
+      <Popover
+        open={adjustmentsMenuFor !== null}
+        onClose={() => setAdjustmentsMenuFor(null)}
+        anchorRef={adjustmentsMenuAnchorRef}
+        width={280}
+      >
+        {activeGroup && (
+          <div className="policy-manage-list">
+            {activeGroup.adjustments.length === 0 && <p className="text-xs text-gray-500 px-2 py-1">No adjustments yet.</p>}
+            {activeGroup.adjustments.map((adj) => (
+              <div key={adj.id} className="policy-manage-row justify-between">
+                <span className="status-manage-name">
+                  {ADJUSTMENT_TYPE_LABELS[adj.type] || adj.type}
+                  {adj.label ? ` — ${adj.label}` : ''}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  {formatMoney(adj.amountCents, adj.currency)}
+                  {run?.status === 'draft' && (
+                    <button type="button" className="icon-btn danger" onClick={() => handleDeleteAdjustment(adj.id)}>
+                      <span className="tip">Remove</span>
+                      <TrashIcon className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </span>
+              </div>
+            ))}
+            {run?.status === 'draft' && (
+              <form className="mt-2 border-t border-line pt-2" onSubmit={handleAddAdjustment}>
+                <div className="form-group">
+                  <label htmlFor="adj-type">Type</label>
+                  <select
+                    id="adj-type"
+                    value={newAdjustment.type}
+                    onChange={(e) =>
+                      setNewAdjustment({
+                        ...newAdjustment,
+                        type: e.target.value as 'bonus' | 'commission' | 'reimbursement' | 'deduction',
+                      })
+                    }
+                  >
+                    <option value="bonus">Bonus</option>
+                    <option value="commission">Commission</option>
+                    <option value="reimbursement">Reimbursement</option>
+                    <option value="deduction">Deduction</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="adj-amount">Amount</label>
+                  <input
+                    id="adj-amount"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={newAdjustment.amount}
+                    onChange={(e) => setNewAdjustment({ ...newAdjustment, amount: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="adj-label">Note (optional)</label>
+                  <input
+                    id="adj-label"
+                    type="text"
+                    value={newAdjustment.label}
+                    onChange={(e) => setNewAdjustment({ ...newAdjustment, label: e.target.value })}
+                  />
+                </div>
+                <button type="submit" className="btn-primary w-full" disabled={savingAdjustment}>
+                  {savingAdjustment ? 'Adding…' : 'Add adjustment'}
+                </button>
+              </form>
+            )}
+          </div>
+        )}
+      </Popover>
     </div>
   );
 }

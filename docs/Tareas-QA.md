@@ -141,6 +141,15 @@ tenant de prueba (staging) y con `curl` contra la API de producción ya deployad
 sesión sin supervisión del usuario en tiempo real — esta tarea es la pasada de confirmación humana
 que falta.
 
+**Actualización 2026-07-31, mismo día:** después de este push el usuario reportó un error real en
+`/overview` ("Failed to load your tasks"/"Failed to load the team calendar") — diagnosticado como
+un incidente **preexistente, no causado por este push**: las tablas `Task`/`Note` nunca se habían
+creado en la base de datos de producción (`prisma db push` corrido contra `staging` al construir ese
+módulo, nunca contra producción — detalle completo en `docs/tareas/semana-2026-07-29.md`, entrada
+del 2026-07-31, sección D). Ya se corrió el fix (`prisma db push` aditivo contra producción) y se
+verificó con `curl` que los endpoints vuelven 200. **La sección D de abajo es para confirmar que el
+fix se mantiene, no para redescubrir el bug.**
+
 ### A. Verificación visual (todas en `/`, autenticado, un tenant con datos reales)
 
 | # | Pantalla | Qué mirar |
@@ -169,13 +178,22 @@ que falta.
 |---|---|---|
 | 13 | Correr `npx tsx scripts/metrics-report.ts` (o revisar el output ya corrido en la sesión) | Mismo tipo de output que antes del fix (avg/median/max por tenant), sin errores — es un script de solo lectura, sin riesgo para datos reales |
 
+### D. Incidente `Task`/`Note` en producción — confirmar que el fix sigue en pie
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 14 | `GET /api/tasks/mine` y `GET /api/tasks/calendar` (autenticado, cualquier tenant real) | 200, no 500. Si vuelve a dar 500, correr la misma query de diagnóstico contra producción (`information_schema.tables`, ver `docs/tareas/semana-2026-07-29.md` sección D del 2026-07-31 para el procedimiento exacto) antes de asumir que es el mismo bug — podría ser algo nuevo. |
+| 15 | Abrir la pestaña "Notes" de cualquier panel de detalle (Employee/Company/Contact/Opportunity), crear una nota | Se guarda y aparece en la lista, sin error. |
+| 16 | "My tasks" en `/overview` (widget de la derecha) | Cuando el usuario tiene tasks asignadas, aparecen; sin error toast. |
+
 ### Al encontrar una falla
 
 Los ítems A son visuales/UX — cualquier hallazgo ahí es prioridad de pulido, no de seguridad, salvo
 que algo quede genuinamente roto/inutilizable (ej. no se puede guardar un campo, un botón no
 responde). Los ítems B (CORS) son los de mayor riesgo real: si algo que antes funcionaba ahora está
 bloqueado por CORS, es severidad alta (afecta uso real de 167 tenants) — reportar con el origen
-exacto que falló y la URL completa del request.
+exacto que falló y la URL completa del request. Los ítems D, si vuelven a fallar, son severidad alta
+también — es una feature completa (Tasks/Notes) inutilizable, no un detalle visual.
 
 ---
 

@@ -8,15 +8,35 @@
   [`docs/tareas/semana-2026-07-29.md`](tareas/semana-2026-07-29.md); resumen en la sección "Estado
   actual" más abajo. Este archivo se podó (2026-07-30) — los ítems ya completados se movieron a los
   archivos semanales de `docs/tareas/`, acá queda solo lo pendiente + un resumen de alto nivel.
-- **2026-07-31 (de noche, sin supervisión — autorizado explícitamente por el usuario, con la regla de
-  no pushear nada a staging):** pasada de UX/UI completa (Tareas 1-9 de `docs/tareas-ux-ui.md` —
-  paleta cálida, alturas de control, jerarquía de botones, EmptyState/TableSkeleton, panel de detalle
-  agrupado, Kanban con datos, tiles de Settings, dark mode de 3 planos, patrón mobile) + 4 ítems
-  sueltos de este archivo (fix N+1 de `metrics-report.ts`, ghost row/scrollbar de Company Users, CORS
-  restringido a allowlist, y esta misma limpieza de checklist). Todo en el working tree local, nada
-  commiteado/pusheado — pendiente de revisión del usuario. Varios ítems grandes del backlog (Payroll,
-  Payments, Integraciones, roles custom, etc.) se dejaron sin tocar a propósito por no tener spec
-  técnico todavía — ver marca `[ ]` de cada uno.
+- **2026-07-31 (de noche, sin supervisión en tiempo real — autorizado explícitamente por el usuario)
+  → mañana del mismo día, pusheado a staging y producción, con un incidente real encontrado y
+  resuelto en el camino. Detalle completo, minuto a minuto, en
+  [`docs/tareas/semana-2026-07-29.md`](tareas/semana-2026-07-29.md) — acá solo el resumen:**
+  1. Pasada de UX/UI completa (Tareas 1-9 de `docs/tareas-ux-ui.md` — paleta cálida, alturas de
+     control, jerarquía de botones, EmptyState/TableSkeleton, panel de detalle agrupado, Kanban con
+     datos, tiles de Settings, dark mode de 3 planos, patrón mobile) + 4 ítems sueltos de este
+     archivo (fix N+1 de `metrics-report.ts`, ghost row/scrollbar de Company Users, CORS restringido
+     a allowlist, limpieza de este checklist). Todo verificado con Playwright contra un tenant de
+     staging antes de pushear.
+  2. Commit `7f97cf2` + `4d6c786`, pusheados a **staging y producción en el mismo turno** (confirmado
+     explícitamente por el usuario, saltando el paso intermedio de revisión manual que exige la regla
+     de deploy de abajo — excepción puntual, no un cambio de la regla general).
+  3. **Incidente encontrado post-push, no causado por este push:** el usuario reportó toasts de error
+     ("Failed to load your tasks" / "Failed to load the team calendar") al abrir `/overview` en
+     producción. Diagnosticado con un tenant de prueba descartable creado directo en producción vía
+     `curl`: las tablas `Task`/`Note` **no existían en la base de datos de producción** —
+     `prisma db push` se había corrido contra `staging` al construir el módulo de Tasks/Notes
+     (`docs/tareas/semana-2026-07-29.md`, entrada "módulo de Tasks/Notes") pero nunca contra
+     producción. Rompía silenciosamente `GET /api/tasks/mine`, `GET /api/tasks/calendar` y
+     `GET/POST /api/notes` con 500 desde el primer deploy del CRM completo — nadie lo había notado
+     hasta ahora. Confirmado con una query de solo lectura contra ambas bases (`information_schema.tables`)
+     antes de tocar nada. Fix: `prisma db push` contra producción (puramente aditivo — creó las 2
+     tablas faltantes, cero riesgo de datos porque no podían tener ninguna fila hasta ahora).
+     Verificado end-to-end después: los 3 endpoints vuelven 200. Este es exactamente el "riesgo de
+     desincronización" que la regla de deploy de abajo ya advertía como latente desde el 2026-07-23 —
+     ver esa entrada, corregida hoy para ser explícitamente bidireccional.
+  4. Varios ítems grandes del backlog (Payroll, Payments, Integraciones, roles custom, etc.) se
+     dejaron sin tocar a propósito por no tener spec técnico todavía — ver marca `[ ]` de cada uno.
 
 ## Prioridades (tiers)
 
@@ -160,7 +180,19 @@ Hallazgos de `docs/ux-ui-audit.md` + decisiones tomadas en las sesiones de mocku
 
 ## Notas de avance
 
-- **Proceso de deploy — obligatorio desde el 2026-07-27 (confirmado por el usuario 2026-07-24):** ambiente de staging armado y verificado (`staging.joinnorthstack.com`, branch de Neon separada, Turnstile con claves de test de Cloudflare, Zoho compartido con producción). Regla acordada: **todo cambio de código** (backend/frontend/schema) pasa primero por `staging` (`git push origin main:staging`, verificar, recién ahí `git push origin main`) — sin excepciones una vez que arranque. **Los cambios que solo tocan `docs/*.md` van directo a `main`**, sin pasar por staging, porque no hay nada que deployar/testear ahí (no se renderizan en ningún lado de la app). Recordatorio operativo: la branch de Neon `staging` es una foto tomada en el momento de crearla — cualquier `prisma db push` contra producción tiene que correrse también contra el `DATABASE_URL` de `staging` (mismo secret ya cargado en GitHub) para que no se desincronicen; ya pasó una vez (ver incidente de "Can't reach database server" del 2026-07-23, resuelto sin relación al schema, pero el riesgo de desincronización sigue latente).
+- **Proceso de deploy — obligatorio desde el 2026-07-27 (confirmado por el usuario 2026-07-24):** ambiente de staging armado y verificado (`staging.joinnorthstack.com`, branch de Neon separada, Turnstile con claves de test de Cloudflare, Zoho compartido con producción). Regla acordada: **todo cambio de código** (backend/frontend/schema) pasa primero por `staging` (`git push origin main:staging`, verificar, recién ahí `git push origin main`) — sin excepciones una vez que arranque. **Los cambios que solo tocan `docs/*.md` van directo a `main`**, sin pasar por staging, porque no hay nada que deployar/testear ahí (no se renderizan en ningún lado de la app). Recordatorio operativo, **corregido 2026-07-31 para ser explícitamente bidireccional** (la versión
+anterior de esta regla solo cubría un sentido y el riesgo se concretó en el sentido contrario — ver
+incidente abajo): la branch de Neon `staging` es una foto tomada en el momento de crearla —
+**cualquier `prisma db push`, corrido contra cualquiera de las dos bases, tiene que correrse también
+contra la otra en la misma sesión de trabajo**, no asumir que "ya lo hice en la otra" sin confirmarlo
+explícitamente. Dos incidentes reales hasta ahora, uno por cada sentido: (1) 2026-07-23, "Can't reach
+database server" — resuelto sin relación al schema, pero ya dejó anotado el riesgo como latente; (2)
+**2026-07-31 — riesgo concretado de verdad:** al construir el módulo de Tasks/Notes se corrió
+`prisma db push` contra `staging` pero nunca contra producción; las tablas `Task`/`Note` no existían
+ahí, rompiendo silenciosamente (500) `/api/tasks/*` y `/api/notes` desde el primer deploy del CRM
+completo hasta que un usuario lo notó y se diagnosticó/corrigió el 2026-07-31 (detalle completo en
+`docs/tareas/semana-2026-07-29.md`). Checklist mental para cualquier `db push` de acá en adelante:
+¿corrí esto contra staging? ¿contra producción? ¿contra las dos, en la misma sesión, no "después"?
   - **Corrección aplicada el mismo día que el gate arrancó (2026-07-27):** "verificar" significa que **el usuario** revisa `staging` con sus propios ojos, no que Claude se autoverifique con build/tests/queries directas y decida por su cuenta que está listo para promover. La primera pieza del rediseño de Clients (schema, Unidad 1) se pusheó por error tanto a `staging` como a producción en el mismo turno — corregido de inmediato tras el señalamiento del usuario, y respetado sin excepciones en las 10 unidades siguientes (todas exclusivamente en `staging`, ninguna promovida a `main` todavía).
 - La prioridad actual es validar la base del sistema con HR antes de avanzar a clientes y pagos.
 - El archivo `.env` local está configurado con Neon y listo para pruebas.

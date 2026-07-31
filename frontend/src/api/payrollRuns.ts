@@ -40,6 +40,14 @@ export const payrollRunsApi = {
     return res.json();
   },
 
+  getPayslipPreview: async (token: string, runId: string, employeeId: string): Promise<Blob> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/runs/${runId}/employees/${employeeId}/payslip`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.blob();
+  },
+
   addPersonToPayrollRun: async (token: string, runId: string, employeeId: string): Promise<void> => {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/runs/${runId}/employees`, {
       method: 'POST',

@@ -6,6 +6,7 @@ import {
 } from '../modules/hr/payFrequencyService.js';
 import { createCompensation, listCompensationHistory } from '../modules/hr/employeeCompensationService.js';
 import { addPersonToRun, confirmRun, createRun, getRunDetail, listRuns } from '../modules/hr/payrollRunService.js';
+import { generatePayslipPdf } from '../modules/hr/payslipService.js';
 import {
   createAdjustment,
   createOffCyclePayments,
@@ -346,4 +347,22 @@ payrollRouter.post('/api/hr/payroll/off-payments', async (req, res) => {
     return res.status(400).json({ error: result.error });
   }
   return res.status(201).json(result.entries);
+});
+
+payrollRouter.get('/api/hr/payroll/runs/:runId/employees/:employeeId/payslip', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (user.role !== 'owner') {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const result = await generatePayslipPdf(user.tenantId!, req.params.runId, req.params.employeeId);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', 'inline; filename="payslip-preview.pdf"');
+  return res.send(result.pdf);
 });

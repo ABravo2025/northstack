@@ -6,7 +6,7 @@ import SlideOver from '../components/common/SlideOver';
 import Popover from '../components/common/Popover';
 import SearchableSelect from '../components/common/SearchableSelect';
 import StatusChip from '../components/common/StatusChip';
-import { ChevronLeftIcon, PencilIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
+import { ChevronLeftIcon, DocumentIcon, PencilIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
 import { formatMoney } from '../lib/currencies';
 
 const ADJUSTMENT_TYPE_LABELS: Record<string, string> = {
@@ -628,6 +628,10 @@ function RunDetailView({ token, runId, onBack }: RunDetailViewProps) {
   const [addPersonSelectedId, setAddPersonSelectedId] = useState('');
   const [addingPerson, setAddingPerson] = useState(false);
 
+  const [payslipFor, setPayslipFor] = useState<{ employeeId: string; name: string } | null>(null);
+  const [payslipUrl, setPayslipUrl] = useState<string | null>(null);
+  const [payslipLoading, setPayslipLoading] = useState(false);
+
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -756,6 +760,28 @@ function RunDetailView({ token, runId, onBack }: RunDetailViewProps) {
     }
   };
 
+  const openPayslip = async (employeeId: string, name: string) => {
+    if (!run) return;
+    setPayslipFor({ employeeId, name });
+    setPayslipUrl(null);
+    setPayslipLoading(true);
+    try {
+      const blob = await api.getPayslipPreview(token, run.id, employeeId);
+      setPayslipUrl(URL.createObjectURL(blob));
+    } catch (error) {
+      toast.error('Failed to load payslip preview: ' + (error as Error).message);
+      setPayslipFor(null);
+    } finally {
+      setPayslipLoading(false);
+    }
+  };
+
+  const closePayslip = () => {
+    if (payslipUrl) URL.revokeObjectURL(payslipUrl);
+    setPayslipUrl(null);
+    setPayslipFor(null);
+  };
+
   return (
     <div className="container">
       <div className="page-toolbar no-border">
@@ -816,12 +842,13 @@ function RunDetailView({ token, runId, onBack }: RunDetailViewProps) {
                 <th>Base</th>
                 <th>Adjustments</th>
                 <th>Total</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
               {run.employeeGroups.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="text-sm text-gray-500">
+                  <td colSpan={6} className="text-sm text-gray-500">
                     Nobody has a compensation record under this pay frequency yet.
                   </td>
                 </tr>
@@ -862,10 +889,20 @@ function RunDetailView({ token, runId, onBack }: RunDetailViewProps) {
                       </button>
                     </td>
                     <td>{group.base ? formatMoney(group.total, group.base.currency) : '—'}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        onClick={() => openPayslip(group.employee.id, `${group.employee.firstName} ${group.employee.lastName}`)}
+                      >
+                        <span className="tip">Payslip preview</span>
+                        <DocumentIcon />
+                      </button>
+                    </td>
                   </tr>
                   {isInactive && (
                     <tr>
-                      <td colSpan={5} className="bg-amber-100 px-3 py-1.5 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-400">
+                      <td colSpan={6} className="bg-amber-100 px-3 py-1.5 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-400">
                         Figura {group.employee.statusDefn.name.toLowerCase()} desde {group.statusSince!.slice(0, 10)} — revisar
                         antes de confirmar.
                       </td>
@@ -954,6 +991,21 @@ function RunDetailView({ token, runId, onBack }: RunDetailViewProps) {
           </div>
         )}
       </Popover>
+
+      <SlideOver open={payslipFor !== null} title={payslipFor ? `Payslip — ${payslipFor.name}` : 'Payslip'} onClose={closePayslip}>
+        <p className="mb-3 rounded-md bg-amber-100 px-3 py-1.5 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-400">
+          Preview only — not sent. Not a legal document.
+        </p>
+        {payslipLoading && <p>Loading…</p>}
+        {!payslipLoading && payslipUrl && (
+          <>
+            <iframe src={payslipUrl} title="Payslip preview" className="h-[60vh] w-full rounded-md border border-line" />
+            <a href={payslipUrl} download="payslip-preview.pdf" className="btn-primary mt-3 inline-flex">
+              Download
+            </a>
+          </>
+        )}
+      </SlideOver>
     </div>
   );
 }

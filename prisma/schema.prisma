@@ -126,6 +126,36 @@ enum PipelineType {
   account
 }
 
+// Payroll V1 (Tier 3.5) — see docs/tareas-desarrollo.md, "Payroll (Tier 3.5) —
+// spec técnico completo", Unidad 1. How often a PayFrequencyDefinition pays.
+enum PayFrequencyCadence {
+  weekly
+  biweekly
+  monthly
+}
+
+// Distinct from the existing `CompensationType` enum (hourly/monthly, used by
+// Employee.compensationType's flat fields) — EmployeeCompensation is a
+// separate, versioned history model, deliberately not unifying the two until
+// EmployeeCompensation is proven in production (see Unidad 1's scope note).
+enum PayrollCompensationType {
+  hourly
+  fixed
+}
+
+enum PayrollRunStatus {
+  draft
+  confirmed
+}
+
+enum PayrollEntryType {
+  base
+  bonus
+  commission
+  reimbursement
+  deduction
+}
+
 model Tenant {
   id                      String                   @id @default(uuid())
   name                    String
@@ -160,6 +190,10 @@ model Tenant {
   opportunityStageHistory OpportunityStageHistory[]
   tasks                   Task[]
   notes                   Note[]
+  payFrequencies          PayFrequencyDefinition[]
+  employeeCompensations   EmployeeCompensation[]
+  payrollRuns             PayrollRun[]
+  payrollEntries          PayrollEntry[]
 }
 
 model User {
@@ -184,6 +218,8 @@ model User {
   tasksAssigned           Task[]        @relation("TaskAssignee")
   tasksCreated            Task[]        @relation("TaskCreatedBy")
   notesCreated            Note[]
+  compensationsCreated    EmployeeCompensation[]
+  payrollRunsCreated      PayrollRun[]
 }
 
 model Employee {
@@ -217,6 +253,8 @@ model Employee {
   timeOffPolicies          EmployeeTimeOffPolicy[]
   timeOffRequestsMade      TimeOffRequest[]         @relation("TimeOffRequestEmployee")
   timeOffRequestsToApprove TimeOffRequest[]         @relation("TimeOffRequestApprover")
+  compensationHistory      EmployeeCompensation[]
+  payrollEntries           PayrollEntry[]
 
   @@unique([tenantId, email])
 }
@@ -639,4 +677,89 @@ model Invitation {
   employee        Employee?        @relation(fields: [employeeId], references: [id])
   createdAt       DateTime         @default(now())
   expiresAt       DateTime
+}
+
+// Payroll V1 (Tier 3.5) — see docs/tareas-desarrollo.md, "Payroll (Tier 3.5) —
+// spec técnico completo", Unidad 1. Visibility is owner-only across the
+// board (plus an employee can see their own EmployeeCompensation history),
+// enforced in the service layer once the corresponding endpoints exist
+// (Unidad 2+) — not a schema-level concern, same pattern already used for
+// Employee.hourlyRateCents/monthlyRateCents.
+
+model PayFrequencyDefinition {
+  id            String                 @id @default(uuid())
+  tenantId      String
+  tenant        Tenant                 @relation(fields: [tenantId], references: [id])
+  name          String
+  cadence       PayFrequencyCadence
+  payAnchor     String // free text in V1 (e.g. "Viernes", "Días 15 y 30") — no calendar calculation yet
+  isActive      Boolean                @default(true)
+  order         Int                    @default(0)
+  compensations EmployeeCompensation[]
+  payrollRuns   PayrollRun[]
+
+  @@index([tenantId])
+}
+
+// Individual compensation contract, with an effective date range — not a flat
+// field on Employee. Only one row per employeeId may have effectiveTo: null
+// (currently vigente) at a time; enforced in the service layer, not the DB
+// (creating a new vigente row closes the previous one in the same
+// transaction).
+model EmployeeCompensation {
+  id               String                  @id @default(uuid())
+  tenantId         String
+  tenant           Tenant                  @relation(fields: [tenantId], references: [id])
+  employeeId       String
+  employee         Employee                @relation(fields: [employeeId], references: [id])
+  compensationType PayrollCompensationType
+  rateCents        Int
+  currency         String
+  payFrequencyId   String
+  payFrequency     PayFrequencyDefinition  @relation(fields: [payFrequencyId], references: [id])
+  effectiveFrom    DateTime
+  effectiveTo      DateTime?
+  note             String?
+  createdByUserId  String
+  createdBy        User                    @relation(fields: [createdByUserId], references: [id])
+  createdAt        DateTime                @default(now())
+
+  @@index([tenantId, employeeId])
+}
+
+model PayrollRun {
+  id              String                  @id @default(uuid())
+  tenantId        String
+  tenant          Tenant                  @relation(fields: [tenantId], references: [id])
+  payFrequencyId  String?
+  payFrequency    PayFrequencyDefinition? @relation(fields: [payFrequencyId], references: [id])
+  periodLabel     String
+  status          PayrollRunStatus        @default(draft)
+  createdByUserId String
+  createdBy       User                    @relation(fields: [createdByUserId], references: [id])
+  confirmedAt     DateTime?
+  createdAt       DateTime                @default(now())
+  entries         PayrollEntry[]
+
+  @@index([tenantId, status])
+}
+
+model PayrollEntry {
+  id          String           @id @default(uuid())
+  tenantId    String
+  tenant      Tenant           @relation(fields: [tenantId], references: [id])
+  employeeId  String
+  employee    Employee         @relation(fields: [employeeId], references: [id])
+  runId       String?
+  run         PayrollRun?      @relation(fields: [runId], references: [id])
+  type        PayrollEntryType
+  amountCents Int // can be negative for deductions
+  currency    String
+  hoursQty    Float? // only meaningful when the run's base entry compensationType is hourly
+  label       String?
+  paymentDate DateTime
+  createdAt   DateTime         @default(now())
+
+  @@index([tenantId, employeeId])
+  @@index([tenantId, runId])
 }

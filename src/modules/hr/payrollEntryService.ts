@@ -132,3 +132,75 @@ export async function updateHourlyBaseEntryHours(
 
   return { success: true, entry: updated };
 }
+
+export interface OffCyclePaymentInput {
+  employeeId: string;
+  amountCents: number;
+}
+
+export interface CreateOffCyclePaymentsInput {
+  tenantId: string;
+  type: PayrollEntryType;
+  currency: string;
+  paymentDate: Date | string;
+  payments: OffCyclePaymentInput[];
+}
+
+export interface CreateOffCyclePaymentsResult {
+  success: boolean;
+  entries?: PayrollEntry[];
+  error?: string;
+}
+
+// Unidad 12 — off-cycle payments, independent of any run (runId: null).
+// Amount is per-person (spec flagged this as open — "mismo monto o editable
+// por persona" — resolved to editable: a checklist naturally supports
+// different amounts per person at no extra cost, and off-cycle bonuses
+// realistically do vary person to person). Type/currency/paymentDate are
+// shared across the whole submit.
+export async function createOffCyclePayments(input: CreateOffCyclePaymentsInput): Promise<CreateOffCyclePaymentsResult> {
+  if (!ADJUSTMENT_TYPES.includes(input.type)) {
+    return { success: false, error: 'Invalid payment type' };
+  }
+  if (input.payments.length === 0) {
+    return { success: false, error: 'Select at least one person' };
+  }
+  for (const payment of input.payments) {
+    if (!Number.isInteger(payment.amountCents) || payment.amountCents === 0) {
+      return { success: false, error: 'Every selected person needs a non-zero amount' };
+    }
+  }
+
+  const paymentDate = new Date(input.paymentDate);
+  if (Number.isNaN(paymentDate.getTime())) {
+    return { success: false, error: 'Invalid payment date' };
+  }
+
+  const employeeIds = [...new Set(input.payments.map((p) => p.employeeId))];
+  const employees = await prisma.employee.findMany({ where: { id: { in: employeeIds }, tenantId: input.tenantId } });
+  if (employees.length !== employeeIds.length) {
+    return { success: false, error: 'One or more employees were not found' };
+  }
+
+  const entries = await prisma.payrollEntry.createMany({
+    data: input.payments.map((payment) => ({
+      tenantId: input.tenantId,
+      employeeId: payment.employeeId,
+      runId: null,
+      type: input.type,
+      amountCents: input.type === 'deduction' ? -Math.abs(payment.amountCents) : Math.abs(payment.amountCents),
+      currency: input.currency,
+      paymentDate,
+    })),
+  });
+  // createMany doesn't return the created rows — re-fetch by the inputs we
+  // just used (employeeId + paymentDate is specific enough for this single
+  // batch, there's no id to key off otherwise).
+  const created = await prisma.payrollEntry.findMany({
+    where: { tenantId: input.tenantId, runId: null, employeeId: { in: employeeIds }, paymentDate },
+    orderBy: { createdAt: 'desc' },
+    take: entries.count,
+  });
+
+  return { success: true, entries: created };
+}

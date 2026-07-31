@@ -44,4 +44,25 @@ export const payrollEntriesApi = {
     if (!res.ok) await throwApiError(res);
     return res.json();
   },
+
+  createOffCyclePayments: async (
+    token: string,
+    data: {
+      type: 'bonus' | 'commission' | 'reimbursement' | 'deduction';
+      currency: string;
+      paymentDate: string;
+      payments: { employeeId: string; amountCents: number }[];
+    },
+  ): Promise<PayrollEntry[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/off-payments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
 };

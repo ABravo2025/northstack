@@ -58,9 +58,25 @@ export default function PayrollPage({ token }: PayrollPageProps) {
   const [newRunForm, setNewRunForm] = useState({ payFrequencyId: '', periodLabel: '' });
   const [creatingRun, setCreatingRun] = useState(false);
 
+  // --- Off-cycle payments (Unidad 12) ---
+  const [tenantCurrency, setTenantCurrency] = useState('USD');
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [offPaymentOpen, setOffPaymentOpen] = useState(false);
+  const [offPaymentType, setOffPaymentType] = useState<'bonus' | 'commission' | 'reimbursement' | 'deduction'>('bonus');
+  const [offPaymentDate, setOffPaymentDate] = useState('');
+  const [offPaymentSelections, setOffPaymentSelections] = useState<Record<string, string>>({}); // employeeId -> amount string
+  const [savingOffPayment, setSavingOffPayment] = useState(false);
+
   useEffect(() => {
     loadFrequencies();
     loadRuns();
+    api.listEmployees(token).then(setEmployees).catch(() => {});
+    api
+      .getCurrentTenant(token)
+      .then((tenant) => setTenantCurrency(tenant.currency))
+      .catch(() => {
+        // Non-critical — falls back to USD formatting/currency if it fails.
+      });
   }, []);
 
   const loadFrequencies = async () => {
@@ -146,6 +162,51 @@ export default function PayrollPage({ token }: PayrollPageProps) {
       toast.error('Failed to create run: ' + (error as Error).message);
     } finally {
       setCreatingRun(false);
+    }
+  };
+
+  const handleOpenOffPayment = () => {
+    setOffPaymentType('bonus');
+    setOffPaymentDate('');
+    setOffPaymentSelections({});
+    setOffPaymentOpen(true);
+  };
+
+  const toggleOffPaymentEmployee = (employeeId: string, checked: boolean) => {
+    setOffPaymentSelections((prev) => {
+      const next = { ...prev };
+      if (checked) next[employeeId] = next[employeeId] ?? '';
+      else delete next[employeeId];
+      return next;
+    });
+  };
+
+  const handleCreateOffPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const payments = Object.entries(offPaymentSelections)
+      .filter(([, amount]) => amount.trim() !== '')
+      .map(([employeeId, amount]) => ({
+        employeeId,
+        amountCents: Math.round(Number.parseFloat(amount) * 100),
+      }));
+    if (payments.length === 0) {
+      toast.error('Select at least one person and enter an amount.');
+      return;
+    }
+    setSavingOffPayment(true);
+    try {
+      await api.createOffCyclePayments(token, {
+        type: offPaymentType,
+        currency: tenantCurrency,
+        paymentDate: offPaymentDate,
+        payments,
+      });
+      toast.success(`Payment${payments.length === 1 ? '' : 's'} recorded.`);
+      setOffPaymentOpen(false);
+    } catch (error) {
+      toast.error('Failed to record payment: ' + (error as Error).message);
+    } finally {
+      setSavingOffPayment(false);
     }
   };
 
@@ -276,6 +337,83 @@ export default function PayrollPage({ token }: PayrollPageProps) {
         </form>
       </SlideOver>
 
+      <SlideOver
+        open={offPaymentOpen}
+        title="One-off Payment"
+        onClose={() => setOffPaymentOpen(false)}
+        footer={
+          <>
+            <button type="button" className="btn-secondary" onClick={() => setOffPaymentOpen(false)} disabled={savingOffPayment}>
+              Cancel
+            </button>
+            <button type="submit" form="off-payment-form" className="btn-primary" disabled={savingOffPayment}>
+              {savingOffPayment ? 'Saving…' : 'Record payment'}
+            </button>
+          </>
+        }
+      >
+        <form id="off-payment-form" onSubmit={handleCreateOffPayment}>
+          <div className="form-group">
+            <label htmlFor="off-payment-type">Type</label>
+            <select
+              id="off-payment-type"
+              value={offPaymentType}
+              onChange={(e) => setOffPaymentType(e.target.value as typeof offPaymentType)}
+            >
+              <option value="bonus">Bonus</option>
+              <option value="commission">Commission</option>
+              <option value="reimbursement">Reimbursement</option>
+              <option value="deduction">Deduction</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label htmlFor="off-payment-date">Payment date</label>
+            <input
+              id="off-payment-date"
+              type="date"
+              value={offPaymentDate}
+              onChange={(e) => setOffPaymentDate(e.target.value)}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label>People ({tenantCurrency})</label>
+            <div className="policy-manage-list">
+              {employees.map((emp) => {
+                const checked = emp.id in offPaymentSelections;
+                return (
+                  <div key={emp.id} className="policy-manage-row justify-between">
+                    <label className="flex items-center gap-1.5">
+                      <input
+                        type="checkbox"
+                        className="w-auto"
+                        checked={checked}
+                        onChange={(e) => toggleOffPaymentEmployee(emp.id, e.target.checked)}
+                      />
+                      <span className="status-manage-name">
+                        {emp.firstName} {emp.lastName}
+                      </span>
+                    </label>
+                    {checked && (
+                      <input
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        className="w-20"
+                        value={offPaymentSelections[emp.id]}
+                        onChange={(e) => setOffPaymentSelections({ ...offPaymentSelections, [emp.id]: e.target.value })}
+                        aria-label={`Amount for ${emp.firstName} ${emp.lastName}`}
+                        required
+                      />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </form>
+      </SlideOver>
+
       <div className="page-toolbar no-border">
         <h2>Payroll</h2>
       </div>
@@ -296,10 +434,16 @@ export default function PayrollPage({ token }: PayrollPageProps) {
           Pay Frequencies
         </button>
         {catalogTab === 'runs' ? (
-          <button type="button" className="btn-outline gap-1.5 ml-auto" onClick={handleOpenNewRun}>
-            <PlusIcon className="h-3.5 w-3.5" />
-            New Run
-          </button>
+          <div className="ml-auto flex items-center gap-2">
+            <button type="button" className="btn-outline gap-1.5" onClick={handleOpenOffPayment}>
+              <PlusIcon className="h-3.5 w-3.5" />
+              One-off Payment
+            </button>
+            <button type="button" className="btn-outline gap-1.5" onClick={handleOpenNewRun}>
+              <PlusIcon className="h-3.5 w-3.5" />
+              New Run
+            </button>
+          </div>
         ) : (
           <button type="button" className="btn-outline gap-1.5 ml-auto" onClick={handleOpenAdd}>
             <PlusIcon className="h-3.5 w-3.5" />

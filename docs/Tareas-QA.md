@@ -128,6 +128,57 @@ diferencia en el reporte.
 
 ---
 
+## QA-03 — Pasada UX/UI completa + CORS lockdown + Company Users (push `7f97cf2`, 2026-07-31, a staging y producción en el mismo turno)
+
+**Por qué existe esta tarea:** este push tocó 35 archivos — paleta de color completa (terracota
+reemplaza azul como acento de acción), escala de alturas de control, jerarquía de botones, 3
+componentes nuevos (`EmptyState`, `TableSkeleton`, `EntityCardList`) más `OverviewActionsMenu` y
+`MobileTabbar`, los 4 paneles de detalle reagrupados en secciones, tarjetas de Kanban con datos
+nuevos, tiles de Settings, dark mode reconstruido de cero (3 planos), patrón mobile nuevo, y —
+separado de la parte visual — un fix de N+1 en un script CLI, `CORS` restringido de abierto a
+allowlist, y ghost row/scrollbar nuevos en Company Users. Se verificó con Playwright contra un
+tenant de prueba (staging) y con `curl` contra la API de producción ya deployada, pero fue una
+sesión sin supervisión del usuario en tiempo real — esta tarea es la pasada de confirmación humana
+que falta.
+
+### A. Verificación visual (todas en `/`, autenticado, un tenant con datos reales)
+
+| # | Pantalla | Qué mirar |
+|---|---|---|
+| 1 | `/overview`, `/hr/employees`, `/settings` (claro) | Ningún gris azulado visible (bordes, texto, fondos) — todo debería leerse cálido/piedra. Botón primario en terracota, no azul. |
+| 2 | Las mismas 3, en oscuro (Settings → Appearance → Dark) | Fondo casi negro cálido, no gris ni negro puro. Los 5 pares de texto/fondo listados en `design-system.md` §1 deben leerse con buen contraste — ningún texto casi invisible. |
+| 3 | `/hr/employees`, `/companies`, `/contacts` — forzar tenant vacío o buscar algo sin resultados | `EmptyState` con ícono, título, texto y botón — no el `<p>` de texto plano de antes. Estado de carga (throttlear a 3G en DevTools) debe mostrar el skeleton de tabla, no "Loading...". |
+| 4 | Abrir el panel de detalle de un Employee con varios custom fields | Campos agrupados en secciones (Identity/Role/Contract & compensation/Custom fields), sin scroll dentro del panel, botón "Actions" junto al cierre (X) con Delete y, si corresponde, "Invite to app". |
+| 5 | `/opportunities`, con ≥ 2 stages y ≥ 1 oportunidad | Tarjeta con monto arriba a la derecha, owner + antigüedad en el stage abajo; header de columna con el total sumado. |
+| 6 | `/settings` (home) | Tiles sin círculos de color, con descripción debajo del label. |
+| 7 | 390×844 (mobile) y 768×1024 (tablet), en `/hr/employees` | Debajo de 768px: lista de tarjetas en vez de tabla, tabbar inferior (Overview/Employees/Time Off/Sales) fijo, sin scroll horizontal a nivel `body`. En 768px exacto: vuelve a verse la tabla completa (no las tarjetas). |
+| 8 | `/settings/users` (Company Users) | Fila fantasma "+ Invite" al final de la tabla (click abre el mismo SlideOver que el botón de arriba); si la tabla no entra en el ancho de la ventana, aparece una scrollbar horizontal propia (no la nativa del navegador) debajo de la tabla. |
+
+### B. CORS — confirmar que el allowlist no rompió nada real
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 9 | Usar la app normalmente desde `https://app.joinnorthstack.com` (login, cargar datos, guardar un campo) | Todo funciona igual que siempre — mismo origen, no debería notarse ningún cambio |
+| 10 | Levantar el frontend en local (`npm run dev` en `frontend/`, puerto 5173) contra el backend en local | Debe seguir funcionando — `localhost:*` está explícitamente permitido |
+| 11 | Abrir `/apply/:tenantSlug/:formSlug` de un form público real y enviarlo | Debe funcionar igual que antes — esa ruta (`/api/public/*`) se dejó a propósito abierta a cualquier origen, sin restricción nueva |
+| 12 | (Opcional, si hay forma de probarlo) confirmar con el equipo/documentación si existe algún integrador externo o widget que llame a la API desde un dominio de un tercero (no descubrí evidencia de esto en el código, pero no se puede descartar 100%) | Si existe y no es `/api/public/*`, va a estar bloqueado por el nuevo allowlist — reportarlo como regresión y agregarlo a la lista de orígenes permitidos en `src/app.ts` |
+
+### C. Backend — bajo riesgo, smoke test
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 13 | Correr `npx tsx scripts/metrics-report.ts` (o revisar el output ya corrido en la sesión) | Mismo tipo de output que antes del fix (avg/median/max por tenant), sin errores — es un script de solo lectura, sin riesgo para datos reales |
+
+### Al encontrar una falla
+
+Los ítems A son visuales/UX — cualquier hallazgo ahí es prioridad de pulido, no de seguridad, salvo
+que algo quede genuinamente roto/inutilizable (ej. no se puede guardar un campo, un botón no
+responde). Los ítems B (CORS) son los de mayor riesgo real: si algo que antes funcionaba ahora está
+bloqueado por CORS, es severidad alta (afecta uso real de 167 tenants) — reportar con el origen
+exacto que falló y la URL completa del request.
+
+---
+
 ## Próximas tareas de QA (a definir)
 
 Cuando se construyan los módulos grandes en curso (rediseño de Clients, Payroll), esta tabla de

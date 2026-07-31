@@ -37,6 +37,34 @@
      ver esa entrada, corregida hoy para ser explícitamente bidireccional.
   4. Varios ítems grandes del backlog (Payroll, Payments, Integraciones, roles custom, etc.) se
      dejaron sin tocar a propósito por no tener spec técnico todavía — ver marca `[ ]` de cada uno.
+- **2026-07-31 (más tarde el mismo día): falso arranque de Payroll V1, construido sin ver el spec
+  real, pusheado por error a producción, revertido.** Se le pidió al agente de Development revisar
+  Tier 3.5 y arrancar si no había dudas. En ese momento el archivo no tenía el spec técnico completo
+  de Payroll que hoy vive más abajo (sección "Payroll (Tier 3.5) — spec técnico completo",
+  Unidades 1-15, con Artifact de mockup aprobado) — solo el resumen corto de líneas 62-78. El agente
+  confirmó 4 puntos abiertos por su cuenta (visibilidad abierta a cualquier rol, período como rango
+  de fechas, sin métricas, carga una por una) y construyó un `PayrollEntry` simple — **incompatible
+  con el spec real**, que exige visibilidad **owner-only** y un modelo con `PayFrequencyDefinition`
+  + `EmployeeCompensation` + `PayrollRun` + `PayrollEntry` (con `runId`/`type`/`hoursQty`). El spec
+  real apareció en el archivo recién cuando el usuario lo señaló explícitamente ("tareas-desarrollo.md
+  las tiene"), ya con el V1 simple pusheado a `staging`.
+  - **Incidente real, no solo un desvío de alcance:** el commit de Payroll V1 (`49721d8`) se pusheó
+    correctamente a `staging`, pero un commit posterior de este mismo archivo (solo el fix del
+    checklist de columnas visibles, pensado para ir directo a `main` por ser docs-only) se hizo sobre
+    la misma rama local sin resetear primero — como ambos commits viven en la misma rama `main` local,
+    el segundo `git push origin main` arrastró también el primero. Resultado: Payroll V1 (con su
+    backend apuntando a una tabla `PayrollEntry` que solo existía en la base de `staging`, nunca en
+    producción) se deployó a producción — mismo patrón exacto que el incidente de Task/Note de este
+    mismo día, esta vez autoinfligido en vez de heredado. Detectado antes de que el usuario reportara
+    síntomas, revirtiendo con `git revert 49721d8` (commit `c682fee`) y pusheando a `main` y `staging`
+    por igual — deploy de producción del revert verificado en verde por la API de GitHub Actions.
+  - **Lección aplicada de acá en adelante**: un `git push origin main` nunca debe asumirse "solo
+    docs" únicamente porque el commit que se está armando toca solo `.md` — si la rama local tiene
+    commits de código sin pushear a `main` por delante, van a viajar igual. Verificar con
+    `git log origin/main..HEAD` (o pushear inmediatamente después de cada commit, sin acumular) antes
+    de cualquier push a `main`.
+  - Próximo paso: reconstruir Payroll desde cero siguiendo el spec real, Unidad 1 en adelante,
+    confirmando y pusheando cada unidad a `staging` por separado (ver sección de spec más abajo).
 
 ## Prioridades (tiers)
 
@@ -59,23 +87,18 @@ Siguiente en la cola: Tier 1.
 **Tier 3 — Rediseño de Clients (completo, en producción)** — Company/Contact/Opportunity/Pipeline,
 ver "Estado actual" más abajo y `docs/tareas/semana-2026-07-29.md` para el detalle.
 
-**Tier 3.5 — Módulo Payroll, V1 (nuevo, confirmado por el usuario 2026-07-23)**
-- Sección propia en el sidebar (mismo nivel que Time Off), no un tab dentro de la ficha de Employee.
+**Tier 3.5 — Módulo Payroll, V1 (spec técnico completo, ver sección "Payroll (Tier 3.5) — spec
+técnico completo" más abajo, Unidades 1-15)**
 - **Distinto del "Módulo Payments" ya anotado en Tier 4** — Payments es facturarle a los *Clients*
   del tenant (cuentas por cobrar); Payroll es pagarle a los *Employees* del tenant (cuentas por
   pagar). Flujos de dinero opuestos, no confundir al spec-earlos aunque ambos puedan terminar
   integrando con QuickBooks.
-- **Alcance V1, explícito**: solo carga manual de datos de pago (quién, período, monto, fecha) +
-  métricas derivadas (costo de nómina por mes/departamento, etc.) — **sin** procesamiento de pagos
-  real todavía.
 - **A futuro (no en V1)**: integración con una plataforma de payroll externa para gestionar pagos
   directo desde Northstack — el usuario mencionó un nombre transcripto como "Get thera", sin
   confirmar a qué producto se refiere exactamente; confirmar el nombre real antes de evaluarlo.
-- **Sin confirmar todavía**: visibilidad — dado que esto es compensación real (mismo tipo de dato
-  sensible que `hourlyRateCents`/`monthlyRateCents`), la recomendación por default es restringirlo
-  a `owner` únicamente, mismo criterio ya aplicado ahí, hasta que exista permisología custom.
-- Sin spec técnico todavía — depende de que Tier 2 (tipo de contratación/compensación + moneda)
-  esté resuelto primero, ya que Payroll va a necesitar esos mismos datos como base.
+- Estado: **sin empezar** (ver nota del 2026-07-31 arriba — un primer intento sin ver este spec se
+  construyó, pusheó por error a producción, y se revirtió el mismo día). Orden de ejecución: Unidad
+  1 en adelante, confirmando y pusheando cada unidad a `staging` por separado.
 
 **Tier 4 — Resto de iniciativas grandes**
 - Suscripciones propias del SaaS (Paddle, planes/precios, pantalla de administración autónoma)

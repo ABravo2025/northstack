@@ -22,6 +22,7 @@ import { tasksApi } from './tasks.js';
 import { notesApi } from './notes.js';
 import { payFrequenciesApi } from './payFrequencies.js';
 import { employeeCompensationApi } from './employeeCompensation.js';
+import { payrollRunsApi } from './payrollRuns.js';
 
 export { ApiError } from './http.js';
 export * from './types.js';
@@ -51,4 +52,5 @@ export const api = {
   ...notesApi,
   ...payFrequenciesApi,
   ...employeeCompensationApi,
+  ...payrollRunsApi,
 };

@@ -273,6 +273,44 @@ export interface EmployeeCompensation {
   createdAt: string;
 }
 
+export interface PayrollEntry {
+  id: string;
+  employeeId: string;
+  runId: string | null;
+  type: 'base' | 'bonus' | 'commission' | 'reimbursement' | 'deduction';
+  amountCents: number;
+  currency: string;
+  hoursQty: number | null;
+  label: string | null;
+  paymentDate: string;
+  createdAt: string;
+  employee?: { id: string; firstName: string; lastName: string };
+}
+
+export interface PayrollRun {
+  id: string;
+  payFrequencyId: string | null;
+  payFrequency: { id: string; name: string; cadence: 'weekly' | 'biweekly' | 'monthly' } | null;
+  periodLabel: string;
+  status: 'draft' | 'confirmed';
+  createdByUserId: string;
+  createdBy: { id: string; firstName: string; lastName: string };
+  confirmedAt: string | null;
+  createdAt: string;
+}
+
+export interface PayrollRunEmployeeGroup {
+  employee: { id: string; firstName: string; lastName: string; statusDefn: { id: string; name: string; color: string | null } };
+  compensationType: 'hourly' | 'fixed' | null;
+  base: PayrollEntry | null;
+  adjustments: PayrollEntry[];
+  total: number;
+}
+
+export interface PayrollRunDetail extends PayrollRun {
+  employeeGroups: PayrollRunEmployeeGroup[];
+}
+
 export interface PayFrequency {
   id: string;
   name: string;

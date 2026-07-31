@@ -73,6 +73,7 @@ export async function findRunById(id: string): Promise<PayrollRun | null> {
 
 export interface RunEmployeeGroup {
   employee: { id: string; firstName: string; lastName: string; statusDefn: { id: string; name: string; color: string | null } };
+  compensationType: 'hourly' | 'fixed' | null;
   base: PayrollEntry | null;
   adjustments: PayrollEntry[];
   total: number;
@@ -80,6 +81,10 @@ export interface RunEmployeeGroup {
 
 // Groups the run's PayrollEntry rows by employee (one base + N adjustments
 // each) so the frontend doesn't have to — see Unidad 6 spec note.
+// compensationType isn't stored on PayrollEntry itself (that's an
+// EmployeeCompensation concept) — resolved here via whichever compensation
+// was vigente when the run was created, so the "Hourly"/"Fixed" badge in the
+// run detail table doesn't have to guess from amountCents/hoursQty being 0.
 export async function getRunDetail(tenantId: string, runId: string) {
   const run = await prisma.payrollRun.findUnique({
     where: { id: runId },
@@ -95,6 +100,20 @@ export async function getRunDetail(tenantId: string, runId: string) {
     orderBy: { createdAt: 'asc' },
   });
 
+  const employeeIds = [...new Set(entries.map((e) => e.employeeId))];
+  const compensations =
+    employeeIds.length > 0
+      ? await prisma.employeeCompensation.findMany({
+          where: {
+            tenantId,
+            employeeId: { in: employeeIds },
+            effectiveFrom: { lte: run.createdAt },
+            OR: [{ effectiveTo: null }, { effectiveTo: { gte: run.createdAt } }],
+          },
+        })
+      : [];
+  const compensationTypeByEmployeeId = new Map(compensations.map((c) => [c.employeeId, c.compensationType]));
+
   const groupsByEmployeeId = new Map<string, RunEmployeeGroup>();
   for (const entry of entries) {
     if (!groupsByEmployeeId.has(entry.employeeId)) {
@@ -105,6 +124,7 @@ export async function getRunDetail(tenantId: string, runId: string) {
           lastName: entry.employee.lastName,
           statusDefn: entry.employee.statusDefn,
         },
+        compensationType: compensationTypeByEmployeeId.get(entry.employeeId) ?? null,
         base: null,
         adjustments: [],
         total: 0,

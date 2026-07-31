@@ -257,6 +257,18 @@ export interface TimeOffRequest {
   approver?: { id: string; firstName: string; lastName: string } | null;
 }
 
+export interface PayrollEntry {
+  id: string;
+  employeeId: string;
+  periodStart: string;
+  periodEnd: string;
+  amountCents: number;
+  paymentDate: string;
+  createdAt: string;
+  updatedAt: string;
+  employee: { id: string; firstName: string; lastName: string };
+}
+
 export interface Invitation {
   id: string;
   tenantId: string;

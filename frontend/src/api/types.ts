@@ -257,6 +257,22 @@ export interface TimeOffRequest {
   approver?: { id: string; firstName: string; lastName: string } | null;
 }
 
+export interface EmployeeCompensation {
+  id: string;
+  employeeId: string;
+  compensationType: 'hourly' | 'fixed';
+  rateCents: number;
+  currency: string;
+  payFrequencyId: string;
+  payFrequency: { id: string; name: string; cadence: 'weekly' | 'biweekly' | 'monthly' };
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  note: string | null;
+  createdByUserId: string;
+  createdBy?: { id: string; firstName: string; lastName: string };
+  createdAt: string;
+}
+
 export interface PayFrequency {
   id: string;
   name: string;

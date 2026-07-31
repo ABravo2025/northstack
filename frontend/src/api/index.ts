@@ -21,6 +21,7 @@ import { csvApi } from './csv.js';
 import { tasksApi } from './tasks.js';
 import { notesApi } from './notes.js';
 import { payFrequenciesApi } from './payFrequencies.js';
+import { employeeCompensationApi } from './employeeCompensation.js';
 
 export { ApiError } from './http.js';
 export * from './types.js';
@@ -49,4 +50,5 @@ export const api = {
   ...tasksApi,
   ...notesApi,
   ...payFrequenciesApi,
+  ...employeeCompensationApi,
 };

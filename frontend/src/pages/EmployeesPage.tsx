@@ -1299,6 +1299,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
             employees={employees}
             tenantCurrency={tenantCurrency}
             isOwner={user.role === 'owner'}
+            isOwnerOrAdmin={user.role === 'owner' || user.role === 'admin'}
             token={token}
             tenantUsers={tenantUsers}
             currentUserId={user.id}

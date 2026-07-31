@@ -4,6 +4,8 @@ import {
   listPayFrequencies,
   updatePayFrequency,
 } from '../modules/hr/payFrequencyService.js';
+import { createCompensation, listCompensationHistory } from '../modules/hr/employeeCompensationService.js';
+import { findEmployeeByUserId, findEmployeeById } from '../modules/hr/employeeService.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 
@@ -85,4 +87,67 @@ payrollRouter.patch('/api/hr/pay-frequencies/:frequencyId', async (req, res) => 
     return res.status(400).json({ error: result.error });
   }
   return res.json(result.frequency);
+});
+
+const COMPENSATION_TYPES = ['hourly', 'fixed'];
+
+payrollRouter.get('/api/hr/employees/:employeeId/compensation', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  const employee = await findEmployeeById(req.params.employeeId);
+  if (!employee || employee.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Employee not found' });
+  }
+
+  const isOwnerOrAdmin = user.role === 'owner' || user.role === 'admin';
+  if (!isOwnerOrAdmin) {
+    const actingEmployee = await findEmployeeByUserId(user.id);
+    if (!actingEmployee || actingEmployee.id !== employee.id) {
+      return res.status(403).json({ error: 'Insufficient permissions' });
+    }
+  }
+
+  const history = await listCompensationHistory(user.tenantId!, employee.id);
+  return res.json(history);
+});
+
+payrollRouter.post('/api/hr/employees/:employeeId/compensation', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (user.role !== 'owner') {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const employee = await findEmployeeById(req.params.employeeId);
+  if (!employee || employee.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Employee not found' });
+  }
+
+  const { compensationType, rateCents, currency, payFrequencyId, effectiveFrom, note } = req.body;
+  if (!COMPENSATION_TYPES.includes(compensationType) || !currency || !payFrequencyId || !effectiveFrom) {
+    return res
+      .status(400)
+      .json({ error: 'compensationType, rateCents, currency, payFrequencyId, and effectiveFrom are required' });
+  }
+
+  const result = await createCompensation({
+    tenantId: user.tenantId!,
+    employeeId: employee.id,
+    compensationType,
+    rateCents,
+    currency,
+    payFrequencyId,
+    effectiveFrom,
+    note: note || undefined,
+    createdByUserId: user.id,
+  });
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  return res.status(201).json(result.compensation);
 });

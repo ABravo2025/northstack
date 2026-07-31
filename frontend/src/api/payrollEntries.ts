@@ -45,6 +45,14 @@ export const payrollEntriesApi = {
     return res.json();
   },
 
+  listOffCyclePayments: async (token: string): Promise<PayrollEntry[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/off-payments`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
   createOffCyclePayments: async (
     token: string,
     data: {

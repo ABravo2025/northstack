@@ -64,6 +64,16 @@ export async function findEntryById(id: string): Promise<PayrollEntry | null> {
   return prisma.payrollEntry.findUnique({ where: { id } });
 }
 
+// Unidad 13's unified timeline needs these listed on their own — off-cycle
+// entries (runId: null) were creatable (Unidad 12) but never listable.
+export async function listOffCyclePayments(tenantId: string) {
+  return prisma.payrollEntry.findMany({
+    where: { tenantId, runId: null },
+    include: { employee: { select: { id: true, firstName: true, lastName: true } } },
+    orderBy: { paymentDate: 'desc' },
+  });
+}
+
 export interface DeleteAdjustmentResult {
   success: boolean;
   error?: string;

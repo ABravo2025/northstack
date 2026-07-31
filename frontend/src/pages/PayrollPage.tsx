@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { api } from '../api';
-import type { PayFrequency, PayrollRun, PayrollRunDetail } from '../api';
+import type { PayFrequency, PayrollEntry, PayrollRun, PayrollRunDetail } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import SlideOver from '../components/common/SlideOver';
 import Popover from '../components/common/Popover';
@@ -35,11 +35,11 @@ interface PayFrequencyForm {
 
 const EMPTY_FREQUENCY_FORM: PayFrequencyForm = { name: '', cadence: 'monthly', payAnchor: '', isActive: true };
 
-type CatalogTab = 'runs' | 'frequencies';
+type CatalogTab = 'timeline' | 'frequencies';
 
 export default function PayrollPage({ token }: PayrollPageProps) {
   const toast = useToast();
-  const [catalogTab, setCatalogTab] = useState<CatalogTab>('runs');
+  const [catalogTab, setCatalogTab] = useState<CatalogTab>('timeline');
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
 
   // --- Pay frequencies (Unidad 3) ---
@@ -53,6 +53,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
 
   // --- Runs (Unidad 6/7) ---
   const [runs, setRuns] = useState<PayrollRun[]>([]);
+  const [offPayments, setOffPayments] = useState<PayrollEntry[]>([]);
   const [runsLoading, setRunsLoading] = useState(false);
   const [newRunOpen, setNewRunOpen] = useState(false);
   const [newRunForm, setNewRunForm] = useState({ payFrequencyId: '', periodLabel: '' });
@@ -94,10 +95,11 @@ export default function PayrollPage({ token }: PayrollPageProps) {
   const loadRuns = async () => {
     setRunsLoading(true);
     try {
-      const data = await api.listPayrollRuns(token);
-      setRuns(data);
+      const [runsData, offPaymentsData] = await Promise.all([api.listPayrollRuns(token), api.listOffCyclePayments(token)]);
+      setRuns(runsData);
+      setOffPayments(offPaymentsData);
     } catch (error) {
-      toast.error('Failed to load payroll runs: ' + (error as Error).message);
+      toast.error('Failed to load the payroll timeline: ' + (error as Error).message);
     } finally {
       setRunsLoading(false);
     }
@@ -105,6 +107,18 @@ export default function PayrollPage({ token }: PayrollPageProps) {
 
   const visibleFrequencies = frequencies.filter((f) => f.isActive === !showInactive);
   const activeFrequencies = frequencies.filter((f) => f.isActive);
+
+  // Unidad 13 — unified timeline: PayrollRun (by confirmedAt, falling back to
+  // createdAt while still draft — the spec only names confirmedAt, which
+  // doesn't exist yet for a draft run) and standalone off-cycle PayrollEntry
+  // (by paymentDate), interleaved by date, most recent first.
+  type TimelineItem =
+    | { kind: 'run'; date: string; run: PayrollRun }
+    | { kind: 'off-payment'; date: string; entry: PayrollEntry };
+  const timelineItems: TimelineItem[] = [
+    ...runs.map((run): TimelineItem => ({ kind: 'run', date: run.confirmedAt ?? run.createdAt, run })),
+    ...offPayments.map((entry): TimelineItem => ({ kind: 'off-payment', date: entry.paymentDate, entry })),
+  ].sort((a, b) => b.date.localeCompare(a.date));
 
   const closeSlideOver = () => {
     setSlideOverOpen(false);
@@ -421,10 +435,10 @@ export default function PayrollPage({ token }: PayrollPageProps) {
       <div className="views-bar">
         <button
           type="button"
-          className={`view-tab ${catalogTab === 'runs' ? 'active' : ''}`}
-          onClick={() => setCatalogTab('runs')}
+          className={`view-tab ${catalogTab === 'timeline' ? 'active' : ''}`}
+          onClick={() => setCatalogTab('timeline')}
         >
-          Runs
+          Timeline
         </button>
         <button
           type="button"
@@ -433,7 +447,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
         >
           Pay Frequencies
         </button>
-        {catalogTab === 'runs' ? (
+        {catalogTab === 'timeline' ? (
           <div className="ml-auto flex items-center gap-2">
             <button type="button" className="btn-outline gap-1.5" onClick={handleOpenOffPayment}>
               <PlusIcon className="h-3.5 w-3.5" />
@@ -452,41 +466,61 @@ export default function PayrollPage({ token }: PayrollPageProps) {
         )}
       </div>
 
-      {catalogTab === 'runs' && (
+      {catalogTab === 'timeline' && (
         <div className="mt-4">
           {runsLoading && <p>Loading...</p>}
-          {!runsLoading && runs.length === 0 && (
-            <p className="text-sm text-gray-500">No runs yet — create one from a pay frequency to pre-load who gets paid.</p>
+          {!runsLoading && timelineItems.length === 0 && (
+            <p className="text-sm text-gray-500">
+              Nothing yet — create a run from a pay frequency, or record a one-off payment.
+            </p>
           )}
-          {!runsLoading && runs.length > 0 && (
+          {!runsLoading && timelineItems.length > 0 && (
             <div className="full-table-wrap">
               <table className="table full-table">
                 <thead>
                   <tr>
-                    <th>Period</th>
-                    <th>Frequency</th>
+                    <th>Description</th>
+                    <th>Type</th>
                     <th>Status</th>
-                    <th>Created</th>
+                    <th>Date</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {runs.map((run) => (
-                    <tr key={run.id} className="cursor-pointer" onClick={() => setSelectedRunId(run.id)}>
-                      <td>
-                        <button type="button" className="table-link">
-                          {run.periodLabel}
-                        </button>
-                      </td>
-                      <td>{run.payFrequency?.name ?? '—'}</td>
-                      <td>
-                        <StatusChip
-                          color={run.status === 'confirmed' ? '#047857' : '#9ca3af'}
-                          label={run.status === 'confirmed' ? 'Confirmed' : 'Draft'}
-                        />
-                      </td>
-                      <td>{run.createdAt.slice(0, 10)}</td>
-                    </tr>
-                  ))}
+                  {timelineItems.map((item) =>
+                    item.kind === 'run' ? (
+                      <tr key={`run-${item.run.id}`} className="cursor-pointer" onClick={() => setSelectedRunId(item.run.id)}>
+                        <td>
+                          <button type="button" className="table-link">
+                            {item.run.periodLabel}
+                          </button>
+                        </td>
+                        <td>
+                          <span className="time-off-policy-chip">Run</span>
+                        </td>
+                        <td>
+                          <StatusChip
+                            color={item.run.status === 'confirmed' ? '#047857' : '#9ca3af'}
+                            label={item.run.status === 'confirmed' ? 'Confirmed' : 'Draft'}
+                          />
+                        </td>
+                        <td>{item.date.slice(0, 10)}</td>
+                      </tr>
+                    ) : (
+                      <tr key={`entry-${item.entry.id}`}>
+                        <td>
+                          {ADJUSTMENT_TYPE_LABELS[item.entry.type] || item.entry.type}
+                          {item.entry.employee ? ` — ${item.entry.employee.firstName} ${item.entry.employee.lastName}` : ''}
+                          {' · '}
+                          {formatMoney(item.entry.amountCents, item.entry.currency)}
+                        </td>
+                        <td>
+                          <span className="time-off-policy-chip">One-off</span>
+                        </td>
+                        <td>—</td>
+                        <td>{item.date.slice(0, 10)}</td>
+                      </tr>
+                    ),
+                  )}
                 </tbody>
               </table>
             </div>

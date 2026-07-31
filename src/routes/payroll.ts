@@ -10,6 +10,7 @@ import {
   createAdjustment,
   createOffCyclePayments,
   deleteAdjustment,
+  listOffCyclePayments,
   updateHourlyBaseEntryHours,
 } from '../modules/hr/payrollEntryService.js';
 import { findEmployeeByUserId, findEmployeeById } from '../modules/hr/employeeService.js';
@@ -305,6 +306,19 @@ payrollRouter.post('/api/hr/payroll/runs/:runId/employees', async (req, res) => 
     return res.status(400).json({ error: result.error });
   }
   return res.status(201).json(result.entry);
+});
+
+payrollRouter.get('/api/hr/payroll/off-payments', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (user.role !== 'owner') {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const payments = await listOffCyclePayments(user.tenantId!);
+  return res.json(payments);
 });
 
 payrollRouter.post('/api/hr/payroll/off-payments', async (req, res) => {

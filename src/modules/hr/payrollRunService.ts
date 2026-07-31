@@ -178,3 +178,102 @@ export async function getRunDetail(tenantId: string, runId: string) {
 
   return { ...run, employeeGroups: Array.from(groupsByEmployeeId.values()) };
 }
+
+export interface ConfirmRunResult {
+  success: boolean;
+  run?: PayrollRun;
+  error?: string;
+}
+
+// Blocks confirmation if any hourly base entry still has hoursQty: null
+// (fixed base entries never have hours, so this only looks at employees
+// whose vigente-at-creation compensation was hourly — see getRunDetail's
+// same lookup pattern). Once confirmed, PayrollEntry create/update/delete on
+// this run is rejected by Unidad 8/9's own endpoints (they check run.status
+// directly), not by anything here.
+export async function confirmRun(tenantId: string, runId: string): Promise<ConfirmRunResult> {
+  const run = await prisma.payrollRun.findUnique({ where: { id: runId } });
+  if (!run || run.tenantId !== tenantId) {
+    return { success: false, error: 'Payroll run not found' };
+  }
+  if (run.status !== 'draft') {
+    return { success: false, error: 'This run has already been confirmed' };
+  }
+
+  const baseEntries = await prisma.payrollEntry.findMany({ where: { tenantId, runId, type: 'base' } });
+  const employeeIds = [...new Set(baseEntries.map((e) => e.employeeId))];
+  const hourlyCompensations =
+    employeeIds.length > 0
+      ? await prisma.employeeCompensation.findMany({
+          where: {
+            tenantId,
+            employeeId: { in: employeeIds },
+            compensationType: 'hourly',
+            effectiveFrom: { lte: run.createdAt },
+            OR: [{ effectiveTo: null }, { effectiveTo: { gte: run.createdAt } }],
+          },
+        })
+      : [];
+  const hourlyEmployeeIds = new Set(hourlyCompensations.map((c) => c.employeeId));
+
+  const missingHours = baseEntries.some((e) => hourlyEmployeeIds.has(e.employeeId) && e.hoursQty === null);
+  if (missingHours) {
+    return { success: false, error: 'Every hourly person needs hours loaded before this run can be confirmed' };
+  }
+
+  const confirmed = await prisma.payrollRun.update({
+    where: { id: runId },
+    data: { status: 'confirmed', confirmedAt: new Date() },
+  });
+  return { success: true, run: confirmed };
+}
+
+export interface AddPersonToRunResult {
+  success: boolean;
+  entry?: PayrollEntry;
+  error?: string;
+}
+
+// Unidad 11's manual exception — add someone to a run outside the automatic
+// pre-load (e.g. their compensation was set up after the run was created).
+// Same base-entry shape as createRun's pre-load.
+export async function addPersonToRun(tenantId: string, runId: string, employeeId: string): Promise<AddPersonToRunResult> {
+  const run = await prisma.payrollRun.findUnique({ where: { id: runId } });
+  if (!run || run.tenantId !== tenantId) {
+    return { success: false, error: 'Payroll run not found' };
+  }
+  if (run.status !== 'draft') {
+    return { success: false, error: 'Only a draft run can have people added' };
+  }
+
+  const existing = await prisma.payrollEntry.findFirst({ where: { tenantId, runId, employeeId, type: 'base' } });
+  if (existing) {
+    return { success: false, error: 'This person is already on the run' };
+  }
+
+  const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
+  if (!employee || employee.tenantId !== tenantId) {
+    return { success: false, error: 'Employee not found' };
+  }
+
+  const compensation = await prisma.employeeCompensation.findFirst({
+    where: { tenantId, employeeId, effectiveTo: null },
+  });
+  if (!compensation) {
+    return { success: false, error: 'This person has no active compensation record' };
+  }
+
+  const entry = await prisma.payrollEntry.create({
+    data: {
+      tenantId,
+      employeeId,
+      runId,
+      type: 'base',
+      amountCents: compensation.compensationType === 'fixed' ? compensation.rateCents : 0,
+      currency: compensation.currency,
+      hoursQty: null,
+      paymentDate: new Date(),
+    },
+  });
+  return { success: true, entry };
+}

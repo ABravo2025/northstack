@@ -5,7 +5,7 @@ import {
   updatePayFrequency,
 } from '../modules/hr/payFrequencyService.js';
 import { createCompensation, listCompensationHistory } from '../modules/hr/employeeCompensationService.js';
-import { createRun, getRunDetail, listRuns } from '../modules/hr/payrollRunService.js';
+import { addPersonToRun, confirmRun, createRun, getRunDetail, listRuns } from '../modules/hr/payrollRunService.js';
 import { createAdjustment, deleteAdjustment, updateHourlyBaseEntryHours } from '../modules/hr/payrollEntryService.js';
 import { findEmployeeByUserId, findEmployeeById } from '../modules/hr/employeeService.js';
 import { validateSession } from '../lib/httpAuth.js';
@@ -264,4 +264,40 @@ payrollRouter.patch('/api/hr/payroll/entries/:entryId/hours', async (req, res) =
     return res.status(400).json({ error: result.error });
   }
   return res.json(result.entry);
+});
+
+payrollRouter.post('/api/hr/payroll/runs/:runId/confirm', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (user.role !== 'owner') {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const result = await confirmRun(user.tenantId!, req.params.runId);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  return res.json(result.run);
+});
+
+payrollRouter.post('/api/hr/payroll/runs/:runId/employees', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (user.role !== 'owner') {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  if (!req.body.employeeId) {
+    return res.status(400).json({ error: 'employeeId is required' });
+  }
+
+  const result = await addPersonToRun(user.tenantId!, req.params.runId, req.body.employeeId);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  return res.status(201).json(result.entry);
 });

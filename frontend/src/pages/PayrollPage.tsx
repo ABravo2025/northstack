@@ -4,6 +4,7 @@ import type { PayFrequency, PayrollRun, PayrollRunDetail } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import SlideOver from '../components/common/SlideOver';
 import Popover from '../components/common/Popover';
+import SearchableSelect from '../components/common/SearchableSelect';
 import StatusChip from '../components/common/StatusChip';
 import { ChevronLeftIcon, PencilIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
 import { formatMoney } from '../lib/currencies';
@@ -441,6 +442,14 @@ function RunDetailView({ token, runId, onBack }: RunDetailViewProps) {
   });
   const [savingAdjustment, setSavingAdjustment] = useState(false);
 
+  const [confirming, setConfirming] = useState(false);
+
+  const [addPersonOpen, setAddPersonOpen] = useState(false);
+  const addPersonAnchorRef = useRef<HTMLElement | null>(null);
+  const [addPersonEmployees, setAddPersonEmployees] = useState<any[]>([]);
+  const [addPersonSelectedId, setAddPersonSelectedId] = useState('');
+  const [addingPerson, setAddingPerson] = useState(false);
+
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -521,6 +530,54 @@ function RunDetailView({ token, runId, onBack }: RunDetailViewProps) {
     });
   };
 
+  const missingHours = run?.employeeGroups.some((g) => g.compensationType === 'hourly' && g.base?.hoursQty == null) ?? false;
+
+  const handleConfirmRun = async () => {
+    if (!run) return;
+    setConfirming(true);
+    try {
+      await api.confirmPayrollRun(token, run.id);
+      toast.success('Run confirmed.');
+      load();
+    } catch (error) {
+      toast.error('Failed to confirm run: ' + (error as Error).message);
+    } finally {
+      setConfirming(false);
+    }
+  };
+
+  const openAddPerson = async (e: React.MouseEvent) => {
+    addPersonAnchorRef.current = e.currentTarget as HTMLElement;
+    setAddPersonSelectedId('');
+    setAddPersonOpen(true);
+    try {
+      const employees = await api.listEmployees(token);
+      setAddPersonEmployees(employees);
+    } catch (error) {
+      toast.error('Failed to load employees: ' + (error as Error).message);
+    }
+  };
+
+  const alreadyOnRunIds = new Set(run?.employeeGroups.map((g) => g.employee.id) ?? []);
+  const addPersonOptions = addPersonEmployees
+    .filter((e) => !alreadyOnRunIds.has(e.id))
+    .map((e) => ({ value: e.id, label: `${e.firstName} ${e.lastName}` }));
+
+  const handleAddPerson = async () => {
+    if (!run || !addPersonSelectedId) return;
+    setAddingPerson(true);
+    try {
+      await api.addPersonToPayrollRun(token, run.id, addPersonSelectedId);
+      toast.success('Person added to the run.');
+      setAddPersonOpen(false);
+      load();
+    } catch (error) {
+      toast.error('Failed to add person: ' + (error as Error).message);
+    } finally {
+      setAddingPerson(false);
+    }
+  };
+
   return (
     <div className="container">
       <div className="page-toolbar no-border">
@@ -534,7 +591,40 @@ function RunDetailView({ token, runId, onBack }: RunDetailViewProps) {
             label={run.status === 'confirmed' ? 'Confirmed' : 'Draft'}
           />
         )}
+        {run?.status === 'draft' && (
+          <div className="ml-auto flex items-center gap-2">
+            <button type="button" className="btn-outline gap-1.5" onClick={openAddPerson}>
+              <PlusIcon className="h-3.5 w-3.5" />
+              Add Person
+            </button>
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={handleConfirmRun}
+              disabled={confirming || missingHours}
+              title={missingHours ? 'Every hourly person needs hours loaded before this run can be confirmed' : undefined}
+            >
+              {confirming ? 'Confirming…' : 'Confirm Run'}
+            </button>
+          </div>
+        )}
       </div>
+
+      <Popover open={addPersonOpen} onClose={() => setAddPersonOpen(false)} anchorRef={addPersonAnchorRef} width={280}>
+        <div className="form-group">
+          <label htmlFor="add-person-select">Add person to this run</label>
+          <SearchableSelect
+            id="add-person-select"
+            options={addPersonOptions}
+            value={addPersonSelectedId}
+            onChange={setAddPersonSelectedId}
+            placeholder="Search employees…"
+          />
+        </div>
+        <button type="button" className="btn-primary w-full" onClick={handleAddPerson} disabled={!addPersonSelectedId || addingPerson}>
+          {addingPerson ? 'Adding…' : 'Add'}
+        </button>
+      </Popover>
 
       {loading && <p>Loading...</p>}
 

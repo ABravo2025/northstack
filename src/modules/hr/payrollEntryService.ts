@@ -34,6 +34,9 @@ export async function createAdjustment(input: CreateAdjustmentInput): Promise<Ad
   if (!run || run.tenantId !== input.tenantId) {
     return { success: false, error: 'Payroll run not found' };
   }
+  if (run.status !== 'draft') {
+    return { success: false, error: 'Only entries on a draft run can be added' };
+  }
 
   const employee = await prisma.employee.findUnique({ where: { id: input.employeeId } });
   if (!employee || employee.tenantId !== input.tenantId) {

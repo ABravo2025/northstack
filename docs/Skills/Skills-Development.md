@@ -57,3 +57,4 @@ No dejar un modelo a medio camino entre "campo suelto" (popover chico) y "entida
 No borrar código muerto sin confirmar que no rompe el build primero.
 No tomar una decisión de producto/diseño no cubierta por la tarea y seguir de largo — pará y preguntá (ver sección de arriba).
 Cada vez que se realice un push a staging o produccion, deberas cargar una tarea en Tareas-QA.md para que ejecute el Agente QA.
+Todo elemento nuevo o edicion debe ser creado en ingles, con estructura en ingles y un front en ingles. A menos que se exprese lo contrario.

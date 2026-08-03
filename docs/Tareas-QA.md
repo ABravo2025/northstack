@@ -257,6 +257,92 @@ seguridad — tratarlo con el mismo criterio que QA-01.
 
 ---
 
+## QA-05 — Payroll re-spec: anchorConfig, confirmación de contrato, Assignments (push `f9319a0`, 2026-08-03, a `staging`)
+
+**Por qué existe esta tarea:** después de QA-04 (Payroll V1, 15 unidades), el usuario cargó un spec
+técnico nuevo en `docs/tareas-desarrollo.md` (Unidad 0 a 15 renumeradas) que cambia partes reales del
+modelo de datos y agrega funcionalidad nueva. No es un parche chico — hay que volver a pasar por el
+módulo completo, no solo por lo agregado. Verificado con `npm run build`/`npm test` en cada unidad y
+una sesión de smoke test por `curl` contra un tenant descartable (creado y en gran parte limpiado
+después) — sin Playwright esta sesión tampoco.
+
+### A. Cambio de schema — Pay Frequencies
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | `/hr/payroll` → tab "Pay Frequencies" en un tenant nuevo | Aparecen las 2 políticas seed, ahora en inglés: "Monthly" (Last business day) y "Semimonthly" (Day 15 and last day of month) — antes eran "Mensual"/"Quincenal". Si el tenant ya tenía políticas viejas con cadence `biweekly`, esas filas ya no existen (se limpiaron antes de aplicar el schema nuevo — confirmar que no rompe nada, no que sigan ahí). |
+| 2 | "New Pay Frequency" con cadencia Weekly | Pide día de la semana (select). Al guardar y volver a abrir "Edit", el día queda seleccionado correctamente (round-trip del JSON). |
+| 3 | "New Pay Frequency" con cadencia Semimonthly, opción "Custom" | Pide 2 selects de día de mes (1-31). Guardar, reabrir en Edit — ambos días persisten. |
+| 4 | "New Pay Frequency" con cadencia Monthly, opción "Custom" | Pide 1 select de día de mes. Mismo round-trip que el caso anterior. |
+| 5 | Cualquier política, campo "Due date" en Custom | Pide un número de días, se guarda y se muestra como "+N days" en la tabla. |
+| 6 | Tabla del catálogo | Columna "Due date" nueva, además de "Pay day(s)" ya existente — ambas legibles (no JSON crudo). |
+
+### B. Modal centrado (componente nuevo)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 7 | Abrir "New Pay Frequency" / "New Employee" → sección Compensation / Assignments → "Assign/Reassign Policy" | Los 3 abren un modal centrado con backdrop oscuro, no un panel lateral deslizante (`SlideOver`) — comparar visualmente contra, por ejemplo, el SlideOver de "New Run" en la misma página, que sigue siendo panel lateral. |
+
+### C. Panel de Employee — grupo "Employment" vs "Compensation"
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 8 | Abrir el panel de detalle de cualquier Employee | El grupo "Contract & compensation" ya no existe. En su lugar: "Employment" (Start Date, End Date, Contract URL, Time Off Policies) y, más abajo, "Compensation" (historial de `EmployeeCompensation`, sin cambios visuales). Ningún campo "Contract Type"/"Compensation Type"/"Hourly Rate"/"Monthly Rate" suelto en el panel. |
+| 9 | Exportar Employees a CSV | Las columnas "Contract Type"/"Compensation Type"/"Hourly Rate"/"Monthly Rate" siguen apareciendo (no se tocó el schema de `Employee` ni el CSV) — confirmar que el export no se rompió. |
+
+### D. Alta de empleado con compensación (Unidad 5.1)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 10 | Como owner, "Add Employee" → sección "Compensation (optional)" al final del form, dejar el monto vacío | El empleado se crea sin ninguna `EmployeeCompensation` — igual que el comportamiento de antes de este cambio. |
+| 11 | Mismo form, cargar tipo + monto + frecuencia + fecha | El empleado se crea y, además, aparece con esa compensación como vigente en su panel de detalle (grupo "Compensation") y en el tab "Assignments" de Payroll. |
+| 12 | Como `admin` (no owner) | La sección "Compensation (optional)" no aparece en el form — igual que el resto de los campos owner-only. |
+
+### E. Confirmación de contrato (Unidad 5.3) — el caso más nuevo y más riesgoso
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 13 | Owner carga la primera compensación de un empleado que ya tiene cuenta (`userId` seteado) | El empleado recibe un email ("Confirm your compensation contract") y ve un banner amarillo en `/overview` ("You have a compensation contract pending confirmation") apenas loguea. |
+| 14 | Ese mismo empleado abre "Review & Confirm" desde el banner | Modal centrado con tipo/monto/frecuencia/fecha efectiva + botón "Confirm". Al confirmar, el banner desaparece y no vuelve a aparecer en logins siguientes. |
+| 15 | Crear un Payroll Run bajo la frecuencia de un empleado con contrato **sin confirmar** | El empleado queda excluido del pre-load del run (no aparece en la tabla del run). Toast de aviso ("N people excluded — unconfirmed contract") al crear el run. |
+| 16 | Confirmar el contrato y crear un run nuevo | El empleado ya aparece incluido en el pre-load, sin aviso de excluidos. |
+| 17 | Ese mismo empleado (con Time Off Policy asignada) intenta pedir Time Off mientras su contrato sigue sin confirmar | La request se rechaza con un mensaje pidiendo confirmar el contrato primero — no debería poder cargar una solicitud. |
+| 18 | Owner reasigna la política de un empleado que **ya había confirmado** un contrato antes (vía "Assignments" o el panel del empleado) | El cambio se aplica de inmediato, sin banner de confirmación pendiente ni exclusión de runs — el bloqueo es solo para el primer contrato de cada persona. |
+
+### F. Assignments (Unidad 5.2)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 19 | `/hr/payroll` → tab "Assignments" | Tabla con checkbox por fila, nombre, y chip de política actual o "No policy assigned" por cada Employee del tenant. |
+| 20 | Seleccionar 2-3 personas → "Assign/Reassign Policy" | Modal con frecuencia + fecha efectiva + tipo (compartidos) y, debajo, un input de monto por persona — pre-cargado con el monto anterior si tenía uno, vacío si no. |
+| 21 | Cargar "Apply this amount to all selected rows" | Todos los inputs de monto de las filas seleccionadas se actualizan al mismo valor, pero siguen siendo editables individualmente después. |
+| 22 | Confirmar con algunas filas sin monto cargado | Solo se crean las compensaciones de las filas con monto — no bloquea el batch entero (mismo criterio que el import de CSV). |
+
+### G. Aislamiento entre tenants (mismo criterio que QA-01)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 23 | Con el token de un Tenant B, `POST /api/hr/employees/:id/compensation/:compId/confirm` sobre un `compensationId` del Tenant A | 404, no se modifica el registro de A. |
+| 24 | Con el token de un Tenant B, `GET /api/hr/payroll/compensation/status` o `POST .../compensation/bulk` | Solo devuelve/afecta datos del propio tenant del token — nunca del Tenant A. |
+
+### Nota — Unidad 5.4 no está construida a propósito
+
+El spec pide chips de "estado de contrato" y "último login" en la tabla de Employees, pero depende de
+un módulo de Activity Log que todavía no existe en el proyecto (Tier 5 del backlog general). Se dejó
+sin construir en vez de simular un stand-in — no es un bug, no hace falta reportarlo, solo confirmar
+que no aparece nada roto en su lugar (no debería haber ninguna columna nueva a medio hacer en
+`EmployeesPage.tsx`).
+
+### Al encontrar una falla
+
+Los ítems E (confirmación de contrato) son los de mayor riesgo real — si alguien queda excluido de un
+run o de Time Off sin que corresponda, o al revés, si alguien sin confirmar termina incluido en un run
+igual, es severidad alta (plata mal pagada o gente activa sin cobrar). Los ítems A/B/C/D son
+funcionales — si el flujo principal no deja crear/editar, es alta; problemas de detalle visual son
+baja. El ítem G es seguridad, mismo criterio que QA-01.
+
+---
+
 ## Próximas tareas de QA (a definir)
 
 Cuando se construya el rediseño de Clients pendiente (corte del módulo legado) o el módulo Payments

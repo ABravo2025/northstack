@@ -271,6 +271,8 @@ export interface EmployeeCompensation {
   createdByUserId: string;
   createdBy?: { id: string; firstName: string; lastName: string };
   createdAt: string;
+  confirmedAt: string | null;
+  blocksParticipation: boolean;
 }
 
 export interface PayrollEntry {
@@ -297,6 +299,9 @@ export interface PayrollRun {
   createdBy: { id: string; firstName: string; lastName: string };
   confirmedAt: string | null;
   createdAt: string;
+  // Only set on the POST /runs response — people left out of the pre-load
+  // because their first contract is still unconfirmed (Unidad 5.3/6).
+  excludedForUnconfirmedContract?: number;
 }
 
 export interface PayrollRunEmployeeGroup {

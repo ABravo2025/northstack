@@ -35,4 +35,27 @@ export const employeeCompensationApi = {
     if (!res.ok) await throwApiError(res);
     return res.json();
   },
+
+  // Unidad 5.3 — the employee's own action, confirming a pending contract.
+  confirmEmployeeCompensation: async (
+    token: string,
+    employeeId: string,
+    compensationId: string,
+  ): Promise<EmployeeCompensation> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/compensation/${compensationId}/confirm`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  // Current-user-scoped — backs the Overview banner, null when nothing's pending.
+  getPendingCompensationConfirmation: async (token: string): Promise<EmployeeCompensation | null> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/compensation/pending-confirmation`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
 };

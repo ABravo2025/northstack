@@ -303,6 +303,11 @@ export default function PayrollPage({ token }: PayrollPageProps) {
     try {
       const run = await api.createPayrollRun(token, newRunForm);
       toast.success('Run created.');
+      if (run.excludedForUnconfirmedContract) {
+        toast.error(
+          `${run.excludedForUnconfirmedContract} ${run.excludedForUnconfirmedContract === 1 ? 'person' : 'people'} excluded — unconfirmed contract.`,
+        );
+      }
       setNewRunOpen(false);
       loadRuns();
       setSelectedRunId(run.id);

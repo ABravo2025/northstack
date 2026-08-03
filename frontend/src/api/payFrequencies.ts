@@ -1,10 +1,12 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
-import type { PayFrequency } from './types.js';
+import type { AnchorConfig, PayFrequency } from './types.js';
 
 export interface PayFrequencyInput {
   name: string;
-  cadence: 'weekly' | 'biweekly' | 'monthly';
-  payAnchor: string;
+  cadence: 'weekly' | 'semimonthly' | 'monthly';
+  anchorConfig: AnchorConfig;
+  dueDateOffset: 'same_day' | 'plus_2' | 'plus_5' | 'custom';
+  dueDateCustomDays?: number;
 }
 
 export const payFrequenciesApi = {
@@ -23,7 +25,7 @@ export const payFrequenciesApi = {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify({ ...data, anchorConfig: JSON.stringify(data.anchorConfig) }),
     });
     if (!res.ok) await throwApiError(res);
     return res.json();
@@ -32,7 +34,7 @@ export const payFrequenciesApi = {
   updatePayFrequency: async (
     token: string,
     frequencyId: string,
-    data: Partial<PayFrequencyInput> & { isActive?: boolean },
+    data: Partial<Omit<PayFrequencyInput, 'anchorConfig'>> & { anchorConfig?: AnchorConfig; isActive?: boolean },
   ): Promise<PayFrequency> => {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/pay-frequencies/${frequencyId}`, {
       method: 'PATCH',
@@ -40,7 +42,10 @@ export const payFrequenciesApi = {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        ...data,
+        anchorConfig: data.anchorConfig !== undefined ? JSON.stringify(data.anchorConfig) : undefined,
+      }),
     });
     if (!res.ok) await throwApiError(res);
     return res.json();

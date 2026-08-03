@@ -264,7 +264,7 @@ export interface EmployeeCompensation {
   rateCents: number;
   currency: string;
   payFrequencyId: string;
-  payFrequency: { id: string; name: string; cadence: 'weekly' | 'biweekly' | 'monthly' };
+  payFrequency: { id: string; name: string; cadence: 'weekly' | 'semimonthly' | 'monthly' };
   effectiveFrom: string;
   effectiveTo: string | null;
   note: string | null;
@@ -290,7 +290,7 @@ export interface PayrollEntry {
 export interface PayrollRun {
   id: string;
   payFrequencyId: string | null;
-  payFrequency: { id: string; name: string; cadence: 'weekly' | 'biweekly' | 'monthly' } | null;
+  payFrequency: { id: string; name: string; cadence: 'weekly' | 'semimonthly' | 'monthly' } | null;
   periodLabel: string;
   status: 'draft' | 'confirmed';
   createdByUserId: string;
@@ -318,11 +318,23 @@ export interface PayrollRunDetail extends PayrollRun {
   employeeGroups: PayrollRunEmployeeGroup[];
 }
 
+// Shape of PayFrequency's JSON-encoded anchorConfig column, keyed by
+// cadence — mirrors isValidAnchorConfig on the backend
+// (src/modules/hr/payFrequencyService.ts).
+export type AnchorConfig =
+  | { dayOfWeek: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday' }
+  | { preset: 'first_15' | 'fifteen_last' }
+  | { preset: 'custom'; days: [number, number] }
+  | { preset: 'first_business_day' | 'last_business_day' }
+  | { preset: 'custom'; day: number };
+
 export interface PayFrequency {
   id: string;
   name: string;
-  cadence: 'weekly' | 'biweekly' | 'monthly';
-  payAnchor: string;
+  cadence: 'weekly' | 'semimonthly' | 'monthly';
+  anchorConfig: string; // JSON-encoded AnchorConfig
+  dueDateOffset: 'same_day' | 'plus_2' | 'plus_5' | 'custom';
+  dueDateCustomDays: number | null;
   isActive: boolean;
   order: number;
   assignedCount: number;

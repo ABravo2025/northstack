@@ -1,8 +1,9 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { api } from '../api';
-import type { PayFrequency, PayrollEntry, PayrollRun, PayrollRunDetail } from '../api';
+import type { AnchorConfig, PayFrequency, PayrollEntry, PayrollRun, PayrollRunDetail } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import SlideOver from '../components/common/SlideOver';
+import Modal from '../components/common/Modal';
 import Popover from '../components/common/Popover';
 import SearchableSelect from '../components/common/SearchableSelect';
 import StatusChip from '../components/common/StatusChip';
@@ -32,18 +33,126 @@ interface PayrollPageProps {
 
 const CADENCE_LABELS: Record<string, string> = {
   weekly: 'Weekly',
-  biweekly: 'Biweekly',
+  semimonthly: 'Semimonthly',
   monthly: 'Monthly',
 };
 
+const DAY_OF_WEEK_OPTIONS: { value: string; label: string }[] = [
+  { value: 'monday', label: 'Monday' },
+  { value: 'tuesday', label: 'Tuesday' },
+  { value: 'wednesday', label: 'Wednesday' },
+  { value: 'thursday', label: 'Thursday' },
+  { value: 'friday', label: 'Friday' },
+  { value: 'saturday', label: 'Saturday' },
+  { value: 'sunday', label: 'Sunday' },
+];
+const DAY_OF_WEEK_LABELS: Record<string, string> = Object.fromEntries(DAY_OF_WEEK_OPTIONS.map((d) => [d.value, d.label]));
+const DAY_OF_MONTH_OPTIONS = Array.from({ length: 31 }, (_, i) => i + 1);
+const DUE_DATE_LABELS: Record<string, string> = { same_day: 'Same day', plus_2: '+2 days', plus_5: '+5 days', custom: 'Custom' };
+
+// Human-readable render of the JSON-encoded anchorConfig column, for the
+// catalog table — mirrors isValidAnchorConfig's shape on the backend
+// (src/modules/hr/payFrequencyService.ts).
+function formatAnchorConfig(cadence: string, anchorConfigJson: string): string {
+  let config: any;
+  try {
+    config = JSON.parse(anchorConfigJson);
+  } catch {
+    return '—';
+  }
+  if (cadence === 'weekly') return DAY_OF_WEEK_LABELS[config?.dayOfWeek] ?? '—';
+  if (cadence === 'semimonthly') {
+    if (config?.preset === 'first_15') return 'Days 1 and 15';
+    if (config?.preset === 'fifteen_last') return 'Day 15 and last day of month';
+    if (config?.preset === 'custom' && Array.isArray(config.days)) return `Days ${config.days[0]} and ${config.days[1]}`;
+    return '—';
+  }
+  if (cadence === 'monthly') {
+    if (config?.preset === 'first_business_day') return 'First business day';
+    if (config?.preset === 'last_business_day') return 'Last business day';
+    if (config?.preset === 'custom' && config.day) return `Day ${config.day}`;
+    return '—';
+  }
+  return '—';
+}
+
+function formatDueDate(freq: PayFrequency): string {
+  if (freq.dueDateOffset === 'custom') return `+${freq.dueDateCustomDays ?? '?'} days`;
+  return DUE_DATE_LABELS[freq.dueDateOffset] ?? freq.dueDateOffset;
+}
+
 interface PayFrequencyForm {
   name: string;
-  cadence: 'weekly' | 'biweekly' | 'monthly';
-  payAnchor: string;
+  cadence: 'weekly' | 'semimonthly' | 'monthly';
+  dayOfWeek: string;
+  semimonthlyPreset: 'first_15' | 'fifteen_last' | 'custom';
+  semimonthlyDays: [string, string];
+  monthlyPreset: 'first_business_day' | 'last_business_day' | 'custom';
+  monthlyDay: string;
+  dueDateOffset: 'same_day' | 'plus_2' | 'plus_5' | 'custom';
+  dueDateCustomDays: string;
   isActive: boolean;
 }
 
-const EMPTY_FREQUENCY_FORM: PayFrequencyForm = { name: '', cadence: 'monthly', payAnchor: '', isActive: true };
+const EMPTY_FREQUENCY_FORM: PayFrequencyForm = {
+  name: '',
+  cadence: 'monthly',
+  dayOfWeek: 'monday',
+  semimonthlyPreset: 'first_15',
+  semimonthlyDays: ['1', '15'],
+  monthlyPreset: 'last_business_day',
+  monthlyDay: '1',
+  dueDateOffset: 'same_day',
+  dueDateCustomDays: '',
+  isActive: true,
+};
+
+// Builds the AnchorConfig payload from whichever cadence-specific fields
+// are active in the form — the other cadences' fields stay in state
+// (so switching back and forth doesn't lose what the user typed) but are
+// ignored here.
+function buildAnchorConfig(form: PayFrequencyForm): AnchorConfig {
+  if (form.cadence === 'weekly') {
+    return { dayOfWeek: form.dayOfWeek as AnchorConfig extends { dayOfWeek: infer D } ? D : never };
+  }
+  if (form.cadence === 'semimonthly') {
+    if (form.semimonthlyPreset === 'custom') {
+      return { preset: 'custom', days: [Number(form.semimonthlyDays[0]), Number(form.semimonthlyDays[1])] };
+    }
+    return { preset: form.semimonthlyPreset };
+  }
+  if (form.monthlyPreset === 'custom') {
+    return { preset: 'custom', day: Number(form.monthlyDay) };
+  }
+  return { preset: form.monthlyPreset };
+}
+
+// Inverse of buildAnchorConfig — used when opening "Edit" on an existing
+// frequency, to seed the cadence-specific fields from its stored anchorConfig.
+function parseAnchorConfigIntoForm(cadence: string, anchorConfigJson: string): Partial<PayFrequencyForm> {
+  let config: any;
+  try {
+    config = JSON.parse(anchorConfigJson);
+  } catch {
+    config = {};
+  }
+  if (cadence === 'weekly') {
+    return { dayOfWeek: config.dayOfWeek ?? 'monday' };
+  }
+  if (cadence === 'semimonthly') {
+    if (config.preset === 'custom') {
+      return { semimonthlyPreset: 'custom', semimonthlyDays: [String(config.days?.[0] ?? 1), String(config.days?.[1] ?? 15)] };
+    }
+    return { semimonthlyPreset: config.preset ?? 'first_15' };
+  }
+  if (cadence === 'monthly') {
+    if (config.preset === 'custom') {
+      return { monthlyPreset: 'custom', monthlyDay: String(config.day ?? 1) };
+    }
+    return { monthlyPreset: config.preset ?? 'last_business_day' };
+  }
+  return {};
+}
 
 type CatalogTab = 'timeline' | 'frequencies';
 
@@ -56,7 +165,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
   const [frequencies, setFrequencies] = useState<PayFrequency[]>([]);
   const [loading, setLoading] = useState(false);
   const [showInactive, setShowInactive] = useState(false);
-  const [slideOverOpen, setSlideOverOpen] = useState(false);
+  const [frequencyModalOpen, setFrequencyModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<PayFrequencyForm>(EMPTY_FREQUENCY_FORM);
   const [saving, setSaving] = useState(false);
@@ -130,8 +239,8 @@ export default function PayrollPage({ token }: PayrollPageProps) {
     ...offPayments.map((entry): TimelineItem => ({ kind: 'off-payment', date: entry.paymentDate, entry })),
   ].sort((a, b) => b.date.localeCompare(a.date));
 
-  const closeSlideOver = () => {
-    setSlideOverOpen(false);
+  const closeFrequencyModal = () => {
+    setFrequencyModalOpen(false);
     setEditingId(null);
     setForm(EMPTY_FREQUENCY_FORM);
   };
@@ -139,27 +248,42 @@ export default function PayrollPage({ token }: PayrollPageProps) {
   const handleOpenAdd = () => {
     setForm(EMPTY_FREQUENCY_FORM);
     setEditingId(null);
-    setSlideOverOpen(true);
+    setFrequencyModalOpen(true);
   };
 
   const handleOpenEdit = (freq: PayFrequency) => {
-    setForm({ name: freq.name, cadence: freq.cadence, payAnchor: freq.payAnchor, isActive: freq.isActive });
+    setForm({
+      ...EMPTY_FREQUENCY_FORM,
+      name: freq.name,
+      cadence: freq.cadence,
+      dueDateOffset: freq.dueDateOffset,
+      dueDateCustomDays: freq.dueDateCustomDays != null ? String(freq.dueDateCustomDays) : '',
+      isActive: freq.isActive,
+      ...parseAnchorConfigIntoForm(freq.cadence, freq.anchorConfig),
+    });
     setEditingId(freq.id);
-    setSlideOverOpen(true);
+    setFrequencyModalOpen(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     try {
+      const payload = {
+        name: form.name,
+        cadence: form.cadence,
+        anchorConfig: buildAnchorConfig(form),
+        dueDateOffset: form.dueDateOffset,
+        dueDateCustomDays: form.dueDateOffset === 'custom' ? Number(form.dueDateCustomDays) : undefined,
+      };
       if (editingId) {
-        await api.updatePayFrequency(token, editingId, form);
+        await api.updatePayFrequency(token, editingId, { ...payload, isActive: form.isActive });
         toast.success('Pay frequency updated.');
       } else {
-        await api.createPayFrequency(token, form);
+        await api.createPayFrequency(token, payload);
         toast.success('Pay frequency added.');
       }
-      closeSlideOver();
+      closeFrequencyModal();
       loadFrequencies();
     } catch (error) {
       toast.error('Failed to save pay frequency: ' + (error as Error).message);
@@ -249,13 +373,13 @@ export default function PayrollPage({ token }: PayrollPageProps) {
 
   return (
     <div className="page-full">
-      <SlideOver
-        open={slideOverOpen}
+      <Modal
+        open={frequencyModalOpen}
         title={editingId ? 'Edit Pay Frequency' : 'New Pay Frequency'}
-        onClose={closeSlideOver}
+        onClose={closeFrequencyModal}
         footer={
           <>
-            <button type="button" className="btn-secondary" onClick={closeSlideOver} disabled={saving}>
+            <button type="button" className="btn-secondary" onClick={closeFrequencyModal} disabled={saving}>
               Cancel
             </button>
             <button type="submit" form="pay-frequency-form" className="btn-primary" disabled={saving}>
@@ -266,39 +390,201 @@ export default function PayrollPage({ token }: PayrollPageProps) {
       >
         <form id="pay-frequency-form" onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="pf-name">Name</label>
+            <label htmlFor="pf-name">
+              Name<span className="text-red-600"> *</span>
+            </label>
             <input
               id="pf-name"
               type="text"
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              placeholder="e.g. Mensual, Quincenal"
+              placeholder="e.g. Monthly, Semimonthly"
               required
             />
           </div>
           <div className="form-group">
-            <label htmlFor="pf-cadence">Cadence</label>
+            <label htmlFor="pf-cadence">
+              Cadence<span className="text-red-600"> *</span>
+            </label>
             <select
               id="pf-cadence"
               value={form.cadence}
               onChange={(e) => setForm({ ...form, cadence: e.target.value as PayFrequencyForm['cadence'] })}
             >
               <option value="weekly">Weekly</option>
-              <option value="biweekly">Biweekly</option>
+              <option value="semimonthly">Semimonthly</option>
               <option value="monthly">Monthly</option>
             </select>
           </div>
+
+          {form.cadence === 'weekly' && (
+            <div className="form-group">
+              <label htmlFor="pf-day-of-week">
+                Day of week<span className="text-red-600"> *</span>
+              </label>
+              <select id="pf-day-of-week" value={form.dayOfWeek} onChange={(e) => setForm({ ...form, dayOfWeek: e.target.value })}>
+                {DAY_OF_WEEK_OPTIONS.map((d) => (
+                  <option key={d.value} value={d.value}>
+                    {d.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {form.cadence === 'semimonthly' && (
+            <div className="form-group">
+              <label>
+                Pay day(s)<span className="text-red-600"> *</span>
+              </label>
+              <div className="flex flex-col gap-1.5">
+                <label className="flex items-center gap-1.5 text-sm">
+                  <input
+                    type="radio"
+                    className="w-auto"
+                    name="semimonthly-preset"
+                    checked={form.semimonthlyPreset === 'first_15'}
+                    onChange={() => setForm({ ...form, semimonthlyPreset: 'first_15' })}
+                  />
+                  1st and 15th
+                </label>
+                <label className="flex items-center gap-1.5 text-sm">
+                  <input
+                    type="radio"
+                    className="w-auto"
+                    name="semimonthly-preset"
+                    checked={form.semimonthlyPreset === 'fifteen_last'}
+                    onChange={() => setForm({ ...form, semimonthlyPreset: 'fifteen_last' })}
+                  />
+                  15th and last day of month
+                </label>
+                <label className="flex items-center gap-1.5 text-sm">
+                  <input
+                    type="radio"
+                    className="w-auto"
+                    name="semimonthly-preset"
+                    checked={form.semimonthlyPreset === 'custom'}
+                    onChange={() => setForm({ ...form, semimonthlyPreset: 'custom' })}
+                  />
+                  Custom
+                </label>
+              </div>
+              {form.semimonthlyPreset === 'custom' && (
+                <div className="mt-1.5 flex items-center gap-2">
+                  <select
+                    aria-label="First day of month"
+                    value={form.semimonthlyDays[0]}
+                    onChange={(e) => setForm({ ...form, semimonthlyDays: [e.target.value, form.semimonthlyDays[1]] })}
+                  >
+                    {DAY_OF_MONTH_OPTIONS.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-sm text-ink-muted">and</span>
+                  <select
+                    aria-label="Second day of month"
+                    value={form.semimonthlyDays[1]}
+                    onChange={(e) => setForm({ ...form, semimonthlyDays: [form.semimonthlyDays[0], e.target.value] })}
+                  >
+                    {DAY_OF_MONTH_OPTIONS.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          )}
+
+          {form.cadence === 'monthly' && (
+            <div className="form-group">
+              <label>
+                Pay day<span className="text-red-600"> *</span>
+              </label>
+              <div className="flex flex-col gap-1.5">
+                <label className="flex items-center gap-1.5 text-sm">
+                  <input
+                    type="radio"
+                    className="w-auto"
+                    name="monthly-preset"
+                    checked={form.monthlyPreset === 'first_business_day'}
+                    onChange={() => setForm({ ...form, monthlyPreset: 'first_business_day' })}
+                  />
+                  First business day
+                </label>
+                <label className="flex items-center gap-1.5 text-sm">
+                  <input
+                    type="radio"
+                    className="w-auto"
+                    name="monthly-preset"
+                    checked={form.monthlyPreset === 'last_business_day'}
+                    onChange={() => setForm({ ...form, monthlyPreset: 'last_business_day' })}
+                  />
+                  Last business day
+                </label>
+                <label className="flex items-center gap-1.5 text-sm">
+                  <input
+                    type="radio"
+                    className="w-auto"
+                    name="monthly-preset"
+                    checked={form.monthlyPreset === 'custom'}
+                    onChange={() => setForm({ ...form, monthlyPreset: 'custom' })}
+                  />
+                  Custom
+                </label>
+              </div>
+              {form.monthlyPreset === 'custom' && (
+                <select
+                  aria-label="Day of month"
+                  className="mt-1.5"
+                  value={form.monthlyDay}
+                  onChange={(e) => setForm({ ...form, monthlyDay: e.target.value })}
+                >
+                  {DAY_OF_MONTH_OPTIONS.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+
           <div className="form-group">
-            <label htmlFor="pf-anchor">Pay day(s)</label>
-            <input
-              id="pf-anchor"
-              type="text"
-              value={form.payAnchor}
-              onChange={(e) => setForm({ ...form, payAnchor: e.target.value })}
-              placeholder="e.g. Último día hábil, Días 15 y 30"
-              required
-            />
+            <label htmlFor="pf-due-date">
+              Due date<span className="text-red-600"> *</span>
+            </label>
+            <select
+              id="pf-due-date"
+              value={form.dueDateOffset}
+              onChange={(e) => setForm({ ...form, dueDateOffset: e.target.value as PayFrequencyForm['dueDateOffset'] })}
+            >
+              <option value="same_day">Same day</option>
+              <option value="plus_2">+2 days</option>
+              <option value="plus_5">+5 days</option>
+              <option value="custom">Custom</option>
+            </select>
           </div>
+          {form.dueDateOffset === 'custom' && (
+            <div className="form-group">
+              <label htmlFor="pf-due-date-custom">
+                Days after pay date<span className="text-red-600"> *</span>
+              </label>
+              <input
+                id="pf-due-date-custom"
+                type="number"
+                min="0"
+                step="1"
+                value={form.dueDateCustomDays}
+                onChange={(e) => setForm({ ...form, dueDateCustomDays: e.target.value })}
+                required
+              />
+            </div>
+          )}
+
           {editingId && (
             <div className="form-group">
               <label className="flex items-center gap-1.5">
@@ -313,7 +599,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
             </div>
           )}
         </form>
-      </SlideOver>
+      </Modal>
 
       <SlideOver
         open={newRunOpen}
@@ -550,7 +836,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
             Assigning a pay frequency + rate to a person happens from their employee record, not here.
           </p>
 
-          {loading && <TableSkeleton columns={5} />}
+          {loading && <TableSkeleton columns={6} />}
 
           {!loading && (
             <>
@@ -591,6 +877,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                         <th>Name</th>
                         <th>Cadence</th>
                         <th>Pay day(s)</th>
+                        <th>Due date</th>
                         <th>Assigned people</th>
                         <th></th>
                       </tr>
@@ -600,7 +887,8 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                         <tr key={freq.id} className={!freq.isActive ? 'table-row-inactive' : ''}>
                           <td>{freq.name}</td>
                           <td>{CADENCE_LABELS[freq.cadence] || freq.cadence}</td>
-                          <td>{freq.payAnchor}</td>
+                          <td>{formatAnchorConfig(freq.cadence, freq.anchorConfig)}</td>
+                          <td>{formatDueDate(freq)}</td>
                           <td>{freq.assignedCount}</td>
                           <td>
                             <div className="icon-actions">

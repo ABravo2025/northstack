@@ -1074,6 +1074,45 @@
   @apply flex justify-end gap-2 border-t border-line px-6 py-4 dark:border-dark-line;
 }
 
+/* ---------- Modal: centered, backdrop-covered form ----------
+   Same open/title/onClose/footer shape as SlideOver, for small standalone
+   forms that the design calls out as centered rather than a side panel
+   (Payroll Pay Frequency / Compensation / bulk-reassign, Unidad 3 of
+   docs/tareas-desarrollo.md's Payroll spec). SlideOver stays the default for
+   "entity" forms; reach for Modal only when a design explicitly asks for a
+   centered dialog instead. */
+.modal-overlay {
+  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4;
+}
+
+.modal-panel {
+  @apply flex max-h-[85vh] w-full max-w-md flex-col rounded-lg border border-line bg-surface-1 shadow-xl dark:border-dark-line dark:bg-dark-surface;
+}
+
+.modal-panel.wide {
+  @apply max-w-2xl;
+}
+
+.modal-head {
+  @apply flex items-center justify-between border-b border-line px-6 py-4 dark:border-dark-line;
+}
+
+.modal-title {
+  @apply m-0 text-base font-semibold text-brand-navy dark:text-dark-ink;
+}
+
+.modal-close {
+  @apply cursor-pointer rounded-md border-none bg-transparent p-1 text-ink-faint hover:bg-surface-2 hover:text-brand-navy dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
+}
+
+.modal-body {
+  @apply flex-1 overflow-y-auto px-6 py-4;
+}
+
+.modal-foot {
+  @apply flex justify-end gap-2 border-t border-line px-6 py-4 dark:border-dark-line;
+}
+
 /* ---------- Detail overview modal (Employee/Company/Contact/Opportunity) ----------
    ClickUp visual direction (2.2): a centered popup with a backdrop, not a
    panel that pushes/narrows the table. Accepted tradeoff: the table behind

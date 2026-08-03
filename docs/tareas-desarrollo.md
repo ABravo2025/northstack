@@ -1,7 +1,10 @@
 # Tareas de desarrollo
 
 - Fecha de creación: 2026-07-02
-- Última actualización: 2026-07-30 — módulo CRM (Company/Contact/Opportunity/Pipeline) completo,
+- Última actualización: 2026-07-31 (noche) — módulo Payroll completo (Tier 3.5, 15/15 unidades),
+  en `staging`, pendiente de revisión antes de producción (ver entrada fechada más abajo y
+  [`docs/tareas/semana-2026-07-29.md`](tareas/semana-2026-07-29.md) para el detalle). Resumen de
+  la actualización anterior: módulo CRM (Company/Contact/Opportunity/Pipeline) completo,
   Tasks/Notes con la unificación y rediseño de los 4 paneles de detalle, y una revisión DevOps de
   arquitectura/calidad de código, **todo ya en producción** (primer deploy del CRM completo,
   `origin/main` estaba congelado desde el 2026-07-28). Detalle día a día de esta última tanda en
@@ -64,7 +67,23 @@
     `git log origin/main..HEAD` (o pushear inmediatamente después de cada commit, sin acumular) antes
     de cualquier push a `main`.
   - Próximo paso: reconstruir Payroll desde cero siguiendo el spec real, Unidad 1 en adelante,
-    confirmando y pusheando cada unidad a `staging` por separado (ver sección de spec más abajo).
+    confirmando y pusheando cada unidad a `staging` por separado. (La sección de spec técnico de
+    15 unidades que vivía más abajo en este archivo ya no está — el usuario la sacó del archivo en
+    algún momento de esta misma sesión; el detalle de lo efectivamente construido, unidad por
+    unidad, quedó documentado en `docs/tareas/semana-2026-07-29.md` en su lugar, ver entrada de
+    abajo.)
+- **2026-07-31 (noche): Payroll reconstruido completo — 15/15 unidades del spec real, pusheado a
+  `staging` (commit `d1da7c4`).** A pedido explícito del usuario, cada unidad se confirmó y
+  commiteó por separado pero **ninguna se pusheó hasta que las 15 estuvieron listas** — se pusheó
+  todo junto al final, no unidad por unidad como sugería el spec originalmente. Detalle completo,
+  unidad por unidad, en [`docs/tareas/semana-2026-07-29.md`](tareas/semana-2026-07-29.md) —
+  incluye 2 gaps reales del spec encontrados y resueltos en el camino (endpoint de carga de horas,
+  endpoint de listado de pagos off-cycle) y un bug real (badge Fixed/Hourly no se podía inferir de
+  `amountCents`/`hoursQty`, necesitaba resolución explícita contra `EmployeeCompensation`). Nueva
+  dependencia `pdfkit` (+ `@types/pdfkit`), confirmada con el usuario antes de instalar. Verificado
+  con `npm run build`/`npm test` en cada unidad + varias rondas de smoke test por `curl` contra
+  `staging` (sin Playwright disponible esta sesión). **Nada llegó a producción todavía** — pendiente
+  de que el usuario lo revise en `staging` con su usuario owner. Ver `docs/Tareas-QA.md`, QA-04.
 
 ## Prioridades (tiers)
 
@@ -87,8 +106,7 @@ Siguiente en la cola: Tier 1.
 **Tier 3 — Rediseño de Clients (completo, en producción)** — Company/Contact/Opportunity/Pipeline,
 ver "Estado actual" más abajo y `docs/tareas/semana-2026-07-29.md` para el detalle.
 
-**Tier 3.5 — Módulo Payroll, V1 (spec técnico completo, ver sección "Payroll (Tier 3.5) — spec
-técnico completo" más abajo, Unidades 1-15)**
+**Tier 3.5 — Módulo Payroll, V1 (completo, 15/15 unidades, en `staging`)**
 - **Distinto del "Módulo Payments" ya anotado en Tier 4** — Payments es facturarle a los *Clients*
   del tenant (cuentas por cobrar); Payroll es pagarle a los *Employees* del tenant (cuentas por
   pagar). Flujos de dinero opuestos, no confundir al spec-earlos aunque ambos puedan terminar
@@ -96,9 +114,14 @@ técnico completo" más abajo, Unidades 1-15)**
 - **A futuro (no en V1)**: integración con una plataforma de payroll externa para gestionar pagos
   directo desde Northstack — el usuario mencionó un nombre transcripto como "Get thera", sin
   confirmar a qué producto se refiere exactamente; confirmar el nombre real antes de evaluarlo.
-- Estado: **sin empezar** (ver nota del 2026-07-31 arriba — un primer intento sin ver este spec se
-  construyó, pusheó por error a producción, y se revirtió el mismo día). Orden de ejecución: Unidad
-  1 en adelante, confirmando y pusheando cada unidad a `staging` por separado.
+- **Explícitamente fuera de esta ronda** (por decisión del usuario o del spec original): métricas
+  derivadas (costo de nómina por mes/departamento/tipo); cálculo automático de fecha de pago a
+  partir de `payAnchor` (hoy texto libre); bloqueo duro de confirmación si hay alguien inactivo con
+  pagos cargados (V1 solo advierte); permisología custom sobre Payroll (hoy owner-only a secas).
+- Estado: **completo, pusheado a `staging` (commit `d1da7c4`, 2026-07-31)** — ver
+  [`docs/tareas/semana-2026-07-29.md`](tareas/semana-2026-07-29.md) para el detalle unidad por
+  unidad y `docs/database-schema.md` (grupo 7) para el modelo de datos. Pendiente: revisión del
+  usuario en `staging` (checklist en `docs/Tareas-QA.md`, QA-04) antes de promover a producción.
 
 **Tier 4 — Resto de iniciativas grandes**
 - Suscripciones propias del SaaS (Paddle, planes/precios, pantalla de administración autónoma)
@@ -258,9 +281,15 @@ Las entradas fechadas (el detalle día a día de qué se hizo y por qué) viven 
   producción (124 tenants reales), confirmado explícitamente con el usuario dado el alcance real.
 - **2 documentos nuevos**: [`ux-ui-brief.md`](ux-ui-brief.md) y
   [`features-overview.md`](features-overview.md).
+- **Módulo Payroll — Tier 3.5, completo, solo en `staging`, no en producción**: 15/15 unidades del
+  spec (catálogo de frecuencias, compensación versionada por empleado, runs con pre-carga
+  automática, ajustes, horas para hourly, aviso de empleado inactivo, confirmación, pagos off-cycle,
+  timeline unificado, payslip PDF preview). Ver `docs/database-schema.md` (grupo 7) y
+  `docs/tareas/semana-2026-07-29.md` para el detalle completo.
 - [ ] **Pendiente, sin resolver todavía** (detalle completo en la semana archivada): vincular un
   Contact a una Opportunity al crearla (gap de UX, pausado a pedido del usuario hasta hablar con el
   PM); calificación de leads sin Company confirmada (pospuesto hasta tener volumen real);
   automatizaciones del pipeline de ventas (pospuesto); corte final del módulo `Client` legado
-  (bloqueado en migrar Custom Fields/Public Forms de `entityType: 'client'` primero).
+  (bloqueado en migrar Custom Fields/Public Forms de `entityType: 'client'` primero); **promover
+  Payroll de `staging` a producción** (bloqueado en revisión manual del usuario, ver QA-04).
 

@@ -1,6 +1,6 @@
 # Database Schema
 
-- Última actualización: 2026-07-30
+- Última actualización: 2026-07-31
 - Fuente de verdad real: `prisma/schema.prisma`. Este documento es una vista legible de ese archivo — si difieren, el `.prisma` manda. Regenerar este archivo cuando el schema cambie de forma significativa (modelo nuevo, relación nueva), no hace falta para cambios chicos (un campo opcional más, un índice).
 - Todos los modelos son multi-tenant: casi todos tienen `tenantId` directo (no derivado por join), y el aislamiento entre tenants se verifica en el código de cada endpoint (ownership check), no solo por FK — ver `docs/current-process-flow.md` para el patrón de verificación.
 
@@ -14,6 +14,7 @@ Se dividen en grupos por área funcional, no uno solo gigante, para que sean leg
 4. **Vistas y formularios** — SavedView, PublicForm.
 5. **Sales / Clients redesign** — Company, Contact, Pipeline, Opportunity y su historial.
 6. **Tasks & Notes (cross-entity)** — Task, Note, adjuntables a Employee/Company/Contact/Opportunity.
+7. **Payroll (Tier 3.5)** — PayFrequencyDefinition, EmployeeCompensation, PayrollRun, PayrollEntry.
 
 ## 1. Identidad y acceso
 
@@ -438,6 +439,79 @@ Notas:
 - `Opportunity.nextStepDate`/`nextStepNote` (grupo 5) tienen un script de backfill a `Task` (`scripts/backfill-opportunity-nextstep-to-tasks.ts`, idempotente) — corrido en `staging`, 0 Opportunities con next step cargado todavía ahí, así que no creó nada. Las columnas viejas de `Opportunity` no se tocaron.
 - En el frontend, ambos se consumen a través de `EntityTasksList`/`EntityNotesList` — un componente compartido literal por los 4 paneles de detalle (Employee/Company/Contact/Opportunity), no 4 implementaciones separadas. El compose (crear/editar) está siempre expandido en la columna derecha del panel de detalle (`DetailSidebar.tsx`), no detrás de un popover — cambiado 2026-07-30, antes abría un `Popover` al hacer click en una fila fantasma.
 
+## 7. Payroll (Tier 3.5)
+
+Carga manual de pagos a empleados/contractors + registro histórico de compensación — sin procesamiento real de pagos (sin integración bancaria, sin W2/W4). Construido completo (15/15 unidades del spec) el 2026-07-31, pusheado a `staging`, pendiente de revisión del usuario antes de producción — ver `docs/tareas/semana-2026-07-29.md` para el detalle unidad por unidad. Distinto de **Payments** (grupo 5 no cubre esto todavía) — Payments es cobrarle a los Clients/Companies del tenant, Payroll es pagarle a sus Employees.
+
+```mermaid
+erDiagram
+    TENANT ||--o{ PAY_FREQUENCY_DEFINITION : "defines"
+    TENANT ||--o{ EMPLOYEE_COMPENSATION : "has"
+    TENANT ||--o{ PAYROLL_RUN : "has"
+    TENANT ||--o{ PAYROLL_ENTRY : "has"
+    EMPLOYEE ||--o{ EMPLOYEE_COMPENSATION : "compensation history"
+    EMPLOYEE ||--o{ PAYROLL_ENTRY : "paid via"
+    PAY_FREQUENCY_DEFINITION ||--o{ EMPLOYEE_COMPENSATION : "cadence for"
+    PAY_FREQUENCY_DEFINITION ||--o{ PAYROLL_RUN : "cadence for"
+    PAYROLL_RUN ||--o{ PAYROLL_ENTRY : "contains (nullable — null = off-cycle)"
+    USER ||--o{ EMPLOYEE_COMPENSATION : "created by"
+    USER ||--o{ PAYROLL_RUN : "created by"
+
+    PAY_FREQUENCY_DEFINITION {
+        string id PK
+        string tenantId FK
+        string name
+        enum cadence "weekly/biweekly/monthly"
+        string payAnchor "free text in V1 - no calendar calc yet"
+        bool isActive
+        int order
+    }
+    EMPLOYEE_COMPENSATION {
+        string id PK
+        string tenantId FK
+        string employeeId FK
+        enum compensationType "hourly/fixed - distinct from Employee.compensationType"
+        int rateCents
+        string currency "explicit per record, not tenant-wide"
+        string payFrequencyId FK
+        datetime effectiveFrom
+        datetime effectiveTo "nullable - null = vigente"
+        string note "nullable"
+        string createdByUserId FK
+    }
+    PAYROLL_RUN {
+        string id PK
+        string tenantId FK
+        string payFrequencyId FK "nullable"
+        string periodLabel "free text"
+        enum status "draft/confirmed"
+        string createdByUserId FK
+        datetime confirmedAt "nullable"
+    }
+    PAYROLL_ENTRY {
+        string id PK
+        string tenantId FK
+        string employeeId FK
+        string runId FK "nullable - null = off-cycle payment"
+        enum type "base/bonus/commission/reimbursement/deduction"
+        int amountCents "negative for deductions"
+        string currency
+        float hoursQty "nullable - only for hourly base entries"
+        string label "nullable"
+        datetime paymentDate
+    }
+```
+
+Notas:
+- **Visibilidad owner-only en toda la sección** (enforced en el código de cada endpoint, no en el schema) — excepción: un empleado puede ver su propio historial de `EmployeeCompensation`. Es una decisión explícita del usuario para V1, distinta del default recomendado (que hubiera sido el mismo criterio de `Employee.hourlyRateCents`/`monthlyRateCents`) — a revisar cuando exista permisología custom (Tier 5).
+- **`EmployeeCompensation` es independiente de `Employee.hourlyRateCents`/`monthlyRateCents`** — deliberadamente no unificados hasta que `EmployeeCompensation` esté probado en producción. `PayrollCompensationType` (`hourly`/`fixed`) es un enum distinto de `CompensationType` (`hourly`/`monthly`, el de `Employee`) — mismo nombre conceptual, valores distintos, no reusar uno por el otro.
+- **Invariante de vigencia, no forzado por DB**: como máximo un `EmployeeCompensation` por `employeeId` puede tener `effectiveTo: null` a la vez — crear uno nuevo vigente cierra el anterior (`effectiveTo = effectiveFrom del nuevo - 1 día`) en la misma transacción.
+- **`PayrollRun` pre-carga automática**: crear un run trae todas las `EmployeeCompensation` vigentes que matchean su `payFrequencyId` y genera un `PayrollEntry type: 'base'` por cada una (fixed copia `rateCents` directo; hourly arranca en `amountCents: 0`/`hoursQty: null` hasta cargar horas). No filtra por `Employee.status` — un empleado inactivo se pre-carga igual, solo se marca visualmente (ver abajo).
+- **Confirmar un run es una transición de un solo sentido** (`draft` → `confirmed`, bloqueada si hay algún `base` hourly con `hoursQty: null`) — una vez confirmado, crear/editar/borrar `PayrollEntry` de ese run queda rechazado a nivel de servicio.
+- **Empleado "inactivo" = no es el status default del catálogo**, no un string literal `"Active"` — los nombres de status son renombrables por tenant (`StatusDefinition.isDefault` es el proxy estructural real). La fecha "desde cuándo" sale de `StatusHistoryEntry`, no de un campo propio.
+- **`PayrollEntry.runId: null` es un pago off-cycle** (bono/comisión/reembolso/deducción suelto, con `paymentDate` explícito en vez de pertenecer a un período) — no una entidad contenedora separada.
+- **Payslip PDF** (`src/modules/hr/payslipService.ts`, dependencia nueva `pdfkit`) es una vista previa, no un documento legal — sin numeración, sin firma, sin compliance de ningún país, marcado explícitamente como preview tanto en el PDF como en el modal del frontend.
+
 ## Enums
 
 | Enum | Valores | Usado en |
@@ -459,6 +533,10 @@ Notas:
 | `FormAccessMode` | `public`, `internal` | `PublicForm.accessMode` |
 | `PipelineStageOutcome` | `open`, `won`, `lost` | `PipelineStageDefinition.outcome` |
 | `CatalogKind` | `department`, `jobTitle`, `leadSource`, `lossReason`, `companySize` | `FieldCatalogDefinition.kind` |
+| `PayFrequencyCadence` | `weekly`, `biweekly`, `monthly` | `PayFrequencyDefinition.cadence` |
+| `PayrollCompensationType` | `hourly`, `fixed` | `EmployeeCompensation.compensationType` (distinto de `CompensationType`, ver grupo 7) |
+| `PayrollRunStatus` | `draft`, `confirmed` | `PayrollRun.status` |
+| `PayrollEntryType` | `base`, `bonus`, `commission`, `reimbursement`, `deduction` | `PayrollEntry.type` |
 
 ## Qué falta / deuda conocida
 
@@ -471,4 +549,5 @@ Notas:
 - El sistema de Time Off está completo (7/7 piezas).
 - **Task/Note — permisos abiertos a cualquier rol** (ver grupo 6): revisar cuando exista el sistema de roles custom (Tier 5).
 - **Activity — layout confirmado, sin construir**: el usuario confirmó 2026-07-30 que Activity entra como tab en el panel de detalle (junto a Notes/Tasks), pero sin ningún modelo/backend real todavía — el tab hoy es un placeholder de texto. El sistema de auditoría real (quién hizo qué y cuándo) sigue en Tier 5 ("cola larga").
+- **Payroll (grupo 7) — explícitamente fuera de esta ronda, según el spec**: métricas derivadas (costo por mes/departamento/tipo); cálculo automático de fecha de pago a partir de `payAnchor` (hoy texto libre); bloqueo duro de confirmación si hay alguien inactivo con pagos cargados (V1 solo advierte); permisología custom sobre Payroll (hoy owner-only a secas). En `staging` únicamente, pendiente de revisión del usuario antes de producción.
 - **Tasks/Notes/Company/Contact/Opportunity — nada de esto llegó a producción todavía**: todo el trabajo de esta sesión (2026-07-29/30, ver `docs/tareas-desarrollo.md`) está pusheado a `staging` únicamente, pendiente de que el usuario lo revise antes de promover a `main`.

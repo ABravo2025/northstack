@@ -197,8 +197,68 @@ también — es una feature completa (Tasks/Notes) inutilizable, no un detalle v
 
 ---
 
+## QA-04 — Módulo Payroll completo, 15/15 unidades (push `d1da7c4`, 2026-07-31, a `staging` únicamente)
+
+**Por qué existe esta tarea:** módulo nuevo desde cero (schema + backend + frontend), construido en
+una sola sesión larga siguiendo un spec de 15 unidades (`docs/tareas-desarrollo.md`, sección
+"Payroll (Tier 3.5)" — el detalle día a día completo vive en
+`docs/tareas/semana-2026-07-29.md`). Hubo un falso arranque previo (una versión simplificada, sin
+ver el spec real) que se pusheó por error a producción y se revirtió el mismo día — la versión que
+llegó a `staging` es la reconstrucción completa contra el spec real, no esa primera versión.
+Verificado con `npm run build`/`npm test` en cada una de las 15 unidades y varias rondas de smoke
+test por `curl` contra `staging` (pre-carga fixed/hourly, ajustes, horas con recálculo, guards de
+confirmación, pagos off-cycle, payslip PDF) — **sin verificación visual/Playwright**, esta tarea es
+esa pasada.
+
+### A. Acceso — Payroll es owner-only en toda la sección
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Loguearse como `admin` o `member` de un tenant con datos | "Payroll" **no aparece** en el sidebar (grupo Human Resources). Navegar a mano a `/hr/payroll` no debería mostrar datos reales (los endpoints devuelven 403). |
+| 2 | Loguearse como `owner` | "Payroll" aparece en el sidebar, entre Employees/Time Off y Dashboard, con ícono de dólar. |
+| 3 | Como empleado no-owner que sí tiene un `Employee` vinculado a su usuario, con compensación cargada | Puede ver su propia compensación (dónde se muestra: panel de detalle de su propio Employee, sección "Compensation") aunque no tenga acceso a `/hr/payroll` — confirmar que ve la suya pero no puede ver/editar la de otro compañero. |
+
+### B. Flujo completo de un run (como owner)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 4 | `/hr/payroll` → tab "Pay Frequencies" → "New Pay Frequency" | Crea una frecuencia (nombre, cadencia, día(s) de pago). Aparece en la tabla, toggle Active/Deactivated funciona. |
+| 5 | Panel de detalle de un Employee → sección "Compensation" → "+ Add compensation" | Carga tipo (hourly/fixed), tarifa, moneda, frecuencia (la creada en el paso 4), vigente desde. Se guarda, aparece como "vigente" destacado arriba. |
+| 6 | Cargar una segunda compensación para el mismo Employee, con fecha posterior | La anterior pasa a "historial" (colapsado detrás de "Show history"), la nueva queda como vigente — sin que ambas queden vigentes a la vez. |
+| 7 | `/hr/payroll` tab "Timeline" → "New Run", eligiendo la frecuencia del paso 4 | Se crea el run y pre-carga automáticamente a todos los empleados con compensación vigente bajo esa frecuencia — entrar al detalle del run y confirmar que aparecen. |
+| 8 | En el detalle del run, para un empleado con compensación **fixed** | La columna Base muestra el monto directo (no editable), coincide con la tarifa cargada. |
+| 9 | En el detalle del run, para un empleado con compensación **hourly** | La columna Base es un input de horas editable — escribir un número muestra un preview en vivo ("= $X") antes de guardar, y al perder foco se guarda (recarga con el monto ya calculado). |
+| 10 | Click en la columna "Adjustments" de una fila | Abre un popover — agregar un bono/comisión/reembolso/deducción con tipo, monto, nota. El total de la columna se actualiza (con signo +/− según corresponda). |
+| 11 | Intentar "Confirm Run" con algún empleado hourly sin horas cargadas | El botón está deshabilitado (con tooltip explicando por qué) — no llega a mandar el request. |
+| 12 | Cargar las horas faltantes y confirmar el run | El run pasa a "Confirmed". Los controles de edición (horas, ajustes, "+ Add Person") desaparecen o quedan bloqueados. |
+| 13 | Click en el ícono de payslip de una fila (documento) | Abre un panel con un PDF embebido, banner "Preview only — not sent", y un botón de descarga que efectivamente baja un `.pdf` con el nombre del empleado, período, breakdown y total. |
+| 14 | "+ One-off Payment" desde el tab Timeline | Modal con checklist de empleados — marcar 2-3, cada uno con su propio monto editable, un tipo y fecha compartidos. Al guardar, aparecen como entradas separadas (no agrupadas) en el Timeline con chip "One-off". |
+| 15 | Tab "Timeline" con al menos 1 run y 1 pago único | Ambos aparecen mezclados en una sola lista, ordenados por fecha, cada uno con su chip ("Run" / "One-off") y estado. |
+
+### C. Empleado inactivo (advertencia, no bloqueo)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 16 | Desactivar (cambiar a un status no-default) a un Employee que ya tiene compensación vigente, luego crear/abrir un run que lo incluya | Fila con status en rojo + un banner amarillo debajo ("Figura [status] desde [fecha] — revisar antes de confirmar"). El run **se puede confirmar igual** — no es un bloqueo duro, es solo una advertencia visual. |
+
+### D. Aislamiento entre tenants
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 17 | Con el token de un Tenant B, intentar `GET`/`PATCH` sobre un `runId`/`employeeId`/`entryId` que pertenece al Tenant A | 404 ("not found"), nunca los datos reales ni un 403 que confirme que el recurso existe. Mismo criterio que QA-01. |
+
+### Al encontrar una falla
+
+Los ítems A son de seguridad real (visibilidad de datos de compensación) — cualquier falla ahí es
+severidad alta. Los ítems B/C son la funcionalidad central del módulo — si algo del flujo principal
+(crear run, confirmar, payslip) no funciona, es severidad alta porque el módulo completo queda
+inutilizable; problemas de detalle visual (alineación, texto) son severidad baja. El ítem D es
+seguridad — tratarlo con el mismo criterio que QA-01.
+
+---
+
 ## Próximas tareas de QA (a definir)
 
-Cuando se construyan los módulos grandes en curso (rediseño de Clients, Payroll), esta tabla de
-casos va a necesitar extenderse con sus endpoints nuevos — no asumir que quedan cubiertos por los
-casos de Employee/Client de arriba.
+Cuando se construya el rediseño de Clients pendiente (corte del módulo legado) o el módulo Payments
+(distinto de Payroll — facturación a Clients, no pagos a Employees), esta tabla de casos va a
+necesitar extenderse con sus endpoints nuevos.

@@ -6,9 +6,11 @@ import {
   updatePayFrequency,
 } from '../modules/hr/payFrequencyService.js';
 import {
+  bulkCreateCompensation,
   confirmCompensation,
   createCompensation,
   findBlockingUnconfirmedCompensation,
+  getCompensationStatus,
   listCompensationHistory,
 } from '../modules/hr/employeeCompensationService.js';
 import { addPersonToRun, confirmRun, createRun, getRunDetail, listRuns } from '../modules/hr/payrollRunService.js';
@@ -285,6 +287,56 @@ payrollRouter.get('/api/hr/compensation/pending-confirmation', async (req, res) 
 
   const pending = await findBlockingUnconfirmedCompensation(user.tenantId!, actingEmployee.id);
   return res.json(pending);
+});
+
+// Unidad 5.2 — backs the "Assignments" screen's table (current policy chip
+// per employee, or none).
+payrollRouter.get('/api/hr/payroll/compensation/status', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (user.role !== 'owner') {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const status = await getCompensationStatus(user.tenantId!);
+  return res.json(status);
+});
+
+// Unidad 5.2 — bulk assign/reassign a pay frequency to several people at
+// once, each with its own explicit rate (never derived from the previous
+// one). Exception tool for retrofitting/migrating a group, not the main path
+// (that's Unidad 5.1, at hire).
+payrollRouter.post('/api/hr/payroll/compensation/bulk', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (user.role !== 'owner') {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const { payFrequencyId, effectiveFrom, entries } = req.body;
+  if (!payFrequencyId || !effectiveFrom || !Array.isArray(entries) || entries.length === 0) {
+    return res.status(400).json({ error: 'payFrequencyId, effectiveFrom, and a non-empty entries array are required' });
+  }
+  for (const entry of entries) {
+    if (
+      !entry.employeeId ||
+      !COMPENSATION_TYPES.includes(entry.compensationType) ||
+      !Number.isInteger(entry.rateCents) ||
+      entry.rateCents <= 0 ||
+      !entry.currency
+    ) {
+      return res
+        .status(400)
+        .json({ error: 'Each entry needs employeeId, compensationType, a positive rateCents, and currency' });
+    }
+  }
+
+  const result = await bulkCreateCompensation(user.tenantId!, payFrequencyId, effectiveFrom, entries, user.id);
+  return res.status(201).json(result);
 });
 
 payrollRouter.get('/api/hr/payroll/runs', async (req, res) => {

@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { api } from '../api';
-import type { AnchorConfig, PayFrequency, PayrollEntry, PayrollRun, PayrollRunDetail } from '../api';
+import type { AnchorConfig, CompensationStatusRow, PayFrequency, PayrollEntry, PayrollRun, PayrollRunDetail } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import SlideOver from '../components/common/SlideOver';
 import Modal from '../components/common/Modal';
@@ -154,7 +154,7 @@ function parseAnchorConfigIntoForm(cadence: string, anchorConfigJson: string): P
   return {};
 }
 
-type CatalogTab = 'timeline' | 'frequencies';
+type CatalogTab = 'timeline' | 'frequencies' | 'assignments';
 
 export default function PayrollPage({ token }: PayrollPageProps) {
   const toast = useToast();
@@ -187,9 +187,24 @@ export default function PayrollPage({ token }: PayrollPageProps) {
   const [offPaymentSelections, setOffPaymentSelections] = useState<Record<string, string>>({}); // employeeId -> amount string
   const [savingOffPayment, setSavingOffPayment] = useState(false);
 
+  // --- Assignments (Unidad 5.2) — exception tool for bulk assign/reassign ---
+  const [compensationStatus, setCompensationStatus] = useState<CompensationStatusRow[]>([]);
+  const [assignmentsLoading, setAssignmentsLoading] = useState(false);
+  const [selectedForBulk, setSelectedForBulk] = useState<Set<string>>(new Set());
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
+  const [bulkForm, setBulkForm] = useState({
+    payFrequencyId: '',
+    effectiveFrom: '',
+    compensationType: 'fixed' as 'hourly' | 'fixed',
+    applyToAll: '',
+  });
+  const [bulkAmounts, setBulkAmounts] = useState<Record<string, string>>({});
+  const [savingBulk, setSavingBulk] = useState(false);
+
   useEffect(() => {
     loadFrequencies();
     loadRuns();
+    loadCompensationStatus();
     api.listEmployees(token).then(setEmployees).catch(() => {});
     api
       .getCurrentTenant(token)
@@ -198,6 +213,18 @@ export default function PayrollPage({ token }: PayrollPageProps) {
         // Non-critical — falls back to USD formatting/currency if it fails.
       });
   }, []);
+
+  const loadCompensationStatus = async () => {
+    setAssignmentsLoading(true);
+    try {
+      const data = await api.getCompensationStatus(token);
+      setCompensationStatus(data);
+    } catch (error) {
+      toast.error('Failed to load compensation assignments: ' + (error as Error).message);
+    } finally {
+      setAssignmentsLoading(false);
+    }
+  };
 
   const loadFrequencies = async () => {
     setLoading(true);
@@ -360,6 +387,73 @@ export default function PayrollPage({ token }: PayrollPageProps) {
       toast.error('Failed to record payment: ' + (error as Error).message);
     } finally {
       setSavingOffPayment(false);
+    }
+  };
+
+  const toggleBulkSelection = (employeeId: string, checked: boolean) => {
+    setSelectedForBulk((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(employeeId);
+      else next.delete(employeeId);
+      return next;
+    });
+  };
+
+  const handleOpenBulkAssign = () => {
+    // Pre-fill each row with its previous rate as-is (no conversion) if it
+    // had one — empty if not, per the spec.
+    const seeded: Record<string, string> = {};
+    for (const employeeId of selectedForBulk) {
+      const row = compensationStatus.find((r) => r.employeeId === employeeId);
+      seeded[employeeId] = row?.activeCompensation ? (row.activeCompensation.rateCents / 100).toFixed(2) : '';
+    }
+    setBulkAmounts(seeded);
+    setBulkForm({ payFrequencyId: activeFrequencies[0]?.id ?? '', effectiveFrom: '', compensationType: 'fixed', applyToAll: '' });
+    setBulkModalOpen(true);
+  };
+
+  const applyAmountToAll = (value: string) => {
+    setBulkForm({ ...bulkForm, applyToAll: value });
+    setBulkAmounts((prev) => {
+      const next = { ...prev };
+      for (const employeeId of selectedForBulk) next[employeeId] = value;
+      return next;
+    });
+  };
+
+  const handleSubmitBulk = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const entries = Array.from(selectedForBulk)
+      .filter((employeeId) => (bulkAmounts[employeeId] ?? '').trim() !== '')
+      .map((employeeId) => ({
+        employeeId,
+        compensationType: bulkForm.compensationType,
+        rateCents: Math.round(Number.parseFloat(bulkAmounts[employeeId]) * 100),
+        currency: tenantCurrency,
+      }));
+    if (entries.length === 0) {
+      toast.error('Enter an amount for at least one selected person.');
+      return;
+    }
+    setSavingBulk(true);
+    try {
+      const result = await api.bulkCreateCompensation(token, {
+        payFrequencyId: bulkForm.payFrequencyId,
+        effectiveFrom: bulkForm.effectiveFrom,
+        entries,
+      });
+      if (result.errors.length > 0) {
+        toast.error(`${result.created} assigned, ${result.errors.length} failed.`);
+      } else {
+        toast.success(`${result.created} ${result.created === 1 ? 'person' : 'people'} assigned.`);
+      }
+      setBulkModalOpen(false);
+      setSelectedForBulk(new Set());
+      loadCompensationStatus();
+    } catch (error) {
+      toast.error('Failed to assign: ' + (error as Error).message);
+    } finally {
+      setSavingBulk(false);
     }
   };
 
@@ -748,7 +842,14 @@ export default function PayrollPage({ token }: PayrollPageProps) {
         >
           Pay Frequencies
         </button>
-        {catalogTab === 'timeline' ? (
+        <button
+          type="button"
+          className={`view-tab ${catalogTab === 'assignments' ? 'active' : ''}`}
+          onClick={() => setCatalogTab('assignments')}
+        >
+          Assignments
+        </button>
+        {catalogTab === 'timeline' && (
           <div className="ml-auto flex items-center gap-2">
             <button type="button" className="btn-outline gap-1.5" onClick={handleOpenOffPayment}>
               <PlusIcon className="h-3.5 w-3.5" />
@@ -759,10 +860,22 @@ export default function PayrollPage({ token }: PayrollPageProps) {
               New Run
             </button>
           </div>
-        ) : (
+        )}
+        {catalogTab === 'frequencies' && (
           <button type="button" className="btn-outline gap-1.5 ml-auto" onClick={handleOpenAdd}>
             <PlusIcon className="h-3.5 w-3.5" />
             New Pay Frequency
+          </button>
+        )}
+        {catalogTab === 'assignments' && (
+          <button
+            type="button"
+            className="btn-outline gap-1.5 ml-auto"
+            onClick={handleOpenBulkAssign}
+            disabled={selectedForBulk.size === 0}
+          >
+            <PlusIcon className="h-3.5 w-3.5" />
+            Assign/Reassign Policy{selectedForBulk.size > 0 ? ` (${selectedForBulk.size})` : ''}
           </button>
         )}
       </div>
@@ -913,6 +1026,153 @@ export default function PayrollPage({ token }: PayrollPageProps) {
           )}
         </div>
       )}
+
+      {catalogTab === 'assignments' && (
+        <div className="mt-4">
+          <p className="text-sm text-ink-muted mb-3">
+            Exception tool for retrofitting people with no compensation yet, or migrating a group to a new pay frequency —
+            the main path is setting compensation up when someone is hired.
+          </p>
+
+          {assignmentsLoading && <TableSkeleton columns={3} />}
+
+          {!assignmentsLoading && (
+            <div className="full-table-wrap">
+              <table className="table full-table">
+                <thead>
+                  <tr>
+                    <th></th>
+                    <th>Name</th>
+                    <th>Current Policy</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {compensationStatus.map((row) => (
+                    <tr key={row.employeeId}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          className="w-auto"
+                          checked={selectedForBulk.has(row.employeeId)}
+                          onChange={(e) => toggleBulkSelection(row.employeeId, e.target.checked)}
+                          aria-label={`Select ${row.firstName} ${row.lastName}`}
+                        />
+                      </td>
+                      <td>
+                        {row.firstName} {row.lastName}
+                      </td>
+                      <td>
+                        {row.activeCompensation ? (
+                          <span className="time-off-policy-chip">{row.activeCompensation.payFrequency.name}</span>
+                        ) : (
+                          <span className="text-xs text-ink-faint">No policy assigned</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      <Modal
+        open={bulkModalOpen}
+        title={`Assign/Reassign Policy (${selectedForBulk.size})`}
+        onClose={() => setBulkModalOpen(false)}
+        wide
+        footer={
+          <>
+            <button type="button" className="btn-secondary" onClick={() => setBulkModalOpen(false)} disabled={savingBulk}>
+              Cancel
+            </button>
+            <button type="submit" form="bulk-assign-form" className="btn-primary" disabled={savingBulk}>
+              {savingBulk ? 'Saving…' : 'Assign'}
+            </button>
+          </>
+        }
+      >
+        <form id="bulk-assign-form" onSubmit={handleSubmitBulk}>
+          <div className="form-group">
+            <label htmlFor="bulk-frequency">
+              Pay frequency<span className="text-red-600"> *</span>
+            </label>
+            <select
+              id="bulk-frequency"
+              value={bulkForm.payFrequencyId}
+              onChange={(e) => setBulkForm({ ...bulkForm, payFrequencyId: e.target.value })}
+              required
+            >
+              <option value="">-- select --</option>
+              {activeFrequencies.map((freq) => (
+                <option key={freq.id} value={freq.id}>
+                  {freq.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group">
+            <label htmlFor="bulk-effective">
+              Effective from<span className="text-red-600"> *</span>
+            </label>
+            <input
+              id="bulk-effective"
+              type="date"
+              value={bulkForm.effectiveFrom}
+              onChange={(e) => setBulkForm({ ...bulkForm, effectiveFrom: e.target.value })}
+              required
+            />
+          </div>
+          <div className="form-group">
+            <label htmlFor="bulk-type">
+              Type<span className="text-red-600"> *</span>
+            </label>
+            <select
+              id="bulk-type"
+              value={bulkForm.compensationType}
+              onChange={(e) => setBulkForm({ ...bulkForm, compensationType: e.target.value as 'hourly' | 'fixed' })}
+            >
+              <option value="fixed">Fixed</option>
+              <option value="hourly">Hourly</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label htmlFor="bulk-apply-all">Apply this amount to all selected rows ({tenantCurrency})</label>
+            <input
+              id="bulk-apply-all"
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={bulkForm.applyToAll}
+              onChange={(e) => applyAmountToAll(e.target.value)}
+              placeholder="Optional — or set each row below"
+            />
+          </div>
+
+          <div className="policy-manage-list">
+            {Array.from(selectedForBulk).map((employeeId) => {
+              const row = compensationStatus.find((r) => r.employeeId === employeeId);
+              return (
+                <div key={employeeId} className="policy-manage-row justify-between">
+                  <span className="status-manage-name">
+                    {row ? `${row.firstName} ${row.lastName}` : employeeId}
+                  </span>
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    className="w-24"
+                    value={bulkAmounts[employeeId] ?? ''}
+                    onChange={(e) => setBulkAmounts({ ...bulkAmounts, [employeeId]: e.target.value })}
+                    aria-label={`Amount for ${row ? `${row.firstName} ${row.lastName}` : employeeId} (${tenantCurrency})`}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

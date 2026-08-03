@@ -275,6 +275,26 @@ export interface EmployeeCompensation {
   blocksParticipation: boolean;
 }
 
+// Unidad 5.2 — one row per employee, for the "Assignments" screen.
+export interface CompensationStatusRow {
+  employeeId: string;
+  firstName: string;
+  lastName: string;
+  activeCompensation: EmployeeCompensation | null;
+}
+
+export interface BulkCompensationEntry {
+  employeeId: string;
+  compensationType: 'hourly' | 'fixed';
+  rateCents: number;
+  currency: string;
+}
+
+export interface BulkCreateCompensationResult {
+  created: number;
+  errors: { employeeId: string; error: string }[];
+}
+
 export interface PayrollEntry {
   id: string;
   employeeId: string;

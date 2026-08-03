@@ -1,5 +1,5 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
-import type { EmployeeCompensation } from './types.js';
+import type { BulkCompensationEntry, BulkCreateCompensationResult, CompensationStatusRow, EmployeeCompensation } from './types.js';
 
 export interface EmployeeCompensationInput {
   compensationType: 'hourly' | 'fixed';
@@ -54,6 +54,31 @@ export const employeeCompensationApi = {
   getPendingCompensationConfirmation: async (token: string): Promise<EmployeeCompensation | null> => {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/compensation/pending-confirmation`, {
       headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  // Unidad 5.2 — backs the "Assignments" screen.
+  getCompensationStatus: async (token: string): Promise<CompensationStatusRow[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/compensation/status`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  bulkCreateCompensation: async (
+    token: string,
+    data: { payFrequencyId: string; effectiveFrom: string; entries: BulkCompensationEntry[] },
+  ): Promise<BulkCreateCompensationResult> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/compensation/bulk`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
     });
     if (!res.ok) await throwApiError(res);
     return res.json();

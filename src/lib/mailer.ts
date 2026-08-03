@@ -168,28 +168,36 @@ export interface SendCompensationConfirmationEmailInput {
   compensationType: 'hourly' | 'fixed';
   rateFormatted: string;
   payFrequencyName: string;
+  // True only for a first-ever, unconfirmed contract — that's the case that
+  // actually excludes the person from payroll runs/Time Off until they
+  // confirm. A reassignment for someone who already confirmed once before
+  // doesn't block anything, so the copy shouldn't imply it does.
+  blocksParticipation: boolean;
 }
 
 export async function sendCompensationConfirmationEmail(input: SendCompensationConfirmationEmailInput): Promise<void> {
   if (!mailerConfigured()) return;
 
   const rateLine = `${input.rateFormatted}${input.compensationType === 'hourly' ? ' / hour' : ''} · ${input.payFrequencyName}`;
+  const callToAction = input.blocksParticipation
+    ? "Log into Northstack and confirm it from your Overview page — until you do, you'll be left out of payroll runs."
+    : 'Log into Northstack to review it from your Overview page.';
 
   await transporter.sendMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
     to: input.to,
-    subject: 'Confirm your compensation contract',
+    subject: input.blocksParticipation ? 'Confirm your compensation contract' : 'Your compensation was updated',
     text: [
       `Hi ${input.employeeName},`,
       '',
       `A compensation contract was set up for you: ${rateLine}.`,
       '',
-      'Log into Northstack and confirm it from your Overview page — until you do, you\'ll be left out of payroll runs.',
+      callToAction,
     ].join('\n'),
     html: [
       `<p>Hi ${input.employeeName},</p>`,
       `<p>A compensation contract was set up for you: <strong>${rateLine}</strong>.</p>`,
-      `<p>Log into Northstack and confirm it from your Overview page — until you do, you'll be left out of payroll runs.</p>`,
+      `<p>${callToAction}</p>`,
     ].join('\n'),
   });
 }

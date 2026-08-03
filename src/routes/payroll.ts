@@ -223,10 +223,12 @@ payrollRouter.post('/api/hr/employees/:employeeId/compensation', async (req, res
     return res.status(400).json({ error: result.error });
   }
 
-  // Unidad 5.3 — only notify if the employee already has an account; someone
-  // without one yet sees the same pending-confirmation banner the first time
-  // they log in after accepting their invite, no separate email needed.
-  if (result.compensation!.blocksParticipation && employee.userId) {
+  // Unidad 5.3 — notify on any new contract (first-time or reassignment),
+  // only if the employee already has an account; someone without one yet
+  // sees the same banner the first time they log in after accepting their
+  // invite, no separate email needed. Copy differs depending on whether this
+  // one actually blocks participation (see sendCompensationConfirmationEmail).
+  if (employee.userId) {
     findUserById(employee.userId)
       .then((employeeUser) => {
         if (!employeeUser) return;
@@ -236,6 +238,7 @@ payrollRouter.post('/api/hr/employees/:employeeId/compensation', async (req, res
           compensationType: result.compensation!.compensationType,
           rateFormatted: formatMoney(result.compensation!.rateCents, result.compensation!.currency),
           payFrequencyName: result.compensation!.payFrequency.name,
+          blocksParticipation: result.compensation!.blocksParticipation,
         });
       })
       .catch((error) => {

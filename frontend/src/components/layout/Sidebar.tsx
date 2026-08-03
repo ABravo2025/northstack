@@ -5,7 +5,6 @@ import {
   CalendarIcon,
   ChevronLeftIcon,
   DashboardIcon,
-  DollarIcon,
   GearIcon,
   HomeIcon,
   PeopleIcon,
@@ -15,12 +14,11 @@ import {
 } from '../common/Icons';
 
 interface SidebarProps {
-  user: any;
   mobileOpen: boolean;
   onMobileClose: () => void;
 }
 
-export default function Sidebar({ user, mobileOpen, onMobileClose }: SidebarProps) {
+export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -60,12 +58,6 @@ export default function Sidebar({ user, mobileOpen, onMobileClose }: SidebarProp
             <CalendarIcon className="h-4 w-4 shrink-0" />
             {label('Time Off')}
           </NavLink>
-          {user.role === 'owner' && (
-            <NavLink to="/hr/payroll" className={linkClass} title="Human Resources – Payroll" onClick={onMobileClose}>
-              <DollarIcon className="h-4 w-4 shrink-0" />
-              {label('Payroll')}
-            </NavLink>
-          )}
           <NavLink to="/hr/dashboard" className={linkClass} title="Human Resources – Dashboard" onClick={onMobileClose}>
             <DashboardIcon className="h-4 w-4 shrink-0" />
             {label('Dashboard')}

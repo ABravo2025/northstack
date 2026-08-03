@@ -20,12 +20,6 @@ ColorPicker.tsx — selector de color con paleta + custom persistido en localSto
 ToastProvider.tsx / useToast() — nunca uses alert() fijo.
 ConfirmDialog.tsx — nunca uses confirm() nativo.
 Pagination.tsx — 20 filas/página, client-side.
-EmptyState.tsx — cualquier estado "sin datos todavía" con una acción real para resolverlo (crear el primer registro). Nunca un <p> de texto plano con la clase vieja text-gray-500/text-gray-400 — esas clases quedaron deprecadas en la migración a paleta cálida (usar text-ink-muted/text-ink-faint). Si el vacío es solo un filtro/tab sin CTA que tenga sentido (ej. "no hay nada en la pestaña Deactivated"), un <p className="text-ink-muted"> alcanza — EmptyState es para el vacío real del módulo, no para cualquier lista corta.
-TableSkeleton.tsx — loading state de cualquier tabla/lista, en vez de <p>Loading...</p>. No hace falta para un loading que no precede una tabla (ej. un preview de PDF cargando adentro de un SlideOver).
-Página nueva de módulo — antes de escribir el JSX, abrí una página hermana ya construida (EmployeesPage.tsx, CompaniesPage.tsx u OpportunitiesPage.tsx) y calcá su estructura, no la reinventes por tu cuenta:
-- Contenedor raíz: page-full (sin max-width) para cualquier pantalla con una tabla ancha de varias columnas — container (max-w-6xl, centrado) es solo para pantallas angostas tipo formulario/dashboard (Overview, Time Off, Help). Usar container en una pantalla de tabla la deja angosta y centrada con márgenes desperdiciados en vez de ocupar el ancho completo como el resto de la app — es el error más fácil de cometer y el más visible a simple vista.
-- Nunca un color de Tailwind sin prefijo semántico (gray-*, blue-*) fuera de los casos ya reservados (danger/success/warning) — los neutros del proyecto son los tokens de design-system.md §1 (ink/ink-muted/ink-faint/surface-*/line*).
-Esto viene de un incidente real (Payroll, 2026-07-31): el módulo se construyó en una sesión larga sin comparar contra el resto de la app ni abrir en navegador, y terminó con container en vez de page-full, text-gray-500 en vez de text-ink-muted, y <p>Loading...</p> en vez de TableSkeleton/EmptyState — mismo día en que esos tokens/componentes se habían terminado de migrar en el resto del proyecto. Ver docs/tareas-desarrollo.md.
 Migraciones de DB con datos reales en producción
 
 Para cualquier migración que toque columnas existentes con datos ya cargados (no una tabla nueva vacía):
@@ -57,4 +51,3 @@ No dejar un modelo a medio camino entre "campo suelto" (popover chico) y "entida
 No borrar código muerto sin confirmar que no rompe el build primero.
 No tomar una decisión de producto/diseño no cubierta por la tarea y seguir de largo — pará y preguntá (ver sección de arriba).
 Cada vez que se realice un push a staging o produccion, deberas cargar una tarea en Tareas-QA.md para que ejecute el Agente QA.
-Todo elemento nuevo o edicion debe ser creado en ingles, con estructura en ingles y un front en ingles. A menos que se exprese lo contrario.

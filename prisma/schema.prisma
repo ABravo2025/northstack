@@ -126,57 +126,17 @@ enum PipelineType {
   account
 }
 
-// Payroll V1 (Tier 3.5) — see docs/tareas-desarrollo.md, "Payroll (Tier 3.5) —
-// spec técnico completo", Unidad 1. How often a PayFrequencyDefinition pays.
-enum PayFrequencyCadence {
-  weekly
-  semimonthly
-  monthly
-}
-
-// How many calendar days after the pay date the money is actually due —
-// plain day-count, no business-day adjustment for weekends/holidays (known
-// V1 gap, see docs/tareas-desarrollo.md Payroll backlog).
-enum PayDueDateOffset {
-  same_day
-  plus_2
-  plus_5
-  custom
-}
-
-// Distinct from the existing `CompensationType` enum (hourly/monthly, used by
-// Employee.compensationType's flat fields) — EmployeeCompensation is a
-// separate, versioned history model, deliberately not unifying the two until
-// EmployeeCompensation is proven in production (see Unidad 1's scope note).
-enum PayrollCompensationType {
-  hourly
-  fixed
-}
-
-enum PayrollRunStatus {
-  draft
-  confirmed
-}
-
-enum PayrollEntryType {
-  base
-  bonus
-  commission
-  reimbursement
-  deduction
-}
-
 model Tenant {
-  id                      String                    @id @default(uuid())
+  id                      String                   @id @default(uuid())
   name                    String
-  slug                    String                    @unique
-  status                  TenantStatus              @default(active)
-  createdAt               DateTime                  @default(now())
+  slug                    String                   @unique
+  status                  TenantStatus             @default(active)
+  createdAt               DateTime                 @default(now())
   companySize             String?
   industry                String?
   country                 String?
   acquisitionChannel      AcquisitionChannel?
-  currency                String                    @default("USD") // ISO-4217, one currency per tenant — applies to Employee.hourlyRateCents/monthlyRateCents
+  currency                String                   @default("USD") // ISO-4217, one currency per tenant — applies to Employee.hourlyRateCents/monthlyRateCents
   users                   User[]
   employees               Employee[]
   clients                 Client[]
@@ -200,36 +160,30 @@ model Tenant {
   opportunityStageHistory OpportunityStageHistory[]
   tasks                   Task[]
   notes                   Note[]
-  payFrequencies          PayFrequencyDefinition[]
-  employeeCompensations   EmployeeCompensation[]
-  payrollRuns             PayrollRun[]
-  payrollEntries          PayrollEntry[]
 }
 
 model User {
-  id                      String                 @id @default(uuid())
-  firstName               String
-  lastName                String
-  phone                   String
-  email                   String                 @unique
-  passwordHash            String
-  role                    UserRole               @default(member)
-  status                  UserStatus             @default(active)
-  tenantId                String?
-  tenant                  Tenant?                @relation(fields: [tenantId], references: [id])
-  sessions                Session[]
-  sentInvitations         Invitation[]
-  employee                Employee?
-  statusChanges           StatusHistoryEntry[]
-  savedViews              SavedView[]
-  acceptedTermsAt         DateTime?
+  id               String               @id @default(uuid())
+  firstName        String
+  lastName         String
+  phone            String
+  email            String               @unique
+  passwordHash     String
+  role             UserRole             @default(member)
+  status           UserStatus           @default(active)
+  tenantId         String?
+  tenant           Tenant?              @relation(fields: [tenantId], references: [id])
+  sessions         Session[]
+  sentInvitations  Invitation[]
+  employee         Employee?
+  statusChanges    StatusHistoryEntry[]
+  savedViews       SavedView[]
+  acceptedTermsAt  DateTime?
   accountOwnerOfCompanies Company[]
   ownedOpportunities      Opportunity[]
-  tasksAssigned           Task[]                 @relation("TaskAssignee")
-  tasksCreated            Task[]                 @relation("TaskCreatedBy")
+  tasksAssigned           Task[]        @relation("TaskAssignee")
+  tasksCreated            Task[]        @relation("TaskCreatedBy")
   notesCreated            Note[]
-  compensationsCreated    EmployeeCompensation[]
-  payrollRunsCreated      PayrollRun[]
 }
 
 model Employee {
@@ -261,25 +215,23 @@ model Employee {
   user                     User?                   @relation(fields: [userId], references: [id])
   invitations              Invitation[]
   timeOffPolicies          EmployeeTimeOffPolicy[]
-  timeOffRequestsMade      TimeOffRequest[]        @relation("TimeOffRequestEmployee")
-  timeOffRequestsToApprove TimeOffRequest[]        @relation("TimeOffRequestApprover")
-  compensationHistory      EmployeeCompensation[]
-  payrollEntries           PayrollEntry[]
+  timeOffRequestsMade      TimeOffRequest[]         @relation("TimeOffRequestEmployee")
+  timeOffRequestsToApprove TimeOffRequest[]         @relation("TimeOffRequestApprover")
 
   @@unique([tenantId, email])
 }
 
 model Client {
-  id         String           @id @default(uuid())
-  firstName  String
-  lastName   String
-  email      String
-  company    String
-  statusId   String
-  statusDefn StatusDefinition @relation(fields: [statusId], references: [id])
-  tenantId   String
-  tenant     Tenant           @relation(fields: [tenantId], references: [id])
-  createdAt  DateTime         @default(now())
+  id              String               @id @default(uuid())
+  firstName       String
+  lastName        String
+  email           String
+  company         String
+  statusId        String
+  statusDefn      StatusDefinition     @relation(fields: [statusId], references: [id])
+  tenantId        String
+  tenant          Tenant               @relation(fields: [tenantId], references: [id])
+  createdAt       DateTime             @default(now())
 
   @@unique([tenantId, email])
 }
@@ -290,23 +242,23 @@ model Client {
 // its own later, separate step, not part of this schema-only pass).
 
 model Company {
-  id             String                  @id @default(uuid())
-  tenantId       String
-  tenant         Tenant                  @relation(fields: [tenantId], references: [id])
-  name           String
-  industry       String?
-  website        String?
-  phone          String?
-  billingAddress String? // same field the future Payments module will need — not duplicated
-  sizeId         String?
-  sizeDefn       FieldCatalogDefinition? @relation(fields: [sizeId], references: [id])
-  accountOwnerId String?
-  accountOwner   User?                   @relation(fields: [accountOwnerId], references: [id])
-  statusId       String // lifecycle status (Prospect/Customer/Churned) — StatusDefinition-based
-  statusDefn     StatusDefinition        @relation(fields: [statusId], references: [id]) // like Employee/Client, but never manually edited: derived from Opportunity/Contract events
-  createdAt      DateTime                @default(now())
-  contacts       Contact[]
-  opportunities  Opportunity[]
+  id              String           @id @default(uuid())
+  tenantId        String
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
+  name            String
+  industry        String?
+  website         String?
+  phone           String?
+  billingAddress  String? // same field the future Payments module will need — not duplicated
+  sizeId          String?
+  sizeDefn        FieldCatalogDefinition? @relation(fields: [sizeId], references: [id])
+  accountOwnerId  String?
+  accountOwner    User?            @relation(fields: [accountOwnerId], references: [id])
+  statusId        String // lifecycle status (Prospect/Customer/Churned) — StatusDefinition-based
+  statusDefn      StatusDefinition @relation(fields: [statusId], references: [id]) // like Employee/Client, but never manually edited: derived from Opportunity/Contract events
+  createdAt       DateTime         @default(now())
+  contacts        Contact[]
+  opportunities   Opportunity[]
 
   @@index([tenantId])
 }
@@ -428,16 +380,16 @@ model OpportunityStageHistory {
 }
 
 model StatusDefinition {
-  id         String     @id @default(uuid())
+  id         String               @id @default(uuid())
   tenantId   String
-  tenant     Tenant     @relation(fields: [tenantId], references: [id])
+  tenant     Tenant               @relation(fields: [tenantId], references: [id])
   entityType EntityType
   name       String
   color      String?
-  order      Int        @default(0)
-  isDefault  Boolean    @default(false)
-  isActive   Boolean    @default(true)
-  createdAt  DateTime   @default(now())
+  order      Int                  @default(0)
+  isDefault  Boolean              @default(false)
+  isActive   Boolean              @default(true)
+  createdAt  DateTime             @default(now())
   employees  Employee[]
   clients    Client[]
   companies  Company[]
@@ -460,16 +412,16 @@ enum CatalogKind {
 }
 
 model FieldCatalogDefinition {
-  id                        String        @id @default(uuid())
+  id                        String       @id @default(uuid())
   tenantId                  String
-  tenant                    Tenant        @relation(fields: [tenantId], references: [id])
+  tenant                    Tenant       @relation(fields: [tenantId], references: [id])
   kind                      CatalogKind
   name                      String
-  order                     Int           @default(0)
-  isActive                  Boolean       @default(true)
-  createdAt                 DateTime      @default(now())
-  employeesByDepartment     Employee[]    @relation("EmployeeDepartment")
-  employeesByJobTitle       Employee[]    @relation("EmployeeJobTitle")
+  order                     Int          @default(0)
+  isActive                  Boolean      @default(true)
+  createdAt                 DateTime     @default(now())
+  employeesByDepartment     Employee[]   @relation("EmployeeDepartment")
+  employeesByJobTitle       Employee[]   @relation("EmployeeJobTitle")
   contactsByLeadSource      Contact[]
   opportunitiesByLossReason Opportunity[]
   companiesBySize           Company[]
@@ -511,66 +463,66 @@ model TimeOffPolicyDefinition {
 }
 
 model TimeOffRequest {
-  id              String                  @id @default(uuid())
-  tenantId        String
-  tenant          Tenant                  @relation(fields: [tenantId], references: [id])
-  employeeId      String
-  employee        Employee                @relation("TimeOffRequestEmployee", fields: [employeeId], references: [id])
+  id             String                @id @default(uuid())
+  tenantId       String
+  tenant         Tenant                @relation(fields: [tenantId], references: [id])
+  employeeId     String
+  employee       Employee              @relation("TimeOffRequestEmployee", fields: [employeeId], references: [id])
   timeOffPolicyId String
-  timeOffPolicy   TimeOffPolicyDefinition @relation(fields: [timeOffPolicyId], references: [id])
-  startDate       DateTime
-  endDate         DateTime
-  daysRequested   Float
-  note            String?
-  status          TimeOffRequestStatus    @default(pending)
-  approverId      String?
-  approver        Employee?               @relation("TimeOffRequestApprover", fields: [approverId], references: [id])
-  decidedAt       DateTime?
-  decisionNote    String?
-  createdAt       DateTime                @default(now())
+  timeOffPolicy  TimeOffPolicyDefinition @relation(fields: [timeOffPolicyId], references: [id])
+  startDate      DateTime
+  endDate        DateTime
+  daysRequested  Float
+  note           String?
+  status         TimeOffRequestStatus  @default(pending)
+  approverId     String?
+  approver       Employee?             @relation("TimeOffRequestApprover", fields: [approverId], references: [id])
+  decidedAt      DateTime?
+  decisionNote   String?
+  createdAt      DateTime              @default(now())
 
   @@index([tenantId, employeeId])
   @@index([tenantId, status])
 }
 
 model EmployeeTimeOffPolicy {
-  id              String                  @id @default(uuid())
-  tenantId        String
-  tenant          Tenant                  @relation(fields: [tenantId], references: [id])
-  employeeId      String
-  employee        Employee                @relation(fields: [employeeId], references: [id])
+  id             String                  @id @default(uuid())
+  tenantId       String
+  tenant         Tenant                  @relation(fields: [tenantId], references: [id])
+  employeeId     String
+  employee       Employee                @relation(fields: [employeeId], references: [id])
   timeOffPolicyId String
-  timeOffPolicy   TimeOffPolicyDefinition @relation(fields: [timeOffPolicyId], references: [id])
-  assignedAt      DateTime                @default(now())
+  timeOffPolicy  TimeOffPolicyDefinition @relation(fields: [timeOffPolicyId], references: [id])
+  assignedAt     DateTime                @default(now())
 
   @@unique([employeeId, timeOffPolicyId])
   @@index([tenantId])
 }
 
 model CustomFieldDefinition {
-  id         String             @id @default(uuid())
-  tenantId   String
-  tenant     Tenant             @relation(fields: [tenantId], references: [id])
-  name       String
-  entityType EntityType
-  fieldType  FieldType
-  options    String? // JSON-encoded options for select fields
-  required   Boolean            @default(false)
-  isActive   Boolean            @default(true)
-  createdAt  DateTime           @default(now())
-  values     CustomFieldValue[]
+  id          String             @id @default(uuid())
+  tenantId    String
+  tenant      Tenant             @relation(fields: [tenantId], references: [id])
+  name        String
+  entityType  EntityType
+  fieldType   FieldType
+  options     String?            // JSON-encoded options for select fields
+  required    Boolean            @default(false)
+  isActive    Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+  values      CustomFieldValue[]
 }
 
 model CustomFieldValue {
-  id                      String                @id @default(uuid())
+  id                      String                  @id @default(uuid())
   tenantId                String
-  tenant                  Tenant                @relation(fields: [tenantId], references: [id])
+  tenant                  Tenant                  @relation(fields: [tenantId], references: [id])
   customFieldDefinitionId String
-  customFieldDefinition   CustomFieldDefinition @relation(fields: [customFieldDefinitionId], references: [id])
+  customFieldDefinition   CustomFieldDefinition   @relation(fields: [customFieldDefinitionId], references: [id])
   entityType              EntityType
   entityId                String
   value                   String
-  createdAt               DateTime              @default(now())
+  createdAt               DateTime                @default(now())
 
   @@index([tenantId, entityType, entityId])
 }
@@ -627,19 +579,19 @@ model Note {
 // kept the table name during Unit 10, now applied the other way: get the
 // Form name in code without the DDL risk).
 model Form {
-  id              String         @id @default(uuid())
-  tenantId        String
-  tenant          Tenant         @relation(fields: [tenantId], references: [id])
-  entityType      EntityType
-  name            String
-  slug            String
-  fieldsConfig    String // JSON-encoded array of {key, required} — optional fields only (department/company + cf:<id>); firstName/lastName/email are always shown and required
-  thankYouMessage String? // shown after a successful submit; falls back to a generic message when null
-  accessMode      FormAccessMode @default(public)
-  pipelineId      String? // contact forms only: which Pipeline the auto-created Opportunity lands in, first stage
-  pipeline        Pipeline?      @relation(fields: [pipelineId], references: [id])
-  isActive        Boolean        @default(true)
-  createdAt       DateTime       @default(now())
+  id           String         @id @default(uuid())
+  tenantId     String
+  tenant       Tenant         @relation(fields: [tenantId], references: [id])
+  entityType   EntityType
+  name         String
+  slug         String
+  fieldsConfig String         // JSON-encoded array of {key, required} — optional fields only (department/company + cf:<id>); firstName/lastName/email are always shown and required
+  thankYouMessage String?     // shown after a successful submit; falls back to a generic message when null
+  accessMode   FormAccessMode @default(public)
+  pipelineId   String?        // contact forms only: which Pipeline the auto-created Opportunity lands in, first stage
+  pipeline     Pipeline?      @relation(fields: [pipelineId], references: [id])
+  isActive     Boolean        @default(true)
+  createdAt    DateTime       @default(now())
 
   @@unique([tenantId, slug])
   @@index([tenantId])
@@ -656,9 +608,9 @@ model SavedView {
   name            String
   type            SavedViewType       @default(grid)
   visibility      SavedViewVisibility @default(personal)
-  filters         String? // JSON-encoded array of {field, operator, value}
-  sortBy          String? // JSON-encoded {field, direction}
-  groupByField    String? // kanban/list only: "status" or a CustomFieldDefinition id (select type)
+  filters         String?             // JSON-encoded array of {field, operator, value}
+  sortBy          String?             // JSON-encoded {field, direction}
+  groupByField    String?             // kanban/list only: "status" or a CustomFieldDefinition id (select type)
   createdAt       DateTime            @default(now())
 
   @@index([tenantId, entityType])
@@ -687,102 +639,4 @@ model Invitation {
   employee        Employee?        @relation(fields: [employeeId], references: [id])
   createdAt       DateTime         @default(now())
   expiresAt       DateTime
-}
-
-// Payroll V1 (Tier 3.5) — see docs/tareas-desarrollo.md, "Payroll (Tier 3.5) —
-// spec técnico completo", Unidad 1. Visibility is owner-only across the
-// board (plus an employee can see their own EmployeeCompensation history),
-// enforced in the service layer once the corresponding endpoints exist
-// (Unidad 2+) — not a schema-level concern, same pattern already used for
-// Employee.hourlyRateCents/monthlyRateCents.
-
-model PayFrequencyDefinition {
-  id                String                 @id @default(uuid())
-  tenantId          String
-  tenant            Tenant                 @relation(fields: [tenantId], references: [id])
-  name              String
-  cadence           PayFrequencyCadence
-  // JSON-encoded, shape depends on `cadence` — same convention as
-  // SavedView.filters, no dedicated table. weekly: {dayOfWeek}; semimonthly:
-  // {preset: 'first_15'|'fifteen_last'|'custom', days?: [n, m]}; monthly:
-  // {preset: 'first_business_day'|'last_business_day'|'custom', day?: n}.
-  anchorConfig      String
-  dueDateOffset     PayDueDateOffset       @default(same_day)
-  dueDateCustomDays Int? // only meaningful when dueDateOffset: custom
-  isActive          Boolean                @default(true)
-  order             Int                    @default(0)
-  compensations     EmployeeCompensation[]
-  payrollRuns       PayrollRun[]
-
-  @@index([tenantId])
-}
-
-// Individual compensation contract, with an effective date range — not a flat
-// field on Employee. Only one row per employeeId may have effectiveTo: null
-// (currently vigente) at a time; enforced in the service layer, not the DB
-// (creating a new vigente row closes the previous one in the same
-// transaction).
-model EmployeeCompensation {
-  id                  String                  @id @default(uuid())
-  tenantId            String
-  tenant              Tenant                  @relation(fields: [tenantId], references: [id])
-  employeeId          String
-  employee            Employee                @relation(fields: [employeeId], references: [id])
-  compensationType    PayrollCompensationType
-  rateCents           Int
-  currency            String
-  payFrequencyId      String
-  payFrequency        PayFrequencyDefinition  @relation(fields: [payFrequencyId], references: [id])
-  effectiveFrom       DateTime
-  effectiveTo         DateTime?
-  note                String?
-  createdByUserId     String
-  createdBy           User                    @relation(fields: [createdByUserId], references: [id])
-  createdAt           DateTime                @default(now())
-  // Unidad 5.3 — contract confirmation. blocksParticipation is computed at
-  // creation time: true only when this is the employee's first-ever
-  // EmployeeCompensation (no prior row with confirmedAt set) — a later
-  // reassignment while unconfirmed doesn't pull an already-active person out
-  // of circulation.
-  confirmedAt         DateTime?
-  blocksParticipation Boolean                 @default(false)
-
-  @@index([tenantId, employeeId])
-}
-
-model PayrollRun {
-  id              String                  @id @default(uuid())
-  tenantId        String
-  tenant          Tenant                  @relation(fields: [tenantId], references: [id])
-  payFrequencyId  String?
-  payFrequency    PayFrequencyDefinition? @relation(fields: [payFrequencyId], references: [id])
-  periodLabel     String
-  status          PayrollRunStatus        @default(draft)
-  createdByUserId String
-  createdBy       User                    @relation(fields: [createdByUserId], references: [id])
-  confirmedAt     DateTime?
-  createdAt       DateTime                @default(now())
-  entries         PayrollEntry[]
-
-  @@index([tenantId, status])
-}
-
-model PayrollEntry {
-  id          String           @id @default(uuid())
-  tenantId    String
-  tenant      Tenant           @relation(fields: [tenantId], references: [id])
-  employeeId  String
-  employee    Employee         @relation(fields: [employeeId], references: [id])
-  runId       String?
-  run         PayrollRun?      @relation(fields: [runId], references: [id])
-  type        PayrollEntryType
-  amountCents Int // can be negative for deductions
-  currency    String
-  hoursQty    Float? // only meaningful when the run's base entry compensationType is hourly
-  label       String?
-  paymentDate DateTime
-  createdAt   DateTime         @default(now())
-
-  @@index([tenantId, employeeId])
-  @@index([tenantId, runId])
 }

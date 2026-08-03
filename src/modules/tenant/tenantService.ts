@@ -11,7 +11,6 @@ import { randomUUID } from 'crypto';
 import type { AcquisitionChannel, Session, Tenant, User } from '@prisma/client';
 import { seedDefaultStatusDefinitions } from '../hr/statusService.js';
 import { seedDefaultPipelines } from '../crm/pipelineService.js';
-import { seedDefaultPayFrequencies } from '../hr/payFrequencyService.js';
 
 // Personal/free email providers are excluded from the duplicate-domain check below —
 // otherwise the first person to register with @gmail.com would block every other
@@ -107,7 +106,6 @@ export async function createTenantForUser(input: CreateTenantForUserInput): Prom
 
     await seedDefaultStatusDefinitions(tx, tenant.id);
     await seedDefaultPipelines(tx, tenant.id);
-    await seedDefaultPayFrequencies(tx, tenant.id);
 
     const updatedUser = await tx.user.update({
       where: { id: input.userId },
@@ -213,7 +211,6 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
 
     await seedDefaultStatusDefinitions(tx, tenant.id);
     await seedDefaultPipelines(tx, tenant.id);
-    await seedDefaultPayFrequencies(tx, tenant.id);
 
     const user = await tx.user.create({
       data: {

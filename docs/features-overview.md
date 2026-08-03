@@ -1,6 +1,6 @@
 # Features de la plataforma — Northstack
 
-- Fecha: 2026-07-31
+- Fecha: 2026-07-30
 - Propósito: catálogo de qué tiene la plataforma hoy, en producción, con una descripción breve de
   cada feature — para orientarse rápido sin tener que leer el historial completo de
   `tareas-desarrollo.md`. Es un resumen de producto, no un inventario técnico; para el detalle de
@@ -50,18 +50,6 @@ El módulo de ventas actual, reemplazo del `Client` original (ver sección "Lega
   aprobación/rechazo, cálculo de balance disponible por política, vista de calendario del equipo.
 - **Import/Export CSV**: alta masiva y exportación de Employees por archivo, con plantilla
   descargable.
-
-## Payroll (Tier 3.5) — construido, en `staging`, todavía no en producción
-
-Distinto de este documento en general: se documenta acá igual, marcado explícitamente como no-producción, para que no quede invisible entre `tareas-desarrollo.md` y el schema. Carga manual de pagos a Employees (no cobro a Clients — eso es el módulo Payments, sin construir) — sin procesamiento real de pagos (sin integración bancaria, sin W2/W4).
-
-- **Frecuencias de pago**: catálogo configurable por tenant (semanal/quincenal/mensual + día(s) de pago en texto libre).
-- **Compensación por empleado**: historial versionado (tipo hourly/fixed, tarifa, moneda, frecuencia, vigencia) — no un campo plano, cada cambio queda registrado sin perder el anterior.
-- **Runs de nómina**: se crean por frecuencia de pago y pre-cargan automáticamente a todos los empleados con compensación vigente bajo esa frecuencia. Ajustes por persona (bono/comisión/reembolso/deducción), carga de horas para compensación hourly con recálculo en vivo, aviso visual si alguien figura inactivo (no bloquea), confirmación que congela el run.
-- **Pagos únicos (off-cycle)**: bonos/reembolsos/deducciones sueltos, no atados a un run.
-- **Línea de tiempo unificada**: runs y pagos únicos mezclados cronológicamente en una sola vista.
-- **Payslip PDF**: vista previa descargable por persona/run — marcada explícitamente como preview, no un documento legal.
-- **Visibilidad**: toda la sección es `owner`-only, salvo que cada empleado puede ver su propia compensación.
 
 ## Tasks & Notes (cross-módulo)
 

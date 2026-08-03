@@ -1,6 +1,7 @@
 import {
   createPayFrequency,
   findPayFrequencyById,
+  isValidAnchorConfig,
   listPayFrequencies,
   updatePayFrequency,
 } from '../modules/hr/payFrequencyService.js';
@@ -26,7 +27,8 @@ export const payrollRouter = createAsyncRouter();
 // EmployeeCompensation history (added in Unidad 4) — not a blanket rule for
 // every endpoint in this router.
 
-const PAY_FREQUENCY_CADENCES = ['weekly', 'biweekly', 'monthly'];
+const PAY_FREQUENCY_CADENCES = ['weekly', 'semimonthly', 'monthly'];
+const DUE_DATE_OFFSETS = ['same_day', 'plus_2', 'plus_5', 'custom'];
 
 payrollRouter.get('/api/hr/pay-frequencies', async (req, res) => {
   const user = await validateSession(req, res);
@@ -41,6 +43,38 @@ payrollRouter.get('/api/hr/pay-frequencies', async (req, res) => {
   return res.json(frequencies);
 });
 
+// Shared shape check for anchorConfig/dueDateOffset/dueDateCustomDays,
+// used by both create and update below. `cadence` is passed explicitly
+// since on update it may come from req.body or fall back to the existing
+// row's cadence — isValidAnchorConfig always needs to know which shape to
+// expect.
+function parsePayFrequencyAnchor(
+  body: any,
+  cadence: string,
+): { anchorConfig: string; dueDateOffset: string; dueDateCustomDays?: number } | { error: string } {
+  let parsedAnchorConfig: unknown;
+  try {
+    parsedAnchorConfig = typeof body.anchorConfig === 'string' ? JSON.parse(body.anchorConfig) : body.anchorConfig;
+  } catch {
+    return { error: 'anchorConfig must be valid JSON' };
+  }
+  if (!isValidAnchorConfig(cadence as any, parsedAnchorConfig)) {
+    return { error: 'anchorConfig does not match the selected cadence' };
+  }
+  const dueDateOffset = body.dueDateOffset;
+  if (!DUE_DATE_OFFSETS.includes(dueDateOffset)) {
+    return { error: 'Invalid dueDateOffset' };
+  }
+  if (dueDateOffset === 'custom' && !Number.isInteger(body.dueDateCustomDays)) {
+    return { error: 'dueDateCustomDays is required when dueDateOffset is custom' };
+  }
+  return {
+    anchorConfig: JSON.stringify(parsedAnchorConfig),
+    dueDateOffset,
+    dueDateCustomDays: dueDateOffset === 'custom' ? body.dueDateCustomDays : undefined,
+  };
+}
+
 payrollRouter.post('/api/hr/pay-frequencies', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) {
@@ -52,16 +86,21 @@ payrollRouter.post('/api/hr/pay-frequencies', async (req, res) => {
 
   const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
   const cadence = req.body.cadence;
-  const payAnchor = typeof req.body.payAnchor === 'string' ? req.body.payAnchor.trim() : '';
-  if (!name || !PAY_FREQUENCY_CADENCES.includes(cadence) || !payAnchor) {
-    return res.status(400).json({ error: 'name, a valid cadence, and payAnchor are required' });
+  if (!name || !PAY_FREQUENCY_CADENCES.includes(cadence)) {
+    return res.status(400).json({ error: 'name and a valid cadence are required' });
+  }
+  const anchor = parsePayFrequencyAnchor(req.body, cadence);
+  if ('error' in anchor) {
+    return res.status(400).json({ error: anchor.error });
   }
 
   const frequency = await createPayFrequency({
     tenantId: user.tenantId!,
     name,
     cadence,
-    payAnchor,
+    anchorConfig: anchor.anchorConfig,
+    dueDateOffset: anchor.dueDateOffset as any,
+    dueDateCustomDays: anchor.dueDateCustomDays,
     order: req.body.order,
   });
   return res.status(201).json(frequency);
@@ -85,10 +124,22 @@ payrollRouter.patch('/api/hr/pay-frequencies/:frequencyId', async (req, res) => 
     return res.status(400).json({ error: 'Invalid cadence' });
   }
 
+  let anchor: { anchorConfig: string; dueDateOffset: string; dueDateCustomDays?: number } | undefined;
+  if (req.body.anchorConfig !== undefined || req.body.dueDateOffset !== undefined) {
+    const cadence = req.body.cadence ?? existing.cadence;
+    const parsed = parsePayFrequencyAnchor(req.body, cadence);
+    if ('error' in parsed) {
+      return res.status(400).json({ error: parsed.error });
+    }
+    anchor = parsed;
+  }
+
   const result = await updatePayFrequency(req.params.frequencyId, user.tenantId!, {
     name: req.body.name,
     cadence: req.body.cadence,
-    payAnchor: req.body.payAnchor,
+    anchorConfig: anchor?.anchorConfig,
+    dueDateOffset: anchor?.dueDateOffset as any,
+    dueDateCustomDays: anchor?.dueDateCustomDays,
     isActive: req.body.isActive,
     order: req.body.order,
   });

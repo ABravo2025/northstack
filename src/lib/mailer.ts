@@ -162,6 +162,38 @@ export async function sendTimeOffRequestDecidedEmail(input: SendTimeOffRequestDe
   });
 }
 
+export interface SendCompensationConfirmationEmailInput {
+  to: string;
+  employeeName: string;
+  compensationType: 'hourly' | 'fixed';
+  rateFormatted: string;
+  payFrequencyName: string;
+}
+
+export async function sendCompensationConfirmationEmail(input: SendCompensationConfirmationEmailInput): Promise<void> {
+  if (!mailerConfigured()) return;
+
+  const rateLine = `${input.rateFormatted}${input.compensationType === 'hourly' ? ' / hour' : ''} · ${input.payFrequencyName}`;
+
+  await transporter.sendMail({
+    from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
+    to: input.to,
+    subject: 'Confirm your compensation contract',
+    text: [
+      `Hi ${input.employeeName},`,
+      '',
+      `A compensation contract was set up for you: ${rateLine}.`,
+      '',
+      'Log into Northstack and confirm it from your Overview page — until you do, you\'ll be left out of payroll runs.',
+    ].join('\n'),
+    html: [
+      `<p>Hi ${input.employeeName},</p>`,
+      `<p>A compensation contract was set up for you: <strong>${rateLine}</strong>.</p>`,
+      `<p>Log into Northstack and confirm it from your Overview page — until you do, you'll be left out of payroll runs.</p>`,
+    ].join('\n'),
+  });
+}
+
 export interface SendFeedbackEmailInput {
   to: string;
   fromName: string;

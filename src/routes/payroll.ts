@@ -5,7 +5,12 @@ import {
   listPayFrequencies,
   updatePayFrequency,
 } from '../modules/hr/payFrequencyService.js';
-import { createCompensation, listCompensationHistory } from '../modules/hr/employeeCompensationService.js';
+import {
+  confirmCompensation,
+  createCompensation,
+  findBlockingUnconfirmedCompensation,
+  listCompensationHistory,
+} from '../modules/hr/employeeCompensationService.js';
 import { addPersonToRun, confirmRun, createRun, getRunDetail, listRuns } from '../modules/hr/payrollRunService.js';
 import { generatePayslipPdf } from '../modules/hr/payslipService.js';
 import {
@@ -16,10 +21,16 @@ import {
   updateHourlyBaseEntryHours,
 } from '../modules/hr/payrollEntryService.js';
 import { findEmployeeByUserId, findEmployeeById } from '../modules/hr/employeeService.js';
+import { findUserById } from '../modules/tenant/tenantService.js';
+import { sendCompensationConfirmationEmail } from '../lib/mailer.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 
 export const payrollRouter = createAsyncRouter();
+
+function formatMoney(cents: number, currency: string): string {
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(cents / 100);
+}
 
 // Payroll V1 (Tier 3.5) — see docs/tareas-desarrollo.md, "Payroll (Tier 3.5) —
 // spec técnico completo". Visibility is owner-only across the whole section
@@ -209,7 +220,71 @@ payrollRouter.post('/api/hr/employees/:employeeId/compensation', async (req, res
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }
+
+  // Unidad 5.3 — only notify if the employee already has an account; someone
+  // without one yet sees the same pending-confirmation banner the first time
+  // they log in after accepting their invite, no separate email needed.
+  if (result.compensation!.blocksParticipation && employee.userId) {
+    findUserById(employee.userId)
+      .then((employeeUser) => {
+        if (!employeeUser) return;
+        return sendCompensationConfirmationEmail({
+          to: employeeUser.email,
+          employeeName: `${employee.firstName} ${employee.lastName}`,
+          compensationType: result.compensation!.compensationType,
+          rateFormatted: formatMoney(result.compensation!.rateCents, result.compensation!.currency),
+          payFrequencyName: result.compensation!.payFrequency.name,
+        });
+      })
+      .catch((error) => {
+        console.error('Failed to send compensation confirmation email:', error);
+      });
+  }
+
   return res.status(201).json(result.compensation);
+});
+
+payrollRouter.post('/api/hr/employees/:employeeId/compensation/:compensationId/confirm', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  const employee = await findEmployeeById(req.params.employeeId);
+  if (!employee || employee.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Employee not found' });
+  }
+
+  // Only the employee themselves confirms their own contract — never
+  // owner/admin on their behalf, that would defeat the point of confirming.
+  const actingEmployee = await findEmployeeByUserId(user.id);
+  if (!actingEmployee || actingEmployee.id !== employee.id) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const result = await confirmCompensation(user.tenantId!, employee.id, req.params.compensationId);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  return res.json(result.compensation);
+});
+
+// Current-user-scoped: the pending-confirmation banner on Overview calls
+// this to find out if it has anything to show, without needing the caller's
+// own employeeId up front.
+payrollRouter.get('/api/hr/compensation/pending-confirmation', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  const actingEmployee = await findEmployeeByUserId(user.id);
+  if (!actingEmployee) {
+    return res.json(null);
+  }
+
+  const pending = await findBlockingUnconfirmedCompensation(user.tenantId!, actingEmployee.id);
+  return res.json(pending);
 });
 
 payrollRouter.get('/api/hr/payroll/runs', async (req, res) => {
@@ -243,7 +318,7 @@ payrollRouter.post('/api/hr/payroll/runs', async (req, res) => {
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }
-  return res.status(201).json(result.run);
+  return res.status(201).json({ ...result.run, excludedForUnconfirmedContract: result.excludedForUnconfirmedContract ?? 0 });
 });
 
 payrollRouter.get('/api/hr/payroll/runs/:runId', async (req, res) => {

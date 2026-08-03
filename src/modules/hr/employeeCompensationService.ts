@@ -1,5 +1,5 @@
 import prisma from '../../lib/prisma.js';
-import type { EmployeeCompensation, PayrollCompensationType } from '@prisma/client';
+import type { EmployeeCompensation, Prisma, PayrollCompensationType } from '@prisma/client';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -7,6 +7,8 @@ const compensationInclude = {
   payFrequency: true,
   createdBy: { select: { id: true, firstName: true, lastName: true } },
 } as const;
+
+type CompensationWithRelations = Prisma.EmployeeCompensationGetPayload<{ include: typeof compensationInclude }>;
 
 export interface CreateCompensationInput {
   tenantId: string;
@@ -22,7 +24,7 @@ export interface CreateCompensationInput {
 
 export interface CreateCompensationResult {
   success: boolean;
-  compensation?: EmployeeCompensation;
+  compensation?: CompensationWithRelations;
   error?: string;
 }
 
@@ -58,6 +60,14 @@ export async function createCompensation(input: CreateCompensationInput): Promis
       });
     }
 
+    // Unidad 5.3 — blocksParticipation is true only for this employee's
+    // first-ever contract (no prior row with confirmedAt set). A later
+    // reassignment while unconfirmed stays non-blocking so an already-active
+    // person doesn't drop out of a run over not reviewing a mail in time.
+    const everConfirmed = await tx.employeeCompensation.findFirst({
+      where: { tenantId: input.tenantId, employeeId: input.employeeId, confirmedAt: { not: null } },
+    });
+
     return tx.employeeCompensation.create({
       data: {
         tenantId: input.tenantId,
@@ -69,12 +79,60 @@ export async function createCompensation(input: CreateCompensationInput): Promis
         effectiveFrom,
         note: input.note ?? null,
         createdByUserId: input.createdByUserId,
+        blocksParticipation: !everConfirmed,
       },
       include: compensationInclude,
     });
   });
 
   return { success: true, compensation };
+}
+
+export interface ConfirmCompensationResult {
+  success: boolean;
+  compensation?: CompensationWithRelations;
+  error?: string;
+}
+
+// Unidad 5.3 — the employee themselves confirms their own contract (never
+// owner/admin on their behalf, that would defeat the point of confirming).
+export async function confirmCompensation(
+  tenantId: string,
+  employeeId: string,
+  compensationId: string,
+): Promise<ConfirmCompensationResult> {
+  const compensation = await prisma.employeeCompensation.findUnique({
+    where: { id: compensationId },
+    include: compensationInclude,
+  });
+  if (!compensation || compensation.tenantId !== tenantId || compensation.employeeId !== employeeId) {
+    return { success: false, error: 'Compensation record not found' };
+  }
+  if (compensation.confirmedAt) {
+    return { success: true, compensation };
+  }
+
+  const updated = await prisma.employeeCompensation.update({
+    where: { id: compensationId },
+    data: { confirmedAt: new Date() },
+    include: compensationInclude,
+  });
+  return { success: true, compensation: updated };
+}
+
+// The employee's own unconfirmed, participation-blocking contract (if any) —
+// drives the Overview banner, and is reused as the exclusion check by both
+// Payroll run pre-load (Unidad 6) and Time Off request creation (Unidad 5.3's
+// cross-module note) so the two don't drift out of sync with each other.
+export async function findBlockingUnconfirmedCompensation(
+  tenantId: string,
+  employeeId: string,
+): Promise<CompensationWithRelations | null> {
+  return prisma.employeeCompensation.findFirst({
+    where: { tenantId, employeeId, blocksParticipation: true, confirmedAt: null },
+    include: compensationInclude,
+    orderBy: { createdAt: 'desc' },
+  });
 }
 
 export async function listCompensationHistory(tenantId: string, employeeId: string) {

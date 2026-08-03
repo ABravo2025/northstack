@@ -1,5 +1,6 @@
 import prisma from '../../lib/prisma.js';
 import { sendTimeOffRequestDecidedEmail, sendTimeOffRequestPendingEmail } from '../../lib/mailer.js';
+import { findBlockingUnconfirmedCompensation } from './employeeCompensationService.js';
 import type { TimeOffRequest, TimeOffRequestStatus, User } from '@prisma/client';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -41,6 +42,15 @@ export async function createTimeOffRequest(input: CreateTimeOffRequestInput): Pr
   const employee = await prisma.employee.findUnique({ where: { id: input.employeeId } });
   if (!employee || employee.tenantId !== input.tenantId) {
     return { success: false, error: 'Employee not found' };
+  }
+
+  // Payroll Unidad 5.3's cross-module note: the same "unconfirmed first
+  // contract blocks participation" rule applies here, not just to payroll
+  // runs — someone who hasn't confirmed their compensation yet can't submit
+  // a time off request either.
+  const blockingCompensation = await findBlockingUnconfirmedCompensation(input.tenantId, input.employeeId);
+  if (blockingCompensation) {
+    return { success: false, error: 'Confirm your compensation contract from Overview before requesting time off' };
   }
 
   const policy = await prisma.timeOffPolicyDefinition.findUnique({ where: { id: input.timeOffPolicyId } });

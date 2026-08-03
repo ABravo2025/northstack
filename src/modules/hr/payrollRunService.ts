@@ -4,6 +4,10 @@ import type { PayrollEntry, PayrollRun } from '@prisma/client';
 export interface CreateRunResult {
   success: boolean;
   run?: PayrollRun;
+  // Unidad 5.3's cross-module note: people excluded from the pre-load because
+  // their first-ever contract is still unconfirmed — surfaced as a count, not
+  // silently dropped, so the frontend can show "N people excluded".
+  excludedForUnconfirmedContract?: number;
   error?: string;
 }
 
@@ -13,7 +17,8 @@ export interface CreateRunResult {
 // the run, it doesn't filter them out of the pre-load; blocking is explicitly
 // out of scope for V1). Fixed compensation copies rateCents directly (no
 // conversion); hourly starts at amountCents: 0 / hoursQty: null until loaded
-// (Unidad 9).
+// (Unidad 9). Excludes anyone whose vigente compensation is still
+// blocksParticipation && !confirmedAt (Unidad 5.3).
 export async function createRun(
   tenantId: string,
   payFrequencyId: string,
@@ -31,16 +36,18 @@ export async function createRun(
   const compensations = await prisma.employeeCompensation.findMany({
     where: { tenantId, payFrequencyId, effectiveTo: null },
   });
+  const eligibleCompensations = compensations.filter((c) => !(c.blocksParticipation && !c.confirmedAt));
+  const excludedForUnconfirmedContract = compensations.length - eligibleCompensations.length;
 
   const run = await prisma.$transaction(async (tx) => {
     const created = await tx.payrollRun.create({
       data: { tenantId, payFrequencyId, periodLabel: periodLabel.trim(), createdByUserId },
     });
 
-    if (compensations.length > 0) {
+    if (eligibleCompensations.length > 0) {
       const now = new Date();
       await tx.payrollEntry.createMany({
-        data: compensations.map((comp) => ({
+        data: eligibleCompensations.map((comp) => ({
           tenantId,
           employeeId: comp.employeeId,
           runId: created.id,
@@ -56,7 +63,7 @@ export async function createRun(
     return created;
   });
 
-  return { success: true, run };
+  return { success: true, run, excludedForUnconfirmedContract };
 }
 
 export async function listRuns(tenantId: string) {

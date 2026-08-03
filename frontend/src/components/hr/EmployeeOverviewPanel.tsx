@@ -34,16 +34,6 @@ interface EmployeeOverviewPanelProps {
   onInvite: () => void;
 }
 
-function dollarsToCents(value: string): number | null {
-  if (!value.trim()) return null;
-  const parsed = Number.parseFloat(value);
-  return Number.isNaN(parsed) ? null : Math.round(parsed * 100);
-}
-
-function centsToDollars(cents: number | null | undefined): string {
-  return cents == null ? '' : (cents / 100).toFixed(2);
-}
-
 // Unified with the Company/Contact/Opportunity detail pattern (Checkpoint F,
 // docs/tareas-desarrollo.md): no tabs, no "Edit employee" button — every field
 // is editable in place via AutoSaveField/AutoSaveSelect. Name/business email
@@ -291,50 +281,14 @@ export default function EmployeeOverviewPanel({
           </div>
 
           <div className="field-group">
-            <h4 className="field-group-title">Contract &amp; compensation</h4>
+            {/* "Contract & compensation" split 2026-08-03: Contract Type/Compensation
+                Type/Hourly Rate/Monthly Rate moved out — redundant with the
+                EmployeeCompensation-backed "Compensation" group below (payroll
+                spec Unidad 0). Employee.contractType/compensationType/hourlyRateCents/
+                monthlyRateCents stay in the schema (CSV import/export still reads
+                them) but are no longer surfaced here. */}
+            <h4 className="field-group-title">Employment</h4>
             <div className="field-group-body">
-              <Field label="Contract Type">
-                <AutoSaveSelect
-                  label="Contract Type"
-                  value={employee.contractType || ''}
-                  onSave={(v) => save({ contractType: v || null })}
-                  options={[
-                    { value: 'part_time', label: 'Part Time' },
-                    { value: 'full_time', label: 'Full Time' },
-                  ]}
-                />
-              </Field>
-              <Field label="Compensation Type">
-                <AutoSaveSelect
-                  label="Compensation Type"
-                  value={employee.compensationType || ''}
-                  onSave={(v) => save({ compensationType: v || null })}
-                  options={[
-                    { value: 'hourly', label: 'Hourly' },
-                    { value: 'monthly', label: 'Monthly' },
-                  ]}
-                />
-              </Field>
-              {isOwner && (
-                <Field label={`Hourly Rate (${tenantCurrency})`}>
-                  <AutoSaveField
-                    label="Hourly Rate"
-                    type="number"
-                    value={centsToDollars(employee.hourlyRateCents)}
-                    onSave={(v) => save({ hourlyRateCents: dollarsToCents(v) })}
-                  />
-                </Field>
-              )}
-              {isOwner && (
-                <Field label={`Monthly Rate (${tenantCurrency})`}>
-                  <AutoSaveField
-                    label="Monthly Rate"
-                    type="number"
-                    value={centsToDollars(employee.monthlyRateCents)}
-                    onSave={(v) => save({ monthlyRateCents: dollarsToCents(v) })}
-                  />
-                </Field>
-              )}
               <Field label="Start Date">
                 <AutoSaveField
                   label="Start Date"

@@ -6,7 +6,17 @@ import SlideOver from '../components/common/SlideOver';
 import Popover from '../components/common/Popover';
 import SearchableSelect from '../components/common/SearchableSelect';
 import StatusChip from '../components/common/StatusChip';
-import { ChevronLeftIcon, DocumentIcon, PencilIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
+import EmptyState from '../components/common/EmptyState';
+import TableSkeleton from '../components/common/TableSkeleton';
+import {
+  ChevronLeftIcon,
+  DocumentIcon,
+  DollarIcon,
+  ListIcon,
+  PencilIcon,
+  PlusIcon,
+  TrashIcon,
+} from '../components/common/Icons';
 import { formatMoney } from '../lib/currencies';
 
 const ADJUSTMENT_TYPE_LABELS: Record<string, string> = {
@@ -238,7 +248,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
   }
 
   return (
-    <div className="container">
+    <div className="page-full">
       <SlideOver
         open={slideOverOpen}
         title={editingId ? 'Edit Pay Frequency' : 'New Pay Frequency'}
@@ -468,11 +478,17 @@ export default function PayrollPage({ token }: PayrollPageProps) {
 
       {catalogTab === 'timeline' && (
         <div className="mt-4">
-          {runsLoading && <p>Loading...</p>}
+          {runsLoading && <TableSkeleton columns={4} />}
           {!runsLoading && timelineItems.length === 0 && (
-            <p className="text-sm text-gray-500">
-              Nothing yet — create a run from a pay frequency, or record a one-off payment.
-            </p>
+            <EmptyState
+              icon={<DollarIcon />}
+              title="Nothing here yet"
+              body="Create a run from a pay frequency, or record a one-off payment."
+              primaryLabel="New Run"
+              onPrimary={handleOpenNewRun}
+              secondaryLabel="One-off Payment"
+              onSecondary={handleOpenOffPayment}
+            />
           )}
           {!runsLoading && timelineItems.length > 0 && (
             <div className="full-table-wrap">
@@ -530,11 +546,11 @@ export default function PayrollPage({ token }: PayrollPageProps) {
 
       {catalogTab === 'frequencies' && (
         <div className="mt-4">
-          <p className="text-sm text-gray-500 mb-3">
+          <p className="text-sm text-ink-muted mb-3">
             Assigning a pay frequency + rate to a person happens from their employee record, not here.
           </p>
 
-          {loading && <p>Loading...</p>}
+          {loading && <TableSkeleton columns={5} />}
 
           {!loading && (
             <>
@@ -556,7 +572,17 @@ export default function PayrollPage({ token }: PayrollPageProps) {
               </div>
 
               {visibleFrequencies.length === 0 ? (
-                <p className="text-sm text-gray-500">{showInactive ? 'No deactivated pay frequencies.' : 'No active pay frequencies.'}</p>
+                showInactive ? (
+                  <p className="text-sm text-ink-muted">No deactivated pay frequencies.</p>
+                ) : (
+                  <EmptyState
+                    icon={<ListIcon />}
+                    title="No active pay frequencies"
+                    body="A pay frequency defines how often and on what day a group of people gets paid."
+                    primaryLabel="New Pay Frequency"
+                    onPrimary={handleOpenAdd}
+                  />
+                )
               ) : (
                 <div className="full-table-wrap">
                   <table className="table full-table">
@@ -783,7 +809,7 @@ function RunDetailView({ token, runId, onBack }: RunDetailViewProps) {
   };
 
   return (
-    <div className="container">
+    <div className="page-full">
       <div className="page-toolbar no-border">
         <button type="button" className="icon-btn" onClick={onBack} aria-label="Back to runs">
           <ChevronLeftIcon className="h-4 w-4" />
@@ -830,7 +856,7 @@ function RunDetailView({ token, runId, onBack }: RunDetailViewProps) {
         </button>
       </Popover>
 
-      {loading && <p>Loading...</p>}
+      {loading && <TableSkeleton columns={6} />}
 
       {!loading && run && (
         <div className="mt-4 full-table-wrap">
@@ -848,7 +874,7 @@ function RunDetailView({ token, runId, onBack }: RunDetailViewProps) {
             <tbody>
               {run.employeeGroups.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="text-sm text-gray-500">
+                  <td colSpan={6} className="text-sm text-ink-muted">
                     Nobody has a compensation record under this pay frequency yet.
                   </td>
                 </tr>
@@ -863,7 +889,7 @@ function RunDetailView({ token, runId, onBack }: RunDetailViewProps) {
                       <div className="flex items-center gap-2">
                         {group.employee.firstName} {group.employee.lastName}
                         <StatusChip
-                          color={isInactive ? '#dc2626' : group.employee.statusDefn.color || '#9ca3af'}
+                          color={isInactive ? '#dc2626' : group.employee.statusDefn.color || '#6b7280'}
                           label={group.employee.statusDefn.name}
                         />
                       </div>
@@ -924,7 +950,7 @@ function RunDetailView({ token, runId, onBack }: RunDetailViewProps) {
       >
         {activeGroup && (
           <div className="policy-manage-list">
-            {activeGroup.adjustments.length === 0 && <p className="text-xs text-gray-500 px-2 py-1">No adjustments yet.</p>}
+            {activeGroup.adjustments.length === 0 && <p className="text-xs text-ink-muted px-2 py-1">No adjustments yet.</p>}
             {activeGroup.adjustments.map((adj) => (
               <div key={adj.id} className="policy-manage-row justify-between">
                 <span className="status-manage-name">

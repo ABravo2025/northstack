@@ -48,12 +48,6 @@ const ACTIVE_VIEW_STORAGE_KEY = 'northstack:activeView:employee';
 // be dragged to reorder — everything else can.
 const FROZEN_COLUMN_KEYS = ['name', 'status'];
 
-function dollarsToCents(value: string): number | undefined {
-  if (!value.trim()) return undefined;
-  const parsed = Number.parseFloat(value);
-  return Number.isNaN(parsed) ? undefined : Math.round(parsed * 100);
-}
-
 interface EmployeesPageProps {
   user: any;
   token: string;
@@ -160,13 +154,23 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     startDate: '',
     endDate: '',
     contractUrl: '',
-    hourlyRate: '',
-    monthlyRate: '',
-    contractType: '',
-    compensationType: '',
   };
 
   const [employeeForm, setEmployeeForm] = useState(emptyEmployeeForm);
+
+  // Unidad 5.1 — optional compensation, set up in the same submit as the
+  // employee (reuses employeeCompensationService.createCompensation via a
+  // second call, not a joint transaction — keeps the two services decoupled).
+  // Owner-only, same gating as the rest of Payroll.
+  const emptyCompensationForm = {
+    compensationType: 'fixed' as 'hourly' | 'fixed',
+    rate: '',
+    currency: tenantCurrency,
+    payFrequencyId: '',
+    effectiveFrom: '',
+  };
+  const [newEmployeeCompForm, setNewEmployeeCompForm] = useState(emptyCompensationForm);
+  const [payFrequencies, setPayFrequencies] = useState<any[]>([]);
 
   useEffect(() => {
     loadEmployees();
@@ -188,6 +192,14 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       .catch(() => {
         // Non-critical — the Tasks assignee dropdown just falls back to empty if it fails.
       });
+    if (user.role === 'owner') {
+      api
+        .listPayFrequencies(token)
+        .then((freqs) => setPayFrequencies(freqs.filter((f) => f.isActive)))
+        .catch(() => {
+          // Non-critical — the "Add Employee" compensation section just won't have options.
+        });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -317,6 +329,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const closeSlideOver = () => {
     setSlideOverMode(null);
     setCustomFieldValues({});
+    setNewEmployeeCompForm(emptyCompensationForm);
   };
 
   const handleOpenAdd = () => {
@@ -352,10 +365,6 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         startDate: employeeForm.startDate || undefined,
         endDate: employeeForm.endDate || undefined,
         contractUrl: employeeForm.contractUrl || undefined,
-        hourlyRateCents: dollarsToCents(employeeForm.hourlyRate),
-        monthlyRateCents: dollarsToCents(employeeForm.monthlyRate),
-        contractType: (employeeForm.contractType || null) as 'part_time' | 'full_time' | null,
-        compensationType: (employeeForm.compensationType || null) as 'hourly' | 'monthly' | null,
       });
 
       const valueEntries = Object.entries(customFieldValues).filter(([, value]) => value.trim() !== '');
@@ -364,6 +373,24 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
           customFieldDefinitionId,
           value,
         });
+      }
+
+      // Unidad 5.1 — optional, only if the owner filled in a rate + pay frequency.
+      if (user.role === 'owner' && newEmployeeCompForm.rate.trim() && newEmployeeCompForm.payFrequencyId) {
+        try {
+          await api.createEmployeeCompensation(token, employee.id, {
+            compensationType: newEmployeeCompForm.compensationType,
+            rateCents: Math.round(Number.parseFloat(newEmployeeCompForm.rate) * 100),
+            currency: newEmployeeCompForm.currency,
+            payFrequencyId: newEmployeeCompForm.payFrequencyId,
+            effectiveFrom: newEmployeeCompForm.effectiveFrom || employeeForm.startDate || new Date().toISOString().slice(0, 10),
+          });
+        } catch (error) {
+          // The employee itself was already created successfully — a failed
+          // compensation setup shouldn't look like the whole thing failed.
+          // It can still be added from the employee's own detail panel.
+          toast.error('Employee created, but compensation failed to save: ' + (error as Error).message);
+        }
       }
 
       toast.success(`${employee.firstName} ${employee.lastName} added.`);
@@ -921,67 +948,65 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                 placeholder="https://drive.google.com/..."
               />
             </div>
-            <div className="form-group">
-              <label htmlFor="emp-contractType">Contract Type</label>
-              <select
-                id="emp-contractType"
-                value={employeeForm.contractType}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, contractType: e.target.value })}
-              >
-                <option value="">-- select --</option>
-                <option value="part_time">Part Time</option>
-                <option value="full_time">Full Time</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="emp-compensationType">Compensation Type</label>
-              <select
-                id="emp-compensationType"
-                value={employeeForm.compensationType}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setEmployeeForm({
-                    ...employeeForm,
-                    compensationType: value,
-                    hourlyRate: value === 'monthly' ? '' : employeeForm.hourlyRate,
-                    monthlyRate: value === 'hourly' ? '' : employeeForm.monthlyRate,
-                  });
-                }}
-              >
-                <option value="">-- select --</option>
-                <option value="hourly">Hourly</option>
-                <option value="monthly">Monthly</option>
-              </select>
-            </div>
             {user.role === 'owner' && (
-              <>
-                {employeeForm.compensationType !== 'monthly' && (
-                  <div className="form-group">
-                    <label htmlFor="emp-hourlyRate">Hourly Rate</label>
-                    <input
-                      id="emp-hourlyRate"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={employeeForm.hourlyRate}
-                      onChange={(e) => setEmployeeForm({ ...employeeForm, hourlyRate: e.target.value })}
-                    />
-                  </div>
-                )}
-                {employeeForm.compensationType !== 'hourly' && (
-                  <div className="form-group">
-                    <label htmlFor="emp-monthlyRate">Monthly Rate</label>
-                    <input
-                      id="emp-monthlyRate"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={employeeForm.monthlyRate}
-                      onChange={(e) => setEmployeeForm({ ...employeeForm, monthlyRate: e.target.value })}
-                    />
-                  </div>
-                )}
-              </>
+              <div className="field-group">
+                <h4 className="field-group-title">Compensation (optional)</h4>
+                <p className="mb-2 text-xs text-ink-muted">
+                  Leave the rate empty to skip this — it can be added later from the employee's own record.
+                </p>
+                <div className="form-group">
+                  <label htmlFor="emp-comp-type">Type</label>
+                  <select
+                    id="emp-comp-type"
+                    value={newEmployeeCompForm.compensationType}
+                    onChange={(e) =>
+                      setNewEmployeeCompForm({
+                        ...newEmployeeCompForm,
+                        compensationType: e.target.value as 'hourly' | 'fixed',
+                      })
+                    }
+                  >
+                    <option value="fixed">Fixed</option>
+                    <option value="hourly">Hourly</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="emp-comp-rate">Rate ({newEmployeeCompForm.currency})</label>
+                  <input
+                    id="emp-comp-rate"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={newEmployeeCompForm.rate}
+                    onChange={(e) => setNewEmployeeCompForm({ ...newEmployeeCompForm, rate: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="emp-comp-frequency">Pay Frequency</label>
+                  <select
+                    id="emp-comp-frequency"
+                    value={newEmployeeCompForm.payFrequencyId}
+                    onChange={(e) => setNewEmployeeCompForm({ ...newEmployeeCompForm, payFrequencyId: e.target.value })}
+                  >
+                    <option value="">-- select --</option>
+                    {payFrequencies.map((freq) => (
+                      <option key={freq.id} value={freq.id}>
+                        {freq.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="emp-comp-effective">Effective from</label>
+                  <input
+                    id="emp-comp-effective"
+                    type="date"
+                    value={newEmployeeCompForm.effectiveFrom}
+                    onChange={(e) => setNewEmployeeCompForm({ ...newEmployeeCompForm, effectiveFrom: e.target.value })}
+                    placeholder={employeeForm.startDate || undefined}
+                  />
+                </div>
+              </div>
             )}
 
             {activeEmployeeCustomFields.map((field) => (

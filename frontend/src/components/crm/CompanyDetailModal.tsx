@@ -7,6 +7,7 @@ import AutoSaveField from '../common/AutoSaveField';
 import AutoSaveSelect from '../common/AutoSaveSelect';
 import DetailSidebar from '../layout/DetailSidebar';
 import Field from '../common/Field';
+import RequiredMark from '../common/RequiredMark';
 import OverviewActionsMenu from '../common/OverviewActionsMenu';
 import { PlusIcon, TrashIcon, XIcon } from '../common/Icons';
 import { formatMoney } from '../../lib/currencies';
@@ -316,25 +317,50 @@ export default function CompanyDetailModal({
                   </div>
                   <p className="text-xs text-ink-faint">or create a new one:</p>
                   <div className="flex items-center gap-1.5">
+                    <div className="min-w-0 flex-1">
+                      <label htmlFor="company-new-contact-firstName" className="mb-0.5 block text-xs text-ink-faint">
+                        First name
+                        <RequiredMark />
+                      </label>
+                      <input
+                        id="company-new-contact-firstName"
+                        className="w-full"
+                        placeholder="First name"
+                        value={newContact.firstName}
+                        onChange={(e) => setNewContact({ ...newContact, firstName: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <label htmlFor="company-new-contact-lastName" className="mb-0.5 block text-xs text-ink-faint">
+                        Last name
+                        <RequiredMark />
+                      </label>
+                      <input
+                        id="company-new-contact-lastName"
+                        className="w-full"
+                        placeholder="Last name"
+                        value={newContact.lastName}
+                        onChange={(e) => setNewContact({ ...newContact, lastName: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label htmlFor="company-new-contact-email" className="mb-0.5 block text-xs text-ink-faint">
+                      Email
+                      <RequiredMark />
+                    </label>
                     <input
-                      className="min-w-0 flex-1"
-                      placeholder="First name"
-                      value={newContact.firstName}
-                      onChange={(e) => setNewContact({ ...newContact, firstName: e.target.value })}
-                    />
-                    <input
-                      className="min-w-0 flex-1"
-                      placeholder="Last name"
-                      value={newContact.lastName}
-                      onChange={(e) => setNewContact({ ...newContact, lastName: e.target.value })}
+                      id="company-new-contact-email"
+                      className="w-full"
+                      type="email"
+                      placeholder="Email"
+                      value={newContact.email}
+                      onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
+                      required
                     />
                   </div>
-                  <input
-                    type="email"
-                    placeholder="Email"
-                    value={newContact.email}
-                    onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
-                  />
                   <div className="flex justify-end gap-2">
                     <button type="button" className="btn-secondary" onClick={() => setAddingContact(false)}>
                       Cancel
@@ -373,11 +399,13 @@ export default function CompanyDetailModal({
                 <div className="mt-2 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-gray-800">
                   <label className="text-xs text-ink-muted" htmlFor="new-opp-pipeline">
                     Pipeline
+                    <RequiredMark />
                   </label>
                   <select
                     id="new-opp-pipeline"
                     value={newOppPipelineId}
                     onChange={(e) => setNewOppPipelineId(e.target.value)}
+                    required
                   >
                     {activePipelines.map((p) => (
                       <option key={p.id} value={p.id}>
@@ -387,8 +415,14 @@ export default function CompanyDetailModal({
                   </select>
                   <label className="text-xs text-ink-muted" htmlFor="new-opp-name">
                     Deal name
+                    <RequiredMark />
                   </label>
-                  <input id="new-opp-name" value={newOppName} onChange={(e) => setNewOppName(e.target.value)} />
+                  <input
+                    id="new-opp-name"
+                    value={newOppName}
+                    onChange={(e) => setNewOppName(e.target.value)}
+                    required
+                  />
                   <div className="flex justify-end gap-2">
                     <button type="button" className="btn-secondary" onClick={() => setAddingOpportunity(false)}>
                       Cancel

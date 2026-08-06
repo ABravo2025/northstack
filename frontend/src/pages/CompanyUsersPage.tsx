@@ -4,6 +4,7 @@ import { useToast } from '../components/common/ToastProvider';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Pagination, { paginate } from '../components/common/Pagination';
 import SlideOver from '../components/common/SlideOver';
+import RequiredMark from '../components/common/RequiredMark';
 import { CheckIcon, CopyIcon, LockIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/common/Icons';
 import ColumnResizeHandle from '../components/entity-views/ColumnResizeHandle';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
@@ -258,7 +259,10 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
       >
         <form id="invite-form" onSubmit={handleInvite}>
           <div className="form-group">
-            <label htmlFor="invite-email">Email</label>
+            <label htmlFor="invite-email">
+              Email
+              <RequiredMark />
+            </label>
             <input
               id="invite-email"
               type="email"

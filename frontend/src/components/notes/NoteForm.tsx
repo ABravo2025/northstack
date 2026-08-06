@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Note } from '../../api';
+import RequiredMark from '../common/RequiredMark';
 import { TrashIcon, XIcon } from '../common/Icons';
 
 export interface NoteFormPayload {
@@ -40,17 +41,30 @@ export default function NoteForm({ note, onSubmit, onDelete, onCancelEdit }: Not
   return (
     <div className="inline-compose-form">
       <div className="nv-field">
-        <label htmlFor="note-form-title">Title</label>
-        <input id="note-form-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Short title" />
+        <label htmlFor="note-form-title">
+          Title
+          <RequiredMark />
+        </label>
+        <input
+          id="note-form-title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Short title"
+          required
+        />
       </div>
       <div className="nv-field">
-        <label htmlFor="note-form-description">Description</label>
+        <label htmlFor="note-form-description">
+          Description
+          <RequiredMark />
+        </label>
         <textarea
           id="note-form-description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={5}
           placeholder="Supports **bold** and *italic*"
+          required
         />
       </div>
       <div className="nv-field flex items-center gap-2">

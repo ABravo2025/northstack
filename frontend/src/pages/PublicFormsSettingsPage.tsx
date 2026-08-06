@@ -3,6 +3,7 @@ import { api, type Pipeline, type Form, type PublicFormFieldConfig } from '../ap
 import { useToast } from '../components/common/ToastProvider';
 import SlideOver from '../components/common/SlideOver';
 import EmptyState from '../components/common/EmptyState';
+import RequiredMark from '../components/common/RequiredMark';
 import { GripIcon, ListIcon, PlusIcon, XIcon } from '../components/common/Icons';
 
 interface PublicFormsSettingsPageProps {
@@ -297,7 +298,10 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
       >
         <form id="public-form-form" onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="pf-name">Name</label>
+            <label htmlFor="pf-name">
+              Name
+              <RequiredMark />
+            </label>
             <input
               id="pf-name"
               type="text"
@@ -308,7 +312,10 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
             />
           </div>
           <div className="form-group">
-            <label htmlFor="pf-slug">Link slug</label>
+            <label htmlFor="pf-slug">
+              Link slug
+              <RequiredMark />
+            </label>
             <input
               id="pf-slug"
               type="text"
@@ -392,15 +399,24 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
                   Form preview
                 </p>
                 <div className="mb-3">
-                  <label className="mb-1 block text-sm font-medium">First Name *</label>
+                  <label className="mb-1 block text-sm font-medium">
+                    First Name
+                    <RequiredMark />
+                  </label>
                   <input disabled className="bg-gray-50 dark:bg-gray-800" />
                 </div>
                 <div className="mb-3">
-                  <label className="mb-1 block text-sm font-medium">Last Name *</label>
+                  <label className="mb-1 block text-sm font-medium">
+                    Last Name
+                    <RequiredMark />
+                  </label>
                   <input disabled className="bg-gray-50 dark:bg-gray-800" />
                 </div>
                 <div className="mb-3">
-                  <label className="mb-1 block text-sm font-medium">Email *</label>
+                  <label className="mb-1 block text-sm font-medium">
+                    Email
+                    <RequiredMark />
+                  </label>
                   <input disabled className="bg-gray-50 dark:bg-gray-800" />
                 </div>
 
@@ -424,7 +440,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
                         <GripIcon className="h-3.5 w-3.5 shrink-0 text-gray-400" />
                         <label className="flex-1 text-sm font-medium">
                           {field.label}
-                          {requiredFields[field.key] ? ' *' : ''}
+                          {requiredFields[field.key] && <RequiredMark />}
                         </label>
                         <label className="inline-flex items-center gap-1 text-xs font-normal text-gray-500">
                           <input

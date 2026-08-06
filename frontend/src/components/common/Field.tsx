@@ -1,3 +1,5 @@
+import RequiredMark from './RequiredMark';
+
 // The one piece that was genuinely byte-identical across the 4 detail panels
 // (Employee/Company/Contact/Opportunity) — evaluated as part of Checkpoint F
 // (docs/tareas-desarrollo.md). The rest (header subtitle content, the actual
@@ -24,7 +26,7 @@ export default function Field({ label, children, full, required }: FieldProps) {
     <div className={`overview-field${full ? ' overview-field-full' : ''}`}>
       <span className="overview-field-label">
         {label}
-        {required && <span className="required-mark"> *</span>}
+        {required && <RequiredMark />}
       </span>
       {children}
     </div>

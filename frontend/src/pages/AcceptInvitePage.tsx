@@ -5,6 +5,7 @@ import { useToast } from '../components/common/ToastProvider';
 import PasswordInput from '../components/common/PasswordInput';
 import PasswordChecklist from '../components/common/PasswordChecklist';
 import LegalDocumentModal from '../components/common/LegalDocumentModal';
+import RequiredMark from '../components/common/RequiredMark';
 
 interface AcceptInvitePageProps {
   onAccepted: (token: string, user: any) => void;
@@ -106,7 +107,10 @@ export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) 
                 {mode === 'register' && (
                   <>
                     <div className="form-group">
-                      <label htmlFor="invite-firstName">First Name</label>
+                      <label htmlFor="invite-firstName">
+                        First Name
+                        <RequiredMark />
+                      </label>
                       <input
                         id="invite-firstName"
                         type="text"
@@ -117,7 +121,10 @@ export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) 
                       />
                     </div>
                     <div className="form-group">
-                      <label htmlFor="invite-lastName">Last Name</label>
+                      <label htmlFor="invite-lastName">
+                        Last Name
+                        <RequiredMark />
+                      </label>
                       <input
                         id="invite-lastName"
                         type="text"
@@ -128,7 +135,10 @@ export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) 
                       />
                     </div>
                     <div className="form-group">
-                      <label htmlFor="invite-phone">Phone</label>
+                      <label htmlFor="invite-phone">
+                        Phone
+                        <RequiredMark />
+                      </label>
                       <input
                         id="invite-phone"
                         type="tel"
@@ -146,7 +156,10 @@ export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) 
                   <input id="invite-email" type="email" value={email} disabled />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="invite-password">Password</label>
+                  <label htmlFor="invite-password">
+                    Password
+                    <RequiredMark />
+                  </label>
                   <PasswordInput
                     id="invite-password"
                     value={password}

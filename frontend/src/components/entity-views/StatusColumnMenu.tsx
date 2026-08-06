@@ -3,6 +3,7 @@ import { api } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import ColorPicker from '../common/ColorPicker';
 import Popover from '../common/Popover';
+import RequiredMark from '../common/RequiredMark';
 import { DotsVerticalIcon, GripIcon } from '../common/Icons';
 
 interface StatusLike {
@@ -175,13 +176,17 @@ export default function StatusColumnMenu({ token, entityType, statuses, onChange
             ))}
           </div>
           <div className="nv-field mt-3">
-            <label htmlFor="status-new-name">Add status</label>
+            <label htmlFor="status-new-name">
+              Add status
+              <RequiredMark />
+            </label>
             <input
               id="status-new-name"
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder="e.g. On Leave"
+              required
             />
           </div>
           <div className="nv-field flex items-center gap-2">

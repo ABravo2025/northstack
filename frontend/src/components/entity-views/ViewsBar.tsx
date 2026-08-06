@@ -3,6 +3,7 @@ import type { SavedView } from '../../api';
 import type { ViewField } from '../../lib/viewFields';
 import ConfirmDialog from '../common/ConfirmDialog';
 import Popover from '../common/Popover';
+import RequiredMark from '../common/RequiredMark';
 import { DotsVerticalIcon, GridIcon, KanbanIcon, ListIcon, LockIcon, PlusIcon, TeamIcon } from '../common/Icons';
 
 interface NewViewInput {
@@ -192,7 +193,10 @@ export default function ViewsBar({
 
       <Popover open={newViewOpen} onClose={() => setNewViewOpen(false)} anchorRef={newViewButtonRef} width={260}>
         <div className="nv-field">
-          <label htmlFor="nv-name">View name</label>
+          <label htmlFor="nv-name">
+            View name
+            <RequiredMark />
+          </label>
           <input
             id="nv-name"
             type="text"
@@ -200,6 +204,7 @@ export default function ViewsBar({
             onChange={(e) => setNvName(e.target.value)}
             placeholder="e.g. Sales team only"
             autoFocus
+            required
           />
         </div>
         <div className="nv-field">

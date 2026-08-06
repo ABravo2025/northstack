@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import ConfirmDialog from '../common/ConfirmDialog';
 import Popover from '../common/Popover';
+import RequiredMark from '../common/RequiredMark';
 import { DotsVerticalIcon } from '../common/Icons';
 
 interface CustomFieldLike {
@@ -110,8 +111,17 @@ export default function CustomFieldColumnMenu({ field, onUpdate, onDeactivate, o
         ) : (
           <div onClick={(e) => e.stopPropagation()}>
             <div className="nv-field">
-              <label htmlFor={`cf-edit-name-${field.id}`}>Field name</label>
-              <input id={`cf-edit-name-${field.id}`} type="text" value={name} onChange={(e) => setName(e.target.value)} />
+              <label htmlFor={`cf-edit-name-${field.id}`}>
+                Field name
+                <RequiredMark />
+              </label>
+              <input
+                id={`cf-edit-name-${field.id}`}
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
             </div>
             {field.fieldType === 'select' && (
               <div className="nv-field">

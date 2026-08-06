@@ -4,6 +4,7 @@ import PasswordInput from '../components/common/PasswordInput';
 import PasswordChecklist from '../components/common/PasswordChecklist';
 import AuthLayout from '../components/common/AuthLayout';
 import LegalDocumentModal from '../components/common/LegalDocumentModal';
+import RequiredMark from '../components/common/RequiredMark';
 import { COUNTRIES } from '../lib/countries';
 
 const COMPANY_SIZE_OPTIONS = ['1-10', '11-50', '51-200', '201-500', '500+'];
@@ -87,7 +88,10 @@ export default function RegisterPage({
       <h2 className="auth-title">Register your company</h2>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label htmlFor="register-tenantName">Company Name</label>
+          <label htmlFor="register-tenantName">
+            Company Name
+            <RequiredMark />
+          </label>
           <input
             id="register-tenantName"
             type="text"
@@ -145,7 +149,10 @@ export default function RegisterPage({
           </select>
         </div>
         <div className="form-group">
-          <label htmlFor="register-firstName">First Name</label>
+          <label htmlFor="register-firstName">
+            First Name
+            <RequiredMark />
+          </label>
           <input
             id="register-firstName"
             type="text"
@@ -157,7 +164,10 @@ export default function RegisterPage({
           />
         </div>
         <div className="form-group">
-          <label htmlFor="register-lastName">Last Name</label>
+          <label htmlFor="register-lastName">
+            Last Name
+            <RequiredMark />
+          </label>
           <input
             id="register-lastName"
             type="text"
@@ -169,7 +179,10 @@ export default function RegisterPage({
           />
         </div>
         <div className="form-group">
-          <label htmlFor="register-email">Email</label>
+          <label htmlFor="register-email">
+            Email
+            <RequiredMark />
+          </label>
           <input
             id="register-email"
             type="email"
@@ -184,7 +197,10 @@ export default function RegisterPage({
           )}
         </div>
         <div className="form-group">
-          <label htmlFor="register-phone">Phone</label>
+          <label htmlFor="register-phone">
+            Phone
+            <RequiredMark />
+          </label>
           <input
             id="register-phone"
             type="tel"
@@ -215,7 +231,10 @@ export default function RegisterPage({
           </select>
         </div>
         <div className="form-group">
-          <label htmlFor="register-password">Password</label>
+          <label htmlFor="register-password">
+            Password
+            <RequiredMark />
+          </label>
           <PasswordInput
             id="register-password"
             value={ownerPassword}
@@ -231,7 +250,10 @@ export default function RegisterPage({
           )}
         </div>
         <div className="form-group">
-          <label htmlFor="register-confirmPassword">Confirm Password</label>
+          <label htmlFor="register-confirmPassword">
+            Confirm Password
+            <RequiredMark />
+          </label>
           <PasswordInput
             id="register-confirmPassword"
             value={confirmPassword}

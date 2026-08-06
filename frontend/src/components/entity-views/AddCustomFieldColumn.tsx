@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import Popover from '../common/Popover';
+import RequiredMark from '../common/RequiredMark';
 import { PlusIcon } from '../common/Icons';
 
 interface NewFieldInput {
@@ -64,7 +65,10 @@ export default function AddCustomFieldColumn({ onCreate }: AddCustomFieldColumnP
       </button>
       <Popover open={open} onClose={() => setOpen(false)} anchorRef={triggerRef} width={240} align="right">
         <div className="nv-field">
-          <label htmlFor="new-cf-name">Field name</label>
+          <label htmlFor="new-cf-name">
+            Field name
+            <RequiredMark />
+          </label>
           <input
             id="new-cf-name"
             type="text"
@@ -72,6 +76,7 @@ export default function AddCustomFieldColumn({ onCreate }: AddCustomFieldColumnP
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Emergency Contact"
             autoFocus
+            required
           />
         </div>
         <div className="nv-field">

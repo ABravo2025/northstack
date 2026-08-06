@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Task } from '../../api';
+import RequiredMark from '../common/RequiredMark';
 import { TrashIcon, XIcon } from '../common/Icons';
 
 interface TenantUserLite {
@@ -62,8 +63,17 @@ export default function TaskForm({ task, tenantUsers, defaultAssigneeId, onSubmi
   return (
     <div className="inline-compose-form">
       <div className="nv-field">
-        <label htmlFor="task-form-title">Title</label>
-        <input id="task-form-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Task title" />
+        <label htmlFor="task-form-title">
+          Title
+          <RequiredMark />
+        </label>
+        <input
+          id="task-form-title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Task title"
+          required
+        />
       </div>
       <div className="nv-field">
         <label htmlFor="task-form-description">Description</label>

@@ -2,6 +2,7 @@ import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { api } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import SlideOver from '../common/SlideOver';
+import RequiredMark from '../common/RequiredMark';
 import { DownloadIcon, UploadIcon } from '../common/Icons';
 
 interface CsvImportExportMenuProps {
@@ -138,8 +139,18 @@ const CsvImportExportMenu = forwardRef<CsvImportExportMenuHandle, CsvImportExpor
           </button>
         </div>
         <div className="nv-field">
-          <label htmlFor="csv-file-input">CSV file</label>
-          <input id="csv-file-input" ref={fileInputRef} type="file" accept=".csv,text/csv" onChange={handleFileChosen} />
+          <label htmlFor="csv-file-input">
+            CSV file
+            <RequiredMark />
+          </label>
+          <input
+            id="csv-file-input"
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            onChange={handleFileChosen}
+            required
+          />
         </div>
         {fileName && (
           <div className="nv-field">

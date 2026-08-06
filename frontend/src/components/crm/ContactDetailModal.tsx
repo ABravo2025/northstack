@@ -6,6 +6,7 @@ import AutoSaveField from '../common/AutoSaveField';
 import AutoSaveSelect from '../common/AutoSaveSelect';
 import DetailSidebar from '../layout/DetailSidebar';
 import Field from '../common/Field';
+import RequiredMark from '../common/RequiredMark';
 import OverviewActionsMenu from '../common/OverviewActionsMenu';
 import { PlusIcon, XIcon } from '../common/Icons';
 import { formatMoney } from '../../lib/currencies';
@@ -331,11 +332,13 @@ export default function ContactDetailModal({
                   )}
                   <label className="text-xs text-ink-muted" htmlFor="new-contact-opp-pipeline">
                     Pipeline
+                    <RequiredMark />
                   </label>
                   <select
                     id="new-contact-opp-pipeline"
                     value={newOppPipelineId}
                     onChange={(e) => setNewOppPipelineId(e.target.value)}
+                    required
                   >
                     {activePipelines.map((p) => (
                       <option key={p.id} value={p.id}>
@@ -347,22 +350,26 @@ export default function ContactDetailModal({
                     <>
                       <label className="text-xs text-ink-muted" htmlFor="new-contact-opp-company">
                         Company name (this contact has none yet)
+                        <RequiredMark />
                       </label>
                       <input
                         id="new-contact-opp-company"
                         value={newOppCompanyName}
                         onChange={(e) => setNewOppCompanyName(e.target.value)}
                         placeholder="e.g. Acme Inc."
+                        required
                       />
                     </>
                   )}
                   <label className="text-xs text-ink-muted" htmlFor="new-contact-opp-name">
                     Deal name
+                    <RequiredMark />
                   </label>
                   <input
                     id="new-contact-opp-name"
                     value={newOppName}
                     onChange={(e) => setNewOppName(e.target.value)}
+                    required
                   />
                   <div className="flex justify-end gap-2">
                     <button type="button" className="btn-secondary" onClick={() => setAddingOpportunity(false)}>

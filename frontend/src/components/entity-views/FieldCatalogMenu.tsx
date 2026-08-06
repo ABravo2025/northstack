@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { api, type CatalogKind } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import Popover from '../common/Popover';
+import RequiredMark from '../common/RequiredMark';
 import { DotsVerticalIcon, GripIcon } from '../common/Icons';
 
 interface CatalogEntryLike {
@@ -141,13 +142,17 @@ export default function FieldCatalogMenu({ token, kind, label, entries, onChange
             {sorted.length === 0 && <p className="text-xs text-gray-500">No options yet.</p>}
           </div>
           <div className="nv-field mt-3">
-            <label htmlFor={`catalog-new-${kind}`}>Add {label.toLowerCase()}</label>
+            <label htmlFor={`catalog-new-${kind}`}>
+              Add {label.toLowerCase()}
+              <RequiredMark />
+            </label>
             <input
               id={`catalog-new-${kind}`}
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               placeholder={kind === 'department' ? 'e.g. Engineering' : kind === 'companySize' ? 'e.g. 11-50 employees' : 'e.g. Account Executive'}
+              required
             />
           </div>
           <div className="nv-field">

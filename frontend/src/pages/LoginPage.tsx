@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import PasswordInput from '../components/common/PasswordInput';
 import AuthLayout from '../components/common/AuthLayout';
+import RequiredMark from '../components/common/RequiredMark';
 
 interface LoginPageProps {
   onLogin: (email: string, password: string) => void;
@@ -22,7 +23,10 @@ export default function LoginPage({ onLogin, onSwitchToRegister, loading }: Logi
       <h2 className="auth-title">Login</h2>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label htmlFor="login-email">Email</label>
+          <label htmlFor="login-email">
+            Email
+            <RequiredMark />
+          </label>
           <input
             id="login-email"
             type="email"
@@ -34,7 +38,10 @@ export default function LoginPage({ onLogin, onSwitchToRegister, loading }: Logi
           />
         </div>
         <div className="form-group">
-          <label htmlFor="login-password">Password</label>
+          <label htmlFor="login-password">
+            Password
+            <RequiredMark />
+          </label>
           <PasswordInput
             id="login-password"
             value={password}

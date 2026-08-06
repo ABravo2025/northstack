@@ -4,6 +4,7 @@ import { useToast } from '../components/common/ToastProvider';
 import ColorPicker from '../components/common/ColorPicker';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import SlideOver from '../components/common/SlideOver';
+import RequiredMark from '../components/common/RequiredMark';
 import { ChevronDownIcon, PencilIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
 
 interface PipelinesSettingsPageProps {
@@ -461,7 +462,10 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
       >
         <form id="create-pipeline-form" onSubmit={handleCreatePipeline}>
           <div className="form-group">
-            <label htmlFor="new-pipeline-name">Pipeline name</label>
+            <label htmlFor="new-pipeline-name">
+              Pipeline name
+              <RequiredMark />
+            </label>
             <input
               id="new-pipeline-name"
               type="text"

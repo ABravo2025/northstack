@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { api, type PublicFormConfig } from '../api';
 import AuthLayout from '../components/common/AuthLayout';
+import RequiredMark from '../components/common/RequiredMark';
 
 declare global {
   interface Window {
@@ -158,7 +159,10 @@ export default function PublicFormPage() {
           />
         </div>
         <div className="form-group">
-          <label htmlFor="pf-firstName">First Name *</label>
+          <label htmlFor="pf-firstName">
+            First Name
+            <RequiredMark />
+          </label>
           <input
             id="pf-firstName"
             type="text"
@@ -169,7 +173,10 @@ export default function PublicFormPage() {
           />
         </div>
         <div className="form-group">
-          <label htmlFor="pf-lastName">Last Name *</label>
+          <label htmlFor="pf-lastName">
+            Last Name
+            <RequiredMark />
+          </label>
           <input
             id="pf-lastName"
             type="text"
@@ -180,7 +187,10 @@ export default function PublicFormPage() {
           />
         </div>
         <div className="form-group">
-          <label htmlFor="pf-email">Email *</label>
+          <label htmlFor="pf-email">
+            Email
+            <RequiredMark />
+          </label>
           <input
             id="pf-email"
             type="email"
@@ -208,12 +218,17 @@ export default function PublicFormPage() {
                 ? 'Company'
                 : field.key;
           const inputId = `pf-${field.key}`;
-          const displayLabel = field.required ? `${label} *` : label;
+          const fieldLabel = (
+            <>
+              {label}
+              {field.required && <RequiredMark />}
+            </>
+          );
 
           if (field.key === 'department') {
             return (
               <div className="form-group" key={field.key}>
-                <label htmlFor={inputId}>{displayLabel}</label>
+                <label htmlFor={inputId}>{fieldLabel}</label>
                 <select
                   id={inputId}
                   value={values[field.key] || ''}
@@ -235,7 +250,7 @@ export default function PublicFormPage() {
           if (customDef?.fieldType === 'select') {
             return (
               <div className="form-group" key={field.key}>
-                <label htmlFor={inputId}>{displayLabel}</label>
+                <label htmlFor={inputId}>{fieldLabel}</label>
                 <select
                   id={inputId}
                   value={values[field.key] || ''}
@@ -265,7 +280,7 @@ export default function PublicFormPage() {
 
           return (
             <div className="form-group" key={field.key}>
-              <label htmlFor={inputId}>{displayLabel}</label>
+              <label htmlFor={inputId}>{fieldLabel}</label>
               <input
                 id={inputId}
                 type={inputType}

@@ -442,6 +442,54 @@ incompletos/incorrectos (ej. Opportunity con la Company equivocada), es severida
 
 ---
 
+## QA-08 — Asterisco rojo requerido, platform-wide (2026-08-06, a `staging`)
+
+**Por qué existe esta tarea:** a pedido explícito del usuario, se agregó el marcador visual de
+"campo obligatorio" (asterisco rojo) a todo formulario de la plataforma que tuviera al menos un
+campo genuinamente requerido y no lo mostrara ya. Pieza reusable nueva: `RequiredMark.tsx`
+(componente, no una clase suelta) — `Field.tsx` lo usa internamente vía su prop `required`; el resto
+de los forms (que no usan `Field`) lo importan directo. Sin verificación visual completa del usuario
+todavía — un spot-check con Playwright (Login, Register, Invite user) salió bien, pero esta tarea
+cubre el resto de las pantallas tocadas, que no se vieron en navegador.
+
+### A. Páginas y forms tocados — confirmar que el asterisco aparece solo en los campos que ya eran obligatorios antes (no se agregó ningún requerimiento nuevo, solo el indicador visual)
+
+| # | Pantalla | Campos que deberían tener asterisco |
+|---|---|---|
+| 1 | `/login` | Email, Password |
+| 2 | `/register` | Company Name, First Name, Last Name, Email, Phone, Password, Confirm Password — **no** en los 4 campos "(optional)" (Company size, Industry, Country, How did you hear about us) |
+| 3 | `/accept-invite/:token` (modo registro) | First Name, Last Name, Phone, Password — no en Email (deshabilitado, viene de la invitación) |
+| 4 | `/settings/users` → "Invite someone" | Email |
+| 5 | `/settings/pipelines` → "New Pipeline" | Pipeline name |
+| 6 | `/hr/time-off` → nueva PTO Policy | Name, Days per year |
+| 7 | `/hr/time-off` → nueva solicitud (tab My Requests) | Policy, Start date, End date — no en Note (optional) |
+| 8 | `/settings/public-forms` → nuevo/editar Form | Name, Link slug; en el preview de campos, "First Name"/"Last Name"/"Email" siempre, y cualquier campo dinámico que el toggle "Required" tenga tildado |
+| 9 | `/apply/:tenantSlug/:formSlug` (form público real, sin login) | First Name, Last Name, Email siempre; los campos dinámicos según config del tenant |
+| 10 | Header de columna de un custom field → "+" (agregar) o "Edit field" | Field name |
+| 11 | Header de columna Status → "Manage options" → agregar | Add status |
+| 12 | Header de columna Department/Job Title/Size → agregar | Add [department/job title/size] |
+| 13 | `ViewsBar` → "+" nueva vista guardada | View name |
+| 14 | Menú de import CSV (Employees) | CSV file |
+| 15 | Tab "Tasks" de cualquier panel de detalle (Employee/Company/Contact/Opportunity) | Title (del compose de Task) |
+| 16 | Tab "Notes" de cualquier panel de detalle | Title y Description (ambos requeridos para Notes, a diferencia de Tasks) |
+| 17 | Panel de detalle de Company → sección Contacts → "+" (agregar) → "or create a new one" | First name, Last name, Email — **antes no tenían ningún label visible, solo placeholder**; ahora tienen label chico + asterisco |
+| 18 | Panel de detalle de Company → sección Opportunities → "+" | Pipeline, Deal name |
+| 19 | Panel de detalle de Contact → sección Opportunities → "+" | Pipeline, Deal name, y "Company name" (solo cuando el pipeline elegido es tipo "lead" y el contacto no tiene company todavía) |
+
+### B. Regresión — nada dejó de poder enviarse
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 20 | Completar cualquiera de los forms de arriba con todos los campos requeridos y enviarlo | Se comporta exactamente igual que antes de este cambio — el asterisco es puramente visual, ningún campo que antes se pudiera enviar vacío ahora lo bloquea, y viceversa |
+
+### Al encontrar una falla
+
+Todo lo de esta tarea es visual/informativo — un asterisco de más o de menos es severidad baja. La
+única forma de que esto sea severidad alta es si el ítem B falla (un form que antes funcionaba ahora
+no se puede enviar, o al revés) — eso sí sería una regresión funcional real, no solo cosmética.
+
+---
+
 ## Próximas tareas de QA (a definir)
 
 Cuando se construyan los módulos grandes en curso (rediseño de Clients, Payroll), esta tabla de

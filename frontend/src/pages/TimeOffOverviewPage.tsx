@@ -6,6 +6,7 @@ import SlideOver from '../components/common/SlideOver';
 import Popover from '../components/common/Popover';
 import ColorPicker from '../components/common/ColorPicker';
 import EmptyState from '../components/common/EmptyState';
+import RequiredMark from '../components/common/RequiredMark';
 import { CalendarIcon, ChevronDownIcon, DotsVerticalIcon, PlusIcon } from '../components/common/Icons';
 
 const ACCRUAL_LABELS: Record<string, string> = {
@@ -430,7 +431,10 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
         ) : (
           <form id="time-off-policy-form" onSubmit={handleSubmitPolicy}>
             <div className="form-group">
-              <label htmlFor="policy-name">Name</label>
+              <label htmlFor="policy-name">
+                Name
+                <RequiredMark />
+              </label>
               <input
                 id="policy-name"
                 type="text"
@@ -441,7 +445,10 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
               />
             </div>
             <div className="form-group">
-              <label htmlFor="policy-days">Days per year</label>
+              <label htmlFor="policy-days">
+                Days per year
+                <RequiredMark />
+              </label>
               <input
                 id="policy-days"
                 type="number"
@@ -682,7 +689,10 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                     )}
                     <form onSubmit={handleCreateRequest} className="mb-5">
                       <div className="form-group">
-                        <label htmlFor="time-off-request-policy">Policy</label>
+                        <label htmlFor="time-off-request-policy">
+                          Policy
+                          <RequiredMark />
+                        </label>
                         <select
                           id="time-off-request-policy"
                           value={newRequest.timeOffPolicyId}
@@ -698,7 +708,10 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                         </select>
                       </div>
                       <div className="form-group">
-                        <label htmlFor="time-off-request-start">Start date</label>
+                        <label htmlFor="time-off-request-start">
+                          Start date
+                          <RequiredMark />
+                        </label>
                         <input
                           id="time-off-request-start"
                           type="date"
@@ -708,7 +721,10 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                         />
                       </div>
                       <div className="form-group">
-                        <label htmlFor="time-off-request-end">End date</label>
+                        <label htmlFor="time-off-request-end">
+                          End date
+                          <RequiredMark />
+                        </label>
                         <input
                           id="time-off-request-end"
                           type="date"

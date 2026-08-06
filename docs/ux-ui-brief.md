@@ -30,8 +30,11 @@
 Estos son los bloques que **todas** las pantallas de entidad (Companies/Contacts/Opportunities/
 Employees) comparten — construidos una vez, reusados, no reinventados por módulo:
 
-- **`SlideOver.tsx`**: panel lateral flotante para alta/edición — reemplazó los forms inline que
-  empujaban la tabla.
+- **`Modal.tsx`**: modal centrado con backdrop para el alta de Company/Contact/Opportunity/Employee
+  (2026-08, reemplazó a `SlideOver` ahí — un panel lateral para dar de alta una entidad se sentía
+  incómodo). `SlideOver.tsx` (panel lateral flotante, reemplazó los forms inline que empujaban la
+  tabla) sigue siendo el default para el resto de los forms nuevos que no sean alta de estas 4
+  entidades.
 - **Paneles de detalle (Company/Contact/Opportunity/Employee)**: **70vw × 70vh, 2 columnas** —
   izquierda grid de 2 columnas de campos con autosave (`AutoSaveField`/`AutoSaveSelect`, sin botón
   "Save" ni modo edición separado — guarda al perder foco), derecha tabs **Notes / Tasks /

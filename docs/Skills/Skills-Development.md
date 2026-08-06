@@ -14,7 +14,8 @@ Si el dato es "campo dinámico" reutilizable entre módulos (tipo custom fields)
 Antes de asumir que algo es un enum fijo (status, categorías, etc.), preguntate si en realidad debería ser un catálogo configurable por tenant (StatusDefinition es el precedente: cada tenant puede renombrar/reordenar/desactivar).
 Nunca dejes que passwordHash u otro campo sensible viaje al frontend — pasá todo por una función de sanitización central (sanitizeUser).
 Componentes reutilizables — usalos, no los reinventes
-SlideOver.tsx — panel lateral para forms de "entidad completa" (varios campos).
+SlideOver.tsx — panel lateral para forms de "entidad completa" (varios campos). Sigue siendo el default para forms nuevos que no tengan un motivo puntual para ser Modal (ver siguiente línea).
+Modal.tsx — modal centrado con backdrop, mismas props que SlideOver (open/title/onClose/footer). Usado en 2026-08 para reemplazar el panel lateral de "Add Employee"/"Add Company"/"Add Contact"/"Add Opportunity" (decisión de UX: un panel lateral para dar de alta una entidad se sentía incómodo comparado a un modal centrado) — para esas 4 pantallas, Modal es ahora el patrón esperado, no la excepción. Para un form nuevo de alta de entidad, replicá ese patrón; para otros forms chicos (no de alta de entidad completa), evaluar caso a caso igual que antes.
 Popover.tsx — portal a document.body + getBoundingClientRect(); es el mecanismo estándar para cualquier popover (evita el bug clásico de overflow-x: auto recortando position: absolute).
 ColorPicker.tsx — selector de color con paleta + custom persistido en localStorage.
 ToastProvider.tsx / useToast() — nunca uses alert() fijo.
@@ -60,4 +61,5 @@ Cada vez que se realice un push a staging o produccion, deberas cargar una tarea
 Todo elemento nuevo o edicion debe ser creado en ingles, con estructura en ingles y un front en ingles. A menos que se exprese lo contrario.
 Reusabilidad de codigo: Siempre debes reutilizar el mayor codigo posible, para evitar secciones de codigo que hagan lo mismo. Antes de escribir una función/servicio/componente/hook nuevo, leé docs/function-index.md — es el catálogo de todo lo reusable del proyecto (servicios de backend, utilidades, hooks, componentes de UI, cliente de API), agrupado por archivo, sin números de línea (se desactualizan solos; para ubicar algo exacto usá grep -n "nombre" archivo). Si lo que necesitás ya existe ahí, reusalo en vez de reimplementarlo. Si el archivo parece desactualizado (por ejemplo después de mergear staging a main), decilo y regeneralo antes de confiar en él. Mantenimiento obligatorio: cualquier función/componente/hook nuevo, borrado o renombrado dentro de su alcance (src/lib, src/modules, frontend/src/lib, frontend/src/hooks, frontend/src/components, frontend/src/api) se refleja en ese archivo como parte de la misma tarea, no como algo aparte para después.
 Escalabilidad: debes pensar que el programa esta en desarrollo y muchas cosas tienen que poder ser escalables. Si crees que una tarea puede escalarse, puedes sugerir el cambio asi lo evaluamos a futuro.
+ Si creas alguna funcion nueva reutilizable, debes actualizar function-index.md obligatoriamente.
  

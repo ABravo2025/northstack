@@ -3,7 +3,7 @@ import { api, type SavedView, type ViewFilter, type ViewSort } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Pagination, { paginate } from '../components/common/Pagination';
-import SlideOver from '../components/common/SlideOver';
+import Modal from '../components/common/Modal';
 import EmptyState from '../components/common/EmptyState';
 import TableSkeleton from '../components/common/TableSkeleton';
 import EntityCardList from '../components/common/EntityCardList';
@@ -797,7 +797,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         />
       )}
 
-      <SlideOver
+      <Modal
         open={slideOverMode !== null}
         title="Add Employee"
         onClose={closeSlideOver}
@@ -996,7 +996,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
           </form>
         )}
 
-      </SlideOver>
+      </Modal>
 
       <ViewsBar
         allLabel="All Employees"

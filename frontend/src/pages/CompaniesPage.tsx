@@ -3,7 +3,7 @@ import { api, type Company, type Contact, type Opportunity, type Pipeline, type 
 import { useToast } from '../components/common/ToastProvider';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Pagination, { paginate } from '../components/common/Pagination';
-import SlideOver from '../components/common/SlideOver';
+import Modal from '../components/common/Modal';
 import EmptyState from '../components/common/EmptyState';
 import TableSkeleton from '../components/common/TableSkeleton';
 import EntityCardList from '../components/common/EntityCardList';
@@ -645,7 +645,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
         );
       })()}
 
-      <SlideOver
+      <Modal
         open={slideOverMode === 'add'}
         title="Add Company"
         onClose={closeSlideOver}
@@ -788,7 +788,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
             ))}
           </form>
         )}
-      </SlideOver>
+      </Modal>
 
       {viewingCompanyId &&
         (() => {

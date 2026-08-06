@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api, type Opportunity, type Pipeline } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import ConfirmDialog from '../components/common/ConfirmDialog';
-import SlideOver from '../components/common/SlideOver';
+import Modal from '../components/common/Modal';
 import KanbanBoard from '../components/entity-views/KanbanBoard';
 import OpportunityDetailModal from '../components/crm/OpportunityDetailModal';
 import EmptyState from '../components/common/EmptyState';
@@ -191,7 +191,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
         />
       )}
 
-      <SlideOver
+      <Modal
         open={slideOverMode === 'add'}
         title="Add Opportunity"
         onClose={closeSlideOver}
@@ -310,7 +310,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
             </div>
           </form>
         )}
-      </SlideOver>
+      </Modal>
 
       {viewingId &&
         (() => {

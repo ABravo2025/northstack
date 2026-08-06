@@ -7,9 +7,11 @@ import KanbanBoard from '../components/entity-views/KanbanBoard';
 import OpportunityDetailModal from '../components/crm/OpportunityDetailModal';
 import EmptyState from '../components/common/EmptyState';
 import TableSkeleton from '../components/common/TableSkeleton';
+import Field from '../components/common/Field';
 import { formatMoney } from '../lib/currencies';
 import { getInitials } from '../components/common/Avatar';
 import { PlusIcon, TargetIcon } from '../components/common/Icons';
+import { useAutoCreateGuard } from '../hooks/useAutoCreateGuard';
 
 // A deal that hasn't moved stage in this many days shows its age in red (.kc-age.late).
 const LATE_STAGE_DAYS_THRESHOLD = 14;
@@ -17,6 +19,15 @@ const LATE_STAGE_DAYS_THRESHOLD = 14;
 function daysSince(dateStr: string): number {
   const ms = Date.now() - new Date(dateStr).getTime();
   return Math.max(0, Math.floor(ms / (1000 * 60 * 60 * 24)));
+}
+
+// Local to this form -- no other "Add" form has a required money field, so
+// this isn't pulled into lib/validation.ts alongside isLikelyValidEmail.
+function isLikelyValidAmount(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  const parsed = Number.parseFloat(trimmed);
+  return !Number.isNaN(parsed) && parsed >= 0;
 }
 
 interface OpportunitiesPageProps {
@@ -51,6 +62,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
   const [viewingId, setViewingId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<Opportunity | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const autoCreateGuard = useAutoCreateGuard();
 
   const canEdit = user.role === 'owner' || user.role === 'admin';
 
@@ -115,36 +127,78 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
   const closeSlideOver = () => {
     setSlideOverMode(null);
     setForm((f) => ({ ...emptyForm, currency: f.currency }));
+    autoCreateGuard.reset();
   };
 
   const handleOpenAdd = () => {
     const firstStage = currentPipeline?.stages.filter((s) => s.isActive).sort((a, b) => a.order - b.order)[0];
     setForm((f) => ({ ...emptyForm, currency: f.currency, stageId: firstStage?.id || '' }));
+    autoCreateGuard.reset();
     setSlideOverMode('add');
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Ready once Deal Name, Company, Owner, Amount and Currency are all
+  // filled/valid, plus Loss Reason if the selected stage is already a "lost"
+  // stage (matches the form's own required-field logic below). Takes an
+  // explicit candidate so the two <select>s (Company/Owner) can check
+  // readiness against the value from the change event directly, instead of
+  // racing React's async setState the way reading `form` here would.
+  const isOpportunityAddReady = (candidate: typeof form = form) => {
+    if (!candidate.name.trim()) return false;
+    if (!candidate.companyId || !candidate.ownerId) return false;
+    if (!isLikelyValidAmount(candidate.amountCents)) return false;
+    if (!candidate.currency.trim()) return false;
+    const stage = currentPipeline?.stages.find((s) => s.id === candidate.stageId);
+    if (stage?.outcome === 'lost' && !candidate.lossReasonId) return false;
+    return true;
+  };
+
+  // Shared by the manual "Create" button and the auto-create-on-commit path
+  // below (both go through autoCreateGuard). On success, the Add form is
+  // replaced by the real OpportunityDetailModal for the new deal.
+  const performCreateOpportunity = async (candidate: typeof form = form) => {
+    const amountCents = Math.round(Number.parseFloat(candidate.amountCents || '0') * 100);
+    const opportunity = await api.createOpportunity(token, {
+      name: candidate.name.trim(),
+      companyId: candidate.companyId,
+      pipelineId: activeTab,
+      stageId: candidate.stageId || undefined,
+      amountCents,
+      currency: candidate.currency,
+      estimatedCloseDate: candidate.estimatedCloseDate || undefined,
+      ownerId: candidate.ownerId,
+      nextStepDate: candidate.nextStepDate || undefined,
+      nextStepNote: candidate.nextStepNote || undefined,
+    });
+    toast.success('Opportunity created.');
+    const freshList = await api.listOpportunities(token);
+    setOpportunities(freshList);
+    setSlideOverMode(null);
+    setForm((f) => ({ ...emptyForm, currency: f.currency }));
+    setViewingId(opportunity.id);
+  };
+
+  const attemptAutoCreateOpportunity = (candidate: typeof form = form) => {
+    autoCreateGuard.attempt(isOpportunityAddReady(candidate), async () => {
+      try {
+        await performCreateOpportunity(candidate);
+      } catch (error) {
+        toast.error('Failed to save opportunity: ' + (error as Error).message);
+        throw error;
+      }
+    });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const amountCents = Math.round(Number.parseFloat(form.amountCents || '0') * 100);
-    try {
-      await api.createOpportunity(token, {
-        name: form.name,
-        companyId: form.companyId,
-        pipelineId: activeTab,
-        stageId: form.stageId || undefined,
-        amountCents,
-        currency: form.currency,
-        estimatedCloseDate: form.estimatedCloseDate || undefined,
-        ownerId: form.ownerId,
-        nextStepDate: form.nextStepDate || undefined,
-        nextStepNote: form.nextStepNote || undefined,
-      });
-      toast.success('Opportunity created.');
-      closeSlideOver();
-      reloadOpportunities();
-    } catch (error) {
-      toast.error('Failed to save opportunity: ' + (error as Error).message);
-    }
+    autoCreateGuard.attempt(true, async () => {
+      try {
+        await performCreateOpportunity();
+      } catch (error) {
+        toast.error('Failed to save opportunity: ' + (error as Error).message);
+        throw error;
+      }
+    });
   };
 
   const handleDelete = async () => {
@@ -212,22 +266,27 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
             <div className="field-group">
               <h4 className="field-group-title">Deal</h4>
               <div className="field-group-body">
-                <div className="form-group col-span-2">
-                  <label htmlFor="opp-name">Deal Name</label>
+                <Field label="Deal Name" required full>
                   <input
                     id="opp-name"
+                    className="overview-field-input"
                     type="text"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    onBlur={() => attemptAutoCreateOpportunity()}
                     required
                   />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="opp-companyId">Company</label>
+                </Field>
+                <Field label="Company" required>
                   <select
                     id="opp-companyId"
+                    className="overview-field-input"
                     value={form.companyId}
-                    onChange={(e) => setForm({ ...form, companyId: e.target.value })}
+                    onChange={(e) => {
+                      const next = { ...form, companyId: e.target.value };
+                      setForm(next);
+                      attemptAutoCreateOpportunity(next);
+                    }}
                     required
                   >
                     <option value="">-- select --</option>
@@ -237,10 +296,19 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                       </option>
                     ))}
                   </select>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="opp-ownerId">Owner</label>
-                  <select id="opp-ownerId" value={form.ownerId} onChange={(e) => setForm({ ...form, ownerId: e.target.value })} required>
+                </Field>
+                <Field label="Owner" required>
+                  <select
+                    id="opp-ownerId"
+                    className="overview-field-input"
+                    value={form.ownerId}
+                    onChange={(e) => {
+                      const next = { ...form, ownerId: e.target.value };
+                      setForm(next);
+                      attemptAutoCreateOpportunity(next);
+                    }}
+                    required
+                  >
                     <option value="">-- select --</option>
                     {tenantUsers.map((u) => (
                       <option key={u.id} value={u.id}>
@@ -248,30 +316,32 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                       </option>
                     ))}
                   </select>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="opp-amount">Amount</label>
+                </Field>
+                <Field label="Amount" required>
                   <input
                     id="opp-amount"
+                    className="overview-field-input"
                     type="number"
                     step="0.01"
                     min="0"
                     value={form.amountCents}
                     onChange={(e) => setForm({ ...form, amountCents: e.target.value })}
+                    onBlur={() => attemptAutoCreateOpportunity()}
                     required
                   />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="opp-currency">Currency</label>
+                </Field>
+                <Field label="Currency" required>
                   <input
                     id="opp-currency"
+                    className="overview-field-input"
                     type="text"
                     value={form.currency}
                     onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })}
+                    onBlur={() => attemptAutoCreateOpportunity()}
                     maxLength={3}
                     required
                   />
-                </div>
+                </Field>
               </div>
             </div>
 
@@ -279,12 +349,16 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
               <div className="field-group">
                 <h4 className="field-group-title">Stage</h4>
                 <div className="field-group-body">
-                  <div className="form-group">
-                    <label htmlFor="opp-lossReasonId">Loss Reason</label>
+                  <Field label="Loss Reason" required>
                     <select
                       id="opp-lossReasonId"
+                      className="overview-field-input"
                       value={form.lossReasonId}
-                      onChange={(e) => setForm({ ...form, lossReasonId: e.target.value })}
+                      onChange={(e) => {
+                        const next = { ...form, lossReasonId: e.target.value };
+                        setForm(next);
+                        attemptAutoCreateOpportunity(next);
+                      }}
                       required
                     >
                       <option value="">-- select --</option>
@@ -294,7 +368,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                         </option>
                       ))}
                     </select>
-                  </div>
+                  </Field>
                 </div>
               </div>
             )}
@@ -302,34 +376,34 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
             <div className="field-group">
               <h4 className="field-group-title">Next step</h4>
               <div className="field-group-body">
-                <div className="form-group">
-                  <label htmlFor="opp-estimatedCloseDate">Estimated Close Date</label>
+                <Field label="Estimated Close Date">
                   <input
                     id="opp-estimatedCloseDate"
+                    className="overview-field-input"
                     type="date"
                     value={form.estimatedCloseDate}
                     onChange={(e) => setForm({ ...form, estimatedCloseDate: e.target.value })}
                   />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="opp-nextStepDate">Next Step Date</label>
+                </Field>
+                <Field label="Next Step Date">
                   <input
                     id="opp-nextStepDate"
+                    className="overview-field-input"
                     type="date"
                     value={form.nextStepDate}
                     onChange={(e) => setForm({ ...form, nextStepDate: e.target.value })}
                   />
-                </div>
-                <div className="form-group col-span-2">
-                  <label htmlFor="opp-nextStepNote">Next Step</label>
+                </Field>
+                <Field label="Next Step" full>
                   <input
                     id="opp-nextStepNote"
+                    className="overview-field-input"
                     type="text"
                     value={form.nextStepNote}
                     onChange={(e) => setForm({ ...form, nextStepNote: e.target.value })}
                     placeholder="What's the next action?"
                   />
-                </div>
+                </Field>
               </div>
             </div>
           </form>

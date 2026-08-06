@@ -24,8 +24,11 @@ import StatusChip from '../components/common/StatusChip';
 import CategoryChip from '../components/common/CategoryChip';
 import CompanyDetailModal from '../components/crm/CompanyDetailModal';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
+import Field from '../components/common/Field';
 import { BuildingIcon, ChevronDownIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/common/Icons';
 import { applyFilters, applySort, buildCompanyFields, findField, groupableFields, parseFilters, parseSort } from '../lib/viewFields';
+import { isLikelyValidEmail } from '../lib/validation';
+import { useAutoCreateGuard } from '../hooks/useAutoCreateGuard';
 
 const PAGE_SIZE = 20;
 const ACTIVE_VIEW_STORAGE_KEY = 'northstack:activeView:company';
@@ -75,6 +78,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
   const [companySizes, setCompanySizes] = useState<any[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
   const [companyForm, setCompanyForm] = useState(emptyCompanyForm);
+  const autoCreateGuard = useAutoCreateGuard();
   const [draggedColKey, setDraggedColKey] = useState<string | null>(null);
   const [dragOverColKey, setDragOverColKey] = useState<string | null>(null);
   const [collapsedListSections, setCollapsedListSections] = useState<Set<string>>(new Set());
@@ -241,43 +245,109 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
   const closeSlideOver = () => {
     setSlideOverMode(null);
     setCustomFieldValues({});
+    autoCreateGuard.reset();
   };
 
   const handleOpenAdd = () => {
     setCompanyForm(emptyCompanyForm);
     setCustomFieldValues({});
+    autoCreateGuard.reset();
     setSlideOverMode('add');
   };
 
-  const handleCreateCompany = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const company = await api.createCompany(token, {
-        name: companyForm.name,
-        industry: companyForm.industry || undefined,
-        website: companyForm.website || undefined,
-        phone: companyForm.phone || undefined,
-        billingAddress: companyForm.billingAddress || undefined,
-        sizeId: companyForm.sizeId || undefined,
-        accountOwnerId: companyForm.accountOwnerId || undefined,
-        contact: {
-          firstName: companyForm.contactFirstName.trim(),
-          lastName: companyForm.contactLastName.trim(),
-          email: companyForm.contactEmail.trim(),
-        },
-      });
-
-      const valueEntries = Object.entries(customFieldValues).filter(([, value]) => value.trim() !== '');
-      for (const [customFieldDefinitionId, value] of valueEntries) {
-        await api.createCompanyCustomFieldValue(token, company.id, { customFieldDefinitionId, value });
-      }
-
-      toast.success(`${company.name} added.`);
-      closeSlideOver();
-      refreshAssociatedData();
-    } catch (error) {
-      toast.error('Failed to create company: ' + (error as Error).message);
+  // Ready once Name + the founding contact's 3 fields (a Company can't be
+  // created without one — see emptyCompanyForm above) + any required custom
+  // field are filled/valid.
+  const isCompanyAddReady = (cfValues: Record<string, string> = customFieldValues) => {
+    if (!companyForm.name.trim()) return false;
+    if (!companyForm.contactFirstName.trim() || !companyForm.contactLastName.trim()) return false;
+    if (!isLikelyValidEmail(companyForm.contactEmail)) return false;
+    for (const field of activeCompanyCustomFields) {
+      if (field.required && !(cfValues[field.id] || '').trim()) return false;
     }
+    return true;
+  };
+
+  // Mirrors EmployeesPage's jumpToEmployeePage — a newly created company can
+  // land on any page once merged into the current search/filter/sort.
+  const jumpToCompanyPage = (list: Company[], companyId: string) => {
+    const query = search.trim().toLowerCase();
+    const searchFiltered = list.filter((company) => {
+      if (!query) return true;
+      return (
+        company.name.toLowerCase().includes(query) ||
+        (company.industry ?? '').toLowerCase().includes(query) ||
+        (company.website ?? '').toLowerCase().includes(query)
+      );
+    });
+    const filtered = applyFilters(searchFiltered, fields, viewFilters);
+    const sorted = applySort(filtered, fields, viewSort);
+    const index = sorted.findIndex((c) => c.id === companyId);
+    if (index !== -1) setPage(Math.floor(index / PAGE_SIZE) + 1);
+  };
+
+  // Shared by the manual "Create" button and the auto-create-on-blur path —
+  // both go through autoCreateGuard so the company is never created twice.
+  // On success, the Add form is replaced by the real CompanyDetailModal for
+  // the new company, same as opening an already-created profile.
+  const performCreateCompany = async (cfValues: Record<string, string> = customFieldValues) => {
+    const company = await api.createCompany(token, {
+      name: companyForm.name.trim(),
+      industry: companyForm.industry || undefined,
+      website: companyForm.website || undefined,
+      phone: companyForm.phone || undefined,
+      billingAddress: companyForm.billingAddress || undefined,
+      sizeId: companyForm.sizeId || undefined,
+      accountOwnerId: companyForm.accountOwnerId || undefined,
+      contact: {
+        firstName: companyForm.contactFirstName.trim(),
+        lastName: companyForm.contactLastName.trim(),
+        email: companyForm.contactEmail.trim(),
+      },
+    });
+
+    const valueEntries = Object.entries(cfValues).filter(([, value]) => value.trim() !== '');
+    for (const [customFieldDefinitionId, value] of valueEntries) {
+      await api.createCompanyCustomFieldValue(token, company.id, { customFieldDefinitionId, value });
+    }
+
+    toast.success(`${company.name} added.`);
+    // The founding contact was just created server-side alongside the
+    // company (createCompany's `contact` payload) — refresh contacts too, or
+    // CompanyDetailModal's "Contacts" section would show it as empty until
+    // some later, unrelated refresh happened to run.
+    const [freshList] = await Promise.all([
+      api.listCompanies(token),
+      api.listContacts(token).then(setContacts).catch(() => {}),
+    ]);
+    setCompanies(freshList);
+    jumpToCompanyPage(freshList, company.id);
+    setSlideOverMode(null);
+    setCustomFieldValues({});
+    setViewingCompanyId(company.id);
+  };
+
+  const attemptAutoCreateCompany = (cfValues: Record<string, string> = customFieldValues) => {
+    autoCreateGuard.attempt(isCompanyAddReady(cfValues), async () => {
+      try {
+        await performCreateCompany(cfValues);
+      } catch (error) {
+        toast.error('Failed to create company: ' + (error as Error).message);
+        throw error;
+      }
+    });
+  };
+
+  const handleCreateCompany = (e: React.FormEvent) => {
+    e.preventDefault();
+    autoCreateGuard.attempt(true, async () => {
+      try {
+        await performCreateCompany();
+      } catch (error) {
+        toast.error('Failed to create company: ' + (error as Error).message);
+        throw error;
+      }
+    });
   };
 
   const handleDeleteCompany = async () => {
@@ -300,14 +370,20 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
     values: Record<string, string>,
     setValues: (values: Record<string, string>) => void,
     idPrefix: string,
+    onCommit?: (nextValues: Record<string, string>) => void,
   ) => {
     const inputId = `${idPrefix}-${field.id}`;
     if (field.fieldType === 'select') {
       return (
         <select
           id={inputId}
+          className="overview-field-input"
           value={values[field.id] || ''}
-          onChange={(e) => setValues({ ...values, [field.id]: e.target.value })}
+          onChange={(e) => {
+            const next = { ...values, [field.id]: e.target.value };
+            setValues(next);
+            onCommit?.(next);
+          }}
           required={field.required}
         >
           <option value="">-- select --</option>
@@ -332,9 +408,11 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
     return (
       <input
         id={inputId}
+        className="overview-field-input"
         type={inputType}
         value={values[field.id] || ''}
         onChange={(e) => setValues({ ...values, [field.id]: e.target.value })}
+        onBlur={() => onCommit?.(values)}
         required={field.required}
       />
     );
@@ -666,105 +744,109 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
             <div className="field-group">
               <h4 className="field-group-title">Identity</h4>
               <div className="field-group-body">
-                <div className="form-group col-span-2">
-                  <label htmlFor="company-name">Name</label>
+                <Field label="Name" required full>
                   <input
                     id="company-name"
+                    className="overview-field-input"
                     type="text"
                     value={companyForm.name}
                     onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })}
+                    onBlur={() => attemptAutoCreateCompany()}
                     required
                   />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="company-industry">Industry</label>
+                </Field>
+                <Field label="Industry">
                   <input
                     id="company-industry"
+                    className="overview-field-input"
                     type="text"
                     value={companyForm.industry}
                     onChange={(e) => setCompanyForm({ ...companyForm, industry: e.target.value })}
                   />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="company-website">Website</label>
+                </Field>
+                <Field label="Website">
                   <input
                     id="company-website"
+                    className="overview-field-input"
                     type="url"
                     value={companyForm.website}
                     onChange={(e) => setCompanyForm({ ...companyForm, website: e.target.value })}
                     placeholder="https://example.com"
                   />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="company-phone">Phone</label>
+                </Field>
+                <Field label="Phone">
                   <input
                     id="company-phone"
+                    className="overview-field-input"
                     type="text"
                     value={companyForm.phone}
                     onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })}
                   />
-                </div>
+                </Field>
               </div>
             </div>
 
             <div className="field-group">
               <h4 className="field-group-title">Founding contact</h4>
               <div className="field-group-body">
-                <div className="form-group">
-                  <label htmlFor="company-contact-firstName">First Name</label>
+                <Field label="First Name" required>
                   <input
                     id="company-contact-firstName"
+                    className="overview-field-input"
                     type="text"
                     value={companyForm.contactFirstName}
                     onChange={(e) => setCompanyForm({ ...companyForm, contactFirstName: e.target.value })}
+                    onBlur={() => attemptAutoCreateCompany()}
                     required
                   />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="company-contact-lastName">Last Name</label>
+                </Field>
+                <Field label="Last Name" required>
                   <input
                     id="company-contact-lastName"
+                    className="overview-field-input"
                     type="text"
                     value={companyForm.contactLastName}
                     onChange={(e) => setCompanyForm({ ...companyForm, contactLastName: e.target.value })}
+                    onBlur={() => attemptAutoCreateCompany()}
                     required
                   />
-                </div>
-                <div className="form-group col-span-2">
-                  <label htmlFor="company-contact-email">Email</label>
+                </Field>
+                <Field label="Email" required full>
                   <input
                     id="company-contact-email"
+                    className="overview-field-input"
                     type="email"
                     value={companyForm.contactEmail}
                     onChange={(e) => setCompanyForm({ ...companyForm, contactEmail: e.target.value })}
+                    onBlur={() => attemptAutoCreateCompany()}
                     required
                   />
-                </div>
+                </Field>
               </div>
             </div>
 
             <div className="field-group">
               <h4 className="field-group-title">Address</h4>
               <div className="field-group-body">
-                <div className="form-group col-span-2">
-                  <label htmlFor="company-billingAddress">Billing Address</label>
+                <Field label="Billing Address" full>
                   <input
                     id="company-billingAddress"
+                    className="overview-field-input"
                     type="text"
                     value={companyForm.billingAddress}
                     onChange={(e) => setCompanyForm({ ...companyForm, billingAddress: e.target.value })}
                   />
-                </div>
+                </Field>
               </div>
             </div>
 
             <div className="field-group">
               <h4 className="field-group-title">Ownership</h4>
               <div className="field-group-body">
-                <div className="form-group">
-                  <label htmlFor="company-sizeId">Size</label>
+                <Field label="Size">
                   <select
                     id="company-sizeId"
+                    className="overview-field-input"
                     value={companyForm.sizeId}
                     onChange={(e) => setCompanyForm({ ...companyForm, sizeId: e.target.value })}
                   >
@@ -777,11 +859,11 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
                         </option>
                       ))}
                   </select>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="company-accountOwnerId">Account Owner</label>
+                </Field>
+                <Field label="Account Owner">
                   <select
                     id="company-accountOwnerId"
+                    className="overview-field-input"
                     value={companyForm.accountOwnerId}
                     onChange={(e) => setCompanyForm({ ...companyForm, accountOwnerId: e.target.value })}
                   >
@@ -792,7 +874,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
                       </option>
                     ))}
                   </select>
-                </div>
+                </Field>
               </div>
             </div>
 
@@ -801,13 +883,15 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
                 <h4 className="field-group-title">Custom fields</h4>
                 <div className="field-group-body">
                   {activeCompanyCustomFields.map((field) => (
-                    <div className="form-group" key={field.id}>
-                      <label htmlFor={`company-cf-${field.id}`}>
-                        {field.name}
-                        {field.required ? ' *' : ''}
-                      </label>
-                      {renderCustomFieldInput(field, customFieldValues, setCustomFieldValues, 'company-cf')}
-                    </div>
+                    <Field key={field.id} label={field.name} required={field.required}>
+                      {renderCustomFieldInput(
+                        field,
+                        customFieldValues,
+                        setCustomFieldValues,
+                        'company-cf',
+                        (next) => attemptAutoCreateCompany(next),
+                      )}
+                    </Field>
                   ))}
                 </div>
               </div>

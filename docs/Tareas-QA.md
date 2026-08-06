@@ -392,6 +392,56 @@ si vuelve a reproducirse, severidad alta — es exactamente el reporte original 
 
 ---
 
+## QA-07 — Add Company/Contact/Opportunity: mismo tratamiento que QA-06 (2026-08-06, a `staging`)
+
+**Por qué existe esta tarea:** continuación directa de QA-06 (Add Employee) — el mismo tratamiento
+(paridad visual de campos con el panel de detalle, asterisco rojo en requeridos, auto-create al
+completar los campos obligatorios, sin clickear "Create") se replicó a los otros 3 forms de alta del
+CRM. Verificado con Playwright contra un tenant descartable en `staging` (creación real de Company →
+Contact → Opportunity encadenada, la Opportunity usando la Company recién creada), datos de prueba
+borrados después. Sin verificación visual del usuario todavía — esta tarea es esa pasada.
+
+### A. Paridad visual + asterisco rojo
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | `/companies` → "+ Add" | Campos con el mismo estilo que `CompanyDetailModal` (label izquierda, sin borde hasta foco). Asteriscos rojos en Name, First Name/Last Name/Email de "Founding contact" (4 en total) — ningún otro campo. |
+| 2 | `/contacts` → "+ Add" | Mismo estilo. Asteriscos en First Name/Last Name/Email (3 en total) — el radio "¿Asignar a una company existente?" y el checkbox "Primary contact" quedan con su estilo original (no son campos simples, no se tocaron). |
+| 3 | `/opportunities` → "Add Opportunity" | Mismo estilo. Asteriscos en Deal Name/Company/Owner/Amount/Currency (5 en total) — y en Loss Reason **solo** cuando el stage seleccionado por default sea de tipo "lost" (caso raro, normalmente no aplica al abrir el form). |
+
+### B. Auto-create
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 4 | Company: completar Name + First/Last Name + Email del contacto fundador, perder el foco del último campo | Se crea la Company (con su Contact fundador) y el modal pasa a ser el `CompanyDetailModal` real — sin clickear "Create". El contacto fundador aparece en la sección "Contacts" del panel (confirma que se refrescó `contacts`, no solo `companies`). |
+| 5 | Contact: completar First/Last Name + Email, perder el foco del email | Se crea el Contact y el modal pasa a `ContactDetailModal` real. |
+| 6 | Opportunity: completar Deal Name, elegir Company y Owner (selects — el auto-create dispara en el `onChange`, no hace falta perder el foco), completar Amount y perder el foco | Se crea la Opportunity (moneda ya viene precargada con la del tenant) y el modal pasa a `OpportunityDetailModal` real, con la Company/Owner elegidos correctos y stage en el primer stage activo del pipeline. |
+| 7 | En cualquiera de los 3, dejar un campo requerido vacío o inválido y hacer click afuera | No se crea nada, el form sigue editable — mismo criterio que QA-06. |
+| 8 | Botón "Create" manual en cualquiera de los 3, con los requeridos ya completos | Mismo resultado que el auto-create — sigue funcionando como fallback, sin duplicar la entidad. |
+
+### C. Nota — sin fix de paginación esta vez (a diferencia de QA-06)
+
+Companies/Contacts sí tienen paginación (mismo componente que Employees) — si en la práctica un
+registro nuevo queda fuera de la página visible por un sort/filtro activo, aplica el mismo fix que
+Employees (`jumpToCompanyPage`/`jumpToContactPage`, ya incluidos en este push, no hace falta
+verificarlo aparte salvo que algo falle). Opportunities **no tiene paginación** — el Kanban muestra
+todas las cards de la columna sin límite, así que no aplica ningún fix de este tipo ahí.
+
+### D. Bug preexistente encontrado, no corregido en este push (fuera de alcance)
+
+Al revisar `OpportunitiesPage.tsx` para este trabajo se encontró que el campo "Loss Reason" (visible
+y marcado requerido cuando el stage es "lost") se captura en el form pero **nunca se manda en el
+payload de `createOpportunity`** — bug preexistente, no introducido ni corregido acá. Anotado para
+una unidad aparte; no bloquea esta tarea de QA.
+
+### Al encontrar una falla
+
+Mismo criterio que QA-06: los ítems A son visuales — prioridad de pulido salvo que algo quede
+genuinamente roto. Los ítems B son funcionales — si el auto-create no dispara, o crea con datos
+incompletos/incorrectos (ej. Opportunity con la Company equivocada), es severidad alta.
+
+---
+
 ## Próximas tareas de QA (a definir)
 
 Cuando se construyan los módulos grandes en curso (rediseño de Clients, Payroll), esta tabla de

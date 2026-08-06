@@ -31,6 +31,7 @@ import CategoryChip from '../components/common/CategoryChip';
 import ContactDetailModal from '../components/crm/ContactDetailModal';
 import SearchableSelect from '../components/common/SearchableSelect';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
+import Field from '../components/common/Field';
 import { ChevronDownIcon, PlusIcon, SearchIcon, TrashIcon, UserCircleIcon } from '../components/common/Icons';
 import {
   applyFilters,
@@ -42,6 +43,8 @@ import {
   parseFilters,
   parseSort,
 } from '../lib/viewFields';
+import { isLikelyValidEmail } from '../lib/validation';
+import { useAutoCreateGuard } from '../hooks/useAutoCreateGuard';
 
 const PAGE_SIZE = 20;
 const ACTIVE_VIEW_STORAGE_KEY = 'northstack:activeView:contact';
@@ -95,6 +98,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
   const [contactCustomFields, setContactCustomFields] = useState<any[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
   const [contactForm, setContactForm] = useState(emptyContactForm);
+  const autoCreateGuard = useAutoCreateGuard();
   const [draggedColKey, setDraggedColKey] = useState<string | null>(null);
   const [dragOverColKey, setDragOverColKey] = useState<string | null>(null);
   const [collapsedListSections, setCollapsedListSections] = useState<Set<string>>(new Set());
@@ -246,40 +250,90 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
   const closeSlideOver = () => {
     setSlideOverMode(null);
     setCustomFieldValues({});
+    autoCreateGuard.reset();
   };
 
   const handleOpenAdd = () => {
     setContactForm(emptyContactForm);
     setCustomFieldValues({});
+    autoCreateGuard.reset();
     setSlideOverMode('add');
   };
 
-  const handleCreateContact = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const contact = await api.createContact(token, {
-        firstName: contactForm.firstName,
-        lastName: contactForm.lastName,
-        email: contactForm.email,
-        phone: contactForm.phone || undefined,
-        companyId: contactForm.companyId || null,
-        title: contactForm.title || undefined,
-        isPrimary: contactForm.isPrimary,
-        leadStatus: contactForm.leadStatus || null,
-        leadSourceId: contactForm.leadSourceId || null,
-      });
-
-      const valueEntries = Object.entries(customFieldValues).filter(([, value]) => value.trim() !== '');
-      for (const [customFieldDefinitionId, value] of valueEntries) {
-        await api.createContactCustomFieldValue(token, contact.id, { customFieldDefinitionId, value });
-      }
-
-      toast.success(`${contact.firstName} ${contact.lastName} added.`);
-      closeSlideOver();
-      loadContacts();
-    } catch (error) {
-      toast.error('Failed to create contact: ' + (error as Error).message);
+  const isContactAddReady = (cfValues: Record<string, string> = customFieldValues) => {
+    if (!contactForm.firstName.trim() || !contactForm.lastName.trim()) return false;
+    if (!isLikelyValidEmail(contactForm.email)) return false;
+    for (const field of activeContactCustomFields) {
+      if (field.required && !(cfValues[field.id] || '').trim()) return false;
     }
+    return true;
+  };
+
+  // Mirrors EmployeesPage's jumpToEmployeePage.
+  const jumpToContactPage = (list: Contact[], contactId: string) => {
+    const query = search.trim().toLowerCase();
+    const searchFiltered = list.filter((contact) => {
+      if (!query) return true;
+      return (
+        `${contact.firstName} ${contact.lastName}`.toLowerCase().includes(query) ||
+        contact.email.toLowerCase().includes(query) ||
+        (contact.company?.name ?? '').toLowerCase().includes(query)
+      );
+    });
+    const filtered = applyFilters(searchFiltered, fields, viewFilters);
+    const sorted = applySort(filtered, fields, viewSort);
+    const index = sorted.findIndex((c) => c.id === contactId);
+    if (index !== -1) setPage(Math.floor(index / PAGE_SIZE) + 1);
+  };
+
+  const performCreateContact = async (cfValues: Record<string, string> = customFieldValues) => {
+    const contact = await api.createContact(token, {
+      firstName: contactForm.firstName.trim(),
+      lastName: contactForm.lastName.trim(),
+      email: contactForm.email.trim(),
+      phone: contactForm.phone || undefined,
+      companyId: contactForm.companyId || null,
+      title: contactForm.title || undefined,
+      isPrimary: contactForm.isPrimary,
+      leadStatus: contactForm.leadStatus || null,
+      leadSourceId: contactForm.leadSourceId || null,
+    });
+
+    const valueEntries = Object.entries(cfValues).filter(([, value]) => value.trim() !== '');
+    for (const [customFieldDefinitionId, value] of valueEntries) {
+      await api.createContactCustomFieldValue(token, contact.id, { customFieldDefinitionId, value });
+    }
+
+    toast.success(`${contact.firstName} ${contact.lastName} added.`);
+    const freshList = await api.listContacts(token);
+    setContacts(freshList);
+    jumpToContactPage(freshList, contact.id);
+    setSlideOverMode(null);
+    setCustomFieldValues({});
+    setViewingContactId(contact.id);
+  };
+
+  const attemptAutoCreateContact = (cfValues: Record<string, string> = customFieldValues) => {
+    autoCreateGuard.attempt(isContactAddReady(cfValues), async () => {
+      try {
+        await performCreateContact(cfValues);
+      } catch (error) {
+        toast.error('Failed to create contact: ' + (error as Error).message);
+        throw error;
+      }
+    });
+  };
+
+  const handleCreateContact = (e: React.FormEvent) => {
+    e.preventDefault();
+    autoCreateGuard.attempt(true, async () => {
+      try {
+        await performCreateContact();
+      } catch (error) {
+        toast.error('Failed to create contact: ' + (error as Error).message);
+        throw error;
+      }
+    });
   };
 
   const handleDeleteContact = async () => {
@@ -302,14 +356,20 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
     values: Record<string, string>,
     setValues: (values: Record<string, string>) => void,
     idPrefix: string,
+    onCommit?: (nextValues: Record<string, string>) => void,
   ) => {
     const inputId = `${idPrefix}-${field.id}`;
     if (field.fieldType === 'select') {
       return (
         <select
           id={inputId}
+          className="overview-field-input"
           value={values[field.id] || ''}
-          onChange={(e) => setValues({ ...values, [field.id]: e.target.value })}
+          onChange={(e) => {
+            const next = { ...values, [field.id]: e.target.value };
+            setValues(next);
+            onCommit?.(next);
+          }}
           required={field.required}
         >
           <option value="">-- select --</option>
@@ -334,9 +394,11 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
     return (
       <input
         id={inputId}
+        className="overview-field-input"
         type={inputType}
         value={values[field.id] || ''}
         onChange={(e) => setValues({ ...values, [field.id]: e.target.value })}
+        onBlur={() => onCommit?.(values)}
         required={field.required}
       />
     );
@@ -652,45 +714,48 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
             <div className="field-group">
               <h4 className="field-group-title">Identity</h4>
               <div className="field-group-body">
-                <div className="form-group">
-                  <label htmlFor="contact-firstName">First Name</label>
+                <Field label="First Name" required>
                   <input
                     id="contact-firstName"
+                    className="overview-field-input"
                     type="text"
                     value={contactForm.firstName}
                     onChange={(e) => setContactForm({ ...contactForm, firstName: e.target.value })}
+                    onBlur={() => attemptAutoCreateContact()}
                     required
                   />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="contact-lastName">Last Name</label>
+                </Field>
+                <Field label="Last Name" required>
                   <input
                     id="contact-lastName"
+                    className="overview-field-input"
                     type="text"
                     value={contactForm.lastName}
                     onChange={(e) => setContactForm({ ...contactForm, lastName: e.target.value })}
+                    onBlur={() => attemptAutoCreateContact()}
                     required
                   />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="contact-email">Email</label>
+                </Field>
+                <Field label="Email" required>
                   <input
                     id="contact-email"
+                    className="overview-field-input"
                     type="email"
                     value={contactForm.email}
                     onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                    onBlur={() => attemptAutoCreateContact()}
                     required
                   />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="contact-phone">Phone</label>
+                </Field>
+                <Field label="Phone">
                   <input
                     id="contact-phone"
+                    className="overview-field-input"
                     type="text"
                     value={contactForm.phone}
                     onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
                   />
-                </div>
+                </Field>
                 <div className="form-group col-span-2">
                   <label>Assign to an existing company?</label>
                   <div className="flex items-center gap-4 text-sm">
@@ -732,20 +797,20 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
             <div className="field-group">
               <h4 className="field-group-title">Role</h4>
               <div className="field-group-body">
-                <div className="form-group">
-                  <label htmlFor="contact-title">Title</label>
+                <Field label="Title">
                   <input
                     id="contact-title"
+                    className="overview-field-input"
                     type="text"
                     value={contactForm.title}
                     onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })}
                     placeholder="Role within the company"
                   />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="contact-leadStatus">Lead Status</label>
+                </Field>
+                <Field label="Lead Status">
                   <select
                     id="contact-leadStatus"
+                    className="overview-field-input"
                     value={contactForm.leadStatus}
                     onChange={(e) => setContactForm({ ...contactForm, leadStatus: e.target.value })}
                   >
@@ -756,7 +821,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
                       </option>
                     ))}
                   </select>
-                </div>
+                </Field>
                 <div className="form-group col-span-2">
                   <label htmlFor="contact-isPrimary" className="inline-flex items-center gap-1.5 font-normal">
                     <input
@@ -774,10 +839,10 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
             <div className="field-group">
               <h4 className="field-group-title">Source</h4>
               <div className="field-group-body">
-                <div className="form-group">
-                  <label htmlFor="contact-leadSourceId">Lead Source</label>
+                <Field label="Lead Source">
                   <select
                     id="contact-leadSourceId"
+                    className="overview-field-input"
                     value={contactForm.leadSourceId}
                     onChange={(e) => setContactForm({ ...contactForm, leadSourceId: e.target.value })}
                   >
@@ -788,7 +853,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
                       </option>
                     ))}
                   </select>
-                </div>
+                </Field>
               </div>
             </div>
 
@@ -797,13 +862,15 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
                 <h4 className="field-group-title">Custom fields</h4>
                 <div className="field-group-body">
                   {activeContactCustomFields.map((field) => (
-                    <div className="form-group" key={field.id}>
-                      <label htmlFor={`contact-cf-${field.id}`}>
-                        {field.name}
-                        {field.required ? ' *' : ''}
-                      </label>
-                      {renderCustomFieldInput(field, customFieldValues, setCustomFieldValues, 'contact-cf')}
-                    </div>
+                    <Field key={field.id} label={field.name} required={field.required}>
+                      {renderCustomFieldInput(
+                        field,
+                        customFieldValues,
+                        setCustomFieldValues,
+                        'contact-cf',
+                        (next) => attemptAutoCreateContact(next),
+                      )}
+                    </Field>
                   ))}
                 </div>
               </div>

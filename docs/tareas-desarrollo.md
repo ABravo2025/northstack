@@ -1,7 +1,12 @@
 # Tareas de desarrollo
 
 - Fecha de creación: 2026-07-02
-- Última actualización: 2026-07-30 — módulo CRM (Company/Contact/Opportunity/Pipeline) completo,
+- Última actualización: 2026-08-06 — checklist cruzado contra el código real (CSV export/import de
+  Employees confirmado implementado; estado de Payroll corregido — ver la entrada fechada más abajo
+  y la nota de estado en la sección "Tier 3.5"); push de Employees a `staging` (paridad visual del
+  modal "Add" con el panel de detalle, auto-create al completar campos obligatorios, asterisco rojo
+  reusable, fix de paginación — ver QA-06 en `docs/Tareas-QA.md`).
+- Última actualización anterior: 2026-07-30 — módulo CRM (Company/Contact/Opportunity/Pipeline) completo,
   Tasks/Notes con la unificación y rediseño de los 4 paneles de detalle, y una revisión DevOps de
   arquitectura/calidad de código, **todo ya en producción** (primer deploy del CRM completo,
   `origin/main` estaba congelado desde el 2026-07-28). Detalle día a día de esta última tanda en
@@ -65,6 +70,30 @@
     de cualquier push a `main`.
   - Próximo paso: reconstruir Payroll desde cero siguiendo el spec real, Unidad 1 en adelante,
     confirmando y pusheando cada unidad a `staging` por separado (ver sección de spec más abajo).
+- **2026-08-06 — checklist auditado contra el código real, más un push de Employees a `staging`:**
+  1. **Add Employee, paridad visual + auto-create**: el modal de alta de Employee pasó a usar el
+     mismo estilo de campo que el panel de detalle (`Field.tsx`, label a la izquierda, input sin
+     borde hasta foco/hover, en vez de `.form-group` con label arriba) y ganó asterisco rojo
+     reusable (`Field` prop `required`, `.required-mark`) en los campos obligatorios. Comportamiento
+     nuevo: apenas First Name/Last Name/Business Email (+ cualquier custom field `required`) están
+     completos, el empleado se auto-crea y el modal pasa a ser el `EmployeeOverviewPanel` real de esa
+     persona — sin clickear "Create" (el botón sigue de fallback manual). Pieza nueva reusable:
+     `useAutoCreateGuard` (`frontend/src/hooks/`).
+  2. **Bug real encontrado y corregido en el camino** (reportado por el usuario probando la app): un
+     empleado recién creado podía no aparecer en la tabla al cerrar el panel si el sort/filtro activo
+     lo mandaba a otra página — la tabla ahora salta a la página donde cayó, verificado con Playwright
+     forzando el caso determinístico (orden por Name ascendente, nombre que cae en la última página).
+  3. Pusheado a `staging` (`659da8a`), QA-06 cargada en `docs/Tareas-QA.md`. Compañías/Contacts/
+     Opportunities quedan con el mismo tratamiento pendiente, unidad por separado.
+  4. **Auditoría del checklist de este archivo contra `git log`/el código real** (a pedido del
+     usuario): CSV export/import de Employees confirmado ya implementado (ítems tildados más abajo,
+     con la salvedad de que Clients quedó huérfano de UI); y se encontró que el estado de Payroll
+     documentado acá (**"sin empezar"**, nota del 2026-07-31) estaba desactualizado — en realidad se
+     construyó completo entre el 2026-08-01 y el 2026-08-03, llegó a `staging`, y se revirtió de
+     `main` el 2026-08-03 en un incidente de deploy (detalle completo en la nota de estado dentro de
+     la sección "Tier 3.5" más abajo). Hoy Payroll no existe en el código en ningún entorno — ni
+     `main` ni `staging` (esto último, efecto colateral del propio push de Employees de hoy, al
+     sincronizar `staging` con el `main` post-revert).
 
 ## Prioridades (tiers)
 
@@ -96,9 +125,34 @@ técnico completo" más abajo, Unidades 1-15)**
 - **A futuro (no en V1)**: integración con una plataforma de payroll externa para gestionar pagos
   directo desde Northstack — el usuario mencionó un nombre transcripto como "Get thera", sin
   confirmar a qué producto se refiere exactamente; confirmar el nombre real antes de evaluarlo.
-- Estado: **sin empezar** (ver nota del 2026-07-31 arriba — un primer intento sin ver este spec se
-  construyó, pusheó por error a producción, y se revirtió el mismo día). Orden de ejecución: Unidad
-  1 en adelante, confirmando y pusheando cada unidad a `staging` por separado.
+- **Estado real, corregido 2026-08-06 al cruzar este archivo contra `git log`/el código actual**:
+  **sin empezar — otra vez.** El resumen "sin empezar" de abajo databa del 2026-07-31 (solo el falso
+  arranque de esa fecha) y no reflejaba lo que pasó después: el spec completo (Unidad 0-15, más el
+  re-spec de `anchorConfig`/confirmación de contrato/Assignments) se construyó de punta a punta
+  entre el 2026-08-01 y el 2026-08-03, llegó a `staging` (commits `97af398`…`d1da7c4` para las 15
+  unidades originales, después `2c0d7b1`…`f9319a0` para el re-spec — ver `docs/Tareas-QA.md` QA-04
+  y QA-05, escritas en su momento para esos pushes), pero **nunca llegó a revisión real en
+  navegador**. El 2026-08-03 un `git push origin main` que se armó pensando que solo llevaba un
+  commit de docs (QA-05) en realidad arrastró las 27 commits de código que la rama local `main`
+  tenía por delante de `origin/main` — el módulo Payroll completo, sin revisar, se deployó a
+  producción. Revertido de inmediato (`6f4209d`, mismo día) con los 15+ archivos de Payroll
+  eliminados de `main` — decisión correcta, ver el mensaje del commit para el detalle completo del
+  incidente. **Consecuencia no anticipada en ese momento**: como este proyecto no mantiene una rama
+  de trabajo separada para `staging` (el flujo es siempre pushear `main` local a los dos refs
+  remotos), el revert quedó parado *encima* de `main` — cualquier `git push origin main:staging`
+  posterior iba a arrastrar el revert también a `staging`, sacando a Payroll de ahí igual, a pesar
+  de que el propio mensaje del revert decía "Payroll stays on staging, unreviewed, exactly where it
+  was". Eso se concretó el 2026-08-06: un push de rutina de un fix de Employees a `staging` sincronizó
+  `staging` con el `main` post-revert, así que **hoy Payroll no existe en el código en ningún
+  entorno** (ni `main` ni `staging`) — confirmado directamente contra `prisma/schema.prisma`,
+  `src/routes/`, `src/modules/hr/` y `frontend/src/pages/` (sin rastro de
+  `PayFrequencyDefinition`/`EmployeeCompensation`/`PayrollRun`/`PayrollEntry`/`PayrollPage.tsx`).
+  **QA-04 y QA-05 en `docs/Tareas-QA.md` describen verificación de un módulo que ya no está en el
+  código** — no tiene sentido correrlas tal como están hasta que Payroll se reconstruya; no se
+  borraron esas entradas por si sirve releer los casos de prueba al retomar. Orden de ejecución para
+  la próxima vez: Unidad 1 en adelante, confirmando y pusheando cada unidad a `staging` por
+  separado — **y esta vez, revisión real del usuario en `staging` antes de acumular más unidades**,
+  no solo build/test en verde.
 
 **Tier 4 — Resto de iniciativas grandes**
 - Suscripciones propias del SaaS (Paddle, planes/precios, pantalla de administración autónoma)
@@ -148,8 +202,8 @@ Organizado por tipo. Los ítems que tocan más de una capa quedan bajo la capa d
   1. [x] Notificaciones por email de eventos que requieren acción — implementado 2026-07-21 (Bloque 3 del brief semanal). Solicitud pendiente → email al manager asignado; decisión manual (aprobar/rechazar) → email solo al empleado (quien decide ya sabe). Caso especial confirmado con el usuario: una política **auto-aprobada** (`requiresApproval: false`) no tiene a nadie decidiendo activamente, así que ese email de "decidida" va a **empleado + manager + owner**, no solo al empleado. Todo vía `src/lib/mailer.ts`, best-effort (un fallo de envío no rompe la creación/decisión de la solicitud).
   2. [x] Seed de datos de ejemplo opcional al crear un tenant nuevo (botón tipo "Load sample data", borrable después) — implementado 2026-07-23, junto con el ítem 3 (mismo componente). Botón "Load sample data" en la card nueva de Overview → `POST /api/onboarding/seed-sample-data` (`onboardingService.ts`, nuevo) crea 3 departamentos + 3 job titles (catálogo real, no texto plano) + 5 empleados + 4 clientes de ejemplo. No es idempotente a propósito (llamarlo de nuevo agrega más filas) — la UI ya lo previene ocultando el botón de "empezar" una vez que hay datos reales, y es una acción de conveniencia, no una migración.
   3. [x] Onboarding checklist en `OverviewPage.tsx` — implementado 2026-07-23. Card nueva (`OnboardingChecklist.tsx`) con 4 pasos con check real contra el backend (`GET /api/onboarding/status`): agregar tu primer empleado, agregar tu primer cliente, invitar a un compañero, crear una política de Time Off — cada uno linkea a la página correspondiente. Solo visible para owner/admin (los 4 pasos requieren permisos que un `member` no tiene). Se descarta sola cuando los 4 están completos, o el usuario la cierra a mano (✕, persistido en `localStorage`). **Gotcha real encontrado**: el registro de un tenant nuevo ya auto-crea un `Employee` para el owner (`tenantService.ts`, de antes) — sin ajustar esto, "Add your first employee" hubiera aparecido tildado desde el segundo 1 para cualquier tenant nuevo. Corregido: `hasEmployees` requiere `count > 1`, no `count > 0`. Verificado con Playwright: tenant nuevo → los 4 pasos sin marcar; "Load sample data" → 2 se tildan al toque (empleados/clientes), confirmado contra la API real (6 empleados = 1 owner + 5 de muestra, 4 clientes); cerrar la card persiste entre reloads.
-  4. [ ] Import por CSV — hoy la única carga es una por una o vía el formulario público (pensado para autoregistro, no para bulk); un tester con un equipo real de 20-30 personas no las va a tipear a mano solo para probar. **Alcance ampliado 2026-07-21, a pedido del usuario:** pensarlo como una capacidad genérica/reusable ("casi todo" debería poder importarse por CSV), no una feature aislada de Employees/Clients — incluye contemplar, cuando se construya, la carga de datos del módulo Payments (facturas/cobros de cada tenant a sus Clients, ya anotado más arriba), no solo las 2 entidades de hoy.
-  5. [ ] Export de empleados/clientes a CSV — contraparte del import; también transmite confianza ("mis datos no quedan atrapados acá") a alguien evaluando el producto.
+  4. [x] Import por CSV — **parcialmente implementado, confirmado 2026-08-06 al cruzar contra el código real**: `csvService.ts` tiene `importEmployeesFromCsv`/`importClientsFromCsv`, pero solo Employees tiene un punto de entrada real en el frontend (`CsvImportExportMenu` en `EmployeesPage.tsx`, con template descargable) — la función de Clients quedó huérfana (sin UI) desde que se borró la página de Clients del frontend (rediseño de Clients, 2026-07-29/30). El alcance ampliado que pedía el usuario ("casi todo" debería poder importarse, incluyendo Payments a futuro) **no** está resuelto — sigue siendo Employees únicamente, no una capacidad genérica reusable por entidad. Dejar este ítem en la cola si se quiere extender a Companies/Contacts/Opportunities.
+  5. [x] Export de empleados/clientes a CSV — **implementado, confirmado 2026-08-06**: `exportEmployeesToCsv`/`exportClientsToCsv` en `csvService.ts`, con el mismo `CsvImportExportMenu` de arriba como punto de entrada. Mismo matiz que el import: solo Employees tiene botón real en la UI hoy — `exportClientsToCsv` existe pero está huérfana por la misma razón (página de Clients borrada).
   6. [x] "What's new" / changelog visible en la app — implementado 2026-07-23, popover como pedía el backlog original (no página, a diferencia de Help/FAQ — acá sí tiene sentido un popover chico y rápido de escanear). Ícono nuevo (`BellIcon`, agregado a `Icons.tsx`) en `TopBar.tsx`, con un punto azul de "no leído" cuando hay entradas más nuevas que la última vista (`localStorage`, guarda el id de la entrada más reciente vista). Contenido **estático**, igual criterio que Help/FAQ — array hardcodeado en `frontend/src/lib/changelog.ts` (`CHANGELOG_ENTRIES`, más nueva primero), sin CMS. 8 entradas reales escritas en lenguaje de usuario (no mensajes de commit) resumiendo los cambios visibles más recientes de la semana — columnas de tabla, checklist de onboarding, campos nuevos de Employee, rediseño de tablas, Views/Kanban, Public Forms, Settings unificado, Time Off. Verificado con Playwright: punto de "no leído" visible en la primera carga, desaparece al abrir el popover, se mantiene ausente después de recargar (persistencia real, no solo de sesión).
   7. [x] Canal de feedback/reporte de bugs para testers — implementado 2026-07-21 (Bloque 3). `POST /api/feedback` (autenticado, cualquier rol) manda a `FEEDBACK_EMAIL` (confirmado por el usuario: `info@joinnorthstack.com`, ⚠️ **falta cargarlo como env var en Vercel producción** — solo está en el `.env` local por ahora). Frontend: item "Send feedback" en el dropdown de `TopBar.tsx`, abre un `SlideOver` con textarea, confirma con toast. A diferencia del resto de los envíos de email de este bloque, **no** es best-effort — si el envío falla, la request devuelve error real (el feedback en sí es el punto del request, no un efecto secundario).
 - [ ] **Idea (backlog, anotada por el usuario 2026-07-21, sin detalle ni empezar):** ícono de notificaciones in-app (campana con contador, dropdown de notificaciones recientes) — distinto del canal de *email* ya anotado arriba: esto es un canal adicional, dentro de la propia app, para eventos como "CSV importado", "export finalizado", además de los eventos accionables de Time Off/Public Forms ya cubiertos por email. Conceptualmente se solapa con las otras 3 ideas de "avisar que pasó algo" ya anotadas (email, Slack, webhooks salientes) — al spec-earlo, conviene diseñar un solo modelo de "evento" del lado del backend y que cada canal (in-app, email, Slack, webhook) sea solo una forma distinta de entregarlo, en vez de 4 implementaciones sueltas que hacen lo mismo cada una a su manera.

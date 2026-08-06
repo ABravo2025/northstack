@@ -635,6 +635,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
         open={slideOverMode === 'add'}
         title="Add Contact"
         onClose={closeSlideOver}
+        wide
         footer={
           <>
             <button type="button" className="btn-secondary" onClick={closeSlideOver}>
@@ -648,141 +649,165 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
       >
         {slideOverMode === 'add' && (
           <form id="contact-form" onSubmit={handleCreateContact}>
-            <div className="form-group">
-              <label htmlFor="contact-firstName">First Name</label>
-              <input
-                id="contact-firstName"
-                type="text"
-                value={contactForm.firstName}
-                onChange={(e) => setContactForm({ ...contactForm, firstName: e.target.value })}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="contact-lastName">Last Name</label>
-              <input
-                id="contact-lastName"
-                type="text"
-                value={contactForm.lastName}
-                onChange={(e) => setContactForm({ ...contactForm, lastName: e.target.value })}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="contact-email">Email</label>
-              <input
-                id="contact-email"
-                type="email"
-                value={contactForm.email}
-                onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="contact-phone">Phone</label>
-              <input
-                id="contact-phone"
-                type="text"
-                value={contactForm.phone}
-                onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
-              />
-            </div>
-            <div className="form-group">
-              <label>Assign to an existing company?</label>
-              <div className="flex items-center gap-4 text-sm">
-                <label className="inline-flex items-center gap-1.5 font-normal">
+            <div className="field-group">
+              <h4 className="field-group-title">Identity</h4>
+              <div className="field-group-body">
+                <div className="form-group">
+                  <label htmlFor="contact-firstName">First Name</label>
                   <input
-                    type="radio"
-                    name="contact-assign-company"
-                    checked={!contactForm.assignToCompany}
-                    onChange={() => setContactForm({ ...contactForm, assignToCompany: false, companyId: '' })}
+                    id="contact-firstName"
+                    type="text"
+                    value={contactForm.firstName}
+                    onChange={(e) => setContactForm({ ...contactForm, firstName: e.target.value })}
+                    required
                   />
-                  No — lead without a confirmed company
-                </label>
-                <label className="inline-flex items-center gap-1.5 font-normal">
+                </div>
+                <div className="form-group">
+                  <label htmlFor="contact-lastName">Last Name</label>
                   <input
-                    type="radio"
-                    name="contact-assign-company"
-                    checked={contactForm.assignToCompany}
-                    onChange={() => setContactForm({ ...contactForm, assignToCompany: true })}
+                    id="contact-lastName"
+                    type="text"
+                    value={contactForm.lastName}
+                    onChange={(e) => setContactForm({ ...contactForm, lastName: e.target.value })}
+                    required
                   />
-                  Yes
-                </label>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="contact-email">Email</label>
+                  <input
+                    id="contact-email"
+                    type="email"
+                    value={contactForm.email}
+                    onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="contact-phone">Phone</label>
+                  <input
+                    id="contact-phone"
+                    type="text"
+                    value={contactForm.phone}
+                    onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
+                  />
+                </div>
+                <div className="form-group col-span-2">
+                  <label>Assign to an existing company?</label>
+                  <div className="flex items-center gap-4 text-sm">
+                    <label className="inline-flex items-center gap-1.5 font-normal">
+                      <input
+                        type="radio"
+                        name="contact-assign-company"
+                        checked={!contactForm.assignToCompany}
+                        onChange={() => setContactForm({ ...contactForm, assignToCompany: false, companyId: '' })}
+                      />
+                      No — lead without a confirmed company
+                    </label>
+                    <label className="inline-flex items-center gap-1.5 font-normal">
+                      <input
+                        type="radio"
+                        name="contact-assign-company"
+                        checked={contactForm.assignToCompany}
+                        onChange={() => setContactForm({ ...contactForm, assignToCompany: true })}
+                      />
+                      Yes
+                    </label>
+                  </div>
+                </div>
+                {contactForm.assignToCompany && (
+                  <div className="form-group col-span-2">
+                    <label htmlFor="contact-companyId">Company</label>
+                    <SearchableSelect
+                      id="contact-companyId"
+                      options={companies.map((c) => ({ value: c.id, label: c.name }))}
+                      value={contactForm.companyId}
+                      onChange={(v) => setContactForm({ ...contactForm, companyId: v })}
+                      placeholder="Search companies…"
+                    />
+                  </div>
+                )}
               </div>
-            </div>
-            {contactForm.assignToCompany && (
-              <div className="form-group">
-                <label htmlFor="contact-companyId">Company</label>
-                <SearchableSelect
-                  id="contact-companyId"
-                  options={companies.map((c) => ({ value: c.id, label: c.name }))}
-                  value={contactForm.companyId}
-                  onChange={(v) => setContactForm({ ...contactForm, companyId: v })}
-                  placeholder="Search companies…"
-                />
-              </div>
-            )}
-            <div className="form-group">
-              <label htmlFor="contact-title">Title</label>
-              <input
-                id="contact-title"
-                type="text"
-                value={contactForm.title}
-                onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })}
-                placeholder="Role within the company"
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="contact-isPrimary" className="inline-flex items-center gap-1.5 font-normal">
-                <input
-                  id="contact-isPrimary"
-                  type="checkbox"
-                  checked={contactForm.isPrimary}
-                  onChange={(e) => setContactForm({ ...contactForm, isPrimary: e.target.checked })}
-                />
-                Primary contact for this company
-              </label>
-            </div>
-            <div className="form-group">
-              <label htmlFor="contact-leadStatus">Lead Status</label>
-              <select
-                id="contact-leadStatus"
-                value={contactForm.leadStatus}
-                onChange={(e) => setContactForm({ ...contactForm, leadStatus: e.target.value })}
-              >
-                <option value="">-- none --</option>
-                {Object.entries(LEAD_STATUS_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="contact-leadSourceId">Lead Source</label>
-              <select
-                id="contact-leadSourceId"
-                value={contactForm.leadSourceId}
-                onChange={(e) => setContactForm({ ...contactForm, leadSourceId: e.target.value })}
-              >
-                <option value="">-- none --</option>
-                {leadSources.map((ls) => (
-                  <option key={ls.id} value={ls.id}>
-                    {ls.name}
-                  </option>
-                ))}
-              </select>
             </div>
 
-            {activeContactCustomFields.map((field) => (
-              <div className="form-group" key={field.id}>
-                <label htmlFor={`contact-cf-${field.id}`}>
-                  {field.name}
-                  {field.required ? ' *' : ''}
-                </label>
-                {renderCustomFieldInput(field, customFieldValues, setCustomFieldValues, 'contact-cf')}
+            <div className="field-group">
+              <h4 className="field-group-title">Role</h4>
+              <div className="field-group-body">
+                <div className="form-group">
+                  <label htmlFor="contact-title">Title</label>
+                  <input
+                    id="contact-title"
+                    type="text"
+                    value={contactForm.title}
+                    onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })}
+                    placeholder="Role within the company"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="contact-leadStatus">Lead Status</label>
+                  <select
+                    id="contact-leadStatus"
+                    value={contactForm.leadStatus}
+                    onChange={(e) => setContactForm({ ...contactForm, leadStatus: e.target.value })}
+                  >
+                    <option value="">-- none --</option>
+                    {Object.entries(LEAD_STATUS_LABELS).map(([value, label]) => (
+                      <option key={value} value={value}>
+                        {label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group col-span-2">
+                  <label htmlFor="contact-isPrimary" className="inline-flex items-center gap-1.5 font-normal">
+                    <input
+                      id="contact-isPrimary"
+                      type="checkbox"
+                      checked={contactForm.isPrimary}
+                      onChange={(e) => setContactForm({ ...contactForm, isPrimary: e.target.checked })}
+                    />
+                    Primary contact for this company
+                  </label>
+                </div>
               </div>
-            ))}
+            </div>
+
+            <div className="field-group">
+              <h4 className="field-group-title">Source</h4>
+              <div className="field-group-body">
+                <div className="form-group">
+                  <label htmlFor="contact-leadSourceId">Lead Source</label>
+                  <select
+                    id="contact-leadSourceId"
+                    value={contactForm.leadSourceId}
+                    onChange={(e) => setContactForm({ ...contactForm, leadSourceId: e.target.value })}
+                  >
+                    <option value="">-- none --</option>
+                    {leadSources.map((ls) => (
+                      <option key={ls.id} value={ls.id}>
+                        {ls.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {activeContactCustomFields.length > 0 && (
+              <div className="field-group">
+                <h4 className="field-group-title">Custom fields</h4>
+                <div className="field-group-body">
+                  {activeContactCustomFields.map((field) => (
+                    <div className="form-group" key={field.id}>
+                      <label htmlFor={`contact-cf-${field.id}`}>
+                        {field.name}
+                        {field.required ? ' *' : ''}
+                      </label>
+                      {renderCustomFieldInput(field, customFieldValues, setCustomFieldValues, 'contact-cf')}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </form>
         )}
       </Modal>

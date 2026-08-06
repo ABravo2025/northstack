@@ -801,6 +801,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         open={slideOverMode !== null}
         title="Add Employee"
         onClose={closeSlideOver}
+        wide
         footer={
           <>
             <button type="button" className="btn-secondary" onClick={closeSlideOver}>
@@ -814,148 +815,161 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       >
         {slideOverMode === 'add' && (
           <form id="employee-form" onSubmit={handleCreateEmployee}>
-            <div className="form-group">
-              <label htmlFor="emp-firstName">First Name</label>
-              <input
-                id="emp-firstName"
-                type="text"
-                value={employeeForm.firstName}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, firstName: e.target.value })}
-                required
-              />
+            <div className="field-group">
+              <h4 className="field-group-title">Identity</h4>
+              <div className="field-group-body">
+                <div className="form-group">
+                  <label htmlFor="emp-firstName">First Name</label>
+                  <input
+                    id="emp-firstName"
+                    type="text"
+                    value={employeeForm.firstName}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, firstName: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="emp-lastName">Last Name</label>
+                  <input
+                    id="emp-lastName"
+                    type="text"
+                    value={employeeForm.lastName}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, lastName: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="emp-email">Business Email</label>
+                  <input
+                    id="emp-email"
+                    type="email"
+                    value={employeeForm.email}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, email: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="emp-personalEmail">Personal Email</label>
+                  <input
+                    id="emp-personalEmail"
+                    type="email"
+                    value={employeeForm.personalEmail}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, personalEmail: e.target.value })}
+                  />
+                </div>
+              </div>
             </div>
-            <div className="form-group">
-              <label htmlFor="emp-lastName">Last Name</label>
-              <input
-                id="emp-lastName"
-                type="text"
-                value={employeeForm.lastName}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, lastName: e.target.value })}
-                required
-              />
+
+            <div className="field-group">
+              <h4 className="field-group-title">Role</h4>
+              <div className="field-group-body">
+                <div className="form-group">
+                  <label htmlFor="emp-departmentId">Department</label>
+                  <select
+                    id="emp-departmentId"
+                    value={employeeForm.departmentId}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, departmentId: e.target.value })}
+                  >
+                    <option value="">-- none --</option>
+                    {employeeDepartments
+                      .filter((d) => d.isActive)
+                      .map((d) => (
+                        <option key={d.id} value={d.id}>
+                          {d.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="emp-jobTitleId">Job Title</label>
+                  <select
+                    id="emp-jobTitleId"
+                    value={employeeForm.jobTitleId}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, jobTitleId: e.target.value })}
+                  >
+                    <option value="">-- none --</option>
+                    {employeeJobTitles
+                      .filter((j) => j.isActive)
+                      .map((j) => (
+                        <option key={j.id} value={j.id}>
+                          {j.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="emp-managerId">Reports To</label>
+                  <select
+                    id="emp-managerId"
+                    value={employeeForm.managerId}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, managerId: e.target.value })}
+                  >
+                    <option value="">-- No manager --</option>
+                    {employees.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.firstName} {emp.lastName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
-            <div className="form-group">
-              <label htmlFor="emp-email">Business Email</label>
-              <input
-                id="emp-email"
-                type="email"
-                value={employeeForm.email}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, email: e.target.value })}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="emp-personalEmail">Personal Email</label>
-              <input
-                id="emp-personalEmail"
-                type="email"
-                value={employeeForm.personalEmail}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, personalEmail: e.target.value })}
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="emp-departmentId">Department</label>
-              <select
-                id="emp-departmentId"
-                value={employeeForm.departmentId}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, departmentId: e.target.value })}
-              >
-                <option value="">-- none --</option>
-                {employeeDepartments
-                  .filter((d) => d.isActive)
-                  .map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                    </option>
-                  ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="emp-jobTitleId">Job Title</label>
-              <select
-                id="emp-jobTitleId"
-                value={employeeForm.jobTitleId}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, jobTitleId: e.target.value })}
-              >
-                <option value="">-- none --</option>
-                {employeeJobTitles
-                  .filter((j) => j.isActive)
-                  .map((j) => (
-                    <option key={j.id} value={j.id}>
-                      {j.name}
-                    </option>
-                  ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="emp-managerId">Reports To</label>
-              <select
-                id="emp-managerId"
-                value={employeeForm.managerId}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, managerId: e.target.value })}
-              >
-                <option value="">-- No manager --</option>
-                {employees.map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.firstName} {emp.lastName}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="emp-startDate">Start Date</label>
-              <input
-                id="emp-startDate"
-                type="date"
-                value={employeeForm.startDate}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, startDate: e.target.value })}
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="emp-contractUrl">Contract URL</label>
-              <input
-                id="emp-contractUrl"
-                type="url"
-                value={employeeForm.contractUrl}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, contractUrl: e.target.value })}
-                placeholder="https://drive.google.com/..."
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="emp-contractType">Contract Type</label>
-              <select
-                id="emp-contractType"
-                value={employeeForm.contractType}
-                onChange={(e) => setEmployeeForm({ ...employeeForm, contractType: e.target.value })}
-              >
-                <option value="">-- select --</option>
-                <option value="part_time">Part Time</option>
-                <option value="full_time">Full Time</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="emp-compensationType">Compensation Type</label>
-              <select
-                id="emp-compensationType"
-                value={employeeForm.compensationType}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setEmployeeForm({
-                    ...employeeForm,
-                    compensationType: value,
-                    hourlyRate: value === 'monthly' ? '' : employeeForm.hourlyRate,
-                    monthlyRate: value === 'hourly' ? '' : employeeForm.monthlyRate,
-                  });
-                }}
-              >
-                <option value="">-- select --</option>
-                <option value="hourly">Hourly</option>
-                <option value="monthly">Monthly</option>
-              </select>
-            </div>
-            {user.role === 'owner' && (
-              <>
-                {employeeForm.compensationType !== 'monthly' && (
+
+            <div className="field-group">
+              <h4 className="field-group-title">Contract &amp; compensation</h4>
+              <div className="field-group-body">
+                <div className="form-group">
+                  <label htmlFor="emp-startDate">Start Date</label>
+                  <input
+                    id="emp-startDate"
+                    type="date"
+                    value={employeeForm.startDate}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, startDate: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="emp-contractUrl">Contract URL</label>
+                  <input
+                    id="emp-contractUrl"
+                    type="url"
+                    value={employeeForm.contractUrl}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, contractUrl: e.target.value })}
+                    placeholder="https://drive.google.com/..."
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="emp-contractType">Contract Type</label>
+                  <select
+                    id="emp-contractType"
+                    value={employeeForm.contractType}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, contractType: e.target.value })}
+                  >
+                    <option value="">-- select --</option>
+                    <option value="part_time">Part Time</option>
+                    <option value="full_time">Full Time</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="emp-compensationType">Compensation Type</label>
+                  <select
+                    id="emp-compensationType"
+                    value={employeeForm.compensationType}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setEmployeeForm({
+                        ...employeeForm,
+                        compensationType: value,
+                        hourlyRate: value === 'monthly' ? '' : employeeForm.hourlyRate,
+                        monthlyRate: value === 'hourly' ? '' : employeeForm.monthlyRate,
+                      });
+                    }}
+                  >
+                    <option value="">-- select --</option>
+                    <option value="hourly">Hourly</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                </div>
+                {user.role === 'owner' && employeeForm.compensationType !== 'monthly' && (
                   <div className="form-group">
                     <label htmlFor="emp-hourlyRate">Hourly Rate</label>
                     <input
@@ -968,7 +982,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                     />
                   </div>
                 )}
-                {employeeForm.compensationType !== 'hourly' && (
+                {user.role === 'owner' && employeeForm.compensationType !== 'hourly' && (
                   <div className="form-group">
                     <label htmlFor="emp-monthlyRate">Monthly Rate</label>
                     <input
@@ -981,18 +995,25 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                     />
                   </div>
                 )}
-              </>
-            )}
-
-            {activeEmployeeCustomFields.map((field) => (
-              <div className="form-group" key={field.id}>
-                <label htmlFor={`emp-cf-${field.id}`}>
-                  {field.name}
-                  {field.required ? ' *' : ''}
-                </label>
-                {renderCustomFieldInput(field, customFieldValues, setCustomFieldValues, 'emp-cf')}
               </div>
-            ))}
+            </div>
+
+            {activeEmployeeCustomFields.length > 0 && (
+              <div className="field-group">
+                <h4 className="field-group-title">Custom fields</h4>
+                <div className="field-group-body">
+                  {activeEmployeeCustomFields.map((field) => (
+                    <div className="form-group" key={field.id}>
+                      <label htmlFor={`emp-cf-${field.id}`}>
+                        {field.name}
+                        {field.required ? ' *' : ''}
+                      </label>
+                      {renderCustomFieldInput(field, customFieldValues, setCustomFieldValues, 'emp-cf')}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </form>
         )}
 

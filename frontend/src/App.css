@@ -1076,13 +1076,16 @@
 
 /* ---------- Modal: centered, backdrop-covered form ----------
    Same open/title/onClose/footer shape as SlideOver, for small standalone
-   forms that the design calls out as centered rather than a side panel
-   (Payroll Pay Frequency / Compensation / bulk-reassign, Unidad 3 of
-   docs/tareas-desarrollo.md's Payroll spec). SlideOver stays the default for
-   "entity" forms; reach for Modal only when a design explicitly asks for a
-   centered dialog instead. */
+   forms that the design calls out as centered rather than a side panel.
+   Overlay darkness (black/60) and rounded-lg card treatment deliberately
+   match .detail-modal-overlay/.overview-panel below (the "click a name"
+   modal) — same modal family, not a second competing style. `wide` (used
+   for the 4 entity "Add" forms, 2026-08) matches .overview-panel's
+   min-w-[720px] so a .field-group/.field-group-body 2-column layout (same
+   classes the detail panels use) fits comfortably. SlideOver stays the
+   default for every other kind of form. */
 .modal-overlay {
-  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4;
+  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4;
 }
 
 .modal-panel {
@@ -1090,7 +1093,7 @@
 }
 
 .modal-panel.wide {
-  @apply max-w-2xl;
+  @apply max-w-3xl;
 }
 
 .modal-head {

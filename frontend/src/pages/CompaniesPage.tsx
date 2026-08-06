@@ -649,6 +649,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
         open={slideOverMode === 'add'}
         title="Add Company"
         onClose={closeSlideOver}
+        wide
         footer={
           <>
             <button type="button" className="btn-secondary" onClick={closeSlideOver}>
@@ -662,130 +663,155 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
       >
         {slideOverMode === 'add' && (
           <form id="company-form" onSubmit={handleCreateCompany}>
-            <div className="form-group">
-              <label htmlFor="company-name">Name</label>
-              <input
-                id="company-name"
-                type="text"
-                value={companyForm.name}
-                onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })}
-                required
-              />
-            </div>
-
-            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mt-2 mb-1">
-              Founding contact
-            </p>
-            <div className="form-group">
-              <label htmlFor="company-contact-firstName">First Name</label>
-              <input
-                id="company-contact-firstName"
-                type="text"
-                value={companyForm.contactFirstName}
-                onChange={(e) => setCompanyForm({ ...companyForm, contactFirstName: e.target.value })}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="company-contact-lastName">Last Name</label>
-              <input
-                id="company-contact-lastName"
-                type="text"
-                value={companyForm.contactLastName}
-                onChange={(e) => setCompanyForm({ ...companyForm, contactLastName: e.target.value })}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="company-contact-email">Email</label>
-              <input
-                id="company-contact-email"
-                type="email"
-                value={companyForm.contactEmail}
-                onChange={(e) => setCompanyForm({ ...companyForm, contactEmail: e.target.value })}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="company-industry">Industry</label>
-              <input
-                id="company-industry"
-                type="text"
-                value={companyForm.industry}
-                onChange={(e) => setCompanyForm({ ...companyForm, industry: e.target.value })}
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="company-website">Website</label>
-              <input
-                id="company-website"
-                type="url"
-                value={companyForm.website}
-                onChange={(e) => setCompanyForm({ ...companyForm, website: e.target.value })}
-                placeholder="https://example.com"
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="company-phone">Phone</label>
-              <input
-                id="company-phone"
-                type="text"
-                value={companyForm.phone}
-                onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })}
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="company-billingAddress">Billing Address</label>
-              <input
-                id="company-billingAddress"
-                type="text"
-                value={companyForm.billingAddress}
-                onChange={(e) => setCompanyForm({ ...companyForm, billingAddress: e.target.value })}
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="company-sizeId">Size</label>
-              <select
-                id="company-sizeId"
-                value={companyForm.sizeId}
-                onChange={(e) => setCompanyForm({ ...companyForm, sizeId: e.target.value })}
-              >
-                <option value="">-- none --</option>
-                {companySizes
-                  .filter((s) => s.isActive)
-                  .map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="company-accountOwnerId">Account Owner</label>
-              <select
-                id="company-accountOwnerId"
-                value={companyForm.accountOwnerId}
-                onChange={(e) => setCompanyForm({ ...companyForm, accountOwnerId: e.target.value })}
-              >
-                <option value="">-- none --</option>
-                {tenantUsers.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.firstName} {u.lastName}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {activeCompanyCustomFields.map((field) => (
-              <div className="form-group" key={field.id}>
-                <label htmlFor={`company-cf-${field.id}`}>
-                  {field.name}
-                  {field.required ? ' *' : ''}
-                </label>
-                {renderCustomFieldInput(field, customFieldValues, setCustomFieldValues, 'company-cf')}
+            <div className="field-group">
+              <h4 className="field-group-title">Identity</h4>
+              <div className="field-group-body">
+                <div className="form-group col-span-2">
+                  <label htmlFor="company-name">Name</label>
+                  <input
+                    id="company-name"
+                    type="text"
+                    value={companyForm.name}
+                    onChange={(e) => setCompanyForm({ ...companyForm, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="company-industry">Industry</label>
+                  <input
+                    id="company-industry"
+                    type="text"
+                    value={companyForm.industry}
+                    onChange={(e) => setCompanyForm({ ...companyForm, industry: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="company-website">Website</label>
+                  <input
+                    id="company-website"
+                    type="url"
+                    value={companyForm.website}
+                    onChange={(e) => setCompanyForm({ ...companyForm, website: e.target.value })}
+                    placeholder="https://example.com"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="company-phone">Phone</label>
+                  <input
+                    id="company-phone"
+                    type="text"
+                    value={companyForm.phone}
+                    onChange={(e) => setCompanyForm({ ...companyForm, phone: e.target.value })}
+                  />
+                </div>
               </div>
-            ))}
+            </div>
+
+            <div className="field-group">
+              <h4 className="field-group-title">Founding contact</h4>
+              <div className="field-group-body">
+                <div className="form-group">
+                  <label htmlFor="company-contact-firstName">First Name</label>
+                  <input
+                    id="company-contact-firstName"
+                    type="text"
+                    value={companyForm.contactFirstName}
+                    onChange={(e) => setCompanyForm({ ...companyForm, contactFirstName: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="company-contact-lastName">Last Name</label>
+                  <input
+                    id="company-contact-lastName"
+                    type="text"
+                    value={companyForm.contactLastName}
+                    onChange={(e) => setCompanyForm({ ...companyForm, contactLastName: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group col-span-2">
+                  <label htmlFor="company-contact-email">Email</label>
+                  <input
+                    id="company-contact-email"
+                    type="email"
+                    value={companyForm.contactEmail}
+                    onChange={(e) => setCompanyForm({ ...companyForm, contactEmail: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="field-group">
+              <h4 className="field-group-title">Address</h4>
+              <div className="field-group-body">
+                <div className="form-group col-span-2">
+                  <label htmlFor="company-billingAddress">Billing Address</label>
+                  <input
+                    id="company-billingAddress"
+                    type="text"
+                    value={companyForm.billingAddress}
+                    onChange={(e) => setCompanyForm({ ...companyForm, billingAddress: e.target.value })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="field-group">
+              <h4 className="field-group-title">Ownership</h4>
+              <div className="field-group-body">
+                <div className="form-group">
+                  <label htmlFor="company-sizeId">Size</label>
+                  <select
+                    id="company-sizeId"
+                    value={companyForm.sizeId}
+                    onChange={(e) => setCompanyForm({ ...companyForm, sizeId: e.target.value })}
+                  >
+                    <option value="">-- none --</option>
+                    {companySizes
+                      .filter((s) => s.isActive)
+                      .map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="company-accountOwnerId">Account Owner</label>
+                  <select
+                    id="company-accountOwnerId"
+                    value={companyForm.accountOwnerId}
+                    onChange={(e) => setCompanyForm({ ...companyForm, accountOwnerId: e.target.value })}
+                  >
+                    <option value="">-- none --</option>
+                    {tenantUsers.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.firstName} {u.lastName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {activeCompanyCustomFields.length > 0 && (
+              <div className="field-group">
+                <h4 className="field-group-title">Custom fields</h4>
+                <div className="field-group-body">
+                  {activeCompanyCustomFields.map((field) => (
+                    <div className="form-group" key={field.id}>
+                      <label htmlFor={`company-cf-${field.id}`}>
+                        {field.name}
+                        {field.required ? ' *' : ''}
+                      </label>
+                      {renderCustomFieldInput(field, customFieldValues, setCustomFieldValues, 'company-cf')}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </form>
         )}
       </Modal>

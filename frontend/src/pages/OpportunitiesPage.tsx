@@ -195,6 +195,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
         open={slideOverMode === 'add'}
         title="Add Opportunity"
         onClose={closeSlideOver}
+        wide
         footer={
           <>
             <button type="button" className="btn-secondary" onClick={closeSlideOver}>
@@ -208,105 +209,128 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
       >
         {slideOverMode === 'add' && (
           <form id="opportunity-form" onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label htmlFor="opp-name">Deal Name</label>
-              <input id="opp-name" type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+            <div className="field-group">
+              <h4 className="field-group-title">Deal</h4>
+              <div className="field-group-body">
+                <div className="form-group col-span-2">
+                  <label htmlFor="opp-name">Deal Name</label>
+                  <input
+                    id="opp-name"
+                    type="text"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="opp-companyId">Company</label>
+                  <select
+                    id="opp-companyId"
+                    value={form.companyId}
+                    onChange={(e) => setForm({ ...form, companyId: e.target.value })}
+                    required
+                  >
+                    <option value="">-- select --</option>
+                    {companies.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="opp-ownerId">Owner</label>
+                  <select id="opp-ownerId" value={form.ownerId} onChange={(e) => setForm({ ...form, ownerId: e.target.value })} required>
+                    <option value="">-- select --</option>
+                    {tenantUsers.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.firstName} {u.lastName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="opp-amount">Amount</label>
+                  <input
+                    id="opp-amount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={form.amountCents}
+                    onChange={(e) => setForm({ ...form, amountCents: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="opp-currency">Currency</label>
+                  <input
+                    id="opp-currency"
+                    type="text"
+                    value={form.currency}
+                    onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })}
+                    maxLength={3}
+                    required
+                  />
+                </div>
+              </div>
             </div>
-            <div className="form-group">
-              <label htmlFor="opp-companyId">Company</label>
-              <select
-                id="opp-companyId"
-                value={form.companyId}
-                onChange={(e) => setForm({ ...form, companyId: e.target.value })}
-                required
-              >
-                <option value="">-- select --</option>
-                {companies.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="opp-amount">Amount</label>
-              <input
-                id="opp-amount"
-                type="number"
-                step="0.01"
-                min="0"
-                value={form.amountCents}
-                onChange={(e) => setForm({ ...form, amountCents: e.target.value })}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="opp-currency">Currency</label>
-              <input
-                id="opp-currency"
-                type="text"
-                value={form.currency}
-                onChange={(e) => setForm({ ...form, currency: e.target.value.toUpperCase() })}
-                maxLength={3}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="opp-ownerId">Owner</label>
-              <select id="opp-ownerId" value={form.ownerId} onChange={(e) => setForm({ ...form, ownerId: e.target.value })} required>
-                <option value="">-- select --</option>
-                {tenantUsers.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.firstName} {u.lastName}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label htmlFor="opp-estimatedCloseDate">Estimated Close Date</label>
-              <input
-                id="opp-estimatedCloseDate"
-                type="date"
-                value={form.estimatedCloseDate}
-                onChange={(e) => setForm({ ...form, estimatedCloseDate: e.target.value })}
-              />
-            </div>
+
             {selectedStage?.outcome === 'lost' && (
-              <div className="form-group">
-                <label htmlFor="opp-lossReasonId">Loss Reason</label>
-                <select
-                  id="opp-lossReasonId"
-                  value={form.lossReasonId}
-                  onChange={(e) => setForm({ ...form, lossReasonId: e.target.value })}
-                  required
-                >
-                  <option value="">-- select --</option>
-                  {lossReasons.map((lr) => (
-                    <option key={lr.id} value={lr.id}>
-                      {lr.name}
-                    </option>
-                  ))}
-                </select>
+              <div className="field-group">
+                <h4 className="field-group-title">Stage</h4>
+                <div className="field-group-body">
+                  <div className="form-group">
+                    <label htmlFor="opp-lossReasonId">Loss Reason</label>
+                    <select
+                      id="opp-lossReasonId"
+                      value={form.lossReasonId}
+                      onChange={(e) => setForm({ ...form, lossReasonId: e.target.value })}
+                      required
+                    >
+                      <option value="">-- select --</option>
+                      {lossReasons.map((lr) => (
+                        <option key={lr.id} value={lr.id}>
+                          {lr.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
               </div>
             )}
-            <div className="form-group">
-              <label htmlFor="opp-nextStepDate">Next Step Date</label>
-              <input
-                id="opp-nextStepDate"
-                type="date"
-                value={form.nextStepDate}
-                onChange={(e) => setForm({ ...form, nextStepDate: e.target.value })}
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="opp-nextStepNote">Next Step</label>
-              <input
-                id="opp-nextStepNote"
-                type="text"
-                value={form.nextStepNote}
-                onChange={(e) => setForm({ ...form, nextStepNote: e.target.value })}
-                placeholder="What's the next action?"
-              />
+
+            <div className="field-group">
+              <h4 className="field-group-title">Next step</h4>
+              <div className="field-group-body">
+                <div className="form-group">
+                  <label htmlFor="opp-estimatedCloseDate">Estimated Close Date</label>
+                  <input
+                    id="opp-estimatedCloseDate"
+                    type="date"
+                    value={form.estimatedCloseDate}
+                    onChange={(e) => setForm({ ...form, estimatedCloseDate: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="opp-nextStepDate">Next Step Date</label>
+                  <input
+                    id="opp-nextStepDate"
+                    type="date"
+                    value={form.nextStepDate}
+                    onChange={(e) => setForm({ ...form, nextStepDate: e.target.value })}
+                  />
+                </div>
+                <div className="form-group col-span-2">
+                  <label htmlFor="opp-nextStepNote">Next Step</label>
+                  <input
+                    id="opp-nextStepNote"
+                    type="text"
+                    value={form.nextStepNote}
+                    onChange={(e) => setForm({ ...form, nextStepNote: e.target.value })}
+                    placeholder="What's the next action?"
+                  />
+                </div>
+              </div>
             </div>
           </form>
         )}

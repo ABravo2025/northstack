@@ -297,7 +297,11 @@ Las entradas fechadas (el detalle día a día de qué se hizo y por qué) viven 
   sigue vivo puertas adentro (onboarding, Public Forms) — el corte final es una unidad futura
   separada, sin fecha.
 - **Dirección visual ClickUp**: dark mode a negro puro, tipografía/chips/modal/Settings grid
-  rediseñados, 10/11 ítems.
+  rediseñados. Las Tareas 1-9 de `docs/tareas-ux-ui.md` están 100% completas (nota del 2026-07-31 más
+  arriba) — el "10/11" que quedaba abierto acá era vago sin decir cuál; **confirmado 2026-08-06,
+  sigue sin construir**: el FAB de acción primaria en mobile (`design-system.md` §13, Tarea 9c) —
+  bloqueado en que `AppLayout.tsx` no tiene hoy un mecanismo de "acción primaria por página" que el
+  FAB pueda invocar (cada página maneja su propio `handleOpenAdd` suelto).
 - **Módulo de Tasks/Notes + unificación y rediseño de los 4 paneles de detalle** (Employee/
   Company/Contact/Opportunity): panel de detalle pasó de un popup de 460px a 70vw×70vh en 2
   columnas, con tabs Notes/Tasks/Activity (Activity es placeholder). Checkpoints D (bugs), E

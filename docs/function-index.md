@@ -181,6 +181,12 @@ CRUD estándar, cross-entidad vía `entityType`/`entityId`: **createNote**, **fi
 ### `frontend/src/lib/countries.ts`, `frontend/src/lib/changelog.ts`
 Solo datos (`COUNTRIES`, `CHANGELOG_ENTRIES`), sin funciones — no indexado más allá de esta mención.
 
+### `frontend/src/lib/validation.ts`
+- **isLikelyValidEmail(value)** — chequeo de forma client-side-only (no reemplaza validación de backend), usado para gatear cuándo un campo cuenta como "completo" en un trigger de auto-save/auto-create.
+
+### `frontend/src/hooks/useAutoCreateGuard.ts`
+- **useAutoCreateGuard()** — guard reusable para forms de "Add [Entity]" que auto-crean apenas sus campos requeridos están completos (2026-08, ver `EmployeeOverviewPanel`/`EmployeesPage.tsx`). Devuelve `{ attempt(isReady, run), reset() }`: `attempt` no hace nada si ya se creó, si hay una request en vuelo, o si `isReady` es false — así se puede llamar desde el commit de cada campo requerido (blur en texto, change en select) sin duplicar la entidad; `run` debe relanzar su error después de reportarlo (toast) para que el guard no marque la creación como exitosa y permita reintentar. `reset()` se llama al cerrar/reabrir el form.
+
 ### `frontend/src/hooks/useColumnOrder.ts`
 - **useColumnOrder(storageKey, allKeys)** — orden de columnas persistido en `localStorage`; una key nueva (columna/custom field nuevo) se agrega al final, una que ya no existe se descarta sola.
 
@@ -228,7 +234,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 - **ConfirmDialog** — modal de confirmación para acciones destructivas; nunca usar `confirm()` nativo.
 - **EmptyState** — estado vacío con ícono/título/cuerpo/CTA; usar en vez de un `<p>` de texto plano (ver `docs/Skills/Skills-Development.md`).
 - **EntityCardList** — lista de tarjetas para la vista mobile de una tabla (`<md`, patrón responsive).
-- **Field** — wrapper de label+valor para paneles de detalle.
+- **Field** — wrapper de label+valor para paneles de detalle y forms de alta. Prop `required` (2026-08) agrega el asterisco rojo reusable (`.required-mark`) junto al label — es el marcador estándar de campo obligatorio para cualquier form nuevo que use `Field`.
 - **Icons.tsx** — toda la iconografía de la app, un componente por ícono (`SearchIcon`, `PlusIcon`, `PencilIcon`, `TrashIcon`, `MailIcon`, `EyeIcon`/`EyeOffIcon`, `CheckIcon`, `XIcon`, `GripIcon`, `GridIcon`, `KanbanIcon`, `ListIcon`, `LockIcon`, `TeamIcon`, `FilterIcon`, `DotsVerticalIcon`, `CopyIcon`, `HomeIcon`, `DashboardIcon`, `CalendarIcon`, `TrendingIcon`, `PeopleIcon`, `BriefcaseIcon`, `GearIcon`, `UserCircleIcon`, `ChevronDownIcon`/`ChevronLeftIcon`/`ChevronRightIcon`, `MenuIcon`, `DownloadIcon`, `UploadIcon`, `BellIcon`, `BuildingIcon`, `TargetIcon`) — **revisar esta lista antes de agregar un ícono nuevo**, es fácil duplicar uno que ya existe con otro nombre. (`DollarIcon`/`DocumentIcon` existen en `staging`, agregados para Payroll — no en `main` todavía.)
 - **LegalDocumentModal** — visor de ToS/Privacy Policy.
 - **Modal** — modal centrado con backdrop, mismas props que `SlideOver` (open/title/onClose/footer). Patrón esperado (no excepción) para el form de alta de Employee/Company/Contact/Opportunity desde 2026-08; para otros forms chicos, evaluar caso a caso si el diseño pide centrado en vez de panel lateral.

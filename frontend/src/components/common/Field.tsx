@@ -11,12 +11,21 @@ interface FieldProps {
   // field that's genuinely long (an address) rather than a short value that
   // benefits from sitting two-up.
   full?: boolean;
+  // Red asterisk after the label (2026-08) — the one reusable marker for
+  // "this field can't be left empty", used by every "Add [Entity]" form.
+  // Detail panels don't set this: once an entity exists, every field there
+  // is independently editable/clearable, so "required" no longer means
+  // anything at that point.
+  required?: boolean;
 }
 
-export default function Field({ label, children, full }: FieldProps) {
+export default function Field({ label, children, full, required }: FieldProps) {
   return (
     <div className={`overview-field${full ? ' overview-field-full' : ''}`}>
-      <span className="overview-field-label">{label}</span>
+      <span className="overview-field-label">
+        {label}
+        {required && <span className="required-mark"> *</span>}
+      </span>
       {children}
     </div>
   );

@@ -25,6 +25,7 @@ import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar'
 import Avatar, { getInitials } from '../components/common/Avatar';
 import StatusChip from '../components/common/StatusChip';
 import CategoryChip from '../components/common/CategoryChip';
+import Field from '../components/common/Field';
 import { ChevronDownIcon, MailIcon, PeopleIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/common/Icons';
 import {
   applyFilters,
@@ -36,6 +37,8 @@ import {
   parseSort,
 } from '../lib/viewFields';
 import { formatMoney } from '../lib/currencies';
+import { isLikelyValidEmail } from '../lib/validation';
+import { useAutoCreateGuard } from '../hooks/useAutoCreateGuard';
 
 const CONTRACT_TYPE_LABELS: Record<string, string> = { part_time: 'Part Time', full_time: 'Full Time' };
 const COMPENSATION_TYPE_LABELS: Record<string, string> = { hourly: 'Hourly', monthly: 'Monthly' };
@@ -167,6 +170,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   };
 
   const [employeeForm, setEmployeeForm] = useState(emptyEmployeeForm);
+  const autoCreateGuard = useAutoCreateGuard();
 
   useEffect(() => {
     loadEmployees();
@@ -317,11 +321,13 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const closeSlideOver = () => {
     setSlideOverMode(null);
     setCustomFieldValues({});
+    autoCreateGuard.reset();
   };
 
   const handleOpenAdd = () => {
     setEmployeeForm(emptyEmployeeForm);
     setCustomFieldValues({});
+    autoCreateGuard.reset();
     setSlideOverMode('add');
   };
 
@@ -338,40 +344,107 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     }
   };
 
-  const handleCreateEmployee = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      const employee = await api.createEmployee(token, {
-        firstName: employeeForm.firstName,
-        lastName: employeeForm.lastName,
-        email: employeeForm.email,
-        personalEmail: employeeForm.personalEmail || undefined,
-        departmentId: employeeForm.departmentId || null,
-        jobTitleId: employeeForm.jobTitleId || null,
-        managerId: employeeForm.managerId || null,
-        startDate: employeeForm.startDate || undefined,
-        endDate: employeeForm.endDate || undefined,
-        contractUrl: employeeForm.contractUrl || undefined,
-        hourlyRateCents: dollarsToCents(employeeForm.hourlyRate),
-        monthlyRateCents: dollarsToCents(employeeForm.monthlyRate),
-        contractType: (employeeForm.contractType || null) as 'part_time' | 'full_time' | null,
-        compensationType: (employeeForm.compensationType || null) as 'hourly' | 'monthly' | null,
-      });
-
-      const valueEntries = Object.entries(customFieldValues).filter(([, value]) => value.trim() !== '');
-      for (const [customFieldDefinitionId, value] of valueEntries) {
-        await api.createEmployeeCustomFieldValue(token, employee.id, {
-          customFieldDefinitionId,
-          value,
-        });
-      }
-
-      toast.success(`${employee.firstName} ${employee.lastName} added.`);
-      closeSlideOver();
-      loadEmployees();
-    } catch (error) {
-      toast.error('Failed to create employee: ' + (error as Error).message);
+  // Ready once every required field (the 3 fixed ones + any required custom
+  // field) is filled and shaped like a valid value — gates the auto-create
+  // effect below so it doesn't fire on an obviously unfinished form. Accepts
+  // an explicit custom-field-values override for the one commit path
+  // (a required custom field of type "select") whose onChange needs to check
+  // readiness against a value that hasn't reached state yet — see
+  // useAutoCreateGuard.ts for why blur-triggered checks don't need this.
+  const isEmployeeAddReady = (cfValues: Record<string, string> = customFieldValues) => {
+    if (!employeeForm.firstName.trim() || !employeeForm.lastName.trim()) return false;
+    if (!isLikelyValidEmail(employeeForm.email)) return false;
+    for (const field of activeEmployeeCustomFields) {
+      if (field.required && !(cfValues[field.id] || '').trim()) return false;
     }
+    return true;
+  };
+
+  // A newly created employee can land on any page once merged into the
+  // current search/filter/sort (the list has no guaranteed backend order,
+  // and an active sort can put it anywhere) — without this, closing the
+  // detail panel after an auto-create could leave the user staring at a
+  // table that looks unchanged because the new row is a page or two away.
+  // Recomputes the same search -> filter -> sort pipeline the render body
+  // uses, against the fresh list, and jumps to whichever page contains it.
+  const jumpToEmployeePage = (list: any[], employeeId: string) => {
+    const query = employeeSearch.trim().toLowerCase();
+    const searchFiltered = list.filter((emp) => {
+      if (!query) return true;
+      return (
+        `${emp.firstName} ${emp.lastName}`.toLowerCase().includes(query) ||
+        emp.email.toLowerCase().includes(query) ||
+        (emp.departmentDefn?.name ?? '').toLowerCase().includes(query)
+      );
+    });
+    const filtered = applyFilters(searchFiltered, fields, viewFilters);
+    const sorted = applySort(filtered, fields, viewSort);
+    const index = sorted.findIndex((e) => e.id === employeeId);
+    if (index !== -1) setPage(Math.floor(index / PAGE_SIZE) + 1);
+  };
+
+  // The actual creation + hand-off, shared by the manual "Create" button and
+  // the auto-create-on-required-complete path below — both go through
+  // autoCreateGuard so only one of them ever actually fires. On success, the
+  // Add form is replaced by the real EmployeeOverviewPanel for the new
+  // employee — same component used for an already-created profile, not a
+  // visual copy of it (2026-08, see docs/tareas-desarrollo.md).
+  const performCreateEmployee = async (cfValues: Record<string, string> = customFieldValues) => {
+    const employee = await api.createEmployee(token, {
+      firstName: employeeForm.firstName.trim(),
+      lastName: employeeForm.lastName.trim(),
+      email: employeeForm.email.trim(),
+      personalEmail: employeeForm.personalEmail || undefined,
+      departmentId: employeeForm.departmentId || null,
+      jobTitleId: employeeForm.jobTitleId || null,
+      managerId: employeeForm.managerId || null,
+      startDate: employeeForm.startDate || undefined,
+      endDate: employeeForm.endDate || undefined,
+      contractUrl: employeeForm.contractUrl || undefined,
+      hourlyRateCents: dollarsToCents(employeeForm.hourlyRate),
+      monthlyRateCents: dollarsToCents(employeeForm.monthlyRate),
+      contractType: (employeeForm.contractType || null) as 'part_time' | 'full_time' | null,
+      compensationType: (employeeForm.compensationType || null) as 'hourly' | 'monthly' | null,
+    });
+
+    const valueEntries = Object.entries(cfValues).filter(([, value]) => value.trim() !== '');
+    for (const [customFieldDefinitionId, value] of valueEntries) {
+      await api.createEmployeeCustomFieldValue(token, employee.id, {
+        customFieldDefinitionId,
+        value,
+      });
+    }
+
+    toast.success(`${employee.firstName} ${employee.lastName} added.`);
+    const freshList = await api.listEmployees(token);
+    setEmployees(freshList);
+    jumpToEmployeePage(freshList, employee.id);
+    setSlideOverMode(null);
+    setCustomFieldValues({});
+    setOverviewEmployeeId(employee.id);
+  };
+
+  const attemptAutoCreateEmployee = (cfValues: Record<string, string> = customFieldValues) => {
+    autoCreateGuard.attempt(isEmployeeAddReady(cfValues), async () => {
+      try {
+        await performCreateEmployee(cfValues);
+      } catch (error) {
+        toast.error('Failed to create employee: ' + (error as Error).message);
+        throw error;
+      }
+    });
+  };
+
+  const handleCreateEmployee = (e: React.FormEvent) => {
+    e.preventDefault();
+    autoCreateGuard.attempt(true, async () => {
+      try {
+        await performCreateEmployee();
+      } catch (error) {
+        toast.error('Failed to create employee: ' + (error as Error).message);
+        throw error;
+      }
+    });
   };
 
   const handleInviteEmployee = async (employeeId: string) => {
@@ -508,14 +581,24 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     values: Record<string, string>,
     setValues: (values: Record<string, string>) => void,
     idPrefix: string,
+    // Fired with the merged next-values object on commit (blur for text,
+    // change for select — same asymmetry as AutoSaveField/AutoSaveSelect) so
+    // a caller like the auto-create check below can read a value that
+    // hasn't reached state yet without racing React's async setState.
+    onCommit?: (nextValues: Record<string, string>) => void,
   ) => {
     const inputId = `${idPrefix}-${field.id}`;
     if (field.fieldType === 'select') {
       return (
         <select
           id={inputId}
+          className="overview-field-input"
           value={values[field.id] || ''}
-          onChange={(e) => setValues({ ...values, [field.id]: e.target.value })}
+          onChange={(e) => {
+            const next = { ...values, [field.id]: e.target.value };
+            setValues(next);
+            onCommit?.(next);
+          }}
           required={field.required}
         >
           <option value="">-- select --</option>
@@ -540,9 +623,11 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     return (
       <input
         id={inputId}
+        className="overview-field-input"
         type={inputType}
         value={values[field.id] || ''}
         onChange={(e) => setValues({ ...values, [field.id]: e.target.value })}
+        onBlur={() => onCommit?.(values)}
         required={field.required}
       />
     );
@@ -818,55 +903,58 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
             <div className="field-group">
               <h4 className="field-group-title">Identity</h4>
               <div className="field-group-body">
-                <div className="form-group">
-                  <label htmlFor="emp-firstName">First Name</label>
+                <Field label="First Name" required>
                   <input
                     id="emp-firstName"
+                    className="overview-field-input"
                     type="text"
                     value={employeeForm.firstName}
                     onChange={(e) => setEmployeeForm({ ...employeeForm, firstName: e.target.value })}
+                    onBlur={() => attemptAutoCreateEmployee()}
                     required
                   />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="emp-lastName">Last Name</label>
+                </Field>
+                <Field label="Last Name" required>
                   <input
                     id="emp-lastName"
+                    className="overview-field-input"
                     type="text"
                     value={employeeForm.lastName}
                     onChange={(e) => setEmployeeForm({ ...employeeForm, lastName: e.target.value })}
+                    onBlur={() => attemptAutoCreateEmployee()}
                     required
                   />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="emp-email">Business Email</label>
+                </Field>
+                <Field label="Business Email" required>
                   <input
                     id="emp-email"
+                    className="overview-field-input"
                     type="email"
                     value={employeeForm.email}
                     onChange={(e) => setEmployeeForm({ ...employeeForm, email: e.target.value })}
+                    onBlur={() => attemptAutoCreateEmployee()}
                     required
                   />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="emp-personalEmail">Personal Email</label>
+                </Field>
+                <Field label="Personal Email">
                   <input
                     id="emp-personalEmail"
+                    className="overview-field-input"
                     type="email"
                     value={employeeForm.personalEmail}
                     onChange={(e) => setEmployeeForm({ ...employeeForm, personalEmail: e.target.value })}
                   />
-                </div>
+                </Field>
               </div>
             </div>
 
             <div className="field-group">
               <h4 className="field-group-title">Role</h4>
               <div className="field-group-body">
-                <div className="form-group">
-                  <label htmlFor="emp-departmentId">Department</label>
+                <Field label="Department">
                   <select
                     id="emp-departmentId"
+                    className="overview-field-input"
                     value={employeeForm.departmentId}
                     onChange={(e) => setEmployeeForm({ ...employeeForm, departmentId: e.target.value })}
                   >
@@ -879,11 +967,11 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                         </option>
                       ))}
                   </select>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="emp-jobTitleId">Job Title</label>
+                </Field>
+                <Field label="Job Title">
                   <select
                     id="emp-jobTitleId"
+                    className="overview-field-input"
                     value={employeeForm.jobTitleId}
                     onChange={(e) => setEmployeeForm({ ...employeeForm, jobTitleId: e.target.value })}
                   >
@@ -896,11 +984,11 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                         </option>
                       ))}
                   </select>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="emp-managerId">Reports To</label>
+                </Field>
+                <Field label="Reports To">
                   <select
                     id="emp-managerId"
+                    className="overview-field-input"
                     value={employeeForm.managerId}
                     onChange={(e) => setEmployeeForm({ ...employeeForm, managerId: e.target.value })}
                   >
@@ -911,36 +999,36 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                       </option>
                     ))}
                   </select>
-                </div>
+                </Field>
               </div>
             </div>
 
             <div className="field-group">
               <h4 className="field-group-title">Contract &amp; compensation</h4>
               <div className="field-group-body">
-                <div className="form-group">
-                  <label htmlFor="emp-startDate">Start Date</label>
+                <Field label="Start Date">
                   <input
                     id="emp-startDate"
+                    className="overview-field-input"
                     type="date"
                     value={employeeForm.startDate}
                     onChange={(e) => setEmployeeForm({ ...employeeForm, startDate: e.target.value })}
                   />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="emp-contractUrl">Contract URL</label>
+                </Field>
+                <Field label="Contract URL">
                   <input
                     id="emp-contractUrl"
+                    className="overview-field-input"
                     type="url"
                     value={employeeForm.contractUrl}
                     onChange={(e) => setEmployeeForm({ ...employeeForm, contractUrl: e.target.value })}
                     placeholder="https://drive.google.com/..."
                   />
-                </div>
-                <div className="form-group">
-                  <label htmlFor="emp-contractType">Contract Type</label>
+                </Field>
+                <Field label="Contract Type">
                   <select
                     id="emp-contractType"
+                    className="overview-field-input"
                     value={employeeForm.contractType}
                     onChange={(e) => setEmployeeForm({ ...employeeForm, contractType: e.target.value })}
                   >
@@ -948,11 +1036,11 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                     <option value="part_time">Part Time</option>
                     <option value="full_time">Full Time</option>
                   </select>
-                </div>
-                <div className="form-group">
-                  <label htmlFor="emp-compensationType">Compensation Type</label>
+                </Field>
+                <Field label="Compensation Type">
                   <select
                     id="emp-compensationType"
+                    className="overview-field-input"
                     value={employeeForm.compensationType}
                     onChange={(e) => {
                       const value = e.target.value;
@@ -968,32 +1056,32 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                     <option value="hourly">Hourly</option>
                     <option value="monthly">Monthly</option>
                   </select>
-                </div>
+                </Field>
                 {user.role === 'owner' && employeeForm.compensationType !== 'monthly' && (
-                  <div className="form-group">
-                    <label htmlFor="emp-hourlyRate">Hourly Rate</label>
+                  <Field label="Hourly Rate">
                     <input
                       id="emp-hourlyRate"
+                      className="overview-field-input"
                       type="number"
                       step="0.01"
                       min="0"
                       value={employeeForm.hourlyRate}
                       onChange={(e) => setEmployeeForm({ ...employeeForm, hourlyRate: e.target.value })}
                     />
-                  </div>
+                  </Field>
                 )}
                 {user.role === 'owner' && employeeForm.compensationType !== 'hourly' && (
-                  <div className="form-group">
-                    <label htmlFor="emp-monthlyRate">Monthly Rate</label>
+                  <Field label="Monthly Rate">
                     <input
                       id="emp-monthlyRate"
+                      className="overview-field-input"
                       type="number"
                       step="0.01"
                       min="0"
                       value={employeeForm.monthlyRate}
                       onChange={(e) => setEmployeeForm({ ...employeeForm, monthlyRate: e.target.value })}
                     />
-                  </div>
+                  </Field>
                 )}
               </div>
             </div>
@@ -1003,13 +1091,15 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                 <h4 className="field-group-title">Custom fields</h4>
                 <div className="field-group-body">
                   {activeEmployeeCustomFields.map((field) => (
-                    <div className="form-group" key={field.id}>
-                      <label htmlFor={`emp-cf-${field.id}`}>
-                        {field.name}
-                        {field.required ? ' *' : ''}
-                      </label>
-                      {renderCustomFieldInput(field, customFieldValues, setCustomFieldValues, 'emp-cf')}
-                    </div>
+                    <Field key={field.id} label={field.name} required={field.required}>
+                      {renderCustomFieldInput(
+                        field,
+                        customFieldValues,
+                        setCustomFieldValues,
+                        'emp-cf',
+                        (next) => attemptAutoCreateEmployee(next),
+                      )}
+                    </Field>
                   ))}
                 </div>
               </div>

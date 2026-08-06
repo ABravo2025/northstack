@@ -343,6 +343,55 @@ baja. El ítem G es seguridad, mismo criterio que QA-01.
 
 ---
 
+## QA-06 — Add Employee: paridad visual con el panel de detalle + auto-create + fix de paginación (2026-08-06, a `staging`)
+
+**Por qué existe esta tarea:** el modal "Add Employee" se reconstruyó para verse igual que el panel
+de detalle de un empleado ya creado (mismo estilo de campo — label a la izquierda, input sin borde
+hasta foco/hover — en vez de label arriba + caja con borde) y ganó comportamiento nuevo: apenas
+First Name, Last Name y Business Email están completos (chequeado al perder foco), el empleado se
+crea solo en el backend y el modal pasa a mostrar el panel de detalle real de esa persona — sin
+clickear "Create". Los campos requeridos ahora muestran un asterisco rojo (`Field.tsx`, prop
+`required`, reusable en cualquier form nuevo). De paso se encontró y corrigió un bug real reportado
+por el usuario probando la app: el empleado recién creado podía no aparecer en la tabla al cerrar el
+panel si el orden/filtro activo lo mandaba a otra página — ahora la tabla salta automáticamente a la
+página donde cayó. Verificado con Playwright contra un tenant descartable en `staging` (incluyendo
+el caso determinístico: ordenar por Name ascendente y crear a alguien cuyo nombre cae en la última
+página) — sin supervisión visual del usuario todavía, esta tarea es esa pasada.
+
+### A. Paridad visual
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | `/hr/employees` → "+ Add" (fila fantasma al final de la tabla, o el botón del estado vacío si el tenant no tiene empleados todavía) | Los campos se ven como el panel de detalle: label a la izquierda, input sin borde visible hasta hacer foco/hover — no la caja con borde de antes. |
+| 2 | Mirar los labels de First Name, Last Name, Business Email | Los 3 tienen un asterisco rojo después del label. Ningún otro campo (Department, Job Title, Contract Type, etc.) lo tiene. |
+| 3 | Cualquier custom field de Employee marcado como `required` | También muestra el asterisco rojo (antes era un `*` de texto plano al final del label, ahora es el mismo `.required-mark` reusable). |
+
+### B. Auto-create
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 4 | Completar First Name + Last Name + un email con forma válida (ej. `a@b.com`), sin tocar el botón "Create" | Al perder foco el campo de email, aparece el toast de "agregado" y el modal se reemplaza por el panel de detalle real de la persona (avatar, nombre, email, chip de status, columna de Notes/Tasks/Activity) — mismo componente que abrir un empleado ya existente. |
+| 5 | Completar los 3 campos requeridos y clickear "Create" a mano en vez de esperar el auto-create | Mismo resultado que el caso 4 — el botón manual sigue funcionando como fallback, sin crear el empleado dos veces. |
+| 6 | Dejar un campo requerido vacío o con un email con forma inválida (ej. `sin-arroba`) y clickear en otro lado del form | No pasa nada — no se crea el empleado, el form sigue editable. |
+| 7 | Completar los 3 requeridos + un custom field marcado `required`, dejando el custom field vacío | No se auto-crea hasta que el custom field también esté completo. |
+| 8 | Provocar un error del backend al auto-crear (ej. reusar el email de un empleado que ya existe en el tenant) | Toast de error legible, el form no se cierra ni se vacía — completar un email distinto y volver a perder el foco reintenta la creación. |
+
+### C. Fix de paginación (bug real corregido esta ronda)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 9 | Con ≥ 21 empleados en el tenant (para forzar 2+ páginas) y sin ningún sort activo, crear uno nuevo desde la fila fantasma de la página 1 | Al cerrar el panel de detalle, el empleado nuevo es visible en la tabla sin tener que navegar de página a mano. |
+| 10 | Mismo escenario, pero ordenando la tabla por "Name" ascendente antes de crear, con un nombre que alfabéticamente caiga en la última página (ej. empieza con "Z") | La tabla salta sola a la página donde cayó el nuevo registro (el indicador "Page X of Y" cambia) y la fila es visible sin navegar a mano. |
+
+### Al encontrar una falla
+
+Los ítems A son visuales — prioridad de pulido salvo que algo quede genuinamente roto. Los ítems B
+son funcionales — si el auto-create no dispara nunca, o dispara con datos incompletos, es severidad
+alta (mismo criterio que cualquier bug de alta de datos). El ítem C es el bug que motivó esta ronda:
+si vuelve a reproducirse, severidad alta — es exactamente el reporte original del usuario.
+
+---
+
 ## Próximas tareas de QA (a definir)
 
 Cuando se construyan los módulos grandes en curso (rediseño de Clients, Payroll), esta tabla de

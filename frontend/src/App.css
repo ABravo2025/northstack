@@ -27,6 +27,13 @@
   @apply mb-1 text-sm font-medium text-brand-navy dark:text-gray-200;
 }
 
+/* Red asterisk marking a required field — the one reusable marker for this
+   across the whole app, dropped into a label wherever a field can't be left
+   empty (both .form-group labels and Field.tsx's required prop use it). */
+.required-mark {
+  @apply text-red-600 dark:text-red-400;
+}
+
 .form-group input,
 .form-group select,
 .form-group textarea {

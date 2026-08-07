@@ -1,6 +1,6 @@
 # Database Schema
 
-- Última actualización: 2026-07-30
+- Última actualización: 2026-08-07 (Payroll Unidad 1 — ver grupo 7)
 - Fuente de verdad real: `prisma/schema.prisma`. Este documento es una vista legible de ese archivo — si difieren, el `.prisma` manda. Regenerar este archivo cuando el schema cambie de forma significativa (modelo nuevo, relación nueva), no hace falta para cambios chicos (un campo opcional más, un índice).
 - Todos los modelos son multi-tenant: casi todos tienen `tenantId` directo (no derivado por join), y el aislamiento entre tenants se verifica en el código de cada endpoint (ownership check), no solo por FK — ver `docs/current-process-flow.md` para el patrón de verificación.
 
@@ -14,6 +14,7 @@ Se dividen en grupos por área funcional, no uno solo gigante, para que sean leg
 4. **Vistas y formularios** — SavedView, PublicForm.
 5. **Sales / Clients redesign** — Company, Contact, Pipeline, Opportunity y su historial.
 6. **Tasks & Notes (cross-entity)** — Task, Note, adjuntables a Employee/Company/Contact/Opportunity.
+7. **Payroll** — PayFrequencyDefinition, PaymentMethodDefinition, EmployeeCompensation, PayrollRun, PayrollEntry.
 
 ## 1. Identidad y acceso
 
@@ -110,6 +111,9 @@ erDiagram
         datetime endDate "nullable"
         string contractUrl "nullable, link only"
         string personalEmail "nullable"
+        enum personType "nullable, profile/contractor/employee — Payroll Unidad 1, unpopulated until Unidad 4/5"
+        string nationality "nullable — Payroll Unidad 1"
+        string countryOfResidence "nullable, filled by the person at contract confirmation — Payroll Unidad 7"
         string statusId FK
         string managerId FK "nullable, self-relation"
         string tenantId FK
@@ -438,6 +442,115 @@ Notas:
 - `Opportunity.nextStepDate`/`nextStepNote` (grupo 5) tienen un script de backfill a `Task` (`scripts/backfill-opportunity-nextstep-to-tasks.ts`, idempotente) — corrido en `staging`, 0 Opportunities con next step cargado todavía ahí, así que no creó nada. Las columnas viejas de `Opportunity` no se tocaron.
 - En el frontend, ambos se consumen a través de `EntityTasksList`/`EntityNotesList` — un componente compartido literal por los 4 paneles de detalle (Employee/Company/Contact/Opportunity), no 4 implementaciones separadas. El compose (crear/editar) está siempre expandido en la columna derecha del panel de detalle (`DetailSidebar.tsx`), no detrás de un popover — cambiado 2026-07-30, antes abría un `Popover` al hacer click en una fila fantasma.
 
+## 7. Payroll
+
+Spec completo en `docs/spec-payroll.md` (v2, 21 unidades) — tercer intento, los dos anteriores se
+revirtieron por completo (git log tiene el detalle; `docs/tareas-desarrollo.md` y
+`docs/features-overview.md` resumen el incidente). Unidad 1 (esta) es solo schema — sin ningún
+endpoint ni pantalla todavía.
+
+```mermaid
+erDiagram
+    TENANT ||--o{ PAY_FREQUENCY_DEFINITION : "defines"
+    TENANT ||--o{ PAYMENT_METHOD_DEFINITION : "defines"
+    TENANT ||--o{ EMPLOYEE_COMPENSATION : "has"
+    TENANT ||--o{ PAYROLL_RUN : "has"
+    TENANT ||--o{ PAYROLL_ENTRY : "has"
+
+    EMPLOYEE ||--o{ EMPLOYEE_COMPENSATION : "contracts (versioned)"
+    PAY_FREQUENCY_DEFINITION ||--o{ EMPLOYEE_COMPENSATION : "assigned to"
+    PAYMENT_METHOD_DEFINITION ||--o{ EMPLOYEE_COMPENSATION : "chosen by the person"
+    PAY_FREQUENCY_DEFINITION ||--o{ PAYROLL_RUN : "runs under"
+    PAYROLL_RUN ||--o{ PAYROLL_ENTRY : "contains"
+    EMPLOYEE ||--o{ PAYROLL_ENTRY : "paid"
+    USER ||--o{ EMPLOYEE_COMPENSATION : "created by"
+    USER ||--o{ PAYROLL_RUN : "created by"
+
+    PAY_FREQUENCY_DEFINITION {
+        string id PK
+        string tenantId FK
+        string name
+        enum cadence "weekly/semimonthly/monthly"
+        string anchorConfig "JSON, shape depends on cadence"
+        enum dueDateOffset "same_day/plus_2/plus_5/custom"
+        int dueDateCustomDays "nullable"
+        bool isActive
+        int order
+    }
+    PAYMENT_METHOD_DEFINITION {
+        string id PK
+        string tenantId FK
+        string name
+        bool isActive
+        int order
+    }
+    EMPLOYEE_COMPENSATION {
+        string id PK
+        string tenantId FK
+        string employeeId FK
+        enum compensationType "hourly/fixed — PayrollCompensationType, distinct from the legacy CompensationType enum"
+        int rateCents
+        string currency
+        string payFrequencyId FK
+        string jobTitle "snapshot, not linked to the People Job Title catalog"
+        string description
+        datetime effectiveFrom
+        datetime effectiveTo "nullable, null = active"
+        string note "nullable"
+        string paymentMethodId FK "nullable, filled by the person"
+        enum paymentAccountSubType "nullable, iban/ach/username"
+        string paymentAccountDataEncrypted "nullable, AES-256-GCM ciphertext"
+        datetime confirmedAt "nullable"
+        bool blocksParticipation "true only if this is the employee's first-ever compensation"
+        string createdByUserId FK
+    }
+    PAYROLL_RUN {
+        string id PK
+        string tenantId FK
+        string payFrequencyId FK "nullable"
+        string periodLabel
+        enum status "draft/confirmed"
+        string createdByUserId FK
+        datetime confirmedAt "nullable"
+    }
+    PAYROLL_ENTRY {
+        string id PK
+        string tenantId FK
+        string employeeId FK
+        string runId FK "nullable — null = a loose off-cycle entry"
+        enum type "base/bonus/commission/reimbursement/deduction"
+        int amountCents "can be negative"
+        string currency
+        float hoursQty "nullable, only for hourly"
+        string label "nullable"
+        datetime paymentDate
+    }
+```
+
+Notas:
+- **`EmployeeCompensation` es versionado, nunca un campo plano en `Employee`** — una suba de sueldo
+  o un cambio de frecuencia crea un registro nuevo en vez de sobreescribir. La regla "un solo
+  registro `effectiveTo: null` por empleado" se aplica en `employeeCompensationService` (a
+  construirse en Unidad 2+), no a nivel de base de datos — mismo patrón que `StatusDefinition.isDefault`.
+- **`PayFrequencyDefinition`/`PaymentMethodDefinition` son catálogos configurables por tenant**, no
+  enums fijos — mismo precedente que `StatusDefinition`/`TimeOffPolicyDefinition`.
+- **`PayrollCompensationType` (`hourly`/`fixed`) es un enum nuevo, distinto del `CompensationType`
+  legado (`hourly`/`monthly`)** que todavía usa `Employee.compensationType` — se mantienen separados
+  a propósito mientras dura la migración (ver debajo), para no romper la columna vieja todavía en
+  uso.
+- **Deuda de la Unidad 1**: `Employee.hourlyRateCents`/`monthlyRateCents`/`compensationType` (grupo
+  2) siguen intactos y en uso (tabla de Employees, panel de detalle, CSV) — se retiran recién en una
+  unidad posterior, después de que exista un catálogo de `PayFrequencyDefinition` sembrado (Unidad
+  2) contra el cual backfillear cualquier dato ya cargado, siguiendo el patrón de migración segura
+  (aditivo → backfill → verificar → destructivo). Confirmado con el usuario 2026-08-07: se retiran,
+  no quedan en paralelo indefinidamente.
+- **Restos de un intento anterior**: al aplicar esta unidad se encontraron 4 tablas huérfanas en
+  `staging` (mismos nombres, forma de columnas vieja e incompatible) dejadas por un intento de
+  Payroll revertido por completo del lado del código — un `git revert` no deshace un `prisma db push`
+  ya aplicado. Se borraron antes de aplicar el schema nuevo.
+- Nada de este grupo llegó a producción todavía — solo `staging` (schema pusheado directamente vía
+  `prisma db push`, código en la rama remota `staging`).
+
 ## Enums
 
 | Enum | Valores | Usado en |
@@ -459,6 +572,13 @@ Notas:
 | `FormAccessMode` | `public`, `internal` | `PublicForm.accessMode` |
 | `PipelineStageOutcome` | `open`, `won`, `lost` | `PipelineStageDefinition.outcome` |
 | `CatalogKind` | `department`, `jobTitle`, `leadSource`, `lossReason`, `companySize` | `FieldCatalogDefinition.kind` |
+| `PersonType` | `profile`, `contractor`, `employee` | `Employee.personType` |
+| `PayFrequencyCadence` | `weekly`, `semimonthly`, `monthly` | `PayFrequencyDefinition.cadence` |
+| `DueDateOffset` | `same_day`, `plus_2`, `plus_5`, `custom` | `PayFrequencyDefinition.dueDateOffset` |
+| `PayrollCompensationType` | `hourly`, `fixed` | `EmployeeCompensation.compensationType` |
+| `PaymentAccountSubType` | `iban`, `ach`, `username` | `EmployeeCompensation.paymentAccountSubType` |
+| `PayrollRunStatus` | `draft`, `confirmed` | `PayrollRun.status` |
+| `PayrollEntryType` | `base`, `bonus`, `commission`, `reimbursement`, `deduction` | `PayrollEntry.type` |
 
 ## Qué falta / deuda conocida
 
@@ -472,3 +592,4 @@ Notas:
 - **Task/Note — permisos abiertos a cualquier rol** (ver grupo 6): revisar cuando exista el sistema de roles custom (Tier 5).
 - **Activity — layout confirmado, sin construir**: el usuario confirmó 2026-07-30 que Activity entra como tab en el panel de detalle (junto a Notes/Tasks), pero sin ningún modelo/backend real todavía — el tab hoy es un placeholder de texto. El sistema de auditoría real (quién hizo qué y cuándo) sigue en Tier 5 ("cola larga").
 - **Tasks/Notes/Company/Contact/Opportunity — nada de esto llegó a producción todavía**: todo el trabajo de esta sesión (2026-07-29/30, ver `docs/tareas-desarrollo.md`) está pusheado a `staging` únicamente, pendiente de que el usuario lo revise antes de promover a `main`.
+- **Payroll — Unidad 1 (schema) en `staging` únicamente**: `Employee.hourlyRateCents`/`monthlyRateCents`/`compensationType` siguen activos (tabla, panel de detalle, CSV) y se retiran en una unidad posterior a Unidad 2, no en esta — ver grupo 7 arriba para el detalle completo y el porqué del orden.

@@ -349,6 +349,46 @@ no se puede enviar, o al revés) — eso sí sería una regresión funcional rea
 
 ---
 
+## QA-09 — Payroll Unidad 1: schema aditivo, sin superficie funcional todavía (2026-08-07, a `staging`)
+
+**Por qué existe esta tarea:** primer push del rearranque de Payroll (`docs/spec-payroll.md`, v2,
+21 unidades — tercer intento, los dos anteriores se revirtieron por completo, ver `git log`). Esta
+unidad es **solo schema + una utilidad de cifrado** — no hay ningún endpoint, pantalla ni
+comportamiento nuevo que probar todavía. El objetivo de esta tarea es una verificación de
+regresión (nada existente se rompió), no una prueba de feature nueva.
+
+### A. Regresión — nada de HR/Employees se movió
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | `GET /api/hr/employees` contra un tenant de `staging` con empleados reales | Responde igual que antes — mismos campos, mismo conteo, sin errores 500 |
+| 2 | Crear/editar un Employee normal (sin tocar nada de Payroll) desde `/hr/people` (o `/hr/employees` si el rename de Unidad 4 todavía no llegó) | Funciona idéntico a antes — `personType`/`nationality`/`countryOfResidence` son columnas nuevas nullable, no deberían aparecer en ningún form todavía |
+| 3 | `npm run build` (backend) y `npm run build` (frontend), `npm test` | Los tres en verde |
+
+### B. Confirmar el estado del schema en la base de `staging`
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 4 | Listar tablas de `staging` (`information_schema.tables`) | Existen `PayFrequencyDefinition`, `PaymentMethodDefinition`, `EmployeeCompensation`, `PayrollRun`, `PayrollEntry` — todas vacías (0 filas), con las columnas del spec nuevo (`EmployeeCompensation` debe tener `jobTitle`/`description`/`paymentMethodId`, que la versión vieja borrada no tenía) |
+| 5 | `Employee` en `staging` | Tiene `personType`/`nationality`/`countryOfResidence`, las 3 en null para todos los empleados existentes; `hourlyRateCents`/`monthlyRateCents`/`compensationType` siguen intactas (se retiran en una unidad posterior, no en esta) |
+
+### Nota sobre restos de un intento anterior
+
+Al hacer `prisma db push` para esta unidad, aparecieron 4 tablas huérfanas en `staging`
+(`PayFrequencyDefinition`/`PayrollRun`/`PayrollEntry`/`EmployeeCompensation`, con pocas filas y una
+forma de columnas vieja e incompatible) — restos de un intento de Payroll revertido por completo en
+el código, pero cuyo `db push` nunca se deshizo. Se borraron antes de aplicar el schema nuevo. Si
+`staging` tiene otras tablas/columnas sueltas sin relación clara con el código actual, vale la pena
+reportarlo — puede ser la misma clase de resto.
+
+### Al encontrar una falla
+
+Cualquier falla en la sección A es alta severidad (regresión sobre algo que ya funcionaba en
+producción). La sección B es informativa — confirma que el push llegó como se esperaba, no hay
+comportamiento de usuario que pueda fallar todavía.
+
+---
+
 ## Próximas tareas de QA (a definir)
 
 Cuando se construyan los módulos grandes en curso (rediseño de Clients, Payroll), esta tabla de

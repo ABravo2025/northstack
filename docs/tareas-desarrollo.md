@@ -2,10 +2,12 @@
 
 - Fecha de creación: 2026-07-02
 - Última actualización: 2026-08-06 — checklist cruzado contra el código real (CSV export/import de
-  Employees confirmado implementado; estado de Payroll corregido — ver la entrada fechada más abajo
-  y la nota de estado en la sección "Tier 3.5"); push de Employees a `staging` (paridad visual del
-  modal "Add" con el panel de detalle, auto-create al completar campos obligatorios, asterisco rojo
-  reusable, fix de paginación — ver QA-06 en `docs/Tareas-QA.md`).
+  Employees confirmado implementado); spec de Payroll eliminado del checklist por quedar
+  inconsistente con la realidad (se había construido, se revirtió por un incidente de deploy el
+  2026-08-03, y no existe en el código en ningún entorno — ver la entrada fechada más abajo, el
+  historial completo queda en `git log` si hace falta reconstruirlo); push de Employees a `staging`
+  (paridad visual del modal "Add" con el panel de detalle, auto-create al completar campos
+  obligatorios, asterisco rojo reusable, fix de paginación — ver QA-06 en `docs/Tareas-QA.md`).
 - Última actualización anterior: 2026-07-30 — módulo CRM (Company/Contact/Opportunity/Pipeline) completo,
   Tasks/Notes con la unificación y rediseño de los 4 paneles de detalle, y una revisión DevOps de
   arquitectura/calidad de código, **todo ya en producción** (primer deploy del CRM completo,
@@ -42,34 +44,12 @@
      ver esa entrada, corregida hoy para ser explícitamente bidireccional.
   4. Varios ítems grandes del backlog (Payroll, Payments, Integraciones, roles custom, etc.) se
      dejaron sin tocar a propósito por no tener spec técnico todavía — ver marca `[ ]` de cada uno.
-- **2026-07-31 (más tarde el mismo día): falso arranque de Payroll V1, construido sin ver el spec
-  real, pusheado por error a producción, revertido.** Se le pidió al agente de Development revisar
-  Tier 3.5 y arrancar si no había dudas. En ese momento el archivo no tenía el spec técnico completo
-  de Payroll que hoy vive más abajo (sección "Payroll (Tier 3.5) — spec técnico completo",
-  Unidades 1-15, con Artifact de mockup aprobado) — solo el resumen corto de líneas 62-78. El agente
-  confirmó 4 puntos abiertos por su cuenta (visibilidad abierta a cualquier rol, período como rango
-  de fechas, sin métricas, carga una por una) y construyó un `PayrollEntry` simple — **incompatible
-  con el spec real**, que exige visibilidad **owner-only** y un modelo con `PayFrequencyDefinition`
-  + `EmployeeCompensation` + `PayrollRun` + `PayrollEntry` (con `runId`/`type`/`hoursQty`). El spec
-  real apareció en el archivo recién cuando el usuario lo señaló explícitamente ("tareas-desarrollo.md
-  las tiene"), ya con el V1 simple pusheado a `staging`.
-  - **Incidente real, no solo un desvío de alcance:** el commit de Payroll V1 (`49721d8`) se pusheó
-    correctamente a `staging`, pero un commit posterior de este mismo archivo (solo el fix del
-    checklist de columnas visibles, pensado para ir directo a `main` por ser docs-only) se hizo sobre
-    la misma rama local sin resetear primero — como ambos commits viven en la misma rama `main` local,
-    el segundo `git push origin main` arrastró también el primero. Resultado: Payroll V1 (con su
-    backend apuntando a una tabla `PayrollEntry` que solo existía en la base de `staging`, nunca en
-    producción) se deployó a producción — mismo patrón exacto que el incidente de Task/Note de este
-    mismo día, esta vez autoinfligido en vez de heredado. Detectado antes de que el usuario reportara
-    síntomas, revirtiendo con `git revert 49721d8` (commit `c682fee`) y pusheando a `main` y `staging`
-    por igual — deploy de producción del revert verificado en verde por la API de GitHub Actions.
-  - **Lección aplicada de acá en adelante**: un `git push origin main` nunca debe asumirse "solo
-    docs" únicamente porque el commit que se está armando toca solo `.md` — si la rama local tiene
-    commits de código sin pushear a `main` por delante, van a viajar igual. Verificar con
-    `git log origin/main..HEAD` (o pushear inmediatamente después de cada commit, sin acumular) antes
-    de cualquier push a `main`.
-  - Próximo paso: reconstruir Payroll desde cero siguiendo el spec real, Unidad 1 en adelante,
-    confirmando y pusheando cada unidad a `staging` por separado (ver sección de spec más abajo).
+- **Lección de proceso (2026-07-31, del primero de dos incidentes de Payroll — el segundo y más
+  grande se resume en la entrada del 2026-08-06 más abajo; detalle completo de ambos en `git log`,
+  no repetido acá):** un `git push origin main` nunca debe asumirse "solo docs" únicamente porque el
+  commit que se está armando toca solo `.md` — si la rama local tiene commits de código sin pushear a
+  `main` por delante, van a viajar igual. Verificar con `git log origin/main..HEAD` (o pushear
+  inmediatamente después de cada commit, sin acumular) antes de cualquier push a `main`.
 - **2026-08-06 — checklist auditado contra el código real, más un push de Employees a `staging`:**
   1. **Add Employee, paridad visual + auto-create**: el modal de alta de Employee pasó a usar el
      mismo estilo de campo que el panel de detalle (`Field.tsx`, label a la izquierda, input sin
@@ -87,13 +67,18 @@
      Opportunities quedan con el mismo tratamiento pendiente, unidad por separado.
   4. **Auditoría del checklist de este archivo contra `git log`/el código real** (a pedido del
      usuario): CSV export/import de Employees confirmado ya implementado (ítems tildados más abajo,
-     con la salvedad de que Clients quedó huérfano de UI); y se encontró que el estado de Payroll
-     documentado acá (**"sin empezar"**, nota del 2026-07-31) estaba desactualizado — en realidad se
-     construyó completo entre el 2026-08-01 y el 2026-08-03, llegó a `staging`, y se revirtió de
-     `main` el 2026-08-03 en un incidente de deploy (detalle completo en la nota de estado dentro de
-     la sección "Tier 3.5" más abajo). Hoy Payroll no existe en el código en ningún entorno — ni
-     `main` ni `staging` (esto último, efecto colateral del propio push de Employees de hoy, al
-     sincronizar `staging` con el `main` post-revert).
+     con la salvedad de que Clients quedó huérfano de UI). Payroll, documentado acá como "sin
+     empezar", en realidad se había construido completo entre el 2026-08-01 y el 2026-08-03 (Unidad
+     0-15 + un re-spec), llegó a `staging` sin revisión real del usuario, y se revirtió de `main` el
+     2026-08-03 tras un incidente de deploy (un push pensado como "solo docs" arrastró 27 commits de
+     código sin revisar — commits `97af398`…`d1da7c4`, después `2c0d7b1`…`f9319a0`, revert en
+     `6f4209d`). Hoy no existe en el código en ningún entorno — ni `main` ni `staging` (esto último,
+     efecto colateral del propio push de Employees de hoy). **A pedido del usuario, se eliminó del
+     checklist el spec técnico completo de Payroll** (vivía en este archivo, Tier 3.5 + la sección
+     "Payroll — spec técnico completo") **por quedar inconsistente con la realidad**, junto con
+     QA-04/QA-05 en `docs/Tareas-QA.md` (describían testear un módulo que ya no existe). El historial
+     completo sigue en `git log` — retomar Payroll significa un spec nuevo desde cero, no reciclar el
+     viejo.
 
 ## Prioridades (tiers)
 
@@ -116,43 +101,15 @@ Siguiente en la cola: Tier 1.
 **Tier 3 — Rediseño de Clients (completo, en producción)** — Company/Contact/Opportunity/Pipeline,
 ver "Estado actual" más abajo y `docs/tareas/semana-2026-07-29.md` para el detalle.
 
-**Tier 3.5 — Módulo Payroll, V1 (spec técnico completo, ver sección "Payroll (Tier 3.5) — spec
-técnico completo" más abajo, Unidades 1-15)**
-- **Distinto del "Módulo Payments" ya anotado en Tier 4** — Payments es facturarle a los *Clients*
-  del tenant (cuentas por cobrar); Payroll es pagarle a los *Employees* del tenant (cuentas por
-  pagar). Flujos de dinero opuestos, no confundir al spec-earlos aunque ambos puedan terminar
-  integrando con QuickBooks.
-- **A futuro (no en V1)**: integración con una plataforma de payroll externa para gestionar pagos
-  directo desde Northstack — el usuario mencionó un nombre transcripto como "Get thera", sin
-  confirmar a qué producto se refiere exactamente; confirmar el nombre real antes de evaluarlo.
-- **Estado real, corregido 2026-08-06 al cruzar este archivo contra `git log`/el código actual**:
-  **sin empezar — otra vez.** El resumen "sin empezar" de abajo databa del 2026-07-31 (solo el falso
-  arranque de esa fecha) y no reflejaba lo que pasó después: el spec completo (Unidad 0-15, más el
-  re-spec de `anchorConfig`/confirmación de contrato/Assignments) se construyó de punta a punta
-  entre el 2026-08-01 y el 2026-08-03, llegó a `staging` (commits `97af398`…`d1da7c4` para las 15
-  unidades originales, después `2c0d7b1`…`f9319a0` para el re-spec — ver `docs/Tareas-QA.md` QA-04
-  y QA-05, escritas en su momento para esos pushes), pero **nunca llegó a revisión real en
-  navegador**. El 2026-08-03 un `git push origin main` que se armó pensando que solo llevaba un
-  commit de docs (QA-05) en realidad arrastró las 27 commits de código que la rama local `main`
-  tenía por delante de `origin/main` — el módulo Payroll completo, sin revisar, se deployó a
-  producción. Revertido de inmediato (`6f4209d`, mismo día) con los 15+ archivos de Payroll
-  eliminados de `main` — decisión correcta, ver el mensaje del commit para el detalle completo del
-  incidente. **Consecuencia no anticipada en ese momento**: como este proyecto no mantiene una rama
-  de trabajo separada para `staging` (el flujo es siempre pushear `main` local a los dos refs
-  remotos), el revert quedó parado *encima* de `main` — cualquier `git push origin main:staging`
-  posterior iba a arrastrar el revert también a `staging`, sacando a Payroll de ahí igual, a pesar
-  de que el propio mensaje del revert decía "Payroll stays on staging, unreviewed, exactly where it
-  was". Eso se concretó el 2026-08-06: un push de rutina de un fix de Employees a `staging` sincronizó
-  `staging` con el `main` post-revert, así que **hoy Payroll no existe en el código en ningún
-  entorno** (ni `main` ni `staging`) — confirmado directamente contra `prisma/schema.prisma`,
-  `src/routes/`, `src/modules/hr/` y `frontend/src/pages/` (sin rastro de
-  `PayFrequencyDefinition`/`EmployeeCompensation`/`PayrollRun`/`PayrollEntry`/`PayrollPage.tsx`).
-  **QA-04 y QA-05 en `docs/Tareas-QA.md` describen verificación de un módulo que ya no está en el
-  código** — no tiene sentido correrlas tal como están hasta que Payroll se reconstruya; no se
-  borraron esas entradas por si sirve releer los casos de prueba al retomar. Orden de ejecución para
-  la próxima vez: Unidad 1 en adelante, confirmando y pusheando cada unidad a `staging` por
-  separado — **y esta vez, revisión real del usuario en `staging` antes de acumular más unidades**,
-  no solo build/test en verde.
+**Tier 3.5 — Módulo Payroll — sin spec activo, eliminado del checklist 2026-08-06.** Se había
+construido completo (Unidad 0-15 + un re-spec) entre el 2026-08-01 y el 2026-08-03, llegó a
+`staging` sin revisión real del usuario, y terminó revertido de `main` el mismo 2026-08-03 tras un
+incidente de deploy (detalle en la entrada fechada 2026-08-06 de la sección de arriba). Hoy no
+existe en el código en ningún entorno. El spec técnico que vivía en este archivo se eliminó por
+quedar inconsistente con esa realidad — retomar Payroll significa empezar un spec nuevo desde cero,
+no reciclar el viejo; el historial completo (qué se construyó, cómo se revirtió) queda en `git log`
+si hace falta consultarlo. Distinto del "Módulo Payments" de Tier 4 — Payments es facturarle a los
+*Clients* del tenant (cuentas por cobrar), Payroll es pagarle a los *Employees* (cuentas por pagar).
 
 **Tier 4 — Resto de iniciativas grandes**
 - Suscripciones propias del SaaS (Paddle, planes/precios, pantalla de administración autónoma)
@@ -321,365 +278,3 @@ Las entradas fechadas (el detalle día a día de qué se hizo y por qué) viven 
   PM); calificación de leads sin Company confirmada (pospuesto hasta tener volumen real);
   automatizaciones del pipeline de ventas (pospuesto); corte final del módulo `Client` legado
   (bloqueado en migrar Custom Fields/Public Forms de `entityType: 'client'` primero).
-
-
-# Payroll (Tier 3.5) — spec técnico completo
-
-Carga manual de pagos a empleados y contractors + registro histórico de compensación, sin
-procesamiento real de pagos (no hay integración bancaria ni generación de W2/W4 — el público
-inicial son contractors internacionales facturando por su cuenta). Distinto de **Payments**
-(cobro a Clients/Companies, no pago a Employees).
-
-Mockup de referencia (Artifact aprobado): "Northstack — Payroll (mockup)" — línea de tiempo
-unificada de runs + pagos únicos, pestaña de Políticas de pago, detalle de run con ajustes
-colapsados, status de empleado visible, carga de horas para hourly.
-
-Visibilidad: **owner/admin-only** por default en toda la sección (mismo criterio que hoy tienen
-`hourlyRateCents`/`monthlyRateCents` en Employee), hasta que exista permisología custom.
-Excepción: cada empleado puede ver su propio historial de compensación (`EmployeeCompensation`),
-igual que hoy puede ver su propio balance de PTO.
-
-Orden sugerido: **1 → 12**, cada unidad se confirma y pushea a `staging` antes de pasar a la
-siguiente (mismo criterio que el rediseño de Clients). Ninguna requiere tocar `Client`,
-`Opportunity` ni ningún módulo de Sales.
-
----
-
-## Unidad 0 — Reconciliar con lo ya construido (previo a todo lo demás)
-
-**Antes de tocar schema ni ninguna otra unidad**: existe hoy en el panel de Employee una sección
-"Contract & Compensation" (Contract Type, Compensation Type, Hourly Rate, Monthly Rate, Start
-Date, End Date, Contract URL) construida en paralelo a este spec, que se solapa parcialmente con
-lo que definimos acá pero no es lo mismo — no tiene frecuencia de pago, no tiene vigencia
-histórica real (`effectiveFrom`/`effectiveTo`), y mezcla con los campos legacy
-`hourlyRateCents`/`monthlyRateCents` de `Employee`.
-
-- [ ] Evaluar campo por campo si esa sección es funcionalmente redundante con
-  `EmployeeCompensation` (Unidad 1) una vez construido. Si lo es — probablemente lo sea, dado que
-  cubre el mismo dominio con menos capacidad (sin historial, sin frecuencia) — **eliminarla por
-  completo** (UI + los campos de schema que le sean exclusivos, si los hay) en vez de dejarla
-  coexistiendo con el modelo nuevo. No debería quedar más de un lugar para cargar compensación.
-  `hourlyRateCents`/`monthlyRateCents` de `Employee` siguen la decisión ya tomada aparte (quedan
-  por ahora, se resuelve cuando `EmployeeCompensation` esté funcionando en producción — no forma
-  parte de esta evaluación).
-- [ ] Si hay alguna pieza de esa sección que **no** es redundante (ej. `Contract URL`, que no
-  tiene equivalente en el modelo nuevo), decidir explícitamente si se conserva como campo aparte
-  o se descarta — no asumir en silencio, confirmar antes de construir el resto.
-
----
-
-## Unidad 1 — Schema (Prisma)
-
-- [ ] `PayFrequencyDefinition` (tenant-level, catálogo — mismo patrón que `PtoPolicyDefinition`):
-  `id`, `tenantId`, `name`, `cadence` (`weekly` / `semimonthly` / `monthly`), `anchorConfig` (JSON,
-  forma según `cadence` — ver detalle abajo), `dueDateOffset` (enum: `same_day` / `plus_2` /
-  `plus_5` / `custom`), `dueDateCustomDays` (int, nullable — solo si `dueDateOffset: custom`),
-  `isActive`, `order`.
-
-  **Forma de `anchorConfig` según `cadence`** (JSON, sin tabla propia — mismo criterio ya usado
-  para otros campos JSON del proyecto, ej. `SavedView.filters`):
-  - `weekly` → `{ dayOfWeek: 'monday'..'sunday' }`
-  - `semimonthly` → `{ preset: 'first_15' }` (días 1 y 15) / `{ preset: 'fifteen_last' }` (día 15 y
-    último día de mes) / `{ preset: 'custom', days: [n, m] }` (dos días de mes elegidos a mano,
-    sin builder de rangos)
-  - `monthly` → `{ preset: 'first_business_day' }` / `{ preset: 'last_business_day' }` /
-    `{ preset: 'custom', day: n }` (un día fijo del mes)
-
-  **Nota de alcance deliberada**: `dueDateOffset` es un número de días de calendario plano — no
-  contempla correr el pago al día hábil anterior si cae fin de semana/feriado (a diferencia de
-  Deel/Thera, que sí lo hacen). Aceptado como gap conocido para V1, ver backlog al final.
-- [ ] `EmployeeCompensation` (contrato individual, con vigencia — no vive como campo plano en
-  `Employee`): `id`, `employeeId` (FK), `compensationType` (`hourly` / `fixed`), `rateCents`,
-  `currency`, `payFrequencyId` (FK a `PayFrequencyDefinition`), `effectiveFrom` (date),
-  `effectiveTo` (date, nullable — `null` = vigente), `note`, `createdByUserId`, `createdAt`.
-  Constraint a nivel de servicio (no de DB): un `employeeId` no puede tener dos registros con
-  `effectiveTo: null` simultáneos — al crear uno nuevo vigente, el anterior se cierra
-  (`effectiveTo = effectiveFrom del nuevo - 1 día`) en la misma transacción.
-- [ ] `PayrollRun`: `id`, `tenantId`, `payFrequencyId` (FK, **nullable** — null identifica un
-  pago único/off-cycle en vez de un run masivo), `periodLabel` (string libre, ej. "2da quincena ·
-  julio 2026"), `status` (`draft` / `confirmed`), `createdByUserId`, `confirmedAt` (nullable).
-- [ ] `PayrollEntry`: `id`, `tenantId`, `employeeId` (FK), `runId` (FK, **nullable** — null =
-  entrada suelta creada directo, no via pre-carga de un run), `type` (enum fijo: `base` / `bonus`
-  / `commission` / `reimbursement` / `deduction`), `amountCents` (puede ser negativo para
-  deducciones), `currency`, `hoursQty` (decimal, nullable — solo aplica si `compensationType:
-  hourly`), `label` (nota libre), `paymentDate`.
-- [ ] Migración/backfill: ninguno necesario — todo aditivo, no toca `Employee`,
-  `hourlyRateCents`/`monthlyRateCents` quedan como están (decisión ya tomada: no se tocan hasta
-  que `EmployeeCompensation` esté funcionando en producción).
-- [ ] `EntityType` no necesita extenderse — Payroll no usa `CustomFieldValue`/`StatusHistoryEntry`
-  en V1 (sin campos custom, sin historial de status — no aplica).
-
-**Nota de alcance deliberada**: el matching de quién entra a cada run sigue siendo por
-`payFrequencyId`, no por fecha exacta calculada contra `anchorConfig` — `anchorConfig` define
-*qué opción se muestra y guarda* para cada política, pero todavía no hay un job que calcule
-automáticamente "hoy corresponde correr la semi-mensual". Ese cálculo de calendario (y el ajuste
-a día hábil del due date, la advertencia de arriba) quedan para una ronda futura si hace falta.
-
----
-
-## Unidad 2 — Catálogo de políticas de pago (backend)
-
-- [ ] `payFrequencyService.ts`: CRUD de `PayFrequencyDefinition` (create/list/update/deactivate —
-  mismo patrón que `ptoPolicyService.ts`, sin delete físico, `isActive: false` en su lugar).
-- [ ] Endpoint `GET /api/hr/pay-frequencies` — devuelve activas + conteo de personas asignadas
-  (`EmployeeCompensation` vigente por cada una) para el listado.
-- [ ] Endpoint `POST /api/hr/pay-frequencies` / `PATCH /api/hr/pay-frequencies/:id` — owner-only.
-- [ ] Seed inicial al crear un tenant nuevo: 2 políticas de ejemplo ("Mensual", "Quincenal") —
-  mismo criterio que el seed de Pipelines/Statuses, evita que un tenant nuevo vea Payroll vacío.
-
-## Unidad 3 — Catálogo de políticas de pago (frontend)
-
-- [ ] Pestaña "Políticas de pago" dentro de `/hr/payroll` (no en Settings — Payroll ya tiene su
-  propia sección en el sidebar, igual que PTO). Tabla: Nombre / Cadencia / Día(s) de pago
-  (renderizado legible a partir de `anchorConfig`, ej. "Días 1 y 15") / Due date / Personas
-  asignadas / editar.
-- [ ] Modal "Nueva política" / "Editar política" (centrado, con backdrop — no panel lateral):
-  nombre, cadencia (select: Semanal / Semi-mensual / Mensual — cambia las opciones de abajo
-  dinámicamente), y según la cadencia:
-  - Semanal → select de día de la semana
-  - Semi-mensual → radio con 3 opciones: "1 y 15" / "15 y último día de mes" / "Custom" (este
-    último muestra 2 selects de día de mes, 1–31)
-  - Mensual → radio con 3 opciones: "Primer día hábil" / "Último día hábil" / "Custom" (muestra 1
-    select de día de mes)
-  - Due date (siempre visible, aparte de la cadencia): select "Mismo día" / "+2 días" / "+5 días"
-    / "Custom" (número a mano si se elige Custom)
-- [ ] Nota visible en la pantalla (como en el mockup): "la asignación de política + monto por
-  persona se hace desde la ficha del empleado, no acá".
-- [ ] Campos requeridos (nombre, cadencia, y el/los campo(s) de día según la opción elegida)
-  marcados con asterisco rojo.
-
-## Unidad 4 — Compensación por empleado (backend)
-
-- [ ] `employeeCompensationService.ts`: `createCompensation` (cierra automáticamente el registro
-  vigente anterior si existe, dentro de una transacción), `listCompensationHistory(employeeId)`,
-  `getActiveCompensation(employeeId, atDate?)` — esta última es la que va a usar el cálculo de
-  runs (Unidad 5), busca la compensación vigente en una fecha dada, no solo "la actual".
-- [ ] Endpoints: `GET /api/hr/employees/:id/compensation` (historial completo — el propio
-  empleado puede consultar el suyo, owner/admin cualquiera), `POST
-  /api/hr/employees/:id/compensation` (owner-only).
-- [ ] Reusar el guardrail de permisos ya existente para `hourlyRateCents`/`monthlyRateCents` en
-  `employeeService.ts` como referencia de patrón (mismo criterio de gating).
-
-## Unidad 5 — Compensación por empleado (frontend)
-
-- [ ] Nueva sección "Compensación" en la ficha de cada empleado (Overview panel), listando el
-  historial (`EmployeeCompensation`) — vigente destacado arriba, resto colapsado como historial.
-- [ ] Modal para cargar un registro nuevo (centrado, con backdrop — mismo patrón de modal ya
-  confirmado para el resto de la plataforma, no panel lateral tipo `SlideOver`): tipo (hourly/
-  fixed), monto, moneda, política de pago (select del catálogo de la Unidad 3), vigente desde,
-  nota. Campos requeridos marcados con asterisco rojo.
-- [ ] Gating de visibilidad: propio empleado ve solo el suyo; owner/admin ven cualquiera (según
-  cómo se resuelva el gating exacto en Unidad 4).
-
-## Unidad 5.1 — Compensación inicial en el alta de empleado (frontend, cross-módulo)
-
-**Toca el form de "Nuevo empleado" existente (fuera de Payroll estrictamente, pero necesario
-para que el camino principal no sea retrofitear a todos desde Asignaciones)**.
-
-- [ ] El form de alta de `Employee` gana un paso/sección opcional (visible, no escondida detrás
-  de un toggle — dentro del mismo modal de alta, no como panel lateral aparte) para cargar el
-  `EmployeeCompensation` inicial en el mismo submit: tipo, monto, moneda, política de pago,
-  vigente desde (default = fecha de alta). Mismo criterio que Deel — el contrato se define al dar
-  de alta, no como paso B separado. Campos requeridos (si se completa esta sección) con asterisco
-  rojo.
-- [ ] Si se deja vacío, la persona queda sin `EmployeeCompensation` — aparece en el listado de
-  "sin política asignada" de la Unidad 5.2, para completarlo después sin bloquear el alta.
-- [ ] Reusa el mismo servicio de la Unidad 4 (`employeeCompensationService.createCompensation`),
-  no un endpoint nuevo — el alta de empleado llama a `POST /api/hr/employees/:id/compensation`
-  como una segunda llamada dentro del mismo flujo del formulario (no una transacción conjunta con
-  la creación del `Employee`, para no acoplar los dos servicios).
-
-## Unidad 5.2 — Asignación / reasignación masiva de política de pago (backend + frontend)
-
-Herramienta de **excepción**, no el camino principal (ese es la Unidad 5.1) — para retrofitear
-gente vieja sin compensación cargada, o migrar un grupo ya existente a una política nueva.
-
-- [ ] Backend: `POST /api/hr/payroll/compensation/bulk` — recibe una lista de `{employeeId,
-  compensationType, rateCents, currency}` + `payFrequencyId` y `effectiveFrom` comunes a todo el
-  batch. Crea un `EmployeeCompensation` por cada entrada (cerrando el vigente anterior si existía,
-  mismo mecanismo de la Unidad 4) — **nunca calcula el monto a partir del anterior**, cada monto
-  viene explícito en el payload.
-- [ ] Endpoint de soporte: `GET /api/hr/payroll/compensation/status` — lista todos los `Employee`
-  con su `EmployeeCompensation` vigente (o `null` si no tiene ninguna) y el chip de política
-  actual, para armar la pantalla de abajo.
-- [ ] Frontend: vista "Asignaciones" dentro de Payroll (mismo patrón que la de PTO Policies) —
-  tabla de empleados con checkbox, chip de política actual o "Sin política asignada". Seleccionás
-  varios → "Asignar/reasignar política" abre un modal centrado (no panel lateral) → elegís
-  frecuencia destino + vigencia común → tabla de revisión con un input de monto editable por
-  persona (pre-llenado con el monto anterior tal cual, sin conversión, si tenía uno — vacío si no
-  tenía). Input opcional "aplicar este monto a todas las filas seleccionadas" arriba de la tabla,
-  para el caso de un grupo que cobra lo mismo — sigue siendo un número que vos cargás a mano, no
-  un cálculo derivado de nada. Campos requeridos con asterisco rojo.
-
----
-
-## Unidad 5.3 — Confirmación de contrato (backend + frontend)
-
-Un contrato (`EmployeeCompensation`) sin confirmar por el empleado **bloquea** su participación en
-payroll runs — y, por dependencia cruzada, en cálculos de Time Off (ver nota abajo). El bloqueo
-solo aplica si la persona **nunca confirmó nada antes**: si ya tenía un contrato confirmado y le
-reasignan la política (Unidad 5.2), el cambio nuevo queda pendiente de confirmar pero no la saca
-de circulación mientras tanto — evita que alguien activo desaparezca de un run por no revisar el
-mail a tiempo.
-
-- [ ] `EmployeeCompensation` gana `confirmedAt` (nullable) y `blocksParticipation` (boolean,
-  calculado al crear el registro: `true` solo si `employeeId` no tiene ningún otro
-  `EmployeeCompensation` con `confirmedAt` no nulo — es decir, es su primer contrato).
-- [ ] Backend: al crear un `EmployeeCompensation` (tanto en el alta, Unidad 5.1, como en la
-  reasignación masiva, Unidad 5.2), si la persona ya tiene `User` vinculado (`Employee.userId`),
-  se le notifica directo (in-app + mail); si todavía no tiene cuenta, el paso de confirmación se
-  suma como parte del flujo existente de `Invitation`/accept-invite, no un mail aparte.
-- [ ] Endpoint `POST /api/hr/employees/:id/compensation/:compId/confirm` — acción del propio
-  empleado (no de owner/admin), setea `confirmedAt`.
-- [ ] Frontend: pantalla/paso de confirmación mostrando tipo de contrato, monto, frecuencia,
-  posición — botón "Confirmar". Si es parte del accept-invite, un paso más en ese flujo ya
-  existente; si la persona ya tenía cuenta, un banner en su Overview ("Tenés un contrato pendiente
-  de confirmar") hasta que lo resuelva.
-- [ ] Unidad 6 (creación de run) se actualiza: la query de pre-carga excluye a cualquier persona
-  cuyo `EmployeeCompensation` vigente tenga `blocksParticipation: true` y `confirmedAt: null` —
-  y el run muestra un aviso ("N personas excluidas por contrato sin confirmar") en vez de
-  simplemente omitirlas en silencio.
-
-**Dependencia cruzada, fuera del alcance de este archivo**: el mismo chequeo
-(`blocksParticipation && !confirmedAt` → excluir) tiene que replicarse en el servicio de
-elegibilidad de Time Off (`timeOffBalanceService.ts` u equivalente) — no se construye acá, queda
-anotado como requisito explícito para cuando se ejecute esta unidad, no como backlog pospuesto.
-
-## Unidad 5.4 — Indicadores de contrato y acceso en la tabla de Employees (frontend, cross-módulo)
-
-**Toca `EmployeesPage.tsx` (fuera de Payroll estrictamente, mismo criterio de cross-módulo que la
-Unidad 5.1)**. Dos columnas/chips nuevos, ambos de solo lectura — no hay acción manual, todo se
-deriva.
-
-- [ ] Backend: `GET /api/hr/employees` (o un endpoint de soporte aparte si tocar el principal es
-  riesgoso) suma dos campos calculados por empleado:
-  - `contractStatus`: `sin_compensacion` (nunca se le cargó nada) / `confirmado`
-    (`EmployeeCompensation` vigente con `confirmedAt` seteado) / `pendiente` (sin confirmar, menos
-    de 3 días desde que se creó/notificó) / `vencido` (sin confirmar, 3 días o más).
-  - `lastLoginAt`: se deriva del Activity Log (evento de login más reciente para el `User`
-    vinculado, `entityType`/`entityId` nulos) — `null` si nunca hubo ningún login. **Depende de
-    que el módulo de Activity Log ya esté construido** (spec aparte, ya cerrado) — si Payroll se
-    ejecuta antes que Activity Log, esta unidad queda bloqueada hasta que exista esa tabla.
-- [ ] Frontend: chip de contrato en la fila de cada empleado (`Confirmado` verde / `Pendiente`
-  neutro / `Vencido` rojo / sin chip si nunca tuvo compensación cargada — no aplica). Chip
-  separado de acceso: `Ingresó · [fecha último login]` o `Nunca ingresó` (neutro/gris, no es un
-  estado de alerta, es informativo).
-- [ ] Ambos chips visibles en la vista Grid de Employees, sin agregar filtro/sort dedicado en
-  esta unidad (si hace falta filtrar por "contrato vencido" más adelante, es una extensión menor
-  sobre esto, no bloqueante ahora).
-
-## Unidad 6 — Payroll Run: creación y pre-carga automática (backend)
-
-- [ ] `payrollRunService.ts`: `createRun(payFrequencyId, periodLabel)` — trae todos los
-  `Employee` activos con `EmployeeCompensation` vigente cuyo `payFrequencyId` matchea, y por cada
-  uno crea un `PayrollEntry` en estado implícito borrador (`runId` seteado, `type: 'base'`,
-  `amountCents`/`hoursQty` según `compensationType`: si es `fixed`, `amountCents = rateCents`
-  directo (no hay conversión ni división — ver Unidad de Compensación); si es `hourly`,
-  `amountCents: 0` y `hoursQty: null` hasta que se cargue a mano.
-- [ ] Endpoint `POST /api/hr/payroll/runs` — owner-only.
-- [ ] Endpoint `GET /api/hr/payroll/runs/:id` — devuelve el run con sus `PayrollEntry` agrupadas
-  por empleado (una fila base + N ajustes por persona, ya armado del lado del backend para que el
-  frontend no tenga que agrupar).
-
-## Unidad 7 — Payroll Run: pantalla de creación y detalle (frontend)
-
-- [ ] Modal "Nuevo run": select de frecuencia (trae del catálogo de la Unidad 3), campo de
-  período (texto libre por ahora, ej. "2da quincena · agosto 2026").
-- [ ] Pantalla de detalle del run: tabla una fila por persona (status dot, nombre, badge de
-  compensación, base del período, ajustes colapsados como total, total, acciones) — igual al
-  mockup aprobado.
-- [ ] Base del período: read-only si `fixed` (viene directo de `rateCents`), input de horas si
-  `hourly` (con la fórmula "hs × tarifa" visible al lado).
-
-## Unidad 8 — Ajustes dentro de un run (backend + frontend)
-
-- [ ] Backend: `POST /api/hr/payroll/entries` (crear un ajuste — bono/comisión/reembolso/
-  deducción — asociado a `runId` + `employeeId`), `DELETE /api/hr/payroll/entries/:id` (solo si
-  el run padre sigue en `draft`).
-- [ ] Frontend: el botón de "ajustes" en cada fila muestra solo el **total** (+/− monto), no la
-  cantidad de líneas — al clickear expande el detalle editable (tipo, monto, nota, eliminar) +
-  "agregar ajuste".
-
-## Unidad 9 — Carga de horas para hourly (backend + frontend)
-
-- [ ] Backend: al confirmar el run (Unidad 11), si hay algún `PayrollEntry type: 'base'` con
-  `compensationType: hourly` y `hoursQty: null`, bloquear la confirmación con un error específico
-  (no se puede confirmar un run con horas sin cargar).
-- [ ] Frontend: input de horas editable en la fila (ya cubierto visualmente en Unidad 7), con
-  validación en vivo — recalcula el total de esa fila al cambiar.
-
-## Unidad 10 — Alerta de empleado inactivo (backend + frontend)
-
-- [ ] Backend: `GET /api/hr/payroll/runs/:id` (Unidad 6) incluye el `status` actual de cada
-  `Employee` en la respuesta, para que el frontend pueda marcar la fila sin un endpoint aparte.
-- [ ] Frontend: fila con status dot rojo + banner de advertencia debajo ("Figura inactivo/a desde
-  [fecha] — revisar antes de confirmar") si el `Employee.status` no es el status "activo" del
-  catálogo del tenant. **No bloquea la confirmación** en V1 — es advertencia visual, no un guard
-  duro (si en el futuro se decide bloquear, es un cambio de una línea en Unidad 11).
-
-## Unidad 11 — Confirmar run (backend + frontend)
-
-- [ ] Backend: `POST /api/hr/payroll/runs/:id/confirm` — valida horas cargadas (Unidad 9),
-  transición `draft → confirmed`, `confirmedAt` seteado, bloquea edición/borrado de
-  `PayrollEntry` asociadas desde ese momento (guard en los endpoints de Unidad 8).
-- [ ] Frontend: botón "Confirmar run" deshabilitado si hay horas sin cargar (con tooltip
-  explicando por qué), sin necesidad de esperar el error del backend para dar feedback.
-- [ ] Botón "+ Agregar persona a este run" (excepción manual — sumar a alguien fuera de la
-  pre-carga automática) — solo habilitado mientras el run esté en `draft`.
-
----
-
-## Unidad 12 — Pagos únicos / off-cycle (backend + frontend)
-
-- [ ] Backend: `POST /api/hr/payroll/off-payments` — recibe una lista de `employeeId` + tipo +
-  monto (mismo monto o editable por persona, a definir con Alejandro si hace falta variar por
-  persona en el mismo submit) → crea un `PayrollEntry` independiente por cada uno, `runId: null`,
-  `paymentDate` explícito (no un período).
-- [ ] Frontend: modal "+ Pago único" — selector de personas (checklist), tipo, monto. Cada persona
-  marcada genera su propio `PayrollEntry`, sin agruparlas en una entidad contenedora. Campos
-  requeridos con asterisco rojo.
-
-## Unidad 13 — Línea de tiempo unificada (frontend)
-
-- [ ] Pestaña principal de Payroll: una sola lista cronológica mezclando `PayrollRun` confirmados/
-  en borrador y `PayrollEntry` sueltas (`runId: null`), cada una con un chip "Run" / "Pago único"
-  — igual al mockup aprobado. Ambos tipos ordenados por fecha (confirmedAt del run, o
-  paymentDate del pago suelto).
-
-## Unidad 14 — Payslip PDF (preview, backend + frontend)
-
-- [ ] Backend: endpoint que arma un PDF simple a partir de un `PayrollEntry` (o del set de
-  entries de una persona en un run) — nombre, período, breakdown de conceptos, total. Sin
-  numeración legal, sin firma, sin compliance de ningún país — vista previa descargable, marcada
-  explícitamente como tal.
-- [ ] Frontend: ícono de payslip en cada fila del run → modal de preview con el PDF, marcado
-  "Vista previa, no enviado" (igual que el mockup), botón de descarga.
-
-## Unidad 15 — Sidebar y ruta
-
-- [ ] Nueva entrada "Payroll" en el sidebar, mismo grupo que Time Off (grupo "HR"), ruta
-  `/hr/payroll`. Owner-only a nivel de ítem de navegación (no solo a nivel de endpoint).
-
----
-
-## Backlog — explícitamente fuera de esta ronda
-
-- [ ] **Métricas de Payroll** (costo por mes/departamento/tipo, tendencia) — mockeadas y
-  discutidas, pero el usuario pidió dejarlas afuera de esta ronda. Van en un spec propio cuando
-  se retome.
-- [ ] **Cálculo automático de fecha de pago** a partir de `anchorConfig` (hoy define la opción
-  elegida, pero no hay job que calcule "hoy corresponde correr esta política") — no bloquea el
-  V1, el matching por frecuencia ya resuelve el problema central de no pagarle a quien no
-  corresponde.
-- [ ] **Ajuste de `dueDateOffset` a día hábil** si el resultado cae fin de semana/feriado (Deel y
-  Thera sí lo resuelven, corriendo el pago al día hábil anterior) — gap conocido, aceptado para
-  V1, el owner puede ajustarlo a mano si hace falta.
-- [ ] **Bloqueo duro de confirmación si hay alguien inactivo con pagos cargados** — V1 solo
-  advierte visualmente (Unidad 10); si en el futuro se decide bloquear en vez de advertir, es un
-  cambio acotado sobre esa misma unidad.
-- [ ] **Permisología custom sobre Payroll** — hoy es owner-only a secas (más el propio empleado
-  viendo su propia compensación); depende del rediseño de roles/permisos que está anotado como
-  pendiente en el backlog general, no específico de Payroll.
-- [ ] **Vista dedicada de historial de `EmployeeCompensation` con filtros/exportación** — la
-  Unidad 5 cubre el listado básico en la ficha del empleado; algo más elaborado (ej. reporte de
-  aumentos del año) queda para cuando haya un caso de uso real.

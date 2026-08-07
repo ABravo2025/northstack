@@ -17,7 +17,7 @@
   quedó desactualizado (por ejemplo, después de mergear una rama grande como `staging` a `main`),
   regeneralo antes de seguir confiando en él para chequear reusabilidad.
 - Reflejaba el estado de `main` al momento de escribirse — **no incluye** módulos que solo viven en
-  `staging` todavía sin mergear (ej. Payroll, en `staging` desde 2026-08-03) hasta que se promuevan.
+  `staging` todavía sin mergear, hasta que se promuevan.
 
 ---
 
@@ -236,7 +236,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 - **EntityCardList** — lista de tarjetas para la vista mobile de una tabla (`<md`, patrón responsive).
 - **Field** — wrapper de label+valor para paneles de detalle y forms de alta. Prop `required` (2026-08) renderiza `RequiredMark` junto al label.
 - **RequiredMark** (2026-08) — el asterisco rojo, como componente en vez de texto suelto (`.required-mark` en CSS). Es el único lugar que define "así se ve un campo obligatorio" — `Field` lo usa internamente vía su prop `required`; cualquier form que **no** use `Field` (la mayoría de los `.form-group` + `<label>` sueltos de SlideOvers/popovers/páginas de auth) lo importa y lo cae directo dentro del `<label>`: `<label>Nombre<RequiredMark /></label>`. Aplicado en 2026-08 a los 4 forms de alta del CRM, Login/Register/Accept Invite, los popovers de Invite user/PTO Policy/Time Off request/Custom Field/Status/Field Catalog/Saved View/Pipeline/CSV import, el builder de Public Forms + el form público en sí, TaskForm/NoteForm, y los sub-forms de alta rápida dentro de los paneles de detalle del CRM (ej. "add a new contact" en `CompanyDetailModal`).
-- **Icons.tsx** — toda la iconografía de la app, un componente por ícono (`SearchIcon`, `PlusIcon`, `PencilIcon`, `TrashIcon`, `MailIcon`, `EyeIcon`/`EyeOffIcon`, `CheckIcon`, `XIcon`, `GripIcon`, `GridIcon`, `KanbanIcon`, `ListIcon`, `LockIcon`, `TeamIcon`, `FilterIcon`, `DotsVerticalIcon`, `CopyIcon`, `HomeIcon`, `DashboardIcon`, `CalendarIcon`, `TrendingIcon`, `PeopleIcon`, `BriefcaseIcon`, `GearIcon`, `UserCircleIcon`, `ChevronDownIcon`/`ChevronLeftIcon`/`ChevronRightIcon`, `MenuIcon`, `DownloadIcon`, `UploadIcon`, `BellIcon`, `BuildingIcon`, `TargetIcon`) — **revisar esta lista antes de agregar un ícono nuevo**, es fácil duplicar uno que ya existe con otro nombre. (`DollarIcon`/`DocumentIcon` existen en `staging`, agregados para Payroll — no en `main` todavía.)
+- **Icons.tsx** — toda la iconografía de la app, un componente por ícono (`SearchIcon`, `PlusIcon`, `PencilIcon`, `TrashIcon`, `MailIcon`, `EyeIcon`/`EyeOffIcon`, `CheckIcon`, `XIcon`, `GripIcon`, `GridIcon`, `KanbanIcon`, `ListIcon`, `LockIcon`, `TeamIcon`, `FilterIcon`, `DotsVerticalIcon`, `CopyIcon`, `HomeIcon`, `DashboardIcon`, `CalendarIcon`, `TrendingIcon`, `PeopleIcon`, `BriefcaseIcon`, `GearIcon`, `UserCircleIcon`, `ChevronDownIcon`/`ChevronLeftIcon`/`ChevronRightIcon`, `MenuIcon`, `DownloadIcon`, `UploadIcon`, `BellIcon`, `BuildingIcon`, `TargetIcon`) — **revisar esta lista antes de agregar un ícono nuevo**, es fácil duplicar uno que ya existe con otro nombre.
 - **LegalDocumentModal** — visor de ToS/Privacy Policy.
 - **Modal** — modal centrado con backdrop, mismas props que `SlideOver` (open/title/onClose/footer). Patrón esperado (no excepción) para el form de alta de Employee/Company/Contact/Opportunity desde 2026-08; para otros forms chicos, evaluar caso a caso si el diseño pide centrado en vez de panel lateral.
 - **OverviewActionsMenu** — trigger "Actions" del header de un panel de detalle (Delete, Invite to app, etc.).

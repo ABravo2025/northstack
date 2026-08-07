@@ -430,6 +430,49 @@ que QA-01.
 
 ---
 
+## QA-11 — Payroll Unidad 3+4: pantalla de políticas de pago, rename a People, `personType` (2026-08-07, en local únicamente — no pusheado a `staging` todavía)
+
+**Por qué existe esta tarea:** primera pantalla real de Payroll (`/hr/payroll`, todavía sin entrada
+en el sidebar — eso es la Unidad 21) + el primer cambio cross-módulo (People). Verificado en
+navegador con Playwright durante el desarrollo (screenshots + `console --errors`), pero esta unidad
+**no está pusheada a ningún entorno compartido** — el usuario pidió explícitamente seguir sin
+pushear. Cuando se decida pushear, correr esto contra `staging` antes de pedir el visto bueno final.
+
+### A. `/hr/payroll` — catálogo de políticas de pago
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Tenant nuevo → `/hr/payroll` → tab "Payment Policies" | 5 pay frequencies seedeadas (Semanal, Semi-mensual ×2, Mensual ×2) + 4 payment methods (Wire transfer/Payoneer/Wise/PayPal), todas "Active" |
+| 2 | "New policy" → cadencia Weekly / Semi-monthly / Monthly | El formulario cambia dinámicamente (día de semana / radios 1y15-15yúltimo-Custom con 2 inputs / radios primer-último-Custom con 1 input) — verificado, ver capturas de la sesión |
+| 3 | Toggle "Active (N)" / "Deactivated (N)" después de desactivar una política desde el modal de edición | La política desactivada desaparece de "Active" y aparece en "Deactivated", reactivable desde ahí (bug propio de la Unidad 2 corregido antes de esta tarea: el `GET` filtraba `isActive` a nivel de servicio y dejaba todo lo desactivado invisible para siempre) |
+| 4 | Cualquier acción de mutación (New policy, Add method, Edit, Deactivate) con un usuario `admin` o `member` | 403 — Payroll es owner-only (`canManagePayroll`), a diferencia del resto de HR |
+
+### B. Rename a People (cross-módulo) — regresión
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 5 | Sidebar y tabbar mobile | Dicen "People", no "Employees"; el ícono no cambió |
+| 6 | Navegar a `/hr/employees` (bookmark viejo) | Redirige a `/hr/people` sin romper nada (mismo patrón que `/profile`→`/settings/profile`) |
+| 7 | `/hr/people` — tabla, búsqueda, CSV import/export, custom fields, Time Off, Kanban, vistas guardadas | Todo funciona idéntico a como funcionaba en `/hr/employees` antes del rename — es solo texto/ruta, ninguna funcionalidad debería haber cambiado |
+| 8 | Modal "Add Person" | Primer campo es "Type" (Profile/Contractor/Employee, requerido) antes de "Identity"; sección que antes decía "Contract & compensation" ahora dice solo "Contract" (sin Compensation Type/Hourly Rate/Monthly Rate) |
+| 9 | Columna de tabla que antes era "Compensation Type" | Ahora es "Type", muestra Profile/Contractor/Employee o "—" si no está seteado (todos los `Employee` preexistentes lo tienen `null`) |
+| 10 | Crear una persona nueva con `personType: profile` | Se crea igual que antes (sin bloqueo — Profile nunca participa de Payroll, y todavía no hay nada que lo bloquee en esta unidad) |
+
+### C. Retiro de compensación legada — regresión de datos
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 11 | Los 4 `Employee` de `staging` que tenían `hourlyRateCents`/`monthlyRateCents`/`compensationType` cargados | Tienen ahora un `EmployeeCompensation` con los mismos montos, `confirmedAt` seteado (no bloqueados), y una `payFrequencyId` asignada (Mensual si eran `monthly`/tenían `monthlyRateCents`, Semanal si eran `hourly`) — verificar con una query directa, no hay UI todavía para verlo (esa es la Unidad 5+) |
+| 12 | Las columnas `hourlyRateCents`/`monthlyRateCents`/`compensationType` en la base | Siguen existiendo físicamente (no se corrió el `db push` destructivo), pero ningún endpoint ni pantalla las lee o escribe más |
+
+### Al encontrar una falla
+
+A.4 y B.6 son alta severidad (permisos y ruteo rotos). B.7 es crítica si algo de la funcionalidad
+existente de Employees se rompió — el objetivo del rename era cero regresión funcional. El resto es
+severidad media/baja (visual o de datos, sin impacto de seguridad).
+
+---
+
 ## Próximas tareas de QA (a definir)
 
 Cuando se construyan los módulos grandes en curso (rediseño de Clients, Payroll), esta tabla de

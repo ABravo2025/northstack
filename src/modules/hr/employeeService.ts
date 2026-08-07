@@ -2,7 +2,7 @@ import prisma from '../../lib/prisma.js';
 import { getDefaultStatusId, recordStatusChange } from './statusService.js';
 import { listCustomFieldValuesForEntities } from './customFieldService.js';
 import { findActiveTimeOffRequestsForEmployees } from './timeOffRequestService.js';
-import type { CompensationType, ContractType, Employee, Prisma } from '@prisma/client';
+import type { ContractType, Employee, PersonType, Prisma } from '@prisma/client';
 
 export interface CreateEmployeeInput {
   firstName: string;
@@ -10,10 +10,8 @@ export interface CreateEmployeeInput {
   email: string;
   departmentId?: string | null;
   jobTitleId?: string | null;
-  hourlyRateCents?: number | null;
-  monthlyRateCents?: number | null;
   contractType?: ContractType | null;
-  compensationType?: CompensationType | null;
+  personType?: PersonType | null;
   startDate?: string | null;
   endDate?: string | null;
   contractUrl?: string | null;
@@ -29,10 +27,8 @@ export interface UpdateEmployeeInput {
   email?: string;
   departmentId?: string | null;
   jobTitleId?: string | null;
-  hourlyRateCents?: number | null;
-  monthlyRateCents?: number | null;
   contractType?: ContractType | null;
-  compensationType?: CompensationType | null;
+  personType?: PersonType | null;
   startDate?: string | null;
   endDate?: string | null;
   contractUrl?: string | null;
@@ -51,10 +47,8 @@ export async function createEmployee(input: CreateEmployeeInput): Promise<Employ
       email: input.email.toLowerCase(),
       departmentId: input.departmentId ?? null,
       jobTitleId: input.jobTitleId ?? null,
-      hourlyRateCents: input.hourlyRateCents ?? null,
-      monthlyRateCents: input.monthlyRateCents ?? null,
       contractType: input.contractType ?? null,
-      compensationType: input.compensationType ?? null,
+      personType: input.personType ?? null,
       startDate: input.startDate ? new Date(input.startDate) : null,
       endDate: input.endDate ? new Date(input.endDate) : null,
       contractUrl: input.contractUrl ?? null,
@@ -98,12 +92,7 @@ export async function wouldCreateManagerCycle(
   return false;
 }
 
-// hourlyRateCents/monthlyRateCents are compensation data — for now, visible to
-// `owner` only (not even `admin`). This is a deliberate stopgap, not a general
-// permissions mechanism: revisit once the custom-roles system exists.
-const COMPENSATION_FIELDS = ['hourlyRateCents', 'monthlyRateCents'] as const;
-
-export async function listEmployees(tenantId: string | null | undefined, viewerRole?: string) {
+export async function listEmployees(tenantId: string | null | undefined) {
   if (!tenantId) {
     return [];
   }
@@ -132,12 +121,6 @@ export async function listEmployees(tenantId: string | null | undefined, viewerR
         ? { policyName: activeTimeOff.timeOffPolicy.name, color: activeTimeOff.timeOffPolicy.color }
         : null,
     };
-
-    if (viewerRole !== 'owner') {
-      for (const field of COMPENSATION_FIELDS) {
-        delete result[field];
-      }
-    }
 
     return result;
   });
@@ -174,10 +157,8 @@ export async function updateEmployee(
   if (input.email !== undefined) data.email = input.email.toLowerCase();
   if (input.departmentId !== undefined) data.departmentId = input.departmentId;
   if (input.jobTitleId !== undefined) data.jobTitleId = input.jobTitleId;
-  if (input.hourlyRateCents !== undefined) data.hourlyRateCents = input.hourlyRateCents;
-  if (input.monthlyRateCents !== undefined) data.monthlyRateCents = input.monthlyRateCents;
   if (input.contractType !== undefined) data.contractType = input.contractType;
-  if (input.compensationType !== undefined) data.compensationType = input.compensationType;
+  if (input.personType !== undefined) data.personType = input.personType;
   if (input.startDate !== undefined) data.startDate = input.startDate ? new Date(input.startDate) : null;
   if (input.endDate !== undefined) data.endDate = input.endDate ? new Date(input.endDate) : null;
   if (input.contractUrl !== undefined) data.contractUrl = input.contractUrl;

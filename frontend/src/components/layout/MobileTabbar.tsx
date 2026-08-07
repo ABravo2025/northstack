@@ -17,9 +17,9 @@ export default function MobileTabbar() {
         <HomeIcon className="h-5 w-5" />
         Overview
       </NavLink>
-      <NavLink to="/hr/employees" className={({ isActive }) => (isActive ? 'active' : '')}>
+      <NavLink to="/hr/people" className={({ isActive }) => (isActive ? 'active' : '')}>
         <PeopleIcon className="h-5 w-5" />
-        Employees
+        People
       </NavLink>
       <NavLink to="/hr/time-off" className={({ isActive }) => (isActive ? 'active' : '')}>
         <CalendarIcon className="h-5 w-5" />

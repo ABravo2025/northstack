@@ -20,6 +20,7 @@ import CompanyAppearancePage from './pages/CompanyAppearancePage';
 import CompanyUsersPage from './pages/CompanyUsersPage';
 import PublicFormsSettingsPage from './pages/PublicFormsSettingsPage';
 import PublicFormPage from './pages/PublicFormPage';
+import PayrollPage from './pages/PayrollPage';
 import AppLayout from './layouts/AppLayout';
 import WorkspaceSettingsLayout from './layouts/WorkspaceSettingsLayout';
 import SettingsHomePage from './pages/SettingsHomePage';
@@ -196,8 +197,10 @@ export default function App() {
         <Route path="/overview" element={<OverviewPage token={token ?? ''} user={user} />} />
         <Route path="/help" element={<HelpPage />} />
         <Route path="/hr/dashboard" element={<HrDashboardPage />} />
-        <Route path="/hr/employees" element={<EmployeesPage user={user} token={token ?? ''} />} />
+        <Route path="/hr/people" element={<EmployeesPage user={user} token={token ?? ''} />} />
+        <Route path="/hr/employees" element={<Navigate to="/hr/people" replace />} />
         <Route path="/hr/time-off" element={<TimeOffOverviewPage user={user} token={token ?? ''} />} />
+        <Route path="/hr/payroll" element={<PayrollPage user={user} token={token ?? ''} />} />
         <Route path="/companies" element={<CompaniesPage user={user} token={token ?? ''} />} />
         <Route path="/contacts" element={<ContactsPage user={user} token={token ?? ''} />} />
         <Route path="/opportunities" element={<OpportunitiesPage user={user} token={token ?? ''} />} />

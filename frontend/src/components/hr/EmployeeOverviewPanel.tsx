@@ -13,8 +13,6 @@ import { XIcon } from '../common/Icons';
 interface EmployeeOverviewPanelProps {
   employee: any;
   employees: any[]; // full tenant roster, for the "Reports To" dropdown (excluding self)
-  tenantCurrency: string;
-  isOwner: boolean;
   token: string;
   tenantUsers: { id: string; firstName: string; lastName: string }[];
   currentUserId: string;
@@ -31,16 +29,6 @@ interface EmployeeOverviewPanelProps {
   onInvite: () => void;
 }
 
-function dollarsToCents(value: string): number | null {
-  if (!value.trim()) return null;
-  const parsed = Number.parseFloat(value);
-  return Number.isNaN(parsed) ? null : Math.round(parsed * 100);
-}
-
-function centsToDollars(cents: number | null | undefined): string {
-  return cents == null ? '' : (cents / 100).toFixed(2);
-}
-
 // Unified with the Company/Contact/Opportunity detail pattern (Checkpoint F,
 // docs/tareas-desarrollo.md): no tabs, no "Edit employee" button — every field
 // is editable in place via AutoSaveField/AutoSaveSelect. Name/business email
@@ -50,8 +38,6 @@ function centsToDollars(cents: number | null | undefined): string {
 export default function EmployeeOverviewPanel({
   employee,
   employees,
-  tenantCurrency,
-  isOwner,
   token,
   tenantUsers,
   currentUserId,
@@ -226,7 +212,7 @@ export default function EmployeeOverviewPanel({
           </div>
 
           <div className="field-group">
-            <h4 className="field-group-title">Contract &amp; compensation</h4>
+            <h4 className="field-group-title">Contract</h4>
             <div className="field-group-body">
               <Field label="Contract Type">
                 <AutoSaveSelect
@@ -239,37 +225,6 @@ export default function EmployeeOverviewPanel({
                   ]}
                 />
               </Field>
-              <Field label="Compensation Type">
-                <AutoSaveSelect
-                  label="Compensation Type"
-                  value={employee.compensationType || ''}
-                  onSave={(v) => save({ compensationType: v || null })}
-                  options={[
-                    { value: 'hourly', label: 'Hourly' },
-                    { value: 'monthly', label: 'Monthly' },
-                  ]}
-                />
-              </Field>
-              {isOwner && (
-                <Field label={`Hourly Rate (${tenantCurrency})`}>
-                  <AutoSaveField
-                    label="Hourly Rate"
-                    type="number"
-                    value={centsToDollars(employee.hourlyRateCents)}
-                    onSave={(v) => save({ hourlyRateCents: dollarsToCents(v) })}
-                  />
-                </Field>
-              )}
-              {isOwner && (
-                <Field label={`Monthly Rate (${tenantCurrency})`}>
-                  <AutoSaveField
-                    label="Monthly Rate"
-                    type="number"
-                    value={centsToDollars(employee.monthlyRateCents)}
-                    onSave={(v) => save({ monthlyRateCents: dollarsToCents(v) })}
-                  />
-                </Field>
-              )}
               <Field label="Start Date">
                 <AutoSaveField
                   label="Start Date"

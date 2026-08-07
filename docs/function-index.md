@@ -228,6 +228,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 | `timeOffBalances.ts` | listTimeOffBalances, getEmployeeTimeOffBalance, +custom field values (nota: nombre de archivo engañoso, ver código) |
 | `tasks.ts` | listTasks, listMyTasks, listTasksForCalendar, createTask, updateTask, deleteTask |
 | `notes.ts` | listNotes, createNote, updateNote, deleteNote |
+| `payroll.ts` | listPayFrequencies, createPayFrequency, updatePayFrequency, listPaymentMethods, createPaymentMethod, updatePaymentMethod |
 | `csv.ts` | exportEmployeesCsv, importEmployeesCsv, employeesCsvTemplate |
 | `tenantUsers.ts` | listTenantUsers, updateTenantUser, listTenantInvitations, createTenantInvitation, cancelInvitation |
 | `publicFormsAdmin.ts` | listPublicForms, createPublicForm, updatePublicForm |

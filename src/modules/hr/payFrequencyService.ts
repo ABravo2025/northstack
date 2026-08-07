@@ -62,9 +62,14 @@ export async function createPayFrequency(input: CreatePayFrequencyInput): Promis
   });
 }
 
+// Returns both active and inactive rows, same convention as
+// listStatusDefinitions/listTimeOffPolicies — the management table (Unidad 3)
+// needs to show and reactivate deactivated ones, so the active/inactive split
+// happens client-side. Callers that need active-only (e.g. a pay-frequency
+// picker on the Employee contract form, Unidad 5) filter client-side too.
 export async function listPayFrequencies(tenantId: string): Promise<PayFrequencyDefinition[]> {
   return prisma.payFrequencyDefinition.findMany({
-    where: { tenantId, isActive: true },
+    where: { tenantId },
     orderBy: { order: 'asc' },
   });
 }
@@ -73,10 +78,9 @@ export interface PayFrequencyWithAssignedCount extends PayFrequencyDefinition {
   assignedCount: number;
 }
 
-// GET /api/hr/pay-frequencies wants "activas + conteo de personas asignadas"
-// per docs/spec-payroll.md Unidad 2 — "assigned" means having a *currently
-// active* EmployeeCompensation (effectiveTo: null) on that frequency, not
-// historical contracts that have since closed.
+// "assigned" means having a *currently active* EmployeeCompensation
+// (effectiveTo: null) on that frequency, not historical contracts that have
+// since closed.
 export async function listPayFrequenciesWithAssignedCount(
   tenantId: string,
 ): Promise<PayFrequencyWithAssignedCount[]> {

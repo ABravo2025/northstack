@@ -37,9 +37,12 @@ export async function createPaymentMethod(input: CreatePaymentMethodInput): Prom
   });
 }
 
+// Returns both active and inactive — same reasoning as
+// payFrequencyService.listPayFrequencies (the management table needs to show
+// and reactivate deactivated ones).
 export async function listPaymentMethods(tenantId: string): Promise<PaymentMethodDefinition[]> {
   return prisma.paymentMethodDefinition.findMany({
-    where: { tenantId, isActive: true },
+    where: { tenantId },
     orderBy: { order: 'asc' },
   });
 }

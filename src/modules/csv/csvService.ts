@@ -16,16 +16,6 @@ export interface ImportResult {
   errors: ImportError[];
 }
 
-function centsToDollarsStr(cents: number | null | undefined): string {
-  return cents == null ? '' : (cents / 100).toFixed(2);
-}
-
-function dollarsToCents(value: string): number | undefined {
-  if (!value.trim()) return undefined;
-  const parsed = Number.parseFloat(value);
-  return Number.isNaN(parsed) ? undefined : Math.round(parsed * 100);
-}
-
 function toDateOrUndefined(value: string): string | undefined {
   if (!value.trim()) return undefined;
   return Number.isNaN(Date.parse(value)) ? undefined : value.trim();
@@ -44,24 +34,16 @@ const EMPLOYEE_BASE_HEADERS = [
   'Contract URL',
   'Manager Email',
   'Contract Type',
-  'Compensation Type',
 ];
-const EMPLOYEE_COMPENSATION_HEADERS = ['Hourly Rate', 'Monthly Rate'];
 
 const CONTRACT_TYPE_LABELS: Record<string, string> = { part_time: 'Part Time', full_time: 'Full Time' };
-const COMPENSATION_TYPE_LABELS: Record<string, string> = { hourly: 'Hourly', monthly: 'Monthly' };
 
 function contractTypeFromLabel(label: string): 'part_time' | 'full_time' | undefined {
   const normalized = label.trim().toLowerCase().replace(/\s+/g, '_');
   return normalized === 'part_time' || normalized === 'full_time' ? normalized : undefined;
 }
 
-function compensationTypeFromLabel(label: string): 'hourly' | 'monthly' | undefined {
-  const normalized = label.trim().toLowerCase();
-  return normalized === 'hourly' || normalized === 'monthly' ? normalized : undefined;
-}
-
-export async function exportEmployeesToCsv(tenantId: string, viewerRole: string): Promise<string> {
+export async function exportEmployeesToCsv(tenantId: string): Promise<string> {
   const employees = await prisma.employee.findMany({
     where: { tenantId },
     include: { departmentDefn: true, jobTitleDefn: true, statusDefn: true, manager: true },
@@ -70,13 +52,8 @@ export async function exportEmployeesToCsv(tenantId: string, viewerRole: string)
   const customFields = await listCustomFieldDefinitions(tenantId, 'employee');
   const activeCustomFields = customFields.filter((f) => f.isActive);
   const values = await listCustomFieldValuesForEntities(tenantId, 'employee', employees.map((e) => e.id));
-  const isOwner = viewerRole === 'owner';
 
-  const headers = [
-    ...EMPLOYEE_BASE_HEADERS,
-    ...(isOwner ? EMPLOYEE_COMPENSATION_HEADERS : []),
-    ...activeCustomFields.map((f) => f.name),
-  ];
+  const headers = [...EMPLOYEE_BASE_HEADERS, ...activeCustomFields.map((f) => f.name)];
 
   const rows = employees.map((emp) => {
     const base = [
@@ -92,23 +69,20 @@ export async function exportEmployeesToCsv(tenantId: string, viewerRole: string)
       emp.contractUrl ?? '',
       emp.manager?.email ?? '',
       emp.contractType ? CONTRACT_TYPE_LABELS[emp.contractType] : '',
-      emp.compensationType ? COMPENSATION_TYPE_LABELS[emp.compensationType] : '',
     ];
-    const compensation = isOwner ? [centsToDollarsStr(emp.hourlyRateCents), centsToDollarsStr(emp.monthlyRateCents)] : [];
     const customFieldCells = activeCustomFields.map(
       (f) => values.find((v) => v.entityId === emp.id && v.customFieldDefinitionId === f.id)?.value ?? '',
     );
-    return [...base, ...compensation, ...customFieldCells];
+    return [...base, ...customFieldCells];
   });
 
   return toCsv([headers, ...rows]);
 }
 
-export async function getEmployeesCsvTemplate(tenantId: string, viewerRole: string): Promise<string> {
+export async function getEmployeesCsvTemplate(tenantId: string): Promise<string> {
   const customFields = (await listCustomFieldDefinitions(tenantId, 'employee')).filter((f) => f.isActive);
-  const isOwner = viewerRole === 'owner';
 
-  const headers = [...EMPLOYEE_BASE_HEADERS, ...(isOwner ? EMPLOYEE_COMPENSATION_HEADERS : []), ...customFields.map((f) => f.name)];
+  const headers = [...EMPLOYEE_BASE_HEADERS, ...customFields.map((f) => f.name)];
   const example = [
     'Jane',
     'Doe',
@@ -122,17 +96,14 @@ export async function getEmployeesCsvTemplate(tenantId: string, viewerRole: stri
     '',
     '',
     'Full Time',
-    'Monthly',
-    ...(isOwner ? ['', '7500.00'] : []),
     ...customFields.map(() => ''),
   ];
 
   return toCsv([headers, example]);
 }
 
-export async function importEmployeesFromCsv(tenantId: string, csvText: string, viewerRole: string): Promise<ImportResult> {
+export async function importEmployeesFromCsv(tenantId: string, csvText: string): Promise<ImportResult> {
   const records = rowsToRecords(parseCsv(csvText));
-  const isOwner = viewerRole === 'owner';
   const statuses = await listStatusDefinitions(tenantId, 'employee');
   const customFields = (await listCustomFieldDefinitions(tenantId, 'employee')).filter((f) => f.isActive);
 
@@ -172,7 +143,6 @@ export async function importEmployeesFromCsv(tenantId: string, csvText: string, 
         : null;
 
       const contractTypeLabel = getField(record, 'Contract Type');
-      const compensationTypeLabel = getField(record, 'Compensation Type');
 
       const employee = await createEmployee({
         tenantId,
@@ -188,13 +158,6 @@ export async function importEmployeesFromCsv(tenantId: string, csvText: string, 
         contractUrl: getField(record, 'Contract URL') || undefined,
         managerId: manager?.id,
         contractType: contractTypeLabel ? contractTypeFromLabel(contractTypeLabel) : undefined,
-        compensationType: compensationTypeLabel ? compensationTypeFromLabel(compensationTypeLabel) : undefined,
-        ...(isOwner
-          ? {
-              hourlyRateCents: dollarsToCents(getField(record, 'Hourly Rate')),
-              monthlyRateCents: dollarsToCents(getField(record, 'Monthly Rate')),
-            }
-          : {}),
       });
 
       for (const field of customFields) {

@@ -62,7 +62,7 @@ export default function OnboardingChecklist({ token }: OnboardingChecklistProps)
   if (!status || dismissed) return null;
 
   const items: ChecklistItem[] = [
-    { key: 'employees', label: 'Add your first employee', done: status.hasEmployees, to: '/hr/employees' },
+    { key: 'employees', label: 'Add your first employee', done: status.hasEmployees, to: '/hr/people' },
     { key: 'teammate', label: 'Invite a teammate', done: status.hasInvitedTeammate, to: '/settings/users' },
     { key: 'timeoff', label: 'Set up a Time Off policy', done: status.hasTimeOffPolicy, to: '/hr/time-off' },
   ];

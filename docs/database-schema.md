@@ -1,6 +1,6 @@
 # Database Schema
 
-- Última actualización: 2026-08-07 (Payroll Unidad 1 — ver grupo 7)
+- Última actualización: 2026-08-07 (Payroll Unidades 1-4 — ver grupo 7)
 - Fuente de verdad real: `prisma/schema.prisma`. Este documento es una vista legible de ese archivo — si difieren, el `.prisma` manda. Regenerar este archivo cuando el schema cambie de forma significativa (modelo nuevo, relación nueva), no hace falta para cambios chicos (un campo opcional más, un índice).
 - Todos los modelos son multi-tenant: casi todos tienen `tenantId` directo (no derivado por join), y el aislamiento entre tenants se verifica en el código de cada endpoint (ownership check), no solo por FK — ver `docs/current-process-flow.md` para el patrón de verificación.
 
@@ -103,15 +103,12 @@ erDiagram
         string email
         string departmentId FK "nullable, FieldCatalogDefinition"
         string jobTitleId FK "nullable, FieldCatalogDefinition"
-        int hourlyRateCents "nullable, owner-only visibility"
-        int monthlyRateCents "nullable, owner-only visibility"
         enum contractType "nullable, part_time/full_time"
-        enum compensationType "nullable, hourly/monthly"
         datetime startDate "nullable"
         datetime endDate "nullable"
         string contractUrl "nullable, link only"
         string personalEmail "nullable"
-        enum personType "nullable, profile/contractor/employee — Payroll Unidad 1, unpopulated until Unidad 4/5"
+        enum personType "nullable, profile/contractor/employee — Payroll Unidad 4, first field on the People alta form"
         string nationality "nullable — Payroll Unidad 1"
         string countryOfResidence "nullable, filled by the person at contract confirmation — Payroll Unidad 7"
         string statusId FK
@@ -446,8 +443,8 @@ Notas:
 
 Spec completo en `docs/spec-payroll.md` (v2, 21 unidades) — tercer intento, los dos anteriores se
 revirtieron por completo (git log tiene el detalle; `docs/tareas-desarrollo.md` y
-`docs/features-overview.md` resumen el incidente). Unidad 1 (esta) es solo schema — sin ningún
-endpoint ni pantalla todavía.
+`docs/features-overview.md` resumen el incidente). Completas hasta Unidad 4 (schema, cifrado,
+catálogo de políticas de pago, rename a People + `personType`).
 
 ```mermaid
 erDiagram
@@ -534,22 +531,27 @@ Notas:
   construirse en Unidad 2+), no a nivel de base de datos — mismo patrón que `StatusDefinition.isDefault`.
 - **`PayFrequencyDefinition`/`PaymentMethodDefinition` son catálogos configurables por tenant**, no
   enums fijos — mismo precedente que `StatusDefinition`/`TimeOffPolicyDefinition`.
-- **`PayrollCompensationType` (`hourly`/`fixed`) es un enum nuevo, distinto del `CompensationType`
-  legado (`hourly`/`monthly`)** que todavía usa `Employee.compensationType` — se mantienen separados
-  a propósito mientras dura la migración (ver debajo), para no romper la columna vieja todavía en
-  uso.
-- **Deuda de la Unidad 1**: `Employee.hourlyRateCents`/`monthlyRateCents`/`compensationType` (grupo
-  2) siguen intactos y en uso (tabla de Employees, panel de detalle, CSV) — se retiran recién en una
-  unidad posterior, después de que exista un catálogo de `PayFrequencyDefinition` sembrado (Unidad
-  2) contra el cual backfillear cualquier dato ya cargado, siguiendo el patrón de migración segura
-  (aditivo → backfill → verificar → destructivo). Confirmado con el usuario 2026-08-07: se retiran,
-  no quedan en paralelo indefinidamente.
+- **`PayrollCompensationType` (`hourly`/`fixed`) reemplaza al `CompensationType` legado**
+  (`hourly`/`monthly`) — nombre distinto porque el value set cambia (`fixed` en vez de `monthly`).
+- **`Employee.hourlyRateCents`/`monthlyRateCents`/`compensationType` retirados (Unidad 4, 2026-08-07)**:
+  `scripts/backfill-legacy-employee-compensation.ts` copió cualquier dato ya cargado (4 registros en
+  `staging`, todos de prueba) a un `EmployeeCompensation` inicial antes de sacar los 3 campos del
+  schema de Prisma — `confirmedAt`/`blocksParticipation: false` forzados en la migración para no
+  bloquear a gente que ya tenía compensación real, a diferencia de un contrato nuevo genuino (Unidad
+  9). El `CompensationType` enum se borró del todo. **Las columnas físicas siguen en la base**
+  (inofensivas, sin usar) — el `db push` destructivo que las borra de verdad queda para un paso
+  posterior explícito, siguiendo el patrón de migración segura (aditivo → backfill → verificar →
+  destructivo).
 - **Restos de un intento anterior**: al aplicar esta unidad se encontraron 4 tablas huérfanas en
   `staging` (mismos nombres, forma de columnas vieja e incompatible) dejadas por un intento de
   Payroll revertido por completo del lado del código — un `git revert` no deshace un `prisma db push`
   ya aplicado. Se borraron antes de aplicar el schema nuevo.
-- Nada de este grupo llegó a producción todavía — solo `staging` (schema pusheado directamente vía
-  `prisma db push`, código en la rama remota `staging`).
+- Nada de este grupo llegó a producción todavía. El schema aditivo de la Unidad 1 (enums/modelos
+  nuevos + los 3 campos nuevos de `Employee`) sí se pusheó contra la base de `staging` vía
+  `prisma db push` — el retiro de `hourlyRateCents`/`monthlyRateCents`/`compensationType` (Unidad 4)
+  todavía **no** se aplicó a nivel de base (sigue como columnas físicas sin usar; solo se sacaron del
+  schema de Prisma/la app). El código (Unidades 1-4) está commiteado en local únicamente, sin
+  pushear a la rama remota `staging` todavía, a pedido explícito del usuario 2026-08-07.
 
 ## Enums
 
@@ -561,7 +563,6 @@ Notas:
 | `AcquisitionChannel` | `organic`, `paid_ads`, `referral`, `content`, `outbound_sales`, `partnership`, `other` | `Tenant.acquisitionChannel` |
 | `FieldType` | `text`, `number`, `date`, `select`, `email` | `CustomFieldDefinition.fieldType` |
 | `ContractType` | `part_time`, `full_time` | `Employee.contractType` |
-| `CompensationType` | `hourly`, `monthly` | `Employee.compensationType` |
 | `EntityType` | `employee`, `client`, `company`, `contact`, `opportunity` | `StatusDefinition`/`StatusHistoryEntry`/`CustomFieldDefinition`/`CustomFieldValue`/`SavedView`/`PublicForm`/`Task`/`Note`.entityType (Task/Note never use `client`) |
 | `InvitationStatus` | `pending`, `accepted`, `expired`, `revoked` | `Invitation.status` |
 | `TimeOffAccrualMethod` | `fixed_annual`, `monthly` | `TimeOffPolicyDefinition.accrualMethod` |
@@ -592,4 +593,4 @@ Notas:
 - **Task/Note — permisos abiertos a cualquier rol** (ver grupo 6): revisar cuando exista el sistema de roles custom (Tier 5).
 - **Activity — layout confirmado, sin construir**: el usuario confirmó 2026-07-30 que Activity entra como tab en el panel de detalle (junto a Notes/Tasks), pero sin ningún modelo/backend real todavía — el tab hoy es un placeholder de texto. El sistema de auditoría real (quién hizo qué y cuándo) sigue en Tier 5 ("cola larga").
 - **Tasks/Notes/Company/Contact/Opportunity — nada de esto llegó a producción todavía**: todo el trabajo de esta sesión (2026-07-29/30, ver `docs/tareas-desarrollo.md`) está pusheado a `staging` únicamente, pendiente de que el usuario lo revise antes de promover a `main`.
-- **Payroll — Unidad 1 (schema) en `staging` únicamente**: `Employee.hourlyRateCents`/`monthlyRateCents`/`compensationType` siguen activos (tabla, panel de detalle, CSV) y se retiran en una unidad posterior a Unidad 2, no en esta — ver grupo 7 arriba para el detalle completo y el porqué del orden.
+- **Payroll — Unidades 1-4 solo en local/commits, nada pusheado a `staging` todavía** (a pedido del usuario, 2026-08-07): schema + cifrado (U1), catálogo de políticas de pago (U2, backend+frontend), rename a People + `personType` + retiro de la compensación legada (U4) — ver grupo 7 arriba para el detalle completo.

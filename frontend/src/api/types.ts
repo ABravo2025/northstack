@@ -27,10 +27,8 @@ export interface Employee {
   departmentDefn?: { id: string; name: string } | null;
   jobTitleId?: string | null;
   jobTitleDefn?: { id: string; name: string } | null;
-  hourlyRateCents?: number | null;
-  monthlyRateCents?: number | null;
   contractType?: 'part_time' | 'full_time' | null;
-  compensationType?: 'hourly' | 'monthly' | null;
+  personType?: 'profile' | 'contractor' | 'employee' | null;
   startDate?: string | null;
   endDate?: string | null;
   contractUrl?: string | null;
@@ -356,4 +354,28 @@ export interface PublicFormConfig {
   customFieldDefs: PublicFormCustomFieldDef[];
   departmentOptions: { id: string; name: string }[];
   thankYouMessage: string | null;
+}
+
+// Payroll (docs/spec-payroll.md) — anchorConfig is JSON-encoded server-side,
+// its shape depends on cadence (see the spec's Unidad 1 for the 3 shapes).
+export type PayFrequencyCadence = 'weekly' | 'semimonthly' | 'monthly';
+export type DueDateOffset = 'same_day' | 'plus_2' | 'plus_5' | 'custom';
+
+export interface PayFrequency {
+  id: string;
+  name: string;
+  cadence: PayFrequencyCadence;
+  anchorConfig: string;
+  dueDateOffset: DueDateOffset;
+  dueDateCustomDays: number | null;
+  isActive: boolean;
+  order: number;
+  assignedCount?: number; // only present on the list endpoint
+}
+
+export interface PaymentMethod {
+  id: string;
+  name: string;
+  isActive: boolean;
+  order: number;
 }

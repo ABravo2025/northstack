@@ -154,26 +154,6 @@ export function buildEmployeeFields(
       getValue: (item: any) =>
         item.contractType === 'part_time' ? 'Part Time' : item.contractType === 'full_time' ? 'Full Time' : '',
     },
-    {
-      key: 'compensationType',
-      label: 'Compensation Type',
-      valueType: 'select',
-      selectOptions: [{ value: 'Hourly' }, { value: 'Monthly' }],
-      getValue: (item: any) =>
-        item.compensationType === 'hourly' ? 'Hourly' : item.compensationType === 'monthly' ? 'Monthly' : '',
-    },
-    {
-      key: 'hourlyRate',
-      label: 'Hourly Rate',
-      valueType: 'number',
-      getValue: (item: any) => (item.hourlyRateCents != null ? String(item.hourlyRateCents / 100) : ''),
-    },
-    {
-      key: 'monthlyRate',
-      label: 'Monthly Rate',
-      valueType: 'number',
-      getValue: (item: any) => (item.monthlyRateCents != null ? String(item.monthlyRateCents / 100) : ''),
-    },
     ...buildCustomFieldColumns(customFields),
   ];
 }

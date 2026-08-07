@@ -50,9 +50,9 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
 
         <div className="sidebar-divider">
           {!collapsed && <p className="sidebar-group-label">Human Resources</p>}
-          <NavLink to="/hr/employees" className={linkClass} title="Employees" onClick={onMobileClose}>
+          <NavLink to="/hr/people" className={linkClass} title="People" onClick={onMobileClose}>
             <PeopleIcon className="h-4 w-4 shrink-0" />
-            {label('Employees')}
+            {label('People')}
           </NavLink>
           <NavLink to="/hr/time-off" className={linkClass} title="Human Resources – Time Off" onClick={onMobileClose}>
             <CalendarIcon className="h-4 w-4 shrink-0" />

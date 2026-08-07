@@ -36,26 +36,18 @@ import {
   parseFilters,
   parseSort,
 } from '../lib/viewFields';
-import { formatMoney } from '../lib/currencies';
 import { isLikelyValidEmail } from '../lib/validation';
 import { useAutoCreateGuard } from '../hooks/useAutoCreateGuard';
 
 const CONTRACT_TYPE_LABELS: Record<string, string> = { part_time: 'Part Time', full_time: 'Full Time' };
-const COMPENSATION_TYPE_LABELS: Record<string, string> = { hourly: 'Hourly', monthly: 'Monthly' };
 const CONTRACT_TYPE_VALUE_BY_LABEL: Record<string, string> = { 'Part Time': 'part_time', 'Full Time': 'full_time' };
-const COMPENSATION_TYPE_VALUE_BY_LABEL: Record<string, string> = { Hourly: 'hourly', Monthly: 'monthly' };
+const PERSON_TYPE_LABELS: Record<string, string> = { profile: 'Profile', contractor: 'Contractor', employee: 'Employee' };
 
 const PAGE_SIZE = 20;
 const ACTIVE_VIEW_STORAGE_KEY = 'northstack:activeView:employee';
 // Frozen columns stay pinned to the left through horizontal scroll and can't
 // be dragged to reorder — everything else can.
 const FROZEN_COLUMN_KEYS = ['name', 'status'];
-
-function dollarsToCents(value: string): number | undefined {
-  if (!value.trim()) return undefined;
-  const parsed = Number.parseFloat(value);
-  return Number.isNaN(parsed) ? undefined : Math.round(parsed * 100);
-}
 
 interface EmployeesPageProps {
   user: any;
@@ -77,7 +69,6 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const [timeOffPolicies, setTimeOffPolicies] = useState<any[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
 
-  const [tenantCurrency, setTenantCurrency] = useState('USD');
   const [tenantUsers, setTenantUsers] = useState<any[]>([]);
   const [collapsedListSections, setCollapsedListSections] = useState<Set<string>>(new Set());
   const [overviewEmployeeId, setOverviewEmployeeId] = useState<string | null>(null);
@@ -163,10 +154,8 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     startDate: '',
     endDate: '',
     contractUrl: '',
-    hourlyRate: '',
-    monthlyRate: '',
     contractType: '',
-    compensationType: '',
+    personType: '',
   };
 
   const [employeeForm, setEmployeeForm] = useState(emptyEmployeeForm);
@@ -180,12 +169,6 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     loadEmployeeJobTitles();
     loadTimeOffPolicies();
     loadViews();
-    api
-      .getCurrentTenant(token)
-      .then((tenant) => setTenantCurrency(tenant.currency))
-      .catch(() => {
-        // Non-critical for this page — falls back to USD formatting if it fails.
-      });
     api
       .listTenantUsers(token)
       .then(setTenantUsers)
@@ -401,10 +384,8 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       startDate: employeeForm.startDate || undefined,
       endDate: employeeForm.endDate || undefined,
       contractUrl: employeeForm.contractUrl || undefined,
-      hourlyRateCents: dollarsToCents(employeeForm.hourlyRate),
-      monthlyRateCents: dollarsToCents(employeeForm.monthlyRate),
       contractType: (employeeForm.contractType || null) as 'part_time' | 'full_time' | null,
-      compensationType: (employeeForm.compensationType || null) as 'hourly' | 'monthly' | null,
+      personType: (employeeForm.personType || null) as 'profile' | 'contractor' | 'employee' | null,
     });
 
     const valueEntries = Object.entries(cfValues).filter(([, value]) => value.trim() !== '');
@@ -493,10 +474,6 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         const value = CONTRACT_TYPE_VALUE_BY_LABEL[newValue];
         if (!value) return;
         await api.updateEmployee(token, emp.id, { contractType: value as 'part_time' | 'full_time' });
-      } else if (groupField === 'compensationType') {
-        const value = COMPENSATION_TYPE_VALUE_BY_LABEL[newValue];
-        if (!value) return;
-        await api.updateEmployee(token, emp.id, { compensationType: value as 'hourly' | 'monthly' });
       } else if (groupField.startsWith('cf:')) {
         const definitionId = groupField.slice(3);
         const existing = emp.customFieldVals?.find((v: any) => v.customFieldDefinitionId === definitionId);
@@ -707,26 +684,10 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       render: (emp: any) => (emp.contractType ? CONTRACT_TYPE_LABELS[emp.contractType] : '—'),
     },
     {
-      key: 'compensationType',
-      label: 'Compensation Type',
-      render: (emp: any) => (emp.compensationType ? COMPENSATION_TYPE_LABELS[emp.compensationType] : '—'),
+      key: 'personType',
+      label: 'Type',
+      render: (emp: any) => (emp.personType ? PERSON_TYPE_LABELS[emp.personType] : '—'),
     },
-    ...(user.role === 'owner'
-      ? [
-          {
-            key: 'hourlyRate',
-            label: 'Hourly Rate',
-            render: (emp: any) =>
-              emp.hourlyRateCents != null ? formatMoney(emp.hourlyRateCents, tenantCurrency) : '—',
-          },
-          {
-            key: 'monthlyRate',
-            label: 'Monthly Rate',
-            render: (emp: any) =>
-              emp.monthlyRateCents != null ? formatMoney(emp.monthlyRateCents, tenantCurrency) : '—',
-          },
-        ]
-      : []),
   ];
 
   const toggleableColumns = [
@@ -884,7 +845,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
 
       <Modal
         open={slideOverMode !== null}
-        title="Add Employee"
+        title="Add Person"
         onClose={closeSlideOver}
         wide
         footer={
@@ -900,6 +861,26 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       >
         {slideOverMode === 'add' && (
           <form id="employee-form" onSubmit={handleCreateEmployee}>
+            <div className="field-group">
+              <h4 className="field-group-title">Type</h4>
+              <div className="field-group-body">
+                <Field label="Type" required>
+                  <select
+                    id="emp-personType"
+                    className="overview-field-input"
+                    value={employeeForm.personType}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, personType: e.target.value })}
+                    required
+                  >
+                    <option value="">-- select --</option>
+                    <option value="profile">Profile</option>
+                    <option value="contractor">Contractor</option>
+                    <option value="employee">Employee</option>
+                  </select>
+                </Field>
+              </div>
+            </div>
+
             <div className="field-group">
               <h4 className="field-group-title">Identity</h4>
               <div className="field-group-body">
@@ -1004,7 +985,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
             </div>
 
             <div className="field-group">
-              <h4 className="field-group-title">Contract &amp; compensation</h4>
+              <h4 className="field-group-title">Contract</h4>
               <div className="field-group-body">
                 <Field label="Start Date">
                   <input
@@ -1037,52 +1018,6 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                     <option value="full_time">Full Time</option>
                   </select>
                 </Field>
-                <Field label="Compensation Type">
-                  <select
-                    id="emp-compensationType"
-                    className="overview-field-input"
-                    value={employeeForm.compensationType}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setEmployeeForm({
-                        ...employeeForm,
-                        compensationType: value,
-                        hourlyRate: value === 'monthly' ? '' : employeeForm.hourlyRate,
-                        monthlyRate: value === 'hourly' ? '' : employeeForm.monthlyRate,
-                      });
-                    }}
-                  >
-                    <option value="">-- select --</option>
-                    <option value="hourly">Hourly</option>
-                    <option value="monthly">Monthly</option>
-                  </select>
-                </Field>
-                {user.role === 'owner' && employeeForm.compensationType !== 'monthly' && (
-                  <Field label="Hourly Rate">
-                    <input
-                      id="emp-hourlyRate"
-                      className="overview-field-input"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={employeeForm.hourlyRate}
-                      onChange={(e) => setEmployeeForm({ ...employeeForm, hourlyRate: e.target.value })}
-                    />
-                  </Field>
-                )}
-                {user.role === 'owner' && employeeForm.compensationType !== 'hourly' && (
-                  <Field label="Monthly Rate">
-                    <input
-                      id="emp-monthlyRate"
-                      className="overview-field-input"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={employeeForm.monthlyRate}
-                      onChange={(e) => setEmployeeForm({ ...employeeForm, monthlyRate: e.target.value })}
-                    />
-                  </Field>
-                )}
               </div>
             </div>
 
@@ -1110,7 +1045,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       </Modal>
 
       <ViewsBar
-        allLabel="All Employees"
+        allLabel="All People"
         views={views}
         activeViewId={activeViewId}
         onSelectView={setActiveViewId}
@@ -1124,7 +1059,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       />
 
       <div className="page-toolbar">
-        <h2>Employees</h2>
+        <h2>People</h2>
         {employees.length > 0 && (
           <div className="toolbar-search">
             <SearchIcon />
@@ -1408,8 +1343,6 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
           <EmployeeOverviewPanel
             employee={overviewEmployee}
             employees={employees}
-            tenantCurrency={tenantCurrency}
-            isOwner={user.role === 'owner'}
             token={token}
             tenantUsers={tenantUsers}
             currentUserId={user.id}

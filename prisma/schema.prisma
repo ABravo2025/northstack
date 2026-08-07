@@ -47,11 +47,6 @@ enum ContractType {
   full_time
 }
 
-enum CompensationType {
-  hourly
-  monthly
-}
-
 enum EntityType {
   employee
   client
@@ -151,12 +146,9 @@ enum DueDateOffset {
   custom
 }
 
-// Distinct from the existing `CompensationType` enum (hourly/monthly, still
-// used by Employee.hourlyRateCents/monthlyRateCents while that pair is being
-// retired in favor of EmployeeCompensation — see docs/spec-payroll.md's
-// "Unidad 1" note in tareas-desarrollo history). Different value set (`fixed`
-// instead of `monthly`) and a different lifecycle, so reusing the old enum
-// name here would collide with the not-yet-dropped legacy column.
+// Named distinctly from the retired `CompensationType` enum (hourly/monthly,
+// used by the now-removed Employee.compensationType) it replaces — different
+// value set (`fixed` instead of `monthly`).
 enum PayrollCompensationType {
   hourly
   fixed
@@ -194,7 +186,7 @@ model Tenant {
   industry                 String?
   country                  String?
   acquisitionChannel       AcquisitionChannel?
-  currency                 String                    @default("USD") // ISO-4217, one currency per tenant — applies to Employee.hourlyRateCents/monthlyRateCents
+  currency                 String                    @default("USD") // ISO-4217, tenant-wide default (Opportunity/EmployeeCompensation can override per record)
   users                    User[]
   employees                Employee[]
   clients                  Client[]
@@ -260,10 +252,14 @@ model Employee {
   departmentDefn           FieldCatalogDefinition? @relation("EmployeeDepartment", fields: [departmentId], references: [id])
   jobTitleId               String?
   jobTitleDefn             FieldCatalogDefinition? @relation("EmployeeJobTitle", fields: [jobTitleId], references: [id])
-  hourlyRateCents          Int? // owner-only visibility, enforced in listEmployees — not a schema-level concern
-  monthlyRateCents         Int?
+  // hourlyRateCents/monthlyRateCents/compensationType (Tier 2, predates Payroll)
+  // retired here (Payroll Unidad 4) in favor of the versioned
+  // EmployeeCompensation model — see scripts/backfill-legacy-employee-compensation.ts
+  // for the one-time data migration. The physical columns still exist in the
+  // database (harmless, unused) until a separate, later, explicitly-approved
+  // destructive `db push` — removed here only from the Prisma schema/client so
+  // the app stops reading/writing them.
   contractType             ContractType?
-  compensationType         CompensationType? // determines which of hourlyRateCents/monthlyRateCents applies
   startDate                DateTime?
   endDate                  DateTime?
   contractUrl              String? // link only (e.g. Drive/Dropbox) — no file upload support in the app today

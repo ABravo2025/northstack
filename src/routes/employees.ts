@@ -35,7 +35,7 @@ import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 
 const VALID_CONTRACT_TYPES = ['part_time', 'full_time'];
-const VALID_COMPENSATION_TYPES = ['hourly', 'monthly'];
+const VALID_PERSON_TYPES = ['profile', 'contractor', 'employee'];
 
 export const employeesRouter = createAsyncRouter();
 
@@ -49,7 +49,7 @@ employeesRouter.get('/api/hr/employees', async (req, res) => {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  const employees = await listEmployees(user.tenantId, user.role);
+  const employees = await listEmployees(user.tenantId);
   return res.json(employees);
 });
 
@@ -63,7 +63,7 @@ employeesRouter.get('/api/hr/employees/export/csv', async (req, res) => {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  const csv = await exportEmployeesToCsv(user.tenantId!, user.role);
+  const csv = await exportEmployeesToCsv(user.tenantId!);
   res.setHeader('Content-Type', 'text/csv');
   res.setHeader('Content-Disposition', 'attachment; filename="employees.csv"');
   return res.send(csv);
@@ -83,7 +83,7 @@ employeesRouter.post('/api/hr/employees/import/csv', async (req, res) => {
     return res.status(400).json({ error: 'csv is required' });
   }
 
-  const result = await importEmployeesFromCsv(user.tenantId!, req.body.csv, user.role);
+  const result = await importEmployeesFromCsv(user.tenantId!, req.body.csv);
   return res.json(result);
 });
 
@@ -97,7 +97,7 @@ employeesRouter.get('/api/hr/employees/template/csv', async (req, res) => {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  const csv = await getEmployeesCsvTemplate(user.tenantId!, user.role);
+  const csv = await getEmployeesCsvTemplate(user.tenantId!);
   res.setHeader('Content-Type', 'text/csv');
   res.setHeader('Content-Disposition', 'attachment; filename="employees-import-template.csv"');
   return res.send(csv);
@@ -113,20 +113,12 @@ employeesRouter.post('/api/hr/employees', async (req, res) => {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  if ((req.body.hourlyRateCents !== undefined || req.body.monthlyRateCents !== undefined) && user.role !== 'owner') {
-    return res.status(403).json({ error: 'Only the owner can set compensation' });
-  }
-
   if (req.body.contractType !== undefined && req.body.contractType !== null && !VALID_CONTRACT_TYPES.includes(req.body.contractType)) {
     return res.status(400).json({ error: 'Invalid contract type' });
   }
 
-  if (
-    req.body.compensationType !== undefined &&
-    req.body.compensationType !== null &&
-    !VALID_COMPENSATION_TYPES.includes(req.body.compensationType)
-  ) {
-    return res.status(400).json({ error: 'Invalid compensation type' });
+  if (req.body.personType !== undefined && req.body.personType !== null && !VALID_PERSON_TYPES.includes(req.body.personType)) {
+    return res.status(400).json({ error: 'Invalid person type' });
   }
 
   if (req.body.managerId) {
@@ -182,20 +174,12 @@ employeesRouter.patch('/api/hr/employees/:employeeId', async (req, res) => {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  if ((req.body.hourlyRateCents !== undefined || req.body.monthlyRateCents !== undefined) && user.role !== 'owner') {
-    return res.status(403).json({ error: 'Only the owner can set compensation' });
-  }
-
   if (req.body.contractType !== undefined && req.body.contractType !== null && !VALID_CONTRACT_TYPES.includes(req.body.contractType)) {
     return res.status(400).json({ error: 'Invalid contract type' });
   }
 
-  if (
-    req.body.compensationType !== undefined &&
-    req.body.compensationType !== null &&
-    !VALID_COMPENSATION_TYPES.includes(req.body.compensationType)
-  ) {
-    return res.status(400).json({ error: 'Invalid compensation type' });
+  if (req.body.personType !== undefined && req.body.personType !== null && !VALID_PERSON_TYPES.includes(req.body.personType)) {
+    return res.status(400).json({ error: 'Invalid person type' });
   }
 
   const employee = await findEmployeeById(req.params.employeeId);

@@ -1,5 +1,5 @@
 import prisma from '../../lib/prisma.js';
-import type { EmployeeCompensation, PayrollCompensationType } from '@prisma/client';
+import type { EmployeeCompensation, PayrollCompensationType, PersonType } from '@prisma/client';
 import { createInvitation } from '../tenant/invitationService.js';
 
 export interface CreateCompensationInput {
@@ -93,4 +93,105 @@ export async function createCompensation(input: CreateCompensationInput): Promis
 
 export async function findCompensationById(id: string): Promise<EmployeeCompensation | null> {
   return prisma.employeeCompensation.findUnique({ where: { id } });
+}
+
+// Unidad 10 — bulk assign/reassign, an exception tool (retrofitting old
+// people with no compensation, or migrating a group to a new pay
+// frequency). Never computes an amount from the previous one — each amount
+// arrives explicit in the payload. One createCompensation call per entry,
+// so the "close the previous open record, compute blocksParticipation,
+// maybe invite" logic never gets duplicated.
+export interface BulkCompensationEntryInput {
+  employeeId: string;
+  compensationType: PayrollCompensationType;
+  rateCents: number;
+  currency: string;
+  jobTitle: string;
+  description: string;
+}
+
+export interface BulkCompensationInput {
+  tenantId: string;
+  payFrequencyId: string;
+  effectiveFrom: string;
+  createdByUserId: string;
+  entries: BulkCompensationEntryInput[];
+}
+
+export interface BulkCompensationEntryResult {
+  employeeId: string;
+  success: boolean;
+  compensationId?: string;
+  error?: string;
+}
+
+export async function createCompensationBulk(input: BulkCompensationInput): Promise<BulkCompensationEntryResult[]> {
+  const results: BulkCompensationEntryResult[] = [];
+  for (const entry of input.entries) {
+    const result = await createCompensation({
+      tenantId: input.tenantId,
+      employeeId: entry.employeeId,
+      compensationType: entry.compensationType,
+      rateCents: entry.rateCents,
+      currency: entry.currency,
+      payFrequencyId: input.payFrequencyId,
+      jobTitle: entry.jobTitle,
+      description: entry.description,
+      effectiveFrom: input.effectiveFrom,
+      createdByUserId: input.createdByUserId,
+    });
+    results.push({
+      employeeId: entry.employeeId,
+      success: result.success,
+      compensationId: result.compensation?.id,
+      error: result.error,
+    });
+  }
+  return results;
+}
+
+export interface CompensationStatusEntry {
+  employeeId: string;
+  employeeFirstName: string;
+  employeeLastName: string;
+  personType: PersonType | null;
+  currentCompensation: {
+    payFrequencyName: string;
+    compensationType: PayrollCompensationType;
+    rateCents: number;
+    currency: string;
+  } | null;
+}
+
+// Powers the Assignments tab (Unidad 10) — every Contractor/Employee with
+// their current (effectiveTo: null) compensation, or null if they've never
+// had one (the retrofit case this tool exists for).
+export async function getCompensationStatus(tenantId: string): Promise<CompensationStatusEntry[]> {
+  const employees = await prisma.employee.findMany({
+    where: { tenantId, personType: { in: ['contractor', 'employee'] } },
+    include: {
+      compensations: {
+        where: { effectiveTo: null },
+        include: { payFrequency: true },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+      },
+    },
+    orderBy: { firstName: 'asc' },
+  });
+
+  return employees.map((employee) => ({
+    employeeId: employee.id,
+    employeeFirstName: employee.firstName,
+    employeeLastName: employee.lastName,
+    personType: employee.personType,
+    currentCompensation: employee.compensations[0]
+      ? {
+          payFrequencyName: employee.compensations[0].payFrequency.name,
+          compensationType: employee.compensations[0].compensationType,
+          rateCents: employee.compensations[0].rateCents,
+          currency: employee.compensations[0].currency,
+        }
+      : null,
+  }));
 }

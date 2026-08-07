@@ -108,6 +108,11 @@ export async function listEmployees(tenantId: string | null | undefined) {
       jobTitleDefn: true,
       manager: { select: { id: true, firstName: true, lastName: true } },
       timeOffPolicies: { include: { timeOffPolicy: true } },
+      // Only need the very first-ever compensation (not the current/latest
+      // one) to compute contractStatus below — a reassignment (Unidad 10)
+      // never re-confirms, so checking the *latest* row's confirmedAt would
+      // wrongly flag an already-active person as pending/expired forever.
+      compensations: { orderBy: { createdAt: 'asc' }, take: 1 },
     },
   });
 
@@ -117,16 +122,43 @@ export async function listEmployees(tenantId: string | null | undefined) {
 
   return employees.map((employee) => {
     const activeTimeOff = activeTimeOffRequests.find((request) => request.employeeId === employee.id);
+    const { compensations, ...employeeFields } = employee;
     const result: any = {
-      ...employee,
+      ...employeeFields,
       customFieldVals: values.filter((value) => value.entityId === employee.id),
       activeTimeOffTag: activeTimeOff
         ? { policyName: activeTimeOff.timeOffPolicy.name, color: activeTimeOff.timeOffPolicy.color }
         : null,
+      contractStatus: computeContractStatus(employee.personType, employee.userId, compensations[0]),
     };
 
     return result;
   });
+}
+
+// Payroll Unidad 11 — 'sin_compensacion'/'confirmado'/'pendiente'/'vencido',
+// or null for Profile (not applicable at all, not just an empty state).
+// "vencido" = pending for more than 3 days since the first contract was
+// created.
+const CONTRACT_EXPIRY_DAYS = 3;
+
+function computeContractStatus(
+  personType: PersonType | null,
+  userId: string | null,
+  firstCompensation: { createdAt: Date } | undefined,
+): 'sin_compensacion' | 'confirmado' | 'pendiente' | 'vencido' | null {
+  if (personType !== 'contractor' && personType !== 'employee') {
+    return null;
+  }
+  if (!firstCompensation) {
+    return 'sin_compensacion';
+  }
+  if (userId) {
+    return 'confirmado';
+  }
+  const ageMs = Date.now() - firstCompensation.createdAt.getTime();
+  const ageDays = ageMs / (1000 * 60 * 60 * 24);
+  return ageDays > CONTRACT_EXPIRY_DAYS ? 'vencido' : 'pendiente';
 }
 
 export async function findEmployeeById(id: string): Promise<Employee | null> {

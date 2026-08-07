@@ -400,3 +400,23 @@ export interface EmployeeCompensation {
   blocksParticipation: boolean;
   createdAt: string;
 }
+
+export interface CompensationStatusEntry {
+  employeeId: string;
+  employeeFirstName: string;
+  employeeLastName: string;
+  personType: 'profile' | 'contractor' | 'employee' | null;
+  currentCompensation: {
+    payFrequencyName: string;
+    compensationType: PayrollCompensationType;
+    rateCents: number;
+    currency: string;
+  } | null;
+}
+
+export interface BulkCompensationEntryResult {
+  employeeId: string;
+  success: boolean;
+  compensationId?: string;
+  error?: string;
+}

@@ -1,22 +1,31 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api';
-import type { DueDateOffset, PayFrequency, PayFrequencyCadence, PaymentMethod } from '../api';
+import type {
+  CompensationStatusEntry,
+  DueDateOffset,
+  PayFrequency,
+  PayFrequencyCadence,
+  PaymentMethod,
+  PayrollCompensationType,
+} from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import Modal from '../components/common/Modal';
 import RequiredMark from '../components/common/RequiredMark';
 import EmptyState from '../components/common/EmptyState';
+import Field from '../components/common/Field';
 import TableSkeleton from '../components/common/TableSkeleton';
-import { CalendarIcon, PencilIcon, PlusIcon } from '../components/common/Icons';
+import { formatMoney } from '../lib/currencies';
+import { CalendarIcon, PencilIcon, PlusIcon, TeamIcon } from '../components/common/Icons';
 
 interface PayrollPageProps {
   user: any;
   token: string;
 }
 
-// Only one tab exists yet (Unidad 3) — the tab bar itself is deliberate this
-// early because docs/spec-payroll.md's later units (Asignaciones, Runs,
-// Timeline) add siblings here, not a rebuild of this page's shell.
-type Tab = 'policies';
+// The tab bar exists even while only "policies" has real content (Unidad 3)
+// because docs/spec-payroll.md's later units (Asignaciones, Timeline) add
+// siblings here, not a rebuild of this page's shell.
+type Tab = 'policies' | 'assignments';
 
 const CADENCE_LABELS: Record<PayFrequencyCadence, string> = {
   weekly: 'Weekly',
@@ -104,6 +113,26 @@ const EMPTY_FREQUENCY_FORM: FrequencyFormState = {
   isActive: true,
 };
 
+interface AssignFormState {
+  payFrequencyId: string;
+  effectiveFrom: string;
+  compensationType: PayrollCompensationType | '';
+  currency: string;
+  jobTitle: string;
+  description: string;
+}
+
+function getEmptyAssignForm(): AssignFormState {
+  return {
+    payFrequencyId: '',
+    effectiveFrom: new Date().toISOString().slice(0, 10),
+    compensationType: '',
+    currency: 'USD',
+    jobTitle: '',
+    description: '',
+  };
+}
+
 function formStateFromFrequency(freq: PayFrequency): FrequencyFormState {
   const config = parseAnchorConfig(freq.anchorConfig);
   const base: FrequencyFormState = {
@@ -155,6 +184,7 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
   const [tab, setTab] = useState<Tab>('policies');
   const [frequencies, setFrequencies] = useState<PayFrequency[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [compensationStatus, setCompensationStatus] = useState<CompensationStatusEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [frequencyFilter, setFrequencyFilter] = useState<'active' | 'inactive'>('active');
 
@@ -169,6 +199,13 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
   const [methodName, setMethodName] = useState('');
   const [savingMethod, setSavingMethod] = useState(false);
 
+  const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<Set<string>>(new Set());
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [assignForm, setAssignForm] = useState(getEmptyAssignForm());
+  const [assignRates, setAssignRates] = useState<Record<string, string>>({});
+  const [bulkApplyAmount, setBulkApplyAmount] = useState('');
+  const [savingAssignment, setSavingAssignment] = useState(false);
+
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -177,9 +214,14 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
   const load = async () => {
     setLoading(true);
     try {
-      const [freqData, methodData] = await Promise.all([api.listPayFrequencies(token), api.listPaymentMethods(token)]);
+      const [freqData, methodData, statusData] = await Promise.all([
+        api.listPayFrequencies(token),
+        api.listPaymentMethods(token),
+        api.getCompensationStatus(token),
+      ]);
       setFrequencies(freqData);
       setPaymentMethods(methodData);
+      setCompensationStatus(statusData);
     } catch (error) {
       toast.error('Failed to load payroll settings: ' + (error as Error).message);
     } finally {
@@ -260,6 +302,88 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
     }
   };
 
+  const toggleEmployeeSelected = (employeeId: string) => {
+    setSelectedEmployeeIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(employeeId)) next.delete(employeeId);
+      else next.add(employeeId);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedEmployeeIds.size === compensationStatus.length) {
+      setSelectedEmployeeIds(new Set());
+    } else {
+      setSelectedEmployeeIds(new Set(compensationStatus.map((e) => e.employeeId)));
+    }
+  };
+
+  const openAssignModal = () => {
+    setAssignForm(getEmptyAssignForm());
+    // Pre-fill each selected person's rate with their previous amount as-is
+    // (no conversion) if they had one — docs/spec-payroll.md Unidad 10.
+    const rates: Record<string, string> = {};
+    for (const employeeId of selectedEmployeeIds) {
+      const entry = compensationStatus.find((e) => e.employeeId === employeeId);
+      rates[employeeId] = entry?.currentCompensation ? (entry.currentCompensation.rateCents / 100).toFixed(2) : '';
+    }
+    setAssignRates(rates);
+    setBulkApplyAmount('');
+    setAssignModalOpen(true);
+  };
+
+  const applyAmountToAllSelected = () => {
+    if (!bulkApplyAmount.trim()) return;
+    const next: Record<string, string> = {};
+    for (const employeeId of selectedEmployeeIds) {
+      next[employeeId] = bulkApplyAmount;
+    }
+    setAssignRates((prev) => ({ ...prev, ...next }));
+  };
+
+  const isAssignFormReady =
+    Boolean(assignForm.payFrequencyId) &&
+    Boolean(assignForm.effectiveFrom) &&
+    Boolean(assignForm.compensationType) &&
+    Boolean(assignForm.currency.trim()) &&
+    Boolean(assignForm.jobTitle.trim()) &&
+    Boolean(assignForm.description.trim()) &&
+    [...selectedEmployeeIds].every((id) => (assignRates[id] || '').trim() && !Number.isNaN(Number.parseFloat(assignRates[id])));
+
+  const handleSubmitAssignment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isAssignFormReady) return;
+    setSavingAssignment(true);
+    try {
+      const results = await api.createCompensationBulk(token, {
+        payFrequencyId: assignForm.payFrequencyId,
+        effectiveFrom: assignForm.effectiveFrom,
+        entries: [...selectedEmployeeIds].map((employeeId) => ({
+          employeeId,
+          compensationType: assignForm.compensationType as PayrollCompensationType,
+          rateCents: Math.round(Number.parseFloat(assignRates[employeeId]) * 100),
+          currency: assignForm.currency.trim().toUpperCase(),
+          jobTitle: assignForm.jobTitle.trim(),
+          description: assignForm.description.trim(),
+        })),
+      });
+      const failures = results.filter((r) => !r.success);
+      if (failures.length > 0) {
+        toast.error(`${failures.length} of ${results.length} assignment(s) failed.`);
+      } else {
+        toast.success(`Assigned pay policy to ${results.length} ${results.length === 1 ? 'person' : 'people'}.`);
+      }
+      setAssignModalOpen(false);
+      setSelectedEmployeeIds(new Set());
+      load();
+    } catch (error) {
+      toast.error('Failed to assign pay policy: ' + (error as Error).message);
+    } finally {
+      setSavingAssignment(false);
+    }
+  };
+
   const activeFrequencies = frequencies.filter((f) => f.isActive);
   const inactiveFrequencies = frequencies.filter((f) => !f.isActive);
   const filteredFrequencies = frequencyFilter === 'active' ? activeFrequencies : inactiveFrequencies;
@@ -271,6 +395,13 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
       </div>
 
       <div className="views-bar">
+        <button
+          type="button"
+          className={`view-tab ${tab === 'assignments' ? 'active' : ''}`}
+          onClick={() => setTab('assignments')}
+        >
+          Assignments
+        </button>
         <button type="button" className={`view-tab ${tab === 'policies' ? 'active' : ''}`} onClick={() => setTab('policies')}>
           Payment Policies
         </button>
@@ -280,7 +411,88 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
         {loading ? (
           <TableSkeleton rows={5} columns={5} />
         ) : (
-          tab === 'policies' && (
+          <>
+          {tab === 'assignments' && (
+            <>
+              <div className="flex items-start justify-between gap-4 mb-3">
+                <p className="text-sm text-ink-muted">
+                  Retrofit people with no pay policy yet, or migrate a group to a new one. New people get their
+                  first contract from their own alta, not here.
+                </p>
+                {isOwner && (
+                  <button
+                    type="button"
+                    className="btn-outline gap-1.5"
+                    onClick={openAssignModal}
+                    disabled={selectedEmployeeIds.size === 0}
+                  >
+                    Assign/Reassign Policy ({selectedEmployeeIds.size})
+                  </button>
+                )}
+              </div>
+
+              {compensationStatus.length === 0 ? (
+                <EmptyState
+                  icon={<TeamIcon />}
+                  title="No contractors or employees yet"
+                  body="Add People with Type Contractor or Employee to assign a pay policy."
+                  primaryLabel="Go to People"
+                  onPrimary={() => {
+                    window.location.href = '/hr/people';
+                  }}
+                />
+              ) : (
+                <div className="full-table-wrap">
+                  <table className="table full-table">
+                    <thead>
+                      <tr>
+                        {isOwner && (
+                          <th style={{ width: 32 }}>
+                            <input
+                              type="checkbox"
+                              checked={selectedEmployeeIds.size > 0 && selectedEmployeeIds.size === compensationStatus.length}
+                              onChange={toggleSelectAll}
+                            />
+                          </th>
+                        )}
+                        <th>Name</th>
+                        <th>Current Policy</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {compensationStatus.map((entry) => (
+                        <tr key={entry.employeeId}>
+                          {isOwner && (
+                            <td>
+                              <input
+                                type="checkbox"
+                                checked={selectedEmployeeIds.has(entry.employeeId)}
+                                onChange={() => toggleEmployeeSelected(entry.employeeId)}
+                              />
+                            </td>
+                          )}
+                          <td>
+                            {entry.employeeFirstName} {entry.employeeLastName}
+                          </td>
+                          <td>
+                            {entry.currentCompensation ? (
+                              <span className="category-chip">
+                                {formatMoney(entry.currentCompensation.rateCents, entry.currentCompensation.currency)} ·{' '}
+                                {entry.currentCompensation.payFrequencyName}
+                              </span>
+                            ) : (
+                              <span className="text-ink-muted">No policy assigned</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
+          {tab === 'policies' && (
             <>
               <div className="flex items-start justify-between gap-4 mb-1">
                 <div>
@@ -399,7 +611,8 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
                 ))}
               </div>
             </>
-          )
+          )}
+          </>
         )}
       </div>
 
@@ -643,6 +856,155 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
               <RequiredMark />
             </label>
             <input id="method-name" type="text" required autoFocus value={methodName} onChange={(e) => setMethodName(e.target.value)} />
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={assignModalOpen}
+        title="Assign / Reassign Policy"
+        onClose={() => setAssignModalOpen(false)}
+        wide
+        footer={
+          <>
+            <button type="button" className="btn-secondary" onClick={() => setAssignModalOpen(false)}>
+              Cancel
+            </button>
+            <button type="submit" form="assign-form" className="btn-primary" disabled={savingAssignment || !isAssignFormReady}>
+              {savingAssignment ? 'Saving…' : `Assign to ${selectedEmployeeIds.size}`}
+            </button>
+          </>
+        }
+      >
+        <form id="assign-form" onSubmit={handleSubmitAssignment}>
+          <div className="field-group">
+            <h4 className="field-group-title">New policy (applies to everyone selected)</h4>
+            <div className="field-group-body">
+              <Field label="Pay Frequency" required>
+                <select
+                  id="assign-payFrequencyId"
+                  className="overview-field-input"
+                  value={assignForm.payFrequencyId}
+                  onChange={(e) => setAssignForm({ ...assignForm, payFrequencyId: e.target.value })}
+                  required
+                >
+                  <option value="">-- select --</option>
+                  {activeFrequencies.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.name}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Effective From" required>
+                <input
+                  id="assign-effectiveFrom"
+                  className="overview-field-input"
+                  type="date"
+                  value={assignForm.effectiveFrom}
+                  onChange={(e) => setAssignForm({ ...assignForm, effectiveFrom: e.target.value })}
+                  required
+                />
+              </Field>
+              <Field label="Compensation Type" required>
+                <select
+                  id="assign-compensationType"
+                  className="overview-field-input"
+                  value={assignForm.compensationType}
+                  onChange={(e) => setAssignForm({ ...assignForm, compensationType: e.target.value as PayrollCompensationType })}
+                  required
+                >
+                  <option value="">-- select --</option>
+                  <option value="hourly">Hourly</option>
+                  <option value="fixed">Fixed</option>
+                </select>
+              </Field>
+              <Field label="Currency" required>
+                <input
+                  id="assign-currency"
+                  className="overview-field-input"
+                  type="text"
+                  value={assignForm.currency}
+                  onChange={(e) => setAssignForm({ ...assignForm, currency: e.target.value.toUpperCase() })}
+                  required
+                />
+              </Field>
+              <Field label="Job Title" required>
+                <input
+                  id="assign-jobTitle"
+                  className="overview-field-input"
+                  type="text"
+                  value={assignForm.jobTitle}
+                  onChange={(e) => setAssignForm({ ...assignForm, jobTitle: e.target.value })}
+                  required
+                />
+              </Field>
+              <Field label="Description" required full>
+                <textarea
+                  id="assign-description"
+                  className="overview-field-input"
+                  value={assignForm.description}
+                  onChange={(e) => setAssignForm({ ...assignForm, description: e.target.value })}
+                  required
+                />
+              </Field>
+            </div>
+          </div>
+
+          <div className="field-group">
+            <h4 className="field-group-title">Review — amount per person ({assignForm.currency || 'USD'})</h4>
+            <div className="flex items-center gap-2 mb-3">
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="Apply this amount to all"
+                value={bulkApplyAmount}
+                onChange={(e) => setBulkApplyAmount(e.target.value)}
+                style={{ maxWidth: 220 }}
+              />
+              <button type="button" className="btn-secondary btn-sm" onClick={applyAmountToAllSelected}>
+                Apply to all selected
+              </button>
+            </div>
+            <div className="full-table-wrap">
+              <table className="table full-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Previous</th>
+                    <th>New amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...selectedEmployeeIds].map((employeeId) => {
+                    const entry = compensationStatus.find((e) => e.employeeId === employeeId);
+                    return (
+                      <tr key={employeeId}>
+                        <td>
+                          {entry?.employeeFirstName} {entry?.employeeLastName}
+                        </td>
+                        <td>
+                          {entry?.currentCompensation
+                            ? formatMoney(entry.currentCompensation.rateCents, entry.currentCompensation.currency)
+                            : '—'}
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={assignRates[employeeId] || ''}
+                            onChange={(e) => setAssignRates({ ...assignRates, [employeeId]: e.target.value })}
+                            required
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         </form>
       </Modal>

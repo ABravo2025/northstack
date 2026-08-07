@@ -42,6 +42,14 @@ import { useAutoCreateGuard } from '../hooks/useAutoCreateGuard';
 const CONTRACT_TYPE_LABELS: Record<string, string> = { part_time: 'Part Time', full_time: 'Full Time' };
 const CONTRACT_TYPE_VALUE_BY_LABEL: Record<string, string> = { 'Part Time': 'part_time', 'Full Time': 'full_time' };
 const PERSON_TYPE_LABELS: Record<string, string> = { profile: 'Profile', contractor: 'Contractor', employee: 'Employee' };
+// Payroll Unidad 11 — 'sin_compensacion' deliberately has no entry (renders
+// '—', same as Profile) since it isn't one of the 3 chip states the spec
+// calls out.
+const CONTRACT_STATUS_CHIPS = {
+  confirmado: { color: '#059669', label: 'Confirmed' },
+  pendiente: { color: '#9ca3af', label: 'Pending' },
+  vencido: { color: '#dc2626', label: 'Expired' },
+};
 
 const PAGE_SIZE = 20;
 const ACTIVE_VIEW_STORAGE_KEY = 'northstack:activeView:employee';
@@ -736,6 +744,18 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       key: 'personType',
       label: 'Type',
       render: (emp: any) => (emp.personType ? PERSON_TYPE_LABELS[emp.personType] : '—'),
+    },
+    {
+      key: 'contractStatus',
+      label: 'Contract',
+      // No chip at all for Profile or "never had a compensation" — Payroll
+      // Unidad 11 treats those as not applicable, not as a 4th chip state.
+      render: (emp: any) =>
+        emp.contractStatus && CONTRACT_STATUS_CHIPS[emp.contractStatus as keyof typeof CONTRACT_STATUS_CHIPS] ? (
+          <StatusChip {...CONTRACT_STATUS_CHIPS[emp.contractStatus as keyof typeof CONTRACT_STATUS_CHIPS]} />
+        ) : (
+          '—'
+        ),
     },
   ];
 

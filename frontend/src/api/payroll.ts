@@ -1,5 +1,7 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
 import type {
+  BulkCompensationEntryResult,
+  CompensationStatusEntry,
   DueDateOffset,
   EmployeeCompensation,
   PayFrequency,
@@ -104,6 +106,38 @@ export const payrollApi = {
     },
   ): Promise<EmployeeCompensation> => {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/compensation`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  getCompensationStatus: async (token: string): Promise<CompensationStatusEntry[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/compensation/status`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  createCompensationBulk: async (
+    token: string,
+    data: {
+      payFrequencyId: string;
+      effectiveFrom: string;
+      entries: {
+        employeeId: string;
+        compensationType: PayrollCompensationType;
+        rateCents: number;
+        currency: string;
+        jobTitle: string;
+        description: string;
+      }[];
+    },
+  ): Promise<BulkCompensationEntryResult[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/compensation/bulk`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(data),

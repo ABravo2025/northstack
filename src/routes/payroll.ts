@@ -11,7 +11,11 @@ import {
   listPaymentMethods,
   updatePaymentMethod,
 } from '../modules/hr/paymentMethodService.js';
-import { createCompensation } from '../modules/hr/employeeCompensationService.js';
+import {
+  createCompensation,
+  createCompensationBulk,
+  getCompensationStatus,
+} from '../modules/hr/employeeCompensationService.js';
 import { findEmployeeById } from '../modules/hr/employeeService.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
@@ -208,4 +212,70 @@ payrollRouter.post('/api/hr/payroll/compensation', async (req, res) => {
     return res.status(400).json({ error: result.error });
   }
   return res.status(201).json(result.compensation);
+});
+
+// --- Bulk assign/reassign (Unidad 10) — exception tool, owner-only --------
+
+payrollRouter.get('/api/hr/payroll/compensation/status', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManagePayroll(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const status = await getCompensationStatus(user.tenantId!);
+  return res.json(status);
+});
+
+payrollRouter.post('/api/hr/payroll/compensation/bulk', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManagePayroll(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const payFrequency = await findPayFrequencyById(req.body.payFrequencyId);
+  if (!payFrequency || payFrequency.tenantId !== user.tenantId) {
+    return res.status(400).json({ error: 'Pay frequency not found' });
+  }
+
+  if (!Array.isArray(req.body.entries) || req.body.entries.length === 0) {
+    return res.status(400).json({ error: 'entries must be a non-empty array' });
+  }
+
+  for (const entry of req.body.entries) {
+    const employee = await findEmployeeById(entry.employeeId);
+    if (!employee || employee.tenantId !== user.tenantId) {
+      return res.status(400).json({ error: `Employee ${entry.employeeId} not found` });
+    }
+    if (!VALID_PAYROLL_COMPENSATION_TYPES.includes(entry.compensationType)) {
+      return res.status(400).json({ error: `Invalid compensation type for employee ${entry.employeeId}` });
+    }
+    if (!Number.isInteger(entry.rateCents) || entry.rateCents < 0) {
+      return res.status(400).json({ error: `Invalid rateCents for employee ${entry.employeeId}` });
+    }
+  }
+
+  const results = await createCompensationBulk({
+    tenantId: user.tenantId!,
+    payFrequencyId: req.body.payFrequencyId,
+    effectiveFrom: req.body.effectiveFrom,
+    createdByUserId: user.id,
+    entries: req.body.entries.map((entry: any) => ({
+      employeeId: entry.employeeId,
+      compensationType: entry.compensationType,
+      rateCents: entry.rateCents,
+      currency: entry.currency,
+      jobTitle: entry.jobTitle.trim(),
+      description: entry.description.trim(),
+    })),
+  });
+
+  return res.status(201).json(results);
 });

@@ -4,10 +4,15 @@ import type {
   CompensationStatusEntry,
   DueDateOffset,
   EmployeeCompensation,
+  OffCyclePayrollEntry,
   PayFrequency,
   PayFrequencyCadence,
   PaymentMethod,
   PayrollCompensationType,
+  PayrollEntryType,
+  PayrollRun,
+  PayrollRunEntry,
+  RunDetail,
 } from './types.js';
 
 export const payrollApi = {
@@ -138,6 +143,120 @@ export const payrollApi = {
     },
   ): Promise<BulkCompensationEntryResult[]> => {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/compensation/bulk`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  // --- Payroll Runs (Unidad 12/13/16/17) -----------------------------------
+
+  listPayrollRuns: async (token: string): Promise<PayrollRun[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/runs`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  createPayrollRun: async (token: string, data: { payFrequencyId: string; periodLabel: string }): Promise<PayrollRun> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/runs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  getPayrollRunDetail: async (token: string, runId: string): Promise<RunDetail> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/runs/${runId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  addEmployeeToPayrollRun: async (token: string, runId: string, employeeId: string): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/runs/${runId}/employees`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ employeeId }),
+    });
+    if (!res.ok) await throwApiError(res);
+  },
+
+  confirmPayrollRun: async (token: string, runId: string): Promise<PayrollRun> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/runs/${runId}/confirm`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  // --- Payroll entries: adjustments (Unidad 14) + hours (Unidad 15) -------
+
+  createPayrollAdjustment: async (
+    token: string,
+    data: {
+      runId: string;
+      employeeId: string;
+      type: PayrollEntryType;
+      amountCents: number;
+      currency: string;
+      label?: string;
+      paymentDate: string;
+    },
+  ): Promise<PayrollRunEntry> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/entries`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  deletePayrollEntry: async (token: string, entryId: string): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/entries/${entryId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+  },
+
+  updatePayrollEntryHours: async (token: string, entryId: string, hoursQty: number): Promise<PayrollRunEntry> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/entries/${entryId}/hours`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ hoursQty }),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  // --- Off-cycle payments (Unidad 18) --------------------------------------
+
+  listOffCyclePayments: async (token: string): Promise<OffCyclePayrollEntry[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/off-payments`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  createOffCyclePayments: async (
+    token: string,
+    data: {
+      type: PayrollEntryType;
+      paymentDate: string;
+      entries: { employeeId: string; amountCents: number; currency: string; label?: string }[];
+    },
+  ): Promise<{ employeeId: string; entryId: string }[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/off-payments`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(data),

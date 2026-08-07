@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import type {
   CompensationStatusEntry,
   DueDateOffset,
+  OffCyclePayrollEntry,
   PayFrequency,
   PayFrequencyCadence,
   PaymentMethod,
   PayrollCompensationType,
+  PayrollEntryType,
+  PayrollRun,
 } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import Modal from '../components/common/Modal';
@@ -14,6 +18,7 @@ import RequiredMark from '../components/common/RequiredMark';
 import EmptyState from '../components/common/EmptyState';
 import Field from '../components/common/Field';
 import TableSkeleton from '../components/common/TableSkeleton';
+import StatusChip from '../components/common/StatusChip';
 import { formatMoney } from '../lib/currencies';
 import { CalendarIcon, PencilIcon, PlusIcon, TeamIcon } from '../components/common/Icons';
 
@@ -25,7 +30,15 @@ interface PayrollPageProps {
 // The tab bar exists even while only "policies" has real content (Unidad 3)
 // because docs/spec-payroll.md's later units (Asignaciones, Timeline) add
 // siblings here, not a rebuild of this page's shell.
-type Tab = 'policies' | 'assignments';
+type Tab = 'timeline' | 'assignments' | 'policies';
+
+const ADJUSTMENT_TYPE_LABELS: Record<string, string> = {
+  base: 'Payment',
+  bonus: 'Bonus',
+  commission: 'Commission',
+  reimbursement: 'Reimbursement',
+  deduction: 'Deduction',
+};
 
 const CADENCE_LABELS: Record<PayFrequencyCadence, string> = {
   weekly: 'Weekly',
@@ -181,10 +194,13 @@ function buildAnchorConfig(form: FrequencyFormState): Record<string, unknown> {
 
 export default function PayrollPage({ user, token }: PayrollPageProps) {
   const toast = useToast();
-  const [tab, setTab] = useState<Tab>('policies');
+  const navigate = useNavigate();
+  const [tab, setTab] = useState<Tab>('timeline');
   const [frequencies, setFrequencies] = useState<PayFrequency[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [compensationStatus, setCompensationStatus] = useState<CompensationStatusEntry[]>([]);
+  const [payrollRuns, setPayrollRuns] = useState<PayrollRun[]>([]);
+  const [offCyclePayments, setOffCyclePayments] = useState<OffCyclePayrollEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [frequencyFilter, setFrequencyFilter] = useState<'active' | 'inactive'>('active');
 
@@ -206,6 +222,20 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
   const [bulkApplyAmount, setBulkApplyAmount] = useState('');
   const [savingAssignment, setSavingAssignment] = useState(false);
 
+  const [newRunModalOpen, setNewRunModalOpen] = useState(false);
+  const [newRunPayFrequencyId, setNewRunPayFrequencyId] = useState('');
+  const [newRunPeriodLabel, setNewRunPeriodLabel] = useState('');
+  const [savingRun, setSavingRun] = useState(false);
+
+  const [offPaymentModalOpen, setOffPaymentModalOpen] = useState(false);
+  const [offPaymentSelectedIds, setOffPaymentSelectedIds] = useState<Set<string>>(new Set());
+  const [offPaymentType, setOffPaymentType] = useState<PayrollEntryType>('bonus');
+  const [offPaymentAmount, setOffPaymentAmount] = useState('');
+  const [offPaymentCurrency, setOffPaymentCurrency] = useState('USD');
+  const [offPaymentLabel, setOffPaymentLabel] = useState('');
+  const [offPaymentDate, setOffPaymentDate] = useState(new Date().toISOString().slice(0, 10));
+  const [savingOffPayment, setSavingOffPayment] = useState(false);
+
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -214,14 +244,18 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
   const load = async () => {
     setLoading(true);
     try {
-      const [freqData, methodData, statusData] = await Promise.all([
+      const [freqData, methodData, statusData, runsData, offPaymentsData] = await Promise.all([
         api.listPayFrequencies(token),
         api.listPaymentMethods(token),
         api.getCompensationStatus(token),
+        api.listPayrollRuns(token),
+        api.listOffCyclePayments(token),
       ]);
       setFrequencies(freqData);
       setPaymentMethods(methodData);
       setCompensationStatus(statusData);
+      setPayrollRuns(runsData);
+      setOffCyclePayments(offPaymentsData);
     } catch (error) {
       toast.error('Failed to load payroll settings: ' + (error as Error).message);
     } finally {
@@ -388,13 +422,106 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
   const inactiveFrequencies = frequencies.filter((f) => !f.isActive);
   const filteredFrequencies = frequencyFilter === 'active' ? activeFrequencies : inactiveFrequencies;
 
+  const openNewRunModal = () => {
+    setNewRunPayFrequencyId('');
+    setNewRunPeriodLabel('');
+    setNewRunModalOpen(true);
+  };
+
+  const handleCreateRun = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRunPayFrequencyId || !newRunPeriodLabel.trim()) return;
+    setSavingRun(true);
+    try {
+      const run = await api.createPayrollRun(token, {
+        payFrequencyId: newRunPayFrequencyId,
+        periodLabel: newRunPeriodLabel.trim(),
+      });
+      setNewRunModalOpen(false);
+      toast.success('Payroll run created.');
+      navigate(`/hr/payroll/runs/${run.id}`);
+    } catch (error) {
+      toast.error('Failed to create run: ' + (error as Error).message);
+    } finally {
+      setSavingRun(false);
+    }
+  };
+
+  const openOffPaymentModal = () => {
+    setOffPaymentSelectedIds(new Set());
+    setOffPaymentType('bonus');
+    setOffPaymentAmount('');
+    setOffPaymentCurrency('USD');
+    setOffPaymentLabel('');
+    setOffPaymentDate(new Date().toISOString().slice(0, 10));
+    setOffPaymentModalOpen(true);
+  };
+
+  const toggleOffPaymentSelected = (employeeId: string) => {
+    setOffPaymentSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(employeeId)) next.delete(employeeId);
+      else next.add(employeeId);
+      return next;
+    });
+  };
+
+  const handleCreateOffPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (offPaymentSelectedIds.size === 0 || !offPaymentAmount.trim() || !offPaymentDate) return;
+    setSavingOffPayment(true);
+    try {
+      await api.createOffCyclePayments(token, {
+        type: offPaymentType,
+        paymentDate: offPaymentDate,
+        entries: [...offPaymentSelectedIds].map((employeeId) => ({
+          employeeId,
+          amountCents: Math.round(Number.parseFloat(offPaymentAmount) * 100),
+          currency: offPaymentCurrency.trim().toUpperCase(),
+          label: offPaymentLabel || undefined,
+        })),
+      });
+      toast.success(`Created ${offPaymentSelectedIds.size} one-off payment(s).`);
+      setOffPaymentModalOpen(false);
+      load();
+    } catch (error) {
+      toast.error('Failed to create one-off payment: ' + (error as Error).message);
+    } finally {
+      setSavingOffPayment(false);
+    }
+  };
+
+  type TimelineItem =
+    | { kind: 'run'; date: string; run: PayrollRun }
+    | { kind: 'off-cycle'; date: string; entry: OffCyclePayrollEntry };
+
+  const timelineItems: TimelineItem[] = [
+    ...payrollRuns.map((run): TimelineItem => ({ kind: 'run', date: run.confirmedAt || run.createdAt, run })),
+    ...offCyclePayments.map((entry): TimelineItem => ({ kind: 'off-cycle', date: entry.paymentDate, entry })),
+  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
   return (
     <div className="container">
       <div className="page-toolbar">
         <h2 className="page-title">Payroll</h2>
+        {tab === 'timeline' && isOwner && (
+          <div className="flex items-center gap-2">
+            <button type="button" className="btn-secondary gap-1.5" onClick={openOffPaymentModal}>
+              <PlusIcon className="h-3.5 w-3.5" />
+              One-off Payment
+            </button>
+            <button type="button" className="btn-primary gap-1.5" onClick={openNewRunModal}>
+              <PlusIcon className="h-3.5 w-3.5" />
+              New Run
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="views-bar">
+        <button type="button" className={`view-tab ${tab === 'timeline' ? 'active' : ''}`} onClick={() => setTab('timeline')}>
+          Timeline
+        </button>
         <button
           type="button"
           className={`view-tab ${tab === 'assignments' ? 'active' : ''}`}
@@ -412,6 +539,76 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
           <TableSkeleton rows={5} columns={5} />
         ) : (
           <>
+          {tab === 'timeline' && (
+            <>
+              {timelineItems.length === 0 ? (
+                <EmptyState
+                  icon={<CalendarIcon />}
+                  title="No payroll activity yet"
+                  body="Create a run for a pay frequency, or record a one-off payment."
+                  primaryLabel="New Run"
+                  onPrimary={openNewRunModal}
+                />
+              ) : (
+                <div className="full-table-wrap">
+                  <table className="table full-table">
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Detail</th>
+                        <th>Status</th>
+                        <th></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {timelineItems.map((item) =>
+                        item.kind === 'run' ? (
+                          <tr key={`run-${item.run.id}`}>
+                            <td>{item.date.slice(0, 10)}</td>
+                            <td>
+                              <span className="category-chip">Run</span>
+                            </td>
+                            <td>{item.run.periodLabel}</td>
+                            <td>
+                              <StatusChip
+                                color={item.run.status === 'confirmed' ? '#059669' : '#9ca3af'}
+                                label={item.run.status === 'confirmed' ? 'Confirmed' : 'Draft'}
+                              />
+                            </td>
+                            <td>
+                              <button
+                                type="button"
+                                className="btn-secondary btn-sm"
+                                onClick={() => navigate(`/hr/payroll/runs/${item.run.id}`)}
+                              >
+                                Open
+                              </button>
+                            </td>
+                          </tr>
+                        ) : (
+                          <tr key={`entry-${item.entry.id}`}>
+                            <td>{item.date.slice(0, 10)}</td>
+                            <td>
+                              <span className="category-chip">One-off</span>
+                            </td>
+                            <td>
+                              {item.entry.employeeFirstName} {item.entry.employeeLastName} ·{' '}
+                              {ADJUSTMENT_TYPE_LABELS[item.entry.type] || item.entry.type} ·{' '}
+                              {formatMoney(item.entry.amountCents, item.entry.currency)}
+                              {item.entry.label ? ` · ${item.entry.label}` : ''}
+                            </td>
+                            <td>—</td>
+                            <td></td>
+                          </tr>
+                        ),
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </>
+          )}
           {tab === 'assignments' && (
             <>
               <div className="flex items-start justify-between gap-4 mb-3">
@@ -1002,6 +1199,179 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
                       </tr>
                     );
                   })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={newRunModalOpen}
+        title="New Run"
+        onClose={() => setNewRunModalOpen(false)}
+        footer={
+          <>
+            <button type="button" className="btn-secondary" onClick={() => setNewRunModalOpen(false)}>
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="new-run-form"
+              className="btn-primary"
+              disabled={savingRun || !newRunPayFrequencyId || !newRunPeriodLabel.trim()}
+            >
+              {savingRun ? 'Creating…' : 'Create'}
+            </button>
+          </>
+        }
+      >
+        <form id="new-run-form" onSubmit={handleCreateRun}>
+          <div className="form-group">
+            <label htmlFor="new-run-frequency">
+              Pay Frequency
+              <RequiredMark />
+            </label>
+            <select
+              id="new-run-frequency"
+              value={newRunPayFrequencyId}
+              onChange={(e) => setNewRunPayFrequencyId(e.target.value)}
+              required
+            >
+              <option value="">-- select --</option>
+              {activeFrequencies.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group">
+            <label htmlFor="new-run-period">
+              Period
+              <RequiredMark />
+            </label>
+            <input
+              id="new-run-period"
+              type="text"
+              value={newRunPeriodLabel}
+              onChange={(e) => setNewRunPeriodLabel(e.target.value)}
+              placeholder="e.g. 2nd half · August 2026"
+              required
+            />
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={offPaymentModalOpen}
+        title="One-off Payment"
+        onClose={() => setOffPaymentModalOpen(false)}
+        wide
+        footer={
+          <>
+            <button type="button" className="btn-secondary" onClick={() => setOffPaymentModalOpen(false)}>
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="off-payment-form"
+              className="btn-primary"
+              disabled={savingOffPayment || offPaymentSelectedIds.size === 0 || !offPaymentAmount.trim()}
+            >
+              {savingOffPayment ? 'Saving…' : `Create for ${offPaymentSelectedIds.size}`}
+            </button>
+          </>
+        }
+      >
+        <form id="off-payment-form" onSubmit={handleCreateOffPayment}>
+          <div className="field-group">
+            <div className="field-group-body">
+              <Field label="Type" required>
+                <select
+                  id="off-payment-type"
+                  className="overview-field-input"
+                  value={offPaymentType}
+                  onChange={(e) => setOffPaymentType(e.target.value as PayrollEntryType)}
+                  required
+                >
+                  <option value="bonus">Bonus</option>
+                  <option value="commission">Commission</option>
+                  <option value="reimbursement">Reimbursement</option>
+                  <option value="deduction">Deduction</option>
+                </select>
+              </Field>
+              <Field label={`Amount (${offPaymentCurrency || 'USD'})`} required>
+                <input
+                  id="off-payment-amount"
+                  className="overview-field-input"
+                  type="number"
+                  step="0.01"
+                  value={offPaymentAmount}
+                  onChange={(e) => setOffPaymentAmount(e.target.value)}
+                  required
+                />
+              </Field>
+              <Field label="Currency" required>
+                <input
+                  id="off-payment-currency"
+                  className="overview-field-input"
+                  type="text"
+                  value={offPaymentCurrency}
+                  onChange={(e) => setOffPaymentCurrency(e.target.value.toUpperCase())}
+                  required
+                />
+              </Field>
+              <Field label="Payment Date" required>
+                <input
+                  id="off-payment-date"
+                  className="overview-field-input"
+                  type="date"
+                  value={offPaymentDate}
+                  onChange={(e) => setOffPaymentDate(e.target.value)}
+                  required
+                />
+              </Field>
+              <Field label="Note" full>
+                <input
+                  id="off-payment-label"
+                  className="overview-field-input"
+                  type="text"
+                  value={offPaymentLabel}
+                  onChange={(e) => setOffPaymentLabel(e.target.value)}
+                />
+              </Field>
+            </div>
+          </div>
+
+          <div className="field-group">
+            <h4 className="field-group-title">
+              People
+              <RequiredMark />
+            </h4>
+            <div className="full-table-wrap">
+              <table className="table full-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: 32 }}></th>
+                    <th>Name</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {compensationStatus.map((entry) => (
+                    <tr key={entry.employeeId}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={offPaymentSelectedIds.has(entry.employeeId)}
+                          onChange={() => toggleOffPaymentSelected(entry.employeeId)}
+                        />
+                      </td>
+                      <td>
+                        {entry.employeeFirstName} {entry.employeeLastName}
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

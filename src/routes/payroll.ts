@@ -17,6 +17,15 @@ import {
   getCompensationStatus,
 } from '../modules/hr/employeeCompensationService.js';
 import { findEmployeeById } from '../modules/hr/employeeService.js';
+import {
+  addEmployeeToRun,
+  confirmRun,
+  createRun,
+  getRunDetail,
+  listRuns,
+} from '../modules/hr/payrollRunService.js';
+import { createAdjustment, deleteEntry, updateEntryHours } from '../modules/hr/payrollEntryService.js';
+import { createOffPayments, listOffPayments } from '../modules/hr/payrollOffPaymentService.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 
@@ -274,6 +283,230 @@ payrollRouter.post('/api/hr/payroll/compensation/bulk', async (req, res) => {
       currency: entry.currency,
       jobTitle: entry.jobTitle.trim(),
       description: entry.description.trim(),
+    })),
+  });
+
+  return res.status(201).json(results);
+});
+
+// --- Payroll Runs (Unidad 12/13/16/17) — owner-only, real $ amounts -------
+
+payrollRouter.get('/api/hr/payroll/runs', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!canManagePayroll(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const runs = await listRuns(user.tenantId!);
+  return res.json(runs);
+});
+
+payrollRouter.post('/api/hr/payroll/runs', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!canManagePayroll(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  if (!req.body.periodLabel?.trim()) {
+    return res.status(400).json({ error: 'periodLabel is required' });
+  }
+
+  const result = await createRun({
+    tenantId: user.tenantId!,
+    payFrequencyId: req.body.payFrequencyId,
+    periodLabel: req.body.periodLabel.trim(),
+    createdByUserId: user.id,
+  });
+
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  return res.status(201).json(result.run);
+});
+
+payrollRouter.get('/api/hr/payroll/runs/:id', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!canManagePayroll(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const result = await getRunDetail(user.tenantId!, req.params.id);
+  if (!result.success) {
+    return res.status(404).json({ error: result.error });
+  }
+  return res.json(result.detail);
+});
+
+payrollRouter.post('/api/hr/payroll/runs/:id/employees', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!canManagePayroll(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const employee = await findEmployeeById(req.body.employeeId);
+  if (!employee || employee.tenantId !== user.tenantId) {
+    return res.status(400).json({ error: 'Employee not found' });
+  }
+
+  const result = await addEmployeeToRun(user.tenantId!, req.params.id, req.body.employeeId);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  return res.status(201).json({ success: true });
+});
+
+payrollRouter.post('/api/hr/payroll/runs/:id/confirm', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!canManagePayroll(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const result = await confirmRun(user.tenantId!, req.params.id);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  return res.json(result.run);
+});
+
+// --- Payroll entries: adjustments (Unidad 14) + hours (Unidad 15) --------
+
+const VALID_ADJUSTMENT_TYPES = ['bonus', 'commission', 'reimbursement', 'deduction'];
+
+payrollRouter.post('/api/hr/payroll/entries', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!canManagePayroll(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  if (!VALID_ADJUSTMENT_TYPES.includes(req.body.type)) {
+    return res.status(400).json({ error: 'Invalid adjustment type' });
+  }
+  if (!Number.isInteger(req.body.amountCents)) {
+    return res.status(400).json({ error: 'amountCents must be an integer (deductions may be negative)' });
+  }
+
+  const employee = await findEmployeeById(req.body.employeeId);
+  if (!employee || employee.tenantId !== user.tenantId) {
+    return res.status(400).json({ error: 'Employee not found' });
+  }
+
+  const result = await createAdjustment({
+    tenantId: user.tenantId!,
+    runId: req.body.runId,
+    employeeId: req.body.employeeId,
+    type: req.body.type,
+    amountCents: req.body.amountCents,
+    currency: req.body.currency,
+    label: req.body.label || null,
+    paymentDate: req.body.paymentDate,
+  });
+
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  return res.status(201).json(result.entry);
+});
+
+payrollRouter.delete('/api/hr/payroll/entries/:id', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!canManagePayroll(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const result = await deleteEntry(user.tenantId!, req.params.id);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  return res.status(204).send();
+});
+
+payrollRouter.patch('/api/hr/payroll/entries/:id/hours', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!canManagePayroll(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const result = await updateEntryHours(user.tenantId!, req.params.id, Number(req.body.hoursQty));
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  return res.json(result.entry);
+});
+
+// --- Off-cycle payments (Unidad 18) ----------------------------------------
+
+payrollRouter.get('/api/hr/payroll/off-payments', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!canManagePayroll(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const entries = await listOffPayments(user.tenantId!);
+  return res.json(entries);
+});
+
+payrollRouter.post('/api/hr/payroll/off-payments', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!canManagePayroll(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  if (!Array.isArray(req.body.entries) || req.body.entries.length === 0) {
+    return res.status(400).json({ error: 'entries must be a non-empty array' });
+  }
+  if (!VALID_ADJUSTMENT_TYPES.includes(req.body.type) && req.body.type !== 'base') {
+    return res.status(400).json({ error: 'Invalid entry type' });
+  }
+  if (!req.body.paymentDate) {
+    return res.status(400).json({ error: 'paymentDate is required' });
+  }
+
+  for (const entry of req.body.entries) {
+    const employee = await findEmployeeById(entry.employeeId);
+    if (!employee || employee.tenantId !== user.tenantId) {
+      return res.status(400).json({ error: `Employee ${entry.employeeId} not found` });
+    }
+  }
+
+  const results = await createOffPayments({
+    tenantId: user.tenantId!,
+    type: req.body.type,
+    paymentDate: req.body.paymentDate,
+    entries: req.body.entries.map((entry: any) => ({
+      employeeId: entry.employeeId,
+      amountCents: entry.amountCents,
+      currency: entry.currency,
+      label: entry.label || null,
     })),
   });
 

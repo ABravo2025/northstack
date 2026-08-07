@@ -420,3 +420,58 @@ export interface BulkCompensationEntryResult {
   compensationId?: string;
   error?: string;
 }
+
+export type PayrollEntryType = 'base' | 'bonus' | 'commission' | 'reimbursement' | 'deduction';
+export type PayrollRunStatus = 'draft' | 'confirmed';
+
+export interface PayrollRun {
+  id: string;
+  tenantId: string;
+  payFrequencyId: string | null;
+  periodLabel: string;
+  status: PayrollRunStatus;
+  createdByUserId: string;
+  confirmedAt: string | null;
+  createdAt: string;
+}
+
+export interface PayrollRunEntry {
+  id: string;
+  type: PayrollEntryType;
+  amountCents: number;
+  currency: string;
+  hoursQty: number | null;
+  label: string | null;
+  paymentDate: string;
+}
+
+export interface RunDetailEmployeeRow {
+  employeeId: string;
+  employeeFirstName: string;
+  employeeLastName: string;
+  compensationType: PayrollCompensationType;
+  rateCents: number;
+  currency: string;
+  statusName: string;
+  isInactive: boolean;
+  entries: PayrollRunEntry[];
+  baseAmountCents: number;
+  adjustmentsTotalCents: number;
+  totalCents: number;
+}
+
+export interface RunDetail {
+  run: PayrollRun & { payFrequency: { id: string; name: string } | null };
+  employeeRows: RunDetailEmployeeRow[];
+  excludedCount: number;
+  hasUnloadedHours: boolean;
+}
+
+// A loose (runId: null) off-cycle PayrollEntry, for the unified timeline
+// (Unidad 19) — includes the employee's name since the timeline shows it
+// without a separate lookup.
+export interface OffCyclePayrollEntry extends PayrollRunEntry {
+  employeeId: string;
+  employeeFirstName: string;
+  employeeLastName: string;
+}

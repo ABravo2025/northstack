@@ -443,8 +443,11 @@ Notas:
 
 Spec completo en `docs/spec-payroll.md` (v2, 21 unidades) — tercer intento, los dos anteriores se
 revirtieron por completo (git log tiene el detalle; `docs/tareas-desarrollo.md` y
-`docs/features-overview.md` resumen el incidente). Completas hasta Unidad 4 (schema, cifrado,
-catálogo de políticas de pago, rename a People + `personType`).
+`docs/features-overview.md` resumen el incidente). Completas hasta Unidad 7 (schema, cifrado,
+catálogo de políticas de pago, rename a People + `personType`, alta con contrato inicial,
+invitación específica, y la pantalla pública de confirmación de contrato) — verificado de punta a
+punta con Playwright: alta de un Contractor → invitación automática → confirmación real (contraseña,
+país, IBAN) → `User` creado y logueado → datos de cuenta desencriptados coinciden con lo ingresado.
 
 ```mermaid
 erDiagram
@@ -498,6 +501,7 @@ erDiagram
         enum paymentAccountSubType "nullable, iban/ach/username"
         string paymentAccountDataEncrypted "nullable, AES-256-GCM ciphertext"
         datetime confirmedAt "nullable"
+        string confirmedIp "nullable, evidence captured alongside confirmedAt — Unidad 7"
         bool blocksParticipation "true only if this is the employee's first-ever compensation"
         string createdByUserId FK
     }
@@ -533,25 +537,31 @@ Notas:
   enums fijos — mismo precedente que `StatusDefinition`/`TimeOffPolicyDefinition`.
 - **`PayrollCompensationType` (`hourly`/`fixed`) reemplaza al `CompensationType` legado**
   (`hourly`/`monthly`) — nombre distinto porque el value set cambia (`fixed` en vez de `monthly`).
-- **`Employee.hourlyRateCents`/`monthlyRateCents`/`compensationType` retirados (Unidad 4, 2026-08-07)**:
-  `scripts/backfill-legacy-employee-compensation.ts` copió cualquier dato ya cargado (4 registros en
-  `staging`, todos de prueba) a un `EmployeeCompensation` inicial antes de sacar los 3 campos del
-  schema de Prisma — `confirmedAt`/`blocksParticipation: false` forzados en la migración para no
-  bloquear a gente que ya tenía compensación real, a diferencia de un contrato nuevo genuino (Unidad
-  9). El `CompensationType` enum se borró del todo. **Las columnas físicas siguen en la base**
-  (inofensivas, sin usar) — el `db push` destructivo que las borra de verdad queda para un paso
-  posterior explícito, siguiendo el patrón de migración segura (aditivo → backfill → verificar →
-  destructivo).
+- **`Employee.hourlyRateCents`/`monthlyRateCents`/`compensationType` retirados por completo (Unidad
+  4, 2026-08-07)**: `scripts/backfill-legacy-employee-compensation.ts` copió cualquier dato ya
+  cargado (4 registros en `staging`, todos de prueba) a un `EmployeeCompensation` inicial —
+  `confirmedAt`/`blocksParticipation: false` forzados en la migración para no bloquear a gente que
+  ya tenía compensación real, a diferencia de un contrato nuevo genuino (Unidad 9). Aplicado el
+  patrón completo de migración segura (aditivo → backfill → verificar con query directa →
+  destructivo, este último con confirmación explícita del usuario dado que Prisma no permite un
+  `db push` parcial): las 3 columnas y el enum `CompensationType` **ya no existen en la base**, no
+  solo en el código.
 - **Restos de un intento anterior**: al aplicar esta unidad se encontraron 4 tablas huérfanas en
   `staging` (mismos nombres, forma de columnas vieja e incompatible) dejadas por un intento de
   Payroll revertido por completo del lado del código — un `git revert` no deshace un `prisma db push`
   ya aplicado. Se borraron antes de aplicar el schema nuevo.
-- Nada de este grupo llegó a producción todavía. El schema aditivo de la Unidad 1 (enums/modelos
-  nuevos + los 3 campos nuevos de `Employee`) sí se pusheó contra la base de `staging` vía
-  `prisma db push` — el retiro de `hourlyRateCents`/`monthlyRateCents`/`compensationType` (Unidad 4)
-  todavía **no** se aplicó a nivel de base (sigue como columnas físicas sin usar; solo se sacaron del
-  schema de Prisma/la app). El código (Unidades 1-4) está commiteado en local únicamente, sin
-  pushear a la rama remota `staging` todavía, a pedido explícito del usuario 2026-08-07.
+- **Gotcha de ruteo (Unidad 7)**: `GET /api/public/contract-confirmation/:token` colisionaba con el
+  catch-all genérico `GET /api/public/:tenantSlug/:formSlug` de Public Forms — misma forma de 2
+  segmentos, y Express matchea por orden de registro, así que el que estaba registrado primero
+  (Forms) se comía el request y devolvía siempre "Form not found". Fix: las rutas de Payroll se
+  registraron *antes* que el catch-all en `src/routes/public.ts`, con un comentario explicando por
+  qué el orden importa acá. Si se agrega un endpoint público nuevo bajo `/api/public/*` con 2
+  segmentos de path, chequear este archivo primero.
+- Nada de este grupo llegó a producción todavía — todo (Unidades 1-7) commiteado en local
+  únicamente, sin pushear a la rama remota `staging`, a pedido explícito del usuario 2026-08-07. El
+  schema sí se aplicó directamente contra la base de datos de `staging` vía `prisma db push`
+  (incluye el retiro destructivo de la Unidad 4 y el campo `confirmedIp` de la Unidad 7) — necesario
+  para poder probar en local, pero es una capa distinta del código en git.
 
 ## Enums
 

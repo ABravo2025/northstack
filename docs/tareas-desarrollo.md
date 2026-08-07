@@ -106,19 +106,28 @@ ver "Estado actual" más abajo y `docs/tareas/semana-2026-07-29.md` para el deta
 revirtieron por completo — detalle en la entrada fechada 2026-08-06 de la sección de arriba y en
 `git log`. Este spec se escribió desde cero, sin reciclar el viejo, con 21 unidades (incluye el
 rename a "People", confirmación de contrato con evidencia, y cifrado de datos de cuenta). Estado:
-**Unidades 1-4 completas** — schema + cifrado (U1), catálogo de políticas de pago backend+frontend
-(U2+U3), rename a People + `personType` + retiro de la compensación legada (U4). **Todo commiteado
-en local únicamente, sin pushear a `staging` — a pedido explícito del usuario 2026-08-07** ("segui
-con el resto, no pusheemos a staging aun"), distinto del criterio de "confirmar y pushear cada
-unidad por separado" que se venía usando; el schema aditivo de la Unidad 1 sí llegó a la base de
-`staging` (`prisma db push`, necesario para poder probar en local — ver `docs/database-schema.md`
-grupo 7), pero el código no. Al arrancar se encontraron y borraron 4 tablas huérfanas en esa misma
-base (restos del intento anterior que el `git revert` nunca limpió a nivel de base de datos).
-`Employee.hourlyRateCents`/`monthlyRateCents`/`compensationType` se migraron a `EmployeeCompensation`
-(`scripts/backfill-legacy-employee-compensation.ts`, 4 registros de prueba en `staging`) y se
-sacaron del schema de Prisma — las columnas físicas siguen en la base hasta un `db push` destructivo
-posterior. Distinto del "Módulo Payments" de Tier 4 — Payments es facturarle a los *Clients* del
-tenant (cuentas por cobrar), Payroll es pagarle a los *Employees* (cuentas por pagar).
+**Unidades 1-7 completas** — schema + cifrado (U1), catálogo de políticas de pago backend+frontend
+(U2+U3), rename a People + `personType` + retiro de la compensación legada (U4), alta con contrato
+inicial (U5), invitación específica vía `acceptPath` (U6), y la pantalla pública de confirmación de
+contrato con contraseña/país/método de pago + evidencia IP (U7) — el flujo completo (alta de un
+Contractor → invitación automática → confirmación real con IBAN → `User` creado y logueado →
+desencriptado verificado) se probó de punta a punta con Playwright, sin errores de consola.
+
+**Todo commiteado en local únicamente, sin pushear a `staging` — a pedido explícito del usuario
+2026-08-07** ("segui con el resto, no pusheemos a staging aun"), distinto del criterio de "confirmar
+y pushear cada unidad por separado" que se venía usando. El schema **sí** se aplicó directamente
+contra la base de datos de `staging` (necesario para poder probar en local) — incluye el retiro
+destructivo de `Employee.hourlyRateCents`/`monthlyRateCents`/`compensationType` (Unidad 4, con
+confirmación explícita del usuario ya que Prisma no permite aplicar solo la parte aditiva de un
+`db push` cuando hay cambios destructivos pendientes en el mismo diff) y el campo `confirmedIp`
+(Unidad 7, evidencia de confirmación que no estaba contemplada en el schema original de la Unidad 1).
+`scripts/backfill-legacy-employee-compensation.ts` migró los 4 registros de prueba con datos legados
+antes del borrado. Ver `docs/database-schema.md` grupo 7 para el detalle completo, incluyendo un
+gotcha de ruteo real encontrado en la Unidad 7 (colisión entre `/api/public/contract-confirmation/:token`
+y el catch-all de Public Forms).
+
+Distinto del "Módulo Payments" de Tier 4 — Payments es facturarle a los *Clients* del tenant
+(cuentas por cobrar), Payroll es pagarle a los *Employees* (cuentas por pagar).
 
 **Tier 4 — Resto de iniciativas grandes**
 - Suscripciones propias del SaaS (Paddle, planes/precios, pantalla de administración autónoma)

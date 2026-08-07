@@ -26,6 +26,7 @@ export const employeesApi = {
       contractUrl?: string;
       contractType?: 'part_time' | 'full_time' | null;
       personType?: 'profile' | 'contractor' | 'employee' | null;
+      nationality?: string;
     },
   ): Promise<Employee> => {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/employees`, {

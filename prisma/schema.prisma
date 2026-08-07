@@ -630,6 +630,7 @@ model EmployeeCompensation {
   paymentAccountSubType       PaymentAccountSubType?
   paymentAccountDataEncrypted String? // AES-256-GCM ciphertext (src/lib/encryption.ts) — never plaintext
   confirmedAt                 DateTime?
+  confirmedIp                 String? // evidence captured alongside confirmedAt — docs/spec-payroll.md's "checkbox + timestamp + IP" (Unidad 7)
   blocksParticipation         Boolean                  @default(false) // true only if this is the employee's first-ever EmployeeCompensation, computed once at creation — see Unidad 9
   createdByUserId             String
   createdBy                   User                     @relation(fields: [createdByUserId], references: [id])

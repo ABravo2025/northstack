@@ -104,8 +104,16 @@ CRUD estándar: **createContact**, **listContacts(tenantId)**, **findContactById
 - **createCustomFieldDefinition**, **setCustomFieldDefinitionActive**, **updateCustomFieldDefinition** (nota: `fieldType` no es editable a propósito — cambiarlo podría dejar valores guardados que ya no matchean), **findCustomFieldDefinitionById**, **listCustomFieldDefinitions**.
 - **createCustomFieldValue**, **findCustomFieldValueById**, **updateCustomFieldValue**, **deleteCustomFieldValue**, **listCustomFieldValuesForEntity**, **listCustomFieldValuesForEntities**.
 
+### `src/modules/hr/contractConfirmationService.ts` (Payroll, Unidad 7)
+- **getContractConfirmationDetails(token)** — read model público para `/confirm-contract/:token`: datos read-only del contrato (owner) + catálogo de métodos de pago para el select editable.
+- **confirmContract(input)** — valida, cifra los datos de cuenta (`encryptPaymentAccountData`), y en una transacción: crea el `User` (nombre copiado del `Employee`, nunca re-pedido), vincula `Employee.userId`, guarda `countryOfResidence`, completa la `EmployeeCompensation` (método de pago + `confirmedAt`/`confirmedIp`), marca la `Invitation` `accepted`, crea la `Session` — la persona queda logueada de una.
+
+### `src/modules/hr/employeeCompensationService.ts` (Payroll, Unidad 5)
+- **createCompensation(input)** — única función que crea una fila de `EmployeeCompensation`: cierra la vigente anterior (`effectiveTo`), calcula `blocksParticipation` (true solo si es la primera de la persona), y dispara la invitación de confirmación de contrato (Unidad 6) si corresponde. Pensada para reusarse tal cual desde la asignación masiva (Unidad 10).
+- **findCompensationById(id)**.
+
 ### `src/modules/hr/employeeService.ts`
-- **createEmployee(input)**, **listEmployees(tenantId, viewerRole?)**, **findEmployeeById(id)**, **findEmployeeByUserId(userId)**, **updateEmployee(...)**, **deleteEmployee(id)**.
+- **createEmployee(input)**, **listEmployees(tenantId)**, **findEmployeeById(id)**, **findEmployeeByUserId(userId)**, **updateEmployee(...)**, **deleteEmployee(id)**.
 - **wouldCreateManagerCycle(...)** — camina la cadena de `managerId` hacia arriba para detectar un ciclo antes de asignar un manager nuevo.
 
 ### `src/modules/hr/employeeTimeOffPolicyService.ts`
@@ -162,7 +170,9 @@ CRUD estándar, cross-entidad vía `entityType`/`entityId`: **createNote**, **fi
 - **listTasksForCalendar(tenantId)** — todos los Task con `dueDate`, el frontend filtra al mes visible.
 
 ### `src/modules/tenant/invitationService.ts`
-- **findInvitationByToken(token)**, **createInvitation(input)**, **acceptInvitation(input)**, **listTenantInvitations(tenantId)**, **cancelInvitation(tenantId, invitationId)**.
+- **findInvitationByToken(token)** — incluye `employeeId`/`tenantId` en el select.
+- **createInvitation(input)** — acepta `acceptPath` opcional (default `/accept-invite`; Payroll usa `/confirm-contract` para el primer contrato de un Contractor/Employee, Unidad 6) para que el link del email apunte a una pantalla distinta de la genérica.
+- **acceptInvitation(input)**, **listTenantInvitations(tenantId)**, **cancelInvitation(tenantId, invitationId)**.
 
 ### `src/modules/tenant/tenantService.ts`
 - **getEmailDomain(email)** / **normalizeSlug(value)** — helpers de string.
@@ -228,7 +238,8 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 | `timeOffBalances.ts` | listTimeOffBalances, getEmployeeTimeOffBalance, +custom field values (nota: nombre de archivo engañoso, ver código) |
 | `tasks.ts` | listTasks, listMyTasks, listTasksForCalendar, createTask, updateTask, deleteTask |
 | `notes.ts` | listNotes, createNote, updateNote, deleteNote |
-| `payroll.ts` | listPayFrequencies, createPayFrequency, updatePayFrequency, listPaymentMethods, createPaymentMethod, updatePaymentMethod |
+| `payroll.ts` | listPayFrequencies, createPayFrequency, updatePayFrequency, listPaymentMethods, createPaymentMethod, updatePaymentMethod, createCompensation |
+| `contractConfirmationPublic.ts` | getContractConfirmation, confirmContract — público, sin auth (standalone `/confirm-contract/:token`) |
 | `csv.ts` | exportEmployeesCsv, importEmployeesCsv, employeesCsvTemplate |
 | `tenantUsers.ts` | listTenantUsers, updateTenantUser, listTenantInvitations, createTenantInvitation, cancelInvitation |
 | `publicFormsAdmin.ts` | listPublicForms, createPublicForm, updatePublicForm |

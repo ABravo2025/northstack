@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { api, type SavedView, type ViewFilter, type ViewSort } from '../api';
+import { api, type PayFrequency, type SavedView, type ViewFilter, type ViewSort } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Pagination, { paginate } from '../components/common/Pagination';
@@ -67,6 +67,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const [employeeDepartments, setEmployeeDepartments] = useState<any[]>([]);
   const [employeeJobTitles, setEmployeeJobTitles] = useState<any[]>([]);
   const [timeOffPolicies, setTimeOffPolicies] = useState<any[]>([]);
+  const [payFrequencies, setPayFrequencies] = useState<PayFrequency[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
 
   const [tenantUsers, setTenantUsers] = useState<any[]>([]);
@@ -143,7 +144,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     setPage(1);
   }, [employeeSearch, activeViewId]);
 
-  const emptyEmployeeForm = {
+  const getEmptyEmployeeForm = () => ({
     firstName: '',
     lastName: '',
     email: '',
@@ -156,9 +157,20 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     contractUrl: '',
     contractType: '',
     personType: '',
-  };
+    nationality: '',
+    // Initial contract (Payroll Unidad 5) — only used/required when personType
+    // is contractor/employee.
+    compensationType: '',
+    rateAmount: '',
+    currency: 'USD',
+    payFrequencyId: '',
+    contractJobTitle: '',
+    contractDescription: '',
+    effectiveFrom: new Date().toISOString().slice(0, 10),
+    contractNote: '',
+  });
 
-  const [employeeForm, setEmployeeForm] = useState(emptyEmployeeForm);
+  const [employeeForm, setEmployeeForm] = useState(getEmptyEmployeeForm);
   const autoCreateGuard = useAutoCreateGuard();
 
   useEffect(() => {
@@ -168,6 +180,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     loadEmployeeDepartments();
     loadEmployeeJobTitles();
     loadTimeOffPolicies();
+    loadPayFrequencies();
     loadViews();
     api
       .listTenantUsers(token)
@@ -211,6 +224,15 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       setTimeOffPolicies(policies.filter((p) => p.isActive));
     } catch (error) {
       toast.error('Failed to load time off policies: ' + (error as Error).message);
+    }
+  };
+
+  const loadPayFrequencies = async () => {
+    try {
+      const frequencies = await api.listPayFrequencies(token);
+      setPayFrequencies(frequencies.filter((f) => f.isActive));
+    } catch (error) {
+      toast.error('Failed to load pay frequencies: ' + (error as Error).message);
     }
   };
 
@@ -308,7 +330,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   };
 
   const handleOpenAdd = () => {
-    setEmployeeForm(emptyEmployeeForm);
+    setEmployeeForm(getEmptyEmployeeForm());
     setCustomFieldValues({});
     autoCreateGuard.reset();
     setSlideOverMode('add');
@@ -335,8 +357,20 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   // readiness against a value that hasn't reached state yet — see
   // useAutoCreateGuard.ts for why blur-triggered checks don't need this.
   const isEmployeeAddReady = (cfValues: Record<string, string> = customFieldValues) => {
+    if (!employeeForm.personType) return false;
     if (!employeeForm.firstName.trim() || !employeeForm.lastName.trim()) return false;
     if (!isLikelyValidEmail(employeeForm.email)) return false;
+    // Contractor/Employee can't be saved without a complete initial contract
+    // (docs/spec-payroll.md Unidad 4/5) — Profile never shows or needs this.
+    if (employeeForm.personType === 'contractor' || employeeForm.personType === 'employee') {
+      if (!employeeForm.compensationType) return false;
+      if (!employeeForm.rateAmount.trim() || Number.isNaN(Number.parseFloat(employeeForm.rateAmount))) return false;
+      if (!employeeForm.currency.trim()) return false;
+      if (!employeeForm.payFrequencyId) return false;
+      if (!employeeForm.contractJobTitle.trim()) return false;
+      if (!employeeForm.contractDescription.trim()) return false;
+      if (!employeeForm.effectiveFrom) return false;
+    }
     for (const field of activeEmployeeCustomFields) {
       if (field.required && !(cfValues[field.id] || '').trim()) return false;
     }
@@ -386,7 +420,22 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       contractUrl: employeeForm.contractUrl || undefined,
       contractType: (employeeForm.contractType || null) as 'part_time' | 'full_time' | null,
       personType: (employeeForm.personType || null) as 'profile' | 'contractor' | 'employee' | null,
+      nationality: employeeForm.nationality || undefined,
     });
+
+    if (employeeForm.personType === 'contractor' || employeeForm.personType === 'employee') {
+      await api.createCompensation(token, {
+        employeeId: employee.id,
+        compensationType: employeeForm.compensationType as 'hourly' | 'fixed',
+        rateCents: Math.round(Number.parseFloat(employeeForm.rateAmount) * 100),
+        currency: employeeForm.currency.trim().toUpperCase(),
+        payFrequencyId: employeeForm.payFrequencyId,
+        jobTitle: employeeForm.contractJobTitle.trim(),
+        description: employeeForm.contractDescription.trim(),
+        effectiveFrom: employeeForm.effectiveFrom,
+        note: employeeForm.contractNote || undefined,
+      });
+    }
 
     const valueEntries = Object.entries(cfValues).filter(([, value]) => value.trim() !== '');
     for (const [customFieldDefinitionId, value] of valueEntries) {
@@ -926,6 +975,15 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                     onChange={(e) => setEmployeeForm({ ...employeeForm, personalEmail: e.target.value })}
                   />
                 </Field>
+                <Field label="Nationality">
+                  <input
+                    id="emp-nationality"
+                    className="overview-field-input"
+                    type="text"
+                    value={employeeForm.nationality}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, nationality: e.target.value })}
+                  />
+                </Field>
               </div>
             </div>
 
@@ -954,7 +1012,16 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                     id="emp-jobTitleId"
                     className="overview-field-input"
                     value={employeeForm.jobTitleId}
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, jobTitleId: e.target.value })}
+                    onChange={(e) => {
+                      const jobTitleId = e.target.value;
+                      const jobTitleName = employeeJobTitles.find((j) => j.id === jobTitleId)?.name ?? '';
+                      // Pre-fills the contract's Job Title snapshot (Payroll
+                      // Unidad 5) — a starting point, not linked afterward;
+                      // typing over it in the Initial Compensation section
+                      // below isn't overwritten again unless this select
+                      // changes once more.
+                      setEmployeeForm({ ...employeeForm, jobTitleId, contractJobTitle: jobTitleName });
+                    }}
                   >
                     <option value="">-- none --</option>
                     {employeeJobTitles
@@ -1020,6 +1087,103 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                 </Field>
               </div>
             </div>
+
+            {(employeeForm.personType === 'contractor' || employeeForm.personType === 'employee') && (
+              <div className="field-group">
+                <h4 className="field-group-title">Initial Compensation</h4>
+                <div className="field-group-body">
+                  <Field label="Compensation Type" required>
+                    <select
+                      id="emp-comp-type"
+                      className="overview-field-input"
+                      value={employeeForm.compensationType}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, compensationType: e.target.value })}
+                      required
+                    >
+                      <option value="">-- select --</option>
+                      <option value="hourly">Hourly</option>
+                      <option value="fixed">Fixed</option>
+                    </select>
+                  </Field>
+                  <Field label={`Rate (${employeeForm.currency || 'USD'})`} required>
+                    <input
+                      id="emp-comp-rate"
+                      className="overview-field-input"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={employeeForm.rateAmount}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, rateAmount: e.target.value })}
+                      required
+                    />
+                  </Field>
+                  <Field label="Currency" required>
+                    <input
+                      id="emp-comp-currency"
+                      className="overview-field-input"
+                      type="text"
+                      value={employeeForm.currency}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, currency: e.target.value.toUpperCase() })}
+                      required
+                    />
+                  </Field>
+                  <Field label="Pay Frequency" required>
+                    <select
+                      id="emp-comp-payFrequencyId"
+                      className="overview-field-input"
+                      value={employeeForm.payFrequencyId}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, payFrequencyId: e.target.value })}
+                      required
+                    >
+                      <option value="">-- select --</option>
+                      {payFrequencies.map((f) => (
+                        <option key={f.id} value={f.id}>
+                          {f.name}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                  <Field label="Job Title (contract)" required>
+                    <input
+                      id="emp-comp-jobTitle"
+                      className="overview-field-input"
+                      type="text"
+                      value={employeeForm.contractJobTitle}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, contractJobTitle: e.target.value })}
+                      required
+                    />
+                  </Field>
+                  <Field label="Effective From" required>
+                    <input
+                      id="emp-comp-effectiveFrom"
+                      className="overview-field-input"
+                      type="date"
+                      value={employeeForm.effectiveFrom}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, effectiveFrom: e.target.value })}
+                      required
+                    />
+                  </Field>
+                  <Field label="Description" required full>
+                    <textarea
+                      id="emp-comp-description"
+                      className="overview-field-input"
+                      value={employeeForm.contractDescription}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, contractDescription: e.target.value })}
+                      required
+                    />
+                  </Field>
+                  <Field label="Note" full>
+                    <input
+                      id="emp-comp-note"
+                      className="overview-field-input"
+                      type="text"
+                      value={employeeForm.contractNote}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, contractNote: e.target.value })}
+                    />
+                  </Field>
+                </div>
+              </div>
+            )}
 
             {activeEmployeeCustomFields.length > 0 && (
               <div className="field-group">

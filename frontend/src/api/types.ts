@@ -29,6 +29,7 @@ export interface Employee {
   jobTitleDefn?: { id: string; name: string } | null;
   contractType?: 'part_time' | 'full_time' | null;
   personType?: 'profile' | 'contractor' | 'employee' | null;
+  nationality?: string | null;
   startDate?: string | null;
   endDate?: string | null;
   contractUrl?: string | null;
@@ -378,4 +379,24 @@ export interface PaymentMethod {
   name: string;
   isActive: boolean;
   order: number;
+}
+
+export type PayrollCompensationType = 'hourly' | 'fixed';
+
+export interface EmployeeCompensation {
+  id: string;
+  employeeId: string;
+  compensationType: PayrollCompensationType;
+  rateCents: number;
+  currency: string;
+  payFrequencyId: string;
+  jobTitle: string;
+  description: string;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  note: string | null;
+  paymentMethodId: string | null;
+  confirmedAt: string | null;
+  blocksParticipation: boolean;
+  createdAt: string;
 }

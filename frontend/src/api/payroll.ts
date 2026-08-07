@@ -1,5 +1,12 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
-import type { DueDateOffset, PayFrequency, PayFrequencyCadence, PaymentMethod } from './types.js';
+import type {
+  DueDateOffset,
+  EmployeeCompensation,
+  PayFrequency,
+  PayFrequencyCadence,
+  PaymentMethod,
+  PayrollCompensationType,
+} from './types.js';
 
 export const payrollApi = {
   listPayFrequencies: async (token: string): Promise<PayFrequency[]> => {
@@ -75,6 +82,29 @@ export const payrollApi = {
   ): Promise<PaymentMethod> => {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/payment-methods/${id}`, {
       method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  createCompensation: async (
+    token: string,
+    data: {
+      employeeId: string;
+      compensationType: PayrollCompensationType;
+      rateCents: number;
+      currency: string;
+      payFrequencyId: string;
+      jobTitle: string;
+      description: string;
+      effectiveFrom: string;
+      note?: string;
+    },
+  ): Promise<EmployeeCompensation> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/compensation`, {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(data),
     });

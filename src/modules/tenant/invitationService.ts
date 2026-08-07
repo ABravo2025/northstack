@@ -12,6 +12,11 @@ export interface CreateInvitationInput {
   email: string;
   role?: UserRole;
   employeeId?: string;
+  // Where the emailed link sends the invitee — defaults to the generic
+  // accept-invite screen. Payroll's contract-confirmation flow (Unidad 6)
+  // overrides this to '/confirm-contract' so a Contractor/Employee's first
+  // invitation lands on their contract instead of the generic accept screen.
+  acceptPath?: string;
 }
 
 export interface InvitationResult {
@@ -33,6 +38,8 @@ export async function findInvitationByToken(token: string) {
       role: true,
       status: true,
       expiresAt: true,
+      employeeId: true,
+      tenantId: true,
     },
   });
 }
@@ -69,11 +76,12 @@ export async function createInvitation(input: CreateInvitationInput): Promise<In
   });
 
   const appBaseUrl = process.env.APP_BASE_URL ?? 'http://localhost:5173';
+  const acceptPath = input.acceptPath ?? '/accept-invite';
   sendInvitationEmail({
     to: invitation.email,
     tenantName: tenant.name,
     role: invitation.role,
-    acceptUrl: `${appBaseUrl}/accept-invite/${invitation.token}`,
+    acceptUrl: `${appBaseUrl}${acceptPath}/${invitation.token}`,
   }).catch((error) => {
     // Best-effort: the invitation itself (and its copyable link in the UI)
     // already exists, so a failed email shouldn't fail the whole request.

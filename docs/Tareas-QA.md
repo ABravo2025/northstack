@@ -473,6 +473,54 @@ severidad media/baja (visual o de datos, sin impacto de seguridad).
 
 ---
 
+## QA-12 — Payroll Unidad 5+6+7: alta con contrato, invitación, confirmación pública (2026-08-07, en local únicamente — no pusheado a `staging`)
+
+**Por qué existe esta tarea:** el flujo central de Payroll — dar de alta un Contractor/Employee con
+su contrato, que dispare una invitación, y que la persona la confirme en una pantalla pública sin
+sesión. Verificado end-to-end con un script propio (API real + Playwright) durante el desarrollo:
+alta → invitación auto-creada → confirmación con IBAN → `User` creado y logueado → desencriptado
+verificado byte a byte contra lo ingresado. Cero errores de consola. Igual que QA-11, correr esto
+de nuevo contra `staging` antes de pedir el visto bueno final, no asumir que alcanza con lo ya hecho.
+
+### A. Alta con contrato inicial (Unidad 5)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | "Add Person" con Type = Profile | No aparece ninguna sección de contrato; se guarda con solo Identity/Role/Contract (los campos generales, no los de compensación) |
+| 2 | "Add Person" con Type = Contractor o Employee, sin completar la sección "Initial Compensation" | El botón de auto-create/submit no dispara — a diferencia de Profile, acá el contrato es obligatorio para guardar |
+| 3 | Elegir un Job Title del catálogo en la sección Role | El campo "Job Title (contract)" de Initial Compensation se pre-completa con ese nombre, pero sigue editable a mano sin que se vuelva a pisar solo (a menos que se cambie el Job Title del catálogo de nuevo) |
+| 4 | Completar Initial Compensation (Hourly o Fixed, monto, moneda, Pay Frequency, Job Title, Effective From, Description) y guardar | Se crea el `Employee` y, aparte, un `EmployeeCompensation` con `blocksParticipation: true` (primer contrato de esa persona) |
+| 5 | Nacionalidad en la sección Identity | Se guarda en `Employee.nationality`, aplica a cualquier Type |
+
+### B. Invitación específica (Unidad 6)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 6 | Después del paso A.4, revisar la tabla `Invitation` | Se creó una fila nueva con `employeeId` seteado, `role: member`, apuntando (vía el email que mandaría `sendInvitationEmail`) a `/confirm-contract/:token`, no a `/accept-invite/:token` |
+| 7 | Repetir el alta con Type = Profile | No se crea ninguna `Invitation` — Profile nunca dispara este flujo |
+| 8 | Reasignar/crear un segundo contrato para alguien que ya confirmó el primero (una vez exista la Unidad 10) | No debería volver a mandar invitación — la condición es "primer contrato + sin `User` vinculado", no "cualquier contrato nuevo" (verificar cuando la Unidad 10 exista) |
+
+### C. Confirmación pública de contrato (Unidad 7)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 9 | Abrir `/confirm-contract/:token` sin sesión iniciada | Carga sin pedir login — es una pantalla pública. Muestra el bloque read-only completo (Persona, Job Title, Descripción, Tipo de compensación, Monto, Frecuencia, Vigente desde, Nacionalidad, Time Off Policies con `-` si no tiene ninguna) |
+| 10 | Elegir método de pago "Wire transfer" | Aparece el radio IBAN/ACH; IBAN muestra 1 campo, ACH muestra 2 (routing + account) |
+| 11 | Elegir cualquier otro método de pago | Aparece un solo campo de usuario/correo, sin radio IBAN/ACH |
+| 12 | Completar todo sin tildar los 2 checkboxes (contrato + Términos) | El botón "Confirm Contract" sigue deshabilitado |
+| 13 | Confirmar con datos válidos | Se crea el `User` (nombre copiado del `Employee`, no re-pedido), se vincula `Employee.userId`, se guarda `countryOfResidence`, la `EmployeeCompensation` queda con `paymentMethodId`/`paymentAccountSubType`/`confirmedAt`/`confirmedIp` seteados y `paymentAccountDataEncrypted` con el dato cifrado (nunca texto plano — confirmar con una query directa que no se pueda leer el IBAN/routing/username a simple vista), la `Invitation` pasa a `accepted`, y la persona queda logueada automáticamente en `/overview` |
+| 14 | Intentar reabrir el mismo link después de confirmado | Debería fallar con un error claro ("ya confirmado") — verificar, no se probó explícitamente en la ronda de desarrollo |
+| 15 | Link vencido o revocado | Mismo criterio que el `accept-invite` genérico — error claro, sin crear nada |
+
+### Al encontrar una falla
+
+C.13 es crítica si el dato de cuenta queda en texto plano en la base (ver Unidad 8, es el corazón de
+por qué existe el cifrado). B.6 es alta si la invitación apunta al lugar equivocado — dejaría a la
+persona en un flujo roto (login genérico sin contrato que confirmar). El resto es alta/media según
+si bloquea el flujo completo o es un detalle de UI.
+
+---
+
 ## Próximas tareas de QA (a definir)
 
 Cuando se construyan los módulos grandes en curso (rediseño de Clients, Payroll), esta tabla de

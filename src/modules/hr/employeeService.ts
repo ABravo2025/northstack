@@ -12,6 +12,7 @@ export interface CreateEmployeeInput {
   jobTitleId?: string | null;
   contractType?: ContractType | null;
   personType?: PersonType | null;
+  nationality?: string | null;
   startDate?: string | null;
   endDate?: string | null;
   contractUrl?: string | null;
@@ -29,6 +30,7 @@ export interface UpdateEmployeeInput {
   jobTitleId?: string | null;
   contractType?: ContractType | null;
   personType?: PersonType | null;
+  nationality?: string | null;
   startDate?: string | null;
   endDate?: string | null;
   contractUrl?: string | null;
@@ -49,6 +51,7 @@ export async function createEmployee(input: CreateEmployeeInput): Promise<Employ
       jobTitleId: input.jobTitleId ?? null,
       contractType: input.contractType ?? null,
       personType: input.personType ?? null,
+      nationality: input.nationality ?? null,
       startDate: input.startDate ? new Date(input.startDate) : null,
       endDate: input.endDate ? new Date(input.endDate) : null,
       contractUrl: input.contractUrl ?? null,
@@ -159,6 +162,7 @@ export async function updateEmployee(
   if (input.jobTitleId !== undefined) data.jobTitleId = input.jobTitleId;
   if (input.contractType !== undefined) data.contractType = input.contractType;
   if (input.personType !== undefined) data.personType = input.personType;
+  if (input.nationality !== undefined) data.nationality = input.nationality;
   if (input.startDate !== undefined) data.startDate = input.startDate ? new Date(input.startDate) : null;
   if (input.endDate !== undefined) data.endDate = input.endDate ? new Date(input.endDate) : null;
   if (input.contractUrl !== undefined) data.contractUrl = input.contractUrl;

@@ -6,6 +6,7 @@ import TableSkeleton from './components/common/TableSkeleton';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import AcceptInvitePage from './pages/AcceptInvitePage';
+import ContractConfirmationPage from './pages/ContractConfirmationPage';
 import OverviewPage from './pages/OverviewPage';
 import HelpPage from './pages/HelpPage';
 import HrDashboardPage from './pages/HrDashboardPage';
@@ -36,19 +37,21 @@ export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const isAcceptInviteRoute = location.pathname.startsWith('/accept-invite');
+  const isConfirmContractRoute = location.pathname.startsWith('/confirm-contract');
 
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(
-    () => !isAcceptInviteRoute && Boolean(localStorage.getItem('token')),
+    () => !isAcceptInviteRoute && !isConfirmContractRoute && Boolean(localStorage.getItem('token')),
   );
   const [authError, setAuthError] = useState<FormError | null>(null);
 
   useEffect(() => {
-    if (isAcceptInviteRoute) {
-      // Handling an invite link: never auto-restore a stored session, the invited
-      // person may not be whoever last used this browser.
+    if (isAcceptInviteRoute || isConfirmContractRoute) {
+      // Handling an invite/contract-confirmation link: never auto-restore a
+      // stored session, the invited person may not be whoever last used this
+      // browser.
       return;
     }
 
@@ -67,6 +70,13 @@ export default function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  const handleContractConfirmed = (newToken: string, newUser: any) => {
+    setToken(newToken);
+    localStorage.setItem('token', newToken);
+    setUser(newUser);
+    navigate('/overview');
+  };
 
   const handleInvitationAccepted = (newToken: string, newUser: any) => {
     setToken(newToken);
@@ -190,6 +200,10 @@ export default function App() {
       <Route
         path="/accept-invite/:token"
         element={<AcceptInvitePage onAccepted={handleInvitationAccepted} />}
+      />
+      <Route
+        path="/confirm-contract/:token"
+        element={<ContractConfirmationPage onConfirmed={handleContractConfirmed} />}
       />
       <Route path="/apply/:tenantSlug/:formSlug" element={<PublicFormPage />} />
 

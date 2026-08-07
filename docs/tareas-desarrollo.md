@@ -101,15 +101,19 @@ Siguiente en la cola: Tier 1.
 **Tier 3 — Rediseño de Clients (completo, en producción)** — Company/Contact/Opportunity/Pipeline,
 ver "Estado actual" más abajo y `docs/tareas/semana-2026-07-29.md` para el detalle.
 
-**Tier 3.5 — Módulo Payroll — sin spec activo, eliminado del checklist 2026-08-06.** Se había
-construido completo (Unidad 0-15 + un re-spec) entre el 2026-08-01 y el 2026-08-03, llegó a
-`staging` sin revisión real del usuario, y terminó revertido de `main` el mismo 2026-08-03 tras un
-incidente de deploy (detalle en la entrada fechada 2026-08-06 de la sección de arriba). Hoy no
-existe en el código en ningún entorno. El spec técnico que vivía en este archivo se eliminó por
-quedar inconsistente con esa realidad — retomar Payroll significa empezar un spec nuevo desde cero,
-no reciclar el viejo; el historial completo (qué se construyó, cómo se revirtió) queda en `git log`
-si hace falta consultarlo. Distinto del "Módulo Payments" de Tier 4 — Payments es facturarle a los
-*Clients* del tenant (cuentas por cobrar), Payroll es pagarle a los *Employees* (cuentas por pagar).
+**Tier 3.5 — Módulo Payroll — tercer intento en curso, spec nuevo en `docs/spec-payroll.md`
+(2026-08-07).** Los dos intentos anteriores (Unidad 0-15 + re-spec, 2026-08-01 a 08-03) se
+revirtieron por completo — detalle en la entrada fechada 2026-08-06 de la sección de arriba y en
+`git log`. Este spec se escribió desde cero, sin reciclar el viejo, con 21 unidades (incluye el
+rename a "People", confirmación de contrato con evidencia, y cifrado de datos de cuenta). Estado:
+**Unidad 1 (schema + cifrado) y Unidad 2 (catálogo de políticas de pago, backend) completas, en
+`staging` únicamente.** Al arrancar se encontraron y borraron 4 tablas huérfanas en la base de
+`staging` (restos del intento anterior que el `git revert` nunca limpió a nivel de base de datos —
+ver `docs/database-schema.md` grupo 7). `Employee.hourlyRateCents`/`monthlyRateCents`/
+`compensationType` siguen activos a propósito hasta una unidad posterior (retiro confirmado con el
+usuario, pendiente de que exista un catálogo de frecuencias contra el cual backfillear). Distinto
+del "Módulo Payments" de Tier 4 — Payments es facturarle a los *Clients* del tenant (cuentas por
+cobrar), Payroll es pagarle a los *Employees* (cuentas por pagar).
 
 **Tier 4 — Resto de iniciativas grandes**
 - Suscripciones propias del SaaS (Paddle, planes/precios, pantalla de administración autónoma)

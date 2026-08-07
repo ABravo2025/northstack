@@ -1,7 +1,7 @@
 import type { UserRole } from '@prisma/client';
 
 export const rolePermissions: Record<UserRole, string[]> = {
-  owner: ['view_hr', 'create_hr', 'manage_custom_fields', 'invite_users', 'manage_users'],
+  owner: ['view_hr', 'create_hr', 'manage_custom_fields', 'invite_users', 'manage_users', 'manage_payroll'],
   admin: ['view_hr', 'create_hr', 'manage_custom_fields', 'invite_users', 'manage_users'],
   member: ['view_hr'],
 };
@@ -24,4 +24,11 @@ export function canInviteUsers(role: UserRole): boolean {
 
 export function canManageUsers(role: UserRole): boolean {
   return rolePermissions[role].includes('manage_users');
+}
+
+// Owner-only, unlike the rest of this file where admin matches owner —
+// Payroll's compensation data is owner-only visibility by default (see
+// docs/spec-payroll.md's "Convenciones" section) until custom permissions exist.
+export function canManagePayroll(role: UserRole): boolean {
+  return rolePermissions[role].includes('manage_payroll');
 }

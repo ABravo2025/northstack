@@ -32,6 +32,9 @@
 - **rowsToRecords(rows)** — header + filas → array de objetos planos, keyed por nombre de columna (match case-insensitive). Forma que consume todo importador de CSV de la app.
 - **getField(record, ...names)** — busca un campo en un record por cualquiera de varios nombres alternativos (alias de columna).
 
+### `src/lib/encryption.ts`
+- **encryptPaymentAccountData(plaintext)** / **decryptPaymentAccountData(payload)** — AES-256-GCM vía el módulo `crypto` nativo de Node (sin librería externa), keyed por `PAYMENT_DATA_ENCRYPTION_KEY`. Único uso hoy: `EmployeeCompensation.paymentAccountDataEncrypted` (Payroll, ver `docs/spec-payroll.md`).
+
 ### `src/lib/httpAuth.ts`
 - **getBearerToken(req)** — extrae el token `Authorization: Bearer`.
 - **getClientIp(req)** — IP del cliente, para rate limiting.
@@ -67,7 +70,7 @@ Todas siguen el mismo patrón: `if (!mailerConfigured()) return;` (no rompen el 
 
 ### `src/modules/auth/permissionService.ts`
 Todas son `(role: UserRole) => boolean`, la fuente de verdad de qué puede hacer cada rol:
-**canViewHr**, **canCreateHr**, **canManageCustomFields**, **canInviteUsers**, **canManageUsers**.
+**canViewHr**, **canCreateHr**, **canManageCustomFields**, **canInviteUsers**, **canManageUsers**, **canManagePayroll** (owner-only, a diferencia del resto — ver Payroll en `docs/spec-payroll.md`).
 
 ### `src/modules/clients/clientService.ts` (módulo legado, ver `features-overview.md`)
 CRUD estándar: **createClient**, **listClients(tenantId)**, **findClientById(id)**, **updateClient(id, input, changedByUserId)**, **deleteClient(id)**.
@@ -111,6 +114,14 @@ CRUD estándar: **createContact**, **listContacts(tenantId)**, **findContactById
 ### `src/modules/hr/fieldCatalogService.ts` (catálogos configurables: Department, Job Title, etc.)
 - **listFieldCatalogDefinitions(...)**, **findFieldCatalogDefinitionById(id)**, **createFieldCatalogDefinition(...)**, **updateFieldCatalogDefinition(...)**.
 - **findOrCreateFieldCatalogDefinition(...)** — find-or-create por nombre, usado por el backfill de Department y por submissions de Public Form que referencian un catálogo que puede no existir todavía.
+
+### `src/modules/hr/payFrequencyService.ts` (catálogo configurable: Payroll)
+- **seedDefaultPayFrequencies(tx, tenantId)** — 5 políticas estándar al crear un tenant (Semanal, Semi-mensual ×2, Mensual ×2).
+- **createPayFrequency(...)**, **listPayFrequencies(tenantId)**, **listPayFrequenciesWithAssignedCount(tenantId)** (suma cuántas `EmployeeCompensation` vigentes usan cada una), **findPayFrequencyById(id)**, **updatePayFrequency(...)**.
+
+### `src/modules/hr/paymentMethodService.ts` (catálogo chico: Payroll)
+- **seedDefaultPaymentMethods(tx, tenantId)** — Wire transfer/Payoneer/Wise/PayPal al crear un tenant.
+- **createPaymentMethod(...)**, **listPaymentMethods(tenantId)**, **findPaymentMethodById(id)**, **updatePaymentMethod(...)**.
 
 ### `src/modules/hr/publicFormService.ts`
 - **createPublicForm(input)**, **listPublicForms(tenantId)**, **getTenantSlug(tenantId)**, **updatePublicForm(...)**.

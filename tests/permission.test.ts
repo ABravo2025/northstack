@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { canCreateHr, canManageCustomFields, canViewHr } from '../src/modules/auth/permissionService.js';
+import {
+  canCreateHr,
+  canManageCustomFields,
+  canManagePayroll,
+  canViewHr,
+} from '../src/modules/auth/permissionService.js';
 
 describe('permission service', () => {
   it('allows owner and admin to manage HR and custom fields', () => {
@@ -16,5 +21,11 @@ describe('permission service', () => {
     expect(canViewHr('member')).toBe(true);
     expect(canCreateHr('member')).toBe(false);
     expect(canManageCustomFields('member')).toBe(false);
+  });
+
+  it('restricts Payroll management to owner only, unlike the rest of HR', () => {
+    expect(canManagePayroll('owner')).toBe(true);
+    expect(canManagePayroll('admin')).toBe(false);
+    expect(canManagePayroll('member')).toBe(false);
   });
 });

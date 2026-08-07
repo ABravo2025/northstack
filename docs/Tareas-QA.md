@@ -389,6 +389,47 @@ comportamiento de usuario que pueda fallar todavía.
 
 ---
 
+## QA-10 — Payroll Unidad 2: catálogo de políticas de pago, backend (2026-08-07, a `staging`)
+
+**Por qué existe esta tarea:** primer endpoint real de Payroll — catálogo de `PayFrequencyDefinition`
+(políticas de pago) y `PaymentMethodDefinition` (métodos de pago), owner-only para crear/editar,
+abierto a cualquier rol para listar. Verificado en vivo contra `staging` durante el desarrollo (no
+solo build/tests) — ver el detalle abajo para lo que ya se probó y lo que falta confirmar con un
+segundo rol real.
+
+### A. Ya verificado durante el desarrollo (no hace falta repetir, pero documentado para que QA sepa qué asumir)
+
+- `POST /api/tenants/register` de un tenant nuevo siembra automáticamente 5 `PayFrequencyDefinition`
+  (Semanal, Semi-mensual · 1 y 15, Semi-mensual · 15 y último día, Mensual · primer día hábil,
+  Mensual · último día hábil) y 4 `PaymentMethodDefinition` (Wire transfer, Payoneer, Wise, PayPal).
+- `GET /api/hr/pay-frequencies` devuelve las 5 con `assignedCount: 0` (todavía no hay ninguna
+  `EmployeeCompensation`). `GET /api/hr/payment-methods` devuelve las 4.
+- `POST /api/hr/pay-frequencies` con un owner crea una política custom (probado con `weekly` +
+  `anchorConfig: {dayOfWeek: "wednesday"}` + `dueDateOffset: "plus_2"`).
+- `PATCH /api/hr/pay-frequencies/:id` con `isActive: false` saca la política del `GET` (probado
+  desactivando "Semanal" — desapareció de la lista, sigue en la base con `isActive: false`).
+- Backfill (`scripts/backfill-payroll-catalogs.ts`) corrido contra `staging`: sembró los catálogos
+  en los 175 tenants existentes que no los tenían (0 saltados por ya tenerlos) — verificado con
+  conteo directo (`875` filas de `PayFrequencyDefinition` = `175 × 5`, `700` de
+  `PaymentMethodDefinition` = `175 × 4`). **No corrido contra producción todavía.**
+
+### B. Falta confirmar — no probado en esta ronda
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | `POST /api/hr/pay-frequencies` con un usuario `admin` (no owner) | 403 — a diferencia del resto de HR, Payroll es **owner-only**, admin no alcanza (`canManagePayroll`, ver `permission.test.ts` para la cobertura unitaria de la función; esto es la verificación end-to-end que falta) |
+| 2 | `PATCH /api/hr/pay-frequencies/:id` / `POST`/`PATCH /api/hr/payment-methods` con `admin` o `member` | 403 en los 3 |
+| 3 | `PATCH /api/hr/pay-frequencies/:id-de-otro-tenant` con un owner de un tenant distinto | 404 (aislamiento entre tenants — mismo criterio que QA-01, todavía no hay un caso explícito para Payroll en esa tabla) |
+| 4 | Sin ningún endpoint ni pantalla que use `PayFrequencyDefinition.anchorConfig`/`PaymentMethodDefinition` todavía (Unidad 3+), no hay nada más que romper de cara al usuario en esta unidad |
+
+### Al encontrar una falla
+
+El caso B.1/B.2 (owner-only no respetado) es alta severidad — es la única barrera de permisos que
+compensación tiene hoy. El caso B.3 (aislamiento entre tenants) es crítico si falla, mismo criterio
+que QA-01.
+
+---
+
 ## Próximas tareas de QA (a definir)
 
 Cuando se construyan los módulos grandes en curso (rediseño de Clients, Payroll), esta tabla de

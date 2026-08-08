@@ -1154,7 +1154,7 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
                   required
                 />
               </Field>
-              <Field label="Description" required full>
+              <Field label="Role Description" required full>
                 <textarea
                   id="assign-description"
                   className="overview-field-input"

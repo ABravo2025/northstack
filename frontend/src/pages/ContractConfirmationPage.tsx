@@ -136,7 +136,7 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
                     {details.jobTitle}
                   </div>
                   <div className="overview-field overview-field-full">
-                    <span className="overview-field-label">Description</span>
+                    <span className="overview-field-label">Role Description</span>
                     {details.description}
                   </div>
                   <div className="overview-field">

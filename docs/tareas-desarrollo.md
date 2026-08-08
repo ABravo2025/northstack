@@ -165,6 +165,42 @@ con el catch-all de Public Forms por tener la misma forma de 2 segmentos.
 cargar `PAYMENT_DATA_ENCRYPTION_KEY` en Vercel (staging y producción) antes de promover, ya que hoy
 solo existe en el `.env` local gitignorado.
 
+**Primera ronda de fixes de la revisión del usuario (2026-08-08, local, sin pushear):**
+- Nationality (alta de persona) pasó de texto libre a `<select>` reusando `COUNTRIES`
+  (`frontend/src/lib/countries.ts`), la misma lista que ya usaba la confirmación de contrato.
+- Los 5 `PayFrequencyDefinition` default pasaron de español a inglés (Weekly/Semi-monthly ·
+  .../Monthly · ...) en `payFrequencyService.ts`, con un backfill (`scripts/rename-pay-frequencies-
+  to-english.ts`) que renombró los ya seedeados en los 177 tenants de `staging` — rename de texto
+  puro, no toca ids/relaciones.
+- El campo "Description" del contrato inicial (alta de persona, bulk assign/reassign, y su reflejo
+  en la confirmación pública) se relabeleó a "Role Description" en las 3 pantallas — solo el label
+  visible, la propiedad de dominio sigue siendo `description` de punta a punta.
+- Se confirmó que el envío de emails (Nodemailer/Zoho, `src/lib/mailer.ts`) funciona correctamente
+  (test directo de SMTP con `transporter.verify()`+`sendMail()` exitoso) — el reporte de "no llega
+  el email de invitación" no es un problema de infraestructura ni de código; a falta de acceso a la
+  casilla de prueba del usuario, queda pendiente confirmar si fue spam/promociones o un email de
+  prueba no revisable.
+- Alta de persona ahora permite asignar Time Off Policies (checkboxes) en el mismo modal —antes solo
+  se podía después de creado el empleado— reusando `assignTimeOffPolicyToEmployee` justo después de
+  `createEmployee`/`createCompensation`.
+- Department, Reports To, Start Date y Contract Type pasaron a obligatorios en el alta. Dos gotchas
+  resueltos en el camino: (1) "Reports To" obligatorio hubiera bloqueado la creación de la primera
+  persona de un tenant nuevo (nadie a quien reportar) — se agregó una opción explícita "No manager"
+  para que sea una elección consciente, no un default vacío; (2) "Department" obligatorio hubiera
+  bloqueado el alta en un tenant sin departamentos configurados (el caso por defecto) — se agregó el
+  mismo `FieldCatalogMenu` que ya vive en el header de la tabla, ahora también inline en el modal.
+- Checkboxes de toda la plataforma rediseñados vía una regla CSS global (`input[type='checkbox']`
+  en `App.css`, sin componente nuevo) — caja redondeada con `appearance: none`, fill `brand-blue` +
+  check blanco al marcar, más grande y notorio que el checkbox nativo del navegador.
+- Bug real encontrado al construir el punto anterior: abrir el `Popover` de `FieldCatalogMenu` desde
+  dentro de un `Modal` y presionar Escape cerraba los dos a la vez, no solo el popover.
+  `Modal.tsx`/`Popover.tsx` escuchan `keydown` en el mismo target (`document`) y el `Modal` se
+  registra primero (monta antes de que el popover exista) — `stopPropagation()` no alcanza para
+  frenar un listener hermano en el mismo target ni corrige el orden de registro. Arreglado en
+  `Popover.tsx` registrando su listener con `{ capture: true }` (corre antes de cualquier listener
+  en fase de bubble sin importar el orden de registro) + `stopImmediatePropagation()`. Afecta a
+  cualquier combinación Popover-dentro-de-Modal existente, no solo a Payroll.
+
 Distinto del "Módulo Payments" de Tier 4 — Payments es facturarle a los *Clients* del tenant
 (cuentas por cobrar), Payroll es pagarle a los *Employees* (cuentas por pagar).
 

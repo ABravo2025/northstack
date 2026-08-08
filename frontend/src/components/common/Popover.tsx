@@ -77,11 +77,21 @@ export default function Popover({ open, onClose, anchorRef, children, align = 'l
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       // Stop the Escape from also reaching a parent modal's own Escape
-      // listener (e.g. EmployeeOverviewPanel/CompanyDetailModal each close on
-      // Escape too, listening on window) — without this, opening a Popover
-      // from inside one of those and pressing Escape closed both layers at
-      // once instead of just the popover on top.
-      e.stopPropagation();
+      // listener (e.g. Modal/EmployeeOverviewPanel/CompanyDetailModal each
+      // close on Escape too, also via a `document` keydown listener) —
+      // without this, opening a Popover from inside one of those and
+      // pressing Escape closed both layers at once instead of just the
+      // popover on top. stopPropagation() alone doesn't work here: it only
+      // blocks propagation to ancestor targets, but these are sibling
+      // listeners on the identical `document` target. stopImmediatePropagation()
+      // does stop siblings, but only the ones that haven't run yet — since
+      // the parent Modal's listener was registered first (it mounted before
+      // the Popover ever opened), plain bubble-phase registration would run
+      // the Modal's handler *first*. Registering this one with `capture:
+      // true` (below) makes it run during the capture phase, before any
+      // bubble-phase listener anywhere in the tree — including the Modal's
+      // — regardless of registration order.
+      e.stopImmediatePropagation();
       onClose();
     };
     const handleScroll = (e: Event) => {
@@ -104,12 +114,12 @@ export default function Popover({ open, onClose, anchorRef, children, align = 'l
     };
 
     document.addEventListener('mousedown', handlePointerDown);
-    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keydown', handleKeyDown, true);
     window.addEventListener('scroll', handleScroll, true);
     window.addEventListener('resize', onClose);
     return () => {
       document.removeEventListener('mousedown', handlePointerDown);
-      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keydown', handleKeyDown, true);
       window.removeEventListener('scroll', handleScroll, true);
       window.removeEventListener('resize', onClose);
     };

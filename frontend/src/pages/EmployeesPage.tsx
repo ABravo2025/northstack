@@ -38,6 +38,7 @@ import {
 } from '../lib/viewFields';
 import { isLikelyValidEmail } from '../lib/validation';
 import { useAutoCreateGuard } from '../hooks/useAutoCreateGuard';
+import { COUNTRIES } from '../lib/countries';
 
 const CONTRACT_TYPE_LABELS: Record<string, string> = { part_time: 'Part Time', full_time: 'Full Time' };
 const CONTRACT_TYPE_VALUE_BY_LABEL: Record<string, string> = { 'Part Time': 'part_time', 'Full Time': 'full_time' };
@@ -176,6 +177,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     contractDescription: '',
     effectiveFrom: new Date().toISOString().slice(0, 10),
     contractNote: '',
+    timeOffPolicyIds: [] as string[],
   });
 
   const [employeeForm, setEmployeeForm] = useState(getEmptyEmployeeForm);
@@ -368,6 +370,10 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     if (!employeeForm.personType) return false;
     if (!employeeForm.firstName.trim() || !employeeForm.lastName.trim()) return false;
     if (!isLikelyValidEmail(employeeForm.email)) return false;
+    if (!employeeForm.departmentId) return false;
+    if (!employeeForm.managerId) return false;
+    if (!employeeForm.startDate) return false;
+    if (!employeeForm.contractType) return false;
     // Contractor/Employee can't be saved without a complete initial contract
     // (docs/spec-payroll.md Unidad 4/5) — Profile never shows or needs this.
     if (employeeForm.personType === 'contractor' || employeeForm.personType === 'employee') {
@@ -422,7 +428,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       personalEmail: employeeForm.personalEmail || undefined,
       departmentId: employeeForm.departmentId || null,
       jobTitleId: employeeForm.jobTitleId || null,
-      managerId: employeeForm.managerId || null,
+      managerId: employeeForm.managerId && employeeForm.managerId !== 'none' ? employeeForm.managerId : null,
       startDate: employeeForm.startDate || undefined,
       endDate: employeeForm.endDate || undefined,
       contractUrl: employeeForm.contractUrl || undefined,
@@ -451,6 +457,10 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         customFieldDefinitionId,
         value,
       });
+    }
+
+    for (const timeOffPolicyId of employeeForm.timeOffPolicyIds) {
+      await api.assignTimeOffPolicyToEmployee(token, employee.id, timeOffPolicyId);
     }
 
     toast.success(`${employee.firstName} ${employee.lastName} added.`);
@@ -996,13 +1006,19 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                   />
                 </Field>
                 <Field label="Nationality">
-                  <input
+                  <select
                     id="emp-nationality"
                     className="overview-field-input"
-                    type="text"
                     value={employeeForm.nationality}
                     onChange={(e) => setEmployeeForm({ ...employeeForm, nationality: e.target.value })}
-                  />
+                  >
+                    <option value="">-- select --</option>
+                    {COUNTRIES.map((country) => (
+                      <option key={country} value={country}>
+                        {country}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
               </div>
             </div>
@@ -1010,22 +1026,32 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
             <div className="field-group">
               <h4 className="field-group-title">Role</h4>
               <div className="field-group-body">
-                <Field label="Department">
-                  <select
-                    id="emp-departmentId"
-                    className="overview-field-input"
-                    value={employeeForm.departmentId}
-                    onChange={(e) => setEmployeeForm({ ...employeeForm, departmentId: e.target.value })}
-                  >
-                    <option value="">-- none --</option>
-                    {employeeDepartments
-                      .filter((d) => d.isActive)
-                      .map((d) => (
-                        <option key={d.id} value={d.id}>
-                          {d.name}
-                        </option>
-                      ))}
-                  </select>
+                <Field label="Department" required>
+                  <div className="flex items-center">
+                    <select
+                      id="emp-departmentId"
+                      className="overview-field-input"
+                      value={employeeForm.departmentId}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, departmentId: e.target.value })}
+                      required
+                    >
+                      <option value="">-- select --</option>
+                      {employeeDepartments
+                        .filter((d) => d.isActive)
+                        .map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.name}
+                          </option>
+                        ))}
+                    </select>
+                    <FieldCatalogMenu
+                      token={token}
+                      kind="department"
+                      label="Department"
+                      entries={employeeDepartments}
+                      onChanged={loadEmployeeDepartments}
+                    />
+                  </div>
                 </Field>
                 <Field label="Job Title">
                   <select
@@ -1053,14 +1079,16 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                       ))}
                   </select>
                 </Field>
-                <Field label="Reports To">
+                <Field label="Reports To" required>
                   <select
                     id="emp-managerId"
                     className="overview-field-input"
                     value={employeeForm.managerId}
                     onChange={(e) => setEmployeeForm({ ...employeeForm, managerId: e.target.value })}
+                    required
                   >
-                    <option value="">-- No manager --</option>
+                    <option value="">-- select --</option>
+                    <option value="none">No manager</option>
                     {employees.map((emp) => (
                       <option key={emp.id} value={emp.id}>
                         {emp.firstName} {emp.lastName}
@@ -1074,13 +1102,14 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
             <div className="field-group">
               <h4 className="field-group-title">Contract</h4>
               <div className="field-group-body">
-                <Field label="Start Date">
+                <Field label="Start Date" required>
                   <input
                     id="emp-startDate"
                     className="overview-field-input"
                     type="date"
                     value={employeeForm.startDate}
                     onChange={(e) => setEmployeeForm({ ...employeeForm, startDate: e.target.value })}
+                    required
                   />
                 </Field>
                 <Field label="Contract URL">
@@ -1093,12 +1122,13 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                     placeholder="https://drive.google.com/..."
                   />
                 </Field>
-                <Field label="Contract Type">
+                <Field label="Contract Type" required>
                   <select
                     id="emp-contractType"
                     className="overview-field-input"
                     value={employeeForm.contractType}
                     onChange={(e) => setEmployeeForm({ ...employeeForm, contractType: e.target.value })}
+                    required
                   >
                     <option value="">-- select --</option>
                     <option value="part_time">Part Time</option>
@@ -1183,7 +1213,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                       required
                     />
                   </Field>
-                  <Field label="Description" required full>
+                  <Field label="Role Description" required full>
                     <textarea
                       id="emp-comp-description"
                       className="overview-field-input"
@@ -1201,6 +1231,37 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                       onChange={(e) => setEmployeeForm({ ...employeeForm, contractNote: e.target.value })}
                     />
                   </Field>
+                </div>
+              </div>
+            )}
+
+            {(employeeForm.personType === 'contractor' || employeeForm.personType === 'employee') && (
+              <div className="field-group">
+                <h4 className="field-group-title">Time Off</h4>
+                <div className="field-group-body">
+                  {timeOffPolicies.length === 0 ? (
+                    <p className="text-sm text-ink-faint">No time off policies set up yet.</p>
+                  ) : (
+                    <div className="flex flex-col gap-1.5">
+                      {timeOffPolicies.map((policy) => (
+                        <label key={policy.id} className="flex items-center gap-2 text-sm font-normal">
+                          <input
+                            type="checkbox"
+                            checked={employeeForm.timeOffPolicyIds.includes(policy.id)}
+                            onChange={(e) =>
+                              setEmployeeForm({
+                                ...employeeForm,
+                                timeOffPolicyIds: e.target.checked
+                                  ? [...employeeForm.timeOffPolicyIds, policy.id]
+                                  : employeeForm.timeOffPolicyIds.filter((id) => id !== policy.id),
+                              })
+                            }
+                          />
+                          {policy.name}
+                        </label>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

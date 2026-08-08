@@ -7,14 +7,17 @@ type PrismaTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 // Seeded at tenant creation (docs/spec-payroll.md Unidad 2) — every standard
 // combination ready to use immediately; a tenant only creates something new
 // for a genuinely custom schedule. Neither dueDateOffset (defaults to
-// same_day for all 5) nor "Semanal"'s payday (Friday, the most common
+// same_day for all 5) nor "Weekly"'s payday (Friday, the most common
 // default) is prescribed by the spec — both are editable from Unidad 3's UI.
+// Names are English — the platform's UI language (2026-08-08, renamed from
+// the original Spanish defaults; see scripts/rename-pay-frequencies-to-english.ts
+// for the one-time backfill that renamed already-seeded tenants).
 const DEFAULT_PAY_FREQUENCIES: { name: string; cadence: PayFrequencyCadence; anchorConfig: Record<string, unknown> }[] = [
-  { name: 'Semanal', cadence: 'weekly', anchorConfig: { dayOfWeek: 'friday' } },
-  { name: 'Semi-mensual · 1 y 15', cadence: 'semimonthly', anchorConfig: { preset: 'first_15' } },
-  { name: 'Semi-mensual · 15 y último día', cadence: 'semimonthly', anchorConfig: { preset: 'fifteen_last' } },
-  { name: 'Mensual · primer día hábil', cadence: 'monthly', anchorConfig: { preset: 'first_business_day' } },
-  { name: 'Mensual · último día hábil', cadence: 'monthly', anchorConfig: { preset: 'last_business_day' } },
+  { name: 'Weekly', cadence: 'weekly', anchorConfig: { dayOfWeek: 'friday' } },
+  { name: 'Semi-monthly · 1st and 15th', cadence: 'semimonthly', anchorConfig: { preset: 'first_15' } },
+  { name: 'Semi-monthly · 15th and last day', cadence: 'semimonthly', anchorConfig: { preset: 'fifteen_last' } },
+  { name: 'Monthly · first business day', cadence: 'monthly', anchorConfig: { preset: 'first_business_day' } },
+  { name: 'Monthly · last business day', cadence: 'monthly', anchorConfig: { preset: 'last_business_day' } },
 ];
 
 // Two createMany calls would be one, but this is a single table (unlike

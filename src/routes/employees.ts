@@ -24,10 +24,12 @@ import { findFieldCatalogDefinitionById } from '../modules/hr/fieldCatalogServic
 import { findStatusDefinitionById } from '../modules/hr/statusService.js';
 import { calculateEmployeeTimeOffBalances } from '../modules/hr/timeOffBalanceService.js';
 import { createInvitation } from '../modules/tenant/invitationService.js';
+import { getEmployeeContractPdf, resendEmployeeContract } from '../modules/hr/contractPdfService.js';
 import {
   canCreateHr,
   canInviteUsers,
   canManageCustomFields,
+  canManagePayroll,
   canViewHr,
 } from '../modules/auth/permissionService.js';
 import { exportEmployeesToCsv, getEmployeesCsvTemplate, importEmployeesFromCsv } from '../modules/csv/csvService.js';
@@ -275,6 +277,40 @@ employeesRouter.post('/api/hr/employees/:employeeId/invite', async (req, res) =>
   }
 
   return res.status(201).json({ invitation: result.invitation });
+});
+
+employeesRouter.get('/api/hr/employees/:employeeId/contract-pdf', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!canManagePayroll(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const result = await getEmployeeContractPdf(user.tenantId!, req.params.employeeId);
+  if (!result.success) {
+    return res.status(404).json({ error: result.error });
+  }
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', 'inline; filename="contract.pdf"');
+  return res.send(Buffer.from(result.pdfBytes!));
+});
+
+employeesRouter.post('/api/hr/employees/:employeeId/resend-contract', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!canManagePayroll(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const result = await resendEmployeeContract(user.tenantId!, req.params.employeeId, user.id);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  return res.json({ success: true });
 });
 
 employeesRouter.get('/api/hr/employees/:employeeId/time-off-policies', async (req, res) => {

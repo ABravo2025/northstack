@@ -19,7 +19,18 @@ export default function Modal({ open, title, onClose, children, footer, wide = f
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key !== 'Escape') return;
+      // Stop this from also reaching a parent detail panel's own Escape
+      // listener (EmployeeOverviewPanel/CompanyDetailModal etc. close on
+      // Escape too, via a `window` keydown listener) — document is a real
+      // ancestor of window in the bubble path, so plain stopPropagation()
+      // (unlike the document-vs-document case in Popover.tsx) is enough
+      // here. Without it, opening a Modal from inside one of those panels
+      // and pressing Escape closed both layers at once instead of just the
+      // modal on top (found 2026-08-08 via the Payroll contract-preview
+      // modal opened from the People overview panel).
+      e.stopPropagation();
+      onClose();
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);

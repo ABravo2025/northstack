@@ -1,6 +1,7 @@
 import prisma from '../../lib/prisma.js';
 import type { EmployeeCompensation, PayrollCompensationType, PersonType } from '@prisma/client';
 import { createInvitation } from '../tenant/invitationService.js';
+import { renderContractPdf } from './contractPdfService.js';
 
 export interface CreateCompensationInput {
   tenantId: string;
@@ -57,6 +58,25 @@ export async function createCompensation(input: CreateCompensationInput): Promis
     });
   }
 
+  const [tenant, payFrequency] = await Promise.all([
+    prisma.tenant.findUniqueOrThrow({ where: { id: input.tenantId } }),
+    prisma.payFrequencyDefinition.findUniqueOrThrow({ where: { id: input.payFrequencyId } }),
+  ]);
+  const draftPdfBytes = await renderContractPdf({
+    tenantName: tenant.name,
+    employeeName: `${employee.firstName} ${employee.lastName}`,
+    nationality: employee.nationality,
+    jobTitle: input.jobTitle,
+    description: input.description,
+    compensationType: input.compensationType,
+    rateCents: input.rateCents,
+    currency: input.currency,
+    payFrequencyName: payFrequency.name,
+    effectiveFrom: effectiveFromDate,
+    signed: false,
+  });
+  const draftPdfBuffer = Buffer.from(draftPdfBytes);
+
   const compensation = await prisma.employeeCompensation.create({
     data: {
       tenantId: input.tenantId,
@@ -71,6 +91,7 @@ export async function createCompensation(input: CreateCompensationInput): Promis
       note: input.note ?? null,
       blocksParticipation: isFirstEver,
       createdByUserId: input.createdByUserId,
+      contractPdf: draftPdfBuffer,
     },
   });
 
@@ -85,6 +106,7 @@ export async function createCompensation(input: CreateCompensationInput): Promis
       role: 'member',
       employeeId: employee.id,
       acceptPath: '/confirm-contract',
+      attachments: [{ filename: 'contract-draft.pdf', content: draftPdfBuffer }],
     });
   }
 

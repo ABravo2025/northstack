@@ -201,6 +201,35 @@ solo existe en el `.env` local gitignorado.
   en fase de bubble sin importar el orden de registro) + `stopImmediatePropagation()`. Afecta a
   cualquier combinación Popover-dentro-de-Modal existente, no solo a Payroll.
 
+**Segunda ronda de fixes (2026-08-08, local, sin pushear):**
+- Inputs numéricos de toda la plataforma perdieron las flechitas nativas de subir/bajar (regla CSS
+  global, `input[type='number']::-webkit-inner-spin-button`/`-moz-appearance: textfield`) — se
+  reportó en el form de ajustes del Payroll Run, pero nada en la app depende de poder "spinnear" un
+  número con el mouse, así que el fix es global.
+- Las 6 tablas de `PayrollPage.tsx`/`PayrollRunDetailPage.tsx` nunca conectaron el `HorizontalScrollbar`
+  establecido (el nativo ya estaba oculto vía `.full-table-wrap`, así que una tabla que desbordara
+  ahí no tenía ninguna forma visible de scrollear) — conectado igual que en `EmployeesPage.tsx`.
+- **Almacenamiento y envío del contrato** (`EmployeeCompensation.contractPdf`, `Bytes?`): una sola
+  columna que guarda el PDF vigente — borrador al crear el contrato, sobrescrito por la versión
+  firmada (con fecha/hora/IP ya incluidos en el documento) al confirmar. El borrador va adjunto al
+  email de invitación; al firmar se dispara un email nuevo al firmante con copia al owner y a quien
+  cargó el contrato. Nuevo `contractPdfService.ts` (genera con `pdf-lib`, mismo estilo que
+  `payslipService.ts`); `mailer.ts` ganó `attachments` en `sendInvitationEmail` y la función nueva
+  `sendContractSignedEmail`. Acción "Resend contract" en el panel de detalle de People (owner-only,
+  confirmado con el usuario que ahí es donde tenía que vivir) — reenvía lo guardado sin regenerar
+  nada, emitiendo una invitación nueva solo si la anterior ya venció. "View contract" reusa
+  `PayslipPreviewModal` (ahora con `title`/`downloadFilename`/`helperText` opcionales) en vez de un
+  componente nuevo.
+- Bug de la misma familia que el de Popover/Modal encontrado al probar "View contract": cerrar ese
+  modal con Escape también cerraba el panel completo del empleado. Acá `Modal.tsx` escucha en
+  `document` y el panel escucha en `window` (una relación real de ancestro, a diferencia del caso
+  Popover-vs-Modal) — alcanzó con `stopPropagation()` en `Modal.tsx`, sin necesitar `capture`.
+- Verificación: decodificar a mano los content streams del PDF generado (los `Tj` de pdf-lib son hex,
+  no texto plano) confirmó que todos los campos están — el iframe de preview se ve en blanco en el
+  screenshot de Playwright porque Chromium headless no renderiza PDFs embebidos ahí (mismo mecanismo
+  que ya usaba el payslip, no es una regresión); confirmar visualmente en un navegador real queda
+  para la revisión del usuario.
+
 Distinto del "Módulo Payments" de Tier 4 — Payments es facturarle a los *Clients* del tenant
 (cuentas por cobrar), Payroll es pagarle a los *Employees* (cuentas por pagar).
 

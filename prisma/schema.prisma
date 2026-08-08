@@ -635,6 +635,7 @@ model EmployeeCompensation {
   createdByUserId             String
   createdBy                   User                     @relation(fields: [createdByUserId], references: [id])
   createdAt                   DateTime                 @default(now())
+  contractPdf                 Bytes? // generated at creation (draft, unsigned) and overwritten at confirmation (signed, with confirmedAt/confirmedIp evidence baked in) — same column holds whichever version currently applies, so "view"/"resend" always serve the latest state
 
   @@index([tenantId, employeeId])
 }

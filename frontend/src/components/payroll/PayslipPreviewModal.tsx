@@ -6,12 +6,23 @@ interface PayslipPreviewModalProps {
   open: boolean;
   onClose: () => void;
   fetchPdf: () => Promise<Blob>;
+  // Generic enough by now (title/filename/helper text) to also back the
+  // Payroll contract PDF preview (People overview panel) — same
+  // fetch-blob-into-an-iframe shape, just not always a payslip. Defaults
+  // keep the original payslip callers unchanged.
+  title?: string;
+  downloadFilename?: string;
+  helperText?: string;
 }
 
-// Reusable across the run detail screen (a person's entries within a run)
-// and any future loose-entry payslip trigger — both backend endpoints return
-// the same "preview, not issued" PDF shape (Unidad 20).
-export default function PayslipPreviewModal({ open, onClose, fetchPdf }: PayslipPreviewModalProps) {
+export default function PayslipPreviewModal({
+  open,
+  onClose,
+  fetchPdf,
+  title = 'Payslip preview',
+  downloadFilename = 'payslip-preview.pdf',
+  helperText = 'Preview only — not sent.',
+}: PayslipPreviewModalProps) {
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,22 +51,22 @@ export default function PayslipPreviewModal({ open, onClose, fetchPdf }: Payslip
   return (
     <Modal
       open={open}
-      title="Payslip preview"
+      title={title}
       onClose={onClose}
       wide
       footer={
         objectUrl ? (
-          <a href={objectUrl} download="payslip-preview.pdf" className="btn-primary gap-1.5 inline-flex items-center">
+          <a href={objectUrl} download={downloadFilename} className="btn-primary gap-1.5 inline-flex items-center">
             <DownloadIcon className="h-4 w-4" />
             Download
           </a>
         ) : undefined
       }
     >
-      <p className="text-sm text-ink-muted mb-3">Preview only — not sent.</p>
+      {helperText && <p className="text-sm text-ink-muted mb-3">{helperText}</p>}
       {loading && <p>Loading preview…</p>}
       {error && <div className="alert alert-error">{error}</div>}
-      {objectUrl && <iframe src={objectUrl} title="Payslip preview" style={{ width: '100%', height: '70vh', border: 'none' }} />}
+      {objectUrl && <iframe src={objectUrl} title={title} style={{ width: '100%', height: '70vh', border: 'none' }} />}
     </Modal>
   );
 }

@@ -15,10 +15,13 @@ export interface SendInvitationEmailInput {
   tenantName: string;
   role: string;
   acceptUrl: string;
+  attachments?: { filename: string; content: Buffer }[];
 }
 
 export async function sendInvitationEmail(input: SendInvitationEmailInput): Promise<void> {
   if (!mailerConfigured()) return;
+
+  const hasContract = Boolean(input.attachments?.length);
 
   await transporter.sendMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
@@ -29,13 +32,16 @@ export async function sendInvitationEmail(input: SendInvitationEmailInput): Prom
       '',
       `Accept your invitation: ${input.acceptUrl}`,
       '',
+      hasContract ? 'Your contract is attached to this email for your records.\n' : '',
       'This link expires in 7 days.',
     ].join('\n'),
     html: [
       `<p>You've been invited to join <strong>${input.tenantName}</strong> on Northstack as <strong>${input.role}</strong>.</p>`,
       `<p><a href="${input.acceptUrl}">Accept your invitation</a></p>`,
+      hasContract ? '<p>Your contract is attached to this email for your records.</p>' : '',
       '<p>This link expires in 7 days.</p>',
     ].join('\n'),
+    attachments: input.attachments?.map((a) => ({ filename: a.filename, content: a.content, contentType: 'application/pdf' })),
   });
 }
 
@@ -190,5 +196,38 @@ export async function sendFeedbackEmail(input: SendFeedbackEmailInput): Promise<
       `<p><strong>Page:</strong> ${input.pageUrl}</p>`,
       `<p>${input.message.replace(/\n/g, '<br />')}</p>`,
     ].join('\n'),
+  });
+}
+
+export interface SendContractSignedEmailInput {
+  to: string;
+  cc?: string[];
+  tenantName: string;
+  employeeName: string;
+  pdfBuffer: Buffer;
+}
+
+// Fired once, right after contract confirmation (docs/spec-payroll.md Unidad
+// 7) — the signer gets their own copy, cc'd to the tenant owner and whoever
+// created the contract (EmployeeCompensation.createdByUserId), so there's a
+// paper trail beyond just what's stored in the app.
+export async function sendContractSignedEmail(input: SendContractSignedEmailInput): Promise<void> {
+  if (!mailerConfigured()) return;
+
+  await transporter.sendMail({
+    from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
+    to: input.to,
+    cc: input.cc && input.cc.length > 0 ? input.cc : undefined,
+    subject: `Signed contract — ${input.employeeName} (${input.tenantName})`,
+    text: [
+      `${input.employeeName}'s contract with ${input.tenantName} was just confirmed and signed.`,
+      '',
+      'The signed contract is attached to this email.',
+    ].join('\n'),
+    html: [
+      `<p><strong>${input.employeeName}</strong>'s contract with <strong>${input.tenantName}</strong> was just confirmed and signed.</p>`,
+      '<p>The signed contract is attached to this email.</p>',
+    ].join('\n'),
+    attachments: [{ filename: 'contract-signed.pdf', content: input.pdfBuffer, contentType: 'application/pdf' }],
   });
 }

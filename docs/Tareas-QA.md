@@ -575,6 +575,24 @@ resto es medio/bajo salvo que rompa el flujo completo de principio a fin.
 
 ---
 
+## QA-14 — Contrato: almacenamiento, email y reenvío (2026-08-08, en local únicamente — no pusheado a `staging`)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Crear el contrato inicial de un Contractor/Employee | El invitado recibe el email de invitación con un PDF adjunto (`contract-draft.pdf`) marcado "DRAFT — PENDING SIGNATURE" |
+| 2 | "Actions" → "View contract" en el panel de detalle de esa persona, antes de confirmar | Modal con el PDF embebido + botón de descarga real; solo visible para `owner` |
+| 3 | "Actions" → "Resend contract" antes de confirmar | Reenvía el mismo link de invitación (o uno nuevo si venció hace más de 7 días) con el borrador adjunto |
+| 4 | Confirmar el contrato vía `/confirm-contract/:token` | El firmante recibe un email nuevo con el PDF firmado adjunto (marcado "SIGNED", con fecha/hora/IP incluidos en el documento), con copia al owner y a quien cargó el contrato |
+| 5 | "View contract" después de confirmado | Muestra la versión firmada, no la borrador |
+| 6 | "Resend contract" después de confirmado | Reenvía la versión firmada al firmante, con las mismas copias que el envío original |
+| 7 | Rol `admin` o `member` en el panel de detalle | No ve "View contract" ni "Resend contract" (son owner-only, como el resto de Payroll) |
+
+Severidad: si el email firmado no le llega a nadie (ni signer ni copias), o si "View contract" antes
+de confirmar muestra la versión firmada (o viceversa), es alto — significa que la columna no se está
+sobrescribiendo en el momento correcto.
+
+---
+
 ## Próximas tareas de QA (a definir)
 
 Cuando se construyan los módulos grandes en curso (rediseño de Clients, Payroll), esta tabla de

@@ -74,4 +74,21 @@ export const employeesApi = {
     if (!res.ok) await throwApiError(res);
     return res.json();
   },
+
+  getEmployeeContractPdf: async (token: string, employeeId: string): Promise<Blob> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/contract-pdf`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.blob();
+  },
+
+  resendContract: async (token: string, employeeId: string): Promise<{ success: true }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/resend-contract`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
 };

@@ -97,6 +97,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
 
   const canManageCustomFields = user.role === 'owner' || user.role === 'admin';
   const canEditEmployees = user.role === 'owner' || user.role === 'admin';
+  const canManagePayroll = user.role === 'owner';
   const activeEmployeeCustomFields = employeeCustomFields.filter((field) => field.isActive);
   const activeEmployeeStatuses = employeeStatuses.filter((s) => s.isActive);
   // Column width/visibility/order are saved-view-scoped, not shared across
@@ -1597,6 +1598,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
             jobTitles={employeeJobTitles}
             timeOffPolicies={timeOffPolicies}
             canManageEmployees={canManageCustomFields}
+            canManagePayroll={canManagePayroll}
             onClose={() => setOverviewEmployeeId(null)}
             onChanged={refreshEmployeesSilently}
             onSaved={patchEmployeeInList}

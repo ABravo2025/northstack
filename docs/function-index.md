@@ -43,12 +43,13 @@
 
 ### `src/lib/mailer.ts`
 Todas siguen el mismo patrón: `if (!mailerConfigured()) return;` (no rompen el request si Zoho no está configurado), best-effort.
-- **sendInvitationEmail(input)** — invitación a un tenant.
+- **sendInvitationEmail(input)** — invitación a un tenant; `input.attachments` opcional (Payroll usa esto para adjuntar el contrato borrador).
 - **sendPublicFormSubmissionEmail(input)** — aviso al owner de una submission nueva en un Public Form.
 - **sendPublicFormConfirmationEmail(input)** — confirmación al que llenó el form.
 - **sendTimeOffRequestPendingEmail(input)** — aviso al approver de una solicitud de Time Off pendiente.
 - **sendTimeOffRequestDecidedEmail(input)** — aviso de aprobación/rechazo (o auto-aprobación).
 - **sendFeedbackEmail(input)** — feedback de un tenant a `FEEDBACK_EMAIL`.
+- **sendContractSignedEmail(input)** — (Payroll) contrato firmado adjunto, al firmante con copia al owner + a quien lo cargó.
 
 ### `src/lib/rateLimit.ts`
 - **AUTH_RATE_LIMIT** (const) — 5 intentos / 15 min, más estricto que el default por ser blanco de fuerza bruta.
@@ -106,10 +107,15 @@ CRUD estándar: **createContact**, **listContacts(tenantId)**, **findContactById
 
 ### `src/modules/hr/contractConfirmationService.ts` (Payroll, Unidad 7)
 - **getContractConfirmationDetails(token)** — read model público para `/confirm-contract/:token`: datos read-only del contrato (owner) + catálogo de métodos de pago para el select editable.
-- **confirmContract(input)** — valida, cifra los datos de cuenta (`encryptPaymentAccountData`), y en una transacción: crea el `User` (nombre copiado del `Employee`, nunca re-pedido), vincula `Employee.userId`, guarda `countryOfResidence`, completa la `EmployeeCompensation` (método de pago + `confirmedAt`/`confirmedIp`), marca la `Invitation` `accepted`, crea la `Session` — la persona queda logueada de una.
+- **confirmContract(input)** — valida, cifra los datos de cuenta (`encryptPaymentAccountData`), genera el PDF firmado (`contractPdfService.renderContractPdf`), y en una transacción: crea el `User` (nombre copiado del `Employee`, nunca re-pedido), vincula `Employee.userId`, guarda `countryOfResidence`, completa la `EmployeeCompensation` (método de pago + `confirmedAt`/`confirmedIp`/`contractPdf`), marca la `Invitation` `accepted`, crea la `Session` — la persona queda logueada de una. Después del commit, dispara (best-effort) `sendContractSignedEmail` al firmante con copia al owner y a `createdByUserId`.
+
+### `src/modules/hr/contractPdfService.ts` (Payroll, 2026-08-08 — feedback del usuario)
+- **renderContractPdf(input)** — arma el PDF (`pdf-lib`, mismo estilo que `payslipService.ts`) con los términos del contrato; `signed: false` lo marca "DRAFT — PENDING SIGNATURE", `signed: true` agrega el bloque de confirmación (fecha/hora/IP) y lo marca "SIGNED". Se llama dos veces por contrato: al crearlo (borrador) y al confirmarlo (firmado, sobrescribe la misma columna).
+- **getEmployeeContractPdf(tenantId, employeeId)** — el PDF *guardado* (no lo regenera) de la compensación más relevante de la persona (la vigente, o la más reciente si no hay ninguna abierta).
+- **resendEmployeeContract(tenantId, employeeId, actingUserId)** — reenvía lo que esté guardado ahora mismo: si no está firmado, reusa la invitación pendiente (o crea una nueva si venció) + el borrador adjunto; si ya está firmado, reenvía el firmado al usuario vinculado con copia al owner y a quien lo cargó.
 
 ### `src/modules/hr/employeeCompensationService.ts` (Payroll, Unidad 5/10)
-- **createCompensation(input)** — única función que crea una fila de `EmployeeCompensation`: cierra la vigente anterior (`effectiveTo`), calcula `blocksParticipation` (true solo si es la primera de la persona), y dispara la invitación de confirmación de contrato (Unidad 6) si corresponde.
+- **createCompensation(input)** — única función que crea una fila de `EmployeeCompensation`: cierra la vigente anterior (`effectiveTo`), calcula `blocksParticipation` (true solo si es la primera de la persona), genera y guarda el PDF borrador (`contractPdfService.renderContractPdf`), y dispara la invitación de confirmación de contrato (Unidad 6, con el borrador adjunto) si corresponde.
 - **createCompensationBulk(input)** — asignación/reasignación masiva (Unidad 10): un `createCompensation` por entrada, nunca deriva el monto del anterior.
 - **getCompensationStatus(tenantId)** — cada Contractor/Employee con su compensación vigente (o `null`), para la tabla de Asignaciones.
 - **findCompensationById(id)**.
@@ -192,7 +198,7 @@ CRUD estándar, cross-entidad vía `entityType`/`entityId`: **createNote**, **fi
 
 ### `src/modules/tenant/invitationService.ts`
 - **findInvitationByToken(token)** — incluye `employeeId`/`tenantId` en el select.
-- **createInvitation(input)** — acepta `acceptPath` opcional (default `/accept-invite`; Payroll usa `/confirm-contract` para el primer contrato de un Contractor/Employee, Unidad 6) para que el link del email apunte a una pantalla distinta de la genérica.
+- **createInvitation(input)** — acepta `acceptPath` opcional (default `/accept-invite`; Payroll usa `/confirm-contract` para el primer contrato de un Contractor/Employee, Unidad 6) para que el link del email apunte a una pantalla distinta de la genérica; también acepta `attachments` opcional, pasado tal cual a `sendInvitationEmail`.
 - **acceptInvitation(input)**, **listTenantInvitations(tenantId)**, **cancelInvitation(tenantId, invitationId)**.
 
 ### `src/modules/tenant/tenantService.ts`
@@ -244,7 +250,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 | Archivo | Métodos |
 |---|---|
 | `auth.ts` | registerTenant, login, register, getInvitation, acceptInvitation, logout, getCurrentUser, updateProfile, changePassword, getCurrentTenant, updateTenantCurrency |
-| `employees.ts` | listEmployees, createEmployee, updateEmployee, deleteEmployee, inviteEmployee |
+| `employees.ts` | listEmployees, createEmployee, updateEmployee, deleteEmployee, inviteEmployee, getEmployeeContractPdf, resendContract |
 | `companies.ts` | listCompanies, createCompany, updateCompany, deleteCompany, +custom field values |
 | `contacts.ts` | listContacts, createContact, updateContact, deleteContact, +custom field values |
 | `opportunities.ts` | listOpportunities, createOpportunity, updateOpportunity, deleteOpportunity, addOpportunityContact, removeOpportunityContact |
@@ -321,7 +327,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 - **Sidebar** / **TopBar** — navegación principal.
 
 ### `frontend/src/components/payroll/`
-- **PayslipPreviewModal** — dado un `fetchPdf: () => Promise<Blob>`, resuelve el blob a un object URL y lo muestra en un `<iframe>` + botón de descarga (Payroll Unidad 20). Reusable para el preview por persona-en-un-run y, a futuro, para una entry suelta.
+- **PayslipPreviewModal** — dado un `fetchPdf: () => Promise<Blob>`, resuelve el blob a un object URL y lo muestra en un `<iframe>` + botón de descarga (Payroll Unidad 20). Props `title`/`downloadFilename`/`helperText` opcionales (default = payslip) la generalizaron (2026-08-08) para reusarla tal cual en "View contract" del panel de People — el nombre quedó desactualizado (no es solo payslips), pero no se renombró el archivo para no ensuciar el diff.
 
 ### `frontend/src/components/notes/`
 - **EntityNotesList** — tab "Notes" compartido por los 4 paneles de detalle (mismo mecanismo que `EntityTasksList`).

@@ -17,6 +17,10 @@ export interface CreateInvitationInput {
   // overrides this to '/confirm-contract' so a Contractor/Employee's first
   // invitation lands on their contract instead of the generic accept screen.
   acceptPath?: string;
+  // The draft contract PDF (Payroll, contractPdfService.ts) — attached as-is
+  // when this invitation is for a first-ever contract, so the invitee has a
+  // copy to read even before opening the link.
+  attachments?: { filename: string; content: Buffer }[];
 }
 
 export interface InvitationResult {
@@ -82,6 +86,7 @@ export async function createInvitation(input: CreateInvitationInput): Promise<In
     tenantName: tenant.name,
     role: invitation.role,
     acceptUrl: `${appBaseUrl}${acceptPath}/${invitation.token}`,
+    attachments: input.attachments,
   }).catch((error) => {
     // Best-effort: the invitation itself (and its copyable link in the UI)
     // already exists, so a failed email shouldn't fail the whole request.

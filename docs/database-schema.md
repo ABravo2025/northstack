@@ -504,6 +504,7 @@ erDiagram
         string confirmedIp "nullable, evidence captured alongside confirmedAt — Unidad 7"
         bool blocksParticipation "true only if this is the employee's first-ever compensation"
         string createdByUserId FK
+        bytes contractPdf "nullable, draft at creation -> overwritten with the signed version at confirmation"
     }
     PAYROLL_RUN {
         string id PK
@@ -562,6 +563,19 @@ Notas:
   schema sí se aplicó directamente contra la base de datos de `staging` vía `prisma db push`
   (incluye el retiro destructivo de la Unidad 4 y el campo `confirmedIp` de la Unidad 7) — necesario
   para poder probar en local, pero es una capa distinta del código en git.
+- **`EmployeeCompensation.contractPdf` (2026-08-08, feedback del usuario)**: una sola columna que
+  guarda el PDF del contrato tal cual existe en cada momento — generado como borrador al crear el
+  contrato (`employeeCompensationService.createCompensation`, vía `contractPdfService.renderContractPdf`)
+  y **sobrescrito** con la versión firmada (con `confirmedAt`/`confirmedIp` ya incluidos en el propio
+  documento) al confirmar (`contractConfirmationService.confirmContract`) — nunca dos columnas
+  separadas, la que corresponde según el estado. El borrador va adjunto al email de invitación
+  (`mailer.sendInvitationEmail` ahora acepta `attachments`); al firmar se dispara un email nuevo
+  (`mailer.sendContractSignedEmail`) al firmante con copia al owner del tenant y a quien cargó el
+  contrato (`createdByUserId`). `POST /api/hr/employees/:employeeId/resend-contract` (owner-only)
+  reenvía lo que sea que esté guardado ahora mismo, sin regenerar nada — si el borrador ya venció su
+  invitación (7 días), emite una nueva antes de reenviar. `GET /api/hr/employees/:employeeId/contract-pdf`
+  sirve el PDF guardado para "View contract" en el panel de People (reusa `PayslipPreviewModal` con
+  props generalizados, no es un componente nuevo).
 
 ## Enums
 

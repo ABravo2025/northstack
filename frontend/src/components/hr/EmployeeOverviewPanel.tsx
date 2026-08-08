@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import Avatar from '../common/Avatar';
@@ -8,6 +8,7 @@ import AutoSaveSelect from '../common/AutoSaveSelect';
 import DetailSidebar from '../layout/DetailSidebar';
 import Field from '../common/Field';
 import OverviewActionsMenu from '../common/OverviewActionsMenu';
+import PayslipPreviewModal from '../payroll/PayslipPreviewModal';
 import { XIcon } from '../common/Icons';
 
 interface EmployeeOverviewPanelProps {
@@ -22,12 +23,19 @@ interface EmployeeOverviewPanelProps {
   jobTitles: any[];
   timeOffPolicies: any[];
   canManageEmployees: boolean;
+  // Owner-only, same gate as the rest of Payroll (canManagePayroll) — this
+  // person's contract PDF and its resend action are compensation data, not
+  // general HR data, so an admin who can otherwise manage employees still
+  // shouldn't see these (the backend enforces the same boundary).
+  canManagePayroll: boolean;
   onClose: () => void;
   onChanged: () => void;
   onSaved: (updatedEmployee: any) => void;
   onRequestDelete: () => void;
   onInvite: () => void;
 }
+
+const HAS_CONTRACT_STATUSES = new Set(['confirmado', 'pendiente', 'vencido']);
 
 // Unified with the Company/Contact/Opportunity detail pattern (Checkpoint F,
 // docs/tareas-desarrollo.md): no tabs, no "Edit employee" button — every field
@@ -47,6 +55,7 @@ export default function EmployeeOverviewPanel({
   jobTitles,
   timeOffPolicies,
   canManageEmployees,
+  canManagePayroll,
   onClose,
   onChanged,
   onSaved,
@@ -54,6 +63,21 @@ export default function EmployeeOverviewPanel({
   onInvite,
 }: EmployeeOverviewPanelProps) {
   const toast = useToast();
+  const [contractPreviewOpen, setContractPreviewOpen] = useState(false);
+  const [resendingContract, setResendingContract] = useState(false);
+  const hasContract = canManagePayroll && HAS_CONTRACT_STATUSES.has(employee.contractStatus);
+
+  const handleResendContract = async () => {
+    setResendingContract(true);
+    try {
+      await api.resendContract(token, employee.id);
+      toast.success('Contract resent.');
+    } catch (error) {
+      toast.error('Failed to resend contract: ' + (error as Error).message);
+    } finally {
+      setResendingContract(false);
+    }
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -126,6 +150,10 @@ export default function EmployeeOverviewPanel({
             className="overview-actions-trigger"
             items={[
               ...(canManageEmployees && !employee.userId ? [{ label: 'Invite to app', onClick: onInvite }] : []),
+              ...(hasContract ? [{ label: 'View contract', onClick: () => setContractPreviewOpen(true) }] : []),
+              ...(hasContract
+                ? [{ label: resendingContract ? 'Resending contract…' : 'Resend contract', onClick: handleResendContract }]
+                : []),
               { label: 'Delete', onClick: onRequestDelete, danger: true },
             ]}
           />
@@ -326,6 +354,16 @@ export default function EmployeeOverviewPanel({
         />
         </div>
       </div>
+      {contractPreviewOpen && (
+        <PayslipPreviewModal
+          open={contractPreviewOpen}
+          onClose={() => setContractPreviewOpen(false)}
+          fetchPdf={() => api.getEmployeeContractPdf(token, employee.id)}
+          title="Contract"
+          downloadFilename="contract.pdf"
+          helperText="This is the exact document generated for this contract."
+        />
+      )}
     </div>
   );
 }

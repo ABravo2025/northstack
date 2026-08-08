@@ -11,6 +11,8 @@ import {
   PHONE_POLICY_MESSAGE,
 } from '../auth/authService.js';
 import { encryptPaymentAccountData } from '../../lib/encryption.js';
+import { renderContractPdf } from './contractPdfService.js';
+import { sendContractSignedEmail } from '../../lib/mailer.js';
 
 // Public, token-gated read model for the contract-confirmation screen
 // (docs/spec-payroll.md Unidad 7) — split into a read-only block (what the
@@ -173,6 +175,24 @@ export async function confirmContract(input: ConfirmContractInput): Promise<Conf
   }
 
   const encryptedAccountData = encryptPaymentAccountData(input.paymentAccountData.trim());
+  const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: invitation.tenantId } });
+  const confirmedAt = new Date();
+  const signedPdfBytes = await renderContractPdf({
+    tenantName: tenant.name,
+    employeeName: `${employee.firstName} ${employee.lastName}`,
+    nationality: employee.nationality,
+    jobTitle: compensation.jobTitle,
+    description: compensation.description,
+    compensationType: compensation.compensationType,
+    rateCents: compensation.rateCents,
+    currency: compensation.currency,
+    payFrequencyName: compensation.payFrequency.name,
+    effectiveFrom: compensation.effectiveFrom,
+    signed: true,
+    confirmedAt,
+    confirmedIp: input.ip,
+  });
+  const signedPdfBuffer = Buffer.from(signedPdfBytes);
 
   const result = await prisma.$transaction(async (tx) => {
     const user = await tx.user.create({
@@ -201,8 +221,9 @@ export async function confirmContract(input: ConfirmContractInput): Promise<Conf
         paymentMethodId: paymentMethod.id,
         paymentAccountSubType: input.paymentAccountSubType ?? null,
         paymentAccountDataEncrypted: encryptedAccountData,
-        confirmedAt: new Date(),
+        confirmedAt,
         confirmedIp: input.ip,
+        contractPdf: signedPdfBuffer,
       },
     });
 
@@ -221,6 +242,28 @@ export async function confirmContract(input: ConfirmContractInput): Promise<Conf
 
     return { user, session };
   }, { timeout: 15000 });
+
+  // Best-effort, fire-and-forget (same reasoning as the invitation email in
+  // invitationService.ts) — the contract is already confirmed and stored
+  // either way; a failed email here shouldn't fail a request the user is
+  // waiting on to get logged in.
+  Promise.all([
+    prisma.user.findFirst({ where: { tenantId: invitation.tenantId, role: 'owner' } }),
+    prisma.user.findUnique({ where: { id: compensation.createdByUserId } }),
+  ])
+    .then(([owner, creator]) => {
+      const cc = [...new Set([owner?.email, creator?.email].filter((e): e is string => Boolean(e) && e !== result.user.email))];
+      return sendContractSignedEmail({
+        to: result.user.email,
+        cc,
+        tenantName: tenant.name,
+        employeeName: `${employee.firstName} ${employee.lastName}`,
+        pdfBuffer: signedPdfBuffer,
+      });
+    })
+    .catch((error) => {
+      console.error('Failed to send signed contract email:', error);
+    });
 
   return { success: true, user: result.user, session: result.session };
 }

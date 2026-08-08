@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
 import type { CompensationStatusEntry, PayrollEntryType, RunDetail } from '../api';
@@ -7,6 +7,7 @@ import Modal from '../components/common/Modal';
 import TableSkeleton from '../components/common/TableSkeleton';
 import StatusChip from '../components/common/StatusChip';
 import PayslipPreviewModal from '../components/payroll/PayslipPreviewModal';
+import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
 import { formatMoney } from '../lib/currencies';
 import { ChevronDownIcon, ChevronLeftIcon, EyeIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
 
@@ -27,6 +28,7 @@ export default function PayrollRunDetailPage({ user, token }: PayrollRunDetailPa
   const toast = useToast();
   const navigate = useNavigate();
   const { runId } = useParams<{ runId: string }>();
+  const tableWrapRef = useRef<HTMLDivElement>(null);
   const [detail, setDetail] = useState<RunDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -233,7 +235,7 @@ export default function PayrollRunDetailPage({ user, token }: PayrollRunDetailPa
       {detail.employeeRows.length === 0 ? (
         <p className="text-sm text-ink-muted">No one is in this run yet.</p>
       ) : (
-        <div className="full-table-wrap">
+        <div className="full-table-wrap" ref={tableWrapRef}>
           <table className="table full-table">
             <thead>
               <tr>
@@ -413,6 +415,7 @@ export default function PayrollRunDetailPage({ user, token }: PayrollRunDetailPa
           </table>
         </div>
       )}
+      <HorizontalScrollbar targetRef={tableWrapRef} />
 
       <Modal open={addPersonModalOpen} title="Add person to this run" onClose={() => setAddPersonModalOpen(false)}>
         {addPersonCandidates.length === 0 ? (

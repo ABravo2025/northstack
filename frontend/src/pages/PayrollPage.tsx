@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api';
 import type {
@@ -19,6 +19,7 @@ import EmptyState from '../components/common/EmptyState';
 import Field from '../components/common/Field';
 import TableSkeleton from '../components/common/TableSkeleton';
 import StatusChip from '../components/common/StatusChip';
+import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
 import { formatMoney } from '../lib/currencies';
 import { CalendarIcon, PencilIcon, PlusIcon, TeamIcon } from '../components/common/Icons';
 
@@ -195,6 +196,11 @@ function buildAnchorConfig(form: FrequencyFormState): Record<string, unknown> {
 export default function PayrollPage({ user, token }: PayrollPageProps) {
   const toast = useToast();
   const navigate = useNavigate();
+  const timelineTableRef = useRef<HTMLDivElement>(null);
+  const assignmentsTableRef = useRef<HTMLDivElement>(null);
+  const frequenciesTableRef = useRef<HTMLDivElement>(null);
+  const bulkAssignTableRef = useRef<HTMLDivElement>(null);
+  const offPaymentPeopleTableRef = useRef<HTMLDivElement>(null);
   const [tab, setTab] = useState<Tab>('timeline');
   const [frequencies, setFrequencies] = useState<PayFrequency[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
@@ -568,7 +574,7 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
                   onPrimary={openNewRunModal}
                 />
               ) : (
-                <div className="full-table-wrap">
+                <div className="full-table-wrap" ref={timelineTableRef}>
                   <table className="table full-table">
                     <thead>
                       <tr>
@@ -625,6 +631,7 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
                   </table>
                 </div>
               )}
+              <HorizontalScrollbar targetRef={timelineTableRef} />
             </>
           )}
           {tab === 'assignments' && (
@@ -657,7 +664,7 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
                   }}
                 />
               ) : (
-                <div className="full-table-wrap">
+                <div className="full-table-wrap" ref={assignmentsTableRef}>
                   <table className="table full-table">
                     <thead>
                       <tr>
@@ -705,6 +712,7 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
                   </table>
                 </div>
               )}
+              <HorizontalScrollbar targetRef={assignmentsTableRef} />
             </>
           )}
           {tab === 'policies' && (
@@ -756,7 +764,7 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
                       {frequencyFilter === 'active' ? 'No active pay frequencies.' : 'No deactivated pay frequencies.'}
                     </p>
                   ) : (
-                    <div className="full-table-wrap">
+                    <div className="full-table-wrap" ref={frequenciesTableRef}>
                       <table className="table full-table">
                         <thead>
                           <tr>
@@ -797,6 +805,7 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
                       </table>
                     </div>
                   )}
+                  <HorizontalScrollbar targetRef={frequenciesTableRef} />
                 </>
               )}
 
@@ -1182,7 +1191,7 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
                 Apply to all selected
               </button>
             </div>
-            <div className="full-table-wrap">
+            <div className="full-table-wrap" ref={bulkAssignTableRef}>
               <table className="table full-table">
                 <thead>
                   <tr>
@@ -1220,6 +1229,7 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
                 </tbody>
               </table>
             </div>
+            <HorizontalScrollbar targetRef={bulkAssignTableRef} />
           </div>
         </form>
       </Modal>
@@ -1367,7 +1377,7 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
               People
               <RequiredMark />
             </h4>
-            <div className="full-table-wrap">
+            <div className="full-table-wrap" ref={offPaymentPeopleTableRef}>
               <table className="table full-table">
                 <thead>
                   <tr>
@@ -1393,6 +1403,7 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
                 </tbody>
               </table>
             </div>
+            <HorizontalScrollbar targetRef={offPaymentPeopleTableRef} />
           </div>
         </form>
       </Modal>

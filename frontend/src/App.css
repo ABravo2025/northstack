@@ -1785,6 +1785,21 @@ input[type='checkbox']:disabled {
   @apply cursor-not-allowed opacity-50;
 }
 
+/* ---------- Number inputs (platform-wide) ---------- */
+/* Drop the native up/down spinner arrows on every <input type="number"> —
+   they invite mis-clicks that silently nudge a rate/amount by 1 (2026-08-08,
+   user feedback from the Payroll Run adjustment form, but the fix is
+   global: nothing in this app relies on stepping a number with the mouse). */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type='number'] {
+  -moz-appearance: textfield;
+}
+
 .task-row-title {
   @apply flex-1 truncate text-left text-sm text-brand-navy dark:text-dark-ink;
 }

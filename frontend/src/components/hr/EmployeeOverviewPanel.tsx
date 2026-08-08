@@ -325,7 +325,14 @@ export default function EmployeeOverviewPanel({
               <h4 className="field-group-title">Compensation</h4>
               <div className="field-group-body">
                 {loadingCompensation ? (
-                  <p className="text-sm text-ink-faint">Loading…</p>
+                  <>
+                    {[0, 1, 2, 3].map((i) => (
+                      <div key={i} className="skeleton-row" style={{ height: 28, animationDelay: `${i * 0.08}s` }}>
+                        <span className="skeleton-bar" style={{ width: 80, marginRight: 16 }} />
+                        <span className="skeleton-bar" style={{ width: 130 }} />
+                      </div>
+                    ))}
+                  </>
                 ) : !compensation ? (
                   <p className="text-sm text-ink-faint">No active compensation.</p>
                 ) : (

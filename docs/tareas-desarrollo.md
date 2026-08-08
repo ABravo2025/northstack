@@ -235,6 +235,24 @@ solo existe en el `.env` local gitignorado.
   `EmployeeOverviewPanel.tsx` (nuevo endpoint `GET /api/hr/employees/:employeeId/compensation`,
   owner-only, sin datos sensibles) que muestra todos esos campos + estado de firma, con los botones
   "View contract"/"Resend contract" movidos ahí desde el menú "Actions" (más visibles en contexto).
+- **Causa real de "View contract dice que no hay contrato pero si veo los datos"**: no era un bug de
+  lógica — `getEmployeeCompensationSummary` y `getEmployeeContractPdf` usan exactamente el mismo
+  `where` (confirmado leyendo el código), así que si uno encuentra la fila el otro también. La causa
+  real: durante esta sesión, varios hot-reloads de `tsx watch` chocaron por el puerto (`EADDRINUSE`
+  en el log del backend — un proceso viejo seguía escuchando en :3000 mientras el nuevo intentaba
+  levantar), dejando el servidor sirviendo código *anterior* a `contractPdfService.ts` en algunos
+  momentos. Los 6 `EmployeeCompensation` ya creados en `staging` (incluyendo los de prueba del
+  usuario) quedaron con `contractPdf: null` por esto, no por un error de código. Arreglado matando
+  todos los procesos colgados del puerto 3000, reiniciando limpio, y corriendo
+  `scripts/backfill-contract-pdf.ts` (genera el PDF borrador/firmado según `confirmedAt`, mismo
+  patrón que los demás backfills) contra los 6 registros existentes — confirmado con una creación +
+  confirmación nueva contra el server ya reiniciado que el flujo normal nunca tuvo el problema.
+- **Loading de la sección "Compensation"**: el `<p>Loading…</p>` original sí seguía el patrón
+  establecido para sub-secciones dentro de un panel ya abierto (mismo estilo que
+  `EntityNotesList`/`EntityTasksList`/`PayslipPreviewModal`) — no había una tercera convención de
+  "skeleton" para este caso. De todos modos, reemplazado por barras reusando las clases
+  `.skeleton-row`/`.skeleton-bar` (mismas de `TableSkeleton.tsx`, sin CSS nuevo) para que se sienta
+  más "de la plataforma" en vez de texto plano.
 
 Distinto del "Módulo Payments" de Tier 4 — Payments es facturarle a los *Clients* del tenant
 (cuentas por cobrar), Payroll es pagarle a los *Employees* (cuentas por pagar).

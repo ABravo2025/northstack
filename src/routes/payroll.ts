@@ -15,6 +15,7 @@ import {
   createCompensation,
   createCompensationBulk,
   getCompensationStatus,
+  listTerminatedCompensations,
 } from '../modules/hr/employeeCompensationService.js';
 import { findEmployeeById } from '../modules/hr/employeeService.js';
 import {
@@ -238,6 +239,20 @@ payrollRouter.get('/api/hr/payroll/compensation/status', async (req, res) => {
 
   const status = await getCompensationStatus(user.tenantId!);
   return res.json(status);
+});
+
+payrollRouter.get('/api/hr/payroll/compensation/terminated', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManagePayroll(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const terminated = await listTerminatedCompensations(user.tenantId!);
+  return res.json(terminated);
 });
 
 payrollRouter.post('/api/hr/payroll/compensation/bulk', async (req, res) => {

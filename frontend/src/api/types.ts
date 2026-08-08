@@ -421,6 +421,11 @@ export interface CompensationStatusEntry {
   employeeId: string;
   employeeFirstName: string;
   employeeLastName: string;
+  employeeEmail: string;
+  // Whether this person has ever confirmed a first-ever contract (linked
+  // User) — reassignments never re-trigger confirmation, so this is the
+  // right Draft/Confirmed signal, not a field on currentCompensation itself.
+  isConfirmed: boolean;
   personType: 'profile' | 'contractor' | 'employee' | null;
   currentCompensation: {
     payFrequencyName: string;
@@ -428,6 +433,24 @@ export interface CompensationStatusEntry {
     rateCents: number;
     currency: string;
   } | null;
+}
+
+// A closed (effectiveTo set) EmployeeCompensation row — the "Terminated"
+// bucket of the Assignments tab. Separate from CompensationStatusEntry
+// (which only ever looks at the currently-open row) since a person can have
+// several of these in their history.
+export interface TerminatedCompensationEntry {
+  compensationId: string;
+  employeeId: string;
+  employeeFirstName: string;
+  employeeLastName: string;
+  employeeEmail: string;
+  payFrequencyName: string;
+  compensationType: PayrollCompensationType;
+  rateCents: number;
+  currency: string;
+  effectiveFrom: string;
+  effectiveTo: string;
 }
 
 export interface BulkCompensationEntryResult {

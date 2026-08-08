@@ -118,7 +118,8 @@ CRUD estándar: **createContact**, **listContacts(tenantId)**, **findContactById
 ### `src/modules/hr/employeeCompensationService.ts` (Payroll, Unidad 5/10)
 - **createCompensation(input)** — única función que crea una fila de `EmployeeCompensation`: cierra la vigente anterior (`effectiveTo`), calcula `blocksParticipation` (true solo si es la primera de la persona), genera y guarda el PDF borrador (`contractPdfService.renderContractPdf`), y dispara la invitación de confirmación de contrato (Unidad 6, con el borrador adjunto) si corresponde.
 - **createCompensationBulk(input)** — asignación/reasignación masiva (Unidad 10): un `createCompensation` por entrada, nunca deriva el monto del anterior.
-- **getCompensationStatus(tenantId)** — cada Contractor/Employee con su compensación vigente (o `null`), para la tabla de Asignaciones.
+- **getCompensationStatus(tenantId)** — cada Contractor/Employee con su compensación vigente (o `null`) + `isConfirmed` (si alguna vez confirmó su primer contrato, vía `userId` — no `confirmedAt` de la fila actual, que nunca se vuelve a setear en una reasignación), para las sub-pestañas Draft/Confirmed de Asignaciones.
+- **listTerminatedCompensations(tenantId)** — toda fila de `EmployeeCompensation` ya cerrada (`effectiveTo` seteado, superada por una reasignación) — sub-pestaña "Terminated" de Asignaciones (2026-08-08, feedback del usuario). Una persona puede aparecer más de una vez si tuvo varios contratos.
 - **findCompensationById(id)**.
 
 ### `src/modules/hr/employeeService.ts`
@@ -266,7 +267,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 | `timeOffBalances.ts` | listTimeOffBalances, getEmployeeTimeOffBalance, +custom field values (nota: nombre de archivo engañoso, ver código) |
 | `tasks.ts` | listTasks, listMyTasks, listTasksForCalendar, createTask, updateTask, deleteTask |
 | `notes.ts` | listNotes, createNote, updateNote, deleteNote |
-| `payroll.ts` | listPayFrequencies, createPayFrequency, updatePayFrequency, listPaymentMethods, createPaymentMethod, updatePaymentMethod, createCompensation, getCompensationStatus, createCompensationBulk, listPayrollRuns, createPayrollRun, getPayrollRunDetail, addEmployeeToPayrollRun, confirmPayrollRun, createPayrollAdjustment, deletePayrollEntry, updatePayrollEntryHours, listOffCyclePayments, createOffCyclePayments, getRunEmployeePayslip, getEntryPayslip |
+| `payroll.ts` | listPayFrequencies, createPayFrequency, updatePayFrequency, listPaymentMethods, createPaymentMethod, updatePaymentMethod, createCompensation, getCompensationStatus, listTerminatedCompensations, createCompensationBulk, listPayrollRuns, createPayrollRun, getPayrollRunDetail, addEmployeeToPayrollRun, confirmPayrollRun, createPayrollAdjustment, deletePayrollEntry, updatePayrollEntryHours, listOffCyclePayments, createOffCyclePayments, getRunEmployeePayslip, getEntryPayslip |
 | `contractConfirmationPublic.ts` | getContractConfirmation, confirmContract — público, sin auth (standalone `/confirm-contract/:token`) |
 | `csv.ts` | exportEmployeesCsv, importEmployeesCsv, employeesCsvTemplate |
 | `tenantUsers.ts` | listTenantUsers, updateTenantUser, listTenantInvitations, createTenantInvitation, cancelInvitation |

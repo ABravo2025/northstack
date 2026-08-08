@@ -176,6 +176,13 @@ export interface CompensationStatusEntry {
   employeeId: string;
   employeeFirstName: string;
   employeeLastName: string;
+  employeeEmail: string;
+  // Whether this person has ever confirmed a first-ever contract (has a
+  // linked User) — the right signal for a Draft/Confirmed split, since a
+  // reassignment (Unidad 10) never re-triggers confirmation: a raise's new
+  // EmployeeCompensation row always has confirmedAt: null, even for someone
+  // who's been an active, confirmed team member for years.
+  isConfirmed: boolean;
   personType: PersonType | null;
   currentCompensation: {
     payFrequencyName: string;
@@ -206,6 +213,8 @@ export async function getCompensationStatus(tenantId: string): Promise<Compensat
     employeeId: employee.id,
     employeeFirstName: employee.firstName,
     employeeLastName: employee.lastName,
+    employeeEmail: employee.email,
+    isConfirmed: Boolean(employee.userId),
     personType: employee.personType,
     currentCompensation: employee.compensations[0]
       ? {
@@ -215,5 +224,50 @@ export async function getCompensationStatus(tenantId: string): Promise<Compensat
           currency: employee.compensations[0].currency,
         }
       : null,
+  }));
+}
+
+export interface TerminatedCompensationEntry {
+  compensationId: string;
+  employeeId: string;
+  employeeFirstName: string;
+  employeeLastName: string;
+  employeeEmail: string;
+  payFrequencyName: string;
+  compensationType: PayrollCompensationType;
+  rateCents: number;
+  currency: string;
+  effectiveFrom: Date;
+  effectiveTo: Date;
+}
+
+// The "Terminated" bucket of the Assignments tab (2026-08-08 user feedback):
+// every compensation row that's been closed (superseded by a reassignment,
+// or explicitly ended) — history that getCompensationStatus deliberately
+// excludes since it only ever looks at the currently-open row per person.
+// A person can appear here more than once if they've had several contracts.
+export async function listTerminatedCompensations(tenantId: string): Promise<TerminatedCompensationEntry[]> {
+  const rows = await prisma.employeeCompensation.findMany({
+    where: {
+      tenantId,
+      effectiveTo: { not: null },
+      employee: { personType: { in: ['contractor', 'employee'] } },
+    },
+    include: { employee: true, payFrequency: true },
+    orderBy: { effectiveTo: 'desc' },
+  });
+
+  return rows.map((row) => ({
+    compensationId: row.id,
+    employeeId: row.employeeId,
+    employeeFirstName: row.employee.firstName,
+    employeeLastName: row.employee.lastName,
+    employeeEmail: row.employee.email,
+    payFrequencyName: row.payFrequency.name,
+    compensationType: row.compensationType,
+    rateCents: row.rateCents,
+    currency: row.currency,
+    effectiveFrom: row.effectiveFrom,
+    effectiveTo: row.effectiveTo!,
   }));
 }

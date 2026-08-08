@@ -11,6 +11,7 @@ import type {
   PayrollCompensationType,
   PayrollEntryType,
   PayrollRun,
+  TerminatedCompensationEntry,
 } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import Modal from '../components/common/Modal';
@@ -205,6 +206,8 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
   const [frequencies, setFrequencies] = useState<PayFrequency[]>([]);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [compensationStatus, setCompensationStatus] = useState<CompensationStatusEntry[]>([]);
+  const [terminatedCompensations, setTerminatedCompensations] = useState<TerminatedCompensationEntry[]>([]);
+  const [assignmentSubTab, setAssignmentSubTab] = useState<'draft' | 'confirmed' | 'terminated'>('draft');
   const [payrollRuns, setPayrollRuns] = useState<PayrollRun[]>([]);
   const [offCyclePayments, setOffCyclePayments] = useState<OffCyclePayrollEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -257,16 +260,18 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
     }
     setLoading(true);
     try {
-      const [freqData, methodData, statusData, runsData, offPaymentsData] = await Promise.all([
+      const [freqData, methodData, statusData, terminatedData, runsData, offPaymentsData] = await Promise.all([
         api.listPayFrequencies(token),
         api.listPaymentMethods(token),
         api.getCompensationStatus(token),
+        api.listTerminatedCompensations(token),
         api.listPayrollRuns(token),
         api.listOffCyclePayments(token),
       ]);
       setFrequencies(freqData);
       setPaymentMethods(methodData);
       setCompensationStatus(statusData);
+      setTerminatedCompensations(terminatedData);
       setPayrollRuns(runsData);
       setOffCyclePayments(offPaymentsData);
     } catch (error) {
@@ -359,10 +364,10 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
   };
 
   const toggleSelectAll = () => {
-    if (selectedEmployeeIds.size === compensationStatus.length) {
+    if (selectedEmployeeIds.size === visibleAssignments.length) {
       setSelectedEmployeeIds(new Set());
     } else {
-      setSelectedEmployeeIds(new Set(compensationStatus.map((e) => e.employeeId)));
+      setSelectedEmployeeIds(new Set(visibleAssignments.map((e) => e.employeeId)));
     }
   };
 
@@ -434,6 +439,16 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
   const activeFrequencies = frequencies.filter((f) => f.isActive);
   const inactiveFrequencies = frequencies.filter((f) => !f.isActive);
   const filteredFrequencies = frequencyFilter === 'active' ? activeFrequencies : inactiveFrequencies;
+
+  // Draft = never confirmed a first-ever contract; Confirmed = has (stays
+  // Confirmed through any later reassignment — a raise's new compensation
+  // row never gets its own confirmedAt, the person doesn't re-sign every
+  // time). Terminated = a separate, closed-row dataset (getCompensationStatus
+  // only ever looks at the open row, so a closed one never shows up here).
+  // 2026-08-08 user feedback.
+  const draftAssignments = compensationStatus.filter((e) => !e.isConfirmed);
+  const confirmedAssignments = compensationStatus.filter((e) => e.isConfirmed);
+  const visibleAssignments = assignmentSubTab === 'draft' ? draftAssignments : confirmedAssignments;
 
   const openNewRunModal = () => {
     setNewRunPayFrequencyId('');
@@ -641,7 +656,7 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
                   Retrofit people with no pay policy yet, or migrate a group to a new one. New people get their
                   first contract from their own alta, not here.
                 </p>
-                {isOwner && (
+                {isOwner && assignmentSubTab !== 'terminated' && (
                   <button
                     type="button"
                     className="btn-outline gap-1.5"
@@ -653,7 +668,7 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
                 )}
               </div>
 
-              {compensationStatus.length === 0 ? (
+              {compensationStatus.length === 0 && terminatedCompensations.length === 0 ? (
                 <EmptyState
                   icon={<TeamIcon />}
                   title="No contractors or employees yet"
@@ -664,53 +679,139 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
                   }}
                 />
               ) : (
-                <div className="full-table-wrap" ref={assignmentsTableRef}>
-                  <table className="table full-table">
-                    <thead>
-                      <tr>
-                        {isOwner && (
-                          <th style={{ width: 32 }}>
-                            <input
-                              type="checkbox"
-                              checked={selectedEmployeeIds.size > 0 && selectedEmployeeIds.size === compensationStatus.length}
-                              onChange={toggleSelectAll}
-                            />
-                          </th>
-                        )}
-                        <th>Name</th>
-                        <th>Current Policy</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {compensationStatus.map((entry) => (
-                        <tr key={entry.employeeId}>
-                          {isOwner && (
-                            <td>
-                              <input
-                                type="checkbox"
-                                checked={selectedEmployeeIds.has(entry.employeeId)}
-                                onChange={() => toggleEmployeeSelected(entry.employeeId)}
-                              />
-                            </td>
-                          )}
-                          <td>
-                            {entry.employeeFirstName} {entry.employeeLastName}
-                          </td>
-                          <td>
-                            {entry.currentCompensation ? (
-                              <span className="category-chip">
-                                {formatMoney(entry.currentCompensation.rateCents, entry.currentCompensation.currency)} ·{' '}
-                                {entry.currentCompensation.payFrequencyName}
-                              </span>
-                            ) : (
-                              <span className="text-ink-muted">No policy assigned</span>
+                <>
+                  <div className="mini-toggle-row mb-3 mt-3">
+                    <button
+                      type="button"
+                      className={`mini-toggle-opt ${assignmentSubTab === 'draft' ? 'active' : ''}`}
+                      onClick={() => {
+                        setAssignmentSubTab('draft');
+                        setSelectedEmployeeIds(new Set());
+                      }}
+                    >
+                      Draft ({draftAssignments.length})
+                    </button>
+                    <button
+                      type="button"
+                      className={`mini-toggle-opt ${assignmentSubTab === 'confirmed' ? 'active' : ''}`}
+                      onClick={() => {
+                        setAssignmentSubTab('confirmed');
+                        setSelectedEmployeeIds(new Set());
+                      }}
+                    >
+                      Confirmed ({confirmedAssignments.length})
+                    </button>
+                    <button
+                      type="button"
+                      className={`mini-toggle-opt ${assignmentSubTab === 'terminated' ? 'active' : ''}`}
+                      onClick={() => {
+                        setAssignmentSubTab('terminated');
+                        setSelectedEmployeeIds(new Set());
+                      }}
+                    >
+                      Terminated ({terminatedCompensations.length})
+                    </button>
+                  </div>
+
+                  {assignmentSubTab === 'terminated' ? (
+                    terminatedCompensations.length === 0 ? (
+                      <p className="text-sm text-ink-muted">No terminated assignments.</p>
+                    ) : (
+                      <div className="full-table-wrap" ref={assignmentsTableRef}>
+                        <table className="table full-table">
+                          <thead>
+                            <tr>
+                              <th>Name</th>
+                              <th>Email</th>
+                              <th>Policy</th>
+                              <th>Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {terminatedCompensations.map((entry) => (
+                              <tr key={entry.compensationId}>
+                                <td>
+                                  {entry.employeeFirstName} {entry.employeeLastName}
+                                </td>
+                                <td>{entry.employeeEmail}</td>
+                                <td>
+                                  <span className="category-chip">
+                                    {formatMoney(entry.rateCents, entry.currency)} · {entry.payFrequencyName}
+                                  </span>
+                                </td>
+                                <td>
+                                  <StatusChip color="#6b7280" label={`Terminated ${entry.effectiveTo.slice(0, 10)}`} />
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )
+                  ) : visibleAssignments.length === 0 ? (
+                    <p className="text-sm text-ink-muted">
+                      No {assignmentSubTab === 'draft' ? 'draft' : 'confirmed'} assignments.
+                    </p>
+                  ) : (
+                    <div className="full-table-wrap" ref={assignmentsTableRef}>
+                      <table className="table full-table">
+                        <thead>
+                          <tr>
+                            {isOwner && (
+                              <th style={{ width: 32 }}>
+                                <input
+                                  type="checkbox"
+                                  checked={selectedEmployeeIds.size > 0 && selectedEmployeeIds.size === visibleAssignments.length}
+                                  onChange={toggleSelectAll}
+                                />
+                              </th>
                             )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Current Policy</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {visibleAssignments.map((entry) => (
+                            <tr key={entry.employeeId}>
+                              {isOwner && (
+                                <td>
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedEmployeeIds.has(entry.employeeId)}
+                                    onChange={() => toggleEmployeeSelected(entry.employeeId)}
+                                  />
+                                </td>
+                              )}
+                              <td>
+                                {entry.employeeFirstName} {entry.employeeLastName}
+                              </td>
+                              <td>{entry.employeeEmail}</td>
+                              <td>
+                                {entry.currentCompensation ? (
+                                  <span className="category-chip">
+                                    {formatMoney(entry.currentCompensation.rateCents, entry.currentCompensation.currency)} ·{' '}
+                                    {entry.currentCompensation.payFrequencyName}
+                                  </span>
+                                ) : (
+                                  <span className="text-ink-muted">No policy assigned</span>
+                                )}
+                              </td>
+                              <td>
+                                {entry.isConfirmed ? (
+                                  <StatusChip color="#059669" label="Confirmed" />
+                                ) : (
+                                  <StatusChip color="#9ca3af" label="Draft" />
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </>
               )}
               <HorizontalScrollbar targetRef={assignmentsTableRef} />
             </>

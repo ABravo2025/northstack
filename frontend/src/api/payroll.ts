@@ -13,6 +13,7 @@ import type {
   PayrollRun,
   PayrollRunEntry,
   RunDetail,
+  TerminatedCompensationEntry,
 } from './types.js';
 
 export const payrollApi = {
@@ -121,6 +122,14 @@ export const payrollApi = {
 
   getCompensationStatus: async (token: string): Promise<CompensationStatusEntry[]> => {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/compensation/status`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  listTerminatedCompensations: async (token: string): Promise<TerminatedCompensationEntry[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/compensation/terminated`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);

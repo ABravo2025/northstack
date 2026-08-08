@@ -253,6 +253,18 @@ solo existe en el `.env` local gitignorado.
   "skeleton" para este caso. De todos modos, reemplazado por barras reusando las clases
   `.skeleton-row`/`.skeleton-bar` (mismas de `TableSkeleton.tsx`, sin CSS nuevo) para que se sienta
   más "de la plataforma" en vez de texto plano.
+- **Assignments con Email + sub-pestañas Draft/Confirmed/Terminated** (2026-08-08, feedback del
+  usuario): la tabla ahora muestra Nombre/Email/Policy actual/Status, dividida en 3 sub-pestañas
+  (`.mini-toggle-row`, mismo patrón que el filtro Active/Deactivated de Pay Frequencies). Draft/
+  Confirmed usan `getCompensationStatus` (sin cambiar su forma para no romper el modal de bulk
+  assign ni "Add person to this run" en `PayrollRunDetailPage.tsx`, que ya lo consumían) con un
+  campo nuevo `isConfirmed` — **no** `currentCompensation.confirmedAt`: una reasignación nunca
+  vuelve a pedirle confirmación a alguien que ya firmó su primer contrato, así que esa fila SIEMPRE
+  tiene `confirmedAt: null`, y clasificar por eso hubiera mandado a "Draft" para siempre a cualquiera
+  reasignado una vez (encontrado y corregido durante la propia verificación, antes de reportar).
+  Terminated es un dataset separado y nuevo (`listTerminatedCompensations`, todo lo que tiene
+  `effectiveTo` seteado) ya que `getCompensationStatus` solo mira la fila abierta — de solo lectura,
+  sin checkboxes ni botón de reasignar (esas filas ya fueron superadas).
 
 Distinto del "Módulo Payments" de Tier 4 — Payments es facturarle a los *Clients* del tenant
 (cuentas por cobrar), Payroll es pagarle a los *Employees* (cuentas por pagar).

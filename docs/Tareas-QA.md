@@ -535,9 +535,11 @@ no juzga espaciado, contraste, textos, ni casos borde de UI que un script no pie
 
 | # | Caso | Resultado esperado |
 |---|---|---|
-| 1 | Tab "Assignments" de `/hr/payroll` | Lista todo Contractor/Employee con su política actual (chip) o "No policy assigned" |
+| 1 | Tab "Assignments" de `/hr/payroll` | Lista todo Contractor/Employee con Nombre/Email/Policy actual/Status, en 3 sub-pestañas (Draft/Confirmed/Terminated) con contador |
 | 2 | Seleccionar 2+ personas → "Assign/Reassign Policy" | Modal con frecuencia/fecha/tipo/moneda/job title/descripción comunes + tabla de revisión con el monto de cada persona pre-cargado (el anterior tal cual, vacío si no tenía) y editable; "Apply to all selected" sobreescribe todos los montos visibles |
 | 3 | Columna "Contract" en `/hr/people` | Chip verde/neutro/rojo (Confirmed/Pending/Expired) solo para Contractor/Employee con al menos un contrato — vacío (`—`) para Profile o sin contrato nunca |
+| 4 | Sub-pestaña "Terminated" de Assignments | Solo lectura — sin checkboxes ni botón "Assign/Reassign Policy"; muestra la política vieja + fecha de terminación de cada persona reasignada |
+| 5 | Reasignar a alguien ya confirmado (Confirmed → nueva policy) | Sigue apareciendo en "Confirmed" (no vuelve a "Draft") — su policy anterior pasa a "Terminated" |
 
 ### B. Payroll Run (Unidades 12-17)
 

@@ -401,6 +401,22 @@ export interface EmployeeCompensation {
   createdAt: string;
 }
 
+// Read model for the People overview panel's "Compensation" section — a
+// safe subset of EmployeeCompensation (no payment account data, no PDF
+// bytes), always the currently-open (effectiveTo: null) row.
+export interface EmployeeCompensationSummary {
+  compensationType: PayrollCompensationType;
+  rateCents: number;
+  currency: string;
+  payFrequencyName: string;
+  jobTitle: string;
+  description: string;
+  effectiveFrom: string;
+  note: string | null;
+  confirmedAt: string | null;
+  hasContractPdf: boolean;
+}
+
 export interface CompensationStatusEntry {
   employeeId: string;
   employeeFirstName: string;

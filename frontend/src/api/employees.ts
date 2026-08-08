@@ -1,5 +1,5 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
-import type { Employee, Invitation } from './types.js';
+import type { Employee, EmployeeCompensationSummary, Invitation } from './types.js';
 
 export const employeesApi = {
   // HR Employees
@@ -69,6 +69,14 @@ export const employeesApi = {
   inviteEmployee: async (token: string, employeeId: string): Promise<{ invitation: Invitation }> => {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/invite`, {
       method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  getEmployeeCompensation: async (token: string, employeeId: string): Promise<EmployeeCompensationSummary> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/compensation`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);

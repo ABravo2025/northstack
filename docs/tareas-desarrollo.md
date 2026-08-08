@@ -229,6 +229,12 @@ solo existe en el `.env` local gitignorado.
   screenshot de Playwright porque Chromium headless no renderiza PDFs embebidos ahí (mismo mecanismo
   que ya usaba el payslip, no es una regresión); confirmar visualmente en un navegador real queda
   para la revisión del usuario.
+- Gap encontrado por el usuario probando lo anterior: el contrato cargado en el alta (tipo de
+  compensación, monto, frecuencia, job title, descripción) no se veía en ningún lado del panel de
+  detalle de la persona — solo existía dentro del PDF. Se agregó una sección "Compensation" a
+  `EmployeeOverviewPanel.tsx` (nuevo endpoint `GET /api/hr/employees/:employeeId/compensation`,
+  owner-only, sin datos sensibles) que muestra todos esos campos + estado de firma, con los botones
+  "View contract"/"Resend contract" movidos ahí desde el menú "Actions" (más visibles en contexto).
 
 Distinto del "Módulo Payments" de Tier 4 — Payments es facturarle a los *Clients* del tenant
 (cuentas por cobrar), Payroll es pagarle a los *Employees* (cuentas por pagar).

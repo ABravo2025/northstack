@@ -24,7 +24,11 @@ import { findFieldCatalogDefinitionById } from '../modules/hr/fieldCatalogServic
 import { findStatusDefinitionById } from '../modules/hr/statusService.js';
 import { calculateEmployeeTimeOffBalances } from '../modules/hr/timeOffBalanceService.js';
 import { createInvitation } from '../modules/tenant/invitationService.js';
-import { getEmployeeContractPdf, resendEmployeeContract } from '../modules/hr/contractPdfService.js';
+import {
+  getEmployeeCompensationSummary,
+  getEmployeeContractPdf,
+  resendEmployeeContract,
+} from '../modules/hr/contractPdfService.js';
 import {
   canCreateHr,
   canInviteUsers,
@@ -277,6 +281,22 @@ employeesRouter.post('/api/hr/employees/:employeeId/invite', async (req, res) =>
   }
 
   return res.status(201).json({ invitation: result.invitation });
+});
+
+employeesRouter.get('/api/hr/employees/:employeeId/compensation', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!canManagePayroll(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const result = await getEmployeeCompensationSummary(user.tenantId!, req.params.employeeId);
+  if (!result.success) {
+    return res.status(404).json({ error: result.error });
+  }
+  return res.json(result.summary);
 });
 
 employeesRouter.get('/api/hr/employees/:employeeId/contract-pdf', async (req, res) => {

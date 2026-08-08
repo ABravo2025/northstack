@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api';
+import type { EmployeeCompensationSummary } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import Avatar from '../common/Avatar';
 import StatusChip from '../common/StatusChip';
@@ -9,6 +10,7 @@ import DetailSidebar from '../layout/DetailSidebar';
 import Field from '../common/Field';
 import OverviewActionsMenu from '../common/OverviewActionsMenu';
 import PayslipPreviewModal from '../payroll/PayslipPreviewModal';
+import { formatMoney } from '../../lib/currencies';
 import { XIcon } from '../common/Icons';
 
 interface EmployeeOverviewPanelProps {
@@ -65,7 +67,23 @@ export default function EmployeeOverviewPanel({
   const toast = useToast();
   const [contractPreviewOpen, setContractPreviewOpen] = useState(false);
   const [resendingContract, setResendingContract] = useState(false);
+  const [compensation, setCompensation] = useState<EmployeeCompensationSummary | null>(null);
+  const [loadingCompensation, setLoadingCompensation] = useState(false);
   const hasContract = canManagePayroll && HAS_CONTRACT_STATUSES.has(employee.contractStatus);
+
+  useEffect(() => {
+    if (!hasContract) {
+      setCompensation(null);
+      return;
+    }
+    setLoadingCompensation(true);
+    api
+      .getEmployeeCompensation(token, employee.id)
+      .then(setCompensation)
+      .catch(() => setCompensation(null))
+      .finally(() => setLoadingCompensation(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employee.id, hasContract]);
 
   const handleResendContract = async () => {
     setResendingContract(true);
@@ -150,10 +168,6 @@ export default function EmployeeOverviewPanel({
             className="overview-actions-trigger"
             items={[
               ...(canManageEmployees && !employee.userId ? [{ label: 'Invite to app', onClick: onInvite }] : []),
-              ...(hasContract ? [{ label: 'View contract', onClick: () => setContractPreviewOpen(true) }] : []),
-              ...(hasContract
-                ? [{ label: resendingContract ? 'Resending contract…' : 'Resend contract', onClick: handleResendContract }]
-                : []),
               { label: 'Delete', onClick: onRequestDelete, danger: true },
             ]}
           />
@@ -305,6 +319,78 @@ export default function EmployeeOverviewPanel({
               </div>
             </div>
           </div>
+
+          {hasContract && (
+            <div className="field-group">
+              <h4 className="field-group-title">Compensation</h4>
+              <div className="field-group-body">
+                {loadingCompensation ? (
+                  <p className="text-sm text-ink-faint">Loading…</p>
+                ) : !compensation ? (
+                  <p className="text-sm text-ink-faint">No active compensation.</p>
+                ) : (
+                  <>
+                    <div className="overview-field">
+                      <span className="overview-field-label">Type</span>
+                      <span className="overview-field-value">
+                        {compensation.compensationType === 'hourly' ? 'Hourly' : 'Fixed'}
+                      </span>
+                    </div>
+                    <div className="overview-field">
+                      <span className="overview-field-label">Rate</span>
+                      <span className="overview-field-value">{formatMoney(compensation.rateCents, compensation.currency)}</span>
+                    </div>
+                    <div className="overview-field">
+                      <span className="overview-field-label">Pay Frequency</span>
+                      <span className="overview-field-value">{compensation.payFrequencyName}</span>
+                    </div>
+                    <div className="overview-field">
+                      <span className="overview-field-label">Effective From</span>
+                      <span className="overview-field-value">{compensation.effectiveFrom.slice(0, 10)}</span>
+                    </div>
+                    <div className="overview-field">
+                      <span className="overview-field-label">Job Title</span>
+                      <span className="overview-field-value">{compensation.jobTitle}</span>
+                    </div>
+                    <div className="overview-field overview-field-full">
+                      <span className="overview-field-label">Role Description</span>
+                      <span className="overview-field-value">{compensation.description}</span>
+                    </div>
+                    {compensation.note && (
+                      <div className="overview-field overview-field-full">
+                        <span className="overview-field-label">Note</span>
+                        <span className="overview-field-value">{compensation.note}</span>
+                      </div>
+                    )}
+                    <div className="overview-field">
+                      <span className="overview-field-label">Contract Status</span>
+                      <span className="overview-field-value">
+                        {compensation.confirmedAt
+                          ? `Confirmed on ${compensation.confirmedAt.slice(0, 10)}`
+                          : 'Pending signature'}
+                      </span>
+                    </div>
+                    <div className="overview-field overview-field-full">
+                      <span className="overview-field-label"></span>
+                      <div className="flex gap-2">
+                        <button type="button" className="btn-secondary btn-sm" onClick={() => setContractPreviewOpen(true)}>
+                          View contract
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-secondary btn-sm"
+                          onClick={handleResendContract}
+                          disabled={resendingContract}
+                        >
+                          {resendingContract ? 'Resending…' : 'Resend contract'}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
 
           {customFields.length > 0 && (
             <div className="field-group">

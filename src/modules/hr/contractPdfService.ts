@@ -102,6 +102,53 @@ async function findRelevantCompensation(tenantId: string, employeeId: string): P
   });
 }
 
+export interface EmployeeCompensationSummary {
+  compensationType: 'hourly' | 'fixed';
+  rateCents: number;
+  currency: string;
+  payFrequencyName: string;
+  jobTitle: string;
+  description: string;
+  effectiveFrom: string;
+  note: string | null;
+  confirmedAt: string | null;
+  hasContractPdf: boolean;
+}
+
+// The read model behind the "Compensation" section of the People overview
+// panel (2026-08-08, user feedback: the contract data entered at alta was
+// never shown anywhere afterward except inside the generated PDF) — safe to
+// expose as-is, deliberately excludes paymentAccountDataEncrypted and the
+// raw contractPdf bytes (those stay behind their own owner-gated endpoints).
+export async function getEmployeeCompensationSummary(
+  tenantId: string,
+  employeeId: string,
+): Promise<{ success: boolean; summary?: EmployeeCompensationSummary; error?: string }> {
+  const compensation = await prisma.employeeCompensation.findFirst({
+    where: { tenantId, employeeId, effectiveTo: null },
+    include: { payFrequency: true },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (!compensation) {
+    return { success: false, error: 'This person has no active compensation' };
+  }
+  return {
+    success: true,
+    summary: {
+      compensationType: compensation.compensationType,
+      rateCents: compensation.rateCents,
+      currency: compensation.currency,
+      payFrequencyName: compensation.payFrequency.name,
+      jobTitle: compensation.jobTitle,
+      description: compensation.description,
+      effectiveFrom: compensation.effectiveFrom.toISOString(),
+      note: compensation.note,
+      confirmedAt: compensation.confirmedAt ? compensation.confirmedAt.toISOString() : null,
+      hasContractPdf: Boolean(compensation.contractPdf),
+    },
+  };
+}
+
 export interface ContractPdfResult {
   success: boolean;
   pdfBytes?: Uint8Array;

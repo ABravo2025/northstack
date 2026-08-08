@@ -113,6 +113,7 @@ CRUD estándar: **createContact**, **listContacts(tenantId)**, **findContactById
 - **renderContractPdf(input)** — arma el PDF (`pdf-lib`, mismo estilo que `payslipService.ts`) con los términos del contrato; `signed: false` lo marca "DRAFT — PENDING SIGNATURE", `signed: true` agrega el bloque de confirmación (fecha/hora/IP) y lo marca "SIGNED". Se llama dos veces por contrato: al crearlo (borrador) y al confirmarlo (firmado, sobrescribe la misma columna).
 - **getEmployeeContractPdf(tenantId, employeeId)** — el PDF *guardado* (no lo regenera) de la compensación más relevante de la persona (la vigente, o la más reciente si no hay ninguna abierta).
 - **resendEmployeeContract(tenantId, employeeId, actingUserId)** — reenvía lo que esté guardado ahora mismo: si no está firmado, reusa la invitación pendiente (o crea una nueva si venció) + el borrador adjunto; si ya está firmado, reenvía el firmado al usuario vinculado con copia al owner y a quien lo cargó.
+- **getEmployeeCompensationSummary(tenantId, employeeId)** — read model de la compensación *vigente* (`effectiveTo: null`) de la persona, sin datos sensibles (nunca `paymentAccountDataEncrypted` ni los bytes del PDF) — feedback del usuario 2026-08-08: el contrato cargado en el alta no se veía en ningún lado del panel de detalle, solo dentro del PDF generado. Alimenta la sección "Compensation" de `EmployeeOverviewPanel.tsx`.
 
 ### `src/modules/hr/employeeCompensationService.ts` (Payroll, Unidad 5/10)
 - **createCompensation(input)** — única función que crea una fila de `EmployeeCompensation`: cierra la vigente anterior (`effectiveTo`), calcula `blocksParticipation` (true solo si es la primera de la persona), genera y guarda el PDF borrador (`contractPdfService.renderContractPdf`), y dispara la invitación de confirmación de contrato (Unidad 6, con el borrador adjunto) si corresponde.
@@ -250,7 +251,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 | Archivo | Métodos |
 |---|---|
 | `auth.ts` | registerTenant, login, register, getInvitation, acceptInvitation, logout, getCurrentUser, updateProfile, changePassword, getCurrentTenant, updateTenantCurrency |
-| `employees.ts` | listEmployees, createEmployee, updateEmployee, deleteEmployee, inviteEmployee, getEmployeeContractPdf, resendContract |
+| `employees.ts` | listEmployees, createEmployee, updateEmployee, deleteEmployee, inviteEmployee, getEmployeeCompensation, getEmployeeContractPdf, resendContract |
 | `companies.ts` | listCompanies, createCompany, updateCompany, deleteCompany, +custom field values |
 | `contacts.ts` | listContacts, createContact, updateContact, deleteContact, +custom field values |
 | `opportunities.ts` | listOpportunities, createOpportunity, updateOpportunity, deleteOpportunity, addOpportunityContact, removeOpportunityContact |

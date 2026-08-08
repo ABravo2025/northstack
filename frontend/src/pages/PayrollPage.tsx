@@ -543,18 +543,6 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
     <div className="container">
       <div className="page-toolbar">
         <h2 className="page-title">Payroll</h2>
-        {tab === 'timeline' && isOwner && (
-          <div className="flex items-center gap-2">
-            <button type="button" className="btn-secondary gap-1.5" onClick={openOffPaymentModal}>
-              <PlusIcon className="h-3.5 w-3.5" />
-              One-off Payment
-            </button>
-            <button type="button" className="btn-primary gap-1.5" onClick={openNewRunModal}>
-              <PlusIcon className="h-3.5 w-3.5" />
-              New Run
-            </button>
-          </div>
-        )}
       </div>
 
       <div className="views-bar">
@@ -580,6 +568,24 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
           <>
           {tab === 'timeline' && (
             <>
+              <div className="flex items-start justify-between gap-4 mb-3">
+                <p className="text-sm text-ink-muted">
+                  Every payroll run and one-off payment in one place, newest first.
+                </p>
+                {isOwner && (
+                  <div className="flex items-center gap-2">
+                    <button type="button" className="btn-secondary gap-1.5" onClick={openOffPaymentModal}>
+                      <PlusIcon className="h-3.5 w-3.5" />
+                      One-off Payment
+                    </button>
+                    <button type="button" className="btn-primary gap-1.5" onClick={openNewRunModal}>
+                      <PlusIcon className="h-3.5 w-3.5" />
+                      New Run
+                    </button>
+                  </div>
+                )}
+              </div>
+
               {timelineItems.length === 0 ? (
                 <EmptyState
                   icon={<CalendarIcon />}

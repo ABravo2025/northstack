@@ -265,6 +265,13 @@ solo existe en el `.env` local gitignorado.
   Terminated es un dataset separado y nuevo (`listTerminatedCompensations`, todo lo que tiene
   `effectiveTo` seteado) ya que `getCompensationStatus` solo mira la fila abierta — de solo lectura,
   sin checkboxes ni botón de reasignar (esas filas ya fueron superadas).
+- **Estructura inconsistente entre tabs de Payroll** (2026-08-08, feedback del usuario): el tab
+  Timeline tenía sus botones ("One-off Payment"/"New Run") en el `.page-toolbar` de nivel de página,
+  a la altura del título "Payroll" — Assignments y Payment Policies siempre los tuvieron dentro de su
+  propio contenido, junto a una descripción, debajo de las pestañas. Timeline además no tenía
+  descripción. Movido para que las 3 pestañas compartan la misma estructura: título de página solo
+  con "Payroll", y cada tab con su propia fila descripción + botón(es) inmediatamente debajo de la
+  barra de pestañas.
 
 Distinto del "Módulo Payments" de Tier 4 — Payments es facturarle a los *Clients* del tenant
 (cuentas por cobrar), Payroll es pagarle a los *Employees* (cuentas por pagar).

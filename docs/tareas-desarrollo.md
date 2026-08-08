@@ -101,30 +101,69 @@ Siguiente en la cola: Tier 1.
 **Tier 3 — Rediseño de Clients (completo, en producción)** — Company/Contact/Opportunity/Pipeline,
 ver "Estado actual" más abajo y `docs/tareas/semana-2026-07-29.md` para el detalle.
 
-**Tier 3.5 — Módulo Payroll — tercer intento en curso, spec nuevo en `docs/spec-payroll.md`
-(2026-08-07).** Los dos intentos anteriores (Unidad 0-15 + re-spec, 2026-08-01 a 08-03) se
-revirtieron por completo — detalle en la entrada fechada 2026-08-06 de la sección de arriba y en
-`git log`. Este spec se escribió desde cero, sin reciclar el viejo, con 21 unidades (incluye el
-rename a "People", confirmación de contrato con evidencia, y cifrado de datos de cuenta). Estado:
-**Unidades 1-7 completas** — schema + cifrado (U1), catálogo de políticas de pago backend+frontend
-(U2+U3), rename a People + `personType` + retiro de la compensación legada (U4), alta con contrato
-inicial (U5), invitación específica vía `acceptPath` (U6), y la pantalla pública de confirmación de
-contrato con contraseña/país/método de pago + evidencia IP (U7) — el flujo completo (alta de un
-Contractor → invitación automática → confirmación real con IBAN → `User` creado y logueado →
-desencriptado verificado) se probó de punta a punta con Playwright, sin errores de consola.
+**Tier 3.5 — Módulo Payroll — tercer intento, COMPLETO (21/21 unidades), spec en
+`docs/spec-payroll.md` (2026-08-07).** Los dos intentos anteriores (Unidad 0-15 + re-spec,
+2026-08-01 a 08-03) se revirtieron por completo — detalle en la entrada fechada 2026-08-06 de la
+sección de arriba y en `git log`. Este spec se escribió desde cero, sin reciclar el viejo.
+
+Resumen por bloque (detalle técnico completo en `docs/database-schema.md` grupo 7):
+- **U1-U4 — Cimientos**: schema + cifrado AES-256-GCM (`src/lib/encryption.ts`), catálogo de
+  políticas de pago y métodos de pago (backend+frontend), rename "Employee"→"People" a nivel de
+  nav/ruta/heading + `personType` (Profile/Contractor/Employee) como gate de todo el módulo, retiro
+  completo (schema + DB, con confirmación explícita del usuario para el paso destructivo) de
+  `Employee.hourlyRateCents`/`monthlyRateCents`/`compensationType` en favor de `EmployeeCompensation`
+  versionado.
+- **U5-U9 — Onboarding a Payroll**: alta con contrato inicial dentro del mismo modal "Add Person",
+  invitación específica (`acceptPath: '/confirm-contract'`) disparada al crear el primer contrato de
+  alguien sin `User` vinculado, pantalla pública `/confirm-contract/:token` (contraseña, país,
+  método de pago con IBAN/ACH o usuario según corresponda, evidencia IP+timestamp), cifrado de datos
+  de cuenta ya integrado a esa confirmación, y `blocksParticipation` calculado en la creación de cada
+  contrato.
+- **U10-U11 — Gestión de personas**: asignación/reasignación masiva de política de pago (tabla +
+  modal de revisión con monto editable por persona), chip de estado de contrato
+  (Confirmado/Pendiente/Vencido) en la tabla de People.
+- **U12-U17 — Payroll Run**: creación con pre-carga automática (excluye contratos sin confirmar),
+  pantalla de detalle por persona (base/ajustes/total), ajustes editables mientras el run esté en
+  borrador, carga de horas para compensación hourly con recálculo automático, alerta visual de
+  persona inactiva, y confirmación que bloquea edición posterior.
+- **U18-U19 — Pagos fuera de ciclo y timeline**: pagos únicos independientes de cualquier run, y una
+  única línea de tiempo cronológica (pestaña principal de Payroll) mezclando runs y pagos sueltos.
+- **U20 — Payslip PDF preview**: nueva dependencia `pdf-lib` (confirmada explícitamente con el
+  usuario — sin binarios nativos, sin dependencias transitivas), PDF marcado "PREVIEW — NOT ISSUED"
+  en el documento mismo, no solo en la UI.
+- **U21 — Sidebar**: entrada "Payroll" owner-only a nivel de nav (con guard adicional en las 2
+  páginas para que un no-owner que adivine la URL no vea pestañas rotas, más allá del 403 que ya
+  daban los endpoints).
+
+Verificado con un script de smoke test contra la API real (creación de run, exclusión de contrato
+sin confirmar, bloqueo de confirmación con horas sin cargar, recálculo de horas, ajustes, confirmar,
+bloqueo post-confirmación, pago fuera de ciclo) y con una pasada de Playwright de punta a punta
+sobre las 21 unidades juntas (registro → alta con contrato → confirmación pública con IBAN → login
+automático → Assignments → crear run → ajuste → confirmar → payslip → pago fuera de ciclo →
+timeline), sin errores de consola al final. Esa pasada encontró y corrigió dos cosas antes de dar el
+módulo por cerrado:
+- Un warning real de React (fragments sin `key` agrupando las 2-3 filas por persona en
+  `PayrollRunDetailPage.tsx`) — corregido usando `<Fragment key={row.employeeId}>` en vez del
+  shorthand `<>`.
+- Dos 403 de consola que resultaron **no ser de Payroll**: `OverviewPage.tsx` llama
+  `listTenantUsers` sin chequear rol al montar, pero `GET /api/tenants/users` está gateado a
+  owner/admin (`canManageUsers`) — cualquier `member` que entra a `/overview` los dispara (se
+  silencian con `.catch(() => {})`, no rompen nada, pero ensucian la consola). No es parte del
+  spec de Payroll así que no se tocó; queda anotado como backlog de UX/Overview.
 
 **Todo commiteado en local únicamente, sin pushear a `staging` — a pedido explícito del usuario
-2026-08-07** ("segui con el resto, no pusheemos a staging aun"), distinto del criterio de "confirmar
-y pushear cada unidad por separado" que se venía usando. El schema **sí** se aplicó directamente
-contra la base de datos de `staging` (necesario para poder probar en local) — incluye el retiro
-destructivo de `Employee.hourlyRateCents`/`monthlyRateCents`/`compensationType` (Unidad 4, con
-confirmación explícita del usuario ya que Prisma no permite aplicar solo la parte aditiva de un
-`db push` cuando hay cambios destructivos pendientes en el mismo diff) y el campo `confirmedIp`
-(Unidad 7, evidencia de confirmación que no estaba contemplada en el schema original de la Unidad 1).
-`scripts/backfill-legacy-employee-compensation.ts` migró los 4 registros de prueba con datos legados
-antes del borrado. Ver `docs/database-schema.md` grupo 7 para el detalle completo, incluyendo un
-gotcha de ruteo real encontrado en la Unidad 7 (colisión entre `/api/public/contract-confirmation/:token`
-y el catch-all de Public Forms).
+2026-08-07** ("segui y completa todo, una vez que este todo en local lo quiero testear a full"),
+distinto del criterio de "confirmar y pushear cada unidad por separado" que se venía usando. El
+schema sí se aplicó directamente contra la base de datos de `staging` (necesario para poder probar
+en local, incluyendo el paso destructivo de la Unidad 4 y el campo `confirmedIp` de la Unidad 7, no
+contemplado en el schema original de la Unidad 1) — el código no. `scripts/backfill-legacy-employee-
+compensation.ts` migró los registros de prueba con datos legados antes del borrado. Gotcha de ruteo
+real encontrado y corregido en la Unidad 7: `/api/public/contract-confirmation/:token` colisionaba
+con el catch-all de Public Forms por tener la misma forma de 2 segmentos.
+
+**Pendiente, a cargo del usuario**: revisar todo el módulo en local antes de decidir qué pushear;
+cargar `PAYMENT_DATA_ENCRYPTION_KEY` en Vercel (staging y producción) antes de promover, ya que hoy
+solo existe en el `.env` local gitignorado.
 
 Distinto del "Módulo Payments" de Tier 4 — Payments es facturarle a los *Clients* del tenant
 (cuentas por cobrar), Payroll es pagarle a los *Employees* (cuentas por pagar).

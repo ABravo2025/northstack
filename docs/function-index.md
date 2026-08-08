@@ -108,13 +108,34 @@ CRUD estándar: **createContact**, **listContacts(tenantId)**, **findContactById
 - **getContractConfirmationDetails(token)** — read model público para `/confirm-contract/:token`: datos read-only del contrato (owner) + catálogo de métodos de pago para el select editable.
 - **confirmContract(input)** — valida, cifra los datos de cuenta (`encryptPaymentAccountData`), y en una transacción: crea el `User` (nombre copiado del `Employee`, nunca re-pedido), vincula `Employee.userId`, guarda `countryOfResidence`, completa la `EmployeeCompensation` (método de pago + `confirmedAt`/`confirmedIp`), marca la `Invitation` `accepted`, crea la `Session` — la persona queda logueada de una.
 
-### `src/modules/hr/employeeCompensationService.ts` (Payroll, Unidad 5)
-- **createCompensation(input)** — única función que crea una fila de `EmployeeCompensation`: cierra la vigente anterior (`effectiveTo`), calcula `blocksParticipation` (true solo si es la primera de la persona), y dispara la invitación de confirmación de contrato (Unidad 6) si corresponde. Pensada para reusarse tal cual desde la asignación masiva (Unidad 10).
+### `src/modules/hr/employeeCompensationService.ts` (Payroll, Unidad 5/10)
+- **createCompensation(input)** — única función que crea una fila de `EmployeeCompensation`: cierra la vigente anterior (`effectiveTo`), calcula `blocksParticipation` (true solo si es la primera de la persona), y dispara la invitación de confirmación de contrato (Unidad 6) si corresponde.
+- **createCompensationBulk(input)** — asignación/reasignación masiva (Unidad 10): un `createCompensation` por entrada, nunca deriva el monto del anterior.
+- **getCompensationStatus(tenantId)** — cada Contractor/Employee con su compensación vigente (o `null`), para la tabla de Asignaciones.
 - **findCompensationById(id)**.
 
 ### `src/modules/hr/employeeService.ts`
-- **createEmployee(input)**, **listEmployees(tenantId)**, **findEmployeeById(id)**, **findEmployeeByUserId(userId)**, **updateEmployee(...)**, **deleteEmployee(id)**.
+- **createEmployee(input)**, **listEmployees(tenantId)** (suma `contractStatus` por fila — Unidad 11), **findEmployeeById(id)**, **findEmployeeByUserId(userId)**, **updateEmployee(...)**, **deleteEmployee(id)**.
 - **wouldCreateManagerCycle(...)** — camina la cadena de `managerId` hacia arriba para detectar un ciclo antes de asignar un manager nuevo.
+
+### `src/modules/hr/payrollRunService.ts` (Payroll, Unidad 12/13/16/17)
+- **createRun(input)** — preload automático: toda persona Contractor/Employee con `EmployeeCompensation` vigente en la frecuencia elegida, excluyendo a quien tenga el primer contrato sin confirmar (`blocksParticipation`+`confirmedAt: null`, Unidad 9).
+- **getRunDetail(tenantId, runId)** — entries agrupadas por persona (base + ajustes), badge de compensación, `isInactive` contra el status default del tenant, conteo de excluidos, y si falta cargar alguna hora.
+- **addEmployeeToRun(...)** — excepción manual, solo mientras el run esté `draft`.
+- **confirmRun(tenantId, runId)** — bloquea si falta cargar horas de algún `base` hourly (Unidad 15); `draft` → `confirmed`.
+- **findRunById(id)**, **listRuns(tenantId)**.
+
+### `src/modules/hr/payrollEntryService.ts` (Payroll, Unidad 14/15)
+- **createAdjustment(input)** — bono/comisión/reembolso/deducción, solo mientras el run esté `draft`.
+- **deleteEntry(tenantId, entryId)** — solo si el run sigue `draft`.
+- **updateEntryHours(tenantId, entryId, hoursQty)** — recalcula `amountCents` contra la tarifa horaria vigente de la persona.
+
+### `src/modules/hr/payrollOffPaymentService.ts` (Payroll, Unidad 18/19)
+- **createOffPayments(input)** — un `PayrollEntry` independiente (`runId: null`) por persona seleccionada.
+- **listOffPayments(tenantId)** — para la línea de tiempo unificada.
+
+### `src/modules/hr/payslipService.ts` (Payroll, Unidad 20)
+- **buildPayslipForRunEmployee(tenantId, runId, employeeId)** / **buildPayslipForEntry(tenantId, entryId)** — arman el PDF de preview (`pdf-lib`) a partir de las entries de una persona en un run, o de una entry suelta. Marcado "PREVIEW — NOT ISSUED" en el PDF mismo, no solo en la UI.
 
 ### `src/modules/hr/employeeTimeOffPolicyService.ts`
 - **listEmployeeTimeOffPolicies(tenantId, employeeId)**, **assignTimeOffPolicyToEmployee(...)**, **unassignTimeOffPolicyFromEmployee(...)**.
@@ -238,7 +259,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 | `timeOffBalances.ts` | listTimeOffBalances, getEmployeeTimeOffBalance, +custom field values (nota: nombre de archivo engañoso, ver código) |
 | `tasks.ts` | listTasks, listMyTasks, listTasksForCalendar, createTask, updateTask, deleteTask |
 | `notes.ts` | listNotes, createNote, updateNote, deleteNote |
-| `payroll.ts` | listPayFrequencies, createPayFrequency, updatePayFrequency, listPaymentMethods, createPaymentMethod, updatePaymentMethod, createCompensation |
+| `payroll.ts` | listPayFrequencies, createPayFrequency, updatePayFrequency, listPaymentMethods, createPaymentMethod, updatePaymentMethod, createCompensation, getCompensationStatus, createCompensationBulk, listPayrollRuns, createPayrollRun, getPayrollRunDetail, addEmployeeToPayrollRun, confirmPayrollRun, createPayrollAdjustment, deletePayrollEntry, updatePayrollEntryHours, listOffCyclePayments, createOffCyclePayments, getRunEmployeePayslip, getEntryPayslip |
 | `contractConfirmationPublic.ts` | getContractConfirmation, confirmContract — público, sin auth (standalone `/confirm-contract/:token`) |
 | `csv.ts` | exportEmployeesCsv, importEmployeesCsv, employeesCsvTemplate |
 | `tenantUsers.ts` | listTenantUsers, updateTenantUser, listTenantInvitations, createTenantInvitation, cancelInvitation |
@@ -298,6 +319,9 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 - **MobileTabbar** — tabbar inferior fijo, solo `<768px` (Overview/Employees/Time Off/Sales).
 - **OnboardingChecklist** — card de `/overview` con los 4 pasos de onboarding.
 - **Sidebar** / **TopBar** — navegación principal.
+
+### `frontend/src/components/payroll/`
+- **PayslipPreviewModal** — dado un `fetchPdf: () => Promise<Blob>`, resuelve el blob a un object URL y lo muestra en un `<iframe>` + botón de descarga (Payroll Unidad 20). Reusable para el preview por persona-en-un-run y, a futuro, para una entry suelta.
 
 ### `frontend/src/components/notes/`
 - **EntityNotesList** — tab "Notes" compartido por los 4 paneles de detalle (mismo mecanismo que `EntityTasksList`).

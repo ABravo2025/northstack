@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../api';
 import type { CompensationStatusEntry, PayrollEntryType, RunDetail } from '../api';
@@ -6,10 +6,12 @@ import { useToast } from '../components/common/ToastProvider';
 import Modal from '../components/common/Modal';
 import TableSkeleton from '../components/common/TableSkeleton';
 import StatusChip from '../components/common/StatusChip';
+import PayslipPreviewModal from '../components/payroll/PayslipPreviewModal';
 import { formatMoney } from '../lib/currencies';
-import { ChevronDownIcon, ChevronLeftIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
+import { ChevronDownIcon, ChevronLeftIcon, EyeIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
 
 interface PayrollRunDetailPageProps {
+  user: any;
   token: string;
 }
 
@@ -20,7 +22,8 @@ const ADJUSTMENT_TYPE_LABELS: Record<string, string> = {
   deduction: 'Deduction',
 };
 
-export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProps) {
+export default function PayrollRunDetailPage({ user, token }: PayrollRunDetailPageProps) {
+  const isOwner = user?.role === 'owner';
   const toast = useToast();
   const navigate = useNavigate();
   const { runId } = useParams<{ runId: string }>();
@@ -37,6 +40,7 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
   const [addPersonModalOpen, setAddPersonModalOpen] = useState(false);
   const [addPersonCandidates, setAddPersonCandidates] = useState<CompensationStatusEntry[]>([]);
   const [addingEmployeeId, setAddingEmployeeId] = useState<string | null>(null);
+  const [payslipEmployeeId, setPayslipEmployeeId] = useState<string | null>(null);
 
   useEffect(() => {
     load();
@@ -44,7 +48,10 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
   }, [runId]);
 
   const load = async () => {
-    if (!runId) return;
+    if (!runId || !isOwner) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const data = await api.getPayrollRunDetail(token, runId);
@@ -159,6 +166,14 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
     }
   };
 
+  if (!isOwner) {
+    return (
+      <div className="container">
+        <p className="text-sm text-ink-muted">Payroll is only visible to the tenant owner.</p>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="container">
@@ -237,8 +252,8 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
                 const adjustments = row.entries.filter((e) => e.type !== 'base');
                 const isExpanded = expandedEmployeeId === row.employeeId;
                 return (
-                  <>
-                    <tr key={row.employeeId} className={row.isInactive ? 'table-row-inactive' : ''}>
+                  <Fragment key={row.employeeId}>
+                    <tr className={row.isInactive ? 'table-row-inactive' : ''}>
                       <td>
                         <span
                           className="color-dot inline-block"
@@ -287,10 +302,20 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
                       <td>
                         <strong>{formatMoney(row.totalCents, row.currency)}</strong>
                       </td>
-                      <td></td>
+                      <td>
+                        <button
+                          type="button"
+                          className="icon-btn"
+                          onClick={() => setPayslipEmployeeId(row.employeeId)}
+                          aria-label={`Payslip preview for ${row.employeeFirstName} ${row.employeeLastName}`}
+                        >
+                          <span className="tip">Payslip preview</span>
+                          <EyeIcon className="h-4 w-4" />
+                        </button>
+                      </td>
                     </tr>
                     {row.isInactive && (
-                      <tr key={`${row.employeeId}-inactive-banner`}>
+                      <tr>
                         <td colSpan={7} style={{ padding: 0 }}>
                           <div className="alert alert-error" style={{ margin: '0 0 0.5rem 0' }}>
                             {row.employeeFirstName} {row.employeeLastName} is not active ({row.statusName}).
@@ -299,7 +324,7 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
                       </tr>
                     )}
                     {isExpanded && (
-                      <tr key={`${row.employeeId}-adjustments`}>
+                      <tr>
                         <td colSpan={7}>
                           <div className="card" style={{ padding: '0.75rem 1rem' }}>
                             {adjustments.length > 0 && (
@@ -381,7 +406,7 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 );
               })}
             </tbody>
@@ -413,6 +438,14 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
           </div>
         )}
       </Modal>
+
+      {payslipEmployeeId && runId && (
+        <PayslipPreviewModal
+          open={payslipEmployeeId !== null}
+          onClose={() => setPayslipEmployeeId(null)}
+          fetchPdf={() => api.getRunEmployeePayslip(token, runId, payslipEmployeeId)}
+        />
+      )}
     </div>
   );
 }

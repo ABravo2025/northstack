@@ -521,6 +521,60 @@ si bloquea el flujo completo o es un detalle de UI.
 
 ---
 
+## QA-13 — Payroll Unidad 10-21: asignación masiva, Payroll Run completo, payslip, sidebar (2026-08-07, en local únicamente — no pusheado a `staging`)
+
+**Por qué existe esta tarea:** cierra las 21 unidades del spec. Verificado con un script de smoke
+test contra la API real durante el desarrollo (lógica de negocio: exclusión, bloqueos, recálculos) y
+después con una pasada de Playwright de punta a punta sobre el flujo completo (registro → contrato →
+confirmación → Assignments → run → ajuste → confirmar → payslip → pago fuera de ciclo → timeline),
+sin errores de consola al cierre — corrigió un warning de `key` en `PayrollRunDetailPage.tsx` en el
+camino. Lo que falta es una revisión visual humana (esta tabla), no funcional: la pasada automatizada
+no juzga espaciado, contraste, textos, ni casos borde de UI que un script no piensa en probar.
+
+### A. Asignación masiva (Unidad 10) + indicadores (Unidad 11)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Tab "Assignments" de `/hr/payroll` | Lista todo Contractor/Employee con su política actual (chip) o "No policy assigned" |
+| 2 | Seleccionar 2+ personas → "Assign/Reassign Policy" | Modal con frecuencia/fecha/tipo/moneda/job title/descripción comunes + tabla de revisión con el monto de cada persona pre-cargado (el anterior tal cual, vacío si no tenía) y editable; "Apply to all selected" sobreescribe todos los montos visibles |
+| 3 | Columna "Contract" en `/hr/people` | Chip verde/neutro/rojo (Confirmed/Pending/Expired) solo para Contractor/Employee con al menos un contrato — vacío (`—`) para Profile o sin contrato nunca |
+
+### B. Payroll Run (Unidades 12-17)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 4 | Tab "Timeline" → "New Run" | Modal con select de Pay Frequency + período libre; al crear, navega directo a `/hr/payroll/runs/:id` |
+| 5 | Detalle del run recién creado | Una fila por persona con contrato vigente en esa frecuencia (confirmado); nadie con contrato sin confirmar aparece, y arriba dice "N personas excluidas" si corresponde |
+| 6 | Persona Fixed vs Hourly | Fixed muestra el monto directo, sin input; Hourly muestra un input de horas + "hs × tarifa = total" al lado, editable mientras el run esté en borrador |
+| 7 | Botón de ajustes en una fila | Muestra solo el total (+/− monto); al hacer click expande la lista editable (tipo/monto/nota/eliminar) + form para agregar uno nuevo |
+| 8 | Confirmar el run con alguna hora sin cargar | Botón deshabilitado (o falla con mensaje claro si se fuerza por API) |
+| 9 | Cargar todas las horas y confirmar | Run pasa a "Confirmed"; los ajustes ya no se pueden agregar/borrar, ni las horas editar |
+| 10 | Persona con status distinto al default del tenant | Banner de advertencia debajo de su fila — no bloquea nada, solo visual |
+| 11 | "+ Add person to this run" con el run en borrador | Lista gente con compensación activa que todavía no está en el run; agregarla crea su fila base |
+
+### C. Pagos únicos, timeline y payslip (Unidades 18-20)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 12 | "One-off Payment" desde el tab Timeline | Modal con tipo/monto/moneda/fecha + checklist de personas; cada una marcada genera su propia entry independiente (sin agruparlas) |
+| 13 | Tab Timeline después de crear un run y un pago único | Ambos aparecen mezclados, ordenados por fecha, con chip "Run"/"One-off" distinto |
+| 14 | Ícono de payslip en una fila del run | Abre modal con el PDF embebido, etiqueta "Preview only — not sent", botón de descarga real (`.pdf`) |
+
+### D. Sidebar (Unidad 21)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 15 | Sidebar con un usuario `owner` | Aparece "Payroll" en el grupo Human Resources |
+| 16 | Sidebar con `admin` o `member` | No aparece la entrada; si navegan a `/hr/payroll` o `/hr/payroll/runs/:id` a mano, ven "Payroll is only visible to the tenant owner." en vez de pestañas rotas |
+
+### Al encontrar una falla
+
+B.8/B.9 (el bloqueo de confirmación por horas sin cargar) es el corazón de la Unidad 15/17 — si
+falla, es alta severidad. D.16 es alta si un no-owner logra ver datos de compensación reales. El
+resto es medio/bajo salvo que rompa el flujo completo de principio a fin.
+
+---
+
 ## Próximas tareas de QA (a definir)
 
 Cuando se construyan los módulos grandes en curso (rediseño de Clients, Payroll), esta tabla de

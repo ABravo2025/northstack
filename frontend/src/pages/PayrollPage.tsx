@@ -242,6 +242,13 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
   }, []);
 
   const load = async () => {
+    if (!isOwner) {
+      // Payroll is owner-only at the nav level too (Unidad 21) — a
+      // non-owner who guesses the URL shouldn't spend a round trip hitting
+      // endpoints that will 403 anyway.
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const [freqData, methodData, statusData, runsData, offPaymentsData] = await Promise.all([
@@ -499,6 +506,17 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
     ...payrollRuns.map((run): TimelineItem => ({ kind: 'run', date: run.confirmedAt || run.createdAt, run })),
     ...offCyclePayments.map((entry): TimelineItem => ({ kind: 'off-cycle', date: entry.paymentDate, entry })),
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  if (!isOwner) {
+    return (
+      <div className="container">
+        <div className="page-toolbar">
+          <h2 className="page-title">Payroll</h2>
+        </div>
+        <p className="text-sm text-ink-muted">Payroll is only visible to the tenant owner.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="container">

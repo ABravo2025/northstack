@@ -26,6 +26,7 @@ import {
 } from '../modules/hr/payrollRunService.js';
 import { createAdjustment, deleteEntry, updateEntryHours } from '../modules/hr/payrollEntryService.js';
 import { createOffPayments, listOffPayments } from '../modules/hr/payrollOffPaymentService.js';
+import { buildPayslipForEntry, buildPayslipForRunEmployee } from '../modules/hr/payslipService.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 
@@ -511,4 +512,42 @@ payrollRouter.post('/api/hr/payroll/off-payments', async (req, res) => {
   });
 
   return res.status(201).json(results);
+});
+
+// --- Payslip preview PDF (Unidad 20) ---------------------------------------
+
+payrollRouter.get('/api/hr/payroll/runs/:runId/employees/:employeeId/payslip', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!canManagePayroll(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const result = await buildPayslipForRunEmployee(user.tenantId!, req.params.runId, req.params.employeeId);
+  if (!result.success) {
+    return res.status(404).json({ error: result.error });
+  }
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', 'inline; filename="payslip-preview.pdf"');
+  return res.send(Buffer.from(result.pdfBytes!));
+});
+
+payrollRouter.get('/api/hr/payroll/entries/:id/payslip', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!canManagePayroll(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const result = await buildPayslipForEntry(user.tenantId!, req.params.id);
+  if (!result.success) {
+    return res.status(404).json({ error: result.error });
+  }
+  res.setHeader('Content-Type', 'application/pdf');
+  res.setHeader('Content-Disposition', 'inline; filename="payslip-preview.pdf"');
+  return res.send(Buffer.from(result.pdfBytes!));
 });

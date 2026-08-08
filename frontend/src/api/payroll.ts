@@ -264,4 +264,22 @@ export const payrollApi = {
     if (!res.ok) await throwApiError(res);
     return res.json();
   },
+
+  // --- Payslip preview PDF (Unidad 20) -------------------------------------
+
+  getRunEmployeePayslip: async (token: string, runId: string, employeeId: string): Promise<Blob> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/runs/${runId}/employees/${employeeId}/payslip`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.blob();
+  },
+
+  getEntryPayslip: async (token: string, entryId: string): Promise<Blob> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/entries/${entryId}/payslip`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.blob();
+  },
 };

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
+  BriefcaseIcon,
   BuildingIcon,
   CalendarIcon,
   ChevronLeftIcon,
@@ -14,12 +15,14 @@ import {
 } from '../common/Icons';
 
 interface SidebarProps {
+  user: any;
   mobileOpen: boolean;
   onMobileClose: () => void;
 }
 
-export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
+export default function Sidebar({ user, mobileOpen, onMobileClose }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const isOwner = user?.role === 'owner';
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `sidebar-link${isActive ? ' active' : ''}${collapsed ? ' justify-center' : ''}`;
@@ -58,6 +61,12 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
             <CalendarIcon className="h-4 w-4 shrink-0" />
             {label('Time Off')}
           </NavLink>
+          {isOwner && (
+            <NavLink to="/hr/payroll" className={linkClass} title="Human Resources – Payroll" onClick={onMobileClose}>
+              <BriefcaseIcon className="h-4 w-4 shrink-0" />
+              {label('Payroll')}
+            </NavLink>
+          )}
           <NavLink to="/hr/dashboard" className={linkClass} title="Human Resources – Dashboard" onClick={onMobileClose}>
             <DashboardIcon className="h-4 w-4 shrink-0" />
             {label('Dashboard')}

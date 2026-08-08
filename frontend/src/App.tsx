@@ -216,7 +216,7 @@ export default function App() {
         <Route path="/hr/employees" element={<Navigate to="/hr/people" replace />} />
         <Route path="/hr/time-off" element={<TimeOffOverviewPage user={user} token={token ?? ''} />} />
         <Route path="/hr/payroll" element={<PayrollPage user={user} token={token ?? ''} />} />
-        <Route path="/hr/payroll/runs/:runId" element={<PayrollRunDetailPage token={token ?? ''} />} />
+        <Route path="/hr/payroll/runs/:runId" element={<PayrollRunDetailPage user={user} token={token ?? ''} />} />
         <Route path="/companies" element={<CompaniesPage user={user} token={token ?? ''} />} />
         <Route path="/contacts" element={<ContactsPage user={user} token={token ?? ''} />} />
         <Route path="/opportunities" element={<OpportunitiesPage user={user} token={token ?? ''} />} />

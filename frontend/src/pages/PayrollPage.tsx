@@ -21,7 +21,7 @@ import Field from '../components/common/Field';
 import TableSkeleton from '../components/common/TableSkeleton';
 import StatusChip from '../components/common/StatusChip';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
-import { formatMoney } from '../lib/currencies';
+import { CURRENCY_CODES, currencyLabel, formatMoney } from '../lib/currencies';
 import { CalendarIcon, PencilIcon, PlusIcon, TeamIcon } from '../components/common/Icons';
 
 interface PayrollPageProps {
@@ -1251,14 +1251,20 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
                 </select>
               </Field>
               <Field label="Currency" required>
-                <input
+                <select
                   id="assign-currency"
                   className="overview-field-input"
-                  type="text"
                   value={assignForm.currency}
-                  onChange={(e) => setAssignForm({ ...assignForm, currency: e.target.value.toUpperCase() })}
+                  onChange={(e) => setAssignForm({ ...assignForm, currency: e.target.value })}
                   required
-                />
+                >
+                  <option value="">-- select --</option>
+                  {CURRENCY_CODES.map((code) => (
+                    <option key={code} value={code}>
+                      {currencyLabel(code)}
+                    </option>
+                  ))}
+                </select>
               </Field>
               <Field label="Job Title" required>
                 <input
@@ -1448,14 +1454,20 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
                 />
               </Field>
               <Field label="Currency" required>
-                <input
+                <select
                   id="off-payment-currency"
                   className="overview-field-input"
-                  type="text"
                   value={offPaymentCurrency}
-                  onChange={(e) => setOffPaymentCurrency(e.target.value.toUpperCase())}
+                  onChange={(e) => setOffPaymentCurrency(e.target.value)}
                   required
-                />
+                >
+                  <option value="">-- select --</option>
+                  {CURRENCY_CODES.map((code) => (
+                    <option key={code} value={code}>
+                      {currencyLabel(code)}
+                    </option>
+                  ))}
+                </select>
               </Field>
               <Field label="Payment Date" required>
                 <input

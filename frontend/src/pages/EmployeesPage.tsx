@@ -39,6 +39,7 @@ import {
 import { isLikelyValidEmail } from '../lib/validation';
 import { useAutoCreateGuard } from '../hooks/useAutoCreateGuard';
 import { COUNTRIES } from '../lib/countries';
+import { CURRENCY_CODES, currencyLabel } from '../lib/currencies';
 
 const CONTRACT_TYPE_LABELS: Record<string, string> = { part_time: 'Part Time', full_time: 'Full Time' };
 const CONTRACT_TYPE_VALUE_BY_LABEL: Record<string, string> = { 'Part Time': 'part_time', 'Full Time': 'full_time' };
@@ -1028,7 +1029,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
               <h4 className="field-group-title">Role</h4>
               <div className="field-group-body">
                 <Field label="Department" required>
-                  <div className="flex items-center">
+                  <div className="flex min-w-0 flex-1 items-center gap-1">
                     <select
                       id="emp-departmentId"
                       className="overview-field-input"
@@ -1169,14 +1170,20 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                     />
                   </Field>
                   <Field label="Currency" required>
-                    <input
+                    <select
                       id="emp-comp-currency"
                       className="overview-field-input"
-                      type="text"
                       value={employeeForm.currency}
-                      onChange={(e) => setEmployeeForm({ ...employeeForm, currency: e.target.value.toUpperCase() })}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, currency: e.target.value })}
                       required
-                    />
+                    >
+                      <option value="">-- select --</option>
+                      {CURRENCY_CODES.map((code) => (
+                        <option key={code} value={code}>
+                          {currencyLabel(code)}
+                        </option>
+                      ))}
+                    </select>
                   </Field>
                   <Field label="Pay Frequency" required>
                     <select

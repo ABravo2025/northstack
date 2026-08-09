@@ -241,6 +241,24 @@ model User {
   notesCreated            Note[]
   compensationsCreated    EmployeeCompensation[]
   payrollRunsCreated      PayrollRun[]
+  passwordResetTokens     PasswordResetToken[]
+}
+
+// "Forgot your password?" magic link — single-use, short-lived (1h, see
+// PASSWORD_RESET_EXPIRY_MS in authService.ts). usedAt doubles as both the
+// consumed-flag and an audit trail of when it was actually used, so no
+// separate status enum like Invitation's — a reset token only ever has two
+// states (unused/used), it doesn't need pending/revoked.
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 model Employee {

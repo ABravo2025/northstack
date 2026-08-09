@@ -486,6 +486,19 @@ Las entradas fechadas (el detalle día a día de qué se hizo y por qué) viven 
   directo a `main`, saltando `staging`. Incluyó migrar el schema de producción desde cero (0 tablas
   de Payroll existentes) con el patrón seguro aditivo→backfill→verificar→destructivo, con datos
   reales de 126 tenants/234 empleados — ver el detalle completo en Tier 3.5 más arriba.
+- **"¿Olvidaste tu contraseña?" (2026-08-09, pedido del usuario)** — magic link por email para poner
+  una contraseña nueva. Modelo nuevo `PasswordResetToken` (mismo patrón que `Invitation`, token
+  random + expiración de 1 hora, pero con un flag `usedAt` en vez de un enum `status`).
+  `POST /api/auth/forgot-password` nunca revela si el email existe (respuesta genérica siempre —
+  evita enumeration); `GET /api/auth/reset-password/:token` valida sin consumir (para poder avisar
+  "este link venció" antes de que la persona escriba la contraseña); `POST /api/auth/reset-password`
+  consume el token, **borra todas** las sesiones existentes del usuario (a diferencia de
+  `changeOwnPassword`, que preserva la sesión actual) y loguea automáticamente con una sesión nueva.
+  Frontend: link "Forgot your password?" en `LoginPage.tsx`, `ForgotPasswordPage.tsx` (email) y
+  `ResetPasswordPage.tsx` (clon del patrón de `AcceptInvitePage.tsx` — token en la URL, no restaura
+  sesión automáticamente). Verificado con Playwright de punta a punta: link visible, email sin
+  enumeration, auto-login tras el reset, sesión vieja muerta (401), password vieja rechazada, token
+  de un solo uso (reusarlo da 400). Todavía **en local únicamente**, no pusheado.
 - [ ] **Pendiente, sin resolver todavía** (detalle completo en la semana archivada): vincular un
   Contact a una Opportunity al crearla (gap de UX, pausado a pedido del usuario hasta hablar con el
   PM); calificación de leads sin Company confirmada (pospuesto hasta tener volumen real);

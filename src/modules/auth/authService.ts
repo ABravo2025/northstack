@@ -1,7 +1,8 @@
-import { randomBytes, scryptSync, timingSafeEqual } from 'crypto';
+import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import prisma from '../../lib/prisma.js';
 import type { UserRole } from '@prisma/client';
 import type { User, Session } from '@prisma/client';
+import { sendPasswordResetEmail } from '../../lib/mailer.js';
 
 export interface RegisterUserInput {
   firstName: string;
@@ -274,4 +275,100 @@ export async function changeOwnPassword(
   });
 
   return { success: true, user: updated };
+}
+
+// 1 hour — much shorter than an invitation (7 days, INVITATION_EXPIRY_MS in
+// invitationService.ts): a password reset link is meant to be used right
+// away, a long-lived one sitting in an inbox is a bigger liability.
+const PASSWORD_RESET_EXPIRY_MS = 60 * 60 * 1000;
+
+// Always resolves, never tells the caller whether the email matched a real
+// account — the route always shows the same generic "if that email exists…"
+// message either way, so a stranger probing random addresses can't use this
+// to discover which emails have accounts (enumeration).
+export async function requestPasswordReset(email: string): Promise<void> {
+  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+  if (!user) {
+    return;
+  }
+
+  // Superseding any still-unused link from an earlier request — only the
+  // most recent one a person asked for should actually work.
+  await prisma.passwordResetToken.updateMany({
+    where: { userId: user.id, usedAt: null },
+    data: { usedAt: new Date() },
+  });
+
+  const token = randomUUID();
+  await prisma.passwordResetToken.create({
+    data: { userId: user.id, token, expiresAt: new Date(Date.now() + PASSWORD_RESET_EXPIRY_MS) },
+  });
+
+  const appBaseUrl = process.env.APP_BASE_URL ?? 'http://localhost:5173';
+  // Best-effort, same reasoning as invitationService.ts's invitation email:
+  // the token already exists in the DB regardless of whether this send
+  // succeeds, so a flaky SMTP call shouldn't fail the (already
+  // information-free) response the caller is waiting on.
+  sendPasswordResetEmail({
+    to: user.email,
+    resetUrl: `${appBaseUrl}/reset-password/${token}`,
+  }).catch((error) => {
+    console.error('Failed to send password reset email:', error);
+  });
+}
+
+export interface ValidateResetTokenResult {
+  valid: boolean;
+  error?: string;
+}
+
+// Read-only check (no side effects) so the frontend can show "this link
+// expired" before the person types a whole new password — same shape as
+// getContractConfirmationDetails's pre-flight check in contractConfirmationService.ts.
+export async function validatePasswordResetToken(token: string): Promise<ValidateResetTokenResult> {
+  const resetToken = await prisma.passwordResetToken.findUnique({ where: { token } });
+  if (!resetToken) {
+    return { valid: false, error: 'This reset link is invalid.' };
+  }
+  if (resetToken.usedAt) {
+    return { valid: false, error: 'This reset link has already been used.' };
+  }
+  if (resetToken.expiresAt < new Date()) {
+    return { valid: false, error: 'This reset link has expired.' };
+  }
+  return { valid: true };
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<AuthResult> {
+  const resetToken = await prisma.passwordResetToken.findUnique({ where: { token } });
+  if (!resetToken) {
+    return { success: false, error: 'This reset link is invalid.' };
+  }
+  if (resetToken.usedAt) {
+    return { success: false, error: 'This reset link has already been used.' };
+  }
+  if (resetToken.expiresAt < new Date()) {
+    return { success: false, error: 'This reset link has expired.' };
+  }
+  if (!isPasswordValid(newPassword)) {
+    return { success: false, error: PASSWORD_POLICY_MESSAGE, field: 'password' };
+  }
+
+  const passwordHash = hashPassword(newPassword);
+  const result = await prisma.$transaction(async (tx) => {
+    const user = await tx.user.update({ where: { id: resetToken.userId }, data: { passwordHash } });
+    await tx.passwordResetToken.update({ where: { id: resetToken.id }, data: { usedAt: new Date() } });
+    // Unlike changeOwnPassword (which keeps the requester's own session
+    // alive), a reset has no "current session" to preserve — whoever had one
+    // before either forgot their password legitimately or shouldn't still be
+    // logged in, so every existing session is revoked before issuing the one
+    // fresh session below.
+    await tx.session.deleteMany({ where: { userId: resetToken.userId } });
+    const session = await tx.session.create({
+      data: { token: randomUUID(), userId: resetToken.userId, expiresAt: newSessionExpiry() },
+    });
+    return { user, session };
+  });
+
+  return { success: true, user: result.user, session: result.session };
 }

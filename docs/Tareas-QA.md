@@ -613,6 +613,25 @@ de negocio nueva.
 
 ---
 
+## QA-16 — "¿Olvidaste tu contraseña?" (2026-08-09, en local únicamente)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Link "Forgot your password?" en `/login` | Visible debajo del campo Password, lleva a `/forgot-password` |
+| 2 | Pedir reset con un email que SÍ existe | Mensaje genérico "if an account exists…"; llega un email real con el link (expira en 1h) |
+| 3 | Pedir reset con un email que NO existe | Mismo mensaje genérico, mismo status 200 — no debe distinguirse de #2 (enumeration) |
+| 4 | Abrir el link recibido, poner una contraseña nueva válida | Login automático, aterriza en `/overview` |
+| 5 | Cualquier sesión vieja de ese usuario (otro dispositivo/pestaña) | Deja de funcionar inmediatamente después del reset (401) |
+| 6 | Login con la contraseña VIEJA después del reset | Rechazado (401) |
+| 7 | Reusar el mismo link de reset una segunda vez | Rechazado (400, "ya fue usado") |
+| 8 | Abrir un link de reset vencido (o esperar 1h) | Pantalla muestra el error antes de dejar escribir la contraseña, con link para pedir uno nuevo |
+
+Severidad: si #3 alguna vez responde distinto a #2 (status, mensaje, o timing notoriamente distinto),
+es un problema de seguridad (enumeration de emails) — alta. Si #5 no revoca las sesiones viejas, alta
+también (una cuenta comprometida no se puede "cerrar" reseteando la contraseña).
+
+---
+
 ## Próximas tareas de QA (a definir)
 
 Cuando se construyan los módulos grandes en curso (rediseño de Clients, Payroll), esta tabla de

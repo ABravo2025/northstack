@@ -72,6 +72,32 @@ export const authApi = {
     return res.json();
   },
 
+  forgotPassword: async (email: string): Promise<{ message: string }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  validateResetToken: async (token: string): Promise<{ valid: boolean }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/auth/reset-password/${token}`);
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  resetPassword: async (token: string, password: string): Promise<AuthResponse> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, password }),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
   logout: async (token: string): Promise<void> => {
     const res = await apiFetch(`${API_BASE_URL}/api/auth/logout`, {
       method: 'POST',

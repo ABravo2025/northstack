@@ -5,6 +5,8 @@ import { useToast } from './components/common/ToastProvider';
 import TableSkeleton from './components/common/TableSkeleton';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import AcceptInvitePage from './pages/AcceptInvitePage';
 import ContractConfirmationPage from './pages/ContractConfirmationPage';
 import OverviewPage from './pages/OverviewPage';
@@ -39,20 +41,21 @@ export default function App() {
   const navigate = useNavigate();
   const isAcceptInviteRoute = location.pathname.startsWith('/accept-invite');
   const isConfirmContractRoute = location.pathname.startsWith('/confirm-contract');
+  const isResetPasswordRoute = location.pathname.startsWith('/reset-password');
 
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(
-    () => !isAcceptInviteRoute && !isConfirmContractRoute && Boolean(localStorage.getItem('token')),
+    () => !isAcceptInviteRoute && !isConfirmContractRoute && !isResetPasswordRoute && Boolean(localStorage.getItem('token')),
   );
   const [authError, setAuthError] = useState<FormError | null>(null);
 
   useEffect(() => {
-    if (isAcceptInviteRoute || isConfirmContractRoute) {
-      // Handling an invite/contract-confirmation link: never auto-restore a
-      // stored session, the invited person may not be whoever last used this
-      // browser.
+    if (isAcceptInviteRoute || isConfirmContractRoute || isResetPasswordRoute) {
+      // Handling an invite/contract-confirmation/password-reset link: never
+      // auto-restore a stored session, whoever clicked it may not be whoever
+      // last used this browser.
       return;
     }
 
@@ -73,6 +76,13 @@ export default function App() {
   }, [token]);
 
   const handleContractConfirmed = (newToken: string, newUser: any) => {
+    setToken(newToken);
+    localStorage.setItem('token', newToken);
+    setUser(newUser);
+    navigate('/overview');
+  };
+
+  const handlePasswordReset = (newToken: string, newUser: any) => {
     setToken(newToken);
     localStorage.setItem('token', newToken);
     setUser(newUser);
@@ -178,6 +188,7 @@ export default function App() {
             <LoginPage
               onLogin={handleLogin}
               onSwitchToRegister={() => navigate('/register')}
+              onForgotPassword={() => navigate('/forgot-password')}
               loading={loading}
             />
           )
@@ -198,6 +209,17 @@ export default function App() {
           )
         }
       />
+      <Route
+        path="/forgot-password"
+        element={
+          isAuthenticated ? (
+            <Navigate to="/overview" replace />
+          ) : (
+            <ForgotPasswordPage onBackToLogin={() => navigate('/login')} />
+          )
+        }
+      />
+      <Route path="/reset-password/:token" element={<ResetPasswordPage onReset={handlePasswordReset} />} />
       <Route
         path="/accept-invite/:token"
         element={<AcceptInvitePage onAccepted={handleInvitationAccepted} />}

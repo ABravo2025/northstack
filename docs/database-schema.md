@@ -25,6 +25,7 @@ erDiagram
     USER ||--o{ SESSION : "has"
     USER ||--o{ INVITATION : "sends (invitedBy)"
     USER ||--o| EMPLOYEE : "linked to (optional)"
+    USER ||--o{ PASSWORD_RESET_TOKEN : "requests"
 
     TENANT {
         string id PK
@@ -68,6 +69,14 @@ erDiagram
         string employeeId FK "nullable"
         datetime expiresAt
     }
+    PASSWORD_RESET_TOKEN {
+        string id PK
+        string userId FK
+        string token UK
+        datetime expiresAt "1 hour — shorter than Invitation's 7 days"
+        datetime usedAt "nullable, doubles as the consumed flag"
+        datetime createdAt
+    }
 ```
 
 Notas:
@@ -75,6 +84,7 @@ Notas:
 - `Invitation` no fuerza un solo uso por email — el guardrail real (no invitar a alguien que ya pertenece a un tenant) vive en `createInvitation`, no en el schema.
 - `Session.expiresAt` es **expiración deslizante**: cada uso válido la extiende (solo si falta menos de 1 día, para no pagar el costo de un `UPDATE` en cada request autenticado). Cambiar la propia contraseña revoca todas las demás sesiones del usuario. Se agregó vía migración segura (nullable → backfill de las sesiones existentes → `NOT NULL`), documentada en `docs/tareas/semana-2026-07-21.md`.
 - `Tenant.companySize`/`industry`/`country`/`acquisitionChannel` y `User.acceptedTermsAt` son campos del formulario de Sign Up ampliado (2026-07-22) — todos nullable, no retroactivos.
+- **`PasswordResetToken` ("¿olvidaste tu contraseña?", 2026-08-09)**: mismo patrón que `Invitation` (token random, ventana de expiración, resuelto en un solo request), pero con un flag `usedAt` en vez de un enum `status` — un reset token solo tiene dos estados posibles (sin usar/usado), no necesita `pending/expired/revoked`. `POST /api/auth/forgot-password` nunca revela si el email existe (misma respuesta genérica siempre, sin importar el resultado — evita enumeration); pedir un reset nuevo invalida (`usedAt`) cualquier token anterior sin usar de esa persona. Al confirmar el reset (`POST /api/auth/reset-password`) se borran **todas** las sesiones existentes del usuario (a diferencia de `changeOwnPassword`, que preserva la sesión que hizo el cambio) y se crea una sesión nueva — la persona queda logueada, pero cualquier sesión vieja (robada o no) muere.
 
 ## 2. HR core
 

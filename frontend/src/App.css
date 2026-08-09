@@ -1386,6 +1386,10 @@
   @apply mt-1 w-full cursor-pointer rounded-md border border-brand-blue bg-transparent px-4 py-2.5 text-sm font-semibold text-brand-cream transition-colors hover:bg-brand-blue disabled:cursor-not-allowed disabled:opacity-60;
 }
 
+.auth-forgot-link {
+  @apply mt-1.5 block cursor-pointer border-none bg-transparent p-0 text-right text-xs font-semibold text-brand-blue-light underline-offset-2 hover:underline;
+}
+
 .auth-foot {
   @apply mt-4 flex items-center justify-between gap-2 border-t border-brand-blue-light/15 pt-3 text-xs text-brand-blue-light/80;
 }

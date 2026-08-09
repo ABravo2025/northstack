@@ -231,3 +231,30 @@ export async function sendContractSignedEmail(input: SendContractSignedEmailInpu
     attachments: [{ filename: 'contract-signed.pdf', content: input.pdfBuffer, contentType: 'application/pdf' }],
   });
 }
+
+export interface SendPasswordResetEmailInput {
+  to: string;
+  resetUrl: string;
+}
+
+export async function sendPasswordResetEmail(input: SendPasswordResetEmailInput): Promise<void> {
+  if (!mailerConfigured()) return;
+
+  await transporter.sendMail({
+    from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
+    to: input.to,
+    subject: 'Reset your Northstack password',
+    text: [
+      'We received a request to reset your Northstack password.',
+      '',
+      `Reset your password: ${input.resetUrl}`,
+      '',
+      'This link expires in 1 hour. If you did not request this, you can safely ignore this email.',
+    ].join('\n'),
+    html: [
+      '<p>We received a request to reset your Northstack password.</p>',
+      `<p><a href="${input.resetUrl}">Reset your password</a></p>`,
+      '<p>This link expires in 1 hour. If you did not request this, you can safely ignore this email.</p>',
+    ].join('\n'),
+  });
+}

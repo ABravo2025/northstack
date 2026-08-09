@@ -50,6 +50,7 @@ Todas siguen el mismo patrón: `if (!mailerConfigured()) return;` (no rompen el 
 - **sendTimeOffRequestDecidedEmail(input)** — aviso de aprobación/rechazo (o auto-aprobación).
 - **sendFeedbackEmail(input)** — feedback de un tenant a `FEEDBACK_EMAIL`.
 - **sendContractSignedEmail(input)** — (Payroll) contrato firmado adjunto, al firmante con copia al owner + a quien lo cargó.
+- **sendPasswordResetEmail(input)** — link de "¿olvidaste tu contraseña?" (2026-08-09), expira en 1 hora.
 
 ### `src/lib/rateLimit.ts`
 - **AUTH_RATE_LIMIT** (const) — 5 intentos / 15 min, más estricto que el default por ser blanco de fuerza bruta.
@@ -68,6 +69,9 @@ Todas siguen el mismo patrón: `if (!mailerConfigured()) return;` (no rompen el 
 - **authenticateToken(token)** — resuelve un token de sesión a su `User`.
 - **logoutUser(token)** — revoca una sesión.
 - **updateOwnProfile(userId, input)** / **changeOwnPassword(...)** — auto-gestión del propio usuario.
+- **requestPasswordReset(email)** (2026-08-09) — nunca revela si el email existe (misma respuesta genérica siempre); si existe, invalida cualquier `PasswordResetToken` sin usar de esa persona y crea uno nuevo (1h de expiración), dispara `sendPasswordResetEmail` best-effort.
+- **validatePasswordResetToken(token)** — chequeo de solo lectura (existe/no usado/no vencido) para que el frontend pueda avisar "este link venció" antes de que la persona escriba la contraseña nueva.
+- **resetPassword(token, newPassword)** — valida el token (mismo chequeo de 3 pasos que `validatePasswordResetToken`) + `isPasswordValid`, y en una transacción: actualiza `passwordHash`, marca el token usado, **borra todas** las sesiones del usuario (a diferencia de `changeOwnPassword`, que preserva la sesión actual) y crea una sesión nueva.
 
 ### `src/modules/auth/permissionService.ts`
 Todas son `(role: UserRole) => boolean`, la fuente de verdad de qué puede hacer cada rol:
@@ -251,7 +255,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 
 | Archivo | Métodos |
 |---|---|
-| `auth.ts` | registerTenant, login, register, getInvitation, acceptInvitation, logout, getCurrentUser, updateProfile, changePassword, getCurrentTenant, updateTenantCurrency |
+| `auth.ts` | registerTenant, login, register, forgotPassword, validateResetToken, resetPassword, getInvitation, acceptInvitation, logout, getCurrentUser, updateProfile, changePassword, getCurrentTenant, updateTenantCurrency |
 | `employees.ts` | listEmployees, createEmployee, updateEmployee, deleteEmployee, inviteEmployee, getEmployeeCompensation, getEmployeeContractPdf, resendContract |
 | `companies.ts` | listCompanies, createCompany, updateCompany, deleteCompany, +custom field values |
 | `contacts.ts` | listContacts, createContact, updateContact, deleteContact, +custom field values |

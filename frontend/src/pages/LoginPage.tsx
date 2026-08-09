@@ -6,10 +6,11 @@ import RequiredMark from '../components/common/RequiredMark';
 interface LoginPageProps {
   onLogin: (email: string, password: string) => void;
   onSwitchToRegister: () => void;
+  onForgotPassword: () => void;
   loading: boolean;
 }
 
-export default function LoginPage({ onLogin, onSwitchToRegister, loading }: LoginPageProps) {
+export default function LoginPage({ onLogin, onSwitchToRegister, onForgotPassword, loading }: LoginPageProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -51,6 +52,9 @@ export default function LoginPage({ onLogin, onSwitchToRegister, loading }: Logi
             disabled={loading}
             autoComplete="current-password"
           />
+          <button type="button" className="auth-forgot-link" onClick={onForgotPassword}>
+            Forgot your password?
+          </button>
         </div>
         <button type="submit" className="auth-submit" disabled={loading}>
           {loading ? 'Logging in...' : 'Login'}

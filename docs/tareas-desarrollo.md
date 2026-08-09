@@ -101,8 +101,8 @@ Siguiente en la cola: Tier 1.
 **Tier 3 — Rediseño de Clients (completo, en producción)** — Company/Contact/Opportunity/Pipeline,
 ver "Estado actual" más abajo y `docs/tareas/semana-2026-07-29.md` para el detalle.
 
-**Tier 3.5 — Módulo Payroll — tercer intento, COMPLETO (21/21 unidades), spec en
-`docs/spec-payroll.md` (2026-08-07).** Los dos intentos anteriores (Unidad 0-15 + re-spec,
+**Tier 3.5 — Módulo Payroll — tercer intento, COMPLETO (21/21 unidades) y EN PRODUCCIÓN desde
+2026-08-09, spec en `docs/spec-payroll.md` (2026-08-07).** Los dos intentos anteriores (Unidad 0-15 + re-spec,
 2026-08-01 a 08-03) se revirtieron por completo — detalle en la entrada fechada 2026-08-06 de la
 sección de arriba y en `git log`. Este spec se escribió desde cero, sin reciclar el viejo.
 
@@ -151,19 +151,46 @@ módulo por cerrado:
   silencian con `.catch(() => {})`, no rompen nada, pero ensucian la consola). No es parte del
   spec de Payroll así que no se tocó; queda anotado como backlog de UX/Overview.
 
-**Todo commiteado en local únicamente, sin pushear a `staging` — a pedido explícito del usuario
-2026-08-07** ("segui y completa todo, una vez que este todo en local lo quiero testear a full"),
-distinto del criterio de "confirmar y pushear cada unidad por separado" que se venía usando. El
-schema sí se aplicó directamente contra la base de datos de `staging` (necesario para poder probar
-en local, incluyendo el paso destructivo de la Unidad 4 y el campo `confirmedIp` de la Unidad 7, no
-contemplado en el schema original de la Unidad 1) — el código no. `scripts/backfill-legacy-employee-
-compensation.ts` migró los registros de prueba con datos legados antes del borrado. Gotcha de ruteo
-real encontrado y corregido en la Unidad 7: `/api/public/contract-confirmation/:token` colisionaba
-con el catch-all de Public Forms por tener la misma forma de 2 segmentos.
+**Estado de deploy: EN PRODUCCIÓN desde 2026-08-09.** El desarrollo completo (Unidades 1-21 + todas
+las rondas de fixes de abajo) se mantuvo en local únicamente hasta esa fecha, a pedido explícito del
+usuario 2026-08-07 ("segui y completa todo, una vez que este todo en local lo quiero testear a
+full"), distinto del criterio de "confirmar y pushear cada unidad por separado" que se venía usando.
+El schema se había aplicado antes contra `staging` (necesario para poder probar en local, incluyendo
+el paso destructivo de la Unidad 4 y el campo `confirmedIp` de la Unidad 7, no contemplado en el
+schema original de la Unidad 1) — `scripts/backfill-legacy-employee-compensation.ts` migró los
+registros de prueba con datos legados antes del borrado. Gotcha de ruteo real encontrado y corregido
+en la Unidad 7: `/api/public/contract-confirmation/:token` colisionaba con el catch-all de Public
+Forms por tener la misma forma de 2 segmentos.
 
-**Pendiente, a cargo del usuario**: revisar todo el módulo en local antes de decidir qué pushear;
-cargar `PAYMENT_DATA_ENCRYPTION_KEY` en Vercel (staging y producción) antes de promover, ya que hoy
-solo existe en el `.env` local gitignorado.
+**Migración y deploy a producción (2026-08-09)** — a pedido explícito del usuario, saltando el flujo
+habitual de pasar por `staging` primero:
+- **Producción no tenía nada del schema de Payroll** (0 tablas nuevas, y las 3 columnas legacy de
+  `Employee` seguían vivas con datos reales) — se armó un schema *transicional* (el actual +
+  reinsertando `hourlyRateCents`/`monthlyRateCents`/`compensationType`/enum `CompensationType` solo
+  para esta migración, nunca commiteado) para poder aplicar TODO lo aditivo (5 tablas nuevas de
+  Payroll) contra producción sin tocar las columnas legacy todavía, vía
+  `prisma db push --schema=<transicional> --skip-generate` (el `--skip-generate` evita pisar el
+  cliente Prisma local a mitad de sesión).
+- `scripts/backfill-payroll-catalogs.ts` sembró pay frequencies/payment methods en los 126 tenants
+  reales de producción.
+- De 234 empleados reales, **9 tenían datos en los campos legacy** — los 9 son de tenants de testing
+  viejos (confirmado con el usuario: "ninguno de esos tenants son reales, son test de amigos"), no
+  clientes reales. Migrados a `EmployeeCompensation` con una variante del backfill que lee las 3
+  columnas legacy por SQL crudo en vez de vía el cliente tipado (`prisma.employee.findMany` ya no
+  acepta esos campos: el schema.prisma actual los borró hace rato, así que el cliente generado los
+  rechaza sin importar a qué base apunte `DATABASE_URL`) — verificado 9/9 antes de seguir. Un caso
+  con datos inconsistentes (`compensationType: hourly` con solo `monthlyRateCents` seteado, de un
+  tenant de test) se migró a mano como fixed/mensual.
+- `prisma db push` (sin `--accept-data-loss`) contra el schema final real confirmó que el único
+  cambio pendiente eran exactamente esas 3 columnas + el enum viejo — nada más. Recién ahí,
+  `--accept-data-loss` para el borrado real, con conteos de tenants/empleados verificados iguales
+  antes y después (126/234).
+- Push de todo el código a `main` → deploy real disparado (`.github/workflows/deploy.yml`,
+  `vercel deploy --prod`) → verificado sirviendo bien (`/`, `/login` en 200, un endpoint de Payroll
+  devolviendo 401 limpio en vez de 500).
+- `PAYMENT_DATA_ENCRYPTION_KEY` (clave nueva de 32 bytes, generada para esta ocasión) cargada por el
+  usuario en Vercel → Production — confirmado el nombre exacto (sensible a mayúsculas) y el valor
+  (decodifica a 32 bytes).
 
 **Primera ronda de fixes de la revisión del usuario (2026-08-08, local, sin pushear):**
 - Nationality (alta de persona) pasó de texto libre a `<select>` reusando `COUNTRIES`
@@ -272,6 +299,22 @@ solo existe en el `.env` local gitignorado.
   descripción. Movido para que las 3 pestañas compartan la misma estructura: título de página solo
   con "Payroll", y cada tab con su propia fila descripción + botón(es) inmediatamente debajo de la
   barra de pestañas.
+- **Currency como texto libre + regresión de ancho en Department** (2026-08-09, feedback del
+  usuario): Currency (alta de persona, bulk assign/reassign, pago único) pasó a `<select>` reusando
+  `CURRENCY_CODES`/`currencyLabel` (`lib/currencies.ts`), mismo patrón que Settings → Appearance.
+  Aparte, el botón de "gestionar" agregado al lado de Department (fix anterior) le rompió el ancho —
+  el `<select>` quedó envuelto en un `div` sin `flex-1`/`min-w-0`, así que no heredaba el ancho que
+  `.overview-field`'s layout le da a cada campo — quedaba visiblemente más angosto que el resto.
+- **Aclaraciones, no bugs** (2026-08-09, preguntas del usuario): "Job Title" aparece dos veces a
+  propósito — el de "Role" es el cargo general de la persona (catálogo de la empresa, reportes/
+  filtros); el de "Job Title (contract)" es una foto fija de cómo se llamaba el puesto en ESE
+  contrato específico, deliberadamente no linkeado al catálogo (si el catálogo cambia después, el
+  contrato viejo tiene que seguir mostrando lo que decía en su momento). Por otro lado, `cadence`
+  (Weekly/Semimonthly/Monthly) y el detalle de días (1-15, último día hábil, etc.) YA son campos
+  separados en el modelo (`PayFrequencyDefinition.cadence` + `.anchorConfig`), con columnas propias
+  ("Cadence"/"Pay day(s)") en la tabla de Payment Policies — el `name` mostrado en el dropdown de
+  asignación es solo una etiqueta de texto libre para mostrar, no la fuente de verdad; un reporte
+  debería consultar `cadence` (+ `anchorConfig` si hace falta el detalle), no parsear `name`.
 
 Distinto del "Módulo Payments" de Tier 4 — Payments es facturarle a los *Clients* del tenant
 (cuentas por cobrar), Payroll es pagarle a los *Employees* (cuentas por pagar).
@@ -438,6 +481,11 @@ Las entradas fechadas (el detalle día a día de qué se hizo y por qué) viven 
   producción (124 tenants reales), confirmado explícitamente con el usuario dado el alcance real.
 - **2 documentos nuevos**: [`ux-ui-brief.md`](ux-ui-brief.md) y
   [`features-overview.md`](features-overview.md).
+- **Deploy a producción del módulo Payroll completo (2026-08-09)** — 21 unidades + varias rondas de
+  fixes de feedback del usuario, desarrolladas en local (a pedido explícito) y recién promovidas
+  directo a `main`, saltando `staging`. Incluyó migrar el schema de producción desde cero (0 tablas
+  de Payroll existentes) con el patrón seguro aditivo→backfill→verificar→destructivo, con datos
+  reales de 126 tenants/234 empleados — ver el detalle completo en Tier 3.5 más arriba.
 - [ ] **Pendiente, sin resolver todavía** (detalle completo en la semana archivada): vincular un
   Contact a una Opportunity al crearla (gap de UX, pausado a pedido del usuario hasta hablar con el
   PM); calificación de leads sin Company confirmada (pospuesto hasta tener volumen real);

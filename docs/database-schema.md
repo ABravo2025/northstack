@@ -558,11 +558,15 @@ Notas:
   registraron *antes* que el catch-all en `src/routes/public.ts`, con un comentario explicando por
   qué el orden importa acá. Si se agrega un endpoint público nuevo bajo `/api/public/*` con 2
   segmentos de path, chequear este archivo primero.
-- Nada de este grupo llegó a producción todavía — todo (Unidades 1-7) commiteado en local
-  únicamente, sin pushear a la rama remota `staging`, a pedido explícito del usuario 2026-08-07. El
-  schema sí se aplicó directamente contra la base de datos de `staging` vía `prisma db push`
-  (incluye el retiro destructivo de la Unidad 4 y el campo `confirmedIp` de la Unidad 7) — necesario
-  para poder probar en local, pero es una capa distinta del código en git.
+- **En producción desde 2026-08-09.** El módulo se desarrolló completo en local (Unidades 1-21 +
+  rondas de fixes) a pedido explícito del usuario 2026-08-07, y se promovió directo a `main` sin
+  pasar por `staging` (también a pedido explícito). Producción no tenía ninguna tabla de este grupo
+  ni el retiro de las columnas legacy de `Employee` — la migración completa (aditivo con un schema
+  transicional → `scripts/backfill-payroll-catalogs.ts` → backfill de compensación legacy vía SQL
+  crudo, 9 empleados de tenants de testing → verificar → destructivo con `--accept-data-loss`) se
+  corrió a mano contra la base real, con conteos de tenants/empleados verificados iguales antes y
+  después (126/234). Detalle completo en `docs/tareas-desarrollo.md`, entrada "Migración y deploy a
+  producción (2026-08-09)".
 - **`EmployeeCompensation.contractPdf` (2026-08-08, feedback del usuario)**: una sola columna que
   guarda el PDF del contrato tal cual existe en cada momento — generado como borrador al crear el
   contrato (`employeeCompensationService.createCompensation`, vía `contractPdfService.renderContractPdf`)

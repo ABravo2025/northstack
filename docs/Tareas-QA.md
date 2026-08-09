@@ -430,6 +430,10 @@ que QA-01.
 
 ---
 
+> **Actualización 2026-08-09**: todo el módulo Payroll cubierto por QA-11 a QA-14 (y sus rondas de
+> fixes en `docs/tareas-desarrollo.md`) está **en producción** — las fechas "en local únicamente" de
+> cada entrada de abajo reflejan cuándo se escribió esa tarea, no el estado actual del deploy.
+
 ## QA-11 — Payroll Unidad 3+4: pantalla de políticas de pago, rename a People, `personType` (2026-08-07, en local únicamente — no pusheado a `staging` todavía)
 
 **Por qué existe esta tarea:** primera pantalla real de Payroll (`/hr/payroll`, todavía sin entrada
@@ -592,6 +596,20 @@ resto es medio/bajo salvo que rompa el flujo completo de principio a fin.
 Severidad: si el email firmado no le llega a nadie (ni signer ni copias), o si "View contract" antes
 de confirmar muestra la versión firmada (o viceversa), es alto — significa que la columna no se está
 sobrescribiendo en el momento correcto.
+
+---
+
+## QA-15 — Ronda final pre-producción: Currency dropdown, ancho de Department, deploy (2026-08-09 — en producción)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Campo "Currency" en alta de persona / bulk assign / pago único | Dropdown con códigos ISO reales (ej. "EUR — Euro"), no texto libre |
+| 2 | Campo "Department" en el modal "Add Person" | Mismo ancho que el resto de los campos del formulario (Nationality, Contract Type, etc.) |
+| 3 | `app.joinnorthstack.com` — homepage, `/login`, y un endpoint de Payroll sin sesión | 200, 200, y 401 limpio (no 500) |
+| 4 | Rol `admin` en un tenant real de producción | No ve "Payroll" en el sidebar (solo "People") — es owner-only a propósito, no un bug |
+
+Sin severidad alta pendiente en esta ronda — son ajustes visuales + verificación de deploy, no lógica
+de negocio nueva.
 
 ---
 

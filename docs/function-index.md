@@ -41,6 +41,9 @@
 - **authenticateUser(req, res)** — valida credenciales de login, no de sesión existente.
 - **validateSession(req, res)** — valida el token de sesión de un request ya autenticado; el que usa casi todo endpoint protegido.
 
+### `src/lib/platformAuth.ts`
+- **requirePlatformRole(...allowed)** — devuelve un helper `(req, res) => Promise<User | null>` en el mismo estilo call-and-return de `validateSession` (no middleware `next()`). Usa `authenticateUser` (no `validateSession`, porque el staff de plataforma no tiene `tenantId`), y rechaza si `user.platformRole` es null o no está en `allowed`. `platform_admin` pasa siempre (bypass implícito, no hace falta listarlo). Usado por las rutas `/api/platform/*` (Admin Center).
+
 ### `src/lib/mailer.ts`
 Todas siguen el mismo patrón: `if (!mailerConfigured()) return;` (no rompen el request si Zoho no está configurado), best-effort.
 - **sendInvitationEmail(input)** — invitación a un tenant; `input.attachments` opcional (Payroll usa esto para adjuntar el contrato borrador).

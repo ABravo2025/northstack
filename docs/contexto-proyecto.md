@@ -1,7 +1,12 @@
 # Contexto de desarrollo del proyecto
 
 - Fecha de creación: 2026-07-02
-- Última actualización: 2026-07-30 (módulos de Tasks/Notes + unificación y rediseño de los 4 paneles de detalle — ver sección al final de este archivo; todo en `staging`, nada en producción todavía)
+- Última actualización: 2026-08-11 (Admin Center completo, Blocks 1-8 — ver sección al final de este
+  archivo). **Nota**: este archivo no se actualizó entre el 2026-07-30 y el 2026-08-11 — quedó
+  desactualizado respecto a Payroll (deploy completo 2026-08-09) y "¿Olvidaste tu contraseña?"
+  (2026-08-09); ambos están documentados con detalle en `docs/tareas-desarrollo.md`, que es la fuente
+  más al día. Esta entrada solo agrega Admin Center, no reconcilia el resto del gap.
+- Última actualización anterior: 2026-07-30 (módulos de Tasks/Notes + unificación y rediseño de los 4 paneles de detalle — ver sección al final de este archivo; todo en `staging`, nada en producción todavía)
 - Ver también: `docs/current-process-flow.md` (diagramas de flujo), `docs/database-schema.md` (esquema completo de la base de datos), `docs/tareas-desarrollo.md` (checklist general) y `docs/tareas/` (notas de avance fechadas, un archivo por semana ISO — este archivo resume, esa carpeta tiene el detalle día a día).
 
 ## Resumen del proyecto
@@ -246,3 +251,49 @@ Sesión larga, continua (cruzó medianoche). Detalle completo, con timestamps y 
 - `deleteContact`/`deleteCompany` crasheaban con un error crudo de constraint si la entidad tenía Opportunities vinculadas (`OpportunityContact` no tiene `onDelete: Cascade`) — ahora ofrecen un flag opcional para borrar las Opportunities vinculadas en cascada; borrar una Company siempre desvincula (nunca borra) sus Contacts.
 
 **Limitación de esta sesión, relevante para la próxima**: no hubo ninguna herramienta de automatización de navegador disponible (ni Playwright ni `chromium-cli`) — todo se verificó por `npm run build`/`npm test` y smoke tests reales por `curl` contra `staging` (creando/editando/borrando datos de prueba), pero **ninguna captura de pantalla ni verificación visual propia**. Todo lo que se corrigió del lado visual (header, contraste, grid, redibujado del panel) salió de que el usuario lo probó él mismo en `localhost:5173`/`staging` y describió lo que veía — no de que Claude lo haya visto. Si la próxima sesión tiene Playwright disponible, vale la pena una pasada de verificación visual completa antes de promover a producción.
+
+### Admin Center completo — Platform Roles, Tenants, Tickets/Ideas (2026-08-11)
+
+Implementación de punta a punta de `docs/Admin-platform/` (8 bloques), pedida explícitamente por el
+usuario ("empezá con el desarrollo completo"), en dos repos: `northstack` (schema + `/api/platform/*`)
+y `northstack-devtasks` (`admin.joinnorthstack.com`, hasta ahora un dashboard interno de Tasks con
+login de usuario/contraseña fijo). Detalle completo, bloque por bloque, en `docs/tareas-desarrollo.md`
+— acá el resumen de lo que importa para orientarse rápido.
+
+**El punto de partida no era el que los docs asumían.** El contexto de Admin Center decía explícitamente
+"a verificar antes de arrancar" sobre si el trabajo previo de auth (`isPlatformAdmin`, login delegado)
+ya estaba hecho — no lo estaba. Tampoco existían los mockups referenciados en ninguna parte de ningún
+repo. Esto se descubrió recién al arrancar, no antes — cambió el alcance real de Block 1 de "migrar un
+boolean a enum" a "construir la base entera desde cero".
+
+**Incidente real durante Block 1**: el `.env` local tenía `STAGING_DATABASE_URL` apuntando accidentalmente
+a la misma base que `DATABASE_URL` (sin isolation real entre ambas), y además `DATABASE_URL` en sí
+resultó estar desactualizado — apuntaba a una base que no era la que Vercel usa en producción de verdad.
+Se detectó empíricamente (un token de sesión escrito en la base "de producción" local no aparecía al
+pegarle a la API real en vivo) antes de que causara daño real — nada de esto tocó datos de usuarios
+reales, pero sí significó rehacer el push de Block 1 una vez corregido el `.env` con el valor real
+confirmado por el usuario desde Neon directamente.
+
+**Repo principal**: `PlatformRole` (enum) + `User.platformRole`/`User.createdAt` (aditivo — los usuarios
+que ya existían van a mostrar la fecha de esta migración como "fecha de alta", no la real, sin una fuente
+mejor disponible); `PlatformStatusDefinition` (catálogo de estados, pero de plataforma, no por tenant, a
+diferencia de `StatusDefinition`); modelos `Ticket`/`Idea` (`EntityType` ganó `ticket`/`idea` para que el
+hilo de respuestas reuse `Note` en vez de una tabla de comentarios nueva); rutas nuevas bajo
+`/api/platform/*`. El formulario de feedback existente ahora persiste un `Ticket`/`Idea` real además de
+seguir mandando el mail de siempre.
+
+**`northstack-devtasks`**: login reescrito para pegarle server-to-server al login real del repo
+principal (cuentas reales de Northstack, gateadas por `platformRole`, no más contraseña compartida fija)
+— el token del repo principal nunca sale del servidor, viaja en la cookie firmada propia de admin-center.
+Secciones Tenants y Tickets completas; Ideas queda "Próximamente" (backend listo, unidad de UI futura).
+El UI se diseñó fresco en el estilo propio de admin-center (oscuro, acento índigo, sin Tailwind) — portar
+el sistema de diseño del producto principal se descartó explícitamente, es más disrupción que valor para
+una herramienta interna que ya tenía su propia identidad visual. Un hallazgo real a mitad de camino:
+Vercel (plan Hobby) cuenta cada archivo bajo `api/` como una Serverless Function propia, tope 12 por
+deployment — un deploy real falló por esto al sumar las rutas de Tenants; se resolvió moviendo el código
+compartido de `api/lib/` a un `server-lib/` a nivel de raíz (ya no cuenta). El rollout completo terminó
+con exactamente 12 funciones, sin margen para lo próximo que se agregue ahí.
+
+Verificado en producción real en cada bloque con sesiones de prueba temporales (creadas y borradas
+directo vía Prisma, sin necesitar la contraseña de nadie) — nunca en un navegador real todavía; ver
+`docs/Tareas-QA.md` QA-17 para la primera pasada humana pendiente.

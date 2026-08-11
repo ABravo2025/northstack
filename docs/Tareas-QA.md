@@ -613,7 +613,7 @@ de negocio nueva.
 
 ---
 
-## QA-16 — "¿Olvidaste tu contraseña?" (2026-08-09, en local únicamente)
+## QA-16 — "¿Olvidaste tu contraseña?" (2026-08-09, en producción desde 2026-08-11)
 
 | # | Caso | Resultado esperado |
 |---|---|---|
@@ -629,6 +629,64 @@ de negocio nueva.
 Severidad: si #3 alguna vez responde distinto a #2 (status, mensaje, o timing notoriamente distinto),
 es un problema de seguridad (enumeration de emails) — alta. Si #5 no revoca las sesiones viejas, alta
 también (una cuenta comprometida no se puede "cerrar" reseteando la contraseña).
+
+---
+
+## QA-17 — Admin Center: Platform Roles, Tenants, Tickets/Ideas (2026-08-11, en producción)
+
+**Contexto:** rollout completo del roadmap en `docs/Admin-platform/` — 8 bloques, repo principal
+(`northstack`, rutas `/api/platform/*`) + `northstack-devtasks` (admin.joinnorthstack.com). Verificado
+programáticamente durante la implementación (sesiones de prueba creadas/borradas contra producción vía
+Prisma directo, sin necesidad de contraseña real) pero **nunca en un navegador real** — esta tarea es
+esa primera pasada humana.
+
+### Login y roles (`admin.joinnorthstack.com`)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Login con email/password reales de una cuenta con `platformRole: null` | Rechazado, 403 "Esta cuenta no tiene acceso a Admin Center" |
+| 2 | Login con la cuenta `platform_admin` (Alejandro) | Entra, footer del nav muestra "Alejandro · Platform Admin" |
+| 3 | Nav con rol `platform_admin` | Ve Tareas, Notas sueltas, Tenants, Tickets, Ideas — todo |
+| 4 | Nav con un usuario `platform_support` (setear `platformRole` manualmente en un usuario de prueba) | Ve solo Tenants y Tickets; Tareas/Notas/Ideas ocultos del nav, no solo deshabilitados |
+| 5 | `platform_support` intentando `GET /api/platform/statuses` directo (curl/devtools) | 403 — el Settings del catálogo es solo-admin aunque no aparezca en el nav |
+
+### Tenants
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 6 | Tab "Activos" | Lista real de tenants activos, contador del tab coincide con la cantidad de filas |
+| 7 | Cambiar de tab (Suspendidos/Cancelados) | Filtra correctamente, contador de cada tab es independiente |
+| 8 | Click en un header de columna (Nombre/País/Fecha de alta/Usuarios) | Ordena, click de nuevo invierte el orden |
+| 9 | Buscar por nombre o país | Filtra en vivo |
+| 10 | Click en una fila | Modal con stats (estado, moneda, industria, tamaño, usuarios) + tabla de Users real de ese tenant |
+
+### Tickets
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 11 | "+ Nuevo ticket" → buscar un tenant real, completar subject/description | Crea el ticket, abre su detalle automáticamente |
+| 12 | Filtro de estado "Open (not terminal)" (default) | No muestra tickets con status `resolved`/`closed` |
+| 13 | Filtro "Assigned to me" / "Unassigned" | Filtra correctamente |
+| 14 | En el detalle: cambiar el estado por el dropdown | Persiste, se refleja en la lista al cerrar el modal |
+| 15 | En el detalle: "Assign to me" en un ticket sin asignar | Se asigna, aparece botón "Unassign" |
+| 16 | Responder un ticket que tiene reporter (`userId` no nulo) real | Se ve la respuesta en el hilo, **llega un email real** al reporter — probar con un tenant de prueba, no uno real |
+| 17 | Responder un ticket sin reporter (creado por staff, `userId` null) | Se ve en el hilo, no intenta mandar ningún email (no hay a quién) |
+| 18 | Settings → cambiar el label de un estado | Persiste, aparece actualizado en el dropdown del detalle |
+| 19 | Settings → reordenar con las flechas ↑/↓ | El orden persiste al recargar |
+| 20 | Settings → desactivar un estado que es el default | Rechazado con el mensaje "Cannot deactivate the default status" |
+| 21 | Settings → desactivar un estado no-default | Pide confirmación (`confirm()` nativo), tickets existentes con ese estado no se rompen |
+
+### Feedback → Ticket/Idea (`app.joinnorthstack.com`, producto principal)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 22 | Menú de usuario → "Send feedback" → "Report a problem", completar subject+message | Llega el mail a `FEEDBACK_EMAIL` (como siempre) Y aparece un Ticket nuevo en Admin Center con `createdByType: 'user'` |
+| 23 | Mismo flujo pero "Suggest an idea" | Se crea una `Idea` (verificar por DB directa — todavía no hay UI de Ideas en Admin Center, es la unidad siguiente) |
+
+**Severidad:** #1, #4 y #5 son control de acceso — si fallan, cualquiera con cuenta Northstack (o el
+rol equivocado) podría ver datos de otros tenants vía Admin Center, alta. #16 enviando el email al
+reporter equivocado (o no enviándolo cuando debería) es media — no expone datos pero rompe la promesa
+del flujo de soporte.
 
 ---
 

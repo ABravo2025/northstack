@@ -1,7 +1,11 @@
 # Tareas de desarrollo
 
 - Fecha de creación: 2026-07-02
-- Última actualización: 2026-08-06 — checklist cruzado contra el código real (CSV export/import de
+- Última actualización: 2026-08-11 — Admin Center completo (Blocks 1-8: Platform Roles, Tenants,
+  Tickets/Ideas) en producción, en ambos repos (`northstack` + `northstack-devtasks`); "¿Olvidaste tu
+  contraseña?" (que estaba solo en local desde el 2026-08-09) pusheado junto con Block 1. Ver la
+  entrada completa en "Estado actual" más abajo.
+- Última actualización anterior: 2026-08-06 — checklist cruzado contra el código real (CSV export/import de
   Employees confirmado implementado); spec de Payroll eliminado del checklist por quedar
   inconsistente con la realidad (se había construido, se revirtió por un incidente de deploy el
   2026-08-03, y no existe en el código en ningún entorno — ver la entrada fechada más abajo, el
@@ -498,9 +502,36 @@ Las entradas fechadas (el detalle día a día de qué se hizo y por qué) viven 
   `ResetPasswordPage.tsx` (clon del patrón de `AcceptInvitePage.tsx` — token en la URL, no restaura
   sesión automáticamente). Verificado con Playwright de punta a punta: link visible, email sin
   enumeration, auto-login tras el reset, sesión vieja muerta (401), password vieja rechazada, token
-  de un solo uso (reusarlo da 400). Todavía **en local únicamente**, no pusheado.
+  de un solo uso (reusarlo da 400). Pusheado a staging y producción el 2026-08-11 (ver entrada de
+  Admin Center más abajo — fue junto con Block 1 de ese rollout).
 - [ ] **Pendiente, sin resolver todavía** (detalle completo en la semana archivada): vincular un
   Contact a una Opportunity al crearla (gap de UX, pausado a pedido del usuario hasta hablar con el
   PM); calificación de leads sin Company confirmada (pospuesto hasta tener volumen real);
   automatizaciones del pipeline de ventas (pospuesto); corte final del módulo `Client` legado
   (bloqueado en migrar Custom Fields/Public Forms de `entityType: 'client'` primero).
+- **Admin Center — roadmap completo (Blocks 1-8), 2026-08-11, en producción** — implementación
+  completa de `docs/Admin-platform/` (specs de Alejandro): Platform Roles, Tenants (solo lectura),
+  Tickets/Ideas. El punto de partida real fue distinto de lo que los docs asumían — `isPlatformAdmin`
+  nunca existió en el schema, admin-center corría 100% sobre `DEVTASKS_USER`/`PASS_HASH` sin ninguna
+  conexión al repo principal, y los mockups referenciados (`admin-center-*-mockup.html`) no existen en
+  ningún repo — así que Block 1 fue una construcción desde cero, no una migración chica, y el UI de
+  Tenants/Tickets se diseñó fresco en el estilo propio de admin-center (oscuro/índigo, sin Tailwind),
+  no portando el sistema de diseño del producto principal.
+  - **Repo principal**: `enum PlatformRole` + `User.platformRole`/`User.createdAt` (aditivo — los
+    usuarios previos a esta migración van a mostrar la fecha de la migración como "fecha de alta", no
+    la real, por falta de una fuente mejor); `src/lib/platformAuth.ts` (`requirePlatformRole`);
+    `enum PlatformStatusDefinition` + modelos `Ticket`/`Idea` (`EntityType` ganó `ticket`/`idea` para
+    que el hilo de respuestas reuse `Note`, no una tabla nueva); rutas `/api/platform/*`
+    (`src/routes/platform.ts`) para Tenants/Tickets/Statuses; `POST /api/feedback` ahora persiste un
+    `Ticket`/`Idea` además de mandar el mail a `FEEDBACK_EMAIL` de siempre.
+  - **`northstack-devtasks` (admin.joinnorthstack.com)**: login reescrito para delegar en
+    `POST /api/auth/login` del repo principal server-to-server (cuentas reales gateadas por
+    `platformRole`, no más contraseña compartida) — el token del repo principal queda solo del lado
+    del servidor, en la cookie firmada propia de admin-center, nunca expuesto al browser; secciones
+    Tenants y Tickets completas (list/detail/settings), Ideas queda "Próximamente" (backend listo,
+    UI es la próxima unidad). Se movió `api/lib/` a un `server-lib/` a nivel de raíz a mitad de
+    camino — Vercel (plan Hobby) cuenta cada archivo bajo `api/` como una Serverless Function
+    (tope 12) y un deploy real falló por esto; terminó el rollout con exactamente 12, sin margen.
+  - Verificado en producción real con sesiones de prueba temporales (creadas y borradas vía Prisma
+    directo, sin necesitar contraseñas de nadie) para cada bloque antes de dar por cerrado — checklist
+    completo de verificación humana en `docs/Tareas-QA.md` QA-17.

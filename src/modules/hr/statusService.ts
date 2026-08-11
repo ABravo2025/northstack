@@ -26,6 +26,10 @@ const DEFAULT_STATUSES: Record<EntityType, { name: string; order: number; isDefa
   // this Record<EntityType, ...> stays exhaustive as EntityType grows.
   contact: [],
   opportunity: [],
+  // Ticket/Idea use PlatformStatusDefinition (platform-wide catalog, seeded
+  // by scripts/seed-platform-statuses.ts), not this per-tenant mechanism.
+  ticket: [],
+  idea: [],
 };
 
 export async function seedDefaultStatusDefinitions(tx: PrismaTx, tenantId: string): Promise<void> {

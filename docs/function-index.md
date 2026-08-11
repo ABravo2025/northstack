@@ -54,6 +54,7 @@ Todas siguen el mismo patrón: `if (!mailerConfigured()) return;` (no rompen el 
 - **sendFeedbackEmail(input)** — feedback de un tenant a `FEEDBACK_EMAIL`.
 - **sendContractSignedEmail(input)** — (Payroll) contrato firmado adjunto, al firmante con copia al owner + a quien lo cargó.
 - **sendPasswordResetEmail(input)** — link de "¿olvidaste tu contraseña?" (2026-08-09), expira en 1 hora.
+- **sendTicketNoteCreatedEmail(input)** — Admin Center: aviso al reporter de un Ticket cuando staff de plataforma responde.
 
 ### `src/lib/rateLimit.ts`
 - **AUTH_RATE_LIMIT** (const) — 5 intentos / 15 min, más estricto que el default por ser blanco de fuerza bruta.
@@ -222,6 +223,15 @@ Admin Center (`/api/platform/tenants*`, `requirePlatformRole('platform_support')
 - **listTenants(input)** — por `status` (requerido), sort/search en memoria (dataset chico, no vale la pena mezclar Prisma `orderBy` con un sort manual solo para `userCount`).
 - **getTenantDetail(tenantId)** — incluye `userCount` + los campos de perfil (currency/companySize/industry/acquisitionChannel).
 - **listTenantUsers(input)** — usuarios de un tenant, sort vía Prisma `orderBy`.
+
+### `src/modules/platform/platformTicketService.ts`
+- **listTickets(input)** / **getTicketWithNotes(id)** / **createTicket(input)** / **updateTicket(id, input)** — CRUD de Ticket, `requirePlatformRole('platform_support')` en las rutas.
+- **createTicketNote(ticketId, createdById, description)** — crea la `Note` (reusa `noteService.createNote`, no una tabla nueva) y dispara `sendTicketNoteCreatedEmail` best-effort si el autor tiene `platformRole` (staff) y el ticket tiene `userId`. El distingo "Admin/Support/Tenant" del hilo se deriva de `platformRole` del autor, no es un campo propio.
+- **createIdea(input)** — usado por el form de feedback (Block 7); sin rutas list/detail todavía (UI de Ideas es unidad futura).
+
+### `src/modules/platform/platformStatusService.ts`
+Catálogo de `PlatformStatusDefinition` (plataforma, no por tenant) — `requirePlatformRole()` sin roles extra en las rutas, o sea solo `platform_admin` vía bypass.
+- **listPlatformStatuses(entityType)** / **createPlatformStatus(input)** / **updatePlatformStatus(id, input)** — mismo guard que `statusService.updateStatusDefinition` (no se puede desactivar el status default); desactivar un status en uso pero no-default SÍ está permitido en el backend a propósito (el frontend confirma).
 
 ### `src/modules/tenant/tenantUserService.ts`
 - **listTenantUsers(tenantId)**, **updateTenantUser(...)**.

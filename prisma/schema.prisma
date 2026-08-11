@@ -62,6 +62,64 @@ enum EntityType {
   company
   contact
   opportunity
+  ticket
+  idea
+}
+
+// Platform-wide (Alejandro/soporte), not per-tenant -- unlike StatusDefinition
+// (a per-tenant catalog), Tickets/Ideas belong to Northstack itself, so
+// there's exactly one catalog of statuses per entity type across the whole
+// platform, not one per tenant.
+enum PlatformEntityType {
+  ticket
+  idea
+}
+
+model PlatformStatusDefinition {
+  id         String             @id @default(uuid())
+  entityType PlatformEntityType
+  key        String // slug interno, ej. "under_review"
+  label      String // texto mostrado en la UI, editable
+  order      Int
+  isDefault  Boolean            @default(false) // el que toma un registro nuevo al crearse
+  isTerminal Boolean            @default(false) // cuenta como "cerrado" en filtros rápidos
+  active     Boolean            @default(true) // desactivar en vez de borrar si ya está en uso
+  tickets    Ticket[]
+  ideas      Idea[]
+
+  @@unique([entityType, key])
+}
+
+model Ticket {
+  id               String                   @id @default(uuid())
+  tenantId         String
+  tenant           Tenant                   @relation(fields: [tenantId], references: [id])
+  userId           String? // nullable si soporte lo carga sin identificar a nadie puntual
+  user             User?                    @relation("TicketReporter", fields: [userId], references: [id])
+  createdByType    String // 'user' | 'platform_staff'
+  assignedToUserId String?
+  assignedTo       User?                    @relation("TicketAssignee", fields: [assignedToUserId], references: [id])
+  subject          String
+  description      String
+  statusId         String
+  status           PlatformStatusDefinition @relation(fields: [statusId], references: [id])
+  createdAt        DateTime                 @default(now())
+}
+
+// Sin assignedToUserId -- no es un flujo de asignación de soporte, es
+// trabajo de producto de Alejandro.
+model Idea {
+  id            String                   @id @default(uuid())
+  tenantId      String
+  tenant        Tenant                   @relation(fields: [tenantId], references: [id])
+  userId        String?
+  user          User?                    @relation("IdeaReporter", fields: [userId], references: [id])
+  createdByType String
+  subject       String
+  description   String
+  statusId      String
+  status        PlatformStatusDefinition @relation(fields: [statusId], references: [id])
+  createdAt     DateTime                 @default(now())
 }
 
 enum InvitationStatus {
@@ -219,6 +277,8 @@ model Tenant {
   opportunityStageHistory  OpportunityStageHistory[]
   tasks                    Task[]
   notes                    Note[]
+  tickets                  Ticket[]
+  ideas                    Idea[]
   payFrequencyDefinitions  PayFrequencyDefinition[]
   paymentMethodDefinitions PaymentMethodDefinition[]
   employeeCompensations    EmployeeCompensation[]
@@ -250,6 +310,9 @@ model User {
   tasksAssigned           Task[]                 @relation("TaskAssignee")
   tasksCreated            Task[]                 @relation("TaskCreatedBy")
   notesCreated            Note[]
+  ticketsReported         Ticket[]               @relation("TicketReporter")
+  ticketsAssignedTo       Ticket[]               @relation("TicketAssignee")
+  ideasReported           Idea[]                 @relation("IdeaReporter")
   compensationsCreated    EmployeeCompensation[]
   payrollRunsCreated      PayrollRun[]
   passwordResetTokens     PasswordResetToken[]

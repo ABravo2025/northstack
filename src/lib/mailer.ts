@@ -258,3 +258,25 @@ export async function sendPasswordResetEmail(input: SendPasswordResetEmailInput)
     ].join('\n'),
   });
 }
+
+export interface SendTicketNoteCreatedEmailInput {
+  to: string;
+  ticketSubject: string;
+  authorName: string;
+  noteBody: string;
+}
+
+export async function sendTicketNoteCreatedEmail(input: SendTicketNoteCreatedEmailInput): Promise<void> {
+  if (!mailerConfigured()) return;
+
+  await transporter.sendMail({
+    from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
+    to: input.to,
+    subject: `New reply on your ticket: "${input.ticketSubject}"`,
+    text: [`${input.authorName} replied to your ticket "${input.ticketSubject}":`, '', input.noteBody].join('\n'),
+    html: [
+      `<p><strong>${input.authorName}</strong> replied to your ticket <strong>${input.ticketSubject}</strong>:</p>`,
+      `<p>${input.noteBody}</p>`,
+    ].join('\n'),
+  });
+}

@@ -1,4 +1,4 @@
-import type { TenantStatus } from '@prisma/client';
+import type { PlatformEntityType, TenantStatus } from '@prisma/client';
 import { requirePlatformRole } from '../lib/platformAuth.js';
 import {
   getTenantDetail,
@@ -8,6 +8,19 @@ import {
   type TenantSortField,
   type TenantUserSortField,
 } from '../modules/platform/platformTenantService.js';
+import {
+  createTicket,
+  createTicketNote,
+  getTicketWithNotes,
+  listTickets,
+  updateTicket,
+  type TicketSortField,
+} from '../modules/platform/platformTicketService.js';
+import {
+  createPlatformStatus,
+  listPlatformStatuses,
+  updatePlatformStatus,
+} from '../modules/platform/platformStatusService.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 
 export const platformRouter = createAsyncRouter();
@@ -22,6 +35,8 @@ const VALID_TENANT_USER_SORT: TenantUserSortField[] = [
   'status',
   'createdAt',
 ];
+const VALID_TICKET_SORT: TicketSortField[] = ['subject', 'createdAt'];
+const VALID_PLATFORM_ENTITY_TYPES: PlatformEntityType[] = ['ticket', 'idea'];
 
 function parseSortOrder(value: unknown): SortOrder {
   return value === 'desc' ? 'desc' : 'asc';
@@ -82,4 +97,150 @@ platformRouter.get('/api/platform/tenants/:id/users', async (req, res) => {
     sortOrder: parseSortOrder(req.query.sortOrder),
   });
   return res.json(users);
+});
+
+platformRouter.get('/api/platform/tickets', async (req, res) => {
+  const user = await requirePlatformRole('platform_support')(req, res);
+  if (!user) {
+    return;
+  }
+
+  const sortBy = (req.query.sortBy as string) || 'createdAt';
+  if (!VALID_TICKET_SORT.includes(sortBy as TicketSortField)) {
+    return res.status(400).json({ error: `sortBy must be one of: ${VALID_TICKET_SORT.join(', ')}` });
+  }
+
+  const tickets = await listTickets({
+    status: (req.query.status as string) || undefined,
+    assignee: (req.query.assignee as string) || undefined,
+    search: (req.query.search as string) || undefined,
+    sortBy: sortBy as TicketSortField,
+    sortOrder: parseSortOrder(req.query.sortOrder),
+  });
+  return res.json(tickets);
+});
+
+platformRouter.post('/api/platform/tickets', async (req, res) => {
+  const user = await requirePlatformRole('platform_support')(req, res);
+  if (!user) {
+    return;
+  }
+
+  const tenantId = req.body.tenantId as string;
+  if (!tenantId) {
+    return res.status(400).json({ error: 'tenantId is required' });
+  }
+
+  const ticket = await createTicket({
+    tenantId,
+    userId: (req.body.userId as string) || undefined,
+    createdByType: 'platform_staff',
+    subject: (req.body.subject as string) || '',
+    description: (req.body.description as string) || '',
+  });
+
+  return res.status(201).json(ticket);
+});
+
+platformRouter.get('/api/platform/tickets/:id', async (req, res) => {
+  const user = await requirePlatformRole('platform_support')(req, res);
+  if (!user) {
+    return;
+  }
+
+  const ticket = await getTicketWithNotes(req.params.id);
+  if (!ticket) {
+    return res.status(404).json({ error: 'Ticket not found' });
+  }
+  return res.json(ticket);
+});
+
+platformRouter.patch('/api/platform/tickets/:id', async (req, res) => {
+  const user = await requirePlatformRole('platform_support')(req, res);
+  if (!user) {
+    return;
+  }
+
+  const ticket = await updateTicket(req.params.id, {
+    statusId: req.body.statusId,
+    assignedToUserId: req.body.assignedToUserId,
+  });
+  return res.json(ticket);
+});
+
+platformRouter.post('/api/platform/tickets/:id/notes', async (req, res) => {
+  const user = await requirePlatformRole('platform_support')(req, res);
+  if (!user) {
+    return;
+  }
+
+  const description = (req.body.description as string)?.trim();
+  if (!description) {
+    return res.status(400).json({ error: 'description is required' });
+  }
+
+  const note = await createTicketNote(req.params.id, user.id, description);
+  return res.status(201).json(note);
+});
+
+// Settings del catálogo -- solo platform_admin (bypass implícito, sin roles
+// extra en la lista).
+platformRouter.get('/api/platform/statuses', async (req, res) => {
+  const user = await requirePlatformRole()(req, res);
+  if (!user) {
+    return;
+  }
+
+  const entityType = req.query.entityType as string;
+  if (!VALID_PLATFORM_ENTITY_TYPES.includes(entityType as PlatformEntityType)) {
+    return res.status(400).json({ error: `entityType must be one of: ${VALID_PLATFORM_ENTITY_TYPES.join(', ')}` });
+  }
+
+  const statuses = await listPlatformStatuses(entityType as PlatformEntityType);
+  return res.json(statuses);
+});
+
+platformRouter.post('/api/platform/statuses', async (req, res) => {
+  const user = await requirePlatformRole()(req, res);
+  if (!user) {
+    return;
+  }
+
+  const entityType = req.body.entityType as string;
+  const key = (req.body.key as string)?.trim();
+  const label = (req.body.label as string)?.trim();
+  if (!VALID_PLATFORM_ENTITY_TYPES.includes(entityType as PlatformEntityType)) {
+    return res.status(400).json({ error: `entityType must be one of: ${VALID_PLATFORM_ENTITY_TYPES.join(', ')}` });
+  }
+  if (!key || !label) {
+    return res.status(400).json({ error: 'key and label are required' });
+  }
+
+  const status = await createPlatformStatus({
+    entityType: entityType as PlatformEntityType,
+    key,
+    label,
+    order: typeof req.body.order === 'number' ? req.body.order : 0,
+  });
+  return res.status(201).json(status);
+});
+
+platformRouter.patch('/api/platform/statuses/:id', async (req, res) => {
+  const user = await requirePlatformRole()(req, res);
+  if (!user) {
+    return;
+  }
+
+  const result = await updatePlatformStatus(req.params.id, {
+    label: req.body.label,
+    order: req.body.order,
+    isDefault: req.body.isDefault,
+    isTerminal: req.body.isTerminal,
+    active: req.body.active,
+  });
+
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  return res.json(result.status);
 });

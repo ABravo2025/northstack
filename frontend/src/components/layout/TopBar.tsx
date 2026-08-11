@@ -17,6 +17,8 @@ export default function TopBar({ user, token, onLogout, onMenuClick }: TopBarPro
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackType, setFeedbackType] = useState<'ticket' | 'idea'>('ticket');
+  const [feedbackSubject, setFeedbackSubject] = useState('');
   const [feedbackMessage, setFeedbackMessage] = useState('');
   const [sendingFeedback, setSendingFeedback] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -25,11 +27,13 @@ export default function TopBar({ user, token, onLogout, onMenuClick }: TopBarPro
 
   const handleSendFeedback = async () => {
     const message = feedbackMessage.trim();
-    if (!message) return;
+    const subject = feedbackSubject.trim();
+    if (!message || !subject) return;
     setSendingFeedback(true);
     try {
-      await api.sendFeedback(token, { message, pageUrl: window.location.href });
+      await api.sendFeedback(token, { type: feedbackType, subject, message, pageUrl: window.location.href });
       toast.success('Thanks! Your feedback was sent.');
+      setFeedbackSubject('');
       setFeedbackMessage('');
       setFeedbackOpen(false);
     } catch (err) {
@@ -155,14 +159,53 @@ export default function TopBar({ user, token, onLogout, onMenuClick }: TopBarPro
             type="button"
             className="btn-primary"
             onClick={handleSendFeedback}
-            disabled={sendingFeedback || !feedbackMessage.trim()}
+            disabled={sendingFeedback || !feedbackMessage.trim() || !feedbackSubject.trim()}
           >
             {sendingFeedback ? 'Sending…' : 'Send'}
           </button>
         }
       >
         <div className="form-group">
-          <label htmlFor="feedback-message">Found a bug or have an idea?</label>
+          <label>What's this about?</label>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium ${
+                feedbackType === 'ticket' ? 'border-accent bg-accent-tint text-accent' : 'border-line-strong text-ink-muted'
+              }`}
+              onClick={() => setFeedbackType('ticket')}
+              disabled={sendingFeedback}
+            >
+              Report a problem
+            </button>
+            <button
+              type="button"
+              className={`flex-1 rounded-md border px-3 py-2 text-sm font-medium ${
+                feedbackType === 'idea' ? 'border-accent bg-accent-tint text-accent' : 'border-line-strong text-ink-muted'
+              }`}
+              onClick={() => setFeedbackType('idea')}
+              disabled={sendingFeedback}
+            >
+              Suggest an idea
+            </button>
+          </div>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="feedback-subject">Subject</label>
+          <input
+            id="feedback-subject"
+            type="text"
+            value={feedbackSubject}
+            onChange={(e) => setFeedbackSubject(e.target.value)}
+            placeholder={feedbackType === 'ticket' ? "What's the problem, in a few words?" : "What's your idea, in a few words?"}
+            disabled={sendingFeedback}
+            autoFocus
+          />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="feedback-message">{feedbackType === 'ticket' ? 'What happened?' : 'Tell us more'}</label>
           <textarea
             id="feedback-message"
             rows={6}
@@ -170,7 +213,6 @@ export default function TopBar({ user, token, onLogout, onMenuClick }: TopBarPro
             onChange={(e) => setFeedbackMessage(e.target.value)}
             placeholder="Tell us what happened or what you'd like to see."
             disabled={sendingFeedback}
-            autoFocus
           />
         </div>
       </SlideOver>

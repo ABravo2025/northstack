@@ -2,7 +2,10 @@ import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
 
 export const feedbackApi = {
   // Feedback
-  sendFeedback: async (token: string, data: { message: string; pageUrl: string }): Promise<void> => {
+  sendFeedback: async (
+    token: string,
+    data: { message: string; pageUrl: string; type?: 'ticket' | 'idea'; subject?: string },
+  ): Promise<void> => {
     const res = await apiFetch(`${API_BASE_URL}/api/feedback`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },

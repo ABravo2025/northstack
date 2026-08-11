@@ -535,3 +535,16 @@ Las entradas fechadas (el detalle día a día de qué se hizo y por qué) viven 
   - Verificado en producción real con sesiones de prueba temporales (creadas y borradas vía Prisma
     directo, sin necesitar contraseñas de nadie) para cada bloque antes de dar por cerrado — checklist
     completo de verificación humana en `docs/Tareas-QA.md` QA-17.
+  - **Ronda 2, mismo día**: el usuario marcó correctamente que la primera pasada se había desviado del
+    spec en varios puntos y que faltaba la verificación real en navegador (el checklist de
+    `docs/Admin-platform/tareas-admin-center-roles-tenants-tickets.md` la pedía explícitamente, se
+    había saltado). Se cerraron 4 gaps reales contra `spec-admin-center-tickets-ideas.md` ("+ Nuevo
+    ticket" ahora crea vacío y edita en el detalle en vez de un form de un paso, badge de autor
+    Admin/Support/Tenant en el hilo, contador de tickets abiertos en el nav, `color` propio del
+    catálogo en `PlatformStatusDefinition` — campo nuevo, aditivo). Y se hizo la pasada de Playwright
+    real (contra `vercel dev` local, proxeando a producción real, nunca datos falsos), que encontró 3
+    bugs genuinos que ningún `curl` había detectado: encoding de `+`/espacio roto en el proxy (rompía
+    toda búsqueda de 2+ palabras), una condición de carrera en `TicketDetailModal`/`StatusSettingsTab`
+    (una respuesta vieja podía pisar el estado nuevo justo después de guardar), y `.form-group`
+    (Subject/Description/Reply) sin ningún CSS definido en este repo. Todo corregido y re-verificado
+    con el mismo script hasta que los 12 checks automatizados pasaron.

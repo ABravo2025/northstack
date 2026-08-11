@@ -637,8 +637,18 @@ también (una cuenta comprometida no se puede "cerrar" reseteando la contraseña
 **Contexto:** rollout completo del roadmap en `docs/Admin-platform/` — 8 bloques, repo principal
 (`northstack`, rutas `/api/platform/*`) + `northstack-devtasks` (admin.joinnorthstack.com). Verificado
 programáticamente durante la implementación (sesiones de prueba creadas/borradas contra producción vía
-Prisma directo, sin necesidad de contraseña real) pero **nunca en un navegador real** — esta tarea es
-esa primera pasada humana.
+Prisma directo, sin necesidad de contraseña real).
+
+**Actualización 2026-08-11 (mismo día, ronda 2):** se hizo la pasada de verificación real en navegador
+que había quedado pendiente (Playwright, contra `localhost` corriendo `vercel dev` con las rutas
+proxeando a producción real — nunca contra datos falsos). Encontró y corrigió bugs reales que la
+verificación por `curl` no detectaba: un bug de encoding donde cualquier búsqueda de 2+ palabras
+devolvía cero resultados (el `+` de espacio nunca se decodificaba de vuelta al reenviar la query),
+una condición de carrera en `TicketDetailModal`/`StatusSettingsTab` donde una respuesta vieja podía
+pisar el estado nuevo justo después de guardar un cambio (ej. "Assign to me" parecía no hacer nada), y
+`.form-group` (Subject/Description/Reply) renderizando sin ningún estilo porque esa clase nunca se
+había definido en el CSS de este repo. Los checks de abajo ya reflejan ese estado corregido — quedan
+como checklist para una pasada humana con tu cuenta real, no como algo todavía no probado en absoluto.
 
 ### Login y roles (`admin.joinnorthstack.com`)
 

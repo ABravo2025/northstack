@@ -217,6 +217,12 @@ CRUD estándar, cross-entidad vía `entityType`/`entityId`: **createNote**, **fi
 - **findTenantNameById(tenantId)**, **getTenantById(tenantId)**, **updateTenantCurrency(tenantId, currency)**.
 - **findUserById(id)** — sin scope de tenant a propósito (mismo patrón que `findClientById`/`findEmployeeById`) — el caller valida `tenantId` antes de confiar en el resultado.
 
+### `src/modules/platform/platformTenantService.ts`
+Admin Center (`/api/platform/tenants*`, `requirePlatformRole('platform_support')`), no confundir con `tenantService.ts` (self-service tenant-scoped).
+- **listTenants(input)** — por `status` (requerido), sort/search en memoria (dataset chico, no vale la pena mezclar Prisma `orderBy` con un sort manual solo para `userCount`).
+- **getTenantDetail(tenantId)** — incluye `userCount` + los campos de perfil (currency/companySize/industry/acquisitionChannel).
+- **listTenantUsers(input)** — usuarios de un tenant, sort vía Prisma `orderBy`.
+
 ### `src/modules/tenant/tenantUserService.ts`
 - **listTenantUsers(tenantId)**, **updateTenantUser(...)**.
 

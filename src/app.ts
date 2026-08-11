@@ -20,6 +20,7 @@ import { feedbackRouter } from './routes/feedback.js';
 import { tasksRouter } from './routes/tasks.js';
 import { notesRouter } from './routes/notes.js';
 import { payrollRouter } from './routes/payroll.js';
+import { platformRouter } from './routes/platform.js';
 
 dotenv.config();
 
@@ -92,6 +93,7 @@ app.use(feedbackRouter);
 app.use(tasksRouter);
 app.use(notesRouter);
 app.use(payrollRouter);
+app.use(platformRouter);
 
 // Catches anything an async route handler throws (e.g. Neon/Prisma dropping
 // the connection) so it becomes a clean JSON response instead of crashing

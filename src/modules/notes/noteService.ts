@@ -18,8 +18,12 @@ export interface UpdateNoteInput {
   description?: string;
 }
 
+// platformRole is only meaningful for Admin Center's Ticket notes (author
+// badge: Admin/Support/Tenant, see platformTicketService.ts) -- harmless
+// extra field for every other Note usage (Employee/Company/etc.), which
+// already sets it to null on non-staff users.
 const noteInclude = {
-  createdBy: { select: { id: true, firstName: true, lastName: true } },
+  createdBy: { select: { id: true, firstName: true, lastName: true, platformRole: true } },
 } satisfies Prisma.NoteInclude;
 
 export async function createNote(input: CreateNoteInput) {

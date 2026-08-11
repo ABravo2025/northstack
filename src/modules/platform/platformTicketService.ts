@@ -95,14 +95,20 @@ export async function createTicket(input: CreateTicketInput) {
 export interface UpdateTicketInput {
   statusId?: string;
   assignedToUserId?: string | null;
+  subject?: string;
+  description?: string;
 }
 
 export async function updateTicket(id: string, input: UpdateTicketInput) {
   // Whitelist explicitly — never spread req.body straight through (same rule
-  // as every other update service in the app).
+  // as every other update service in the app). subject/description are here
+  // because "+ Nuevo ticket" creates an empty-ish ticket and the detail view
+  // is where staff fills them in (spec-admin-center-tickets-ideas.md section 4).
   const data: Prisma.TicketUncheckedUpdateInput = {};
   if (input.statusId !== undefined) data.statusId = input.statusId;
   if (input.assignedToUserId !== undefined) data.assignedToUserId = input.assignedToUserId;
+  if (input.subject !== undefined) data.subject = input.subject;
+  if (input.description !== undefined) data.description = input.description;
 
   return prisma.ticket.update({ where: { id }, data, include: ticketInclude });
 }

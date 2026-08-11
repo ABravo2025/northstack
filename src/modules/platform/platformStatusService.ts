@@ -13,6 +13,7 @@ export interface CreatePlatformStatusInput {
   key: string;
   label: string;
   order: number;
+  color?: string;
 }
 
 export async function createPlatformStatus(input: CreatePlatformStatusInput) {
@@ -22,6 +23,7 @@ export async function createPlatformStatus(input: CreatePlatformStatusInput) {
       key: input.key,
       label: input.label,
       order: input.order,
+      color: input.color,
     },
   });
 }
@@ -29,6 +31,7 @@ export async function createPlatformStatus(input: CreatePlatformStatusInput) {
 export interface UpdatePlatformStatusInput {
   label?: string;
   order?: number;
+  color?: string;
   isDefault?: boolean;
   isTerminal?: boolean;
   active?: boolean;
@@ -62,6 +65,7 @@ export async function updatePlatformStatus(
   const data: Prisma.PlatformStatusDefinitionUncheckedUpdateInput = {};
   if (input.label !== undefined) data.label = input.label;
   if (input.order !== undefined) data.order = input.order;
+  if (input.color !== undefined) data.color = input.color;
   if (input.isDefault !== undefined) data.isDefault = input.isDefault;
   if (input.isTerminal !== undefined) data.isTerminal = input.isTerminal;
   if (input.active !== undefined) data.active = input.active;

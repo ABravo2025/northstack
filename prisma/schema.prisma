@@ -84,6 +84,7 @@ model PlatformStatusDefinition {
   isDefault  Boolean            @default(false) // el que toma un registro nuevo al crearse
   isTerminal Boolean            @default(false) // cuenta como "cerrado" en filtros rápidos
   active     Boolean            @default(true) // desactivar en vez de borrar si ya está en uso
+  color      String? // mismo patrón que StatusDefinition.color (por-tenant) -- hex, editable en Settings
   tickets    Ticket[]
   ideas      Idea[]
 

@@ -164,6 +164,8 @@ platformRouter.patch('/api/platform/tickets/:id', async (req, res) => {
   const ticket = await updateTicket(req.params.id, {
     statusId: req.body.statusId,
     assignedToUserId: req.body.assignedToUserId,
+    subject: req.body.subject,
+    description: req.body.description,
   });
   return res.json(ticket);
 });
@@ -221,6 +223,7 @@ platformRouter.post('/api/platform/statuses', async (req, res) => {
     key,
     label,
     order: typeof req.body.order === 'number' ? req.body.order : 0,
+    color: (req.body.color as string) || undefined,
   });
   return res.status(201).json(status);
 });
@@ -234,6 +237,7 @@ platformRouter.patch('/api/platform/statuses/:id', async (req, res) => {
   const result = await updatePlatformStatus(req.params.id, {
     label: req.body.label,
     order: req.body.order,
+    color: req.body.color,
     isDefault: req.body.isDefault,
     isTerminal: req.body.isTerminal,
     active: req.body.active,

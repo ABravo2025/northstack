@@ -1,10 +1,10 @@
 # Tareas de desarrollo
 
 - Fecha de creación: 2026-07-02
-- Última actualización: 2026-08-11 — Admin Center completo (Blocks 1-8: Platform Roles, Tenants,
-  Tickets/Ideas) en producción, en ambos repos (`northstack` + `northstack-devtasks`); "¿Olvidaste tu
-  contraseña?" (que estaba solo en local desde el 2026-08-09) pusheado junto con Block 1. Ver la
-  entrada completa en "Estado actual" más abajo.
+- Última actualización: 2026-08-12 — Admin Center completo (Blocks 1-8 + UI de Ideas, 3 rondas de
+  correcciones tras encontrar gaps reales contra el spec) en producción, en ambos repos (`northstack` +
+  `northstack-devtasks`); "¿Olvidaste tu contraseña?" (que estaba solo en local desde el 2026-08-09)
+  pusheado junto con Block 1. Ver la entrada completa en "Estado actual" más abajo.
 - Última actualización anterior: 2026-08-06 — checklist cruzado contra el código real (CSV export/import de
   Employees confirmado implementado); spec de Payroll eliminado del checklist por quedar
   inconsistente con la realidad (se había construido, se revirtió por un incidente de deploy el
@@ -548,3 +548,23 @@ Las entradas fechadas (el detalle día a día de qué se hizo y por qué) viven 
     (una respuesta vieja podía pisar el estado nuevo justo después de guardar), y `.form-group`
     (Subject/Description/Reply) sin ningún CSS definido en este repo. Todo corregido y re-verificado
     con el mismo script hasta que los 12 checks automatizados pasaron.
+  - **Ronda 3, mismo día — UI de Ideas**: el usuario probó el form de feedback él mismo ("ideas is not
+    linked") y encontró que, aunque el backend de Idea funcionaba, no había ninguna pantalla en Admin
+    Center para verla — el placeholder "Próximamente" seguía ahí. Se construyó `IdeasPage.tsx` +
+    `IdeaDetailModal.tsx` (mismo patrón que Tickets, sin assignee porque Idea no tiene
+    `assignedToUserId`, y las notas nunca mandan email). Backend nuevo:
+    `GET/PATCH /api/platform/ideas[/:id]`, `POST /api/platform/ideas/:id/notes`, `platform_admin`-only
+    per la matriz de acceso. **Hallazgo real durante esta ronda**: al agregar las rutas de Ideas se
+    volvió a pegar contra el límite de 12 Serverless Functions de Vercel (Hobby plan) — se probó
+    consolidar con catch-all routes (`[...path].ts` y `[[...path]].ts`) para ahorrar funciones, pero
+    **ambas variantes resultaron poco confiables en `vercel dev` local** (confirmado con `curl`, no
+    asumido): la catch-all opcional nunca matcheaba la ruta base sin segmentos, y la catch-all
+    obligatoria dejaba de matchear a partir de 2 segmentos (rompía `:id/users` y `:id/notes`). Se
+    resolvió con un mecanismo distinto: un solo `api/platform-proxy.ts` + un rewrite en `vercel.json`
+    (`/api/platform/:path* -> /api/platform-proxy`), que lee la ruta real de `req.url` en vez de
+    depender del router de archivos dinámicos de Vercel — verificado con `curl` contra los mismos casos
+    que habían fallado antes (ruta base, 1 segmento, 2 segmentos, GET/POST/PATCH) y también contra
+    producción real (no solo local) antes de confiar en el approach. Resultado: 5 funciones en vez de
+    12, con margen real para lo que siga. Verificado de punta a punta con Playwright (19/19 checks) y
+    todos los datos de prueba limpiados después, incluida una nota que quedó pegada en una Idea real de
+    Alejandro durante el testing.

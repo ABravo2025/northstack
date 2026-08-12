@@ -691,12 +691,22 @@ como checklist para una pasada humana con tu cuenta real, no como algo todavía 
 | # | Caso | Resultado esperado |
 |---|---|---|
 | 22 | Menú de usuario → "Send feedback" → "Report a problem", completar subject+message | Llega el mail a `FEEDBACK_EMAIL` (como siempre) Y aparece un Ticket nuevo en Admin Center con `createdByType: 'user'` |
-| 23 | Mismo flujo pero "Suggest an idea" | Se crea una `Idea` (verificar por DB directa — todavía no hay UI de Ideas en Admin Center, es la unidad siguiente) |
+| 23 | Mismo flujo pero "Suggest an idea" | Se crea una `Idea`, visible en la sección Ideas de Admin Center (UI agregada 2026-08-12, ya no es placeholder) |
 
-**Severidad:** #1, #4 y #5 son control de acceso — si fallan, cualquiera con cuenta Northstack (o el
-rol equivocado) podría ver datos de otros tenants vía Admin Center, alta. #16 enviando el email al
+### Ideas (`admin.joinnorthstack.com`, agregado 2026-08-12)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 24 | Nav "Ideas" con rol `platform_admin` | Visible; con `platform_support` no aparece (a diferencia de Tickets, Ideas es admin-only) |
+| 25 | Lista de Ideas | Muestra subject/tenant/reportado por/estado/fecha, filtro de estado, búsqueda |
+| 26 | Click en una idea → detalle | Subject/Description editables inline, Status editable, **sin** sección de asignado (Idea no tiene assignee) |
+| 27 | Agregar una nota en el detalle de una idea | Se agrega al hilo, **nunca** dispara ningún email (a diferencia de responder un Ticket) |
+| 28 | Settings de Ideas (tab dentro de la sección Ideas) | Catálogo de 5 estados (new/under_review/planned/declined/shipped) con color, reorder, rename |
+
+**Severidad:** #1, #4, #5 y #24 son control de acceso — si fallan, cualquiera con cuenta Northstack (o
+el rol equivocado) podría ver datos de otros tenants vía Admin Center, alta. #16 enviando el email al
 reporter equivocado (o no enviándolo cuando debería) es media — no expone datos pero rompe la promesa
-del flujo de soporte.
+del flujo de soporte. #27 mandando un email por error en una Idea sería el mismo tipo de problema.
 
 ---
 

@@ -158,9 +158,7 @@ export interface CreateIdeaInput {
   description: string;
 }
 
-// No list/detail/patch routes yet -- Ideas UI is a future block (see
-// docs/Admin-platform/spec-admin-center-tickets-ideas.md section 6). This is
-// used by the in-app feedback form (Block 7) to persist an Idea.
+// Used by the in-app feedback form (Block 7) to persist an Idea.
 export async function createIdea(input: CreateIdeaInput) {
   const defaultStatus = await prisma.platformStatusDefinition.findFirstOrThrow({
     where: { entityType: 'idea', isDefault: true },
@@ -175,5 +173,91 @@ export async function createIdea(input: CreateIdeaInput) {
       description: input.description,
       statusId: defaultStatus.id,
     },
+  });
+}
+
+const ideaInclude = {
+  tenant: { select: { id: true, name: true } },
+  user: { select: { id: true, firstName: true, lastName: true, email: true } },
+  status: true,
+} satisfies Prisma.IdeaInclude;
+
+export type IdeaSortField = 'subject' | 'createdAt';
+
+export interface ListIdeasInput {
+  status?: string; // status key, or '__open__' for "not terminal"
+  search?: string;
+  sortBy: IdeaSortField;
+  sortOrder: SortOrder;
+}
+
+// No assignee filter -- Idea has no assignedToUserId, it's Alejandro's
+// product backlog, not a support queue (see spec section 2).
+export async function listIdeas(input: ListIdeasInput) {
+  const where: Prisma.IdeaWhereInput = {};
+
+  if (input.status === '__open__') {
+    where.status = { isTerminal: false };
+  } else if (input.status) {
+    where.status = { key: input.status };
+  }
+
+  if (input.search) {
+    where.OR = [
+      { subject: { contains: input.search, mode: 'insensitive' } },
+      { tenant: { name: { contains: input.search, mode: 'insensitive' } } },
+      {
+        user: {
+          OR: [
+            { firstName: { contains: input.search, mode: 'insensitive' } },
+            { lastName: { contains: input.search, mode: 'insensitive' } },
+            { email: { contains: input.search, mode: 'insensitive' } },
+          ],
+        },
+      },
+    ];
+  }
+
+  return prisma.idea.findMany({
+    where,
+    include: ideaInclude,
+    orderBy: { [input.sortBy]: input.sortOrder },
+  });
+}
+
+export async function getIdeaWithNotes(id: string) {
+  const idea = await prisma.idea.findUnique({ where: { id }, include: ideaInclude });
+  if (!idea) return null;
+  const notes = await listNotesForEntity(idea.tenantId, 'idea', idea.id);
+  return { ...idea, notes };
+}
+
+export interface UpdateIdeaInput {
+  statusId?: string;
+  subject?: string;
+  description?: string;
+}
+
+export async function updateIdea(id: string, input: UpdateIdeaInput) {
+  const data: Prisma.IdeaUncheckedUpdateInput = {};
+  if (input.statusId !== undefined) data.statusId = input.statusId;
+  if (input.subject !== undefined) data.subject = input.subject;
+  if (input.description !== undefined) data.description = input.description;
+
+  return prisma.idea.update({ where: { id }, data, include: ideaInclude });
+}
+
+// Notes on Idea are 100% internal (Alejandro annotating his own backlog) --
+// never triggers an email, unlike createTicketNote. Title stays a fixed
+// "Note" rather than "Reply" since there's no reporter being replied to.
+export async function createIdeaNote(ideaId: string, createdById: string, description: string) {
+  const idea = await prisma.idea.findUniqueOrThrow({ where: { id: ideaId } });
+  return createNote({
+    tenantId: idea.tenantId,
+    entityType: 'idea',
+    entityId: idea.id,
+    title: 'Note',
+    description,
+    createdById,
   });
 }

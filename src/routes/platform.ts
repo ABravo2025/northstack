@@ -9,11 +9,16 @@ import {
   type TenantUserSortField,
 } from '../modules/platform/platformTenantService.js';
 import {
+  createIdeaNote,
   createTicket,
   createTicketNote,
+  getIdeaWithNotes,
   getTicketWithNotes,
+  listIdeas,
   listTickets,
+  updateIdea,
   updateTicket,
+  type IdeaSortField,
   type TicketSortField,
 } from '../modules/platform/platformTicketService.js';
 import {
@@ -36,6 +41,7 @@ const VALID_TENANT_USER_SORT: TenantUserSortField[] = [
   'createdAt',
 ];
 const VALID_TICKET_SORT: TicketSortField[] = ['subject', 'createdAt'];
+const VALID_IDEA_SORT: IdeaSortField[] = ['subject', 'createdAt'];
 const VALID_PLATFORM_ENTITY_TYPES: PlatformEntityType[] = ['ticket', 'idea'];
 
 function parseSortOrder(value: unknown): SortOrder {
@@ -247,4 +253,69 @@ platformRouter.patch('/api/platform/statuses/:id', async (req, res) => {
     return res.status(400).json({ error: result.error });
   }
   return res.json(result.status);
+});
+
+// "Ver/gestionar Ideas" es solo platform_admin (ver la matriz de acceso en
+// spec-admin-center-platform-roles.md) -- a diferencia de Tickets, que
+// también deja pasar a platform_support.
+platformRouter.get('/api/platform/ideas', async (req, res) => {
+  const user = await requirePlatformRole()(req, res);
+  if (!user) {
+    return;
+  }
+
+  const sortBy = (req.query.sortBy as string) || 'createdAt';
+  if (!VALID_IDEA_SORT.includes(sortBy as IdeaSortField)) {
+    return res.status(400).json({ error: `sortBy must be one of: ${VALID_IDEA_SORT.join(', ')}` });
+  }
+
+  const ideas = await listIdeas({
+    status: (req.query.status as string) || undefined,
+    search: (req.query.search as string) || undefined,
+    sortBy: sortBy as IdeaSortField,
+    sortOrder: parseSortOrder(req.query.sortOrder),
+  });
+  return res.json(ideas);
+});
+
+platformRouter.get('/api/platform/ideas/:id', async (req, res) => {
+  const user = await requirePlatformRole()(req, res);
+  if (!user) {
+    return;
+  }
+
+  const idea = await getIdeaWithNotes(req.params.id);
+  if (!idea) {
+    return res.status(404).json({ error: 'Idea not found' });
+  }
+  return res.json(idea);
+});
+
+platformRouter.patch('/api/platform/ideas/:id', async (req, res) => {
+  const user = await requirePlatformRole()(req, res);
+  if (!user) {
+    return;
+  }
+
+  const idea = await updateIdea(req.params.id, {
+    statusId: req.body.statusId,
+    subject: req.body.subject,
+    description: req.body.description,
+  });
+  return res.json(idea);
+});
+
+platformRouter.post('/api/platform/ideas/:id/notes', async (req, res) => {
+  const user = await requirePlatformRole()(req, res);
+  if (!user) {
+    return;
+  }
+
+  const description = (req.body.description as string)?.trim();
+  if (!description) {
+    return res.status(400).json({ error: 'description is required' });
+  }
+
+  const note = await createIdeaNote(req.params.id, user.id, description);
+  return res.status(201).json(note);
 });

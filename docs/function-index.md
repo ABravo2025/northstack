@@ -227,7 +227,9 @@ Admin Center (`/api/platform/tenants*`, `requirePlatformRole('platform_support')
 ### `src/modules/platform/platformTicketService.ts`
 - **listTickets(input)** / **getTicketWithNotes(id)** / **createTicket(input)** / **updateTicket(id, input)** — CRUD de Ticket, `requirePlatformRole('platform_support')` en las rutas.
 - **createTicketNote(ticketId, createdById, description)** — crea la `Note` (reusa `noteService.createNote`, no una tabla nueva) y dispara `sendTicketNoteCreatedEmail` best-effort si el autor tiene `platformRole` (staff) y el ticket tiene `userId`. El distingo "Admin/Support/Tenant" del hilo se deriva de `platformRole` del autor, no es un campo propio.
-- **createIdea(input)** — usado por el form de feedback (Block 7); sin rutas list/detail todavía (UI de Ideas es unidad futura).
+- **createIdea(input)** — usado por el form de feedback (Block 7).
+- **listIdeas(input)** / **getIdeaWithNotes(id)** / **updateIdea(id, input)** — CRUD de Idea, sin `assignee` (no tiene `assignedToUserId`, es backlog de producto, no cola de soporte). `requirePlatformRole()` sin roles extra (solo `platform_admin`), a diferencia de Ticket.
+- **createIdeaNote(ideaId, createdById, description)** — Notes 100% internas, nunca dispara email (a diferencia de `createTicketNote`).
 
 ### `src/modules/platform/platformStatusService.ts`
 Catálogo de `PlatformStatusDefinition` (plataforma, no por tenant) — `requirePlatformRole()` sin roles extra en las rutas, o sea solo `platform_admin` vía bypass.

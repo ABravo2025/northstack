@@ -55,6 +55,7 @@ Todas siguen el mismo patrón: `if (!mailerConfigured()) return;` (no rompen el 
 - **sendContractSignedEmail(input)** — (Payroll) contrato firmado adjunto, al firmante con copia al owner + a quien lo cargó.
 - **sendPasswordResetEmail(input)** — link de "¿olvidaste tu contraseña?" (2026-08-09), expira en 1 hora.
 - **sendTicketNoteCreatedEmail(input)** — Admin Center: aviso al reporter de un Ticket cuando staff de plataforma responde.
+- **sendSignupVerificationEmail(input)** — Tenant Signup (`docs/spec-tenant-signup.md`), link de verificación de email antes de crear el Tenant/User, expira en 24hs.
 
 ### `src/lib/rateLimit.ts`
 - **AUTH_RATE_LIMIT** (const) — 5 intentos / 15 min, más estricto que el default por ser blanco de fuerza bruta.
@@ -79,7 +80,7 @@ Todas siguen el mismo patrón: `if (!mailerConfigured()) return;` (no rompen el 
 
 ### `src/modules/auth/permissionService.ts`
 Todas son `(role: UserRole) => boolean`, la fuente de verdad de qué puede hacer cada rol:
-**canViewHr**, **canCreateHr**, **canManageCustomFields**, **canInviteUsers**, **canManageUsers**, **canManagePayroll** (owner-only, a diferencia del resto — ver Payroll en `docs/spec-payroll.md`).
+**canViewHr**, **canCreateHr**, **canManageCustomFields**, **canInviteUsers**, **canManageUsers**, **canManagePayroll** (owner-only, a diferencia del resto — ver Payroll en `docs/spec-payroll.md`), **canManageBilling** (owner-only, mismo criterio que Payroll — Subscription Plans, `docs/spec-subscription-plans.md`).
 
 ### `src/modules/clients/clientService.ts` (módulo legado, ver `features-overview.md`)
 CRUD estándar: **createClient**, **listClients(tenantId)**, **findClientById(id)**, **updateClient(id, input, changedByUserId)**, **deleteClient(id)**.
@@ -206,16 +207,28 @@ CRUD estándar, cross-entidad vía `entityType`/`entityId`: **createNote**, **fi
 - **listMyTasks(tenantId, assigneeId)** — pendientes primero, por fecha de vencimiento más próxima.
 - **listTasksForCalendar(tenantId)** — todos los Task con `dueDate`, el frontend filtra al mes visible.
 
+### `src/modules/tenant/emailVerificationService.ts` (Tenant Signup, `docs/spec-tenant-signup.md`)
+- **startSignupVerification(email)** — valida formato + dominio duplicado (`checkEmailDomainNotAlreadyRegistered`), invalida cualquier verificación previa sin usar de ese email, crea una nueva y dispara el mail. Backea tanto `/signup/start` como `/signup/resend` (son la misma operación).
+- **verifySignupToken(token)** — lookup público (GET), marca `verifiedAt` la primera vez, idempotente en llamadas siguientes. No consume el token — eso lo hace `registerTenantWithOwner` recién al final.
+
+### `src/modules/tenant/planService.ts` (Subscription Plans, `docs/spec-subscription-plans.md`)
+- **CURRENT_PLAN_PRICES_CENTS** (const) — tabla de precios server-side (nunca confiar en un precio del cliente); editar acá cuando cambie el precio de lanzamiento, no afecta a tenants que ya congelaron el suyo.
+- **updateTenantPlan(tenantId, plan)** — solo `starter`/`growth` (Scale no tiene checkout self-service todavía); setea `plan` + `lockedPriceCents`/`lockedPriceSetAt`, nunca toca `trialEndsAt`.
+
+### `src/modules/tenant/planTransitionService.ts` (Subscription Plans)
+- **runPlanTransitions(now?)** — `trialing → past_due → suspended` según `trialEndsAt`/`gracePeriodEndsAt`; idempotente, pensada para correr diaria vía Vercel Cron (`src/routes/internal.ts`).
+
 ### `src/modules/tenant/invitationService.ts`
 - **findInvitationByToken(token)** — incluye `employeeId`/`tenantId` en el select.
 - **createInvitation(input)** — acepta `acceptPath` opcional (default `/accept-invite`; Payroll usa `/confirm-contract` para el primer contrato de un Contractor/Employee, Unidad 6) para que el link del email apunte a una pantalla distinta de la genérica; también acepta `attachments` opcional, pasado tal cual a `sendInvitationEmail`.
 - **acceptInvitation(input)**, **listTenantInvitations(tenantId)**, **cancelInvitation(tenantId, invitationId)**.
 
 ### `src/modules/tenant/tenantService.ts`
-- **getEmailDomain(email)** / **normalizeSlug(value)** — helpers de string.
+- **getEmailDomain(email)** / **normalizeSlug(value)** / **isEmailFormatValid(email)** — helpers de string.
+- **checkEmailDomainNotAlreadyRegistered(email)** — validador de dominio duplicado, compartido por `emailVerificationService.ts` (el gate real, en `signup/start`) y `registerTenantWithOwner` (defensa en profundidad); excluye tenants `cancelled` del match, no solo `active`.
 - **createTenantForUser(input)** — tenant nuevo para un usuario ya existente.
-- **registerTenantWithOwner(input)** — flujo completo de "Sign Up" (tenant + owner + seeds).
-- **findTenantNameById(tenantId)**, **getTenantById(tenantId)**, **updateTenantCurrency(tenantId, currency)**.
+- **registerTenantWithOwner(input)** — flujo completo de "Sign Up" (tenant + owner + seeds); requiere `verificationToken` (Tenant Signup, `docs/spec-tenant-signup.md`) validado y consumido al final, justo antes de la transacción — nunca antes, para no quemar el token si otra validación falla. Setea `Tenant.status: 'trialing'` + `trialEndsAt` (Subscription Plans).
+- **findTenantNameById(tenantId)**, **getTenantById(tenantId)** (incluye `status`/`plan`/`companySize`/`trialEndsAt`/`gracePeriodEndsAt`), **updateTenantCurrency(tenantId, currency)**.
 - **findUserById(id)** — sin scope de tenant a propósito (mismo patrón que `findClientById`/`findEmployeeById`) — el caller valida `tenantId` antes de confiar en el resultado.
 
 ### `src/modules/platform/platformTenantService.ts`
@@ -276,7 +289,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 
 | Archivo | Métodos |
 |---|---|
-| `auth.ts` | registerTenant, login, register, forgotPassword, validateResetToken, resetPassword, getInvitation, acceptInvitation, logout, getCurrentUser, updateProfile, changePassword, getCurrentTenant, updateTenantCurrency |
+| `auth.ts` | startSignup, resendSignup, verifySignup, registerTenant, login, register, forgotPassword, validateResetToken, resetPassword, getInvitation, acceptInvitation, logout, getCurrentUser, updateProfile, changePassword, getCurrentTenant, updateTenantCurrency, updateTenantPlan |
 | `employees.ts` | listEmployees, createEmployee, updateEmployee, deleteEmployee, inviteEmployee, getEmployeeCompensation, getEmployeeContractPdf, resendContract |
 | `companies.ts` | listCompanies, createCompany, updateCompany, deleteCompany, +custom field values |
 | `contacts.ts` | listContacts, createContact, updateContact, deleteContact, +custom field values |
@@ -315,9 +328,10 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 - **RequiredMark** (2026-08) — el asterisco rojo, como componente en vez de texto suelto (`.required-mark` en CSS). Es el único lugar que define "así se ve un campo obligatorio" — `Field` lo usa internamente vía su prop `required`; cualquier form que **no** use `Field` (la mayoría de los `.form-group` + `<label>` sueltos de SlideOvers/popovers/páginas de auth) lo importa y lo cae directo dentro del `<label>`: `<label>Nombre<RequiredMark /></label>`. Aplicado en 2026-08 a los 4 forms de alta del CRM, Login/Register/Accept Invite, los popovers de Invite user/PTO Policy/Time Off request/Custom Field/Status/Field Catalog/Saved View/Pipeline/CSV import, el builder de Public Forms + el form público en sí, TaskForm/NoteForm, y los sub-forms de alta rápida dentro de los paneles de detalle del CRM (ej. "add a new contact" en `CompanyDetailModal`).
 - **Icons.tsx** — toda la iconografía de la app, un componente por ícono (`SearchIcon`, `PlusIcon`, `PencilIcon`, `TrashIcon`, `MailIcon`, `EyeIcon`/`EyeOffIcon`, `CheckIcon`, `XIcon`, `GripIcon`, `GridIcon`, `KanbanIcon`, `ListIcon`, `LockIcon`, `TeamIcon`, `FilterIcon`, `DotsVerticalIcon`, `CopyIcon`, `HomeIcon`, `DashboardIcon`, `CalendarIcon`, `TrendingIcon`, `PeopleIcon`, `BriefcaseIcon`, `GearIcon`, `UserCircleIcon`, `ChevronDownIcon`/`ChevronLeftIcon`/`ChevronRightIcon`, `MenuIcon`, `DownloadIcon`, `UploadIcon`, `BellIcon`, `BuildingIcon`, `TargetIcon`) — **revisar esta lista antes de agregar un ícono nuevo**, es fácil duplicar uno que ya existe con otro nombre.
 - **LegalDocumentModal** — visor de ToS/Privacy Policy.
-- **Modal** — modal centrado con backdrop, mismas props que `SlideOver` (open/title/onClose/footer). Patrón esperado (no excepción) para el form de alta de Employee/Company/Contact/Opportunity desde 2026-08; para otros forms chicos, evaluar caso a caso si el diseño pide centrado en vez de panel lateral.
+- **Modal** — modal centrado con backdrop, mismas props que `SlideOver` (open/title/onClose/footer). Patrón esperado (no excepción) para el form de alta de Employee/Company/Contact/Opportunity desde 2026-08; para otros forms chicos, evaluar caso a caso si el diseño pide centrado en vez de panel lateral. Prop `wide` (768px) ya existía; `xwide` (1024px, nuevo 2026-08-13) para contenido que necesita más ancho todavía, como `PlansModal`.
 - **OverviewActionsMenu** — trigger "Actions" del header de un panel de detalle (Delete, Invite to app, etc.).
 - **Pagination** (+ **paginate**) — paginación client-side, 20 filas/página.
+- **PlansModal** (2026-08-13, Subscription Plans) — modal (`Modal` `xwide`) que se abre solo una vez, automáticamente, cuando un tenant recién creado (`status: 'trialing'`, `plan: null`) llega a cualquier pantalla — no es una ruta, no bloquea navegación (corregido de una versión anterior que sí lo era). 3 tarjetas: Free Trial (mismas features que Starter, cierra el modal sin llamar al backend), Starter, Growth — copy fiel al mockup aprobado. Dismiss persistido en `localStorage` por tenant (`northstack:dismissedPlansModal:<tenantId>`), owner-only (gateado también server-side por `canManageBilling`). Montado en `AppLayout.tsx`.
 - **PasswordChecklist** / **PasswordInput** — checklist en vivo de reglas de contraseña + toggle mostrar/ocultar.
 - **Popover** — portal a `document.body` + posicionamiento por coordenadas reales; mecanismo estándar para cualquier dropdown flotante, nunca un `<div absolute>` a mano.
 - **RoleChip** — chip de rol (owner/admin/member).

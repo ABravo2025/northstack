@@ -1,7 +1,53 @@
 # Tareas de desarrollo
 
 - Fecha de creación: 2026-07-02
-- Última actualización: 2026-08-12 — Admin Center completo (Blocks 1-8 + UI de Ideas, 3 rondas de
+- Última actualización: 2026-08-13 — **Tenant Signup + Subscription Plans implementado completo,
+  solo en local, sin pushear** (`docs/spec-tenant-signup.md` + `docs/spec-subscription-plans.md`,
+  breakdown en `docs/task-breakdown-signup-plans.md`, los 3 archivos existían sin trackear en el
+  repo desde antes de esta sesión). Backend: modelo `EmailVerification`, `User.jobFunction`,
+  5 columnas nuevas en `Tenant` (`plan`/`trialEndsAt`/`gracePeriodEndsAt`/`lockedPriceCents`/
+  `lockedPriceSetAt`), `TenantStatus` gana `trialing`/`past_due` — ver `docs/database-schema.md`
+  grupo 8 para el detalle completo del schema y las decisiones (por qué el token se consume al
+  final y no al validar, por qué `checkEmailDomainNotAlreadyRegistered` ahora excluye solo
+  `cancelled` en vez de exigir `active`). Rutas nuevas: `POST /api/tenants/signup/start`,
+  `/resend`, `GET /signup/verify/:token`, `PATCH /api/tenants/me/plan` (owner-only), y
+  `GET /api/internal/plan-transitions/run` (cron interno, ver más abajo). Frontend:
+  `RegisterPage.tsx` reescrita a 2 pantallas (email → check inbox), `CompleteSignupPage.tsx`
+  nueva (survey de 3 pasos en `/register/complete`), `PlansPage.tsx` nueva (`/plans`), guard de
+  ruta + banner de `past_due` en `AppLayout.tsx`. 21 tests nuevos (`tests/tenantSignup.test.ts`,
+  `tests/subscriptionPlans.test.ts`), `npm run build`/`npm test`/`npm run lint` verdes en back y
+  front.
+  - **Gap real encontrado en el spec, resuelto antes de escribir código**: el breakdown pedía
+    "el mismo patrón de cron que ya usa Payroll" — Payroll no tiene ningún cron, no existía
+    ningún mecanismo de job programado en el proyecto. Confirmado con el usuario (Vercel Cron
+    Job, nuevo `vercel.json` → `crons`, endpoint interno protegido por `CRON_SECRET` si está
+    configurado — igual que `mailerConfigured()`, no rompe en local si falta la env var).
+    **`CRON_SECRET` queda pendiente de cargar en Vercel antes de un deploy real**, mismo caso que
+    `PAYMENT_DATA_ENCRYPTION_KEY` en su momento para Payroll.
+  - **Bug real encontrado y corregido durante la propia implementación**: el orden original
+    hubiera consumido (borrado) el `EmailVerification` *antes* de chequear que el nombre de
+    tenant/email/dominio estuvieran libres — si cualquiera de esos fallaba después, la persona
+    se quedaba sin token válido por una causa que no tenía nada que ver con su email, forzándola
+    a reiniciar todo el flujo de verificación. Reordenado para consumir el token al final,
+    justo antes de la transacción.
+  - **Pendiente, explícitamente fuera de esta ronda** (igual que dicen los specs): integración
+    real de Paddle, UI de "agregar método de pago", pantalla de autogestión de suscripción,
+    prorrateo, y — hallazgo propio, no estaba en el spec — **ningún enforcement de acceso para
+    `suspended`** (el status cambia pero nada bloquea requests todavía).
+  - **No pusheado a `staging` ni a `main`** — a pedido explícito del usuario, que lo va a probar
+    en su propio entorno local primero.
+  - **Corrección real del usuario, mismo día**: la primera pasada implementó "Choose your plan"
+    como una página propia (`/plans`) que bloqueaba la navegación hasta elegir un plan — no
+    coincidía con el mockup real ya aprobado (`subscription-plans-mockup.html`, pegado
+    directamente en el chat; nunca había existido como archivo en el repo, así que la primera
+    pasada se armó solo a partir de la prosa del spec). Corregido a `PlansModal.tsx`
+    (`components/common/`, `Modal` con prop nueva `xwide`, 1024px): se abre una sola vez,
+    automáticamente, apenas se crea el workspace, sobre la pantalla que sea — descartable, no
+    bloquea nada, porque el trial de 15 días ya arranca en el registro sin importar si se elige
+    un plan. Dismiss persistido en `localStorage` por tenant. A pedido explícito, se agregó una
+    3ra tarjeta "Free Trial" (mismas features que Starter, cierra el modal sin pegarle al
+    backend) que no estaba en el mockup ni en el spec original.
+- Última actualización anterior: 2026-08-12 — Admin Center completo (Blocks 1-8 + UI de Ideas, 3 rondas de
   correcciones tras encontrar gaps reales contra el spec) en producción, en ambos repos (`northstack` +
   `northstack-devtasks`); "¿Olvidaste tu contraseña?" (que estaba solo en local desde el 2026-08-09)
   pusheado junto con Block 1. Ver la entrada completa en "Estado actual" más abajo.

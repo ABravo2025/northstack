@@ -1,6 +1,6 @@
 # Database Schema
 
-- Última actualización: 2026-08-07 (Payroll Unidades 1-4 — ver grupo 7)
+- Última actualización: 2026-08-13 (Tenant Signup + Subscription Plans, solo local/sin pushear — ver grupo 8)
 - Fuente de verdad real: `prisma/schema.prisma`. Este documento es una vista legible de ese archivo — si difieren, el `.prisma` manda. Regenerar este archivo cuando el schema cambie de forma significativa (modelo nuevo, relación nueva), no hace falta para cambios chicos (un campo opcional más, un índice).
 - Todos los modelos son multi-tenant: casi todos tienen `tenantId` directo (no derivado por join), y el aislamiento entre tenants se verifica en el código de cada endpoint (ownership check), no solo por FK — ver `docs/current-process-flow.md` para el patrón de verificación.
 
@@ -15,6 +15,7 @@ Se dividen en grupos por área funcional, no uno solo gigante, para que sean leg
 5. **Sales / Clients redesign** — Company, Contact, Pipeline, Opportunity y su historial.
 6. **Tasks & Notes (cross-entity)** — Task, Note, adjuntables a Employee/Company/Contact/Opportunity.
 7. **Payroll** — PayFrequencyDefinition, PaymentMethodDefinition, EmployeeCompensation, PayrollRun, PayrollEntry.
+8. **Tenant Signup + Subscription Plans** — EmailVerification, y los campos nuevos de Tenant (plan/trial/gracia/precio congelado).
 
 ## 1. Identidad y acceso
 
@@ -591,13 +592,72 @@ Notas:
   sirve el PDF guardado para "View contract" en el panel de People (reusa `PayslipPreviewModal` con
   props generalizados, no es un componente nuevo).
 
+## 8. Tenant Signup + Subscription Plans
+
+Specs completos en `docs/spec-tenant-signup.md` y `docs/spec-subscription-plans.md` (v1,
+2026-08-13, breakdown en `docs/task-breakdown-signup-plans.md`). **Solo en local — sin
+pushear a `staging` ni `main` todavía**, a la espera de que el usuario lo pruebe. Reemplaza el
+registro de un solo paso (`RegisterPage.tsx` → `POST /api/tenants/register` directo, sin
+verificar el email) por: email → verificación por link → survey de 3 pasos (Company/You/
+Security) → cuenta creada → `/overview`, con `PlansModal` (Starter/Growth/Free Trial)
+abriéndose una sola vez, automáticamente, encima de esa pantalla — **corregido 2026-08-13**:
+la primera implementación lo hizo una ruta (`/plans`) que bloqueaba la navegación hasta elegir
+un plan; Alejandro corrigió con el mockup real aprobado (`subscription-plans-mockup.html`,
+pegado en el chat, nunca existió como archivo en el repo) — es un modal descartable, no un
+gate, porque el trial ya arranca en el registro sin importar si se elige plan.
+
+```mermaid
+erDiagram
+    TENANT ||--o{ EMAIL_VERIFICATION : "ninguna FK real - solo email"
+
+    EMAIL_VERIFICATION {
+        string id PK
+        string email
+        string token UK
+        datetime expiresAt "24hs"
+        datetime verifiedAt "nullable"
+        datetime createdAt
+    }
+```
+
+Notas:
+- **`EmailVerification` no tiene FK a `Tenant`/`User`** — existe *antes* de que cualquiera de
+  los dos se cree (Screen 1, antes de empezar el survey). `registerTenantWithOwner` la valida
+  (verificada, no vencida, email coincide) y la borra recién al final, justo antes de la
+  transacción de creación — a propósito, no antes: si se consumiera apenas se valida y después
+  fallara otro chequeo (nombre de tenant repetido, dominio bloqueado), la persona se quedaría
+  sin token válido por una falla que no tenía nada que ver con su email.
+- **`Tenant` gana 5 columnas** (todas nullable/aditivas, sin migración destructiva):
+  `plan` (`PlanTier?`), `trialEndsAt`/`gracePeriodEndsAt` (`DateTime?`), `lockedPriceCents`/
+  `lockedPriceSetAt`. `trialEndsAt` se setea una sola vez, en `registerTenantWithOwner`
+  (`now + 15 días`) — elegir/cambiar de plan en `/plans` nunca lo vuelve a tocar.
+  `lockedPriceCents` es el precio que un tenant paga aunque el precio de lista cambie después
+  (tabla de precios server-side en `planService.ts`, nunca confiar en un precio del cliente).
+- **`TenantStatus` gana `trialing`/`past_due`** (además de `active`/`suspended`/`cancelled` ya
+  existentes). Máquina de estados: `trialing` → (vence `trialEndsAt`) → `past_due`
+  (`gracePeriodEndsAt = trialEndsAt + 14 días`, acceso completo, solo banner) → (vence
+  `gracePeriodEndsAt`) → `suspended`. Corrida por `planTransitionService.runPlanTransitions()`,
+  disparada por un Vercel Cron nuevo (`vercel.json` → `/api/internal/plan-transitions/run`,
+  1 vez/día) — no existía ningún mecanismo de cron en el proyecto antes de esto.
+- **`checkEmailDomainNotAlreadyRegistered`** (extraído de `registerTenantWithOwner` a
+  `tenantService.ts`, reusado por `emailVerificationService.ts`) ahora excluye tenants
+  `cancelled` del match en vez de solo permitir `active` — antes de este cambio, un tenant
+  `trialing`/`past_due` (que no existían como estados) no aplicaba; ahora sí bloquean un
+  dominio duplicado igual que `active`, y solo `cancelled` (compañía que se fue) no bloquea.
+- **`User.jobFunction`** (`JobFunction?`, nuevo enum) — "tu rol en la empresa" del survey
+  (Screen 3b), deliberadamente no reusa `UserRole` (que es el enum de permisos owner/admin/
+  member).
+- **Sin enforcement de acceso para `suspended` todavía** — un tenant suspendido sigue
+  técnicamente accesible hoy (nada en el código bloquea requests por `tenant.status`), fuera de
+  alcance de este spec (ver "Qué falta" abajo).
+
 ## Enums
 
 | Enum | Valores | Usado en |
 |---|---|---|
 | `UserRole` | `owner`, `admin`, `member` | `User.role`, `Invitation.role` |
 | `UserStatus` | `active`, `inactive` | `User.status` |
-| `TenantStatus` | `active`, `suspended`, `cancelled` | `Tenant.status` |
+| `TenantStatus` | `active`, `trialing`, `past_due`, `suspended`, `cancelled` | `Tenant.status` (`trialing`/`past_due` nuevos, Subscription Plans — grupo 8) |
 | `AcquisitionChannel` | `organic`, `paid_ads`, `referral`, `content`, `outbound_sales`, `partnership`, `other` | `Tenant.acquisitionChannel` |
 | `FieldType` | `text`, `number`, `date`, `select`, `email` | `CustomFieldDefinition.fieldType` |
 | `ContractType` | `part_time`, `full_time` | `Employee.contractType` |
@@ -618,6 +678,8 @@ Notas:
 | `PaymentAccountSubType` | `iban`, `ach`, `username` | `EmployeeCompensation.paymentAccountSubType` |
 | `PayrollRunStatus` | `draft`, `confirmed` | `PayrollRun.status` |
 | `PayrollEntryType` | `base`, `bonus`, `commission`, `reimbursement`, `deduction` | `PayrollEntry.type` |
+| `JobFunction` | `founder_ceo`, `hr`, `ops_finance`, `sales`, `other` | `User.jobFunction` (grupo 8) |
+| `PlanTier` | `starter`, `growth`, `scale` | `Tenant.plan` (grupo 8) |
 
 ## Qué falta / deuda conocida
 
@@ -632,3 +694,4 @@ Notas:
 - **Activity — layout confirmado, sin construir**: el usuario confirmó 2026-07-30 que Activity entra como tab en el panel de detalle (junto a Notes/Tasks), pero sin ningún modelo/backend real todavía — el tab hoy es un placeholder de texto. El sistema de auditoría real (quién hizo qué y cuándo) sigue en Tier 5 ("cola larga").
 - **Tasks/Notes/Company/Contact/Opportunity — nada de esto llegó a producción todavía**: todo el trabajo de esta sesión (2026-07-29/30, ver `docs/tareas-desarrollo.md`) está pusheado a `staging` únicamente, pendiente de que el usuario lo revise antes de promover a `main`.
 - **Payroll — Unidades 1-4 solo en local/commits, nada pusheado a `staging` todavía** (a pedido del usuario, 2026-08-07): schema + cifrado (U1), catálogo de políticas de pago (U2, backend+frontend), rename a People + `personType` + retiro de la compensación legada (U4) — ver grupo 7 arriba para el detalle completo.
+- **Tenant Signup + Subscription Plans — completo en local, nada pusheado todavía** (2026-08-13, ver grupo 8): a la espera de que el usuario lo pruebe en su entorno local antes de decidir si va a `staging`. Fuera de alcance de este spec, explícitamente pospuesto: integración real de Paddle/checkout, UI de "agregar método de pago", pantalla de autogestión de suscripción en `/settings`, y **cualquier enforcement de acceso para tenants `suspended`** (hoy el status cambia pero nada bloquea requests en base a él — un tenant suspendido sigue funcionando igual que uno activo).

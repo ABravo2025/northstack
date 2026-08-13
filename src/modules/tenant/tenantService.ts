@@ -8,7 +8,7 @@ import {
   PHONE_POLICY_MESSAGE,
 } from '../auth/authService.js';
 import { randomUUID } from 'crypto';
-import type { AcquisitionChannel, Session, Tenant, User } from '@prisma/client';
+import type { AcquisitionChannel, JobFunction, Session, Tenant, User } from '@prisma/client';
 import { seedDefaultStatusDefinitions } from '../hr/statusService.js';
 import { seedDefaultPipelines } from '../crm/pipelineService.js';
 import { seedDefaultPayFrequencies } from '../hr/payFrequencyService.js';
@@ -47,6 +47,49 @@ export function getEmailDomain(email: string): string {
   return email.split('@')[1]?.toLowerCase() ?? '';
 }
 
+const EMAIL_FORMAT_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function isEmailFormatValid(email: string): boolean {
+  return EMAIL_FORMAT_REGEX.test(email.trim());
+}
+
+export interface DomainCheckResult {
+  blocked: boolean;
+  error?: string;
+}
+
+// Shared by registerTenantWithOwner (defense in depth, at final submit) and
+// signup/start + /resend (the real gate, before an EmailVerification is even created) — see
+// spec-tenant-signup.md. Extracted 2026-08 from what used to be inline-only in
+// registerTenantWithOwner, so the check doesn't diverge between the two call sites.
+//
+// `cancelled` tenants are excluded from the match (previously only `active` was checked) —
+// a company that left shouldn't block a new signup from the same domain, and `trialing`/
+// `past_due` tenants (added alongside Subscription Plans) are real, current tenants that
+// should block a duplicate exactly like `active` already did.
+export async function checkEmailDomainNotAlreadyRegistered(email: string): Promise<DomainCheckResult> {
+  const emailDomain = getEmailDomain(email);
+  if (!emailDomain || GENERIC_EMAIL_DOMAINS.has(emailDomain)) {
+    return { blocked: false };
+  }
+
+  const domainAlreadyRegistered = await prisma.user.findFirst({
+    where: {
+      email: { endsWith: `@${emailDomain}` },
+      tenant: { status: { not: 'cancelled' } },
+    },
+  });
+
+  if (domainAlreadyRegistered) {
+    return {
+      blocked: true,
+      error: 'A company with this email domain is already registered. Ask an admin there for an invite instead.',
+    };
+  }
+
+  return { blocked: false };
+}
+
 export interface TenantCreationResult {
   success: boolean;
   tenant?: Tenant;
@@ -69,11 +112,23 @@ export interface RegisterTenantWithOwnerInput {
   ownerPassword: string;
   ownerPhone: string;
   acceptedTerms?: boolean;
-  companySize?: string;
-  industry?: string;
-  country?: string;
+  // Required for new signups (spec-tenant-signup.md, Screen 3a) — the schema columns stay
+  // nullable so pre-existing tenants (registered before this requirement) aren't affected.
+  companySize: string;
+  industry: string;
+  country: string;
   acquisitionChannel?: AcquisitionChannel;
+  jobFunction?: JobFunction;
+  // Proof the owner's email was verified via the link sent by startSignupVerification —
+  // required (spec-tenant-signup.md's "Submit final"), checked and consumed below before
+  // anything is created.
+  verificationToken: string;
 }
+
+// 15 days, spec-subscription-plans.md — set once at registration, independent of whether the
+// owner ever picks a plan on /plans. Kept as a named constant (not inlined) so
+// planTransitionService.ts's own comment about "same 15 days" has one source to point at.
+export const SIGNUP_TRIAL_DAYS = 15;
 
 export async function createTenantForUser(input: CreateTenantForUserInput): Promise<TenantCreationResult> {
   const slug = normalizeSlug(input.name);
@@ -168,6 +223,16 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
     };
   }
 
+  if (!input.companySize?.trim()) {
+    return { success: false, error: 'Company size is required', field: 'companySize' };
+  }
+  if (!input.industry?.trim()) {
+    return { success: false, error: 'Industry is required', field: 'industry' };
+  }
+  if (!input.country?.trim()) {
+    return { success: false, error: 'Country is required', field: 'country' };
+  }
+
   const existingTenant = await prisma.tenant.findUnique({
     where: { slug },
   });
@@ -184,21 +249,23 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
     return { success: false, error: 'Email already registered', field: 'ownerEmail' };
   }
 
-  const emailDomain = getEmailDomain(normalizedEmail);
-  if (emailDomain && !GENERIC_EMAIL_DOMAINS.has(emailDomain)) {
-    const domainAlreadyRegistered = await prisma.user.findFirst({
-      where: {
-        email: { endsWith: `@${emailDomain}` },
-        tenant: { status: 'active' },
-      },
-    });
-    if (domainAlreadyRegistered) {
-      return {
-        success: false,
-        error: 'A company with this email domain is already registered. Ask an admin there for an invite instead.',
-        field: 'ownerEmail',
-      };
-    }
+  // Defense in depth — the real gate already ran in startSignupVerification before this
+  // email was ever allowed to reach a verification link. Re-checked here in case tenant
+  // state changed between then and now (e.g. someone else from the same domain registered
+  // in the meantime).
+  const domainCheck = await checkEmailDomainNotAlreadyRegistered(normalizedEmail);
+  if (domainCheck.blocked) {
+    return { success: false, error: domainCheck.error, field: 'ownerEmail' };
+  }
+
+  // Deliberately last, right before the transaction — this is the only check that actually
+  // consumes (deletes) the EmailVerification row. If it ran earlier and any of the checks
+  // above then failed (tenant name taken, email taken, domain blocked), the person would be
+  // stuck: their token burned for an registration attempt that never happened, forcing them
+  // to restart the whole email-verification flow just to fix an unrelated field.
+  const verification = await validateAndConsumeEmailVerification(input.verificationToken, normalizedEmail);
+  if (!verification.valid) {
+    return { success: false, error: verification.error, field: 'verificationToken' };
   }
 
   const result = await prisma.$transaction(async (tx) => {
@@ -210,6 +277,8 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
         industry: input.industry,
         country: input.country,
         acquisitionChannel: input.acquisitionChannel,
+        status: 'trialing',
+        trialEndsAt: new Date(Date.now() + SIGNUP_TRIAL_DAYS * 24 * 60 * 60 * 1000),
       },
     });
 
@@ -228,6 +297,7 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
         role: 'owner',
         tenantId: tenant.id,
         acceptedTermsAt: new Date(),
+        jobFunction: input.jobFunction,
       },
     });
 
@@ -271,7 +341,19 @@ export async function findTenantNameById(tenantId: string): Promise<string | nul
 }
 
 export async function getTenantById(tenantId: string) {
-  return prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true, name: true, currency: true } });
+  return prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: {
+      id: true,
+      name: true,
+      currency: true,
+      status: true,
+      plan: true,
+      companySize: true,
+      trialEndsAt: true,
+      gracePeriodEndsAt: true,
+    },
+  });
 }
 
 // Unscoped by design (matches findClientById/findEmployeeById elsewhere) — the
@@ -294,6 +376,40 @@ export async function updateTenantCurrency(tenantId: string, currency: string): 
 
   const tenant = await prisma.tenant.update({ where: { id: tenantId }, data: { currency } });
   return { success: true, tenant };
+}
+
+interface EmailVerificationCheckResult {
+  valid: boolean;
+  error?: string;
+}
+
+// Final-submit check for registerTenantWithOwner, not the same operation as
+// emailVerificationService.ts's verifySignupToken (which only marks a link as clicked). This
+// requires the link to have already been clicked (verifiedAt set), and additionally checks
+// the email matches and consumes the row (deletes it) so it can never be reused for a second
+// tenant — kept here rather than in emailVerificationService.ts to avoid a circular import
+// (that file already depends on this one for the domain/format checks).
+async function validateAndConsumeEmailVerification(token: string, email: string): Promise<EmailVerificationCheckResult> {
+  if (!token?.trim()) {
+    return { valid: false, error: 'Email verification is required' };
+  }
+
+  const record = await prisma.emailVerification.findUnique({ where: { token } });
+  if (!record) {
+    return { valid: false, error: 'This verification link is invalid. Please start over.' };
+  }
+  if (!record.verifiedAt) {
+    return { valid: false, error: 'This email has not been verified yet.' };
+  }
+  if (record.expiresAt < new Date()) {
+    return { valid: false, error: 'This verification link has expired. Please start over.' };
+  }
+  if (record.email !== email) {
+    return { valid: false, error: 'This verification link does not match this email.' };
+  }
+
+  await prisma.emailVerification.delete({ where: { id: record.id } });
+  return { valid: true };
 }
 
 export function normalizeSlug(value: string): string {

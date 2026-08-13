@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { api, ApiError } from './api';
+import { api } from './api';
+import type { Tenant } from './api';
 import { useToast } from './components/common/ToastProvider';
 import TableSkeleton from './components/common/TableSkeleton';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import CompleteSignupPage from './pages/CompleteSignupPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import AcceptInvitePage from './pages/AcceptInvitePage';
@@ -30,11 +32,6 @@ import WorkspaceSettingsLayout from './layouts/WorkspaceSettingsLayout';
 import SettingsHomePage from './pages/SettingsHomePage';
 import './App.css';
 
-export interface FormError {
-  message: string;
-  field?: string;
-}
-
 export default function App() {
   const toast = useToast();
   const location = useLocation();
@@ -42,20 +39,26 @@ export default function App() {
   const isAcceptInviteRoute = location.pathname.startsWith('/accept-invite');
   const isConfirmContractRoute = location.pathname.startsWith('/confirm-contract');
   const isResetPasswordRoute = location.pathname.startsWith('/reset-password');
+  const isRegisterCompleteRoute = location.pathname.startsWith('/register/complete');
 
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [user, setUser] = useState<any>(null);
+  const [tenant, setTenant] = useState<Tenant | null>(null);
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(
-    () => !isAcceptInviteRoute && !isConfirmContractRoute && !isResetPasswordRoute && Boolean(localStorage.getItem('token')),
+    () =>
+      !isAcceptInviteRoute &&
+      !isConfirmContractRoute &&
+      !isResetPasswordRoute &&
+      !isRegisterCompleteRoute &&
+      Boolean(localStorage.getItem('token')),
   );
-  const [authError, setAuthError] = useState<FormError | null>(null);
 
   useEffect(() => {
-    if (isAcceptInviteRoute || isConfirmContractRoute || isResetPasswordRoute) {
-      // Handling an invite/contract-confirmation/password-reset link: never
-      // auto-restore a stored session, whoever clicked it may not be whoever
-      // last used this browser.
+    if (isAcceptInviteRoute || isConfirmContractRoute || isResetPasswordRoute || isRegisterCompleteRoute) {
+      // Handling an invite/contract-confirmation/password-reset/signup-completion link: never
+      // auto-restore a stored session, whoever clicked it may not be whoever last used this
+      // browser.
       return;
     }
 
@@ -65,6 +68,10 @@ export default function App() {
         .getCurrentUser(token)
         .then((response) => {
           setUser(response.user);
+          // Best-effort, alongside the user — powers PlansModal (shown once, right after
+          // signup) and the past_due grace-period banner, both in AppLayout. A failure here
+          // shouldn't block being logged in, so it's swallowed rather than logging the user out.
+          return api.getCurrentTenant(token).then(setTenant).catch(() => {});
         })
         .catch(() => {
           setToken(null);
@@ -98,7 +105,6 @@ export default function App() {
 
   const handleLogin = async (email: string, password: string) => {
     setLoading(true);
-    setAuthError(null);
     try {
       const response = await api.login({ email, password });
       const newToken = response.session?.token;
@@ -108,50 +114,23 @@ export default function App() {
         setUser(response.user);
       }
     } catch (error) {
-      const field = error instanceof ApiError ? error.field : undefined;
-      if (field) {
-        setAuthError({ message: (error as Error).message, field });
-      } else {
-        toast.error((error as Error).message);
-      }
+      // /api/auth/login never returns a `field` (unlike registration) — always a toast.
+      toast.error((error as Error).message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleRegister = async (data: {
-    tenantName: string;
-    ownerFirstName: string;
-    ownerLastName: string;
-    ownerEmail: string;
-    ownerPassword: string;
-    ownerPhone: string;
-    acceptedTerms: boolean;
-    companySize?: string;
-    industry?: string;
-    country?: string;
-    acquisitionChannel?: string;
-  }) => {
-    setLoading(true);
-    setAuthError(null);
-    try {
-      const response = await api.registerTenant(data);
-      const newToken = response.session?.token;
-      if (newToken) {
-        setToken(newToken);
-        localStorage.setItem('token', newToken);
-        setUser(response.user);
-      }
-    } catch (error) {
-      const field = error instanceof ApiError ? error.field : undefined;
-      if (field) {
-        setAuthError({ message: (error as Error).message, field });
-      } else {
-        toast.error((error as Error).message);
-      }
-    } finally {
-      setLoading(false);
-    }
+  // CompleteSignupPage already called POST /api/tenants/register itself (it owns the 3-step
+  // survey's own loading/error state) — this just adopts the resulting session, same shape as
+  // handleContractConfirmed/handlePasswordReset/handleInvitationAccepted above. Lands on
+  // /overview directly — PlansModal (AppLayout) shows itself automatically over that screen
+  // for a fresh trialing tenant, it isn't a route of its own (2026-08-13 correction).
+  const handleSignupCompleted = (newToken: string, newUser: any) => {
+    setToken(newToken);
+    localStorage.setItem('token', newToken);
+    setUser(newUser);
+    navigate('/overview');
   };
 
   const handleLogout = async () => {
@@ -200,15 +179,11 @@ export default function App() {
           isAuthenticated ? (
             <Navigate to="/overview" replace />
           ) : (
-            <RegisterPage
-              onRegister={handleRegister}
-              onSwitchToLogin={() => navigate('/login')}
-              loading={loading}
-              error={authError}
-            />
+            <RegisterPage onSwitchToLogin={() => navigate('/login')} />
           )
         }
       />
+      <Route path="/register/complete" element={<CompleteSignupPage onRegistered={handleSignupCompleted} />} />
       <Route
         path="/forgot-password"
         element={
@@ -230,7 +205,11 @@ export default function App() {
       />
       <Route path="/apply/:tenantSlug/:formSlug" element={<PublicFormPage />} />
 
-      <Route element={<AppLayout user={user} token={token} onLogout={handleLogout} />}>
+      <Route
+        element={
+          <AppLayout user={user} token={token} tenant={tenant} onTenantUpdated={setTenant} onLogout={handleLogout} />
+        }
+      >
         <Route path="/overview" element={<OverviewPage token={token ?? ''} user={user} />} />
         <Route path="/help" element={<HelpPage />} />
         <Route path="/hr/dashboard" element={<HrDashboardPage />} />

@@ -8,6 +8,11 @@ interface ModalProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   wide?: boolean;
+  // Wider still than `wide` (768px) — for content that genuinely needs more
+  // room side-by-side, like a 3-card pricing comparison (PlansModal). Kept
+  // as its own prop rather than widening `wide` itself, so existing
+  // "wide" call sites (entity Add forms) don't change shape.
+  xwide?: boolean;
 }
 
 // Centered, backdrop-covered modal for small standalone forms — distinct
@@ -15,7 +20,7 @@ interface ModalProps {
 // page's existing flow. Same open/title/onClose/footer API as SlideOver so
 // call sites read the same way; reach for this only when a design
 // explicitly calls for a centered dialog instead of a side panel.
-export default function Modal({ open, title, onClose, children, footer, wide = false }: ModalProps) {
+export default function Modal({ open, title, onClose, children, footer, wide = false, xwide = false }: ModalProps) {
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -41,7 +46,7 @@ export default function Modal({ open, title, onClose, children, footer, wide = f
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
-        className={`modal-panel ${wide ? 'wide' : ''}`}
+        className={`modal-panel ${wide ? 'wide' : ''} ${xwide ? 'xwide' : ''}`}
         role="dialog"
         aria-modal="true"
         aria-label={title}

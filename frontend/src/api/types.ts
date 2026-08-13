@@ -17,6 +17,23 @@ export interface AuthResponse {
   };
 }
 
+export type TenantStatus = 'active' | 'trialing' | 'past_due' | 'suspended' | 'cancelled';
+export type PlanTier = 'starter' | 'growth' | 'scale';
+
+// Subscription Plans (spec-subscription-plans.md) — the fields GET/PATCH /api/tenants/current
+// added alongside status/plan/companySize, which already existed on the response but weren't
+// typed here since nothing on the frontend needed them yet.
+export interface Tenant {
+  id: string;
+  name: string;
+  currency: string;
+  status: TenantStatus;
+  plan: PlanTier | null;
+  companySize: string | null;
+  trialEndsAt: string | null;
+  gracePeriodEndsAt: string | null;
+}
+
 export interface Employee {
   id: string;
   firstName: string;

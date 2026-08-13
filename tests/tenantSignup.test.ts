@@ -1,0 +1,241 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const users: any[] = [];
+const emailVerifications: any[] = [];
+const tenants: any[] = [];
+
+vi.mock('../src/lib/prisma.js', () => ({
+  default: {
+    user: {
+      findUnique: vi.fn(async ({ where }: any) => users.find((u) => u.email === where.email) ?? null),
+      findFirst: vi.fn(async ({ where }: any) => {
+        const suffix = where.email.endsWith as string;
+        const excludedStatus = where.tenant?.status?.not;
+        return (
+          users.find((u) => u.email.endsWith(suffix) && u.tenantStatus && u.tenantStatus !== excludedStatus) ?? null
+        );
+      }),
+    },
+    tenant: {
+      findUnique: vi.fn(async ({ where }: any) => tenants.find((t) => t.slug === where.slug) ?? null),
+    },
+    emailVerification: {
+      findUnique: vi.fn(
+        async ({ where }: any) => emailVerifications.find((e) => e.token === where.token || e.id === where.id) ?? null,
+      ),
+      create: vi.fn(async ({ data }: any) => {
+        const record = { id: `ev-${emailVerifications.length + 1}`, verifiedAt: null, createdAt: new Date(), ...data };
+        emailVerifications.push(record);
+        return record;
+      }),
+      update: vi.fn(async ({ where, data }: any) => {
+        const record = emailVerifications.find((e) => e.id === where.id);
+        Object.assign(record, data);
+        return record;
+      }),
+      delete: vi.fn(async ({ where }: any) => {
+        const index = emailVerifications.findIndex((e) => e.id === where.id);
+        const [removed] = emailVerifications.splice(index, 1);
+        return removed;
+      }),
+      deleteMany: vi.fn(async ({ where }: any) => {
+        const before = emailVerifications.length;
+        for (let i = emailVerifications.length - 1; i >= 0; i -= 1) {
+          if (emailVerifications[i].email === where.email && emailVerifications[i].verifiedAt === where.verifiedAt) {
+            emailVerifications.splice(i, 1);
+          }
+        }
+        return { count: before - emailVerifications.length };
+      }),
+    },
+  },
+}));
+
+vi.mock('../src/lib/mailer.js', () => ({
+  sendSignupVerificationEmail: vi.fn(async () => {}),
+}));
+
+import {
+  startSignupVerification,
+  verifySignupToken,
+} from '../src/modules/tenant/emailVerificationService.js';
+import { checkEmailDomainNotAlreadyRegistered, registerTenantWithOwner } from '../src/modules/tenant/tenantService.js';
+
+const validPersonFields = {
+  tenantName: 'Acme Inc',
+  ownerFirstName: 'Alice',
+  ownerLastName: 'Smith',
+  ownerEmail: 'alice@acme.com',
+  ownerPassword: 'StrongPassword123!',
+  ownerPhone: '+1-555-0100',
+  acceptedTerms: true,
+  companySize: '1-10',
+  industry: 'Software',
+  country: 'United States',
+};
+
+describe('emailVerificationService', () => {
+  beforeEach(() => {
+    users.length = 0;
+    emailVerifications.length = 0;
+    tenants.length = 0;
+  });
+
+  it('rejects a malformed email before creating a verification row', async () => {
+    const result = await startSignupVerification('not-an-email');
+    expect(result.success).toBe(false);
+    expect(result.field).toBe('email');
+    expect(emailVerifications).toHaveLength(0);
+  });
+
+  it('rejects an email that already belongs to a registered user', async () => {
+    users.push({ id: 'u1', email: 'taken@acme.com', tenantStatus: 'active' });
+    const result = await startSignupVerification('taken@acme.com');
+    expect(result.success).toBe(false);
+    expect(result.field).toBe('email');
+  });
+
+  it('rejects a domain already registered by an active tenant, but allows generic providers through', async () => {
+    users.push({ id: 'u1', email: 'existing@acme.com', tenantStatus: 'active' });
+
+    const blocked = await startSignupVerification('newperson@acme.com');
+    expect(blocked.success).toBe(false);
+    expect(blocked.field).toBe('email');
+
+    const allowed = await startSignupVerification('someone@gmail.com');
+    expect(allowed.success).toBe(true);
+  });
+
+  it('creates a verification row and supersedes an earlier unverified one for the same email', async () => {
+    const first = await startSignupVerification('alice@acme.com');
+    expect(first.success).toBe(true);
+    expect(emailVerifications).toHaveLength(1);
+    const firstToken = emailVerifications[0].token;
+
+    const second = await startSignupVerification('alice@acme.com');
+    expect(second.success).toBe(true);
+    expect(emailVerifications).toHaveLength(1);
+    expect(emailVerifications[0].token).not.toBe(firstToken);
+  });
+
+  it('verifies a fresh token and is idempotent on a second call', async () => {
+    await startSignupVerification('alice@acme.com');
+    const token = emailVerifications[0].token;
+
+    const first = await verifySignupToken(token);
+    expect(first.success).toBe(true);
+    expect(first.email).toBe('alice@acme.com');
+    expect(emailVerifications[0].verifiedAt).toBeInstanceOf(Date);
+
+    const second = await verifySignupToken(token);
+    expect(second.success).toBe(true);
+    expect(second.email).toBe('alice@acme.com');
+  });
+
+  it('rejects an unknown token with 404 and an expired token with 410', async () => {
+    const missing = await verifySignupToken('does-not-exist');
+    expect(missing.success).toBe(false);
+    expect(missing.status).toBe(404);
+
+    emailVerifications.push({
+      id: 'ev-expired',
+      email: 'bob@acme.com',
+      token: 'expired-token',
+      expiresAt: new Date(Date.now() - 1000),
+      verifiedAt: null,
+      createdAt: new Date(),
+    });
+    const expired = await verifySignupToken('expired-token');
+    expect(expired.success).toBe(false);
+    expect(expired.status).toBe(410);
+  });
+});
+
+describe('checkEmailDomainNotAlreadyRegistered', () => {
+  beforeEach(() => {
+    users.length = 0;
+  });
+
+  it('excludes cancelled tenants from the block, but not trialing/past_due ones', async () => {
+    users.push({ id: 'u1', email: 'owner@acme.com', tenantStatus: 'cancelled' });
+    const afterCancelled = await checkEmailDomainNotAlreadyRegistered('new@acme.com');
+    expect(afterCancelled.blocked).toBe(false);
+
+    users.push({ id: 'u2', email: 'owner2@acme.com', tenantStatus: 'trialing' });
+    const afterTrialing = await checkEmailDomainNotAlreadyRegistered('new@acme.com');
+    expect(afterTrialing.blocked).toBe(true);
+  });
+});
+
+describe('registerTenantWithOwner — email verification gate', () => {
+  beforeEach(() => {
+    users.length = 0;
+    emailVerifications.length = 0;
+    tenants.length = 0;
+  });
+
+  it('rejects registration when verificationToken is missing, without creating anything', async () => {
+    const result = await registerTenantWithOwner({ ...validPersonFields, verificationToken: '' });
+    expect(result.success).toBe(false);
+    expect(result.field).toBe('verificationToken');
+    expect(tenants).toHaveLength(0);
+    expect(users).toHaveLength(0);
+  });
+
+  it('rejects registration when the token was never verified', async () => {
+    emailVerifications.push({
+      id: 'ev-1',
+      email: 'alice@acme.com',
+      token: 'unverified-token',
+      expiresAt: new Date(Date.now() + 60_000),
+      verifiedAt: null,
+      createdAt: new Date(),
+    });
+
+    const result = await registerTenantWithOwner({ ...validPersonFields, verificationToken: 'unverified-token' });
+    expect(result.success).toBe(false);
+    expect(result.field).toBe('verificationToken');
+    // Not consumed — the person can still go back and click the email link.
+    expect(emailVerifications).toHaveLength(1);
+  });
+
+  it('rejects registration when the verified token belongs to a different email', async () => {
+    emailVerifications.push({
+      id: 'ev-2',
+      email: 'someone-else@acme.com',
+      token: 'mismatched-token',
+      expiresAt: new Date(Date.now() + 60_000),
+      verifiedAt: new Date(),
+      createdAt: new Date(),
+    });
+
+    const result = await registerTenantWithOwner({ ...validPersonFields, verificationToken: 'mismatched-token' });
+    expect(result.success).toBe(false);
+    expect(result.field).toBe('verificationToken');
+  });
+
+  it('does not consume the token if the tenant name is already taken', async () => {
+    tenants.push({ id: 't1', slug: 'acme-inc' });
+    emailVerifications.push({
+      id: 'ev-3',
+      email: 'alice@acme.com',
+      token: 'valid-token',
+      expiresAt: new Date(Date.now() + 60_000),
+      verifiedAt: new Date(),
+      createdAt: new Date(),
+    });
+
+    const result = await registerTenantWithOwner({ ...validPersonFields, verificationToken: 'valid-token' });
+    expect(result.success).toBe(false);
+    expect(result.field).toBe('tenantName');
+    // Still there — burning the token on an unrelated failure would force a full restart of
+    // the verification flow just to fix the tenant name.
+    expect(emailVerifications).toHaveLength(1);
+  });
+
+  it('requires companySize/industry/country before ever checking the token', async () => {
+    const result = await registerTenantWithOwner({ ...validPersonFields, industry: '', verificationToken: 'whatever' });
+    expect(result.success).toBe(false);
+    expect(result.field).toBe('industry');
+  });
+});

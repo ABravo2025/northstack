@@ -1,308 +1,111 @@
-import { useState } from 'react';
-import type { FormError } from '../App';
-import PasswordInput from '../components/common/PasswordInput';
-import PasswordChecklist from '../components/common/PasswordChecklist';
+import { useEffect, useState } from 'react';
 import AuthLayout from '../components/common/AuthLayout';
-import LegalDocumentModal from '../components/common/LegalDocumentModal';
 import RequiredMark from '../components/common/RequiredMark';
-import { COUNTRIES } from '../lib/countries';
+import { useToast } from '../components/common/ToastProvider';
+import { api, ApiError } from '../api';
 
-const COMPANY_SIZE_OPTIONS = ['1-10', '11-50', '51-200', '201-500', '500+'];
-
-const ACQUISITION_CHANNEL_OPTIONS: { value: string; label: string }[] = [
-  { value: 'organic', label: 'Organic search' },
-  { value: 'paid_ads', label: 'Paid ads' },
-  { value: 'referral', label: 'Referral' },
-  { value: 'content', label: 'Content (blog, video, etc.)' },
-  { value: 'outbound_sales', label: 'Outbound sales' },
-  { value: 'partnership', label: 'Partnership' },
-  { value: 'other', label: 'Other' },
-];
+// spec-tenant-signup.md — Screen 2's cooldown before "Resend email" is clickable again.
+const RESEND_COOLDOWN_SECONDS = 30;
 
 interface RegisterPageProps {
-  onRegister: (data: {
-    tenantName: string;
-    ownerFirstName: string;
-    ownerLastName: string;
-    ownerEmail: string;
-    ownerPassword: string;
-    ownerPhone: string;
-    acceptedTerms: boolean;
-    companySize?: string;
-    industry?: string;
-    country?: string;
-    acquisitionChannel?: string;
-  }) => void;
   onSwitchToLogin: () => void;
-  loading: boolean;
-  error?: FormError | null;
 }
 
-export default function RegisterPage({
-  onRegister,
-  onSwitchToLogin,
-  loading,
-  error,
-}: RegisterPageProps) {
-  const [tenantName, setTenantName] = useState('');
-  const [ownerFirstName, setOwnerFirstName] = useState('');
-  const [ownerLastName, setOwnerLastName] = useState('');
-  const [ownerEmail, setOwnerEmail] = useState('');
-  const [ownerPhone, setOwnerPhone] = useState('');
-  const [ownerPassword, setOwnerPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [companySize, setCompanySize] = useState('');
-  const [industry, setIndustry] = useState('');
-  const [country, setCountry] = useState('');
-  const [acquisitionChannel, setAcquisitionChannel] = useState('');
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [legalDoc, setLegalDoc] = useState<'terms' | 'privacy' | null>(null);
-  const [passwordMismatch, setPasswordMismatch] = useState(false);
+// Screen 1 (email) + Screen 2 (check your inbox) of the verified signup flow
+// (spec-tenant-signup.md). The rest of the old one-step form (company/owner details,
+// password) now lives in CompleteSignupPage.tsx, reached only after the email link is
+// clicked — this page's only job is collecting an email and getting a verification link sent.
+export default function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
+  const toast = useToast();
+  const [step, setStep] = useState<'email' | 'sent'>('email');
+  const [email, setEmail] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
 
-  const fieldError = (name: string) => (error?.field === name ? error.message : null);
+  useEffect(() => {
+    if (cooldown <= 0) return undefined;
+    const timer = setInterval(() => setCooldown((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (ownerPassword !== confirmPassword) {
-      setPasswordMismatch(true);
-      return;
+    setEmailError(null);
+    setLoading(true);
+    try {
+      await api.startSignup(email);
+      setStep('sent');
+      setCooldown(RESEND_COOLDOWN_SECONDS);
+    } catch (error) {
+      if (error instanceof ApiError && error.field === 'email') {
+        setEmailError(error.message);
+      } else {
+        toast.error((error as Error).message);
+      }
+    } finally {
+      setLoading(false);
     }
-    setPasswordMismatch(false);
-    onRegister({
-      tenantName,
-      ownerFirstName,
-      ownerLastName,
-      ownerEmail,
-      ownerPassword,
-      ownerPhone,
-      acceptedTerms,
-      companySize: companySize || undefined,
-      industry: industry.trim() || undefined,
-      country: country || undefined,
-      acquisitionChannel: acquisitionChannel || undefined,
-    });
   };
+
+  const handleResend = async () => {
+    if (cooldown > 0 || loading) return;
+    setLoading(true);
+    try {
+      await api.resendSignup(email);
+      setCooldown(RESEND_COOLDOWN_SECONDS);
+      toast.success('Verification email sent again.');
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (step === 'sent') {
+    return (
+      <AuthLayout>
+        <h2 className="auth-title">Check your inbox</h2>
+        <p className="text-sm mb-3">
+          We sent a verification link to <strong>{email}</strong>. Click it to continue setting up your account. The
+          link expires in 24 hours.
+        </p>
+        <button type="button" className="auth-submit" onClick={handleResend} disabled={loading || cooldown > 0}>
+          {cooldown > 0 ? `Resend email (${cooldown}s)` : loading ? 'Sending…' : 'Resend email'}
+        </button>
+        <div className="auth-foot">
+          <span>Wrong email?</span>
+          <button type="button" onClick={() => setStep('email')}>
+            Start over
+          </button>
+        </div>
+      </AuthLayout>
+    );
+  }
 
   return (
     <AuthLayout>
       <h2 className="auth-title">Register your company</h2>
+      <p className="text-sm mb-3">Enter your work email — we'll send you a link to verify it before you continue.</p>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
-          <label htmlFor="register-tenantName">
-            Company Name
-            <RequiredMark />
-          </label>
-          <input
-            id="register-tenantName"
-            type="text"
-            value={tenantName}
-            onChange={(e) => setTenantName(e.target.value)}
-            placeholder="My Company"
-            required
-            disabled={loading}
-          />
-          {fieldError('tenantName') && (
-            <div className="field-error">{fieldError('tenantName')}</div>
-          )}
-        </div>
-        <div className="form-group">
-          <label htmlFor="register-companySize">Company size (optional)</label>
-          <select
-            id="register-companySize"
-            value={companySize}
-            onChange={(e) => setCompanySize(e.target.value)}
-            disabled={loading}
-          >
-            <option value="">-- select --</option>
-            {COMPANY_SIZE_OPTIONS.map((band) => (
-              <option key={band} value={band}>
-                {band} employees
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="form-group">
-          <label htmlFor="register-industry">Industry (optional)</label>
-          <input
-            id="register-industry"
-            type="text"
-            value={industry}
-            onChange={(e) => setIndustry(e.target.value)}
-            placeholder="e.g. Software, Retail, Healthcare"
-            disabled={loading}
-          />
-        </div>
-        <div className="form-group">
-          <label htmlFor="register-country">Country (optional)</label>
-          <select
-            id="register-country"
-            value={country}
-            onChange={(e) => setCountry(e.target.value)}
-            disabled={loading}
-          >
-            <option value="">-- select --</option>
-            {COUNTRIES.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="form-group">
-          <label htmlFor="register-firstName">
-            First Name
-            <RequiredMark />
-          </label>
-          <input
-            id="register-firstName"
-            type="text"
-            value={ownerFirstName}
-            onChange={(e) => setOwnerFirstName(e.target.value)}
-            placeholder="John"
-            required
-            disabled={loading}
-          />
-        </div>
-        <div className="form-group">
-          <label htmlFor="register-lastName">
-            Last Name
-            <RequiredMark />
-          </label>
-          <input
-            id="register-lastName"
-            type="text"
-            value={ownerLastName}
-            onChange={(e) => setOwnerLastName(e.target.value)}
-            placeholder="Doe"
-            required
-            disabled={loading}
-          />
-        </div>
-        <div className="form-group">
           <label htmlFor="register-email">
-            Email
+            Work Email
             <RequiredMark />
           </label>
           <input
             id="register-email"
             type="email"
-            value={ownerEmail}
-            onChange={(e) => setOwnerEmail(e.target.value)}
-            placeholder="your@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="your@company.com"
             required
             disabled={loading}
           />
-          {fieldError('ownerEmail') && (
-            <div className="field-error">{fieldError('ownerEmail')}</div>
-          )}
-        </div>
-        <div className="form-group">
-          <label htmlFor="register-phone">
-            Phone
-            <RequiredMark />
-          </label>
-          <input
-            id="register-phone"
-            type="tel"
-            value={ownerPhone}
-            onChange={(e) => setOwnerPhone(e.target.value)}
-            placeholder="+1 555 0100"
-            required
-            disabled={loading}
-          />
-          {fieldError('ownerPhone') && (
-            <div className="field-error">{fieldError('ownerPhone')}</div>
-          )}
-        </div>
-        <div className="form-group">
-          <label htmlFor="register-acquisitionChannel">How did you hear about us? (optional)</label>
-          <select
-            id="register-acquisitionChannel"
-            value={acquisitionChannel}
-            onChange={(e) => setAcquisitionChannel(e.target.value)}
-            disabled={loading}
-          >
-            <option value="">-- select --</option>
-            {ACQUISITION_CHANNEL_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="form-group">
-          <label htmlFor="register-password">
-            Password
-            <RequiredMark />
-          </label>
-          <PasswordInput
-            id="register-password"
-            value={ownerPassword}
-            onChange={setOwnerPassword}
-            placeholder="••••••••"
-            required
-            disabled={loading}
-            autoComplete="new-password"
-          />
-          <PasswordChecklist password={ownerPassword} />
-          {fieldError('ownerPassword') && (
-            <div className="field-error">{fieldError('ownerPassword')}</div>
-          )}
-        </div>
-        <div className="form-group">
-          <label htmlFor="register-confirmPassword">
-            Confirm Password
-            <RequiredMark />
-          </label>
-          <PasswordInput
-            id="register-confirmPassword"
-            value={confirmPassword}
-            onChange={(value) => {
-              setConfirmPassword(value);
-              setPasswordMismatch(false);
-            }}
-            placeholder="••••••••"
-            required
-            disabled={loading}
-            autoComplete="new-password"
-          />
-          {passwordMismatch && <div className="field-error">Passwords don't match.</div>}
-        </div>
-        <div className="form-group">
-          <label className="flex items-start gap-1.5 text-sm font-normal">
-            <input
-              type="checkbox"
-              className="mt-0.5 w-auto"
-              checked={acceptedTerms}
-              onChange={(e) => setAcceptedTerms(e.target.checked)}
-              required
-              disabled={loading}
-            />
-            <span>
-              I agree to the{' '}
-              <button
-                type="button"
-                className="text-brand-blue underline underline-offset-2 hover:text-brand-navy dark:hover:text-brand-blue-light"
-                onClick={() => setLegalDoc('terms')}
-              >
-                Terms of Service
-              </button>{' '}
-              and{' '}
-              <button
-                type="button"
-                className="text-brand-blue underline underline-offset-2 hover:text-brand-navy dark:hover:text-brand-blue-light"
-                onClick={() => setLegalDoc('privacy')}
-              >
-                Privacy Policy
-              </button>
-            </span>
-          </label>
-          {fieldError('acceptedTerms') && (
-            <div className="field-error">{fieldError('acceptedTerms')}</div>
-          )}
+          {emailError && <div className="field-error">{emailError}</div>}
         </div>
         <button type="submit" className="auth-submit" disabled={loading}>
-          {loading ? 'Registering...' : 'Register'}
+          {loading ? 'Sending…' : 'Continue'}
         </button>
       </form>
       <div className="auth-foot">
@@ -311,7 +114,6 @@ export default function RegisterPage({
           Login
         </button>
       </div>
-      {legalDoc && <LegalDocumentModal initialDoc={legalDoc} onClose={() => setLegalDoc(null)} />}
     </AuthLayout>
   );
 }

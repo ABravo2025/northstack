@@ -571,6 +571,13 @@
   @apply border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300;
 }
 
+/* First real consumer: the past_due grace-period banner in AppLayout.tsx
+   (spec-subscription-plans.md). design-system.md names amber as the token for
+   non-destructive warning states but notes no dedicated class existed yet. */
+.alert-warning {
+  @apply border border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300;
+}
+
 .field-error {
   @apply mt-1 text-xs text-red-600 dark:text-red-400;
 }
@@ -1101,6 +1108,24 @@
 
 .modal-panel.wide {
   @apply max-w-3xl;
+}
+
+.modal-panel.xwide {
+  @apply max-w-5xl;
+}
+
+/* PlansModal's body is tall enough to scroll (3 cards + full feature lists) — reuses the same
+   hide-native-scrollbar treatment as .full-table-wrap instead of leaving the raw OS scrollbar
+   visible, which is the one already-established pattern in this project for scrollable
+   containers (App.css, ~line 807). Scoped to .xwide specifically, the only Modal usage today
+   (PlansModal) — if a second .xwide modal shows up and wants a plain scrollbar instead, split
+   this into its own modifier class then. */
+.modal-panel.xwide .modal-body {
+  scrollbar-width: none;
+}
+
+.modal-panel.xwide .modal-body::-webkit-scrollbar {
+  display: none;
 }
 
 .modal-head {

@@ -1,11 +1,13 @@
 import { sanitizeUser } from '../modules/auth/authService.js';
-import { canInviteUsers, canManageUsers } from '../modules/auth/permissionService.js';
+import { canInviteUsers, canManageBilling, canManageUsers } from '../modules/auth/permissionService.js';
 import {
   createTenantForUser,
   getTenantById,
   registerTenantWithOwner,
   updateTenantCurrency,
 } from '../modules/tenant/tenantService.js';
+import { startSignupVerification, verifySignupToken } from '../modules/tenant/emailVerificationService.js';
+import { updateTenantPlan } from '../modules/tenant/planService.js';
 import {
   acceptInvitation,
   cancelInvitation,
@@ -17,10 +19,62 @@ import { listTenantUsers, updateTenantUser } from '../modules/tenant/tenantUserS
 import { AUTH_RATE_LIMIT, isRateLimited } from '../lib/rateLimit.js';
 import { authenticateUser, getClientIp, validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
+import type { PlanTier } from '@prisma/client';
 
 const VALID_ACQUISITION_CHANNELS = ['organic', 'paid_ads', 'referral', 'content', 'outbound_sales', 'partnership', 'other'];
+const VALID_JOB_FUNCTIONS = ['founder_ceo', 'hr', 'ops_finance', 'sales', 'other'];
 
 export const tenantsRouter = createAsyncRouter();
+
+// Tenant Signup — email verification (spec-tenant-signup.md). Own rate-limit bucket so a
+// burst of signup attempts doesn't share (or exhaust) the login/register bucket, and vice
+// versa.
+tenantsRouter.post('/api/tenants/signup/start', async (req, res) => {
+  if (isRateLimited(`signup-start:${getClientIp(req)}`, AUTH_RATE_LIMIT)) {
+    return res.status(429).json({ error: 'Too many attempts. Please try again later.' });
+  }
+
+  const email = req.body.email as string | undefined;
+  if (!email?.trim()) {
+    return res.status(400).json({ error: 'Email is required', field: 'email' });
+  }
+
+  const result = await startSignupVerification(email);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error, field: result.field });
+  }
+
+  return res.json({ message: 'Verification email sent.' });
+});
+
+// Functionally identical to /start (same validation, same "invalidate the old link, send a
+// new one" behavior) — kept as a separate route/bucket so the frontend's cooldown timer and
+// analytics can distinguish "first attempt" from "resend", per spec-tenant-signup.md.
+tenantsRouter.post('/api/tenants/signup/resend', async (req, res) => {
+  if (isRateLimited(`signup-resend:${getClientIp(req)}`, AUTH_RATE_LIMIT)) {
+    return res.status(429).json({ error: 'Too many attempts. Please try again later.' });
+  }
+
+  const email = req.body.email as string | undefined;
+  if (!email?.trim()) {
+    return res.status(400).json({ error: 'Email is required', field: 'email' });
+  }
+
+  const result = await startSignupVerification(email);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error, field: result.field });
+  }
+
+  return res.json({ message: 'Verification email sent.' });
+});
+
+tenantsRouter.get('/api/tenants/signup/verify/:token', async (req, res) => {
+  const result = await verifySignupToken(req.params.token);
+  if (!result.success) {
+    return res.status(result.status ?? 400).json({ error: result.error });
+  }
+  return res.json({ email: result.email });
+});
 
 tenantsRouter.post('/api/tenants/register', async (req, res) => {
   if (isRateLimited(`tenant-register:${getClientIp(req)}`, AUTH_RATE_LIMIT)) {
@@ -29,6 +83,14 @@ tenantsRouter.post('/api/tenants/register', async (req, res) => {
 
   if (req.body.acquisitionChannel !== undefined && !VALID_ACQUISITION_CHANNELS.includes(req.body.acquisitionChannel)) {
     return res.status(400).json({ error: 'Invalid acquisition channel', field: 'acquisitionChannel' });
+  }
+
+  if (req.body.jobFunction !== undefined && req.body.jobFunction !== null && !VALID_JOB_FUNCTIONS.includes(req.body.jobFunction)) {
+    return res.status(400).json({ error: 'Invalid job function', field: 'jobFunction' });
+  }
+
+  if (!req.body.verificationToken?.trim()) {
+    return res.status(400).json({ error: 'Email verification is required', field: 'verificationToken' });
   }
 
   const result = await registerTenantWithOwner({
@@ -43,6 +105,8 @@ tenantsRouter.post('/api/tenants/register', async (req, res) => {
     industry: req.body.industry,
     country: req.body.country,
     acquisitionChannel: req.body.acquisitionChannel,
+    jobFunction: req.body.jobFunction || undefined,
+    verificationToken: req.body.verificationToken,
   });
 
   if (!result.success) {
@@ -52,6 +116,31 @@ tenantsRouter.post('/api/tenants/register', async (req, res) => {
   return res
     .status(201)
     .json({ tenant: result.tenant, user: sanitizeUser(result.user!), session: result.session });
+});
+
+// Subscription Plans (spec-subscription-plans.md) — owner-only, same bar as Payroll's
+// manage_payroll. Only starter/growth are selectable here; Scale has no self-serve checkout.
+tenantsRouter.patch('/api/tenants/me/plan', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageBilling(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const plan = req.body.plan as PlanTier | undefined;
+  if (!plan) {
+    return res.status(400).json({ error: 'plan is required', field: 'plan' });
+  }
+
+  const result = await updateTenantPlan(user.tenantId!, plan);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error, field: 'plan' });
+  }
+
+  return res.json({ tenant: result.tenant });
 });
 
 tenantsRouter.post('/api/tenants', async (req, res) => {

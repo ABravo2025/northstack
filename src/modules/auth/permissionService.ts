@@ -1,7 +1,15 @@
 import type { UserRole } from '@prisma/client';
 
 export const rolePermissions: Record<UserRole, string[]> = {
-  owner: ['view_hr', 'create_hr', 'manage_custom_fields', 'invite_users', 'manage_users', 'manage_payroll'],
+  owner: [
+    'view_hr',
+    'create_hr',
+    'manage_custom_fields',
+    'invite_users',
+    'manage_users',
+    'manage_payroll',
+    'manage_billing',
+  ],
   admin: ['view_hr', 'create_hr', 'manage_custom_fields', 'invite_users', 'manage_users'],
   member: ['view_hr'],
 };
@@ -31,4 +39,11 @@ export function canManageUsers(role: UserRole): boolean {
 // docs/spec-payroll.md's "Convenciones" section) until custom permissions exist.
 export function canManagePayroll(role: UserRole): boolean {
   return rolePermissions[role].includes('manage_payroll');
+}
+
+// Owner-only, same reasoning as canManagePayroll above — Subscription Plans
+// (spec-subscription-plans.md) treats choosing/changing the tenant's plan as an
+// ownership-level decision, not something an admin does on the owner's behalf.
+export function canManageBilling(role: UserRole): boolean {
+  return rolePermissions[role].includes('manage_billing');
 }

@@ -259,6 +259,37 @@ export async function sendPasswordResetEmail(input: SendPasswordResetEmailInput)
   });
 }
 
+export interface SendSignupVerificationEmailInput {
+  to: string;
+  verifyUrl: string;
+}
+
+// Tenant Signup (spec-tenant-signup.md) — sent from POST /api/tenants/signup/start and
+// /resend, before any Tenant/User exists yet. Same best-effort pattern as the rest of this
+// file: the EmailVerification row is already created regardless of whether this send
+// succeeds, so a flaky SMTP call doesn't block the (already information-free) response.
+export async function sendSignupVerificationEmail(input: SendSignupVerificationEmailInput): Promise<void> {
+  if (!mailerConfigured()) return;
+
+  await transporter.sendMail({
+    from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
+    to: input.to,
+    subject: 'Verify your email to finish setting up Northstack',
+    text: [
+      "Thanks for starting your Northstack signup — let's confirm this is your email.",
+      '',
+      `Verify your email: ${input.verifyUrl}`,
+      '',
+      'This link expires in 24 hours. If you did not request this, you can safely ignore this email.',
+    ].join('\n'),
+    html: [
+      "<p>Thanks for starting your Northstack signup — let's confirm this is your email.</p>",
+      `<p><a href="${input.verifyUrl}">Verify your email</a></p>`,
+      '<p>This link expires in 24 hours. If you did not request this, you can safely ignore this email.</p>',
+    ].join('\n'),
+  });
+}
+
 export interface SendTicketNoteCreatedEmailInput {
   to: string;
   ticketSubject: string;

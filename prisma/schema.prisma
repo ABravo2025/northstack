@@ -20,8 +20,35 @@ enum UserStatus {
 
 enum TenantStatus {
   active
+  // trialing/past_due — added for the Subscription Plans flow (spec-subscription-plans.md):
+  // trialing = inside the 15-day free trial from signup; past_due = trial lapsed with no
+  // payment method, 14-day grace period (full read/write access, just a banner) before
+  // moving to suspended. Existing tenants are unaffected (default stays `active`).
+  trialing
+  past_due
   suspended
   cancelled
+}
+
+// "Your role" on the signup survey (spec-tenant-signup.md, Screen 3b) — distinct from
+// UserRole (owner/admin/member, the permission enum). Fixed small set, not a per-tenant
+// configurable catalog (FieldCatalogDefinition) since it's informational, not something a
+// tenant would ever rename/reorder for their own use.
+enum JobFunction {
+  founder_ceo
+  hr
+  ops_finance
+  sales
+  other
+}
+
+// Selected on /plans right after signup (spec-subscription-plans.md). Scale has no real
+// price/checkout yet — kept in the enum so a tenant can be set to it manually (direct sales
+// conversation) even though the pricing page doesn't offer it as a clickable option.
+enum PlanTier {
+  starter
+  growth
+  scale
 }
 
 // Staff-only, orthogonal to tenant membership. Null = not Northstack staff
@@ -255,6 +282,15 @@ model Tenant {
   country                  String?
   acquisitionChannel       AcquisitionChannel?
   currency                 String                    @default("USD") // ISO-4217, tenant-wide default (Opportunity/EmployeeCompensation can override per record)
+  // Subscription Plans (spec-subscription-plans.md) — all nullable/additive, no billing
+  // provider integrated yet (Paddle is a separate, later round). trialEndsAt is set once at
+  // registration; plan/lockedPriceCents/lockedPriceSetAt are set by PATCH /api/tenants/me/plan;
+  // gracePeriodEndsAt is set by the plan-transitions job the first time a tenant lapses.
+  plan                     PlanTier?
+  trialEndsAt              DateTime?
+  gracePeriodEndsAt        DateTime?
+  lockedPriceCents         Int?
+  lockedPriceSetAt         DateTime?
   users                    User[]
   employees                Employee[]
   clients                  Client[]
@@ -306,6 +342,7 @@ model User {
   statusChanges           StatusHistoryEntry[]
   savedViews              SavedView[]
   acceptedTermsAt         DateTime?
+  jobFunction             JobFunction?
   accountOwnerOfCompanies Company[]
   ownedOpportunities      Opportunity[]
   tasksAssigned           Task[]                 @relation("TaskAssignee")
@@ -334,6 +371,23 @@ model PasswordResetToken {
   createdAt DateTime  @default(now())
 
   @@index([userId])
+}
+
+// Tenant Signup — email verification (spec-tenant-signup.md). No FK to User/Tenant on
+// purpose: this token exists *before* either is created (Screen 1, before the survey even
+// starts) — registerTenantWithOwner consumes it as plain evidence "this email was verified",
+// then deletes the row. No `usedAt`/status field: a stale/superseded row is deleted outright
+// (see emailVerificationService.ts) rather than marked invalid, since nothing else needs to
+// read a dead row afterward.
+model EmailVerification {
+  id         String    @id @default(uuid())
+  email      String
+  token      String    @unique
+  expiresAt  DateTime
+  verifiedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([email])
 }
 
 model Employee {

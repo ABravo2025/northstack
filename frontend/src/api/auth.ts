@@ -1,7 +1,34 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
-import type { AuthResponse, TenantUser } from './types.js';
+import type { AuthResponse, PlanTier, Tenant, TenantUser } from './types.js';
 
 export const authApi = {
+  // Tenant Signup — email verification (spec-tenant-signup.md)
+  startSignup: async (email: string): Promise<{ message: string }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/tenants/signup/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  resendSignup: async (email: string): Promise<{ message: string }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/tenants/signup/resend`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  verifySignup: async (token: string): Promise<{ email: string }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/tenants/signup/verify/${token}`);
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
   // Auth
   registerTenant: async (data: {
     tenantName: string;
@@ -11,10 +38,12 @@ export const authApi = {
     ownerPassword: string;
     ownerPhone: string;
     acceptedTerms: boolean;
-    companySize?: string;
-    industry?: string;
-    country?: string;
+    companySize: string;
+    industry: string;
+    country: string;
     acquisitionChannel?: string;
+    jobFunction?: string;
+    verificationToken: string;
   }): Promise<AuthResponse> => {
     const res = await apiFetch(`${API_BASE_URL}/api/tenants/register`, {
       method: 'POST',
@@ -145,7 +174,7 @@ export const authApi = {
     if (!res.ok) await throwApiError(res);
   },
 
-  getCurrentTenant: async (token: string): Promise<{ id: string; name: string; currency: string }> => {
+  getCurrentTenant: async (token: string): Promise<Tenant> => {
     const res = await apiFetch(`${API_BASE_URL}/api/tenants/current`, {
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -153,11 +182,23 @@ export const authApi = {
     const data = await res.json();
     return data.tenant;
   },
-  updateTenantCurrency: async (token: string, currency: string): Promise<{ id: string; name: string; currency: string }> => {
+  updateTenantCurrency: async (token: string, currency: string): Promise<Tenant> => {
     const res = await apiFetch(`${API_BASE_URL}/api/tenants/current`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ currency }),
+    });
+    if (!res.ok) await throwApiError(res);
+    const data = await res.json();
+    return data.tenant;
+  },
+
+  // Subscription Plans (spec-subscription-plans.md)
+  updateTenantPlan: async (token: string, plan: PlanTier): Promise<Tenant> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/tenants/me/plan`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ plan }),
     });
     if (!res.ok) await throwApiError(res);
     const data = await res.json();

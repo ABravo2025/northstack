@@ -710,6 +710,56 @@ del flujo de soporte. #27 mandando un email por error en una Idea sería el mism
 
 ---
 
+## QA-18 — Tenant Signup (verificación de email) + Subscription Plans (2026-08-13, en `staging` — no en producción todavía)
+
+**Contexto:** reemplaza el registro de un solo paso por email → verificación por link → survey
+de 3 pasos (Company/You/Security) → cuenta creada → `/overview`, con `PlansModal` (modal
+descartable, no una ruta que bloquea) ofreciendo Starter/Growth/Free Trial. Trial de 15 días +
+14 de gracia corridos por un cron nuevo (`/api/internal/plan-transitions/run`, Vercel Cron
+diario). Verificado por Claude con `curl` de punta a punta contra la base de `staging`
+(signup → verify → register → tenant en `trialing` → elegir plan → precio congelado → cron
+→ `past_due`), datos de prueba borrados después — falta la pasada humana en navegador.
+
+### Signup
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | `/register`, cargar un email y enviar | Pasa a "Check your inbox"; llega un email real con el link de verificación (expira en 24hs) |
+| 2 | "Resend email" antes de los 30s | Botón deshabilitado con cuenta regresiva |
+| 3 | "Resend email" después de los 30s | Manda un link nuevo; el anterior deja de funcionar |
+| 4 | "Wrong email? Start over" | Vuelve a la pantalla de email |
+| 5 | Abrir el link recibido | Va a `/register/complete?token=...`, muestra el survey (Company primero) con el email ya verificado |
+| 6 | Abrir un link ya usado o vencido | Pantalla de error clara, con link para volver a `/register` |
+| 7 | Completar Company → You → Security y enviar | Cuenta creada, login automático, aterriza en `/overview` |
+| 8 | Dejar un campo obligatorio vacío en cualquier paso (ej. Industry) | No deja avanzar (validación nativa del form) |
+| 9 | Un error del backend en el submit final (ej. nombre de empresa repetido) | Vuelve al paso correcto (Company) con el error marcado en el campo — no se pierde lo demás cargado |
+| 10 | Registrar dos cuentas con el mismo dominio corporativo (no genérico) | La segunda es rechazada ("ya hay una empresa con este dominio...") |
+| 11 | Registrar con un dominio genérico (gmail.com, etc.) dos veces | Ambas pasan — dominios genéricos no bloquean |
+
+### Subscription Plans
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 12 | Owner recién registrado, primera vez en `/overview` | `PlansModal` se abre solo, automáticamente |
+| 13 | Cerrar el modal (X, click afuera, o "Continue with free trial") | Se cierra, y no vuelve a aparecer al navegar a otra pantalla ni al recargar |
+| 14 | Elegir "Starter" o "Growth" | Modal se cierra, precio de lanzamiento visible en algún lado (a confirmar dónde se muestra hoy — no hay pantalla de "mi plan" todavía) |
+| 15 | Tenant con `companySize: 1-10` cargado en el signup | Badge "Recommended for you" en Starter |
+| 16 | Tenant con `companySize: 11-50` | Badge "Recommended for you" en Growth |
+| 17 | Usuario con rol `member` (no owner) en un tenant sin plan elegido | **No** ve el modal |
+| 18 | Link "Get in touch" (Scale) | Abre un mailto a `info@joinnorthstack.com` |
+| 19 | Contenido del modal contra el mockup aprobado | Copy, precios, features y fine print coinciden |
+
+**Severidad:** #10 fallando (dominio duplicado no bloqueado) es alta — es el control anti-abuso
+central del nuevo flujo. #17 (un member viendo/pudiendo tocar algo de billing) sería medio-alto,
+aunque el backend igual lo bloquea con 403 si se fuerza la llamada. El resto son bugs de
+UX/visuales, no de seguridad.
+
+**Pendiente, no armado en esta ronda:** ningún job de recuperación de pago real (Paddle no está
+integrado), ninguna pantalla de "mi plan actual" en Settings, y ningún bloqueo de acceso real
+para tenants `suspended` — el estado cambia pero nada en el código restringe requests todavía.
+
+---
+
 ## Próximas tareas de QA (a definir)
 
 Cuando se construyan los módulos grandes en curso (rediseño de Clients, Payroll), esta tabla de

@@ -1,11 +1,13 @@
 # Contexto de desarrollo del proyecto
 
 - Fecha de creación: 2026-07-02
-- Última actualización: 2026-08-11 (Admin Center completo, Blocks 1-8 — ver sección al final de este
+- Última actualización: 2026-08-13 (Tenant Signup con verificación de email + Subscription
+  Plans, solo en `staging` — ver sección al final de este archivo).
+- Última actualización anterior: 2026-08-11 (Admin Center completo, Blocks 1-8 — ver sección al final de este
   archivo). **Nota**: este archivo no se actualizó entre el 2026-07-30 y el 2026-08-11 — quedó
   desactualizado respecto a Payroll (deploy completo 2026-08-09) y "¿Olvidaste tu contraseña?"
   (2026-08-09); ambos están documentados con detalle en `docs/tareas-desarrollo.md`, que es la fuente
-  más al día. Esta entrada solo agrega Admin Center, no reconcilia el resto del gap.
+  más al día. Esa entrada solo agregó Admin Center, no reconcilió el resto del gap.
 - Última actualización anterior: 2026-07-30 (módulos de Tasks/Notes + unificación y rediseño de los 4 paneles de detalle — ver sección al final de este archivo; todo en `staging`, nada en producción todavía)
 - Ver también: `docs/current-process-flow.md` (diagramas de flujo), `docs/database-schema.md` (esquema completo de la base de datos), `docs/tareas-desarrollo.md` (checklist general) y `docs/tareas/` (notas de avance fechadas, un archivo por semana ISO — este archivo resume, esa carpeta tiene el detalle día a día).
 
@@ -297,3 +299,49 @@ con exactamente 12 funciones, sin margen para lo próximo que se agregue ahí.
 Verificado en producción real en cada bloque con sesiones de prueba temporales (creadas y borradas
 directo vía Prisma, sin necesitar la contraseña de nadie) — nunca en un navegador real todavía; ver
 `docs/Tareas-QA.md` QA-17 para la primera pasada humana pendiente.
+
+### Tenant Signup (verificación de email) + Subscription Plans (2026-08-13)
+
+Implementación completa de los specs `docs/spec-tenant-signup.md` y
+`docs/spec-subscription-plans.md` (ambos ya "aprobados" por el usuario antes de esta sesión,
+más el breakdown en `docs/task-breakdown-signup-plans.md`) — **todo en `staging`, nada en
+producción todavía**, a la espera de que el usuario lo pruebe y confirme.
+
+Reemplaza el registro de un solo paso (`POST /api/tenants/register` directo, sin verificar que
+el email fuera real) por: email → link de verificación → survey de 3 pasos (Company/You/
+Security) → cuenta creada → `/overview`. Modelo nuevo `EmailVerification` (sin FK a Tenant/User,
+existe antes de que cualquiera de los dos se cree); el token se consume recién al final,
+justo antes de crear el tenant — no apenas se valida, porque consumirlo antes y fallar después
+por otro motivo (nombre de tenant repetido, dominio bloqueado) dejaría a la persona sin token
+válido por una causa que no tenía nada que ver con su email. `Tenant` gana `status: 'trialing'`
++ `trialEndsAt` (15 días) al registrarse, sin importar si después elige un plan.
+
+Elegir plan quedó resuelto como `PlansModal.tsx` — **no** como la ruta `/plans` que se había
+armado en la primera pasada. El spec de Subscription Plans citaba un mockup aprobado
+(`subscription-plans-mockup.html`) que nunca existió como archivo en el repo (segunda vez que
+pasa esto en el proyecto, la primera fue con el mockup de devtasks en Admin Center), así que la
+primera implementación se armó solo a partir de la prosa del spec y terminó siendo una pantalla
+de página completa que bloqueaba la navegación hasta elegir un plan. El usuario pegó el mockup
+real en el chat y corrigió: tiene que ser un modal descartable que se abre una sola vez,
+automáticamente, apenas se crea el workspace — nunca un gate, porque el trial de 15 días ya
+arranca en el registro sin importar si se elige plan. De paso pidió agregar una 3ra tarjeta
+"Free Trial" (mismas features que Starter, no estaba en el mockup) cuyo botón solo cierra el
+modal sin pegarle al backend.
+
+El breakdown pedía "el mismo cron que ya usa Payroll" para la máquina de estados
+`trialing → past_due → suspended` — Payroll no tiene ningún cron, no existía ningún mecanismo
+de job programado en el proyecto. Confirmado con el usuario: Vercel Cron Job nuevo (primero en
+el proyecto, `vercel.json` → `crons`), pegándole una vez al día a un endpoint interno
+(`src/routes/internal.ts`) protegido por `CRON_SECRET` cuando está configurada — pendiente
+cargarla en Vercel antes de cualquier deploy real, mismo caso que
+`PAYMENT_DATA_ENCRYPTION_KEY` en su momento para Payroll.
+
+Verificado de punta a punta con `curl` contra la base de `staging` real (signup → verify →
+register → tenant en `trialing` con `trialEndsAt` correcto → elegir plan → precio congelado
+según la tabla server-side → backdatear el trial → correr el cron → tenant pasa a `past_due`
+con `gracePeriodEndsAt` correcto), datos de prueba borrados después — sin pasada de Playwright
+todavía porque no hay browser automation disponible esta sesión, queda para que el usuario
+pruebe él mismo (ya lo está haciendo). QA-18 en `docs/Tareas-QA.md` tiene el checklist completo.
+No hay ningún enforcement de acceso todavía para tenants `suspended` (el status cambia pero
+nada bloquea requests) — explícitamente fuera de alcance de esta ronda, igual que la
+integración real de Paddle/checkout.

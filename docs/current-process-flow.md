@@ -1,6 +1,9 @@
 # Current Process Flow
 
-- Última actualización: 2026-07-30 (módulos de Tasks/Notes cross-entidad, unificación de los 4 paneles de detalle — Employee/Company/Contact/Opportunity — y su rediseño visual a 70vw×70vh con tabs Notes/Tasks/Activity; ver sección dedicada más abajo. Todo en `staging`, nada en producción todavía)
+- Última actualización: 2026-08-13 (Tenant Signup con verificación de email + Subscription
+  Plans — reemplaza el registro de un solo paso y agrega el modal de selección de plan post-
+  signup; ver secciones dedicadas más abajo. Todo en `staging`, nada en producción todavía)
+- Última actualización anterior: 2026-07-30 (módulos de Tasks/Notes cross-entidad, unificación de los 4 paneles de detalle — Employee/Company/Contact/Opportunity — y su rediseño visual a 70vw×70vh con tabs Notes/Tasks/Activity; ver sección dedicada más abajo. Todo en `staging`, nada en producción todavía)
 
 This document describes the current architecture and flows for Northstack, kept in sync so a fresh session (or a fresh person) can recover context quickly.
 
@@ -32,24 +35,94 @@ This document describes the current architecture and flows for Northstack, kept 
 
 ## Auth & registration flow
 
+**Rewritten 2026-08-13 (staging only)** — registration is no longer a single step. It used to
+be one form (company + owner data together) straight into `POST /api/tenants/register`; now an
+email has to be verified via a link before that same endpoint will accept a submission at all,
+and the form itself is split into a 3-step survey. See `docs/spec-tenant-signup.md` for the
+full spec and "why" (mainly: anyone could register with an email that wasn't theirs before).
+
 ```mermaid
 flowchart TD
   A[Public Access] --> B[Login Page]
   B --> C{Has account?}
   C -->|Yes| D[POST /api/auth/login]
-  C -->|No| E[Register page: company + owner data]
-  D --> F{Valid token?}
-  F -->|Yes| G[App shell: Sidebar + TopBar + Outlet]
-  F -->|No| H[Show auth error]
+  C -->|No| E[RegisterPage: just a work email]
 
-  E --> I[POST /api/tenants/register]
-  I --> J[Create Tenant + Owner User + Session, atomically]
-  J --> G
+  E --> F[POST /api/tenants/signup/start]
+  F --> G[EmailVerification row created, link sent - best effort]
+  G --> H["Check your inbox screen (Resend after 30s cooldown)"]
+  H --> I[Click link -> /register/complete?token=]
+  I --> J[GET /api/tenants/signup/verify/:token]
+  J --> K{Valid, not expired?}
+  K -->|No| L[Show expired/invalid, link back to /register]
+  K -->|Yes, idempotent| M[CompleteSignupPage survey: Company -> You -> Security]
+
+  M --> N[POST /api/tenants/register incl. verificationToken]
+  N --> O{Token verified, not expired, email matches?}
+  O -->|No| P[400, jump back to the step that owns the failing field]
+  O -->|Yes| Q[Consume token, create Tenant + Owner User + Session atomically]
+  Q --> R[Tenant.status = trialing, trialEndsAt = now + 15d, plan = null]
+  R --> S[App shell: Sidebar + TopBar + Outlet, lands on /overview]
+  S --> T[PlansModal opens once automatically - see Subscription Plans below]
+
+  D --> U{Valid token?}
+  U -->|Yes| S
+  U -->|No| V[Show auth error]
 ```
 
-- Registration is a **single step**: company data + owner data together, `POST /api/tenants/register` creates Tenant + owner User + Session atomically — never a "tenant-less" user outside the invitation path.
-- `POST /api/auth/register` (bare user, no tenant) exists only for the invitation-acceptance path.
+- The `EmailVerification` token is deliberately **consumed last**, right before the tenant is
+  actually created — not the moment it's validated. If it were consumed earlier and a later
+  check failed (tenant name taken, domain blocked), the person would be stuck needing to
+  restart the whole email flow over an unrelated field. `checkEmailDomainNotAlreadyRegistered`
+  (shared by `signup/start` and the final submit) now excludes only `cancelled` tenants from
+  the duplicate-domain block, not just `active` — `trialing`/`past_due` tenants block a
+  duplicate exactly like `active` already did.
+- `POST /api/auth/register` (bare user, no tenant) is unchanged — still only used by the
+  invitation-acceptance path, which does **not** require email verification (an invited user
+  was already vouched for by an existing admin).
 - Every endpoint that returns a `user` object strips `passwordHash` first (`sanitizeUser` in `authService.ts`) — this used to leak to the client on every auth response until it was found and fixed.
+
+## Subscription Plans
+
+**New 2026-08-13 (staging only)** — spec in `docs/spec-subscription-plans.md`. No real billing
+yet (Paddle isn't integrated); this is just the trial clock and the plan the tenant intends to
+pay for once billing exists.
+
+```mermaid
+flowchart TD
+  A[Owner lands on /overview right after signup] --> B{tenant.status trialing AND plan null?}
+  B -->|Yes, owner only| C[PlansModal opens automatically over whatever screen]
+  B -->|No| D[No modal]
+
+  C --> E{Choice}
+  E -->|Starter or Growth| F[PATCH /api/tenants/me/plan]
+  F --> G[Server-side price table locks lockedPriceCents/lockedPriceSetAt - never trusts a client price]
+  G --> H[Modal closes, dismissal saved per-tenant in localStorage]
+  E -->|Free Trial or close/backdrop click| H
+
+  I[Daily Vercel Cron -> GET /api/internal/plan-transitions/run] --> J{trialing tenants past trialEndsAt?}
+  J -->|Yes| K[status -> past_due, gracePeriodEndsAt = trialEndsAt + 14d]
+  I --> L{past_due tenants past gracePeriodEndsAt?}
+  L -->|Yes| M[status -> suspended]
+  K --> N[AppLayout shows a dismiss-free warning banner with days remaining]
+```
+
+- **The modal is dismissible, not a gate** — corrected 2026-08-13 after the first pass built it
+  as a blocking `/plans` route; the approved mockup and Alejandro's own instruction were
+  explicit that the trial already starts at registration regardless of plan choice, so this is
+  an upsell prompt, not a wall. Only shown to the tenant's owner (`canManageBilling`,
+  owner-only, same bar as Payroll).
+- **"Free Trial" is a 3rd card**, not in the original mockup — added at Alejandro's request,
+  same feature list as Starter, its "Continue" button just closes the modal (no backend call —
+  every tenant already has full functional access during the trial regardless of `plan`,
+  nothing in the code gates features by plan today).
+- **No cron existed anywhere in this project before this** — the breakdown doc assumed one from
+  Payroll that turned out not to exist. `vercel.json`'s new `crons` entry is the first one,
+  hitting a plain Express route (`src/routes/internal.ts`) protected by `CRON_SECRET` when
+  that env var is set (mirrors `mailerConfigured()`'s graceful-degradation posture for local
+  dev) — **`CRON_SECRET` still needs to be added to Vercel's env vars** before any real deploy.
+- **No access enforcement for `suspended` yet** — the status changes, but nothing in the code
+  actually blocks a suspended tenant's requests. Explicitly out of scope for this round.
 
 ## Invitation flow (email-backed, real send)
 
@@ -320,15 +393,15 @@ flowchart TD
 ## Frontend implementation status
 
 - `frontend/src/App.tsx` holds top-level auth state (`token`, `user`) and the full route tree; `AppLayout` gates everything behind auth and renders `TopBar` + `Sidebar` + `Outlet`.
-- Pages (current, `frontend/src/pages/`): `LoginPage`, `RegisterPage`, `AcceptInvitePage`, `OverviewPage` (home screen, Time Off calendar), `HrDashboardPage`/`ClientsDashboardPage` (placeholders), `EmployeesPage`, `ClientsPage`, `TimeOffOverviewPage` (Assignments/My Requests/Approvals/All Requests/Balances tabs), `ProfileSettingsPage`, `CompanyAppearancePage`, `CompanyUsersPage`, `PublicFormsSettingsPage`, `PipelinesSettingsPage`, `HelpPage`, `PublicFormPage` (the standalone `/apply` page) — plus, from the Clients redesign (see dedicated section below): `CompaniesPage`, `ContactsPage`, `OpportunitiesPage`. `CustomFieldsSettingsPage`/`StatusesSettingsPage`/`PtoPoliciesSettingsPage` no longer exist — deleted in the 2026-07-16 Settings rebrand when their functionality moved inline into each module's table header.
-- Shared components worth knowing about: `ColorPicker.tsx` (preset + custom color popover, used by Statuses/Time Off Policies/Pipeline stages), `Icons.tsx` (hand-drawn inline SVGs, no icon library dependency — includes `HomeIcon`/`CalendarIcon`/`TrendingIcon` added specifically to keep every sidebar entry visually distinct), `KanbanBoard.tsx` (generic drag-and-drop board — powers both SavedView Kanban and the Opportunity pipeline board), `SlideOver.tsx`/`Popover.tsx`/`ConfirmDialog.tsx`/`ToastProvider.tsx` (shared UI chrome used everywhere), `DetailSidebar.tsx`/`TaskForm.tsx`/`NoteForm.tsx`/`Field.tsx` (shared across all 4 entity detail panels since the 2026-07-30 redesign, see dedicated section above), `SearchableSelect.tsx` (generic Popover-based searchable dropdown, added for Contact→Company assignment).
+- Pages (current, `frontend/src/pages/`): `LoginPage`, `RegisterPage` (rewritten 2026-08-13 — now just email + "check your inbox", see Auth & registration flow above), `CompleteSignupPage` (new 2026-08-13, `/register/complete` — the 3-step survey), `AcceptInvitePage`, `OverviewPage` (home screen, Time Off calendar), `HrDashboardPage`/`ClientsDashboardPage` (placeholders), `EmployeesPage`, `ClientsPage`, `TimeOffOverviewPage` (Assignments/My Requests/Approvals/All Requests/Balances tabs), `ProfileSettingsPage`, `CompanyAppearancePage`, `CompanyUsersPage`, `PublicFormsSettingsPage`, `PipelinesSettingsPage`, `HelpPage`, `PublicFormPage` (the standalone `/apply` page) — plus, from the Clients redesign (see dedicated section below): `CompaniesPage`, `ContactsPage`, `OpportunitiesPage`. `CustomFieldsSettingsPage`/`StatusesSettingsPage`/`PtoPoliciesSettingsPage` no longer exist — deleted in the 2026-07-16 Settings rebrand when their functionality moved inline into each module's table header. **Note**: this list has drifted from the real page set over time beyond just this entry (e.g. `PayrollPage`/`PayrollRunDetailPage`/`ForgotPasswordPage`/`ResetPasswordPage`/`ContractConfirmationPage` are also missing here) — `App.tsx`'s route tree is the actual source of truth, this list wasn't fully reconciled this round.
+- Shared components worth knowing about: `ColorPicker.tsx` (preset + custom color popover, used by Statuses/Time Off Policies/Pipeline stages), `Icons.tsx` (hand-drawn inline SVGs, no icon library dependency — includes `HomeIcon`/`CalendarIcon`/`TrendingIcon` added specifically to keep every sidebar entry visually distinct), `KanbanBoard.tsx` (generic drag-and-drop board — powers both SavedView Kanban and the Opportunity pipeline board), `SlideOver.tsx`/`Popover.tsx`/`ConfirmDialog.tsx`/`ToastProvider.tsx` (shared UI chrome used everywhere), `DetailSidebar.tsx`/`TaskForm.tsx`/`NoteForm.tsx`/`Field.tsx` (shared across all 4 entity detail panels since the 2026-07-30 redesign, see dedicated section above), `SearchableSelect.tsx` (generic Popover-based searchable dropdown, added for Contact→Company assignment), `PlansModal.tsx` (new 2026-08-13, see Subscription Plans above — `Modal.tsx`'s new `xwide` size).
 - Dark mode: Tailwind v4 class-based `dark:` variant (`@custom-variant dark`), toggle lives in `/settings` → Appearance, preference stored in `localStorage` per device (not synced tenant-wide — a deliberate scope call, flagged as not confirmed with the user beyond "it works").
 - Verified end-to-end via `curl` against the real backend for every flow above; the user has been clicking through the actual deployed app in the browser throughout, catching several real UX/security gaps (illegible role dropdown in dark mode, editable email on the invite-accept page, missing copy-link on the Company invite form) that got fixed the same session.
 
 ## Future roadmap notes (not started)
 
 - **Clients redesign — remaining pieces**: (1) run the Client→Company/Contact backfill against production, blocked on the user reviewing staging; (2) the actual cutover (hide/remove the `Client` module) once the user has verified the migrated data — deliberately not started; (3) lead qualification without enough Form volume yet, and Opportunity automations (stage-change emails, auto-assign owner, stale-deal reminders) — both explicitly postponed by the user until there's real usage evidence to design against.
-- **Payments/subscriptions billing** — open topic, not decided. International reach is the stated goal; Stripe directly would require a US entity (Argentina isn't a Stripe direct-payout country), so Paddle (merchant-of-record, handles international tax, no US entity needed, higher fee) is the current leading option. Needs: plan/pricing definition, trial policy, and what happens to a tenant on payment failure/cancellation.
+- **Payments/subscriptions billing** — the trial/plan-selection *scaffolding* is built (staging only, see "Subscription Plans" above): 15-day trial + 14-day grace period, Starter/Growth/Free Trial choice, launch-price locking. Real charging is still not decided — no payment provider is integrated. International reach is the stated goal; Stripe directly would require a US entity (Argentina isn't a Stripe direct-payout country), so Paddle (merchant-of-record, handles international tax, no US entity needed, higher fee) is the current leading option. Still needed once a provider is picked: actual checkout, a way to add/change a payment method, and enforcement of the `suspended` status (today it's cosmetic).
 - **Payroll module (V1)** — confirmed and scoped in the backlog (`docs/tareas-desarrollo.md`, Tier 3.5) but not started: manual pay-run data entry + derived cost metrics, distinct from Payments (which is billing the tenant's own Clients/Companies, not paying Employees).
 - **Roles**: currently fixed (`owner`/`admin`/`member`) with hardcoded permissions in `permissionService.ts`. A custom-roles system is a noted idea, not scoped — Task/Note permissions (currently open to any role) are meant to be revisited once this exists.
 - **Audit logging**: per-user login + modification history. Noted idea, not scoped — the Activity tab in the new detail-panel sidebar is UI-ready (see Tasks & Notes section above) but has no backend behind it yet; this is what would fill it in.

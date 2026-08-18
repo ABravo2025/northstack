@@ -1,27 +1,22 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
 import type { AuthResponse, PlanTier, Tenant, TenantUser } from './types.js';
 
-export const authApi = {
-  // Tenant Signup — email verification (spec-tenant-signup.md)
-  startSignup: async (email: string): Promise<{ message: string }> => {
-    const res = await apiFetch(`${API_BASE_URL}/api/tenants/signup/start`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    });
-    if (!res.ok) await throwApiError(res);
-    return res.json();
-  },
+// Tenant Signup — email verification (spec-tenant-signup.md). /start and /resend hit distinct
+// backend routes (own rate-limit buckets for the cooldown timer/analytics) but are otherwise
+// identical requests — one helper instead of two copies that could diverge.
+const postSignupEmail = async (path: 'start' | 'resend', email: string): Promise<{ message: string }> => {
+  const res = await apiFetch(`${API_BASE_URL}/api/tenants/signup/${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) await throwApiError(res);
+  return res.json();
+};
 
-  resendSignup: async (email: string): Promise<{ message: string }> => {
-    const res = await apiFetch(`${API_BASE_URL}/api/tenants/signup/resend`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email }),
-    });
-    if (!res.ok) await throwApiError(res);
-    return res.json();
-  },
+export const authApi = {
+  startSignup: (email: string) => postSignupEmail('start', email),
+  resendSignup: (email: string) => postSignupEmail('resend', email),
 
   verifySignup: async (token: string): Promise<{ email: string }> => {
     const res = await apiFetch(`${API_BASE_URL}/api/tenants/signup/verify/${token}`);
@@ -193,7 +188,14 @@ export const authApi = {
     return data.tenant;
   },
 
-  // Subscription Plans (spec-subscription-plans.md)
+  // Subscription Plans (spec-subscription-plans.md). Public — mirrors planService.ts's
+  // CURRENT_PLAN_PRICES_CENTS so PlansModal doesn't carry a second, driftable copy of the price.
+  getPlanPrices: async (): Promise<{ prices: Record<'starter' | 'growth', number> }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/plans/prices`);
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
   updateTenantPlan: async (token: string, plan: PlanTier): Promise<Tenant> => {
     const res = await apiFetch(`${API_BASE_URL}/api/tenants/me/plan`, {
       method: 'PATCH',

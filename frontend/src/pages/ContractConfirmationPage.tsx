@@ -5,7 +5,7 @@ import type { ContractConfirmationDetails } from '../api/contractConfirmationPub
 import { useToast } from '../components/common/ToastProvider';
 import PasswordInput from '../components/common/PasswordInput';
 import PasswordChecklist from '../components/common/PasswordChecklist';
-import LegalDocumentModal from '../components/common/LegalDocumentModal';
+import AcceptTermsCheckbox from '../components/common/AcceptTermsCheckbox';
 import RequiredMark from '../components/common/RequiredMark';
 import { formatMoney } from '../lib/currencies';
 import { COUNTRIES } from '../lib/countries';
@@ -35,7 +35,6 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
   const [usernameValue, setUsernameValue] = useState('');
   const [acceptedContract, setAcceptedContract] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [legalDoc, setLegalDoc] = useState<'terms' | 'privacy' | null>(null);
 
   useEffect(() => {
     if (!token) {
@@ -356,32 +355,7 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
                     <span>I accept the contract as shown above.</span>
                   </label>
                 </div>
-                <div className="form-group">
-                  <label className="flex items-start gap-1.5 text-sm font-normal">
-                    <input
-                      type="checkbox"
-                      className="mt-0.5 w-auto"
-                      checked={acceptedTerms}
-                      onChange={(e) => setAcceptedTerms(e.target.checked)}
-                      required
-                      disabled={submitting}
-                    />
-                    <span>
-                      I agree to the{' '}
-                      <button type="button" className="text-brand-blue underline underline-offset-2" onClick={() => setLegalDoc('terms')}>
-                        Terms of Service
-                      </button>{' '}
-                      and{' '}
-                      <button
-                        type="button"
-                        className="text-brand-blue underline underline-offset-2"
-                        onClick={() => setLegalDoc('privacy')}
-                      >
-                        Privacy Policy
-                      </button>
-                    </span>
-                  </label>
-                </div>
+                <AcceptTermsCheckbox checked={acceptedTerms} onChange={setAcceptedTerms} disabled={submitting} />
 
                 <div className="form-actions">
                   <button type="submit" className="btn btn-primary" disabled={submitting || !canSubmit}>
@@ -393,7 +367,6 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
           )}
         </div>
       </div>
-      {legalDoc && <LegalDocumentModal initialDoc={legalDoc} onClose={() => setLegalDoc(null)} />}
     </div>
   );
 }

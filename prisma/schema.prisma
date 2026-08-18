@@ -329,6 +329,12 @@ model User {
   lastName                String
   phone                   String
   email                   String                 @unique
+  // Lowercased domain portion of `email`, set at create time (src/lib/email.ts's
+  // getEmailDomain) — lets checkEmailDomainNotAlreadyRegistered (tenantService.ts) do an
+  // indexed equality lookup instead of an `endsWith` scan of the whole table, which can't use
+  // a btree index. Nullable because it predates existing rows — see
+  // scripts/backfill-user-email-domain.ts, run once after this column is added.
+  emailDomain             String?
   passwordHash            String
   role                    UserRole               @default(member)
   status                  UserStatus             @default(active)
@@ -354,6 +360,8 @@ model User {
   compensationsCreated    EmployeeCompensation[]
   payrollRunsCreated      PayrollRun[]
   passwordResetTokens     PasswordResetToken[]
+
+  @@index([emailDomain])
 }
 
 // "Forgot your password?" magic link — single-use, short-lived (1h, see

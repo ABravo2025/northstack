@@ -1,7 +1,8 @@
 import { randomUUID } from 'crypto';
 import prisma from '../../lib/prisma.js';
 import { sendSignupVerificationEmail } from '../../lib/mailer.js';
-import { checkEmailDomainNotAlreadyRegistered, isEmailFormatValid } from './tenantService.js';
+import { checkEmailDomainNotAlreadyRegistered } from './tenantService.js';
+import { isEmailFormatValid } from '../../lib/email.js';
 
 // 24h — long enough someone can click the link later the same day from their phone, short
 // enough a stale/unclicked link doesn't sit around forever. Independent of

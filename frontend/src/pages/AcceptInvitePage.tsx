@@ -4,7 +4,7 @@ import { api } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import PasswordInput from '../components/common/PasswordInput';
 import PasswordChecklist from '../components/common/PasswordChecklist';
-import LegalDocumentModal from '../components/common/LegalDocumentModal';
+import AcceptTermsCheckbox from '../components/common/AcceptTermsCheckbox';
 import RequiredMark from '../components/common/RequiredMark';
 
 interface AcceptInvitePageProps {
@@ -29,7 +29,6 @@ export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) 
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [legalDoc, setLegalDoc] = useState<'terms' | 'privacy' | null>(null);
 
   useEffect(() => {
     if (!invitationToken) {
@@ -172,36 +171,7 @@ export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) 
                   {mode === 'register' && <PasswordChecklist password={password} />}
                 </div>
                 {mode === 'register' && (
-                  <div className="form-group">
-                    <label className="flex items-start gap-1.5 text-sm font-normal">
-                      <input
-                        type="checkbox"
-                        className="mt-0.5 w-auto"
-                        checked={acceptedTerms}
-                        onChange={(e) => setAcceptedTerms(e.target.checked)}
-                        required
-                        disabled={loading}
-                      />
-                      <span>
-                        I agree to the{' '}
-                        <button
-                          type="button"
-                          className="text-brand-blue underline underline-offset-2 hover:text-brand-navy dark:hover:text-brand-blue-light"
-                          onClick={() => setLegalDoc('terms')}
-                        >
-                          Terms of Service
-                        </button>{' '}
-                        and{' '}
-                        <button
-                          type="button"
-                          className="text-brand-blue underline underline-offset-2 hover:text-brand-navy dark:hover:text-brand-blue-light"
-                          onClick={() => setLegalDoc('privacy')}
-                        >
-                          Privacy Policy
-                        </button>
-                      </span>
-                    </label>
-                  </div>
+                  <AcceptTermsCheckbox checked={acceptedTerms} onChange={setAcceptedTerms} disabled={loading} />
                 )}
                 <div className="form-actions">
                   <button type="submit" className="btn btn-primary" disabled={loading}>
@@ -228,7 +198,6 @@ export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) 
           )}
         </div>
       </div>
-      {legalDoc && <LegalDocumentModal initialDoc={legalDoc} onClose={() => setLegalDoc(null)} />}
     </div>
   );
 }

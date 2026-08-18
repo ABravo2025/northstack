@@ -13,6 +13,7 @@ import { seedDefaultStatusDefinitions } from '../hr/statusService.js';
 import { seedDefaultPipelines } from '../crm/pipelineService.js';
 import { seedDefaultPayFrequencies } from '../hr/payFrequencyService.js';
 import { seedDefaultPaymentMethods } from '../hr/paymentMethodService.js';
+import { getEmailDomain } from '../../lib/email.js';
 
 // Personal/free email providers are excluded from the duplicate-domain check below —
 // otherwise the first person to register with @gmail.com would block every other
@@ -43,16 +44,6 @@ export const GENERIC_EMAIL_DOMAINS = new Set([
   'example.net',
 ]);
 
-export function getEmailDomain(email: string): string {
-  return email.split('@')[1]?.toLowerCase() ?? '';
-}
-
-const EMAIL_FORMAT_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-export function isEmailFormatValid(email: string): boolean {
-  return EMAIL_FORMAT_REGEX.test(email.trim());
-}
-
 export interface DomainCheckResult {
   blocked: boolean;
   error?: string;
@@ -76,7 +67,7 @@ export async function checkEmailDomainNotAlreadyRegistered(email: string): Promi
 
   const domainAlreadyRegistered = await prisma.user.findFirst({
     where: {
-      email: { endsWith: `@${emailDomain}` },
+      emailDomain,
       tenant: { status: { notIn: ['cancelled', 'suspended'] } },
     },
   });
@@ -220,6 +211,7 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
         lastName: input.ownerLastName,
         phone: input.ownerPhone.trim(),
         email: normalizedEmail,
+        emailDomain: getEmailDomain(normalizedEmail),
         passwordHash: hashPassword(input.ownerPassword),
         role: 'owner',
         tenantId: tenant.id,

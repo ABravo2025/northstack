@@ -3,6 +3,7 @@ import prisma from '../../lib/prisma.js';
 import type { TenantStatus, UserRole } from '@prisma/client';
 import type { User, Session } from '@prisma/client';
 import { sendPasswordResetEmail } from '../../lib/mailer.js';
+import { getEmailDomain } from '../../lib/email.js';
 
 export interface RegisterUserInput {
   firstName: string;
@@ -112,12 +113,14 @@ export async function registerUser(input: RegisterUserInput): Promise<AuthResult
     return { success: false, error: 'You must accept the Terms of Service and Privacy Policy', field: 'acceptedTerms' };
   }
 
+  const normalizedEmail = input.email.toLowerCase();
   const user = await prisma.user.create({
     data: {
       firstName: input.firstName,
       lastName: input.lastName,
       phone: input.phone.trim(),
-      email: input.email.toLowerCase(),
+      email: normalizedEmail,
+      emailDomain: getEmailDomain(normalizedEmail),
       passwordHash: hashPassword(input.password),
       role: input.role ?? 'member',
       acceptedTermsAt: new Date(),

@@ -2,7 +2,7 @@ import { sanitizeUser } from '../modules/auth/authService.js';
 import { canInviteUsers, canManageBilling, canManageUsers } from '../modules/auth/permissionService.js';
 import { getTenantById, registerTenantWithOwner, updateTenantCurrency } from '../modules/tenant/tenantService.js';
 import { startSignupVerification, verifySignupToken } from '../modules/tenant/emailVerificationService.js';
-import { updateTenantPlan } from '../modules/tenant/planService.js';
+import { CURRENT_PLAN_PRICES_CENTS, updateTenantPlan } from '../modules/tenant/planService.js';
 import {
   acceptInvitation,
   cancelInvitation,
@@ -15,17 +15,20 @@ import { AUTH_RATE_LIMIT, isRateLimited } from '../lib/rateLimit.js';
 import { authenticateUser, getClientIp, validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import type { PlanTier } from '@prisma/client';
+import type express from 'express';
 
 const VALID_ACQUISITION_CHANNELS = ['organic', 'paid_ads', 'referral', 'content', 'outbound_sales', 'partnership', 'other'];
 const VALID_JOB_FUNCTIONS = ['founder_ceo', 'hr', 'ops_finance', 'sales', 'other'];
 
 export const tenantsRouter = createAsyncRouter();
 
-// Tenant Signup — email verification (spec-tenant-signup.md). Own rate-limit bucket so a
-// burst of signup attempts doesn't share (or exhaust) the login/register bucket, and vice
-// versa.
-tenantsRouter.post('/api/tenants/signup/start', async (req, res) => {
-  if (isRateLimited(`signup-start:${getClientIp(req)}`, AUTH_RATE_LIMIT)) {
+// Tenant Signup — email verification (spec-tenant-signup.md). /start and /resend are
+// functionally identical (same validation, same "invalidate the old link, send a new one"
+// behavior in startSignupVerification) — kept as separate routes, each with its own rate-limit
+// bucket, only so the frontend's cooldown timer and analytics can distinguish "first attempt"
+// from "resend". One handler, parameterized by bucket, instead of two copies that could diverge.
+const handleSignupEmailRequest = (bucketPrefix: string) => async (req: express.Request, res: express.Response) => {
+  if (isRateLimited(`${bucketPrefix}:${getClientIp(req)}`, AUTH_RATE_LIMIT)) {
     return res.status(429).json({ error: 'Too many attempts. Please try again later.' });
   }
 
@@ -40,28 +43,10 @@ tenantsRouter.post('/api/tenants/signup/start', async (req, res) => {
   }
 
   return res.json({ message: 'Verification email sent.' });
-});
+};
 
-// Functionally identical to /start (same validation, same "invalidate the old link, send a
-// new one" behavior) — kept as a separate route/bucket so the frontend's cooldown timer and
-// analytics can distinguish "first attempt" from "resend", per spec-tenant-signup.md.
-tenantsRouter.post('/api/tenants/signup/resend', async (req, res) => {
-  if (isRateLimited(`signup-resend:${getClientIp(req)}`, AUTH_RATE_LIMIT)) {
-    return res.status(429).json({ error: 'Too many attempts. Please try again later.' });
-  }
-
-  const email = req.body.email as string | undefined;
-  if (!email?.trim()) {
-    return res.status(400).json({ error: 'Email is required', field: 'email' });
-  }
-
-  const result = await startSignupVerification(email);
-  if (!result.success) {
-    return res.status(400).json({ error: result.error, field: result.field });
-  }
-
-  return res.json({ message: 'Verification email sent.' });
-});
+tenantsRouter.post('/api/tenants/signup/start', handleSignupEmailRequest('signup-start'));
+tenantsRouter.post('/api/tenants/signup/resend', handleSignupEmailRequest('signup-resend'));
 
 tenantsRouter.get('/api/tenants/signup/verify/:token', async (req, res) => {
   const result = await verifySignupToken(req.params.token);
@@ -111,6 +96,14 @@ tenantsRouter.post('/api/tenants/register', async (req, res) => {
   return res
     .status(201)
     .json({ tenant: result.tenant, user: sanitizeUser(result.user!), session: result.session });
+});
+
+// Public — just the current launch prices, so PlansModal.tsx (frontend) doesn't hardcode a
+// second copy of the number planService.ts already calls authoritative ("when it's time to
+// raise to the regular price, edit the numbers here"). No auth needed: not tenant-specific,
+// and the modal renders before there's necessarily anything else useful to gate it behind.
+tenantsRouter.get('/api/plans/prices', async (_req, res) => {
+  return res.json({ prices: CURRENT_PLAN_PRICES_CENTS });
 });
 
 // Subscription Plans (spec-subscription-plans.md) — owner-only, same bar as Payroll's

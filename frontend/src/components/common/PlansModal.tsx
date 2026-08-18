@@ -1,9 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Modal from './Modal';
 import { CheckIcon } from './Icons';
 import { useToast } from './ToastProvider';
 import { api } from '../../api';
 import type { PlanTier, Tenant } from '../../api/types';
+
+function formatPlanPrice(cents: number): string {
+  return `$${Math.round(cents / 100)}`;
+}
 
 interface FeatureRow {
   label: string;
@@ -119,6 +123,19 @@ interface PlansModalProps {
 export default function PlansModal({ open, tenant, token, onClose, onPlanChosen }: PlansModalProps) {
   const toast = useToast();
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
+  const [livePrices, setLivePrices] = useState<Record<'starter' | 'growth', number> | null>(null);
+
+  // Fetched lazily on first open rather than on mount — this component stays mounted
+  // (AppLayout toggles `open`, doesn't remount it) so this only ever runs once per session,
+  // and only for the sessions that actually open the modal. Falls back to the static
+  // PLAN_CARDS price strings below if the fetch hasn't landed yet or fails.
+  useEffect(() => {
+    if (!open || livePrices) return;
+    api
+      .getPlanPrices()
+      .then((res) => setLivePrices(res.prices))
+      .catch(() => {});
+  }, [open, livePrices]);
 
   const recommended = recommendedTier(tenant?.companySize ?? null);
 
@@ -156,6 +173,10 @@ export default function PlansModal({ open, tenant, token, onClose, onPlanChosen 
       <div className="grid gap-4 sm:grid-cols-3">
         {PLAN_CARDS.map((card) => {
           const isRecommended = card.key === recommended;
+          const displayPrice =
+            (card.key === 'starter' || card.key === 'growth') && livePrices
+              ? formatPlanPrice(livePrices[card.key])
+              : card.price;
           return (
             <div
               key={card.key}
@@ -172,7 +193,7 @@ export default function PlansModal({ open, tenant, token, onClose, onPlanChosen 
               <p className="text-xs text-ink-muted mb-4 min-h-[2rem]">{card.tagline}</p>
 
               <p className="mb-0.5">
-                <span className="text-2xl font-bold">{card.price}</span>
+                <span className="text-2xl font-bold">{displayPrice}</span>
                 {card.priceSuffix && <span className="text-sm font-normal text-ink-muted"> {card.priceSuffix}</span>}
                 {card.strikePrice && <span className="ml-1 text-sm text-ink-faint line-through">{card.strikePrice}</span>}
               </p>

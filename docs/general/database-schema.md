@@ -46,6 +46,7 @@ erDiagram
         string lastName
         string phone
         string email UK
+        string emailDomain "nullable, lowercased domain of email — indexed"
         string passwordHash
         enum role "owner/admin/member"
         enum status "active/inactive"
@@ -85,6 +86,7 @@ Notas:
 - `Invitation` no fuerza un solo uso por email — el guardrail real (no invitar a alguien que ya pertenece a un tenant) vive en `createInvitation`, no en el schema.
 - `Session.expiresAt` es **expiración deslizante**: cada uso válido la extiende (solo si falta menos de 1 día, para no pagar el costo de un `UPDATE` en cada request autenticado). Cambiar la propia contraseña revoca todas las demás sesiones del usuario. Se agregó vía migración segura (nullable → backfill de las sesiones existentes → `NOT NULL`), documentada en `docs/tareas/semana-2026-07-21.md`.
 - `Tenant.companySize`/`industry`/`country`/`acquisitionChannel` y `User.acceptedTermsAt` son campos del formulario de Sign Up ampliado (2026-07-22) — todos nullable, no retroactivos.
+- **`User.emailDomain` (2026-08-18)**: agregado para que `checkEmailDomainNotAlreadyRegistered` (`tenantService.ts`) haga un lookup indexado en vez de un scan de toda la tabla con `email: {endsWith: '@dominio'}` (Postgres no puede usar un índice btree para eso). Mismo patrón seguro que `Session.expiresAt` arriba: columna nullable, seteada en cada `user.create` desde el 2026-08-18 en adelante (`registerTenantWithOwner`, `registerUser`, `contractConfirmationService`), y un backfill (`scripts/backfill-user-email-domain.ts`) para las filas anteriores — correrlo una vez después del `prisma db push` que agrega la columna, contra **las dos** bases (ver la regla de proceso en `docs/general/tareas-desarrollo.md`).
 - **`PasswordResetToken` ("¿olvidaste tu contraseña?", 2026-08-09)**: mismo patrón que `Invitation` (token random, ventana de expiración, resuelto en un solo request), pero con un flag `usedAt` en vez de un enum `status` — un reset token solo tiene dos estados posibles (sin usar/usado), no necesita `pending/expired/revoked`. `POST /api/auth/forgot-password` nunca revela si el email existe (misma respuesta genérica siempre, sin importar el resultado — evita enumeration); pedir un reset nuevo invalida (`usedAt`) cualquier token anterior sin usar de esa persona. Al confirmar el reset (`POST /api/auth/reset-password`) se borran **todas** las sesiones existentes del usuario (a diferencia de `changeOwnPassword`, que preserva la sesión que hizo el cambio) y se crea una sesión nueva — la persona queda logueada, pero cualquier sesión vieja (robada o no) muere.
 
 ## 2. HR core

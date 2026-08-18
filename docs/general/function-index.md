@@ -32,6 +32,11 @@
 - **rowsToRecords(rows)** — header + filas → array de objetos planos, keyed por nombre de columna (match case-insensitive). Forma que consume todo importador de CSV de la app.
 - **getField(record, ...names)** — busca un campo en un record por cualquiera de varios nombres alternativos (alias de columna).
 
+### `src/lib/email.ts`
+Leaf module (sin imports) — extraído 2026-08-18 de `tenantService.ts` para que `authService.ts` y `contractConfirmationService.ts` pudieran usarlo sin crear un import circular.
+- **isEmailFormatValid(email)** — regex de formato, no de existencia real.
+- **getEmailDomain(email)** — dominio en minúsculas de un email. Setea `User.emailDomain` en cada `user.create` (registerTenantWithOwner, registerUser, contractConfirmationService) y lo usa `publicFormService.ts` para matchear Contact↔Company por dominio.
+
 ### `src/lib/encryption.ts`
 - **encryptPaymentAccountData(plaintext)** / **decryptPaymentAccountData(payload)** — AES-256-GCM vía el módulo `crypto` nativo de Node (sin librería externa), keyed por `PAYMENT_DATA_ENCRYPTION_KEY`. Único uso hoy: `EmployeeCompensation.paymentAccountDataEncrypted` (Payroll, ver `docs/spec-payroll.md`).
 
@@ -216,7 +221,7 @@ CRUD estándar, cross-entidad vía `entityType`/`entityId`: **createNote**, **fi
 - **updateTenantPlan(tenantId, plan)** — solo `starter`/`growth` (Scale no tiene checkout self-service todavía); setea `plan` + `lockedPriceCents`/`lockedPriceSetAt`, nunca toca `trialEndsAt`.
 
 ### `src/modules/tenant/planTransitionService.ts` (Subscription Plans)
-- **runPlanTransitions(now?)** — `trialing → past_due → suspended` según `trialEndsAt`/`gracePeriodEndsAt`; idempotente, pensada para correr diaria vía Vercel Cron (`src/routes/internal.ts`).
+- **runPlanTransitions(now?)** — `trialing → past_due → suspended` según `trialEndsAt`/`gracePeriodEndsAt`; idempotente, pensada para correr diaria vía Vercel Cron (`src/routes/internal.ts`). El paso `trialing → past_due` es un solo `$executeRaw` (2026-08-18, antes era un `findMany` + loop de `update` uno por uno) — `gracePeriodEndsAt` depende del `trialEndsAt` de cada fila, por eso no es un `updateMany` directo.
 
 ### `src/modules/tenant/invitationService.ts`
 - **findInvitationByToken(token)** — incluye `employeeId`/`tenantId` en el select.
@@ -224,8 +229,8 @@ CRUD estándar, cross-entidad vía `entityType`/`entityId`: **createNote**, **fi
 - **acceptInvitation(input)**, **listTenantInvitations(tenantId)**, **cancelInvitation(tenantId, invitationId)**.
 
 ### `src/modules/tenant/tenantService.ts`
-- **getEmailDomain(email)** / **normalizeSlug(value)** / **isEmailFormatValid(email)** — helpers de string.
-- **checkEmailDomainNotAlreadyRegistered(email)** — validador de dominio duplicado, compartido por `emailVerificationService.ts` (el gate real, en `signup/start`) y `registerTenantWithOwner` (defensa en profundidad); excluye tenants `cancelled` y `suspended` del match, no solo `active` (un trial abandonado no debe bloquear el dominio para siempre, ya que todavía no hay billing real que permita reactivarse self-serve).
+- **normalizeSlug(value)** — helper de string. (`getEmailDomain`/`isEmailFormatValid` viven en `src/lib/email.ts` desde 2026-08-18.)
+- **checkEmailDomainNotAlreadyRegistered(email)** — validador de dominio duplicado, compartido por `emailVerificationService.ts` (el gate real, en `signup/start`) y `registerTenantWithOwner` (defensa en profundidad); excluye tenants `cancelled` y `suspended` del match, no solo `active` (un trial abandonado no debe bloquear el dominio para siempre, ya que todavía no hay billing real que permita reactivarse self-serve). Desde 2026-08-18 filtra por `User.emailDomain` (igualdad, indexado) en vez de `email: {endsWith}` (scan completo de la tabla).
 - **registerTenantWithOwner(input)** — flujo completo de "Sign Up" (tenant + owner + seeds); requiere `verificationToken` (Tenant Signup, `docs/spec-tenant-signup.md`) validado y consumido al final, justo antes de la transacción — nunca antes, para no quemar el token si otra validación falla. Setea `Tenant.status: 'trialing'` + `trialEndsAt` (Subscription Plans).
 - **findTenantNameById(tenantId)**, **getTenantById(tenantId)** (incluye `status`/`plan`/`companySize`/`trialEndsAt`/`gracePeriodEndsAt`), **updateTenantCurrency(tenantId, currency)**.
 - **findUserById(id)** — sin scope de tenant a propósito (mismo patrón que `findClientById`/`findEmployeeById`) — el caller valida `tenantId` antes de confiar en el resultado.
@@ -288,7 +293,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 
 | Archivo | Métodos |
 |---|---|
-| `auth.ts` | startSignup, resendSignup, verifySignup, registerTenant, login, register, forgotPassword, validateResetToken, resetPassword, getInvitation, acceptInvitation, logout, getCurrentUser, updateProfile, changePassword, getCurrentTenant, updateTenantCurrency, updateTenantPlan |
+| `auth.ts` | startSignup, resendSignup (ambas vía el helper interno `postSignupEmail`, no exportado), verifySignup, registerTenant, login, register, forgotPassword, validateResetToken, resetPassword, getInvitation, acceptInvitation, logout, getCurrentUser, updateProfile, changePassword, getCurrentTenant, updateTenantCurrency, getPlanPrices (2026-08-18, público, sin token), updateTenantPlan |
 | `employees.ts` | listEmployees, createEmployee, updateEmployee, deleteEmployee, inviteEmployee, getEmployeeCompensation, getEmployeeContractPdf, resendContract |
 | `companies.ts` | listCompanies, createCompany, updateCompany, deleteCompany, +custom field values |
 | `contacts.ts` | listContacts, createContact, updateContact, deleteContact, +custom field values |
@@ -315,6 +320,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 | `http.ts` | apiFetch(url, init?), throwApiError(res) — base compartida, no un dominio |
 
 ### `frontend/src/components/common/` — componentes reusables genéricos, no ligados a una entidad
+- **AcceptTermsCheckbox** (2026-08-18) — checkbox "acepto ToS/Privacy" + los dos botones que abren `LegalDocumentModal`; dueño de su propio estado de qué doc mostrar. Extraído de tres copias casi idénticas (CompleteSignupPage, AcceptInvitePage, ContractConfirmationPage) — usar esto en vez de reimplementar el bloque en cualquier form nuevo que pida aceptar términos.
 - **AuthLayout** — shell de las pantallas de login/registro.
 - **AutoSaveField** / **AutoSaveSelect** — input/select que guarda solo (blur / change), revierte y avisa por toast si el PATCH falla. Usar siempre que un campo se edite "en línea" sin botón Save.
 - **Avatar** (+ **getInitials**) — círculo con iniciales.
@@ -330,7 +336,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 - **Modal** — modal centrado con backdrop, mismas props que `SlideOver` (open/title/onClose/footer). Patrón esperado (no excepción) para el form de alta de Employee/Company/Contact/Opportunity desde 2026-08; para otros forms chicos, evaluar caso a caso si el diseño pide centrado en vez de panel lateral. Prop `wide` (768px) ya existía; `xwide` (1024px, nuevo 2026-08-13) para contenido que necesita más ancho todavía, como `PlansModal`.
 - **OverviewActionsMenu** — trigger "Actions" del header de un panel de detalle (Delete, Invite to app, etc.).
 - **Pagination** (+ **paginate**) — paginación client-side, 20 filas/página.
-- **PlansModal** (2026-08-13, Subscription Plans) — modal (`Modal` `xwide`) que se abre solo una vez, automáticamente, cuando un tenant recién creado (`status: 'trialing'`, `plan: null`) llega a cualquier pantalla — no es una ruta, no bloquea navegación (corregido de una versión anterior que sí lo era). 3 tarjetas: Free Trial (mismas features que Starter, cierra el modal sin llamar al backend), Starter, Growth — copy fiel al mockup aprobado. Dismiss persistido en `localStorage` por tenant (`northstack:dismissedPlansModal:<tenantId>`), owner-only (gateado también server-side por `canManageBilling`). Montado en `AppLayout.tsx`.
+- **PlansModal** (2026-08-13, Subscription Plans) — modal (`Modal` `xwide`) que se abre solo una vez, automáticamente, cuando un tenant recién creado (`status: 'trialing'`, `plan: null`) llega a cualquier pantalla — no es una ruta, no bloquea navegación (corregido de una versión anterior que sí lo era). 3 tarjetas: Free Trial (mismas features que Starter, cierra el modal sin llamar al backend), Starter, Growth — copy fiel al mockup aprobado. Precio de Starter/Growth traído en vivo de `GET /api/plans/prices` (2026-08-18, `api.getPlanPrices`) en vez de hardcodeado, para no divergir silenciosamente de `planService.ts`'s `CURRENT_PLAN_PRICES_CENTS`; fetch lazy en el primer `open`, cacheado en el componente (que queda montado, `AppLayout` solo togglea `open`). Dismiss persistido en `localStorage` por tenant (`northstack:dismissedPlansModal:<tenantId>`), owner-only (gateado también server-side por `canManageBilling`). Desde 2026-08-18 el dismiss ya no es un callejón sin salida: `AppLayout` muestra un banner "Choose a plan" mientras `plan === null` que puede reabrir el modal (`plansModalForceOpen`). Montado en `AppLayout.tsx`.
 - **PasswordChecklist** / **PasswordInput** — checklist en vivo de reglas de contraseña + toggle mostrar/ocultar.
 - **Popover** — portal a `document.body` + posicionamiento por coordenadas reales; mecanismo estándar para cualquier dropdown flotante, nunca un `<div absolute>` a mano.
 - **RoleChip** — chip de rol (owner/admin/member).

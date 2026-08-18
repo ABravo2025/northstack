@@ -21,13 +21,16 @@ vi.mock('../src/lib/prisma.js', () => {
   const mockPrisma: any = {
     user: {
       findUnique: vi.fn(async ({ where }: any) => users.find((u) => u.email === where.email) ?? null),
+      // Domain derived from each fixture's `.email` rather than requiring an `.emailDomain`
+      // field on every test's pushed user — mirrors what the real column holds without
+      // needing every existing fixture updated.
       findFirst: vi.fn(async ({ where }: any) => {
-        const suffix = where.email.endsWith as string;
         const excludedStatuses: string[] = where.tenant?.status?.notIn ?? [];
         return (
-          users.find(
-            (u) => u.email.endsWith(suffix) && u.tenantStatus && !excludedStatuses.includes(u.tenantStatus),
-          ) ?? null
+          users.find((u) => {
+            const domain = u.email.split('@')[1]?.toLowerCase();
+            return domain === where.emailDomain && u.tenantStatus && !excludedStatuses.includes(u.tenantStatus);
+          }) ?? null
         );
       }),
       create: vi.fn(async ({ data }: any) => {

@@ -10,13 +10,6 @@ vi.mock('../src/lib/prisma.js', () => ({
         Object.assign(tenant, data);
         return tenant;
       }),
-      findMany: vi.fn(async ({ where }: any) => {
-        return tenants.filter((t) => {
-          if (where.status !== t.status) return false;
-          if (where.trialEndsAt && !(t.trialEndsAt <= where.trialEndsAt.lte)) return false;
-          return true;
-        });
-      }),
       updateMany: vi.fn(async ({ where, data }: any) => {
         let count = 0;
         for (const t of tenants) {
@@ -28,6 +21,21 @@ vi.mock('../src/lib/prisma.js', () => ({
         return { count };
       }),
     },
+    // Mirrors runPlanTransitions' single UPDATE statement: trialing rows whose trialEndsAt has
+    // lapsed move to past_due, with gracePeriodEndsAt computed from each row's own trialEndsAt
+    // (not a shared constant) — the exact reason that step is raw SQL instead of updateMany.
+    // Positional args match the query's two interpolations, in order: gracePeriodDays, now.
+    $executeRaw: vi.fn(async (_strings: any, gracePeriodDays: number, now: Date) => {
+      let count = 0;
+      for (const t of tenants) {
+        if (t.status !== 'trialing') continue;
+        if (!(t.trialEndsAt <= now)) continue;
+        t.status = 'past_due';
+        t.gracePeriodEndsAt = new Date(t.trialEndsAt.getTime() + gracePeriodDays * 24 * 60 * 60 * 1000);
+        count += 1;
+      }
+      return count;
+    }),
   },
 }));
 

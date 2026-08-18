@@ -64,14 +64,17 @@ export default function App() {
 
     if (token) {
       setCheckingSession(true);
-      api
-        .getCurrentUser(token)
-        .then((response) => {
-          setUser(response.user);
-          // Best-effort, alongside the user — powers PlansModal (shown once, right after
-          // signup) and the past_due grace-period banner, both in AppLayout. A failure here
-          // shouldn't block being logged in, so it's swallowed rather than logging the user out.
-          return api.getCurrentTenant(token).then(setTenant).catch(() => {});
+      // Run in parallel, not chained — getCurrentTenant only needs the token, not the user
+      // response, so sequencing them doubled the round-trip on every session restore. The
+      // tenant fetch stays best-effort (powers PlansModal + the past_due banner in AppLayout);
+      // a failure there shouldn't block being logged in, so it's swallowed independently rather
+      // than failing the whole Promise.all.
+      Promise.all([api.getCurrentUser(token), api.getCurrentTenant(token).catch(() => null)])
+        .then(([userResponse, tenant]) => {
+          setUser(userResponse.user);
+          if (tenant) {
+            setTenant(tenant);
+          }
         })
         .catch(() => {
           setToken(null);

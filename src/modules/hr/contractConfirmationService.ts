@@ -13,6 +13,7 @@ import {
 import { encryptPaymentAccountData } from '../../lib/encryption.js';
 import { renderContractPdf } from './contractPdfService.js';
 import { sendContractSignedEmail } from '../../lib/mailer.js';
+import { getEmailDomain } from '../../lib/email.js';
 
 // Public, token-gated read model for the contract-confirmation screen
 // (docs/spec-payroll.md Unidad 7) — split into a read-only block (what the
@@ -203,6 +204,7 @@ export async function confirmContract(input: ConfirmContractInput): Promise<Conf
         lastName: employee.lastName,
         phone: input.phone.trim(),
         email: invitation.email,
+        emailDomain: getEmailDomain(invitation.email),
         passwordHash: hashPassword(input.password),
         role: invitation.role,
         tenantId: invitation.tenantId,

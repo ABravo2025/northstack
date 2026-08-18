@@ -5,7 +5,8 @@ import { createContact } from '../crm/contactService.js';
 import { addOpportunityContact, createOpportunity } from '../crm/opportunityService.js';
 import { getDefaultStatusId } from './statusService.js';
 import { createCustomFieldValue, isValueValidForFieldType } from './customFieldService.js';
-import { GENERIC_EMAIL_DOMAINS, getEmailDomain } from '../tenant/tenantService.js';
+import { GENERIC_EMAIL_DOMAINS } from '../tenant/tenantService.js';
+import { getEmailDomain } from '../../lib/email.js';
 import { sendPublicFormConfirmationEmail, sendPublicFormSubmissionEmail } from '../../lib/mailer.js';
 import type { EntityType, Form, FormAccessMode } from '@prisma/client';
 

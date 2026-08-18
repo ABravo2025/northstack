@@ -63,10 +63,11 @@ export interface DomainCheckResult {
 // spec-tenant-signup.md. Extracted 2026-08 from what used to be inline-only in
 // registerTenantWithOwner, so the check doesn't diverge between the two call sites.
 //
-// `cancelled` tenants are excluded from the match (previously only `active` was checked) —
-// a company that left shouldn't block a new signup from the same domain, and `trialing`/
-// `past_due` tenants (added alongside Subscription Plans) are real, current tenants that
-// should block a duplicate exactly like `active` already did.
+// `cancelled` and `suspended` tenants are excluded from the match (previously only `active`
+// was checked) — a company that left, or whose lapsed trial auto-suspended with no self-serve
+// way back (no billing provider is integrated yet), shouldn't permanently block a new signup
+// from the same domain. `trialing`/`past_due` tenants (added alongside Subscription Plans) are
+// real, current tenants that should block a duplicate exactly like `active` already did.
 export async function checkEmailDomainNotAlreadyRegistered(email: string): Promise<DomainCheckResult> {
   const emailDomain = getEmailDomain(email);
   if (!emailDomain || GENERIC_EMAIL_DOMAINS.has(emailDomain)) {
@@ -76,7 +77,7 @@ export async function checkEmailDomainNotAlreadyRegistered(email: string): Promi
   const domainAlreadyRegistered = await prisma.user.findFirst({
     where: {
       email: { endsWith: `@${emailDomain}` },
-      tenant: { status: { not: 'cancelled' } },
+      tenant: { status: { notIn: ['cancelled', 'suspended'] } },
     },
   });
 
@@ -97,11 +98,6 @@ export interface TenantCreationResult {
   session?: Session;
   error?: string;
   field?: string;
-}
-
-export interface CreateTenantForUserInput {
-  userId: string;
-  name: string;
 }
 
 export interface RegisterTenantWithOwnerInput {
@@ -129,75 +125,6 @@ export interface RegisterTenantWithOwnerInput {
 // owner ever picks a plan on /plans. Kept as a named constant (not inlined) so
 // planTransitionService.ts's own comment about "same 15 days" has one source to point at.
 export const SIGNUP_TRIAL_DAYS = 15;
-
-export async function createTenantForUser(input: CreateTenantForUserInput): Promise<TenantCreationResult> {
-  const slug = normalizeSlug(input.name);
-
-  const existingTenant = await prisma.tenant.findUnique({
-    where: { slug },
-  });
-
-  if (existingTenant) {
-    return { success: false, error: 'Tenant slug already registered' };
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { id: input.userId },
-  });
-
-  if (!user) {
-    return { success: false, error: 'User not found' };
-  }
-
-  if (user.tenantId) {
-    return { success: false, error: 'User already belongs to a tenant' };
-  }
-
-  const result = await prisma.$transaction(async (tx) => {
-    const tenant = await tx.tenant.create({
-      data: {
-        name: input.name,
-        slug,
-      },
-    });
-
-    await seedDefaultStatusDefinitions(tx, tenant.id);
-    await seedDefaultPipelines(tx, tenant.id);
-    await seedDefaultPayFrequencies(tx, tenant.id);
-    await seedDefaultPaymentMethods(tx, tenant.id);
-
-    const updatedUser = await tx.user.update({
-      where: { id: input.userId },
-      data: {
-        tenantId: tenant.id,
-        role: 'owner',
-      },
-    });
-
-    const ownerDefaultStatus = await tx.statusDefinition.findFirstOrThrow({
-      where: { tenantId: tenant.id, entityType: 'employee', isDefault: true },
-    });
-
-    await tx.employee.create({
-      data: {
-        firstName: updatedUser.firstName,
-        lastName: updatedUser.lastName,
-        email: updatedUser.email,
-        statusId: ownerDefaultStatus.id,
-        tenantId: tenant.id,
-        userId: updatedUser.id,
-      },
-    });
-
-    return { tenant, user: updatedUser };
-  }, { timeout: 15000 }); // default 5000ms is tight once seeding (statuses + pipelines) adds several round trips over Neon's network latency
-
-  return {
-    success: true,
-    tenant: result.tenant,
-    user: result.user,
-  };
-}
 
 export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInput): Promise<TenantCreationResult> {
   const slug = normalizeSlug(input.tenantName);
@@ -408,7 +335,17 @@ async function validateAndConsumeEmailVerification(token: string, email: string)
     return { valid: false, error: 'This verification link does not match this email.' };
   }
 
-  await prisma.emailVerification.delete({ where: { id: record.id } });
+  // Atomic consume — re-checks verifiedAt at delete time instead of trusting the read above, so
+  // two concurrent submits of the same verified email (double-click, client retry) can't both
+  // pass validation and create two tenants: only one deleteMany actually removes the row, the
+  // loser gets count 0 and a clean error instead of racing into tenant creation.
+  const consumed = await prisma.emailVerification.deleteMany({
+    where: { id: record.id, verifiedAt: { not: null } },
+  });
+  if (consumed.count === 0) {
+    return { valid: false, error: 'This verification link is invalid. Please start over.' };
+  }
+
   return { valid: true };
 }
 

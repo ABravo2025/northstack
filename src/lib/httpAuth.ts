@@ -36,5 +36,14 @@ export async function validateSession(req: express.Request, res: express.Respons
     return null;
   }
 
+  // Suspended (spec-subscription-plans.md: trial + grace period both lapsed) goes view-only,
+  // not a hard lockout — GETs still work so the workspace stays visible, only mutations are
+  // blocked, since no billing provider is integrated yet to give a self-serve way to pay and
+  // reactivate. Every tenant-scoped route goes through here, so this is the one place to gate.
+  if (req.method !== 'GET' && user.tenant?.status === 'suspended') {
+    res.status(403).json({ error: 'Your workspace is in view-only mode until your subscription is renewed.' });
+    return null;
+  }
+
   return user;
 }

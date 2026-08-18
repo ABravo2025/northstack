@@ -37,9 +37,10 @@ export async function startSignupVerification(email: string): Promise<StartSignu
 
   // Only the most recently requested link should work — same "supersede the old one" idea as
   // requestPasswordReset (authService.ts), adapted to this model's simpler shape (no
-  // usedAt/status column): an unverified row from an earlier request is deleted outright
-  // instead of marked invalid.
-  await prisma.emailVerification.deleteMany({ where: { email: normalizedEmail, verifiedAt: null } });
+  // usedAt/status column): every prior row for this email is deleted outright instead of
+  // marked invalid, whether or not it was already clicked — otherwise a verified-but-abandoned
+  // row stays valid for up to 24h after a resend, alongside the new one.
+  await prisma.emailVerification.deleteMany({ where: { email: normalizedEmail } });
 
   const token = randomUUID();
   await prisma.emailVerification.create({
@@ -75,12 +76,15 @@ export async function verifySignupToken(token: string): Promise<VerifySignupToke
     return { success: false, error: 'This verification link is invalid.', status: 404 };
   }
 
-  if (record.verifiedAt) {
-    return { success: true, email: record.email };
-  }
-
+  // Expiry always wins, even over a link that was already clicked — otherwise a link clicked
+  // hours ago but abandoned mid-survey keeps reporting success here while the final submit
+  // (validateAndConsumeEmailVerification in tenantService.ts, which does check this) rejects it.
   if (record.expiresAt < new Date()) {
     return { success: false, error: 'This verification link has expired.', status: 410 };
+  }
+
+  if (record.verifiedAt) {
+    return { success: true, email: record.email };
   }
 
   const updated = await prisma.emailVerification.update({

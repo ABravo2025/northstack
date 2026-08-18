@@ -126,10 +126,17 @@ export default function App() {
   // handleContractConfirmed/handlePasswordReset/handleInvitationAccepted above. Lands on
   // /overview directly — PlansModal (AppLayout) shows itself automatically over that screen
   // for a fresh trialing tenant, it isn't a route of its own (2026-08-13 correction).
-  const handleSignupCompleted = (newToken: string, newUser: any) => {
+  //
+  // tenant is set directly from the register response rather than left to the [token] effect
+  // above: react-router's BrowserRouter wraps the location update from navigate() in
+  // startTransition, so that effect can fire (and hit its isRegisterCompleteRoute guard) before
+  // location.pathname has actually changed to /overview, and then never re-runs since token
+  // doesn't change again — PlansModal would never appear for a fresh signup otherwise.
+  const handleSignupCompleted = (newToken: string, newUser: any, newTenant: Tenant) => {
     setToken(newToken);
     localStorage.setItem('token', newToken);
     setUser(newUser);
+    setTenant(newTenant);
     navigate('/overview');
   };
 
@@ -143,6 +150,10 @@ export default function App() {
     }
     setToken(null);
     setUser(null);
+    // Cleared alongside token/user — otherwise a second person logging in on the same tab
+    // briefly (or, if the tenant fetch below then fails, indefinitely) sees the previous
+    // account's tenant: its past_due/suspended banner, its PlansModal dismissal state, etc.
+    setTenant(null);
     localStorage.removeItem('token');
   };
 

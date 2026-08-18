@@ -7,6 +7,7 @@ import LegalDocumentModal from '../components/common/LegalDocumentModal';
 import RequiredMark from '../components/common/RequiredMark';
 import { COUNTRIES } from '../lib/countries';
 import { api, ApiError } from '../api';
+import type { Tenant } from '../api';
 
 const COMPANY_SIZE_OPTIONS = ['1-10', '11-50', '51-200', '201-500', '500+'];
 
@@ -49,7 +50,7 @@ const FIELD_STEP: Record<string, SurveyStep> = {
 type SurveyStep = 'company' | 'you' | 'security';
 
 interface CompleteSignupPageProps {
-  onRegistered: (token: string, user: any) => void;
+  onRegistered: (token: string, user: any, tenant: Tenant) => void;
 }
 
 // Reached via /register/complete?token=... after clicking the link from
@@ -136,14 +137,19 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
         verificationToken: token!,
       });
       const sessionToken = response.session?.token;
-      if (!sessionToken) {
+      if (!sessionToken || !response.tenant) {
         throw new Error('Could not start a session');
       }
-      onRegistered(sessionToken, response.user);
+      onRegistered(sessionToken, response.user, response.tenant);
     } catch (err) {
-      if (err instanceof ApiError && err.field) {
-        setFieldError({ field: err.field, message: err.message });
-        setSurveyStep(FIELD_STEP[err.field] ?? 'security');
+      // Only jump to a specific step if that field actually has a step + renderer for it (e.g.
+      // ownerEmail/verificationToken don't — there's no email input on this page). Anything
+      // unmapped falls back to the top banner instead of silently landing with no message shown.
+      const field = err instanceof ApiError ? err.field : undefined;
+      const step = field ? FIELD_STEP[field] : undefined;
+      if (field && step) {
+        setFieldError({ field, message: (err as Error).message });
+        setSurveyStep(step);
       } else {
         setFieldError({ field: '', message: (err as Error).message });
       }

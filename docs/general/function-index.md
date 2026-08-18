@@ -39,7 +39,7 @@
 - **getBearerToken(req)** — extrae el token `Authorization: Bearer`.
 - **getClientIp(req)** — IP del cliente, para rate limiting.
 - **authenticateUser(req, res)** — valida credenciales de login, no de sesión existente.
-- **validateSession(req, res)** — valida el token de sesión de un request ya autenticado; el que usa casi todo endpoint protegido.
+- **validateSession(req, res)** — valida el token de sesión de un request ya autenticado; el que usa casi todo endpoint protegido. Desde 2026-08-18 también bloquea con 403 cualquier request no-`GET` si `tenant.status === 'suspended'` (view-only: sin billing real todavía no hay forma self-serve de reactivar, así que se lee pero no se escribe).
 
 ### `src/lib/platformAuth.ts`
 - **requirePlatformRole(...allowed)** — devuelve un helper `(req, res) => Promise<User | null>` en el mismo estilo call-and-return de `validateSession` (no middleware `next()`). Usa `authenticateUser` (no `validateSession`, porque el staff de plataforma no tiene `tenantId`), y rechaza si `user.platformRole` es null o no está en `allowed`. `platform_admin` pasa siempre (bypass implícito, no hace falta listarlo). Usado por las rutas `/api/platform/*` (Admin Center).
@@ -71,7 +71,7 @@ Todas siguen el mismo patrón: `if (!mailerConfigured()) return;` (no rompen el 
 - **isPhoneValid(phone)** — validación de teléfono.
 - **registerUser(input)** — alta de usuario suelto (no tenant nuevo — ver `tenantService.registerTenantWithOwner` para eso).
 - **loginUser(input)** — login, crea sesión.
-- **authenticateToken(token)** — resuelve un token de sesión a su `User`.
+- **authenticateToken(token)** — resuelve un token de sesión a su `User`, con `tenant: {id, status} | null` incluido (2026-08-18) para que `validateSession` pueda gatear por status de tenant sin un round-trip extra.
 - **logoutUser(token)** — revoca una sesión.
 - **updateOwnProfile(userId, input)** / **changeOwnPassword(...)** — auto-gestión del propio usuario.
 - **requestPasswordReset(email)** (2026-08-09) — nunca revela si el email existe (misma respuesta genérica siempre); si existe, invalida cualquier `PasswordResetToken` sin usar de esa persona y crea uno nuevo (1h de expiración), dispara `sendPasswordResetEmail` best-effort.
@@ -225,8 +225,7 @@ CRUD estándar, cross-entidad vía `entityType`/`entityId`: **createNote**, **fi
 
 ### `src/modules/tenant/tenantService.ts`
 - **getEmailDomain(email)** / **normalizeSlug(value)** / **isEmailFormatValid(email)** — helpers de string.
-- **checkEmailDomainNotAlreadyRegistered(email)** — validador de dominio duplicado, compartido por `emailVerificationService.ts` (el gate real, en `signup/start`) y `registerTenantWithOwner` (defensa en profundidad); excluye tenants `cancelled` del match, no solo `active`.
-- **createTenantForUser(input)** — tenant nuevo para un usuario ya existente.
+- **checkEmailDomainNotAlreadyRegistered(email)** — validador de dominio duplicado, compartido por `emailVerificationService.ts` (el gate real, en `signup/start`) y `registerTenantWithOwner` (defensa en profundidad); excluye tenants `cancelled` y `suspended` del match, no solo `active` (un trial abandonado no debe bloquear el dominio para siempre, ya que todavía no hay billing real que permita reactivarse self-serve).
 - **registerTenantWithOwner(input)** — flujo completo de "Sign Up" (tenant + owner + seeds); requiere `verificationToken` (Tenant Signup, `docs/spec-tenant-signup.md`) validado y consumido al final, justo antes de la transacción — nunca antes, para no quemar el token si otra validación falla. Setea `Tenant.status: 'trialing'` + `trialEndsAt` (Subscription Plans).
 - **findTenantNameById(tenantId)**, **getTenantById(tenantId)** (incluye `status`/`plan`/`companySize`/`trialEndsAt`/`gracePeriodEndsAt`), **updateTenantCurrency(tenantId, currency)**.
 - **findUserById(id)** — sin scope de tenant a propósito (mismo patrón que `findClientById`/`findEmployeeById`) — el caller valida `tenantId` antes de confiar en el resultado.

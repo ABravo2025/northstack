@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import prisma from '../../lib/prisma.js';
-import type { UserRole } from '@prisma/client';
+import type { TenantStatus, UserRole } from '@prisma/client';
 import type { User, Session } from '@prisma/client';
 import { sendPasswordResetEmail } from '../../lib/mailer.js';
 
@@ -155,10 +155,14 @@ export async function loginUser(input: LoginUserInput): Promise<AuthResult> {
   return { success: true, user, session };
 }
 
-export async function authenticateToken(token: string): Promise<User | null> {
+// Minimal tenant projection alongside the user — just enough for validateSession (httpAuth.ts)
+// to gate mutations on a suspended workspace without a second round trip per request.
+export type AuthenticatedUser = User & { tenant: { id: string; status: TenantStatus } | null };
+
+export async function authenticateToken(token: string): Promise<AuthenticatedUser | null> {
   const session = await prisma.session.findUnique({
     where: { token },
-    include: { user: true },
+    include: { user: { include: { tenant: { select: { id: true, status: true } } } } },
   });
 
   if (!session) {

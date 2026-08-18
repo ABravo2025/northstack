@@ -578,6 +578,12 @@
   @apply border border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300;
 }
 
+/* First real consumer: the "choose a plan" reminder banner in AppLayout.tsx — same pattern as
+   alert-warning/error/success above, blue for a non-urgent FYI rather than a warning. */
+.alert-info {
+  @apply border border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-300;
+}
+
 .field-error {
   @apply mt-1 text-xs text-red-600 dark:text-red-400;
 }

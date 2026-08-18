@@ -1,4 +1,5 @@
-import type { PlatformEntityType, TenantStatus } from '@prisma/client';
+import { TenantStatus } from '@prisma/client';
+import type { PlatformEntityType } from '@prisma/client';
 import { requirePlatformRole } from '../lib/platformAuth.js';
 import {
   getTenantDetail,
@@ -30,7 +31,10 @@ import { createAsyncRouter } from '../lib/asyncRouter.js';
 
 export const platformRouter = createAsyncRouter();
 
-const VALID_TENANT_STATUSES: TenantStatus[] = ['active', 'suspended', 'cancelled'];
+// Derived from the enum itself (not hand-copied) so a future status addition can't silently
+// leave Admin Center unable to list tenants in that state — that's exactly what happened here
+// when trialing/past_due were added to the schema without this list being updated.
+const VALID_TENANT_STATUSES: TenantStatus[] = Object.values(TenantStatus);
 const VALID_TENANT_SORT: TenantSortField[] = ['name', 'country', 'createdAt', 'userCount'];
 const VALID_TENANT_USER_SORT: TenantUserSortField[] = [
   'firstName',

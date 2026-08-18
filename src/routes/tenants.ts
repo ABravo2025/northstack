@@ -1,11 +1,6 @@
 import { sanitizeUser } from '../modules/auth/authService.js';
 import { canInviteUsers, canManageBilling, canManageUsers } from '../modules/auth/permissionService.js';
-import {
-  createTenantForUser,
-  getTenantById,
-  registerTenantWithOwner,
-  updateTenantCurrency,
-} from '../modules/tenant/tenantService.js';
+import { getTenantById, registerTenantWithOwner, updateTenantCurrency } from '../modules/tenant/tenantService.js';
 import { startSignupVerification, verifySignupToken } from '../modules/tenant/emailVerificationService.js';
 import { updateTenantPlan } from '../modules/tenant/planService.js';
 import {
@@ -141,29 +136,6 @@ tenantsRouter.patch('/api/tenants/me/plan', async (req, res) => {
   }
 
   return res.json({ tenant: result.tenant });
-});
-
-tenantsRouter.post('/api/tenants', async (req, res) => {
-  const user = await authenticateUser(req, res);
-  if (!user) {
-    return;
-  }
-
-  const name = req.body.name as string;
-  if (!name || !name.trim()) {
-    return res.status(400).json({ error: 'Tenant name is required' });
-  }
-
-  const result = await createTenantForUser({
-    userId: user.id,
-    name: name.trim(),
-  });
-
-  if (!result.success) {
-    return res.status(400).json({ error: result.error });
-  }
-
-  return res.status(201).json({ tenant: result.tenant, user: sanitizeUser(result.user!) });
 });
 
 tenantsRouter.get('/api/tenants/current', async (req, res) => {

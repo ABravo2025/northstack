@@ -7,11 +7,9 @@ export interface AuthResponse {
     role: string;
     tenantId?: string;
   };
-  tenant?: {
-    id: string;
-    name: string;
-    slug: string;
-  };
+  // Full shape only on POST /api/tenants/register — every other AuthResponse caller
+  // (login, accept-invite, password reset) doesn't create/return a tenant.
+  tenant?: Tenant;
   session?: {
     token: string;
   };

@@ -56,6 +56,11 @@ vi.mock('../src/lib/prisma.js', () => {
     employee: {
       create: vi.fn(async () => ({})),
     },
+    // Billing Integration — registerTenantWithOwner now creates a placeholder Subscription
+    // alongside the Tenant in the same transaction (see tenantService.ts).
+    subscription: {
+      create: vi.fn(async ({ data }: any) => ({ id: `subscription-${Math.random()}`, ...data })),
+    },
     $transaction: vi.fn(async (fn: any) => fn(mockPrisma)),
     emailVerification: {
       findUnique: vi.fn(

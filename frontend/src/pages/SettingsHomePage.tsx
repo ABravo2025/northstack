@@ -22,10 +22,19 @@ interface Tile {
 
 export default function SettingsHomePage({ user }: SettingsHomePageProps) {
   const isAdmin = user.role === 'owner' || user.role === 'admin';
+  const isOwner = user.role === 'owner';
 
   const accountTiles: Tile[] = [
     { to: 'profile', label: 'Profile', desc: 'Name, phone and password.', icon: <UserCircleIcon /> },
   ];
+
+  // Owner-only visibility (matches canManageBilling on the backend — every mutating endpoint
+  // under it already rejects a non-owner with 403), placed alongside Profile per Alejandro's
+  // explicit placement call (2026-08-19) — "My account" itself still renders for every role,
+  // this tile is just conditionally appended to it for owners.
+  if (isOwner) {
+    accountTiles.push({ to: 'billing', label: 'Billing', desc: 'Plan, invoices and payment method.', icon: <BriefcaseIcon /> });
+  }
 
   const companyTiles: Tile[] = [
     { to: 'appearance', label: 'Appearance', desc: 'Currency and theme for the workspace.', icon: <BuildingIcon /> },
@@ -73,13 +82,6 @@ export default function SettingsHomePage({ user }: SettingsHomePageProps) {
                 </span>
                 <span className="settings-tile-label">Integrations</span>
                 <span className="settings-tile-desc">Connect Northstack to other tools.</span>
-              </span>
-              <span className="settings-tile disabled" aria-disabled="true">
-                <span className="settings-tile-icon">
-                  <BriefcaseIcon />
-                </span>
-                <span className="settings-tile-label">Billing</span>
-                <span className="settings-tile-desc">Plan, invoices and payment method.</span>
               </span>
             </div>
           </div>

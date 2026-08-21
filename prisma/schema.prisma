@@ -51,6 +51,26 @@ enum PlanTier {
   scale
 }
 
+// Billing Integration (spec-billing-integration.md) — Paddle (international) vs Mercado Pago
+// (Argentina only), routed via resolveProvider() in subscriptionService.ts. Additive: the
+// existing Tenant.status/plan/trialEndsAt/gracePeriodEndsAt/lockedPriceCents fields stay as the
+// mirror route guards/AppLayout's banner already read — syncSubscriptionAndTenant() becomes the
+// single writer for both Subscription and that mirror from here on (cron + the two webhook
+// handlers, once built). See the Subscription model below for why plan/lockedPriceCents aren't
+// nullable there even though Tenant's are.
+enum SubscriptionStatus {
+  trialing
+  active
+  past_due
+  suspended
+  cancelled
+}
+
+enum PaymentProvider {
+  paddle
+  mercadopago
+}
+
 // Staff-only, orthogonal to tenant membership. Null = not Northstack staff
 // (the normal case for every customer User). Admin Center's login rejects
 // anyone with a null platformRole.
@@ -291,6 +311,7 @@ model Tenant {
   gracePeriodEndsAt        DateTime?
   lockedPriceCents         Int?
   lockedPriceSetAt         DateTime?
+  subscription             Subscription?
   users                    User[]
   employees                Employee[]
   clients                  Client[]
@@ -321,6 +342,82 @@ model Tenant {
   employeeCompensations    EmployeeCompensation[]
   payrollRuns              PayrollRun[]
   payrollEntries           PayrollEntry[]
+}
+
+// Billing Integration (spec-billing-integration.md). plan/lockedPriceCents are deliberately NOT
+// nullable, unlike the equivalent Tenant fields above: a tenant that hasn't explicitly picked a
+// plan yet (Tenant.plan still null) gets a 'starter'-priced placeholder Subscription instead —
+// see registerTenantWithOwner (tenantService.ts) and scripts/backfill-billing-subscriptions.ts.
+// updateTenantPlan (planService.ts) overwrites the placeholder with the real choice the moment
+// the tenant picks one, so nothing here ever gets charged against an unconfirmed guess.
+model Subscription {
+  id                      String             @id @default(uuid())
+  tenantId                String             @unique // 1:1 — one live subscription per tenant
+  tenant                  Tenant             @relation(fields: [tenantId], references: [id])
+  plan                    PlanTier
+  status                  SubscriptionStatus @default(trialing)
+  provider                PaymentProvider? // null until a payment method is actually attached
+  externalSubscriptionId  String? // Paddle subscription id, or Mercado Pago preapproval_id
+  lockedPriceCents        Int
+  currency                String // "USD" (Paddle) | "ARS" (Mercado Pago)
+  trialEndsAt             DateTime?
+  gracePeriodEndsAt       DateTime?
+  currentPeriodStart      DateTime?
+  currentPeriodEnd        DateTime?
+  cancelledAt             DateTime? // when cancellation was requested
+  cancellationEffectiveAt DateTime? // = currentPeriodEnd at the moment of the request
+  cancellationReason      String?
+  paymentMethodBrand      String? // "visa" | "mastercard" | etc — display only, never sensitive
+  paymentMethodLast4      String?
+  createdAt               DateTime           @default(now())
+  updatedAt               DateTime           @updatedAt
+  invoices                Invoice[]
+
+  @@index([provider, status])
+}
+
+model Invoice {
+  id                String          @id @default(uuid())
+  subscriptionId    String
+  subscription      Subscription    @relation(fields: [subscriptionId], references: [id])
+  provider          PaymentProvider
+  externalInvoiceId String?
+  amountCents       Int
+  currency          String
+  status            String // paid | failed | refunded
+  periodStart       DateTime
+  periodEnd         DateTime
+  paidAt            DateTime?
+  createdAt         DateTime        @default(now())
+
+  @@index([subscriptionId])
+}
+
+// Price catalog by plan+market (spec-billing-integration.md). A price change never edits an
+// existing row — lockedPriceCents on Subscription already freezes what a tenant is actually
+// charged — it inserts a new row with a later effectiveFrom instead.
+model PlanPrice {
+  id                String   @id @default(uuid())
+  plan              PlanTier
+  market            String // "international" | "ar"
+  currency          String // "USD" | "ARS"
+  launchPriceCents  Int
+  regularPriceCents Int
+  effectiveFrom     DateTime @default(now())
+  createdAt         DateTime @default(now())
+
+  @@index([plan, market])
+}
+
+// Webhook idempotency (spec's webhook contract: insert-then-process). @@unique makes a
+// concurrent duplicate delivery fail the insert instead of double-processing, even under a race.
+model ProcessedWebhookEvent {
+  id              String          @id @default(uuid())
+  provider        PaymentProvider
+  externalEventId String
+  processedAt     DateTime        @default(now())
+
+  @@unique([provider, externalEventId])
 }
 
 model User {

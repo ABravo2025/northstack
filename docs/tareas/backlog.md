@@ -2,9 +2,9 @@
 
 Único archivo de backlog de `docs/tareas/`: solo ítems **pendientes/abiertos/en curso**, clasificados
 por módulo. Lo ya completado no vive acá — queda en los archivos `historial-*.md` de esta misma
-carpeta y en las entradas fechadas de `docs/tareas-desarrollo.md`/`docs/tareas/semana-*.md`. Compilado
+carpeta y en las entradas fechadas de `docs/general/tareas-desarrollo.md`/`docs/tareas/semana-*.md`. Compilado
 2026-08-18 a partir de `semana-2026-07-29.md`, `handoff-2026-07-24/05-tareas-pendientes.md` y
-`tareas-desarrollo.md` (contrastados contra el código real donde fue posible), sin fecha de cierre en
+`docs/general/tareas-desarrollo.md` (contrastados contra el código real donde fue posible), sin fecha de cierre en
 los ítems.
 
 ## HR / Payroll
@@ -26,7 +26,7 @@ los ítems.
   Kanban) — hay que guardar primero y reabrir en edición. Un fix parcial (vincular desde
   `ContactDetailModal` hacia una Opportunity nueva o existente) ya se construyó, pero el gap de UX
   original — crear la Opportunity misma con el Contact ya asociado — sigue señalado como sin resolver
-  en el resumen más reciente de `tareas-desarrollo.md`, pausado a pedido del usuario hasta hablar con
+  en el resumen más reciente de `docs/general/tareas-desarrollo.md`, pausado a pedido del usuario hasta hablar con
   el PM sobre el enfoque.
 - [ ] **Calificación de leads sin Company confirmada**: si un Form público no puede matchear Company
   (ej. email personal) hoy solo crea un Contact (`leadStatus: New`, `companyId: null`). Falta el

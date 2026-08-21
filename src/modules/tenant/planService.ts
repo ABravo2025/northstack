@@ -24,16 +24,35 @@ export async function updateTenantPlan(tenantId: string, plan: PlanTier): Promis
     return { success: false, error: 'This plan is not available for self-service selection yet.' };
   }
 
-  const tenant = await prisma.tenant.update({
-    where: { id: tenantId },
-    data: {
-      plan,
-      lockedPriceCents: CURRENT_PLAN_PRICES_CENTS[plan],
-      lockedPriceSetAt: new Date(),
-      // trialEndsAt is deliberately untouched here — it was set once at registration
-      // (tenantService.ts's registerTenantWithOwner) and picking/re-picking a plan doesn't
-      // restart the trial clock (spec-subscription-plans.md: "no arranca un trial nuevo").
-    },
+  const lockedPriceCents = CURRENT_PLAN_PRICES_CENTS[plan];
+
+  const tenant = await prisma.$transaction(async (tx) => {
+    const updated = await tx.tenant.update({
+      where: { id: tenantId },
+      data: {
+        plan,
+        lockedPriceCents,
+        lockedPriceSetAt: new Date(),
+        // trialEndsAt is deliberately untouched here — it was set once at registration
+        // (tenantService.ts's registerTenantWithOwner) and picking/re-picking a plan doesn't
+        // restart the trial clock (spec-subscription-plans.md: "no arranca un trial nuevo").
+      },
+    });
+
+    // Billing Integration (spec-billing-integration.md) — keep Subscription's own copy of
+    // plan/lockedPriceCents in sync with the tenant's explicit choice here, otherwise it stays
+    // pinned to the 'starter' placeholder set at signup (schema.prisma's comment on the
+    // Subscription model) even after the tenant picks Growth, and a checkout built on top of
+    // Subscription.plan/lockedPriceCents would charge the wrong plan. Currency stays "USD" here
+    // on purpose — this endpoint predates per-country pricing (CURRENT_PLAN_PRICES_CENTS above
+    // is USD-only); an Argentina-priced checkout looks up PlanPrice directly instead of trusting
+    // this placeholder, so it's superseded before it would ever matter.
+    await tx.subscription.update({
+      where: { tenantId },
+      data: { plan, lockedPriceCents, currency: 'USD' },
+    });
+
+    return updated;
   });
 
   return { success: true, tenant };

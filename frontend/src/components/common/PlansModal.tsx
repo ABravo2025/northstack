@@ -61,7 +61,7 @@ const PLAN_CARDS: PlanCardConfig[] = [
     priceSuffix: '/month',
     strikePrice: '$39',
     cap: 'Up to 10 people',
-    ctaLabel: 'Start free trial',
+    ctaLabel: 'Start 15-day free trial',
     features: [
       { label: 'Sales / CRM', sub: '1 pipeline', included: true },
       { label: 'HR core & Time Off', included: true },
@@ -80,7 +80,7 @@ const PLAN_CARDS: PlanCardConfig[] = [
     priceSuffix: '/month',
     strikePrice: '$99',
     cap: 'Up to 50 people',
-    ctaLabel: 'Start free trial',
+    ctaLabel: 'Start 15-day free trial',
     features: [
       { label: 'Sales / CRM', sub: 'unlimited pipelines', included: true },
       { label: 'HR core & Time Off', included: true },
@@ -114,13 +114,25 @@ interface PlansModalProps {
   token: string;
   onClose: () => void;
   onPlanChosen: (tenant: Tenant) => void;
+  // Override for how a plan selection is actually submitted — defaults to the pre-billing
+  // updateTenantPlan flow (AppLayout's auto-open for a fresh trialing tenant). BillingPage.tsx
+  // ("Change plan", 2026-08-19) passes its own handler instead, since a tenant that already has
+  // a real payment provider attached needs the post-billing self-serve change-plan endpoint —
+  // calling updateTenantPlan there would silently skip telling Paddle/Mercado Pago about the
+  // change at all.
+  onSelectPlan?: (plan: PlanTier) => Promise<void>;
+  // Marks that card as the tenant's current plan (disabled, "Current plan" instead of a CTA) —
+  // only meaningful for BillingPage's "Change plan" (a tenant there always already has a real
+  // plan). AppLayout's auto-open only ever shows when plan === null, so nothing is ever "current"
+  // there — this prop stays undefined in that usage.
+  currentPlan?: PlanTier | null;
 }
 
 // Shown once, automatically, right when a workspace is created (spec-subscription-plans.md +
 // Alejandro's 2026-08-13 correction: a dismissible modal over the app, not a route that blocks
 // navigation until a plan is picked — the trial has already started at registration either
 // way, this is an upsell, not a gate).
-export default function PlansModal({ open, tenant, token, onClose, onPlanChosen }: PlansModalProps) {
+export default function PlansModal({ open, tenant, token, onClose, onPlanChosen, onSelectPlan, currentPlan }: PlansModalProps) {
   const toast = useToast();
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [livePrices, setLivePrices] = useState<Record<'starter' | 'growth', number> | null>(null);
@@ -146,8 +158,13 @@ export default function PlansModal({ open, tenant, token, onClose, onPlanChosen 
     }
     setLoadingKey(card.key);
     try {
-      const updated = await api.updateTenantPlan(token, card.key);
-      onPlanChosen(updated);
+      if (onSelectPlan) {
+        await onSelectPlan(card.key);
+        onClose();
+      } else {
+        const updated = await api.updateTenantPlan(token, card.key);
+        onPlanChosen(updated);
+      }
     } catch (error) {
       toast.error((error as Error).message);
     } finally {
@@ -160,7 +177,8 @@ export default function PlansModal({ open, tenant, token, onClose, onPlanChosen 
       <div className="text-center mb-2">
         <div className="text-xs font-semibold text-accent uppercase tracking-wide mb-1">Last step</div>
         <p className="text-sm text-ink-muted max-w-md mx-auto">
-          Every plan starts with a 15-day free trial — no credit card required. You can change plans anytime from
+          Every plan includes a real 15-day free trial. Free Trial needs no card at all — Starter and Growth ask
+          for one upfront, but you're never charged until the 15 days are up. You can change plans anytime from
           Settings.
         </p>
       </div>
@@ -172,7 +190,8 @@ export default function PlansModal({ open, tenant, token, onClose, onPlanChosen 
 
       <div className="grid gap-4 sm:grid-cols-3">
         {PLAN_CARDS.map((card) => {
-          const isRecommended = card.key === recommended;
+          const isCurrent = card.key === currentPlan;
+          const isRecommended = !isCurrent && card.key === recommended;
           const displayPrice =
             (card.key === 'starter' || card.key === 'growth') && livePrices
               ? formatPlanPrice(livePrices[card.key])
@@ -181,13 +200,21 @@ export default function PlansModal({ open, tenant, token, onClose, onPlanChosen 
             <div
               key={card.key}
               className={`relative flex flex-col rounded-xl border p-5 ${
-                isRecommended ? 'border-accent shadow-[0_0_0_1px_var(--color-accent)]' : 'border-line dark:border-dark-line'
+                isCurrent || isRecommended
+                  ? 'border-accent shadow-[0_0_0_1px_var(--color-accent)]'
+                  : 'border-line dark:border-dark-line'
               }`}
             >
-              {isRecommended && (
+              {isCurrent ? (
                 <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-accent px-3 py-1 text-xs font-semibold text-white">
-                  Recommended for you
+                  Current plan
                 </span>
+              ) : (
+                isRecommended && (
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-accent px-3 py-1 text-xs font-semibold text-white">
+                    Recommended for you
+                  </span>
+                )
               )}
               <h3 className="card-title mt-1">{card.name}</h3>
               <p className="text-xs text-ink-muted mb-4 min-h-[2rem]">{card.tagline}</p>
@@ -199,11 +226,16 @@ export default function PlansModal({ open, tenant, token, onClose, onPlanChosen 
               </p>
               <p className="text-xs text-ink-faint mb-3">{card.cap}</p>
 
-              {card.key !== 'trial' && (
-                <div className="text-xs font-semibold text-accent bg-accent-tint rounded-md px-2 py-1.5 mb-3 leading-snug">
-                  🚀 Launch price — locked in for as long as you stay subscribed
-                </div>
-              )}
+              {/* Rendered for every card, invisible on trial (no "locked price" concept for a
+                  free plan) — reserves the same height so the feature list below starts at the
+                  same row across all 3 cards instead of trial's list starting higher. */}
+              <div
+                className={`text-xs font-semibold text-accent bg-accent-tint rounded-md px-2 py-1.5 mb-3 leading-snug ${
+                  card.key === 'trial' ? 'invisible' : ''
+                }`}
+              >
+                🚀 Launch price, locked in — first charge in 15 days
+              </div>
 
               <ul className="flex-1 flex flex-col gap-2 text-sm mb-4">
                 {card.features.map((feature) => (
@@ -228,9 +260,9 @@ export default function PlansModal({ open, tenant, token, onClose, onPlanChosen 
                 type="button"
                 className={card.key === 'growth' ? 'btn btn-primary w-full' : 'btn btn-outline w-full'}
                 onClick={() => handleSelect(card)}
-                disabled={loadingKey !== null}
+                disabled={loadingKey !== null || isCurrent}
               >
-                {loadingKey === card.key ? 'Starting…' : card.ctaLabel}
+                {isCurrent ? 'Current plan' : loadingKey === card.key ? 'Starting…' : card.ctaLabel}
               </button>
             </div>
           );
@@ -246,9 +278,10 @@ export default function PlansModal({ open, tenant, token, onClose, onPlanChosen 
       </p>
 
       <p className="text-center text-xs text-ink-faint mt-4 leading-relaxed">
-        Your trial ends in <strong className="text-ink-muted">15 days</strong>. If no payment method is added, your
-        workspace keeps working for <strong className="text-ink-muted">14 more days</strong> before it's paused —
-        plenty of time, no surprise lockout.
+        Your trial ends in <strong className="text-ink-muted">15 days</strong>. Added a card for Starter or Growth?
+        You're billed automatically then, no extra step. Went with Free Trial instead? Your workspace keeps working
+        for <strong className="text-ink-muted">14 more days</strong> before it's paused — plenty of time, no
+        surprise lockout.
         <br />
         * Payroll calculates and tracks pay runs today — it doesn't move money yet. One-click payment processing is
         coming through a future partnership.

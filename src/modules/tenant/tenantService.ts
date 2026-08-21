@@ -14,6 +14,7 @@ import { seedDefaultPipelines } from '../crm/pipelineService.js';
 import { seedDefaultPayFrequencies } from '../hr/payFrequencyService.js';
 import { seedDefaultPaymentMethods } from '../hr/paymentMethodService.js';
 import { getEmailDomain } from '../../lib/email.js';
+import { CURRENT_PLAN_PRICES_CENTS } from './planService.js';
 
 // Personal/free email providers are excluded from the duplicate-domain check below —
 // otherwise the first person to register with @gmail.com would block every other
@@ -204,6 +205,22 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
     await seedDefaultPipelines(tx, tenant.id);
     await seedDefaultPayFrequencies(tx, tenant.id);
     await seedDefaultPaymentMethods(tx, tenant.id);
+
+    // Billing Integration (spec-billing-integration.md, Unidad 2) — every tenant gets a
+    // Subscription from the moment it's created, not just backfilled for pre-existing ones.
+    // plan/lockedPriceCents start as the same 'starter' placeholder the backfill script uses for
+    // tenants with no chosen plan (schema.prisma's comment on the Subscription model);
+    // updateTenantPlan (planService.ts) overwrites it the moment the owner actually picks one.
+    await tx.subscription.create({
+      data: {
+        tenantId: tenant.id,
+        plan: 'starter',
+        status: 'trialing',
+        lockedPriceCents: CURRENT_PLAN_PRICES_CENTS.starter,
+        currency: 'USD',
+        trialEndsAt: tenant.trialEndsAt,
+      },
+    });
 
     const user = await tx.user.create({
       data: {

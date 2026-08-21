@@ -32,6 +32,39 @@ export interface Tenant {
   gracePeriodEndsAt: string | null;
 }
 
+// Billing Integration (docs/Task MD/spec-billing-integration.md) — GET /api/subscriptions/me.
+export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'suspended' | 'cancelled';
+export type PaymentProvider = 'paddle' | 'mercadopago';
+
+export interface Invoice {
+  id: string;
+  provider: PaymentProvider;
+  amountCents: number;
+  currency: string;
+  status: string; // "paid" | "failed" | "refunded"
+  periodStart: string;
+  periodEnd: string;
+  paidAt: string | null;
+  createdAt: string;
+}
+
+export interface Subscription {
+  plan: PlanTier;
+  status: SubscriptionStatus;
+  provider: PaymentProvider | null;
+  currency: string;
+  lockedPriceCents: number;
+  trialEndsAt: string | null;
+  gracePeriodEndsAt: string | null;
+  currentPeriodStart: string | null;
+  currentPeriodEnd: string | null;
+  cancelledAt: string | null;
+  cancellationEffectiveAt: string | null;
+  paymentMethodBrand: string | null;
+  paymentMethodLast4: string | null;
+  invoices: Invoice[];
+}
+
 export interface Employee {
   id: string;
   firstName: string;

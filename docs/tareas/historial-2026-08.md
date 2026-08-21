@@ -1,17 +1,17 @@
 # Historial de avance — Agosto 2026 (desde 2026-08-03)
 
-Parte del historial de `docs/tareas-desarrollo.md` (el checklist general vive ahí, no acá). Ver
+Parte del historial de `docs/general/tareas-desarrollo.md` (el checklist general vive ahí, no acá). Ver
 también `docs/contexto-proyecto.md` para el contexto completo del proyecto.
 
 **Nota sobre cómo se armó este archivo:** el proceso de archivar el trabajo semanal en `docs/tareas/`
 se cortó el 2026-08-03 — desde esa fecha, todo el detalle día a día de agosto quedó documentado
-directo en `docs/tareas-desarrollo.md` (en la sección "Notas de avance"/"Estado actual" y en el
+directo en `docs/general/tareas-desarrollo.md` (en la sección "Notas de avance"/"Estado actual" y en el
 checklist de Tier 3.5) sin nunca archivarse a un archivo separado, a diferencia de julio (ver
 [`historial-2026-06-29_2026-07-21.md`](historial-2026-06-29_2026-07-21.md) y
 [`semana-2026-07-29.md`](semana-2026-07-29.md)). Este archivo reorganiza cronológicamente ese
 contenido de agosto para que no quede enterrado en un archivo cada vez más largo — **es una copia
 organizada, no un reemplazo**: el contenido original sigue viviendo tal cual en
-`docs/tareas-desarrollo.md`, no se tocó ni se borró de ahí.
+`docs/general/tareas-desarrollo.md`, no se tocó ni se borró de ahí.
 
 **Qué cubre este período, a alto nivel:**
 - **Payroll** — módulo completo (21/21 unidades), construido en su tercer intento (los dos primeros
@@ -29,7 +29,7 @@ organizada, no un reemplazo**: el contenido original sigue viviendo tal cual en
 - **2026-08-01 a 2026-08-03 (contexto — segundo intento de Payroll)**: Payroll se había construido
   completo en este rango (Unidad 0-15 + un re-spec), pero llegó a `staging` sin que el usuario lo
   revisara de verdad. El detalle completo de cómo se armó y qué contenía ese intento no está
-  reconstruido en `docs/tareas-desarrollo.md` — la fuente lo dice explícitamente: "detalle completo
+  reconstruido en `docs/general/tareas-desarrollo.md` — la fuente lo dice explícitamente: "detalle completo
   de ambos [incidentes] en `git log`, no repetido acá". Lo que sí quedó documentado es el incidente
   de deploy que lo cerró, fechado el mismo 2026-08-03 (ver entrada siguiente).
 
@@ -59,12 +59,12 @@ organizada, no un reemplazo**: el contenido original sigue viviendo tal cual en
      forzando el caso determinístico (orden por Name ascendente, nombre que cae en la última página).
   3. Pusheado a `staging` (`659da8a`), QA-06 cargada en `docs/Tareas-QA.md`. Compañías/Contacts/
      Opportunities quedan con el mismo tratamiento pendiente, como unidad por separado.
-  4. **Auditoría del checklist de `docs/tareas-desarrollo.md` contra `git log`/el código real** (a
+  4. **Auditoría del checklist de `docs/general/tareas-desarrollo.md` contra `git log`/el código real** (a
      pedido del usuario): CSV export/import de Employees confirmado ya implementado (con la
      salvedad de que Clients quedó huérfano de UI). Payroll, documentado hasta ese momento como "sin
      empezar", en realidad se había construido completo entre el 2026-08-01 y el 2026-08-03 y se
      había revertido el mismo 2026-08-03 (ver entrada de arriba). **A pedido del usuario, se eliminó
-     del checklist el spec técnico completo de Payroll** (vivía en `docs/tareas-desarrollo.md`, Tier
+     del checklist el spec técnico completo de Payroll** (vivía en `docs/general/tareas-desarrollo.md`, Tier
      3.5 + la sección "Payroll — spec técnico completo") **por quedar inconsistente con la
      realidad**, junto con QA-04/QA-05 en `docs/Tareas-QA.md` (describían testear un módulo que ya no
      existía). El historial completo del intento revertido sigue en `git log` si hace falta
@@ -323,7 +323,7 @@ organizada, no un reemplazo**: el contenido original sigue viviendo tal cual en
   - **"¿Olvidaste tu contraseña?" pusheado a staging y producción este mismo día**, junto con el
     Block 1 de este rollout (había quedado en local desde el 2026-08-09, ver entrada anterior).
 
-- **2026-08-12 (nota)**: la entrada de "Última actualización" de `docs/tareas-desarrollo.md` que
+- **2026-08-12 (nota)**: la entrada de "Última actualización" de `docs/general/tareas-desarrollo.md` que
   resume Admin Center como completo en ambos repos está fechada este día — un día después del trabajo
   descripto arriba (Block 1 + Rondas 2 y 3, todas fechadas "mismo día" == 2026-08-11 en la sección
   "Estado actual" del propio archivo). No hay contenido técnico adicional fechado específicamente
@@ -382,7 +382,7 @@ organizada, no un reemplazo**: el contenido original sigue viviendo tal cual en
 ## Pendientes explícitos de agosto
 
 Para el agente que arma el backlog consolidado: estos son los ítems que la propia fuente
-(`docs/tareas-desarrollo.md`) marca como explícitamente inconclusos/pendientes dentro del contenido de
+(`docs/general/tareas-desarrollo.md`) marca como explícitamente inconclusos/pendientes dentro del contenido de
 agosto.
 
 **Tenant Signup + Subscription Plans (no está en producción todavía):**

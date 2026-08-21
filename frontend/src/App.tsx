@@ -25,6 +25,8 @@ import CompanyAppearancePage from './pages/CompanyAppearancePage';
 import CompanyUsersPage from './pages/CompanyUsersPage';
 import PublicFormsSettingsPage from './pages/PublicFormsSettingsPage';
 import PublicFormPage from './pages/PublicFormPage';
+import BillingPage from './pages/BillingPage';
+import PaddleCheckoutPage from './pages/PaddleCheckoutPage';
 import PayrollPage from './pages/PayrollPage';
 import PayrollRunDetailPage from './pages/PayrollRunDetailPage';
 import AppLayout from './layouts/AppLayout';
@@ -218,6 +220,7 @@ export default function App() {
         element={<ContractConfirmationPage onConfirmed={handleContractConfirmed} />}
       />
       <Route path="/apply/:tenantSlug/:formSlug" element={<PublicFormPage />} />
+      <Route path="/billing/checkout" element={<PaddleCheckoutPage />} />
 
       <Route
         element={
@@ -250,6 +253,7 @@ export default function App() {
           />
           <Route path="public-forms" element={<PublicFormsSettingsPage token={token ?? ''} />} />
           <Route path="pipelines" element={<PipelinesSettingsPage token={token ?? ''} />} />
+          <Route path="billing" element={<BillingPage token={token ?? ''} tenant={tenant} onTenantUpdated={setTenant} />} />
         </Route>
       </Route>
 

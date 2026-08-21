@@ -22,6 +22,8 @@ import { notesRouter } from './routes/notes.js';
 import { payrollRouter } from './routes/payroll.js';
 import { platformRouter } from './routes/platform.js';
 import { internalRouter } from './routes/internal.js';
+import { subscriptionsRouter } from './routes/subscriptions.js';
+import { webhooksRouter } from './routes/webhooks.js';
 
 dotenv.config();
 
@@ -65,6 +67,15 @@ app.use(
 // middleware above, so it's relaxed explicitly; everything else (HSTS,
 // X-Content-Type-Options, frame protections, etc.) stays at Helmet's default.
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
+
+// Billing Integration webhooks (Paddle, Mercado Pago) need the raw, unparsed request body for
+// HMAC signature verification — express.json() below would already have consumed/reparsed it by
+// the time a route handler runs, and a reserialized JSON.stringify(parsed) isn't guaranteed
+// byte-identical to what the provider actually signed. Mounted before the global json() parser
+// so it wins for these two paths only; req.body is a Buffer there instead of a parsed object
+// (see routes/webhooks.ts's rawBodyText helper). Every other route keeps the normal parsed body.
+app.use('/api/webhooks/paddle', express.raw({ type: '*/*', limit: '2mb' }));
+app.use('/api/webhooks/mercadopago', express.raw({ type: '*/*', limit: '2mb' }));
 app.use(express.json({ limit: '2mb' })); // default 100kb is too small for a CSV import body
 
 app.get('/health', (_req, res) => {
@@ -96,6 +107,8 @@ app.use(notesRouter);
 app.use(payrollRouter);
 app.use(platformRouter);
 app.use(internalRouter);
+app.use(subscriptionsRouter);
+app.use(webhooksRouter);
 
 // Catches anything an async route handler throws (e.g. Neon/Prisma dropping
 // the connection) so it becomes a clean JSON response instead of crashing

@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const tenants: any[] = [];
+const subscriptions: any[] = [];
 
-vi.mock('../src/lib/prisma.js', () => ({
-  default: {
+vi.mock('../src/lib/prisma.js', () => {
+  const mockPrisma: any = {
     tenant: {
       update: vi.fn(async ({ where, data }: any) => {
         const tenant = tenants.find((t) => t.id === where.id);
@@ -21,22 +22,61 @@ vi.mock('../src/lib/prisma.js', () => ({
         return { count };
       }),
     },
+    subscription: {
+      // Billing Integration — runPlanTransitions' Mercado Pago cancellation sweep. None of the
+      // pre-existing runPlanTransitions tests in this file seed a Subscription, so this always
+      // returns [] for them (0 cancellations) — dedicated coverage lives in its own describe
+      // block below.
+      findMany: vi.fn(async ({ where }: any) => {
+        return subscriptions.filter(
+          (s) =>
+            s.provider === where.provider &&
+            s.status !== 'cancelled' &&
+            s.cancellationEffectiveAt &&
+            s.cancellationEffectiveAt <= where.cancellationEffectiveAt.lte,
+        );
+      }),
+      // updateTenantPlan also keeps Subscription's own plan/lockedPriceCents in sync
+      // (subscriptionService.ts's sync path is cron/webhook-only, this is the separate
+      // pre-billing "which plan do you want" write). No-ops if the fixture didn't seed a
+      // matching row — none of the updateTenantPlan tests in this file assert on Subscription.
+      update: vi.fn(async ({ where, data }: any) => {
+        const subscription = subscriptions.find((s) => s.tenantId === where.tenantId);
+        if (subscription) {
+          Object.assign(subscription, data);
+        }
+        return subscription;
+      }),
+    },
+    $transaction: vi.fn(async (fn: any) => fn(mockPrisma)),
     // Mirrors runPlanTransitions' single UPDATE statement: trialing rows whose trialEndsAt has
     // lapsed move to past_due, with gracePeriodEndsAt computed from each row's own trialEndsAt
     // (not a shared constant) — the exact reason that step is raw SQL instead of updateMany.
     // Positional args match the query's two interpolations, in order: gracePeriodDays, now.
+    // 2026-08-20: also mirrors the NOT EXISTS guard — a tenant whose Subscription already has a
+    // provider (attached a card during a Paddle/Mercado Pago native trial) is left untouched.
     $executeRaw: vi.fn(async (_strings: any, gracePeriodDays: number, now: Date) => {
       let count = 0;
       for (const t of tenants) {
         if (t.status !== 'trialing') continue;
         if (!(t.trialEndsAt <= now)) continue;
+        const sub = subscriptions.find((s) => s.tenantId === t.id);
+        if (sub?.provider) continue;
         t.status = 'past_due';
         t.gracePeriodEndsAt = new Date(t.trialEndsAt.getTime() + gracePeriodDays * 24 * 60 * 60 * 1000);
         count += 1;
       }
       return count;
     }),
-  },
+  };
+  return { default: mockPrisma };
+});
+
+// vi.mock factories are hoisted above every top-level const, so the mock function they
+// reference must be created via vi.hoisted() rather than a plain const above this call.
+const { updatePreapprovalMock } = vi.hoisted(() => ({ updatePreapprovalMock: vi.fn(async () => ({})) }));
+vi.mock('../src/lib/mercadopago.js', () => ({
+  updatePreapproval: updatePreapprovalMock,
 }));
 
 import { canManageBilling } from '../src/modules/auth/permissionService.js';
@@ -54,7 +94,9 @@ describe('canManageBilling', () => {
 describe('updateTenantPlan', () => {
   beforeEach(() => {
     tenants.length = 0;
+    subscriptions.length = 0;
     tenants.push({ id: 't1', plan: null, lockedPriceCents: null, lockedPriceSetAt: null, trialEndsAt: new Date('2026-09-01') });
+    subscriptions.push({ tenantId: 't1', plan: 'starter', lockedPriceCents: CURRENT_PLAN_PRICES_CENTS.starter, currency: 'USD' });
   });
 
   it('rejects scale — no self-serve checkout for it yet', async () => {
@@ -85,6 +127,8 @@ describe('updateTenantPlan', () => {
 describe('runPlanTransitions', () => {
   beforeEach(() => {
     tenants.length = 0;
+    subscriptions.length = 0;
+    updatePreapprovalMock.mockClear();
   });
 
   it('moves a lapsed trial to past_due and sets a 14-day grace period from its own trialEndsAt', async () => {
@@ -153,5 +197,69 @@ describe('runPlanTransitions', () => {
     expect(result.movedToPastDue).toBe(1);
     expect(result.movedToSuspended).toBe(1);
     expect(tenants[0].status).toBe('suspended');
+  });
+
+  it('leaves a lapsed trial untouched if the tenant already attached a provider (Billing Integration, native trial in progress)', async () => {
+    tenants.push({ id: 't1', status: 'trialing', trialEndsAt: new Date('2026-08-01'), gracePeriodEndsAt: null });
+    subscriptions.push({ tenantId: 't1', provider: 'paddle', status: 'trialing' });
+
+    const result = await runPlanTransitions(new Date('2026-08-02'));
+
+    expect(result.movedToPastDue).toBe(0);
+    expect(tenants[0].status).toBe('trialing');
+  });
+
+  describe('Mercado Pago cancellation sweep (Billing Integration)', () => {
+    it('calls updatePreapproval and cancels a due Mercado Pago subscription', async () => {
+      tenants.push({ id: 't1', status: 'active' });
+      subscriptions.push({
+        tenantId: 't1',
+        provider: 'mercadopago',
+        status: 'active',
+        externalSubscriptionId: 'preapproval-123',
+        cancellationEffectiveAt: new Date('2026-08-01'),
+      });
+
+      const result = await runPlanTransitions(new Date('2026-08-02'));
+
+      expect(result.cancelledMercadoPagoSubscriptions).toBe(1);
+      expect(updatePreapprovalMock).toHaveBeenCalledWith('preapproval-123', { status: 'cancelled' });
+      expect(subscriptions[0].status).toBe('cancelled');
+      expect(tenants[0].status).toBe('cancelled');
+    });
+
+    it('leaves a Mercado Pago subscription untouched before its cancellationEffectiveAt', async () => {
+      tenants.push({ id: 't1', status: 'active' });
+      subscriptions.push({
+        tenantId: 't1',
+        provider: 'mercadopago',
+        status: 'active',
+        externalSubscriptionId: 'preapproval-456',
+        cancellationEffectiveAt: new Date('2026-09-01'),
+      });
+
+      const result = await runPlanTransitions(new Date('2026-08-02'));
+
+      expect(result.cancelledMercadoPagoSubscriptions).toBe(0);
+      expect(updatePreapprovalMock).not.toHaveBeenCalled();
+      expect(subscriptions[0].status).toBe('active');
+    });
+
+    it('never touches a Paddle subscription — Paddle schedules its own cancellation natively', async () => {
+      tenants.push({ id: 't1', status: 'active' });
+      subscriptions.push({
+        tenantId: 't1',
+        provider: 'paddle',
+        status: 'active',
+        externalSubscriptionId: 'sub_paddle_1',
+        cancellationEffectiveAt: new Date('2026-08-01'),
+      });
+
+      const result = await runPlanTransitions(new Date('2026-08-02'));
+
+      expect(result.cancelledMercadoPagoSubscriptions).toBe(0);
+      expect(updatePreapprovalMock).not.toHaveBeenCalled();
+      expect(subscriptions[0].status).toBe('active');
+    });
   });
 });

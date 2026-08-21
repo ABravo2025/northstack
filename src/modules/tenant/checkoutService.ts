@@ -27,7 +27,7 @@ const BILLING_CALLBACK_URL = 'https://app.joinnorthstack.com/billing/callback';
 // syncSubscriptionAndTenant (called from the webhook once payment confirms) is the only place
 // that sets provider/externalSubscriptionId/currency for real.
 export async function startCheckout(
-  tenant: { id: string; country: string | null },
+  tenant: { id: string; country: string | null; trialEndsAt: Date | null },
   user: { email: string },
 ): Promise<StartCheckoutResult> {
   const subscription = await prisma.subscription.findUnique({ where: { tenantId: tenant.id } });
@@ -83,7 +83,22 @@ export async function startCheckout(
   // than adding a second env var, since both providers' sandbox/live credentials are always
   // flipped together in practice — there's no scenario with one in sandbox and the other live.
   const isRealProductionBilling = process.env.PADDLE_ENV === 'production';
-  const trialDays = isUpdatingPaymentMethod || !isRealProductionBilling ? undefined : SIGNUP_TRIAL_DAYS;
+
+  // Capped at whatever's actually left of the tenant's ORIGINAL trial window (set once at
+  // signup, tenantService.ts), never a fresh SIGNUP_TRIAL_DAYS every time checkout runs —
+  // Alejandro's 2026-08-21 catch: since nothing here writes Subscription.provider until a
+  // webhook confirms payment, a tenant could otherwise start-but-abandon checkout indefinitely
+  // and, whenever they finally did complete one, always land a brand new 15-day runway from that
+  // moment — repeatedly pushing out the real first charge forever, exactly the "interminable"
+  // trial he flagged. If the original window already lapsed (daysRemaining <= 0 — e.g. already
+  // past_due), checkout charges immediately instead of granting more free time.
+  const daysRemaining = tenant.trialEndsAt
+    ? Math.ceil((tenant.trialEndsAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000))
+    : 0;
+  const trialDays =
+    isUpdatingPaymentMethod || !isRealProductionBilling || daysRemaining <= 0
+      ? undefined
+      : Math.min(SIGNUP_TRIAL_DAYS, daysRemaining);
 
   if (provider === 'mercadopago') {
     const preapproval = await createPreapproval({

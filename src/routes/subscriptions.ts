@@ -54,7 +54,10 @@ subscriptionsRouter.post('/api/subscriptions/me/checkout', async (req, res) => {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  const tenant = await prisma.tenant.findUnique({ where: { id: user.tenantId! }, select: { id: true, country: true } });
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: user.tenantId! },
+    select: { id: true, country: true, trialEndsAt: true },
+  });
   if (!tenant) {
     return res.status(404).json({ error: 'Tenant not found' });
   }

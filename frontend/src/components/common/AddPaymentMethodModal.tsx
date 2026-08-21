@@ -14,6 +14,11 @@ interface AddPaymentMethodModalProps {
   // the same POST /api/subscriptions/me/checkout.
   mode: 'subscribe' | 'update';
   planLabel?: string; // e.g. "Starter — $29.00/mo", shown only in subscribe mode
+  // Days actually left of the tenant's original trial window (daysRemainingUntil(tenant.trialEndsAt))
+  // — only meaningful in "subscribe" mode. checkoutService.ts caps the real provider-side trial at
+  // this same number (2026-08-21), so this copy must match: 0 (or omitted) means checkout charges
+  // immediately, never promise "free trial" in that case.
+  trialDaysRemaining?: number;
   onClose: () => void;
 }
 
@@ -32,9 +37,17 @@ interface AddPaymentMethodModalProps {
 // itself; PaddleCheckoutPage.tsx does, in its own tab. BillingPage.tsx refetches on window focus
 // (both providers leave the original tab in place) rather than relying on a same-tab redirect
 // completing.
-export default function AddPaymentMethodModal({ open, token, mode, planLabel, onClose }: AddPaymentMethodModalProps) {
+export default function AddPaymentMethodModal({
+  open,
+  token,
+  mode,
+  planLabel,
+  trialDaysRemaining,
+  onClose,
+}: AddPaymentMethodModalProps) {
   const toast = useToast();
   const [loading, setLoading] = useState(false);
+  const hasTrialLeft = mode === 'subscribe' && Boolean(trialDaysRemaining && trialDaysRemaining > 0);
 
   const handleStart = async () => {
     setLoading(true);
@@ -59,18 +72,40 @@ export default function AddPaymentMethodModal({ open, token, mode, planLabel, on
   };
 
   return (
-    <Modal open={open} title={mode === 'subscribe' ? 'Start your free trial' : 'Update payment method'} onClose={onClose}>
+    <Modal
+      open={open}
+      title={mode === 'subscribe' ? (hasTrialLeft ? 'Start your free trial' : 'Subscribe') : 'Update payment method'}
+      onClose={onClose}
+    >
       {mode === 'subscribe' ? (
         <p className="text-sm text-ink-muted mb-4">
-          {planLabel ? (
+          {hasTrialLeft ? (
             <>
-              You're about to start your 15-day free trial of <strong className="text-ink">{planLabel}</strong>.{' '}
+              {planLabel ? (
+                <>
+                  You're about to start your {trialDaysRemaining}-day free trial of{' '}
+                  <strong className="text-ink">{planLabel}</strong>.{' '}
+                </>
+              ) : (
+                `You're about to start your ${trialDaysRemaining}-day free trial. `
+              )}
+              You'll be redirected to our payment provider (in a new tab) to securely add a card — you won't be
+              charged until the trial ends in {trialDaysRemaining} day{trialDaysRemaining === 1 ? '' : 's'}. Northstack
+              never sees or stores your card details.
             </>
           ) : (
-            "You're about to start your 15-day free trial. "
+            <>
+              {planLabel ? (
+                <>
+                  You're about to subscribe to <strong className="text-ink">{planLabel}</strong>.{' '}
+                </>
+              ) : (
+                "You're about to subscribe. "
+              )}
+              You'll be redirected to our payment provider (in a new tab) to securely add a card — you'll be charged
+              right away. Northstack never sees or stores your card details.
+            </>
           )}
-          You'll be redirected to our payment provider (in a new tab) to securely add a card — you won't be
-          charged until the trial ends in 15 days. Northstack never sees or stores your card details.
         </p>
       ) : (
         <p className="text-sm text-ink-muted mb-4">

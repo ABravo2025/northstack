@@ -7,6 +7,7 @@ import PlansModal from '../components/common/PlansModal';
 import AddPaymentMethodModal from '../components/common/AddPaymentMethodModal';
 import { api } from '../api';
 import type { PlanTier, Tenant } from '../api';
+import { daysRemainingUntil } from '../lib/trial';
 
 interface AppLayoutProps {
   user: any;
@@ -14,11 +15,6 @@ interface AppLayoutProps {
   tenant: Tenant | null;
   onTenantUpdated: (tenant: Tenant) => void;
   onLogout: () => void;
-}
-
-function daysRemaining(target: string): number {
-  const ms = new Date(target).getTime() - Date.now();
-  return Math.max(0, Math.ceil(ms / (24 * 60 * 60 * 1000)));
 }
 
 function plansModalDismissedKey(tenantId: string): string {
@@ -103,8 +99,8 @@ export default function AppLayout({ user, token, tenant, onTenantUpdated, onLogo
           {tenant?.status === 'past_due' && tenant.gracePeriodEndsAt && (
             <div className="alert alert-warning mx-4 mt-4 sm:mx-6 flex items-center justify-between gap-3">
               <span>
-                Your free trial ended. You have {daysRemaining(tenant.gracePeriodEndsAt)} day
-                {daysRemaining(tenant.gracePeriodEndsAt) === 1 ? '' : 's'} left before your account is suspended.
+                Your free trial ended. You have {daysRemainingUntil(tenant.gracePeriodEndsAt)} day
+                {daysRemainingUntil(tenant.gracePeriodEndsAt) === 1 ? '' : 's'} left before your account is suspended.
               </span>
               {user.role === 'owner' && (
                 <button
@@ -143,6 +139,7 @@ export default function AppLayout({ user, token, tenant, onTenantUpdated, onLogo
         // routes correctly either way based on the tenant's real provider state, this only
         // affects the modal's wording in that edge case.
         mode="subscribe"
+        trialDaysRemaining={tenant ? daysRemainingUntil(tenant.trialEndsAt) : 0}
         onClose={() => setShowAddPaymentMethod(false)}
       />
       <PlansModal

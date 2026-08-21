@@ -6,6 +6,7 @@ import ConfirmDialog from '../components/common/ConfirmDialog';
 import TableSkeleton from '../components/common/TableSkeleton';
 import { BriefcaseIcon } from '../components/common/Icons';
 import { formatMoney } from '../lib/currencies';
+import { daysRemainingUntil } from '../lib/trial';
 import AddPaymentMethodModal from '../components/common/AddPaymentMethodModal';
 import PlansModal from '../components/common/PlansModal';
 
@@ -326,6 +327,7 @@ export default function BillingPage({ token, tenant, onTenantUpdated }: BillingP
         token={token}
         mode={hasProvider ? 'update' : 'subscribe'}
         planLabel={`${PLAN_LABEL[subscription.plan]} — ${formatMoney(subscription.lockedPriceCents, subscription.currency)}/mo`}
+        trialDaysRemaining={daysRemainingUntil(subscription.trialEndsAt)}
         onClose={() => setShowAddPaymentMethod(false)}
       />
 

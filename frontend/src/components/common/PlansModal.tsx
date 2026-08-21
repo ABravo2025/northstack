@@ -4,6 +4,7 @@ import { CheckIcon } from './Icons';
 import { useToast } from './ToastProvider';
 import { api } from '../../api';
 import type { PlanTier, Tenant } from '../../api/types';
+import { daysRemainingUntil } from '../../lib/trial';
 
 function formatPlanPrice(cents: number): string {
   return `$${Math.round(cents / 100)}`;
@@ -24,7 +25,21 @@ interface PlanCardConfig {
   strikePrice?: string;
   cap: string;
   features: FeatureRow[];
-  ctaLabel: string;
+  // Only meaningful for the 'trial' card, which never depends on trialDaysLeft — Starter/Growth's
+  // label is computed at render time (planCtaLabel below) instead, since it must reflect however
+  // many days are actually left of the tenant's trial, not a hardcoded "15".
+  ctaLabel?: string;
+}
+
+// Alejandro's 2026-08-21 catch: once the tenant's real trial window has lapsed, checkoutService.ts
+// already charges immediately instead of granting a fresh trial (see its daysRemaining comment) —
+// this modal must stop promising "free trial" once that's no longer true, or the copy actively
+// lies about what's about to happen.
+function planCtaLabel(card: PlanCardConfig, trialDaysLeft: number): string {
+  if (card.key === 'trial') {
+    return card.ctaLabel!;
+  }
+  return trialDaysLeft > 0 ? `Start ${trialDaysLeft}-day free trial` : 'Subscribe now';
 }
 
 // Copy/features match the approved mockup (subscription-plans-mockup.html) verbatim —
@@ -61,7 +76,6 @@ const PLAN_CARDS: PlanCardConfig[] = [
     priceSuffix: '/month',
     strikePrice: '$39',
     cap: 'Up to 10 people',
-    ctaLabel: 'Start 15-day free trial',
     features: [
       { label: 'Sales / CRM', sub: '1 pipeline', included: true },
       { label: 'HR core & Time Off', included: true },
@@ -80,7 +94,6 @@ const PLAN_CARDS: PlanCardConfig[] = [
     priceSuffix: '/month',
     strikePrice: '$99',
     cap: 'Up to 50 people',
-    ctaLabel: 'Start 15-day free trial',
     features: [
       { label: 'Sales / CRM', sub: 'unlimited pipelines', included: true },
       { label: 'HR core & Time Off', included: true },
@@ -150,6 +163,8 @@ export default function PlansModal({ open, tenant, token, onClose, onPlanChosen,
   }, [open, livePrices]);
 
   const recommended = recommendedTier(tenant?.companySize ?? null);
+  const trialDaysLeft = daysRemainingUntil(tenant?.trialEndsAt ?? null);
+  const hasTrialLeft = trialDaysLeft > 0;
 
   const handleSelect = async (card: PlanCardConfig) => {
     if (card.key === 'trial') {
@@ -177,9 +192,19 @@ export default function PlansModal({ open, tenant, token, onClose, onPlanChosen,
       <div className="text-center mb-2">
         <div className="text-xs font-semibold text-accent uppercase tracking-wide mb-1">Last step</div>
         <p className="text-sm text-ink-muted max-w-md mx-auto">
-          Every plan includes a real 15-day free trial. Free Trial needs no card at all — Starter and Growth ask
-          for one upfront, but you're never charged until the 15 days are up. You can change plans anytime from
-          Settings.
+          {hasTrialLeft ? (
+            <>
+              Every plan includes a real {trialDaysLeft}-day free trial. Free Trial needs no card at all — Starter
+              and Growth ask for one upfront, but you're never charged until the trial is up. You can change plans
+              anytime from Settings.
+            </>
+          ) : (
+            <>
+              Your free trial has ended. Starter and Growth are billed right away once you add a card — Free Trial
+              keeps your workspace running a little longer, but doesn't remove the need to eventually pick a paid
+              plan. You can change plans anytime from Settings.
+            </>
+          )}
         </p>
       </div>
 
@@ -234,7 +259,7 @@ export default function PlansModal({ open, tenant, token, onClose, onPlanChosen,
                   card.key === 'trial' ? 'invisible' : ''
                 }`}
               >
-                🚀 Launch price, locked in — first charge in 15 days
+                🚀 Launch price, locked in — {hasTrialLeft ? `first charge in ${trialDaysLeft} days` : 'charged today'}
               </div>
 
               <ul className="flex-1 flex flex-col gap-2 text-sm mb-4">
@@ -262,7 +287,7 @@ export default function PlansModal({ open, tenant, token, onClose, onPlanChosen,
                 onClick={() => handleSelect(card)}
                 disabled={loadingKey !== null || isCurrent}
               >
-                {isCurrent ? 'Current plan' : loadingKey === card.key ? 'Starting…' : card.ctaLabel}
+                {isCurrent ? 'Current plan' : loadingKey === card.key ? 'Starting…' : planCtaLabel(card, trialDaysLeft)}
               </button>
             </div>
           );
@@ -278,10 +303,16 @@ export default function PlansModal({ open, tenant, token, onClose, onPlanChosen,
       </p>
 
       <p className="text-center text-xs text-ink-faint mt-4 leading-relaxed">
-        Your trial ends in <strong className="text-ink-muted">15 days</strong>. Added a card for Starter or Growth?
-        You're billed automatically then, no extra step. Went with Free Trial instead? Your workspace keeps working
-        for <strong className="text-ink-muted">14 more days</strong> before it's paused — plenty of time, no
-        surprise lockout.
+        {hasTrialLeft ? (
+          <>
+            Your trial ends in <strong className="text-ink-muted">{trialDaysLeft} day{trialDaysLeft === 1 ? '' : 's'}</strong>.
+            Added a card for Starter or Growth? You're billed automatically then, no extra step. Went with Free Trial
+            instead? Your workspace keeps working for <strong className="text-ink-muted">14 more days</strong> before
+            it's paused — plenty of time, no surprise lockout.
+          </>
+        ) : (
+          <>Your trial has ended. Add a card for Starter or Growth to be billed right away and keep full access.</>
+        )}
         <br />
         * Payroll calculates and tracks pay runs today — it doesn't move money yet. One-click payment processing is
         coming through a future partnership.

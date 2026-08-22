@@ -5,3 +5,6 @@ coverage/
 .vercel
 .env*
 *.tsbuildinfo
+
+# Local-only scratch scripts (underscore prefix = never committed, e.g. scripts/_create-local-test-user.ts)
+scripts/_*.ts

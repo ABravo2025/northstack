@@ -5,6 +5,7 @@ import { useToast } from './ToastProvider';
 import { api } from '../../api';
 import type { PlanTier, Tenant } from '../../api/types';
 import { daysRemainingUntil } from '../../lib/trial';
+import { COMPANY_SIZE_1_10, COMPANY_SIZE_11_50 } from '../../lib/companySize';
 
 function formatPlanPrice(cents: number): string {
   return `$${Math.round(cents / 100)}`;
@@ -116,8 +117,8 @@ const PLAN_CARDS: PlanCardConfig[] = [
 // 11-50 -> Growth). Larger bands get the "Get in touch" link highlighted instead — no card is
 // recommended for them.
 function recommendedTier(companySize: string | null): PlanTier | null {
-  if (companySize === '1-10') return 'starter';
-  if (companySize === '11-50') return 'growth';
+  if (companySize === COMPANY_SIZE_1_10) return 'starter';
+  if (companySize === COMPANY_SIZE_11_50) return 'growth';
   return null;
 }
 

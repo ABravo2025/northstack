@@ -25,9 +25,14 @@ export default function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
 
   useEffect(() => {
     if (cooldown <= 0) return undefined;
+    // Depend on whether a cooldown is active, not its value — the functional updater below
+    // self-terminates once it hits 0, so re-running this on every tick (old dep: [cooldown])
+    // just tore the interval down and rebuilt it every second, making the countdown drift
+    // slower than real time.
     const timer = setInterval(() => setCooldown((s) => Math.max(0, s - 1)), 1000);
     return () => clearInterval(timer);
-  }, [cooldown]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cooldown > 0]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

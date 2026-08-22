@@ -1,5 +1,6 @@
 import prisma from '../../lib/prisma.js';
 import type { CustomFieldDefinition, CustomFieldValue, EntityType, FieldType } from '@prisma/client';
+import { isEmailFormatValid } from '../../lib/email.js';
 
 export interface CreateCustomFieldInput {
   tenantId: string;
@@ -18,8 +19,6 @@ export interface CreateCustomFieldValueInput {
   value: string;
 }
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 export function isValueValidForFieldType(
   fieldType: FieldType,
   value: string,
@@ -31,7 +30,7 @@ export function isValueValidForFieldType(
     case 'date':
       return !Number.isNaN(Date.parse(value));
     case 'email':
-      return EMAIL_REGEX.test(value);
+      return isEmailFormatValid(value);
     case 'select': {
       let allowedOptions: string[] = [];
       try {

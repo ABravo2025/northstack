@@ -9,6 +9,7 @@ import {
 } from '../auth/authService.js';
 import { randomUUID } from 'crypto';
 import type { AcquisitionChannel, JobFunction, Session, Tenant, User } from '@prisma/client';
+import { TENANT_SUMMARY_SELECT, type TenantSummary } from './tenantSummary.js';
 import { seedDefaultStatusDefinitions } from '../hr/statusService.js';
 import { seedDefaultPipelines } from '../crm/pipelineService.js';
 import { seedDefaultPayFrequencies } from '../hr/payFrequencyService.js';
@@ -190,10 +191,10 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
   const result = await prisma.$transaction(async (tx) => {
     const tenant = await tx.tenant.create({
       data: {
-        name: input.tenantName,
+        name: input.tenantName.trim(),
         slug,
         companySize: input.companySize,
-        industry: input.industry,
+        industry: input.industry.trim(),
         country: input.country,
         acquisitionChannel: input.acquisitionChannel,
         status: 'trialing',
@@ -279,16 +280,7 @@ export async function findTenantNameById(tenantId: string): Promise<string | nul
 export async function getTenantById(tenantId: string) {
   return prisma.tenant.findUnique({
     where: { id: tenantId },
-    select: {
-      id: true,
-      name: true,
-      currency: true,
-      status: true,
-      plan: true,
-      companySize: true,
-      trialEndsAt: true,
-      gracePeriodEndsAt: true,
-    },
+    select: TENANT_SUMMARY_SELECT,
   });
 }
 
@@ -301,7 +293,7 @@ export async function findUserById(id: string): Promise<User | null> {
 
 export interface UpdateTenantCurrencyResult {
   success: boolean;
-  tenant?: Tenant;
+  tenant?: TenantSummary;
   error?: string;
 }
 
@@ -310,7 +302,11 @@ export async function updateTenantCurrency(tenantId: string, currency: string): 
     return { success: false, error: 'Invalid currency code' };
   }
 
-  const tenant = await prisma.tenant.update({ where: { id: tenantId }, data: { currency } });
+  const tenant = await prisma.tenant.update({
+    where: { id: tenantId },
+    data: { currency },
+    select: TENANT_SUMMARY_SELECT,
+  });
   return { success: true, tenant };
 }
 

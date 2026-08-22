@@ -1,5 +1,6 @@
 import prisma from '../../lib/prisma.js';
-import type { PlanTier, Tenant } from '@prisma/client';
+import type { PlanTier } from '@prisma/client';
+import { TENANT_SUMMARY_SELECT, type TenantSummary } from './tenantSummary.js';
 
 // Server-side price list — never trust a price sent by the client (spec-subscription-plans.md).
 // These are the "launch price" values; when it's time to raise to the regular price, edit the
@@ -13,7 +14,7 @@ export const CURRENT_PLAN_PRICES_CENTS: Record<'starter' | 'growth', number> = {
 
 export interface UpdateTenantPlanResult {
   success: boolean;
-  tenant?: Tenant;
+  tenant?: TenantSummary;
   error?: string;
 }
 
@@ -37,6 +38,7 @@ export async function updateTenantPlan(tenantId: string, plan: PlanTier): Promis
         // (tenantService.ts's registerTenantWithOwner) and picking/re-picking a plan doesn't
         // restart the trial clock (spec-subscription-plans.md: "no arranca un trial nuevo").
       },
+      select: TENANT_SUMMARY_SELECT,
     });
 
     // Billing Integration (spec-billing-integration.md) — keep Subscription's own copy of

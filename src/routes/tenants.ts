@@ -32,8 +32,8 @@ const handleSignupEmailRequest = (bucketPrefix: string) => async (req: express.R
     return res.status(429).json({ error: 'Too many attempts. Please try again later.' });
   }
 
-  const email = req.body.email as string | undefined;
-  if (!email?.trim()) {
+  const email = req.body.email;
+  if (typeof email !== 'string' || !email.trim()) {
     return res.status(400).json({ error: 'Email is required', field: 'email' });
   }
 
@@ -69,7 +69,7 @@ tenantsRouter.post('/api/tenants/register', async (req, res) => {
     return res.status(400).json({ error: 'Invalid job function', field: 'jobFunction' });
   }
 
-  if (!req.body.verificationToken?.trim()) {
+  if (typeof req.body.verificationToken !== 'string' || !req.body.verificationToken.trim()) {
     return res.status(400).json({ error: 'Email verification is required', field: 'verificationToken' });
   }
 
@@ -245,8 +245,8 @@ tenantsRouter.post('/api/tenants/invitations', async (req, res) => {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  const email = req.body.email as string;
-  if (!email || !email.trim()) {
+  const email = req.body.email;
+  if (typeof email !== 'string' || !email.trim()) {
     return res.status(400).json({ error: 'Email is required' });
   }
 

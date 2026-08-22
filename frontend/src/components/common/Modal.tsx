@@ -43,10 +43,16 @@ export default function Modal({ open, title, onClose, children, footer, wide = f
 
   if (!open) return null;
 
+  // Mutually exclusive by construction rather than by CSS rule order — `xwide` wins if both are
+  // somehow passed, so which one applies never depends on where `.wide`/`.xwide` happen to sit
+  // in App.css (found 2026-08-18: they were independent classes, and reordering those two CSS
+  // blocks would have silently changed which modals rendered at which width).
+  const sizeClass = xwide ? 'xwide' : wide ? 'wide' : '';
+
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div
-        className={`modal-panel ${wide ? 'wide' : ''} ${xwide ? 'xwide' : ''}`}
+        className={`modal-panel ${sizeClass}`}
         role="dialog"
         aria-modal="true"
         aria-label={title}

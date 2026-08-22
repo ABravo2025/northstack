@@ -6,10 +6,9 @@ import PasswordChecklist from '../components/common/PasswordChecklist';
 import AcceptTermsCheckbox from '../components/common/AcceptTermsCheckbox';
 import RequiredMark from '../components/common/RequiredMark';
 import { COUNTRIES } from '../lib/countries';
+import { COMPANY_SIZE_OPTIONS } from '../lib/companySize';
 import { api, ApiError } from '../api';
 import type { Tenant } from '../api';
-
-const COMPANY_SIZE_OPTIONS = ['1-10', '11-50', '51-200', '201-500', '500+'];
 
 const ACQUISITION_CHANNEL_OPTIONS: { value: string; label: string }[] = [
   { value: 'organic', label: 'Organic search' },
@@ -271,6 +270,9 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
                 </option>
               ))}
             </select>
+            {fieldErrorFor('acquisitionChannel') && (
+              <div className="field-error">{fieldErrorFor('acquisitionChannel')}</div>
+            )}
           </div>
           <button type="submit" className="auth-submit">
             Continue
@@ -335,6 +337,7 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
                 </option>
               ))}
             </select>
+            {fieldErrorFor('jobFunction') && <div className="field-error">{fieldErrorFor('jobFunction')}</div>}
           </div>
           <div className="form-actions flex gap-2">
             <button type="button" className="btn btn-secondary" onClick={() => setSurveyStep('company')}>

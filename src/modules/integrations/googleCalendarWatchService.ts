@@ -203,12 +203,25 @@ export async function processInboundCalendarChanges(userId: string): Promise<voi
 // Run daily (src/routes/internal.ts's cron route) — Google Calendar channels
 // can't be renewed in place, only stopped and reopened. Picks up anything
 // expiring within 48h, plus anything already past expiration as a self-heal.
+// Also self-heals connections that have never had a channel at all — anyone
+// who connected before this feature existed (or whose one-time openWatchChannelForUser
+// call at connect time failed) would otherwise sit silently un-watched
+// forever, since there'd be no GoogleCalendarWatchChannel row for the
+// "expiring soon" query above to ever find.
 export async function renewExpiringWatchChannels(): Promise<{ renewed: number; failed: number }> {
   const soon = new Date(Date.now() + 48 * 60 * 60 * 1000);
-  const expiring = await prisma.googleCalendarWatchChannel.findMany({ where: { expiration: { lt: soon } } });
+
+  const [expiring, connectedUserIds, channeledUserIds] = await Promise.all([
+    prisma.googleCalendarWatchChannel.findMany({ where: { expiration: { lt: soon } }, select: { userId: true, channelId: true, resourceId: true } }),
+    prisma.googleCalendarConnection.findMany({ where: { needsReconnect: false }, select: { userId: true } }),
+    prisma.googleCalendarWatchChannel.findMany({ select: { userId: true } }),
+  ]);
+  const hasChannel = new Set(channeledUserIds.map((c) => c.userId));
+  const missing = connectedUserIds.filter((c) => !hasChannel.has(c.userId));
 
   let renewed = 0;
   let failed = 0;
+
   for (const channel of expiring) {
     const calendar = await getAuthorizedClientForUser(channel.userId).catch(() => null);
     if (calendar) {
@@ -221,6 +234,16 @@ export async function renewExpiringWatchChannels(): Promise<{ renewed: number; f
     } catch (err) {
       failed++;
       console.error(`Failed to renew Google Calendar watch channel for user ${channel.userId}:`, err);
+    }
+  }
+
+  for (const connection of missing) {
+    try {
+      await openWatchChannelForUser(connection.userId);
+      renewed++;
+    } catch (err) {
+      failed++;
+      console.error(`Failed to open a missing Google Calendar watch channel for user ${connection.userId}:`, err);
     }
   }
 

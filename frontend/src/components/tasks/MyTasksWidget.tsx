@@ -48,8 +48,17 @@ export default function MyTasksWidget({ token, tenantUsers, currentUserId }: MyT
     }
   };
 
+  // Same 30s silent polling as the Overview calendar grid (OverviewPage.tsx)
+  // — this widget fetches its own data independently, so completing a task
+  // outside Northstack (e.g. deleting its synced event in Google Calendar)
+  // wouldn't otherwise show up here until a manual reload, even though the
+  // calendar grid next to it already refreshed itself.
   useEffect(() => {
     load();
+    const interval = setInterval(() => {
+      api.listMyTasks(token).then(setTasks).catch(() => {});
+    }, 30000);
+    return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

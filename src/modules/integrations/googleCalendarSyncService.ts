@@ -9,6 +9,7 @@ import { getAuthorizedClientForUser, markNeedsReconnectIfRevoked } from './googl
 // (lib/mailer.ts) is best-effort and never blocks the caller.
 
 const ONE_HOUR_MS = 60 * 60 * 1000;
+const ONE_DAY_MS = 24 * ONE_HOUR_MS;
 
 // A Task's dueDate is either date-only (always exactly UTC midnight — no
 // time was ever set in TaskForm) or a real instant (a specific time was
@@ -31,8 +32,11 @@ function taskEventBody(task: Task): calendar_v3.Schema$Event {
           end: { dateTime: new Date(due.getTime() + ONE_HOUR_MS).toISOString(), timeZone: 'UTC' },
         }
       : {
+          // Google's all-day end.date is exclusive (same rule as the Time Off sync below), so a
+          // single-day event needs the end date one day past the start, not equal to it — an
+          // equal start/end is a zero-length event Google either rejects or renders wrong.
           start: { date: due.toISOString().slice(0, 10) },
-          end: { date: due.toISOString().slice(0, 10) },
+          end: { date: new Date(due.getTime() + ONE_DAY_MS).toISOString().slice(0, 10) },
         }),
   };
 }
@@ -42,10 +46,11 @@ async function deleteGoogleEvent(calendar: calendar_v3.Calendar, eventId: string
     await calendar.events.delete({ calendarId: 'primary', eventId });
   } catch (err: any) {
     // 410/404 just means it's already gone (e.g. the user deleted it by hand
-    // on the Google side) — nothing to do. Anything else is a real failure,
-    // logged but swallowed (best-effort).
+    // on the Google side) — nothing to do. Anything else is a real failure —
+    // rethrown (not swallowed) so callers can run markNeedsReconnectIfRevoked,
+    // same as the insert/patch path below.
     if (err?.code !== 410 && err?.code !== 404) {
-      console.error('Failed to delete Google Calendar event:', err);
+      throw err;
     }
   }
 }
@@ -68,6 +73,7 @@ export async function syncTaskCalendarEvent(previous: Task | null, current: Task
           await deleteGoogleEvent(oldCalendar, previous.googleCalendarEventId);
         } catch (err) {
           await markNeedsReconnectIfRevoked(previous.assigneeId, err);
+          console.error('Failed to delete Google Calendar event:', err);
         }
       }
     }
@@ -87,6 +93,7 @@ export async function syncTaskCalendarEvent(previous: Task | null, current: Task
             await deleteGoogleEvent(calendar, current.googleCalendarEventId);
           } catch (err) {
             await markNeedsReconnectIfRevoked(current.assigneeId, err);
+            console.error('Failed to delete Google Calendar event:', err);
           }
         }
       }
@@ -97,7 +104,19 @@ export async function syncTaskCalendarEvent(previous: Task | null, current: Task
     }
 
     const calendar = await getAuthorizedClientForUser(current.assigneeId);
-    if (!calendar) return; // assignee never connected Google Calendar (or needs to reconnect) — nothing to sync
+    if (!calendar) {
+      // Reassigned to someone without Google Calendar connected (or needing
+      // reconnect): the old event was already deleted from the previous
+      // assignee's calendar above, so this id is now stale — it never existed
+      // on the new assignee's calendar. Clearing it lets
+      // backfillCalendarSyncForUser pick this task up once they eventually
+      // connect, instead of leaving a dangling id that a future patch() would
+      // 404 against forever.
+      if (assigneeChanged && current.googleCalendarEventId) {
+        await prisma.task.update({ where: { id: current.id }, data: { googleCalendarEventId: null } }).catch(() => {});
+      }
+      return;
+    }
 
     const eventBody = taskEventBody(current);
 
@@ -144,6 +163,7 @@ async function syncTimeOffEventForViewer(
         await deleteGoogleEvent(calendar, existingSync.googleCalendarEventId);
       } catch (err) {
         await markNeedsReconnectIfRevoked(viewerUserId, err);
+        console.error('Failed to delete Google Calendar event:', err);
       }
     }
     await prisma.timeOffCalendarSync.delete({ where: { id: existingSync.id } }).catch(() => {});

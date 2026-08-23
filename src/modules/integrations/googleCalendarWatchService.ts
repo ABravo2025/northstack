@@ -48,11 +48,14 @@ function webhookUrl(): string {
 // Opens a fresh channel and upserts the row — used both right after a user
 // connects (googleCalendarAuthService.ts's callback) and by the renewal cron.
 // Best-effort: if watch() fails (quota, revoked access, etc.), the one-way
-// sync still works fine without this, so this never throws to its caller.
-export async function openWatchChannelForUser(userId: string): Promise<void> {
+// sync still works fine without this, so this never throws to its caller —
+// the callback site relies on that to never block the redirect. Returns
+// whether it actually succeeded so callers that care (the renewal cron) can
+// tell renewed from failed instead of both always looking like success.
+export async function openWatchChannelForUser(userId: string): Promise<boolean> {
   try {
     const calendar = await getAuthorizedClientForUser(userId);
-    if (!calendar) return;
+    if (!calendar) return false;
 
     const channelId = randomUUID();
     const channelToken = randomBytes(32).toString('hex');
@@ -69,7 +72,7 @@ export async function openWatchChannelForUser(userId: string): Promise<void> {
 
     if (!data.resourceId || !data.expiration) {
       console.error('Google Calendar events.watch() did not return resourceId/expiration');
-      return;
+      return false;
     }
 
     // syncToken is deliberately left untouched on update — a new channel
@@ -91,9 +94,11 @@ export async function openWatchChannelForUser(userId: string): Promise<void> {
         expiration: new Date(Number(data.expiration)),
       },
     });
+    return true;
   } catch (err) {
     await markNeedsReconnectIfRevoked(userId, err);
     console.error('Failed to open Google Calendar watch channel:', err);
+    return false;
   }
 }
 
@@ -263,22 +268,23 @@ export async function renewExpiringWatchChannels(): Promise<{ renewed: number; f
       await calendar.channels.stop({ requestBody: { id: channel.channelId, resourceId: channel.resourceId } }).catch(() => {});
     }
 
-    try {
-      await openWatchChannelForUser(channel.userId);
+    // openWatchChannelForUser never throws (see its own comment) — it reports
+    // success via its return value instead, so that's what renewed/failed
+    // must be driven from, not a try/catch that can never see a rejection.
+    if (await openWatchChannelForUser(channel.userId)) {
       renewed++;
-    } catch (err) {
+    } else {
       failed++;
-      console.error(`Failed to renew Google Calendar watch channel for user ${channel.userId}:`, err);
+      console.error(`Failed to renew Google Calendar watch channel for user ${channel.userId}`);
     }
   }
 
   for (const connection of missing) {
-    try {
-      await openWatchChannelForUser(connection.userId);
+    if (await openWatchChannelForUser(connection.userId)) {
       renewed++;
-    } catch (err) {
+    } else {
       failed++;
-      console.error(`Failed to open a missing Google Calendar watch channel for user ${connection.userId}:`, err);
+      console.error(`Failed to open a missing Google Calendar watch channel for user ${connection.userId}`);
     }
   }
 

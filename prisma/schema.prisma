@@ -343,6 +343,7 @@ model Tenant {
   payrollRuns              PayrollRun[]
   payrollEntries           PayrollEntry[]
   googleCalendarConnections GoogleCalendarConnection[]
+  timeOffCalendarSyncs      TimeOffCalendarSync[]
 }
 
 // Billing Integration (spec-billing-integration.md). plan/lockedPriceCents are deliberately NOT
@@ -459,6 +460,7 @@ model User {
   payrollRunsCreated      PayrollRun[]
   passwordResetTokens     PasswordResetToken[]
   googleCalendarConnection GoogleCalendarConnection?
+  timeOffCalendarSyncs    TimeOffCalendarSync[]
 
   @@index([emailDomain])
 }
@@ -801,10 +803,33 @@ model TimeOffRequest {
   decidedAt       DateTime?
   decisionNote    String?
   createdAt       DateTime                @default(now())
-  googleCalendarEventId String? // set once this request is approved and pushed to the employee's connected Google Calendar; see googleCalendarSyncService.ts
+  calendarSyncs   TimeOffCalendarSync[]
 
   @@index([tenantId, employeeId])
   @@index([tenantId, status])
+}
+
+// One row per (approved TimeOffRequest, connected user who can see it) —
+// team-wide visibility by design (2026-08-23, Alejandro's explicit call):
+// every user who connects Google Calendar sees every tenant employee's
+// approved time off on their own calendar, same as the shared team calendar
+// already on the Overview page, not just their own. A single
+// googleCalendarEventId on TimeOffRequest itself isn't enough once one
+// request fans out to N different people's calendars — each gets its own
+// Google event id. See googleCalendarSyncService.ts.
+model TimeOffCalendarSync {
+  id                    String          @id @default(uuid())
+  tenantId              String
+  tenant                Tenant          @relation(fields: [tenantId], references: [id])
+  timeOffRequestId      String
+  timeOffRequest        TimeOffRequest  @relation(fields: [timeOffRequestId], references: [id])
+  userId                String
+  user                  User            @relation(fields: [userId], references: [id])
+  googleCalendarEventId String
+  createdAt             DateTime        @default(now())
+
+  @@unique([timeOffRequestId, userId])
+  @@index([tenantId])
 }
 
 model EmployeeTimeOffPolicy {

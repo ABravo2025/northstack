@@ -242,7 +242,6 @@ erDiagram
         string approverId FK "nullable - snapshot of employee.managerId at request time"
         datetime decidedAt "nullable"
         string decisionNote "nullable"
-        string googleCalendarEventId "nullable — set only while status=approved, grupo 9"
     }
 ```
 
@@ -253,7 +252,7 @@ Notas:
 - Si `requiresApproval` es `false`, la solicitud nace directo en `status: approved`.
 - El tag visual de "de licencia" en la fila del empleado se deriva en cada `GET /api/hr/employees`, no es una columna.
 - Sistema completo (7/7 piezas: jerarquía, políticas, asignación, solicitud/aprobación, balance, calendario, tag visual) desde 2026-07-14.
-- **2026-08-22**: `TimeOffRequest.googleCalendarEventId` — ver grupo 9. Solo se setea mientras `status === 'approved'`; se limpia (evento borrado en Google) si pasa a cualquier otro estado.
+- **2026-08-23**: un `TimeOffRequest` aprobado se sincroniza a Google Calendar — no como campo propio, sino vía `TimeOffCalendarSync` (grupo 9), porque un mismo Time Off aparece en el calendario de **todos** los usuarios conectados del tenant, no solo el de la persona que se lo toma (mismo criterio que la vista compartida del Overview).
 
 ## 4. Vistas y formularios
 
@@ -694,6 +693,19 @@ erDiagram
         string tenantId "no FK - ídem"
         datetime createdAt "rows older than 10 min are rejected"
     }
+
+    TENANT ||--o{ TIME_OFF_CALENDAR_SYNC : "has"
+    TIME_OFF_REQUEST ||--o{ TIME_OFF_CALENDAR_SYNC : "fans out to"
+    USER ||--o{ TIME_OFF_CALENDAR_SYNC : "sees on their calendar"
+
+    TIME_OFF_CALENDAR_SYNC {
+        string id PK
+        string tenantId FK
+        string timeOffRequestId FK
+        string userId FK "the viewer whose calendar this event lives on"
+        string googleCalendarEventId
+        datetime createdAt
+    }
 ```
 
 Notas:
@@ -714,9 +726,16 @@ Notas:
 - **Sync es reactivo, no hay reconciliación periódica**: `syncTaskCalendarEvent`/
   `syncTimeOffCalendarEvent` (`src/modules/integrations/googleCalendarSyncService.ts`) corren
   best-effort inmediatamente después de cada create/update/delete de Task o cada cambio de status
-  de TimeOffRequest — ver el `Task`/`TimeOffRequest` de los grupos 6/3 para el campo
-  `googleCalendarEventId` que mapea 1 registro → 1 evento de Google. Si alguien borra el evento a
-  mano del lado de Google, no se recrea solo.
+  de TimeOffRequest. Si alguien borra el evento a mano del lado de Google, no se recrea solo.
+  `backfillCalendarSyncForUser` corre una sola vez, justo al conectar, para no dejar afuera lo que
+  ya estaba pendiente antes de esa conexión (sync reactivo no mira para atrás).
+- **Task es personal, Time Off es de todo el equipo — asimetría deliberada** (2026-08-23,
+  corrección de Alejandro sobre el diseño original): un Task solo aparece en el calendario de su
+  `assigneeId` (`Task.googleCalendarEventId`, 1 registro → 1 evento, grupo 6). Un Time Off
+  aprobado, en cambio, aparece en el calendario de **todos** los usuarios conectados del tenant —
+  mismo criterio que la vista compartida de Time Off en el Overview — por eso 1 `TimeOffRequest`
+  puede generar N filas en `TimeOffCalendarSync` (una por cada `GoogleCalendarConnection` del
+  tenant), no un solo `googleCalendarEventId` en el propio `TimeOffRequest`.
 - **`Employee.birthdate`** (`DateTime? @db.Date`, grupo 2) — sin encriptar, mismo criterio que
   `startDate`/`endDate`/`nationality` (no es dato tan sensible como para justificar el mecanismo de
   `EmployeeCompensation`). Se muestra como evento anual recurrente (match por mes+día, año

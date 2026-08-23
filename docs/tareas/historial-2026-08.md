@@ -501,6 +501,28 @@ organizada, no un reemplazo**: el contenido original sigue viviendo tal cual en
     producción a propósito (no hay DB de dev separada) — cualquier prueba manual local es contra
     datos reales.
 
+- **2026-08-23 — Google Calendar: credenciales reales cargadas, 3 bugs encontrados/corregidos en
+  vivo contra `staging`, y Time Off rediseñado a alcance de equipo**: Alejandro consiguió el
+  `GOOGLE_CALENDAR_CLIENT_SECRET` real y lo cargó; Claude registró los 3 redirect URIs en Google
+  Cloud Console (con Alejandro siguiendo los pasos), cargó las 4 variables nuevas + `APP_BASE_URL`
+  (que faltaba para el scope Preview de Vercel) y re-deployó `staging`. Al probar con una cuenta
+  real de Google se encontraron y corrigieron, en orden: (1) la pantalla de consentimiento estaba
+  en modo "Internal" (config de Google Cloud — Alejandro la pasó a "External" + se agregó como test
+  user), (2) el callback pedía el email de la cuenta sin haber solicitado el scope `userinfo.email`,
+  crasheaba con un 500 crudo (encontrado leyendo los logs de Vercel del request real — corregido:
+  scope agregado + todo el callback envuelto en try/catch), (3) nada de lo ya existente antes de
+  conectar se sincronizaba porque el sync es puramente reactivo (corregido con
+  `backfillCalendarSyncForUser`, corrido una sola vez al conectar). Detalle completo en
+  `Tareas-QA.md` QA-19, sección "Actualización 2026-08-23".
+  - **Cambio de diseño, no bug**: Alejandro esperaba que el Time Off sincronizado fuera visible
+    para todo el equipo conectado (igual que la vista compartida del Overview), no solo para quien
+    se toma la licencia. Se reemplazó `TimeOffRequest.googleCalendarEventId` (un campo, un evento)
+    por el modelo `TimeOffCalendarSync` (una fila por cada par solicitud+usuario-conectado — ver
+    `database-schema.md` grupo 9), y se actualizó el backfill para traer el Time Off aprobado de
+    **todo** el tenant a cualquier usuario que se conecta, no solo el propio. Tasks se mantiene
+    personal (solo el calendario de quien tiene asignada la tarea) — no se pidió cambiar eso.
+    Pendiente re-probar de punta a punta con el modelo nuevo.
+
 ---
 
 ## Pendientes explícitos de agosto

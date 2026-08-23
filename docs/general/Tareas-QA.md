@@ -815,7 +815,7 @@ para verificar, y ambos se revirtieron a su estado original (`birthdate: null`,
 | 14 | **Pendiente:** reasignar la Task a otra persona (conectada o no) | El evento desaparece del calendario del asignado anterior; aparece uno nuevo en el del nuevo asignado si también está conectado |
 | 15 | **Pendiente:** aprobar un Time Off request | Evento de todo el rango de fechas en el Google Calendar del empleado (si tiene cuenta conectada) |
 | 16 | **Pendiente:** revocar el acceso desde la propia cuenta de Google (myaccount.google.com/permissions) y volver a intentar un sync | La conexión pasa a `needsReconnect: true`, la tarjeta de Profile muestra "Access was revoked — reconnect to resume syncing" en vez de fallar silenciosamente para siempre |
-| 17 | **Pendiente:** botón "Disconnect" | Deja de sincronizar; no rompe nada si luego se completa/edita una Task que ya tenía un evento sincronizado antes de desconectar |
+| 17 | Botón "Disconnect" seguido de "Connect" de nuevo | Dispara el backfill (ver #18) — probado en staging el 23, funciona |
 
 **Severidad:** ninguna crítica encontrada en lo verificable hoy. Los casos 11-17 son el verdadero
 riesgo — el código nunca ejecutó una llamada real contra la API de Google Calendar (ni éxito ni
@@ -827,6 +827,40 @@ lista para `staging`.
 momentáneamente (una sola llamada, se loguea el error y no se reintenta); ningún job de
 reconciliación periódica (el sync es puramente reactivo a cada create/update/delete, así que un
 evento borrado a mano del lado de Google no se recrea solo).
+
+### Actualización 2026-08-23 — probado en vivo contra Google real en `staging`, 3 bugs encontrados y corregidos
+
+Con las credenciales reales ya cargadas por Alejandro, se probó el flujo de punta a punta contra
+`staging.joinnorthstack.com` y Google real (no simulado). Se encontraron y corrigieron 3 problemas
+reales, todos ya en `staging`:
+
+1. **Pantalla de consentimiento en modo "Internal"** (config de Google Cloud, no de código) — un
+   Gmail personal no calificaba, tiraba `Error 403: org_internal`. Alejandro lo cambió a "External"
+   + agregó su cuenta como test user.
+2. **`oauth2.userinfo.get()` sin el scope de `email`** — el callback pedía el email de la cuenta
+   conectada sin haber pedido permiso para leerlo, tiraba un 500 crudo (`{"error":"Something went
+   wrong..."}`) en vez de redirigir con un toast de error. Encontrado leyendo el log de Vercel del
+   request real. Corregido: se agregó `userinfo.email` al scope pedido, y el callback entero quedó
+   envuelto en try/catch (antes un fallo ahí crasheaba sin control).
+3. **Nada de lo que ya exist��a antes de conectar se sincronizaba** — el sync es reactivo (solo
+   dispara en el próximo create/update/delete), así que las Tasks/Time Off ya creadas antes de la
+   primera conexión nunca aparecían. Corregido con `backfillCalendarSyncForUser`, corrido una sola
+   vez justo al conectar.
+
+Además, un cambio de diseño real (no un bug) pedido por Alejandro tras probarlo: **Time Off pasó a
+ser de todo el equipo, no personal** — originalmente cada Time Off aprobado solo sincronizaba al
+calendario de la persona que se lo tomaba; Alejandro esperaba ver ahí el Time Off de **todo** el
+equipo, igual que la vista compartida del Overview. Rediseñado: `TimeOffRequest.googleCalendarEventId`
+(un campo) se reemplazó por el modelo `TimeOffCalendarSync` (una fila por cada par
+request+usuario-conectado — ver `database-schema.md` grupo 9). `backfillCalendarSyncForUser`
+también se actualizó para empujar **todo** el Time Off aprobado del tenant a un usuario recién
+conectado, no solo el suyo propio. Tasks se mantiene personal (solo el calendario del assignee) —
+Alejandro no pidió cambiar eso.
+
+**Pendiente de re-probar** tras el rediseño de Time Off (no verificado todavía end-to-end con el
+nuevo modelo): que un Time Off aprobado aparezca en el calendario de **cada** usuario conectado del
+tenant (no solo uno), y que el backfill al conectar un usuario nuevo traiga el Time Off aprobado de
+**otros** empleados, no solo el propio.
 
 ---
 

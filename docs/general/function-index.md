@@ -235,8 +235,11 @@ CRUD estándar: **createTimeOffPolicy**, **listTimeOffPolicies(tenantId)**, **fi
 - **getAuthorizedClientForUser(userId)** — cliente `calendar_v3.Calendar` ya autorizado, o `null` si el usuario nunca conectó/necesita reconectar (no-op silencioso para quien llama). Persiste el access token refrescado automáticamente vía el evento `tokens` de `google-auth-library`.
 - **markNeedsReconnectIfRevoked(userId, err)** — si el error es `invalid_grant`, marca `needsReconnect: true` en la conexión.
 
-### `src/modules/integrations/googleCalendarSyncService.ts` (2026-08-22)
-- **syncTaskCalendarEvent(previous, current)** / **syncTimeOffCalendarEvent(previous, current)** — sync unidireccional (Northstack → Google), best-effort (nunca tiran, ver comentario en el archivo). Llamadas desde `taskService.ts` y `timeOffRequestService.ts` tras cada write relevante; no llamar desde ningún otro lugar sin releer la tabla de decisión del archivo (reasignación de assignee, completar/borrar, cambio de status de Time Off).
+### `src/modules/integrations/googleCalendarSyncService.ts` (2026-08-22, rediseño de Time Off 2026-08-23)
+- **syncTaskCalendarEvent(previous, current)** — sync unidireccional (Northstack → Google) del Task al calendario de su `assigneeId` únicamente (personal, 1 registro → 1 evento). Best-effort, nunca tira. Llamada desde `taskService.ts` tras create/update/delete.
+- **syncTimeOffCalendarEvent(previous, current)** — a diferencia de Tasks, es de todo el equipo: sincroniza a **todos** los `GoogleCalendarConnection` del tenant, no solo al de la persona que se toma la licencia (decisión explícita de Alejandro, 2026-08-23, mismo criterio que la vista compartida del Overview). Internamente delega en `syncTimeOffEventForViewer` (no exportada) por cada usuario conectado. Llamada desde `timeOffRequestService.ts` tras create/decide/cancel.
+- **backfillCalendarSyncForUser(userId, tenantId)** — corre una sola vez, justo al conectar, para sincronizar lo que ya estaba pendiente (Tasks propios + **todo** el Time Off aprobado del tenant, no solo el propio) — sin esto, sync reactivo nunca mira para atrás. Llamada desde `googleCalendarIntegration.ts`'s callback route tras un connect exitoso.
+- No llamar ninguna de las tres desde otro lugar sin releer la tabla de decisión de cada una en el archivo (reasignación de assignee, completar/borrar, cambio de status de Time Off).
 
 ### `src/modules/notes/noteService.ts`
 CRUD estándar, cross-entidad vía `entityType`/`entityId`: **createNote**, **findNoteById(id)**, **listNotesForEntity(tenantId, entityType, entityId)**, **updateNote(id, input)**, **deleteNote(id)**.

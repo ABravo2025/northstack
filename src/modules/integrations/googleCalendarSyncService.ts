@@ -96,65 +96,90 @@ export async function syncTaskCalendarEvent(previous: Task | null, current: Task
   }
 }
 
-// Time off: only an approved request has a calendar event. Pending/rejected/
-// cancelled/deleted all mean "no event" (a pending request never had one, so
-// that path is a no-op, kept for symmetry with the task version above).
+// Time off is team-wide visibility, not personal (2026-08-23, Alejandro's
+// explicit call): every connected user in the tenant sees every employee's
+// approved time off on their own calendar — same "shared team calendar"
+// Time Off already has on the Overview page, just mirrored into Google. So
+// one TimeOffRequest can fan out into N Google events (one per connected
+// user), tracked in TimeOffCalendarSync (one row per request+viewer pair).
+async function syncTimeOffEventForViewer(
+  request: TimeOffRequest,
+  employeeName: string,
+  wantsEvent: boolean,
+  viewerUserId: string,
+): Promise<void> {
+  const existingSync = await prisma.timeOffCalendarSync.findUnique({
+    where: { timeOffRequestId_userId: { timeOffRequestId: request.id, userId: viewerUserId } },
+  });
+
+  if (!wantsEvent) {
+    if (!existingSync) return;
+    const calendar = await getAuthorizedClientForUser(viewerUserId);
+    if (calendar) {
+      try {
+        await deleteGoogleEvent(calendar, existingSync.googleCalendarEventId);
+      } catch (err) {
+        await markNeedsReconnectIfRevoked(viewerUserId, err);
+      }
+    }
+    await prisma.timeOffCalendarSync.delete({ where: { id: existingSync.id } }).catch(() => {});
+    return;
+  }
+
+  const calendar = await getAuthorizedClientForUser(viewerUserId);
+  if (!calendar) return;
+
+  // Google's all-day `end.date` is exclusive, so a request spanning
+  // startDate..endDate (both inclusive) needs one day added to endDate.
+  const endExclusive = new Date(request.endDate);
+  endExclusive.setUTCDate(endExclusive.getUTCDate() + 1);
+
+  const eventBody: calendar_v3.Schema$Event = {
+    summary: `${employeeName} — Time off`,
+    description: request.note ?? undefined,
+    start: { date: request.startDate.toISOString().slice(0, 10) },
+    end: { date: endExclusive.toISOString().slice(0, 10) },
+  };
+
+  try {
+    if (existingSync) {
+      await calendar.events.patch({ calendarId: 'primary', eventId: existingSync.googleCalendarEventId, requestBody: eventBody });
+    } else {
+      const { data } = await calendar.events.insert({ calendarId: 'primary', requestBody: eventBody });
+      if (data.id) {
+        await prisma.timeOffCalendarSync.create({
+          data: { tenantId: request.tenantId, timeOffRequestId: request.id, userId: viewerUserId, googleCalendarEventId: data.id },
+        });
+      }
+    }
+  } catch (err) {
+    await markNeedsReconnectIfRevoked(viewerUserId, err);
+    console.error('Failed to sync time off request to Google Calendar:', err);
+  }
+}
+
+// Pending/rejected/cancelled/deleted all mean "no event" for every viewer
+// (a pending request never had one, so that path is a no-op for viewers who
+// never got a sync row, kept for symmetry with the task version above).
 export async function syncTimeOffCalendarEvent(
   previous: TimeOffRequest | null,
   current: TimeOffRequest | null,
 ): Promise<void> {
   try {
-    const wantsEvent = !!current && current.status === 'approved';
-    const requestId = current?.id ?? previous?.id;
-    const employeeId = current?.employeeId ?? previous?.employeeId;
-    const existingEventId = current?.googleCalendarEventId ?? previous?.googleCalendarEventId;
+    const request = current ?? previous;
+    if (!request) return;
 
-    if (!employeeId || !requestId) return;
+    const wantsEvent = current?.status === 'approved';
 
-    const employee = await prisma.employee.findUnique({ where: { id: employeeId }, select: { userId: true } });
-    if (!employee?.userId) return; // time off can be recorded for a profile with no linked platform user
+    const [employee, connections] = await Promise.all([
+      prisma.employee.findUnique({ where: { id: request.employeeId }, select: { firstName: true, lastName: true } }),
+      prisma.googleCalendarConnection.findMany({ where: { tenantId: request.tenantId }, select: { userId: true } }),
+    ]);
+    if (!employee) return;
+    const employeeName = `${employee.firstName} ${employee.lastName}`;
 
-    if (!wantsEvent) {
-      if (existingEventId) {
-        const calendar = await getAuthorizedClientForUser(employee.userId);
-        if (calendar) {
-          try {
-            await deleteGoogleEvent(calendar, existingEventId);
-          } catch (err) {
-            await markNeedsReconnectIfRevoked(employee.userId, err);
-          }
-        }
-        await prisma.timeOffRequest.update({ where: { id: requestId }, data: { googleCalendarEventId: null } }).catch(() => {});
-      }
-      return;
-    }
-
-    const calendar = await getAuthorizedClientForUser(employee.userId);
-    if (!calendar) return;
-
-    const request = current!;
-    // Google's all-day `end.date` is exclusive, so a request spanning
-    // startDate..endDate (both inclusive) needs one day added to endDate.
-    const endExclusive = new Date(request.endDate);
-    endExclusive.setUTCDate(endExclusive.getUTCDate() + 1);
-
-    const eventBody: calendar_v3.Schema$Event = {
-      summary: 'Time off',
-      description: request.note ?? undefined,
-      start: { date: request.startDate.toISOString().slice(0, 10) },
-      end: { date: endExclusive.toISOString().slice(0, 10) },
-    };
-
-    try {
-      if (existingEventId) {
-        await calendar.events.patch({ calendarId: 'primary', eventId: existingEventId, requestBody: eventBody });
-      } else {
-        const { data } = await calendar.events.insert({ calendarId: 'primary', requestBody: eventBody });
-        await prisma.timeOffRequest.update({ where: { id: request.id }, data: { googleCalendarEventId: data.id ?? null } });
-      }
-    } catch (err) {
-      await markNeedsReconnectIfRevoked(employee.userId, err);
-      console.error('Failed to sync time off request to Google Calendar:', err);
+    for (const connection of connections) {
+      await syncTimeOffEventForViewer(request, employeeName, wantsEvent, connection.userId);
     }
   } catch (err) {
     console.error('syncTimeOffCalendarEvent failed unexpectedly:', err);
@@ -177,14 +202,16 @@ export async function backfillCalendarSyncForUser(userId: string, tenantId: stri
       await syncTaskCalendarEvent(null, task);
     }
 
-    const employee = await prisma.employee.findUnique({ where: { userId }, select: { id: true } });
-    if (!employee) return;
-
+    // Team-wide, not just this user's own — every tenant employee's approved
+    // time off gets pushed to the newly-connected user's calendar too (see
+    // syncTimeOffCalendarEvent's comment on why this fans out per viewer).
     const approvedTimeOff = await prisma.timeOffRequest.findMany({
-      where: { tenantId, employeeId: employee.id, status: 'approved', googleCalendarEventId: null },
+      where: { tenantId, status: 'approved' },
+      include: { employee: { select: { firstName: true, lastName: true } } },
     });
     for (const request of approvedTimeOff) {
-      await syncTimeOffCalendarEvent(null, request);
+      const employeeName = `${request.employee.firstName} ${request.employee.lastName}`;
+      await syncTimeOffEventForViewer(request, employeeName, true, userId);
     }
   } catch (err) {
     console.error('backfillCalendarSyncForUser failed unexpectedly:', err);

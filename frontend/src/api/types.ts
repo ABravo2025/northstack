@@ -32,7 +32,7 @@ export interface Tenant {
   gracePeriodEndsAt: string | null;
 }
 
-// Billing Integration (docs/Task MD/spec-billing-integration.md) — GET /api/subscriptions/me.
+// Billing Integration (docs/general/spec-billing-integration.md) — GET /api/subscriptions/me.
 export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'suspended' | 'cancelled';
 export type PaymentProvider = 'paddle' | 'mercadopago';
 
@@ -80,6 +80,7 @@ export interface Employee {
   nationality?: string | null;
   startDate?: string | null;
   endDate?: string | null;
+  birthdate?: string | null;
   contractUrl?: string | null;
   statusId: string;
   statusDefn?: { id: string; name: string; color: string | null };
@@ -93,6 +94,19 @@ export interface Employee {
     customFieldDefinitionId: string;
     value: string;
   }[];
+}
+
+export interface EmployeeBirthday {
+  id: string;
+  firstName: string;
+  lastName: string;
+  birthdate: string;
+}
+
+export interface GoogleCalendarStatus {
+  connected: boolean;
+  googleAccountEmail: string | null;
+  needsReconnect: boolean;
 }
 
 export interface Company {

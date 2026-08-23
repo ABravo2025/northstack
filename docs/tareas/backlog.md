@@ -14,10 +14,6 @@ los ítems.
   Aplicaría a `department`, `statusId`, `managerId`, custom fields embebidos. Sin definir: patrón de
   edición (click-to-edit por celda vs. fila entera en modo edición), autosave vs. confirmar, y si
   Companies/Contacts reciben el mismo tratamiento por consistencia.
-- [ ] **Compensación: sin campo de moneda por monto individual**: hoy la moneda es un valor único por
-  tenant (`Tenant.currency`, aplica a `hourlyRateCents`/`monthlyRateCents`), decisión explícita.
-  Insuficiente si un tenant necesita mezclar monedas distintas entre personas — solo relevante si
-  aparece un tenant multinacional real que lo pida.
 
 ## CRM
 
@@ -95,20 +91,29 @@ los ítems.
 
 ## Infra/Otros
 
-- [ ] **Tenant Signup + Subscription Plans — piezas de negocio sin construir**: integración real de
-  Paddle, UI de "agregar método de pago", pantalla de autogestión de suscripción (ver plan, cambiar de
-  plan, actualizar método de pago, cancelar), y prorrateo — explícitamente fuera de la ronda que
-  construyó el flujo de signup con verificación de email + trial de 15 días + `PlansModal`. Todo el
-  módulo (backend `EmailVerification`/campos de `Tenant`/rutas `signup/*`, frontend
-  `RegisterPage`/`CompleteSignupPage`/`PlansModal`) sigue **sin pushear a `staging` ni a `main`** —
-  a pedido explícito del usuario, que lo va a probar primero en su propio entorno local.
-- [ ] **Sin enforcement de acceso para tenants con status `suspended`**: hallazgo propio de la
-  implementación de Signup+Plans, no estaba en el spec original — el status del tenant cambia a
-  `suspended` pero ningún middleware bloquea todavía las requests de ese tenant.
-- [ ] **`CRON_SECRET` sin cargar en Vercel**: protege `GET /api/internal/plan-transitions/run` (el
-  cron nuevo de Vercel Cron Job para transiciones de plan/trial). Falta cargarlo en Vercel antes de
-  cualquier deploy real del módulo de Signup+Plans, mismo caso que fue `PAYMENT_DATA_ENCRYPTION_KEY`
-  para Payroll en su momento.
+- [ ] **Prorrateo al cambiar de plan**: `changePlan` (self-serve, Billing Integration) llama al
+  proveedor y agenda el cambio para el próximo ciclo de facturación — no calcula ni cobra/acredita la
+  diferencia del ciclo en curso. Sin definir si hace falta prorratear de verdad o si "aplica desde el
+  próximo ciclo" es la política final.
+- [ ] **Webhook de Paddle todavía apunta al túnel de cloudflared (muerto), no a la URL estable de
+  staging**: a diferencia de Mercado Pago (ya migrado a
+  `https://staging.joinnorthstack.com/api/webhooks/paddle`, con el protection-bypass de Vercel), el
+  webhook de Paddle en su dashboard sandbox sigue registrado contra una URL de túnel efímera de una
+  sesión de testing anterior. Hay que repetir en Paddle el mismo cambio que ya se hizo en Mercado
+  Pago: URL estable + `?x-vercel-protection-bypass=<secret>` (Vercel Deployment Protection bloquea
+  cualquier POST externo a `staging.joinnorthstack.com` sin ese query param, confirmado en vivo).
+- [ ] **Precios reales de Argentina (Mercado Pago) sin definir**: los `PlanPrice` de mercado `ar`
+  siguen en placeholder (no en cero, pero no son precios reales todavía) — bloquea solo el pricing
+  real, no la integración en sí (ya probada de punta a punta contra sandbox).
+- [ ] **Credenciales reales (producción) de Paddle/Mercado Pago sin cargar**: hoy Vercel Preview
+  (staging) tiene las credenciales *sandbox* de ambos proveedores (`PADDLE_API_KEY`,
+  `PADDLE_WEBHOOK_SECRET`, `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`, `VITE_PADDLE_CLIENT_TOKEN`) — nada
+  cargado todavía en el scope de Production. Bloquea salir a cobrar de verdad, no bloquea seguir
+  probando en staging.
+- [ ] **Billing Integration (Paddle + Mercado Pago) construido y probado en `staging`, pendiente de
+  code review antes de promover a `main`**: mismo gate que ya se usó para Tenant Signup + Subscription
+  Plans (`docs/tareas/historial-2026-08.md` documenta el detalle) — no pushear a `main` sin esa
+  revisión primero.
 - [ ] **Sistema de roles custom / permisología**: hoy los roles son fijos (owner/admin/member,
   hardcodeados en `permissionService.ts`). Deliberadamente al final de la cola — va a seguir mudando
   con cada módulo nuevo, conviene resolverlo una sola vez cuando el set de features esté más estable.
@@ -118,12 +123,21 @@ los ítems.
   Northstack); webhooks salientes (URL + eventos elegibles); Slack como app instalable vía OAuth real
   (no un webhook simple). Incluye también la contraparte entrante: API pública protegida por token
   para integraciones externas. Sin spec técnico todavía, explícitamente no bloqueante para el beta.
-- [ ] **OAuth de Google**: dos usos a evaluar juntos por compartir el mismo flujo — "Sign in with
-  Google" en registro/login, y sincronizar solicitudes de Time Off aprobadas al Google Calendar
-  personal de cada empleado. Sin empezar.
+- [x] **OAuth de Google — sync de Task/Time Off al Google Calendar personal** (2026-08-22, solo
+  local todavía, ver `docs/general/database-schema.md` grupo 9 y QA-19 en `Tareas-QA.md`):
+  construido — cada usuario conecta su cuenta desde Settings → Profile, y sus Tasks con fecha
+  límite + Time Off aprobados se sincronizan (best-effort, unidireccional) para que Google dé las
+  notificaciones. Bloqueado para probar de punta a punta y pushear a `staging`: falta que
+  Alejandro cargue `GOOGLE_CALENDAR_CLIENT_SECRET`/`GOOGLE_CALENDAR_REDIRECT_URI` reales (Google
+  Cloud Console) — el `GOOGLE_CALENDAR_CLIENT_ID` que ya estaba en `.env` no tenía código atrás
+  hasta ahora.
+- [ ] **"Sign in with Google" en registro/login**: comparte el mismo Google Cloud OAuth client que
+  el punto de arriba, pero es un flujo de autenticación distinto (reemplaza/complementa
+  email+password), no construido todavía. Evaluar junto con el ítem de abajo si conviene un solo
+  hub de credenciales OAuth reusadas entre ambos usos.
 - [ ] **Verificación de email por OTP + 2FA por email en login**: el flujo de signup de tenants nuevos
-  ya incorpora verificación de email (por link/token, `EmailVerification`, aún sin pushear — ver
-  arriba), pero un código OTP de un solo uso para el registro directo (`POST /api/auth/register`) y
+  ya incorpora verificación de email (por link/token, `EmailVerification`, en producción desde
+  2026-08-18), pero un código OTP de un solo uso para el registro directo (`POST /api/auth/register`) y
   2FA por email en cada login siguen sin diseñar ni construir.
 - [ ] **i18n**: alcance sin definir (¿selector de usuario o fijo por tenant/región?, qué idiomas además
   del actual). Relacionado con un hallazgo de UX ya anotado: la landing está en español y la app en
@@ -133,7 +147,9 @@ los ítems.
 - [ ] **Notificaciones in-app** (ícono de campana con contador, dropdown de recientes): distinto del
   canal de email ya existente. Se solapa conceptualmente con Slack/webhooks salientes — conviene
   diseñar un solo modelo de "evento" compartido entre los canales (in-app, email, Slack, webhook)
-  antes de construir cualquiera.
+  antes de construir cualquiera. **2026-08-22**: para el caso puntual de recordatorios de Tasks/Time
+  Off, se optó por sync a Google Calendar en vez de esto (ver el ítem de OAuth de Google arriba) —
+  sigue sin existir nada in-app para el resto de los eventos de la plataforma.
 - [ ] **Historial de valores previos de custom fields** (con retención por tiempo): evaluado y
   pospuesto a propósito.
 - [ ] **Hallazgos de seguridad sin resolver de la auditoría 2026-07-16** (`docs/informe-tecnico/

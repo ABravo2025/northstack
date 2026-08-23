@@ -100,7 +100,7 @@ export default function MyTasksWidget({ token, tenantUsers, currentUserId }: MyT
               aria-label={task.completedAt ? 'Mark as pending' : 'Mark as complete'}
             />
             <div className="min-w-0 flex-1">
-              <div className={`task-row-title ${task.completedAt ? 'completed' : ''}`} style={{ display: 'block' }}>
+              <div className="task-row-title" style={{ display: 'block' }}>
                 {task.title}
               </div>
               {task.entitySummary && <div className="text-xs text-gray-400 truncate">{task.entitySummary}</div>}

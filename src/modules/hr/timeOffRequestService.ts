@@ -1,5 +1,6 @@
 import prisma from '../../lib/prisma.js';
 import { sendTimeOffRequestDecidedEmail, sendTimeOffRequestPendingEmail } from '../../lib/mailer.js';
+import { syncTimeOffCalendarEvent } from '../integrations/googleCalendarSyncService.js';
 import type { TimeOffRequest, TimeOffRequestStatus, User } from '@prisma/client';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -73,6 +74,11 @@ export async function createTimeOffRequest(input: CreateTimeOffRequestInput): Pr
       decisionNote: autoApprove ? 'Auto-approved — this policy does not require approval' : null,
     },
   });
+
+  // Best-effort, never blocks the response — see googleCalendarSyncService.ts.
+  // Only an approved request produces an event, so a plain pending request
+  // correctly gets no Google Calendar entry until it's actually decided.
+  void syncTimeOffCalendarEvent(null, request).catch((err) => console.error('Google Calendar time off sync failed:', err));
 
   const employeeName = `${employee.firstName} ${employee.lastName}`;
   const manager = employee.managerId ? await prisma.employee.findUnique({ where: { id: employee.managerId } }) : null;
@@ -208,6 +214,8 @@ export async function decideTimeOffRequest(
     },
   });
 
+  void syncTimeOffCalendarEvent(request, updated).catch((err) => console.error('Google Calendar time off sync failed:', err));
+
   const [employee, policy] = await Promise.all([
     prisma.employee.findUnique({ where: { id: request.employeeId } }),
     prisma.timeOffPolicyDefinition.findUnique({ where: { id: request.timeOffPolicyId } }),
@@ -252,6 +260,12 @@ export async function cancelTimeOffRequest(
     return { success: false, error: 'Only pending requests can be cancelled' };
   }
 
-  await prisma.timeOffRequest.update({ where: { id: requestId }, data: { status: 'cancelled' } });
+  const updated = await prisma.timeOffRequest.update({ where: { id: requestId }, data: { status: 'cancelled' } });
+
+  // Only pending requests can be cancelled (checked above), and a pending
+  // request never had a Google Calendar event yet — this call is a no-op in
+  // practice, kept only for symmetry/defensiveness.
+  void syncTimeOffCalendarEvent(request, updated).catch((err) => console.error('Google Calendar time off sync failed:', err));
+
   return { success: true };
 }

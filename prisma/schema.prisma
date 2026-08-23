@@ -342,6 +342,7 @@ model Tenant {
   employeeCompensations    EmployeeCompensation[]
   payrollRuns              PayrollRun[]
   payrollEntries           PayrollEntry[]
+  googleCalendarConnections GoogleCalendarConnection[]
 }
 
 // Billing Integration (spec-billing-integration.md). plan/lockedPriceCents are deliberately NOT
@@ -457,6 +458,7 @@ model User {
   compensationsCreated    EmployeeCompensation[]
   payrollRunsCreated      PayrollRun[]
   passwordResetTokens     PasswordResetToken[]
+  googleCalendarConnection GoogleCalendarConnection?
 
   @@index([emailDomain])
 }
@@ -519,6 +521,7 @@ model Employee {
   personType               PersonType? // Payroll (Unidad 4): profile/contractor/employee — nullable because pre-existing rows predate this field; the People alta form (Unidad 4/5) makes it a required first choice going forward
   nationality              String? // Payroll (Unidad 5): profile data, not part of any EmployeeCompensation contract
   countryOfResidence       String? // Payroll (Unidad 7): filled by the person themselves at contract confirmation, never by the owner
+  birthdate                DateTime?               @db.Date // shown as a recurring annual entry on the Overview calendar (month+day only, year ignored)
   statusId                 String
   statusDefn               StatusDefinition        @relation(fields: [statusId], references: [id])
   managerId                String?
@@ -798,6 +801,7 @@ model TimeOffRequest {
   decidedAt       DateTime?
   decisionNote    String?
   createdAt       DateTime                @default(now())
+  googleCalendarEventId String? // set once this request is approved and pushed to the employee's connected Google Calendar; see googleCalendarSyncService.ts
 
   @@index([tenantId, employeeId])
   @@index([tenantId, status])
@@ -980,6 +984,7 @@ model Task {
   createdBy   User       @relation("TaskCreatedBy", fields: [createdById], references: [id])
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+  googleCalendarEventId String? // set once this task's dueDate has been pushed to the assignee's connected Google Calendar; see googleCalendarSyncService.ts
 
   @@index([tenantId, entityType, entityId])
   @@index([tenantId, assigneeId])
@@ -1057,6 +1062,45 @@ model Session {
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
   expiresAt DateTime
+}
+
+// One connected Google account per platform user (self-service, personal —
+// not a tenant-wide/admin-configured integration). Tokens are encrypted at
+// rest via lib/googleTokenEncryption.ts (its own key, mirroring how
+// encryption.ts is scoped to payment data only). needsReconnect is set by
+// googleCalendarAuthService.ts when Google reports the refresh token as
+// revoked (invalid_grant) — the row is kept (not deleted) so the UI can show
+// "reconnect" with the last-known account email instead of "not connected".
+model GoogleCalendarConnection {
+  id                     String   @id @default(uuid())
+  tenantId               String
+  tenant                 Tenant   @relation(fields: [tenantId], references: [id])
+  userId                 String   @unique
+  user                   User     @relation(fields: [userId], references: [id])
+  googleAccountEmail     String
+  accessTokenEncrypted   String
+  refreshTokenEncrypted  String
+  accessTokenExpiresAt   DateTime
+  scope                  String
+  needsReconnect         Boolean  @default(false)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@index([tenantId])
+}
+
+// Short-lived, single-use CSRF state for the Google OAuth redirect
+// round-trip. Needed (rather than a signed nonce) because the /connect
+// redirect and the /callback hit are two separate, stateless Vercel function
+// invocations with no shared memory — same DB-lookup shape as Session
+// (opaque token -> row). Deleted on successful callback; a row older than 10
+// minutes is treated as expired and rejected.
+model GoogleOAuthState {
+  id        String   @id @default(uuid())
+  state     String   @unique
+  userId    String
+  tenantId  String
+  createdAt DateTime @default(now())
 }
 
 model Invitation {

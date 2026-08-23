@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { api } from '../api';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { api, type GoogleCalendarStatus } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import PasswordInput from '../components/common/PasswordInput';
 import PasswordChecklist from '../components/common/PasswordChecklist';
@@ -23,6 +24,54 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '' });
   const [passwordError, setPasswordError] = useState<{ message: string; field?: string } | null>(null);
   const [passwordSaving, setPasswordSaving] = useState(false);
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [googleStatus, setGoogleStatus] = useState<GoogleCalendarStatus | null>(null);
+  const [googleBusy, setGoogleBusy] = useState(false);
+
+  const loadGoogleStatus = () => {
+    api
+      .getGoogleCalendarStatus(token)
+      .then(setGoogleStatus)
+      .catch((error) => toast.error('Failed to load Google Calendar status: ' + (error as Error).message));
+  };
+
+  useEffect(() => {
+    loadGoogleStatus();
+
+    if (searchParams.get('googleCalendarConnected')) {
+      toast.success('Google Calendar connected.');
+      setSearchParams({}, { replace: true });
+    } else if (searchParams.get('googleCalendarError')) {
+      toast.error('Could not connect Google Calendar. Please try again.');
+      setSearchParams({}, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleGoogleConnect = async () => {
+    setGoogleBusy(true);
+    try {
+      const { url } = await api.getGoogleCalendarConnectUrl(token);
+      window.location.href = url;
+    } catch (error) {
+      toast.error('Failed to start Google Calendar connection: ' + (error as Error).message);
+      setGoogleBusy(false);
+    }
+  };
+
+  const handleGoogleDisconnect = async () => {
+    setGoogleBusy(true);
+    try {
+      await api.disconnectGoogleCalendar(token);
+      toast.success('Google Calendar disconnected.');
+      loadGoogleStatus();
+    } catch (error) {
+      toast.error('Failed to disconnect Google Calendar: ' + (error as Error).message);
+    } finally {
+      setGoogleBusy(false);
+    }
+  };
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,6 +159,42 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
             </button>
           </div>
         </form>
+      </div>
+
+      <div className="card">
+        <h3 className="card-title">Google Calendar</h3>
+        <p className="text-xs text-gray-400" style={{ marginBottom: 12 }}>
+          Connect your Google account to get your task due dates and approved time off pushed to your personal
+          Google Calendar, so Google's own reminders notify you.
+        </p>
+        {googleStatus?.connected ? (
+          <>
+            <p style={{ marginBottom: 12 }}>
+              Connected as <strong>{googleStatus.googleAccountEmail}</strong>
+              {googleStatus.needsReconnect && (
+                <span className="field-error" style={{ display: 'block' }}>
+                  Access was revoked — reconnect to resume syncing.
+                </span>
+              )}
+            </p>
+            <div className="form-actions">
+              {googleStatus.needsReconnect && (
+                <button type="button" className="btn-primary" onClick={handleGoogleConnect} disabled={googleBusy}>
+                  Reconnect
+                </button>
+              )}
+              <button type="button" onClick={handleGoogleDisconnect} disabled={googleBusy}>
+                Disconnect
+              </button>
+            </div>
+          </>
+        ) : (
+          <div className="form-actions">
+            <button type="button" className="btn-primary" onClick={handleGoogleConnect} disabled={googleBusy}>
+              {googleBusy ? 'Connecting…' : 'Connect Google Calendar'}
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="card">

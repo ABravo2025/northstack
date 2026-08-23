@@ -760,6 +760,76 @@ para tenants `suspended` — el estado cambia pero nada en el código restringe 
 
 ---
 
+## QA-19 — Google Calendar sync + cumpleaños de empleados + tareas completadas fuera del Overview (2026-08-22, en local únicamente — no pusheado a `staging` todavía)
+
+**Contexto:** tres piezas pedidas juntas por Alejandro. (1) Sync unidireccional (Northstack →
+Google) de las fechas límite de Tasks y de los Time Off aprobados hacia el Google Calendar
+personal de cada usuario conectado, vía OAuth per-usuario nuevo (no existía ningún OAuth en la
+app antes de esto) — las notificaciones las da el propio Google Calendar, no se construyó ningún
+sistema de notificaciones in-app. (2) Campo `birthdate` nuevo en `Employee`, mostrado como evento
+anual recurrente en el calendario del Overview (solo interno, no se sincroniza a Google). (3) Las
+tareas completadas se excluyen server-side (no solo visualmente) de `GET /api/tasks/calendar` y
+`GET /api/tasks/mine` — el registro de la tarea se conserva, solo desaparece de estas dos vistas.
+
+Verificado por Claude contra la base de producción (ver nota abajo) con `curl` + Playwright
+headless: (2) y (3) confirmados de punta a punta, incluyendo captura de pantalla del calendario
+mostrando el chip 🎂 y la desaparición de la tarea completada tanto del grid como del widget "My
+tasks". (1) **no pudo verificarse de punta a punta** — faltan credenciales reales de Google Cloud
+(`GOOGLE_CALENDAR_CLIENT_SECRET`, `GOOGLE_CALENDAR_REDIRECT_URI` registrado en la consola); solo
+se confirmó que sin esas credenciales el endpoint `/connect` devuelve 503 de forma prolija (sin
+crashear) y que el frontend lo muestra como un toast de error legible.
+
+**Nota sobre el entorno de prueba:** `DATABASE_URL` local apunta a producción (confirmado con
+Alejandro que así es como se trabaja normalmente en este proyecto, no hay base de dev separada).
+Se usó un empleado de prueba ya existente ("test test") y una tarea de prueba ya existente ("3212")
+para verificar, y ambos se revirtieron a su estado original (`birthdate: null`,
+`completedAt: null`) después de capturar las screenshots.
+
+### Tareas completadas fuera del Overview
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Marcar una tarea propia como completada desde "My tasks" | Desaparece de la lista inmediatamente (no solo tachada) |
+| 2 | Marcar como completada una tarea con `dueDate` visible en el grid del Overview | El chip desaparece del día correspondiente en el próximo refresh |
+| 3 | Ver esa misma tarea en la lista de tareas de la entidad a la que pertenece (`EntityTasksList`, ej. página de un Employee/Opportunity) | Sigue apareciendo, con su estado completado intacto — este endpoint (`GET /api/tasks?entityType&entityId`) no se tocó |
+| 4 | `GET /api/tasks/calendar` y `GET /api/tasks/mine` directamente con una tarea completada de por medio | Ninguno de los dos la incluye en la respuesta |
+
+### Cumpleaños
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 5 | Cargar un `birthdate` en un Employee desde People (tabla/detalle, campo nuevo junto a Start Date/End Date) | Se guarda y se puede editar como cualquier otro campo de fecha existente |
+| 6 | Ver el Overview en el mes correspondiente | Chip rosa "🎂 Nombre A." en el día correcto |
+| 7 | Cambiar de mes y volver | El chip solo aparece en el mes/día correcto, todos los años (year se ignora a propósito) |
+| 8 | Loguearse como rol `member` (no HR admin) | Igual ve los cumpleaños — `GET /api/hr/employees/birthdays` está gateado por `canViewHr`, que ya incluye a `member` |
+
+### Google Calendar (pendiente de credenciales reales para terminar de verificar)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 9 | Ir a Settings → Profile sin Google configurado | Tarjeta "Google Calendar" visible, botón "Connect Google Calendar" |
+| 10 | Click en "Connect Google Calendar" sin credenciales configuradas | Toast de error legible ("Google Calendar sync is not configured yet"), sin crash — confirmado |
+| 11 | **Pendiente:** con credenciales reales, click en Connect | Redirige a la pantalla de consentimiento de Google, y tras aceptar vuelve a `/settings/profile?googleCalendarConnected=1` con un toast de éxito y el email de la cuenta conectada visible |
+| 12 | **Pendiente:** crear una Task con `dueDate` asignada a un usuario conectado | Aparece un evento de un día completo en su Google Calendar real |
+| 13 | **Pendiente:** completar o borrar esa Task | El evento se borra de Google Calendar |
+| 14 | **Pendiente:** reasignar la Task a otra persona (conectada o no) | El evento desaparece del calendario del asignado anterior; aparece uno nuevo en el del nuevo asignado si también está conectado |
+| 15 | **Pendiente:** aprobar un Time Off request | Evento de todo el rango de fechas en el Google Calendar del empleado (si tiene cuenta conectada) |
+| 16 | **Pendiente:** revocar el acceso desde la propia cuenta de Google (myaccount.google.com/permissions) y volver a intentar un sync | La conexión pasa a `needsReconnect: true`, la tarjeta de Profile muestra "Access was revoked — reconnect to resume syncing" en vez de fallar silenciosamente para siempre |
+| 17 | **Pendiente:** botón "Disconnect" | Deja de sincronizar; no rompe nada si luego se completa/edita una Task que ya tenía un evento sincronizado antes de desconectar |
+
+**Severidad:** ninguna crítica encontrada en lo verificable hoy. Los casos 11-17 son el verdadero
+riesgo — el código nunca ejecutó una llamada real contra la API de Google Calendar (ni éxito ni
+error real más allá de `invalid_grant` simulado en la lectura del código), así que hay que
+correrlos apenas Alejandro tenga las credenciales de Google Cloud, antes de considerar esta pieza
+lista para `staging`.
+
+**Pendiente, no armado en esta ronda:** ningún reintento/backoff si Google Calendar está caído
+momentáneamente (una sola llamada, se loguea el error y no se reintenta); ningún job de
+reconciliación periódica (el sync es puramente reactivo a cada create/update/delete, así que un
+evento borrado a mano del lado de Google no se recrea solo).
+
+---
+
 ## Próximas tareas de QA (a definir)
 
 Cuando se construyan los módulos grandes en curso (rediseño de Clients, Payroll), esta tabla de

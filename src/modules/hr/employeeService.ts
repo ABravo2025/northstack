@@ -15,6 +15,7 @@ export interface CreateEmployeeInput {
   nationality?: string | null;
   startDate?: string | null;
   endDate?: string | null;
+  birthdate?: string | null;
   contractUrl?: string | null;
   personalEmail?: string | null;
   statusId?: string;
@@ -33,6 +34,7 @@ export interface UpdateEmployeeInput {
   nationality?: string | null;
   startDate?: string | null;
   endDate?: string | null;
+  birthdate?: string | null;
   contractUrl?: string | null;
   personalEmail?: string | null;
   statusId?: string;
@@ -54,6 +56,7 @@ export async function createEmployee(input: CreateEmployeeInput): Promise<Employ
       nationality: input.nationality ?? null,
       startDate: input.startDate ? new Date(input.startDate) : null,
       endDate: input.endDate ? new Date(input.endDate) : null,
+      birthdate: input.birthdate ? new Date(input.birthdate) : null,
       contractUrl: input.contractUrl ?? null,
       personalEmail: input.personalEmail ?? null,
       statusId,
@@ -197,6 +200,7 @@ export async function updateEmployee(
   if (input.nationality !== undefined) data.nationality = input.nationality;
   if (input.startDate !== undefined) data.startDate = input.startDate ? new Date(input.startDate) : null;
   if (input.endDate !== undefined) data.endDate = input.endDate ? new Date(input.endDate) : null;
+  if (input.birthdate !== undefined) data.birthdate = input.birthdate ? new Date(input.birthdate) : null;
   if (input.contractUrl !== undefined) data.contractUrl = input.contractUrl;
   if (input.personalEmail !== undefined) data.personalEmail = input.personalEmail;
   if (input.statusId !== undefined) data.statusId = input.statusId;
@@ -230,5 +234,15 @@ export async function updateEmployee(
 export async function deleteEmployee(id: string): Promise<void> {
   await prisma.employee.delete({
     where: { id },
+  });
+}
+
+// Every employee with a birthdate set, for the Overview calendar's recurring
+// annual entries — mirrors listTasksForCalendar/listTimeOffRequestsForCalendar's
+// "return everything, let the frontend filter to the visible month" convention.
+export async function listEmployeeBirthdaysForCalendar(tenantId: string) {
+  return prisma.employee.findMany({
+    where: { tenantId, birthdate: { not: null } },
+    select: { id: true, firstName: true, lastName: true, birthdate: true },
   });
 }

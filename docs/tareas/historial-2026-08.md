@@ -19,8 +19,12 @@ organizada, no un reemplazo**: el contenido original sigue viviendo tal cual en
 - **Admin Center** — herramienta para staff de plataforma (Platform Roles, Tenants, Tickets, Ideas),
   **en producción desde el 2026-08-11**, en los dos repos (`northstack` + `northstack-devtasks`).
 - **Tenant Signup + Subscription Plans** — signup con verificación de email + selección de plan de
-  suscripción, **construido completo pero todavía NO pusheado a `staging` ni a `main`** — el usuario
-  lo va a probar primero en su propio entorno local.
+  suscripción, **en producción desde el 2026-08-18** (después de una revisión de código que corrigió
+  12 bugs).
+- **Billing Integration** — Paddle + Mercado Pago para la suscripción propia de Northstack (trial
+  real de 15 días, checkout, webhooks, autogestión), construido y probado de punta a punta contra
+  sandbox en `staging` entre el 2026-08-19 y el 2026-08-22, **todavía sin pushear a `main`** —
+  pendiente de code review.
 
 ---
 
@@ -376,6 +380,126 @@ organizada, no un reemplazo**: el contenido original sigue viviendo tal cual en
     registro sin importar si se elige un plan. Dismiss persistido en `localStorage` por tenant. A
     pedido explícito, se agregó una 3ra tarjeta "Free Trial" (mismas features que Starter, cierra el
     modal sin pegarle al backend) que no estaba en el mockup ni en el spec original.
+  - **Actualización posterior**: este módulo sí terminó pusheándose — **en producción desde el
+    2026-08-18**, después de una revisión de código que encontró y corrigió 12 bugs (ver commits
+    "Fix critical/important bugs..." y "Resolve remaining efficiency/duplication findings..." del
+    2026-08-18/19). El "no pusheado" de arriba describe el estado al momento de construirlo, no el
+    estado final.
+
+- **2026-08-19 a 2026-08-22 — Billing Integration: Paddle + Mercado Pago para la suscripción propia
+  de Northstack**: integra pagos reales (no de los Clients del tenant — de Northstack cobrándole al
+  tenant) vía Paddle (merchant of record, tenants fuera de Argentina, USD) y Mercado Pago (ARS,
+  tenants de Argentina), elegido automáticamente por país. Spec + breakdown
+  (`docs/general/spec-billing-integration.md` + `task-breakdown-billing-integration.md`, movidos acá
+  desde `docs/Task MD/` al cerrar esta ronda) definían 23 unidades en 6 etapas.
+  - **Backend**: modelos `Subscription`/`Invoice`/`PlanPrice`/`ProcessedWebhookEvent` (schema
+    additivo). Wrappers hand-rolled de cada proveedor (`src/lib/paddle.ts`, `src/lib/mercadopago.ts`
+    — `fetch` + `crypto` nativo, sin SDK oficial, misma línea minimalista que el resto del proyecto).
+    `checkoutService.ts` (`startCheckout`) cubre suscribirse por primera vez y actualizar método de
+    pago como dos intents distintos sobre el mismo endpoint. Webhooks firmados + idempotentes
+    (`src/routes/webhooks.ts`) para ambos proveedores, con "nunca confiar en el body del webhook" —
+    round-trip a la API del proveedor antes de aplicar cualquier cambio. Self-serve
+    (`subscriptionSelfServeService.ts`): cambiar de plan, cancelar, reanudar. Cron de vencimiento de
+    trial (`planTransitionService.ts`) actualizado para no tocar tenants que ya tienen un proveedor
+    real enganchado.
+  - **Frontend**: `BillingPage.tsx` nueva (plan, método de pago, invoices), `AddPaymentMethodModal.tsx`
+    y `PaddleCheckoutPage.tsx` (ruta standalone `/billing/checkout`, pestaña propia). Tile de Billing
+    movido a "My account" en Settings, visible solo para el owner.
+  - **Dos reversiones de modelo de negocio en la misma sesión, ambas a pedido explícito de
+    Alejandro**: primero "elegir un plan cobra directo, sin trial"; corregido a "trial real de 15
+    días, tarjeta se pide ahora pero el primer cobro real recién a los 15 días" ("no encañar al
+    cliente") — implementado con el mecanismo nativo de cada proveedor (`trial_period` de Paddle,
+    `free_trial` de Mercado Pago), no un "cobramos después a mano".
+  - **Bug real encontrado en producción de código, no en testing manual**: `paddleRequest()` no
+    desenvolvía el `{data, meta}` de la API de Paddle — `transaction.id` quedaba `undefined` en
+    silencio. Test de regresión agregado (`tests/paddleClient.test.ts`).
+  - **Bug real encontrado en testing en vivo contra sandbox**: el webhook de `transaction.completed`
+    de Paddle podía llegar con el array `payments` vacío/incompleto en el momento exacto en que
+    dispara — se agregó un round-trip a `GET /transactions/{id}` (mismos datos, ya completos ahí) en
+    vez de confiar en el body del webhook.
+  - **Catch real de Alejandro probando el flujo, no un bug de código**: `startCheckout` le pedía
+    siempre un trial fresco de 15 días al proveedor en cada intento de suscripción, sin importar
+    cuánto tiempo ya había pasado del trial original del tenant — como nada marca la suscripción
+    como real hasta que un webhook confirma el pago, alguien podía arrancar-y-abandonar el checkout
+    indefinidamente y, cuando finalmente completara uno, siempre conseguir 15 días frescos desde ese
+    momento (trial "interminable"). Corregido: el trial que se le pide al proveedor ahora tiene tope
+    en los días que de verdad quedan del `trialEndsAt` original del tenant: si ya venció, cobra de
+    inmediato en vez de dar más tiempo gratis. El frontend (`PlansModal`/`AddPaymentMethodModal`) se
+    actualizó en paralelo para nunca prometer un trial que el backend no vaya a dar.
+  - **Diseño explícito para poder confirmar el flujo sin esperar 15 días reales**: fuera de
+    producción real (`PADDLE_ENV !== 'production'` — staging, local, cualquier lugar contra sandbox),
+    una suscripción nueva cobra de inmediato en vez de dar trial. Reusa `PADDLE_ENV` existente en vez
+    de sumar una env var nueva.
+  - **Hallazgo real de infraestructura, no de código**: `staging.joinnorthstack.com` tiene activado
+    el Deployment Protection de Vercel (SSO) — bloqueaba con 401 cualquier POST externo, incluidos
+    los webhooks reales de Mercado Pago/Paddle, antes de que llegaran a la app. Resuelto con
+    `vercel project protection enable --protection-bypass` + el secret como query param
+    (`?x-vercel-protection-bypass=...`) en la URL configurada en el dashboard de cada proveedor — ya
+    migrado para Mercado Pago, **Paddle sigue pendiente** (ver backlog).
+  - **Bug de idempotencia real, encontrado por el propio simulador de webhooks de Mercado Pago**: el
+    evento se marcaba "procesado" (insert en `ProcessedWebhookEvent`) *antes* de procesarlo — si el
+    procesamiento fallaba después (como pasó con un `data.id` de prueba que no existía, 404 real),
+    el evento quedaba marcado como procesado para siempre; un reintento real del proveedor no iba a
+    reprocesar nada. Corregido: si el procesamiento tira error, se borra el insert antes de
+    relanzar la excepción, para que un reintento real sí reprocese.
+  - **90 tests** (`tests/checkoutService.test.ts`, `subscriptionService.test.ts`,
+    `subscriptionSelfServe.test.ts`, `webhookSignatures.test.ts`, `paddleClient.test.ts`, + updates),
+    `npm run build`/`npm test`/`npm run lint` verdes en back y front en cada push.
+  - **Estado actual**: pusheado y probado de punta a punta contra sandbox en `staging`
+    (`staging.joinnorthstack.com`), **no pusheado a `main` todavía** — pendiente de code review antes
+    de promover, mismo gate que se usó para Signup+Plans. Pendientes concretos anotados en
+    `docs/tareas/backlog.md` (webhook de Paddle sin migrar a la URL estable, precios reales de
+    Argentina, credenciales de producción de ambos proveedores, prorrateo al cambiar de plan).
+
+- **2026-08-22 — Auditoría de `docs/tareas/backlog.md` contra el código real**: se revisaron los ~34
+  ítems pendientes del backlog uno por uno contra el código actual. Dos se confirmaron resueltos y se
+  sacaron de `backlog.md` (el resto sigue abierto tal cual estaba):
+  1. **Compensación con moneda por registro individual**: ya no es un valor único por tenant.
+     `EmployeeCompensation.currency` (`prisma/schema.prisma`) permite que cada registro de
+     compensación tenga su propia moneda, con selector ISO-4217 en el formulario de compensación de
+     `EmployeesPage.tsx` (`frontend/src/lib/currencies.ts`). El comentario de `Tenant.currency` en el
+     schema ya refleja que Opportunity/EmployeeCompensation pueden overridear por registro.
+  2. **Enforcement de acceso para tenants `suspended`**: `validateSession` en `src/lib/httpAuth.ts:39-46`
+     bloquea con 403 cualquier request que no sea GET cuando `user.tenant?.status === 'suspended'`
+     (modo view-only, no lockout total). Confirmado que las 18 rutas tenant-scoped pasan por esta
+     función (155 usos de `validateSession`/`authenticateUser` en `src/routes/`), no es un guard
+     parcial.
+
+  El resto de los ítems (CRM, UX/UI, Notes/Tasks, y el resto de Infra/Otros — roles custom, panel de
+  integraciones, OAuth de Google, OTP/2FA, i18n, logs de auditoría, notificaciones in-app, historial de
+  custom fields, hallazgos §2.5/§2.7 de la auditoría de seguridad, `role` arbitrario en registro, tests
+  de aislamiento entre tenants, tests de frontend, duplicación de lógica en páginas de listado) se
+  confirmaron **todavía pendientes** tal como estaban documentados, sin cambios de texto salvo donde
+  `backlog.md` ya se había actualizado por separado (Signup+Plans/Billing Integration, `CRON_SECRET`).
+
+- **2026-08-22/23 — Google Calendar sync + cumpleaños de empleados + tareas completadas fuera del
+  Overview** (a `staging` el 23): tres piezas pedidas juntas por Alejandro. Detalle completo en
+  `docs/general/database-schema.md` §9, `docs/general/function-index.md` y `Tareas-QA.md` QA-19 —
+  acá solo el resumen.
+  1. **Google Calendar** — primer OAuth de toda la app. Cada usuario conecta su cuenta personal
+     desde Settings → Profile; una vez conectada, sus Tasks con `dueDate` y sus Time Off aprobados
+     se sincronizan (unidireccional, best-effort) para que Google dé las notificaciones — se
+     descartó construir un sistema de notificaciones in-app propio. Nuevo módulo
+     `src/modules/integrations/` (`googleCalendarAuthService.ts`, `googleCalendarSyncService.ts`),
+     nueva dependencia `googleapis` (aprobada explícitamente antes de instalar), tokens
+     encriptados con una key propia (`GOOGLE_TOKEN_ENCRYPTION_KEY`, mismo patrón AES-256-GCM que
+     Payroll pero sin reusar su key). **Bloqueado para probarse de punta a punta**: falta que
+     Alejandro cargue `GOOGLE_CALENDAR_CLIENT_SECRET`/`GOOGLE_CALENDAR_REDIRECT_URI` reales de
+     Google Cloud Console — sin eso, el botón "Connect" falla de forma prolija (503, toast
+     legible, confirmado), pero el flujo real de consentimiento nunca se probó.
+  2. **Cumpleaños**: `Employee.birthdate` nuevo (sin encriptar, mismo criterio que
+     `startDate`/`nationality`), evento anual recurrente en el calendario del Overview, interno
+     únicamente — nunca sincronizado a Google, decisión explícita.
+  3. **Tareas completadas**: `listTasksForCalendar`/`listMyTasks` ahora excluyen
+     `completedAt != null` del lado del servidor (no solo visual) — la tarea sigue existiendo y
+     visible en el tab de su entidad, solo desaparece del calendario y del widget "My tasks".
+  - Verificado con Playwright headless + curl contra datos de producción existentes (un empleado y
+    una tarea de prueba ya presentes, revertidos después de la verificación) — cumpleaños y
+    ocultamiento de completadas confirmados de punta a punta con capturas; Google Calendar no,
+    por falta de credenciales reales.
+  - Nota de entorno confirmada con Alejandro en esta ronda: `DATABASE_URL` local apunta a
+    producción a propósito (no hay DB de dev separada) — cualquier prueba manual local es contra
+    datos reales.
 
 ---
 
@@ -385,7 +509,14 @@ Para el agente que arma el backlog consolidado: estos son los ítems que la prop
 (`docs/general/tareas-desarrollo.md`) marca como explícitamente inconclusos/pendientes dentro del contenido de
 agosto.
 
-**Tenant Signup + Subscription Plans (no está en producción todavía):**
+**Nota (2026-08-22): esta lista es una foto del momento en que se compiló este archivo, no el estado
+actual** — varios de estos ítems ya se resolvieron después (ver las entradas de la línea de tiempo de
+arriba y `docs/tareas/backlog.md` para lo que sigue abierto de verdad). En particular: Signup+Plans sí
+se pusheó y está en producción desde el 2026-08-18; `CRON_SECRET` ya está cargado en Vercel (Preview y
+Production); Paddle/Mercado Pago/UI de pago/autogestión de suscripción se construyeron completos en la
+ronda de Billing Integration (misma entrada de arriba).
+
+**Tenant Signup + Subscription Plans (estado al momento de compilar este archivo — ver nota arriba):**
 1. **No pusheado a `staging` ni a `main`** — a pedido explícito del usuario, que lo prueba primero en
    su propio entorno local. Es el bloqueador principal: hasta que eso no pase, nada de lo demás abajo
    importa en producción.

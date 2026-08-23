@@ -11,6 +11,7 @@ import {
   createEmployee,
   deleteEmployee,
   findEmployeeById,
+  listEmployeeBirthdaysForCalendar,
   listEmployees,
   updateEmployee,
   wouldCreateManagerCycle,
@@ -57,6 +58,20 @@ employeesRouter.get('/api/hr/employees', async (req, res) => {
 
   const employees = await listEmployees(user.tenantId);
   return res.json(employees);
+});
+
+employeesRouter.get('/api/hr/employees/birthdays', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canViewHr(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const birthdays = await listEmployeeBirthdaysForCalendar(user.tenantId!);
+  return res.json(birthdays);
 });
 
 employeesRouter.get('/api/hr/employees/export/csv', async (req, res) => {

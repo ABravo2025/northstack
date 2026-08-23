@@ -1,5 +1,6 @@
 import prisma from '../../lib/prisma.js';
 import { findEntityTenantId, isSupportedCrossModuleEntityType } from '../crossModule/entityLookup.js';
+import { syncTaskCalendarEvent } from '../integrations/googleCalendarSyncService.js';
 import type { EntityType, Prisma } from '@prisma/client';
 
 export { findEntityTenantId };
@@ -30,7 +31,7 @@ const taskInclude = {
 } satisfies Prisma.TaskInclude;
 
 export async function createTask(input: CreateTaskInput) {
-  return prisma.task.create({
+  const task = await prisma.task.create({
     data: {
       tenantId: input.tenantId,
       entityType: input.entityType,
@@ -43,6 +44,11 @@ export async function createTask(input: CreateTaskInput) {
     },
     include: taskInclude,
   });
+
+  // Best-effort, never blocks the response — see googleCalendarSyncService.ts.
+  void syncTaskCalendarEvent(null, task).catch((err) => console.error('Google Calendar task sync failed:', err));
+
+  return task;
 }
 
 export async function findTaskById(id: string) {
@@ -68,19 +74,35 @@ export async function updateTask(id: string, input: UpdateTaskInput) {
   if (input.dueDate !== undefined) data.dueDate = input.dueDate;
   if (input.completedAt !== undefined) data.completedAt = input.completedAt;
 
-  return prisma.task.update({ where: { id }, data, include: taskInclude });
+  // Fetched before the write so the Google Calendar sync below can tell what
+  // changed (e.g. reassignment, or dueDate/completedAt flipping) — see
+  // syncTaskCalendarEvent's decision table.
+  const previous = await prisma.task.findUnique({ where: { id } });
+  const updated = await prisma.task.update({ where: { id }, data, include: taskInclude });
+
+  void syncTaskCalendarEvent(previous, updated).catch((err) => console.error('Google Calendar task sync failed:', err));
+
+  return updated;
 }
 
 export async function deleteTask(id: string): Promise<void> {
+  const task = await prisma.task.findUnique({ where: { id } });
   await prisma.task.delete({ where: { id } });
+
+  if (task) {
+    void syncTaskCalendarEvent(task, null).catch((err) => console.error('Google Calendar task sync failed:', err));
+  }
 }
 
-// "Mine": pending tasks first (completedAt null), by soonest dueDate, nulls
-// (no due date) last — sorted in code rather than relying on a Prisma
-// nulls-ordering preview feature not otherwise used in this project.
+// "Mine": pending only (completed tasks are hidden from this list to keep the
+// Overview's "My tasks" widget free of visual noise once done — the Task row
+// itself is untouched, so it still shows up in the entity's own task history),
+// soonest dueDate first, nulls (no due date) last — sorted in code rather than
+// relying on a Prisma nulls-ordering preview feature not otherwise used in
+// this project.
 export async function listMyTasks(tenantId: string, assigneeId: string) {
   const tasks = await prisma.task.findMany({
-    where: { tenantId, assigneeId },
+    where: { tenantId, assigneeId, completedAt: null },
     include: {
       ...taskInclude,
     },
@@ -94,9 +116,6 @@ export async function listMyTasks(tenantId: string, assigneeId: string) {
   }));
 
   return withSummary.sort((a, b) => {
-    if (!!a.completedAt !== !!b.completedAt) {
-      return a.completedAt ? 1 : -1;
-    }
     if (!a.dueDate && !b.dueDate) return 0;
     if (!a.dueDate) return 1;
     if (!b.dueDate) return -1;
@@ -104,12 +123,14 @@ export async function listMyTasks(tenantId: string, assigneeId: string) {
   });
 }
 
-// Every Task with a dueDate for the tenant — mirrors the existing Time Off
-// calendar endpoint's convention of returning everything and letting the
-// frontend filter to the visible month, rather than taking a date-range param.
+// Every pending (not yet completed) Task with a dueDate for the tenant —
+// mirrors the existing Time Off calendar endpoint's convention of returning
+// everything and letting the frontend filter to the visible month, rather
+// than taking a date-range param. Completed tasks are excluded so the
+// Overview calendar doesn't accumulate visual noise once tasks are done.
 export async function listTasksForCalendar(tenantId: string) {
   const tasks = await prisma.task.findMany({
-    where: { tenantId, dueDate: { not: null } },
+    where: { tenantId, dueDate: { not: null }, completedAt: null },
     include: taskInclude,
     orderBy: { dueDate: 'asc' },
   });

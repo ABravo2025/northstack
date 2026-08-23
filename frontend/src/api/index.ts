@@ -23,6 +23,7 @@ import { notesApi } from './notes.js';
 import { payrollApi } from './payroll.js';
 import { contractConfirmationPublicApi } from './contractConfirmationPublic.js';
 import { billingApi } from './billing.js';
+import { integrationsApi } from './integrations.js';
 
 export { ApiError } from './http.js';
 export * from './types.js';
@@ -53,4 +54,5 @@ export const api = {
   ...payrollApi,
   ...contractConfirmationPublicApi,
   ...billingApi,
+  ...integrationsApi,
 };

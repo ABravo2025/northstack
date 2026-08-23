@@ -1,5 +1,5 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
-import type { Employee, EmployeeCompensationSummary, Invitation } from './types.js';
+import type { Employee, EmployeeBirthday, EmployeeCompensationSummary, Invitation } from './types.js';
 
 export const employeesApi = {
   // HR Employees
@@ -23,6 +23,7 @@ export const employeesApi = {
       managerId?: string | null;
       startDate?: string;
       endDate?: string;
+      birthdate?: string;
       contractUrl?: string;
       contractType?: 'part_time' | 'full_time' | null;
       personType?: 'profile' | 'contractor' | 'employee' | null;
@@ -94,6 +95,14 @@ export const employeesApi = {
   resendContract: async (token: string, employeeId: string): Promise<{ success: true }> => {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/resend-contract`, {
       method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  listEmployeeBirthdays: async (token: string): Promise<EmployeeBirthday[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/birthdays`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);

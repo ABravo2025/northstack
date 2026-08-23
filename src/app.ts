@@ -24,6 +24,7 @@ import { platformRouter } from './routes/platform.js';
 import { internalRouter } from './routes/internal.js';
 import { subscriptionsRouter } from './routes/subscriptions.js';
 import { webhooksRouter } from './routes/webhooks.js';
+import { googleCalendarIntegrationRouter } from './routes/googleCalendarIntegration.js';
 
 dotenv.config();
 
@@ -109,6 +110,7 @@ app.use(platformRouter);
 app.use(internalRouter);
 app.use(subscriptionsRouter);
 app.use(webhooksRouter);
+app.use(googleCalendarIntegrationRouter);
 
 // Catches anything an async route handler throws (e.g. Neon/Prisma dropping
 // the connection) so it becomes a clean JSON response instead of crashing

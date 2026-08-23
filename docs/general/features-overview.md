@@ -48,8 +48,18 @@ El módulo de ventas actual, reemplazo del `Client` original (ver sección "Lega
 - **Time Off**: políticas configurables (método de acumulación fijo-anual o mensual, días por año,
   paga o no, requiere aprobación o no), asignación de políticas por Employee, solicitudes con
   aprobación/rechazo, cálculo de balance disponible por política, vista de calendario del equipo.
+  Una solicitud aprobada se sincroniza (best-effort) al Google Calendar personal del empleado, si
+  tiene su cuenta conectada — ver "Google Calendar" abajo (2026-08-22, solo local todavía).
+- **Cumpleaños** (2026-08-22, solo local todavía): campo opcional en el legajo del Employee,
+  mostrado como evento anual recurrente en el calendario de `/overview` — visible para cualquier
+  rol del tenant, nunca sincronizado a Google (queda interno a propósito).
 - **Import/Export CSV**: alta masiva y exportación de Employees por archivo, con plantilla
   descargable.
+- **Google Calendar** (2026-08-22, solo local todavía, a la espera de credenciales reales de
+  Google Cloud): cada usuario puede conectar su cuenta de Google personal desde Settings → Profile.
+  Una vez conectada, sus Tasks con fecha límite y sus Time Off aprobados se empujan (sync
+  unidireccional, best-effort) a su Google Calendar — las notificaciones/recordatorios los da el
+  propio Google, la app no tiene (ni construyó) un sistema de notificaciones in-app propio.
 
 ## Tasks & Notes (cross-módulo)
 
@@ -57,7 +67,10 @@ El módulo de ventas actual, reemplazo del `Client` original (ver sección "Lega
   Opportunity — título, descripción, asignado, fecha límite, completado. Visible en 3 lugares: tab
   del panel de detalle de la entidad, widget "Mis tareas" en `/overview`, y el calendario de
   `/overview`. Permisos abiertos a cualquier rol del tenant por ahora (decisión deliberada, revisar
-  cuando exista permisología custom).
+  cuando exista permisología custom). **2026-08-22**: una tarea completada desaparece del widget y
+  del calendario de `/overview` (sigue visible en el tab de la entidad) para reducir ruido visual;
+  si el usuario que la completó tiene Google Calendar conectado, el evento sincronizado también se
+  borra.
 - **Notes**: registro de texto libre (no es un to-do) por entidad, con formato básico
   `**bold**`/`*italic*`. Mismo tab que Tasks en el panel de detalle.
 

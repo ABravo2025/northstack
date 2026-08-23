@@ -1,6 +1,6 @@
 # Database Schema
 
-- Última actualización: 2026-08-13 (Tenant Signup + Subscription Plans, solo local/sin pushear — ver grupo 8)
+- Última actualización: 2026-08-22 (Google Calendar sync + cumpleaños de empleados, solo local/sin pushear — ver grupo 9)
 - Fuente de verdad real: `prisma/schema.prisma`. Este documento es una vista legible de ese archivo — si difieren, el `.prisma` manda. Regenerar este archivo cuando el schema cambie de forma significativa (modelo nuevo, relación nueva), no hace falta para cambios chicos (un campo opcional más, un índice).
 - Todos los modelos son multi-tenant: casi todos tienen `tenantId` directo (no derivado por join), y el aislamiento entre tenants se verifica en el código de cada endpoint (ownership check), no solo por FK — ver `docs/current-process-flow.md` para el patrón de verificación.
 
@@ -16,6 +16,7 @@ Se dividen en grupos por área funcional, no uno solo gigante, para que sean leg
 6. **Tasks & Notes (cross-entity)** — Task, Note, adjuntables a Employee/Company/Contact/Opportunity.
 7. **Payroll** — PayFrequencyDefinition, PaymentMethodDefinition, EmployeeCompensation, PayrollRun, PayrollEntry.
 8. **Tenant Signup + Subscription Plans** — EmailVerification, y los campos nuevos de Tenant (plan/trial/gracia/precio congelado).
+9. **Google Calendar sync + cumpleaños** — GoogleCalendarConnection, GoogleOAuthState, y los campos nuevos de Employee/Task/TimeOffRequest.
 
 ## 1. Identidad y acceso
 
@@ -124,6 +125,7 @@ erDiagram
         enum personType "nullable, profile/contractor/employee — Payroll Unidad 4, first field on the People alta form"
         string nationality "nullable — Payroll Unidad 1"
         string countryOfResidence "nullable, filled by the person at contract confirmation — Payroll Unidad 7"
+        date birthdate "nullable — recurring annual entry on the Overview calendar, grupo 9"
         string statusId FK
         string managerId FK "nullable, self-relation"
         string tenantId FK
@@ -240,6 +242,7 @@ erDiagram
         string approverId FK "nullable - snapshot of employee.managerId at request time"
         datetime decidedAt "nullable"
         string decisionNote "nullable"
+        string googleCalendarEventId "nullable — set only while status=approved, grupo 9"
     }
 ```
 
@@ -250,6 +253,7 @@ Notas:
 - Si `requiresApproval` es `false`, la solicitud nace directo en `status: approved`.
 - El tag visual de "de licencia" en la fila del empleado se deriva en cada `GET /api/hr/employees`, no es una columna.
 - Sistema completo (7/7 piezas: jerarquía, políticas, asignación, solicitud/aprobación, balance, calendario, tag visual) desde 2026-07-14.
+- **2026-08-22**: `TimeOffRequest.googleCalendarEventId` — ver grupo 9. Solo se setea mientras `status === 'approved'`; se limpia (evento borrado en Google) si pasa a cualquier otro estado.
 
 ## 4. Vistas y formularios
 
@@ -432,6 +436,7 @@ erDiagram
         datetime dueDate "nullable"
         datetime completedAt "nullable - presence/absence is the done state"
         string createdById FK "User"
+        string googleCalendarEventId "nullable — set only while dueDate present and not completed, grupo 9"
     }
     NOTE {
         string id PK
@@ -447,6 +452,7 @@ erDiagram
 Notas:
 - **Permisos abiertos a cualquier rol del tenant** (no gateado por `canCreateHr`/`canManageCustomFields` como Employee/Opportunity) — confirmado con el usuario 2026-07-29: Tasks es una checklist operativa compartida, Notes un registro compartido, ninguno dato sensible. Anotado para revisar cuando exista el sistema de roles custom (Tier 5).
 - `Task` tiene asignado + fecha límite + estado completado (es un to-do); `Note` no tiene ninguno de los tres — es un registro, no una acción pendiente.
+- **2026-08-22**: `listTasksForCalendar`/`listMyTasks` (los dos endpoints que alimentan el Overview) excluyen `completedAt != null` server-side — una tarea completada sigue existiendo (se ve en `EntityTasksList`, el tab de la propia entidad) pero desaparece del calendario y del widget "My tasks". `Task.googleCalendarEventId` — ver grupo 9.
 - **`Note.title`/`description`** se llamaban `header`/`body` hasta el 2026-07-30 — renombrados para que coincidan con `Task.title`/`description` (consistencia entre los dos módulos gemelos). Migrado con el patrón seguro (nullable → backfill → requerido/borrar columnas viejas); preservó la única Note real que ya existía en `staging` (creada por el usuario probando la app).
 - `description` admite un subconjunto chico de markdown (**bold**, *italic*) renderizado a elementos React reales (`frontend/src/lib/lightMarkdown.tsx`, sin `dangerouslySetInnerHTML`) — no una librería de markdown completa, no se justificaba para "resaltar partes" nada más.
 - `Opportunity.nextStepDate`/`nextStepNote` (grupo 5) tienen un script de backfill a `Task` (`scripts/backfill-opportunity-nextstep-to-tasks.ts`, idempotente) — corrido en `staging`, 0 Opportunities con next step cargado todavía ahí, así que no creó nada. Las columnas viejas de `Opportunity` no se tocaron.
@@ -652,6 +658,70 @@ Notas:
 - **Sin enforcement de acceso para `suspended` todavía** — un tenant suspendido sigue
   técnicamente accesible hoy (nada en el código bloquea requests por `tenant.status`), fuera de
   alcance de este spec (ver "Qué falta" abajo).
+
+## 9. Google Calendar sync + cumpleaños
+
+Pedido por Alejandro 2026-08-22: notificaciones de eventos de la plataforma vía Google Calendar
+(sync unidireccional Northstack → Google, las notificaciones las da el propio Google, no se
+construyó ningún sistema de notificaciones in-app), cumpleaños de empleados visibles en el
+Overview, y tareas completadas ocultas del Overview (esto último no toca el schema — ver grupo 6).
+Primer OAuth de toda la app — no existía ninguno antes. **Solo en local — sin pushear a `staging`
+ni `main` todavía**, a la espera de credenciales reales de Google Cloud
+(`GOOGLE_CALENDAR_CLIENT_SECRET`/`REDIRECT_URI`) que Alejandro todavía no cargó.
+
+```mermaid
+erDiagram
+    TENANT ||--o{ GOOGLE_CALENDAR_CONNECTION : "has"
+    USER ||--o| GOOGLE_CALENDAR_CONNECTION : "connects, 1:1"
+
+    GOOGLE_CALENDAR_CONNECTION {
+        string id PK
+        string tenantId FK
+        string userId FK "unique - one Google account per platform user"
+        string googleAccountEmail
+        string accessTokenEncrypted "AES-256-GCM, lib/googleTokenEncryption.ts"
+        string refreshTokenEncrypted "AES-256-GCM, lib/googleTokenEncryption.ts"
+        datetime accessTokenExpiresAt
+        string scope
+        bool needsReconnect "default false - set when Google reports invalid_grant"
+        datetime createdAt
+        datetime updatedAt
+    }
+    GOOGLE_OAUTH_STATE {
+        string id PK
+        string state UK "single-use, deleted on successful callback"
+        string userId "no FK - just carries identity across the redirect"
+        string tenantId "no FK - ídem"
+        datetime createdAt "rows older than 10 min are rejected"
+    }
+```
+
+Notas:
+- **`GoogleCalendarConnection` es 1:1 con `User`** (`userId @unique`) — cada persona conecta su
+  propia cuenta de Google, no hay conexión a nivel tenant/admin. Vive en Settings → Profile ("My
+  account", visible a cualquier rol), no en la tile "Integrations" (Company, admin-only, todavía
+  deshabilitada) de `SettingsHomePage.tsx` — esa es para integraciones a nivel tenant, algo distinto.
+- **`GoogleOAuthState` existe solo por el round-trip stateless de Vercel**: `/connect` y
+  `/callback` son dos invocaciones de función separadas sin memoria compartida, así que la
+  identidad del usuario que inició el flujo tiene que sobrevivir en la base, no en memoria — mismo
+  patrón lookup-por-token que `Session`. Fila de un solo uso, se borra en el callback exitoso.
+- **Tokens encriptados con su propia key** (`GOOGLE_TOKEN_ENCRYPTION_KEY`), no la de Payroll
+  (`PAYMENT_DATA_ENCRYPTION_KEY`) — mismo mecanismo AES-256-GCM (`lib/encryption.ts`), pero un key
+  distinto por propósito, a propósito (ver comentario en `lib/encryption.ts`).
+- **`needsReconnect`** se prende cuando Google devuelve `invalid_grant` (refresh token revocado) —
+  la fila no se borra sola, así la UI puede mostrar "reconnect" con el email de la cuenta en vez de
+  "not connected". Solo se borra de verdad al hacer click en "Disconnect".
+- **Sync es reactivo, no hay reconciliación periódica**: `syncTaskCalendarEvent`/
+  `syncTimeOffCalendarEvent` (`src/modules/integrations/googleCalendarSyncService.ts`) corren
+  best-effort inmediatamente después de cada create/update/delete de Task o cada cambio de status
+  de TimeOffRequest — ver el `Task`/`TimeOffRequest` de los grupos 6/3 para el campo
+  `googleCalendarEventId` que mapea 1 registro → 1 evento de Google. Si alguien borra el evento a
+  mano del lado de Google, no se recrea solo.
+- **`Employee.birthdate`** (`DateTime? @db.Date`, grupo 2) — sin encriptar, mismo criterio que
+  `startDate`/`endDate`/`nationality` (no es dato tan sensible como para justificar el mecanismo de
+  `EmployeeCompensation`). Se muestra como evento anual recurrente (match por mes+día, año
+  ignorado) en el calendario del Overview — **nunca se sincroniza a Google**, decisión explícita de
+  Alejandro (2026-08-22) para mantener esto interno.
 
 ## Enums
 

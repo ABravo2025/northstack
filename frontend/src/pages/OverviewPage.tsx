@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { api, type Task } from '../api';
+import { api, type EmployeeBirthday, type Task } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import TableSkeleton from '../components/common/TableSkeleton';
 import { ChevronLeftIcon, ChevronRightIcon } from '../components/common/Icons';
@@ -52,6 +52,7 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
   const toast = useToast();
   const [requests, setRequests] = useState<any[]>([]);
   const [calendarTasks, setCalendarTasks] = useState<Task[]>([]);
+  const [birthdays, setBirthdays] = useState<EmployeeBirthday[]>([]);
   const [tenantUsers, setTenantUsers] = useState<{ id: string; firstName: string; lastName: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [cursor, setCursor] = useState(() => {
@@ -71,12 +72,14 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
   const loadCalendar = async () => {
     setLoading(true);
     try {
-      const [data, tasks] = await Promise.all([
+      const [data, tasks, employeeBirthdays] = await Promise.all([
         api.listTimeOffRequests(token, 'calendar'),
         api.listTasksForCalendar(token),
+        api.listEmployeeBirthdays(token),
       ]);
       setRequests(data);
       setCalendarTasks(tasks);
+      setBirthdays(employeeBirthdays);
     } catch (error) {
       toast.error('Failed to load the team calendar: ' + (error as Error).message);
     } finally {
@@ -140,6 +143,24 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
     return map;
   }, [grid, calendarTasks, cursor]);
 
+  // Birthdays recur every year, so match on month+day only (never the year) —
+  // read via UTC getters since birthdate is a plain @db.Date column, serialized
+  // as midnight UTC, and a local-time read would roll it back a day west of UTC.
+  const birthdaysByDay = useMemo(() => {
+    const map: Record<string, EmployeeBirthday[]> = {};
+    for (let week = 0; week < grid.length; week++) {
+      for (const day of grid[week]) {
+        if (day === null) continue;
+        const key = dateKey(cursor.year, cursor.month, day);
+        map[key] = birthdays.filter((b) => {
+          const d = new Date(b.birthdate);
+          return d.getUTCMonth() === cursor.month && d.getUTCDate() === day;
+        });
+      }
+    }
+    return map;
+  }, [grid, birthdays, cursor]);
+
   const goToPrevMonth = () => {
     setCursor((c) => (c.month === 0 ? { year: c.year - 1, month: 11 } : { year: c.year, month: c.month - 1 }));
   };
@@ -200,9 +221,19 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
                         const key = dateKey(cursor.year, cursor.month, day);
                         const dayRequests = requestsByDay[key] || [];
                         const dayTasks = tasksByDay[key] || [];
+                        const dayBirthdays = birthdaysByDay[key] || [];
                         return (
                           <td key={j} className={key === todayKey ? 'calendar-cell calendar-cell-today' : 'calendar-cell'}>
                             <div className="calendar-cell-date">{day}</div>
+                            {dayBirthdays.map((b) => (
+                              <div
+                                key={b.id}
+                                className="calendar-entry-birthday"
+                                title={`${b.firstName} ${b.lastName}'s birthday`}
+                              >
+                                🎂 {b.firstName} {b.lastName[0]}.
+                              </div>
+                            ))}
                             {dayRequests.map((req) => (
                               <div
                                 key={req.id}

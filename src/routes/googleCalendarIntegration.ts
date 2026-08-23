@@ -1,0 +1,72 @@
+import {
+  buildGoogleAuthUrl,
+  disconnectGoogleCalendar,
+  getGoogleCalendarConnectionStatus,
+  googleCalendarConfigured,
+  handleGoogleOAuthCallback,
+} from '../modules/integrations/googleCalendarAuthService.js';
+import { validateSession } from '../lib/httpAuth.js';
+import { createAsyncRouter } from '../lib/asyncRouter.js';
+
+export const googleCalendarIntegrationRouter = createAsyncRouter();
+
+function appBaseUrl(): string {
+  return process.env.APP_BASE_URL ?? 'http://localhost:5173';
+}
+
+googleCalendarIntegrationRouter.get('/api/integrations/google-calendar/status', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  const status = await getGoogleCalendarConnectionStatus(user.id);
+  return res.json(status);
+});
+
+// Returns the Google consent URL as JSON rather than redirecting directly —
+// this route is called via an authenticated fetch() (Authorization: Bearer
+// header), which a plain browser navigation to it wouldn't carry. The
+// frontend does the actual `window.location.href = url` navigation itself.
+googleCalendarIntegrationRouter.get('/api/integrations/google-calendar/connect', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!googleCalendarConfigured()) {
+    return res.status(503).json({ error: 'Google Calendar sync is not configured yet.' });
+  }
+
+  const url = await buildGoogleAuthUrl(user.id, user.tenantId!);
+  return res.json({ url });
+});
+
+// Hit directly by the browser as part of Google's OAuth redirect — no bearer
+// token available here, so identity comes from the `state` row (see
+// buildGoogleAuthUrl/handleGoogleOAuthCallback), not validateSession.
+googleCalendarIntegrationRouter.get('/api/integrations/google-calendar/callback', async (req, res) => {
+  const code = req.query.code as string | undefined;
+  const state = req.query.state as string | undefined;
+
+  if (!code || !state) {
+    return res.redirect(`${appBaseUrl()}/settings/profile?googleCalendarError=1`);
+  }
+
+  const result = await handleGoogleOAuthCallback(code, state);
+  if (!result.success) {
+    return res.redirect(`${appBaseUrl()}/settings/profile?googleCalendarError=1`);
+  }
+
+  return res.redirect(`${appBaseUrl()}/settings/profile?googleCalendarConnected=1`);
+});
+
+googleCalendarIntegrationRouter.post('/api/integrations/google-calendar/disconnect', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  await disconnectGoogleCalendar(user.id);
+  return res.status(204).end();
+});

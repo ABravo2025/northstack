@@ -40,6 +40,10 @@ Leaf module (sin imports) — extraído 2026-08-18 de `tenantService.ts` para qu
 ### `src/lib/encryption.ts`
 - **encryptPaymentAccountData(plaintext)** / **decryptPaymentAccountData(payload)** — AES-256-GCM vía el módulo `crypto` nativo de Node (sin librería externa), keyed por `PAYMENT_DATA_ENCRYPTION_KEY`. Único uso hoy: `EmployeeCompensation.paymentAccountDataEncrypted` (Payroll, ver `docs/spec-payroll.md`).
 
+### `src/lib/googleTokenEncryption.ts` (2026-08-22)
+- **encryptGoogleToken(plaintext)** / **decryptGoogleToken(payload)** — mismo AES-256-GCM que `encryption.ts`, pero con su propia key (`GOOGLE_TOKEN_ENCRYPTION_KEY`) — no reusar la de Payroll, un key por propósito. Único uso: `GoogleCalendarConnection.accessTokenEncrypted`/`refreshTokenEncrypted`.
+- **isGoogleTokenEncryptionConfigured()** — usado por `googleCalendarConfigured()` en `googleCalendarAuthService.ts`.
+
 ### `src/lib/httpAuth.ts`
 - **getBearerToken(req)** — extrae el token `Authorization: Bearer`.
 - **getClientIp(req)** — IP del cliente, para rate limiting.
@@ -62,7 +66,7 @@ Todas siguen el mismo patrón: `if (!mailerConfigured()) return;` (no rompen el 
 - **sendTicketNoteCreatedEmail(input)** — Admin Center: aviso al reporter de un Ticket cuando staff de plataforma responde.
 - **sendSignupVerificationEmail(input)** — Tenant Signup (`docs/spec-tenant-signup.md`), link de verificación de email antes de crear el Tenant/User, expira en 24hs.
 
-### `src/lib/mercadopago.ts` (Billing Integration, `docs/Task MD/spec-billing-integration.md`)
+### `src/lib/mercadopago.ts` (Billing Integration, `docs/general/spec-billing-integration.md`)
 Wrapper propio (`fetch` + `crypto` nativos, sin SDK) contra la API de Mercado Pago — mismo criterio que `src/lib/encryption.ts`.
 - **createPreapproval(input)** — Preapproval sin plan asociado (`status: 'pending'`, así la respuesta trae `init_point` para el checkout hosteado); `input.subscriptionId` va como `external_reference`, la clave de join del webhook. `input.trialDays?` (2026-08-20, "genuinely free for 15 days") → `auto_recurring.free_trial: { frequency, frequency_type: 'days' }`, verificado contra sandbox real (`next_payment_date` sale 15 días después de la creación). Se omite (no se manda `free_trial`) en el fallback de "actualizar método de pago" de MP en `checkoutService.ts` — esa suscripción ya gastó o nunca tuvo ese trial, no le corresponde uno nuevo.
 - **getPreapproval(id)** / **getAuthorizedPayment(id)** — round-trip de seguridad del webhook (nunca confiar en el body directo); `getAuthorizedPayment` no estaba en el breakdown original, agregado porque el contrato de webhooks necesita reaccionar a eventos `authorized_payment` (pago recurrente confirmado/fallido), distintos de los eventos `preapproval`.
@@ -72,7 +76,7 @@ Wrapper propio (`fetch` + `crypto` nativos, sin SDK) contra la API de Mercado Pa
 - **Gotcha real de Mercado Pago, no de este código**: un usuario de test recién creado (`/users/test_user`) no está disponible de inmediato como `payer_email` en `/preapproval` — delay de propagación del lado de MP, devuelve 500 los primeros segundos. Reusar un comprador de test ya existente (o esperar unos segundos) lo resuelve. Relevante para cualquier test futuro contra este sandbox.
 - **Cómo conseguir un `MP_ACCESS_TOKEN` de test utilizable**: el access token de tu propia cuenta real (aunque tenga prefijo `TEST-`) NO sirve como "collector" de un Preapproval de test — MP exige que comprador y vendedor sean ambos de test o ambos reales. Hace falta loguearse (incógnito) como la cuenta de prueba tipo Vendedor creada en Developer Panel → Tus integraciones → Cuentas de prueba, y ahí sacar SU propio Access Token desde "Credenciales de producción" (no "de prueba" — logueado como cuenta de test no se ve esa sección). Ese token puede tener prefijo `APP_USR-` sin ser peligroso, ya que la identidad detrás sigue siendo sintética — verificar siempre con `GET /users/me` antes de confiar en un token nuevo.
 
-### `src/lib/paddle.ts` (Billing Integration, `docs/Task MD/spec-billing-integration.md`)
+### `src/lib/paddle.ts` (Billing Integration, `docs/general/spec-billing-integration.md`)
 Wrapper propio, mismo criterio que `mercadopago.ts` de arriba.
 - **createNonCatalogTransaction(input)** — el mecanismo real para precio dinámico (Paddle.js `Checkout.open()` solo acepta `priceId` de catálogo o `transactionId`, nunca un precio inline — a diferencia de lo que la spec asumía): crea una Transaction con un precio no-catálogo, el frontend abre el Overlay con `Checkout.open({ transactionId })`. `input.subscriptionId` va en `custom_data.subscriptionId`, la clave de join del webhook (mismo rol que `external_reference` de MP). `input.trialDays?` (2026-08-20, "genuinely free for 15 days" — corrección de Alejandro, elegir un plan pago ya no cobra al toque) → `price.trial_period: { interval: 'day', frequency }`, verificado contra sandbox real (`requires_payment_method: true`, `details.totals.total: "0"`). Mismo criterio de omisión que `createPreapproval` de abajo.
 - **updateSubscriptionItems(subscriptionId, input)** — cambio de plan self-serve (Etapa D), `proration_billing_mode: 'do_not_bill'`.
@@ -161,6 +165,7 @@ CRUD estándar: **createContact**, **listContacts(tenantId)**, **findContactById
 ### `src/modules/hr/employeeService.ts`
 - **createEmployee(input)**, **listEmployees(tenantId)** (suma `contractStatus` por fila — Unidad 11), **findEmployeeById(id)**, **findEmployeeByUserId(userId)**, **updateEmployee(...)**, **deleteEmployee(id)**.
 - **wouldCreateManagerCycle(...)** — camina la cadena de `managerId` hacia arriba para detectar un ciclo antes de asignar un manager nuevo.
+- **listEmployeeBirthdaysForCalendar(tenantId)** (2026-08-22) — todo empleado con `birthdate` no nulo, para el calendario del Overview. Mismo criterio "devolver todo, filtrar en el frontend" que `listTasksForCalendar`/`listTimeOffRequestsForCalendar`.
 
 ### `src/modules/hr/payrollRunService.ts` (Payroll, Unidad 12/13/16/17)
 - **createRun(input)** — preload automático: toda persona Contractor/Employee con `EmployeeCompensation` vigente en la frecuencia elegida, excluyendo a quien tenga el primer contrato sin confirmar (`blocksParticipation`+`confirmedAt: null`, Unidad 9).
@@ -217,10 +222,21 @@ CRUD estándar: **createSavedView**, **listSavedViews(...)**, **findSavedViewByI
 CRUD estándar: **createTimeOffPolicy**, **listTimeOffPolicies(tenantId)**, **findTimeOffPolicyById(id)**, **updateTimeOffPolicy(...)**.
 
 ### `src/modules/hr/timeOffRequestService.ts`
-- **createTimeOffRequest(input)** — valida fechas + asignación de política, auto-aprueba si la política no requiere aprobación.
+- **createTimeOffRequest(input)** — valida fechas + asignación de política, auto-aprueba si la política no requiere aprobación. Desde 2026-08-22, dispara `syncTimeOffCalendarEvent` (best-effort) si el resultado ya nace `approved`.
 - **listMyTimeOffRequests**, **listPendingApprovals**, **listTimeOffRequestsForCalendar**, **listAllTimeOffRequests**.
 - **findActiveTimeOffRequestsForEmployees(tenantId, employeeIds)** — solo solicitudes activas *hoy*, no el historial completo.
-- **decideTimeOffRequest(...)** / **cancelTimeOffRequest(...)**.
+- **decideTimeOffRequest(...)** / **cancelTimeOffRequest(...)** — ambas disparan `syncTimeOffCalendarEvent` (best-effort) tras la escritura.
+
+### `src/modules/integrations/googleCalendarAuthService.ts` (2026-08-22)
+- **googleCalendarConfigured()** — chequea que `GOOGLE_CALENDAR_CLIENT_ID`/`CLIENT_SECRET`/`REDIRECT_URI`/`GOOGLE_TOKEN_ENCRYPTION_KEY` estén seteados; mismo patrón best-effort que `mailerConfigured()` en `lib/mailer.ts`.
+- **buildGoogleAuthUrl(userId, tenantId)** — crea el `GoogleOAuthState` de un solo uso y arma la URL de consentimiento (`scope: calendar.events` únicamente).
+- **handleGoogleOAuthCallback(code, state)** — valida el `state` (≤10 min, un solo uso), intercambia el code por tokens, upsert de `GoogleCalendarConnection` (tokens encriptados vía `lib/googleTokenEncryption.ts`).
+- **getGoogleCalendarConnectionStatus(userId)**, **disconnectGoogleCalendar(userId)** (revoca best-effort + borra la fila).
+- **getAuthorizedClientForUser(userId)** — cliente `calendar_v3.Calendar` ya autorizado, o `null` si el usuario nunca conectó/necesita reconectar (no-op silencioso para quien llama). Persiste el access token refrescado automáticamente vía el evento `tokens` de `google-auth-library`.
+- **markNeedsReconnectIfRevoked(userId, err)** — si el error es `invalid_grant`, marca `needsReconnect: true` en la conexión.
+
+### `src/modules/integrations/googleCalendarSyncService.ts` (2026-08-22)
+- **syncTaskCalendarEvent(previous, current)** / **syncTimeOffCalendarEvent(previous, current)** — sync unidireccional (Northstack → Google), best-effort (nunca tiran, ver comentario en el archivo). Llamadas desde `taskService.ts` y `timeOffRequestService.ts` tras cada write relevante; no llamar desde ningún otro lugar sin releer la tabla de decisión del archivo (reasignación de assignee, completar/borrar, cambio de status de Time Off).
 
 ### `src/modules/notes/noteService.ts`
 CRUD estándar, cross-entidad vía `entityType`/`entityId`: **createNote**, **findNoteById(id)**, **listNotesForEntity(tenantId, entityType, entityId)**, **updateNote(id, input)**, **deleteNote(id)**.
@@ -230,9 +246,9 @@ CRUD estándar, cross-entidad vía `entityType`/`entityId`: **createNote**, **fi
 - **getOnboardingStatus(tenantId)** — estado del checklist de onboarding (`/overview`).
 
 ### `src/modules/tasks/taskService.ts`
-- CRUD cross-entidad: **createTask**, **findTaskById(id)**, **listTasksForEntity(tenantId, entityType, entityId)**, **updateTask(id, input)**, **deleteTask(id)**.
-- **listMyTasks(tenantId, assigneeId)** — pendientes primero, por fecha de vencimiento más próxima.
-- **listTasksForCalendar(tenantId)** — todos los Task con `dueDate`, el frontend filtra al mes visible.
+- CRUD cross-entidad: **createTask**, **findTaskById(id)**, **listTasksForEntity(tenantId, entityType, entityId)**, **updateTask(id, input)**, **deleteTask(id)** — las tres primeras (create/update/delete) disparan `syncTaskCalendarEvent` (best-effort, 2026-08-22) tras la escritura.
+- **listMyTasks(tenantId, assigneeId)** — pendientes primero (2026-08-22: además excluye completadas del todo, no solo las ordena al final), por fecha de vencimiento más próxima.
+- **listTasksForCalendar(tenantId)** — Task con `dueDate` y sin completar (2026-08-22: antes incluía completadas), el frontend filtra al mes visible.
 
 ### `src/modules/tenant/emailVerificationService.ts` (Tenant Signup, `docs/spec-tenant-signup.md`)
 - **startSignupVerification(email)** — valida formato + dominio duplicado (`checkEmailDomainNotAlreadyRegistered`), invalida cualquier verificación previa sin usar de ese email, crea una nueva y dispara el mail. Backea tanto `/signup/start` como `/signup/resend` (son la misma operación).
@@ -246,13 +262,13 @@ CRUD estándar, cross-entidad vía `entityType`/`entityId`: **createNote**, **fi
 - **GRACE_PERIOD_DAYS** (const, exportada desde Billing Integration) — 14 días; reusada por `routes/webhooks.ts` cuando un pago recurrente falla.
 - **runPlanTransitions(now?)** — `trialing → past_due → suspended` según `trialEndsAt`/`gracePeriodEndsAt`; idempotente, pensada para correr diaria vía Vercel Cron (`src/routes/internal.ts`). El paso `trialing → past_due` es un solo `$executeRaw` (2026-08-18, antes era un `findMany` + loop de `update` uno por uno) — `gracePeriodEndsAt` depende del `trialEndsAt` de cada fila, por eso no es un `updateMany` directo. Desde Billing Integration también barre `Subscription`s de Mercado Pago con `cancellationEffectiveAt` vencido y llama `updatePreapproval(id, { status: 'cancelled' })` — MP no tiene "cancelar a fin de período" nativo como Paddle, así que el cancel self-serve (Etapa D) solo marca la fecha localmente y este paso es el que efectivamente llama a MP cuando llega. **`trialing → past_due` ahora tiene un `NOT EXISTS` sobre `Subscription.provider IS NOT NULL`** (2026-08-20, "genuinely free for 15 days") — un tenant que ya adjuntó tarjeta en un trial nativo de Paddle/MP no debe caer en `past_due` por nuestro propio reloj interno mientras el proveedor todavía no le cobró nada (eso lo maneja el webhook, no este cron).
 
-### `src/modules/tenant/subscriptionService.ts` (Billing Integration, `docs/Task MD/spec-billing-integration.md`)
+### `src/modules/tenant/subscriptionService.ts` (Billing Integration, `docs/general/spec-billing-integration.md`)
 - **resolveProvider(tenant)** — `tenant.country === 'Argentina'` → `mercadopago`; cualquier otro valor, incluido `null` (tenants legacy sin país), → `paddle`.
 - **syncSubscriptionAndTenant(input)** — único punto de escritura de `Subscription` + su espejo en `Tenant.status`/`plan`/`trialEndsAt`/`gracePeriodEndsAt`/`lockedPriceCents`, en una sola transacción. Pensado para el cron y los dos webhook handlers (Paddle/Mercado Pago) — `updateTenantPlan` de arriba es la única excepción deliberada (escribe ambas filas inline, no es una transición de status). Solo escribe en `Tenant` los campos del subset con espejo real, y solo si vinieron seteados en el `input` — un webhook que solo toca `paymentMethodBrand`/`Last4` nunca toca `Tenant`.
 - **getBillingSummary(tenantId)** (Etapa E) — backea `GET /api/subscriptions/me`, lectura del `Subscription` + sus `invoices` para `BillingPage.tsx`. No estaba en el breakdown original (todas las unidades 1-15 son escrituras) — sin esto la página no tiene de dónde leer. Cualquier miembro autenticado del tenant, mismo criterio que `GET /api/tenants/current` (los endpoints que escriben siguen owner-only vía `canManageBilling`).
 - **getInvoiceDocumentUrl(tenantId, invoiceId, disposition?)** (2026-08-19) — backea `GET /api/subscriptions/me/invoices/:invoiceId/document?disposition=`. Verifica que la Invoice pertenezca de verdad al tenant antes de pedirle la URL a `getInvoicePdfUrl` (paddle.ts) — Paddle-only, Mercado Pago no tiene documento equivalente todavía. `disposition` viaja tal cual al query param de Paddle (`inline` ver / `attachment` descargar).
 
-### `src/modules/tenant/checkoutService.ts` (Billing Integration, `docs/Task MD/spec-billing-integration.md`)
+### `src/modules/tenant/checkoutService.ts` (Billing Integration, `docs/general/spec-billing-integration.md`)
 - **startCheckout(tenant, user)** — backea `POST /api/subscriptions/me/checkout`. Desde 2026-08-19 (corrección de Alejandro) cubre dos intents distintos según si `Subscription.provider` ya está seteado: **suscribirse por primera vez** (sin provider — crea una Transaction/Preapproval nueva, no toca `Subscription` hasta que el webhook confirme el pago) vs. **actualizar el método de pago** de una suscripción YA activa (con provider — Paddle usa `getUpdatePaymentMethodTransaction` sobre la MISMA suscripción; Mercado Pago no tiene ese mecanismo así que cancela la preapproval vieja y crea una nueva, mismo resultado neto de "una sola tarjeta activa"). Nunca crea una segunda suscripción compitiendo para un tenant ya activo. Rechaza si el `PlanPrice` del mercado del tenant no existe o es el placeholder AR (0 cents). **2026-08-20**: la rama de suscripción nueva pasa `trialDays: SIGNUP_TRIAL_DAYS` (de `tenantService.ts`) a `createPreapproval`/`createNonCatalogTransaction` — tarjeta ahora, primer cobro real recién a los 15 días. La rama de "actualizar método de pago" (incluido el fallback de cancelar+recrear de MP) nunca pasa `trialDays` — no le corresponde un trial nuevo a alguien que ya está pagando. **2026-08-20 (misma tarde)**: ese `trialDays` real solo aplica cuando `process.env.PADDLE_ENV === 'production'` (`isRealProductionBilling`) — fuera de eso (staging, local dev, cualquier lugar corriendo contra sandbox) una suscripción nueva cobra de inmediato en vez de dar los 15 días, para poder confirmar el flujo completo tarjeta→webhook→suscripción activa contra sandbox sin esperar 15 días reales. Reusa `PADDLE_ENV` (ya existente en `paddle.ts` para elegir el host sandbox/live) en vez de sumar una variable nueva, porque en la práctica los dos proveedores siempre pasan a modo real juntos. **2026-08-21 (catch de Alejandro)**: `trialDays` ya no es siempre `SIGNUP_TRIAL_DAYS` fijo — se calcula como los días que de verdad quedan hasta el `Tenant.trialEndsAt` ORIGINAL (fijado una sola vez al signup), tope `SIGNUP_TRIAL_DAYS`, y si ya venció (`daysRemaining <= 0`) cobra de inmediato en vez de dar más tiempo gratis. Sin esto, como nada acá escribe `Subscription.provider` hasta que un webhook confirma el pago, alguien podía arrancar-y-abandonar el checkout indefinidamente y, cuando finalmente completara uno, siempre conseguía 15 días frescos desde ESE momento — empujando el primer cobro real para siempre, el trial "interminable" que señaló. `startCheckout` ahora recibe `tenant.trialEndsAt` (antes solo `id`/`country`) — `routes/subscriptions.ts` lo agregó al `select`.
 
 ### `src/modules/tenant/subscriptionSelfServeService.ts` (Billing Integration, Etapa D)
@@ -304,7 +320,7 @@ Catálogo de `PlatformStatusDefinition` (plataforma, no por tenant) — `require
 - **renderNoteDescription(description)** — subset mínimo de Markdown (bold/italic/links/saltos de línea) para el texto de Notes, sin librería externa.
 
 ### `frontend/src/lib/viewFields.ts` (motor de Views/Filters/Sort genérico)
-- **buildEmployeeFields(...)**, **buildCompanyFields(...)**, **buildContactFields(...)** — arman la lista de `ViewField` (columnas filtrables/ordenables) por entidad, incluyendo custom fields.
+- **buildEmployeeFields(...)**, **buildCompanyFields(...)**, **buildContactFields(...)** — arman la lista de `ViewField` (columnas filtrables/ordenables) por entidad, incluyendo custom fields. `buildEmployeeFields` incluye `birthdate` (2026-08-22, `valueType: 'date'`, mismo patrón que `startDate`/`endDate`) — agregar un campo nuevo a Employee generalmente alcanza con sumarlo acá, sin tocar la tabla/detalle/form a mano.
 - **findField(fields, key)**, **groupableFields(fields)**, **parseFilters(raw)**, **parseSort(raw)**.
 
 ### `frontend/src/lib/countries.ts`, `frontend/src/lib/changelog.ts`
@@ -334,7 +350,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 | Archivo | Métodos |
 |---|---|
 | `auth.ts` | startSignup, resendSignup (ambas vía el helper interno `postSignupEmail`, no exportado), verifySignup, registerTenant, login, register, forgotPassword, validateResetToken, resetPassword, getInvitation, acceptInvitation, logout, getCurrentUser, updateProfile, changePassword, getCurrentTenant, updateTenantCurrency, getPlanPrices (2026-08-18, público, sin token), updateTenantPlan |
-| `employees.ts` | listEmployees, createEmployee, updateEmployee, deleteEmployee, inviteEmployee, getEmployeeCompensation, getEmployeeContractPdf, resendContract |
+| `employees.ts` | listEmployees, createEmployee, updateEmployee, deleteEmployee, inviteEmployee, getEmployeeCompensation, getEmployeeContractPdf, resendContract, listEmployeeBirthdays (2026-08-22) |
 | `companies.ts` | listCompanies, createCompany, updateCompany, deleteCompany, +custom field values |
 | `contacts.ts` | listContacts, createContact, updateContact, deleteContact, +custom field values |
 | `opportunities.ts` | listOpportunities, createOpportunity, updateOpportunity, deleteOpportunity, addOpportunityContact, removeOpportunityContact |
@@ -347,7 +363,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 | `timeOffPolicyAssignments.ts` | listEmployeeTimeOffPolicies, assignTimeOffPolicyToEmployee, unassignTimeOffPolicyFromEmployee |
 | `timeOffRequests.ts` | listTimeOffRequests, createTimeOffRequest, decideTimeOffRequest, cancelTimeOffRequest |
 | `timeOffBalances.ts` | listTimeOffBalances, getEmployeeTimeOffBalance, +custom field values (nota: nombre de archivo engañoso, ver código) |
-| `tasks.ts` | listTasks, listMyTasks, listTasksForCalendar, createTask, updateTask, deleteTask |
+| `tasks.ts` | listTasks, listMyTasks (2026-08-22: excluye completadas), listTasksForCalendar (ídem), createTask, updateTask, deleteTask |
 | `notes.ts` | listNotes, createNote, updateNote, deleteNote |
 | `payroll.ts` | listPayFrequencies, createPayFrequency, updatePayFrequency, listPaymentMethods, createPaymentMethod, updatePaymentMethod, createCompensation, getCompensationStatus, listTerminatedCompensations, createCompensationBulk, listPayrollRuns, createPayrollRun, getPayrollRunDetail, addEmployeeToPayrollRun, confirmPayrollRun, createPayrollAdjustment, deletePayrollEntry, updatePayrollEntryHours, listOffCyclePayments, createOffCyclePayments, getRunEmployeePayslip, getEntryPayslip |
 | `contractConfirmationPublic.ts` | getContractConfirmation, confirmContract — público, sin auth (standalone `/confirm-contract/:token`) |
@@ -358,6 +374,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 | `onboarding.ts` | getOnboardingStatus, seedSampleData |
 | `feedback.ts` | sendFeedback |
 | `http.ts` | apiFetch(url, init?), throwApiError(res) — base compartida, no un dominio |
+| `integrations.ts` (2026-08-22) | getGoogleCalendarStatus, getGoogleCalendarConnectUrl (devuelve `{url}` para que el frontend haga `window.location.href` — no redirige el propio backend, porque este endpoint se llama con fetch autenticado, no con navegación directa), disconnectGoogleCalendar |
 | `billing.ts` (Billing Integration, Etapa E) | getSubscription, startCheckout, changeSubscriptionPlan (post-billing, distinto de `updateTenantPlan` de arriba que es la elección pre-billing durante trial), cancelSubscription, resumeSubscription, getInvoiceDocumentUrl(token, invoiceId, disposition?) (2026-08-19, Paddle-only, URL temporal ~1h, se pide fresca en cada click — `BillingPage.tsx` la usa dos veces por fila de Invoice: "View invoice" con `inline`, "Download" con `attachment`) |
 
 ### `frontend/src/components/common/` — componentes reusables genéricos, no ligados a una entidad
@@ -424,6 +441,6 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 
 ### `frontend/src/components/tasks/`
 - **EntityTasksList** — tab "Tasks" compartido por los 4 paneles de detalle.
-- **MyTasksWidget** — widget "My tasks" de `/overview`, reusa el mismo popover de edición que `EntityTasksList` vía `TaskFormPopover`.
+- **MyTasksWidget** — widget "My tasks" de `/overview`, reusa el mismo popover de edición que `EntityTasksList` vía `TaskFormPopover`. Desde 2026-08-22, el propio endpoint (`listMyTasks`) ya no devuelve tareas completadas — el widget no filtra nada del lado del cliente, solo desaparecen del `state` en el próximo `load()`.
 - **TaskForm** — form de compose/edit de un Task, siempre expandido dentro del tab.
 - **TaskFormPopover** — wrapper de `TaskForm` en un `Popover`, para los 2 lugares que sí necesitan popover-al-click (el widget de Overview y las entradas del calendario) — nunca reimplementar el form ahí adentro, envolver el mismo `TaskForm`.

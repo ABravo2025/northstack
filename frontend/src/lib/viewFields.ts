@@ -141,6 +141,12 @@ export function buildEmployeeFields(
       getValue: (item: any) => item.endDate ?? '',
     },
     {
+      key: 'birthdate',
+      label: 'Birthdate',
+      valueType: 'date',
+      getValue: (item: any) => item.birthdate ?? '',
+    },
+    {
       key: 'contractUrl',
       label: 'Contract URL',
       valueType: 'text',

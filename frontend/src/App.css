@@ -400,6 +400,12 @@
   @apply mb-0.5 cursor-pointer truncate rounded bg-amber-100 px-1 py-0.5 text-xs text-amber-800 transition-colors hover:bg-amber-200 dark:bg-amber-900/40 dark:text-amber-300 dark:hover:bg-amber-900/70;
 }
 
+/* Employee birthdays on the /overview calendar — recurring annual entries,
+   pink to stay visually distinct from Time Off (gray/dashed) and Tasks (amber). */
+.calendar-entry-birthday {
+  @apply mb-0.5 truncate rounded bg-pink-100 px-1 py-0.5 text-xs text-pink-800 dark:bg-pink-900/40 dark:text-pink-300;
+}
+
 .header {
   @apply flex items-center justify-between border-b border-line bg-surface-0 px-5 py-4 dark:border-dark-line dark:bg-dark-page;
 }

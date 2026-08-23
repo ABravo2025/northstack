@@ -561,6 +561,20 @@ organizada, no un reemplazo**: el contenido original sigue viviendo tal cual en
   llevar hora además de fecha (`TaskForm.tsx`), sincronizada como evento con horario real en Google
   en vez de todo-el-día — sin tocar el schema, `Task.dueDate` ya guardaba hora completa.
 
+- **2026-08-23 (más tarde todavía) — borrar el evento en Google ahora completa la Task, investigada
+  y descartada la migración a Google Tasks API**: Alejandro probó borrar un evento sincronizado y
+  esperaba que la Task quedara completada, no solo sin fecha (comportamiento original, documentado
+  como decisión deliberada). Corregido: `applyInboundEventChange` ahora marca `completedAt` y le
+  agrega una nota a la descripción (`[Auto-completed — event deleted in Google Calendar on
+  YYYY-MM-DD]`) para distinguirlo de un check manual — la Task nunca se borra. También preguntó por
+  qué el evento se ve como un "evento" de Calendar y no como una "Tarea" nativa de Google (Google
+  Tasks, un producto/API separado con checkbox propio) — investigado con la documentación oficial
+  antes de tocar código: el campo `due` de Tasks API es **explícitamente solo-fecha** ("la hora se
+  descarta, no se puede leer ni escribir vía la API") y **no tiene mecanismo de push
+  notifications** (el endpoint `watch` no existe, a diferencia de Calendar). Cambiar a Tasks API
+  perdería tanto la hora recién agregada como el sync inverso en tiempo real — se recomendó
+  explícitamente no migrar, y quedó así (Calendar Events se mantiene).
+
 ---
 
 ## Pendientes explícitos de agosto

@@ -159,18 +159,26 @@ async function listChangedEvents(calendar: calendar_v3.Calendar, storedSyncToken
   }
 }
 
-// event.status === 'cancelled' means deleted in Google. Deliberately does
-// NOT mark the Task completed or delete it — this codebase already committed
-// to "hide, don't destroy" for completed tasks (see taskService.ts); removing
-// an event from a calendar isn't the same claim as "this work is done."
-// Instead the Task just goes back to having no due date (unscheduled, still
-// open, drops off the Overview calendar until it gets a new date).
+// event.status === 'cancelled' means deleted in Google — treated as "this
+// got done" (2026-08-23, Alejandro's explicit call after trying the earlier
+// "just unschedule it" behavior and preferring completion instead — matches
+// how he actually uses the calendar: removing the event *is* the signal that
+// the work is finished). The Task row itself is still never deleted (this
+// codebase's "hide, don't destroy" stance on completed tasks, see
+// taskService.ts) — a short note gets appended to the description recording
+// *why* it was completed, since a checkbox alone can't distinguish "I
+// finished this" from "Google told us it vanished."
 async function applyInboundEventChange(userId: string, event: calendar_v3.Schema$Event): Promise<void> {
   const task = await prisma.task.findFirst({ where: { assigneeId: userId, googleCalendarEventId: event.id } });
   if (!task) return; // not a Task-tracked event — ignore anything else on the user's calendar
 
   if (event.status === 'cancelled') {
-    await prisma.task.update({ where: { id: task.id }, data: { dueDate: null, googleCalendarEventId: null } });
+    const deletedNote = `[Auto-completed — event deleted in Google Calendar on ${new Date().toISOString().slice(0, 10)}]`;
+    const description = task.description ? `${task.description}\n\n${deletedNote}` : deletedNote;
+    await prisma.task.update({
+      where: { id: task.id },
+      data: { dueDate: null, googleCalendarEventId: null, completedAt: new Date(), description },
+    });
     return;
   }
 

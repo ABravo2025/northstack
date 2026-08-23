@@ -36,6 +36,19 @@ function dateKey(year: number, month: number, day: number): string {
   return `${year}-${pad(month + 1)}-${pad(day)}`;
 }
 
+// A date-only dueDate (exactly UTC midnight, no time ever set — see
+// TaskForm.tsx's matching comment) belongs on the day its UTC date portion
+// names, unambiguously. A timed dueDate is a real instant, so it has to be
+// placed on the *viewer's local* calendar day instead — slicing the UTC
+// string directly (as this used to do) put a task assigned late in the day
+// in a timezone behind UTC on the wrong (next) day, since the UTC instant
+// can already have rolled past midnight.
+function taskDueDateKey(iso: string): string {
+  const d = new Date(iso);
+  const hasTime = d.getUTCHours() !== 0 || d.getUTCMinutes() !== 0 || d.getUTCSeconds() !== 0;
+  return hasTime ? dateKey(d.getFullYear(), d.getMonth(), d.getDate()) : iso.slice(0, 10);
+}
+
 function buildMonthGrid(year: number, month: number): (number | null)[][] {
   const firstWeekday = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -161,7 +174,7 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
       for (const day of grid[week]) {
         if (day === null) continue;
         const key = dateKey(cursor.year, cursor.month, day);
-        map[key] = calendarTasks.filter((t) => t.dueDate && t.dueDate.slice(0, 10) === key);
+        map[key] = calendarTasks.filter((t) => t.dueDate && taskDueDateKey(t.dueDate) === key);
       }
     }
     return map;

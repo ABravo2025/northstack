@@ -57,6 +57,8 @@ export async function buildGoogleAuthUrl(userId: string, tenantId: string): Prom
 export interface OAuthCallbackResult {
   success: boolean;
   error?: string;
+  userId?: string;
+  tenantId?: string;
 }
 
 // Verifies `state` against the DB (proves this callback belongs to the user
@@ -111,7 +113,7 @@ export async function handleGoogleOAuthCallback(code: string, state: string): Pr
       },
     });
 
-    return { success: true };
+    return { success: true, userId: stateRow.userId, tenantId: stateRow.tenantId };
   } catch (err) {
     console.error('Google Calendar OAuth callback failed:', err);
     return { success: false, error: 'Something went wrong connecting Google Calendar. Please try again.' };

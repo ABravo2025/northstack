@@ -160,3 +160,33 @@ export async function syncTimeOffCalendarEvent(
     console.error('syncTimeOffCalendarEvent failed unexpectedly:', err);
   }
 }
+
+// Sync only ever fires reactively, on the next create/update/delete after a
+// user connects (see taskService.ts/timeOffRequestService.ts's call sites) —
+// it never looks backward. Without this, everything a user already had
+// pending *before* connecting would silently never appear in their Google
+// Calendar until they happened to touch it again. Called once, right after a
+// connection is established (handleGoogleOAuthCallback) — best-effort, same
+// never-throws contract as the two functions above.
+export async function backfillCalendarSyncForUser(userId: string, tenantId: string): Promise<void> {
+  try {
+    const pendingTasks = await prisma.task.findMany({
+      where: { tenantId, assigneeId: userId, dueDate: { not: null }, completedAt: null, googleCalendarEventId: null },
+    });
+    for (const task of pendingTasks) {
+      await syncTaskCalendarEvent(null, task);
+    }
+
+    const employee = await prisma.employee.findUnique({ where: { userId }, select: { id: true } });
+    if (!employee) return;
+
+    const approvedTimeOff = await prisma.timeOffRequest.findMany({
+      where: { tenantId, employeeId: employee.id, status: 'approved', googleCalendarEventId: null },
+    });
+    for (const request of approvedTimeOff) {
+      await syncTimeOffCalendarEvent(null, request);
+    }
+  } catch (err) {
+    console.error('backfillCalendarSyncForUser failed unexpectedly:', err);
+  }
+}

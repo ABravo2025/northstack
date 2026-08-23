@@ -5,6 +5,7 @@ import {
   googleCalendarConfigured,
   handleGoogleOAuthCallback,
 } from '../modules/integrations/googleCalendarAuthService.js';
+import { backfillCalendarSyncForUser } from '../modules/integrations/googleCalendarSyncService.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 
@@ -57,6 +58,14 @@ googleCalendarIntegrationRouter.get('/api/integrations/google-calendar/callback'
   if (!result.success) {
     return res.redirect(`${appBaseUrl()}/settings/profile?googleCalendarError=1`);
   }
+
+  // One-time catch-up for whatever this user already had pending before
+  // connecting — sync otherwise only fires reactively on the next
+  // create/update/delete, so without this, pre-existing tasks/time off would
+  // silently never appear in Google Calendar. Awaited (not fire-and-forget)
+  // since Vercel serverless functions don't guarantee un-awaited work
+  // survives past the response being sent.
+  await backfillCalendarSyncForUser(result.userId!, result.tenantId!);
 
   return res.redirect(`${appBaseUrl()}/settings/profile?googleCalendarConnected=1`);
 });

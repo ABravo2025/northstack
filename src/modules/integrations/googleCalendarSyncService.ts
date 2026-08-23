@@ -8,6 +8,35 @@ import { getAuthorizedClientForUser, markNeedsReconnectIfRevoked } from './googl
 // underlying Task/TimeOffRequest request, mirroring how email sending
 // (lib/mailer.ts) is best-effort and never blocks the caller.
 
+const ONE_HOUR_MS = 60 * 60 * 1000;
+
+// A Task's dueDate is either date-only (always exactly UTC midnight — no
+// time was ever set in TaskForm) or a real instant (a specific time was
+// picked, converted from local time to UTC on submit) — see TaskForm.tsx's
+// matching comment. All-day events use Google's `date` field; a real instant
+// uses `dateTime` instead, so the event shows at the actual hour in Google
+// Calendar rather than as a full-day block. Tasks have no explicit duration,
+// so a timed event gets a flat 1-hour block purely for visual sizing on the
+// calendar — it doesn't mean anything about how long the task takes.
+function taskEventBody(task: Task): calendar_v3.Schema$Event {
+  const due = task.dueDate!;
+  const hasTime = due.getUTCHours() !== 0 || due.getUTCMinutes() !== 0 || due.getUTCSeconds() !== 0;
+
+  return {
+    summary: task.title,
+    description: task.description ?? undefined,
+    ...(hasTime
+      ? {
+          start: { dateTime: due.toISOString(), timeZone: 'UTC' },
+          end: { dateTime: new Date(due.getTime() + ONE_HOUR_MS).toISOString(), timeZone: 'UTC' },
+        }
+      : {
+          start: { date: due.toISOString().slice(0, 10) },
+          end: { date: due.toISOString().slice(0, 10) },
+        }),
+  };
+}
+
 async function deleteGoogleEvent(calendar: calendar_v3.Calendar, eventId: string): Promise<void> {
   try {
     await calendar.events.delete({ calendarId: 'primary', eventId });
@@ -70,12 +99,7 @@ export async function syncTaskCalendarEvent(previous: Task | null, current: Task
     const calendar = await getAuthorizedClientForUser(current.assigneeId);
     if (!calendar) return; // assignee never connected Google Calendar (or needs to reconnect) — nothing to sync
 
-    const eventBody: calendar_v3.Schema$Event = {
-      summary: current.title,
-      description: current.description ?? undefined,
-      start: { date: current.dueDate!.toISOString().slice(0, 10) },
-      end: { date: current.dueDate!.toISOString().slice(0, 10) },
-    };
+    const eventBody = taskEventBody(current);
 
     try {
       // A pre-existing event only carries over if the assignee didn't

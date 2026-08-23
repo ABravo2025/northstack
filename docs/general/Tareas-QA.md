@@ -902,6 +902,45 @@ muchos cambios de una vez (paginación implementada pero no probada con volumen 
 si `renewExpiringWatchChannels` falla repetidamente para un mismo usuario (se loguea, no se
 notifica a nadie).
 
+### Actualización 2026-08-23 (misma noche) — probado en vivo con Alejandro, causa real encontrada + 2 mejoras
+
+**El caso 1-8 de arriba SÍ se probó de punta a punta con Alejandro en `staging`**, con hallazgos
+importantes que valen la pena documentar en detalle porque la causa real no tenía nada que ver con
+el código de esta pieza:
+
+1. **`events.watch()` funcionaba perfecto** (Google aceptaba el canal, devolvía `resourceId`/
+   `expiration` reales — confirmado con una fila real en `GoogleCalendarWatchChannel` vía el SQL
+   editor de Neon), pero **cero notificaciones llegaban nunca**, ni siquiera el handshake
+   `resourceState: sync` inmediato que Google manda apenas se abre un canal.
+2. Se descartaron en orden, cada uno confirmado con evidencia real antes de pasar al siguiente:
+   verificación de dominio en Search Console (ya estaba verificado, se hizo de todos modos por las
+   dudas — Google incluso ofreció agregar el registro DNS solo, con acceso a Cloudflare), dominios
+   autorizados en la pantalla de consentimiento OAuth (`joinnorthstack.com` ya figuraba ahí).
+3. **Causa real**: `staging.joinnorthstack.com` tiene activada la protección de deployment de
+   Vercel, que redirige (302, a una pantalla de login de Vercel) cualquier request sin sesión de
+   Vercel — incluidos los POST que Google manda al webhook. El navegador de Alejandro pasaba sin
+   problema (ya tenía sesión de Vercel), por eso el resto del flujo (connect/callback/status/
+   disconnect) siempre funcionó y nunca hizo sospechar de esto. Se encontró recién al confirmar que
+   la tabla de requests de Vercel no tenía **ninguna** fila para `/api/integrations/google-calendar/
+   webhook` — ni un intento fallido, nada — lo cual solo tiene sentido si Vercel corta el request
+   antes de que llegue a nuestro código (nada que loguear del lado de la app).
+4. **Fix**: `VERCEL_AUTOMATION_BYPASS_SECRET` (la función "Protection Bypass for Automation" de
+   Vercel, ya existía como System Environment Variable en el proyecto) embebido como query param en
+   la URL que le registramos a Google. Confirmado funcionando: caso 3 (editar el evento en Google)
+   probado en vivo, la Task se actualizó en Northstack.
+
+**Dos mejoras agregadas la misma noche, a pedido de Alejandro tras probar:**
+- **Auto-refresh cada 30s en el Overview** (`OverviewPage.tsx`) — sin esto, un cambio que llega por
+  webhook (o cualquier cambio de otro origen) no se veía hasta recargar la página a mano. Silencioso
+  (sin skeleton de loading, sin toast de error) para no interrumpir a quien esté mirando la pantalla.
+- **Tasks con hora, no solo fecha** — `TaskForm.tsx` ahora tiene un campo "Time (optional)" junto a
+  la fecha. Sin hora: se mantiene el comportamiento de siempre (evento de todo el día en Google).
+  Con hora: se sincroniza como evento con horario real (bloque fijo de 1h en el calendario, sin que
+  eso implique que la tarea "dura" una hora — es solo el tamaño visual del bloque). El sync inverso
+  (Google → Northstack) también se actualizó para preservar la hora al leer de vuelta, no solo la
+  fecha. No hizo falta tocar el schema — `Task.dueDate` ya guardaba hora completa, solo faltaba
+  exponerlo en el form y en la conversión hacia/desde Google.
+
 ---
 
 ## Próximas tareas de QA (a definir)

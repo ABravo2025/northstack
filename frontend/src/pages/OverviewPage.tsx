@@ -63,20 +63,33 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const taskAnchorRef = useRef<HTMLDivElement | null>(null);
 
+  // 30s polling while the page is open — the only way changes made outside
+  // Northstack (e.g. editing a synced Task's event directly in Google
+  // Calendar) show up without the user manually reloading, since nothing
+  // pushes updates to the browser. Silent: no loading skeleton, no error
+  // toast, so a background refresh never interrupts whatever the user is
+  // doing — a transient failure just retries on the next tick.
   useEffect(() => {
     loadCalendar();
     api.listTenantUsers(token).then(setTenantUsers).catch(() => {});
+    const interval = setInterval(() => {
+      refreshCalendarSilently();
+    }, 30000);
+    return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const fetchCalendarData = () =>
+    Promise.all([
+      api.listTimeOffRequests(token, 'calendar'),
+      api.listTasksForCalendar(token),
+      api.listEmployeeBirthdays(token),
+    ]);
 
   const loadCalendar = async () => {
     setLoading(true);
     try {
-      const [data, tasks, employeeBirthdays] = await Promise.all([
-        api.listTimeOffRequests(token, 'calendar'),
-        api.listTasksForCalendar(token),
-        api.listEmployeeBirthdays(token),
-      ]);
+      const [data, tasks, employeeBirthdays] = await fetchCalendarData();
       setRequests(data);
       setCalendarTasks(tasks);
       setBirthdays(employeeBirthdays);
@@ -84,6 +97,17 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
       toast.error('Failed to load the team calendar: ' + (error as Error).message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const refreshCalendarSilently = async () => {
+    try {
+      const [data, tasks, employeeBirthdays] = await fetchCalendarData();
+      setRequests(data);
+      setCalendarTasks(tasks);
+      setBirthdays(employeeBirthdays);
+    } catch {
+      // best-effort — the next 30s tick just tries again
     }
   };
 
@@ -256,16 +280,25 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
                                 {req.status === 'pending' ? ' (pending)' : ''}
                               </div>
                             ))}
-                            {dayTasks.map((task) => (
-                              <div
-                                key={task.id}
-                                className="calendar-entry-task"
-                                title={`${task.title}${task.entitySummary ? ` — ${task.entitySummary}` : ''}`}
-                                onClick={(e) => openTaskForm(e, task)}
-                              >
-                                {task.title}
-                              </div>
-                            ))}
+                            {dayTasks.map((task) => {
+                              const dueDate = task.dueDate ? new Date(task.dueDate) : null;
+                              const hasTime =
+                                dueDate && (dueDate.getUTCHours() !== 0 || dueDate.getUTCMinutes() !== 0 || dueDate.getUTCSeconds() !== 0);
+                              const timeLabel = hasTime
+                                ? dueDate!.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+                                : null;
+                              return (
+                                <div
+                                  key={task.id}
+                                  className="calendar-entry-task"
+                                  title={`${timeLabel ? `${timeLabel} — ` : ''}${task.title}${task.entitySummary ? ` — ${task.entitySummary}` : ''}`}
+                                  onClick={(e) => openTaskForm(e, task)}
+                                >
+                                  {timeLabel && <span className="calendar-entry-task-time">{timeLabel} </span>}
+                                  {task.title}
+                                </div>
+                              );
+                            })}
                           </td>
                         );
                       })}

@@ -174,8 +174,16 @@ async function applyInboundEventChange(userId: string, event: calendar_v3.Schema
     return;
   }
 
-  const startDateStr = event.start?.date ?? (event.start?.dateTime ? event.start.dateTime.slice(0, 10) : null);
-  const incomingDueDate = startDateStr ? new Date(startDateStr) : null;
+  // event.start.date (all-day) keeps date-only/UTC-midnight semantics;
+  // event.start.dateTime (timed) is a real instant — preserved in full, not
+  // truncated to its date portion, so an hour picked (or moved) in Google
+  // Calendar round-trips correctly. Mirrors taskEventBody's same distinction
+  // in googleCalendarSyncService.ts, just read in the opposite direction.
+  const incomingDueDate = event.start?.date
+    ? new Date(event.start.date)
+    : event.start?.dateTime
+      ? new Date(event.start.dateTime)
+      : null;
   const incomingTitle = event.summary ?? task.title;
   const incomingDescription = event.description ?? null;
 

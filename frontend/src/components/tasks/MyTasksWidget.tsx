@@ -15,6 +15,15 @@ interface MyTasksWidgetProps {
   currentUserId: string;
 }
 
+// Same UTC-midnight-vs-real-instant distinction as TaskForm.tsx — a
+// date-only dueDate shows just the date, a timed one also shows the hour.
+function formatDueDate(iso: string): string {
+  const d = new Date(iso);
+  const dateStr = d.toLocaleDateString();
+  const hasTime = d.getUTCHours() !== 0 || d.getUTCMinutes() !== 0 || d.getUTCSeconds() !== 0;
+  return hasTime ? `${dateStr} ${d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : dateStr;
+}
+
 // "My tasks" widget on /overview (item 11, Módulo de Tasks): assigned-to-me
 // tasks, pending first, soonest due date first — same list the "mine"
 // endpoint already sorts server-side (taskService.ts, listMyTasks). Rows open
@@ -105,7 +114,7 @@ export default function MyTasksWidget({ token, tenantUsers, currentUserId }: MyT
               </div>
               {task.entitySummary && <div className="text-xs text-gray-400 truncate">{task.entitySummary}</div>}
             </div>
-            {task.dueDate && <span className="task-row-date">{new Date(task.dueDate).toLocaleDateString()}</span>}
+            {task.dueDate && <span className="task-row-date">{formatDueDate(task.dueDate)}</span>}
           </div>
         ))}
       </div>

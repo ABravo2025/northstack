@@ -544,6 +544,23 @@ organizada, no un reemplazo**: el contenido original sigue viviendo tal cual en
   rutas nuevas no rompen nada corriendo local; falta la prueba real de punta a punta contra
   `staging`, ver `Tareas-QA.md` QA-20.
 
+- **2026-08-23 (cierre de la noche) — sync inverso funcionando de punta a punta + 2 mejoras
+  pedidas al probar**: sesión larga de debugging en vivo con Alejandro contra `staging` (detalle
+  completo en `Tareas-QA.md` QA-20, "Actualización 2026-08-23"). Causa real de que el webhook no
+  recibiera nada: la protección de deployment de Vercel bloqueaba los POST de Google (sin sesión de
+  Vercel, como cualquier server-to-server real) antes de que llegaran al código — no era un problema
+  de dominio ni de Google. Se descartó verificación de dominio y dominios autorizados de OAuth
+  (ambos ya estaban bien) antes de dar con la causa real, leyendo la tabla de requests de Vercel y
+  notando que la ruta del webhook no tenía **ninguna** fila, ni siquiera fallida. Fix: el
+  `VERCEL_AUTOMATION_BYPASS_SECRET` del proyecto (ya existía) embebido como query param en la URL
+  que se le registra a Google. **Vale la pena recordar esto para cualquier futura integración que
+  reciba webhooks/callbacks de un servicio externo en este proyecto — cualquier endpoint que un
+  tercero necesite poder golpear sin sesión de Vercel va a necesitar el mismo tratamiento.**
+  Además, a pedido de Alejandro tras probar: auto-refresh cada 30s en el Overview (silencioso, sin
+  loading ni toast) para que los cambios lleguen sin recargar a mano, y las Tasks ahora pueden
+  llevar hora además de fecha (`TaskForm.tsx`), sincronizada como evento con horario real en Google
+  en vez de todo-el-día — sin tocar el schema, `Task.dueDate` ya guardaba hora completa.
+
 ---
 
 ## Pendientes explícitos de agosto

@@ -23,13 +23,23 @@ vi.mock('../src/lib/prisma.js', () => {
       findUnique: vi.fn(async ({ where }: any) => users.find((u) => u.email === where.email) ?? null),
       // Domain derived from each fixture's `.email` rather than requiring an `.emailDomain`
       // field on every test's pushed user — mirrors what the real column holds without
-      // needing every existing fixture updated.
+      // needing every existing fixture updated. A fixture that explicitly sets `emailDomain`
+      // (including `null`, to simulate a pre-backfill legacy row) has that value used as-is
+      // instead, so the OR-fallback branch below has something real to exercise.
       findFirst: vi.fn(async ({ where }: any) => {
         const excludedStatuses: string[] = where.tenant?.status?.notIn ?? [];
+        const conditions: any[] = where.OR ?? [where];
         return (
           users.find((u) => {
-            const domain = u.email.split('@')[1]?.toLowerCase();
-            return domain === where.emailDomain && u.tenantStatus && !excludedStatuses.includes(u.tenantStatus);
+            if (!u.tenantStatus || excludedStatuses.includes(u.tenantStatus)) return false;
+            const storedDomain = 'emailDomain' in u ? u.emailDomain : u.email.split('@')[1]?.toLowerCase();
+            return conditions.some((cond) => {
+              if (cond.emailDomain === null) {
+                const suffix = cond.email?.endsWith as string | undefined;
+                return storedDomain === null && !!suffix && u.email.toLowerCase().endsWith(suffix.toLowerCase());
+              }
+              return storedDomain === cond.emailDomain;
+            });
           }) ?? null
         );
       }),
@@ -248,6 +258,12 @@ describe('checkEmailDomainNotAlreadyRegistered', () => {
     users.push({ id: 'u1', email: 'owner@acme.com', tenantStatus: 'suspended' });
     const result = await checkEmailDomainNotAlreadyRegistered('new@acme.com');
     expect(result.blocked).toBe(false);
+  });
+
+  it('still blocks a legacy user whose emailDomain column has not been backfilled yet (null)', async () => {
+    users.push({ id: 'u1', email: 'owner@acme.com', tenantStatus: 'active', emailDomain: null });
+    const result = await checkEmailDomainNotAlreadyRegistered('new@acme.com');
+    expect(result.blocked).toBe(true);
   });
 });
 

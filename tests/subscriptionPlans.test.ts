@@ -47,6 +47,19 @@ vi.mock('../src/lib/prisma.js', () => {
         }
         return subscription;
       }),
+      // updateTenantPlan now upserts (not update) so a tenant with no pre-existing Subscription
+      // row (predates Billing Integration, backfill script not yet run) is self-healed instead
+      // of throwing P2025.
+      upsert: vi.fn(async ({ where, update, create }: any) => {
+        const subscription = subscriptions.find((s) => s.tenantId === where.tenantId);
+        if (subscription) {
+          Object.assign(subscription, update);
+          return subscription;
+        }
+        const created = { ...create };
+        subscriptions.push(created);
+        return created;
+      }),
     },
     $transaction: vi.fn(async (fn: any) => fn(mockPrisma)),
     // Mirrors runPlanTransitions' single UPDATE statement: trialing rows whose trialEndsAt has

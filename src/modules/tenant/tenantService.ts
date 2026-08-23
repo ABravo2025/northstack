@@ -67,9 +67,14 @@ export async function checkEmailDomainNotAlreadyRegistered(email: string): Promi
     return { blocked: false };
   }
 
+  // OR'd with a fallback endsWith scan for emailDomain: null rows — every user created before
+  // this column existed has no emailDomain until scripts/backfill-user-email-domain.ts is run
+  // for its environment; without the fallback, the equality match silently never sees those
+  // rows and a duplicate-domain signup that should be blocked goes through instead. The
+  // fallback only scans null rows (not the whole table), so it stays cheap once backfilled.
   const domainAlreadyRegistered = await prisma.user.findFirst({
     where: {
-      emailDomain,
+      OR: [{ emailDomain }, { emailDomain: null, email: { endsWith: `@${emailDomain}` } }],
       tenant: { status: { notIn: ['cancelled', 'suspended'] } },
     },
   });

@@ -1,6 +1,16 @@
 import prisma from '../../lib/prisma.js';
-import type { PlanTier } from '@prisma/client';
+import type { PlanTier, SubscriptionStatus, TenantStatus } from '@prisma/client';
 import { TENANT_SUMMARY_SELECT, type TenantSummary } from './tenantSummary.js';
+
+// Same value set on both enums by design (see schema.prisma) — kept as an explicit map rather
+// than a cast, matching subscriptionService.ts's SUBSCRIPTION_TO_TENANT_STATUS convention.
+const TENANT_TO_SUBSCRIPTION_STATUS: Record<TenantStatus, SubscriptionStatus> = {
+  trialing: 'trialing',
+  active: 'active',
+  past_due: 'past_due',
+  suspended: 'suspended',
+  cancelled: 'cancelled',
+};
 
 // Server-side price list — never trust a price sent by the client (spec-subscription-plans.md).
 // These are the "launch price" values; when it's time to raise to the regular price, edit the
@@ -49,9 +59,24 @@ export async function updateTenantPlan(tenantId: string, plan: PlanTier): Promis
     // on purpose — this endpoint predates per-country pricing (CURRENT_PLAN_PRICES_CENTS above
     // is USD-only); an Argentina-priced checkout looks up PlanPrice directly instead of trusting
     // this placeholder, so it's superseded before it would ever matter.
-    await tx.subscription.update({
+    //
+    // upsert, not update: a tenant created before Billing Integration shipped has no
+    // Subscription row until scripts/backfill-billing-subscriptions.ts is run for its
+    // environment. Without this, `update` throws P2025 (record not found) and this endpoint
+    // 500s for every pre-existing tenant until an operator remembers to run that script — this
+    // makes plan selection self-healing instead of depending on that manual step.
+    await tx.subscription.upsert({
       where: { tenantId },
-      data: { plan, lockedPriceCents, currency: 'USD' },
+      update: { plan, lockedPriceCents, currency: 'USD' },
+      create: {
+        tenantId,
+        plan,
+        status: TENANT_TO_SUBSCRIPTION_STATUS[updated.status],
+        lockedPriceCents,
+        currency: 'USD',
+        trialEndsAt: updated.trialEndsAt,
+        gracePeriodEndsAt: updated.gracePeriodEndsAt,
+      },
     });
 
     return updated;

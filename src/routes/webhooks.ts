@@ -140,6 +140,15 @@ webhooksRouter.post('/api/webhooks/mercadopago', async (req, res) => {
         provider: 'mercadopago',
         externalSubscriptionId: preapproval.id,
         currentPeriodStart: new Date(),
+        // Without this, Subscription.currency/lockedPriceCents stay at their USD placeholder
+        // (set at signup) forever for an AR tenant actually billed in ARS — every invoice this
+        // subscription generates afterward inherits that wrong currency label.
+        ...(preapproval.auto_recurring
+          ? {
+              currency: preapproval.auto_recurring.currency_id,
+              lockedPriceCents: Math.round(preapproval.auto_recurring.transaction_amount * 100),
+            }
+          : {}),
       });
     } else if (preapproval.status === 'cancelled') {
       await syncSubscriptionAndTenant({ tenantId: subscription.tenantId, status: 'cancelled' });

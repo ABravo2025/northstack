@@ -4,8 +4,13 @@ import prisma from '../../lib/prisma.js';
 import { decryptGoogleToken, encryptGoogleToken, isGoogleTokenEncryptionConfigured } from '../../lib/googleTokenEncryption.js';
 
 // event CRUD only — no calendar-settings/list access, the minimal scope for
-// one-way Task/TimeOff -> Google Calendar sync.
+// one-way Task/TimeOff -> Google Calendar sync. `userinfo.email` is also
+// requested (not calendar-related) solely so the callback can label the
+// connection with the connected account's email for the Profile Settings UI
+// (oauth2.userinfo.get() 403s without it — calendar.events alone doesn't
+// carry permission to read profile info).
 const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
+const EMAIL_SCOPE = 'https://www.googleapis.com/auth/userinfo.email';
 const OAUTH_STATE_MAX_AGE_MS = 10 * 60 * 1000;
 
 export function googleCalendarConfigured(): boolean {
@@ -44,7 +49,7 @@ export async function buildGoogleAuthUrl(userId: string, tenantId: string): Prom
     // Always show the consent screen so a *reconnect* also yields a fresh
     // refresh_token — Google only issues one on the first-ever grant otherwise.
     prompt: 'consent',
-    scope: [CALENDAR_SCOPE],
+    scope: [CALENDAR_SCOPE, EMAIL_SCOPE],
     state,
   });
 }
@@ -67,41 +72,50 @@ export async function handleGoogleOAuthCallback(code: string, state: string): Pr
     return { success: false, error: 'This connection link has expired. Please try connecting again.' };
   }
 
-  const client = buildOAuth2Client();
-  const { tokens } = await client.getToken(code);
-  if (!tokens.access_token || !tokens.refresh_token) {
-    return { success: false, error: 'Google did not grant offline access. Please try again.' };
+  // The callback is a mid-navigation browser hit — any failure below must
+  // still end in a redirect (via the caller's `if (!result.success)`
+  // branch), never an uncaught throw surfacing Express's generic JSON 500
+  // page to a browser tab.
+  try {
+    const client = buildOAuth2Client();
+    const { tokens } = await client.getToken(code);
+    if (!tokens.access_token || !tokens.refresh_token) {
+      return { success: false, error: 'Google did not grant offline access. Please try again.' };
+    }
+    client.setCredentials(tokens);
+
+    const oauth2 = google.oauth2({ auth: client, version: 'v2' });
+    const { data: userInfo } = await oauth2.userinfo.get();
+    if (!userInfo.email) {
+      return { success: false, error: 'Could not read the connected Google account email.' };
+    }
+
+    await prisma.googleCalendarConnection.upsert({
+      where: { userId: stateRow.userId },
+      create: {
+        tenantId: stateRow.tenantId,
+        userId: stateRow.userId,
+        googleAccountEmail: userInfo.email,
+        accessTokenEncrypted: encryptGoogleToken(tokens.access_token),
+        refreshTokenEncrypted: encryptGoogleToken(tokens.refresh_token),
+        accessTokenExpiresAt: new Date(tokens.expiry_date ?? Date.now()),
+        scope: tokens.scope ?? CALENDAR_SCOPE,
+      },
+      update: {
+        googleAccountEmail: userInfo.email,
+        accessTokenEncrypted: encryptGoogleToken(tokens.access_token),
+        refreshTokenEncrypted: encryptGoogleToken(tokens.refresh_token),
+        accessTokenExpiresAt: new Date(tokens.expiry_date ?? Date.now()),
+        scope: tokens.scope ?? CALENDAR_SCOPE,
+        needsReconnect: false,
+      },
+    });
+
+    return { success: true };
+  } catch (err) {
+    console.error('Google Calendar OAuth callback failed:', err);
+    return { success: false, error: 'Something went wrong connecting Google Calendar. Please try again.' };
   }
-  client.setCredentials(tokens);
-
-  const oauth2 = google.oauth2({ auth: client, version: 'v2' });
-  const { data: userInfo } = await oauth2.userinfo.get();
-  if (!userInfo.email) {
-    return { success: false, error: 'Could not read the connected Google account email.' };
-  }
-
-  await prisma.googleCalendarConnection.upsert({
-    where: { userId: stateRow.userId },
-    create: {
-      tenantId: stateRow.tenantId,
-      userId: stateRow.userId,
-      googleAccountEmail: userInfo.email,
-      accessTokenEncrypted: encryptGoogleToken(tokens.access_token),
-      refreshTokenEncrypted: encryptGoogleToken(tokens.refresh_token),
-      accessTokenExpiresAt: new Date(tokens.expiry_date ?? Date.now()),
-      scope: tokens.scope ?? CALENDAR_SCOPE,
-    },
-    update: {
-      googleAccountEmail: userInfo.email,
-      accessTokenEncrypted: encryptGoogleToken(tokens.access_token),
-      refreshTokenEncrypted: encryptGoogleToken(tokens.refresh_token),
-      accessTokenExpiresAt: new Date(tokens.expiry_date ?? Date.now()),
-      scope: tokens.scope ?? CALENDAR_SCOPE,
-      needsReconnect: false,
-    },
-  });
-
-  return { success: true };
 }
 
 export interface GoogleCalendarConnectionStatus {

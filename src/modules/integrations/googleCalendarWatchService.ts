@@ -21,9 +21,28 @@ import { getAuthorizedClientForUser, markNeedsReconnectIfRevoked } from './googl
 // trip since the values already match), but there's no reason to take that
 // hop for a change that came *from* Google in the first place.
 
+// staging/production sit behind Vercel's Deployment Protection, which
+// redirects any request without a Vercel SSO session to a login page —
+// including Google's own server-to-server webhook POSTs, which obviously
+// never have one. VERCEL_AUTOMATION_BYPASS_SECRET (Vercel's own "Protection
+// Bypass for Automation" feature, auto-injected as a System Environment
+// Variable once a secret is configured in Project Settings > Deployment
+// Protection) is embedded directly in the registered address as a query
+// param — the one documented way to let a specific automated caller through
+// without disabling protection for the whole deployment. Found live: the
+// channel registered fine (Google accepted it, returned a resourceId), but
+// zero notifications — not even the immediate post-watch() handshake — ever
+// reached the app, because Vercel's protection intercepted them before our
+// route ever saw them.
 function webhookUrl(): string {
   const base = process.env.APP_BASE_URL ?? 'http://localhost:5173';
-  return `${base}/api/integrations/google-calendar/webhook`;
+  const url = new URL('/api/integrations/google-calendar/webhook', base);
+  const bypassSecret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+  if (bypassSecret) {
+    url.searchParams.set('x-vercel-protection-bypass', bypassSecret);
+    url.searchParams.set('x-vercel-set-bypass-cookie', 'false');
+  }
+  return url.toString();
 }
 
 // Opens a fresh channel and upserts the row — used both right after a user

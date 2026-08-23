@@ -239,6 +239,13 @@ CRUD estándar: **createTimeOffPolicy**, **listTimeOffPolicies(tenantId)**, **fi
 - **syncTaskCalendarEvent(previous, current)** — sync unidireccional (Northstack → Google) del Task al calendario de su `assigneeId` únicamente (personal, 1 registro → 1 evento). Best-effort, nunca tira. Llamada desde `taskService.ts` tras create/update/delete.
 - **syncTimeOffCalendarEvent(previous, current)** — a diferencia de Tasks, es de todo el equipo: sincroniza a **todos** los `GoogleCalendarConnection` del tenant, no solo al de la persona que se toma la licencia (decisión explícita de Alejandro, 2026-08-23, mismo criterio que la vista compartida del Overview). Internamente delega en `syncTimeOffEventForViewer` (no exportada) por cada usuario conectado. Llamada desde `timeOffRequestService.ts` tras create/decide/cancel.
 - **backfillCalendarSyncForUser(userId, tenantId)** — corre una sola vez, justo al conectar, para sincronizar lo que ya estaba pendiente (Tasks propios + **todo** el Time Off aprobado del tenant, no solo el propio) — sin esto, sync reactivo nunca mira para atrás. Llamada desde `googleCalendarIntegration.ts`'s callback route tras un connect exitoso.
+
+### `src/modules/integrations/googleCalendarWatchService.ts` (2026-08-23)
+Leg inversa (Google → Northstack) de Task sync, solo Tasks — ver el comentario largo al principio del archivo para el por qué (Time Off queda afuera, notificaciones de Google no traen datos, prevención de loop de sync).
+- **openWatchChannelForUser(userId)** — abre/renueva un canal de notificaciones (`events.watch`), best-effort. Llamada desde el callback de OAuth (`googleCalendarAuthService.ts` vía la ruta) al conectar, y desde `renewExpiringWatchChannels` para renovar.
+- **stopWatchChannelForUser(userId)** — cierra el canal en Google (best-effort) y borra la fila local. Llamada desde la ruta de disconnect.
+- **processInboundCalendarChanges(userId)** — ante una notificación real (no el handshake `sync`), pide el diff vía `events.list(syncToken)`, persiste el `syncToken` nuevo, y aplica cada cambio con `prisma.task.update` directo (nunca `taskService.updateTask` — evita re-disparar el sync de salida sobre el mismo cambio). Un evento borrado en Google limpia `dueDate`/`googleCalendarEventId` de la Task, nunca la completa ni la borra.
+- **renewExpiringWatchChannels()** — corrida diaria vía el cron `/api/internal/google-calendar-channels/renew` (`src/routes/internal.ts`); los canales de Google no se renuevan in-place, así que cierra y vuelve a abrir cada uno que vence dentro de 48hs.
 - No llamar ninguna de las tres desde otro lugar sin releer la tabla de decisión de cada una en el archivo (reasignación de assignee, completar/borrar, cambio de status de Time Off).
 
 ### `src/modules/notes/noteService.ts`

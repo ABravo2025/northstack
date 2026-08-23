@@ -461,6 +461,7 @@ model User {
   passwordResetTokens     PasswordResetToken[]
   googleCalendarConnection GoogleCalendarConnection?
   timeOffCalendarSyncs    TimeOffCalendarSync[]
+  googleCalendarWatchChannel GoogleCalendarWatchChannel?
 
   @@index([emailDomain])
 }
@@ -1126,6 +1127,27 @@ model GoogleOAuthState {
   userId    String
   tenantId  String
   createdAt DateTime @default(now())
+}
+
+// One active Google Calendar "watch channel" per connected user — Google's
+// push-notification mechanism for the reverse (Google -> Northstack) leg of
+// Task sync, Tasks only (see googleCalendarWatchService.ts's schema-comment-
+// length explanation of why this needs more than "a webhook route"). Google
+// notifications carry no event data, only "something changed" — syncToken is
+// the cursor for the follow-up events.list() call that gets the real diff.
+// Channels expire and can't be renewed in place, only stopped and reopened —
+// see the /api/internal/google-calendar-channels/renew cron in internal.ts.
+model GoogleCalendarWatchChannel {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id])
+  channelId    String   @unique
+  resourceId   String
+  channelToken String
+  syncToken    String?
+  expiration   DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Invitation {

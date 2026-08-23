@@ -6,6 +6,12 @@ import {
   handleGoogleOAuthCallback,
 } from '../modules/integrations/googleCalendarAuthService.js';
 import { backfillCalendarSyncForUser } from '../modules/integrations/googleCalendarSyncService.js';
+import {
+  openWatchChannelForUser,
+  processInboundCalendarChanges,
+  stopWatchChannelForUser,
+} from '../modules/integrations/googleCalendarWatchService.js';
+import prisma from '../lib/prisma.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 
@@ -67,6 +73,10 @@ googleCalendarIntegrationRouter.get('/api/integrations/google-calendar/callback'
   // survives past the response being sent.
   await backfillCalendarSyncForUser(result.userId!, result.tenantId!);
 
+  // Opens the push-notification channel for the reverse (Google -> Northstack)
+  // leg of Task sync — best-effort, never blocks the redirect if it fails.
+  await openWatchChannelForUser(result.userId!);
+
   return res.redirect(`${appBaseUrl()}/settings/profile?googleCalendarConnected=1`);
 });
 
@@ -76,6 +86,39 @@ googleCalendarIntegrationRouter.post('/api/integrations/google-calendar/disconne
     return;
   }
 
+  await stopWatchChannelForUser(user.id);
   await disconnectGoogleCalendar(user.id);
   return res.status(204).end();
+});
+
+// Hit directly by Google, never by our own frontend — no bearer token, no
+// CSRF concern (Google doesn't send cookies), identity/authenticity comes
+// entirely from the channel id + token matching a row we created ourselves
+// (see googleCalendarWatchService.ts's module comment). Always acks 200
+// regardless of outcome — erroring back to Google risks it disabling the
+// channel after repeated failures, and any real problem here is already
+// logged server-side for us to find later (same reasoning as Paddle/Mercado
+// Pago's webhook handlers acking fast in src/routes/webhooks.ts).
+googleCalendarIntegrationRouter.post('/api/integrations/google-calendar/webhook', async (req, res) => {
+  const channelId = req.headers['x-goog-channel-id'] as string | undefined;
+  const resourceId = req.headers['x-goog-resource-id'] as string | undefined;
+  const resourceState = req.headers['x-goog-resource-state'] as string | undefined;
+  const channelToken = req.headers['x-goog-channel-token'] as string | undefined;
+
+  if (!channelId || !resourceId || !channelToken) {
+    return res.status(200).end();
+  }
+
+  const channel = await prisma.googleCalendarWatchChannel.findUnique({ where: { channelId } });
+  if (!channel || channel.resourceId !== resourceId || channel.channelToken !== channelToken) {
+    return res.status(200).end();
+  }
+
+  // "sync" is the handshake Google sends immediately once watch() succeeds —
+  // nothing changed yet, just acknowledge.
+  if (resourceState !== 'sync') {
+    await processInboundCalendarChanges(channel.userId);
+  }
+
+  return res.status(200).end();
 });

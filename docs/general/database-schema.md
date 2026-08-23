@@ -706,6 +706,18 @@ erDiagram
         string googleCalendarEventId
         datetime createdAt
     }
+
+    USER ||--o| GOOGLE_CALENDAR_WATCH_CHANNEL : "watches, 1:1"
+
+    GOOGLE_CALENDAR_WATCH_CHANNEL {
+        string id PK
+        string userId FK "unique - one active channel per connected user"
+        string channelId UK "our own id, sent to Google as watch()'s id"
+        string resourceId "Google's opaque id for the watched resource"
+        string channelToken "shared secret set at watch() time, verified against X-Goog-Channel-Token"
+        string syncToken "nullable - incremental cursor for events.list(), null until first notification"
+        datetime expiration "channel stops delivering after this - renewed daily by cron"
+    }
 ```
 
 Notas:
@@ -741,6 +753,21 @@ Notas:
   `EmployeeCompensation`). Se muestra como evento anual recurrente (match por mes+día, año
   ignorado) en el calendario del Overview — **nunca se sincroniza a Google**, decisión explícita de
   Alejandro (2026-08-22) para mantener esto interno.
+- **`GoogleCalendarWatchChannel` — sync inverso (Google → Northstack), solo Tasks** (2026-08-23,
+  pedido explícito de Alejandro tras probar el sync unidireccional). Time Off queda afuera a
+  propósito: al ser de todo el equipo, "quién puede editarlo de vuelta" no tiene una respuesta
+  limpia. Un canal por usuario conectado (`userId @unique`), abierto al conectar
+  (`src/modules/integrations/googleCalendarWatchService.ts`'s `openWatchChannelForUser`, llamado
+  desde el callback de OAuth junto al backfill) y renovado a diario por el cron
+  `/api/internal/google-calendar-channels/renew` (`vercel.json`) — los canales de Google no se
+  renuevan in-place, solo se cierran y se abren de nuevo, por eso hace falta el cron en vez de
+  fijar una fecha de vencimiento larga y listo. Las notificaciones de Google no traen datos, solo
+  avisan "algo cambió" — `channelToken` es la única verificación de que la notificación es legítima
+  (Google no firma el body como sí hacen Paddle/Mercado Pago), y `syncToken` es el cursor que
+  permite pedirle a Google el diff real vía `events.list`. Solo se tocan Tasks cuyo
+  `googleCalendarEventId` ya estaba trackeado — nunca se lee el calendario completo del usuario.
+  **No se puede probar contra `localhost`** — Google no puede llegarle a una máquina local, así que
+  esta pieza solo se verifica de punta a punta contra `staging`/producción.
 
 ## Enums
 

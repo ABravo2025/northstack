@@ -523,6 +523,27 @@ organizada, no un reemplazo**: el contenido original sigue viviendo tal cual en
     personal (solo el calendario de quien tiene asignada la tarea) — no se pidió cambiar eso.
     Pendiente re-probar de punta a punta con el modelo nuevo.
 
+- **2026-08-23 (misma tarde) — Sync inverso Google → Northstack, solo Tasks, vía notificaciones
+  push**: Alejandro pidió que editar un evento sincronizado directamente en Google Calendar también
+  actualice la Task en Northstack (antes solo funcionaba Northstack → Google). Planeado con
+  `EnterPlanMode` dado el tamaño real de la pieza — infraestructura de webhooks nueva en el
+  proyecto, con un mecanismo de renovación (los canales de Google vencen y no se pueden renovar
+  in-place, solo cerrar y volver a abrir). Alcance acotado a Tasks únicamente (Time Off queda
+  unidireccional — al sincronizar a todo el equipo, no hay una respuesta limpia a quién puede
+  editarlo de vuelta) y a notificaciones push de Google en vez de un cron de polling (elegido por
+  Alejandro explícitamente, pese a ser la opción más compleja). Construido: modelo
+  `GoogleCalendarWatchChannel` (uno por usuario conectado), `googleCalendarWatchService.ts` (abrir/
+  cerrar canal, procesar el diff entrante vía `events.list(syncToken)`, aplicar cambios con
+  `prisma.task.update` directo para no re-disparar el sync de salida sobre el mismo cambio y crear
+  un loop), ruta nueva `POST /api/integrations/google-calendar/webhook` (verificada por
+  `channelToken`, no por firma — Google no firma el body de sus notificaciones), y un segundo cron
+  diario (`/api/internal/google-calendar-channels/renew`) que renueva canales por vencer. Borrar el
+  evento en Google limpia la fecha de la Task pero no la marca completada ni la borra — mismo
+  criterio de "ocultar, no destruir" que ya se usó para las tareas completadas. **No puede probarse
+  contra `localhost`** (Google no puede llegarle a una máquina local) — solo se verificó que las
+  rutas nuevas no rompen nada corriendo local; falta la prueba real de punta a punta contra
+  `staging`, ver `Tareas-QA.md` QA-20.
+
 ---
 
 ## Pendientes explícitos de agosto

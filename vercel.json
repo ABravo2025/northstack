@@ -8,6 +8,7 @@
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "crons": [
-    { "path": "/api/internal/plan-transitions/run", "schedule": "0 6 * * *" }
+    { "path": "/api/internal/plan-transitions/run", "schedule": "0 6 * * *" },
+    { "path": "/api/internal/google-calendar-channels/renew", "schedule": "0 7 * * *" }
   ]
 }

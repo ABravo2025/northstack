@@ -864,6 +864,46 @@ tenant (no solo uno), y que el backfill al conectar un usuario nuevo traiga el T
 
 ---
 
+## QA-20 — Sync inverso Google → Northstack para Tasks (2026-08-23, en `staging`, pendiente de verificación real)
+
+**Contexto:** pedido explícito de Alejandro tras probar el sync unidireccional — si edita el evento
+de una Task directamente en Google Calendar, el cambio tiene que reflejarse en la Task. Alcance
+acotado a propósito a Tasks (Time Off queda unidireccional, ver QA-19: al ser de todo el equipo no
+hay una respuesta limpia a "quién puede editarlo de vuelta"). Mecanismo elegido por Alejandro:
+notificaciones push de Google (no un cron de polling), pese a ser la opción más compleja de las
+dos — más detalle de por qué en `docs/general/database-schema.md` grupo 9 y en el comentario largo
+al principio de `src/modules/integrations/googleCalendarWatchService.ts`.
+
+**No pudo verificarse de punta a punta en esta ronda**: las notificaciones push de Google no pueden
+llegar a `localhost` bajo ningún concepto, así que esta pieza solo se puede probar contra
+`staging`/producción, con un ida y vuelta más lento (editar en Google real, esperar, revisar en la
+plataforma) que las piezas anteriores. Se verificó únicamente que las rutas nuevas no rompen nada:
+`POST /api/integrations/google-calendar/webhook` responde 200 tanto sin headers como con headers
+falsos que no matchean ningún canal existente (rechazo silencioso, sin crashear), y
+`GET /api/internal/google-calendar-channels/renew` corre limpio localmente (0 canales para renovar,
+esperado ya que la base local es producción y la conexión real de prueba vive en `staging`).
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Conectar (o reconectar) una cuenta real de Google | Se crea una fila en `GoogleCalendarWatchChannel` para ese usuario (verificar vía logs de Vercel o una query directa, no hay UI para esto todavía) |
+| 2 | Crear una Task con fecha límite asignada a un usuario conectado | Aparece el evento en su Google Calendar real (comportamiento ya verificado en QA-19, no es nuevo acá) |
+| 3 | Cambiarle la fecha o el título al evento directamente en Google Calendar | Al cabo de unos segundos a un par de minutos (latencia de entrega de Google, no controlable), la Task se actualiza en Northstack con el nuevo `dueDate`/`title` |
+| 4 | Borrar el evento en Google Calendar | La Task pierde su `dueDate` (y `googleCalendarEventId`) y desaparece del calendario del Overview — pero **sigue existiendo y no se marca completada** |
+| 5 | Verificar que no se genera un loop: tras el caso 3, revisar que Northstack no le vuelva a mandar un PATCH innecesario a Google por el mismo cambio | El código usa `prisma.task.update` directo (no `taskService.updateTask`) específicamente para evitar este loop — confirmar en los logs que no hay un ida-y-vuelta infinito |
+| 6 | Editar en Google un evento de Calendar que **no** fue creado por Northstack (no tiene `googleCalendarEventId` trackeado en ninguna Task) | No pasa nada del lado de Northstack — solo se tocan eventos que la plataforma reconoce como propios |
+| 7 | Esperar (o forzar) que un canal esté por vencer y que corra el cron de renovación | El canal viejo se cierra, se abre uno nuevo, y el `syncToken` se conserva (no se pierde el cursor de sincronización) |
+| 8 | Botón "Disconnect" | El canal se cierra en Google y se borra la fila local — no debería seguir recibiendo notificaciones después |
+
+**Severidad:** no evaluable todavía — nada de esto corrió contra un webhook real de Google. Antes
+de dar esta pieza por lista, correr los 8 casos de arriba contra `staging` con una cuenta real.
+
+**Pendiente, no armado en esta ronda:** ningún límite de tamaño de payload si `events.list` trae
+muchos cambios de una vez (paginación implementada pero no probada con volumen real); ningún alerta
+si `renewExpiringWatchChannels` falla repetidamente para un mismo usuario (se loguea, no se
+notifica a nadie).
+
+---
+
 ## Próximas tareas de QA (a definir)
 
 Cuando se construyan los módulos grandes en curso (rediseño de Clients, Payroll), esta tabla de

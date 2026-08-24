@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { api, type Company, type Contact, type Opportunity, type Pipeline } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import Avatar from '../common/Avatar';
@@ -9,11 +9,17 @@ import DetailSidebar from '../layout/DetailSidebar';
 import Field from '../common/Field';
 import RequiredMark from '../common/RequiredMark';
 import OverviewActionsMenu from '../common/OverviewActionsMenu';
+import SearchableSelect from '../common/SearchableSelect';
 import { PlusIcon, TrashIcon, XIcon } from '../common/Icons';
 import { formatMoney } from '../../lib/currencies';
 
 interface CompanyDetailModalProps {
   company: Company;
+  // Full tenant list — used to compute direct children and the parent-company
+  // selector's exclusion set (self + descendants) client-side, same pattern
+  // as companyContacts/companyOpportunities below. Not a new endpoint: the
+  // page already loads this for the table.
+  companies: Company[];
   token: string;
   tenantUsers: any[];
   contacts: Contact[];
@@ -27,10 +33,15 @@ interface CompanyDetailModalProps {
   onChanged: () => void;
   onSaved: (updatedCompany: Company) => void;
   onRequestDelete: () => void;
+  // Swaps which Company this modal shows (used by the Hierarchy section's
+  // parent/children links) — the page owns which company id is "open", this
+  // modal doesn't navigate on its own.
+  onNavigate: (companyId: string) => void;
 }
 
 export default function CompanyDetailModal({
   company,
+  companies,
   token,
   tenantUsers,
   contacts,
@@ -44,6 +55,7 @@ export default function CompanyDetailModal({
   onChanged,
   onSaved,
   onRequestDelete,
+  onNavigate,
 }: CompanyDetailModalProps) {
   const toast = useToast();
   const [addingContact, setAddingContact] = useState(false);
@@ -65,6 +77,41 @@ export default function CompanyDetailModal({
   const companyOpportunities = opportunities.filter((o) => o.companyId === company.id);
   const unlinkedContacts = contacts.filter((c) => !c.companyId);
   const activePipelines = pipelines.filter((p) => p.isActive);
+
+  const directChildCompanies = companies.filter((c) => c.parentCompanyId === company.id);
+
+  // Every descendant (not just direct children) — excluded from the parent
+  // selector below alongside `company.id` itself, so the UI never even offers
+  // a choice the backend's anti-cycle check would reject.
+  const descendantCompanyIds = useMemo(() => {
+    const ids = new Set<string>();
+    const stack = [company.id];
+    while (stack.length > 0) {
+      const currentId = stack.pop()!;
+      for (const candidate of companies) {
+        if (candidate.parentCompanyId === currentId && !ids.has(candidate.id)) {
+          ids.add(candidate.id);
+          stack.push(candidate.id);
+        }
+      }
+    }
+    return ids;
+  }, [companies, company.id]);
+
+  const parentCompanyOptions = [
+    { value: '', label: '— No parent (top-level) —' },
+    ...companies
+      .filter((c) => c.id !== company.id && !descendantCompanyIds.has(c.id))
+      .map((c) => ({ value: c.id, label: c.name })),
+  ];
+
+  const handleParentCompanyChange = async (value: string) => {
+    try {
+      await save({ parentCompanyId: value || null });
+    } catch (error) {
+      toast.error('Failed to update parent company: ' + (error as Error).message);
+    }
+  };
 
   // Two-part update: onSaved patches the row instantly (no round-trip wait —
   // found by the user 2026-07-30), then onChanged still runs a silent
@@ -240,6 +287,50 @@ export default function CompanyDetailModal({
                 />
               </Field>
             </div>
+          </div>
+
+          <div className="field-group">
+            <h4 className="field-group-title">Hierarchy</h4>
+            <div className="field-group-body">
+              <Field label="Parent company" full>
+                <div className="flex items-center gap-1.5">
+                  <div className="min-w-0 flex-1">
+                    <SearchableSelect
+                      value={company.parentCompanyId || ''}
+                      onChange={handleParentCompanyChange}
+                      options={parentCompanyOptions}
+                      placeholder="No parent — top-level company"
+                    />
+                  </div>
+                  {company.parentCompanyId && (
+                    <button
+                      type="button"
+                      className="table-link text-xs whitespace-nowrap"
+                      onClick={() => onNavigate(company.parentCompanyId!)}
+                    >
+                      Open →
+                    </button>
+                  )}
+                </div>
+              </Field>
+            </div>
+            {directChildCompanies.length > 0 && (
+              <div className="overview-field overview-field-full">
+                <div className="min-w-0 flex-1">
+                  <span className="overview-field-label">Associated companies ({directChildCompanies.length})</span>
+                  {directChildCompanies.map((child) => (
+                    <button
+                      key={child.id}
+                      type="button"
+                      className="table-link block text-left text-sm py-0.5"
+                      onClick={() => onNavigate(child.id)}
+                    >
+                      {child.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {customFields.length > 0 && (

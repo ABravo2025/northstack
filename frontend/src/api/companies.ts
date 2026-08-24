@@ -54,7 +54,11 @@ export const companiesApi = {
     return res.json();
   },
 
-  deleteCompany: async (token: string, companyId: string, options?: { deleteLinkedOpportunities?: boolean }): Promise<void> => {
+  deleteCompany: async (
+    token: string,
+    companyId: string,
+    options?: { deleteLinkedOpportunities?: boolean; cascadeToChildCompanies?: boolean },
+  ): Promise<void> => {
     const res = await apiFetch(`${API_BASE_URL}/api/companies/${companyId}`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },

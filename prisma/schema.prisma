@@ -574,6 +574,14 @@ model Company {
   website        String?
   phone          String?
   billingAddress String? // same field the future Payments module will need — not duplicated
+  // Self-referential, one level of parent/subsidiary — anti-cycle validated in
+  // companyService.ts (wouldCreateCompanyHierarchyCycle, same walk-the-chain
+  // pattern as Employee.managerId's wouldCreateManagerCycle). Deleting a
+  // Company always unlinks its direct children (parentCompanyId -> null)
+  // unless the caller opts into cascading the delete — see deleteCompany.
+  parentCompanyId String?
+  parentCompany   Company?                @relation("CompanyHierarchy", fields: [parentCompanyId], references: [id])
+  childCompanies  Company[]               @relation("CompanyHierarchy")
   sizeId         String?
   sizeDefn       FieldCatalogDefinition? @relation(fields: [sizeId], references: [id])
   accountOwnerId String?

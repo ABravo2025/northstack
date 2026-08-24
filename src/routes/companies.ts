@@ -1,5 +1,12 @@
 import { canCreateHr, canManageCustomFields, canViewHr } from '../modules/auth/permissionService.js';
-import { createCompany, deleteCompany, findCompanyById, listCompanies, updateCompany } from '../modules/crm/companyService.js';
+import {
+  createCompany,
+  deleteCompany,
+  findCompanyById,
+  listCompanies,
+  updateCompany,
+  wouldCreateCompanyHierarchyCycle,
+} from '../modules/crm/companyService.js';
 import { findContactById } from '../modules/crm/contactService.js';
 import {
   createCustomFieldValue,
@@ -109,6 +116,17 @@ companiesRouter.patch('/api/companies/:companyId', async (req, res) => {
     }
   }
 
+  if (req.body.parentCompanyId) {
+    const parent = await findCompanyById(req.body.parentCompanyId);
+    if (!parent || parent.tenantId !== user.tenantId) {
+      return res.status(400).json({ error: 'Parent company not found' });
+    }
+    const wouldCycle = await wouldCreateCompanyHierarchyCycle(req.params.companyId, req.body.parentCompanyId);
+    if (wouldCycle) {
+      return res.status(400).json({ error: 'This would create a company hierarchy cycle' });
+    }
+  }
+
   const updated = await updateCompany(req.params.companyId, req.body);
   return res.json(updated);
 });
@@ -130,6 +148,7 @@ companiesRouter.delete('/api/companies/:companyId', async (req, res) => {
 
   const result = await deleteCompany(req.params.companyId, {
     deleteLinkedOpportunities: req.body?.deleteLinkedOpportunities === true,
+    cascadeToChildCompanies: req.body?.cascadeToChildCompanies === true,
   });
   if (!result.success) {
     return res.status(400).json({ error: result.error });

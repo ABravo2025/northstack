@@ -24,25 +24,27 @@ Cuatro focos, en orden de dependencia (1 y 2 son independientes entre sí; 3 dep
 
 ---
 
-## 1. Jerarquía de Company
+## 1. Jerarquía de Company — completo (2026-08-24, en `staging`)
 
 ### 1.1 Schema
 
-- [ ] Agregar `Company.parentCompanyId` — FK nullable, autoreferencial a `Company`, mismo tenant.
-- [ ] Migración aditiva (push simple, sin backfill — todas las Companies existentes quedan con `parentCompanyId: null`).
+- [x] **Construido**: `Company.parentCompanyId` — FK nullable, autoreferencial a `Company` (relación `CompanyHierarchy`). Push aditivo, sin backfill.
 
 ### 1.2 Backend
 
-- [ ] Validación anti-ciclo al setear `parentCompanyId`: reusar el mismo patrón que `wouldCreateManagerCycle` (`employeeService.ts`) — caminar la cadena de ancestros del padre propuesto; si el `id` de la Company que se está editando aparece en esa cadena, rechazar con 400.
-- [x] **Resuelto 2026-08-24**: borrar o cambiar el status de una Company (ej. a "Churned"/offboarding) **no afecta a sus hijas** — el status/existencia de cada Company es independiente de su matriz, mismo criterio que ya usa `deleteCompany` con sus Contacts (desvincula, nunca borra en cascada). Al borrar una Company con hijas, `parentCompanyId` de las hijas pasa a `null` (quedan como raíz, no huérfanas de un padre que ya no existe) — mismo patrón que el desvinculado de Contacts. El `ConfirmDialog` de borrar/cambiar status de una Company con hijas activas suma un checkbox opcional ("¿Aplicar lo mismo a las N empresas asociadas?", sin marcar por default) — si se tilda, aplica la misma acción (borrado o el mismo cambio de status) a cada hija; si no, las hijas quedan intactas salvo por el `parentCompanyId: null`.
-- [ ] `companyService.ts`: al traer el detalle de una Company, incluir su lista de hijas directas (no todo el árbol completo, solo un nivel — el frontend puede pedir más si navega).
+- [x] **Construido**: `wouldCreateCompanyHierarchyCycle` en `companyService.ts` — mismo patrón de `wouldCreateManagerCycle` (`employeeService.ts`), llamado desde `routes/companies.ts`'s PATCH antes de aceptar un `parentCompanyId` nuevo (self-reference y ciclos de N pasos, ambos 400).
+- [x] **Construido**: borrar una Company **no afecta a sus hijas por default** — `deleteCompany` las desvincula (`parentCompanyId: null`), mismo criterio que ya usa con Contacts. Nuevo flag opcional `cascadeToChildCompanies` (recursivo — borra todo el subárbol, no solo un nivel) para cuando sí se quiere aplicar la misma acción a las hijas.
+- [x] **Construido**: `COMPANY_INCLUDE` suma `parentCompany: {id, name}` — el frontend ya trae la lista completa de Companies del tenant (mismo patrón que Contacts/Opportunities de una Company), así que las hijas directas se calculan client-side filtrando por `parentCompanyId`, sin un endpoint nuevo.
 
 ### 1.3 Frontend
 
-- [ ] `CompaniesPage.tsx` / detalle de Company: sección "Jerarquía" mostrando `parentCompanyId` (si tiene, con link) y lista de Companies hijas directas (con link cada una).
-- [ ] Selector de `parentCompanyId` al editar una Company: autocomplete sobre las Companies del tenant, excluyendo a la propia Company y a sus descendientes (para no ni siquiera ofrecer una opción que el backend va a rechazar).
-- [ ] Sin límite de profundidad en el modelo, pero considerar un tope visual de indentación en la UI del árbol (ej. colapsar después de 3-4 niveles) — nota de implementación, no bloqueante.
-- [ ] `ConfirmDialog` de borrar/cambiar status de una Company con Companies hijas: checkbox opcional "Apply the same to N associated companies" (ver 1.2 — resuelto 2026-08-24).
+- [x] **Construido**: `CompanyDetailModal.tsx` gana una sección "Hierarchy" — selector de `parentCompanyId` (`SearchableSelect`, excluye a la propia Company y a sus descendientes calculados client-side) + link "Open →" al padre si tiene uno, y una lista de Companies hijas directas, cada una clickeable (`onNavigate`, nueva prop — cambia qué Company muestra el modal sin pasar por la tabla).
+- [x] **Construido**: `ConfirmDialog` extendido con una prop `checkboxes` (array) para más de un opt-in en el mismo diálogo — usado acá cuando una Company a borrar tiene tanto Opportunities vinculadas como Companies hijas; los demás call sites (un solo checkbox) no se tocaron, quedan con la prop singular de siempre.
+- [ ] Sin límite de profundidad en el modelo — sin tope visual de indentación todavía (no hay una vista de árbol completo, solo un nivel a la vez vía navegación); no bloqueante, nota para si se retoma.
+
+**Verificado** con un script de punta a punta contra `staging` real (2 tenants de prueba, creados y borrados vía Prisma): parent seteado con include correcto, ciclo de 2 pasos rechazado, self-reference rechazado, `parentCompanyId` de otro tenant rechazado, borrado sin cascada desvincula, borrado con cascada se lleva a la hija. `npm run build`/`npm test` (91/91) backend y build frontend en verde.
+
+**Corrección 2026-08-24 (verificado contra el código real de `CompanyDetailModal.tsx`, no solo contra la spec)**: el ítem "tab de Contacts en el detalle de Company", que esta sección y el §3.4 original marcaban como pendiente, **ya existe** — la sección "Contacts (N)" con listar/vincular existente/crear nuevo/desvincular ya estaba construida (parte del rediseño de Clients original, 2026-07-27/30). No hubo nada que construir ahí; la Unidad 2 quedó más chica de lo planeado.
 
 ### 1.4 Explícitamente fuera de alcance de esta unidad
 
@@ -108,8 +110,8 @@ Disparador: una Opportunity de un pipeline `type: 'lead'` entra a un stage con `
 ### 3.4 UI de creación de Opportunity contextual — la mayor parte ya existe
 
 - [x] **Ya construido**: el flujo completo desde `ContactDetailModal.tsx` (elegir Pipeline, gate de Company, placeholder inline) — no es una unidad nueva, es lo que ya está en 3.1-3.2.
-- [ ] **Pendiente real, esto sí es nuevo**: el mismo flujo simétrico desde `CompanyDetailModal.tsx` — botón "Agregar Opportunity" que solo lista pipelines `type: 'account'`, con la Company implícita (sin buscador) y un selector opcional de Contacts ya vinculados a esa Company (autocomplete acotado a `Contact.companyId === company.id`).
-- [ ] **Requisito de UI que sigue pendiente**: el detalle de Company necesita una sección/tab listando los Contacts asociados (`companyId` FK ya existe, falta la vista) — no estaba construido como vista propia hasta ahora.
+- [x] **Corregido 2026-08-24 (verificado contra el código)**: el "requisito de UI" de la sección Contacts en el detalle de Company que este punto marcaba como pendiente ya existe — ver §1.3.
+- [ ] **Pendiente real, único ítem que queda de esta unidad**: `CompanyDetailModal.tsx`'s "Agregar Opportunity" (`handleCreateOpportunity`/`openAddOpportunity`) hoy lista **todos** los pipelines activos (`activePipelines`, sin filtrar), no solo los `type: 'account'` — falta acotar el selector y agregar el selector opcional de Contacts ya vinculados a esa Company (autocomplete acotado a `Contact.companyId === company.id`).
 - [ ] **Modal genérico** (desde el módulo Opportunities, sin partir de un perfil): elegir Pipeline primero (cualquier `type`); según el `type` elegido, mostrar dinámicamente el buscador de Company (`account`, ya existente) o el flujo de Contact + nombre-de-Company-placeholder (`lead`, mismo patrón que `ContactDetailModal.tsx`).
 
 ### 3.5 Forecast ponderado
@@ -204,7 +206,7 @@ Notification                     (tabla nueva — ver 3.9 para todos los campos)
 Pensado para minimizar dependencias cruzadas — cada unidad build → test → verificación real → commit → push a `staging`, igual que el rediseño original. **Reordenado 2026-08-24**, dos veces el mismo día: primero para sacar valor antes y separar automatizaciones en dos entregables; después, tras encontrar que `Pipeline.type` ya existía con un diseño distinto (placeholder Company en vez de `companyId` nullable — ver corrección al inicio de §3), el punto 1 se achicó bastante — ya no es un cambio de schema greenfield, es blindar/cerrar huecos de algo que ya está construido:
 
 1. **Cerrar los huecos de `Pipeline.type`/gate de Company** (3.1, 3.2) — inmutabilidad de `type` post-creación, `type` obligatorio en el body de creación, el gate de Company replicado en el backend (`opportunityService.createOpportunity`), `Company.isPlaceholder`. Es la base de la que depende todo lo demás de la sección 3, pero mucho más chica que la Unidad 1 original.
-2. **Company hierarchy** (sección 1) **+ tab de Contacts en el detalle de Company** — ambos independientes de Pipeline, se hacen en paralelo con el punto 1. El tab de Contacts (`Contact.companyId` ya existe hoy) estaba enterrado en 3.4 sin necesidad.
+2. **Company hierarchy** (sección 1) — ✅ completo. El tab de Contacts que este punto también contemplaba resultó ya estar construido (corrección 2026-08-24, ver §1.3) — no hizo falta nada ahí.
 3. **isPrimary único + multi-threading indicador + soft-delete de Contact/Opportunity** (2.1, 2.2, 2.3) — independiente, rápido.
 4. **Cambio de Pipeline con el gate de Company real, más el disparador de cierre de lead** (3.6 primero — es el mecanismo genérico —, después 3.3, que solo lo invoca al ganar) — depende del punto 1.
 5. **UI contextual de creación de Opportunity desde Company** (3.4, sin el tab de Contacts que ya se movió al punto 2) — depende de los puntos 1 y 4.

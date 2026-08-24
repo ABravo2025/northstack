@@ -975,6 +975,37 @@ cualquier gap de validación server-side. El resto es media/baja salvo regresió
 
 ---
 
+## QA-22 — Sales v2, Unidad 2: jerarquía de Company (2026-08-24, en `staging`)
+
+**Por qué existe esta tarea:** `Company.parentCompanyId` nuevo (matriz/sucursal, un nivel,
+autoreferencial), con anti-ciclo, borrado que desvincula por default (o cascadea si se pide), y una
+sección "Hierarchy" nueva en el detalle de Company. De paso se confirmó que el tab de Contacts en el
+detalle de Company (que la spec original marcaba como pendiente) ya existía — nada que verificar ahí,
+sigue funcionando igual que siempre. Verificado con un script contra `staging` real (2 tenants de
+prueba): parent seteado con nombre correcto, ciclo de 2 pasos rechazado, self-reference rechazado,
+Company de otro tenant rechazada como parent, delete sin cascada desvincula, delete con cascada borra
+la hija. `npm run build`/`npm test` (91/91) backend y build frontend en verde.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | `/companies`, abrir el detalle de cualquier Company | Nueva sección "Hierarchy" — selector "Parent company" (buscador tipo autocomplete) |
+| 2 | Elegir otra Company del tenant como parent | Se guarda al elegir (autosave, sin botón Save); si la Company elegida tiene un padre a su vez, no aparece en la lista de opciones para ninguna de sus propias descendientes |
+| 3 | Con un parent ya asignado | Aparece un link "Open →" al lado del selector — click navega al detalle de esa Company (cierra este modal, abre el otro) |
+| 4 | Una Company con hijas asignadas | Sección "Associated companies (N)" debajo del selector, cada nombre es clickeable y navega al detalle de esa hija |
+| 5 | Intentar armar un ciclo (A es padre de B, después intentar que B sea padre de A) desde la UI | La Company que crearía el ciclo no debería ni aparecer como opción en el selector (excluida client-side); si se fuerza por API, 400 |
+| 6 | Borrar una Company que tiene hijas asignadas, **sin** tildar el checkbox nuevo | Las hijas quedan intactas, solo pierden el parent (visible en su propia sección Hierarchy después) |
+| 7 | Borrar una Company con hijas **y** Opportunities vinculadas | El `ConfirmDialog` muestra **dos** checkboxes independientes (uno por cada cascada) — tildar uno no afecta al otro |
+| 8 | Borrar con el checkbox de hijas tildado | Las hijas (y las hijas de las hijas, si las tuvieran) se borran también, no solo se desvinculan |
+| 9 | Regresión: cualquier otro `ConfirmDialog` de un solo checkbox en la app (ej. borrar un Employee con Opportunities, archivar un Pipeline) | Sigue viéndose y funcionando igual que siempre — la extensión de `ConfirmDialog` es aditiva, no debería haber cambiado nada visual en los casos de un solo checkbox |
+| 10 | Detalle de cualquier Company (regresión) | La sección "Contacts (N)" sigue funcionando exactamente igual que antes — no se tocó |
+
+**Severidad:** el caso 5 (ciclo) es alta si se logra crear de verdad — dejaría el árbol de
+jerarquía en un estado irrecuperable por la UI normal (loop infinito si algo intentara caminar la
+cadena). El caso 9 (regresión de ConfirmDialog) es alta si algo rompió — es un componente compartido
+por casi toda la app.
+
+---
+
 ## Próximas tareas de QA (a definir)
 
 Cuando se construyan los módulos grandes en curso (rediseño de Clients, Payroll), esta tabla de

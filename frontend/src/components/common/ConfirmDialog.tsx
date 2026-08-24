@@ -13,6 +13,14 @@ interface ConfirmDialogProps {
   checkboxLabel?: string;
   checkboxChecked?: boolean;
   onCheckboxChange?: (checked: boolean) => void;
+  /**
+   * For more than one independent opt-in cascade in the same dialog (e.g.
+   * deleting a Company that has both linked Opportunities and child
+   * Companies) — takes priority over the single checkboxLabel/Checked/
+   * onCheckboxChange trio above when provided, which stays untouched for
+   * every existing single-checkbox call site.
+   */
+  checkboxes?: { label: string; checked: boolean; onChange: (checked: boolean) => void }[];
   onConfirm: () => void;
   onCancel: () => void;
 }
@@ -27,6 +35,7 @@ export default function ConfirmDialog({
   checkboxLabel,
   checkboxChecked = false,
   onCheckboxChange,
+  checkboxes,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -40,16 +49,23 @@ export default function ConfirmDialog({
           {title}
         </h3>
         <p className="confirm-dialog-message">{message}</p>
-        {checkboxLabel && (
-          <label className="flex items-center gap-2 text-sm mb-2">
-            <input
-              type="checkbox"
-              checked={checkboxChecked}
-              onChange={(e) => onCheckboxChange?.(e.target.checked)}
-            />
-            {checkboxLabel}
-          </label>
-        )}
+        {checkboxes
+          ? checkboxes.map((cb) => (
+              <label key={cb.label} className="flex items-center gap-2 text-sm mb-2">
+                <input type="checkbox" checked={cb.checked} onChange={(e) => cb.onChange(e.target.checked)} />
+                {cb.label}
+              </label>
+            ))
+          : checkboxLabel && (
+              <label className="flex items-center gap-2 text-sm mb-2">
+                <input
+                  type="checkbox"
+                  checked={checkboxChecked}
+                  onChange={(e) => onCheckboxChange?.(e.target.checked)}
+                />
+                {checkboxLabel}
+              </label>
+            )}
         {confirmText && (
           <div className="form-group">
             <label htmlFor="confirm-dialog-type-input" className="sr-only">

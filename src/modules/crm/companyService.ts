@@ -41,13 +41,47 @@ export interface UpdateCompanyInput {
   billingAddress?: string | null;
   sizeId?: string | null;
   accountOwnerId?: string | null;
+  parentCompanyId?: string | null;
 }
 
 const COMPANY_INCLUDE = {
   statusDefn: true,
   accountOwner: { select: { id: true, firstName: true, lastName: true } },
   sizeDefn: true,
+  parentCompany: { select: { id: true, name: true } },
 } satisfies Prisma.CompanyInclude;
+
+// Same walk-the-chain shape as employeeService.ts's wouldCreateManagerCycle,
+// applied to Company.parentCompanyId instead of Employee.managerId. The
+// caller (routes/companies.ts) is responsible for confirming proposedParentId
+// belongs to the same tenant before calling this — this function only walks
+// the chain, it doesn't re-check tenant ownership at each hop.
+export async function wouldCreateCompanyHierarchyCycle(companyId: string, proposedParentId: string): Promise<boolean> {
+  if (companyId === proposedParentId) {
+    return true;
+  }
+
+  let currentId: string | null = proposedParentId;
+  const visited = new Set<string>();
+
+  while (currentId) {
+    if (currentId === companyId) {
+      return true;
+    }
+    if (visited.has(currentId)) {
+      return false;
+    }
+    visited.add(currentId);
+
+    const parent: { parentCompanyId: string | null } | null = await prisma.company.findUnique({
+      where: { id: currentId },
+      select: { parentCompanyId: true },
+    });
+    currentId = parent?.parentCompanyId ?? null;
+  }
+
+  return false;
+}
 
 export async function createCompany(input: CreateCompanyInput): Promise<Company> {
   const statusId = input.statusId ?? (await getDefaultStatusId(input.tenantId, 'company'));
@@ -124,6 +158,7 @@ export async function updateCompany(id: string, input: UpdateCompanyInput): Prom
   if (input.billingAddress !== undefined) data.billingAddress = input.billingAddress;
   if (input.sizeId !== undefined) data.sizeId = input.sizeId;
   if (input.accountOwnerId !== undefined) data.accountOwnerId = input.accountOwnerId;
+  if (input.parentCompanyId !== undefined) data.parentCompanyId = input.parentCompanyId;
 
   return prisma.company.update({
     where: { id },
@@ -145,6 +180,13 @@ export interface DeleteCompanyOptions {
   // (companyId -> null), never deleted, so no opt-in is needed for them —
   // deleting a Company should never take a Contact down with it.
   deleteLinkedOpportunities?: boolean;
+  // Child companies (Company.parentCompanyId) default to the same
+  // unlink-never-delete treatment as Contacts — a parent's fate is
+  // independent of its children's (docs/tareas/specredisenosalesv2.md §1.2).
+  // Opt-in cascade deletes the whole subtree instead: each direct child is
+  // deleted the same way (recursively), carrying deleteLinkedOpportunities
+  // along so a child with Opportunities doesn't dead-end mid-cascade.
+  cascadeToChildCompanies?: boolean;
 }
 
 export async function deleteCompany(id: string, options: DeleteCompanyOptions = {}): Promise<DeleteCompanyResult> {
@@ -158,6 +200,18 @@ export async function deleteCompany(id: string, options: DeleteCompanyOptions = 
     for (const opportunity of opportunities) {
       await deleteOpportunity(opportunity.id);
     }
+  }
+
+  if (options.cascadeToChildCompanies) {
+    const children = await prisma.company.findMany({ where: { parentCompanyId: id }, select: { id: true } });
+    for (const child of children) {
+      const childResult = await deleteCompany(child.id, options);
+      if (!childResult.success) {
+        return childResult;
+      }
+    }
+  } else {
+    await prisma.company.updateMany({ where: { parentCompanyId: id }, data: { parentCompanyId: null } });
   }
 
   await prisma.$transaction([

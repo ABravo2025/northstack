@@ -70,6 +70,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
   const [viewingCompanyId, setViewingCompanyId] = useState<string | null>(null);
   const [deletingCompany, setDeletingCompany] = useState<Company | null>(null);
   const [deleteLinkedOpportunities, setDeleteLinkedOpportunities] = useState(false);
+  const [cascadeToChildCompanies, setCascadeToChildCompanies] = useState(false);
   const tableWrapRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -353,15 +354,17 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
   const handleDeleteCompany = async () => {
     if (!deletingCompany) return;
     try {
-      await api.deleteCompany(token, deletingCompany.id, { deleteLinkedOpportunities });
+      await api.deleteCompany(token, deletingCompany.id, { deleteLinkedOpportunities, cascadeToChildCompanies });
       toast.success(`${deletingCompany.name} deleted.`);
       setDeletingCompany(null);
       setDeleteLinkedOpportunities(false);
+      setCascadeToChildCompanies(false);
       refreshAssociatedData();
     } catch (error) {
       toast.error('Failed to delete company: ' + (error as Error).message);
       setDeletingCompany(null);
       setDeleteLinkedOpportunities(false);
+      setCascadeToChildCompanies(false);
     }
   };
 
@@ -690,6 +693,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
       {deletingCompany && (() => {
         const linkedContacts = contacts.filter((c) => c.companyId === deletingCompany.id);
         const linkedOpportunities = opportunities.filter((o) => o.companyId === deletingCompany.id);
+        const childCompanies = companies.filter((c) => c.parentCompanyId === deletingCompany.id);
         const messageParts = [`Are you sure you want to delete ${deletingCompany.name}? This can't be undone.`];
         if (linkedContacts.length > 0) {
           messageParts.push(
@@ -701,23 +705,35 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
             `${linkedOpportunities.length} opportunity(ies) (${linkedOpportunities.map((o) => o.name).join(', ')}) can't exist without a company and will be deleted too.`,
           );
         }
+        if (childCompanies.length > 0) {
+          messageParts.push(
+            `${childCompanies.length} associated compan${childCompanies.length === 1 ? 'y' : 'ies'} (${childCompanies.map((c) => c.name).join(', ')}) will just lose this parent by default — their own status/existence isn't affected.`,
+          );
+        }
+        const checkboxes = [
+          linkedOpportunities.length > 0 && {
+            label: `Also delete ${linkedOpportunities.length} linked opportunity(ies)`,
+            checked: deleteLinkedOpportunities,
+            onChange: setDeleteLinkedOpportunities,
+          },
+          childCompanies.length > 0 && {
+            label: `Apply the same delete to ${childCompanies.length} associated compan${childCompanies.length === 1 ? 'y' : 'ies'}`,
+            checked: cascadeToChildCompanies,
+            onChange: setCascadeToChildCompanies,
+          },
+        ].filter(Boolean) as { label: string; checked: boolean; onChange: (checked: boolean) => void }[];
         return (
           <ConfirmDialog
             title="Delete company"
             message={messageParts.join(' ')}
             confirmLabel="Delete"
             confirmDisabled={linkedOpportunities.length > 0 && !deleteLinkedOpportunities}
-            checkboxLabel={
-              linkedOpportunities.length > 0
-                ? `Also delete ${linkedOpportunities.length} linked opportunity(ies)`
-                : undefined
-            }
-            checkboxChecked={deleteLinkedOpportunities}
-            onCheckboxChange={setDeleteLinkedOpportunities}
+            checkboxes={checkboxes.length > 0 ? checkboxes : undefined}
             onConfirm={handleDeleteCompany}
             onCancel={() => {
               setDeletingCompany(null);
               setDeleteLinkedOpportunities(false);
+              setCascadeToChildCompanies(false);
             }}
           />
         );
@@ -907,6 +923,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
           return (
             <CompanyDetailModal
               company={viewingCompany}
+              companies={companies}
               token={token}
               tenantUsers={tenantUsers}
               contacts={contacts}
@@ -916,6 +933,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
               companySizes={companySizes}
               tenantCurrency={tenantCurrency}
               currentUserId={user.id}
+              onNavigate={(companyId) => setViewingCompanyId(companyId)}
               onClose={() => setViewingCompanyId(null)}
               onChanged={refreshAssociatedData}
               onSaved={patchCompanyInList}

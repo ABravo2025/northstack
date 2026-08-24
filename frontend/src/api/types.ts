@@ -120,6 +120,8 @@ export interface Company {
   sizeDefn?: { id: string; name: string } | null;
   accountOwnerId: string | null;
   accountOwner?: { id: string; firstName: string; lastName: string } | null;
+  parentCompanyId: string | null;
+  parentCompany?: { id: string; name: string } | null;
   statusId: string;
   statusDefn?: { id: string; name: string; color: string | null };
   // True only for a Company created inline off a `lead`-type Pipeline

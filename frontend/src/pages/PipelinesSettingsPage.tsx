@@ -35,6 +35,11 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [newStageName, setNewStageName] = useState<Record<string, string>>({});
+  // Local draft while editing a stage's win probability — committed onBlur
+  // (docs/tareas/specredisenosalesv2.md §3.5), same "commit on blur, not
+  // every keystroke" idiom as pipeline rename above, keyed by stage.id so
+  // multiple stages can be mid-edit independently.
+  const [probabilityDrafts, setProbabilityDrafts] = useState<Record<string, string>>({});
   const [archivingPipeline, setArchivingPipeline] = useState<Pipeline | null>(null);
   const [archivingSaving, setArchivingSaving] = useState(false);
   const [reactivatingPipeline, setReactivatingPipeline] = useState<Pipeline | null>(null);
@@ -208,6 +213,27 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
     }
   };
 
+  const getProbabilityDraft = (stage: PipelineStage): string =>
+    probabilityDrafts[stage.id] !== undefined ? probabilityDrafts[stage.id] : String(stage.probability);
+
+  const handleStageProbabilityBlur = async (pipeline: Pipeline, stage: PipelineStage) => {
+    const raw = probabilityDrafts[stage.id];
+    setProbabilityDrafts((prev) => {
+      const next = { ...prev };
+      delete next[stage.id];
+      return next;
+    });
+    if (raw === undefined) return;
+    const parsed = Number.parseInt(raw, 10);
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100 || parsed === stage.probability) return;
+    try {
+      await api.updatePipelineStage(token, pipeline.id, stage.id, { probability: parsed });
+      loadPipelines();
+    } catch (error) {
+      toast.error('Failed to update probability: ' + (error as Error).message);
+    }
+  };
+
   const toggleArchiveStage = async (pipeline: Pipeline, stage: PipelineStage) => {
     try {
       await api.updatePipelineStage(token, pipeline.id, stage.id, { isActive: !stage.isActive });
@@ -330,6 +356,27 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
                       </option>
                     ))}
                   </select>
+                  {stage.outcome === 'open' ? (
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      className="select-compact"
+                      style={{ width: 56 }}
+                      value={getProbabilityDraft(stage)}
+                      onChange={(e) => setProbabilityDrafts({ ...probabilityDrafts, [stage.id]: e.target.value })}
+                      onBlur={() => handleStageProbabilityBlur(pipeline, stage)}
+                      title="Win probability (%) — used for the weighted pipeline forecast"
+                    />
+                  ) : (
+                    <span
+                      className="text-xs text-ink-faint"
+                      style={{ width: 56, textAlign: 'center' }}
+                      title="Forced — Won is always 100%, Lost is always 0%"
+                    >
+                      {stage.probability}%
+                    </span>
+                  )}
                   <button type="button" className="btn-secondary" onClick={() => toggleArchiveStage(pipeline, stage)}>
                     {stage.isActive ? 'Archive' : 'Reactivate'}
                   </button>

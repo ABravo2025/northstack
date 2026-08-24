@@ -14,6 +14,12 @@ import { createAsyncRouter } from '../lib/asyncRouter.js';
 const VALID_OUTCOMES = ['open', 'won', 'lost'];
 const VALID_PIPELINE_TYPES = ['lead', 'account'];
 
+// Shared by the stage POST/PATCH handlers — `undefined` (not provided) is
+// always valid, since resolveProbability's own default/forcing applies then.
+function isValidProbability(value: unknown): boolean {
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 100;
+}
+
 export const pipelinesRouter = createAsyncRouter();
 
 // Read is open to any authenticated tenant member (same as status-definitions/
@@ -107,6 +113,10 @@ pipelinesRouter.post('/api/pipelines/:pipelineId/stages', async (req, res) => {
     return res.status(400).json({ error: "outcome must be 'open', 'won', or 'lost'" });
   }
 
+  if (req.body.probability !== undefined && !isValidProbability(req.body.probability)) {
+    return res.status(400).json({ error: 'probability must be an integer between 0 and 100' });
+  }
+
   const stage = await createPipelineStage({
     tenantId: user.tenantId!,
     pipelineId: req.params.pipelineId,
@@ -114,6 +124,7 @@ pipelinesRouter.post('/api/pipelines/:pipelineId/stages', async (req, res) => {
     color: req.body.color,
     order: req.body.order,
     outcome: req.body.outcome,
+    probability: req.body.probability,
   });
 
   return res.status(201).json(stage);
@@ -138,11 +149,16 @@ pipelinesRouter.patch('/api/pipelines/:pipelineId/stages/:stageId', async (req, 
     return res.status(400).json({ error: "outcome must be 'open', 'won', or 'lost'" });
   }
 
+  if (req.body.probability !== undefined && !isValidProbability(req.body.probability)) {
+    return res.status(400).json({ error: 'probability must be an integer between 0 and 100' });
+  }
+
   const result = await updatePipelineStage(req.params.stageId, user.tenantId!, {
     name: req.body.name,
     color: req.body.color,
     order: req.body.order,
     outcome: req.body.outcome,
+    probability: req.body.probability,
     isActive: req.body.isActive,
   });
 

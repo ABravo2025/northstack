@@ -659,6 +659,16 @@ model PipelineStageDefinition {
   color         String?
   order         Int                       @default(0)
   outcome       PipelineStageOutcome      @default(open)
+  // 0-100, weighted-forecast input (docs/tareas/specredisenosalesv2.md §3.5).
+  // Forced by the backend (never trusts a client-supplied value) to 100 for
+  // `won` and 0 for `lost` — only `open` stages take a tenant-editable value.
+  // Default of 50 applies to any ad-hoc single-stage add (createPipelineStage
+  // has no way to know the eventual N of a "batch" the way the tenant-
+  // registration seed does — see seedDefaultPipelines's own 10%-80%
+  // interpolation, which is the one place N is genuinely known upfront).
+  // 100% editable after creation either way, so the default's precision
+  // isn't critical.
+  probability   Int                       @default(50)
   isActive      Boolean                   @default(true)
   createdAt     DateTime                  @default(now())
   opportunities Opportunity[]
@@ -684,7 +694,17 @@ model Opportunity {
   ownerId            String
   owner              User                      @relation(fields: [ownerId], references: [id])
   lossReasonId       String? // required at the application layer when stage.outcome === 'lost' — not enforced at the DB level
-  lossReason         FieldCatalogDefinition?   @relation(fields: [lossReasonId], references: [id])
+  lossReason         FieldCatalogDefinition?   @relation("OpportunityLossReason", fields: [lossReasonId], references: [id])
+  // Symmetric to lossReasonId (docs/tareas/specredisenosalesv2.md §3.7) —
+  // required at the application layer when stage.outcome === 'won'. Needs its
+  // own explicit relation name since this is now a second FK from Opportunity
+  // to FieldCatalogDefinition (Prisma requires disambiguating when more than
+  // one relation connects the same two models) — purely a Prisma-client-level
+  // rename for the pre-existing lossReason relation, no DB/migration impact.
+  winReasonId        String?
+  winReason          FieldCatalogDefinition?   @relation("OpportunityWinReason", fields: [winReasonId], references: [id])
+  // Free text, optional, applies to both Won and Lost closes.
+  closeNote          String?
   nextStepDate       DateTime?
   nextStepNote       String?
   // Set false when the sole active Contact linked to this Opportunity gets
@@ -760,6 +780,7 @@ enum CatalogKind {
   jobTitle
   leadSource
   lossReason
+  winReason
   companySize
 }
 
@@ -775,7 +796,8 @@ model FieldCatalogDefinition {
   employeesByDepartment     Employee[]    @relation("EmployeeDepartment")
   employeesByJobTitle       Employee[]    @relation("EmployeeJobTitle")
   contactsByLeadSource      Contact[]
-  opportunitiesByLossReason Opportunity[]
+  opportunitiesByLossReason Opportunity[] @relation("OpportunityLossReason")
+  opportunitiesByWinReason  Opportunity[] @relation("OpportunityWinReason")
   companiesBySize           Company[]
 
   @@index([tenantId, kind])

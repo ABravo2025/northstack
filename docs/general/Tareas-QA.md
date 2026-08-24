@@ -1112,3 +1112,41 @@ rechazaba), no un gate de seguridad nuevo; el caso 9 es el que confirma que no s
 falta de prueba visual en navegador es la mayor incertidumbre de esta unidad — si algo se rompe en el
 renderizado condicional (por ejemplo, un campo que no aparece cuando debería), no quedaría capturado por
 esta verificación y solo se vería al usarlo en la UI real.
+
+## QA-26 — Sales v2, Unidad 6: forecast ponderado + cierre simétrico Won/Lost (2026-08-24, en `staging`)
+
+**Por qué existe esta tarea:** dos piezas independientes del mismo build-order step (spec §3.5 + §3.7).
+(1) `PipelineStageDefinition.probability` (0-100, forzado a 100/won y 0/lost en backend, editable por
+tenant solo para stages `open`) alimenta un cálculo de pipeline value ponderado (`Σ amount ×
+probability/100` sobre deals abiertos) que reemplaza la suma simple en el header de `/opportunities` y en
+el subtotal por stage del Kanban. (2) `winReasonId`/`closeNote` en Opportunity, simétricos a
+`lossReasonId` ya existente — obligatorio a nivel de aplicación al mover a un stage `won`. **Descubrimiento
+importante durante la implementación**: ni `lossReason` ni `leadSource` tenían ninguna UI para que el
+tenant creara nuevas opciones de catálogo — solo se podían leer. Replicar `winReasonId` tal cual iba a
+dejar a todo tenant sin forma de cerrar ningún deal como Won (ver la decisión documentada en
+`specredisenosalesv2.md` §3.7). Se agregó un menú "add option" (reusando `FieldCatalogMenu.tsx`) junto a
+ambos selects en `OpportunityDetailModal.tsx`, arreglando el gap para los dos catálogos. Verificado contra
+`staging` real de punta a punta vía HTTP (seed formula del tenant-registration, ad-hoc stage add, edición
+de probability, gate de winReasonId, gate de lossReason sigue intacto, catálogo de la kind equivocada
+rechazado). `npm run build`/`npm test` (91/91) backend y build frontend en verde. Schema aditivo pusheado
+a staging (`probability` con default, `winReasonId`/`closeNote` nullable, enum `winReason` agregado — sin
+paso destructivo).
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Tenant nuevo, pipelines "Leads"/"Clientes" recién sembrados | Stages `New`=10%, `In Progress`=80%, `Won`=100%, `Lost`=0% |
+| 2 | `/settings` → Pipelines, agregar un stage nuevo `open` a mano ("Add Stage") | Nace con 50% (no hay N conocido de antemano para interpolar) |
+| 3 | Mismo lugar, cambiar el outcome de un stage a `won` o `lost` | El campo de probabilidad deja de ser editable y muestra 100%/0% fijo |
+| 4 | Intentar mandar `probability` fuera de 0-100 directo a la API | 400 |
+| 5 | `/opportunities`, header del pipeline activo | Muestra "Weighted value: ..." — suma ponderada de los deals abiertos, no la suma simple |
+| 6 | Kanban, subtotal de una columna `open` vs. una columna `won`/`lost` | La columna `open` muestra el monto ponderado por la probabilidad del stage; `won`/`lost` muestran el monto real sin ponderar (evita mostrar $0 en Lost) |
+| 7 | Mover una Opportunity a un stage `won` sin elegir Win Reason | Bloqueado — mismo mensaje de error que ya existía para Lost sin Loss Reason |
+| 8 | Confirmar el cierre con Win Reason + Close Note | Se guardan ambos; el Close Note también funciona en un cierre Lost |
+| 9 | `OpportunityDetailModal.tsx`, selects de Loss/Win Reason | Cada uno tiene un menú "..." al lado para agregar una opción nueva sin salir del modal — antes no existía ningún camino para esto |
+| 10 | Regresión: `GET /api/field-catalog?kind=winReason` | 200, no 400 — el bug ya conocido de olvidar actualizar `VALID_CATALOG_KINDS` (documentado en la spec) no se repitió |
+| 11 | Regresión: mover a Lost sin Loss Reason | Sigue bloqueado igual que antes de esta unidad |
+
+**Severidad:** alta en el caso 9 — sin eso, la Unidad 6 completa habría sido inutilizable en producción
+(ningún tenant puede cerrar un deal como Won sin al menos una opción de Win Reason, y no había forma de
+crear una). El caso 6 es media — mostrar $0 en una columna Lost habría sido confuso pero no habría roto
+ningún flujo. El resto son verificaciones de correctitud estándar del gate simétrico.

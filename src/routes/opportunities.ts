@@ -23,13 +23,15 @@ export const opportunitiesRouter = createAsyncRouter();
 // belong to this tenant (directive: validate any id referenced in the body,
 // not just the URL param), the pipeline has to be active (archived pipelines
 // are read-only — "no editables hasta desarchivar"), the stage has to belong
-// to that pipeline, and a `lost`-outcome stage requires a lossReasonId.
+// to that pipeline, and a `lost`-outcome stage requires a lossReasonId (a
+// `won`-outcome stage requires a winReasonId, symmetric — spec §3.7).
 async function validateOpportunityRefs(
   tenantId: string,
   body: any,
   pipelineId: string,
   existingLossReasonId?: string | null,
   existingCompanyId?: string,
+  existingWinReasonId?: string | null,
 ): Promise<{ error: string } | null> {
   const pipeline = await findPipelineById(pipelineId);
   if (!pipeline || pipeline.tenantId !== tenantId) {
@@ -73,6 +75,7 @@ async function validateOpportunityRefs(
   }
 
   const resolvedLossReasonId = body.lossReasonId !== undefined ? body.lossReasonId : existingLossReasonId;
+  const resolvedWinReasonId = body.winReasonId !== undefined ? body.winReasonId : existingWinReasonId;
 
   if (body.stageId !== undefined) {
     const stage = await findPipelineStageById(body.stageId);
@@ -82,12 +85,22 @@ async function validateOpportunityRefs(
     if (stage.outcome === 'lost' && !resolvedLossReasonId) {
       return { error: 'A loss reason is required when moving an Opportunity to a Lost stage' };
     }
+    if (stage.outcome === 'won' && !resolvedWinReasonId) {
+      return { error: 'A win reason is required when moving an Opportunity to a Won stage' };
+    }
   }
 
   if (body.lossReasonId) {
     const lossReason = await findFieldCatalogDefinitionById(body.lossReasonId);
     if (!lossReason || lossReason.tenantId !== tenantId || lossReason.kind !== 'lossReason') {
       return { error: 'Loss reason not found' };
+    }
+  }
+
+  if (body.winReasonId) {
+    const winReason = await findFieldCatalogDefinitionById(body.winReasonId);
+    if (!winReason || winReason.tenantId !== tenantId || winReason.kind !== 'winReason') {
+      return { error: 'Win reason not found' };
     }
   }
 
@@ -177,6 +190,7 @@ opportunitiesRouter.patch('/api/opportunities/:opportunityId', async (req, res) 
     req.body.pipelineId || opportunity.pipelineId,
     opportunity.lossReasonId,
     opportunity.companyId,
+    opportunity.winReasonId,
   );
   if (refError) {
     return res.status(400).json(refError);

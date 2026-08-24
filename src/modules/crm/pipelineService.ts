@@ -15,11 +15,15 @@ const DEFAULT_PIPELINES: { name: string; type: PipelineType }[] = [
   { name: 'Leads', type: 'lead' },
   { name: 'Clientes', type: 'account' },
 ];
-const DEFAULT_STAGES: { name: string; order: number; outcome: PipelineStageOutcome }[] = [
-  { name: 'New', order: 0, outcome: 'open' },
-  { name: 'In Progress', order: 1, outcome: 'open' },
-  { name: 'Won', order: 2, outcome: 'won' },
-  { name: 'Lost', order: 3, outcome: 'lost' },
+const DEFAULT_STAGES: { name: string; order: number; outcome: PipelineStageOutcome; probability: number }[] = [
+  // Weighted-forecast seed formula (docs/tareas/specredisenosalesv2.md §3.5):
+  // for the N `open` stages of a new Pipeline, the first starts at 10%, the
+  // last at 80%, interpolated in between (10 + i × 70/(N-1)) — here N=2, so
+  // that's just the two endpoints directly. `won`/`lost` are always 100/0.
+  { name: 'New', order: 0, outcome: 'open', probability: 10 },
+  { name: 'In Progress', order: 1, outcome: 'open', probability: 80 },
+  { name: 'Won', order: 2, outcome: 'won', probability: 100 },
+  { name: 'Lost', order: 3, outcome: 'lost', probability: 0 },
 ];
 
 // Two createMany calls (not N sequential creates) — this runs inside the
@@ -45,6 +49,7 @@ export async function seedDefaultPipelines(tx: PrismaTx, tenantId: string): Prom
       name: stage.name,
       order: stage.order,
       outcome: stage.outcome,
+      probability: stage.probability,
     })),
   );
   await tx.pipelineStageDefinition.createMany({ data: stages });
@@ -120,6 +125,7 @@ export interface CreatePipelineStageInput {
   color?: string | null;
   order?: number;
   outcome?: PipelineStageOutcome;
+  probability?: number;
 }
 
 export interface UpdatePipelineStageInput {
@@ -127,6 +133,7 @@ export interface UpdatePipelineStageInput {
   color?: string | null;
   order?: number;
   outcome?: PipelineStageOutcome;
+  probability?: number;
   isActive?: boolean;
 }
 
@@ -136,7 +143,20 @@ export interface PipelineStageResult {
   error?: string;
 }
 
+// Forced regardless of what the client sends — `won`/`lost` are always
+// 100/0, never tenant-editable, matching the spec's "forzado en backend, no
+// depende de que el tenant lo configure bien" (docs/tareas/specredisenosalesv2.md
+// §3.5). Only `open` stages take the tenant-supplied value (defaulting to 50
+// — see the `probability` field's own schema comment for why there's no
+// N-based interpolation here, unlike the tenant-registration seed).
+function resolveProbability(outcome: PipelineStageOutcome, requested: number | undefined): number {
+  if (outcome === 'won') return 100;
+  if (outcome === 'lost') return 0;
+  return requested ?? 50;
+}
+
 export async function createPipelineStage(input: CreatePipelineStageInput): Promise<PipelineStageDefinition> {
+  const outcome = input.outcome ?? 'open';
   return prisma.pipelineStageDefinition.create({
     data: {
       tenantId: input.tenantId,
@@ -144,7 +164,8 @@ export async function createPipelineStage(input: CreatePipelineStageInput): Prom
       name: input.name,
       color: input.color ?? null,
       order: input.order ?? 0,
-      outcome: input.outcome ?? 'open',
+      outcome,
+      probability: resolveProbability(outcome, input.probability),
     },
   });
 }
@@ -169,6 +190,9 @@ export async function updatePipelineStage(
   if (input.order !== undefined) data.order = input.order;
   if (input.outcome !== undefined) data.outcome = input.outcome;
   if (input.isActive !== undefined) data.isActive = input.isActive;
+  if (input.outcome !== undefined || input.probability !== undefined) {
+    data.probability = resolveProbability(input.outcome ?? existing.outcome, input.probability);
+  }
 
   const stage = await prisma.pipelineStageDefinition.update({ where: { id }, data });
   return { success: true, stage };

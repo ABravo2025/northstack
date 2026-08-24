@@ -170,6 +170,10 @@ export interface PipelineStage {
   color: string | null;
   order: number;
   outcome: 'open' | 'won' | 'lost';
+  // 0-100, weighted-forecast input (docs/tareas/specredisenosalesv2.md §3.5).
+  // Forced by the backend to 100/0 for won/lost — only meaningfully editable
+  // for `open` stages.
+  probability: number;
   isActive: boolean;
 }
 
@@ -205,6 +209,9 @@ export interface Opportunity {
   ownerId: string;
   owner?: { id: string; firstName: string; lastName: string };
   lossReasonId: string | null;
+  // Symmetric to lossReasonId (docs/tareas/specredisenosalesv2.md §3.7).
+  winReasonId: string | null;
+  closeNote: string | null;
   nextStepDate: string | null;
   nextStepNote: string | null;
   // Set false when this Opportunity loses its sole active linked Contact
@@ -273,7 +280,7 @@ export interface StatusDefinition {
   isActive: boolean;
 }
 
-export type CatalogKind = 'department' | 'jobTitle' | 'leadSource' | 'lossReason' | 'companySize';
+export type CatalogKind = 'department' | 'jobTitle' | 'leadSource' | 'lossReason' | 'winReason' | 'companySize';
 
 export interface FieldCatalogDefinition {
   id: string;

@@ -43,7 +43,7 @@ export const pipelinesApi = {
   createPipelineStage: async (
     token: string,
     pipelineId: string,
-    data: { name: string; color?: string; order?: number; outcome?: 'open' | 'won' | 'lost' },
+    data: { name: string; color?: string; order?: number; outcome?: 'open' | 'won' | 'lost'; probability?: number },
   ): Promise<PipelineStage> => {
     const res = await apiFetch(`${API_BASE_URL}/api/pipelines/${pipelineId}/stages`, {
       method: 'POST',
@@ -58,7 +58,14 @@ export const pipelinesApi = {
     token: string,
     pipelineId: string,
     stageId: string,
-    data: { name?: string; color?: string; order?: number; outcome?: 'open' | 'won' | 'lost'; isActive?: boolean },
+    data: {
+      name?: string;
+      color?: string;
+      order?: number;
+      outcome?: 'open' | 'won' | 'lost';
+      probability?: number;
+      isActive?: boolean;
+    },
   ): Promise<PipelineStage> => {
     const res = await apiFetch(`${API_BASE_URL}/api/pipelines/${pipelineId}/stages/${stageId}`, {
       method: 'PATCH',

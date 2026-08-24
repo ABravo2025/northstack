@@ -120,9 +120,10 @@ Disparador: una Opportunity de un pipeline `type: 'lead'` entra a un stage con `
 
 ### 3.5 Forecast ponderado
 
-- [ ] Schema: `PipelineStageDefinition.probability` — int 0-100, editable por tenant al configurar stages en `/settings` → Pipelines.
+- [x] **Construido — Unidad 6 (2026-08-24)**: Schema `PipelineStageDefinition.probability` — int 0-100, `@default(50)`. Editable por tenant en `/settings` → Pipelines (input numérico junto al selector de outcome, solo para stages `open` — para `won`/`lost` se muestra el valor forzado como texto, no editable).
 - [x] **Resuelto 2026-08-24 — fórmula de seed**: para los stages `outcome: open` de un Pipeline nuevo (N de ellos, en orden), el primero arranca en 10% y el último en 80%, con el resto interpolado en pasos iguales (`10 + i × 70/(N-1)`, redondeado al 5% más cercano; con un solo stage intermedio, 50% liso). `outcome: won` siempre 100%, `outcome: lost` siempre 0% — forzado en backend, no depende de que el tenant lo configure bien. Como es 100% editable después desde `/settings` → Pipelines, la precisión del default no es crítica.
-- [ ] Cálculo de pipeline value: `Σ (amountCents × probability / 100)` sobre Opportunities `outcome: open` — reemplaza la suma simple actual. Dónde se muestra: header del Kanban de Opportunity (total del pipeline) y, si se puede, subtotal por stage.
+- [x] **Construido — Unidad 6, con una aclaración**: la fórmula de interpolación por N solo aplica literalmente al seed de tenant-registration (`seedDefaultPipelines`, N=2 conocido de antemano → 10%/80% exactos para "Leads"/"Clientes"). El agregado de un stage ad-hoc uno-a-uno (`createPipelineStage`, tanto el botón "Add Stage" como el loop del formulario "Create Pipeline") no conoce el N final de antemano, así que usa un default plano de 50% para `open` — sigue siendo 100% editable después, así que la falta de precisión ahí no es un problema real.
+- [x] **Construido — Unidad 6**: Cálculo de pipeline value: `Σ (amountCents × probability / 100)` sobre Opportunities `outcome: open` — reemplaza la suma simple actual. Se muestra en el header de `/opportunities` (total ponderado del pipeline activo) y como subtotal por stage en el Kanban (`KanbanBoard.tsx`'s `renderColumnTotal`, ya existía el mecanismo genérico, solo se conectó con el cálculo ponderado). Los stages `won`/`lost` muestran el total real (no ponderado) en su subtotal — mostrar $0 en la columna Lost habría sido confuso, la probabilidad forzada ahí es un artefacto del cálculo global, no algo que deba ocultar el monto real perdido/ganado.
 
 ### 3.6 Cambio de Pipeline — incluye el gate de Company real para pipelines `account`
 
@@ -134,11 +135,12 @@ Disparador: una Opportunity de un pipeline `type: 'lead'` entra a un stage con `
 
 ### 3.7 Cierre simétrico Won/Lost
 
-- [ ] Schema: extender enum `CatalogKind` con `winReason` (junto a `department`/`jobTitle`/`leadSource`/`lossReason`), reusando `FieldCatalogDefinition` — mismo mecanismo que ya se usó para no crear tablas nuevas por catálogo.
-- [ ] **Recordar el bug ya conocido:** `VALID_CATALOG_KINDS` en `src/routes/catalogs.ts` hay que actualizarlo con el nuevo valor — ya pasó una vez que se olvidó al agregar `leadSource`/`lossReason` y rompió `GET /api/field-catalog?kind=...` con 400.
-- [ ] `Opportunity.winReasonId` — FK nullable, obligatoria a nivel de aplicación cuando el stage destino tiene `outcome: won` (mismo patrón que `lossReasonId` con `outcome: lost`).
-- [ ] Schema: `Opportunity.closeNote` — texto libre, opcional, aplica a ambos outcomes (Won y Lost).
-- [ ] UI: el modal de cierre de Opportunity (al mover a un stage won/lost) pide el reason correspondiente (`winReasonId`/`lossReasonId`) más `closeNote` opcional, para ambos casos.
+- [x] **Construido — Unidad 6 (2026-08-24)**: Schema extendido, enum `CatalogKind` con `winReason` (junto a `department`/`jobTitle`/`leadSource`/`lossReason`), reusando `FieldCatalogDefinition` — mismo mecanismo que ya se usó para no crear tablas nuevas por catálogo.
+- [x] **Construido — Unidad 6, bug conocido evitado**: `VALID_CATALOG_KINDS` en `src/routes/catalogs.ts` actualizado con `winReason` en el mismo commit que agregó el enum — la razón de ser de este bullet explícito en la spec.
+- [x] **Construido — Unidad 6**: `Opportunity.winReasonId` — FK nullable (necesitó nombre de relación explícito en Prisma, `"OpportunityWinReason"`, porque ahora hay dos FKs de Opportunity a FieldCatalogDefinition — sin impacto de migración, es solo un rename a nivel de Prisma client), obligatoria a nivel de aplicación cuando el stage destino tiene `outcome: won` (`routes/opportunities.ts`'s `validateOpportunityRefs`, mismo patrón que `lossReasonId` con `outcome: lost`).
+- [x] **Construido — Unidad 6**: Schema `Opportunity.closeNote` — texto libre, opcional, aplica a ambos outcomes (Won y Lost).
+- [x] **Construido — Unidad 6**: UI — `OpportunityDetailModal.tsx` muestra "Win Reason" (cuando el stage actual es `won`) o "Loss Reason" (cuando es `lost`), más "Close Note" para ambos casos; el formulario "Add Opportunity" genérico de `OpportunitiesPage.tsx` tiene el mismo par de campos cuando el stage por defecto ya cae en won/lost.
+- [x] **Decisión adicional 2026-08-24 (no estaba en la spec original, surgió durante la implementación — ver historial de la conversación)**: ni `lossReason` ni `leadSource` (los catálogos ya existentes del mismo mecanismo) tenían ninguna UI para que el tenant creara nuevas opciones — solo se leían. Replicar `winReasonId` exactamente iba a dejar a **todos** los tenants sin forma de cerrar **ningún** deal como Won (select requerido, siempre vacío). Se agregó un menú "add option" (reusando `FieldCatalogMenu.tsx`, ya usado por Company/Employee) junto a los selects de Loss Reason y Win Reason en `OpportunityDetailModal.tsx` — arregla el gap para ambos catálogos, no solo el nuevo.
 
 ### 3.8 Automatizaciones (diseño ahora, build después)
 

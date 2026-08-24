@@ -6,6 +6,7 @@ import AutoSaveSelect from '../common/AutoSaveSelect';
 import DetailSidebar from '../layout/DetailSidebar';
 import Field from '../common/Field';
 import OverviewActionsMenu from '../common/OverviewActionsMenu';
+import FieldCatalogMenu from '../entity-views/FieldCatalogMenu';
 import { PlusIcon, XIcon } from '../common/Icons';
 
 interface OpportunityDetailModalProps {
@@ -16,6 +17,11 @@ interface OpportunityDetailModalProps {
   pipelines: Pipeline[];
   tenantUsers: any[];
   lossReasons: any[];
+  winReasons: any[];
+  // Reloads both lossReasons/winReasons after FieldCatalogMenu adds a new
+  // option — separate from onChanged, which only refreshes the Opportunity
+  // list itself (docs/tareas/specredisenosalesv2.md §3.7).
+  onReasonsChanged: () => void;
   currentUserId: string;
   onClose: () => void;
   onChanged: () => void;
@@ -36,6 +42,8 @@ export default function OpportunityDetailModal({
   pipelines,
   tenantUsers,
   lossReasons,
+  winReasons,
+  onReasonsChanged,
   currentUserId,
   onClose,
   onChanged,
@@ -377,12 +385,40 @@ export default function OpportunityDetailModal({
                 </div>
               </Field>
               {currentStage?.outcome === 'lost' && (
-                <Field label="Loss Reason">
+                <div className="overview-field">
+                  <div className="flex items-center justify-between">
+                    <span className="overview-field-label">Loss Reason</span>
+                    <FieldCatalogMenu token={token} kind="lossReason" label="Loss Reason" entries={lossReasons} onChanged={onReasonsChanged} />
+                  </div>
                   <AutoSaveSelect
                     label="Loss Reason"
                     value={opportunity.lossReasonId || ''}
                     onSave={(v) => save({ lossReasonId: v || null })}
-                    options={lossReasons.map((lr) => ({ value: lr.id, label: lr.name }))}
+                    options={lossReasons.filter((lr) => lr.isActive).map((lr) => ({ value: lr.id, label: lr.name }))}
+                  />
+                </div>
+              )}
+              {currentStage?.outcome === 'won' && (
+                <div className="overview-field">
+                  <div className="flex items-center justify-between">
+                    <span className="overview-field-label">Win Reason</span>
+                    <FieldCatalogMenu token={token} kind="winReason" label="Win Reason" entries={winReasons} onChanged={onReasonsChanged} />
+                  </div>
+                  <AutoSaveSelect
+                    label="Win Reason"
+                    value={opportunity.winReasonId || ''}
+                    onSave={(v) => save({ winReasonId: v || null })}
+                    options={winReasons.filter((wr) => wr.isActive).map((wr) => ({ value: wr.id, label: wr.name }))}
+                  />
+                </div>
+              )}
+              {(currentStage?.outcome === 'won' || currentStage?.outcome === 'lost') && (
+                <Field label="Close Note" full>
+                  <AutoSaveField
+                    label="Close Note"
+                    value={opportunity.closeNote || ''}
+                    onSave={(v) => save({ closeNote: v || null })}
+                    placeholder="Optional details about how this deal closed"
                   />
                 </Field>
               )}

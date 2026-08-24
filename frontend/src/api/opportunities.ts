@@ -23,6 +23,8 @@ export const opportunitiesApi = {
       estimatedCloseDate?: string | null;
       ownerId: string;
       lossReasonId?: string | null;
+      winReasonId?: string | null;
+      closeNote?: string | null;
       nextStepDate?: string | null;
       nextStepNote?: string | null;
     },
@@ -49,6 +51,8 @@ export const opportunitiesApi = {
       estimatedCloseDate: string | null;
       ownerId: string;
       lossReasonId: string | null;
+      winReasonId: string | null;
+      closeNote: string | null;
       nextStepDate: string | null;
       nextStepNote: string | null;
     }>,

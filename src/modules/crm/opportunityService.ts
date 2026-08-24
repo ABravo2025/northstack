@@ -12,6 +12,8 @@ export interface CreateOpportunityInput {
   estimatedCloseDate?: string | null;
   ownerId: string;
   lossReasonId?: string | null;
+  winReasonId?: string | null;
+  closeNote?: string | null;
   nextStepDate?: string | null;
   nextStepNote?: string | null;
 }
@@ -30,6 +32,11 @@ export interface UpdateOpportunityInput {
   estimatedCloseDate?: string | null;
   ownerId?: string;
   lossReasonId?: string | null;
+  // Symmetric to lossReasonId (docs/tareas/specredisenosalesv2.md §3.7) —
+  // required at the application layer (routes/opportunities.ts) when the
+  // resolved stage has outcome: 'won'.
+  winReasonId?: string | null;
+  closeNote?: string | null;
   nextStepDate?: string | null;
   nextStepNote?: string | null;
   // Not exposed by any UI yet — set automatically by
@@ -89,6 +96,8 @@ export async function createOpportunity(input: CreateOpportunityInput): Promise<
       estimatedCloseDate: input.estimatedCloseDate ? new Date(input.estimatedCloseDate) : null,
       ownerId: input.ownerId,
       lossReasonId: input.lossReasonId ?? null,
+      winReasonId: input.winReasonId ?? null,
+      closeNote: input.closeNote ?? null,
       nextStepDate: input.nextStepDate ? new Date(input.nextStepDate) : null,
       nextStepNote: input.nextStepNote ?? null,
     },
@@ -140,6 +149,8 @@ export async function updateOpportunity(
   }
   if (input.ownerId !== undefined) data.ownerId = input.ownerId;
   if (input.lossReasonId !== undefined) data.lossReasonId = input.lossReasonId;
+  if (input.winReasonId !== undefined) data.winReasonId = input.winReasonId;
+  if (input.closeNote !== undefined) data.closeNote = input.closeNote;
   if (input.nextStepDate !== undefined) data.nextStepDate = input.nextStepDate ? new Date(input.nextStepDate) : null;
   if (input.nextStepNote !== undefined) data.nextStepNote = input.nextStepNote;
   if (input.isActive !== undefined) data.isActive = input.isActive;

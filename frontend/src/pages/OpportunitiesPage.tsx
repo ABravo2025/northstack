@@ -56,6 +56,8 @@ const emptyForm = {
   estimatedCloseDate: '',
   ownerId: '',
   lossReasonId: '',
+  winReasonId: '',
+  closeNote: '',
   nextStepDate: '',
   nextStepNote: '',
 };
@@ -67,7 +69,11 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
   const [companies, setCompanies] = useState<any[]>([]);
   const [contacts, setContacts] = useState<any[]>([]);
   const [tenantUsers, setTenantUsers] = useState<any[]>([]);
+  // Unfiltered (active + inactive) — FieldCatalogMenu manages both; anywhere
+  // these are offered as select options, filter to isActive at that point
+  // (same idiom as CompaniesPage.tsx's companySizes).
   const [lossReasons, setLossReasons] = useState<any[]>([]);
+  const [winReasons, setWinReasons] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('');
   const [slideOverMode, setSlideOverMode] = useState<'add' | null>(null);
@@ -96,15 +102,17 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
       api.listContacts(token),
       api.listTenantUsers(token),
       api.listFieldCatalogDefinitions(token, 'lossReason'),
+      api.listFieldCatalogDefinitions(token, 'winReason'),
       api.getCurrentTenant(token),
     ])
-      .then(([pipelinesData, oppsData, companiesData, contactsData, usersData, lossReasonsData, tenant]) => {
+      .then(([pipelinesData, oppsData, companiesData, contactsData, usersData, lossReasonsData, winReasonsData, tenant]) => {
         setPipelines(pipelinesData);
         setOpportunities(oppsData);
         setCompanies(companiesData);
         setContacts(contactsData);
         setTenantUsers(usersData);
-        setLossReasons(lossReasonsData.filter((d) => d.isActive));
+        setLossReasons(lossReasonsData);
+        setWinReasons(winReasonsData);
         setForm((f) => ({ ...f, currency: tenant.currency }));
         if (!hasSetInitialTab.current) {
           const firstActive = pipelinesData.find((p) => p.isActive);
@@ -122,6 +130,15 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
     api.listOpportunities(token).then(setOpportunities).catch(() => {});
   };
 
+  const reloadReasonCatalogs = () => {
+    Promise.all([api.listFieldCatalogDefinitions(token, 'lossReason'), api.listFieldCatalogDefinitions(token, 'winReason')])
+      .then(([lr, wr]) => {
+        setLossReasons(lr);
+        setWinReasons(wr);
+      })
+      .catch(() => {});
+  };
+
   // Instant row update from a PATCH response, no round-trip wait (found
   // 2026-07-30, same fix as Employee/Company/Contact) — paired with
   // reloadOpportunities above, since updateOpportunity's response carries no
@@ -135,6 +152,20 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
   const archivedPipelineIds = new Set(pipelines.filter((p) => !p.isActive).map((p) => p.id));
   const currentPipeline = activePipelines.find((p) => p.id === activeTab);
   const archivedOpportunities = opportunities.filter((o) => archivedPipelineIds.has(o.pipelineId));
+
+  // Weighted pipeline value (docs/tareas/specredisenosalesv2.md §3.5):
+  // Σ (amountCents × stage.probability / 100) over open-outcome Opportunities
+  // in the currently viewed pipeline — replaces a plain sum, since a deal
+  // sitting in an early low-probability stage shouldn't count toward the
+  // forecast the same as one about to close.
+  const currentPipelineOpenOpportunities = currentPipeline
+    ? opportunities.filter((o) => o.pipelineId === currentPipeline.id && o.stage?.outcome === 'open')
+    : [];
+  const weightedPipelineTotalCents = currentPipelineOpenOpportunities.reduce(
+    (sum, o) => sum + o.amountCents * ((o.stage?.probability ?? 100) / 100),
+    0,
+  );
+  const weightedPipelineCurrency = currentPipelineOpenOpportunities[0]?.currency;
 
   // Pipeline chosen inside the Add form — starts out equal to the active
   // Kanban tab (handleOpenAdd) but is independently changeable
@@ -205,6 +236,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
 
     const stage = pipeline?.stages.find((s) => s.id === candidate.stageId);
     if (stage?.outcome === 'lost' && !candidate.lossReasonId) return false;
+    if (stage?.outcome === 'won' && !candidate.winReasonId) return false;
     return true;
   };
 
@@ -249,6 +281,13 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
       currency: candidate.currency,
       estimatedCloseDate: candidate.estimatedCloseDate || undefined,
       ownerId: candidate.ownerId,
+      // Not previously sent even though isOpportunityAddReady already
+      // required it for a stage landing directly on Lost — the backend would
+      // have rejected the create over its own missing-lossReasonId check,
+      // same rule now applying symmetrically to winReasonId.
+      lossReasonId: candidate.lossReasonId || undefined,
+      winReasonId: candidate.winReasonId || undefined,
+      closeNote: candidate.closeNote || undefined,
       nextStepDate: candidate.nextStepDate || undefined,
       nextStepNote: candidate.nextStepNote || undefined,
     });
@@ -535,29 +574,67 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
               </div>
             </div>
 
-            {selectedStage?.outcome === 'lost' && (
+            {(selectedStage?.outcome === 'lost' || selectedStage?.outcome === 'won') && (
               <div className="field-group">
                 <h4 className="field-group-title">Stage</h4>
                 <div className="field-group-body">
-                  <Field label="Loss Reason" required>
-                    <select
-                      id="opp-lossReasonId"
+                  {selectedStage?.outcome === 'lost' && (
+                    <Field label="Loss Reason" required>
+                      <select
+                        id="opp-lossReasonId"
+                        className="overview-field-input"
+                        value={form.lossReasonId}
+                        onChange={(e) => {
+                          const next = { ...form, lossReasonId: e.target.value };
+                          setForm(next);
+                          attemptAutoCreateOpportunity(next);
+                        }}
+                        required
+                      >
+                        <option value="">-- select --</option>
+                        {lossReasons
+                          .filter((lr: any) => lr.isActive)
+                          .map((lr: any) => (
+                            <option key={lr.id} value={lr.id}>
+                              {lr.name}
+                            </option>
+                          ))}
+                      </select>
+                    </Field>
+                  )}
+                  {selectedStage?.outcome === 'won' && (
+                    <Field label="Win Reason" required>
+                      <select
+                        id="opp-winReasonId"
+                        className="overview-field-input"
+                        value={form.winReasonId}
+                        onChange={(e) => {
+                          const next = { ...form, winReasonId: e.target.value };
+                          setForm(next);
+                          attemptAutoCreateOpportunity(next);
+                        }}
+                        required
+                      >
+                        <option value="">-- select --</option>
+                        {winReasons
+                          .filter((wr: any) => wr.isActive)
+                          .map((wr: any) => (
+                            <option key={wr.id} value={wr.id}>
+                              {wr.name}
+                            </option>
+                          ))}
+                      </select>
+                    </Field>
+                  )}
+                  <Field label="Close Note" full>
+                    <input
+                      id="opp-closeNote"
                       className="overview-field-input"
-                      value={form.lossReasonId}
-                      onChange={(e) => {
-                        const next = { ...form, lossReasonId: e.target.value };
-                        setForm(next);
-                        attemptAutoCreateOpportunity(next);
-                      }}
-                      required
-                    >
-                      <option value="">-- select --</option>
-                      {lossReasons.map((lr) => (
-                        <option key={lr.id} value={lr.id}>
-                          {lr.name}
-                        </option>
-                      ))}
-                    </select>
+                      type="text"
+                      value={form.closeNote}
+                      onChange={(e) => setForm({ ...form, closeNote: e.target.value })}
+                      placeholder="Optional details about how this deal closed"
+                    />
                   </Field>
                 </div>
               </div>
@@ -613,6 +690,8 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
               pipelines={pipelines}
               tenantUsers={tenantUsers}
               lossReasons={lossReasons}
+              winReasons={winReasons}
+              onReasonsChanged={reloadReasonCatalogs}
               currentUserId={user.id}
               onClose={() => setViewingId(null)}
               onChanged={reloadOpportunities}
@@ -627,6 +706,11 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
 
       <div className="page-toolbar">
         <h2>Opportunities</h2>
+        {currentPipeline && weightedPipelineCurrency && (
+          <span className="text-sm text-ink-muted" title="Σ (amount × stage probability) across open deals in this pipeline">
+            Weighted value: {formatMoney(Math.round(weightedPipelineTotalCents), weightedPipelineCurrency)}
+          </span>
+        )}
         {canEdit && currentPipeline && (
           <button className="btn-primary" onClick={handleOpenAdd}>
             <span className="inline-flex items-center gap-1.5">
@@ -717,14 +801,19 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
               </div>
             );
           }}
-          renderColumnTotal={(colItems) =>
-            colItems.length === 0
-              ? null
-              : formatMoney(
-                  colItems.reduce((sum, o) => sum + o.amountCents, 0),
-                  colItems[0].currency,
-                )
-          }
+          renderColumnTotal={(colItems) => {
+            if (colItems.length === 0) return null;
+            // Weighted for `open` stages (§3.5); won/lost columns show the
+            // plain actual total — probability there is a forced 100/0
+            // forecast artifact, not meant to zero out an already-lost
+            // column's real dollar total.
+            const isOpen = colItems[0].stage?.outcome === 'open';
+            const total = colItems.reduce(
+              (sum, o) => sum + (isOpen ? o.amountCents * ((o.stage?.probability ?? 100) / 100) : o.amountCents),
+              0,
+            );
+            return formatMoney(Math.round(total), colItems[0].currency);
+          }}
           renderColumnFooter={
             canEdit
               ? () => (

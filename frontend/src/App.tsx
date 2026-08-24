@@ -21,6 +21,7 @@ import ContactsPage from './pages/ContactsPage';
 import PipelinesSettingsPage from './pages/PipelinesSettingsPage';
 import OpportunitiesPage from './pages/OpportunitiesPage';
 import ProfileSettingsPage from './pages/ProfileSettingsPage';
+import IntegrationsSettingsPage from './pages/IntegrationsSettingsPage';
 import CompanyAppearancePage from './pages/CompanyAppearancePage';
 import CompanyUsersPage from './pages/CompanyUsersPage';
 import PublicFormsSettingsPage from './pages/PublicFormsSettingsPage';
@@ -246,6 +247,7 @@ export default function App() {
             path="profile"
             element={<ProfileSettingsPage user={user} token={token ?? ''} onUserUpdated={setUser} />}
           />
+          <Route path="integrations" element={<IntegrationsSettingsPage token={token ?? ''} />} />
           <Route path="appearance" element={<CompanyAppearancePage token={token ?? ''} />} />
           <Route
             path="users"

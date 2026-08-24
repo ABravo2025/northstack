@@ -160,6 +160,41 @@
   @apply btn bg-emerald-600 text-white hover:bg-emerald-700;
 }
 
+/* "Connect with Google" button — white/bordered per Google's own brand
+   guidelines for sign-in/connect buttons, deliberately not .btn-primary:
+   the brand's own multi-color "G" mark reads oddly against a solid accent
+   fill, and a white Google-style button is the recognizable, professional
+   convention users already expect from any "Connect Google ___" flow. */
+.btn-google {
+  @apply btn gap-2 border border-line-strong bg-white text-ink shadow-sm hover:bg-surface-2 dark:border-dark-line dark:bg-white dark:text-ink dark:hover:bg-gray-100;
+}
+
+/* Settings > Integrations — one card per connected service, logo + name +
+   description up top, connection status/actions below. */
+.integration-header {
+  @apply mb-4 flex items-start gap-3;
+}
+
+.integration-logo {
+  @apply h-8 w-8 shrink-0;
+}
+
+.integration-status-row {
+  @apply flex flex-wrap items-center justify-between gap-3 rounded-md border border-line-strong p-3 dark:border-dark-line;
+}
+
+.integration-status-dot {
+  @apply inline-block h-2 w-2 shrink-0 rounded-full;
+}
+
+.integration-status-dot-ok {
+  @apply bg-emerald-500;
+}
+
+.integration-status-dot-warn {
+  @apply bg-amber-500;
+}
+
 .card {
   @apply mb-5 rounded-lg border border-line bg-surface-0 p-5 dark:border-dark-line dark:bg-dark-page;
 }

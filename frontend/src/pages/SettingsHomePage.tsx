@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import {
   BriefcaseIcon,
   BuildingIcon,
+  CalendarIcon,
   GridIcon,
   ListIcon,
   TeamIcon,
@@ -26,6 +27,10 @@ export default function SettingsHomePage({ user }: SettingsHomePageProps) {
 
   const accountTiles: Tile[] = [
     { to: 'profile', label: 'Profile', desc: 'Name, phone and password.', icon: <UserCircleIcon /> },
+    // Personal, per-user connections — everyone sees and controls only their
+    // own (e.g. Google Calendar). Distinct from the tenant-wide, admin-only
+    // "Integrations" tile under Company below (2026-08-24).
+    { to: 'integrations', label: 'Integrations', desc: 'Connect your personal Google Calendar.', icon: <CalendarIcon /> },
   ];
 
   // Owner-only visibility (matches canManageBilling on the backend — every mutating endpoint

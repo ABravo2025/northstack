@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import {
   BriefcaseIcon,
   BuildingIcon,
-  CalendarIcon,
   GridIcon,
   ListIcon,
   TeamIcon,
@@ -27,10 +26,14 @@ export default function SettingsHomePage({ user }: SettingsHomePageProps) {
 
   const accountTiles: Tile[] = [
     { to: 'profile', label: 'Profile', desc: 'Name, phone and password.', icon: <UserCircleIcon /> },
-    // Personal, per-user connections — everyone sees and controls only their
-    // own (e.g. Google Calendar). Distinct from the tenant-wide, admin-only
-    // "Integrations" tile under Company below (2026-08-24).
-    { to: 'integrations', label: 'Integrations', desc: 'Connect your personal Google Calendar.', icon: <CalendarIcon /> },
+    // The one home for every integration, personal and (eventually)
+    // tenant-wide alike — reuses the tile/copy that used to sit disabled
+    // under Company as "Coming soon" (2026-08-24, Alejandro's correction:
+    // one Integrations destination, not two). Lives in "My account" (every
+    // role, not just admin/owner) because the first real integration,
+    // Google Calendar, is a personal per-user connection — each person only
+    // ever sees and controls their own.
+    { to: 'integrations', label: 'Integrations', desc: 'Connect Northstack to other tools.', icon: <GridIcon /> },
   ];
 
   // Owner-only visibility (matches canManageBilling on the backend — every mutating endpoint
@@ -64,33 +67,18 @@ export default function SettingsHomePage({ user }: SettingsHomePageProps) {
       </div>
 
       {isAdmin && (
-        <>
-          <div className="settings-grid-section">
-            <p className="settings-grid-section-title">Company</p>
-            <div className="settings-grid">
-              {companyTiles.map((tile) => (
-                <Link key={tile.to} to={tile.to} className="settings-tile">
-                  <span className="settings-tile-icon">{tile.icon}</span>
-                  <span className="settings-tile-label">{tile.label}</span>
-                  <span className="settings-tile-desc">{tile.desc}</span>
-                </Link>
-              ))}
-            </div>
+        <div className="settings-grid-section">
+          <p className="settings-grid-section-title">Company</p>
+          <div className="settings-grid">
+            {companyTiles.map((tile) => (
+              <Link key={tile.to} to={tile.to} className="settings-tile">
+                <span className="settings-tile-icon">{tile.icon}</span>
+                <span className="settings-tile-label">{tile.label}</span>
+                <span className="settings-tile-desc">{tile.desc}</span>
+              </Link>
+            ))}
           </div>
-
-          <div className="settings-grid-section">
-            <p className="settings-grid-section-title">Coming soon</p>
-            <div className="settings-grid">
-              <span className="settings-tile disabled" aria-disabled="true">
-                <span className="settings-tile-icon">
-                  <GridIcon />
-                </span>
-                <span className="settings-tile-label">Integrations</span>
-                <span className="settings-tile-desc">Connect Northstack to other tools.</span>
-              </span>
-            </div>
-          </div>
-        </>
+        </div>
       )}
     </>
   );

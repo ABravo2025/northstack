@@ -38,13 +38,13 @@ function GoogleLogo({ className }: { className?: string }) {
   );
 }
 
-// Personal (per-user) integrations — deliberately separate from the
-// tenant-wide, admin-only "Integrations" tile on the Company settings
-// section (still "Coming soon": Slack, outbound webhooks, etc. — a
-// different concept). This page is reachable by every role: each person
-// only ever sees and controls their own connection, never anyone else's
-// (2026-08-24, Alejandro's explicit call after the Google Calendar card
-// briefly lived on the Profile page instead).
+// The one home for every integration (2026-08-24) — reachable by every
+// role, not just admin/owner, since the first one (Google Calendar) is a
+// personal per-user connection: each person only ever sees and controls
+// their own. Future tenant-wide integrations (Slack, outbound webhooks,
+// etc. — previously a separate disabled "Coming soon" tile under Company)
+// belong here too rather than a second entry point; gate an individual card
+// by role if one ends up admin-only, don't split the page.
 export default function IntegrationsSettingsPage({ token }: IntegrationsSettingsPageProps) {
   const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();

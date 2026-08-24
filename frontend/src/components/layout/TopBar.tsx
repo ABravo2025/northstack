@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ChevronDownIcon, MenuIcon, UserCircleIcon } from '../common/Icons';
 import SlideOver from '../common/SlideOver';
 import ChangelogMenu from './ChangelogMenu';
+import NotificationBell from './NotificationBell';
 import { useToast } from '../common/ToastProvider';
 import { api } from '../../api';
 
@@ -97,6 +98,7 @@ export default function TopBar({ user, token, onLogout, onMenuClick }: TopBarPro
       </div>
 
       <div className="flex items-center gap-2">
+      <NotificationBell token={token} />
       <ChangelogMenu />
       <div className="user-menu" ref={menuRef}>
         <button

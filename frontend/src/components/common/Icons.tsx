@@ -337,3 +337,15 @@ export function TargetIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+// "What's new" trigger — freed up BellIcon to mean actual in-app
+// Notifications (docs/tareas/specredisenosalesv2.md §3.9) instead of the
+// changelog, which is the more conventional bell/notification split.
+export function SparklesIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M12 3v4M12 17v4M3 12h4M17 12h4M6 6l2 2M16 16l2 2M18 6l-2 2M8 16l-2 2" />
+      <circle cx="12" cy="12" r="2.5" />
+    </svg>
+  );
+}

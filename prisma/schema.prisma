@@ -335,6 +335,7 @@ model Tenant {
   opportunityStageHistory  OpportunityStageHistory[]
   tasks                    Task[]
   notes                    Note[]
+  notifications            Notification[]
   tickets                  Ticket[]
   ideas                    Idea[]
   payFrequencyDefinitions  PayFrequencyDefinition[]
@@ -453,6 +454,7 @@ model User {
   tasksAssigned           Task[]                 @relation("TaskAssignee")
   tasksCreated            Task[]                 @relation("TaskCreatedBy")
   notesCreated            Note[]
+  notifications           Notification[]
   ticketsReported         Ticket[]               @relation("TicketReporter")
   ticketsAssignedTo       Ticket[]               @relation("TicketAssignee")
   ideasReported           Idea[]                 @relation("IdeaReporter")
@@ -1086,6 +1088,35 @@ model Note {
   updatedAt   DateTime   @updatedAt
 
   @@index([tenantId, entityType, entityId])
+}
+
+// In-app notifications, minimal version (docs/tareas/specredisenosalesv2.md
+// §3.9). Same polymorphic entityType+entityId pattern as Task/Note above.
+// `message` is pre-rendered text at creation time (not computed on read) —
+// same reasoning as StatusHistoryEntry snapshotting a status's name instead
+// of keeping a live FK: a later rename shouldn't rewrite the meaning of an
+// old notification. `type` starts with the two events named in the spec;
+// only `opportunity_stage_changed` has a producer yet (this unit) —
+// `opportunity_stalled` is wired up by §3.8's cron, built later.
+enum NotificationType {
+  opportunity_stage_changed
+  opportunity_stalled
+}
+
+model Notification {
+  id         String           @id @default(uuid())
+  tenantId   String
+  tenant     Tenant           @relation(fields: [tenantId], references: [id])
+  userId     String
+  user       User             @relation(fields: [userId], references: [id])
+  type       NotificationType
+  entityType EntityType
+  entityId   String
+  message    String
+  read       Boolean          @default(false)
+  createdAt  DateTime         @default(now())
+
+  @@index([tenantId, userId, read])
 }
 
 // @@map keeps the physical table name "PublicForm" — only the Prisma model/

@@ -1150,3 +1150,35 @@ paso destructivo).
 (ningún tenant puede cerrar un deal como Won sin al menos una opción de Win Reason, y no había forma de
 crear una). El caso 6 es media — mostrar $0 en una columna Lost habría sido confuso pero no habría roto
 ningún flujo. El resto son verificaciones de correctitud estándar del gate simétrico.
+
+## QA-27 — Sales v2, Unidad 7: notificaciones in-app, versión mínima (2026-08-24, en `staging`)
+
+**Por qué existe esta tarea:** la base de plomería para notificaciones (spec §3.9) — modelo
+`Notification` (destinatario, tipo, entidad genérica, mensaje pre-renderizado, leído/no leído),
+endpoints de listado/contador/marcar-leída, y el bell icon en la barra superior con polling cada 30s.
+**Importante:** esta unidad no incluye ningún productor real — nada dispara todavía una notificación de
+verdad (eso es la Unidad 8, `opportunity_stage_changed` al cambiar de stage). El bell icon queda
+funcional pero en cero hasta entonces, tal como lo anticipa el orden de build de la spec. Se verificó
+sembrando filas de `Notification` directamente vía Prisma (simulando al futuro productor) contra
+`staging` real, ejercitando los 4 endpoints de punta a punta con dos Users del mismo tenant para
+confirmar el aislamiento por destinatario. De paso, se liberó el ícono de campana (antes usado por
+"What's new") para las notificaciones reales, dándole a "What's new" un ícono nuevo (`SparklesIcon`).
+`npm run build`/`npm test` (91/91) backend y build frontend en verde. Schema aditivo pusheado a staging
+(tabla nueva + enum nuevo, sin tocar nada existente).
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Tenant nuevo, sin notificaciones | `GET /api/notifications` devuelve `[]`, `unread-count` devuelve `0` |
+| 2 | Sembrar 3 notificaciones para un User y 1 para otro User del mismo tenant | Cada User solo ve las suyas al listar — nunca las del otro, aunque compartan tenant |
+| 3 | Marcar una notificación individual como leída | El contador de no leídas baja en 1; la fila queda `read: true` |
+| 4 | Intentar marcar como leída una notificación de **otro** User (id real, pero no tuyo) | Rechazado — el ownership check es por `userId`, no solo `tenantId` |
+| 5 | Intentar marcar como leída un id que no existe | 404 |
+| 6 | "Mark all read" | Todas las no leídas del User pasan a `read: true`, contador queda en 0 |
+| 7 | Barra superior: ícono de campana | Es el `BellIcon`; el contador de no leídas aparece como badge numérico cuando hay alguna |
+| 8 | Barra superior: ícono junto al de notificaciones ("What's new") | Ahora es un ícono distinto (chispas), ya no comparte la campana con notificaciones |
+| 9 | Abrir el dropdown de notificaciones sin ninguna sembrada | Muestra "No notifications yet." — no queda vacío/roto |
+
+**Severidad:** baja — esta unidad es infraestructura sin productor real todavía, así que ningún flujo de
+negocio depende de ella hasta que la Unidad 8 la conecte. El caso 4 (ownership por destinatario, no solo
+tenant) es el más importante de esta ronda — una fuga ahí dejaría a un User leer/marcar notificaciones
+de un compañero de tenant.

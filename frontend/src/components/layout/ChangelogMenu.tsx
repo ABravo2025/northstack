@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Popover from '../common/Popover';
-import { BellIcon } from '../common/Icons';
+import { SparklesIcon } from '../common/Icons';
 import { CHANGELOG_ENTRIES } from '../../lib/changelog';
 
 const LAST_SEEN_KEY = 'northstack:changelogLastSeen';
@@ -35,7 +35,7 @@ export default function ChangelogMenu() {
         aria-label={hasUnseen ? "What's new (new updates available)" : "What's new"}
         title="What's new"
       >
-        <BellIcon className="h-4.5 w-4.5" />
+        <SparklesIcon className="h-4.5 w-4.5" />
         {hasUnseen && <span className="changelog-dot" />}
       </button>
       <Popover open={open} onClose={() => setOpen(false)} anchorRef={triggerRef} align="right" width={320}>

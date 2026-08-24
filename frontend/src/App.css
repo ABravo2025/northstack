@@ -293,6 +293,33 @@
   @apply border-b border-line-soft pb-3 last:border-0 last:pb-0 dark:border-dark-line;
 }
 
+/* In-app notifications bell (docs/tareas/specredisenosalesv2.md §3.9) —
+   trigger reuses .changelog-trigger's box, badge shows an actual unread
+   count rather than just a dot since the number itself is useful here. */
+.notification-badge {
+  @apply absolute top-0.5 right-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-accent px-1 text-[10px] font-semibold leading-none text-white ring-2 ring-brand-cream dark:ring-black;
+}
+
+.notification-list {
+  @apply flex max-h-96 flex-col gap-1 overflow-y-auto;
+}
+
+.notification-item {
+  @apply flex w-full cursor-pointer flex-col gap-0.5 rounded-md border-none bg-transparent px-2 py-2 text-left text-sm text-ink hover:bg-surface-2 dark:text-dark-ink dark:hover:bg-white/[0.06];
+}
+
+.notification-item.unread {
+  @apply bg-accent-tint font-medium dark:bg-white/[0.04];
+}
+
+.notification-item-time {
+  @apply text-xs text-ink-faint dark:text-dark-ink-faint;
+}
+
+.notification-empty {
+  @apply px-2 py-4 text-center text-sm text-ink-faint dark:text-dark-ink-faint;
+}
+
 .changelog-entry-date {
   @apply text-[0.68rem] font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint;
 }

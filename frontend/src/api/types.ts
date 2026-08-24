@@ -260,6 +260,23 @@ export interface Note {
   updatedAt: string;
 }
 
+// In-app notifications, minimal version (docs/tareas/specredisenosalesv2.md
+// §3.9). `message` is already-rendered text — nothing to resolve/compute on
+// the frontend.
+export type NotificationType = 'opportunity_stage_changed' | 'opportunity_stalled';
+
+export interface Notification {
+  id: string;
+  tenantId: string;
+  userId: string;
+  type: NotificationType;
+  entityType: TaskEntityType;
+  entityId: string;
+  message: string;
+  read: boolean;
+  createdAt: string;
+}
+
 export interface CustomFieldDefinition {
   id: string;
   name: string;

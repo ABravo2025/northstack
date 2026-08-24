@@ -54,24 +54,27 @@ Cuatro focos, en orden de dependencia (1 y 2 son independientes entre sí; 3 dep
 
 ---
 
-## 2. Contact ↔ Company
+## 2. Contact ↔ Company — completo (2026-08-24, en `staging`)
 
 ### 2.1 Multi-threading (indicador + reporting)
 
-- [ ] Kanban de Opportunity: badge visual (ej. ámbar) cuando `OpportunityContact.count({ opportunityId }) === 1` — "1 solo contacto". Cálculo derivado, sin campo nuevo en base.
-- [ ] `scripts/metrics-report.ts`: sumar una métrica más — % de Opportunities abiertas (`outcome: open`) con un solo Contact vinculado vs. más de uno. Mismo patrón que las métricas ya existentes ahí (corrido a mano, sin UI/endpoint nuevo).
+- [x] **Construido**: badge ámbar (`.kc-single-thread`, nuevo) en la card de Kanban de Opportunity cuando `contactLinks.length === 1`.
+- [x] **Construido**: `scripts/metrics-report.ts` suma "Sales: multi-threading" — % de Opportunities abiertas (`stage.outcome === 'open'`, activas) con 1 solo Contact vinculado vs. más de uno.
 
 ### 2.2 Contact que cambia de Company
 
 - [ ] **No se modela transferencia.** Confirmado con el usuario: cuando un Contact cambia de empresa, se borra el Contact viejo y se crea uno nuevo en la Company nueva (de todos modos cambia el email y el acceso). Sin cambios de schema para este caso.
-- [x] **Resuelto 2026-08-24 — "Delete" de Contact pasa a "Deactivate" (soft), no borrado real**: `Contact.isActive Boolean @default(true)` (nuevo, aditivo — mismo idioma ya usado en `Pipeline.isActive`/`CustomFieldDefinition.isActive`/`StatusDefinition.isActive`, no un mecanismo nuevo). El botón "Delete" de Contact se reemplaza por "Deactivate" (mismo ícono/posición, mismo `ConfirmDialog`) — el registro nunca se borra, solo deja de listarse por default (mismo criterio que cualquier catálogo `isActive`), y sigue siendo la referencia válida de cualquier Note/Task/Opportunity histórica.
-- [x] **`Opportunity.isActive Boolean @default(true)` (nuevo, mismo idioma)**: si el Contact que se desactiva es el **único** vinculado a una Opportunity (vía `OpportunityContact`), el `ConfirmDialog` avisa explícitamente ("Deactivating this contact will also deactivate N linked opportunity(ies)") y, al confirmar, desactiva ambos en la misma transacción — mismo patrón que ya usa `deleteContact` con su flag `deleteLinkedOpportunities`, solo que soft en vez de destructivo. Si la Opportunity tiene otros Contacts activos vinculados, solo se borra la fila `OpportunityContact` (se desvincula), la Opportunity queda intacta.
-- [ ] **Alcance explícito de este punto — solo Contact/Opportunity, no toda la plataforma todavía**: Alejandro pidió este criterio ("avisar en vez de sorprender, flaggear en vez de borrar") como dirección general para el resto de la app, pero **no** se retrofitea acá ningún `delete*` existente de Employee/Company/Client/etc. — son borrados reales hoy (`deleteCompany`, `deleteEmployee`, etc.), y convertirlos a este mismo patrón toca uniqueness constraints (`Employee.email` único por tenant), exports CSV, listados, y más — es su propia sesión de spec, no algo para colar acá sin avisar.
+- [x] **Construido — `Contact.isActive Boolean @default(true)`**: `contactService.ts`'s `deactivateContact` reemplaza al viejo `deleteContact` (mismo verbo/ruta `DELETE /api/contacts/:id`, semántica distinta) — nunca borra, nunca bloquea. El botón "Delete" pasa a decir "Deactivate" (mismo ícono/posición, `ConfirmDialog` sin checkbox — ya no hay una elección destructiva que ofrecer). `listContacts` excluye `isActive: false` por default (sin UI de "ver desactivados" todavía — nota de alcance abajo).
+- [x] **Construido — `Opportunity.isActive Boolean @default(true)`**: si el Contact que se desactiva es el único vínculo activo de una Opportunity, la Opportunity se desactiva también (mismo criterio, misma transacción); si tiene otros Contacts activos, solo se borra la fila `OpportunityContact` (desvincula). `listOpportunities` también excluye `isActive: false` por default.
+- [ ] **Gap conocido, no bloqueante**: no hay UI para ver/reactivar Contacts u Opportunities desactivados todavía — `isActive` quedó whitelisteado en ambos `update*Input` (se puede revertir por API), pero sin botón ni vista. Anotado para una pasada de pulido futura, no en esta unidad (sizing "rápido").
+- [x] **Alcance explícito de este punto — solo Contact/Opportunity, no toda la plataforma**: confirmado, no se tocó ningún `delete*` de Employee/Company/Client/etc.
 
-### 2.3 `isPrimary` único por Company
+### 2.3 `isPrimary` único por Company — completo
 
-- [ ] Al marcar `Contact.isPrimary = true`, envolver en `$transaction`: `updateMany({ where: { companyId, isPrimary: true, id: { not: contactId } }, data: { isPrimary: false } })` seguido del update del Contact en cuestión. Mismo patrón transaccional que ya usa `deleteOpportunity`.
-- [ ] Validar en el PATCH de Contact: si `companyId` es `null`, `isPrimary` no debería tener efecto de unicidad (no hay Company contra la cual ser único) — permitir el valor pero sin disparar el `updateMany`.
+- [x] **Construido**: `createContact`/`updateContact` (`contactService.ts`) envuelven en `$transaction` — `updateMany({ where: { companyId, isPrimary: true, id: { not: contactId } }, data: { isPrimary: false } })` antes de guardar el nuevo primary, tanto al crear como al editar.
+- [x] **Construido**: un Contact sin `companyId` guarda `isPrimary` tal cual, sin disparar ningún `updateMany` (no hay Company contra la cual ser único).
+
+**Verificado** con un script de punta a punta contra `staging` real: crear un 2do primary demueve al 1ro, lo mismo vía PATCH, un Contact sin Company no dispara nada; desactivar el único Contact de una Opportunity la desactiva a ella también, desactivar uno de dos solo desvincula; ambas listas por default excluyen lo desactivado. `npm run build`/`npm test` (91/91) backend y build frontend en verde.
 
 ### 2.4 Leads sin Company confirmada
 
@@ -86,15 +89,15 @@ Cuatro focos, en orden de dependencia (1 y 2 son independientes entre sí; 3 dep
 ### 3.1 `Pipeline.type` — ya existe, falta cerrar 2 huecos
 
 - [x] **Ya construido (2026-07-29)**: enum `PipelineType` (`lead`/`account`), campo `Pipeline.type` con `@default(lead)`, CRUD en `pipelineService.ts`, seed correcto ("Leads" → `lead`, "Clientes" → `account`). Nada de esto se reconstruye.
-- [ ] **Hueco 1 — inmutable después de creado**: hoy `updatePipeline`/`UpdatePipelineInput` acepta `type` en cualquier momento, y `PipelinesSettingsPage.tsx` (`handleTypeChange`) lo deja cambiar libremente desde un `<select>` en la lista — reclasificar un pipeline con Opportunities ya creadas bajo el supuesto contrario queda posible hoy. Sacar `type` de `UpdatePipelineInput` (backend) y del `<select>` editable (mostrar de solo lectura, ej. un chip, una vez creado).
-- [ ] **Hueco 2 — el default implícito**: `@default(lead)` en el schema queda (no vale la pena una migración solo para sacarlo), pero `POST /api/pipelines` debe exigir `type` en el body igual (400 si falta) — que un tenant nuevo lo elija a propósito al crear un pipeline, no que caiga en `lead` por omisión silenciosa del formulario.
+- [x] **Construido — Unidad 1 (2026-08-24, en `staging`)**: sacado `type` de `UpdatePipelineInput` (backend) y del `<select>` editable de `PipelinesSettingsPage.tsx` (ahora texto de solo lectura) — inmutable después de creado.
+- [x] **Confirmado — Unidad 1**: `POST /api/pipelines` ya exigía `type` en el body (400 si falta) desde el 2026-07-29 — el "hueco 2" resultó no ser tal, no hizo falta ningún cambio.
 
 ### 3.2 El gate de Company por `type` — hoy solo en el frontend, hay que blindarlo en el backend
 
 - [x] **Ya construido (frontend únicamente)**: `ContactDetailModal.tsx` bloquea crear una Opportunity en un pipeline `account` sin Company ya vinculada, y en un pipeline `lead` sin Company pide un nombre para crear una placeholder (`api.createCompany` con solo `name` + el Contact como fundador).
-- [ ] **Resuelto 2026-08-24 — falta el mismo gate en `opportunityService.createOpportunity`**: hoy `POST /api/opportunities` no valida nada de esto — pegarle directo a la API con cualquier `companyId` (o sin él) en cualquier pipeline pasa sin chequeo. Mismo principio no-negociable del proyecto (nunca confiar solo en validación de cliente): replicar el gate en el backend — `type: 'account'` sin `companyId` → 400; `type: 'lead'` sin `companyId` sigue requiriendo uno (la creación de la placeholder pasa por `companyService.createCompany` antes, no por un `companyId` nulo).
-- [ ] `amountCents` + `currency` se mantienen obligatorios en ambos tipos (sin cambios respecto al comportamiento actual).
-- [ ] **Schema nuevo — `Company.isPlaceholder Boolean @default(false)`**, aditivo. Se setea `true` únicamente cuando `companyService.createCompany` se llama desde el flujo de alta de Opportunity `lead` sin Company (nuevo parámetro opcional `isPlaceholder?: boolean` en `CreateCompanyInput`, default `false` para el resto de los call sites — Companies creadas desde `/companies` directo o por Form nunca son placeholder). Sin esto no hay forma de saber, más adelante, qué Companies todavía necesitan que alguien complete sus datos reales — es la pieza que faltaba para que 3.3 tenga algo que hacer al cerrar un lead.
+- [x] **Construido — Unidad 1**: el mismo gate ahora corre en `validateOpportunityRefs` (`routes/opportunities.ts`), tanto en create como en update — pegarle directo a la API ya no lo saltea. `type: 'account'` sin `companyId` real (o con uno `isPlaceholder: true`) → 400; `type: 'lead'` sigue requiriendo un `companyId` (la placeholder se crea antes, vía `companyService.createCompany`).
+- [x] `amountCents` + `currency` se mantienen obligatorios en ambos tipos — confirmado, sin cambios de código.
+- [x] **Construido — Unidad 1**: `Company.isPlaceholder Boolean @default(false)`, aditivo. Se setea `true` desde `ContactDetailModal.tsx`'s `handleCreateOpportunity` (único call site), `false` en cualquier otro (alta manual, Public Form).
 
 ### 3.3 Cierre de una Opportunity `lead` — dispara el cambio de pipeline de 3.6 (reemplaza la "conversión" original)
 
@@ -207,7 +210,7 @@ Pensado para minimizar dependencias cruzadas — cada unidad build → test → 
 
 1. **Cerrar los huecos de `Pipeline.type`/gate de Company** (3.1, 3.2) — inmutabilidad de `type` post-creación, `type` obligatorio en el body de creación, el gate de Company replicado en el backend (`opportunityService.createOpportunity`), `Company.isPlaceholder`. Es la base de la que depende todo lo demás de la sección 3, pero mucho más chica que la Unidad 1 original.
 2. **Company hierarchy** (sección 1) — ✅ completo. El tab de Contacts que este punto también contemplaba resultó ya estar construido (corrección 2026-08-24, ver §1.3) — no hizo falta nada ahí.
-3. **isPrimary único + multi-threading indicador + soft-delete de Contact/Opportunity** (2.1, 2.2, 2.3) — independiente, rápido.
+3. **isPrimary único + multi-threading indicador + soft-delete de Contact/Opportunity** (2.1, 2.2, 2.3) — ✅ completo, ver §2.
 4. **Cambio de Pipeline con el gate de Company real, más el disparador de cierre de lead** (3.6 primero — es el mecanismo genérico —, después 3.3, que solo lo invoca al ganar) — depende del punto 1.
 5. **UI contextual de creación de Opportunity desde Company** (3.4, sin el tab de Contacts que ya se movió al punto 2) — depende de los puntos 1 y 4.
 6. **Forecast ponderado + cierre simétrico Won/Lost** (3.5, 3.7) — independientes entre sí, dependen solo del punto 1.

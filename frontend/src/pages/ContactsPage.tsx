@@ -91,7 +91,6 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
   const [slideOverMode, setSlideOverMode] = useState<'add' | null>(null);
   const [viewingContactId, setViewingContactId] = useState<string | null>(null);
   const [deletingContact, setDeletingContact] = useState<Contact | null>(null);
-  const [deleteLinkedOpportunities, setDeleteLinkedOpportunities] = useState(false);
   const tableWrapRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
@@ -339,15 +338,13 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
   const handleDeleteContact = async () => {
     if (!deletingContact) return;
     try {
-      await api.deleteContact(token, deletingContact.id, { deleteLinkedOpportunities });
-      toast.success(`${deletingContact.firstName} ${deletingContact.lastName} deleted.`);
+      await api.deactivateContact(token, deletingContact.id);
+      toast.success(`${deletingContact.firstName} ${deletingContact.lastName} deactivated.`);
       setDeletingContact(null);
-      setDeleteLinkedOpportunities(false);
       refreshAssociatedData();
     } catch (error) {
-      toast.error('Failed to delete contact: ' + (error as Error).message);
+      toast.error('Failed to deactivate contact: ' + (error as Error).message);
       setDeletingContact(null);
-      setDeleteLinkedOpportunities(false);
     }
   };
 
@@ -635,12 +632,9 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
         <div className="icon-actions">
           <button
             className="icon-btn danger"
-            onClick={() => {
-              setDeletingContact(contact);
-              setDeleteLinkedOpportunities(false);
-            }}
+            onClick={() => setDeletingContact(contact)}
           >
-            <span className="tip">Delete</span>
+            <span className="tip">Deactivate</span>
             <TrashIcon />
           </button>
         </div>
@@ -664,31 +658,36 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
   return (
     <div className="page-full">
       {deletingContact && (() => {
+        // Same "sole active link" rule as contactService.ts's deactivateContact —
+        // computed here purely so the confirm copy can say what's actually going
+        // to happen, the backend is the source of truth either way.
         const linkedOpportunities = opportunities.filter((o) =>
           o.contactLinks?.some((link) => link.contactId === deletingContact.id),
         );
+        const willAlsoDeactivate = linkedOpportunities.filter((o) => {
+          const activeLinks = (o.contactLinks || []).filter((link) => {
+            if (link.contactId === deletingContact.id) return true;
+            const linkedContact = contacts.find((c) => c.id === link.contactId);
+            return linkedContact?.isActive !== false;
+          });
+          return activeLinks.length <= 1;
+        });
+        const messageParts = [`Are you sure you want to deactivate ${deletingContact.firstName} ${deletingContact.lastName}? They'll stop appearing in lists, but nothing is deleted.`];
+        if (willAlsoDeactivate.length > 0) {
+          messageParts.push(
+            `${willAlsoDeactivate.length} opportunity(ies) (${willAlsoDeactivate.map((o) => o.name).join(', ')}) will also be deactivated — this is their only active contact.`,
+          );
+        }
+        if (linkedOpportunities.length > willAlsoDeactivate.length) {
+          messageParts.push(`The rest of their linked opportunities just lose this contact, they stay active.`);
+        }
         return (
           <ConfirmDialog
-            title="Delete contact"
-            message={
-              linkedOpportunities.length > 0
-                ? `${deletingContact.firstName} ${deletingContact.lastName} is linked to ${linkedOpportunities.length} opportunity(ies) (${linkedOpportunities.map((o) => o.name).join(', ')}). Deleting the contact requires deleting those too — this can't be undone.`
-                : `Are you sure you want to delete ${deletingContact.firstName} ${deletingContact.lastName}? This can't be undone.`
-            }
-            confirmLabel="Delete"
-            confirmDisabled={linkedOpportunities.length > 0 && !deleteLinkedOpportunities}
-            checkboxLabel={
-              linkedOpportunities.length > 0
-                ? `Also delete ${linkedOpportunities.length} linked opportunity(ies)`
-                : undefined
-            }
-            checkboxChecked={deleteLinkedOpportunities}
-            onCheckboxChange={setDeleteLinkedOpportunities}
+            title="Deactivate contact"
+            message={messageParts.join(' ')}
+            confirmLabel="Deactivate"
             onConfirm={handleDeleteContact}
-            onCancel={() => {
-              setDeletingContact(null);
-              setDeleteLinkedOpportunities(false);
-            }}
+            onCancel={() => setDeletingContact(null)}
           />
         );
       })()}
@@ -902,7 +901,6 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
               onRequestDelete={() => {
                 setViewingContactId(null);
                 setDeletingContact(viewingContact);
-                setDeleteLinkedOpportunities(false);
               }}
             />
           );

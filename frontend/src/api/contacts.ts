@@ -54,13 +54,18 @@ export const contactsApi = {
     return res.json();
   },
 
-  deleteContact: async (token: string, contactId: string, options?: { deleteLinkedOpportunities?: boolean }): Promise<void> => {
+  // "Delete" deactivates instead of destroying the row (docs/tareas/specredisenosalesv2.md
+  // §2.2) — no destructive choice left to make, so no request body/options anymore.
+  deactivateContact: async (
+    token: string,
+    contactId: string,
+  ): Promise<{ contact: Contact; deactivatedOpportunityIds: string[] }> => {
     const res = await apiFetch(`${API_BASE_URL}/api/contacts/${contactId}`, {
       method: 'DELETE',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify(options ?? {}),
+      headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);
+    return res.json();
   },
 
   createContactCustomFieldValue: async (

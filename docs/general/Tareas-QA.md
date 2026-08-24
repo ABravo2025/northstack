@@ -1011,3 +1011,33 @@ por casi toda la app.
 Cuando se construyan los módulos grandes en curso (rediseño de Clients, Payroll), esta tabla de
 casos va a necesitar extenderse con sus endpoints nuevos — no asumir que quedan cubiertos por los
 casos de Employee/Client de arriba.
+
+---
+
+## QA-23 — Sales v2, Unidad 3: isPrimary único, soft-delete de Contact/Opportunity, multi-threading (2026-08-24, en `staging`)
+
+**Por qué existe esta tarea:** tres piezas chicas del mismo grupo. (1) `isPrimary` de Contact ahora
+es único por Company (crear/editar un 2do primary demueve al anterior). (2) "Delete" de Contact pasa
+a "Deactivate" — nunca borra de verdad; si el Contact era el único vínculo activo de una Opportunity,
+la Opportunity se desactiva también, si no, solo se desvincula. (3) Badge ámbar en el Kanban de
+Opportunity para deals con un solo Contact vinculado + métrica nueva en `scripts/metrics-report.ts`.
+Verificado con un script contra `staging` real (9 casos, un tenant de prueba). `npm run build`/`npm
+test` (91/91) backend y build frontend en verde.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Marcar un Contact como "Primary" cuando otro Contact de la misma Company ya lo era | El anterior deja de ser primary automáticamente — solo uno a la vez por Company |
+| 2 | Marcar como Primary un Contact **sin** Company asignada | Se guarda igual, sin afectar el primary de ninguna Company real |
+| 3 | `/contacts`, ícono de la fila (antes "Delete", ahora "Deactivate") | El tooltip dice "Deactivate"; el `ConfirmDialog` ya no tiene checkbox — el texto explica qué va a pasar (nada se borra) |
+| 4 | Desactivar un Contact que es el **único** vinculado a una Opportunity | La Opportunity también queda desactivada — confirmar que desaparece de `/opportunities` (Kanban) pero sigue existiendo (query directa) |
+| 5 | Desactivar un Contact que comparte una Opportunity con otro Contact activo | La Opportunity sigue activa/visible; el Contact desactivado desaparece de su lista de "Contacts involucrados", el otro sigue ahí |
+| 6 | `/contacts` después de desactivar alguno | El Contact desactivado ya no aparece en la tabla — no hay (todavía) forma de verlo/reactivarlo desde la UI, es un gap conocido y aceptado por ahora |
+| 7 | `/opportunities`, Kanban, cualquier deal con un solo Contact vinculado | Badge ámbar chico "1 contact" en la esquina inferior de la card; con 2+ Contacts no aparece |
+| 8 | `npx tsx scripts/metrics-report.ts` (o revisar el output de una corrida) | Sección nueva "Sales: multi-threading" con % de Opportunities abiertas de 1 solo Contact vs. 2+ |
+| 9 | Regresión: Employee/Company/Client — cualquier botón de "Delete" existente en esos módulos | Sigue siendo borrado real, sin cambios — este patrón no se tocó fuera de Contact/Opportunity |
+
+**Severidad:** el caso 4 (desactivar el contacto único de una Opportunity) es el corazón de esta
+unidad — si la Opportunity no se desactiva junto con su único Contact, o si se desactiva quedando
+huérfana de forma incorrecta cuando hay otros Contacts, es alta. El caso 9 (regresión fuera de
+Contact/Opportunity) es alta si algo cambió ahí — el alcance de esta unidad es explícitamente
+acotado.

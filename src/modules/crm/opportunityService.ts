@@ -27,6 +27,11 @@ export interface UpdateOpportunityInput {
   lossReasonId?: string | null;
   nextStepDate?: string | null;
   nextStepNote?: string | null;
+  // Not exposed by any UI yet — set automatically by
+  // contactService.ts's deactivateContact when this Opportunity loses its
+  // sole active Contact (docs/tareas/specredisenosalesv2.md §2.2). Whitelisted
+  // here so that's not a dead end at the API layer either.
+  isActive?: boolean;
 }
 
 const OPPORTUNITY_INCLUDE = {
@@ -96,9 +101,11 @@ export async function createOpportunity(input: CreateOpportunityInput): Promise<
   return opportunity;
 }
 
-export async function listOpportunities(tenantId: string) {
+// includeInactive defaults to false — same isActive-gated-by-default idiom as
+// contactService.ts's listContacts. No caller passes `true` yet.
+export async function listOpportunities(tenantId: string, includeInactive = false) {
   return prisma.opportunity.findMany({
-    where: { tenantId },
+    where: { tenantId, ...(includeInactive ? {} : { isActive: true }) },
     include: OPPORTUNITY_INCLUDE,
   });
 }
@@ -131,6 +138,7 @@ export async function updateOpportunity(
   if (input.lossReasonId !== undefined) data.lossReasonId = input.lossReasonId;
   if (input.nextStepDate !== undefined) data.nextStepDate = input.nextStepDate ? new Date(input.nextStepDate) : null;
   if (input.nextStepNote !== undefined) data.nextStepNote = input.nextStepNote;
+  if (input.isActive !== undefined) data.isActive = input.isActive;
 
   const updated = await prisma.opportunity.update({ where: { id }, data });
 

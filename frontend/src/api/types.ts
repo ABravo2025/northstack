@@ -150,6 +150,11 @@ export interface Contact {
   leadStatus: 'new' | 'contacted' | 'qualified' | 'disqualified' | null;
   leadSourceId: string | null;
   leadSource?: { id: string; name: string } | null;
+  // Soft-delete flag — "Delete" deactivates instead of destroying the row.
+  // No "show deactivated" UI yet, so every list call implicitly filters to
+  // isActive: true server-side; this field exists mainly so a detail view
+  // reached by direct reference (a Note/Task) can show it's deactivated.
+  isActive: boolean;
   createdAt: string;
   customFieldVals?: {
     id: string;
@@ -202,6 +207,11 @@ export interface Opportunity {
   lossReasonId: string | null;
   nextStepDate: string | null;
   nextStepNote: string | null;
+  // Set false when this Opportunity loses its sole active linked Contact
+  // (contactService.ts's deactivateContact) — same soft-delete idiom as
+  // Contact.isActive. No "show deactivated" UI yet, list calls filter to
+  // isActive: true server-side by default.
+  isActive: boolean;
   createdAt: string;
   contactLinks?: OpportunityContactLink[];
   stageHistory?: { id: string; stageId: string; enteredAt: string }[];

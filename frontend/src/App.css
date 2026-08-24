@@ -1796,6 +1796,18 @@
   @apply text-red-700 dark:text-red-400;
 }
 
+/* Multi-threading indicator (docs/tareas/specredisenosalesv2.md §2.1) — an
+   Opportunity with exactly one linked Contact, the one deal-risk case this
+   badge exists to flag ("what if that one person leaves/goes quiet"). */
+.kc-single-thread {
+  @apply ml-auto inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold text-amber-700 dark:text-amber-400;
+  background: rgba(217, 119, 6, 0.12);
+}
+
+.dark .kc-single-thread {
+  background: rgba(217, 119, 6, 0.2);
+}
+
 .kc-tasks {
   @apply ml-auto inline-flex items-center gap-1 text-[10.5px] text-ink-faint dark:text-dark-ink-faint;
 }

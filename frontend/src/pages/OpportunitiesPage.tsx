@@ -518,6 +518,11 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                       {stageDays === 0 ? 'Entered today' : `${stageDays}d in stage`}
                     </span>
                   )}
+                  {(opp.contactLinks?.length ?? 0) === 1 && (
+                    <span className="kc-single-thread" title="Only one contact on this deal">
+                      1 contact
+                    </span>
+                  )}
                 </div>
               </div>
             );

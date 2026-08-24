@@ -182,7 +182,7 @@ export default function ContactDetailModal({
         <div className="overview-panel-head">
           <OverviewActionsMenu
             className="overview-actions-trigger"
-            items={[{ label: 'Delete', onClick: onRequestDelete, danger: true }]}
+            items={[{ label: 'Deactivate', onClick: onRequestDelete, danger: true }]}
           />
           <button type="button" className="slideover-close" onClick={onClose} aria-label="Close">
             <XIcon className="h-4 w-4" />

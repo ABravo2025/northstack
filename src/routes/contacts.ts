@@ -1,6 +1,6 @@
 import { canCreateHr, canManageCustomFields, canViewHr } from '../modules/auth/permissionService.js';
 import { findCompanyById } from '../modules/crm/companyService.js';
-import { createContact, deleteContact, findContactById, listContacts, updateContact } from '../modules/crm/contactService.js';
+import { createContact, deactivateContact, findContactById, listContacts, updateContact } from '../modules/crm/contactService.js';
 import {
   createCustomFieldValue,
   deleteCustomFieldValue,
@@ -122,6 +122,10 @@ contactsRouter.patch('/api/contacts/:contactId', async (req, res) => {
   return res.json(updated);
 });
 
+// Soft: deactivates instead of deleting (docs/tareas/specredisenosalesv2.md
+// §2.2) — kept on the DELETE verb/route since that's still the right REST
+// shape for "remove this from active use", only what happens underneath
+// changed. Never blocks, never destroys — no request body needed anymore.
 contactsRouter.delete('/api/contacts/:contactId', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) {
@@ -137,14 +141,8 @@ contactsRouter.delete('/api/contacts/:contactId', async (req, res) => {
     return res.status(404).json({ error: 'Contact not found' });
   }
 
-  const result = await deleteContact(req.params.contactId, {
-    deleteLinkedOpportunities: req.body?.deleteLinkedOpportunities === true,
-  });
-  if (!result.success) {
-    return res.status(400).json({ error: result.error });
-  }
-
-  return res.status(204).end();
+  const result = await deactivateContact(req.params.contactId);
+  return res.json(result);
 });
 
 contactsRouter.post('/api/contacts/:contactId/custom-fields', async (req, res) => {

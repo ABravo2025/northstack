@@ -137,7 +137,24 @@ async function main() {
   const dayCounts = [...daysByUser.values()].map((set) => set.size);
   console.log(`Users with >=1 session: ${daysByUser.size}`);
   console.log(`Avg distinct login days per user: ${avg(dayCounts).toFixed(1)}`);
-  console.log(`Median distinct login days per user: ${median(dayCounts)}`);
+  console.log(`Median distinct login days per user: ${median(dayCounts)}\n`);
+
+  // -- Sales: multi-threading (docs/tareas/specredisenosalesv2.md §2.1) --
+  // Deal risk indicator — an open Opportunity riding on a single relationship
+  // (one Contact) is more exposed than one with several. Same "open" definition
+  // as the Kanban badge: stage.outcome === 'open', not Opportunity.isActive
+  // (deactivated Opportunities are already excluded by the soft-delete gate,
+  // but "open" here is about deal stage, not row lifecycle).
+  console.log('-- Sales: multi-threading (open Opportunities) --');
+  const openOpportunities = await prisma.opportunity.findMany({
+    where: { isActive: true, stage: { outcome: 'open' } },
+    select: { contactLinks: { select: { id: true } } },
+  });
+  const singleThreaded = openOpportunities.filter((o) => o.contactLinks.length === 1).length;
+  const multiThreaded = openOpportunities.filter((o) => o.contactLinks.length > 1).length;
+  console.log(`Open opportunities: ${openOpportunities.length}`);
+  console.log(`  Single contact: ${pct(singleThreaded, openOpportunities.length)} (${singleThreaded})`);
+  console.log(`  Multiple contacts: ${pct(multiThreaded, openOpportunities.length)} (${multiThreaded})`);
 
   await prisma.$disconnect();
 }

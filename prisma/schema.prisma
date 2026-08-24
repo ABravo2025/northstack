@@ -620,6 +620,12 @@ model Contact {
   leadStatus       LeadStatus? // only meaningful for leads captured via a public Form
   leadSourceId     String?
   leadSource       FieldCatalogDefinition? @relation(fields: [leadSourceId], references: [id])
+  // Soft-delete: "Delete" in the UI deactivates instead (contactService.ts's
+  // deactivateContact) — the row is never actually removed, so it stays a
+  // valid reference for historical Notes/Tasks/Opportunities. Only Contact
+  // and Opportunity work this way today, not the rest of the platform's
+  // delete* functions — see docs/tareas/specredisenosalesv2.md §2.2.
+  isActive         Boolean                 @default(true)
   createdAt        DateTime                @default(now())
   opportunityLinks OpportunityContact[]
 
@@ -681,6 +687,10 @@ model Opportunity {
   lossReason         FieldCatalogDefinition?   @relation(fields: [lossReasonId], references: [id])
   nextStepDate       DateTime?
   nextStepNote       String?
+  // Set false when the sole active Contact linked to this Opportunity gets
+  // deactivated (contactService.ts's deactivateContact) — same soft-delete
+  // idiom as Contact.isActive, see docs/tareas/specredisenosalesv2.md §2.2.
+  isActive           Boolean                   @default(true)
   createdAt          DateTime                  @default(now())
   contactLinks       OpportunityContact[]
   stageHistory       OpportunityStageHistory[]

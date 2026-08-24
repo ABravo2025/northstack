@@ -37,7 +37,19 @@ interface OpportunitiesPageProps {
 
 const emptyForm = {
   name: '',
+  pipelineId: '',
   companyId: '',
+  // `lead`-pipeline path only (docs/tareas/specredisenosalesv2.md §3.4's
+  // "generic modal" — same pattern as ContactDetailModal.tsx's inline
+  // Opportunity creation, generalized since there's no starting Contact/
+  // Company here): link an existing Contact via contactId, or fill the three
+  // newContact* fields to create one. leadCompanyName only matters when the
+  // resolved Contact has no Company yet — it becomes a placeholder Company.
+  contactId: '',
+  newContactFirstName: '',
+  newContactLastName: '',
+  newContactEmail: '',
+  leadCompanyName: '',
   stageId: '',
   amountCents: '',
   currency: 'USD',
@@ -124,6 +136,13 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
   const currentPipeline = activePipelines.find((p) => p.id === activeTab);
   const archivedOpportunities = opportunities.filter((o) => archivedPipelineIds.has(o.pipelineId));
 
+  // Pipeline chosen inside the Add form — starts out equal to the active
+  // Kanban tab (handleOpenAdd) but is independently changeable
+  // (docs/tareas/specredisenosalesv2.md §3.4's "generic modal": pick a
+  // Pipeline first, of any type). Deliberately separate from
+  // `currentPipeline` above, which drives the Kanban board itself.
+  const formPipeline = activePipelines.find((p) => p.id === form.pipelineId);
+
   const closeSlideOver = () => {
     setSlideOverMode(null);
     setForm((f) => ({ ...emptyForm, currency: f.currency }));
@@ -132,23 +151,59 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
 
   const handleOpenAdd = () => {
     const firstStage = currentPipeline?.stages.filter((s) => s.isActive).sort((a, b) => a.order - b.order)[0];
-    setForm((f) => ({ ...emptyForm, currency: f.currency, stageId: firstStage?.id || '' }));
+    setForm((f) => ({ ...emptyForm, currency: f.currency, pipelineId: currentPipeline?.id || '', stageId: firstStage?.id || '' }));
     autoCreateGuard.reset();
     setSlideOverMode('add');
   };
 
-  // Ready once Deal Name, Company, Owner, Amount and Currency are all
-  // filled/valid, plus Loss Reason if the selected stage is already a "lost"
-  // stage (matches the form's own required-field logic below). Takes an
-  // explicit candidate so the two <select>s (Company/Owner) can check
-  // readiness against the value from the change event directly, instead of
-  // racing React's async setState the way reading `form` here would.
+  // Switching Pipeline resets the type-specific fields (Company vs.
+  // Contact/placeholder-Company-name) — carrying over, say, a chosen Company
+  // after switching from `account` to `lead` would silently ignore it, since
+  // the `lead` branch below never reads `companyId`.
+  const handleFormPipelineChange = (pipelineId: string) => {
+    const pipeline = activePipelines.find((p) => p.id === pipelineId);
+    const firstStage = pipeline?.stages.filter((s) => s.isActive).sort((a, b) => a.order - b.order)[0];
+    const next = {
+      ...form,
+      pipelineId,
+      stageId: firstStage?.id || '',
+      companyId: '',
+      contactId: '',
+      newContactFirstName: '',
+      newContactLastName: '',
+      newContactEmail: '',
+      leadCompanyName: '',
+    };
+    setForm(next);
+    attemptAutoCreateOpportunity(next);
+  };
+
+  // Ready once Pipeline, Deal Name, Owner, Amount and Currency are all
+  // filled/valid, plus whatever the pipeline's `type` requires (an
+  // already-identified Company for `account`; a Contact — existing or new —
+  // for `lead`, with a Company name too unless that Contact already has one)
+  // and Loss Reason if the selected stage is already a "lost" stage. Takes an
+  // explicit candidate so the <select>s can check readiness against the value
+  // from the change event directly, instead of racing React's async setState
+  // the way reading `form` here would.
   const isOpportunityAddReady = (candidate: typeof form = form) => {
-    if (!candidate.name.trim()) return false;
-    if (!candidate.companyId || !candidate.ownerId) return false;
+    if (!candidate.pipelineId || !candidate.name.trim() || !candidate.ownerId) return false;
     if (!isLikelyValidAmount(candidate.amountCents)) return false;
     if (!candidate.currency.trim()) return false;
-    const stage = currentPipeline?.stages.find((s) => s.id === candidate.stageId);
+
+    const pipeline = activePipelines.find((p) => p.id === candidate.pipelineId);
+    if (pipeline?.type === 'lead') {
+      const existingContact = candidate.contactId ? contacts.find((c: any) => c.id === candidate.contactId) : null;
+      const hasNewContact =
+        candidate.newContactFirstName.trim() && candidate.newContactLastName.trim() && candidate.newContactEmail.trim();
+      if (!existingContact && !hasNewContact) return false;
+      const needsCompanyName = !existingContact?.companyId;
+      if (needsCompanyName && !candidate.leadCompanyName.trim()) return false;
+    } else if (!candidate.companyId) {
+      return false;
+    }
+
+    const stage = pipeline?.stages.find((s) => s.id === candidate.stageId);
     if (stage?.outcome === 'lost' && !candidate.lossReasonId) return false;
     return true;
   };
@@ -158,10 +213,37 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
   // replaced by the real OpportunityDetailModal for the new deal.
   const performCreateOpportunity = async (candidate: typeof form = form) => {
     const amountCents = Math.round(Number.parseFloat(candidate.amountCents || '0') * 100);
+    const pipeline = activePipelines.find((p) => p.id === candidate.pipelineId);
+
+    let companyId = candidate.companyId;
+    let contactIdToLink: string | null = null;
+
+    if (pipeline?.type === 'lead') {
+      let contact = candidate.contactId ? contacts.find((c: any) => c.id === candidate.contactId) : null;
+      if (!contact) {
+        contact = await api.createContact(token, {
+          firstName: candidate.newContactFirstName.trim(),
+          lastName: candidate.newContactLastName.trim(),
+          email: candidate.newContactEmail.trim(),
+        });
+      }
+      contactIdToLink = contact.id;
+      if (contact.companyId) {
+        companyId = contact.companyId;
+      } else {
+        const createdCompany = await api.createCompany(token, {
+          name: candidate.leadCompanyName.trim(),
+          contact: { contactId: contact.id },
+          isPlaceholder: true,
+        });
+        companyId = createdCompany.id;
+      }
+    }
+
     const opportunity = await api.createOpportunity(token, {
       name: candidate.name.trim(),
-      companyId: candidate.companyId,
-      pipelineId: activeTab,
+      companyId,
+      pipelineId: candidate.pipelineId,
       stageId: candidate.stageId || undefined,
       amountCents,
       currency: candidate.currency,
@@ -170,6 +252,17 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
       nextStepDate: candidate.nextStepDate || undefined,
       nextStepNote: candidate.nextStepNote || undefined,
     });
+    if (contactIdToLink) {
+      await api.addOpportunityContact(token, opportunity.id, { contactId: contactIdToLink });
+    }
+    if (pipeline?.type === 'lead') {
+      // A new Contact/placeholder Company may have just been created —
+      // refresh both so the detail modal that opens next (and the Kanban
+      // card behind it) reflect them immediately.
+      const [freshCompanies, freshContacts] = await Promise.all([api.listCompanies(token), api.listContacts(token)]);
+      setCompanies(freshCompanies);
+      setContacts(freshContacts);
+    }
     toast.success('Opportunity created.');
     const freshList = await api.listOpportunities(token);
     setOpportunities(freshList);
@@ -233,7 +326,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
     }
   };
 
-  const selectedStage = currentPipeline?.stages.find((s) => s.id === form.stageId);
+  const selectedStage = formPipeline?.stages.find((s) => s.id === form.stageId);
 
   if (loading) {
     return (
@@ -276,6 +369,22 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
             <div className="field-group">
               <h4 className="field-group-title">Deal</h4>
               <div className="field-group-body">
+                <Field label="Pipeline" required>
+                  <select
+                    id="opp-pipelineId"
+                    className="overview-field-input"
+                    value={form.pipelineId}
+                    onChange={(e) => handleFormPipelineChange(e.target.value)}
+                    required
+                  >
+                    <option value="">-- select --</option>
+                    {activePipelines.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
                 <Field label="Deal Name" required full>
                   <input
                     id="opp-name"
@@ -287,26 +396,97 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                     required
                   />
                 </Field>
-                <Field label="Company" required>
-                  <select
-                    id="opp-companyId"
-                    className="overview-field-input"
-                    value={form.companyId}
-                    onChange={(e) => {
-                      const next = { ...form, companyId: e.target.value };
-                      setForm(next);
-                      attemptAutoCreateOpportunity(next);
-                    }}
-                    required
-                  >
-                    <option value="">-- select --</option>
-                    {companies.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
+                {formPipeline?.type === 'lead' ? (
+                  <>
+                    <Field label="Contact" required>
+                      <select
+                        id="opp-contactId"
+                        className="overview-field-input"
+                        value={form.contactId}
+                        onChange={(e) => {
+                          const next = { ...form, contactId: e.target.value };
+                          setForm(next);
+                          attemptAutoCreateOpportunity(next);
+                        }}
+                      >
+                        <option value="">-- select an existing contact --</option>
+                        {contacts.map((c: any) => (
+                          <option key={c.id} value={c.id}>
+                            {c.firstName} {c.lastName}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    {!form.contactId && (
+                      <>
+                        <Field label="New contact — first name" required>
+                          <input
+                            className="overview-field-input"
+                            value={form.newContactFirstName}
+                            onChange={(e) => setForm({ ...form, newContactFirstName: e.target.value })}
+                            onBlur={() => attemptAutoCreateOpportunity()}
+                            required
+                          />
+                        </Field>
+                        <Field label="New contact — last name" required>
+                          <input
+                            className="overview-field-input"
+                            value={form.newContactLastName}
+                            onChange={(e) => setForm({ ...form, newContactLastName: e.target.value })}
+                            onBlur={() => attemptAutoCreateOpportunity()}
+                            required
+                          />
+                        </Field>
+                        <Field label="New contact — email" required>
+                          <input
+                            className="overview-field-input"
+                            type="email"
+                            value={form.newContactEmail}
+                            onChange={(e) => setForm({ ...form, newContactEmail: e.target.value })}
+                            onBlur={() => attemptAutoCreateOpportunity()}
+                            required
+                          />
+                        </Field>
+                      </>
+                    )}
+                    {!contacts.find((c: any) => c.id === form.contactId)?.companyId && (
+                      <Field label="Company name" required>
+                        <input
+                          id="opp-leadCompanyName"
+                          className="overview-field-input"
+                          value={form.leadCompanyName}
+                          onChange={(e) => setForm({ ...form, leadCompanyName: e.target.value })}
+                          onBlur={() => attemptAutoCreateOpportunity()}
+                          placeholder="Company name (not yet a confirmed account)"
+                          required
+                        />
+                      </Field>
+                    )}
+                  </>
+                ) : (
+                  <Field label="Company" required>
+                    <select
+                      id="opp-companyId"
+                      className="overview-field-input"
+                      value={form.companyId}
+                      onChange={(e) => {
+                        const next = { ...form, companyId: e.target.value };
+                        setForm(next);
+                        attemptAutoCreateOpportunity(next);
+                      }}
+                      required
+                    >
+                      <option value="">-- select --</option>
+                      {companies
+                        .filter((c: any) => !c.isPlaceholder)
+                        .map((c: any) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                    </select>
+                  </Field>
+                )}
                 <Field label="Owner" required>
                   <select
                     id="opp-ownerId"

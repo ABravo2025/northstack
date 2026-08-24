@@ -64,6 +64,7 @@ export default function CompanyDetailModal({
   const [addingOpportunity, setAddingOpportunity] = useState(false);
   const [newOppPipelineId, setNewOppPipelineId] = useState('');
   const [newOppName, setNewOppName] = useState(company.name);
+  const [newOppContactId, setNewOppContactId] = useState('');
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -76,7 +77,11 @@ export default function CompanyDetailModal({
   const companyContacts = contacts.filter((c) => c.companyId === company.id);
   const companyOpportunities = opportunities.filter((o) => o.companyId === company.id);
   const unlinkedContacts = contacts.filter((c) => !c.companyId);
-  const activePipelines = pipelines.filter((p) => p.isActive);
+  // `account`-only (docs/tareas/specredisenosalesv2.md §3.4) — this Company is
+  // already identified (never a placeholder in this flow, unlike the `lead`
+  // pipeline path from ContactDetailModal.tsx), so only `account` pipelines
+  // make sense here.
+  const accountPipelines = pipelines.filter((p) => p.isActive && p.type === 'account');
 
   const directChildCompanies = companies.filter((c) => c.parentCompanyId === company.id);
 
@@ -180,14 +185,15 @@ export default function CompanyDetailModal({
 
   const openAddOpportunity = () => {
     setNewOppName(company.name);
-    setNewOppPipelineId(activePipelines[0]?.id ?? '');
+    setNewOppPipelineId(accountPipelines[0]?.id ?? '');
+    setNewOppContactId('');
     setAddingOpportunity(true);
   };
 
   const handleCreateOpportunity = async () => {
     if (!newOppPipelineId || !newOppName.trim()) return;
     try {
-      await api.createOpportunity(token, {
+      const created = await api.createOpportunity(token, {
         name: newOppName.trim(),
         companyId: company.id,
         pipelineId: newOppPipelineId,
@@ -195,6 +201,9 @@ export default function CompanyDetailModal({
         currency: tenantCurrency,
         ownerId: company.accountOwnerId || currentUserId,
       });
+      if (newOppContactId) {
+        await api.addOpportunityContact(token, created.id, { contactId: newOppContactId });
+      }
       toast.success('Opportunity created.');
       setAddingOpportunity(false);
       onChanged();
@@ -498,9 +507,26 @@ export default function CompanyDetailModal({
                     onChange={(e) => setNewOppPipelineId(e.target.value)}
                     required
                   >
-                    {activePipelines.map((p) => (
+                    {accountPipelines.length === 0 && <option value="">No active account pipelines</option>}
+                    {accountPipelines.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.name}
+                      </option>
+                    ))}
+                  </select>
+                  <label className="text-xs text-ink-muted" htmlFor="new-opp-contact">
+                    Contact (optional)
+                  </label>
+                  <select
+                    id="new-opp-contact"
+                    value={newOppContactId}
+                    onChange={(e) => setNewOppContactId(e.target.value)}
+                  >
+                    <option value="">-- none --</option>
+                    {companyContacts.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.firstName} {c.lastName}
+                        {c.isPrimary ? ' ★' : ''}
                       </option>
                     ))}
                   </select>

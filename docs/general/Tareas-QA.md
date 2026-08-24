@@ -1078,3 +1078,37 @@ Opportunity a un pipeline `account` con una Company sin identificar todavía, sa
 de todo el mecanismo de placeholder. Los casos 2 y 6 (reseteo de `stageId` server-computed y rechazo
 sin stages activos) son altos porque dejan a la Opportunity en un estado inconsistente (stage que no
 pertenece a su pipeline) si fallan silenciosamente.
+
+## QA-25 — Sales v2, Unidad 5: UI de creación de Opportunity contextual — pipelines filtrados por tipo (2026-08-24, en `staging`)
+
+**Por qué existe esta tarea:** dos piezas del mismo punto (spec §3.4), 100% frontend — no se agregó
+ningún endpoint nuevo, solo se reordenó cómo el frontend usa los que ya existían. (1)
+`CompanyDetailModal.tsx`'s "Agregar Opportunity" ahora filtra el selector de Pipeline a solo `type:
+'account'` (antes mostraba todos, incluyendo `lead`, algo que no tenía sentido para una Company ya
+identificada) y suma un selector opcional de Contact acotado a los ya vinculados a esa Company. (2) El
+"Add Opportunity" genérico de `/opportunities` (sin partir de un perfil) ahora pide Pipeline primero y
+según su `type` muestra el buscador de Company existente (`account`) o el flujo de Contact +
+Company-placeholder (`lead`, mismo patrón que `ContactDetailModal.tsx` pero generalizado). **Importante:
+esta unidad no se pudo probar visualmente en navegador** — no hay herramienta de automatización de
+navegador en este entorno. Se verificó contra `staging` real replicando por HTTP la secuencia exacta de
+llamadas de cada rama del frontend, más una revisión manual del JSX (renderizado condicional, atributos
+`required` nativos). `npm run build` (backend y frontend) en verde — sin cambios de schema ni de tests
+backend en esta unidad (91/91 sigue en verde, sin tests nuevos porque no hay lógica de servidor nueva).
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | `CompanyDetailModal.tsx`, "Agregar Opportunity", selector de Pipeline | Solo aparecen pipelines `type: 'account'` activos — ningún `lead` en la lista |
+| 2 | Mismo formulario, sin pipelines `account` activos en el tenant | El selector muestra "No active account pipelines" y el botón "Create opportunity" queda deshabilitado (sigue atado a `!newOppPipelineId`) |
+| 3 | Mismo formulario, elegir un Contact del selector opcional antes de crear | La Opportunity creada queda con ese Contact vinculado (`GET .../contacts` o el detail modal lo muestra) |
+| 4 | `/opportunities`, "Add Opportunity", elegir un pipeline `lead` | Desaparece el selector de Company; aparecen "Contact" (existente) + campos de contacto nuevo + "Company name" |
+| 5 | Mismo caso, elegir un Contact existente que **ya tiene** Company | El campo "Company name" desaparece — no hace falta, se va a reusar la Company de ese Contact directamente |
+| 6 | Mismo caso, dejar "Contact" vacío y completar los 3 campos de contacto nuevo + "Company name" | Al crear: nuevo Contact + nueva Company placeholder (`isPlaceholder: true`) + Opportunity vinculando ambos, todo en la secuencia correcta |
+| 7 | Mismo formulario, cambiar de un pipeline `account` (con Company ya elegida) a uno `lead` | Los campos del tipo anterior (Company elegida) se limpian — no queda un `companyId` viejo colgado que no aplica al nuevo tipo |
+| 8 | Mismo formulario, pipeline `account`, selector de Company | Solo aparecen Companies con `isPlaceholder: false` — evita elegir una que el backend rechazaría igual |
+| 9 | Regresión: pegarle directo a la API creando una Opportunity con una Company placeholder en un pipeline `account` | Sigue bloqueado con 400 — el filtro del paso 8 es solo cosmético, la garantía real sigue siendo el gate del backend (Unidad 1/4) |
+
+**Severidad:** media — es una mejora de UX/consistencia (evitar ofrecer combinaciones que el backend ya
+rechazaba), no un gate de seguridad nuevo; el caso 9 es el que confirma que no se debilitó nada real. La
+falta de prueba visual en navegador es la mayor incertidumbre de esta unidad — si algo se rompe en el
+renderizado condicional (por ejemplo, un campo que no aparece cuando debería), no quedaría capturado por
+esta verificación y solo se vería al usarlo en la UI real.

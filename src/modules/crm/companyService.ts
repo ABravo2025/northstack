@@ -42,6 +42,11 @@ export interface UpdateCompanyInput {
   sizeId?: string | null;
   accountOwnerId?: string | null;
   parentCompanyId?: string | null;
+  // Only ever flipped false — the "complete this company's real details"
+  // step of moving an Opportunity into an `account` pipeline
+  // (OpportunityDetailModal.tsx's handleCompleteCompanyAndMove, see
+  // docs/tareas/specredisenosalesv2.md §3.6). Nothing sets it back to true.
+  isPlaceholder?: boolean;
 }
 
 const COMPANY_INCLUDE = {
@@ -159,6 +164,7 @@ export async function updateCompany(id: string, input: UpdateCompanyInput): Prom
   if (input.sizeId !== undefined) data.sizeId = input.sizeId;
   if (input.accountOwnerId !== undefined) data.accountOwnerId = input.accountOwnerId;
   if (input.parentCompanyId !== undefined) data.parentCompanyId = input.parentCompanyId;
+  if (input.isPlaceholder !== undefined) data.isPlaceholder = input.isPlaceholder;
 
   return prisma.company.update({
     where: { id },

@@ -42,6 +42,7 @@ export const opportunitiesApi = {
     data: Partial<{
       name: string;
       companyId: string;
+      pipelineId: string;
       stageId: string;
       amountCents: number;
       currency: string;

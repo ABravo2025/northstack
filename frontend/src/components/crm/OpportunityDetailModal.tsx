@@ -45,6 +45,18 @@ export default function OpportunityDetailModal({
   const toast = useToast();
   const [newContactId, setNewContactId] = useState('');
   const [newContactRole, setNewContactRole] = useState('');
+  // Set only when a pipeline change targets an `account` pipeline whose
+  // Company is still a placeholder (docs/tareas/specredisenosalesv2.md §3.6)
+  // — the pipeline change is held until this inline form completes the
+  // Company's real details and clears isPlaceholder, then retries.
+  const [pendingPipelineId, setPendingPipelineId] = useState<string | null>(null);
+  const [companyDraft, setCompanyDraft] = useState({ industry: '', website: '', phone: '' });
+  const [completingCompany, setCompletingCompany] = useState(false);
+  // Set right after a stage change lands this Opportunity on a `won` stage
+  // inside a `lead` pipeline (docs/tareas/specredisenosalesv2.md §3.3) — holds
+  // the suggested target `account` pipeline for the "move to account
+  // pipeline?" offer banner. Null means no offer showing.
+  const [wonOfferPipelineId, setWonOfferPipelineId] = useState<string | null>(null);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -62,6 +74,26 @@ export default function OpportunityDetailModal({
   const linkedContactIds = new Set((opportunity.contactLinks ?? []).map((l) => l.contactId));
   const linkableContacts = contacts.filter((c) => !linkedContactIds.has(c.id));
 
+  // Offers the "move to account pipeline?" banner whenever this Opportunity
+  // is sitting on a `won` stage inside a `lead` pipeline — fires both right
+  // after an internal stage-change save (opportunity.stageId updates via
+  // onSaved) and when the modal is opened already in that state (e.g. right
+  // after a Kanban drag-drop win, see OpportunitiesPage.tsx's handleMove).
+  // Guard: an Opportunity already in an `account` pipeline has nowhere
+  // further to offer moving to, so this is a no-op there
+  // (docs/tareas/specredisenosalesv2.md §3.3).
+  useEffect(() => {
+    if (pipeline?.type !== 'lead' || currentStage?.outcome !== 'won') {
+      return;
+    }
+    const accountPipelines = pipelines.filter((p) => p.type === 'account' && p.isActive);
+    if (accountPipelines.length === 0) {
+      return;
+    }
+    setWonOfferPipelineId(accountPipelines[0].id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [opportunity.stageId, pipeline?.type]);
+
   // Two-part update: onSaved patches the row instantly with the PATCH
   // response (found by the user 2026-07-30 — the background-refetch-only fix
   // updated the row eventually but not "on time"), then onChanged still runs
@@ -77,6 +109,55 @@ export default function OpportunityDetailModal({
     return updated;
   };
 
+  // Proactive check instead of attempt-then-catch: the backend rejects this
+  // exact case (routes/opportunities.ts's validateOpportunityRefs), but
+  // deciding client-side first means an inline form instead of a failed
+  // request + a re-try. company is looked up from the *current* company (not
+  // whatever the target pipeline might imply) — moving pipelines never
+  // changes companyId, see 3.6.
+  const handlePipelineChange = async (pipelineId: string) => {
+    const targetPipeline = pipelines.find((p) => p.id === pipelineId);
+    const currentCompany = companies.find((c) => c.id === opportunity.companyId);
+    if (targetPipeline?.type === 'account' && currentCompany?.isPlaceholder) {
+      setPendingPipelineId(pipelineId);
+      setCompanyDraft({
+        industry: currentCompany.industry || '',
+        website: currentCompany.website || '',
+        phone: currentCompany.phone || '',
+      });
+      return;
+    }
+    try {
+      await save({ pipelineId });
+    } catch (error) {
+      toast.error('Failed to change pipeline: ' + (error as Error).message);
+    }
+  };
+
+  const handleCompleteCompanyAndMove = async () => {
+    if (!pendingPipelineId) return;
+    setCompletingCompany(true);
+    try {
+      await api.updateCompany(token, opportunity.companyId, {
+        industry: companyDraft.industry || null,
+        website: companyDraft.website || null,
+        phone: companyDraft.phone || null,
+        isPlaceholder: false,
+      });
+      await save({ pipelineId: pendingPipelineId });
+      toast.success('Company confirmed, opportunity moved.');
+      setPendingPipelineId(null);
+    } catch (error) {
+      toast.error('Failed to confirm company: ' + (error as Error).message);
+    } finally {
+      setCompletingCompany(false);
+    }
+  };
+
+  const handleCancelPipelineChange = () => {
+    setPendingPipelineId(null);
+  };
+
   const handleStageChange = async (stageId: string) => {
     try {
       await save({ stageId });
@@ -86,6 +167,13 @@ export default function OpportunityDetailModal({
       // user to fill in as the very next step, no separate Save action needed.
       toast.error((error as Error).message || 'Failed to update stage.');
     }
+  };
+
+  const handleAcceptWonOffer = () => {
+    if (!wonOfferPipelineId) return;
+    const targetId = wonOfferPipelineId;
+    setWonOfferPipelineId(null);
+    handlePipelineChange(targetId).catch(() => {});
   };
 
   const handleAddContact = async () => {
@@ -173,6 +261,73 @@ export default function OpportunityDetailModal({
                   emptyLabel="-- select --"
                 />
               </Field>
+              <Field label="Pipeline">
+                <div className="dropdown-trigger-wrap">
+                  <select
+                    className="dropdown-trigger dt-status"
+                    value={opportunity.pipelineId}
+                    onChange={(e) => handlePipelineChange(e.target.value)}
+                  >
+                    {pipelines
+                      .filter((p) => p.isActive)
+                      .map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                  </select>
+                  <svg className="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M6 9l6 6 6-6" />
+                  </svg>
+                </div>
+              </Field>
+              {pendingPipelineId && (
+                <Field label="Confirm company details to move pipeline" full>
+                  <div className="mt-1 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-gray-800">
+                    <p className="text-xs text-ink-muted">
+                      {opportunity.company?.name} is still a placeholder — add its real details to move this deal into{' '}
+                      {pipelines.find((p) => p.id === pendingPipelineId)?.name}.
+                    </p>
+                    <label className="text-xs text-ink-muted" htmlFor="pending-company-industry">
+                      Industry
+                    </label>
+                    <input
+                      id="pending-company-industry"
+                      value={companyDraft.industry}
+                      onChange={(e) => setCompanyDraft((d) => ({ ...d, industry: e.target.value }))}
+                    />
+                    <label className="text-xs text-ink-muted" htmlFor="pending-company-website">
+                      Website
+                    </label>
+                    <input
+                      id="pending-company-website"
+                      value={companyDraft.website}
+                      onChange={(e) => setCompanyDraft((d) => ({ ...d, website: e.target.value }))}
+                    />
+                    <label className="text-xs text-ink-muted" htmlFor="pending-company-phone">
+                      Phone
+                    </label>
+                    <input
+                      id="pending-company-phone"
+                      value={companyDraft.phone}
+                      onChange={(e) => setCompanyDraft((d) => ({ ...d, phone: e.target.value }))}
+                    />
+                    <div className="flex justify-end gap-2">
+                      <button type="button" className="btn-secondary btn-sm" onClick={handleCancelPipelineChange} disabled={completingCompany}>
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-primary btn-sm"
+                        onClick={handleCompleteCompanyAndMove}
+                        disabled={completingCompany}
+                      >
+                        {completingCompany ? 'Saving...' : 'Confirm & Move'}
+                      </button>
+                    </div>
+                  </div>
+                </Field>
+              )}
               <Field label="Amount">
                 <AutoSaveField
                   label="Amount"
@@ -229,6 +384,35 @@ export default function OpportunityDetailModal({
                     onSave={(v) => save({ lossReasonId: v || null })}
                     options={lossReasons.map((lr) => ({ value: lr.id, label: lr.name }))}
                   />
+                </Field>
+              )}
+              {wonOfferPipelineId && (
+                <Field label="Move to account pipeline?" full>
+                  <div className="mt-1 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-gray-800">
+                    <p className="text-xs text-ink-muted">
+                      Won! Move this deal into an account pipeline to keep tracking it there.
+                    </p>
+                    <select
+                      value={wonOfferPipelineId}
+                      onChange={(e) => setWonOfferPipelineId(e.target.value)}
+                    >
+                      {pipelines
+                        .filter((p) => p.type === 'account' && p.isActive)
+                        .map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                    </select>
+                    <div className="flex justify-end gap-2">
+                      <button type="button" className="btn-secondary btn-sm" onClick={() => setWonOfferPipelineId(null)}>
+                        Not now
+                      </button>
+                      <button type="button" className="btn-primary btn-sm" onClick={handleAcceptWonOffer}>
+                        Move
+                      </button>
+                    </div>
+                  </div>
                 </Field>
               )}
             </div>

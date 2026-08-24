@@ -1041,3 +1041,40 @@ unidad — si la Opportunity no se desactiva junto con su único Contact, o si s
 huérfana de forma incorrecta cuando hay otros Contacts, es alta. El caso 9 (regresión fuera de
 Contact/Opportunity) es alta si algo cambió ahí — el alcance de esta unidad es explícitamente
 acotado.
+
+## QA-24 — Sales v2, Unidad 4: cambio de Pipeline + gate de Company real + oferta de mover un lead ganado (2026-08-24, en `staging`)
+
+**Por qué existe esta tarea:** dos piezas relacionadas (spec §3.3 + §3.6). (1) `updateOpportunity`
+ahora acepta reasignar `pipelineId` — resetea `stageId` al primer stage activo del pipeline destino
+(el `stageId` que venga en el mismo body se ignora si el pipeline cambió), y rechaza el cambio si el
+pipeline destino no tiene ningún stage activo. (2) El gate de "no se puede mover una Opportunity a un
+pipeline `account` si su Company sigue siendo un placeholder" (ya existía para cambios de `companyId`
+desde la Unidad 1) ahora también corre en una reasignación de `pipelineId` pura — antes de esta unidad
+ese camino no se chequeaba. En el frontend, `OpportunityDetailModal.tsx` gana un selector de Pipeline
++ un formulario inline para completar los datos reales de la Company cuando el gate bloquea el cambio,
+y un banner "Move to account pipeline?" que aparece solo cuando la Opportunity está en un stage `won`
+de un pipeline `lead` — tanto al cambiar de stage dentro del modal como al abrirlo ya en ese estado
+(incluye el caso de un drag-and-drop ganador en el Kanban de `OpportunitiesPage.tsx`, que ahora abre el
+detail modal automáticamente en ese caso). Verificado con un script contra `staging` real (tenant +
+pipelines + companies + opportunity de punta a punta vía HTTP, todo descartado al final). `npm run
+build`/`npm test` (91/91) backend y build frontend en verde — sin cambios de schema en esta unidad.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Opportunity en pipeline `lead`, Company todavía placeholder → cambiar el selector "Pipeline" del detail modal a un pipeline `account` | Aparece el formulario inline "Confirm company details to move pipeline" en vez de guardar directo; la Opportunity no se mueve hasta completarlo |
+| 2 | Completar el formulario inline (industry/website/phone) y confirmar "Confirm & Move" | La Company pasa a `isPlaceholder: false` con esos datos, y la Opportunity se mueve al pipeline elegido en la misma operación — verificar que el `stageId` resultante es el primer stage activo del pipeline destino |
+| 3 | Repetir el caso 1 pero pegándole directo a la API (`PATCH /api/opportunities/:id` con solo `pipelineId`, sin tocar `companyId`) | 400 con mensaje sobre placeholder — antes de esta unidad este camino no estaba cubierto y el cambio pasaba igual |
+| 4 | Company ya real (`isPlaceholder: false`) → cambiar de pipeline a uno `account` | Se mueve directo, sin pedir nada extra |
+| 5 | Cambiar a un pipeline `type: 'lead'` con Company placeholder | Nunca bloquea — el gate solo aplica para pipelines `account` |
+| 6 | Mover una Opportunity a un pipeline sin ningún stage activo | La operación falla (error genérico del servidor, no un 400 dedicado — ver nota en la spec §3.6) y la Opportunity no cambia de pipeline |
+| 7 | Dentro del detail modal, cambiar el Stage de una Opportunity en un pipeline `lead` a un stage `won` | Aparece el banner "Move to account pipeline?" con un selector de pipelines `account` activos; "Not now" lo descarta sin guardar nada, "Move" dispara el mismo mecanismo del caso 1/2 |
+| 8 | Kanban de `/opportunities`: arrastrar una card de un pipeline `lead` a una columna `won` | El detail modal de esa Opportunity se abre automáticamente mostrando el banner del caso 7 — no hace falta abrirlo a mano |
+| 9 | Arrastrar una card a un stage `won` dentro de un pipeline `account` (no `lead`) | No pasa nada especial — ni se abre el modal automáticamente ni aparece el banner, es terminal |
+| 10 | Regresión: cambiar solo el Stage (sin tocar Pipeline) de una Opportunity que no aterriza en `won`, o que está en un pipeline `account` | Comportamiento sin cambios respecto a antes de esta unidad |
+
+**Severidad:** el caso 3 es el corazón real de esta unidad — es el gap concreto que existía antes (el
+gate solo cubría `companyId`, no `pipelineId`) y si se rompe, vuelve a ser posible mover una
+Opportunity a un pipeline `account` con una Company sin identificar todavía, salteando la razón de ser
+de todo el mecanismo de placeholder. Los casos 2 y 6 (reseteo de `stageId` server-computed y rechazo
+sin stages activos) son altos porque dejan a la Opportunity en un estado inconsistente (stage que no
+pertenece a su pipeline) si fallan silenciosamente.

@@ -29,6 +29,7 @@ async function validateOpportunityRefs(
   body: any,
   pipelineId: string,
   existingLossReasonId?: string | null,
+  existingCompanyId?: string,
 ): Promise<{ error: string } | null> {
   const pipeline = await findPipelineById(pipelineId);
   if (!pipeline || pipeline.tenantId !== tenantId) {
@@ -38,18 +39,29 @@ async function validateOpportunityRefs(
     return { error: 'Cannot create or edit an Opportunity in an archived pipeline' };
   }
 
-  if (body.companyId !== undefined) {
-    const company = await findCompanyById(body.companyId);
-    if (!company || company.tenantId !== tenantId) {
-      return { error: 'Company not found' };
-    }
-    // Backend half of the gate ContactDetailModal.tsx already enforces
-    // client-side (docs/tareas/specredisenosalesv2.md §3.2) — an `account`
-    // pipeline manages an already-identified company, never a placeholder
-    // created ad hoc off a `lead` pipeline. Hitting the API directly used to
-    // bypass this entirely.
-    if (pipeline.type === 'account' && company.isPlaceholder) {
-      return { error: 'This pipeline requires an already-identified company — this one is still a placeholder.' };
+  // Re-check on either a companyId change OR a pipelineId change — moving an
+  // Opportunity into an `account` pipeline is just as much a gate violation as
+  // assigning a placeholder Company to one, and the caller passes the
+  // *effective* pipelineId here (target pipeline when body.pipelineId is
+  // present, else the existing one), so `pipeline` above already reflects the
+  // pipeline this Opportunity would end up in.
+  const companyChanging = body.companyId !== undefined;
+  const pipelineChanging = body.pipelineId !== undefined;
+  if (companyChanging || pipelineChanging) {
+    const effectiveCompanyId = companyChanging ? body.companyId : existingCompanyId;
+    if (effectiveCompanyId) {
+      const company = await findCompanyById(effectiveCompanyId);
+      if (!company || company.tenantId !== tenantId) {
+        return { error: 'Company not found' };
+      }
+      // Backend half of the gate ContactDetailModal.tsx already enforces
+      // client-side (docs/tareas/specredisenosalesv2.md §3.2/§3.6) — an
+      // `account` pipeline manages an already-identified company, never a
+      // placeholder created ad hoc off a `lead` pipeline. Hitting the API
+      // directly used to bypass this entirely.
+      if (pipeline.type === 'account' && company.isPlaceholder) {
+        return { error: 'This pipeline requires an already-identified company — this one is still a placeholder.' };
+      }
     }
   }
 
@@ -159,7 +171,13 @@ opportunitiesRouter.patch('/api/opportunities/:opportunityId', async (req, res) 
     return res.status(404).json({ error: 'Opportunity not found' });
   }
 
-  const refError = await validateOpportunityRefs(user.tenantId!, req.body, opportunity.pipelineId, opportunity.lossReasonId);
+  const refError = await validateOpportunityRefs(
+    user.tenantId!,
+    req.body,
+    req.body.pipelineId || opportunity.pipelineId,
+    opportunity.lossReasonId,
+    opportunity.companyId,
+  );
   if (refError) {
     return res.status(400).json(refError);
   }

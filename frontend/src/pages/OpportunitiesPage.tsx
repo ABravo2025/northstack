@@ -218,6 +218,16 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
     try {
       await api.updateOpportunity(token, opp.id, { stageId: newStageId });
       reloadOpportunities();
+      // Dropping a card onto a `won` stage inside a `lead` pipeline opens the
+      // detail modal so the "move to account pipeline?" offer
+      // (OpportunityDetailModal.tsx, docs/tareas/specredisenosalesv2.md §3.3)
+      // surfaces right away instead of silently waiting for the next manual
+      // open of this deal.
+      const oppPipeline = pipelines.find((p) => p.id === opp.pipelineId);
+      const targetStage = oppPipeline?.stages.find((s) => s.id === newStageId);
+      if (oppPipeline?.type === 'lead' && targetStage?.outcome === 'won') {
+        setViewingId(opp.id);
+      }
     } catch (error) {
       toast.error('Failed to move: ' + (error as Error).message);
     }

@@ -21,6 +21,11 @@ export interface UpdateOpportunityInput {
   name?: string;
   amountCents?: number;
   currency?: string;
+  // Reassigning this always resets stageId to the target pipeline's first
+  // active stage server-side (docs/tareas/specredisenosalesv2.md §3.6) — any
+  // stageId also present in the same call is ignored when pipelineId changes,
+  // same "server computes it" pattern as createOpportunity.
+  pipelineId?: string;
   stageId?: string;
   estimatedCloseDate?: string | null;
   ownerId?: string;
@@ -130,7 +135,6 @@ export async function updateOpportunity(
   if (input.name !== undefined) data.name = input.name;
   if (input.amountCents !== undefined) data.amountCents = input.amountCents;
   if (input.currency !== undefined) data.currency = input.currency;
-  if (input.stageId !== undefined) data.stageId = input.stageId;
   if (input.estimatedCloseDate !== undefined) {
     data.estimatedCloseDate = input.estimatedCloseDate ? new Date(input.estimatedCloseDate) : null;
   }
@@ -140,14 +144,34 @@ export async function updateOpportunity(
   if (input.nextStepNote !== undefined) data.nextStepNote = input.nextStepNote;
   if (input.isActive !== undefined) data.isActive = input.isActive;
 
+  // A pipeline change always wins over any stageId also present in the same
+  // call — the target pipeline's stage set is different, so the caller's
+  // stageId (if any) almost certainly belongs to the *old* pipeline.
+  let resolvedStageId: string | undefined;
+  if (input.pipelineId !== undefined && input.pipelineId !== existing.pipelineId) {
+    data.pipelineId = input.pipelineId;
+    const firstStage = await prisma.pipelineStageDefinition.findFirst({
+      where: { pipelineId: input.pipelineId, isActive: true },
+      orderBy: { order: 'asc' },
+    });
+    if (!firstStage) {
+      throw new Error('Pipeline has no active stages to default into');
+    }
+    data.stageId = firstStage.id;
+    resolvedStageId = firstStage.id;
+  } else if (input.stageId !== undefined) {
+    data.stageId = input.stageId;
+    resolvedStageId = input.stageId;
+  }
+
   const updated = await prisma.opportunity.update({ where: { id }, data });
 
-  if (input.stageId && input.stageId !== existing.stageId) {
+  if (resolvedStageId && resolvedStageId !== existing.stageId) {
     await prisma.opportunityStageHistory.create({
-      data: { tenantId, opportunityId: id, stageId: input.stageId },
+      data: { tenantId, opportunityId: id, stageId: resolvedStageId },
     });
 
-    const stage = await prisma.pipelineStageDefinition.findUnique({ where: { id: input.stageId } });
+    const stage = await prisma.pipelineStageDefinition.findUnique({ where: { id: resolvedStageId } });
     if (stage?.outcome === 'won') {
       await maybeAdvanceCompanyToCustomer(tenantId, updated.companyId);
     }

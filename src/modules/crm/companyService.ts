@@ -21,6 +21,12 @@ export interface CreateCompanyInput {
   // ContactDetailModal creating an ad-hoc Company for a Contact that doesn't
   // have one yet) — both satisfy the same invariant.
   contact: { firstName: string; lastName: string; email: string } | { contactId: string };
+  // True only for the ad-hoc Company created inline from a `lead`-type
+  // Pipeline when a Contact has no Company yet (ContactDetailModal.tsx) —
+  // every other call site (the "Add Company" form, public Form matching)
+  // omits this and gets the default `false`. See Company.isPlaceholder in
+  // schema.prisma for what this gates.
+  isPlaceholder?: boolean;
 }
 
 // statusId deliberately excluded — Company.status is derived from business
@@ -58,6 +64,7 @@ export async function createCompany(input: CreateCompanyInput): Promise<Company>
         accountOwnerId: input.accountOwnerId ?? null,
         statusId,
         tenantId: input.tenantId,
+        isPlaceholder: input.isPlaceholder ?? false,
       },
       include: COMPANY_INCLUDE,
     });

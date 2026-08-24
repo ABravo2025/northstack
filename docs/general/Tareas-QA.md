@@ -943,6 +943,38 @@ el código de esta pieza:
 
 ---
 
+## QA-21 — Sales v2, Unidad 1: gate de Company blindado en backend + `Pipeline.type` inmutable (2026-08-24, en `staging`)
+
+**Por qué existe esta tarea:** primera unidad de `docs/tareas/specredisenosalesv2.md`. No agrega
+ningún campo nuevo de negocio visible — cierra dos huecos sobre un mecanismo que ya estaba
+construido desde el 2026-07-29 (`Pipeline.type`, `'lead'`/`'account'`, con una Company placeholder
+creada al vuelo para leads sin empresa confirmada, ver `ContactDetailModal.tsx`): (1) el gate de
+"un pipeline `account` exige una Company ya identificada" solo vivía en el frontend, así que pegarle
+directo a la API lo saltaba entero; (2) `Pipeline.type` se podía cambiar después de creado desde un
+`<select>` en Settings → Pipelines, pudiendo reclasificar un pipeline con Opportunities ya creadas.
+Verificado de punta a punta con un script contra `staging` real (tenant de prueba creado y borrado
+vía Prisma, sin necesitar contraseña de nadie): placeholder creada con `isPlaceholder: true`, 400 al
+crear una Opportunity `account` con esa Company, 201 al crear una Opportunity `lead` con la misma
+Company, y `type` de un pipeline sin cambiar tras un PATCH que lo intentaba. `npm run build`/`npm
+test` (91/91) backend y `npm run build` frontend en verde.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | `/settings/pipelines`, cualquier pipeline existente | Ya no hay un `<select>` de tipo editable junto al nombre — aparece como texto de solo lectura ("Leads"/"Account") |
+| 2 | Crear un Contact sin Company, abrir su detalle → "+ Add" en Opportunities, elegir un pipeline `account`, sin asignarle Company antes | Bloqueado con el mismo toast de siempre ("This pipeline is account-only...") — comportamiento sin cambios, ya existía |
+| 3 | Mismo Contact sin Company, elegir un pipeline `lead`, cargar un nombre de Company y crear la Opportunity | Se crea una Company nueva con `isPlaceholder: true` (confirmar con una query directa, no hay indicador visual todavía — eso es una unidad futura) y la Opportunity queda creada en ese pipeline |
+| 4 | Con `curl`/Postman: `POST /api/opportunities` directo, `companyId` de una Company `isPlaceholder: true`, `pipelineId` de un pipeline `account` | 400, `"This pipeline requires an already-identified company — this one is still a placeholder."` — antes de esta unidad, esto pasaba sin chequeo |
+| 5 | Mismo caso pero con `pipelineId` de un pipeline `lead` | 201 — sigue permitido |
+| 6 | `PATCH /api/opportunities/:id` cambiando `companyId` a una Company placeholder, en una Opportunity que ya vive en un pipeline `account` | 400, mismo mensaje que el caso 4 — el gate también corre en update, no solo en create |
+| 7 | `PATCH /api/pipelines/:id` con `{ "type": "account" }` sobre un pipeline `lead` existente (curl directo, sin pasar por la UI) | 200, pero el `type` de la respuesta sigue siendo `"lead"` — el campo se ignora en vez de rechazar con error, para no romper un PATCH que además cambia `name`/`order`/`isActive` en el mismo request |
+| 8 | Regresión: flujo normal de alta de Company desde `/companies` (no desde un Contact) | La Company creada tiene `isPlaceholder: false` — el flag nunca se filtra a ningún otro punto de creación |
+
+**Severidad:** el caso 4 es el corazón de esta unidad — si un pipeline `account` termina con una
+Company placeholder colgada (por saltear el frontend), es alta severidad, mismo criterio que
+cualquier gap de validación server-side. El resto es media/baja salvo regresión funcional real.
+
+---
+
 ## Próximas tareas de QA (a definir)
 
 Cuando se construyan los módulos grandes en curso (rediseño de Clients, Payroll), esta tabla de

@@ -580,6 +580,16 @@ model Company {
   accountOwner   User?                   @relation(fields: [accountOwnerId], references: [id])
   statusId       String // lifecycle status (Prospect/Customer/Churned) — StatusDefinition-based
   statusDefn     StatusDefinition        @relation(fields: [statusId], references: [id]) // like Employee/Client, but never manually edited: derived from Opportunity/Contract events
+  // Set only by the ad-hoc "create a Company for this Contact" flow off a
+  // `lead`-type Pipeline (ContactDetailModal.tsx's handleCreateOpportunity) —
+  // never true for a Company created from /companies or a public Form. Marks
+  // "still needs a human to fill in real details" so an `account`-type
+  // Pipeline can require an already-identified Company (see
+  // src/routes/opportunities.ts's validateOpportunityRefs) without confusing
+  // a placeholder for a confirmed one. Cleared explicitly (not on every edit)
+  // once the Sales v2 "close a won lead" flow exists — see
+  // docs/tareas/specredisenosalesv2.md §3.6.
+  isPlaceholder  Boolean                 @default(false)
   createdAt      DateTime                @default(now())
   contacts       Contact[]
   opportunities  Opportunity[]

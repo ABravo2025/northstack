@@ -148,6 +148,7 @@ export default function ContactDetailModal({
         const created = await api.createCompany(token, {
           name: newOppCompanyName.trim(),
           contact: { contactId: contact.id },
+          isPlaceholder: true,
         });
         companyId = created.id;
       }

@@ -43,6 +43,14 @@ async function validateOpportunityRefs(
     if (!company || company.tenantId !== tenantId) {
       return { error: 'Company not found' };
     }
+    // Backend half of the gate ContactDetailModal.tsx already enforces
+    // client-side (docs/tareas/specredisenosalesv2.md §3.2) — an `account`
+    // pipeline manages an already-identified company, never a placeholder
+    // created ad hoc off a `lead` pipeline. Hitting the API directly used to
+    // bypass this entirely.
+    if (pipeline.type === 'account' && company.isPlaceholder) {
+      return { error: 'This pipeline requires an already-identified company — this one is still a placeholder.' };
+    }
   }
 
   if (body.ownerId !== undefined) {

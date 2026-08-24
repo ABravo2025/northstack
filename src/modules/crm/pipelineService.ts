@@ -57,9 +57,12 @@ export interface CreatePipelineInput {
   order?: number;
 }
 
+// `type` deliberately excluded — immutable once a Pipeline is created (see
+// docs/tareas/specredisenosalesv2.md §3.1). Reclassifying a pipeline that
+// already has Opportunities would silently change which Company-gate rule
+// applies to them (src/routes/opportunities.ts's validateOpportunityRefs).
 export interface UpdatePipelineInput {
   name?: string;
-  type?: PipelineType;
   order?: number;
   isActive?: boolean;
 }
@@ -103,7 +106,6 @@ export async function updatePipeline(id: string, tenantId: string, input: Update
 
   const data: Prisma.PipelineUncheckedUpdateInput = {};
   if (input.name !== undefined) data.name = input.name;
-  if (input.type !== undefined) data.type = input.type;
   if (input.order !== undefined) data.order = input.order;
   if (input.isActive !== undefined) data.isActive = input.isActive;
 

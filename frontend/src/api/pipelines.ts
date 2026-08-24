@@ -24,10 +24,12 @@ export const pipelinesApi = {
     return res.json();
   },
 
+  // `type` is intentionally not accepted here — immutable once created, see
+  // docs/tareas/specredisenosalesv2.md §3.1.
   updatePipeline: async (
     token: string,
     pipelineId: string,
-    data: { name?: string; type?: 'lead' | 'account'; order?: number; isActive?: boolean },
+    data: { name?: string; order?: number; isActive?: boolean },
   ): Promise<Pipeline> => {
     const res = await apiFetch(`${API_BASE_URL}/api/pipelines/${pipelineId}`, {
       method: 'PATCH',

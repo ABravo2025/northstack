@@ -67,13 +67,11 @@ pipelinesRouter.patch('/api/pipelines/:pipelineId', async (req, res) => {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  if (req.body.type !== undefined && !VALID_PIPELINE_TYPES.includes(req.body.type)) {
-    return res.status(400).json({ error: "type must be 'lead' or 'account'" });
-  }
-
+  // `type` is immutable after creation (docs/tareas/specredisenosalesv2.md
+  // §3.1) — silently ignored here rather than erroring, since the frontend
+  // no longer sends it and a stray value shouldn't break unrelated updates.
   const result = await updatePipeline(req.params.pipelineId, user.tenantId!, {
     name: req.body.name,
-    type: req.body.type,
     order: req.body.order,
     isActive: req.body.isActive,
   });

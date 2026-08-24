@@ -22,6 +22,7 @@ export const companiesApi = {
       sizeId?: string;
       accountOwnerId?: string | null;
       contact: { firstName: string; lastName: string; email: string } | { contactId: string };
+      isPlaceholder?: boolean;
     },
   ): Promise<Company> => {
     const res = await apiFetch(`${API_BASE_URL}/api/companies`, {

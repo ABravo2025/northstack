@@ -129,15 +129,6 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
     }
   };
 
-  const handleTypeChange = async (pipeline: Pipeline, type: 'lead' | 'account') => {
-    try {
-      await api.updatePipeline(token, pipeline.id, { type });
-      loadPipelines();
-    } catch (error) {
-      toast.error('Failed to update pipeline type: ' + (error as Error).message);
-    }
-  };
-
   // Archiving affects every Opportunity in the pipeline (they become read-only
   // until reactivated), so it goes through a type-to-confirm dialog like other
   // destructive-ish actions in the app. Reactivating isn't destructive, but
@@ -280,23 +271,12 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
             <span className="font-semibold flex-1">{pipeline.name}</span>
           )}
 
-          {/* Not .dt-status — that tint is reserved for Status controls specifically. */}
-          <div className="dropdown-trigger-wrap">
-            <select
-              className="dropdown-trigger"
-              value={pipeline.type}
-              onChange={(e) => handleTypeChange(pipeline, e.target.value as 'lead' | 'account')}
-            >
-              {Object.entries(PIPELINE_TYPE_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            <svg className="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M6 9l6 6 6-6" />
-            </svg>
-          </div>
+          {/* Read-only: `type` is immutable after creation (docs/tareas/specredisenosalesv2.md
+              §3.1) — reclassifying a pipeline with existing Opportunities would silently
+              change which Company-gate rule applies to them. */}
+          <span className="text-xs text-ink-faint" title="Pipeline type can't be changed after creation">
+            {PIPELINE_TYPE_LABELS[pipeline.type]}
+          </span>
 
           <span className="text-xs text-gray-400">{sortedStages.length} stages</span>
 

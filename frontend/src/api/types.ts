@@ -122,6 +122,11 @@ export interface Company {
   accountOwner?: { id: string; firstName: string; lastName: string } | null;
   statusId: string;
   statusDefn?: { id: string; name: string; color: string | null };
+  // True only for a Company created inline off a `lead`-type Pipeline
+  // (Opportunity has no confirmed Company yet) — see Company.isPlaceholder
+  // in schema.prisma. False for every Company created from /companies or a
+  // public Form.
+  isPlaceholder: boolean;
   createdAt: string;
   customFieldVals?: {
     id: string;

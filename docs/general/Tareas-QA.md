@@ -1182,3 +1182,27 @@ confirmar el aislamiento por destinatario. De paso, se liberó el ícono de camp
 negocio depende de ella hasta que la Unidad 8 la conecte. El caso 4 (ownership por destinatario, no solo
 tenant) es el más importante de esta ronda — una fuga ahí dejaría a un User leer/marcar notificaciones
 de un compañero de tenant.
+
+## QA-28 — Fix: pantalla de Pipelines en Settings, hallazgo del usuario al revisar staging (2026-08-25)
+
+**Por qué existe esta tarea:** Alejandro revisó visualmente `/settings` → Pipelines (no es parte de
+ninguna Unidad de la spec, preexistente) y encontró tres problemas en el alta de un Pipeline nuevo: (1)
+usaba `SlideOver` (panel lateral) en vez de `Modal` (centrado) — inconsistente con el resto de los "Add
+X" del sistema (Opportunities/Companies/Contacts/Employees, todos usan `Modal`); (2) el alta de stages no
+permitía asignar `probability` (el "value" del stage, spec §3.5) — solo estaba disponible al editar un
+Pipeline ya creado; (3) el selector Won/Open/Lost no explicaba qué implica cada opción. Se corrigieron los
+tres: `PipelinesSettingsPage.tsx` ahora usa `Modal wide`, el alta de stages tiene el mismo input de
+probability que la vista expandida (default 50%, forzado a 100/0 para won/lost), y se agregó una línea de
+ayuda explicando Open/Won/Lost tanto en el alta como en la vista expandida. Ningún cambio de schema — solo
+frontend. `npm run build`/`npm test` (91/91) backend y build frontend en verde.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | `/settings` → Pipelines → "New Pipeline" | Se abre un modal centrado con overlay, no un panel lateral |
+| 2 | Mismo modal, agregar un stage con outcome `Open` | Aparece un input numérico de probability (0-100), default 50 |
+| 3 | Mismo modal, cambiar el outcome de un stage a `Won` o `Lost` | El input de probability desaparece, se muestra 100%/0% fijo como texto |
+| 4 | Crear el pipeline con esos stages | Los stages nacen con la probability indicada (o forzada a 100/0) — verificar en la vista expandida del pipeline ya creado |
+| 5 | Alta y vista expandida de un pipeline existente | Ambas muestran la misma línea de ayuda explicando qué hace cada outcome |
+
+**Severidad:** baja — es un fix de UX/consistencia sobre una pantalla de Settings, no afecta ningún gate
+de negocio ni dato existente.

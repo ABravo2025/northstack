@@ -3,7 +3,7 @@ import { api, type Opportunity, type Pipeline, type PipelineStage } from '../api
 import { useToast } from '../components/common/ToastProvider';
 import ColorPicker from '../components/common/ColorPicker';
 import ConfirmDialog from '../components/common/ConfirmDialog';
-import SlideOver from '../components/common/SlideOver';
+import Modal from '../components/common/Modal';
 import RequiredMark from '../components/common/RequiredMark';
 import { ChevronDownIcon, PencilIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
 
@@ -18,13 +18,27 @@ interface DraftStage {
   key: string;
   name: string;
   outcome: 'open' | 'won' | 'lost';
+  // String (not number) while editing, same as probabilityDrafts below — kept
+  // separate per-stage here since these rows aren't persisted yet, so there's
+  // no id to key a shared draft map by. Sent as the stage's `probability` on
+  // create; backend still forces 100/0 for won/lost regardless of this value
+  // (docs/tareas/specredisenosalesv2.md §3.5).
+  probability: string;
 }
 
 let draftStageCounter = 0;
 function newDraftStage(): DraftStage {
   draftStageCounter += 1;
-  return { key: `draft-${draftStageCounter}`, name: '', outcome: 'open' };
+  return { key: `draft-${draftStageCounter}`, name: '', outcome: 'open', probability: '50' };
 }
+
+// Shown once, right above the Stages list — explains what each Outcome
+// option actually does rather than leaving Won/Open/Lost unexplained
+// (found while reviewing this screen 2026-08-24: the dropdown alone gives no
+// hint that Won/Lost are terminal and force the probability, or that Open is
+// the default and drives the weighted forecast).
+const OUTCOME_HELP =
+  'Open: still active, counts toward the weighted forecast at its probability. Won/Lost: terminal — probability is forced to 100%/0% and can’t be edited.';
 
 export default function PipelinesSettingsPage({ token }: PipelinesSettingsPageProps) {
   const toast = useToast();
@@ -99,10 +113,12 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
       const stagesToCreate = createStages.filter((s) => s.name.trim());
       for (let i = 0; i < stagesToCreate.length; i++) {
         const stage = stagesToCreate[i];
+        const parsedProbability = Number.parseInt(stage.probability, 10);
         await api.createPipelineStage(token, pipeline.id, {
           name: stage.name.trim(),
           order: i,
           outcome: stage.outcome,
+          probability: Number.isFinite(parsedProbability) ? parsedProbability : undefined,
         });
       }
       setCreateOpen(false);
@@ -317,6 +333,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
 
         {isExpanded && (
           <div className="border-t border-gray-200 dark:border-gray-800 p-3">
+            {sortedStages.length > 0 && <p className="mb-2 text-xs text-gray-500">{OUTCOME_HELP}</p>}
             <div className="flex flex-col gap-2">
               {sortedStages.map((stage, i) => (
                 <div key={stage.id} className="flex items-center gap-2">
@@ -472,10 +489,11 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
         />
       )}
 
-      <SlideOver
+      <Modal
         open={createOpen}
         title="New Pipeline"
         onClose={() => setCreateOpen(false)}
+        wide
         footer={
           <>
             <button type="button" className="btn-secondary" onClick={() => setCreateOpen(false)}>
@@ -514,10 +532,11 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
 
           <div className="form-group">
             <span>Stages</span>
-            <p className="mb-2 text-xs text-gray-500">
+            <p className="mb-1 text-xs text-gray-500">
               Add the stages a deal moves through in this pipeline. You can leave this empty and add stages
               later, or reorder/color them once the pipeline is created.
             </p>
+            <p className="mb-2 text-xs text-gray-500">{OUTCOME_HELP}</p>
             <div className="flex flex-col gap-2">
               {createStages.map((stage, i) => (
                 <div key={stage.key} className="flex items-center gap-2">
@@ -538,6 +557,26 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
                       </option>
                     ))}
                   </select>
+                  {stage.outcome === 'open' ? (
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      className="select-compact"
+                      style={{ width: 56 }}
+                      value={stage.probability}
+                      onChange={(e) => updateDraftStage(stage.key, { probability: e.target.value })}
+                      title="Win probability (%) — used for the weighted pipeline forecast"
+                    />
+                  ) : (
+                    <span
+                      className="text-xs text-ink-faint"
+                      style={{ width: 56, textAlign: 'center' }}
+                      title="Forced — Won is always 100%, Lost is always 0%"
+                    >
+                      {stage.outcome === 'won' ? 100 : 0}%
+                    </span>
+                  )}
                   <button
                     type="button"
                     className="icon-btn"
@@ -557,7 +596,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
             </button>
           </div>
         </form>
-      </SlideOver>
+      </Modal>
     </div>
   );
 }

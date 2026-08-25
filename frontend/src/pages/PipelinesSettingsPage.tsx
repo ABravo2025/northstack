@@ -334,6 +334,15 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
         {isExpanded && (
           <div className="border-t border-gray-200 dark:border-gray-800 p-3">
             {sortedStages.length > 0 && <p className="mb-2 text-xs text-gray-500">{OUTCOME_HELP}</p>}
+            {sortedStages.length > 0 && (
+              <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
+                <span style={{ width: 32 }} />
+                <span style={{ width: 28 }} />
+                <span className="flex-1">Stage name</span>
+                <span style={{ width: 110 }}>Outcome</span>
+                <span style={{ width: 56, textAlign: 'center' }}>Win %</span>
+              </div>
+            )}
             <div className="flex flex-col gap-2">
               {sortedStages.map((stage, i) => (
                 <div key={stage.id} className="flex items-center gap-2">
@@ -364,6 +373,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
                   <span className={`flex-1 text-sm ${!stage.isActive ? 'inactive' : ''}`}>{stage.name}</span>
                   <select
                     className="select-compact"
+                    style={{ width: 110 }}
                     value={stage.outcome}
                     onChange={(e) => handleStageOutcomeChange(pipeline, stage, e.target.value)}
                   >
@@ -537,17 +547,27 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
               later, or reorder/color them once the pipeline is created.
             </p>
             <p className="mb-2 text-xs text-gray-500">{OUTCOME_HELP}</p>
+            {createStages.length > 0 && (
+              <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
+                <span className="flex-1">Stage name</span>
+                <span style={{ width: 110 }}>Outcome</span>
+                <span style={{ width: 56, textAlign: 'center' }}>Win %</span>
+                <span style={{ width: 32 }} />
+              </div>
+            )}
             <div className="flex flex-col gap-2">
               {createStages.map((stage, i) => (
                 <div key={stage.key} className="flex items-center gap-2">
                   <input
                     type="text"
+                    className="flex-1"
                     placeholder={`Stage ${i + 1} name`}
                     value={stage.name}
                     onChange={(e) => updateDraftStage(stage.key, { name: e.target.value })}
                   />
                   <select
                     className="select-compact"
+                    style={{ width: 110 }}
                     value={stage.outcome}
                     onChange={(e) => updateDraftStage(stage.key, { outcome: e.target.value as DraftStage['outcome'] })}
                   >

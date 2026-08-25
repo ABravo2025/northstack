@@ -1300,3 +1300,33 @@ frontend: `PipelinesSettingsPage.tsx`. `npm run build` (backend y frontend) y `n
 
 **Severidad:** baja — mejora de interacción sobre un editor de Settings, sin gate de negocio ni cambio de
 datos involucrado más allá del campo `order` que ya se movía con las flechas.
+
+## QA-32 — Fix: "refresh" al arrastrar stages + desalineación de columnas + ícono de Archive (2026-08-25)
+
+**Por qué existe esta tarea:** tres problemas reportados al probar el drag-and-drop de QA-31. (1) Al
+arrastrar un stage, la pantalla hacía algo parecido a un refresh — molesto. Causa real: el estado del
+drag (`draggedStageId`/`dragOverStageId`) vivía en `PipelinesSettingsPage` (el componente de la página
+completa), así que cada evento `dragover` — que dispara docenas de veces por segundo mientras se mueve
+el mouse — re-renderizaba la página entera, incluyendo la tabla completa de Pipelines que sigue montada
+debajo del modal aunque no se vea. Fix real, no cosmético: se extrajo el editor de stages a un componente
+de React separado (`StageEditor`), con su propio estado local — ahora un evento de drag solo re-renderiza
+ese subárbol chico, no la tabla entera. (2) "Stage Name"/"Outcome"/"Win %" quedaron desalineados respecto
+a los datos de la fila — causa: el ancho del espaciador del header (adivinado en 20px) no coincidía con
+el ancho real que ocupa el ícono de grip. Fix: mismo valor exacto (`STAGE_GRIP_COLUMN_WIDTH = 24`) fijado
+tanto en el header como en el propio grip, para que no puedan desalinearse de nuevo por casualidad. (3) El
+botón "Archive"/"Reactivate" de cada stage pasó de texto a un ícono (ojo abierto = activo, click archiva;
+ojo tachado = archivado, click reactiva), con tooltip. Sin cambios de backend — todo en
+`PipelinesSettingsPage.tsx`. `npm run build` (backend y frontend) y `npm test` (91/91) en verde.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Modal Edit, arrastrar un stage | Ya no hay parpadeo/refresh visible de la pantalla — el drag se siente fluido |
+| 2 | Header "Stage name / Outcome / Win %" vs. los datos de cada fila | Alineados exactamente, sin importar cuántos stages haya |
+| 3 | Columna final de cada stage | Un solo ícono (ojo o ojo tachado) en vez del botón de texto "Archive"/"Reactivate" |
+| 4 | Hover sobre ese ícono | Tooltip dice "Archive" o "Reactivate" según corresponda |
+| 5 | Click en el ícono | Mismo comportamiento de siempre (toggle `isActive` del stage, auto-save) |
+| 6 | Reordenar por drag-and-drop | Sigue funcionando igual que en QA-31 — el fix de performance no cambió el comportamiento, solo dónde vive el estado |
+
+**Severidad:** media en el caso 1 — un "refresh" visible cada vez que se intenta reordenar un stage es el
+tipo de fricción que hace que una función se sienta rota aunque funcione. El resto son ajustes visuales
+menores.

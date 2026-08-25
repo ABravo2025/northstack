@@ -6,7 +6,13 @@ import ConfirmDialog from '../components/common/ConfirmDialog';
 import Modal from '../components/common/Modal';
 import Popover from '../components/common/Popover';
 import RequiredMark from '../components/common/RequiredMark';
-import { DotsVerticalIcon, GripIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
+import { DotsVerticalIcon, EyeIcon, EyeOffIcon, GripIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
+
+// Fixed width shared by the stage editor's grip-handle column and its header
+// spacer, so "Stage name"/"Outcome"/"Win %" line up with the row below —
+// found misaligned by the user 2026-08-25 when the grip replaced the old ▲/▼
+// buttons (the icon's own intrinsic size didn't match the guessed spacer).
+const STAGE_GRIP_COLUMN_WIDTH = 24;
 
 interface PipelinesSettingsPageProps {
   token: string;
@@ -65,6 +71,229 @@ function newDraftStage(): DraftStage {
 const OUTCOME_HELP =
   'Open: still active, counts toward the weighted forecast at its probability. Won/Lost: terminal — probability is forced to 100%/0% and can’t be edited.';
 
+interface StageEditorProps {
+  pipeline: Pipeline;
+  token: string;
+  onChanged: () => void;
+}
+
+// A real, separate component (not a function called inline from the parent's
+// render) — this matters, not just style: drag state used to live in
+// PipelinesSettingsPage itself, so every dragover event re-rendered the
+// entire page (including the full Pipelines table sitting underneath the
+// modal) dozens of times per drag gesture, which the user reported as a
+// janky "screen refresh" while dragging (2026-08-25). Scoping all of this
+// component's own state here means a drag only re-renders this subtree.
+function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
+  const toast = useToast();
+  const [newStageName, setNewStageName] = useState('');
+  // Local draft while editing a stage's win probability — committed onBlur
+  // (docs/tareas/specredisenosalesv2.md §3.5), keyed by stage.id so multiple
+  // stages can be mid-edit independently.
+  const [probabilityDrafts, setProbabilityDrafts] = useState<Record<string, string>>({});
+  const [draggedStageId, setDraggedStageId] = useState<string | null>(null);
+  const [dragOverStageId, setDragOverStageId] = useState<string | null>(null);
+
+  const sortedStages = [...pipeline.stages].sort((a, b) => a.order - b.order);
+
+  const handleAddStage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = newStageName.trim();
+    if (!name) return;
+    try {
+      await api.createPipelineStage(token, pipeline.id, { name, order: pipeline.stages.length, outcome: 'open' });
+      setNewStageName('');
+      onChanged();
+    } catch (error) {
+      toast.error('Failed to add stage: ' + (error as Error).message);
+    }
+  };
+
+  const handleColorChange = async (stage: PipelineStage, color: string) => {
+    try {
+      await api.updatePipelineStage(token, pipeline.id, stage.id, { color });
+      onChanged();
+    } catch (error) {
+      toast.error('Failed to update stage color: ' + (error as Error).message);
+    }
+  };
+
+  const handleOutcomeChange = async (stage: PipelineStage, outcome: string) => {
+    try {
+      await api.updatePipelineStage(token, pipeline.id, stage.id, { outcome: outcome as 'open' | 'won' | 'lost' });
+      onChanged();
+    } catch (error) {
+      toast.error('Failed to update stage outcome: ' + (error as Error).message);
+    }
+  };
+
+  const getProbabilityDraft = (stage: PipelineStage): string =>
+    probabilityDrafts[stage.id] !== undefined ? probabilityDrafts[stage.id] : String(stage.probability);
+
+  const handleProbabilityBlur = async (stage: PipelineStage) => {
+    const raw = probabilityDrafts[stage.id];
+    setProbabilityDrafts((prev) => {
+      const next = { ...prev };
+      delete next[stage.id];
+      return next;
+    });
+    if (raw === undefined) return;
+    const parsed = Number.parseInt(raw, 10);
+    if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100 || parsed === stage.probability) return;
+    try {
+      await api.updatePipelineStage(token, pipeline.id, stage.id, { probability: parsed });
+      onChanged();
+    } catch (error) {
+      toast.error('Failed to update probability: ' + (error as Error).message);
+    }
+  };
+
+  const toggleArchive = async (stage: PipelineStage) => {
+    try {
+      await api.updatePipelineStage(token, pipeline.id, stage.id, { isActive: !stage.isActive });
+      onChanged();
+    } catch (error) {
+      toast.error('Failed to update stage: ' + (error as Error).message);
+    }
+  };
+
+  const handleDragStart = (stageId: string) => setDraggedStageId(stageId);
+
+  const handleDragEnd = () => {
+    setDraggedStageId(null);
+    setDragOverStageId(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent, overId: string) => {
+    e.preventDefault();
+    if (dragOverStageId !== overId) setDragOverStageId(overId);
+  };
+
+  const handleDrop = async (targetStageId: string) => {
+    setDragOverStageId(null);
+    const draggedId = draggedStageId;
+    setDraggedStageId(null);
+    if (!draggedId || draggedId === targetStageId) return;
+
+    const draggedIndex = sortedStages.findIndex((s) => s.id === draggedId);
+    const targetIndex = sortedStages.findIndex((s) => s.id === targetStageId);
+    if (draggedIndex === -1 || targetIndex === -1) return;
+
+    const reordered = [...sortedStages];
+    const [moved] = reordered.splice(draggedIndex, 1);
+    reordered.splice(targetIndex, 0, moved);
+
+    try {
+      for (let i = 0; i < reordered.length; i++) {
+        if (reordered[i].order !== i) {
+          await api.updatePipelineStage(token, pipeline.id, reordered[i].id, { order: i });
+        }
+      }
+      onChanged();
+    } catch (error) {
+      toast.error('Failed to reorder stage: ' + (error as Error).message);
+    }
+  };
+
+  return (
+    <>
+      {sortedStages.length > 0 && <p className="mb-2 text-xs text-gray-500">{OUTCOME_HELP}</p>}
+      {sortedStages.length > 0 && (
+        <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
+          <span style={{ width: STAGE_GRIP_COLUMN_WIDTH }} />
+          <span style={{ width: 28 }} />
+          <span className="flex-1">Stage name</span>
+          <span style={{ width: 110 }}>Outcome</span>
+          <span style={{ width: 56, textAlign: 'center' }}>Win %</span>
+        </div>
+      )}
+      <div className="flex flex-col gap-2">
+        {sortedStages.map((stage) => (
+          <div
+            key={stage.id}
+            className={`flex items-center gap-2 rounded-md border-t-2 border-transparent ${
+              draggedStageId === stage.id ? 'opacity-40' : ''
+            } ${dragOverStageId === stage.id && draggedStageId && draggedStageId !== stage.id ? 'border-t-brand-blue' : ''}`}
+            onDragOver={(e) => handleDragOver(e, stage.id)}
+            onDrop={() => handleDrop(stage.id)}
+          >
+            <span
+              className="status-manage-grip"
+              style={{ width: STAGE_GRIP_COLUMN_WIDTH, justifyContent: 'center' }}
+              draggable
+              onDragStart={() => handleDragStart(stage.id)}
+              onDragEnd={handleDragEnd}
+              aria-label={`Drag to reorder ${stage.name}`}
+            >
+              <GripIcon className="h-3.5 w-3.5" />
+            </span>
+            <ColorPicker value={stage.color || '#6b7280'} onChange={(color) => handleColorChange(stage, color)} />
+            <span className={`flex-1 text-sm ${!stage.isActive ? 'inactive' : ''}`}>{stage.name}</span>
+            <select
+              className="select-compact"
+              style={{ width: 110 }}
+              value={stage.outcome}
+              onChange={(e) => handleOutcomeChange(stage, e.target.value)}
+            >
+              {Object.entries(OUTCOME_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            {stage.outcome === 'open' ? (
+              <input
+                type="number"
+                min={0}
+                max={100}
+                className="select-compact"
+                style={{ width: 56 }}
+                value={getProbabilityDraft(stage)}
+                onChange={(e) => setProbabilityDrafts({ ...probabilityDrafts, [stage.id]: e.target.value })}
+                onBlur={() => handleProbabilityBlur(stage)}
+                title="Win probability (%) — used for the weighted pipeline forecast"
+              />
+            ) : (
+              <span
+                className="text-xs text-ink-faint"
+                style={{ width: 56, textAlign: 'center' }}
+                title="Forced — Won is always 100%, Lost is always 0%"
+              >
+                {stage.probability}%
+              </span>
+            )}
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={() => toggleArchive(stage)}
+              aria-label={stage.isActive ? 'Archive stage' : 'Reactivate stage'}
+            >
+              <span className="tip">{stage.isActive ? 'Archive' : 'Reactivate'}</span>
+              {stage.isActive ? <EyeIcon className="h-3.5 w-3.5" /> : <EyeOffIcon className="h-3.5 w-3.5" />}
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <form className="flex items-center gap-2 mt-3" onSubmit={handleAddStage}>
+        <input
+          type="text"
+          placeholder="New stage name"
+          value={newStageName}
+          onChange={(e) => setNewStageName(e.target.value)}
+          style={{ maxWidth: 220 }}
+        />
+        <button type="submit" className="btn-secondary">
+          <span className="inline-flex items-center gap-1.5">
+            <PlusIcon className="h-3.5 w-3.5" />
+            Add Stage
+          </span>
+        </button>
+      </form>
+    </>
+  );
+}
+
 export default function PipelinesSettingsPage({ token }: PipelinesSettingsPageProps) {
   const toast = useToast();
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
@@ -76,12 +305,6 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
   // no more inline rename-in-row or click-to-expand-stages in the table.
   const [editingPipelineId, setEditingPipelineId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
-  const [newStageName, setNewStageName] = useState<Record<string, string>>({});
-  // Local draft while editing a stage's win probability — committed onBlur
-  // (docs/tareas/specredisenosalesv2.md §3.5), same "commit on blur, not
-  // every keystroke" idiom as pipeline rename above, keyed by stage.id so
-  // multiple stages can be mid-edit independently.
-  const [probabilityDrafts, setProbabilityDrafts] = useState<Record<string, string>>({});
   const [archivingPipeline, setArchivingPipeline] = useState<Pipeline | null>(null);
   const [archivingSaving, setArchivingSaving] = useState(false);
   const [reactivatingPipeline, setReactivatingPipeline] = useState<Pipeline | null>(null);
@@ -94,11 +317,6 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
   // TimeOffOverviewPage.tsx's policy row menu.
   const [pipelineRowMenuFor, setPipelineRowMenuFor] = useState<string | null>(null);
   const pipelineRowMenuAnchorRef = useRef<HTMLElement | null>(null);
-  // Drag-to-reorder for the stage editor (replaces the old ▲/▼ buttons per
-  // user feedback 2026-08-25) — same drag/dragover/drop state shape as
-  // FieldCatalogMenu.tsx's catalog-entry reordering.
-  const [draggedStageId, setDraggedStageId] = useState<string | null>(null);
-  const [dragOverStageId, setDragOverStageId] = useState<string | null>(null);
 
   const handleSort = (field: PipelineSortField) => {
     if (sortField === field) {
@@ -249,110 +467,6 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
     }
   };
 
-  const handleAddStage = async (e: React.FormEvent, pipeline: Pipeline) => {
-    e.preventDefault();
-    const name = (newStageName[pipeline.id] || '').trim();
-    if (!name) return;
-    try {
-      await api.createPipelineStage(token, pipeline.id, {
-        name,
-        order: pipeline.stages.length,
-        outcome: 'open',
-      });
-      setNewStageName({ ...newStageName, [pipeline.id]: '' });
-      loadPipelines();
-    } catch (error) {
-      toast.error('Failed to add stage: ' + (error as Error).message);
-    }
-  };
-
-  const handleStageColorChange = async (pipeline: Pipeline, stage: PipelineStage, color: string) => {
-    try {
-      await api.updatePipelineStage(token, pipeline.id, stage.id, { color });
-      loadPipelines();
-    } catch (error) {
-      toast.error('Failed to update stage color: ' + (error as Error).message);
-    }
-  };
-
-  const handleStageOutcomeChange = async (pipeline: Pipeline, stage: PipelineStage, outcome: string) => {
-    try {
-      await api.updatePipelineStage(token, pipeline.id, stage.id, { outcome: outcome as 'open' | 'won' | 'lost' });
-      loadPipelines();
-    } catch (error) {
-      toast.error('Failed to update stage outcome: ' + (error as Error).message);
-    }
-  };
-
-  const getProbabilityDraft = (stage: PipelineStage): string =>
-    probabilityDrafts[stage.id] !== undefined ? probabilityDrafts[stage.id] : String(stage.probability);
-
-  const handleStageProbabilityBlur = async (pipeline: Pipeline, stage: PipelineStage) => {
-    const raw = probabilityDrafts[stage.id];
-    setProbabilityDrafts((prev) => {
-      const next = { ...prev };
-      delete next[stage.id];
-      return next;
-    });
-    if (raw === undefined) return;
-    const parsed = Number.parseInt(raw, 10);
-    if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100 || parsed === stage.probability) return;
-    try {
-      await api.updatePipelineStage(token, pipeline.id, stage.id, { probability: parsed });
-      loadPipelines();
-    } catch (error) {
-      toast.error('Failed to update probability: ' + (error as Error).message);
-    }
-  };
-
-  const toggleArchiveStage = async (pipeline: Pipeline, stage: PipelineStage) => {
-    try {
-      await api.updatePipelineStage(token, pipeline.id, stage.id, { isActive: !stage.isActive });
-      loadPipelines();
-    } catch (error) {
-      toast.error('Failed to update stage: ' + (error as Error).message);
-    }
-  };
-
-  const handleStageDragStart = (stageId: string) => setDraggedStageId(stageId);
-
-  const handleStageDragEnd = () => {
-    setDraggedStageId(null);
-    setDragOverStageId(null);
-  };
-
-  const handleStageDragOver = (e: React.DragEvent, overId: string) => {
-    e.preventDefault();
-    if (dragOverStageId !== overId) setDragOverStageId(overId);
-  };
-
-  const handleStageDrop = async (pipeline: Pipeline, targetStageId: string) => {
-    setDragOverStageId(null);
-    const draggedId = draggedStageId;
-    setDraggedStageId(null);
-    if (!draggedId || draggedId === targetStageId) return;
-
-    const sorted = [...pipeline.stages].sort((a, b) => a.order - b.order);
-    const draggedIndex = sorted.findIndex((s) => s.id === draggedId);
-    const targetIndex = sorted.findIndex((s) => s.id === targetStageId);
-    if (draggedIndex === -1 || targetIndex === -1) return;
-
-    const reordered = [...sorted];
-    const [moved] = reordered.splice(draggedIndex, 1);
-    reordered.splice(targetIndex, 0, moved);
-
-    try {
-      for (let i = 0; i < reordered.length; i++) {
-        if (reordered[i].order !== i) {
-          await api.updatePipelineStage(token, pipeline.id, reordered[i].id, { order: i });
-        }
-      }
-      loadPipelines();
-    } catch (error) {
-      toast.error('Failed to reorder stage: ' + (error as Error).message);
-    }
-  };
-
   if (loading) {
     return <p>Loading...</p>;
   }
@@ -375,104 +489,6 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
   const sortArrow = (field: PipelineSortField) => (
     <span className="sort-arrow">{sortField === field && sortDirection === 'desc' ? '▴' : '▾'}</span>
   );
-
-  // The stage-editing block — reused as-is inside the Edit modal below and
-  // nowhere else now (used to live inline in an expanded table row; moved
-  // into the modal per the user's 2026-08-25 feedback). Every control here
-  // still auto-saves immediately on change/blur, same as before the move.
-  const renderStageEditor = (pipeline: Pipeline) => {
-    const sortedStages = [...pipeline.stages].sort((a, b) => a.order - b.order);
-    return (
-      <>
-        {sortedStages.length > 0 && <p className="mb-2 text-xs text-gray-500">{OUTCOME_HELP}</p>}
-        {sortedStages.length > 0 && (
-          <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
-            <span style={{ width: 20 }} />
-            <span style={{ width: 28 }} />
-            <span className="flex-1">Stage name</span>
-            <span style={{ width: 110 }}>Outcome</span>
-            <span style={{ width: 56, textAlign: 'center' }}>Win %</span>
-          </div>
-        )}
-        <div className="flex flex-col gap-2">
-          {sortedStages.map((stage) => (
-            <div
-              key={stage.id}
-              className={`flex items-center gap-2 rounded-md border-t-2 border-transparent ${
-                draggedStageId === stage.id ? 'opacity-40' : ''
-              } ${dragOverStageId === stage.id && draggedStageId && draggedStageId !== stage.id ? 'border-t-brand-blue' : ''}`}
-              onDragOver={(e) => handleStageDragOver(e, stage.id)}
-              onDrop={() => handleStageDrop(pipeline, stage.id)}
-            >
-              <span
-                className="status-manage-grip"
-                draggable
-                onDragStart={() => handleStageDragStart(stage.id)}
-                onDragEnd={handleStageDragEnd}
-                aria-label={`Drag to reorder ${stage.name}`}
-              >
-                <GripIcon className="h-3.5 w-3.5" />
-              </span>
-              <ColorPicker value={stage.color || '#6b7280'} onChange={(color) => handleStageColorChange(pipeline, stage, color)} />
-              <span className={`flex-1 text-sm ${!stage.isActive ? 'inactive' : ''}`}>{stage.name}</span>
-              <select
-                className="select-compact"
-                style={{ width: 110 }}
-                value={stage.outcome}
-                onChange={(e) => handleStageOutcomeChange(pipeline, stage, e.target.value)}
-              >
-                {Object.entries(OUTCOME_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-              {stage.outcome === 'open' ? (
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  className="select-compact"
-                  style={{ width: 56 }}
-                  value={getProbabilityDraft(stage)}
-                  onChange={(e) => setProbabilityDrafts({ ...probabilityDrafts, [stage.id]: e.target.value })}
-                  onBlur={() => handleStageProbabilityBlur(pipeline, stage)}
-                  title="Win probability (%) — used for the weighted pipeline forecast"
-                />
-              ) : (
-                <span
-                  className="text-xs text-ink-faint"
-                  style={{ width: 56, textAlign: 'center' }}
-                  title="Forced — Won is always 100%, Lost is always 0%"
-                >
-                  {stage.probability}%
-                </span>
-              )}
-              <button type="button" className="btn-secondary" onClick={() => toggleArchiveStage(pipeline, stage)}>
-                {stage.isActive ? 'Archive' : 'Reactivate'}
-              </button>
-            </div>
-          ))}
-        </div>
-
-        <form className="flex items-center gap-2 mt-3" onSubmit={(e) => handleAddStage(e, pipeline)}>
-          <input
-            type="text"
-            placeholder="New stage name"
-            value={newStageName[pipeline.id] || ''}
-            onChange={(e) => setNewStageName({ ...newStageName, [pipeline.id]: e.target.value })}
-            style={{ maxWidth: 220 }}
-          />
-          <button type="submit" className="btn-secondary">
-            <span className="inline-flex items-center gap-1.5">
-              <PlusIcon className="h-3.5 w-3.5" />
-              Add Stage
-            </span>
-          </button>
-        </form>
-      </>
-    );
-  };
 
   const renderPipelineRow = (pipeline: Pipeline) => {
     return (
@@ -677,7 +693,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
             </div>
             <div className="form-group">
               <span>Stages</span>
-              {renderStageEditor(editingPipeline)}
+              <StageEditor pipeline={editingPipeline} token={token} onChanged={loadPipelines} />
             </div>
           </div>
         ) : (

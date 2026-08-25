@@ -1,5 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, type Opportunity, type Pipeline, type PipelineStage } from '../api';
+import {
+  api,
+  type FieldCatalogDefinition,
+  type Opportunity,
+  type Pipeline,
+  type PipelineAssignmentMode,
+  type PipelineAssignmentUser,
+  type PipelineStage,
+  type TenantUser,
+} from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import ColorPicker from '../components/common/ColorPicker';
 import ConfirmDialog from '../components/common/ConfirmDialog';
@@ -294,6 +303,244 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
           </span>
         </button>
       </form>
+    </>
+  );
+}
+
+interface PipelineAutomationEditorProps {
+  pipeline: Pipeline;
+  token: string;
+  // Only for assignmentMode/stalledThresholdDays — those live on `pipeline`
+  // itself (owned by the parent's `pipelines` state), so a save has to flow
+  // back through loadPipelines to be reflected here. Participants are this
+  // component's own local state (below) precisely so toggling one doesn't
+  // re-run the parent's fetch/re-render — same reasoning as StageEditor.
+  onPipelineChanged: () => void;
+}
+
+// Automations section of the Edit modal (docs/tareas/specredisenosalesv2.md
+// §3.8) — a real separate component for the same reason StageEditor is: the
+// participants checklist does a server round-trip per checkbox, and that
+// state living in the page component would re-render the whole Pipelines
+// table underneath the modal on every click.
+function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: PipelineAutomationEditorProps) {
+  const toast = useToast();
+  const [participants, setParticipants] = useState<PipelineAssignmentUser[]>([]);
+  const [participantsLoading, setParticipantsLoading] = useState(true);
+  const [tenantUsers, setTenantUsers] = useState<TenantUser[]>([]);
+  const [departments, setDepartments] = useState<FieldCatalogDefinition[]>([]);
+  const [selectedDepartmentIds, setSelectedDepartmentIds] = useState<string[]>([]);
+  const [addingFromDepartments, setAddingFromDepartments] = useState(false);
+  const [stalledDraft, setStalledDraft] = useState(
+    pipeline.stalledThresholdDays !== null ? String(pipeline.stalledThresholdDays) : '',
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+    setParticipantsLoading(true);
+    Promise.all([
+      api.listPipelineAssignmentUsers(token, pipeline.id),
+      api.listTenantUsers(token),
+      api.listFieldCatalogDefinitions(token, 'department'),
+    ])
+      .then(([assignmentUsers, users, depts]) => {
+        if (cancelled) return;
+        setParticipants(assignmentUsers);
+        setTenantUsers(users);
+        setDepartments(depts);
+      })
+      .catch((error) => toast.error('Failed to load automation settings: ' + (error as Error).message))
+      .finally(() => {
+        if (!cancelled) setParticipantsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pipeline.id]);
+
+  useEffect(() => {
+    setStalledDraft(pipeline.stalledThresholdDays !== null ? String(pipeline.stalledThresholdDays) : '');
+  }, [pipeline.stalledThresholdDays]);
+
+  const refreshParticipants = async () => {
+    try {
+      const data = await api.listPipelineAssignmentUsers(token, pipeline.id);
+      setParticipants(data);
+    } catch (error) {
+      toast.error('Failed to refresh participants: ' + (error as Error).message);
+    }
+  };
+
+  const handleModeChange = async (value: string) => {
+    try {
+      await api.updatePipeline(token, pipeline.id, { assignmentMode: value === '' ? null : (value as PipelineAssignmentMode) });
+      onPipelineChanged();
+    } catch (error) {
+      toast.error('Failed to update assignment mode: ' + (error as Error).message);
+    }
+  };
+
+  const handleStalledBlur = async () => {
+    const trimmed = stalledDraft.trim();
+    const parsed = trimmed === '' ? null : Number.parseInt(trimmed, 10);
+    if (parsed !== null && (!Number.isFinite(parsed) || parsed < 1)) {
+      toast.error('Stalled reminder days must be a positive number');
+      setStalledDraft(pipeline.stalledThresholdDays !== null ? String(pipeline.stalledThresholdDays) : '');
+      return;
+    }
+    if (parsed === pipeline.stalledThresholdDays) return;
+    try {
+      await api.updatePipeline(token, pipeline.id, { stalledThresholdDays: parsed });
+      onPipelineChanged();
+    } catch (error) {
+      toast.error('Failed to update stalled reminder threshold: ' + (error as Error).message);
+    }
+  };
+
+  const toggleParticipant = async (userId: string, checked: boolean) => {
+    try {
+      if (checked) {
+        await api.assignUserToPipeline(token, pipeline.id, userId);
+      } else {
+        await api.unassignUserFromPipeline(token, pipeline.id, userId);
+      }
+      refreshParticipants();
+    } catch (error) {
+      toast.error('Failed to update participant: ' + (error as Error).message);
+    }
+  };
+
+  const toggleDepartmentSelected = (departmentId: string) => {
+    setSelectedDepartmentIds((prev) =>
+      prev.includes(departmentId) ? prev.filter((id) => id !== departmentId) : [...prev, departmentId],
+    );
+  };
+
+  const handleAddFromDepartments = async () => {
+    if (selectedDepartmentIds.length === 0) return;
+    setAddingFromDepartments(true);
+    try {
+      const result = await api.assignPipelineUsersByDepartments(token, pipeline.id, selectedDepartmentIds);
+      toast.success(
+        `Added ${result.addedCount} of ${result.resolvedUserCount} user(s) as participants (${result.alreadyAssignedCount} were already in the list).`,
+      );
+      setSelectedDepartmentIds([]);
+      refreshParticipants();
+    } catch (error) {
+      toast.error('Failed to add from departments: ' + (error as Error).message);
+    } finally {
+      setAddingFromDepartments(false);
+    }
+  };
+
+  const participantUserIds = new Set(participants.map((p) => p.userId));
+
+  return (
+    <>
+      <div className="form-group">
+        <label htmlFor="pipeline-assignment-mode">Owner auto-assignment</label>
+        <select
+          id="pipeline-assignment-mode"
+          value={pipeline.assignmentMode ?? ''}
+          onChange={(e) => handleModeChange(e.target.value)}
+        >
+          <option value="">Off — owner must always be chosen manually</option>
+          <option value="round_robin">Round robin — rotate through the participants below</option>
+          {pipeline.type === 'account' && (
+            <option value="account_owner">Account owner — use the Company's Account Owner</option>
+          )}
+        </select>
+        {pipeline.assignmentMode === 'account_owner' && (
+          <p className="mt-1 text-xs text-gray-500">
+            Used when the Company has an Account Owner set. Falls back to round robin over the participants below
+            when it doesn't.
+          </p>
+        )}
+      </div>
+
+      {pipeline.assignmentMode && (
+        <div className="form-group">
+          <span>Round-robin participants</span>
+          <p className="mb-1 text-xs text-gray-500">
+            Only currently-active employees are ever picked when it's their turn. A user with no linked Employee
+            record can be added here but will always be skipped.
+          </p>
+          {participantsLoading ? (
+            <p className="text-sm text-ink-faint">Loading…</p>
+          ) : tenantUsers.length === 0 ? (
+            <p className="text-sm text-ink-faint">No users in this tenant yet.</p>
+          ) : (
+            <div className="flex flex-col gap-1" style={{ maxHeight: 180, overflowY: 'auto' }}>
+              {tenantUsers.map((u) => {
+                const checked = participantUserIds.has(u.id);
+                const inactive = u.status !== 'active';
+                return (
+                  <label key={u.id} className={`flex items-center gap-2 text-sm ${inactive ? 'text-ink-faint' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={(e) => toggleParticipant(u.id, e.target.checked)}
+                    />
+                    {u.firstName} {u.lastName}
+                    {inactive && ' (inactive)'}
+                  </label>
+                );
+              })}
+            </div>
+          )}
+
+          {departments.length > 0 && (
+            <div className="mt-3">
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
+                Bulk-add by department
+              </span>
+              <p className="mb-1 text-xs text-gray-500">
+                One-time add — adds whoever currently has an Employee in the selected department(s). Not a live
+                link: later department changes won't update this list automatically.
+              </p>
+              <div className="flex flex-col gap-1 mb-2">
+                {departments.map((d) => (
+                  <label key={d.id} className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={selectedDepartmentIds.includes(d.id)}
+                      onChange={() => toggleDepartmentSelected(d.id)}
+                    />
+                    {d.name}
+                  </label>
+                ))}
+              </div>
+              <button
+                type="button"
+                className="btn-secondary"
+                disabled={selectedDepartmentIds.length === 0 || addingFromDepartments}
+                onClick={handleAddFromDepartments}
+              >
+                {addingFromDepartments ? 'Adding…' : 'Add selected'}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="form-group">
+        <label htmlFor="pipeline-stalled-threshold">Stalled-deal reminders</label>
+        <div className="flex items-center gap-2">
+          <input
+            id="pipeline-stalled-threshold"
+            type="number"
+            min={1}
+            className="select-compact"
+            style={{ width: 80 }}
+            placeholder="Off"
+            value={stalledDraft}
+            onChange={(e) => setStalledDraft(e.target.value)}
+            onBlur={handleStalledBlur}
+          />
+          <span className="text-sm text-gray-500">days in the same stage before notifying the owner</span>
+        </div>
+      </div>
     </>
   );
 }
@@ -705,6 +952,10 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
             <div className="form-group">
               <span>Stages</span>
               <StageEditor pipeline={editingPipeline} token={token} onChanged={loadPipelines} />
+            </div>
+            <div className="form-group">
+              <span>Automations</span>
+              <PipelineAutomationEditor pipeline={editingPipeline} token={token} onPipelineChanged={loadPipelines} />
             </div>
           </div>
         ) : (

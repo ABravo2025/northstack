@@ -69,3 +69,34 @@ export async function markNotificationRead(id: string, tenantId: string, userId:
 export async function markAllNotificationsRead(tenantId: string, userId: string): Promise<void> {
   await prisma.notification.updateMany({ where: { tenantId, userId, read: false }, data: { read: true } });
 }
+
+// Used by the stalled-deal reminder cron (docs/tareas/specredisenosalesv2.md
+// §3.8) to dedup "once per stall episode" without any new schema: the cron
+// skips a candidate whose latest matching notification is newer than the
+// Opportunity's current stage-entry date (a stage change always writes a
+// fresh OpportunityStageHistory row, which naturally invalidates the old
+// notification and allows a new one after the next stall). Batched (one
+// query for every candidate) so the cron isn't N+1 across a whole tenant.
+export async function findLatestNotificationTimestamps(
+  tenantId: string,
+  type: NotificationType,
+  entityType: EntityType,
+  entityIds: string[],
+): Promise<Map<string, Date>> {
+  if (entityIds.length === 0) {
+    return new Map();
+  }
+  const rows = await prisma.notification.findMany({
+    where: { tenantId, type, entityType, entityId: { in: entityIds } },
+    select: { entityId: true, userId: true, createdAt: true },
+  });
+  const latest = new Map<string, Date>();
+  for (const row of rows) {
+    const key = `${row.entityId}:${row.userId}`;
+    const current = latest.get(key);
+    if (!current || row.createdAt > current) {
+      latest.set(key, row.createdAt);
+    }
+  }
+  return latest;
+}

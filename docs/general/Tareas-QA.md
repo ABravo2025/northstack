@@ -1361,3 +1361,53 @@ tocar backend. `npm run build` (backend y frontend) y `npm test` (91/91) en verd
 **Severidad:** alta en el caso 1 — era la causa real del problema reportado dos veces seguidas; el fix de
 QA-32 solo atacaba un síntoma secundario. Vale la pena confirmar explícitamente que ya no hay ningún
 parpadeo antes de dar el tema por cerrado.
+
+## QA-34 — Sales v2, Unidad 8: automatizaciones — round-robin, account owner, recordatorio de deal estancado (2026-08-25, en `staging`)
+
+**Por qué existe esta tarea:** cierra la spec §3.8 — el último bloque grande del rediseño de Sales v2.
+Agrega auto-asignación de owner por Pipeline (`round_robin` o `account_owner`, configurable en el modal de
+Edit de Pipelines), el primer cron real del proyecto (recordatorio de deal estancado), y el primer productor
+real de `Notification` (cambio de stage), conectando el bell icon que Unidad 7 dejó construido pero en cero.
+Varias decisiones no estaban en el spec original y se resolvieron con el usuario esta misma ronda: el
+disparador del round-robin (en la creación, nunca sobreescribe un `ownerId` explícito), el alta masiva de
+participantes por Departamento (una sola vez, no un vínculo vivo), la elegibilidad del round-robin (Employee
+activo + User activo, nunca por nombre de status), y que `account_owner` aplica tanto en la creación directa
+como en el movimiento de pipeline (no solo en el movimiento, como decía el spec original). `Opportunity.ownerId`
+pasó a nullable — consecuencia necesaria de la degradación prolija ("sin owner" en vez de romper), no una
+decisión aparte. El email de cambio de stage sale en cada cambio por ahora (decisión explícita del usuario),
+con un pendiente de backlog anotado para una futura pantalla de preferencias de notificación por usuario.
+
+Verificado contra `staging` real con dos tenants descartables (uno para probar aislamiento) y 40 chequeos de
+punta a punta: rotación en orden con persistencia del cursor sin tocar `Pipeline.updatedAt`, participantes
+inelegibles salteados, degradación a `ownerId: null`, `ownerId` explícito siempre respetado, `account_owner`
+con override/fallback en ambos puntos de entrada, notificación de cambio de stage (no-actor sí, self-change
+no), el cron completo (crea → dedupe en re-corrida → re-notifica tras nuevo estancamiento → auth 401/200),
+alta masiva por departamento, y aislamiento entre tenants. `npm run build`/`npm test` (91/91) backend y
+`npm run build` frontend en verde. Schema aditivo salvo `Opportunity.ownerId` (`NOT NULL` → nullable, no
+destructivo) pusheado a staging.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Pipeline con `assignmentMode: round_robin` y 2+ participantes activos, crear Opportunity sin Owner | Se asigna al siguiente participante elegible en orden; el cursor (`lastAssignedUserId`) avanza sin tocar `updatedAt` del Pipeline |
+| 2 | Mismo caso, pero con un `ownerId` explícito en el request | Se usa tal cual — el round-robin nunca se consulta ni avanza el cursor |
+| 3 | Pipeline `round_robin` sin participantes, o con todos los participantes inelegibles (Employee inactivo o User inactivo) | La Opportunity se crea igual, con `ownerId: null` — nunca un error 500 |
+| 4 | Pipeline `type: 'account'` + `assignmentMode: account_owner`, Company con `accountOwnerId` seteado, crear u mover una Opportunity hacia ese pipeline | El owner queda en el Account Owner de la Company — sobreescribe un owner existente en el caso de movimiento |
+| 5 | Mismo caso pero la Company no tiene `accountOwnerId` | Cae a round-robin sobre los participantes de ese mismo Pipeline; en un movimiento, solo rellena si la Opportunity no tenía owner (no sobreescribe uno existente) |
+| 6 | Crear un Pipeline `type: 'lead'` con `assignmentMode: 'account_owner'`, o editarlo para setearlo así | Rechazado con 400 — esa combinación no tiene sentido |
+| 7 | Pipeline con `assignmentMode: null`, crear una Opportunity sin `ownerId` | Rechazado con 400 — sigue siendo obligatorio como antes de esta unidad |
+| 8 | Cambiar el stage de una Opportunity ajena (el que cambia no es el owner) | El owner recibe una `Notification` (`opportunity_stage_changed`) y un email |
+| 9 | El owner cambia el stage de su propia Opportunity | No se genera notificación ni email para sí mismo |
+| 10 | Pipeline con `stalledThresholdDays` seteado, una Opportunity abierta estancada más de ese umbral | El cron crea una `Notification` (`opportunity_stalled`) + email al owner; una Opportunity sin owner se cuenta como salteada, nunca se le manda a otro |
+| 11 | Correr el cron de nuevo inmediatamente sobre el mismo estancamiento | No duplica la notificación (dedup vía último `Notification.createdAt` vs. `stageHistory[0].enteredAt`) |
+| 12 | La Opportunity cambia de stage y vuelve a estancarse en la nueva | El cron genera una segunda notificación — el cambio de stage invalida la deduplicación anterior |
+| 13 | Pegarle al endpoint del cron sin `Authorization` o con un Bearer incorrecto | 401 en ambos casos |
+| 14 | Pegarle al endpoint del cron con el `CRON_SECRET` correcto | 200, devuelve el resumen de la corrida |
+| 15 | En el modal de Edit de un Pipeline, agregar participantes por Departamento (multi-select) | Agrega a todos los Users que hoy tienen un Employee en esos departamentos; repetir la operación no duplica ni rompe |
+| 16 | Formulario de alta de Opportunity, Pipeline con automatización activa | El campo Owner deja de ser obligatorio y muestra "-- auto-assign --"; el alta automática (`attemptAutoCreateOpportunity`) no dispara antes de que el usuario llegue a ese campo |
+| 17 | Dos tenants distintos, cada uno con su propio round-robin | Nunca se cruzan — ni en la rotación, ni en el listado de participantes, ni al intentar asignar manualmente |
+
+**Severidad:** media-alta — toca la creación/movimiento de Opportunities (camino muy transitado) y agrega el
+primer cron real del proyecto. Los casos 3 y 7 (degradación prolija vs. seguir exigiendo `ownerId` sin
+automatización) son los más importantes: una regresión ahí rompería altas de Opportunity para tenants sin
+esta feature configurada. El caso 11 (dedup del cron) es el segundo más importante — sin él, cada corrida
+diaria le mandaría un email repetido a cada owner con un deal estancado.

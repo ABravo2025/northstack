@@ -236,6 +236,19 @@ enum PipelineType {
   account
 }
 
+// How Opportunity.ownerId gets auto-filled on this Pipeline, when the
+// creator/mover leaves it blank (docs/tareas/specredisenosalesv2.md §3.8).
+// null = no auto-assignment, ownerId is required as before. `round_robin`
+// rotates through PipelineAssignmentUser, skipping anyone not currently an
+// active Employee+User. `account_owner` only makes sense on a `type: 'account'`
+// Pipeline — it defers to Company.accountOwnerId (an override, not a
+// fill-only-if-empty rule) and falls back to round-robin over this same
+// Pipeline's participants when the Company has no Account Owner set.
+enum PipelineAssignmentMode {
+  round_robin
+  account_owner
+}
+
 // Payroll (Tier 3.5) — see docs/spec-payroll.md for the full spec, built from
 // scratch after two earlier attempts were reverted (git log has the history;
 // nothing from them survived to reuse). `profile` never touches Payroll at
@@ -330,6 +343,7 @@ model Tenant {
   contacts                 Contact[]
   pipelines                Pipeline[]
   pipelineStages           PipelineStageDefinition[]
+  pipelineAssignmentUsers  PipelineAssignmentUser[]
   opportunities            Opportunity[]
   opportunityContacts      OpportunityContact[]
   opportunityStageHistory  OpportunityStageHistory[]
@@ -457,6 +471,8 @@ model User {
   notifications           Notification[]
   pipelinesCreated        Pipeline[]             @relation("PipelineCreatedBy")
   pipelinesUpdated        Pipeline[]             @relation("PipelineUpdatedBy")
+  pipelinesLastAssigned   Pipeline[]             @relation("PipelineLastAssignedUser")
+  pipelineAssignments     PipelineAssignmentUser[]
   ticketsReported         Ticket[]               @relation("TicketReporter")
   ticketsAssignedTo       Ticket[]               @relation("TicketAssignee")
   ideasReported           Idea[]                 @relation("IdeaReporter")
@@ -657,10 +673,46 @@ model Pipeline {
   createdBy     User?                     @relation("PipelineCreatedBy", fields: [createdById], references: [id])
   updatedById   String?
   updatedBy     User?                     @relation("PipelineUpdatedBy", fields: [updatedById], references: [id])
+  // Auto-assignment (docs/tareas/specredisenosalesv2.md §3.8) — see
+  // PipelineAssignmentMode's doc comment for what each mode does.
+  assignmentMode       PipelineAssignmentMode?
+  // Days an open Opportunity can sit in the same stage before the stalled-
+  // deal reminder cron notifies its owner. null = reminder off for this Pipeline.
+  stalledThresholdDays Int?
+  // Round-robin rotation cursor — the last User assigned via this Pipeline's
+  // rotation, so the next assignment continues from there instead of always
+  // starting over. Written via a raw SQL statement (pipelineAssignmentService.ts),
+  // deliberately bypassing Prisma's `update()` so it doesn't also bump
+  // `updatedAt`/`updatedBy` on every single Opportunity creation — those columns
+  // are for human edits to the Pipeline itself, not this machine-driven cursor.
+  lastAssignedUserId   String?
+  lastAssignedUser     User?                    @relation("PipelineLastAssignedUser", fields: [lastAssignedUserId], references: [id])
+  assignmentUsers      PipelineAssignmentUser[]
   stages        PipelineStageDefinition[]
   opportunities Opportunity[]
   forms         Form[]
 
+  @@index([tenantId])
+}
+
+// Round-robin participants for a Pipeline (docs/tareas/specredisenosalesv2.md
+// §3.8) — same shape as EmployeeTimeOffPolicy, the established pattern for a
+// simple tenant-scoped join table. Managed by hand in Settings (individually,
+// or bulk-added via the Department picker — see pipelineAssignmentService.ts's
+// assignUsersByDepartments, which just inserts ordinary rows here; there is no
+// live department↔Pipeline binding, adding by department is a one-time
+// snapshot and a row added that way is indistinguishable from one added by hand).
+model PipelineAssignmentUser {
+  id         String   @id @default(uuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  pipelineId String
+  pipeline   Pipeline @relation(fields: [pipelineId], references: [id])
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  assignedAt DateTime @default(now())
+
+  @@unique([pipelineId, userId])
   @@index([tenantId])
 }
 
@@ -706,8 +758,13 @@ model Opportunity {
   amountCents        Int
   currency           String // ISO-4217, explicit per Opportunity — not the tenant-wide Employee compensation currency
   estimatedCloseDate DateTime?
-  ownerId            String
-  owner              User                      @relation(fields: [ownerId], references: [id])
+  // Nullable since Unit 8 (docs/tareas/specredisenosalesv2.md §3.8) — a
+  // round-robin/account_owner Pipeline can genuinely have nobody eligible to
+  // assign (empty participant list, or everyone currently inactive), and the
+  // confirmed behavior is to create the Opportunity anyway rather than 400 —
+  // "no owner yet" beats "can't create this deal at all."
+  ownerId            String?
+  owner              User?                     @relation(fields: [ownerId], references: [id])
   lossReasonId       String? // required at the application layer when stage.outcome === 'lost' — not enforced at the DB level
   lossReason         FieldCatalogDefinition?   @relation("OpportunityLossReason", fields: [lossReasonId], references: [id])
   // Symmetric to lossReasonId (docs/tareas/specredisenosalesv2.md §3.7) —

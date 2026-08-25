@@ -55,6 +55,13 @@ const emptyForm = {
   currency: 'USD',
   estimatedCloseDate: '',
   ownerId: '',
+  // Set once the Owner field is interacted with, including explicitly
+  // choosing blank (docs/tareas/specredisenosalesv2.md §3.8). The auto-create-
+  // on-ready flow (attemptAutoCreateOpportunity) would otherwise fire the
+  // instant the other fields are filled, before the user ever reaches Owner,
+  // on any pipeline with assignment automation — this makes "leave it blank"
+  // a deliberate choice rather than a default nobody made.
+  ownerTouched: false,
   lossReasonId: '',
   winReasonId: '',
   closeNote: '',
@@ -218,11 +225,16 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
   // from the change event directly, instead of racing React's async setState
   // the way reading `form` here would.
   const isOpportunityAddReady = (candidate: typeof form = form) => {
-    if (!candidate.pipelineId || !candidate.name.trim() || !candidate.ownerId) return false;
+    if (!candidate.pipelineId || !candidate.name.trim()) return false;
+
+    const pipeline = activePipelines.find((p) => p.id === candidate.pipelineId);
+    // A pipeline with assignment automation lets Owner stay blank — but only
+    // once the user has actually reached/touched that field, not by default.
+    const autoAssigns = !!pipeline?.assignmentMode;
+    if (!candidate.ownerId && !(autoAssigns && candidate.ownerTouched)) return false;
     if (!isLikelyValidAmount(candidate.amountCents)) return false;
     if (!candidate.currency.trim()) return false;
 
-    const pipeline = activePipelines.find((p) => p.id === candidate.pipelineId);
     if (pipeline?.type === 'lead') {
       const existingContact = candidate.contactId ? contacts.find((c: any) => c.id === candidate.contactId) : null;
       const hasNewContact =
@@ -280,7 +292,9 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
       amountCents,
       currency: candidate.currency,
       estimatedCloseDate: candidate.estimatedCloseDate || undefined,
-      ownerId: candidate.ownerId,
+      // Blank lets the target Pipeline's assignment automation fill it in
+      // server-side (docs/tareas/specredisenosalesv2.md §3.8).
+      ownerId: candidate.ownerId || undefined,
       // Not previously sent even though isOpportunityAddReady already
       // required it for a stage landing directly on Lost — the backend would
       // have rejected the create over its own missing-lossReasonId check,
@@ -526,25 +540,30 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                     </select>
                   </Field>
                 )}
-                <Field label="Owner" required>
+                <Field label="Owner" required={!formPipeline?.assignmentMode}>
                   <select
                     id="opp-ownerId"
                     className="overview-field-input"
                     value={form.ownerId}
                     onChange={(e) => {
-                      const next = { ...form, ownerId: e.target.value };
+                      const next = { ...form, ownerId: e.target.value, ownerTouched: true };
                       setForm(next);
                       attemptAutoCreateOpportunity(next);
                     }}
-                    required
+                    required={!formPipeline?.assignmentMode}
                   >
-                    <option value="">-- select --</option>
+                    <option value="">{formPipeline?.assignmentMode ? '-- auto-assign --' : '-- select --'}</option>
                     {tenantUsers.map((u) => (
                       <option key={u.id} value={u.id}>
                         {u.firstName} {u.lastName}
                       </option>
                     ))}
                   </select>
+                  {formPipeline?.assignmentMode && !form.ownerId && (
+                    <p className="mt-1 text-xs text-gray-500">
+                      This pipeline will assign an owner automatically if left blank.
+                    </p>
+                  )}
                 </Field>
                 <Field label="Amount" required>
                   <input

@@ -11,6 +11,7 @@ import { timeOffBalancesApi } from './timeOffBalances.js';
 import { companiesApi } from './companies.js';
 import { contactsApi } from './contacts.js';
 import { pipelinesApi } from './pipelines.js';
+import { pipelineAssignmentsApi } from './pipelineAssignments.js';
 import { opportunitiesApi } from './opportunities.js';
 import { savedViewsApi } from './savedViews.js';
 import { publicFormsAdminApi } from './publicFormsAdmin.js';
@@ -43,6 +44,7 @@ export const api = {
   ...companiesApi,
   ...contactsApi,
   ...pipelinesApi,
+  ...pipelineAssignmentsApi,
   ...opportunitiesApi,
   ...savedViewsApi,
   ...publicFormsAdminApi,

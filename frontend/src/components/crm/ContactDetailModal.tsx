@@ -153,13 +153,16 @@ export default function ContactDetailModal({
         companyId = created.id;
       }
 
+      // A Pipeline with assignment automation resolves its own owner
+      // server-side (docs/tareas/specredisenosalesv2.md §3.8); otherwise
+      // default to whoever's creating it, same as before.
       const opportunity = await api.createOpportunity(token, {
         name: newOppName.trim(),
         companyId: companyId!,
         pipelineId: pipeline.id,
         amountCents: 0,
         currency: tenantCurrency,
-        ownerId: currentUserId,
+        ownerId: pipeline.assignmentMode ? undefined : currentUserId,
       });
       await api.addOpportunityContact(token, opportunity.id, { contactId: contact.id });
       toast.success('Opportunity created.');

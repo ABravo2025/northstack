@@ -21,7 +21,11 @@ export const opportunitiesApi = {
       amountCents: number;
       currency: string;
       estimatedCloseDate?: string | null;
-      ownerId: string;
+      // Optional since Unit 8 (docs/tareas/specredisenosalesv2.md §3.8) —
+      // omit it (or send null/undefined) to let the target Pipeline's
+      // assignmentMode (round-robin / account owner) fill it in server-side;
+      // required at the API layer only when the Pipeline has no assignmentMode.
+      ownerId?: string | null;
       lossReasonId?: string | null;
       winReasonId?: string | null;
       closeNote?: string | null;
@@ -49,7 +53,7 @@ export const opportunitiesApi = {
       amountCents: number;
       currency: string;
       estimatedCloseDate: string | null;
-      ownerId: string;
+      ownerId: string | null;
       lossReasonId: string | null;
       winReasonId: string | null;
       closeNote: string | null;

@@ -1,5 +1,5 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
-import type { PipelineStage, Pipeline } from './types.js';
+import type { PipelineStage, Pipeline, PipelineAssignmentMode } from './types.js';
 
 export const pipelinesApi = {
   // Pipelines (sales pipelines for Opportunities)
@@ -13,7 +13,13 @@ export const pipelinesApi = {
 
   createPipeline: async (
     token: string,
-    data: { name: string; type: 'lead' | 'account'; order?: number },
+    data: {
+      name: string;
+      type: 'lead' | 'account';
+      order?: number;
+      assignmentMode?: PipelineAssignmentMode | null;
+      stalledThresholdDays?: number | null;
+    },
   ): Promise<Pipeline> => {
     const res = await apiFetch(`${API_BASE_URL}/api/pipelines`, {
       method: 'POST',
@@ -29,7 +35,13 @@ export const pipelinesApi = {
   updatePipeline: async (
     token: string,
     pipelineId: string,
-    data: { name?: string; order?: number; isActive?: boolean },
+    data: {
+      name?: string;
+      order?: number;
+      isActive?: boolean;
+      assignmentMode?: PipelineAssignmentMode | null;
+      stalledThresholdDays?: number | null;
+    },
   ): Promise<Pipeline> => {
     const res = await apiFetch(`${API_BASE_URL}/api/pipelines/${pipelineId}`, {
       method: 'PATCH',

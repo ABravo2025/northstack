@@ -1,5 +1,6 @@
 import { runPlanTransitions } from '../modules/tenant/planTransitionService.js';
 import { renewExpiringWatchChannels } from '../modules/integrations/googleCalendarWatchService.js';
+import { runStalledOpportunityReminders } from '../modules/crm/stalledOpportunityService.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import type express from 'express';
 
@@ -51,5 +52,17 @@ internalRouter.get('/api/internal/google-calendar-channels/renew', async (req, r
   if (!checkCronSecret(req, res, '/api/internal/google-calendar-channels/renew')) return;
 
   const result = await renewExpiringWatchChannels();
+  return res.json(result);
+});
+
+// Triggered once a day by Vercel Cron — stalled-deal reminders
+// (docs/tareas/specredisenosalesv2.md §3.8). Unlike the two crons above (silent
+// billing/infra housekeeping), this one writes user-visible Notifications and
+// sends real email, so it also skips suspended/cancelled tenants (see
+// stalledOpportunityService.ts).
+internalRouter.get('/api/internal/opportunities/stalled-reminders/run', async (req, res) => {
+  if (!checkCronSecret(req, res, '/api/internal/opportunities/stalled-reminders/run')) return;
+
+  const result = await runStalledOpportunityReminders();
   return res.json(result);
 });

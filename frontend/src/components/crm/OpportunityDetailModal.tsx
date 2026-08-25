@@ -354,10 +354,10 @@ export default function OpportunityDetailModal({
               <Field label="Owner">
                 <AutoSaveSelect
                   label="Owner"
-                  value={opportunity.ownerId}
-                  onSave={(v) => save({ ownerId: v })}
+                  value={opportunity.ownerId ?? ''}
+                  onSave={(v) => save({ ownerId: v || null })}
                   options={tenantUsers.map((u) => ({ value: u.id, label: `${u.firstName} ${u.lastName}` }))}
-                  emptyLabel="-- select --"
+                  emptyLabel="-- unassigned --"
                 />
               </Field>
             </div>

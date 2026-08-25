@@ -1,4 +1,7 @@
 import prisma from '../../lib/prisma.js';
+import { resolveNextRoundRobinUserId } from './pipelineAssignmentService.js';
+import { createNotification } from '../notifications/notificationService.js';
+import { sendOpportunityStageChangedEmail } from '../../lib/mailer.js';
 import type { Opportunity, Prisma } from '@prisma/client';
 
 export interface CreateOpportunityInput {
@@ -10,7 +13,12 @@ export interface CreateOpportunityInput {
   amountCents: number;
   currency: string;
   estimatedCloseDate?: string | null;
-  ownerId: string;
+  // Optional since Unit 8 (docs/tareas/specredisenosalesv2.md §3.8) — an
+  // explicit value always wins; omitted/null falls back to the target
+  // Pipeline's assignmentMode (round_robin, or account_owner via
+  // Company.accountOwnerId), which can itself resolve to null (nobody
+  // eligible) rather than fail the create.
+  ownerId?: string | null;
   lossReasonId?: string | null;
   winReasonId?: string | null;
   closeNote?: string | null;
@@ -30,7 +38,9 @@ export interface UpdateOpportunityInput {
   pipelineId?: string;
   stageId?: string;
   estimatedCloseDate?: string | null;
-  ownerId?: string;
+  // undefined = caller didn't touch it (account_owner may still resolve one
+  // on a pipeline move, §3.8); null = explicitly clear the owner.
+  ownerId?: string | null;
   lossReasonId?: string | null;
   // Symmetric to lossReasonId (docs/tareas/specredisenosalesv2.md §3.7) —
   // required at the application layer (routes/opportunities.ts) when the
@@ -44,6 +54,53 @@ export interface UpdateOpportunityInput {
   // sole active Contact (docs/tareas/specredisenosalesv2.md §2.2). Whitelisted
   // here so that's not a dead end at the API layer either.
   isActive?: boolean;
+  // Who's making this call (routes/opportunities.ts's PATCH handler) — used
+  // only to skip the stage-change notification when the owner moved their
+  // own deal (docs/tareas/specredisenosalesv2.md §3.8). Not persisted.
+  changedByUserId?: string;
+}
+
+// Resolves Owner for both createOpportunity and updateOpportunity's
+// pipeline-move branch (docs/tareas/specredisenosalesv2.md §3.8). `mode`
+// distinguishes the two call sites: at creation there's no prior owner to
+// override, so `account_owner` just fills in company.accountOwnerId same as
+// the round-robin fallback would; on a pipeline move, an already-set owner
+// gets overridden by company.accountOwnerId on purpose (the account's
+// designated manager takes over regardless of who worked the lead), while
+// round-robin only fills in when the Opportunity has no owner yet.
+async function resolveAutoAssignedOwnerId(
+  tenantId: string,
+  pipelineId: string,
+  companyId: string,
+  options: { mode: 'create' } | { mode: 'move'; existingOwnerId: string | null },
+): Promise<string | null> {
+  const pipeline = await prisma.pipeline.findUnique({
+    where: { id: pipelineId },
+    select: { type: true, assignmentMode: true },
+  });
+  if (!pipeline?.assignmentMode) {
+    return options.mode === 'move' ? options.existingOwnerId : null;
+  }
+
+  if (pipeline.type === 'account' && pipeline.assignmentMode === 'account_owner') {
+    const company = await prisma.company.findUnique({ where: { id: companyId }, select: { accountOwnerId: true } });
+    if (company?.accountOwnerId) {
+      return company.accountOwnerId; // override — always wins, both at creation and on a move
+    }
+    if (options.mode === 'move' && options.existingOwnerId) {
+      return options.existingOwnerId; // fill-only-if-empty: already has an owner, leave it
+    }
+    return resolveNextRoundRobinUserId(tenantId, pipelineId);
+  }
+
+  if (pipeline.assignmentMode === 'round_robin') {
+    if (options.mode === 'move' && options.existingOwnerId) {
+      return options.existingOwnerId;
+    }
+    return resolveNextRoundRobinUserId(tenantId, pipelineId);
+  }
+
+  return options.mode === 'move' ? options.existingOwnerId : null;
 }
 
 const OPPORTUNITY_INCLUDE = {
@@ -84,6 +141,10 @@ export async function createOpportunity(input: CreateOpportunityInput): Promise<
     stageId = firstStage.id;
   }
 
+  const ownerId = input.ownerId
+    ? input.ownerId
+    : await resolveAutoAssignedOwnerId(input.tenantId, input.pipelineId, input.companyId, { mode: 'create' });
+
   const opportunity = await prisma.opportunity.create({
     data: {
       tenantId: input.tenantId,
@@ -94,7 +155,7 @@ export async function createOpportunity(input: CreateOpportunityInput): Promise<
       amountCents: input.amountCents,
       currency: input.currency,
       estimatedCloseDate: input.estimatedCloseDate ? new Date(input.estimatedCloseDate) : null,
-      ownerId: input.ownerId,
+      ownerId,
       lossReasonId: input.lossReasonId ?? null,
       winReasonId: input.winReasonId ?? null,
       closeNote: input.closeNote ?? null,
@@ -170,6 +231,17 @@ export async function updateOpportunity(
     }
     data.stageId = firstStage.id;
     resolvedStageId = firstStage.id;
+
+    // account_owner / round-robin on a pipeline move (docs/tareas/specredisenosalesv2.md
+    // §3.8) — only when the caller didn't already touch ownerId in this same
+    // call (an explicit choice, including an explicit null, always wins).
+    if (input.ownerId === undefined) {
+      const effectiveCompanyId = input.companyId ?? existing.companyId;
+      data.ownerId = await resolveAutoAssignedOwnerId(tenantId, input.pipelineId, effectiveCompanyId, {
+        mode: 'move',
+        existingOwnerId: existing.ownerId,
+      });
+    }
   } else if (input.stageId !== undefined) {
     data.stageId = input.stageId;
     resolvedStageId = input.stageId;
@@ -185,6 +257,55 @@ export async function updateOpportunity(
     const stage = await prisma.pipelineStageDefinition.findUnique({ where: { id: resolvedStageId } });
     if (stage?.outcome === 'won') {
       await maybeAdvanceCompanyToCustomer(tenantId, updated.companyId);
+    }
+
+    // Stage-change notification + email (docs/tareas/specredisenosalesv2.md
+    // §3.8) — notify the post-update owner, but never about their own change
+    // (most stage moves are the owner dragging their own Kanban card; echoing
+    // that back would train people to ignore the bell). Best-effort: a
+    // failure here must never fail the Opportunity update itself.
+    const recipientId = updated.ownerId;
+    if (recipientId && recipientId !== input.changedByUserId) {
+      try {
+        const [oldStage, newStage, recipient, actor] = await Promise.all([
+          prisma.pipelineStageDefinition.findUnique({ where: { id: existing.stageId }, select: { name: true } }),
+          stage ?? prisma.pipelineStageDefinition.findUnique({ where: { id: resolvedStageId }, select: { name: true } }),
+          prisma.user.findUnique({ where: { id: recipientId }, select: { email: true, firstName: true } }),
+          input.changedByUserId
+            ? prisma.user.findUnique({ where: { id: input.changedByUserId }, select: { firstName: true, lastName: true } })
+            : null,
+        ]);
+        const actorName = actor ? `${actor.firstName} ${actor.lastName}` : undefined;
+        const message = `${updated.name} moved from ${oldStage?.name ?? 'a previous stage'} to ${newStage?.name ?? 'a new stage'}${
+          actorName ? ` by ${actorName}` : ''
+        }`;
+
+        await createNotification({
+          tenantId,
+          userId: recipientId,
+          type: 'opportunity_stage_changed',
+          entityType: 'opportunity',
+          entityId: id,
+          message,
+        });
+
+        if (recipient) {
+          const company = await prisma.company.findUnique({ where: { id: updated.companyId }, select: { name: true } });
+          const appUrl = `${process.env.APP_BASE_URL ?? 'http://localhost:5173'}/opportunities`;
+          sendOpportunityStageChangedEmail({
+            to: recipient.email,
+            ownerFirstName: recipient.firstName,
+            opportunityName: updated.name,
+            companyName: company?.name ?? '',
+            fromStage: oldStage?.name ?? 'a previous stage',
+            toStage: newStage?.name ?? 'a new stage',
+            changedByName: actorName,
+            appUrl,
+          }).catch((error) => console.error('Failed to send opportunity stage changed email:', error));
+        }
+      } catch (error) {
+        console.error('Failed to create opportunity stage changed notification:', error);
+      }
     }
   }
 

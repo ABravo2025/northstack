@@ -1,6 +1,13 @@
 import { randomUUID } from 'crypto';
 import prisma from '../../lib/prisma.js';
-import type { Pipeline, PipelineStageDefinition, PipelineStageOutcome, PipelineType, Prisma } from '@prisma/client';
+import type {
+  Pipeline,
+  PipelineAssignmentMode,
+  PipelineStageDefinition,
+  PipelineStageOutcome,
+  PipelineType,
+  Prisma,
+} from '@prisma/client';
 
 type PrismaTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
@@ -61,6 +68,8 @@ export interface CreatePipelineInput {
   type: PipelineType;
   order?: number;
   createdById: string;
+  assignmentMode?: PipelineAssignmentMode | null;
+  stalledThresholdDays?: number | null;
 }
 
 // `type` deliberately excluded — immutable once a Pipeline is created (see
@@ -71,6 +80,9 @@ export interface UpdatePipelineInput {
   name?: string;
   order?: number;
   isActive?: boolean;
+  // null clears it (no auto-assignment / reminder off) — docs/tareas/specredisenosalesv2.md §3.8.
+  assignmentMode?: PipelineAssignmentMode | null;
+  stalledThresholdDays?: number | null;
   // Always set by the route (every PATCH call comes from an authenticated
   // user) — not optional, unlike the fields above, since "who touched this
   // last" should never silently go stale on a real edit.
@@ -100,6 +112,8 @@ export async function createPipeline(input: CreatePipelineInput) {
       // Set on the row it's creating too, so a freshly created pipeline
       // reads as "created by X, last edited by X" instead of a blank editor.
       updatedById: input.createdById,
+      assignmentMode: input.assignmentMode ?? null,
+      stalledThresholdDays: input.stalledThresholdDays ?? null,
     },
     include: PIPELINE_INCLUDE,
   });
@@ -127,6 +141,8 @@ export async function updatePipeline(id: string, tenantId: string, input: Update
   if (input.name !== undefined) data.name = input.name;
   if (input.order !== undefined) data.order = input.order;
   if (input.isActive !== undefined) data.isActive = input.isActive;
+  if (input.assignmentMode !== undefined) data.assignmentMode = input.assignmentMode;
+  if (input.stalledThresholdDays !== undefined) data.stalledThresholdDays = input.stalledThresholdDays;
 
   const pipeline = await prisma.pipeline.update({ where: { id }, data, include: PIPELINE_INCLUDE });
   return { success: true, pipeline };

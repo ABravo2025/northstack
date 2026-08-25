@@ -67,7 +67,11 @@ async function validateOpportunityRefs(
     }
   }
 
-  if (body.ownerId !== undefined) {
+  // undefined = "let assignment automation decide" (create) or "leave as-is"
+  // (update); null = an intentional, explicit clear (Opportunity gets no
+  // owner) — docs/tareas/specredisenosalesv2.md §3.8. Neither goes through
+  // the owner-exists lookup below.
+  if (body.ownerId !== undefined && body.ownerId !== null) {
     const owner = await findUserById(body.ownerId);
     if (!owner || owner.tenantId !== tenantId) {
       return { error: 'Owner not found' };
@@ -131,14 +135,30 @@ opportunitiesRouter.post('/api/opportunities', async (req, res) => {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  if (!req.body.name || !req.body.companyId || !req.body.pipelineId || !req.body.ownerId) {
-    return res.status(400).json({ error: 'name, companyId, pipelineId, and ownerId are required' });
+  if (!req.body.name || !req.body.companyId || !req.body.pipelineId) {
+    return res.status(400).json({ error: 'name, companyId, and pipelineId are required' });
   }
   if (typeof req.body.amountCents !== 'number' || req.body.amountCents < 0) {
     return res.status(400).json({ error: 'amountCents must be a non-negative number' });
   }
   if (!req.body.currency || typeof req.body.currency !== 'string') {
     return res.status(400).json({ error: 'currency is required' });
+  }
+
+  // Blank means "let assignment automation decide" — only a real value goes
+  // through the owner-exists check inside validateOpportunityRefs.
+  if (!req.body.ownerId) {
+    req.body.ownerId = undefined;
+  }
+
+  const targetPipeline = await findPipelineById(req.body.pipelineId);
+  if (!targetPipeline || targetPipeline.tenantId !== user.tenantId) {
+    return res.status(400).json({ error: 'Pipeline not found' });
+  }
+  // ownerId is required only when this pipeline has no assignment automation
+  // to fall back on (docs/tareas/specredisenosalesv2.md §3.8).
+  if (!req.body.ownerId && !targetPipeline.assignmentMode) {
+    return res.status(400).json({ error: 'ownerId is required' });
   }
 
   const refError = await validateOpportunityRefs(user.tenantId!, req.body, req.body.pipelineId);
@@ -184,6 +204,12 @@ opportunitiesRouter.patch('/api/opportunities/:opportunityId', async (req, res) 
     return res.status(404).json({ error: 'Opportunity not found' });
   }
 
+  // A stray '' (vs. an intentional `null` to clear the owner) shouldn't be
+  // treated as an explicit value.
+  if (req.body.ownerId === '') {
+    req.body.ownerId = undefined;
+  }
+
   const refError = await validateOpportunityRefs(
     user.tenantId!,
     req.body,
@@ -196,7 +222,10 @@ opportunitiesRouter.patch('/api/opportunities/:opportunityId', async (req, res) 
     return res.status(400).json(refError);
   }
 
-  const updated = await updateOpportunity(req.params.opportunityId, user.tenantId!, req.body);
+  const updated = await updateOpportunity(req.params.opportunityId, user.tenantId!, {
+    ...req.body,
+    changedByUserId: user.id,
+  });
   const full = await findOpportunityById(updated.id);
   return res.json(full);
 });

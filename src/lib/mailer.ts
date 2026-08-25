@@ -290,6 +290,80 @@ export async function sendSignupVerificationEmail(input: SendSignupVerificationE
   });
 }
 
+export interface SendOpportunityStageChangedEmailInput {
+  to: string;
+  ownerFirstName: string;
+  opportunityName: string;
+  companyName: string;
+  fromStage: string;
+  toStage: string;
+  changedByName?: string;
+  appUrl: string;
+}
+
+// docs/tareas/specredisenosalesv2.md §3.8 — fires alongside the in-app
+// Notification whenever someone other than the deal's owner moves its stage.
+// Links to the Kanban board, not the deal itself — there's no per-Opportunity
+// URL today (the detail view is component state, not a route).
+export async function sendOpportunityStageChangedEmail(input: SendOpportunityStageChangedEmailInput): Promise<void> {
+  if (!mailerConfigured()) return;
+
+  const actor = input.changedByName ? ` by ${input.changedByName}` : '';
+
+  await transporter.sendMail({
+    from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
+    to: input.to,
+    subject: `${input.opportunityName} moved to ${input.toStage}`,
+    text: [
+      `Hi ${input.ownerFirstName},`,
+      '',
+      `"${input.opportunityName}" (${input.companyName}) moved from ${input.fromStage} to ${input.toStage}${actor}.`,
+      '',
+      `View your pipeline: ${input.appUrl}`,
+    ].join('\n'),
+    html: [
+      `<p>Hi ${input.ownerFirstName},</p>`,
+      `<p><strong>${input.opportunityName}</strong> (${input.companyName}) moved from ${input.fromStage} to <strong>${input.toStage}</strong>${actor}.</p>`,
+      `<p><a href="${input.appUrl}">View your pipeline</a></p>`,
+    ].join('\n'),
+  });
+}
+
+export interface SendOpportunityStalledEmailInput {
+  to: string;
+  ownerFirstName: string;
+  opportunityName: string;
+  companyName: string;
+  stageName: string;
+  daysInStage: number;
+  appUrl: string;
+}
+
+// docs/tareas/specredisenosalesv2.md §3.8 — the stalled-deal reminder cron's
+// email half, alongside the in-app Notification. Same "no per-deal URL" note
+// as above.
+export async function sendOpportunityStalledEmail(input: SendOpportunityStalledEmailInput): Promise<void> {
+  if (!mailerConfigured()) return;
+
+  await transporter.sendMail({
+    from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
+    to: input.to,
+    subject: `${input.opportunityName} has been stalled for ${input.daysInStage} days`,
+    text: [
+      `Hi ${input.ownerFirstName},`,
+      '',
+      `"${input.opportunityName}" (${input.companyName}) has been sitting in ${input.stageName} for ${input.daysInStage} days.`,
+      '',
+      `View your pipeline: ${input.appUrl}`,
+    ].join('\n'),
+    html: [
+      `<p>Hi ${input.ownerFirstName},</p>`,
+      `<p><strong>${input.opportunityName}</strong> (${input.companyName}) has been sitting in <strong>${input.stageName}</strong> for ${input.daysInStage} days.</p>`,
+      `<p><a href="${input.appUrl}">View your pipeline</a></p>`,
+    ].join('\n'),
+  });
+}
+
 export interface SendTicketNoteCreatedEmailInput {
   to: string;
   ticketSubject: string;

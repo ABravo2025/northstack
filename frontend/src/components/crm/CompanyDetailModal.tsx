@@ -193,13 +193,19 @@ export default function CompanyDetailModal({
   const handleCreateOpportunity = async () => {
     if (!newOppPipelineId || !newOppName.trim()) return;
     try {
+      const selectedPipeline = accountPipelines.find((p) => p.id === newOppPipelineId);
+      // A Pipeline with assignment automation resolves its own owner
+      // server-side (docs/tareas/specredisenosalesv2.md §3.8) — an explicit
+      // Account Owner still wins here since that's a deliberate human choice
+      // on the Company, not the "default to me" fallback below it.
+      const autoAssigns = !!selectedPipeline?.assignmentMode;
       const created = await api.createOpportunity(token, {
         name: newOppName.trim(),
         companyId: company.id,
         pipelineId: newOppPipelineId,
         amountCents: 0,
         currency: tenantCurrency,
-        ownerId: company.accountOwnerId || currentUserId,
+        ownerId: company.accountOwnerId || (autoAssigns ? undefined : currentUserId),
       });
       if (newOppContactId) {
         await api.addOpportunityContact(token, created.id, { contactId: newOppContactId });

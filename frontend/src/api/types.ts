@@ -177,6 +177,8 @@ export interface PipelineStage {
   isActive: boolean;
 }
 
+export type PipelineAssignmentMode = 'round_robin' | 'account_owner';
+
 export interface Pipeline {
   id: string;
   name: string;
@@ -190,6 +192,20 @@ export interface Pipeline {
   createdBy?: { id: string; firstName: string; lastName: string } | null;
   updatedBy?: { id: string; firstName: string; lastName: string } | null;
   stages: PipelineStage[];
+  // Automations (docs/tareas/specredisenosalesv2.md §3.8). null = no
+  // auto-assignment, Opportunity creation requires an explicit ownerId.
+  assignmentMode: PipelineAssignmentMode | null;
+  // Days an open Opportunity can sit in one stage before the stalled-deal
+  // reminder cron notifies its owner. null = reminders off for this Pipeline.
+  stalledThresholdDays: number | null;
+}
+
+export interface PipelineAssignmentUser {
+  id: string;
+  pipelineId: string;
+  userId: string;
+  assignedAt: string;
+  user: { id: string; firstName: string; lastName: string; email: string; status: 'active' | 'inactive' };
 }
 
 export interface OpportunityContactLink {
@@ -211,8 +227,11 @@ export interface Opportunity {
   amountCents: number;
   currency: string;
   estimatedCloseDate: string | null;
-  ownerId: string;
-  owner?: { id: string; firstName: string; lastName: string };
+  // Nullable since Unit 8 (docs/tareas/specredisenosalesv2.md §3.8) — a
+  // round-robin/account_owner Pipeline can leave a newly-created Opportunity
+  // without an owner if nobody is currently eligible.
+  ownerId: string | null;
+  owner?: { id: string; firstName: string; lastName: string } | null;
   lossReasonId: string | null;
   // Symmetric to lossReasonId (docs/tareas/specredisenosalesv2.md §3.7).
   winReasonId: string | null;

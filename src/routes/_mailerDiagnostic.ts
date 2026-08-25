@@ -30,15 +30,38 @@ mailerDiagnosticRouter.get('/api/internal/_mailer-diagnostic', async (req, res) 
     auth: { user: process.env.ZOHO_SMTP_USER, pass: process.env.ZOHO_SMTP_PASSWORD },
   });
 
+  let verifyOk = false;
+  let verifyError: string | undefined;
   try {
     await transporter.verify();
-    return res.json({ userConfigured, passwordConfigured, verifyOk: true });
+    verifyOk = true;
   } catch (err) {
-    return res.json({
-      userConfigured,
-      passwordConfigured,
-      verifyOk: false,
-      verifyError: err instanceof Error ? err.message : String(err),
-    });
+    verifyError = err instanceof Error ? err.message : String(err);
   }
+
+  // Optional real send, only when the caller (this diagnostic session, via
+  // the same bearer token) explicitly opts in with ?sendTo=<address> — never
+  // a hardcoded recipient baked into deployed code. verify() alone can pass
+  // while an actual send still gets rejected or silently dropped downstream.
+  const sendTo = typeof req.query.sendTo === 'string' ? req.query.sendTo : undefined;
+  let sendOk: boolean | undefined;
+  let sendError: string | undefined;
+  let sendResponse: string | undefined;
+  if (sendTo) {
+    try {
+      const info = await transporter.sendMail({
+        from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
+        to: sendTo,
+        subject: 'Mailer diagnostic test send',
+        text: 'Real test send from the temporary production mailer diagnostic endpoint.',
+      });
+      sendOk = true;
+      sendResponse = JSON.stringify({ messageId: info.messageId, response: info.response, accepted: info.accepted, rejected: info.rejected });
+    } catch (err) {
+      sendOk = false;
+      sendError = err instanceof Error ? err.message : String(err);
+    }
+  }
+
+  return res.json({ userConfigured, passwordConfigured, verifyOk, verifyError, sendOk, sendError, sendResponse });
 });

@@ -736,6 +736,12 @@ model PipelineStageDefinition {
   // 100% editable after creation either way, so the default's precision
   // isn't critical.
   probability   Int                       @default(50)
+  // Per-stage override of the Unit 8 stage-change notification/email
+  // (docs/tareas/specredisenosalesv2.md §3.8) — an Opportunity entering this
+  // stage notifies+emails its owner only when true. Defaults to true so
+  // existing behavior (notify on every stage change) is unchanged until a
+  // tenant opts a specific stage out.
+  notifyOwnerOnEnter Boolean              @default(true)
   isActive      Boolean                   @default(true)
   createdAt     DateTime                  @default(now())
   opportunities Opportunity[]

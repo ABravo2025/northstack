@@ -156,6 +156,9 @@ export interface CreatePipelineStageInput {
   order?: number;
   outcome?: PipelineStageOutcome;
   probability?: number;
+  // Per-stage override of the stage-change notification/email
+  // (docs/tareas/specredisenosalesv2.md §3.8). Defaults to true (notify).
+  notifyOwnerOnEnter?: boolean;
 }
 
 export interface UpdatePipelineStageInput {
@@ -165,6 +168,7 @@ export interface UpdatePipelineStageInput {
   outcome?: PipelineStageOutcome;
   probability?: number;
   isActive?: boolean;
+  notifyOwnerOnEnter?: boolean;
 }
 
 export interface PipelineStageResult {
@@ -196,6 +200,7 @@ export async function createPipelineStage(input: CreatePipelineStageInput): Prom
       order: input.order ?? 0,
       outcome,
       probability: resolveProbability(outcome, input.probability),
+      notifyOwnerOnEnter: input.notifyOwnerOnEnter ?? true,
     },
   });
 }
@@ -223,6 +228,7 @@ export async function updatePipelineStage(
   if (input.outcome !== undefined || input.probability !== undefined) {
     data.probability = resolveProbability(input.outcome ?? existing.outcome, input.probability);
   }
+  if (input.notifyOwnerOnEnter !== undefined) data.notifyOwnerOnEnter = input.notifyOwnerOnEnter;
 
   const stage = await prisma.pipelineStageDefinition.update({ where: { id }, data });
   return { success: true, stage };

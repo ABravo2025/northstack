@@ -262,10 +262,12 @@ export async function updateOpportunity(
     // Stage-change notification + email (docs/tareas/specredisenosalesv2.md
     // §3.8) — notify the post-update owner, but never about their own change
     // (most stage moves are the owner dragging their own Kanban card; echoing
-    // that back would train people to ignore the bell). Best-effort: a
-    // failure here must never fail the Opportunity update itself.
+    // that back would train people to ignore the bell), and only when the
+    // *destination* stage has this enabled (per-stage opt-out, e.g. a noisy
+    // early "New" stage). Best-effort: a failure here must never fail the
+    // Opportunity update itself.
     const recipientId = updated.ownerId;
-    if (recipientId && recipientId !== input.changedByUserId) {
+    if (recipientId && recipientId !== input.changedByUserId && stage?.notifyOwnerOnEnter) {
       try {
         const [oldStage, newStage, recipient, actor] = await Promise.all([
           prisma.pipelineStageDefinition.findUnique({ where: { id: existing.stageId }, select: { name: true } }),

@@ -13,6 +13,7 @@ import { useToast } from '../components/common/ToastProvider';
 import ColorPicker from '../components/common/ColorPicker';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Modal from '../components/common/Modal';
+import MultiSelectDropdown, { type MultiSelectOption } from '../components/common/MultiSelectDropdown';
 import Popover from '../components/common/Popover';
 import RequiredMark from '../components/common/RequiredMark';
 import { DotsVerticalIcon, EyeIcon, EyeOffIcon, GripIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
@@ -64,12 +65,15 @@ interface DraftStage {
   // create; backend still forces 100/0 for won/lost regardless of this value
   // (docs/tareas/specredisenosalesv2.md §3.5).
   probability: string;
+  // Per-stage stage-change notification opt-out (docs/tareas/specredisenosalesv2.md
+  // §3.8) — defaults on, same as the backend's own default.
+  notifyOwnerOnEnter: boolean;
 }
 
 let draftStageCounter = 0;
 function newDraftStage(): DraftStage {
   draftStageCounter += 1;
-  return { key: `draft-${draftStageCounter}`, name: '', outcome: 'open', probability: '50' };
+  return { key: `draft-${draftStageCounter}`, name: '', outcome: 'open', probability: '50', notifyOwnerOnEnter: true };
 }
 
 // Shown once, right above the Stages list — explains what each Outcome
@@ -166,6 +170,15 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
     }
   };
 
+  const toggleNotifyOwnerOnEnter = async (stage: PipelineStage) => {
+    try {
+      await api.updatePipelineStage(token, pipeline.id, stage.id, { notifyOwnerOnEnter: !stage.notifyOwnerOnEnter });
+      onChanged();
+    } catch (error) {
+      toast.error('Failed to update stage notification setting: ' + (error as Error).message);
+    }
+  };
+
   const handleDragStart = (stageId: string) => setDraggedStageId(stageId);
 
   const handleDragEnd = () => {
@@ -214,6 +227,9 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
           <span className="flex-1">Stage name</span>
           <span style={{ width: 110 }}>Outcome</span>
           <span style={{ width: 56, textAlign: 'center' }}>Win %</span>
+          <span style={{ width: 56, textAlign: 'center' }} title="Notify the owner (in-app + email) when a deal enters this stage">
+            Notify
+          </span>
         </div>
       )}
       <div className="flex flex-col gap-2">
@@ -271,6 +287,14 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
                 {stage.probability}%
               </span>
             )}
+            <span style={{ width: 56, display: 'flex', justifyContent: 'center' }}>
+              <input
+                type="checkbox"
+                checked={stage.notifyOwnerOnEnter}
+                onChange={() => toggleNotifyOwnerOnEnter(stage)}
+                title="Notify the owner (in-app + email) when a deal enters this stage"
+              />
+            </span>
             <button
               type="button"
               className="icon-btn"
@@ -398,23 +422,20 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
     }
   };
 
-  const toggleParticipant = async (userId: string, checked: boolean) => {
+  // MultiSelectDropdown reports the full next selection on every toggle (one
+  // id added or removed at a time in practice) — diff against the persisted
+  // list to know which single assign/unassign call to fire.
+  const handleParticipantsChange = async (nextSelected: string[]) => {
+    const currentIds = participants.map((p) => p.userId);
+    const added = nextSelected.filter((id) => !currentIds.includes(id));
+    const removed = currentIds.filter((id) => !nextSelected.includes(id));
     try {
-      if (checked) {
-        await api.assignUserToPipeline(token, pipeline.id, userId);
-      } else {
-        await api.unassignUserFromPipeline(token, pipeline.id, userId);
-      }
+      for (const id of added) await api.assignUserToPipeline(token, pipeline.id, id);
+      for (const id of removed) await api.unassignUserFromPipeline(token, pipeline.id, id);
       refreshParticipants();
     } catch (error) {
-      toast.error('Failed to update participant: ' + (error as Error).message);
+      toast.error('Failed to update participants: ' + (error as Error).message);
     }
-  };
-
-  const toggleDepartmentSelected = (departmentId: string) => {
-    setSelectedDepartmentIds((prev) =>
-      prev.includes(departmentId) ? prev.filter((id) => id !== departmentId) : [...prev, departmentId],
-    );
   };
 
   const handleAddFromDepartments = async () => {
@@ -434,7 +455,13 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
     }
   };
 
-  const participantUserIds = new Set(participants.map((p) => p.userId));
+  const participantUserIds = participants.map((p) => p.userId);
+  const userOptions: MultiSelectOption[] = tenantUsers.map((u) => ({
+    value: u.id,
+    label: `${u.firstName} ${u.lastName}`,
+    note: u.status !== 'active' ? '(inactive)' : undefined,
+  }));
+  const departmentOptions: MultiSelectOption[] = departments.map((d) => ({ value: d.id, label: d.name }));
 
   return (
     <>
@@ -461,64 +488,48 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
 
       {pipeline.assignmentMode && (
         <div className="form-group">
-          <span>Round-robin participants</span>
+          <label htmlFor="pipeline-participants">Round-robin participants</label>
           <p className="mb-1 text-xs text-gray-500">
             Only currently-active employees are ever picked when it's their turn. A user with no linked Employee
             record can be added here but will always be skipped.
           </p>
-          {participantsLoading ? (
-            <p className="text-sm text-ink-faint">Loading…</p>
-          ) : tenantUsers.length === 0 ? (
-            <p className="text-sm text-ink-faint">No users in this tenant yet.</p>
-          ) : (
-            <div className="flex flex-col gap-1" style={{ maxHeight: 180, overflowY: 'auto' }}>
-              {tenantUsers.map((u) => {
-                const checked = participantUserIds.has(u.id);
-                const inactive = u.status !== 'active';
-                return (
-                  <label key={u.id} className={`flex items-center gap-2 text-sm ${inactive ? 'text-ink-faint' : ''}`}>
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={(e) => toggleParticipant(u.id, e.target.checked)}
-                    />
-                    {u.firstName} {u.lastName}
-                    {inactive && ' (inactive)'}
-                  </label>
-                );
-              })}
-            </div>
-          )}
+          <MultiSelectDropdown
+            id="pipeline-participants"
+            options={userOptions}
+            selected={participantUserIds}
+            onChange={handleParticipantsChange}
+            placeholder={participantsLoading ? 'Loading…' : 'Select participants…'}
+            emptyMessage="No users in this tenant yet."
+          />
 
           {departments.length > 0 && (
             <div className="mt-3">
-              <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
+              <label htmlFor="pipeline-departments" className="text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
                 Bulk-add by department
-              </span>
+              </label>
               <p className="mb-1 text-xs text-gray-500">
                 One-time add — adds whoever currently has an Employee in the selected department(s). Not a live
                 link: later department changes won't update this list automatically.
               </p>
-              <div className="flex flex-col gap-1 mb-2">
-                {departments.map((d) => (
-                  <label key={d.id} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={selectedDepartmentIds.includes(d.id)}
-                      onChange={() => toggleDepartmentSelected(d.id)}
-                    />
-                    {d.name}
-                  </label>
-                ))}
+              <div className="flex items-center gap-2">
+                <div className="flex-1">
+                  <MultiSelectDropdown
+                    id="pipeline-departments"
+                    options={departmentOptions}
+                    selected={selectedDepartmentIds}
+                    onChange={setSelectedDepartmentIds}
+                    placeholder="Select departments…"
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={selectedDepartmentIds.length === 0 || addingFromDepartments}
+                  onClick={handleAddFromDepartments}
+                >
+                  {addingFromDepartments ? 'Adding…' : 'Add selected'}
+                </button>
               </div>
-              <button
-                type="button"
-                className="btn-secondary"
-                disabled={selectedDepartmentIds.length === 0 || addingFromDepartments}
-                onClick={handleAddFromDepartments}
-              >
-                {addingFromDepartments ? 'Adding…' : 'Add selected'}
-              </button>
             </div>
           )}
         </div>
@@ -537,6 +548,145 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
             value={stalledDraft}
             onChange={(e) => setStalledDraft(e.target.value)}
             onBlur={handleStalledBlur}
+          />
+          <span className="text-sm text-gray-500">days in the same stage before notifying the owner</span>
+        </div>
+      </div>
+    </>
+  );
+}
+
+interface PipelineAutomationCreateFieldsProps {
+  token: string;
+  type: 'lead' | 'account';
+  assignmentMode: PipelineAssignmentMode | null;
+  onAssignmentModeChange: (mode: PipelineAssignmentMode | null) => void;
+  participantUserIds: string[];
+  onParticipantUserIdsChange: (ids: string[]) => void;
+  departmentIds: string[];
+  onDepartmentIdsChange: (ids: string[]) => void;
+  stalledThresholdDraft: string;
+  onStalledThresholdDraftChange: (value: string) => void;
+}
+
+// Create-mode counterpart of PipelineAutomationEditor — found by the user
+// 2026-08-25: automations were edit-only, so nobody would ever discover the
+// feature exists unless they thought to go edit a freshly created pipeline.
+// Unlike the edit-mode version, nothing here calls the API directly — the
+// pipeline doesn't exist yet, so every choice is draft state owned by the
+// parent (mirrors how `createStages` already works) and gets applied by
+// handleCreatePipeline once a real pipeline id exists.
+function PipelineAutomationCreateFields({
+  token,
+  type,
+  assignmentMode,
+  onAssignmentModeChange,
+  participantUserIds,
+  onParticipantUserIdsChange,
+  departmentIds,
+  onDepartmentIdsChange,
+  stalledThresholdDraft,
+  onStalledThresholdDraftChange,
+}: PipelineAutomationCreateFieldsProps) {
+  const toast = useToast();
+  const [tenantUsers, setTenantUsers] = useState<TenantUser[]>([]);
+  const [departments, setDepartments] = useState<FieldCatalogDefinition[]>([]);
+  const [loadingOptions, setLoadingOptions] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([api.listTenantUsers(token), api.listFieldCatalogDefinitions(token, 'department')])
+      .then(([users, depts]) => {
+        if (cancelled) return;
+        setTenantUsers(users);
+        setDepartments(depts);
+      })
+      .catch((error) => toast.error('Failed to load users/departments: ' + (error as Error).message))
+      .finally(() => {
+        if (!cancelled) setLoadingOptions(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const userOptions: MultiSelectOption[] = tenantUsers.map((u) => ({
+    value: u.id,
+    label: `${u.firstName} ${u.lastName}`,
+    note: u.status !== 'active' ? '(inactive)' : undefined,
+  }));
+  const departmentOptions: MultiSelectOption[] = departments.map((d) => ({ value: d.id, label: d.name }));
+
+  return (
+    <>
+      <div className="form-group">
+        <label htmlFor="new-pipeline-assignment-mode">Owner auto-assignment</label>
+        <select
+          id="new-pipeline-assignment-mode"
+          value={assignmentMode ?? ''}
+          onChange={(e) => onAssignmentModeChange(e.target.value === '' ? null : (e.target.value as PipelineAssignmentMode))}
+        >
+          <option value="">Off — owner must always be chosen manually</option>
+          <option value="round_robin">Round robin — rotate through participants</option>
+          {type === 'account' && <option value="account_owner">Account owner — use the Company's Account Owner</option>}
+        </select>
+        {assignmentMode === 'account_owner' && (
+          <p className="mt-1 text-xs text-gray-500">
+            Used when the Company has an Account Owner set. Falls back to round robin over the participants below
+            when it doesn't.
+          </p>
+        )}
+      </div>
+
+      {assignmentMode && (
+        <div className="form-group">
+          <label htmlFor="new-pipeline-participants">Round-robin participants</label>
+          <p className="mb-1 text-xs text-gray-500">
+            Only currently-active employees are ever picked when it's their turn. Can be changed later too.
+          </p>
+          <MultiSelectDropdown
+            id="new-pipeline-participants"
+            options={userOptions}
+            selected={participantUserIds}
+            onChange={onParticipantUserIdsChange}
+            placeholder={loadingOptions ? 'Loading…' : 'Select participants…'}
+            emptyMessage="No users in this tenant yet."
+          />
+
+          {departments.length > 0 && (
+            <div className="mt-3">
+              <label htmlFor="new-pipeline-departments" className="text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
+                Also add by department
+              </label>
+              <p className="mb-1 text-xs text-gray-500">
+                One-time add — adds whoever currently has an Employee in the selected department(s) as participants
+                too, once this pipeline is created.
+              </p>
+              <MultiSelectDropdown
+                id="new-pipeline-departments"
+                options={departmentOptions}
+                selected={departmentIds}
+                onChange={onDepartmentIdsChange}
+                placeholder="Select departments…"
+              />
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="form-group">
+        <label htmlFor="new-pipeline-stalled-threshold">Stalled-deal reminders</label>
+        <div className="flex items-center gap-2">
+          <input
+            id="new-pipeline-stalled-threshold"
+            type="number"
+            min={1}
+            className="select-compact"
+            style={{ width: 80 }}
+            placeholder="Off"
+            value={stalledThresholdDraft}
+            onChange={(e) => onStalledThresholdDraftChange(e.target.value)}
           />
           <span className="text-sm text-gray-500">days in the same stage before notifying the owner</span>
         </div>
@@ -583,6 +733,12 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
   const [createType, setCreateType] = useState<'lead' | 'account'>('lead');
   const [createStages, setCreateStages] = useState<DraftStage[]>([newDraftStage()]);
   const [creating, setCreating] = useState(false);
+  // Automations, available from creation on (user feedback 2026-08-25: an
+  // edit-only Automations section meant nobody would ever discover it).
+  const [createAssignmentMode, setCreateAssignmentMode] = useState<PipelineAssignmentMode | null>(null);
+  const [createParticipantUserIds, setCreateParticipantUserIds] = useState<string[]>([]);
+  const [createDepartmentIds, setCreateDepartmentIds] = useState<string[]>([]);
+  const [createStalledThresholdDraft, setCreateStalledThresholdDraft] = useState('');
 
   useEffect(() => {
     setLoading(true);
@@ -614,6 +770,10 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
     setCreateName('');
     setCreateType('lead');
     setCreateStages([newDraftStage()]);
+    setCreateAssignmentMode(null);
+    setCreateParticipantUserIds([]);
+    setCreateDepartmentIds([]);
+    setCreateStalledThresholdDraft('');
     setCreateOpen(true);
   };
 
@@ -646,7 +806,15 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
     if (!name) return;
     setCreating(true);
     try {
-      const pipeline = await api.createPipeline(token, { name, type: createType, order: pipelines.length });
+      const trimmedStalled = createStalledThresholdDraft.trim();
+      const parsedStalled = trimmedStalled === '' ? null : Number.parseInt(trimmedStalled, 10);
+      const pipeline = await api.createPipeline(token, {
+        name,
+        type: createType,
+        order: pipelines.length,
+        assignmentMode: createAssignmentMode,
+        stalledThresholdDays: parsedStalled !== null && Number.isFinite(parsedStalled) ? parsedStalled : null,
+      });
       const stagesToCreate = createStages.filter((s) => s.name.trim());
       for (let i = 0; i < stagesToCreate.length; i++) {
         const stage = stagesToCreate[i];
@@ -656,7 +824,16 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
           order: i,
           outcome: stage.outcome,
           probability: Number.isFinite(parsedProbability) ? parsedProbability : undefined,
+          notifyOwnerOnEnter: stage.notifyOwnerOnEnter,
         });
+      }
+      // Automation participants — applied after creation, same "draft until
+      // Save" idiom as Stages above (docs/tareas/specredisenosalesv2.md §3.8).
+      for (const userId of createParticipantUserIds) {
+        await api.assignUserToPipeline(token, pipeline.id, userId);
+      }
+      if (createDepartmentIds.length > 0) {
+        await api.assignPipelineUsersByDepartments(token, pipeline.id, createDepartmentIds);
       }
       setCreateOpen(false);
       toast.success('Pipeline created.');
@@ -950,12 +1127,12 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
               </p>
             </div>
             <div className="form-group">
-              <span>Stages</span>
-              <StageEditor pipeline={editingPipeline} token={token} onChanged={loadPipelines} />
-            </div>
-            <div className="form-group">
               <span>Automations</span>
               <PipelineAutomationEditor pipeline={editingPipeline} token={token} onPipelineChanged={loadPipelines} />
+            </div>
+            <div className="form-group">
+              <span>Stages</span>
+              <StageEditor pipeline={editingPipeline} token={token} onChanged={loadPipelines} />
             </div>
           </div>
         ) : (
@@ -978,10 +1155,39 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
 
             <div className="form-group">
               <label htmlFor="new-pipeline-type">Type</label>
-              <select id="new-pipeline-type" value={createType} onChange={(e) => setCreateType(e.target.value as 'lead' | 'account')}>
+              <select
+                id="new-pipeline-type"
+                value={createType}
+                onChange={(e) => {
+                  const nextType = e.target.value as 'lead' | 'account';
+                  setCreateType(nextType);
+                  // account_owner only makes sense on an `account` pipeline
+                  // (backend rejects the combination) — drop it rather than
+                  // submit a stale, now-invalid choice.
+                  if (nextType === 'lead' && createAssignmentMode === 'account_owner') {
+                    setCreateAssignmentMode(null);
+                  }
+                }}
+              >
                 <option value="lead">Leads — unqualified prospects, company optional</option>
                 <option value="account">Account — an already-identified company</option>
               </select>
+            </div>
+
+            <div className="form-group">
+              <span>Automations</span>
+              <PipelineAutomationCreateFields
+                token={token}
+                type={createType}
+                assignmentMode={createAssignmentMode}
+                onAssignmentModeChange={setCreateAssignmentMode}
+                participantUserIds={createParticipantUserIds}
+                onParticipantUserIdsChange={setCreateParticipantUserIds}
+                departmentIds={createDepartmentIds}
+                onDepartmentIdsChange={setCreateDepartmentIds}
+                stalledThresholdDraft={createStalledThresholdDraft}
+                onStalledThresholdDraftChange={setCreateStalledThresholdDraft}
+              />
             </div>
 
             <div className="form-group">
@@ -996,6 +1202,9 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
                   <span className="flex-1">Stage name</span>
                   <span style={{ width: 110 }}>Outcome</span>
                   <span style={{ width: 56, textAlign: 'center' }}>Win %</span>
+                  <span style={{ width: 56, textAlign: 'center' }} title="Notify the owner (in-app + email) when a deal enters this stage">
+                    Notify
+                  </span>
                   <span style={{ width: 32 }} />
                 </div>
               )}
@@ -1041,6 +1250,14 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
                         {stage.outcome === 'won' ? 100 : 0}%
                       </span>
                     )}
+                    <span style={{ width: 56, display: 'flex', justifyContent: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={stage.notifyOwnerOnEnter}
+                        onChange={(e) => updateDraftStage(stage.key, { notifyOwnerOnEnter: e.target.checked })}
+                        title="Notify the owner (in-app + email) when a deal enters this stage"
+                      />
+                    </span>
                     <button
                       type="button"
                       className="icon-btn"

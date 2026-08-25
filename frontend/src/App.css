@@ -44,6 +44,20 @@
   @apply rounded-md border border-line-strong bg-surface-1 px-2 py-1 text-xs text-brand-navy dark:border-gray-600 dark:bg-gray-800 dark:text-dark-ink;
 }
 
+/* MultiSelectDropdown's trigger — a <button>, so it can't ride .form-group's
+   input/select/textarea selector above; styled to match it exactly. */
+.multi-select-trigger {
+  @apply flex w-full items-center justify-between gap-2 rounded-md border border-line-strong bg-surface-1 px-2.5 py-2 text-left text-sm text-brand-navy dark:border-gray-600 dark:bg-gray-800 dark:text-dark-ink;
+}
+
+.multi-select-trigger:hover {
+  @apply border-brand-blue/50;
+}
+
+.multi-select-trigger:focus-visible {
+  @apply border-brand-blue outline-none ring-2 ring-brand-blue/25;
+}
+
 .select-compact option {
   @apply bg-surface-1 text-brand-navy dark:bg-gray-800 dark:text-dark-ink;
 }

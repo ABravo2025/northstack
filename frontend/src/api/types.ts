@@ -174,6 +174,10 @@ export interface PipelineStage {
   // Forced by the backend to 100/0 for won/lost — only meaningfully editable
   // for `open` stages.
   probability: number;
+  // Per-stage opt-out of the stage-change Notification + email
+  // (docs/tareas/specredisenosalesv2.md §3.8) — off means an Opportunity
+  // entering this stage never notifies its owner. Defaults true.
+  notifyOwnerOnEnter: boolean;
   isActive: boolean;
 }
 

@@ -1243,3 +1243,38 @@ build`/`npm test` (91/91) backend y build frontend en verde. Schema aditivo push
 **Severidad:** baja — mejora de UX/auditoría sobre una pantalla de Settings, sin gate de negocio
 involucrado. El caso 8 es el más fácil de romper sin querer (un evento de click mal delegado) — vale la
 pena confirmarlo primero al probar.
+
+## QA-30 — Fix: menú "..." en vez de click-to-expand + edición de Pipeline en el modal (2026-08-25)
+
+**Por qué existe esta tarea:** siguiente ronda de feedback sobre la misma pantalla (reemplaza el
+comportamiento de "click en la fila expande stages" de QA-29, casos 7-8, que ya no existe). Alejandro
+pidió reemplazar el lápiz (rename) + botón Archive al final de la fila por un menú "..." con las opciones
+Edit/Archive, y que "Edit" abra el mismo modal que "New Pipeline" mostrando los datos de esa Pipeline —
+tanto el nombre como sus stages se editan ahí, no inline en la tabla. Sin cambios de schema ni backend,
+solo `PipelinesSettingsPage.tsx`. La fila ahora es plana (sin fila-hija expandible): Type/Name/Stages/
+Created/Updated + una columna final con el trigger "...". El menú "..." reusa el mismo patrón de Popover
+que ya existía en `TimeOffOverviewPage.tsx` (un solo Popover compartido, anclado dinámicamente a la fila
+que se clickeó). El modal ahora tiene dos modos: Create (sin cambios respecto a QA-28/29 — nombre + type
++ stages en borrador, todo se crea junto al hacer Save) y Edit (nombre editable con auto-save al perder
+foco, mismo patrón que el rename anterior; Type se muestra de solo lectura, con el mismo tooltip de
+"no se puede cambiar"; y el editor de stages — que antes vivía en la fila expandida — se movió tal cual
+adentro del modal, sin cambiar su comportamiento: cada campo de cada stage sigue guardando al instante
+igual que antes, no hay un botón "Save" separado para los stages). El botón del footer en modo Edit es
+solo "Done" (cierra el modal) porque no hay nada pendiente de guardar — todo ya se guardó solo.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | `/settings` → Pipelines, fila de un Pipeline | Ya no hay lápiz ni botón Archive visibles — solo un ícono de "..." al final de la fila |
+| 2 | Click en "..." | Abre un menú con "Edit" y "Archive" (o "Reactivate" si está archivado) |
+| 3 | Click en la fila fuera del botón "..." | Ya no pasa nada — no hay más expand/collapse inline |
+| 4 | Menú "...", elegir "Edit" | Abre el modal titulado "Edit Pipeline", con el nombre actual precargado y el editor de stages debajo |
+| 5 | Mismo modal, cambiar el nombre y hacer click afuera del campo (blur) | Se guarda solo — no hace falta tocar "Done" para que el nombre se guarde |
+| 6 | Mismo modal, campo Type | Solo texto, de solo lectura, con tooltip explicando que no se puede cambiar |
+| 7 | Mismo modal, editar/agregar/archivar un stage | Mismo comportamiento de siempre (auto-save por campo) — ahora ocurre adentro del modal en vez de en la fila expandida |
+| 8 | Botón "Done" del modal en modo Edit | Solo cierra el modal — no hay ninguna acción de guardado pendiente atada a ese botón |
+| 9 | Menú "...", elegir "Archive"/"Reactivate" | Mismo diálogo de confirmación que ya existía, sin cambios |
+| 10 | Crear un Pipeline nuevo ("New Pipeline") | Sigue funcionando exactamente igual que en QA-28/29 — este flujo no se tocó |
+
+**Severidad:** baja — reorganización de UX sobre una pantalla de Settings. El caso 5 es el más fácil de
+pasar por alto (¿el auto-save del nombre sigue andando después de mover el input al modal?) — confirmarlo
+primero.

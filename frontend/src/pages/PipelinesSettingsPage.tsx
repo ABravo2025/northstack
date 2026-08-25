@@ -1,11 +1,12 @@
-import { Fragment, useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api, type Opportunity, type Pipeline, type PipelineStage } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import ColorPicker from '../components/common/ColorPicker';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Modal from '../components/common/Modal';
+import Popover from '../components/common/Popover';
 import RequiredMark from '../components/common/RequiredMark';
-import { ChevronDownIcon, PencilIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
+import { DotsVerticalIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
 
 interface PipelinesSettingsPageProps {
   token: string;
@@ -69,8 +70,11 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(false);
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [renamingId, setRenamingId] = useState<string | null>(null);
+  // Holds the pipeline currently open in the Edit modal — null means the
+  // modal (if open at all) is in Create mode instead (see `createOpen`).
+  // Editing happens entirely inside the modal now (user feedback 2026-08-25):
+  // no more inline rename-in-row or click-to-expand-stages in the table.
+  const [editingPipelineId, setEditingPipelineId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [newStageName, setNewStageName] = useState<Record<string, string>>({});
   // Local draft while editing a stage's win probability — committed onBlur
@@ -85,6 +89,11 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
   const [pipelineTab, setPipelineTab] = useState<'active' | 'archived'>('active');
   const [sortField, setSortField] = useState<PipelineSortField | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  // Row-level "..." menu (Edit / Archive) — one shared Popover anchored to
+  // whichever row's trigger was last clicked, same pattern as
+  // TimeOffOverviewPage.tsx's policy row menu.
+  const [pipelineRowMenuFor, setPipelineRowMenuFor] = useState<string | null>(null);
+  const pipelineRowMenuAnchorRef = useRef<HTMLElement | null>(null);
 
   const handleSort = (field: PipelineSortField) => {
     if (sortField === field) {
@@ -120,10 +129,22 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
   };
 
   const openCreate = () => {
+    setEditingPipelineId(null);
     setCreateName('');
     setCreateType('lead');
     setCreateStages([newDraftStage()]);
     setCreateOpen(true);
+  };
+
+  const handleStartEdit = (pipeline: Pipeline) => {
+    setRenameValue(pipeline.name);
+    setEditingPipelineId(pipeline.id);
+    setPipelineRowMenuFor(null);
+  };
+
+  const closePipelineModal = () => {
+    setCreateOpen(false);
+    setEditingPipelineId(null);
   };
 
   const addDraftStage = () => {
@@ -166,19 +187,12 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
     }
   };
 
-  const startRename = (pipeline: Pipeline) => {
-    setRenamingId(pipeline.id);
-    setRenameValue(pipeline.name);
-  };
-
+  // Auto-saves on blur, same idiom as the stage fields below — the Edit
+  // modal has no separate "Save" step for the name field.
   const submitRename = async (pipelineId: string) => {
-    if (!renameValue.trim()) {
-      setRenamingId(null);
-      return;
-    }
+    if (!renameValue.trim()) return;
     try {
       await api.updatePipeline(token, pipelineId, { name: renameValue.trim() });
-      setRenamingId(null);
       loadPipelines();
     } catch (error) {
       toast.error('Failed to rename pipeline: ' + (error as Error).message);
@@ -192,6 +206,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
   // it flips creation menus back on tenant-wide, not something to fire by
   // accident. A lighter treatment than Archive on purpose.
   const handleArchiveToggleClick = (pipeline: Pipeline) => {
+    setPipelineRowMenuFor(null);
     if (pipeline.isActive) {
       setArchivingPipeline(pipeline);
     } else {
@@ -326,178 +341,163 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
 
   const activePipelines = sortPipelines(pipelines.filter((p) => p.isActive));
   const archivedPipelines = sortPipelines(pipelines.filter((p) => !p.isActive));
+  const editingPipeline = editingPipelineId ? pipelines.find((p) => p.id === editingPipelineId) ?? null : null;
+  const menuPipeline = pipelineRowMenuFor ? pipelines.find((p) => p.id === pipelineRowMenuFor) ?? null : null;
 
   const sortArrow = (field: PipelineSortField) => (
     <span className="sort-arrow">{sortField === field && sortDirection === 'desc' ? '▴' : '▾'}</span>
   );
 
-  const renderPipelineRow = (pipeline: Pipeline) => {
-    const isExpanded = expandedId === pipeline.id;
+  // The stage-editing block — reused as-is inside the Edit modal below and
+  // nowhere else now (used to live inline in an expanded table row; moved
+  // into the modal per the user's 2026-08-25 feedback). Every control here
+  // still auto-saves immediately on change/blur, same as before the move.
+  const renderStageEditor = (pipeline: Pipeline) => {
     const sortedStages = [...pipeline.stages].sort((a, b) => a.order - b.order);
     return (
       <>
-        <tr className="cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : pipeline.id)}>
-          <td>
-            <div className="flex items-center gap-2">
-              <ChevronDownIcon className={`h-3.5 w-3.5 shrink-0 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />
-              {/* Fixed color per type (not hashed) so Lead vs Account reads at a
-                  glance — found by the user 2026-08-25, the old plain-text label
-                  was too easy to miss. Type itself stays read-only: immutable
-                  after creation (docs/tareas/specredisenosalesv2.md §3.1) —
-                  reclassifying a pipeline with existing Opportunities would
-                  silently change which Company-gate rule applies to them. */}
-              <span
-                className={`category-chip chip-${PIPELINE_TYPE_CHIP_COLOR[pipeline.type]}`}
-                title="Pipeline type can't be changed after creation"
-              >
-                {PIPELINE_TYPE_LABELS[pipeline.type]}
-              </span>
-            </div>
-          </td>
-          <td>
-            {renamingId === pipeline.id ? (
-              <input
-                autoFocus
-                value={renameValue}
-                onChange={(e) => setRenameValue(e.target.value)}
-                onBlur={() => submitRename(pipeline.id)}
-                onClick={(e) => e.stopPropagation()}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') submitRename(pipeline.id);
-                  if (e.key === 'Escape') setRenamingId(null);
-                }}
-                className="rounded-md border border-brand-blue px-2 py-1 text-sm"
-              />
-            ) : (
-              <span className="font-semibold">{pipeline.name}</span>
-            )}
-          </td>
-          <td>{sortedStages.length}</td>
-          <td>
-            <div>{formatPipelineDate(pipeline.createdAt)}</div>
-            <div className="text-xs text-ink-faint">
-              {pipeline.createdBy ? `${pipeline.createdBy.firstName} ${pipeline.createdBy.lastName}` : '—'}
-            </div>
-          </td>
-          <td>
-            <div>{formatPipelineDate(pipeline.updatedAt)}</div>
-            <div className="text-xs text-ink-faint">
-              {pipeline.updatedBy ? `${pipeline.updatedBy.firstName} ${pipeline.updatedBy.lastName}` : '—'}
-            </div>
-          </td>
-          <td onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-2">
-              <button type="button" className="icon-btn" onClick={() => startRename(pipeline)}>
-                <span className="tip">Rename</span>
-                <PencilIcon />
-              </button>
-              <button type="button" className="btn-secondary" onClick={() => handleArchiveToggleClick(pipeline)}>
-                {pipeline.isActive ? 'Archive' : 'Reactivate'}
-              </button>
-            </div>
-          </td>
-        </tr>
-
-        {isExpanded && (
-          <tr>
-            <td colSpan={6} className="bg-surface-0 dark:bg-dark-page" style={{ cursor: 'default' }} onClick={(e) => e.stopPropagation()}>
-              {sortedStages.length > 0 && <p className="mb-2 text-xs text-gray-500">{OUTCOME_HELP}</p>}
-              {sortedStages.length > 0 && (
-                <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
-                  <span style={{ width: 32 }} />
-                  <span style={{ width: 28 }} />
-                  <span className="flex-1">Stage name</span>
-                  <span style={{ width: 110 }}>Outcome</span>
-                  <span style={{ width: 56, textAlign: 'center' }}>Win %</span>
-                </div>
-              )}
-              <div className="flex flex-col gap-2">
-                {sortedStages.map((stage, i) => (
-                  <div key={stage.id} className="flex items-center gap-2">
-                    <div className="flex flex-col">
-                      <button
-                        type="button"
-                        className="icon-btn"
-                        disabled={i === 0}
-                        onClick={() => moveStage(pipeline, stage, -1)}
-                        style={{ height: 16 }}
-                      >
-                        ▲
-                      </button>
-                      <button
-                        type="button"
-                        className="icon-btn"
-                        disabled={i === sortedStages.length - 1}
-                        onClick={() => moveStage(pipeline, stage, 1)}
-                        style={{ height: 16 }}
-                      >
-                        ▼
-                      </button>
-                    </div>
-                    <ColorPicker
-                      value={stage.color || '#6b7280'}
-                      onChange={(color) => handleStageColorChange(pipeline, stage, color)}
-                    />
-                    <span className={`flex-1 text-sm ${!stage.isActive ? 'inactive' : ''}`}>{stage.name}</span>
-                    <select
-                      className="select-compact"
-                      style={{ width: 110 }}
-                      value={stage.outcome}
-                      onChange={(e) => handleStageOutcomeChange(pipeline, stage, e.target.value)}
-                    >
-                      {Object.entries(OUTCOME_LABELS).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                    {stage.outcome === 'open' ? (
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        className="select-compact"
-                        style={{ width: 56 }}
-                        value={getProbabilityDraft(stage)}
-                        onChange={(e) => setProbabilityDrafts({ ...probabilityDrafts, [stage.id]: e.target.value })}
-                        onBlur={() => handleStageProbabilityBlur(pipeline, stage)}
-                        title="Win probability (%) — used for the weighted pipeline forecast"
-                      />
-                    ) : (
-                      <span
-                        className="text-xs text-ink-faint"
-                        style={{ width: 56, textAlign: 'center' }}
-                        title="Forced — Won is always 100%, Lost is always 0%"
-                      >
-                        {stage.probability}%
-                      </span>
-                    )}
-                    <button type="button" className="btn-secondary" onClick={() => toggleArchiveStage(pipeline, stage)}>
-                      {stage.isActive ? 'Archive' : 'Reactivate'}
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              <form className="flex items-center gap-2 mt-3" onSubmit={(e) => handleAddStage(e, pipeline)}>
-                <input
-                  type="text"
-                  placeholder="New stage name"
-                  value={newStageName[pipeline.id] || ''}
-                  onChange={(e) => setNewStageName({ ...newStageName, [pipeline.id]: e.target.value })}
-                  style={{ maxWidth: 220 }}
-                />
-                <button type="submit" className="btn-secondary">
-                  <span className="inline-flex items-center gap-1.5">
-                    <PlusIcon className="h-3.5 w-3.5" />
-                    Add Stage
-                  </span>
-                </button>
-              </form>
-            </td>
-          </tr>
+        {sortedStages.length > 0 && <p className="mb-2 text-xs text-gray-500">{OUTCOME_HELP}</p>}
+        {sortedStages.length > 0 && (
+          <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
+            <span style={{ width: 32 }} />
+            <span style={{ width: 28 }} />
+            <span className="flex-1">Stage name</span>
+            <span style={{ width: 110 }}>Outcome</span>
+            <span style={{ width: 56, textAlign: 'center' }}>Win %</span>
+          </div>
         )}
+        <div className="flex flex-col gap-2">
+          {sortedStages.map((stage, i) => (
+            <div key={stage.id} className="flex items-center gap-2">
+              <div className="flex flex-col">
+                <button
+                  type="button"
+                  className="icon-btn"
+                  disabled={i === 0}
+                  onClick={() => moveStage(pipeline, stage, -1)}
+                  style={{ height: 16 }}
+                >
+                  ▲
+                </button>
+                <button
+                  type="button"
+                  className="icon-btn"
+                  disabled={i === sortedStages.length - 1}
+                  onClick={() => moveStage(pipeline, stage, 1)}
+                  style={{ height: 16 }}
+                >
+                  ▼
+                </button>
+              </div>
+              <ColorPicker value={stage.color || '#6b7280'} onChange={(color) => handleStageColorChange(pipeline, stage, color)} />
+              <span className={`flex-1 text-sm ${!stage.isActive ? 'inactive' : ''}`}>{stage.name}</span>
+              <select
+                className="select-compact"
+                style={{ width: 110 }}
+                value={stage.outcome}
+                onChange={(e) => handleStageOutcomeChange(pipeline, stage, e.target.value)}
+              >
+                {Object.entries(OUTCOME_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              {stage.outcome === 'open' ? (
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  className="select-compact"
+                  style={{ width: 56 }}
+                  value={getProbabilityDraft(stage)}
+                  onChange={(e) => setProbabilityDrafts({ ...probabilityDrafts, [stage.id]: e.target.value })}
+                  onBlur={() => handleStageProbabilityBlur(pipeline, stage)}
+                  title="Win probability (%) — used for the weighted pipeline forecast"
+                />
+              ) : (
+                <span
+                  className="text-xs text-ink-faint"
+                  style={{ width: 56, textAlign: 'center' }}
+                  title="Forced — Won is always 100%, Lost is always 0%"
+                >
+                  {stage.probability}%
+                </span>
+              )}
+              <button type="button" className="btn-secondary" onClick={() => toggleArchiveStage(pipeline, stage)}>
+                {stage.isActive ? 'Archive' : 'Reactivate'}
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <form className="flex items-center gap-2 mt-3" onSubmit={(e) => handleAddStage(e, pipeline)}>
+          <input
+            type="text"
+            placeholder="New stage name"
+            value={newStageName[pipeline.id] || ''}
+            onChange={(e) => setNewStageName({ ...newStageName, [pipeline.id]: e.target.value })}
+            style={{ maxWidth: 220 }}
+          />
+          <button type="submit" className="btn-secondary">
+            <span className="inline-flex items-center gap-1.5">
+              <PlusIcon className="h-3.5 w-3.5" />
+              Add Stage
+            </span>
+          </button>
+        </form>
       </>
+    );
+  };
+
+  const renderPipelineRow = (pipeline: Pipeline) => {
+    return (
+      <tr key={pipeline.id}>
+        <td>
+          {/* Fixed color per type (not hashed) so Lead vs Account reads at a
+              glance — found by the user 2026-08-25, the old plain-text label
+              was too easy to miss. Type itself stays read-only: immutable
+              after creation (docs/tareas/specredisenosalesv2.md §3.1) —
+              reclassifying a pipeline with existing Opportunities would
+              silently change which Company-gate rule applies to them. */}
+          <span
+            className={`category-chip chip-${PIPELINE_TYPE_CHIP_COLOR[pipeline.type]}`}
+            title="Pipeline type can't be changed after creation"
+          >
+            {PIPELINE_TYPE_LABELS[pipeline.type]}
+          </span>
+        </td>
+        <td>
+          <span className="font-semibold">{pipeline.name}</span>
+        </td>
+        <td>{pipeline.stages.length}</td>
+        <td>
+          <div>{formatPipelineDate(pipeline.createdAt)}</div>
+          <div className="text-xs text-ink-faint">
+            {pipeline.createdBy ? `${pipeline.createdBy.firstName} ${pipeline.createdBy.lastName}` : '—'}
+          </div>
+        </td>
+        <td>
+          <div>{formatPipelineDate(pipeline.updatedAt)}</div>
+          <div className="text-xs text-ink-faint">
+            {pipeline.updatedBy ? `${pipeline.updatedBy.firstName} ${pipeline.updatedBy.lastName}` : '—'}
+          </div>
+        </td>
+        <td>
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={(e) => {
+              pipelineRowMenuAnchorRef.current = e.currentTarget;
+              setPipelineRowMenuFor(pipelineRowMenuFor === pipeline.id ? null : pipeline.id);
+            }}
+            aria-label={`Actions for ${pipeline.name}`}
+            title="Actions"
+          >
+            <DotsVerticalIcon />
+          </button>
+        </td>
+      </tr>
     );
   };
 
@@ -559,12 +559,27 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
             <th></th>
           </tr>
         </thead>
-        <tbody>
-          {(pipelineTab === 'archived' ? archivedPipelines : activePipelines).map((pipeline) => (
-            <Fragment key={pipeline.id}>{renderPipelineRow(pipeline)}</Fragment>
-          ))}
-        </tbody>
+        <tbody>{(pipelineTab === 'archived' ? archivedPipelines : activePipelines).map(renderPipelineRow)}</tbody>
       </table>
+
+      <Popover
+        open={pipelineRowMenuFor !== null}
+        onClose={() => setPipelineRowMenuFor(null)}
+        anchorRef={pipelineRowMenuAnchorRef}
+        width={160}
+        align="right"
+      >
+        {menuPipeline && (
+          <>
+            <div className="popover-menu-item" onClick={() => handleStartEdit(menuPipeline)}>
+              Edit
+            </div>
+            <div className="popover-menu-item" onClick={() => handleArchiveToggleClick(menuPipeline)}>
+              {menuPipeline.isActive ? 'Archive' : 'Reactivate'}
+            </div>
+          </>
+        )}
+      </Popover>
 
       {archivingPipeline && (
         <ConfirmDialog
@@ -593,122 +608,157 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
       )}
 
       <Modal
-        open={createOpen}
-        title="New Pipeline"
-        onClose={() => setCreateOpen(false)}
+        open={createOpen || editingPipelineId !== null}
+        title={editingPipeline ? 'Edit Pipeline' : 'New Pipeline'}
+        onClose={closePipelineModal}
         wide
         footer={
-          <>
-            <button type="button" className="btn-secondary" onClick={() => setCreateOpen(false)}>
-              Cancel
+          editingPipeline ? (
+            <button type="button" className="btn-primary" onClick={closePipelineModal}>
+              Done
             </button>
-            <button type="submit" form="create-pipeline-form" className="btn-primary" disabled={creating}>
-              {creating ? 'Saving…' : 'Save'}
-            </button>
-          </>
+          ) : (
+            <>
+              <button type="button" className="btn-secondary" onClick={closePipelineModal}>
+                Cancel
+              </button>
+              <button type="submit" form="create-pipeline-form" className="btn-primary" disabled={creating}>
+                {creating ? 'Saving…' : 'Save'}
+              </button>
+            </>
+          )
         }
       >
-        <form id="create-pipeline-form" onSubmit={handleCreatePipeline}>
-          <div className="form-group">
-            <label htmlFor="new-pipeline-name">
-              Pipeline name
-              <RequiredMark />
-            </label>
-            <input
-              id="new-pipeline-name"
-              type="text"
-              autoFocus
-              required
-              value={createName}
-              onChange={(e) => setCreateName(e.target.value)}
-              placeholder="e.g. Leads, Renewals"
-            />
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="new-pipeline-type">Type</label>
-            <select id="new-pipeline-type" value={createType} onChange={(e) => setCreateType(e.target.value as 'lead' | 'account')}>
-              <option value="lead">Leads — unqualified prospects, company optional</option>
-              <option value="account">Account — an already-identified company</option>
-            </select>
-          </div>
-
-          <div className="form-group">
-            <span>Stages</span>
-            <p className="mb-1 text-xs text-gray-500">
-              Add the stages a deal moves through in this pipeline. You can leave this empty and add stages
-              later, or reorder/color them once the pipeline is created.
-            </p>
-            <p className="mb-2 text-xs text-gray-500">{OUTCOME_HELP}</p>
-            {createStages.length > 0 && (
-              <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
-                <span className="flex-1">Stage name</span>
-                <span style={{ width: 110 }}>Outcome</span>
-                <span style={{ width: 56, textAlign: 'center' }}>Win %</span>
-                <span style={{ width: 32 }} />
-              </div>
-            )}
-            <div className="flex flex-col gap-2">
-              {createStages.map((stage, i) => (
-                <div key={stage.key} className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    className="flex-1"
-                    placeholder={`Stage ${i + 1} name`}
-                    value={stage.name}
-                    onChange={(e) => updateDraftStage(stage.key, { name: e.target.value })}
-                  />
-                  <select
-                    className="select-compact"
-                    style={{ width: 110 }}
-                    value={stage.outcome}
-                    onChange={(e) => updateDraftStage(stage.key, { outcome: e.target.value as DraftStage['outcome'] })}
-                  >
-                    {Object.entries(OUTCOME_LABELS).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                  {stage.outcome === 'open' ? (
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      className="select-compact"
-                      style={{ width: 56 }}
-                      value={stage.probability}
-                      onChange={(e) => updateDraftStage(stage.key, { probability: e.target.value })}
-                      title="Win probability (%) — used for the weighted pipeline forecast"
-                    />
-                  ) : (
-                    <span
-                      className="text-xs text-ink-faint"
-                      style={{ width: 56, textAlign: 'center' }}
-                      title="Forced — Won is always 100%, Lost is always 0%"
-                    >
-                      {stage.outcome === 'won' ? 100 : 0}%
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    className="icon-btn"
-                    onClick={() => removeDraftStage(stage.key)}
-                    aria-label="Remove stage"
-                  >
-                    <TrashIcon className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
+        {editingPipeline ? (
+          <div>
+            <div className="form-group">
+              <label htmlFor="edit-pipeline-name">Pipeline name</label>
+              <input
+                id="edit-pipeline-name"
+                type="text"
+                autoFocus
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                onBlur={() => submitRename(editingPipeline.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+                }}
+              />
             </div>
-            <button type="button" className="btn-secondary mt-2" onClick={addDraftStage}>
-              <span className="inline-flex items-center gap-1.5">
-                <PlusIcon className="h-3.5 w-3.5" />
-                Add Stage
-              </span>
-            </button>
+            <div className="form-group">
+              <label>Type</label>
+              <p className="text-sm text-ink-faint" title="Pipeline type can't be changed after creation">
+                {PIPELINE_TYPE_LABELS[editingPipeline.type]}
+              </p>
+            </div>
+            <div className="form-group">
+              <span>Stages</span>
+              {renderStageEditor(editingPipeline)}
+            </div>
           </div>
-        </form>
+        ) : (
+          <form id="create-pipeline-form" onSubmit={handleCreatePipeline}>
+            <div className="form-group">
+              <label htmlFor="new-pipeline-name">
+                Pipeline name
+                <RequiredMark />
+              </label>
+              <input
+                id="new-pipeline-name"
+                type="text"
+                autoFocus
+                required
+                value={createName}
+                onChange={(e) => setCreateName(e.target.value)}
+                placeholder="e.g. Leads, Renewals"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="new-pipeline-type">Type</label>
+              <select id="new-pipeline-type" value={createType} onChange={(e) => setCreateType(e.target.value as 'lead' | 'account')}>
+                <option value="lead">Leads — unqualified prospects, company optional</option>
+                <option value="account">Account — an already-identified company</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <span>Stages</span>
+              <p className="mb-1 text-xs text-gray-500">
+                Add the stages a deal moves through in this pipeline. You can leave this empty and add stages
+                later, or reorder/color them once the pipeline is created.
+              </p>
+              <p className="mb-2 text-xs text-gray-500">{OUTCOME_HELP}</p>
+              {createStages.length > 0 && (
+                <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
+                  <span className="flex-1">Stage name</span>
+                  <span style={{ width: 110 }}>Outcome</span>
+                  <span style={{ width: 56, textAlign: 'center' }}>Win %</span>
+                  <span style={{ width: 32 }} />
+                </div>
+              )}
+              <div className="flex flex-col gap-2">
+                {createStages.map((stage, i) => (
+                  <div key={stage.key} className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      className="flex-1"
+                      placeholder={`Stage ${i + 1} name`}
+                      value={stage.name}
+                      onChange={(e) => updateDraftStage(stage.key, { name: e.target.value })}
+                    />
+                    <select
+                      className="select-compact"
+                      style={{ width: 110 }}
+                      value={stage.outcome}
+                      onChange={(e) => updateDraftStage(stage.key, { outcome: e.target.value as DraftStage['outcome'] })}
+                    >
+                      {Object.entries(OUTCOME_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                    {stage.outcome === 'open' ? (
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        className="select-compact"
+                        style={{ width: 56 }}
+                        value={stage.probability}
+                        onChange={(e) => updateDraftStage(stage.key, { probability: e.target.value })}
+                        title="Win probability (%) — used for the weighted pipeline forecast"
+                      />
+                    ) : (
+                      <span
+                        className="text-xs text-ink-faint"
+                        style={{ width: 56, textAlign: 'center' }}
+                        title="Forced — Won is always 100%, Lost is always 0%"
+                      >
+                        {stage.outcome === 'won' ? 100 : 0}%
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      className="icon-btn"
+                      onClick={() => removeDraftStage(stage.key)}
+                      aria-label="Remove stage"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button type="button" className="btn-secondary mt-2" onClick={addDraftStage}>
+                <span className="inline-flex items-center gap-1.5">
+                  <PlusIcon className="h-3.5 w-3.5" />
+                  Add Stage
+                </span>
+              </button>
+            </div>
+          </form>
+        )}
       </Modal>
     </div>
   );

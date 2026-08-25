@@ -455,6 +455,8 @@ model User {
   tasksCreated            Task[]                 @relation("TaskCreatedBy")
   notesCreated            Note[]
   notifications           Notification[]
+  pipelinesCreated        Pipeline[]             @relation("PipelineCreatedBy")
+  pipelinesUpdated        Pipeline[]             @relation("PipelineUpdatedBy")
   ticketsReported         Ticket[]               @relation("TicketReporter")
   ticketsAssignedTo       Ticket[]               @relation("TicketAssignee")
   ideasReported           Idea[]                 @relation("IdeaReporter")
@@ -644,6 +646,17 @@ model Pipeline {
   order         Int                       @default(0)
   isActive      Boolean                   @default(true) // archived when false
   createdAt     DateTime                  @default(now())
+  // @default(now()) too (not just @updatedAt) — required so `db push` can add
+  // this NOT NULL column against the 155 existing Pipeline rows without a
+  // destructive step; @updatedAt still auto-bumps it on every future update.
+  updatedAt     DateTime                  @default(now()) @updatedAt
+  // Both nullable — added 2026-08-25, no way to backfill who created/edited
+  // a Pipeline that predates this column (including the two tenant-
+  // registration default pipelines). Null just means "unknown", not "system".
+  createdById   String?
+  createdBy     User?                     @relation("PipelineCreatedBy", fields: [createdById], references: [id])
+  updatedById   String?
+  updatedBy     User?                     @relation("PipelineUpdatedBy", fields: [updatedById], references: [id])
   stages        PipelineStageDefinition[]
   opportunities Opportunity[]
   forms         Form[]

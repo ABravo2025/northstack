@@ -1206,3 +1206,40 @@ frontend. `npm run build`/`npm test` (91/91) backend y build frontend en verde.
 
 **Severidad:** baja — es un fix de UX/consistencia sobre una pantalla de Settings, no afecta ningún gate
 de negocio ni dato existente.
+
+## QA-29 — Fix: Pipelines settings como tabla columnar + auditoría (creado/editado por) (2026-08-25)
+
+**Por qué existe esta tarea:** siguiendo la revisión de QA-28, Alejandro pidió tres cosas más sobre la
+misma pantalla: (1) que se distinga Lead vs Account de un vistazo — antes era texto plano fácil de pasar
+por alto; (2) formato columnar con headers, sorteable; (3) fecha de creación/última edición y usuario
+que creó/editó cada Pipeline. Los puntos (1) y (2) eran solo de frontend. El punto (3) necesitó schema
+nuevo — `Pipeline` no rastreaba quién la creó/editó, solo `createdAt` (sin `updatedAt` siquiera). Se
+agregó `Pipeline.updatedAt` (`@updatedAt`, con `@default(now())` porque había 155 filas existentes sin
+valor — sin ese default `db push` lo hubiera rechazado por requerir un paso destructivo),
+`Pipeline.createdById`/`updatedById` (ambos FK a `User`, nullable — no hay forma de reconstruir quién
+creó un Pipeline que ya existía, incluidos los dos que se siembran en cada registro de tenant nuevo).
+`createPipeline`/`updatePipeline` ahora reciben el id del User autenticado y lo persisten; `updatePipeline`
+lo requiere siempre (no es opcional como el resto de sus campos). El listado de Pipelines pasó de tarjetas
+apiladas a una tabla real (`<table className="table full-table">`, mismo patrón que usan
+Companies/Contacts/Employees) con columnas Type/Name/Stages/Created/Updated ordenables por click, Type
+como chip de color fijo (violeta=Lead, verde azulado=Account, no hasheado — para que el color sea siempre
+el mismo), y la fila se sigue pudiendo expandir para editar sus stages (ahora dentro de una fila de tabla
+con colSpan, mismo contenido que antes). Verificado contra staging real (crear pipeline → createdBy/
+updatedBy = el usuario que lo creó; el pipeline default sembrado en el registro del tenant tiene ambos en
+null, sin romper; renombrar → updatedAt avanza y updatedBy se actualiza, createdBy no cambia). `npm run
+build`/`npm test` (91/91) backend y build frontend en verde. Schema aditivo pusheado a staging.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | `/settings` → Pipelines | Ahora es una tabla con headers: Type, Name, Stages, Created, Updated |
+| 2 | Columna Type | Chip de color relleno (no solo texto) — Lead y Account siempre con el mismo color cada uno |
+| 3 | Click en cualquier header ordenable | Ordena la tabla por esa columna; un segundo click invierte el orden |
+| 4 | Columnas Created/Updated | Muestran fecha + nombre del usuario, o "—" si no hay dato (pipelines viejos, sembrados antes de este fix) |
+| 5 | Crear un Pipeline nuevo | Created y Updated muestran la fecha de hoy y tu propio nombre en ambas |
+| 6 | Renombrar o archivar/reactivar un Pipeline existente | La columna Updated cambia (fecha + tu nombre); Created no se toca |
+| 7 | Click en la fila (fuera de los botones de acción) | Sigue expandiendo/colapsando la edición de stages, igual que antes |
+| 8 | Click en "Rename" o "Archive/Reactivate" | No dispara el expand/collapse de la fila (el click no se propaga) |
+
+**Severidad:** baja — mejora de UX/auditoría sobre una pantalla de Settings, sin gate de negocio
+involucrado. El caso 8 es el más fácil de romper sin querer (un evento de click mal delegado) — vale la
+pena confirmarlo primero al probar.

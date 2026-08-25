@@ -184,6 +184,11 @@ export interface Pipeline {
   order: number;
   isActive: boolean;
   createdAt: string;
+  updatedAt: string;
+  // Both null for any Pipeline that predates this column (2026-08-25),
+  // including the two tenant-registration default pipelines.
+  createdBy?: { id: string; firstName: string; lastName: string } | null;
+  updatedBy?: { id: string; firstName: string; lastName: string } | null;
   stages: PipelineStage[];
 }
 

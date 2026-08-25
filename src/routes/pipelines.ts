@@ -59,6 +59,7 @@ pipelinesRouter.post('/api/pipelines', async (req, res) => {
     name: name.trim(),
     type: req.body.type,
     order: req.body.order,
+    createdById: user.id,
   });
   return res.status(201).json(pipeline);
 });
@@ -80,6 +81,7 @@ pipelinesRouter.patch('/api/pipelines/:pipelineId', async (req, res) => {
     name: req.body.name,
     order: req.body.order,
     isActive: req.body.isActive,
+    updatedById: user.id,
   });
 
   if (!result.success) {

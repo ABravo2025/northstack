@@ -60,6 +60,7 @@ export interface CreatePipelineInput {
   name: string;
   type: PipelineType;
   order?: number;
+  createdById: string;
 }
 
 // `type` deliberately excluded — immutable once a Pipeline is created (see
@@ -70,6 +71,10 @@ export interface UpdatePipelineInput {
   name?: string;
   order?: number;
   isActive?: boolean;
+  // Always set by the route (every PATCH call comes from an authenticated
+  // user) — not optional, unlike the fields above, since "who touched this
+  // last" should never silently go stale on a real edit.
+  updatedById: string;
 }
 
 export interface PipelineResult {
@@ -78,14 +83,25 @@ export interface PipelineResult {
   error?: string;
 }
 
-export async function createPipeline(input: CreatePipelineInput): Promise<Pipeline> {
+const PIPELINE_INCLUDE = {
+  stages: { orderBy: { order: 'asc' as const } },
+  createdBy: { select: { id: true, firstName: true, lastName: true } },
+  updatedBy: { select: { id: true, firstName: true, lastName: true } },
+} satisfies Prisma.PipelineInclude;
+
+export async function createPipeline(input: CreatePipelineInput) {
   return prisma.pipeline.create({
     data: {
       tenantId: input.tenantId,
       name: input.name,
       type: input.type,
       order: input.order ?? 0,
+      createdById: input.createdById,
+      // Set on the row it's creating too, so a freshly created pipeline
+      // reads as "created by X, last edited by X" instead of a blank editor.
+      updatedById: input.createdById,
     },
+    include: PIPELINE_INCLUDE,
   });
 }
 
@@ -93,9 +109,7 @@ export async function listPipelines(tenantId: string) {
   return prisma.pipeline.findMany({
     where: { tenantId },
     orderBy: { order: 'asc' },
-    include: {
-      stages: { orderBy: { order: 'asc' } },
-    },
+    include: PIPELINE_INCLUDE,
   });
 }
 
@@ -109,12 +123,12 @@ export async function updatePipeline(id: string, tenantId: string, input: Update
     return { success: false, error: 'Pipeline not found' };
   }
 
-  const data: Prisma.PipelineUncheckedUpdateInput = {};
+  const data: Prisma.PipelineUncheckedUpdateInput = { updatedById: input.updatedById };
   if (input.name !== undefined) data.name = input.name;
   if (input.order !== undefined) data.order = input.order;
   if (input.isActive !== undefined) data.isActive = input.isActive;
 
-  const pipeline = await prisma.pipeline.update({ where: { id }, data });
+  const pipeline = await prisma.pipeline.update({ where: { id }, data, include: PIPELINE_INCLUDE });
   return { success: true, pipeline };
 }
 

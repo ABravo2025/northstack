@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { api, type Opportunity, type Pipeline, type PipelineStage } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import ColorPicker from '../components/common/ColorPicker';
@@ -13,6 +13,30 @@ interface PipelinesSettingsPageProps {
 
 const OUTCOME_LABELS: Record<string, string> = { open: 'Open', won: 'Won', lost: 'Lost' };
 const PIPELINE_TYPE_LABELS: Record<'lead' | 'account', string> = { lead: 'Leads', account: 'Account' };
+// Fixed (not hashed) so Type reads at a glance — found by the user 2026-08-25:
+// the plain-text type label off to the side was too easy to miss.
+const PIPELINE_TYPE_CHIP_COLOR: Record<'lead' | 'account', 'purple' | 'teal'> = { lead: 'purple', account: 'teal' };
+
+type PipelineSortField = 'type' | 'name' | 'stages' | 'createdAt' | 'updatedAt';
+
+function getPipelineSortValue(p: Pipeline, field: PipelineSortField): string | number {
+  switch (field) {
+    case 'type':
+      return p.type;
+    case 'name':
+      return p.name.toLowerCase();
+    case 'stages':
+      return p.stages.length;
+    case 'createdAt':
+      return new Date(p.createdAt).getTime();
+    case 'updatedAt':
+      return new Date(p.updatedAt).getTime();
+  }
+}
+
+function formatPipelineDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
 
 interface DraftStage {
   key: string;
@@ -59,6 +83,17 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
   const [reactivatingPipeline, setReactivatingPipeline] = useState<Pipeline | null>(null);
   const [reactivatingSaving, setReactivatingSaving] = useState(false);
   const [pipelineTab, setPipelineTab] = useState<'active' | 'archived'>('active');
+  const [sortField, setSortField] = useState<PipelineSortField | null>(null);
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+
+  const handleSort = (field: PipelineSortField) => {
+    if (sortField === field) {
+      setSortDirection((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState('');
@@ -279,156 +314,190 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
     return <p>Loading...</p>;
   }
 
-  const activePipelines = pipelines.filter((p) => p.isActive);
-  const archivedPipelines = pipelines.filter((p) => !p.isActive);
+  const sortPipelines = (list: Pipeline[]): Pipeline[] => {
+    if (!sortField) return list;
+    const dir = sortDirection === 'asc' ? 1 : -1;
+    return [...list].sort((a, b) => {
+      const av = getPipelineSortValue(a, sortField);
+      const bv = getPipelineSortValue(b, sortField);
+      return av < bv ? -1 * dir : av > bv ? 1 * dir : 0;
+    });
+  };
 
-  const renderPipelineCard = (pipeline: Pipeline) => {
+  const activePipelines = sortPipelines(pipelines.filter((p) => p.isActive));
+  const archivedPipelines = sortPipelines(pipelines.filter((p) => !p.isActive));
+
+  const sortArrow = (field: PipelineSortField) => (
+    <span className="sort-arrow">{sortField === field && sortDirection === 'desc' ? '▴' : '▾'}</span>
+  );
+
+  const renderPipelineRow = (pipeline: Pipeline) => {
     const isExpanded = expandedId === pipeline.id;
     const sortedStages = [...pipeline.stages].sort((a, b) => a.order - b.order);
     return (
-      <div key={pipeline.id} className="card" style={{ padding: 0 }}>
-        <div className="flex items-center gap-2 p-3">
-          <button
-            type="button"
-            className="icon-btn"
-            onClick={() => setExpandedId(isExpanded ? null : pipeline.id)}
-            aria-label={isExpanded ? 'Collapse' : 'Expand'}
-          >
-            <ChevronDownIcon className={`h-4 w-4 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />
-          </button>
-
-          {renamingId === pipeline.id ? (
-            <input
-              autoFocus
-              value={renameValue}
-              onChange={(e) => setRenameValue(e.target.value)}
-              onBlur={() => submitRename(pipeline.id)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') submitRename(pipeline.id);
-                if (e.key === 'Escape') setRenamingId(null);
-              }}
-              className="rounded-md border border-brand-blue px-2 py-1 text-sm"
-            />
-          ) : (
-            <span className="font-semibold flex-1">{pipeline.name}</span>
-          )}
-
-          {/* Read-only: `type` is immutable after creation (docs/tareas/specredisenosalesv2.md
-              §3.1) — reclassifying a pipeline with existing Opportunities would silently
-              change which Company-gate rule applies to them. */}
-          <span className="text-xs text-ink-faint" title="Pipeline type can't be changed after creation">
-            {PIPELINE_TYPE_LABELS[pipeline.type]}
-          </span>
-
-          <span className="text-xs text-gray-400">{sortedStages.length} stages</span>
-
-          <button type="button" className="icon-btn" onClick={() => startRename(pipeline)}>
-            <span className="tip">Rename</span>
-            <PencilIcon />
-          </button>
-          <button type="button" className="btn-secondary" onClick={() => handleArchiveToggleClick(pipeline)}>
-            {pipeline.isActive ? 'Archive' : 'Reactivate'}
-          </button>
-        </div>
+      <>
+        <tr className="cursor-pointer" onClick={() => setExpandedId(isExpanded ? null : pipeline.id)}>
+          <td>
+            <div className="flex items-center gap-2">
+              <ChevronDownIcon className={`h-3.5 w-3.5 shrink-0 transition-transform ${isExpanded ? '' : '-rotate-90'}`} />
+              {/* Fixed color per type (not hashed) so Lead vs Account reads at a
+                  glance — found by the user 2026-08-25, the old plain-text label
+                  was too easy to miss. Type itself stays read-only: immutable
+                  after creation (docs/tareas/specredisenosalesv2.md §3.1) —
+                  reclassifying a pipeline with existing Opportunities would
+                  silently change which Company-gate rule applies to them. */}
+              <span
+                className={`category-chip chip-${PIPELINE_TYPE_CHIP_COLOR[pipeline.type]}`}
+                title="Pipeline type can't be changed after creation"
+              >
+                {PIPELINE_TYPE_LABELS[pipeline.type]}
+              </span>
+            </div>
+          </td>
+          <td>
+            {renamingId === pipeline.id ? (
+              <input
+                autoFocus
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                onBlur={() => submitRename(pipeline.id)}
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') submitRename(pipeline.id);
+                  if (e.key === 'Escape') setRenamingId(null);
+                }}
+                className="rounded-md border border-brand-blue px-2 py-1 text-sm"
+              />
+            ) : (
+              <span className="font-semibold">{pipeline.name}</span>
+            )}
+          </td>
+          <td>{sortedStages.length}</td>
+          <td>
+            <div>{formatPipelineDate(pipeline.createdAt)}</div>
+            <div className="text-xs text-ink-faint">
+              {pipeline.createdBy ? `${pipeline.createdBy.firstName} ${pipeline.createdBy.lastName}` : '—'}
+            </div>
+          </td>
+          <td>
+            <div>{formatPipelineDate(pipeline.updatedAt)}</div>
+            <div className="text-xs text-ink-faint">
+              {pipeline.updatedBy ? `${pipeline.updatedBy.firstName} ${pipeline.updatedBy.lastName}` : '—'}
+            </div>
+          </td>
+          <td onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2">
+              <button type="button" className="icon-btn" onClick={() => startRename(pipeline)}>
+                <span className="tip">Rename</span>
+                <PencilIcon />
+              </button>
+              <button type="button" className="btn-secondary" onClick={() => handleArchiveToggleClick(pipeline)}>
+                {pipeline.isActive ? 'Archive' : 'Reactivate'}
+              </button>
+            </div>
+          </td>
+        </tr>
 
         {isExpanded && (
-          <div className="border-t border-gray-200 dark:border-gray-800 p-3">
-            {sortedStages.length > 0 && <p className="mb-2 text-xs text-gray-500">{OUTCOME_HELP}</p>}
-            {sortedStages.length > 0 && (
-              <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
-                <span style={{ width: 32 }} />
-                <span style={{ width: 28 }} />
-                <span className="flex-1">Stage name</span>
-                <span style={{ width: 110 }}>Outcome</span>
-                <span style={{ width: 56, textAlign: 'center' }}>Win %</span>
-              </div>
-            )}
-            <div className="flex flex-col gap-2">
-              {sortedStages.map((stage, i) => (
-                <div key={stage.id} className="flex items-center gap-2">
-                  <div className="flex flex-col">
-                    <button
-                      type="button"
-                      className="icon-btn"
-                      disabled={i === 0}
-                      onClick={() => moveStage(pipeline, stage, -1)}
-                      style={{ height: 16 }}
+          <tr>
+            <td colSpan={6} className="bg-surface-0 dark:bg-dark-page" style={{ cursor: 'default' }} onClick={(e) => e.stopPropagation()}>
+              {sortedStages.length > 0 && <p className="mb-2 text-xs text-gray-500">{OUTCOME_HELP}</p>}
+              {sortedStages.length > 0 && (
+                <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
+                  <span style={{ width: 32 }} />
+                  <span style={{ width: 28 }} />
+                  <span className="flex-1">Stage name</span>
+                  <span style={{ width: 110 }}>Outcome</span>
+                  <span style={{ width: 56, textAlign: 'center' }}>Win %</span>
+                </div>
+              )}
+              <div className="flex flex-col gap-2">
+                {sortedStages.map((stage, i) => (
+                  <div key={stage.id} className="flex items-center gap-2">
+                    <div className="flex flex-col">
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        disabled={i === 0}
+                        onClick={() => moveStage(pipeline, stage, -1)}
+                        style={{ height: 16 }}
+                      >
+                        ▲
+                      </button>
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        disabled={i === sortedStages.length - 1}
+                        onClick={() => moveStage(pipeline, stage, 1)}
+                        style={{ height: 16 }}
+                      >
+                        ▼
+                      </button>
+                    </div>
+                    <ColorPicker
+                      value={stage.color || '#6b7280'}
+                      onChange={(color) => handleStageColorChange(pipeline, stage, color)}
+                    />
+                    <span className={`flex-1 text-sm ${!stage.isActive ? 'inactive' : ''}`}>{stage.name}</span>
+                    <select
+                      className="select-compact"
+                      style={{ width: 110 }}
+                      value={stage.outcome}
+                      onChange={(e) => handleStageOutcomeChange(pipeline, stage, e.target.value)}
                     >
-                      ▲
-                    </button>
-                    <button
-                      type="button"
-                      className="icon-btn"
-                      disabled={i === sortedStages.length - 1}
-                      onClick={() => moveStage(pipeline, stage, 1)}
-                      style={{ height: 16 }}
-                    >
-                      ▼
+                      {Object.entries(OUTCOME_LABELS).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                    {stage.outcome === 'open' ? (
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        className="select-compact"
+                        style={{ width: 56 }}
+                        value={getProbabilityDraft(stage)}
+                        onChange={(e) => setProbabilityDrafts({ ...probabilityDrafts, [stage.id]: e.target.value })}
+                        onBlur={() => handleStageProbabilityBlur(pipeline, stage)}
+                        title="Win probability (%) — used for the weighted pipeline forecast"
+                      />
+                    ) : (
+                      <span
+                        className="text-xs text-ink-faint"
+                        style={{ width: 56, textAlign: 'center' }}
+                        title="Forced — Won is always 100%, Lost is always 0%"
+                      >
+                        {stage.probability}%
+                      </span>
+                    )}
+                    <button type="button" className="btn-secondary" onClick={() => toggleArchiveStage(pipeline, stage)}>
+                      {stage.isActive ? 'Archive' : 'Reactivate'}
                     </button>
                   </div>
-                  <ColorPicker
-                    value={stage.color || '#6b7280'}
-                    onChange={(color) => handleStageColorChange(pipeline, stage, color)}
-                  />
-                  <span className={`flex-1 text-sm ${!stage.isActive ? 'inactive' : ''}`}>{stage.name}</span>
-                  <select
-                    className="select-compact"
-                    style={{ width: 110 }}
-                    value={stage.outcome}
-                    onChange={(e) => handleStageOutcomeChange(pipeline, stage, e.target.value)}
-                  >
-                    {Object.entries(OUTCOME_LABELS).map(([value, label]) => (
-                      <option key={value} value={value}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                  {stage.outcome === 'open' ? (
-                    <input
-                      type="number"
-                      min={0}
-                      max={100}
-                      className="select-compact"
-                      style={{ width: 56 }}
-                      value={getProbabilityDraft(stage)}
-                      onChange={(e) => setProbabilityDrafts({ ...probabilityDrafts, [stage.id]: e.target.value })}
-                      onBlur={() => handleStageProbabilityBlur(pipeline, stage)}
-                      title="Win probability (%) — used for the weighted pipeline forecast"
-                    />
-                  ) : (
-                    <span
-                      className="text-xs text-ink-faint"
-                      style={{ width: 56, textAlign: 'center' }}
-                      title="Forced — Won is always 100%, Lost is always 0%"
-                    >
-                      {stage.probability}%
-                    </span>
-                  )}
-                  <button type="button" className="btn-secondary" onClick={() => toggleArchiveStage(pipeline, stage)}>
-                    {stage.isActive ? 'Archive' : 'Reactivate'}
-                  </button>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
 
-            <form className="flex items-center gap-2 mt-3" onSubmit={(e) => handleAddStage(e, pipeline)}>
-              <input
-                type="text"
-                placeholder="New stage name"
-                value={newStageName[pipeline.id] || ''}
-                onChange={(e) => setNewStageName({ ...newStageName, [pipeline.id]: e.target.value })}
-                style={{ maxWidth: 220 }}
-              />
-              <button type="submit" className="btn-secondary">
-                <span className="inline-flex items-center gap-1.5">
-                  <PlusIcon className="h-3.5 w-3.5" />
-                  Add Stage
-                </span>
-              </button>
-            </form>
-          </div>
+              <form className="flex items-center gap-2 mt-3" onSubmit={(e) => handleAddStage(e, pipeline)}>
+                <input
+                  type="text"
+                  placeholder="New stage name"
+                  value={newStageName[pipeline.id] || ''}
+                  onChange={(e) => setNewStageName({ ...newStageName, [pipeline.id]: e.target.value })}
+                  style={{ maxWidth: 220 }}
+                />
+                <button type="submit" className="btn-secondary">
+                  <span className="inline-flex items-center gap-1.5">
+                    <PlusIcon className="h-3.5 w-3.5" />
+                    Add Stage
+                  </span>
+                </button>
+              </form>
+            </td>
+          </tr>
         )}
-      </div>
+      </>
     );
   };
 
@@ -469,9 +538,33 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
         </div>
       )}
 
-      <div className="flex flex-col gap-3">
-        {(pipelineTab === 'archived' ? archivedPipelines : activePipelines).map(renderPipelineCard)}
-      </div>
+      <table className="table full-table">
+        <thead>
+          <tr>
+            <th className={`sortable ${sortField === 'type' ? 'sorted' : ''}`} onClick={() => handleSort('type')}>
+              Type {sortArrow('type')}
+            </th>
+            <th className={`sortable ${sortField === 'name' ? 'sorted' : ''}`} onClick={() => handleSort('name')}>
+              Name {sortArrow('name')}
+            </th>
+            <th className={`sortable ${sortField === 'stages' ? 'sorted' : ''}`} onClick={() => handleSort('stages')}>
+              Stages {sortArrow('stages')}
+            </th>
+            <th className={`sortable ${sortField === 'createdAt' ? 'sorted' : ''}`} onClick={() => handleSort('createdAt')}>
+              Created {sortArrow('createdAt')}
+            </th>
+            <th className={`sortable ${sortField === 'updatedAt' ? 'sorted' : ''}`} onClick={() => handleSort('updatedAt')}>
+              Updated {sortArrow('updatedAt')}
+            </th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {(pipelineTab === 'archived' ? archivedPipelines : activePipelines).map((pipeline) => (
+            <Fragment key={pipeline.id}>{renderPipelineRow(pipeline)}</Fragment>
+          ))}
+        </tbody>
+      </table>
 
       {archivingPipeline && (
         <ConfirmDialog

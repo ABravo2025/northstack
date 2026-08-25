@@ -1,5 +1,6 @@
 import prisma from '../../lib/prisma.js';
 import { getInvoicePdfUrl } from '../../lib/paddle.js';
+import { CURRENT_PLAN_PRICES_CENTS } from './planService.js';
 import type { PaymentProvider, Prisma, Subscription, SubscriptionStatus, TenantStatus } from '@prisma/client';
 
 // spec-billing-integration.md — Argentina is billed in ARS via Mercado Pago (its own,
@@ -9,46 +10,85 @@ export function resolveProvider(tenant: { country: string | null }): PaymentProv
   return tenant.country === 'Argentina' ? 'mercadopago' : 'paddle';
 }
 
+const BILLING_SUMMARY_SELECT = {
+  plan: true,
+  status: true,
+  provider: true,
+  currency: true,
+  lockedPriceCents: true,
+  trialEndsAt: true,
+  gracePeriodEndsAt: true,
+  currentPeriodStart: true,
+  currentPeriodEnd: true,
+  cancelledAt: true,
+  cancellationEffectiveAt: true,
+  paymentMethodBrand: true,
+  paymentMethodLast4: true,
+  invoices: {
+    select: {
+      id: true,
+      provider: true,
+      amountCents: true,
+      currency: true,
+      status: true,
+      periodStart: true,
+      periodEnd: true,
+      paidAt: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: 'desc' as const },
+  },
+} satisfies Prisma.SubscriptionSelect;
+
+// Same value set on both enums by design (see schema.prisma) — kept as an explicit map rather
+// than a cast, matching planService.ts's/scripts/backfill-billing-subscriptions.ts's own copies.
+const TENANT_TO_SUBSCRIPTION_STATUS: Record<TenantStatus, SubscriptionStatus> = {
+  trialing: 'trialing',
+  active: 'active',
+  past_due: 'past_due',
+  suspended: 'suspended',
+  cancelled: 'cancelled',
+};
+
 // Not in the original task-breakdown (units 1-15 are all writes) — added for Etapa E, since
 // BillingPage.tsx has nothing to read from without this. Read-only, any authenticated tenant
 // member (same bar as GET /api/tenants/current) — the mutating self-serve endpoints stay
 // owner-only via canManageBilling, this just exposes plan/invoice state, no payment credentials
 // (paymentMethodBrand/Last4 are already display-only, never sensitive).
 export async function getBillingSummary(tenantId: string) {
-  const subscription = await prisma.subscription.findUnique({
+  const subscription = await prisma.subscription.findUnique({ where: { tenantId }, select: BILLING_SUMMARY_SELECT });
+  if (subscription) {
+    return subscription;
+  }
+
+  // Self-heal: a tenant created before Billing Integration shipped has no Subscription row
+  // until scripts/backfill-billing-subscriptions.ts is run for its environment — without this,
+  // the Billing page 404s forever for every pre-existing tenant. Mirrors that same script's
+  // placeholder shape (same 'starter'/USD fallback registerTenantWithOwner now sets for brand
+  // new signups) rather than depending on that manual step ever running.
+  const tenant = await prisma.tenant.findUnique({
+    where: { id: tenantId },
+    select: { status: true, plan: true, trialEndsAt: true, gracePeriodEndsAt: true, lockedPriceCents: true },
+  });
+  if (!tenant) {
+    return null;
+  }
+
+  const created = await prisma.subscription.upsert({
     where: { tenantId },
-    select: {
-      plan: true,
-      status: true,
-      provider: true,
-      currency: true,
-      lockedPriceCents: true,
-      trialEndsAt: true,
-      gracePeriodEndsAt: true,
-      currentPeriodStart: true,
-      currentPeriodEnd: true,
-      cancelledAt: true,
-      cancellationEffectiveAt: true,
-      paymentMethodBrand: true,
-      paymentMethodLast4: true,
-      invoices: {
-        select: {
-          id: true,
-          provider: true,
-          amountCents: true,
-          currency: true,
-          status: true,
-          periodStart: true,
-          periodEnd: true,
-          paidAt: true,
-          createdAt: true,
-        },
-        orderBy: { createdAt: 'desc' },
-      },
+    update: {},
+    create: {
+      tenantId,
+      plan: tenant.plan ?? 'starter',
+      status: TENANT_TO_SUBSCRIPTION_STATUS[tenant.status],
+      lockedPriceCents: tenant.lockedPriceCents ?? CURRENT_PLAN_PRICES_CENTS.starter,
+      currency: 'USD',
+      trialEndsAt: tenant.trialEndsAt,
+      gracePeriodEndsAt: tenant.gracePeriodEndsAt,
     },
   });
 
-  return subscription;
+  return { ...created, invoices: [] };
 }
 
 export interface GetInvoiceDocumentUrlResult {

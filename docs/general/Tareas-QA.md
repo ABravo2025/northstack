@@ -1278,3 +1278,25 @@ solo "Done" (cierra el modal) porque no hay nada pendiente de guardar — todo y
 **Severidad:** baja — reorganización de UX sobre una pantalla de Settings. El caso 5 es el más fácil de
 pasar por alto (¿el auto-save del nombre sigue andando después de mover el input al modal?) — confirmarlo
 primero.
+
+## QA-31 — Fix: reordenar stages por drag-and-drop en vez de flechas ▲▼ (2026-08-25)
+
+**Por qué existe esta tarea:** siguiente ronda de feedback sobre el editor de stages (dentro del modal
+Edit desde QA-30). Alejandro pidió reemplazar los botones ▲/▼ por el grip de 6 puntitos + drag-and-drop,
+mismo patrón que ya usa `FieldCatalogMenu.tsx` para reordenar opciones de catálogo (Loss/Win Reason,
+Department, etc. — ver Unidad 6). Se reusó ese patrón tal cual: arrastrar el grip de un stage sobre otro
+reordena la lista completa localmente y persiste el nuevo `order` de cada stage que cambió (mismo
+mecanismo que ya tenían las flechas, solo cambia cómo se dispara). Sin cambios de backend/schema — el
+endpoint `PATCH /api/pipelines/:id/stages/:stageId` con `{ order }` ya existía y no se tocó. Solo
+frontend: `PipelinesSettingsPage.tsx`. `npm run build` (backend y frontend) y `npm test` (91/91) en verde.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Modal Edit de un Pipeline con 2+ stages | Cada stage tiene un ícono de 6 puntitos a la izquierda (donde antes estaban las flechas ▲/▼) |
+| 2 | Arrastrar el grip de un stage y soltarlo sobre otro | La lista se reordena; el stage soltado queda en la posición del que recibió el drop |
+| 3 | Mientras se arrastra | El stage arrastrado se ve semi-transparente; el stage sobre el que está encima muestra un borde superior de color |
+| 4 | Soltar un stage sobre sí mismo, o arrastrar y soltar fuera de cualquier fila | No hace nada — no llama a la API sin necesidad |
+| 5 | Reordenar y volver a abrir el modal (cerrar y re-abrir Edit) | El nuevo orden persiste — quedó guardado en el backend, no es solo un reorder visual |
+
+**Severidad:** baja — mejora de interacción sobre un editor de Settings, sin gate de negocio ni cambio de
+datos involucrado más allá del campo `order` que ya se movía con las flechas.

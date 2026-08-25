@@ -6,7 +6,7 @@ import ConfirmDialog from '../components/common/ConfirmDialog';
 import Modal from '../components/common/Modal';
 import Popover from '../components/common/Popover';
 import RequiredMark from '../components/common/RequiredMark';
-import { DotsVerticalIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
+import { DotsVerticalIcon, GripIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
 
 interface PipelinesSettingsPageProps {
   token: string;
@@ -94,6 +94,11 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
   // TimeOffOverviewPage.tsx's policy row menu.
   const [pipelineRowMenuFor, setPipelineRowMenuFor] = useState<string | null>(null);
   const pipelineRowMenuAnchorRef = useRef<HTMLElement | null>(null);
+  // Drag-to-reorder for the stage editor (replaces the old ▲/▼ buttons per
+  // user feedback 2026-08-25) — same drag/dragover/drop state shape as
+  // FieldCatalogMenu.tsx's catalog-entry reordering.
+  const [draggedStageId, setDraggedStageId] = useState<string | null>(null);
+  const [dragOverStageId, setDragOverStageId] = useState<string | null>(null);
 
   const handleSort = (field: PipelineSortField) => {
     if (sortField === field) {
@@ -309,16 +314,39 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
     }
   };
 
-  const moveStage = async (pipeline: Pipeline, stage: PipelineStage, direction: -1 | 1) => {
+  const handleStageDragStart = (stageId: string) => setDraggedStageId(stageId);
+
+  const handleStageDragEnd = () => {
+    setDraggedStageId(null);
+    setDragOverStageId(null);
+  };
+
+  const handleStageDragOver = (e: React.DragEvent, overId: string) => {
+    e.preventDefault();
+    if (dragOverStageId !== overId) setDragOverStageId(overId);
+  };
+
+  const handleStageDrop = async (pipeline: Pipeline, targetStageId: string) => {
+    setDragOverStageId(null);
+    const draggedId = draggedStageId;
+    setDraggedStageId(null);
+    if (!draggedId || draggedId === targetStageId) return;
+
     const sorted = [...pipeline.stages].sort((a, b) => a.order - b.order);
-    const index = sorted.findIndex((s) => s.id === stage.id);
-    const swapWith = sorted[index + direction];
-    if (!swapWith) return;
+    const draggedIndex = sorted.findIndex((s) => s.id === draggedId);
+    const targetIndex = sorted.findIndex((s) => s.id === targetStageId);
+    if (draggedIndex === -1 || targetIndex === -1) return;
+
+    const reordered = [...sorted];
+    const [moved] = reordered.splice(draggedIndex, 1);
+    reordered.splice(targetIndex, 0, moved);
+
     try {
-      await Promise.all([
-        api.updatePipelineStage(token, pipeline.id, stage.id, { order: swapWith.order }),
-        api.updatePipelineStage(token, pipeline.id, swapWith.id, { order: stage.order }),
-      ]);
+      for (let i = 0; i < reordered.length; i++) {
+        if (reordered[i].order !== i) {
+          await api.updatePipelineStage(token, pipeline.id, reordered[i].id, { order: i });
+        }
+      }
       loadPipelines();
     } catch (error) {
       toast.error('Failed to reorder stage: ' + (error as Error).message);
@@ -359,7 +387,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
         {sortedStages.length > 0 && <p className="mb-2 text-xs text-gray-500">{OUTCOME_HELP}</p>}
         {sortedStages.length > 0 && (
           <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
-            <span style={{ width: 32 }} />
+            <span style={{ width: 20 }} />
             <span style={{ width: 28 }} />
             <span className="flex-1">Stage name</span>
             <span style={{ width: 110 }}>Outcome</span>
@@ -367,28 +395,24 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
           </div>
         )}
         <div className="flex flex-col gap-2">
-          {sortedStages.map((stage, i) => (
-            <div key={stage.id} className="flex items-center gap-2">
-              <div className="flex flex-col">
-                <button
-                  type="button"
-                  className="icon-btn"
-                  disabled={i === 0}
-                  onClick={() => moveStage(pipeline, stage, -1)}
-                  style={{ height: 16 }}
-                >
-                  ▲
-                </button>
-                <button
-                  type="button"
-                  className="icon-btn"
-                  disabled={i === sortedStages.length - 1}
-                  onClick={() => moveStage(pipeline, stage, 1)}
-                  style={{ height: 16 }}
-                >
-                  ▼
-                </button>
-              </div>
+          {sortedStages.map((stage) => (
+            <div
+              key={stage.id}
+              className={`flex items-center gap-2 rounded-md border-t-2 border-transparent ${
+                draggedStageId === stage.id ? 'opacity-40' : ''
+              } ${dragOverStageId === stage.id && draggedStageId && draggedStageId !== stage.id ? 'border-t-brand-blue' : ''}`}
+              onDragOver={(e) => handleStageDragOver(e, stage.id)}
+              onDrop={() => handleStageDrop(pipeline, stage.id)}
+            >
+              <span
+                className="status-manage-grip"
+                draggable
+                onDragStart={() => handleStageDragStart(stage.id)}
+                onDragEnd={handleStageDragEnd}
+                aria-label={`Drag to reorder ${stage.name}`}
+              >
+                <GripIcon className="h-3.5 w-3.5" />
+              </span>
               <ColorPicker value={stage.color || '#6b7280'} onChange={(color) => handleStageColorChange(pipeline, stage, color)} />
               <span className={`flex-1 text-sm ${!stage.isActive ? 'inactive' : ''}`}>{stage.name}</span>
               <select

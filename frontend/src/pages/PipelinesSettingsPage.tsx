@@ -269,7 +269,11 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
               aria-label={stage.isActive ? 'Archive stage' : 'Reactivate stage'}
             >
               <span className="tip">{stage.isActive ? 'Archive' : 'Reactivate'}</span>
-              {stage.isActive ? <EyeIcon className="h-3.5 w-3.5" /> : <EyeOffIcon className="h-3.5 w-3.5" />}
+              {stage.isActive ? (
+                <EyeIcon className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+              ) : (
+                <EyeOffIcon className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+              )}
             </button>
           </div>
         ))}
@@ -334,20 +338,27 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    loadPipelines();
+    setLoading(true);
+    loadPipelines().finally(() => setLoading(false));
     api.listOpportunities(token).then(setOpportunities).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Deliberately never touches `loading` — this is also the background
+  // refresh called after every single field save in the Edit modal (rename,
+  // stage color/outcome/probability/archive/reorder, add stage). Flipping
+  // `loading` here used to unmount the ENTIRE page (table + modal + editor)
+  // behind a "Loading..." placeholder and remount it on every one of those
+  // saves — the real cause of the "screen refresh" the user reported
+  // 2026-08-25, not (or not only) the drag-state re-render scope fixed
+  // earlier the same day. `loading` now only gets set by the initial mount
+  // effect above, where there's genuinely nothing on screen yet.
   const loadPipelines = async () => {
-    setLoading(true);
     try {
       const data = await api.listPipelines(token);
       setPipelines(data);
     } catch (error) {
       toast.error('Failed to load pipelines: ' + (error as Error).message);
-    } finally {
-      setLoading(false);
     }
   };
 

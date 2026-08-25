@@ -1330,3 +1330,34 @@ ojo tachado = archivado, click reactiva), con tooltip. Sin cambios de backend �
 **Severidad:** media en el caso 1 — un "refresh" visible cada vez que se intenta reordenar un stage es el
 tipo de fricción que hace que una función se sienta rota aunque funcione. El resto son ajustes visuales
 menores.
+
+## QA-33 — Fix real del "refresh" (loadPipelines bloqueaba toda la página) + color del ícono Archive (2026-08-25)
+
+**Por qué existe esta tarea:** el fix de QA-32 (mover el estado del drag a su propio componente) era una
+mejora real pero no la causa principal — el usuario confirmó que seguía sin ser fluido, "se renderiza por
+cualquier cosa ahora". Causa raíz encontrada: `loadPipelines()` — la función que se llama después de
+**cualquier** guardado (rename, color/outcome/probability/archive/reorder de un stage, agregar stage,
+crear/archivar/reactivar un pipeline) — hacía `setLoading(true)` al arrancar. Como el componente entero
+tiene `if (loading) return <p>Loading...</p>`, cada uno de esos guardados desmontaba la página completa
+(tabla + modal + editor) y la volvía a montar de cero al terminar. Eso es el "refresh": no era un problema
+de qué tan grande era el árbol que se re-renderizaba (lo de QA-32), sino que la página entera se
+desmontaba literalmente en cada guardado, sin excepción. Fix: `loadPipelines()` ya no toca `loading` —
+ese estado ahora lo maneja solo el `useEffect` de montaje inicial (donde sí tiene sentido, porque todavía
+no hay nada en pantalla). Cualquier refresh posterior es silencioso, mismo patrón "instant update + fetch
+en segundo plano sin pantalla de carga" que ya usan otras páginas del proyecto (ej. `OpportunitiesPage.tsx`).
+De paso, el ícono de Archive/Reactivate de cada stage ahora es verde (ojo abierto, activo) o rojo (ojo
+tachado, archivado) en vez de un solo color neutro. Ambos cambios solo en `PipelinesSettingsPage.tsx`, sin
+tocar backend. `npm run build` (backend y frontend) y `npm test` (91/91) en verde.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Modal Edit, cambiar el color de un stage, el outcome, la probability, o archivar/reactivar | Ya no hay ningún parpadeo de "Loading..." — el cambio se guarda y la pantalla no se mueve |
+| 2 | Modal Edit, arrastrar un stage para reordenar | Igual de fluido que los casos anteriores, sin flash |
+| 3 | Renombrar un pipeline (nombre en el modal), crear uno nuevo, o archivar/reactivar desde el menú "..." | Tampoco muestran el flash de "Loading..." — antes también lo tenían, aunque el usuario no lo haya mencionado explícitamente |
+| 4 | Recargar la página completa (F5) manualmente | Sigue mostrando "Loading..." normalmente — ese caso no cambió, es el único momento en que corresponde |
+| 5 | Ícono de Archive/Reactivate de un stage activo | Ojo abierto, color verde |
+| 6 | Ícono de Archive/Reactivate de un stage archivado | Ojo tachado, color rojo |
+
+**Severidad:** alta en el caso 1 — era la causa real del problema reportado dos veces seguidas; el fix de
+QA-32 solo atacaba un síntoma secundario. Vale la pena confirmar explícitamente que ya no hay ningún
+parpadeo antes de dar el tema por cerrado.

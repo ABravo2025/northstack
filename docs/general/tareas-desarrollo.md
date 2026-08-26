@@ -369,6 +369,40 @@ habitual de pasar por `staging` primero:
 Distinto del "Módulo Payments" de Tier 4 — Payments es facturarle a los *Clients* del tenant
 (cuentas por cobrar), Payroll es pagarle a los *Employees* (cuentas por pagar).
 
+**Tier 3.6 — Rediseño Sales v2 — COMPLETO (8/8 unidades, ítems 9-10 pendientes de spec propia) y en
+`staging` desde 2026-08-25/26, spec en `docs/tareas/specredisenosalesv2.md` (cierre 2026-08-24).**
+Ronda de ajustes sobre el Rediseño de Clients de Tier 3 — no lo reemplaza, corrige y extiende cuatro
+áreas puntuales de Opportunity/Pipeline. **Nada de esto está en `main`/producción todavía**, a la
+espera de que el usuario lo revise en staging.
+
+Resumen por unidad (detalle técnico completo en el spec, sección 6 para el orden de build y
+`docs/general/Tareas-QA.md` QA-24 a QA-37 para la verificación de cada pieza):
+- **U1 — Huecos de `Pipeline.type`/gate de Company**: inmutabilidad de `type` post-creación,
+  gate de Company (real vs. placeholder) replicado en el backend, no solo en el frontend.
+- **U2/U3 — Company hierarchy + Contact/Opportunity**: `parentCompanyId` con anti-ciclo,
+  `isPrimary` único, indicador de multi-threading, soft-delete (`isActive`) de Contact/Opportunity
+  con degradación en cascada.
+- **U4 — Cambio de Pipeline + cierre de lead**: mecanismo genérico de mover una Opportunity entre
+  Pipelines (gate de Company real) del que se cuelga el disparador de "lead ganado → ofrecer mover
+  a un pipeline de cuenta".
+- **U5 — UI de creación de Opportunity contextual**: el modal de alta filtra pipelines por tipo y
+  pide los campos que correspondan a cada uno (lead vs. cuenta ya identificada).
+- **U6 — Forecast ponderado + cierre simétrico**: `probability` por stage (0-100, forzado a 100/0 en
+  Won/Lost), reporte de forecast ponderado, Won y Lost con el mismo tratamiento (razón + nota).
+- **U7 — Notificaciones in-app (versión mínima)**: modelo `Notification`, bell icon con contador y
+  marcar leído — sin productor todavía, a propósito (lo conecta la unidad 8).
+- **U8 — Automatizaciones**: auto-asignación de owner por Pipeline (round-robin por usuario o por
+  departamento, o account-owner heredado de la Company), el primer cron real del proyecto
+  (recordatorio de deal estancado), y el productor de notificación de cambio de stage que U7 dejó
+  listo. Pasó por 3 rondas de ajuste de UX directo con el usuario tras revisar staging (select
+  unificado de 3-4 opciones en vez de dos pasos, campo de participantes obligatorio, 3 stages
+  default al crear un pipeline) — el diseño final quedó documentado en el spec §3.8 y QA-34 a QA-37.
+
+Pendientes, explícitamente fuera de esta ronda, cada uno necesita su propia sesión de spec antes de
+tocar código: **corte del `Client` legado** (migración de Custom Fields campo por campo + corte real
+de rutas/UI) y **dashboard de métrica de ciclo lead→cliente** (necesita definir ruta/nav y un mockup
+visual con el usuario primero).
+
 **Tier 4 — Resto de iniciativas grandes**
 - Suscripciones propias del SaaS (Paddle, planes/precios, pantalla de administración autónoma)
 - Panel de Integraciones — Stripe + QuickBooks + evaluar Mercado Pago (módulo Payments de

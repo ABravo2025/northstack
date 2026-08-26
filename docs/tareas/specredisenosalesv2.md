@@ -1,7 +1,7 @@
 # Rediseño Sales v2 — Company / Contact / Opportunity
 
-**Estado:** spec conversacional cerrada, sin construir todavía.
-**Fecha de cierre de spec:** 2026-08-24.
+**Estado:** ✅ Unidades 1-8 completas y verificadas en `staging` (2026-08-25/26) — ver sección 6 para el detalle por unidad. Pendientes, cada uno con su propia sesión de planning dedicada: corte de `Client` legado (punto 9) y dashboard de métrica lead→cliente (punto 10). Nada de esta spec está en `main`/producción todavía.
+**Fecha de cierre de spec:** 2026-08-24. **Fecha de build:** 2026-08-25/26.
 **Revisión técnica:** 2026-08-24 (mismo día) — 1 gap real encontrado (Public Forms × `Pipeline.scope`, deferido a propósito, ver sección 0) y las 4 decisiones abiertas originales cerradas + 3 nuevas que salieron de la revisión (idempotencia de conversión, soft-delete de Contact/Opportunity, participantes de round-robin) — ver sección 7. Orden de construcción reordenado, ver sección 6.
 **Contexto:** ronda de ajustes sobre el rediseño de Clients ya construido y verificado en `staging` (Company/Contact/Pipeline/Opportunity, 11 unidades, 2026-07-27 — ver `docs/tareas-desarrollo.md` y `docs/database-schema.md` grupo 5). Esto no reemplaza esa base, la extiende y corrige cuatro áreas puntuales.
 
@@ -224,16 +224,18 @@ Notification                     (tabla nueva — ver 3.9 para todos los campos)
 
 Pensado para minimizar dependencias cruzadas — cada unidad build → test → verificación real → commit → push a `staging`, igual que el rediseño original. **Reordenado 2026-08-24**, dos veces el mismo día: primero para sacar valor antes y separar automatizaciones en dos entregables; después, tras encontrar que `Pipeline.type` ya existía con un diseño distinto (placeholder Company en vez de `companyId` nullable — ver corrección al inicio de §3), el punto 1 se achicó bastante — ya no es un cambio de schema greenfield, es blindar/cerrar huecos de algo que ya está construido:
 
-1. **Cerrar los huecos de `Pipeline.type`/gate de Company** (3.1, 3.2) — inmutabilidad de `type` post-creación, `type` obligatorio en el body de creación, el gate de Company replicado en el backend (`opportunityService.createOpportunity`), `Company.isPlaceholder`. Es la base de la que depende todo lo demás de la sección 3, pero mucho más chica que la Unidad 1 original.
+1. **Cerrar los huecos de `Pipeline.type`/gate de Company** (3.1, 3.2) — ✅ completo. Inmutabilidad de `type` post-creación, `type` obligatorio en el body de creación, el gate de Company replicado en el backend (`opportunityService.createOpportunity`), `Company.isPlaceholder`.
 2. **Company hierarchy** (sección 1) — ✅ completo. El tab de Contacts que este punto también contemplaba resultó ya estar construido (corrección 2026-08-24, ver §1.3) — no hizo falta nada ahí.
 3. **isPrimary único + multi-threading indicador + soft-delete de Contact/Opportunity** (2.1, 2.2, 2.3) — ✅ completo, ver §2.
-4. **Cambio de Pipeline con el gate de Company real, más el disparador de cierre de lead** (3.6 primero — es el mecanismo genérico —, después 3.3, que solo lo invoca al ganar) — depende del punto 1.
-5. **UI contextual de creación de Opportunity desde Company** (3.4, sin el tab de Contacts que ya se movió al punto 2) — depende de los puntos 1 y 4.
-6. **Forecast ponderado + cierre simétrico Won/Lost** (3.5, 3.7) — independientes entre sí, dependen solo del punto 1.
-7. **Notificaciones in-app** (3.9, modelo `Notification` + bell icon + marcar leído) — separado de las automatizaciones (punto 8): no necesita el cron, tiene valor por sí solo apenas exista un evento que dispare `type: opportunity_stage_changed`, y baja el tamaño/riesgo del entregable más grande.
-8. **Automatizaciones** (3.8 — round-robin/account-owner, `stalledThresholdDays`, el cron de deal estancado) — el primer cron real del proyecto, se deja para el final una vez que 3.9 (Notification) ya existe para que lo consuma.
-9. **Corte de Client** (sección 4) — sin dependencia técnica con lo anterior, se puede hacer en cualquier momento, pero conviene dejarlo último por ser el de menor urgencia real.
-10. **(Nuevo, baja prioridad) Métrica de ciclo lead → cliente** — ver sección 3.10. No bloquea nada de lo anterior; se puede intercalar donde convenga o dejar para el final.
+4. **Cambio de Pipeline con el gate de Company real, más el disparador de cierre de lead** (3.6 primero — es el mecanismo genérico —, después 3.3, que solo lo invoca al ganar) — ✅ completo.
+5. **UI contextual de creación de Opportunity desde Company** (3.4, sin el tab de Contacts que ya se movió al punto 2) — ✅ completo.
+6. **Forecast ponderado + cierre simétrico Won/Lost** (3.5, 3.7) — ✅ completo.
+7. **Notificaciones in-app** (3.9, modelo `Notification` + bell icon + marcar leído) — ✅ completo, ver §3.9.
+8. **Automatizaciones** (3.8 — round-robin/account-owner, `stalledThresholdDays`, el cron de deal estancado) — ✅ completo, ver §3.8 (incluye 3 rondas de ajuste de UX post-revisión del usuario en staging: QA-35, QA-36, QA-37).
+9. **Corte de Client** (sección 4) — ⏳ pendiente, a propósito. Sin dependencia técnica con lo anterior, pero necesita su propia sesión de spec dedicada antes de tocar código (mismo tamaño que la sesión que originó todo este rediseño) — ver §4, "Corte real... queda explícitamente fuera de esta ronda".
+10. **(Nuevo, baja prioridad) Métrica de ciclo lead → cliente** — ⏳ pendiente. Ver sección 3.10 — necesita definir ruta/entrada de nav junto con Alejandro y un mockup visual antes de construir, no bloquea nada de lo anterior.
+
+**Unidades 1-8 completas y verificadas en `staging` (2026-08-25/26) — nada de esta spec está todavía en `main`/producción, a la espera de revisión del usuario.** Quedan pendientes, cada uno con su propia sesión de planning: el corte de Client (9) y el dashboard de métricas (10).
 
 ---
 

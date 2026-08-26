@@ -345,3 +345,46 @@ pruebe él mismo (ya lo está haciendo). QA-18 en `docs/Tareas-QA.md` tiene el c
 No hay ningún enforcement de acceso todavía para tenants `suspended` (el status cambia pero
 nada bloquea requests) — explícitamente fuera de alcance de esta ronda, igual que la
 integración real de Paddle/checkout.
+
+### Rediseño Sales v2 — Opportunity/Pipeline, 8 unidades (2026-08-25 a 2026-08-26)
+
+**Nota de continuidad:** entre esta entrada y la anterior (2026-08-13) se construyeron y
+shippearon a producción el módulo de Payroll completo (21 unidades, `docs/spec-payroll.md`),
+Admin Center (Tenants/Tickets/Ideas), sincronización de Google Calendar + cumpleaños/Time Off,
+Billing Integration (Paddle + Mercado Pago) y varias tareas de UX/UI — no están detallados acá
+como entradas propias, ver sus specs (`docs/spec-payroll.md`, `docs/general/spec-billing-integration.md`)
+y `docs/general/Tareas-QA.md` para el histórico completo.
+
+Spec en `docs/tareas/specredisenosalesv2.md` (cierre de spec 2026-08-24) — una ronda de ajustes
+sobre el Rediseño de Clients ya construido (Company/Contact/Opportunity/Pipeline, sección de
+arriba, 2026-07-27), no un reemplazo. Cuatro focos: cerrar huecos reales de `Pipeline.type`/gate
+de Company que se habían quedado a medio hacer, jerarquía de Company, reglas de Contact↔Company
+(multi-threading, soft-delete), y el bloque más grande — forecast ponderado, cambio de pipeline,
+cierre simétrico Won/Lost, notificaciones in-app y automatizaciones de owner. **Las 8 unidades
+están completas y verificadas en `staging`** — nada de esto llegó a `main`/producción todavía,
+a la espera de que el usuario lo revise.
+
+La unidad más grande y la que más iteración tuvo fue la 8 (Automatizaciones — round-robin y
+account-owner por Pipeline, más el primer cron real del proyecto para recordatorios de deal
+estancado). El spec original dejaba dos huecos genuinos que solo aparecieron al diseñarla en
+serio: nunca decía en qué momento dispara el round-robin (se resolvió: en la creación de la
+Opportunity, nunca pisa un `ownerId` explícito), y la regla de "dejar sin owner en vez de romper"
+era físicamente imposible porque `Opportunity.ownerId` era `NOT NULL` (se relajó a nullable,
+consecuencia necesaria, no una decisión aparte). Tras construirla y pushearla, el usuario la
+revisó en staging en persona y pidió tres rondas de ajuste de UX seguidas — la sección de
+Automations no vivía en el modal de creación (nadie se iba a enterar de que existía), el picker
+de participantes mostraba individual-por-usuario y alta-por-departamento como si fueran dos
+herramientas optativas a la vez (leía como un error), y finalmente eso se colapsó en un solo
+`<select>` de 3-4 opciones directas (`Off` / `Round robin — by user` / `Round robin — by
+department` / `Account owner`) con el campo de participantes obligatorio una vez elegido round
+robin. Ver el spec §3.8 y `docs/general/Tareas-QA.md` QA-34 a QA-37 para el detalle completo de
+cada ronda.
+
+Verificado de punta a punta contra `staging` real en cada unidad, con tenants descartables
+(creados y borrados vía Prisma) y, para las últimas rondas de ajuste de UI, con Playwright real
+manejando un dev server local apuntado a la base de `staging` — la primera vez en el proyecto que
+hubo browser automation disponible en la sesión (instalación global de Playwright + Chromium ya
+presente en la máquina). Ese mismo proceso encontró y corrigió un bug real de UI en el camino
+(`MultiSelectDropdown` mostraba "vacío" por un instante mientras su propio fetch de opciones
+todavía estaba en curso). `npm run build`/`npm test` (91/91) backend y `npm run build` frontend en
+verde en cada commit.

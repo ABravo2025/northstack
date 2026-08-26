@@ -358,6 +358,12 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
   const [stalledDraft, setStalledDraft] = useState(
     pipeline.stalledThresholdDays !== null ? String(pipeline.stalledThresholdDays) : '',
   );
+  // Which single mechanism builds the round-robin list right now — showing
+  // the individual picker and the department bulk-add side by side as two
+  // "optional" tools read as a mistake (user feedback 2026-08-26): pick one,
+  // not both at once. A required select (no blank option), not a checkbox
+  // pair, so there's never an ambiguous "neither chosen" state.
+  const [participantMode, setParticipantMode] = useState<'user' | 'department'>('user');
 
   useEffect(() => {
     let cancelled = false;
@@ -448,11 +454,19 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
       );
       setSelectedDepartmentIds([]);
       refreshParticipants();
+      // Switch back to the individual view so the merged, current list is
+      // what's on screen after a bulk-add, not the now-empty department picker.
+      setParticipantMode('user');
     } catch (error) {
       toast.error('Failed to add from departments: ' + (error as Error).message);
     } finally {
       setAddingFromDepartments(false);
     }
+  };
+
+  const handleParticipantModeChange = (mode: 'user' | 'department') => {
+    setParticipantMode(mode);
+    setSelectedDepartmentIds([]);
   };
 
   const participantUserIds = participants.map((p) => p.userId);
@@ -488,26 +502,33 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
 
       {pipeline.assignmentMode && (
         <div className="form-group">
-          <label htmlFor="pipeline-participants">Round-robin participants</label>
+          <label htmlFor="pipeline-participant-mode">Round-robin participants</label>
           <p className="mb-1 text-xs text-gray-500">
             Only currently-active employees are ever picked when it's their turn. A user with no linked Employee
             record can be added here but will always be skipped.
           </p>
-          <MultiSelectDropdown
-            id="pipeline-participants"
-            options={userOptions}
-            selected={participantUserIds}
-            onChange={handleParticipantsChange}
-            placeholder={participantsLoading ? 'Loading…' : 'Select participants…'}
-            emptyMessage="No users in this tenant yet."
-            loading={participantsLoading}
-          />
+          <select
+            id="pipeline-participant-mode"
+            className="mb-2"
+            value={participantMode}
+            onChange={(e) => handleParticipantModeChange(e.target.value as 'user' | 'department')}
+          >
+            <option value="user">Add participants by user</option>
+            <option value="department">Add participants by department</option>
+          </select>
 
-          {departments.length > 0 && (
-            <div className="mt-3">
-              <label htmlFor="pipeline-departments" className="text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
-                Bulk-add by department
-              </label>
+          {participantMode === 'user' ? (
+            <MultiSelectDropdown
+              id="pipeline-participants"
+              options={userOptions}
+              selected={participantUserIds}
+              onChange={handleParticipantsChange}
+              placeholder={participantsLoading ? 'Loading…' : 'Select participants…'}
+              emptyMessage="No users in this tenant yet."
+              loading={participantsLoading}
+            />
+          ) : (
+            <>
               <p className="mb-1 text-xs text-gray-500">
                 One-time add — adds whoever currently has an Employee in the selected department(s). Not a live
                 link: later department changes won't update this list automatically.
@@ -519,7 +540,9 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
                     options={departmentOptions}
                     selected={selectedDepartmentIds}
                     onChange={setSelectedDepartmentIds}
-                    placeholder="Select departments…"
+                    placeholder={participantsLoading ? 'Loading…' : 'Select departments…'}
+                    emptyMessage="No departments configured yet."
+                    loading={participantsLoading}
                   />
                 </div>
                 <button
@@ -531,7 +554,7 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
                   {addingFromDepartments ? 'Adding…' : 'Add selected'}
                 </button>
               </div>
-            </div>
+            </>
           )}
         </div>
       )}
@@ -593,6 +616,18 @@ function PipelineAutomationCreateFields({
   const [tenantUsers, setTenantUsers] = useState<TenantUser[]>([]);
   const [departments, setDepartments] = useState<FieldCatalogDefinition[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
+  // Exclusive choice, not two "optional" tools shown together (user feedback
+  // 2026-08-26) — mirrors PipelineAutomationEditor's own toggle.
+  const [participantMode, setParticipantMode] = useState<'user' | 'department'>('user');
+
+  const handleParticipantModeChange = (mode: 'user' | 'department') => {
+    setParticipantMode(mode);
+    if (mode === 'user') {
+      onDepartmentIdsChange([]);
+    } else {
+      onParticipantUserIdsChange([]);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -642,37 +677,46 @@ function PipelineAutomationCreateFields({
 
       {assignmentMode && (
         <div className="form-group">
-          <label htmlFor="new-pipeline-participants">Round-robin participants</label>
+          <label htmlFor="new-pipeline-participant-mode">Round-robin participants</label>
           <p className="mb-1 text-xs text-gray-500">
             Only currently-active employees are ever picked when it's their turn. Can be changed later too.
           </p>
-          <MultiSelectDropdown
-            id="new-pipeline-participants"
-            options={userOptions}
-            selected={participantUserIds}
-            onChange={onParticipantUserIdsChange}
-            placeholder={loadingOptions ? 'Loading…' : 'Select participants…'}
-            emptyMessage="No users in this tenant yet."
-            loading={loadingOptions}
-          />
+          <select
+            id="new-pipeline-participant-mode"
+            className="mb-2"
+            value={participantMode}
+            onChange={(e) => handleParticipantModeChange(e.target.value as 'user' | 'department')}
+          >
+            <option value="user">Add participants by user</option>
+            <option value="department">Add participants by department</option>
+          </select>
 
-          {departments.length > 0 && (
-            <div className="mt-3">
-              <label htmlFor="new-pipeline-departments" className="text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
-                Also add by department
-              </label>
+          {participantMode === 'user' ? (
+            <MultiSelectDropdown
+              id="new-pipeline-participants"
+              options={userOptions}
+              selected={participantUserIds}
+              onChange={onParticipantUserIdsChange}
+              placeholder={loadingOptions ? 'Loading…' : 'Select participants…'}
+              emptyMessage="No users in this tenant yet."
+              loading={loadingOptions}
+            />
+          ) : (
+            <>
               <p className="mb-1 text-xs text-gray-500">
-                One-time add — adds whoever currently has an Employee in the selected department(s) as participants
-                too, once this pipeline is created.
+                One-time add — adds whoever currently has an Employee in the selected department(s) as participants,
+                once this pipeline is created.
               </p>
               <MultiSelectDropdown
                 id="new-pipeline-departments"
                 options={departmentOptions}
                 selected={departmentIds}
                 onChange={onDepartmentIdsChange}
-                placeholder="Select departments…"
+                placeholder={loadingOptions ? 'Loading…' : 'Select departments…'}
+                emptyMessage="No departments configured yet."
+                loading={loadingOptions}
               />
-            </div>
+            </>
           )}
         </div>
       )}

@@ -1457,3 +1457,31 @@ Tenant descartable limpiado, servidores de dev y screenshots temporales borrados
 backend (QA-34), no un fix de un bug de negocio. El caso 4 (reset de `assignmentMode` al cambiar Type) es el
 más importante: sin él, un submit podría mandar una combinación inválida y el usuario vería un 400 sin
 entender por qué.
+
+## QA-36 — Fix: picker de participantes de round-robin, elección obligatoria en vez de dos opcionales + fix de `MultiSelectDropdown` durante su propio loading (2026-08-26, en `staging`)
+
+**Por qué existe esta tarea:** dos hallazgos del usuario al revisar QA-35 en staging. (1) Mostrar el picker
+individual de Users y el de alta-por-Departamento **a la vez**, ambos con aspecto de "opcionales", leía como
+un error de diseño — daba la sensación de dos mecanismos sueltos en vez de una sola forma clara de armar la
+lista de round-robin. Se reemplazó por un `<select>` obligatorio (sin opción en blanco, default "Add
+participants by user") que decide cuál de los dos pickers se muestra — nunca ambos a la vez — y cambiar de
+opción limpia el borrador de la otra. (2) Al verificar esto visualmente (Playwright contra un tenant
+descartable con departamentos reales), se encontró que `MultiSelectDropdown` podía mostrar "No users in this
+tenant yet." / el `emptyMessage` que corresponda por un instante al abrirse, mientras el fetch de opciones del
+componente padre todavía estaba en curso — `options` arranca en `[]`, indistinguible de "confirmado vacío".
+Se agregó un prop `loading` explícito (ya existía desde QA-35 para el picker de Users; ahora también se pasa
+al picker de Departamentos) para que el popover muestre "Loading…" mientras corresponda. La mecánica de fondo
+de round-robin no cambió — esto es puramente de presentación, el modelo de datos (`PipelineAssignmentUser`,
+`assignUsersByDepartments`) es el mismo de QA-34.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Pipeline con `assignmentMode: round_robin` (Create o Edit) | Un único `<select>` "Add participants by user / by department" — nunca ambos pickers visibles al mismo tiempo |
+| 2 | Cambiar de "by user" a "by department" con participantes ya elegidos individualmente | El picker de usuarios se oculta; la selección de departamentos arranca vacía |
+| 3 | En modo Edit, agregar por Departamento y confirmar "Add selected" | Vuelve automáticamente a "by user", mostrando la lista de participantes ya combinada (individuales + resueltos por departamento) |
+| 4 | Abrir cualquiera de los dos dropdowns apenas se revela la sección (antes de que el fetch de Users/Departments del tenant termine) | Muestra "Loading…" — nunca "No users/departments..." de forma prematura |
+
+**Severidad:** media — mismo nivel que QA-35, mejora de claridad de UX sobre una feature ya correcta a nivel de
+negocio (QA-34). El caso 4 es el más importante de esta ronda: sin el fix, un tenant con usuarios/departamentos
+reales podía ver un mensaje de "vacío" incorrecto justo al momento de configurar la automatización, la primera
+vez que interactúa con la feature.

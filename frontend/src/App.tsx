@@ -247,7 +247,10 @@ export default function App() {
             path="profile"
             element={<ProfileSettingsPage user={user} token={token ?? ''} onUserUpdated={setUser} />}
           />
-          <Route path="integrations" element={<IntegrationsSettingsPage token={token ?? ''} />} />
+          <Route
+            path="integrations"
+            element={<IntegrationsSettingsPage token={token ?? ''} user={user} tenant={tenant} />}
+          />
           <Route path="appearance" element={<CompanyAppearancePage token={token ?? ''} />} />
           <Route
             path="users"

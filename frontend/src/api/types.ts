@@ -109,6 +109,14 @@ export interface GoogleCalendarStatus {
   needsReconnect: boolean;
 }
 
+export interface StripeConnectionStatus {
+  connected: boolean;
+  apiKeyMode: 'test' | 'live' | null;
+  connectedAt: string | null;
+  needsAttention: boolean;
+  hasWebhookSecret: boolean;
+}
+
 export interface Company {
   id: string;
   name: string;

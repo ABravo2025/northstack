@@ -769,6 +769,60 @@ Notas:
   **No se puede probar contra `localhost`** — Google no puede llegarle a una máquina local, así que
   esta pieza solo se verifica de punta a punta contra `staging`/producción.
 
+## 10. Payments v1 — conexión con Stripe
+
+Pedido por Alejandro 2026-08-26 (`docs/tareas/specpaymentsv1.md`), Unit 1 únicamente — conectar la
+cuenta de Stripe **propia de cada tenant** (Restricted Key pegada a mano, sin OAuth/Connect —
+Northstack no tiene entidad de negocio para darse de alta como plataforma de Stripe, mismo bloqueo
+ya anotado para la suscripción propia de Northstack vía Paddle/Mercado Pago). Solo lectura: nada
+acá crea charges/invoices/subscriptions. Units 2-4 (lookup Company↔Customer, resúmenes de pagos en
+vivo, webhook de notificaciones) agregan campos/modelos propios cuando se construyan — no
+anticipados acá. **Solo en `staging` — nada pusheado a `main` todavía.**
+
+```mermaid
+erDiagram
+    TENANT ||--o| STRIPE_CONNECTION : "has, 1:1"
+    USER ||--o{ STRIPE_CONNECTION : "connected by"
+
+    STRIPE_CONNECTION {
+        string id PK
+        string tenantId FK UK "one connection per tenant"
+        string apiKeyEncrypted "AES-256-GCM, lib/stripeEncryption.ts"
+        string apiKeyMode "'test' | 'live', detected from the key's own prefix"
+        string stripeAccountId "nullable - GET /account can 401 for a scoped Restricted Key"
+        string webhookSigningSecretEncrypted "nullable - set in a separate step, AES-256-GCM"
+        string connectedByUserId FK
+        datetime connectedAt
+        datetime disconnectedAt "nullable - soft, row survives a disconnect"
+        bool needsAttention "default false - flips true when Stripe rejects the stored key"
+    }
+```
+
+Notas:
+- **1:1 con `Tenant`** (`tenantId @unique`) — a diferencia de `GoogleCalendarConnection` (1:1 con
+  `User`), esta es una conexión a nivel tenant: cualquier owner ve/gestiona la misma, no una por
+  persona.
+- **Sin SDK de Stripe** — `src/lib/stripe.ts` es un wrapper propio (`fetch` + `crypto` nativos),
+  mismo criterio ya establecido por `lib/paddle.ts`/`lib/mercadopago.ts` (evitar una dependencia
+  nueva para un puñado de llamadas REST). A diferencia de esos dos, no hay una sola API key fija en
+  una env var — cada tenant tiene la suya, así que toda función de `stripe.ts` la recibe como
+  parámetro en vez de leerla de `process.env`.
+- **Cifrado con key propia** (`STRIPE_TOKEN_ENCRYPTION_KEY`), ni la de Payroll
+  (`PAYMENT_DATA_ENCRYPTION_KEY`) ni la de Google (`GOOGLE_TOKEN_ENCRYPTION_KEY`) — mismo mecanismo
+  AES-256-GCM, un key por propósito (ver comentario en `lib/encryption.ts`).
+- **`needsAttention`** — mismo espíritu que `GoogleCalendarConnection.needsReconnect`: se prende
+  cuando Stripe rechaza la key guardada (401/403) en vez de que las lecturas fallen en silencio; la
+  fila no se borra sola.
+- **Soft disconnect** (`disconnectedAt`, no se borra la fila) — mismo criterio que
+  `Contact.isActive`/`Opportunity.isActive` del rediseño de Sales v2: conserva el historial (quién
+  conectó, cuándo) y deja que un reconnect futuro pase por el mismo `upsert()` que un connect nuevo,
+  en vez de una segunda fila.
+- **Permisos: owner-only** (`canManagePayments`, `permissionService.ts`) — la spec original decía
+  "owner/admin, mismo criterio que Payroll", pero el gate real de Payroll es owner-only; Alejandro
+  confirmó owner-only acá también, deliberadamente enrutado a través de este permiso nombrado (no un
+  `role === 'owner'` inline en cada endpoint) para no tener que tocar cada call site cuando exista
+  el sistema de roles custom (Tier 5).
+
 ## Enums
 
 | Enum | Valores | Usado en |
@@ -813,3 +867,4 @@ Notas:
 - **Tasks/Notes/Company/Contact/Opportunity — nada de esto llegó a producción todavía**: todo el trabajo de esta sesión (2026-07-29/30, ver `docs/tareas-desarrollo.md`) está pusheado a `staging` únicamente, pendiente de que el usuario lo revise antes de promover a `main`.
 - **Payroll — Unidades 1-4 solo en local/commits, nada pusheado a `staging` todavía** (a pedido del usuario, 2026-08-07): schema + cifrado (U1), catálogo de políticas de pago (U2, backend+frontend), rename a People + `personType` + retiro de la compensación legada (U4) — ver grupo 7 arriba para el detalle completo.
 - **Tenant Signup + Subscription Plans — completo en local, nada pusheado todavía** (2026-08-13, ver grupo 8): a la espera de que el usuario lo pruebe en su entorno local antes de decidir si va a `staging`. Fuera de alcance de este spec, explícitamente pospuesto: integración real de Paddle/checkout, UI de "agregar método de pago", pantalla de autogestión de suscripción en `/settings`, y **cualquier enforcement de acceso para tenants `suspended`** (hoy el status cambia pero nada bloquea requests en base a él — un tenant suspendido sigue funcionando igual que uno activo).
+- **Payments v1 — solo Unit 1 (conexión con Stripe) construida y en `staging`** (2026-08-26, ver grupo 10): lookup/matching Company↔Customer (Unit 2), resúmenes de pagos en vivo (Unit 3) y el webhook de notificaciones proactivas (Unit 4) siguen sin construir — `docs/tareas/specpaymentsv1.md`/`tareaspaymentsv1.md` tienen el detalle unidad por unidad. Nada de esto llegó a `main` todavía.

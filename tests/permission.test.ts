@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   canCreateHr,
   canManageCustomFields,
+  canManagePayments,
   canManagePayroll,
   canViewHr,
 } from '../src/modules/auth/permissionService.js';
@@ -27,5 +28,11 @@ describe('permission service', () => {
     expect(canManagePayroll('owner')).toBe(true);
     expect(canManagePayroll('admin')).toBe(false);
     expect(canManagePayroll('member')).toBe(false);
+  });
+
+  it('restricts Payments (Stripe connection + payment visibility) to owner only, same as Payroll', () => {
+    expect(canManagePayments('owner')).toBe(true);
+    expect(canManagePayments('admin')).toBe(false);
+    expect(canManagePayments('member')).toBe(false);
   });
 });

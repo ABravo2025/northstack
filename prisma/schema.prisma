@@ -359,6 +359,7 @@ model Tenant {
   payrollEntries           PayrollEntry[]
   googleCalendarConnections GoogleCalendarConnection[]
   timeOffCalendarSyncs      TimeOffCalendarSync[]
+  stripeConnection          StripeConnection?
 }
 
 // Billing Integration (spec-billing-integration.md). plan/lockedPriceCents are deliberately NOT
@@ -482,6 +483,7 @@ model User {
   googleCalendarConnection GoogleCalendarConnection?
   timeOffCalendarSyncs    TimeOffCalendarSync[]
   googleCalendarWatchChannel GoogleCalendarWatchChannel?
+  stripeConnectionsConnected StripeConnection[]
 
   @@index([emailDomain])
 }
@@ -1305,6 +1307,27 @@ model GoogleCalendarWatchChannel {
   expiration   DateTime
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+}
+
+// Payments v1 (spec-payments-v1.md) — per-tenant connection to the tenant's OWN Stripe account
+// (a Restricted Key pasted by hand, no OAuth/Connect — Northstack has no business entity to
+// register as a Stripe platform yet, same blocker already noted for Northstack's own
+// Paddle/Mercado Pago subscription). Read-only in v1: nothing here creates charges, invoices, or
+// subscriptions. needsAttention flips true when Stripe rejects the stored key (401/403) instead
+// of failing silently — same "reconnect" signal as GoogleCalendarConnection.needsReconnect above.
+model StripeConnection {
+  id                            String    @id @default(uuid())
+  tenantId                      String    @unique
+  tenant                        Tenant    @relation(fields: [tenantId], references: [id])
+  apiKeyEncrypted               String
+  apiKeyMode                    String // "test" | "live", detected from the key's own prefix
+  stripeAccountId               String?
+  webhookSigningSecretEncrypted String?
+  connectedByUserId             String
+  connectedBy                   User      @relation(fields: [connectedByUserId], references: [id])
+  connectedAt                   DateTime  @default(now())
+  disconnectedAt                DateTime?
+  needsAttention                Boolean   @default(false)
 }
 
 model Invitation {

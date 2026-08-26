@@ -9,6 +9,7 @@ export const rolePermissions: Record<UserRole, string[]> = {
     'manage_users',
     'manage_payroll',
     'manage_billing',
+    'manage_payments',
   ],
   admin: ['view_hr', 'create_hr', 'manage_custom_fields', 'invite_users', 'manage_users'],
   member: ['view_hr'],
@@ -46,4 +47,14 @@ export function canManagePayroll(role: UserRole): boolean {
 // ownership-level decision, not something an admin does on the owner's behalf.
 export function canManageBilling(role: UserRole): boolean {
   return rolePermissions[role].includes('manage_billing');
+}
+
+// Owner-only for now (Alejandro, 2026-08-26 — spec-payments-v1.md decision #9 originally said
+// "owner/admin, same criteria as Payroll", but Payroll's actual gate above is owner-only, and
+// that's the one he confirmed keeping: connecting the tenant's own Stripe account and seeing its
+// Companies' refunds/failed payments/subscriptions stays owner-only until the custom-roles system
+// exists — deliberately routed through this named permission, not an inline `role === 'owner'`
+// check at each call site, so swapping in custom roles later only means changing this function).
+export function canManagePayments(role: UserRole): boolean {
+  return rolePermissions[role].includes('manage_payments');
 }

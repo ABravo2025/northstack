@@ -44,6 +44,10 @@ Leaf module (sin imports) — extraído 2026-08-18 de `tenantService.ts` para qu
 - **encryptGoogleToken(plaintext)** / **decryptGoogleToken(payload)** — mismo AES-256-GCM que `encryption.ts`, pero con su propia key (`GOOGLE_TOKEN_ENCRYPTION_KEY`) — no reusar la de Payroll, un key por propósito. Único uso: `GoogleCalendarConnection.accessTokenEncrypted`/`refreshTokenEncrypted`.
 - **isGoogleTokenEncryptionConfigured()** — usado por `googleCalendarConfigured()` en `googleCalendarAuthService.ts`.
 
+### `src/lib/stripeEncryption.ts` (Payments v1, `docs/tareas/specpaymentsv1.md`, 2026-08-26)
+- **encryptStripeSecret(plaintext)** / **decryptStripeSecret(payload)** — mismo AES-256-GCM que los dos de arriba, key propia (`STRIPE_TOKEN_ENCRYPTION_KEY`). Un solo par de funciones cubre tanto `StripeConnection.apiKeyEncrypted` como `.webhookSigningSecretEncrypted` — ambos son secretos de Stripe pegados por el tenant, no ameritan una función por campo.
+- **isStripeEncryptionConfigured()** — mismo patrón que `isGoogleTokenEncryptionConfigured()`.
+
 ### `src/lib/httpAuth.ts`
 - **getBearerToken(req)** — extrae el token `Authorization: Bearer`.
 - **getClientIp(req)** — IP del cliente, para rate limiting.
@@ -88,6 +92,13 @@ Wrapper propio, mismo criterio que `mercadopago.ts` de arriba.
 - **verifyPaddleSignature(input)** — header `Paddle-Signature` (`ts=...;h1=...`), signed payload `{ts}:{rawBody}`, HMAC-SHA256 hex, `timingSafeEqual`. Fail closed si `PADDLE_WEBHOOK_SECRET` no está configurado.
 - Verificado 2026-08-19 contra Paddle sandbox real: un precio no-catálogo necesita un `product` inline anidado (`name`+`tax_category`), no alcanza con `price` solo — `createNonCatalogTransaction`/`updateSubscriptionItems` ya lo incluyen. Segundo bug real encontrado el mismo día: toda respuesta de la API de Paddle envuelve la entidad real en `{ data, meta }` — `paddleRequest()` (helper interno) ahora desenvuelve `.data` siempre; sin esto, `transaction.id` volvía `undefined` en silencio. `POST /transactions` end-to-end confirmado funcionando contra sandbox real (`checkout.url` + `items[0].price` con totales correctos), incluido el webhook completo (`transaction.completed` → `Subscription` activa + `Invoice` real).
 
+### `src/lib/stripe.ts` (Payments v1, `docs/tareas/specpaymentsv1.md`, 2026-08-26)
+Wrapper propio (`fetch` + `crypto` nativos, sin SDK) contra la API de Stripe — mismo criterio que `mercadopago.ts`/`paddle.ts` de arriba (ver esos dos para el razonamiento explícito de por qué no una librería). A diferencia de esos dos, no hay una sola API key fija leída de una env var — cada tenant tiene la suya propia (`StripeConnection`), así que toda función acá la recibe como parámetro.
+- **retrieveAccount(apiKey)** — `GET /account`, validación de una key recién pegada (Unit 1). Una Restricted Key sin el permiso de lectura "Account" la rechaza (401/403) aunque sea válida — `connectStripe()` (`stripeService.ts`) cae a `listCustomers` en ese caso en vez de rechazar la key.
+- **listCustomers(apiKey, { email?, limit?, starting_after? })** — `GET /customers`; fallback de validación de Unit 1, y base del matching Company↔Customer de Unit 2.
+- **verifyStripeSignature({ signatureHeader, rawBody, secret })** — header `Stripe-Signature` (`t=...,v1=...`), signed payload `{t}.{rawBody}` (punto literal — Paddle usa dos puntos, MP un manifest con `;`), HMAC-SHA256 hex, `timingSafeEqual`. A diferencia de `verifyPaddleSignature`/`verifyMercadoPagoSignature`, el secret es un parámetro (por-tenant), no un env var fijo — no hay caso de "unconfigured env var" que fallar-cerrado. Sin uso todavía (Unit 4, el webhook).
+- Stripe acepta bodies `application/x-www-form-urlencoded` (nunca JSON) con notación de corchetes para objetos anidados (`toFormPairs()`, helper interno) — a diferencia de Paddle/Mercado Pago, que sí toman JSON.
+
 ### `src/lib/rateLimit.ts`
 - **AUTH_RATE_LIMIT** (const) — 5 intentos / 15 min, más estricto que el default por ser blanco de fuerza bruta.
 - **isRateLimited(key, options?)** — chequeo genérico de rate limit por key (IP, endpoint, etc.).
@@ -111,7 +122,7 @@ Wrapper propio, mismo criterio que `mercadopago.ts` de arriba.
 
 ### `src/modules/auth/permissionService.ts`
 Todas son `(role: UserRole) => boolean`, la fuente de verdad de qué puede hacer cada rol:
-**canViewHr**, **canCreateHr**, **canManageCustomFields**, **canInviteUsers**, **canManageUsers**, **canManagePayroll** (owner-only, a diferencia del resto — ver Payroll en `docs/spec-payroll.md`), **canManageBilling** (owner-only, mismo criterio que Payroll — Subscription Plans, `docs/spec-subscription-plans.md`).
+**canViewHr**, **canCreateHr**, **canManageCustomFields**, **canInviteUsers**, **canManageUsers**, **canManagePayroll** (owner-only, a diferencia del resto — ver Payroll en `docs/spec-payroll.md`), **canManageBilling** (owner-only, mismo criterio que Payroll — Subscription Plans, `docs/spec-subscription-plans.md`), **canManagePayments** (owner-only, 2026-08-26 — Payments v1, `docs/tareas/specpaymentsv1.md`: conectar el Stripe del tenant y ver pagos de sus Companies).
 
 ### `src/modules/clients/clientService.ts` (módulo legado, ver `features-overview.md`)
 CRUD estándar: **createClient**, **listClients(tenantId)**, **findClientById(id)**, **updateClient(id, input, changedByUserId)**, **deleteClient(id)**.
@@ -247,6 +258,16 @@ Leg inversa (Google → Northstack) de Task sync, solo Tasks — ver el comentar
 - **processInboundCalendarChanges(userId)** — ante una notificación real (no el handshake `sync`), pide el diff vía `events.list(syncToken)`, persiste el `syncToken` nuevo, y aplica cada cambio con `prisma.task.update` directo (nunca `taskService.updateTask` — evita re-disparar el sync de salida sobre el mismo cambio). Un evento borrado en Google **marca la Task completada** (2026-08-23, corregido tras probar — antes solo le limpiaba la fecha) y agrega una nota a la descripción registrando que fue por borrado en Google, no un check manual; la Task nunca se borra, solo se completa.
 - **renewExpiringWatchChannels()** — corrida diaria vía el cron `/api/internal/google-calendar-channels/renew` (`src/routes/internal.ts`); los canales de Google no se renuevan in-place, así que cierra y vuelve a abrir cada uno que vence dentro de 48hs.
 - No llamar ninguna de las tres desde otro lugar sin releer la tabla de decisión de cada una en el archivo (reasignación de assignee, completar/borrar, cambio de status de Time Off).
+
+### `src/modules/integrations/stripeService.ts` (Payments v1, `docs/tareas/specpaymentsv1.md`, Unit 1 — 2026-08-26)
+Conexión de un tenant a su propia cuenta de Stripe. Unidades 2-4 (lookup, resúmenes en vivo, webhook) agregan sus propias funciones acá cuando se construyan, no descritas todavía.
+- **detectApiKeyMode(apiKey)** — `test`/`live` por el prefijo (`sk_`/`rk_` + `_test_`/`_live_`); tira un error legible si la key no matchea ninguno de los dos, antes de intentar cualquier llamada de red.
+- **connectStripe({ tenantId, userId, apiKey })** — valida contra Stripe real (`retrieveAccount`, con fallback a `listCustomers` si la Restricted Key no tiene permiso de leer Account — ver `stripe.ts`), cifra, `upsert` de `StripeConnection` por `tenantId`. Reconectar (tenant ya tenía una fila, disconnected o no) reusa el mismo `upsert`, nunca crea una segunda fila.
+- **getStripeConnectionStatus(tenantId)** — versión saneada para el frontend (nunca el key cifrado). Una conexión con `disconnectedAt` seteado se reporta como `connected: false`, sin borrar la fila.
+- **saveStripeWebhookSecret(tenantId, secret)** — exige una conexión activa primero (error legible si no).
+- **disconnectStripe(tenantId)** — soft (`disconnectedAt`, mismo criterio que `Contact.isActive`/`Opportunity.isActive` del rediseño de Sales v2) — nunca borra la fila. Idempotente: llamarlo sin conexión activa (nunca conectado, o ya desconectado) es un no-op, no un crash de Prisma.
+- **getApiKeyForTenant(tenantId)** — desencripta la key para que Units 2-4 la usen con `stripe.ts`. Tira si no hay conexión activa.
+- **markNeedsAttention(tenantId)** — para cuando Units 2-4 detecten un 401/403 real de Stripe contra una key ya guardada (key revocada/editada del lado de Stripe) — nunca falla silenciosamente, deja la conexión visible como "necesita atención" en vez de que las lecturas fallen sin explicación.
 
 ### `src/modules/notes/noteService.ts`
 CRUD estándar, cross-entidad vía `entityType`/`entityId`: **createNote**, **findNoteById(id)**, **listNotesForEntity(tenantId, entityType, entityId)**, **updateNote(id, input)**, **deleteNote(id)**.
@@ -384,7 +405,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 | `onboarding.ts` | getOnboardingStatus, seedSampleData |
 | `feedback.ts` | sendFeedback |
 | `http.ts` | apiFetch(url, init?), throwApiError(res) — base compartida, no un dominio |
-| `integrations.ts` (2026-08-22) | getGoogleCalendarStatus, getGoogleCalendarConnectUrl (devuelve `{url}` para que el frontend haga `window.location.href` — no redirige el propio backend, porque este endpoint se llama con fetch autenticado, no con navegación directa), disconnectGoogleCalendar |
+| `integrations.ts` (2026-08-22, +Stripe 2026-08-26) | getGoogleCalendarStatus, getGoogleCalendarConnectUrl (devuelve `{url}` para que el frontend haga `window.location.href` — no redirige el propio backend, porque este endpoint se llama con fetch autenticado, no con navegación directa), disconnectGoogleCalendar, getStripeStatus, connectStripe(token, apiKey), saveStripeWebhookSecret(token, secret), disconnectStripe |
 | `billing.ts` (Billing Integration, Etapa E) | getSubscription, startCheckout, changeSubscriptionPlan (post-billing, distinto de `updateTenantPlan` de arriba que es la elección pre-billing durante trial), cancelSubscription, resumeSubscription, getInvoiceDocumentUrl(token, invoiceId, disposition?) (2026-08-19, Paddle-only, URL temporal ~1h, se pide fresca en cada click — `BillingPage.tsx` la usa dos veces por fila de Invoice: "View invoice" con `inline`, "Download" con `attachment`) |
 
 ### `frontend/src/components/common/` — componentes reusables genéricos, no ligados a una entidad

@@ -27,7 +27,7 @@ import { contractConfirmationPublicApi } from './contractConfirmationPublic.js';
 import { billingApi } from './billing.js';
 import { integrationsApi } from './integrations.js';
 
-export { ApiError } from './http.js';
+export { ApiError, API_BASE_URL } from './http.js';
 export * from './types.js';
 
 export const api = {

@@ -18,6 +18,14 @@ interface MultiSelectDropdownProps {
   onChange: (selected: string[]) => void;
   placeholder?: string;
   emptyMessage?: string;
+  // While the caller's own fetch is still in flight, `options` is
+  // indistinguishable from "confirmed empty" (both start as `[]`) — without
+  // this, the popover shows emptyMessage prematurely, before the data that
+  // would prove it wrong has even arrived (found visually testing this
+  // 2026-08-26: opening the dropdown right after picking a Pipeline's
+  // assignment mode showed "No users in this tenant yet." for an instant on
+  // a tenant that already had one).
+  loading?: boolean;
 }
 
 // Closed dropdown + checkbox list, built on the same Popover every other menu
@@ -32,6 +40,7 @@ export default function MultiSelectDropdown({
   onChange,
   placeholder = 'Select…',
   emptyMessage = 'No options.',
+  loading = false,
 }: MultiSelectDropdownProps) {
   const [open, setOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -58,16 +67,21 @@ export default function MultiSelectDropdown({
       </button>
       <Popover open={open} onClose={() => setOpen(false)} anchorRef={triggerRef} width={260}>
         <div className="col-visibility-list" style={{ maxHeight: 220, overflowY: 'auto' }}>
-          {options.length === 0 && <p className="text-xs text-gray-500 px-2 py-1">{emptyMessage}</p>}
-          {options.map((opt) => (
-            <label className="col-visibility-row" key={opt.value}>
-              <input type="checkbox" checked={selected.includes(opt.value)} onChange={() => toggle(opt.value)} />
-              <span>
-                {opt.label}
-                {opt.note && <span className="text-ink-faint"> {opt.note}</span>}
-              </span>
-            </label>
-          ))}
+          {loading ? (
+            <p className="text-xs text-gray-500 px-2 py-1">Loading…</p>
+          ) : options.length === 0 ? (
+            <p className="text-xs text-gray-500 px-2 py-1">{emptyMessage}</p>
+          ) : null}
+          {!loading &&
+            options.map((opt) => (
+              <label className="col-visibility-row" key={opt.value}>
+                <input type="checkbox" checked={selected.includes(opt.value)} onChange={() => toggle(opt.value)} />
+                <span>
+                  {opt.label}
+                  {opt.note && <span className="text-ink-faint"> {opt.note}</span>}
+                </span>
+              </label>
+            ))}
         </div>
       </Popover>
     </div>

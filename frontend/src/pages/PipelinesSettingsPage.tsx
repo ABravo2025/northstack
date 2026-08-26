@@ -500,6 +500,7 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
             onChange={handleParticipantsChange}
             placeholder={participantsLoading ? 'Loading…' : 'Select participants…'}
             emptyMessage="No users in this tenant yet."
+            loading={participantsLoading}
           />
 
           {departments.length > 0 && (
@@ -652,6 +653,7 @@ function PipelineAutomationCreateFields({
             onChange={onParticipantUserIdsChange}
             placeholder={loadingOptions ? 'Loading…' : 'Select participants…'}
             emptyMessage="No users in this tenant yet."
+            loading={loadingOptions}
           />
 
           {departments.length > 0 && (

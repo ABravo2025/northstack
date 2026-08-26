@@ -1430,8 +1430,19 @@ usan las stages en borrador — nada se persiste hasta el submit. `notifyOwnerOn
 stage (POST/PATCH) y `updateOpportunity` chequea el flag del stage de **destino** (no el de origen) antes de
 notificar/emailear, sumado al chequeo ya existente de "nunca al propio actor". `npm run build`/`npm test`
 (91/91) backend y `npm run build` frontend en verde. Schema aditivo (`notifyOwnerOnEnter` con default `true`,
-sin migración destructiva) pusheado a staging. **No verificado visualmente en navegador** — sin acceso a
-browser en este entorno, solo compilación + build; queda pendiente que el usuario lo revise a ojo en staging.
+sin migración destructiva) pusheado a staging.
+
+**Verificado visualmente 2026-08-26** con un dev server local (frontend + backend) apuntado a
+`STAGING_DATABASE_URL` y un tenant descartable, manejado con Playwright de punta a punta: modal de creación
+con Automations antes de Stages, dropdown multi-select de participantes (abrir/cerrar, resolución real de
+Users del tenant), columna Notify en la tabla de Stages (Create y Edit), y el reset de `assignmentMode` al
+cambiar Type. **Encontrado y corregido en el proceso**: el dropdown de participantes mostraba "No users in
+this tenant yet." por un instante al abrirlo justo después de elegir `round_robin`, porque `options` (todavía
+`[]` mientras el fetch de Users/Departments seguía en curso) era indistinguible de "confirmado vacío".
+`MultiSelectDropdown.tsx` gana un prop `loading` explícito para separar ambos estados; sin él, cualquier
+usuario en una conexión más lenta que localhost habría visto ese mensaje incorrecto de forma mucho más
+notoria. Vuelto a verificar tras el fix: el popover ahora muestra "Loading…" y luego resuelve al usuario real.
+Tenant descartable limpiado, servidores de dev y screenshots temporales borrados al terminar.
 
 | # | Caso | Resultado esperado |
 |---|---|---|

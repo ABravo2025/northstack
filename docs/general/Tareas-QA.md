@@ -1523,3 +1523,50 @@ el seed de tenant-registration (`seedDefaultPipelines`), que es código separado
 silenciosa, sin que el usuario se diera cuenta de que faltaba un paso. Verificado de punta a punta con Playwright
 contra un tenant descartable (2 departamentos, un pipeline `account`) cubriendo los 8 casos de la tabla.
 `npm run build` frontend y `npm test` (91/91) backend en verde (backend no tuvo cambios esta ronda).
+
+## QA-38 — Payments v1, Unidad 1: conexión con Stripe (2026-08-26, en `staging`)
+
+**Por qué existe esta tarea:** cierra la Unidad 1 de `docs/tareas/specpaymentsv1.md` — el cimiento del
+módulo Payments (`docs/tareas/tareaspaymentsv1.md` para el checklist). Cada tenant conecta su propia
+cuenta de Stripe pegando una API key (Restricted Key recomendada, sin OAuth/Connect — Northstack no
+tiene entidad de negocio para eso todavía), desde una card nueva en Settings → Integrations (gateada a
+owner). Solo lectura: nada de esta unidad crea charges/invoices/subscriptions. Dos correcciones reales
+encontradas antes de escribir código, no bugs de esta ronda sino gaps de la spec original: (1) no se
+instaló el SDK `stripe` — `src/lib/stripe.ts` es un cliente REST a mano, mismo criterio ya usado por
+`paddle.ts`/`mercadopago.ts`; (2) el gate de permisos quedó owner-only (confirmado con Alejandro), no
+"owner/admin" como decía la spec citando mal el precedente de Payroll.
+
+**Verificado por Claude** contra `staging` real con un tenant + owner + member descartables (creados y
+borrados vía Prisma directo): gating de permisos (403 para member en los 3 endpoints mutables), rechazo
+inmediato de una key mal formada sin tocar la red, 400 al guardar webhook secret sin conexión previa,
+disconnect sin conexión da 204 limpio (bug real encontrado y corregido: antes crasheaba con un error
+crudo de Prisma), y una llamada real a `api.stripe.com` con una key inventada de prefijo válido —
+confirma que el cliente a mano arma bien la request y parsea el error real de Stripe. `npm run
+build`/`npm test` (116/116, 22 nuevos)/`npm run lint` backend y build/lint frontend en verde.
+
+**Lo que Claude NO pudo probar — necesita a Alejandro con una cuenta de test de Stripe real:** todo el
+camino feliz de conectar de verdad. Sin una cuenta de Stripe (ni siquiera de test/sandbox) disponible en
+este entorno, no se probó: crear una Restricted Key real con los permisos de lectura sugeridos y pegarla
+en el formulario, que `apiKeyMode` detecte `test` correctamente, que `stripeAccountId` se guarde (o que
+el fallback a `listCustomers` entre en juego si la key no tiene permiso de leer Account), guardar un
+webhook signing secret real, y forzar un 401 revocando la key desde el dashboard de Stripe para confirmar
+que `needsAttention` se prende y el banner de reconectar aparece.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Como owner, ir a Settings → Integrations | Card nueva "Stripe" debajo de Google Calendar, con el copy de Restricted Key + checklist de permisos + campo para la key |
+| 2 | Como member o admin, ir a Settings → Integrations | La card de Stripe no aparece en absoluto (a diferencia de la de Google Calendar, que sí es visible para todos) |
+| 3 | Crear una Restricted Key real en Stripe (modo test) con los permisos sugeridos (Customers, Charges, Refunds, Invoices, Subscriptions, PaymentMethods) y pegarla | "Test connection" tiene éxito, la card pasa a estado conectado con el chip "test" |
+| 4 | Repetir con una Secret Key completa (`sk_test_...`) en vez de Restricted | También conecta (el gate solo exige el prefijo `sk_`/`rk_` + `test`/`live`, no distingue el tipo) |
+| 5 | Pegar una key con un typo o de otro formato (ej. una Publishable Key `pk_test_...`) | Rechazada al instante con el mensaje "doesn't look like a Stripe secret or restricted key", sin loading ni delay de red |
+| 6 | Una vez conectado, ver el Paso 2 (Webhook) | Muestra la URL `.../api/webhooks/stripe/<tenantId>`, botón de copiar funcional, checklist de los 5 eventos, campo para el signing secret |
+| 7 | Crear el webhook en Stripe con esa URL + esos eventos, pegar el signing secret real y guardar | Se guarda sin error, la card indica que ya hay un secret guardado |
+| 8 | Ir al dashboard de Stripe y revocar/borrar la Restricted Key ya conectada, después recargar Settings → Integrations | El estado pasa a mostrar el banner de "needsAttention" (rechazada, reconectar) — puede tardar hasta la próxima acción que dispare una llamada real a Stripe con esa key, confirmar si hace falta una lectura activa para que se detecte |
+| 9 | Con la key revocada, click "Disconnect" y volver a conectar con una key nueva | Reconecta sin problema — no queda una segunda fila ni un estado inconsistente |
+| 10 | Revisar `staging.joinnorthstack.com` específicamente (no `app.joinnorthstack.com`) en el Paso 2 | Aparece la nota extra sobre `?x-vercel-protection-bypass=<secret>` — confirmar que de verdad hace falta ahí antes de que Alejandro configure el webhook real en Stripe contra staging |
+
+**Severidad:** media — es la base de todo el módulo Payments, pero v1 es de solo lectura y no hay
+ningún endpoint mutable expuesto más allá de la conexión misma (nada de esto puede cobrar ni mover
+dinero). El caso 8 es el más importante de validar con una cuenta real: si `needsAttention` no se
+prende de verdad ante una key revocada, un tenant puede quedar pensando que su conexión sigue viva
+cuando ya no lo está.

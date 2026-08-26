@@ -1570,3 +1570,52 @@ ningún endpoint mutable expuesto más allá de la conexión misma (nada de esto
 dinero). El caso 8 es el más importante de validar con una cuenta real: si `needsAttention` no se
 prende de verdad ante una key revocada, un tenant puede quedar pensando que su conexión sigue viva
 cuando ya no lo está.
+
+## QA-39 — Payments v1, Unidades 2-3: matching Company↔Stripe + visibilidad de pagos en vivo (2026-08-26, en `staging`)
+
+**Por qué existe esta tarea:** cierra las Unidades 2 y 3 de `docs/tareas/specpaymentsv1.md` — matchear
+una Company con su customer de Stripe (por email de Contact, nunca dominio) y ver refunds/pagos
+fallidos/estado de subscripción en vivo, sin store local. Depende de que QA-38 (Unidad 1, conexión)
+esté resuelta con una cuenta de Stripe real antes de poder probar esto de punta a punta — sin
+conexión activa, todo lo de acá se degrada a estados limpios ("sin vincular"/"sin conexión") en vez
+de fallar, que es exactamente lo único que Claude pudo verificar sin credenciales.
+
+**Corrección real de la spec, resuelta contra la documentación oficial de Stripe (no una suposición):**
+`GET /refunds` no acepta un filtro `customer` — solo Charges lo soporta, y un Charge ya trae
+`refunded`/`amount_refunded`/`status` propios, así que es la única fuente tanto del resumen como del
+historial de eventos (no Payment Intents, no un `/refunds` separado). Esto también resuelve qué
+permisos de lectura necesita la Restricted Key de la Unidad 1: Customers, Charges, Subscriptions —
+Refunds no hace falta como permiso separado.
+
+**Verificado por Claude** contra `staging` real con 2 tenants descartables (uno para probar
+aislamiento): 400 limpio al buscar/vincular sin conexión activa, 403 para member en los 5 endpoints,
+404 (no leak) al pedir una Company de otro tenant, summary/events de una Company sin vincular
+devuelven "sin vincular"/vacío sin llamar a Stripe, overview sin conexión da `connected: false` sin
+intentar ningún Company. 17 tests nuevos con mocks cubren lo que no se pudo probar en vivo:
+consolidación de duplicados en el matching, Contacts inactivos ignorados, conteo de refunds/failed
+desde la misma lista de Charges, preferencia de subscription activa sobre cancelada, paginación y
+clasificación de eventos, agregación de totales en el overview, aislamiento entre tenants, y
+`needsAttention` marcándose ante un 401 real de Stripe. `npm run build`/`npm test` (133/133)/`npm run
+lint` backend y build/lint frontend en verde.
+
+**Lo que Claude NO pudo probar — necesita a Alejandro con la cuenta de Stripe real de QA-38:** todo
+el camino feliz con datos reales.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Con Stripe conectado, abrir una Company cuyo Contact tiene el mismo email que un customer real de Stripe, click "Search on Stripe" | Aparece 1 resultado con el nombre/email del customer y "(via <email del Contact>)" |
+| 2 | Click "Link" sobre ese resultado | La Company pasa a mostrar "Connected to Stripe →", el link abre el customer correcto en el dashboard (con `/test/` si la conexión es de test) |
+| 3 | Una Company con 2+ Contacts, cada uno matcheando un customer de Stripe distinto | Aparecen los 2 resultados, cada uno con su propio Contact de origen — ninguno se pierde ni se duplica |
+| 4 | Una Company sin ningún Contact con email que matchee nada en Stripe | "No matching Stripe customers found..." sin errores |
+| 5 | Con una Company ya vinculada, click "Change link" y elegir un customer distinto | Aparece el diálogo de confirmación ("Replace the existing Stripe link?"); confirmar reemplaza el link, cancelar lo deja igual |
+| 6 | Una Company vinculada a un customer real con al menos un refund, un pago fallido, y una subscripción activa | La sección Payments muestra los 3 conteos correctos + el monto de refunds en la moneda real del charge |
+| 7 | La lista de eventos recientes de esa Company | Cada fila muestra el tipo correcto (Payment/Failed payment/Refund), el monto, la fecha, y el link abre el charge correcto en el dashboard de Stripe |
+| 8 | "Load more" en la lista de eventos, con más de 20 charges reales | Trae la página siguiente sin duplicar ni saltear ninguno |
+| 9 | Ir a la sección "Payments" del sidebar (solo visible para owner) | Tarjetas de refunds/failed/subscripciones activas/companies vinculadas con los totales correctos, tabla de Companies abajo |
+| 10 | Click en el nombre de una Company desde esa tabla | Navega a `/companies` y abre el detalle de esa Company puntual (no solo la lista) |
+| 11 | Como member o admin, intentar ver `/payments` por URL directa | Mensaje "Payments is only visible to the tenant owner" — mismo criterio que Payroll |
+| 12 | Un tenant con varias decenas de Companies vinculadas, abrir `/payments` | Carga en un tiempo razonable (fan-out con límite de concurrencia 10) sin disparar rate limits de Stripe |
+
+**Severidad:** media — solo lectura, no hay riesgo de mover dinero por error. El caso 10 es el más
+importante de los que Claude no pudo probar en vivo: si el deep-link no abre la Company correcta, la
+tabla de la Unidad 3 pierde buena parte de su utilidad práctica.

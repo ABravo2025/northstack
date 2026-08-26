@@ -5,6 +5,7 @@ import {
   BuildingIcon,
   CalendarIcon,
   ChevronLeftIcon,
+  CreditCardIcon,
   DashboardIcon,
   GearIcon,
   HomeIcon,
@@ -87,6 +88,12 @@ export default function Sidebar({ user, mobileOpen, onMobileClose }: SidebarProp
             <TargetIcon className="h-4 w-4 shrink-0" />
             {label('Opportunities')}
           </NavLink>
+          {isOwner && (
+            <NavLink to="/payments" className={linkClass} title="Payments" onClick={onMobileClose}>
+              <CreditCardIcon className="h-4 w-4 shrink-0" />
+              {label('Payments')}
+            </NavLink>
+          )}
         </div>
 
         <div className="sidebar-footer">

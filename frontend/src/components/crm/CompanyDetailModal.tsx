@@ -10,11 +10,15 @@ import Field from '../common/Field';
 import RequiredMark from '../common/RequiredMark';
 import OverviewActionsMenu from '../common/OverviewActionsMenu';
 import SearchableSelect from '../common/SearchableSelect';
+import CompanyStripeSection from './CompanyStripeSection';
 import { PlusIcon, TrashIcon, XIcon } from '../common/Icons';
 import { formatMoney } from '../../lib/currencies';
 
 interface CompanyDetailModalProps {
   company: Company;
+  // Payments v1 (spec-payments-v1.md) — gates the "Payments" section below; owner-only, same as
+  // the rest of Payments v1 (canManagePayments on the backend).
+  isOwner: boolean;
   // Full tenant list — used to compute direct children and the parent-company
   // selector's exclusion set (self + descendants) client-side, same pattern
   // as companyContacts/companyOpportunities below. Not a new endpoint: the
@@ -41,6 +45,7 @@ interface CompanyDetailModalProps {
 
 export default function CompanyDetailModal({
   company,
+  isOwner,
   companies,
   token,
   tenantUsers,
@@ -303,6 +308,22 @@ export default function CompanyDetailModal({
               </Field>
             </div>
           </div>
+
+          {isOwner && (
+            <div className="field-group">
+              <h4 className="field-group-title">Payments</h4>
+              <div className="field-group-body">
+                <CompanyStripeSection
+                  token={token}
+                  company={company}
+                  onLinked={(patch) => {
+                    onSaved({ ...company, ...patch });
+                    onChanged();
+                  }}
+                />
+              </div>
+            </div>
+          )}
 
           <div className="field-group">
             <h4 className="field-group-title">Hierarchy</h4>

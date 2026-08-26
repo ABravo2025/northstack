@@ -27,6 +27,7 @@ import CompanyUsersPage from './pages/CompanyUsersPage';
 import PublicFormsSettingsPage from './pages/PublicFormsSettingsPage';
 import PublicFormPage from './pages/PublicFormPage';
 import BillingPage from './pages/BillingPage';
+import PaymentsOverviewPage from './pages/PaymentsOverviewPage';
 import PaddleCheckoutPage from './pages/PaddleCheckoutPage';
 import PayrollPage from './pages/PayrollPage';
 import PayrollRunDetailPage from './pages/PayrollRunDetailPage';
@@ -239,6 +240,7 @@ export default function App() {
         <Route path="/companies" element={<CompaniesPage user={user} token={token ?? ''} />} />
         <Route path="/contacts" element={<ContactsPage user={user} token={token ?? ''} />} />
         <Route path="/opportunities" element={<OpportunitiesPage user={user} token={token ?? ''} />} />
+        <Route path="/payments" element={<PaymentsOverviewPage user={user} token={token ?? ''} />} />
         <Route path="/profile" element={<Navigate to="/settings/profile" replace />} />
         <Route path="/company" element={<Navigate to="/settings/appearance" replace />} />
         <Route path="/settings" element={<WorkspaceSettingsLayout />}>

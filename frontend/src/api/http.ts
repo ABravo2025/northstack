@@ -7,10 +7,16 @@ export const API_BASE_URL =
 
 export class ApiError extends Error {
   field?: string;
+  // Optional — only set by throwApiError (a real HTTP response), not the network-failure path
+  // below. Added for Payments v1's Company↔Stripe link confirmation flow (status 409 means
+  // "already linked to a different customer, retry with confirmOverwrite"), but generically
+  // useful for any caller that needs to branch on more than just the error message string.
+  status?: number;
 
-  constructor(message: string, field?: string) {
+  constructor(message: string, field?: string, status?: number) {
     super(message);
     this.field = field;
+    this.status = status;
   }
 }
 
@@ -35,5 +41,5 @@ export async function throwApiError(res: Response): Promise<never> {
   } catch {
     // response body wasn't JSON, fall back to statusText
   }
-  throw new ApiError(message, field);
+  throw new ApiError(message, field, res.status);
 }

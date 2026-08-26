@@ -143,6 +143,54 @@ export interface Company {
     customFieldDefinitionId: string;
     value: string;
   }[];
+  // Payments v1, Unit 2 (spec-payments-v1.md)
+  stripeCustomerId: string | null;
+  stripeCustomerMatchedVia: string | null;
+}
+
+export interface StripeCustomerMatch {
+  id: string;
+  email: string | null;
+  name: string | null;
+  matchedViaEmail: string;
+}
+
+export interface StripePaymentSummary {
+  linked: boolean;
+  refundsCount: number;
+  refundsAmountCents: number;
+  // Currency of the underlying Stripe charges, not necessarily the tenant's default — null when
+  // there are no charges yet. See the backend's stripePaymentsService.ts for the known
+  // simplification if a customer somehow has charges in more than one currency.
+  currency: string | null;
+  failedCount: number;
+  subscriptionStatus: string | null;
+}
+
+export interface StripePaymentEvent {
+  id: string;
+  type: 'charge_failed' | 'charge_refunded' | 'charge_succeeded';
+  amountCents: number;
+  currency: string;
+  createdAt: string;
+  dashboardUrl: string;
+}
+
+export interface StripePaymentEventsPage {
+  events: StripePaymentEvent[];
+  nextCursor: string | null;
+}
+
+export interface PaymentsOverviewRow {
+  companyId: string;
+  companyName: string;
+  summary: StripePaymentSummary;
+}
+
+export interface PaymentsOverview {
+  connected: boolean;
+  totals: { refundsCount: number; refundsAmountCents: number; currency: string | null; failedCount: number; activeSubscriptions: number };
+  companies: PaymentsOverviewRow[];
 }
 
 export interface Contact {

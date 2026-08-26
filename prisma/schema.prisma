@@ -596,6 +596,13 @@ model Company {
   website        String?
   phone          String?
   billingAddress String? // same field the future Payments module will need — not duplicated
+  // Payments v1, Unit 2 (spec-payments-v1.md) — matched by iterating this Company's Contact
+  // emails against Stripe (no OAuth/Connect, no domain matching), confirmed manually by a human
+  // (0/1/2+ results). matchedVia stores the Contact *email* that produced the match, a snapshot
+  // (same reasoning as StatusHistoryEntry storing a name instead of a live FK) — surviving a
+  // later change to that Contact's email or the Contact being deactivated.
+  stripeCustomerId         String?
+  stripeCustomerMatchedVia String?
   // Self-referential, one level of parent/subsidiary — anti-cycle validated in
   // companyService.ts (wouldCreateCompanyHierarchyCycle, same walk-the-chain
   // pattern as Employee.managerId's wouldCreateManagerCycle). Deleting a

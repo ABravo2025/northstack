@@ -24,26 +24,28 @@ Criterio en cada unidad: build → `npm run build`/`npm test` → verificación 
 
 ---
 
-## Unidad 2 — Lookup / matching Company ↔ Stripe Customer
+## Unidad 2 — Lookup / matching Company ↔ Stripe Customer — ✅ completa, en `staging`
 
-- [ ] 11. Schema: `Company.stripeCustomerId` (String?) + `Company.stripeCustomerMatchedVia` (String?) — migración aditiva.
-- [ ] 12. Backend: `POST /api/payments/companies/:companyId/stripeLookup` — valida que exista `StripeConnection` activo (error claro si no). Trae todos los `Contact` de la Company, busca `stripe.customers.list({ email: contact.email, limit: 3 })` por cada uno, consolida únicos por `customer.id`, devuelve cada resultado junto con el email que lo originó.
-- [ ] 13. Backend: endpoint para confirmar el vínculo (`PATCH /api/companies/:companyId` o `POST .../stripeLink`) — guarda `stripeCustomerId` + `stripeCustomerMatchedVia`. Si ya había un `stripeCustomerId` distinto, pedir confirmación explícita antes de sobreescribir.
-- [ ] 14. Frontend: botón "Buscar en Stripe" en el detalle de Company. Estados: 0 resultados (mensaje), 1 resultado (card de confirmación con Contact de origen), 2+ resultados (lista seleccionable con el Contact de origen de cada uno).
-- [ ] 15. Frontend: estado "Conectado a Stripe" en el detalle de Company una vez vinculada, con link directo al customer en el dashboard de Stripe (`.../customers/{id}`, usando `test/` en la URL si `apiKeyMode` es test).
-- [ ] 16. Build → test → verificación real (contra customers reales de una cuenta de test) → commit → push a `staging`.
+- [x] 11. Schema: `Company.stripeCustomerId`/`stripeCustomerMatchedVia` — como estaba especificado.
+- [x] 12. Backend: `POST /api/payments/companies/:companyId/stripe-lookup` (**corregido**: kebab-case, no `stripeLookup` — rompía la convención de rutas del resto del proyecto) — valida conexión activa, itera Contacts **activos**, consolida por `customer.id`.
+- [x] 13. Backend: `POST /api/payments/companies/:companyId/stripe-link` (endpoint dedicado) — 409 con `already_linked` si hay que confirmar sobreescritura, reintenta con `confirmOverwrite: true`.
+- [x] 14. Frontend: sección "Payments" nueva en `CompanyDetailModal` (owner-only), botón "Search on Stripe", 0/1/2+ resultados con Contact de origen.
+- [x] 15. Frontend: "Connected to Stripe →" con link al customer en el dashboard, más "Change link".
+- [x] 15b. **Corrección real**: `ApiError` (frontend) no tenía `.status` — se le agregó para poder distinguir el 409 sin parsear el mensaje (cambio genérico, no rompe call sites existentes).
+- [x] 16. **Verificado 2026-08-26** contra `staging` (2 tenants descartables): 400 sin conexión, 403 member, 404 cross-tenant, 400 con campos faltantes. Matching contra Stripe real cubierto por tests con mocks, no una cuenta de test real (no disponible en este entorno). `npm run build`/`npm test` (133/133)/`npm run lint` en verde.
 
 ---
 
-## Unidad 3 — Visibilidad de pagos (resúmenes en vivo, sin store)
+## Unidad 3 — Visibilidad de pagos (resúmenes en vivo, sin store) — ✅ completa, en `staging`
 
-- [ ] 17. Backend: `GET /api/payments/companies/:companyId/summary` — "sin vincular" si no hay `stripeCustomerId` (no error). Si lo hay, en paralelo: `stripe.refunds.list({ customer })`, charges/payment intents fallidos, `stripe.subscriptions.list({ customer })` → arma conteos/montos/estado de subscripción.
-- [ ] 18. Backend: `GET /api/payments/companies/:companyId/events` — listado paginado usando la paginación cursor-based nativa de Stripe (`starting_after`), sin reimplementar offset/limit.
-- [ ] 19. Backend: `GET /api/payments/overview` — todas las Companies del tenant con `stripeCustomerId`, fan-out del `summary` de cada una en paralelo con límite de concurrencia (ej. `p-limit`, tope 10), agrega totales y devuelve también el resumen por Company (para no disparar una segunda ronda de requests desde el frontend).
-- [ ] 20. Frontend: home de la sección Payments — tarjetas de agregados (refunds conteo+monto, failed conteo, companies con subscripción activa) + tabla de Companies con su resumen y link al detalle. Loading claro durante el fan-out.
-- [ ] 21. Frontend: panel dentro del detalle de Company — resumen individual + tabla de eventos paginada (fecha, tipo, monto, link al objeto en Stripe).
-- [ ] 22. Gate de toda la sección (home + panel) a `owner`/`admin`.
-- [ ] 23. Build → test → verificación real (medir tiempo de `overview` con varias decenas de Companies vinculadas, confirmar que el límite de concurrencia no dispara rate limits de Stripe) → commit → push a `staging`.
+- [x] 17. Backend: `GET /api/payments/companies/:companyId/summary` — **corregido, resuelve la decisión abierta original**: `GET /refunds` no acepta filtro `customer` (confirmado contra la doc real de Stripe) — Charges es la única fuente (trae `refunded`/`amount_refunded`/`status` propios), no un `/refunds` separado ni Payment Intents. `listSubscriptions` con `status: 'all'`. Devuelve `currency` también (del Charge, no del tenant).
+- [x] 18. Backend: `GET /api/payments/companies/:companyId/events` — paginación cursor nativa sobre la misma lista de Charges, clasificados en failed/refunded/succeeded.
+- [x] 19. Backend: `GET /api/payments/overview` — **sin `p-limit`**: `mapWithConcurrency` hand-rolled (~15 líneas), mismo criterio de "no paquete nuevo para algo chico" de toda esta spec. Chequea la conexión una sola vez antes del fan-out.
+- [x] 20. Frontend: `PaymentsOverviewPage.tsx` nueva (sidebar "Payments", owner-only, item propio — distinto de la card de setup de la Unidad 1) — tarjetas de agregados + tabla con link al detalle.
+- [x] 20b. **Corrección real**: el link "al detalle" no hubiera andado — `CompaniesPage.tsx` no soportaba abrir una Company por URL. Se agregó `?open=<companyId>` (mismo patrón que `googleCalendarConnected`).
+- [x] 21. Frontend: panel dentro de `CompanyDetailModal` — mismo resumen + eventos recientes con "Load more", en la misma sección "Payments" de la Unidad 2.
+- [x] 22. Gate: owner-only (`canManagePayments`), no "owner/admin" como decía originalmente — mismo criterio ya confirmado en la Unidad 1.
+- [x] 23. **Verificado 2026-08-26** contra `staging`: summary/events "sin vincular"/vacío sin tocar Stripe, overview sin conexión da `connected: false` limpio, 403 member. Fan-out/agregación/aislamiento entre tenants cubiertos por tests con mocks — no medido contra decenas de Companies reales (sin cuenta de test de Stripe en este entorno). Mismo run de build/test/lint que la Unidad 2, en verde.
 
 ---
 

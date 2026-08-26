@@ -90,6 +90,46 @@ export async function listCustomers(
   return stripeRequest<StripeList<StripeCustomer>>(apiKey, 'GET', '/customers', params);
 }
 
+// Payments v1, Unit 3 — a Charge object already carries `refunded`/`amount_refunded`/`status`
+// directly, which is what makes it the single source for both "refunds" and "failed payments" in
+// getCompanyPaymentSummary/getCompanyPaymentEvents below, rather than a separate call per concern.
+// Confirmed against Stripe's real API docs (2026-08-26, `docs.stripe.com/api/refunds/list`): the
+// List Refunds endpoint does NOT accept a `customer` filter (only `charge`/`payment_intent`), so
+// "list refunds for this customer" isn't actually a call Stripe's API supports directly — Charges
+// (which DOES accept `customer`) is the correct source, not a spec oversight to work around later.
+export interface StripeCharge {
+  id: string;
+  amount: number; // cents
+  currency: string; // lowercase ISO-4217, e.g. "usd" — a Charge's own, not necessarily the tenant's
+  status: 'succeeded' | 'pending' | 'failed';
+  refunded: boolean;
+  amount_refunded: number; // cents, partial or full
+  created: number; // unix seconds
+}
+
+export async function listCharges(
+  apiKey: string,
+  params: { customer: string; limit?: number; starting_after?: string },
+): Promise<StripeList<StripeCharge>> {
+  return stripeRequest<StripeList<StripeCharge>>(apiKey, 'GET', '/charges', params);
+}
+
+export interface StripeSubscription {
+  id: string;
+  status: string; // 'active' | 'trialing' | 'past_due' | 'canceled' | 'unpaid' | 'incomplete' | ...
+  customer: string;
+  created: number;
+}
+
+// `status: 'all'` (confirmed against Stripe's docs) — the default (no status param) silently
+// excludes canceled subscriptions, which would hide a churned customer's history entirely.
+export async function listSubscriptions(
+  apiKey: string,
+  params: { customer: string; status?: string; limit?: number; starting_after?: string },
+): Promise<StripeList<StripeSubscription>> {
+  return stripeRequest<StripeList<StripeSubscription>>(apiKey, 'GET', '/subscriptions', params);
+}
+
 export interface VerifyStripeSignatureInput {
   signatureHeader: string;
   rawBody: string;

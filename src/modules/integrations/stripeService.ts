@@ -127,15 +127,25 @@ export async function disconnectStripe(tenantId: string): Promise<void> {
   });
 }
 
-// Units 2-4 build on this — resolves the tenant's own Stripe key, ready to pass into any
-// src/lib/stripe.ts call. Callers should route Stripe 401/403s here into markNeedsAttention
-// rather than letting the connection look silently healthy forever.
-export async function getApiKeyForTenant(tenantId: string): Promise<string> {
+// Units 2-4 build on this — resolves the tenant's own Stripe key (+ mode, needed to build correct
+// dashboard.stripe.com links — test-mode objects live under a /test/ prefix, live-mode don't).
+// Callers should route Stripe 401/403s here into markNeedsAttention rather than letting the
+// connection look silently healthy forever.
+export async function getActiveConnectionForTenant(
+  tenantId: string
+): Promise<{ apiKey: string; apiKeyMode: 'test' | 'live' }> {
   const connection = await prisma.stripeConnection.findUnique({ where: { tenantId } });
   if (!connection || connection.disconnectedAt) {
     throw new Error('This tenant has no active Stripe connection.');
   }
-  return decryptStripeSecret(connection.apiKeyEncrypted);
+  return {
+    apiKey: decryptStripeSecret(connection.apiKeyEncrypted),
+    apiKeyMode: connection.apiKeyMode as 'test' | 'live',
+  };
+}
+
+export async function getApiKeyForTenant(tenantId: string): Promise<string> {
+  return (await getActiveConnectionForTenant(tenantId)).apiKey;
 }
 
 export async function markNeedsAttention(tenantId: string): Promise<void> {

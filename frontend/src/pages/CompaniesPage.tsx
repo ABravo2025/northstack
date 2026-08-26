@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api, type Company, type Contact, type Opportunity, type Pipeline, type SavedView, type ViewFilter, type ViewSort } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import ConfirmDialog from '../components/common/ConfirmDialog';
@@ -68,6 +69,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
   const [loading, setLoading] = useState(false);
   const [slideOverMode, setSlideOverMode] = useState<'add' | null>(null);
   const [viewingCompanyId, setViewingCompanyId] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [deletingCompany, setDeletingCompany] = useState<Company | null>(null);
   const [deleteLinkedOpportunities, setDeleteLinkedOpportunities] = useState(false);
   const [cascadeToChildCompanies, setCascadeToChildCompanies] = useState(false);
@@ -120,6 +122,19 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
     if (activeViewId) localStorage.setItem(ACTIVE_VIEW_STORAGE_KEY, activeViewId);
     else localStorage.removeItem(ACTIVE_VIEW_STORAGE_KEY);
   }, [activeViewId]);
+
+  // Deep-link from another page (Payments overview's "open detail" link, spec-payments-v1.md
+  // Unit 3) — read once and clear, same pattern as IntegrationsSettingsPage's
+  // googleCalendarConnected query param. Doesn't wait for `companies` to load: setting the id
+  // now just means the detail modal renders once the list arrives, same as any other navigation.
+  useEffect(() => {
+    const openId = searchParams.get('open');
+    if (openId) {
+      setViewingCompanyId(openId);
+      setSearchParams({}, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     loadCompanies();
@@ -923,6 +938,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
           return (
             <CompanyDetailModal
               company={viewingCompany}
+              isOwner={user.role === 'owner'}
               companies={companies}
               token={token}
               tenantUsers={tenantUsers}

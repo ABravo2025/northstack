@@ -1,6 +1,6 @@
 # Spec Payments v1 — Conexión Stripe + Visibilidad de Pagos
 
-**Estado:** ✅ Unidad 1 (conexión con Stripe) completa y verificada en `staging` (2026-08-26) — ver sección 8 para el detalle. Unidades 2-4 (lookup Company↔Customer, resúmenes de pagos en vivo, webhook) sin construir todavía. Nada de esta spec está en `main`/producción.
+**Estado:** ✅ Unidades 1-3 completas y verificadas en `staging` (2026-08-26) — conexión con Stripe, lookup/matching Company↔Customer, y visibilidad de pagos en vivo. Ver sección 8 para el detalle por unidad. Unidad 4 (webhook de notificaciones proactivas) sin construir. Nada de esta spec está en `main`/producción; no probado de punta a punta con una cuenta de Stripe real (sin credenciales en este entorno).
 **Fecha de esta ronda:** 2026-08-26.
 **Contexto:** primera unidad del "Módulo Payments" ya anotado en backlog (`docs/tareas-desarrollo.md`, Tier 4, dentro del futuro Panel de Integraciones — punto 1, Stripe). Esta unidad es el cimiento: conexión con Stripe por tenant + visibilidad de refunds/pagos fallidos/subscripciones por Company, dejando la base lista para que una unidad futura agregue creación de charges/invoices desde Northstack. `Company.billingAddress` ya existía reservado para esto (ver `docs/database-schema.md`, grupo 5).
 
@@ -18,7 +18,7 @@ Mismo criterio de ejecución que el resto de las specs del proyecto: cada unidad
 6. **UI:** sección propia "Payments" en el sidebar (nombre en inglés, sin traducir).
 7. **Registro histórico:** sin store, todo en vivo contra la API de Stripe. Con cientos de Companies por tenant, el volumen de filas en sí no era el problema (es poco para Postgres), pero sí lo era la infraestructura a construir y mantener (backfill paginado, idempotencia de webhooks, manejo de drift) para una feature que el propio backlog marca como no bloqueante para el beta. Como Stripe ya es la fuente de verdad del historial completo, consultarlo en vivo evita además cualquier necesidad de backfill.
 8. **Webhook — alcance reducido:** se mantiene, pero solo para **notificaciones proactivas**, no para alimentar un store histórico. Dispara una `Notification` — **corregido 2026-08-26, verificado contra el código real**: el modelo `Notification` ya no es algo planeado, ya existe (`prisma/schema.prisma`, Sales v2 Unidad 7/8, en `staging` desde 2026-08-25/26, junto con el bell icon y los endpoints de listar/marcar leída). Esta unidad solo necesita sumar valores nuevos a `enum NotificationType` — ver Unidad 4.
-9. **Permisos:** gate por rol — interinamente `owner`/`admin` (mismo criterio que Payroll/compensación), hasta que exista el sistema de roles custom (backlog Tier 5).
+9. **Permisos:** gate por rol — **corregido 2026-08-26, confirmado con Alejandro**: owner-only (no "owner/admin" como decía originalmente esta decisión, citando mal el precedente de Payroll — el gate real de `canManagePayroll` también es owner-only). Enrutado vía un permiso nombrado (`canManagePayments`, `permissionService.ts`), no un chequeo inline, para no tener que tocar cada endpoint/componente cuando exista el sistema de roles custom (backlog Tier 5).
 10. **Auditoría del match:** `Company.stripeCustomerMatchedVia` — se guarda el email de Contact que produjo el match.
 11. **Permisos de la Restricted Key:** estrictamente de **lectura** en v1 — nada de escritura por adelantado. Se amplía recién cuando se construya la unidad de cobros.
 
@@ -50,7 +50,7 @@ model StripeConnection {
 
 ### 1.3 Frontend
 
-- Setup guiado en dos pasos (API key → webhook), estado conectado, gateado a `owner`/`admin`.
+- Setup guiado en dos pasos (API key → webhook), estado conectado — card nueva en Settings → Integrations (no un ítem de sidebar, ver corrección en la Unidad 1 de la sección 8), owner-only.
 
 *(Detalle completo de estos tres puntos: ver Unidad 1 en la sección 8 de tareas.)*
 
@@ -93,7 +93,7 @@ Company.stripeCustomerMatchedVia  String?
 - Secretos cifrados en reposo (AES-256-GCM), nunca logueados ni devueltos al frontend.
 - Ningún dato de tarjeta/pago persistido más allá de `stripeCustomerId`/`stripeCustomerMatchedVia`.
 - `needsAttention` en vez de fallar silenciosamente ante key revocada.
-- Todo gateado a `owner`/`admin`, placeholder hasta roles custom.
+- Todo gateado a owner-only (`canManagePayments`), placeholder hasta roles custom.
 
 ---
 
@@ -107,9 +107,9 @@ Company.stripeCustomerMatchedVia  String?
 
 ---
 
-## 7. Decisiones abiertas (no bloqueantes)
+## 7. Decisiones abiertas — cerrada 2026-08-26
 
-- Qué "resources" de lectura exactos permite acotar el creador de Restricted Keys de Stripe, y si "pagos fallidos" sale de Charges, Payment Intents, o ambos — confirmar contra la documentación real al implementar la Unidad 1/3.
+- ~~Qué "resources" de lectura exactos permite acotar el creador de Restricted Keys de Stripe, y si "pagos fallidos" sale de Charges, Payment Intents, o ambos~~ — **resuelto contra la documentación real de Stripe**: Charges, no Payment Intents ni un `/refunds` separado. `GET /refunds` no acepta un filtro `customer` (confirmado en `docs.stripe.com/api/refunds/list`); un Charge ya trae `refunded`/`amount_refunded`/`status` propios, así que es la única fuente que necesita tanto Unit 3 (summary/events) como, indirectamente, define qué permisos de lectura hacen falta en la Restricted Key: Customers, Charges, Subscriptions — no hace falta Refunds ni Payment Intents como permisos separados.
 
 ---
 
@@ -134,24 +134,26 @@ Orden pensado por dependencias: la Unidad 1 es prerrequisito de todo lo demás (
 - [x] **Frontend — estado conectado:** chip `test`/`live` (`role-chip`/`chip-neutral` para test, `chip-good` para live — reusa las clases ya existentes de chips categóricos, no un componente nuevo), fecha de conexión, botón desconectar, banner (`field-error`) si `needsAttention`.
 - [x] **Verificación real 2026-08-26** contra `staging` (dev server local apuntado a `STAGING_DATABASE_URL`, tenant + owner + member descartables creados/borrados vía Prisma directo): status sin conectar, 403 para `member` en los 3 endpoints mutables, 400 inmediato con una key mal formada (sin tocar la red), 400 "Connect Stripe first" al guardar webhook secret sin conexión, disconnect sin conexión previa devuelve 204 limpio (confirma el fix del bug de arriba), y **una llamada real a `api.stripe.com`** con una key con prefijo válido pero inventada — confirma que el cliente a mano arma bien la request (headers, form-encoding) y parsea la respuesta de error real de Stripe, más allá de lo que ya cubren los mocks de los tests unitarios. No se probó una conexión exitosa de punta a punta (hace falta una cuenta de test de Stripe real, no disponible en este entorno) — queda para que Alejandro la pruebe él mismo con su propia cuenta antes de dar la Unidad 1 por cerrada del todo. `npm run build`/`npm test` (116/116, 22 nuevos)/`npm run lint` backend y `npm run build`/`npm run lint` frontend en verde.
 
-### Unidad 2 — Lookup / matching Company ↔ Stripe Customer
+### Unidad 2 — Lookup / matching Company ↔ Stripe Customer — ✅ completa (2026-08-26, en `staging`)
 
-- [ ] **Schema:** `Company.stripeCustomerId` (String?) y `Company.stripeCustomerMatchedVia` (String?) — migración aditiva simple.
-- [ ] **Backend — `POST /api/payments/companies/:companyId/stripeLookup`:** valida que el tenant tenga `StripeConnection` activo (si no, error claro pidiendo completar la Unidad 1 primero). Trae todos los `Contact` de esa Company. Por cada uno, `stripe.customers.list({ email: contact.email, limit: 3 })`. Consolida resultados únicos por `customer.id`, devuelve la lista con el email de Contact que originó cada match (para que el frontend pueda mostrarlo).
-- [ ] **Backend — `PATCH /api/companies/:companyId` (o endpoint dedicado `POST .../stripeLink`):** recibe el `stripeCustomerId` elegido (y el email de origen), guarda ambos campos. Si la Company ya tenía un `stripeCustomerId` distinto, pedir confirmación explícita antes de sobreescribir (no pisar un vínculo existente sin avisar).
-- [ ] **Frontend — dentro del detalle de Company:** botón "Buscar en Stripe". Estados: sin resultados (mensaje + sugerencia de crear el customer manualmente en Stripe si corresponde), 1 resultado (card de confirmación con nombre/email del customer y el Contact que lo originó), 2+ resultados (lista seleccionable, cada opción mostrando el Contact/email de origen).
-- [ ] **Frontend:** una vez vinculada, mostrar el estado "Conectado a Stripe" en el detalle de Company con link directo al customer en el dashboard de Stripe (`https://dashboard.stripe.com/{test/}customers/{id}`, según `apiKeyMode`).
-- [ ] **Build → test → verificación real (contra customers reales de una cuenta de test) → commit → push a `staging`.**
+- [x] **Schema:** `Company.stripeCustomerId`/`stripeCustomerMatchedVia` — igual que lo especificado, aditivo.
+- [x] **Backend — `POST /api/payments/companies/:companyId/stripe-lookup`** — **corregido 2026-08-26, ruta**: kebab-case, no camelCase (`stripeLookup` rompía la convención del resto del proyecto — ver `/api/integrations/google-calendar/status`, `/api/integrations/stripe/webhook-secret`). Valida `StripeConnection` activo, itera los Contact **activos** de la Company contra `listCustomers`, consolida por `customer.id`.
+- [x] **Backend — `POST /api/payments/companies/:companyId/stripe-link`** (endpoint dedicado, no el `PATCH` genérico de Company — necesitaba su propio chequeo de "ya vinculado, confirmar") — 409 con `{error: 'already_linked', currentStripeCustomerId}` si hay que confirmar sobreescritura; el frontend reintenta con `confirmOverwrite: true`.
+- [x] **Frontend — dentro de `CompanyDetailModal` (nueva sección "Payments", owner-only):** botón "Search on Stripe", 0/1/2+ resultados, cada uno mostrando el Contact de origen. Un 409 abre un `ConfirmDialog` en vez de fallar.
+- [x] **Frontend:** una vez vinculada, "Connected to Stripe →" con link a `dashboard.stripe.com/{test/}customers/{id}` (usa `GET /api/integrations/stripe/status` para saber `apiKeyMode`) + botón "Change link" para re-buscar.
+- [x] **Corrección real, encontrada durante la implementación**: `ApiError` (frontend, `api/http.ts`) no traía el status HTTP — necesario para distinguir el 409 de cualquier otro error sin parsear el mensaje. Se le agregó `.status` (cambio genérico, no rompe ningún call site existente).
+- [x] **Verificado 2026-08-26** contra `staging` real (2 tenants descartables, uno para aislamiento): 400 sin conexión activa, 403 para member, 404 en Company de otro tenant, 400 con campos faltantes en el link. No se probó el matching contra customers reales de Stripe (sin cuenta de test disponible en este entorno) — cubierto por tests unitarios con mocks (consolidación de duplicados, Contacts inactivos ignorados, `needsAttention` ante un 401). `npm run build`/`npm test` (133/133, 17 nuevos)/`npm run lint` backend y build/lint frontend en verde.
 
-### Unidad 3 — Visibilidad de pagos (resúmenes en vivo)
+### Unidad 3 — Visibilidad de pagos (resúmenes en vivo) — ✅ completa (2026-08-26, en `staging`)
 
-- [ ] **Backend — `GET /api/payments/companies/:companyId/summary`:** si la Company no tiene `stripeCustomerId`, devolver estado "sin vincular" (no error). Si lo tiene, llamar en paralelo `stripe.refunds.list({ customer })`, el listado de charges/payment intents fallidos, y `stripe.subscriptions.list({ customer })`; armar el resumen (conteo + monto de refunds, conteo de failed, estado de subscripción si existe).
-- [ ] **Backend — `GET /api/payments/companies/:companyId/events`:** listado paginado (usar la paginación cursor-based nativa de Stripe — pasar el `starting_after` que devuelve Stripe, no reimplementar offset/limit).
-- [ ] **Backend — `GET /api/payments/overview`:** trae todas las Companies del tenant con `stripeCustomerId` no nulo, dispara el `summary` de cada una en paralelo con límite de concurrencia (ej. librería tipo `p-limit`, tope 10 simultáneas), agrega los totales. Devolver también, por Company, el resumen individual para poblar la tabla sin una segunda ronda de requests desde el frontend.
-- [ ] **Frontend — home de la sección Payments:** tarjetas de agregados (refunds: conteo + monto, failed: conteo, companies con subscripción activa) + tabla de Companies con su resumen individual y link al detalle. Loading state claro mientras resuelve el fan-out.
-- [ ] **Frontend — panel dentro del detalle de Company:** mismo resumen a nivel individual + tabla de eventos (`events`) con paginación, mostrando fecha, tipo, monto, y link al objeto en el dashboard de Stripe.
-- [ ] Gate de todo lo anterior a `owner`/`admin`.
-- [ ] **Build → test → verificación real (medir tiempo de respuesta de `overview` con un tenant de prueba con varias decenas de Companies vinculadas, confirmar que el límite de concurrencia no dispara rate limits de Stripe) → commit → push a `staging`.**
+- [x] **Backend — `GET /api/payments/companies/:companyId/summary`** — **corrección real, resuelve el ítem 7 abierto**: confirmado contra la documentación real de Stripe (2026-08-26) que `GET /refunds` **no acepta un filtro `customer`** (solo `charge`/`payment_intent`) — "listar refunds de este customer" no es una llamada que la API soporte directo. En vez de eso, `GET /charges?customer=X` es la única fuente: cada Charge ya trae `refunded`/`amount_refunded`/`status` propios, de donde salen tanto refunds como failed. `listSubscriptions` con `status: 'all'` (el default excluye canceladas). Devuelve también `currency` (del Charge, no necesariamente la del tenant — simplificación documentada si un mismo customer tuviera charges en más de una moneda).
+- [x] **Backend — `GET /api/payments/companies/:companyId/events`** — paginación cursor-based nativa de Stripe sobre la misma lista de Charges, cada uno clasificado en `charge_failed`/`charge_refunded`/`charge_succeeded` con su propio `dashboardUrl`.
+- [x] **Backend — `GET /api/payments/overview`** — **sin `p-limit`**: mismo criterio de "no SDK/paquete nuevo para algo chico" ya aplicado en toda esta spec — `mapWithConcurrency`, ~15 líneas hand-rolled. Chequea la conexión una sola vez antes del fan-out (si no hay conexión activa, `connected: false` de una sola vez, no N fallas idénticas por Company).
+- [x] **Frontend — `PaymentsOverviewPage.tsx`** (nueva, sidebar "Payments", owner-only — item propio del sidebar, distinto de la card de conexión de la Unidad 1 que vive en Settings → Integrations): tarjetas de agregados + tabla de Companies con link a su detalle.
+- [x] **Corrección real, encontrada antes de que el link "al detalle" fuera de mentira**: `CompaniesPage.tsx` no soportaba abrir una Company específica por URL — el link de la tabla de arriba no hubiera hecho nada. Se agregó soporte de `?open=<companyId>` (lee una vez, limpia el query param — mismo patrón que `googleCalendarConnected` en `IntegrationsSettingsPage.tsx`).
+- [x] **Frontend — panel dentro de `CompanyDetailModal`:** mismo resumen + lista de eventos recientes con "Load more" (paginación cursor), dentro de la misma sección "Payments" de la Unidad 2 (no una sección aparte).
+- [x] **Gate: owner-only** (no "owner/admin" como decía la spec — mismo `canManagePayments` ya usado en toda la spec, ver corrección de la Unidad 1).
+- [x] **Verificado 2026-08-26** contra `staging` real: summary/events en una Company sin vincular devuelven "sin vincular"/vacío sin tocar Stripe, overview sin conexión activa devuelve `connected: false` limpio, 403 para member. El fan-out con concurrencia y el comportamiento contra datos reales de Stripe están cubiertos por tests unitarios (agregación de totales, aislamiento entre tenants, preferencia de subscription activa sobre cancelada) — no se midió contra decenas de Companies reales vinculadas (sin cuenta de test de Stripe disponible en este entorno). `npm run build`/`npm test`/`npm run lint` en verde (mismo run que la Unidad 2).
 
 ### Unidad 4 — Webhook de notificaciones proactivas
 

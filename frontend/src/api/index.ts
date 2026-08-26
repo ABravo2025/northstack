@@ -26,6 +26,7 @@ import { payrollApi } from './payroll.js';
 import { contractConfirmationPublicApi } from './contractConfirmationPublic.js';
 import { billingApi } from './billing.js';
 import { integrationsApi } from './integrations.js';
+import { paymentsApi } from './payments.js';
 
 export { ApiError, API_BASE_URL } from './http.js';
 export * from './types.js';
@@ -59,4 +60,5 @@ export const api = {
   ...contractConfirmationPublicApi,
   ...billingApi,
   ...integrationsApi,
+  ...paymentsApi,
 };

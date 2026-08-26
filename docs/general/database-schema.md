@@ -823,6 +823,24 @@ Notas:
   `role === 'owner'` inline en cada endpoint) para no tener que tocar cada call site cuando exista
   el sistema de roles custom (Tier 5).
 
+**Unit 2 (2026-08-26, en `staging`) — lookup/matching Company↔Stripe Customer**: aditivo sobre
+`Company` (grupo 5), sin modelo nuevo:
+
+```
+Company.stripeCustomerId          String?
+Company.stripeCustomerMatchedVia  String?  // snapshot del email de Contact que produjo el match
+```
+
+Matching por email exacto de cada `Contact` activo de la Company contra Stripe (nunca por dominio),
+confirmado manualmente (0/1/2+ resultados) — nunca automático. `stripeCustomerMatchedVia` guarda el
+*email*, no una FK al Contact, mismo criterio que `StatusHistoryEntry` guardando un nombre en vez de
+una FK viva (sobrevive a que ese Contact cambie de email o se desactive después).
+
+**Unit 3 (2026-08-26, en `staging`) — visibilidad de pagos en vivo**: sin schema nuevo — todo se
+resuelve en vivo contra la API de Stripe (decisión #7 de la spec, sin store histórico). El único
+dato persistido es el vínculo de Unit 2 de arriba; refunds/failed/subscripciones se recalculan en
+cada request.
+
 ## Enums
 
 | Enum | Valores | Usado en |
@@ -867,4 +885,4 @@ Notas:
 - **Tasks/Notes/Company/Contact/Opportunity — nada de esto llegó a producción todavía**: todo el trabajo de esta sesión (2026-07-29/30, ver `docs/tareas-desarrollo.md`) está pusheado a `staging` únicamente, pendiente de que el usuario lo revise antes de promover a `main`.
 - **Payroll — Unidades 1-4 solo en local/commits, nada pusheado a `staging` todavía** (a pedido del usuario, 2026-08-07): schema + cifrado (U1), catálogo de políticas de pago (U2, backend+frontend), rename a People + `personType` + retiro de la compensación legada (U4) — ver grupo 7 arriba para el detalle completo.
 - **Tenant Signup + Subscription Plans — completo en local, nada pusheado todavía** (2026-08-13, ver grupo 8): a la espera de que el usuario lo pruebe en su entorno local antes de decidir si va a `staging`. Fuera de alcance de este spec, explícitamente pospuesto: integración real de Paddle/checkout, UI de "agregar método de pago", pantalla de autogestión de suscripción en `/settings`, y **cualquier enforcement de acceso para tenants `suspended`** (hoy el status cambia pero nada bloquea requests en base a él — un tenant suspendido sigue funcionando igual que uno activo).
-- **Payments v1 — solo Unit 1 (conexión con Stripe) construida y en `staging`** (2026-08-26, ver grupo 10): lookup/matching Company↔Customer (Unit 2), resúmenes de pagos en vivo (Unit 3) y el webhook de notificaciones proactivas (Unit 4) siguen sin construir — `docs/tareas/specpaymentsv1.md`/`tareaspaymentsv1.md` tienen el detalle unidad por unidad. Nada de esto llegó a `main` todavía.
+- **Payments v1 — Units 1-3 construidas y en `staging`** (2026-08-26, ver grupo 10): conexión con Stripe, lookup/matching Company↔Customer, y visibilidad de pagos en vivo (overview + panel en Company). Falta el webhook de notificaciones proactivas (Unit 4) y el corte del `Client` legado no relacionado — `docs/tareas/specpaymentsv1.md`/`tareaspaymentsv1.md` tienen el detalle unidad por unidad. Nada de esto llegó a `main` todavía. No probado de punta a punta con una cuenta de Stripe real (sin credenciales en este entorno) — pendiente de que Alejandro lo pruebe él mismo.

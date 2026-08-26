@@ -1411,3 +1411,38 @@ primer cron real del proyecto. Los casos 3 y 7 (degradación prolija vs. seguir 
 automatización) son los más importantes: una regresión ahí rompería altas de Opportunity para tenants sin
 esta feature configurada. El caso 11 (dedup del cron) es el segundo más importante — sin él, cada corrida
 diaria le mandaría un email repetido a cada owner con un deal estancado.
+
+## QA-35 — Sales v2, Unidad 8 follow-up: Automations en la creación + multi-select + notificación por stage (2026-08-25, en `staging`)
+
+**Por qué existe esta tarea:** feedback directo del usuario al revisar QA-34 en staging. Tres pedidos: (1) la
+sección "Automations" vivía solo en el modal de Edit — un usuario nunca se enteraría de que la feature existe
+salvo que se le ocurriera editar un pipeline ya creado, así que se movió también al modal de creación, antes
+de Stages en ambos modales; (2) los checklists de participantes/departamentos (siempre visibles, un checkbox
+por fila) se reemplazan por un dropdown multi-select nuevo (`MultiSelectDropdown.tsx` — no existía nada así en
+el proyecto, se construyó sobre `Popover.tsx` siguiendo el mismo patrón que `ColumnVisibilityMenu.tsx`); (3)
+la tabla de Stages gana una columna "Notify" (`PipelineStageDefinition.notifyOwnerOnEnter`, boolean, default
+`true`) para poder apagar la notificación/email de cambio de stage en un stage puntual sin afectar al resto
+del Pipeline.
+
+En el modal de creación, Automations queda como estado en borrador (assignmentMode, participantes,
+departamentos, `stalledThresholdDays`) que recién se aplica después de `createPipeline`, mismo patrón que ya
+usan las stages en borrador — nada se persiste hasta el submit. `notifyOwnerOnEnter` se valida en las rutas de
+stage (POST/PATCH) y `updateOpportunity` chequea el flag del stage de **destino** (no el de origen) antes de
+notificar/emailear, sumado al chequeo ya existente de "nunca al propio actor". `npm run build`/`npm test`
+(91/91) backend y `npm run build` frontend en verde. Schema aditivo (`notifyOwnerOnEnter` con default `true`,
+sin migración destructiva) pusheado a staging. **No verificado visualmente en navegador** — sin acceso a
+browser en este entorno, solo compilación + build; queda pendiente que el usuario lo revise a ojo en staging.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Abrir "New Pipeline" | La sección Automations aparece antes de Stages, sin necesidad de crear el pipeline primero |
+| 2 | Crear un pipeline con `round_robin` + 2 participantes + 1 departamento seleccionados | Al guardar, el pipeline queda creado con esos participantes ya asignados (individuales + los resueltos por departamento) |
+| 3 | Abrir el dropdown de participantes (Create o Edit) | Aparece cerrado por default mostrando "N selected" o los nombres; al abrirlo, checklist con scroll; un User inactivo se ve con nota "(inactive)" |
+| 4 | Elegir Type "Leads" después de haber seleccionado `assignmentMode: account_owner` | Se resetea a "Off" automáticamente — esa combinación es inválida y el backend la rechaza |
+| 5 | En Stages (Create o Edit), destildar "Notify" en un stage puntual | Un cambio de stage hacia ese stage ya no genera `Notification` ni email para el owner; otros stages del mismo pipeline siguen notificando normalmente |
+| 6 | Stage nuevo creado sin tocar "Notify" | Queda con notificación activada por default (compatibilidad con el comportamiento previo a este fix) |
+
+**Severidad:** media — es una mejora de descubribilidad/UX sobre una feature que ya estaba correcta a nivel de
+backend (QA-34), no un fix de un bug de negocio. El caso 4 (reset de `assignmentMode` al cambiar Type) es el
+más importante: sin él, un submit podría mandar una combinación inválida y el usuario vería un 400 sin
+entender por qué.

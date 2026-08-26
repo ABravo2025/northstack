@@ -1485,3 +1485,41 @@ de round-robin no cambió — esto es puramente de presentación, el modelo de d
 negocio (QA-34). El caso 4 es el más importante de esta ronda: sin el fix, un tenant con usuarios/departamentos
 reales podía ver un mensaje de "vacío" incorrecto justo al momento de configurar la automatización, la primera
 vez que interactúa con la feature.
+
+## QA-37 — Round-robin: select unificado (3-4 opciones directas) + campo obligatorio + 3 stages default (2026-08-26, en `staging`)
+
+**Por qué existe esta tarea:** el fix de QA-36 (select anidado "Add participants by user/department" debajo del
+select de modo) seguía leyendo como dos pasos separados — feedback directo del usuario. Se colapsó en **un solo
+select** de "Owner auto-assignment": `Off`, `Round robin — by user`, `Round robin — by department`, y (solo para
+`type: 'account'`) `Account owner`. `Pipeline.assignmentMode` no cambió en la base (sigue siendo `round_robin |
+account_owner | null`) — la distinción "by user" vs. "by department" nunca se persiste, es pura UI: el resultado
+final es la misma lista plana de `PipelineAssignmentUser` sin importar qué picker se usó. Al reabrir Edit de un
+pipeline `round_robin` ya configurado, el select cae en "by user" por default, mostrando la lista actual completa
+sin importar cómo se armó originalmente.
+
+**Campo obligatorio (pedido explícito del usuario, comparado con Name/Type)**: en el modal de creación, elegir
+cualquiera de los dos `round_robin` sin seleccionar ningún participante (ni por usuario ni por departamento)
+bloquea el Save con un toast de error — `account_owner` queda exento, se degrada solo. En Edit no hay bloqueo
+equivalente (no hay un "Save" único que interceptar); se mantiene la degradación prolija ya decidida para
+pipelines existentes (QA-34).
+
+**Además**: el modal de "New Pipeline" ahora arranca con 3 stages precargados (`Lead`/open/50%, `Won`/won/100%,
+`Lost`/lost/0%) en vez de una fila en blanco — totalmente editables/borrables como cualquier draft row. No toca
+el seed de tenant-registration (`seedDefaultPipelines`), que es código separado.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Abrir "New Pipeline" con Type "Leads" | El select de Owner auto-assignment tiene exactamente 3 opciones: Off, Round robin — by user, Round robin — by department (sin Account owner) |
+| 2 | Cambiar Type a "Account" | Aparece una 4ª opción, Account owner |
+| 3 | Elegir "Round robin — by user" | Se muestra únicamente el picker de usuarios, con asterisco de obligatorio en el label |
+| 4 | Elegir "Round robin — by department" | Se muestra únicamente el picker de departamentos, mismo asterisco |
+| 5 | Completar Name pero dejar el picker de participantes vacío con `round_robin` seleccionado, click Save | Toast de error, el modal no se cierra |
+| 6 | Elegir un departamento y click Save | El pipeline se crea correctamente, toast de éxito |
+| 7 | Elegir "Account owner" (pipeline `account`) | Se muestra la sección de participantes como fallback, sin asterisco de obligatorio, con copy distinta ("Used only as a fallback...") |
+| 8 | Abrir "New Pipeline" | Ya vienen 3 stages precargados: Lead (Open, 50%), Won (Won, 100%), Lost (Lost, 0%), todos con Notify tildado |
+
+**Severidad:** media-alta — el caso 5 es el más importante: sin el bloqueo, era fácil crear un pipeline
+`round_robin` completamente vacío (ningún participante) y que cada Opportunity quedara sin owner de forma
+silenciosa, sin que el usuario se diera cuenta de que faltaba un paso. Verificado de punta a punta con Playwright
+contra un tenant descartable (2 departamentos, un pipeline `account`) cubriendo los 8 casos de la tabla.
+`npm run build` frontend y `npm test` (91/91) backend en verde (backend no tuvo cambios esta ronda).

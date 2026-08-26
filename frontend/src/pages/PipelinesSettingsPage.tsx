@@ -76,6 +76,18 @@ function newDraftStage(): DraftStage {
   return { key: `draft-${draftStageCounter}`, name: '', outcome: 'open', probability: '50', notifyOwnerOnEnter: true };
 }
 
+function draftStage(name: string, outcome: DraftStage['outcome'], probability: string): DraftStage {
+  draftStageCounter += 1;
+  return { key: `draft-${draftStageCounter}`, name, outcome, probability, notifyOwnerOnEnter: true };
+}
+
+// Pre-filled starting point for a new Pipeline (user feedback 2026-08-26:
+// an empty single blank row made every new pipeline start from scratch) —
+// still fully editable/removable, same as any other draft row.
+function defaultDraftStages(): DraftStage[] {
+  return [draftStage('Lead', 'open', '50'), draftStage('Won', 'won', '100'), draftStage('Lost', 'lost', '0')];
+}
+
 // Shown once, right above the Stages list — explains what each Outcome
 // option actually does rather than leaving Won/Open/Lost unexplained
 // (found while reviewing this screen 2026-08-24: the dropdown alone gives no
@@ -402,12 +414,31 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
     }
   };
 
-  const handleModeChange = async (value: string) => {
+  const handleModeChange = async (value: PipelineAssignmentMode | null) => {
     try {
-      await api.updatePipeline(token, pipeline.id, { assignmentMode: value === '' ? null : (value as PipelineAssignmentMode) });
+      await api.updatePipeline(token, pipeline.id, { assignmentMode: value });
       onPipelineChanged();
     } catch (error) {
       toast.error('Failed to update assignment mode: ' + (error as Error).message);
+    }
+  };
+
+  // Single select surfaces 3-4 real choices (Off / Round robin — by user /
+  // Round robin — by department / Account owner) instead of a mode select
+  // plus a second, nested "how" select — found confusing shown as two steps
+  // (user feedback 2026-08-26). `participantMode` only ever matters while
+  // assignmentMode is round_robin; the persisted enum itself never grows a
+  // 3rd/4th value for this — the "by user"/"by department" distinction is
+  // purely which tool built the (flat, either way) participant list.
+  const unifiedModeValue = pipeline.assignmentMode === 'round_robin' ? `round_robin_${participantMode}` : pipeline.assignmentMode ?? '';
+
+  const handleUnifiedModeChange = (value: string) => {
+    if (value === 'round_robin_user' || value === 'round_robin_department') {
+      setParticipantMode(value === 'round_robin_user' ? 'user' : 'department');
+      setSelectedDepartmentIds([]);
+      if (pipeline.assignmentMode !== 'round_robin') handleModeChange('round_robin');
+    } else {
+      handleModeChange(value === '' ? null : (value as PipelineAssignmentMode));
     }
   };
 
@@ -464,11 +495,6 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
     }
   };
 
-  const handleParticipantModeChange = (mode: 'user' | 'department') => {
-    setParticipantMode(mode);
-    setSelectedDepartmentIds([]);
-  };
-
   const participantUserIds = participants.map((p) => p.userId);
   const userOptions: MultiSelectOption[] = tenantUsers.map((u) => ({
     value: u.id,
@@ -481,13 +507,10 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
     <>
       <div className="form-group">
         <label htmlFor="pipeline-assignment-mode">Owner auto-assignment</label>
-        <select
-          id="pipeline-assignment-mode"
-          value={pipeline.assignmentMode ?? ''}
-          onChange={(e) => handleModeChange(e.target.value)}
-        >
+        <select id="pipeline-assignment-mode" value={unifiedModeValue} onChange={(e) => handleUnifiedModeChange(e.target.value)}>
           <option value="">Off — owner must always be chosen manually</option>
-          <option value="round_robin">Round robin — rotate through the participants below</option>
+          <option value="round_robin_user">Round robin — by user</option>
+          <option value="round_robin_department">Round robin — by department</option>
           {pipeline.type === 'account' && (
             <option value="account_owner">Account owner — use the Company's Account Owner</option>
           )}
@@ -502,20 +525,11 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
 
       {pipeline.assignmentMode && (
         <div className="form-group">
-          <label htmlFor="pipeline-participant-mode">Round-robin participants</label>
+          <label htmlFor={participantMode === 'user' ? 'pipeline-participants' : 'pipeline-departments'}>Round-robin participants</label>
           <p className="mb-1 text-xs text-gray-500">
             Only currently-active employees are ever picked when it's their turn. A user with no linked Employee
             record can be added here but will always be skipped.
           </p>
-          <select
-            id="pipeline-participant-mode"
-            className="mb-2"
-            value={participantMode}
-            onChange={(e) => handleParticipantModeChange(e.target.value as 'user' | 'department')}
-          >
-            <option value="user">Add participants by user</option>
-            <option value="department">Add participants by department</option>
-          </select>
 
           {participantMode === 'user' ? (
             <MultiSelectDropdown
@@ -620,12 +634,24 @@ function PipelineAutomationCreateFields({
   // 2026-08-26) — mirrors PipelineAutomationEditor's own toggle.
   const [participantMode, setParticipantMode] = useState<'user' | 'department'>('user');
 
-  const handleParticipantModeChange = (mode: 'user' | 'department') => {
-    setParticipantMode(mode);
-    if (mode === 'user') {
-      onDepartmentIdsChange([]);
+  // Single select surfaces 3-4 real choices directly (Off / Round robin — by
+  // user / Round robin — by department / Account owner) — see
+  // PipelineAutomationEditor's own identical comment for why this replaced a
+  // mode select plus a second, nested "how" select (user feedback 2026-08-26).
+  const unifiedModeValue = assignmentMode === 'round_robin' ? `round_robin_${participantMode}` : assignmentMode ?? '';
+
+  const handleUnifiedModeChange = (value: string) => {
+    if (value === 'round_robin_user' || value === 'round_robin_department') {
+      const mode = value === 'round_robin_user' ? 'user' : 'department';
+      setParticipantMode(mode);
+      if (mode === 'user') {
+        onDepartmentIdsChange([]);
+      } else {
+        onParticipantUserIdsChange([]);
+      }
+      onAssignmentModeChange('round_robin');
     } else {
-      onParticipantUserIdsChange([]);
+      onAssignmentModeChange(value === '' ? null : (value as PipelineAssignmentMode));
     }
   };
 
@@ -658,13 +684,10 @@ function PipelineAutomationCreateFields({
     <>
       <div className="form-group">
         <label htmlFor="new-pipeline-assignment-mode">Owner auto-assignment</label>
-        <select
-          id="new-pipeline-assignment-mode"
-          value={assignmentMode ?? ''}
-          onChange={(e) => onAssignmentModeChange(e.target.value === '' ? null : (e.target.value as PipelineAssignmentMode))}
-        >
+        <select id="new-pipeline-assignment-mode" value={unifiedModeValue} onChange={(e) => handleUnifiedModeChange(e.target.value)}>
           <option value="">Off — owner must always be chosen manually</option>
-          <option value="round_robin">Round robin — rotate through participants</option>
+          <option value="round_robin_user">Round robin — by user</option>
+          <option value="round_robin_department">Round robin — by department</option>
           {type === 'account' && <option value="account_owner">Account owner — use the Company's Account Owner</option>}
         </select>
         {assignmentMode === 'account_owner' && (
@@ -677,19 +700,15 @@ function PipelineAutomationCreateFields({
 
       {assignmentMode && (
         <div className="form-group">
-          <label htmlFor="new-pipeline-participant-mode">Round-robin participants</label>
+          <label htmlFor={participantMode === 'user' ? 'new-pipeline-participants' : 'new-pipeline-departments'}>
+            Round-robin participants
+            {assignmentMode === 'round_robin' && <RequiredMark />}
+          </label>
           <p className="mb-1 text-xs text-gray-500">
-            Only currently-active employees are ever picked when it's their turn. Can be changed later too.
+            {assignmentMode === 'account_owner'
+              ? "Used only as a fallback, when the Company has no Account Owner set. Only currently-active employees are ever picked."
+              : "Only currently-active employees are ever picked when it's their turn. Can be changed later too."}
           </p>
-          <select
-            id="new-pipeline-participant-mode"
-            className="mb-2"
-            value={participantMode}
-            onChange={(e) => handleParticipantModeChange(e.target.value as 'user' | 'department')}
-          >
-            <option value="user">Add participants by user</option>
-            <option value="department">Add participants by department</option>
-          </select>
 
           {participantMode === 'user' ? (
             <MultiSelectDropdown
@@ -815,7 +834,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
     setEditingPipelineId(null);
     setCreateName('');
     setCreateType('lead');
-    setCreateStages([newDraftStage()]);
+    setCreateStages(defaultDraftStages());
     setCreateAssignmentMode(null);
     setCreateParticipantUserIds([]);
     setCreateDepartmentIds([]);
@@ -850,6 +869,14 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
     e.preventDefault();
     const name = createName.trim();
     if (!name) return;
+    // Round robin (either flavor) needs at least one participant to actually
+    // do anything — required the same way Name/Type are (user feedback
+    // 2026-08-26). account_owner is exempt: it degrades gracefully to the
+    // Company's Account Owner even with zero fallback participants.
+    if (createAssignmentMode === 'round_robin' && createParticipantUserIds.length === 0 && createDepartmentIds.length === 0) {
+      toast.error('Round robin requires at least one participant, by user or by department.');
+      return;
+    }
     setCreating(true);
     try {
       const trimmedStalled = createStalledThresholdDraft.trim();

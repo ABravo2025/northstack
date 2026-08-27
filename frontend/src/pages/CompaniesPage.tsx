@@ -82,6 +82,8 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
   const [companyForm, setCompanyForm] = useState(emptyCompanyForm);
   const autoCreateGuard = useAutoCreateGuard();
+  const [createdCompanyId, setCreatedCompanyId] = useState<string | null>(null);
+  const sentCompanyCustomFieldIds = useRef<Set<string>>(new Set());
   const [draggedColKey, setDraggedColKey] = useState<string | null>(null);
   const [dragOverColKey, setDragOverColKey] = useState<string | null>(null);
   const [collapsedListSections, setCollapsedListSections] = useState<Set<string>>(new Set());
@@ -262,12 +264,16 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
     setSlideOverMode(null);
     setCustomFieldValues({});
     autoCreateGuard.reset();
+    setCreatedCompanyId(null);
+    sentCompanyCustomFieldIds.current = new Set();
   };
 
   const handleOpenAdd = () => {
     setCompanyForm(emptyCompanyForm);
     setCustomFieldValues({});
     autoCreateGuard.reset();
+    setCreatedCompanyId(null);
+    sentCompanyCustomFieldIds.current = new Set();
     setSlideOverMode('add');
   };
 
@@ -302,11 +308,13 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
     if (index !== -1) setPage(Math.floor(index / PAGE_SIZE) + 1);
   };
 
-  // Shared by the manual "Create" button and the auto-create-on-blur path —
-  // both go through autoCreateGuard so the company is never created twice.
-  // On success, the Add form is replaced by the real CompanyDetailModal for
-  // the new company, same as opening an already-created profile.
-  const performCreateCompany = async (cfValues: Record<string, string> = customFieldValues) => {
+  // Fires in the background as soon as the required fields are ready —
+  // a safety net against losing the form's work, not the point where the
+  // user is "done". Does NOT close the Add form or navigate anywhere; the
+  // user keeps filling in the rest of the fields, and finishCompany (the
+  // real "Create" button) is what closes the form once they're actually done
+  // (backlog QA, 2026-08-27 — see useAutoCreateGuard.ts).
+  const createCompanyRecord = async (cfValues: Record<string, string> = customFieldValues) => {
     const company = await api.createCompany(token, {
       name: companyForm.name.trim(),
       industry: companyForm.industry || undefined,
@@ -325,28 +333,45 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
     const valueEntries = Object.entries(cfValues).filter(([, value]) => value.trim() !== '');
     for (const [customFieldDefinitionId, value] of valueEntries) {
       await api.createCompanyCustomFieldValue(token, company.id, { customFieldDefinitionId, value });
+      sentCompanyCustomFieldIds.current.add(customFieldDefinitionId);
     }
 
-    toast.success(`${company.name} added.`);
     // The founding contact was just created server-side alongside the
     // company (createCompany's `contact` payload) — refresh contacts too, or
     // CompanyDetailModal's "Contacts" section would show it as empty until
     // some later, unrelated refresh happened to run.
-    const [freshList] = await Promise.all([
-      api.listCompanies(token),
-      api.listContacts(token).then(setContacts).catch(() => {}),
-    ]);
-    setCompanies(freshList);
-    jumpToCompanyPage(freshList, company.id);
-    setSlideOverMode(null);
-    setCustomFieldValues({});
-    setViewingCompanyId(company.id);
+    api.listContacts(token).then(setContacts).catch(() => {});
+    setCreatedCompanyId(company.id);
+    return company;
+  };
+
+  // PATCHes the record createCompanyRecord already persisted, with whatever
+  // the user filled in afterward. Custom field values only get a create call
+  // for definitions not already sent at auto-create time (changing a value
+  // already sent isn't handled here — same accepted gap as Opportunity's).
+  const updateCompanyRecord = async (companyId: string, cfValues: Record<string, string>) => {
+    await api.updateCompany(token, companyId, {
+      name: companyForm.name.trim(),
+      industry: companyForm.industry || undefined,
+      website: companyForm.website || undefined,
+      phone: companyForm.phone || undefined,
+      billingAddress: companyForm.billingAddress || undefined,
+      sizeId: companyForm.sizeId || undefined,
+      accountOwnerId: companyForm.accountOwnerId || undefined,
+    });
+    const newEntries = Object.entries(cfValues).filter(
+      ([id, value]) => value.trim() !== '' && !sentCompanyCustomFieldIds.current.has(id),
+    );
+    for (const [customFieldDefinitionId, value] of newEntries) {
+      await api.createCompanyCustomFieldValue(token, companyId, { customFieldDefinitionId, value });
+      sentCompanyCustomFieldIds.current.add(customFieldDefinitionId);
+    }
   };
 
   const attemptAutoCreateCompany = (cfValues: Record<string, string> = customFieldValues) => {
     autoCreateGuard.attempt(isCompanyAddReady(cfValues), async () => {
       try {
-        await performCreateCompany(cfValues);
+        await createCompanyRecord(cfValues);
       } catch (error) {
         toast.error('Failed to create company: ' + (error as Error).message);
         throw error;
@@ -354,16 +379,30 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
     });
   };
 
-  const handleCreateCompany = (e: React.FormEvent) => {
+  const handleCreateCompany = async (e: React.FormEvent) => {
     e.preventDefault();
-    autoCreateGuard.attempt(true, async () => {
-      try {
-        await performCreateCompany();
-      } catch (error) {
-        toast.error('Failed to create company: ' + (error as Error).message);
-        throw error;
+    try {
+      let id = createdCompanyId;
+      if (id) {
+        await updateCompanyRecord(id, customFieldValues);
+      } else {
+        const company = await createCompanyRecord(customFieldValues);
+        id = company.id;
       }
-    });
+      toast.success('Company added.');
+      const [freshList] = await Promise.all([
+        api.listCompanies(token),
+        api.listContacts(token).then(setContacts).catch(() => {}),
+      ]);
+      setCompanies(freshList);
+      jumpToCompanyPage(freshList, id);
+      setSlideOverMode(null);
+      setCreatedCompanyId(null);
+      setCustomFieldValues({});
+      setViewingCompanyId(id);
+    } catch (error) {
+      toast.error('Failed to create company: ' + (error as Error).message);
+    }
   };
 
   const handleDeleteCompany = async () => {
@@ -764,7 +803,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
             <button type="button" className="btn-secondary" onClick={closeSlideOver}>
               Cancel
             </button>
-            <button type="submit" form="company-form" className="btn-primary">
+            <button type="submit" form="company-form" className="btn-primary" disabled={autoCreateGuard.isBusy}>
               Create
             </button>
           </>

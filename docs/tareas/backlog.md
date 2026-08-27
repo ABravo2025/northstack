@@ -87,9 +87,6 @@ los ítems.
   tiempo-en-stage para marcar deals "en riesgo" (depende de que exista reporting); jerarquía de
   Company (matriz/sucursal, solo relevante si aparece un tenant B2B enterprise); resaltar visualmente
   si una Opportunity tiene un solo Contact asociado (multi-threading).
-- [ ] **Crear una Opportunity guarda antes de tiempo**: al completar los campos obligatorios del
-  formulario de alta, la Opportunity se crea automáticamente sin esperar a que el usuario presione
-  el botón "Create" — no debería persistir hasta ese click.
 - [ ] **Opportunity card sin acceso al perfil de Contact/Company**: agregar en la tarjeta de la
   Opportunity un link directo al perfil del contacto y de la compañía correspondientes.
 - [ ] **Opportunity creada desde un Contact no se puede volver a abrir**: al crear una Opportunity

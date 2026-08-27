@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 
 // Shared guard for "Add [Entity]" forms that auto-create once their required
 // fields are complete (2026-08, matching the detail-panel autosave pattern —
@@ -11,13 +11,24 @@ import { useRef } from 'react';
 // error itself, e.g. via toast) so the guard knows not to mark this attempt
 // as created — that keeps the door open for a retry once the user fixes
 // whatever the backend rejected (e.g. a duplicate email).
+//
+// `run` itself is expected to only persist the record — it must NOT close
+// the form or navigate away, since the user should be able to keep filling
+// the rest of the form after the background create fires (backlog QA,
+// 2026-08-27: auto-create used to also jump straight to the detail view,
+// cutting the form short the instant required fields were complete). The
+// caller's explicit "Create"/submit handler is what closes the form —
+// it checks `isBusy`/whatever id the create returned instead of going
+// through `attempt` again.
 export function useAutoCreateGuard() {
   const creatingRef = useRef(false);
   const createdRef = useRef(false);
+  const [isBusy, setIsBusy] = useState(false);
 
   const attempt = async (isReady: boolean, run: () => Promise<void>) => {
     if (createdRef.current || creatingRef.current || !isReady) return;
     creatingRef.current = true;
+    setIsBusy(true);
     try {
       await run();
       createdRef.current = true;
@@ -26,6 +37,7 @@ export function useAutoCreateGuard() {
       // needs to know creation didn't succeed so a later attempt can retry.
     } finally {
       creatingRef.current = false;
+      setIsBusy(false);
     }
   };
 
@@ -34,7 +46,8 @@ export function useAutoCreateGuard() {
   const reset = () => {
     creatingRef.current = false;
     createdRef.current = false;
+    setIsBusy(false);
   };
 
-  return { attempt, reset };
+  return { attempt, reset, isBusy };
 }

@@ -98,6 +98,8 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
   const [contactForm, setContactForm] = useState(emptyContactForm);
   const autoCreateGuard = useAutoCreateGuard();
+  const [createdContactId, setCreatedContactId] = useState<string | null>(null);
+  const sentContactCustomFieldIds = useRef<Set<string>>(new Set());
   const [draggedColKey, setDraggedColKey] = useState<string | null>(null);
   const [dragOverColKey, setDragOverColKey] = useState<string | null>(null);
   const [collapsedListSections, setCollapsedListSections] = useState<Set<string>>(new Set());
@@ -250,12 +252,16 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
     setSlideOverMode(null);
     setCustomFieldValues({});
     autoCreateGuard.reset();
+    setCreatedContactId(null);
+    sentContactCustomFieldIds.current = new Set();
   };
 
   const handleOpenAdd = () => {
     setContactForm(emptyContactForm);
     setCustomFieldValues({});
     autoCreateGuard.reset();
+    setCreatedContactId(null);
+    sentContactCustomFieldIds.current = new Set();
     setSlideOverMode('add');
   };
 
@@ -285,7 +291,12 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
     if (index !== -1) setPage(Math.floor(index / PAGE_SIZE) + 1);
   };
 
-  const performCreateContact = async (cfValues: Record<string, string> = customFieldValues) => {
+  // Fires in the background as soon as the required fields are ready — a
+  // safety net, not the point where the user is "done". Does NOT close the
+  // Add form or navigate; finishContact/handleCreateContact (the real
+  // "Create" button) does that once the user is actually finished (backlog
+  // QA, 2026-08-27 — see useAutoCreateGuard.ts).
+  const createContactRecord = async (cfValues: Record<string, string> = customFieldValues) => {
     const contact = await api.createContact(token, {
       firstName: contactForm.firstName.trim(),
       lastName: contactForm.lastName.trim(),
@@ -301,21 +312,41 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
     const valueEntries = Object.entries(cfValues).filter(([, value]) => value.trim() !== '');
     for (const [customFieldDefinitionId, value] of valueEntries) {
       await api.createContactCustomFieldValue(token, contact.id, { customFieldDefinitionId, value });
+      sentContactCustomFieldIds.current.add(customFieldDefinitionId);
     }
 
-    toast.success(`${contact.firstName} ${contact.lastName} added.`);
-    const freshList = await api.listContacts(token);
-    setContacts(freshList);
-    jumpToContactPage(freshList, contact.id);
-    setSlideOverMode(null);
-    setCustomFieldValues({});
-    setViewingContactId(contact.id);
+    setCreatedContactId(contact.id);
+    return contact;
+  };
+
+  // PATCHes the record createContactRecord already persisted. Custom field
+  // values only get a create call for definitions not already sent at
+  // auto-create time (same accepted gap as Opportunity/Company).
+  const updateContactRecord = async (contactId: string, cfValues: Record<string, string>) => {
+    await api.updateContact(token, contactId, {
+      firstName: contactForm.firstName.trim(),
+      lastName: contactForm.lastName.trim(),
+      email: contactForm.email.trim(),
+      phone: contactForm.phone || undefined,
+      companyId: contactForm.companyId || null,
+      title: contactForm.title || undefined,
+      isPrimary: contactForm.isPrimary,
+      leadStatus: (contactForm.leadStatus || null) as any,
+      leadSourceId: contactForm.leadSourceId || null,
+    });
+    const newEntries = Object.entries(cfValues).filter(
+      ([id, value]) => value.trim() !== '' && !sentContactCustomFieldIds.current.has(id),
+    );
+    for (const [customFieldDefinitionId, value] of newEntries) {
+      await api.createContactCustomFieldValue(token, contactId, { customFieldDefinitionId, value });
+      sentContactCustomFieldIds.current.add(customFieldDefinitionId);
+    }
   };
 
   const attemptAutoCreateContact = (cfValues: Record<string, string> = customFieldValues) => {
     autoCreateGuard.attempt(isContactAddReady(cfValues), async () => {
       try {
-        await performCreateContact(cfValues);
+        await createContactRecord(cfValues);
       } catch (error) {
         toast.error('Failed to create contact: ' + (error as Error).message);
         throw error;
@@ -323,16 +354,27 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
     });
   };
 
-  const handleCreateContact = (e: React.FormEvent) => {
+  const handleCreateContact = async (e: React.FormEvent) => {
     e.preventDefault();
-    autoCreateGuard.attempt(true, async () => {
-      try {
-        await performCreateContact();
-      } catch (error) {
-        toast.error('Failed to create contact: ' + (error as Error).message);
-        throw error;
+    try {
+      let id = createdContactId;
+      if (id) {
+        await updateContactRecord(id, customFieldValues);
+      } else {
+        const contact = await createContactRecord(customFieldValues);
+        id = contact.id;
       }
-    });
+      toast.success('Contact added.');
+      const freshList = await api.listContacts(token);
+      setContacts(freshList);
+      jumpToContactPage(freshList, id);
+      setSlideOverMode(null);
+      setCreatedContactId(null);
+      setCustomFieldValues({});
+      setViewingContactId(id);
+    } catch (error) {
+      toast.error('Failed to create contact: ' + (error as Error).message);
+    }
   };
 
   const handleDeleteContact = async () => {
@@ -702,7 +744,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
             <button type="button" className="btn-secondary" onClick={closeSlideOver}>
               Cancel
             </button>
-            <button type="submit" form="contact-form" className="btn-primary">
+            <button type="submit" form="contact-form" className="btn-primary" disabled={autoCreateGuard.isBusy}>
               Create
             </button>
           </>

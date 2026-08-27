@@ -184,6 +184,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
 
   const [employeeForm, setEmployeeForm] = useState(getEmptyEmployeeForm);
   const autoCreateGuard = useAutoCreateGuard();
+  const [createdEmployeeId, setCreatedEmployeeId] = useState<string | null>(null);
+  const sentEmployeeCustomFieldIds = useRef<Set<string>>(new Set());
+  const assignedTimeOffPolicyIds = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     loadEmployees();
@@ -339,12 +342,18 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     setSlideOverMode(null);
     setCustomFieldValues({});
     autoCreateGuard.reset();
+    setCreatedEmployeeId(null);
+    sentEmployeeCustomFieldIds.current = new Set();
+    assignedTimeOffPolicyIds.current = new Set();
   };
 
   const handleOpenAdd = () => {
     setEmployeeForm(getEmptyEmployeeForm());
     setCustomFieldValues({});
     autoCreateGuard.reset();
+    setCreatedEmployeeId(null);
+    sentEmployeeCustomFieldIds.current = new Set();
+    assignedTimeOffPolicyIds.current = new Set();
     setSlideOverMode('add');
   };
 
@@ -422,7 +431,12 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   // Add form is replaced by the real EmployeeOverviewPanel for the new
   // employee — same component used for an already-created profile, not a
   // visual copy of it (2026-08, see docs/tareas-desarrollo.md).
-  const performCreateEmployee = async (cfValues: Record<string, string> = customFieldValues) => {
+  // Fires in the background as soon as the required fields are ready — a
+  // safety net, not the point where the user is "done". Does NOT close the
+  // Add form or navigate; handleCreateEmployee (the real "Create" button)
+  // does that once the user is actually finished (backlog QA, 2026-08-27 —
+  // see useAutoCreateGuard.ts).
+  const createEmployeeRecord = async (cfValues: Record<string, string> = customFieldValues) => {
     const employee = await api.createEmployee(token, {
       firstName: employeeForm.firstName.trim(),
       lastName: employeeForm.lastName.trim(),
@@ -459,25 +473,60 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         customFieldDefinitionId,
         value,
       });
+      sentEmployeeCustomFieldIds.current.add(customFieldDefinitionId);
     }
 
     for (const timeOffPolicyId of employeeForm.timeOffPolicyIds) {
       await api.assignTimeOffPolicyToEmployee(token, employee.id, timeOffPolicyId);
+      assignedTimeOffPolicyIds.current.add(timeOffPolicyId);
     }
 
-    toast.success(`${employee.firstName} ${employee.lastName} added.`);
-    const freshList = await api.listEmployees(token);
-    setEmployees(freshList);
-    jumpToEmployeePage(freshList, employee.id);
-    setSlideOverMode(null);
-    setCustomFieldValues({});
-    setOverviewEmployeeId(employee.id);
+    setCreatedEmployeeId(employee.id);
+    return employee;
+  };
+
+  // PATCHes the record createEmployeeRecord already persisted, with whatever
+  // the user filled in afterward. Custom field values and Time Off policy
+  // assignments only get sent for entries not already sent at auto-create
+  // time. Compensation (rate/currency/pay frequency) isn't re-synced here —
+  // those fields are already required for auto-create readiness, so they're
+  // set once at creation; changing them afterward isn't handled by this
+  // form (same accepted-gap pattern as Opportunity/Company/Contact).
+  const updateEmployeeRecord = async (employeeId: string, cfValues: Record<string, string>) => {
+    await api.updateEmployee(token, employeeId, {
+      firstName: employeeForm.firstName.trim(),
+      lastName: employeeForm.lastName.trim(),
+      email: employeeForm.email.trim(),
+      personalEmail: employeeForm.personalEmail || undefined,
+      departmentId: employeeForm.departmentId || null,
+      jobTitleId: employeeForm.jobTitleId || null,
+      managerId: employeeForm.managerId && employeeForm.managerId !== 'none' ? employeeForm.managerId : null,
+      startDate: employeeForm.startDate || undefined,
+      endDate: employeeForm.endDate || undefined,
+      contractUrl: employeeForm.contractUrl || undefined,
+      contractType: (employeeForm.contractType || null) as 'part_time' | 'full_time' | null,
+      nationality: employeeForm.nationality || undefined,
+    } as any);
+
+    const newCfEntries = Object.entries(cfValues).filter(
+      ([id, value]) => value.trim() !== '' && !sentEmployeeCustomFieldIds.current.has(id),
+    );
+    for (const [customFieldDefinitionId, value] of newCfEntries) {
+      await api.createEmployeeCustomFieldValue(token, employeeId, { customFieldDefinitionId, value });
+      sentEmployeeCustomFieldIds.current.add(customFieldDefinitionId);
+    }
+
+    const newPolicyIds = employeeForm.timeOffPolicyIds.filter((id) => !assignedTimeOffPolicyIds.current.has(id));
+    for (const timeOffPolicyId of newPolicyIds) {
+      await api.assignTimeOffPolicyToEmployee(token, employeeId, timeOffPolicyId);
+      assignedTimeOffPolicyIds.current.add(timeOffPolicyId);
+    }
   };
 
   const attemptAutoCreateEmployee = (cfValues: Record<string, string> = customFieldValues) => {
     autoCreateGuard.attempt(isEmployeeAddReady(cfValues), async () => {
       try {
-        await performCreateEmployee(cfValues);
+        await createEmployeeRecord(cfValues);
       } catch (error) {
         toast.error('Failed to create employee: ' + (error as Error).message);
         throw error;
@@ -485,16 +534,27 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     });
   };
 
-  const handleCreateEmployee = (e: React.FormEvent) => {
+  const handleCreateEmployee = async (e: React.FormEvent) => {
     e.preventDefault();
-    autoCreateGuard.attempt(true, async () => {
-      try {
-        await performCreateEmployee();
-      } catch (error) {
-        toast.error('Failed to create employee: ' + (error as Error).message);
-        throw error;
+    try {
+      let id = createdEmployeeId;
+      if (id) {
+        await updateEmployeeRecord(id, customFieldValues);
+      } else {
+        const employee = await createEmployeeRecord(customFieldValues);
+        id = employee.id;
       }
-    });
+      toast.success('Employee added.');
+      const freshList = await api.listEmployees(token);
+      setEmployees(freshList);
+      jumpToEmployeePage(freshList, id);
+      setSlideOverMode(null);
+      setCreatedEmployeeId(null);
+      setCustomFieldValues({});
+      setOverviewEmployeeId(id);
+    } catch (error) {
+      toast.error('Failed to create employee: ' + (error as Error).message);
+    }
   };
 
   const handleInviteEmployee = async (employeeId: string) => {
@@ -934,7 +994,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
             <button type="button" className="btn-secondary" onClick={closeSlideOver}>
               Cancel
             </button>
-            <button type="submit" form="employee-form" className="btn-primary">
+            <button type="submit" form="employee-form" className="btn-primary" disabled={autoCreateGuard.isBusy}>
               Create
             </button>
           </>

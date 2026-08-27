@@ -88,6 +88,10 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
   const [deleting, setDeleting] = useState<Opportunity | null>(null);
   const [form, setForm] = useState(emptyForm);
   const autoCreateGuard = useAutoCreateGuard();
+  // Set once the background auto-create (see useAutoCreateGuard) has
+  // persisted the record — from then on, further field edits in the still-
+  // open Add form get PATCHed onto this id instead of trying to create again.
+  const [createdOpportunityId, setCreatedOpportunityId] = useState<string | null>(null);
 
   const canEdit = user.role === 'owner' || user.role === 'admin';
 
@@ -185,12 +189,14 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
     setSlideOverMode(null);
     setForm((f) => ({ ...emptyForm, currency: f.currency }));
     autoCreateGuard.reset();
+    setCreatedOpportunityId(null);
   };
 
   const handleOpenAdd = () => {
     const firstStage = currentPipeline?.stages.filter((s) => s.isActive).sort((a, b) => a.order - b.order)[0];
     setForm((f) => ({ ...emptyForm, currency: f.currency, pipelineId: currentPipeline?.id || '', stageId: firstStage?.id || '' }));
     autoCreateGuard.reset();
+    setCreatedOpportunityId(null);
     setSlideOverMode('add');
   };
 
@@ -252,10 +258,13 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
     return true;
   };
 
-  // Shared by the manual "Create" button and the auto-create-on-commit path
-  // below (both go through autoCreateGuard). On success, the Add form is
-  // replaced by the real OpportunityDetailModal for the new deal.
-  const performCreateOpportunity = async (candidate: typeof form = form) => {
+  // Fires in the background as soon as the required fields are ready (see
+  // attemptAutoCreateOpportunity below) — a safety net against losing the
+  // form's work, not the point where the user is "done". Deliberately does
+  // NOT close the Add form or navigate anywhere; the user keeps filling in
+  // the rest of the fields, and finishOpportunity (the real "Create" button)
+  // is what closes the form once they're actually done.
+  const createOpportunityRecord = async (candidate: typeof form = form) => {
     const amountCents = Math.round(Number.parseFloat(candidate.amountCents || '0') * 100);
     const pipeline = activePipelines.find((p) => p.id === candidate.pipelineId);
 
@@ -310,24 +319,44 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
     }
     if (pipeline?.type === 'lead') {
       // A new Contact/placeholder Company may have just been created —
-      // refresh both so the detail modal that opens next (and the Kanban
-      // card behind it) reflect them immediately.
+      // refresh both so the still-open form (and the Kanban card behind it)
+      // reflect them immediately.
       const [freshCompanies, freshContacts] = await Promise.all([api.listCompanies(token), api.listContacts(token)]);
       setCompanies(freshCompanies);
       setContacts(freshContacts);
     }
-    toast.success('Opportunity created.');
-    const freshList = await api.listOpportunities(token);
-    setOpportunities(freshList);
-    setSlideOverMode(null);
-    setForm((f) => ({ ...emptyForm, currency: f.currency }));
-    setViewingId(opportunity.id);
+    setCreatedOpportunityId(opportunity.id);
+    reloadOpportunities();
+    return opportunity;
+  };
+
+  // PATCHes the record that createOpportunityRecord already persisted, with
+  // whatever the user filled in afterward — contact/company creation only
+  // happens once, at create time, so this only ever touches the Opportunity
+  // fields themselves.
+  const updateOpportunityRecord = async (id: string, candidate: typeof form) => {
+    const amountCents = Math.round(Number.parseFloat(candidate.amountCents || '0') * 100);
+    await api.updateOpportunity(token, id, {
+      name: candidate.name.trim(),
+      companyId: candidate.companyId || undefined,
+      pipelineId: candidate.pipelineId,
+      stageId: candidate.stageId || undefined,
+      amountCents,
+      currency: candidate.currency,
+      estimatedCloseDate: candidate.estimatedCloseDate || undefined,
+      ownerId: candidate.ownerId || undefined,
+      lossReasonId: candidate.lossReasonId || undefined,
+      winReasonId: candidate.winReasonId || undefined,
+      closeNote: candidate.closeNote || undefined,
+      nextStepDate: candidate.nextStepDate || undefined,
+      nextStepNote: candidate.nextStepNote || undefined,
+    });
   };
 
   const attemptAutoCreateOpportunity = (candidate: typeof form = form) => {
     autoCreateGuard.attempt(isOpportunityAddReady(candidate), async () => {
       try {
-        await performCreateOpportunity(candidate);
+        await createOpportunityRecord(candidate);
       } catch (error) {
         toast.error('Failed to save opportunity: ' + (error as Error).message);
         throw error;
@@ -335,16 +364,39 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
     });
   };
 
+  // The actual "I'm done" step — closes the Add form and opens the detail
+  // view. Creates the record now if the background auto-create hasn't fired
+  // yet (e.g. the user tabbed through required fields and hit Create before
+  // the last field's blur/change handler ran); otherwise just PATCHes
+  // whatever changed since the auto-create.
+  const finishOpportunity = async () => {
+    try {
+      let id = createdOpportunityId;
+      if (id) {
+        await updateOpportunityRecord(id, form);
+      } else {
+        const opportunity = await createOpportunityRecord(form);
+        id = opportunity.id;
+      }
+      toast.success('Opportunity created.');
+      // Awaited deliberately — the detail view opened by setViewingId below
+      // reads from this `opportunities` array (find-by-id), so it must
+      // reflect the just-applied update before it opens, not whatever was
+      // last fetched at auto-create time.
+      const freshList = await api.listOpportunities(token);
+      setOpportunities(freshList);
+      setSlideOverMode(null);
+      setCreatedOpportunityId(null);
+      setForm((f) => ({ ...emptyForm, currency: f.currency }));
+      setViewingId(id);
+    } catch (error) {
+      toast.error('Failed to save opportunity: ' + (error as Error).message);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    autoCreateGuard.attempt(true, async () => {
-      try {
-        await performCreateOpportunity();
-      } catch (error) {
-        toast.error('Failed to save opportunity: ' + (error as Error).message);
-        throw error;
-      }
-    });
+    finishOpportunity();
   };
 
   const handleDelete = async () => {
@@ -411,7 +463,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
             <button type="button" className="btn-secondary" onClick={closeSlideOver}>
               Cancel
             </button>
-            <button type="submit" form="opportunity-form" className="btn-primary">
+            <button type="submit" form="opportunity-form" className="btn-primary" disabled={autoCreateGuard.isBusy}>
               Create
             </button>
           </>

@@ -1660,3 +1660,46 @@ configuración (URL mal copiada, evento no tildado al crear el webhook en Stripe
 app si algo falla acá (un 400/200 limpio en todos los casos, nunca un crash). El caso 4 es el más
 importante: es el único de los 5 eventos con lógica de deduplicación real, y es exactamente donde un
 bug se sentiría como spam de notificaciones para el usuario.
+
+## QA-41 — Fix: auto-create en Add Opportunity/Company/Contact/Employee ya no salta a la vista de detalle (2026-08-27, en `staging`)
+
+**Por qué existe esta tarea:** hallazgo de QA manual del usuario — al completar los campos
+obligatorios del formulario de alta, el registro se auto-creaba en background (patrón
+`useAutoCreateGuard`, 2026-08) pero además cerraba el formulario y saltaba a la vista de detalle de
+inmediato, sin dejar completar los campos opcionales restantes. Reproducible en las 4 pantallas que
+usan el hook: Opportunities, Companies, Contacts, Employees.
+
+**Fix:** se separó "crear/persistir en background" de "cerrar el formulario y navegar". El
+auto-create sigue disparando igual que antes (sigue siendo la red de seguridad contra perder el
+formulario), pero ya no cierra nada — el usuario sigue completando campos opcionales con el
+formulario abierto. El botón "Create" ahora: si el registro ya se auto-creó, hace un PATCH con los
+campos actuales (incluyendo lo agregado después del auto-create) antes de recién ahí cerrar y
+navegar a la vista de detalle; si por alguna carrera el auto-create todavía no disparó, crea de
+una. El botón queda deshabilitado mientras el auto-create está en vuelo (`autoCreateGuard.isBusy`,
+nuevo) para evitar una carrera doble-submit.
+
+**Verificado de punta a punta con Playwright contra un tenant de prueba real en `staging`**
+(creado con seed directo vía Prisma, no por signup — reutiliza `createCompany`/`createContact`
+reales) para **Opportunity, Company y Contact**: en los 3 casos, se confirmó que el formulario
+queda abierto después de completar los campos obligatorios, que un campo opcional completado
+después del auto-create (Next Step Note / Industry / Title) efectivamente queda guardado tras
+tocar "Create", y que recién ahí se cierra el formulario y abre el detalle — sin errores de
+consola. **Employee** recibió el mismo cambio de código (compila y tipa limpio) pero no se llegó a
+verificar en navegador — su formulario de alta requiere más datos de prueba (departamento, manager,
+pay frequency, etc.) que no se armaron en esta ronda.
+
+**Gaps aceptados a propósito** (mismo patrón en las 4 pantallas): si el usuario **cambia** un campo
+que ya se había enviado en el auto-create (ej. reelige el Contact de una Opportunity de tipo lead,
+o edita los datos de compensación de un Employee) en vez de solo completar campos nuevos, ese
+cambio puntual no se resincroniza al tocar Create — solo lo agregado de cero después del
+auto-create queda garantizado. No se detectó evidencia de que esto ocurra en el uso normal (llenar
+el form de arriba hacia abajo), pero queda como gap conocido.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Abrir "Add Employee", completar todos los campos obligatorios (incluida la compensación si el person type lo requiere) y esperar unos segundos sin tocar "Create" | El formulario sigue abierto, no salta a ningún lado |
+| 2 | Completar además un campo opcional (ej. Personal Email o Nationality) y recién ahí tocar "Create" | Se cierra el formulario, abre el panel del empleado, y el campo opcional queda guardado |
+| 3 | Repetir 1-2 en Opportunity/Company/Contact como confirmación manual adicional (ya verificado por Claude vía Playwright, pero vale un check visual humano) | Mismo comportamiento |
+
+**Severidad:** baja — es una mejora de UX sobre un flujo que ya persistía los datos correctamente
+(el auto-create en sí no cambió), no hay riesgo de pérdida de datos ni de escritura incorrecta.

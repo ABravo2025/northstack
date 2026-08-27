@@ -1838,3 +1838,41 @@ en esta tanda) y no afecta la creación en sí, pero vale la pena que alguien lo
 
 **Severidad:** baja en las 3 — mejoras de navegación/UX y una feature nueva aditiva, ninguna toca
 datos existentes ni lógica de negocio ya construida.
+
+## QA-45 — Sistema de tags, Entrega 1: CRUD + autocomplete en Contact/Company/Employee (en `staging`)
+
+**Por qué existe esta tarea:** pieza más grande del backlog QA — el usuario eligió tags libres y
+compartidos (no un catálogo predefinido). Dado el tamaño, se parte en 2 entregas: esta (modelo +
+backend + UI de agregar/ver/sacar tags en los 3 perfiles) y una segunda (mostrar tags en las vistas
+de lista + filtrar por ellos), todavía sin arrancar.
+
+**Modelo nuevo** (`prisma/schema.prisma`, push aditivo a `staging` — tablas nuevas, sin tocar datos
+existentes): `TagDefinition` (`tenantId` + `name`, `@@unique([tenantId, name])` — un tag es el mismo
+objeto sin importar en qué entidad se use) y `TagAssignment` (`tenantId` + `tagDefinitionId` +
+`entityType` + `entityId`, mismo patrón polimórfico que `CustomFieldValue`/`Task`/`Note`,
+`@@unique([tagDefinitionId, entityType, entityId])` para que asignar el mismo tag dos veces sea un
+no-op en vez de un error). `entityType` reusa el `EntityType` existente, acotado a
+contact/company/employee (los mismos 3 que Task/Note ya soportan vía
+`crossModule/entityLookup.ts`, reusado tal cual para el chequeo anti-IDOR).
+
+**Backend**: `src/modules/crossModule/tagService.ts` + `src/routes/tags.ts`
+(`GET /api/tags` para el catálogo completo del tenant — alimenta el autocomplete —,
+`GET/POST /api/tags/:entityType/:entityId`, `DELETE /api/tags/assignments/:id`). `assignTag` hace
+find-or-create por nombre exacto + asignación en un solo paso.
+
+**Frontend**: `TagInput.tsx` (nuevo, en `components/common/`) — chips + input con autocomplete
+(`Popover`, mismo mecanismo que `SearchableSelect`), Enter para agregar (crea el tag si no existía),
+click en el chip para sacarlo. Montado en el header de `ContactDetailModal`/`CompanyDetailModal`/
+`EmployeeOverviewPanel`.
+
+**Verificado end-to-end** contra el tenant de prueba en `staging`: se agregó "VIP" a una Company, y
+al abrir un Contact distinto el autocomplete lo sugirió como tag ya existente (confirma que el
+catálogo es realmente compartido entre los 3 módulos, no por separado) — se agregó también ahí, se
+sacó, y una consulta directa a la base confirmó el estado final correcto (VIP sigue en la Company,
+ausente en el Contact). Varios chequeos automáticos del script de Playwright dieron falsos negativos
+por el mismo cold-start de Neon que viene apareciendo toda la sesión en escrituras — no es un bug
+real, confirmado contra la base directamente.
+
+`npm run build`/`npm test` (147/147) en verde. Sin errores de consola.
+
+**Severidad:** baja — tabla nueva, aditiva, no toca ningún modelo ni endpoint existente.

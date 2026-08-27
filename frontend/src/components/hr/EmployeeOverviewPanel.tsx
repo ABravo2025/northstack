@@ -12,6 +12,8 @@ import OverviewActionsMenu from '../common/OverviewActionsMenu';
 import PayslipPreviewModal from '../payroll/PayslipPreviewModal';
 import { formatMoney } from '../../lib/currencies';
 import { XIcon } from '../common/Icons';
+import TagInput from '../common/TagInput';
+import type { TagAssignmentLite } from '../../api';
 
 interface EmployeeOverviewPanelProps {
   employee: any;
@@ -78,7 +80,17 @@ export default function EmployeeOverviewPanel({
   const [resendingContract, setResendingContract] = useState(false);
   const [compensation, setCompensation] = useState<EmployeeCompensationSummary | null>(null);
   const [loadingCompensation, setLoadingCompensation] = useState(false);
+  const [tags, setTags] = useState<TagAssignmentLite[]>([]);
   const hasContract = canManagePayroll && HAS_CONTRACT_STATUSES.has(employee.contractStatus);
+
+  const loadTags = () => {
+    api.listTagsForEntity(token, 'employee', employee.id).then(setTags).catch(() => {});
+  };
+
+  useEffect(() => {
+    loadTags();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employee.id]);
 
   useEffect(() => {
     if (!hasContract) {
@@ -197,6 +209,7 @@ export default function EmployeeOverviewPanel({
                 <StatusChip {...CONTRACT_STATUS_CHIPS[employee.contractStatus as keyof typeof CONTRACT_STATUS_CHIPS]} />
               )}
             </div>
+            <TagInput token={token} entityType="employee" entityId={employee.id} tags={tags} onChanged={loadTags} />
           </div>
         </div>
 

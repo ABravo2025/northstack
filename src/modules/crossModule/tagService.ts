@@ -1,0 +1,70 @@
+import prisma from '../../lib/prisma.js';
+import type { EntityType } from '@prisma/client';
+
+export { findEntityTenantId, isSupportedCrossModuleEntityType as isSupportedTagEntityType } from './entityLookup.js';
+
+// All tag names for the tenant, for autocomplete — free-form tags (backlog
+// QA, 2026-08-27), so there's no fixed catalog to manage, just whatever's
+// already been typed somewhere.
+export async function listTagDefinitions(tenantId: string) {
+  return prisma.tagDefinition.findMany({
+    where: { tenantId },
+    orderBy: { name: 'asc' },
+  });
+}
+
+export async function listTagsForEntity(tenantId: string, entityType: EntityType, entityId: string) {
+  const assignments = await prisma.tagAssignment.findMany({
+    where: { tenantId, entityType, entityId },
+    include: { tagDefinition: true },
+    orderBy: { tagDefinition: { name: 'asc' } },
+  });
+  return assignments.map((a) => ({ tagAssignmentId: a.id, tagDefinitionId: a.tagDefinitionId, name: a.tagDefinition.name }));
+}
+
+// Batch version for list-view chip display/filtering — same shape as
+// listCustomFieldValuesForEntities, one query for every row on the page
+// instead of N.
+export async function listTagsForEntities(tenantId: string, entityType: EntityType, entityIds: string[]) {
+  if (entityIds.length === 0) return [];
+  const assignments = await prisma.tagAssignment.findMany({
+    where: { tenantId, entityType, entityId: { in: entityIds } },
+    include: { tagDefinition: true },
+  });
+  return assignments.map((a) => ({
+    entityId: a.entityId,
+    tagAssignmentId: a.id,
+    tagDefinitionId: a.tagDefinitionId,
+    name: a.tagDefinition.name,
+  }));
+}
+
+// Find-or-create by exact name + assign, in one step — the whole point of
+// "free-form": typing an existing tag's name reuses it (case-sensitive
+// match, same as the @@unique constraint), typing a new one creates it.
+// Idempotent: assigning a tag the entity already has is a no-op, not an
+// error, since the UI's "add on Enter" flow can't easily pre-check itself.
+export async function assignTag(tenantId: string, entityType: EntityType, entityId: string, tagName: string) {
+  const name = tagName.trim();
+  const tagDefinition = await prisma.tagDefinition.upsert({
+    where: { tenantId_name: { tenantId, name } },
+    create: { tenantId, name },
+    update: {},
+  });
+
+  const assignment = await prisma.tagAssignment.upsert({
+    where: { tagDefinitionId_entityType_entityId: { tagDefinitionId: tagDefinition.id, entityType, entityId } },
+    create: { tenantId, tagDefinitionId: tagDefinition.id, entityType, entityId },
+    update: {},
+  });
+
+  return { tagAssignmentId: assignment.id, tagDefinitionId: tagDefinition.id, name: tagDefinition.name };
+}
+
+export async function findTagAssignmentById(id: string) {
+  return prisma.tagAssignment.findUnique({ where: { id } });
+}
+
+export async function removeTagAssignment(id: string): Promise<void> {
+  await prisma.tagAssignment.delete({ where: { id } });
+}

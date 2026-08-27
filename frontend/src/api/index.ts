@@ -21,6 +21,7 @@ import { onboardingApi } from './onboarding.js';
 import { csvApi } from './csv.js';
 import { tasksApi } from './tasks.js';
 import { notesApi } from './notes.js';
+import { tagsApi } from './tags.js';
 import { notificationsApi } from './notifications.js';
 import { payrollApi } from './payroll.js';
 import { contractConfirmationPublicApi } from './contractConfirmationPublic.js';
@@ -55,6 +56,7 @@ export const api = {
   ...csvApi,
   ...tasksApi,
   ...notesApi,
+  ...tagsApi,
   ...notificationsApi,
   ...payrollApi,
   ...contractConfirmationPublicApi,

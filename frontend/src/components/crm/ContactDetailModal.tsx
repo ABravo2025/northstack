@@ -10,6 +10,8 @@ import RequiredMark from '../common/RequiredMark';
 import OverviewActionsMenu from '../common/OverviewActionsMenu';
 import { PlusIcon, XIcon } from '../common/Icons';
 import { formatMoney } from '../../lib/currencies';
+import TagInput from '../common/TagInput';
+import type { TagAssignmentLite } from '../../api';
 
 const LEAD_STATUS_LABELS: Record<string, string> = {
   new: 'New',
@@ -64,6 +66,16 @@ export default function ContactDetailModal({
   const [newOppPipelineId, setNewOppPipelineId] = useState('');
   const [newOppName, setNewOppName] = useState('');
   const [newOppCompanyName, setNewOppCompanyName] = useState('');
+  const [tags, setTags] = useState<TagAssignmentLite[]>([]);
+
+  const loadTags = () => {
+    api.listTagsForEntity(token, 'contact', contact.id).then(setTags).catch(() => {});
+  };
+
+  useEffect(() => {
+    loadTags();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contact.id]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -201,6 +213,7 @@ export default function ContactDetailModal({
               {contact.firstName} {contact.lastName}
             </h3>
             <p>{contact.email}</p>
+            <TagInput token={token} entityType="contact" entityId={contact.id} tags={tags} onChanged={loadTags} />
           </div>
         </div>
 

@@ -13,6 +13,8 @@ import SearchableSelect from '../common/SearchableSelect';
 import CompanyStripeSection from './CompanyStripeSection';
 import { PlusIcon, TrashIcon, XIcon } from '../common/Icons';
 import { formatMoney } from '../../lib/currencies';
+import TagInput from '../common/TagInput';
+import type { TagAssignmentLite } from '../../api';
 
 interface CompanyDetailModalProps {
   company: Company;
@@ -70,6 +72,16 @@ export default function CompanyDetailModal({
   const [newOppPipelineId, setNewOppPipelineId] = useState('');
   const [newOppName, setNewOppName] = useState(company.name);
   const [newOppContactId, setNewOppContactId] = useState('');
+  const [tags, setTags] = useState<TagAssignmentLite[]>([]);
+
+  const loadTags = () => {
+    api.listTagsForEntity(token, 'company', company.id).then(setTags).catch(() => {});
+  };
+
+  useEffect(() => {
+    loadTags();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [company.id]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -247,6 +259,7 @@ export default function CompanyDetailModal({
             {company.statusDefn && (
               <StatusChip color={company.statusDefn.color || '#6b7280'} label={company.statusDefn.name} />
             )}
+            <TagInput token={token} entityType="company" entityId={company.id} tags={tags} onChanged={loadTags} />
           </div>
         </div>
 

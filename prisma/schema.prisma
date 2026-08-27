@@ -360,6 +360,8 @@ model Tenant {
   googleCalendarConnections GoogleCalendarConnection[]
   timeOffCalendarSyncs      TimeOffCalendarSync[]
   stripeConnection          StripeConnection?
+  tagDefinitions            TagDefinition[]
+  tagAssignments            TagAssignment[]
 }
 
 // Billing Integration (spec-billing-integration.md). plan/lockedPriceCents are deliberately NOT
@@ -1125,6 +1127,39 @@ model CustomFieldValue {
   value                   String
   createdAt               DateTime              @default(now())
 
+  @@index([tenantId, entityType, entityId])
+}
+
+// Free-form tags for Contact/Company/Employee (backlog QA, 2026-08-27) —
+// same tenantId + entityType + entityId pattern as CustomFieldValue above,
+// but a tag is its own lightweight catalog entry (TagDefinition, unique per
+// tenant by name) rather than a value on a predefined field, since the same
+// tag is meant to be reused freely across many entities/modules, not scoped
+// to one field definition. Deliberately no color/description — kept as
+// minimal as the "free text" scope the user picked allows; add fields here
+// later if that changes rather than a parallel model.
+model TagDefinition {
+  id          String          @id @default(uuid())
+  tenantId    String
+  tenant      Tenant          @relation(fields: [tenantId], references: [id])
+  name        String
+  createdAt   DateTime        @default(now())
+  assignments TagAssignment[]
+
+  @@unique([tenantId, name])
+}
+
+model TagAssignment {
+  id              String        @id @default(uuid())
+  tenantId        String
+  tenant          Tenant        @relation(fields: [tenantId], references: [id])
+  tagDefinitionId String
+  tagDefinition   TagDefinition @relation(fields: [tagDefinitionId], references: [id])
+  entityType      EntityType
+  entityId        String
+  createdAt       DateTime      @default(now())
+
+  @@unique([tagDefinitionId, entityType, entityId])
   @@index([tenantId, entityType, entityId])
 }
 

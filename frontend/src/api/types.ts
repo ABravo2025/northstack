@@ -344,6 +344,21 @@ export interface Note {
   updatedAt: string;
 }
 
+// Free-form tags (backlog QA, 2026-08-27) — Contact/Company/Employee only for
+// now, same entityType/entityId pattern as Note/Task above.
+export interface TagAssignmentLite {
+  tagAssignmentId: string;
+  tagDefinitionId: string;
+  name: string;
+}
+
+export interface TagDefinition {
+  id: string;
+  tenantId: string;
+  name: string;
+  createdAt: string;
+}
+
 // In-app notifications, minimal version (docs/tareas/specredisenosalesv2.md
 // §3.9). `message` is already-rendered text — nothing to resolve/compute on
 // the frontend.

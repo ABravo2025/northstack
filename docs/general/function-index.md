@@ -147,7 +147,14 @@ CRUD estándar: **createContact**, **listContacts(tenantId)**, **findContactById
 
 ### `src/modules/crossModule/entityLookup.ts`
 - **isSupportedCrossModuleEntityType(entityType)** — type guard de `EntityType`.
-- **findEntityTenantId(entityType, entityId)** — resuelve el tenant dueño de una entidad polimórfica (Task/Note apuntan a Employee/Company/Contact/Opportunity sin FK real) — chequeo anti-IDOR obligatorio antes de adjuntar un Task/Note a algo.
+- **findEntityTenantId(entityType, entityId)** — resuelve el tenant dueño de una entidad polimórfica (Task/Note/Tag apuntan a Employee/Company/Contact/Opportunity sin FK real) — chequeo anti-IDOR obligatorio antes de adjuntar un Task/Note/Tag a algo.
+
+### `src/modules/crossModule/tagService.ts` (backlog QA, 2026-08-27)
+- Reexporta **findEntityTenantId**/`isSupportedCrossModuleEntityType` (como `isSupportedTagEntityType`) de `entityLookup.ts` — mismo chequeo anti-IDOR que Task/Note.
+- **listTagDefinitions(tenantId)** — todos los nombres de tag usados alguna vez en el tenant, para el autocomplete del input (tags libres, no hay catálogo predefinido).
+- **listTagsForEntity(tenantId, entityType, entityId)** / **listTagsForEntities(tenantId, entityType, entityIds)** (batch, misma forma que `listCustomFieldValuesForEntities`).
+- **assignTag(tenantId, entityType, entityId, tagName)** — find-or-create por nombre exacto (`@@unique([tenantId, name])`) + asignación, en un solo paso; idempotente si la entidad ya tiene ese tag.
+- **findTagAssignmentById(id)** / **removeTagAssignment(id)**.
 
 ### `src/modules/csv/csvService.ts`
 - **exportEmployeesToCsv(tenantId, viewerRole)** / **getEmployeesCsvTemplate(tenantId, viewerRole)** / **importEmployeesFromCsv(tenantId, csvText, viewerRole)**.
@@ -450,6 +457,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 - **SlideOver** — panel lateral para forms de "entidad completa"; default para forms nuevos salvo que el diseño pida `Modal` centrado.
 - **StatusChip** — chip de status con punto de color.
 - **TableSkeleton** — loading state de tabla; usar en vez de `<p>Loading...</p>`.
+- **TagInput** (backlog QA, 2026-08-27) — chips + input con autocomplete (`Popover`) para el sistema de tags libres; "Enter" agrega el tag tipeado (crea uno nuevo o reusa uno existente vía `api.addTag`), click en el chip lo quita (`api.removeTag`). Montado en `ContactDetailModal`/`CompanyDetailModal`/`EmployeeOverviewPanel` (mismos 3 tipos de entidad que soporta el backend hoy). Reusa `.time-off-policy-chip`/`.time-off-policy-chip-remove` para el look del chip en vez de una clase nueva.
 - **ToastProvider** (+ **useToast**) — `success`/`error`, nunca `alert()`.
 
 ### `frontend/src/components/entity-views/` — piezas del motor genérico de Views/Filters/Kanban/tabla

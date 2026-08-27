@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   api,
   type Company,
@@ -29,6 +30,7 @@ import { useColumnOrder } from '../hooks/useColumnOrder';
 import Avatar, { getInitials } from '../components/common/Avatar';
 import CategoryChip from '../components/common/CategoryChip';
 import ContactDetailModal from '../components/crm/ContactDetailModal';
+import OpportunityDetailModal from '../components/crm/OpportunityDetailModal';
 import SearchableSelect from '../components/common/SearchableSelect';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
 import Field from '../components/common/Field';
@@ -80,12 +82,17 @@ const emptyContactForm = {
 
 export default function ContactsPage({ user, token }: ContactsPageProps) {
   const toast = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [tenantCurrency, setTenantCurrency] = useState('USD');
   const [leadSources, setLeadSources] = useState<any[]>([]);
+  const [lossReasons, setLossReasons] = useState<any[]>([]);
+  const [winReasons, setWinReasons] = useState<any[]>([]);
+  const [viewingOpportunityId, setViewingOpportunityId] = useState<string | null>(null);
+  const [deletingOpportunity, setDeletingOpportunity] = useState<Opportunity | null>(null);
   const [tenantUsers, setTenantUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [slideOverMode, setSlideOverMode] = useState<'add' | null>(null);
@@ -141,6 +148,17 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
     else localStorage.removeItem(ACTIVE_VIEW_STORAGE_KEY);
   }, [activeViewId]);
 
+  // Deep-link from another page (e.g. the Opportunity card's contact link) —
+  // read once and clear, same pattern as CompaniesPage.tsx's `open` param.
+  useEffect(() => {
+    const openId = searchParams.get('open');
+    if (openId) {
+      setViewingContactId(openId);
+      setSearchParams({}, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     loadContacts();
     loadContactCustomFields();
@@ -155,6 +173,8 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
       .catch(() => {
         // Non-critical — the lead source dropdown just falls back to empty if it fails.
       });
+    api.listFieldCatalogDefinitions(token, 'lossReason').then(setLossReasons).catch(() => {});
+    api.listFieldCatalogDefinitions(token, 'winReason').then(setWinReasons).catch(() => {});
     api
       .listTenantUsers(token)
       .then(setTenantUsers)
@@ -944,9 +964,60 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
                 setViewingContactId(null);
                 setDeletingContact(viewingContact);
               }}
+              onOpenOpportunity={setViewingOpportunityId}
             />
           );
         })()}
+
+      {viewingOpportunityId &&
+        (() => {
+          const viewingOpportunity = opportunities.find((o) => o.id === viewingOpportunityId);
+          if (!viewingOpportunity) return null;
+          return (
+            <OpportunityDetailModal
+              opportunity={viewingOpportunity}
+              token={token}
+              companies={companies}
+              contacts={contacts}
+              pipelines={pipelines}
+              tenantUsers={tenantUsers}
+              lossReasons={lossReasons}
+              winReasons={winReasons}
+              onReasonsChanged={() => {
+                api.listFieldCatalogDefinitions(token, 'lossReason').then(setLossReasons).catch(() => {});
+                api.listFieldCatalogDefinitions(token, 'winReason').then(setWinReasons).catch(() => {});
+              }}
+              currentUserId={user.id}
+              onClose={() => setViewingOpportunityId(null)}
+              onChanged={refreshAssociatedData}
+              onSaved={(updated) => setOpportunities((prev) => prev.map((o) => (o.id === updated.id ? { ...o, ...updated } : o)))}
+              onRequestDelete={() => {
+                setViewingOpportunityId(null);
+                setDeletingOpportunity(viewingOpportunity);
+              }}
+            />
+          );
+        })()}
+
+      {deletingOpportunity && (
+        <ConfirmDialog
+          title="Delete opportunity"
+          message={`Are you sure you want to delete "${deletingOpportunity.name}"? This can't be undone.`}
+          confirmLabel="Delete"
+          onConfirm={async () => {
+            try {
+              await api.deleteOpportunity(token, deletingOpportunity.id);
+              toast.success(`${deletingOpportunity.name} deleted.`);
+              setDeletingOpportunity(null);
+              refreshAssociatedData();
+            } catch (error) {
+              toast.error('Failed to delete: ' + (error as Error).message);
+              setDeletingOpportunity(null);
+            }
+          }}
+          onCancel={() => setDeletingOpportunity(null)}
+        />
+      )}
 
       <ViewsBar
         allLabel="All Contacts"

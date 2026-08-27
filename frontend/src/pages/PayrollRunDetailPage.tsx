@@ -272,25 +272,34 @@ export default function PayrollRunDetailPage({ user, token }: PayrollRunDetailPa
                         {row.compensationType === 'fixed' ? (
                           formatMoney(row.baseAmountCents, row.currency)
                         ) : isDraft ? (
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="number"
-                              step="0.25"
-                              min="0"
-                              style={{ width: 80 }}
-                              value={hoursDrafts[row.employeeId] ?? ''}
-                              onChange={(e) => setHoursDrafts({ ...hoursDrafts, [row.employeeId]: e.target.value })}
-                              onBlur={() => handleSaveHours(row.employeeId)}
-                            />
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-1.5">
+                              <label className="text-xs text-ink-muted" htmlFor={`hours-${row.employeeId}`}>
+                                Hours
+                              </label>
+                              <input
+                                id={`hours-${row.employeeId}`}
+                                type="number"
+                                step="0.25"
+                                min="0"
+                                className="select-compact"
+                                style={{ width: 72 }}
+                                value={hoursDrafts[row.employeeId] ?? ''}
+                                onChange={(e) => setHoursDrafts({ ...hoursDrafts, [row.employeeId]: e.target.value })}
+                                onBlur={() => handleSaveHours(row.employeeId)}
+                              />
+                            </div>
                             <span className="text-xs text-ink-muted">
-                              hs × {formatMoney(row.rateCents, row.currency)} = {formatMoney(row.baseAmountCents, row.currency)}
+                              Rate {formatMoney(row.rateCents, row.currency)}/hr · Base {formatMoney(row.baseAmountCents, row.currency)}
                             </span>
                           </div>
                         ) : (
-                          <span className="text-xs text-ink-muted">
-                            {baseEntry?.hoursQty ?? 0} hs × {formatMoney(row.rateCents, row.currency)} ={' '}
-                            {formatMoney(row.baseAmountCents, row.currency)}
-                          </span>
+                          <div className="flex flex-col gap-0.5 text-xs text-ink-muted">
+                            <span>Hours {baseEntry?.hoursQty ?? 0}</span>
+                            <span>
+                              Rate {formatMoney(row.rateCents, row.currency)}/hr · Base {formatMoney(row.baseAmountCents, row.currency)}
+                            </span>
+                          </div>
                         )}
                       </td>
                       <td>

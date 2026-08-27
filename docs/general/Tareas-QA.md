@@ -1701,5 +1701,59 @@ el form de arriba hacia abajo), pero queda como gap conocido.
 | 2 | Completar además un campo opcional (ej. Personal Email o Nationality) y recién ahí tocar "Create" | Se cierra el formulario, abre el panel del empleado, y el campo opcional queda guardado |
 | 3 | Repetir 1-2 en Opportunity/Company/Contact como confirmación manual adicional (ya verificado por Claude vía Playwright, pero vale un check visual humano) | Mismo comportamiento |
 
+**Actualización 2026-08-27 (misma ronda que QA-42):** Employee quedó verificado en navegador —
+confirmado el mismo comportamiento (formulario abierto tras auto-create, cierra recién al tocar
+Create) al crear un empleado real de prueba.
+
 **Severidad:** baja — es una mejora de UX sobre un flujo que ya persistía los datos correctamente
 (el auto-create en sí no cambió), no hay riesgo de pérdida de datos ni de escritura incorrecta.
+
+## QA-42 — 6 bugs chicos de CRM/HR/Payroll del backlog QA 2026-08-27 (en `staging`)
+
+**Por qué existe esta tarea:** siguiente tanda de la pasada de QA manual del usuario, priorizando
+los bugs chicos ya diagnosticados antes de las piezas grandes (tags, Settings, Google Calendar).
+Los 6 items, verificados de punta a punta con Playwright contra un tenant de prueba real en
+`staging` (mismo tenant que QA-41):
+
+1. **Opportunity creada desde un Contact no se podía reabrir** (`ContactDetailModal.tsx`): la fila
+   de cada Opportunity vinculada no tenía `onClick`. Ahora abre `OpportunityDetailModal` (nuevo prop
+   `onOpenOpportunity`, cableado en `ContactsPage.tsx` con su propio `viewingOpportunityId` +
+   `lossReasons`/`winReasons` fetch + delete). Verificado: crear una Opportunity desde un Contact,
+   click en la fila resultante, se abre el detalle completo con los Contacts vinculados.
+2. **Sección "Opportunities" desalineada en la card de Contact**: usaba `.overview-field` (pensada
+   para una fila label/valor) alrededor de una lista de varias filas. Ahora es un `.field-group`
+   propio, igual que Identity/Role/Source. Verificado visualmente (screenshot).
+3. **Opportunity card sin link a Contact/Company**: el nombre de la Company en la card del Kanban
+   ahora es un link a `/companies?open=<id>` (reusa el deep-link `open` que ya usaba Payments
+   Overview); si hay un único Contact vinculado, su nombre es un link a `/contacts?open=<id>`
+   (antes decía literal "1 contact", sin link). Se agregó el mismo patrón `open` a `ContactsPage.tsx`
+   (ya existía en `CompaniesPage.tsx`). Verificado: click en el nombre de la Company abre su
+   `CompanyDetailModal` correctamente.
+4. **Time Off: asignar/quitar una política a un empleado disparaba un refresh completo** (6
+   endpoints, con `<p>Loading...</p>` reemplazando toda la pantalla). Ahora
+   `refreshAfterAssignmentChange` solo refetchea empleados + balances (lo único que la acción puede
+   afectar), sin `setLoading(true)`. El `<p>Loading...</p>` del loading real (carga inicial de la
+   pestaña) se reemplazó por `TableSkeleton`. Verificado: 0 elementos de skeleton aparecen
+   inmediatamente después de asignar, la tabla nunca se desmonta, y la asignación persiste
+   correctamente tras reload.
+5. **Payroll "Base" poco entendible**: en vez de `123 hs × $65.00 = $7,995.00` corrido, ahora
+   muestra "Hours" con label + input más visible (`.select-compact`, borde visible) en una línea, y
+   "Rate $X/hr · Base $Y" en la siguiente. Verificado con un run real: "Hours" + "Rate $50.00/hr ·
+   Base $0.00" se ven como dos líneas separadas y legibles.
+6. **Contract "Pending" no se veía en el perfil del empleado**: ya existía como columna en la lista
+   de Employees (visible por default, no estaba oculta — se descartó esa hipótesis), pero
+   `EmployeeOverviewPanel.tsx` no lo mostraba en ningún lado. Se agregó el mismo chip
+   (Confirmed/Pending/Expired) al lado del status general en el header del panel. Verificado: un
+   empleado recién creado muestra "Active · Contract pending" en el header.
+
+**Efecto secundario descubierto (no un bug, documentado para contexto):** un Payroll run nuevo
+auto-incluye a los empleados elegibles (contrato confirmado + misma pay frequency) al crearse —
+"Add person" solo hace falta para agregar a alguien después. Un empleado con contrato sin confirmar
+queda explícitamente excluido ("1 person excluded — contract not confirmed yet."), no se puede
+agregar ni manualmente vía "Add person" hasta confirmar el contrato.
+
+`npm run build` (frontend) y `npm test` (backend, 147/147) en verde. Sin errores de consola en
+ninguna de las verificaciones.
+
+**Severidad:** baja en los 6 — todos son fixes de UX/legibilidad o de un `onClick` faltante, ninguno
+toca lógica de negocio ni datos.

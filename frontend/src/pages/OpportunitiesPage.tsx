@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api, type Opportunity, type Pipeline } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import ConfirmDialog from '../components/common/ConfirmDialog';
@@ -849,13 +850,22 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
             const mostRecentEntry = opp.stageHistory?.[0];
             const stageDays = mostRecentEntry ? daysSince(mostRecentEntry.enteredAt) : null;
             const isLate = stageDays !== null && stageDays > LATE_STAGE_DAYS_THRESHOLD;
+            const singleContact = opp.contactLinks?.length === 1 ? opp.contactLinks[0].contact : null;
             return (
               <div onClick={() => setViewingId(opp.id)} style={{ cursor: 'pointer' }}>
                 <div className="kcard-top">
                   <div className="kc-name">{opp.name}</div>
                   <div className="kc-amount">{formatMoney(opp.amountCents, opp.currency)}</div>
                 </div>
-                <div className="kc-meta">{opp.company?.name}</div>
+                {opp.company?.name && (
+                  <Link
+                    to={`/companies?open=${opp.company.id}`}
+                    className="kc-meta hover:underline"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {opp.company.name}
+                  </Link>
+                )}
                 <div className="kcard-foot">
                   <span className="kc-owner">{getInitials(opp.owner?.firstName, opp.owner?.lastName)}</span>
                   {stageDays !== null && (
@@ -863,10 +873,19 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                       {stageDays === 0 ? 'Entered today' : `${stageDays}d in stage`}
                     </span>
                   )}
-                  {(opp.contactLinks?.length ?? 0) === 1 && (
-                    <span className="kc-single-thread" title="Only one contact on this deal">
-                      1 contact
-                    </span>
+                  {singleContact ? (
+                    <Link
+                      to={`/contacts?open=${singleContact.id}`}
+                      className="kc-single-thread hover:underline"
+                      title="Only one contact on this deal"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {singleContact.firstName} {singleContact.lastName}
+                    </Link>
+                  ) : (
+                    (opp.contactLinks?.length ?? 0) > 1 && (
+                      <span className="kc-age">{opp.contactLinks!.length} contacts</span>
+                    )
                   )}
                 </div>
               </div>

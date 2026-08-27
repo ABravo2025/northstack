@@ -6,6 +6,7 @@ import SlideOver from '../components/common/SlideOver';
 import Popover from '../components/common/Popover';
 import ColorPicker from '../components/common/ColorPicker';
 import EmptyState from '../components/common/EmptyState';
+import TableSkeleton from '../components/common/TableSkeleton';
 import RequiredMark from '../components/common/RequiredMark';
 import { CalendarIcon, ChevronDownIcon, DotsVerticalIcon, PlusIcon } from '../components/common/Icons';
 
@@ -127,12 +128,32 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
     }
   };
 
+  // Silent refresh (no setLoading) — only the two things a policy
+  // assignment/removal can actually affect (the employee's assignment list
+  // and, for admins, tenant-wide balances), instead of loadData()'s full
+  // 6-endpoint reload that flashed the whole tab behind the assign menu
+  // (backlog QA, 2026-08-27 — same fix already used by
+  // EmployeeOverviewPanel.tsx's onChanged for this same action).
+  const refreshAfterAssignmentChange = async () => {
+    try {
+      const [employeeData, tenantBalanceData] = await Promise.all([
+        api.listEmployees(token),
+        canManagePolicies ? api.listTimeOffBalances(token) : Promise.resolve(tenantBalances),
+      ]);
+      setEmployees(employeeData);
+      setTenantBalances(tenantBalanceData);
+    } catch {
+      // Non-critical — the assignment itself already succeeded; a stale list
+      // here just means the next full loadData() (e.g. tab switch) catches up.
+    }
+  };
+
   const handleAssign = async (employeeId: string, policyId: string) => {
     try {
       await api.assignTimeOffPolicyToEmployee(token, employeeId, policyId);
       setAssignMenuFor(null);
       toast.success('Policy assigned.');
-      loadData();
+      refreshAfterAssignmentChange();
     } catch (error) {
       toast.error('Failed to assign Time Off policy: ' + (error as Error).message);
     }
@@ -142,7 +163,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
     try {
       await api.unassignTimeOffPolicyFromEmployee(token, employeeId, policyId);
       toast.success('Policy removed.');
-      loadData();
+      refreshAfterAssignmentChange();
     } catch (error) {
       toast.error('Failed to remove Time Off policy: ' + (error as Error).message);
     }
@@ -561,7 +582,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
       </div>
 
       <div className="mt-4">
-        {loading && <p>Loading...</p>}
+        {loading && <TableSkeleton />}
 
         {!loading && tab === 'assignments' && (
           <>

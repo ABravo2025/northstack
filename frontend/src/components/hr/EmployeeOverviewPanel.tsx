@@ -39,6 +39,15 @@ interface EmployeeOverviewPanelProps {
 
 const HAS_CONTRACT_STATUSES = new Set(['confirmado', 'pendiente', 'vencido']);
 
+// Same 3-state chip config as EmployeesPage.tsx's list column — surfaced
+// here too so the contract status is visible from the profile itself, not
+// only the table (backlog QA, 2026-08-27).
+const CONTRACT_STATUS_CHIPS = {
+  confirmado: { color: '#059669', label: 'Contract confirmed' },
+  pendiente: { color: '#9ca3af', label: 'Contract pending' },
+  vencido: { color: '#dc2626', label: 'Contract expired' },
+};
+
 // Unified with the Company/Contact/Opportunity detail pattern (Checkpoint F,
 // docs/tareas-desarrollo.md): no tabs, no "Edit employee" button — every field
 // is editable in place via AutoSaveField/AutoSaveSelect. Name/business email
@@ -180,9 +189,14 @@ export default function EmployeeOverviewPanel({
               {employee.firstName} {employee.lastName}
             </h3>
             <p>{employee.email}</p>
-            {employee.statusDefn && (
-              <StatusChip color={employee.statusDefn.color || '#6b7280'} label={employee.statusDefn.name} />
-            )}
+            <div className="flex items-center gap-1.5">
+              {employee.statusDefn && (
+                <StatusChip color={employee.statusDefn.color || '#6b7280'} label={employee.statusDefn.name} />
+              )}
+              {employee.contractStatus && CONTRACT_STATUS_CHIPS[employee.contractStatus as keyof typeof CONTRACT_STATUS_CHIPS] && (
+                <StatusChip {...CONTRACT_STATUS_CHIPS[employee.contractStatus as keyof typeof CONTRACT_STATUS_CHIPS]} />
+              )}
+            </div>
           </div>
         </div>
 

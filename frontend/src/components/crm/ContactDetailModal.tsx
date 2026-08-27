@@ -34,6 +34,10 @@ interface ContactDetailModalProps {
   onChanged: () => void;
   onSaved: (updatedContact: Contact) => void;
   onRequestDelete: () => void;
+  // Opens the Opportunity detail view for a linked deal — optional since not
+  // every context this modal renders in (yet) wires up its own
+  // OpportunityDetailModal (2026-08-27, backlog QA).
+  onOpenOpportunity?: (opportunityId: string) => void;
 }
 
 export default function ContactDetailModal({
@@ -52,6 +56,7 @@ export default function ContactDetailModal({
   onChanged,
   onSaved,
   onRequestDelete,
+  onOpenOpportunity,
 }: ContactDetailModalProps) {
   const toast = useToast();
   const [addingOpportunity, setAddingOpportunity] = useState(false);
@@ -293,26 +298,31 @@ export default function ContactDetailModal({
             </div>
           )}
 
-          <div className="overview-field overview-field-full">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between">
-                <span className="overview-field-label">Opportunities ({linkedOpportunities.length})</span>
-                <button type="button" className="icon-btn" onClick={openAddOpportunity}>
-                  <span className="tip">Add opportunity</span>
-                  <PlusIcon className="h-3.5 w-3.5" />
-                </button>
-              </div>
+          <div className="field-group">
+            <h4 className="field-group-title flex items-center justify-between">
+              <span>Opportunities ({linkedOpportunities.length})</span>
+              <button type="button" className="icon-btn normal-case tracking-normal" onClick={openAddOpportunity}>
+                <span className="tip">Add opportunity</span>
+                <PlusIcon className="h-3.5 w-3.5" />
+              </button>
+            </h4>
+            <div className="px-4 pb-3">
               {linkedOpportunities.length === 0 && !addingOpportunity && (
                 <p className="text-xs text-ink-faint">No opportunities linked yet.</p>
               )}
               {linkedOpportunities.map((opp) => (
-                <div key={opp.id} className="flex items-center justify-between gap-2 py-1 text-sm">
+                <button
+                  type="button"
+                  key={opp.id}
+                  className="flex w-full items-center justify-between gap-2 py-1 text-left text-sm hover:underline"
+                  onClick={() => onOpenOpportunity?.(opp.id)}
+                >
                   <span>{opp.name}</span>
                   <span className="text-xs text-ink-faint">
                     {opp.stage?.name} · {formatMoney(opp.amountCents, opp.currency)}
                     {opp.pipeline?.isActive === false && ' · Archived'}
                   </span>
-                </div>
+                </button>
               ))}
               {addingOpportunity && (
                 <div className="mt-2 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-gray-800">

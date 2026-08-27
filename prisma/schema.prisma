@@ -1186,6 +1186,13 @@ model Note {
 enum NotificationType {
   opportunity_stage_changed
   opportunity_stalled
+  // Payments v1, Unit 4 (spec-payments-v1.md) — a tenant's own Stripe webhook, matched to a
+  // Company by stripeCustomerId. entityType is always 'company' for these five.
+  stripe_charge_refunded
+  stripe_charge_failed
+  stripe_payment_failed
+  stripe_subscription_past_due
+  stripe_subscription_canceled
 }
 
 model Notification {

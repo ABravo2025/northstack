@@ -841,6 +841,25 @@ resuelve en vivo contra la API de Stripe (decisión #7 de la spec, sin store his
 dato persistido es el vínculo de Unit 2 de arriba; refunds/failed/subscripciones se recalculan en
 cada request.
 
+**Unit 4 (2026-08-26, en `staging`) — webhook de notificaciones proactivas**: aditivo sobre
+`enum NotificationType` (grupo de Sales v2/Notification), sin modelo nuevo — reusa `Notification`
+tal cual ya existía:
+
+```
+NotificationType += stripe_charge_refunded | stripe_charge_failed | stripe_payment_failed
+                  | stripe_subscription_past_due | stripe_subscription_canceled
+```
+
+`POST /api/webhooks/stripe/:tenantId` (en `src/routes/webhooks.ts`, junto a Paddle/Mercado Pago,
+no en `/api/integrations/stripe/*` — ver decisión de la Unidad 1) resuelve la Company por
+`stripeCustomerId` y crea una `Notification` (`entityType: 'company'`). Deliberadamente sin
+`ProcessedWebhookEvent` (esa tabla es de Paddle/MP, `enum PaymentProvider` no ganó un valor
+`stripe`) — el propio spec acepta el riesgo de una notificación duplicada ante un reintento de
+Stripe, a cambio de no construir idempotencia pesada para una feature de solo-avisar.
+`customer.subscription.updated` es el único evento con una guarda real: solo notifica si
+`data.previous_attributes.status` está presente y el status nuevo es `past_due` — sin eso,
+cualquier otro cambio a una subscription ya `past_due` re-notificaría en cada delivery.
+
 ## Enums
 
 | Enum | Valores | Usado en |
@@ -885,4 +904,4 @@ cada request.
 - **Tasks/Notes/Company/Contact/Opportunity — nada de esto llegó a producción todavía**: todo el trabajo de esta sesión (2026-07-29/30, ver `docs/tareas-desarrollo.md`) está pusheado a `staging` únicamente, pendiente de que el usuario lo revise antes de promover a `main`.
 - **Payroll — Unidades 1-4 solo en local/commits, nada pusheado a `staging` todavía** (a pedido del usuario, 2026-08-07): schema + cifrado (U1), catálogo de políticas de pago (U2, backend+frontend), rename a People + `personType` + retiro de la compensación legada (U4) — ver grupo 7 arriba para el detalle completo.
 - **Tenant Signup + Subscription Plans — completo en local, nada pusheado todavía** (2026-08-13, ver grupo 8): a la espera de que el usuario lo pruebe en su entorno local antes de decidir si va a `staging`. Fuera de alcance de este spec, explícitamente pospuesto: integración real de Paddle/checkout, UI de "agregar método de pago", pantalla de autogestión de suscripción en `/settings`, y **cualquier enforcement de acceso para tenants `suspended`** (hoy el status cambia pero nada bloquea requests en base a él — un tenant suspendido sigue funcionando igual que uno activo).
-- **Payments v1 — Units 1-3 construidas y en `staging`** (2026-08-26, ver grupo 10): conexión con Stripe, lookup/matching Company↔Customer, y visibilidad de pagos en vivo (overview + panel en Company). Falta el webhook de notificaciones proactivas (Unit 4) y el corte del `Client` legado no relacionado — `docs/tareas/specpaymentsv1.md`/`tareaspaymentsv1.md` tienen el detalle unidad por unidad. Nada de esto llegó a `main` todavía. No probado de punta a punta con una cuenta de Stripe real (sin credenciales en este entorno) — pendiente de que Alejandro lo pruebe él mismo.
+- **Payments v1 — Units 1-4 construidas y en `staging`** (2026-08-26, ver grupo 10): conexión con Stripe, lookup/matching Company↔Customer, visibilidad de pagos en vivo (overview + panel en Company), y webhook de notificaciones proactivas. Nada de esto llegó a `main` todavía. No probado de punta a punta con una cuenta de Stripe real (sin credenciales en este entorno) — Unit 4 sí se verificó de punta a punta simulando deliveries reales de Stripe (firma HMAC calculada a mano contra un secret conocido), Units 1-3 solo con mocks/estados sin conexión — pendiente de que Alejandro pruebe el resto con su propia cuenta.

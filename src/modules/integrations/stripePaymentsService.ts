@@ -7,8 +7,10 @@ import {
   type StripeCharge,
 } from '../../lib/stripe.js';
 import { getActiveConnectionForTenant, markNeedsAttention } from './stripeService.js';
+import { createNotification } from '../notifications/notificationService.js';
+import type { NotificationType } from '@prisma/client';
 
-// Payments v1, Units 2-3 (spec-payments-v1.md). Company ownership (tenantId match, 404 if not)
+// Payments v1, Units 2-4 (spec-payments-v1.md). Company ownership (tenantId match, 404 if not)
 // is checked by the route before calling any of these — every function here takes an
 // already-validated Company row, it doesn't re-fetch/re-check on its own.
 
@@ -282,4 +284,103 @@ export async function getPaymentsOverview(tenantId: string): Promise<PaymentsOve
   );
 
   return { connected: true, totals, companies: rows };
+}
+
+// ---------------------------------------------------------------------------
+// Unit 4 — webhook-driven proactive notifications
+// ---------------------------------------------------------------------------
+
+// Recipient: the Company's Account Owner if set, otherwise the tenant's owner — never an admin,
+// even though a tenant could have one. Payments visibility is owner-only (canManagePayments), so
+// notifying an admin who couldn't even open the page to act on it would be pointless. Skips
+// silently (no Notification at all) in the rare case neither exists — same "unowned, skip"
+// degradation already used by the stalled-Opportunity cron, not a new pattern for this file.
+export async function notifyCompanyStripeEvent(
+  tenantId: string,
+  company: { id: string; accountOwnerId: string | null },
+  type: NotificationType,
+  message: string
+): Promise<void> {
+  let recipientId = company.accountOwnerId;
+  if (!recipientId) {
+    const owner = await prisma.user.findFirst({ where: { tenantId, role: 'owner', status: 'active' } });
+    recipientId = owner?.id ?? null;
+  }
+  if (!recipientId) {
+    return;
+  }
+
+  await createNotification({
+    tenantId,
+    userId: recipientId,
+    type,
+    entityType: 'company',
+    entityId: company.id,
+    message,
+  });
+}
+
+// Takes the already-verified, parsed Stripe event (signature check + rawBody parsing stay in
+// routes/webhooks.ts, alongside Paddle/Mercado Pago's own signature checks) and resolves it to
+// zero or one Notification. Returns a short status string for the route's response body — mirrors
+// what the Paddle/Mercado Pago handlers already return, useful for eyeballing deliveries in
+// Stripe's own dashboard log without needing server logs.
+export async function processStripeWebhookEvent(tenantId: string, event: any): Promise<string> {
+  const eventType = String(event?.type ?? '');
+  const dataObject = event?.data?.object ?? {};
+  const customerId = typeof dataObject.customer === 'string' ? dataObject.customer : null;
+
+  if (!customerId) {
+    return 'no customer on event';
+  }
+
+  // No match (Company never linked, or linked to a different customer) -> discard without saving
+  // anything, per the spec's own "sin reprocesamiento de eventos sin match".
+  const company = await prisma.company.findFirst({ where: { tenantId, stripeCustomerId: customerId } });
+  if (!company) {
+    return 'no matching Company';
+  }
+
+  const amountCents = typeof dataObject.amount === 'number' ? dataObject.amount : null;
+  const amountRefundedCents = typeof dataObject.amount_refunded === 'number' ? dataObject.amount_refunded : null;
+  const currency = typeof dataObject.currency === 'string' ? dataObject.currency.toUpperCase() : '';
+  const formatAmount = (cents: number) => ` (${(cents / 100).toFixed(2)} ${currency})`;
+
+  switch (eventType) {
+    case 'charge.refunded':
+      await notifyCompanyStripeEvent(
+        tenantId,
+        company,
+        'stripe_charge_refunded',
+        `A payment was refunded for ${company.name}${amountRefundedCents !== null ? formatAmount(amountRefundedCents) : ''}`
+      );
+      return 'notified';
+    case 'charge.failed':
+      await notifyCompanyStripeEvent(
+        tenantId,
+        company,
+        'stripe_charge_failed',
+        `A payment failed for ${company.name}${amountCents !== null ? formatAmount(amountCents) : ''}`
+      );
+      return 'notified';
+    case 'payment_intent.payment_failed':
+      await notifyCompanyStripeEvent(tenantId, company, 'stripe_payment_failed', `A payment attempt failed for ${company.name}`);
+      return 'notified';
+    case 'customer.subscription.updated': {
+      // previous_attributes only lists what actually changed on an *.updated event (confirmed
+      // against Stripe's docs) — without this check, every unrelated update to a subscription
+      // that's already past_due (e.g. a quantity change) would re-fire the same notification.
+      const previousStatus = event?.data?.previous_attributes?.status;
+      if (dataObject.status === 'past_due' && previousStatus !== undefined && previousStatus !== 'past_due') {
+        await notifyCompanyStripeEvent(tenantId, company, 'stripe_subscription_past_due', `${company.name}'s subscription is past due`);
+        return 'notified';
+      }
+      return 'no relevant status transition';
+    }
+    case 'customer.subscription.deleted':
+      await notifyCompanyStripeEvent(tenantId, company, 'stripe_subscription_canceled', `${company.name}'s subscription was canceled`);
+      return 'notified';
+    default:
+      return 'unhandled event type';
+  }
 }

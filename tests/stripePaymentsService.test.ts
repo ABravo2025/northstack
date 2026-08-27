@@ -7,6 +7,7 @@ process.env.STRIPE_TOKEN_ENCRYPTION_KEY = randomBytes(32).toString('hex');
 let connections: any[] = [];
 let contacts: any[] = [];
 let companies: any[] = [];
+let users: any[] = [];
 
 vi.mock('../src/lib/prisma.js', () => ({
   default: {
@@ -31,6 +32,9 @@ vi.mock('../src/lib/prisma.js', () => ({
       findMany: vi.fn(async ({ where }: any) =>
         companies.filter((c) => c.tenantId === where.tenantId && (where.stripeCustomerId ? c.stripeCustomerId != null : true)),
       ),
+      findFirst: vi.fn(async ({ where }: any) =>
+        companies.find((c) => c.tenantId === where.tenantId && c.stripeCustomerId === where.stripeCustomerId) ?? null,
+      ),
       update: vi.fn(async ({ where, data }: any) => {
         const existing = companies.find((c) => c.id === where.id);
         if (!existing) throw new Error('not found');
@@ -38,7 +42,19 @@ vi.mock('../src/lib/prisma.js', () => ({
         return existing;
       }),
     },
+    user: {
+      findFirst: vi.fn(async ({ where }: any) =>
+        users.find((u) => u.tenantId === where.tenantId && u.role === where.role && u.status === where.status) ?? null,
+      ),
+    },
   },
+}));
+
+const { createNotificationMock } = vi.hoisted(() => ({
+  createNotificationMock: vi.fn(async (input: any) => ({ id: 'notif_1', ...input })),
+}));
+vi.mock('../src/modules/notifications/notificationService.js', () => ({
+  createNotification: createNotificationMock,
 }));
 
 const { listCustomersMock, listChargesMock, listSubscriptionsMock } = vi.hoisted(() => ({
@@ -62,6 +78,8 @@ import {
   getCompanyPaymentSummary,
   getPaymentsOverview,
   linkCompanyToStripeCustomer,
+  notifyCompanyStripeEvent,
+  processStripeWebhookEvent,
   searchStripeCustomersForCompany,
 } from '../src/modules/integrations/stripePaymentsService.js';
 
@@ -79,9 +97,11 @@ function resetMocks() {
   connections = [activeConnection('t1')];
   contacts = [];
   companies = [];
+  users = [];
   listCustomersMock.mockReset().mockResolvedValue({ data: [], has_more: false });
   listChargesMock.mockReset().mockResolvedValue({ data: [], has_more: false });
   listSubscriptionsMock.mockReset().mockResolvedValue({ data: [], has_more: false });
+  createNotificationMock.mockClear();
 }
 
 describe('searchStripeCustomersForCompany', () => {
@@ -316,5 +336,138 @@ describe('getPaymentsOverview', () => {
 
     const overview = await getPaymentsOverview('t1');
     expect(overview.companies.map((c) => c.companyId)).toEqual(['c1']);
+  });
+});
+
+describe('notifyCompanyStripeEvent', () => {
+  beforeEach(resetMocks);
+
+  it('notifies the Company\'s Account Owner when one is set', async () => {
+    await notifyCompanyStripeEvent('t1', { id: 'c1', accountOwnerId: 'u-account-owner' }, 'stripe_charge_refunded', 'A payment was refunded');
+
+    expect(createNotificationMock).toHaveBeenCalledWith({
+      tenantId: 't1',
+      userId: 'u-account-owner',
+      type: 'stripe_charge_refunded',
+      entityType: 'company',
+      entityId: 'c1',
+      message: 'A payment was refunded',
+    });
+  });
+
+  it('falls back to the tenant\'s active owner when there is no Account Owner', async () => {
+    users = [{ id: 'u-owner', tenantId: 't1', role: 'owner', status: 'active' }];
+
+    await notifyCompanyStripeEvent('t1', { id: 'c1', accountOwnerId: null }, 'stripe_charge_failed', 'A payment failed');
+
+    expect(createNotificationMock).toHaveBeenCalledWith(expect.objectContaining({ userId: 'u-owner' }));
+  });
+
+  it('never falls back to an admin — silently skips if no active owner exists either', async () => {
+    users = [{ id: 'u-admin', tenantId: 't1', role: 'admin', status: 'active' }];
+
+    await notifyCompanyStripeEvent('t1', { id: 'c1', accountOwnerId: null }, 'stripe_charge_failed', 'A payment failed');
+
+    expect(createNotificationMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('processStripeWebhookEvent', () => {
+  beforeEach(resetMocks);
+
+  function stripeEvent(type: string, dataObject: Record<string, unknown>, previousAttributes?: Record<string, unknown>) {
+    return { type, data: { object: dataObject, ...(previousAttributes ? { previous_attributes: previousAttributes } : {}) } };
+  }
+
+  it('discards an event with no customer on it, without ever looking up a Company', async () => {
+    const result = await processStripeWebhookEvent('t1', stripeEvent('charge.refunded', {}));
+    expect(result).toBe('no customer on event');
+    expect(createNotificationMock).not.toHaveBeenCalled();
+  });
+
+  it('discards an event whose customer matches no Company in this tenant', async () => {
+    const result = await processStripeWebhookEvent('t1', stripeEvent('charge.refunded', { customer: 'cus_unknown' }));
+    expect(result).toBe('no matching Company');
+    expect(createNotificationMock).not.toHaveBeenCalled();
+  });
+
+  it('never matches a customer id belonging to a different tenant', async () => {
+    companies = [{ id: 'c1', tenantId: 't2', name: 'Other tenant Co', stripeCustomerId: 'cus_1', accountOwnerId: null }];
+    const result = await processStripeWebhookEvent('t1', stripeEvent('charge.refunded', { customer: 'cus_1' }));
+    expect(result).toBe('no matching Company');
+  });
+
+  it('notifies on charge.refunded with the refunded amount in the message', async () => {
+    companies = [{ id: 'c1', tenantId: 't1', name: 'Acme', stripeCustomerId: 'cus_1', accountOwnerId: 'u1' }];
+    const result = await processStripeWebhookEvent(
+      't1',
+      stripeEvent('charge.refunded', { customer: 'cus_1', amount_refunded: 2500, currency: 'usd' }),
+    );
+    expect(result).toBe('notified');
+    expect(createNotificationMock).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'stripe_charge_refunded', message: 'A payment was refunded for Acme (25.00 USD)' }),
+    );
+  });
+
+  it('notifies on charge.failed with the charge amount in the message', async () => {
+    companies = [{ id: 'c1', tenantId: 't1', name: 'Acme', stripeCustomerId: 'cus_1', accountOwnerId: 'u1' }];
+    const result = await processStripeWebhookEvent('t1', stripeEvent('charge.failed', { customer: 'cus_1', amount: 5000, currency: 'usd' }));
+    expect(result).toBe('notified');
+    expect(createNotificationMock).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'stripe_charge_failed', message: 'A payment failed for Acme (50.00 USD)' }),
+    );
+  });
+
+  it('notifies on payment_intent.payment_failed', async () => {
+    companies = [{ id: 'c1', tenantId: 't1', name: 'Acme', stripeCustomerId: 'cus_1', accountOwnerId: 'u1' }];
+    const result = await processStripeWebhookEvent('t1', stripeEvent('payment_intent.payment_failed', { customer: 'cus_1' }));
+    expect(result).toBe('notified');
+    expect(createNotificationMock).toHaveBeenCalledWith(expect.objectContaining({ type: 'stripe_payment_failed' }));
+  });
+
+  it('notifies on customer.subscription.deleted', async () => {
+    companies = [{ id: 'c1', tenantId: 't1', name: 'Acme', stripeCustomerId: 'cus_1', accountOwnerId: 'u1' }];
+    const result = await processStripeWebhookEvent('t1', stripeEvent('customer.subscription.deleted', { customer: 'cus_1' }));
+    expect(result).toBe('notified');
+    expect(createNotificationMock).toHaveBeenCalledWith(expect.objectContaining({ type: 'stripe_subscription_canceled' }));
+  });
+
+  it('notifies on customer.subscription.updated only when status just transitioned into past_due', async () => {
+    companies = [{ id: 'c1', tenantId: 't1', name: 'Acme', stripeCustomerId: 'cus_1', accountOwnerId: 'u1' }];
+    const result = await processStripeWebhookEvent(
+      't1',
+      stripeEvent('customer.subscription.updated', { customer: 'cus_1', status: 'past_due' }, { status: 'active' }),
+    );
+    expect(result).toBe('notified');
+    expect(createNotificationMock).toHaveBeenCalledWith(expect.objectContaining({ type: 'stripe_subscription_past_due' }));
+  });
+
+  it('does NOT re-notify on an unrelated update to a subscription that is already past_due', async () => {
+    companies = [{ id: 'c1', tenantId: 't1', name: 'Acme', stripeCustomerId: 'cus_1', accountOwnerId: 'u1' }];
+    // previous_attributes has no `status` key at all — nothing about the status changed in this
+    // particular update (e.g. a quantity or metadata change on an already-past_due subscription).
+    const result = await processStripeWebhookEvent(
+      't1',
+      stripeEvent('customer.subscription.updated', { customer: 'cus_1', status: 'past_due' }, { quantity: 2 }),
+    );
+    expect(result).toBe('no relevant status transition');
+    expect(createNotificationMock).not.toHaveBeenCalled();
+  });
+
+  it('does not notify on customer.subscription.updated when the new status is not past_due', async () => {
+    companies = [{ id: 'c1', tenantId: 't1', name: 'Acme', stripeCustomerId: 'cus_1', accountOwnerId: 'u1' }];
+    const result = await processStripeWebhookEvent(
+      't1',
+      stripeEvent('customer.subscription.updated', { customer: 'cus_1', status: 'active' }, { status: 'past_due' }),
+    );
+    expect(result).toBe('no relevant status transition');
+    expect(createNotificationMock).not.toHaveBeenCalled();
+  });
+
+  it('acknowledges an event type it does not handle, without erroring', async () => {
+    companies = [{ id: 'c1', tenantId: 't1', name: 'Acme', stripeCustomerId: 'cus_1', accountOwnerId: 'u1' }];
+    const result = await processStripeWebhookEvent('t1', stripeEvent('customer.created', { customer: 'cus_1' }));
+    expect(result).toBe('unhandled event type');
+    expect(createNotificationMock).not.toHaveBeenCalled();
   });
 });

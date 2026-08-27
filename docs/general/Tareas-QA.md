@@ -1619,3 +1619,44 @@ el camino feliz con datos reales.
 **Severidad:** media — solo lectura, no hay riesgo de mover dinero por error. El caso 10 es el más
 importante de los que Claude no pudo probar en vivo: si el deep-link no abre la Company correcta, la
 tabla de la Unidad 3 pierde buena parte de su utilidad práctica.
+
+## QA-40 — Payments v1, Unidad 4: webhook de notificaciones proactivas (2026-08-26, en `staging`)
+
+**Por qué existe esta tarea:** cierra `docs/tareas/specpaymentsv1.md` completa (Unidades 1-4). Un
+tenant conecta el webhook de su propia cuenta de Stripe (URL + eventos, ver Paso 2 en Settings →
+Integrations de QA-38) y a partir de ahí, un refund/pago fallido/cambio de subscripción en una
+Company vinculada genera una `Notification` real (bell icon) para el Account Owner de esa Company,
+o el owner del tenant si no tiene uno asignado — nunca un admin, porque Payments es owner-only.
+
+**A diferencia de QA-38/QA-39, esto SÍ se pudo verificar de punta a punta sin una cuenta de Stripe
+real** — a Claude: se sembró un `StripeConnection` descartable con un webhook secret conocido
+directo en la base, y se firmaron a mano payloads de evento con el mismo algoritmo HMAC que usa
+Stripe de verdad, simulando deliveries reales. Confirmado con una query directa a la base: una
+firma válida contra un customer vinculado crea la `Notification` correcta (tipo, mensaje, y
+destinatario — cayó en el owner del tenant porque la Company de prueba no tenía Account Owner);
+firma inválida, header faltante, o tenant sin conexión → 400 sin crear nada; customer sin ninguna
+Company vinculada → 200 sin crear nada. 14 tests nuevos con mocks cubren además el caso más
+delicado: que un `customer.subscription.updated` **no** relacionado al status (ej. cambiar la
+cantidad) sobre una subscription que ya está `past_due` no dispare una notificación repetida —
+solo notifica cuando el status recién transicionó a `past_due` (usando `previous_attributes`, que
+Stripe solo llena con lo que cambió en ese evento puntual). `npm run build`/`npm test`
+(147/147)/`npm run lint` backend en verde.
+
+**Lo único que falta probar con Stripe real:** que un evento real disparado desde el dashboard de
+test de Stripe (no simulado a mano) efectivamente le llegue al endpoint — la firma HMAC en sí ya
+está confirmada bit a bit contra el algoritmo real, así que el riesgo residual es más de
+configuración (URL mal copiada, evento no tildado al crear el webhook en Stripe) que de código.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Con el webhook creado en Stripe (URL + los 5 eventos, ver QA-38 Paso 2), disparar un refund real desde el dashboard de test sobre un customer vinculado a una Company | Aparece una `Notification` nueva en el bell icon del Account Owner (o el owner del tenant si la Company no tiene uno) con el monto correcto |
+| 2 | Repetir con un pago fallido (`charge.failed`) | Notificación con el tipo/mensaje de pago fallido |
+| 3 | Cancelar una subscription real de test sobre un customer vinculado | Notificación de subscription cancelada |
+| 4 | Forzar que una subscription real pase a `past_due` (ej. una tarjeta de test que declina) | Notificación de subscription past due — una sola vez, no una por cada evento relacionado que dispare Stripe en el camino |
+| 5 | Cualquier evento sobre un customer que no está vinculado a ninguna Company del tenant | Ninguna notificación — nada roto, Stripe ve un 200 igual |
+| 6 | Revisar en el dashboard de Stripe → Developers → Webhooks → el endpoint, la pestaña de intentos | Todos los deliveries devuelven 200 (o 400 solo si de verdad hubo un problema de firma/configuración, nunca un 500) |
+
+**Severidad:** media — solo lectura/aviso, no hay riesgo de mover dinero ni de romper el resto de la
+app si algo falla acá (un 400/200 limpio en todos los casos, nunca un crash). El caso 4 es el más
+importante: es el único de los 5 eventos con lógica de deduplicación real, y es exactamente donde un
+bug se sentiría como spam de notificaciones para el usuario.

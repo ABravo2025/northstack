@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import prisma from '../../lib/prisma.js';
 import { sendSignupVerificationEmail } from '../../lib/mailer.js';
+import { bestEffort } from '../../lib/bestEffort.js';
 import { checkEmailDomainNotAlreadyRegistered } from './tenantService.js';
 import { isEmailFormatValid } from '../../lib/email.js';
 
@@ -50,13 +51,17 @@ export async function startSignupVerification(email: string): Promise<StartSignu
 
   const appBaseUrl = process.env.APP_BASE_URL ?? 'http://localhost:5173';
   // Best-effort, same reasoning as every other transactional send in mailer.ts: the row
-  // already exists regardless of whether this particular send succeeds.
-  sendSignupVerificationEmail({
-    to: normalizedEmail,
-    verifyUrl: `${appBaseUrl}/register/complete?token=${token}`,
-  }).catch((error) => {
-    console.error('Failed to send signup verification email:', error);
-  });
+  // already exists regardless of whether this particular send succeeds. Must still be awaited,
+  // not fire-and-forget — see bestEffort.ts's header (confirmed live 2026-08-25: this exact
+  // call site was silently dropping every signup verification email in production because it
+  // wasn't awaited).
+  await bestEffort(
+    sendSignupVerificationEmail({
+      to: normalizedEmail,
+      verifyUrl: `${appBaseUrl}/register/complete?token=${token}`,
+    }),
+    'Failed to send signup verification email:',
+  );
 
   return { success: true };
 }

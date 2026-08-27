@@ -14,6 +14,28 @@ los ítems.
   Aplicaría a `department`, `statusId`, `managerId`, custom fields embebidos. Sin definir: patrón de
   edición (click-to-edit por celda vs. fila entera en modo edición), autosave vs. confirmar, y si
   Companies/Contacts reciben el mismo tratamiento por consistencia.
+- [ ] **Refresh de pantalla al asignar una política de Time Off**: agregar una política de time off
+  a un empleado dispara un refresh completo de la pantalla que no debería ocurrir. Durante ese
+  refresh se muestra el texto literal "loading" en vez de los skeleton bars que usa el resto de la
+  plataforma para estados de carga.
+- [ ] **Vista de lista de People/Employees oculta campos usados para filtrar**: al crear un perfil
+  se completan campos que no quedan visibles en el formato lista (ej. "Pay frequency", útil para
+  saber a quiénes hay que pagar) — deberían mostrarse todos los campos relevantes en la lista, no
+  solo un subconjunto.
+- [ ] **"Add person" de un Payroll run no sigue el patrón estándar de alta**: al crear un payroll
+  run, el botón "Add person" no respeta el formato/flujo que usa el resto de la plataforma para
+  agregar personas o compañías; además debería filtrar automáticamente por las personas cuyo "pay
+  frequency" coincida con el del run seleccionado.
+- [ ] **Campo "Base" del Payroll run poco entendible**: no queda claro qué hay que completar; el
+  input debería ser más visible y, en vez de mostrar "hs x $65.00 =" al lado, agregar dos campos
+  separados — "Rate" y "Type" — para que quede más claro.
+- [ ] **Falta proceso de termination de empleados**: pensar un flujo en Payroll para dar de baja
+  empleados y marcarlos como inactivos.
+- [ ] **Empleados sin firmar el contrato no tienen estado visible**: deberían figurar con un estado
+  tipo "Pending" (o el label que corresponda) mientras no hayan firmado el contrato.
+- [ ] **Reordenar tabs de Time Off**: vista para usuarios comunes — "My timeoff" (detalle de los
+  días libres que quedan según la política asignada), "My request", "Approvals"; vista para
+  administradores — igual que la anterior, agregando "Balances", "All request" y "Policies".
 
 ## CRM
 
@@ -65,6 +87,23 @@ los ítems.
   tiempo-en-stage para marcar deals "en riesgo" (depende de que exista reporting); jerarquía de
   Company (matriz/sucursal, solo relevante si aparece un tenant B2B enterprise); resaltar visualmente
   si una Opportunity tiene un solo Contact asociado (multi-threading).
+- [ ] **Crear una Opportunity guarda antes de tiempo**: al completar los campos obligatorios del
+  formulario de alta, la Opportunity se crea automáticamente sin esperar a que el usuario presione
+  el botón "Create" — no debería persistir hasta ese click.
+- [ ] **Opportunity card sin acceso al perfil de Contact/Company**: agregar en la tarjeta de la
+  Opportunity un link directo al perfil del contacto y de la compañía correspondientes.
+- [ ] **Opportunity creada desde un Contact no se puede volver a abrir**: al crear una Opportunity
+  desde el perfil de un Contact, la card resultante no se puede abrir después, lo que impide
+  completar el resto de sus campos.
+- [ ] **Company de un Contact solo editable desde el perfil de la Company**: una vez que un Contact
+  queda vinculado a una Company, no se puede cambiar esa Company desde el perfil del Contact — solo
+  se pueden agregar/quitar contacts desde el perfil de la Company. A confirmar si es el
+  comportamiento deseado o hace falta simetría.
+- [ ] **Campo "Opportunities" desalineado en la card de Contact**: no respeta el tamaño ni el
+  formato del resto de la tarjeta.
+- [ ] **Sistema de tags para Contact/Company/Employee**: permitir agregar tags en los tres tipos de
+  perfil para que el usuario pueda filtrar y organizar en base a ellos. Sin definir alcance (tags
+  libres vs. predefinidos, compartidos entre módulos o por separado).
 
 ## UX/UI
 
@@ -75,6 +114,11 @@ los ítems.
   vía `<select>`, activar/desactivar vía ícono), sin panel de detalle propio como tienen
   Employees/Companies/Contacts/Opportunities. Es una decisión de producto, no una réplica mecánica de
   patrón — ¿qué mostraría que la tabla no muestre ya? A confirmar con el usuario antes de construirlo.
+- [ ] **Settings sin navegación lateral**: al abrir Settings, el panel izquierdo debería convertirse
+  en un listado de las secciones de Settings para que el usuario se mueva con fluidez entre ellas,
+  con un botón de "volver" agregado.
+- [ ] **Campos desplegables aparecen en blanco**: reportado en algunos selects, no en todos — a
+  confirmar si es un bug real de la plataforma o algo puntual del entorno del usuario.
 
 ## Notes/Tasks
 
@@ -88,6 +132,15 @@ los ítems.
   autenticado del tenant puede crear/editar/borrar/completar cualquier Task — decisión deliberada por
   simplicidad mientras no exista permisología granular; anotado para reabrir esa decisión cuando el
   sistema de roles custom (Infra/Otros) exista.
+- [ ] **Crear Task desde el calendario incompleto**: al hacer click en el calendario para agregar
+  una task, falta el flujo con los campos obligatorios — seleccionar si corresponde a Client/
+  Company/Employee, elegir a quién, y completar título, descripción y fecha.
+
+## Payments
+
+- [ ] **Conexión con Stripe no funciona en modo test (Payments v1)**: probado con una restricted key
+  recién generada — la conexión falla. Nota aparte: esa key quedó pegada en el chat del usuario;
+  conviene rotarla una vez resuelto el bug, aunque sea de test.
 
 ## Infra/Otros
 
@@ -131,6 +184,10 @@ los ítems.
   Alejandro cargue `GOOGLE_CALENDAR_CLIENT_SECRET`/`GOOGLE_CALENDAR_REDIRECT_URI` reales (Google
   Cloud Console) — el `GOOGLE_CALENDAR_CLIENT_ID` que ya estaba en `.env` no tenía código atrás
   hasta ahora.
+- [ ] **Sync de Google Calendar no trae los eventos ya existentes**: al vincular Google Calendar, no
+  se sincronizan los elementos que el usuario ya tenía registrados en su calendario — el sync
+  construido arriba es unidireccional (Northstack → Google); falta evaluar si además hace falta
+  traer eventos existentes desde Google hacia la plataforma.
 - [ ] **"Sign in with Google" en registro/login**: comparte el mismo Google Cloud OAuth client que
   el punto de arriba, pero es un flujo de autenticación distinto (reemplaza/complementa
   email+password), no construido todavía. Evaluar junto con el ítem de abajo si conviene un solo

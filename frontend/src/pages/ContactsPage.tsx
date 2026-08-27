@@ -25,6 +25,7 @@ import AddCustomFieldColumn from '../components/entity-views/AddCustomFieldColum
 import ColumnResizeHandle from '../components/entity-views/ColumnResizeHandle';
 import { useResizableColumns } from '../hooks/useResizableColumns';
 import ColumnVisibilityMenu from '../components/entity-views/ColumnVisibilityMenu';
+import MultiSelectDropdown from '../components/common/MultiSelectDropdown';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { useColumnOrder } from '../hooks/useColumnOrder';
 import Avatar, { getInitials } from '../components/common/Avatar';
@@ -100,6 +101,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
   const [deletingContact, setDeletingContact] = useState<Contact | null>(null);
   const tableWrapRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState('');
+  const [selectedTagFilter, setSelectedTagFilter] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [contactCustomFields, setContactCustomFields] = useState<any[]>([]);
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
@@ -305,7 +307,11 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
         (contact.company?.name ?? '').toLowerCase().includes(query)
       );
     });
-    const filtered = applyFilters(searchFiltered, fields, viewFilters);
+    const tagFiltered =
+      selectedTagFilter.length === 0
+        ? searchFiltered
+        : searchFiltered.filter((contact: any) => (contact.tags || []).some((t: any) => selectedTagFilter.includes(t.name)));
+    const filtered = applyFilters(tagFiltered, fields, viewFilters);
     const sorted = applySort(filtered, fields, viewSort);
     const index = sorted.findIndex((c) => c.id === contactId);
     if (index !== -1) setPage(Math.floor(index / PAGE_SIZE) + 1);
@@ -473,11 +479,20 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
     );
   });
 
-  const viewFilteredContacts = applyFilters(searchFilteredContacts, fields, viewFilters);
+  const tagFilteredContacts =
+    selectedTagFilter.length === 0
+      ? searchFilteredContacts
+      : searchFilteredContacts.filter((contact: any) => (contact.tags || []).some((t: any) => selectedTagFilter.includes(t.name)));
+
+  const viewFilteredContacts = applyFilters(tagFilteredContacts, fields, viewFilters);
   const sortedContacts = applySort(viewFilteredContacts, fields, viewSort);
 
   const pageCount = Math.max(1, Math.ceil(sortedContacts.length / PAGE_SIZE));
   const pagedContacts = paginate(sortedContacts, page, PAGE_SIZE);
+
+  const allTagOptions = Array.from(new Set(contacts.flatMap((contact: any) => (contact.tags || []).map((t: any) => t.name))))
+    .sort()
+    .map((name) => ({ value: name, label: name }));
 
   useEffect(() => {
     setPage(1);
@@ -599,6 +614,22 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
       render: (contact: Contact) => (contact.leadStatus ? LEAD_STATUS_LABELS[contact.leadStatus] : '—'),
     },
     { key: 'leadSource', label: 'Lead Source', render: (contact: Contact) => contact.leadSource?.name || '—' },
+    {
+      key: 'tags',
+      label: 'Tags',
+      render: (contact: any) =>
+        contact.tags && contact.tags.length > 0 ? (
+          <div className="flex flex-wrap items-center">
+            {contact.tags.map((tag: any) => (
+              <span key={tag.tagAssignmentId} className="time-off-policy-chip">
+                {tag.name}
+              </span>
+            ))}
+          </div>
+        ) : (
+          '—'
+        ),
+    },
   ];
 
   const toggleableColumns = [
@@ -1049,6 +1080,16 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
               placeholder="Search by name, email or company..."
             />
           </div>
+        )}
+        {allTagOptions.length > 0 && (
+          <MultiSelectDropdown
+            id="contact-tag-filter"
+            options={allTagOptions}
+            selected={selectedTagFilter}
+            onChange={setSelectedTagFilter}
+            placeholder="Filter by tag"
+            emptyMessage="No tags yet."
+          />
         )}
         {viewType !== 'kanban' && <FilterBar fields={fields} filters={viewFilters} onChange={setViewFilters} />}
         {viewType !== 'kanban' && (

@@ -1,6 +1,7 @@
 import prisma from '../../lib/prisma.js';
 import { getDefaultStatusId } from '../hr/statusService.js';
 import { listCustomFieldValuesForEntities } from '../hr/customFieldService.js';
+import { listTagsForEntities } from '../crossModule/tagService.js';
 import { deleteOpportunity } from './opportunityService.js';
 import type { Company, Prisma } from '@prisma/client';
 
@@ -137,10 +138,12 @@ export async function listCompanies(tenantId: string) {
     'company',
     companies.map((company) => company.id),
   );
+  const tags = await listTagsForEntities(tenantId, 'company', companies.map((company) => company.id));
 
   return companies.map((company) => ({
     ...company,
     customFieldVals: values.filter((value) => value.entityId === company.id),
+    tags: tags.filter((tag) => tag.entityId === company.id),
   }));
 }
 

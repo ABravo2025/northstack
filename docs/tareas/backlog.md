@@ -67,12 +67,6 @@ los ítems.
   tiempo-en-stage para marcar deals "en riesgo" (depende de que exista reporting); jerarquía de
   Company (matriz/sucursal, solo relevante si aparece un tenant B2B enterprise); resaltar visualmente
   si una Opportunity tiene un solo Contact asociado (multi-threading).
-- [ ] **Sistema de tags — falta el filtrado en las listas**: la primera entrega (crear/ver/sacar
-  tags libres en el perfil de Contact/Company/Employee, con autocomplete compartido entre los 3)
-  ya está construida y en `staging` (ver QA-45 en `Tareas-QA.md`). Falta la segunda mitad del pedido
-  original: mostrar los tags como columna/chip en las vistas de lista de Contacts/Companies/
-  Employees y poder filtrar por ellos — no arrancado todavía.
-
 ## UX/UI
 
 - [ ] **FAB de acción primaria en mobile (Tarea 9c del rediseño ClickUp)**: no se construyó — necesita

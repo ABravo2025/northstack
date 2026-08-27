@@ -1876,3 +1876,47 @@ real, confirmado contra la base directamente.
 `npm run build`/`npm test` (147/147) en verde. Sin errores de consola.
 
 **Severidad:** baja — tabla nueva, aditiva, no toca ningún modelo ni endpoint existente.
+
+## QA-46 — Sistema de tags, Entrega 2: columna/chip + filtro en las listas de Contacts/Companies/Employees (en `staging`)
+
+**Por qué existe esta tarea:** segunda mitad del pedido original de tags, dejada pendiente en
+QA-45 ("Falta la segunda mitad del pedido original: mostrar los tags como columna/chip en las
+vistas de lista... y poder filtrar por ellos").
+
+**Por qué no se integró al motor de Views genérico**: `viewFields.ts`/`applyFilters`/`applySort`
+no soportan campos multi-valor (un registro puede tener N tags). Mismo caso ya resuelto para
+"Time Off Policies" en `EmployeesPage.tsx` — se sigue el mismo patrón: columna toggleable de solo
+lectura fuera del motor genérico, más un paso de filtrado bespoke aplicado *antes* de
+`applyFilters` (ver `tagFilteredEmployees`/`tagFilteredContacts`/`tagFilteredCompanies` en cada
+página), con match OR (cualquier tag seleccionado matchea).
+
+**Backend**: `listContacts`/`listCompanies`/`listEmployees` (`contactService.ts`,
+`companyService.ts`, `employeeService.ts`) ahora traen `tags` embebido en cada fila vía
+`listTagsForEntities` (ya existía desde QA-45, una sola query batch en vez de N).
+
+**Frontend**, mismo patrón replicado en `ContactsPage.tsx`, `CompaniesPage.tsx` y
+`EmployeesPage.tsx`:
+- Columna "Tags" (en `ContactsPage`/`CompaniesPage` es una entrada más de su array `columns`
+  genérico; en `EmployeesPage` sigue el patrón bespoke ya usado por "Time Off Policies", con su
+  propio `showTagsColumn`) — chips de solo lectura reusando `.time-off-policy-chip`.
+- Filtro `MultiSelectDropdown` ("Filter by tag") en el toolbar, al lado del buscador — solo se
+  renderiza si el tenant ya tiene al menos un tag asignado en esa lista.
+- `jumpToEmployeePage`/`jumpToContactPage`/`jumpToCompanyPage` (recalculan a qué página saltar
+  tras crear un registro) actualizados con el mismo paso de filtrado por tag, para no quedar
+  desincronizados del pipeline que usa el render.
+
+**Bug encontrado y corregido antes de pushear**: el chip de cada tag usaba `key={tag.id}` — pero
+el shape que devuelve `listTagsForEntities` no tiene `id`, solo `tagAssignmentId` (visto en
+`tagService.ts`). Daba un warning de React "unique key" en las 3 páginas (key `undefined`
+repetida). Corregido a `key={tag.tagAssignmentId}`, mismo campo que ya usaba `TagInput.tsx`.
+
+**Verificado end-to-end** contra el tenant de prueba en `staging` (Playwright): login, se agregó
+el tag "VIP" a un Employee/Contact/Company desde su detalle, se confirmó el chip en la columna
+"Tags" de las 3 listas, se abrió el dropdown "Filter by tag", se marcó "VIP" y se confirmó que la
+lista filtró correctamente. Sin errores de consola tras el fix del `key`. Tag de prueba "VIP"
+borrado de la base al terminar (no queda como catálogo real del tenant de QA).
+
+`npm run build` (frontend, `tsc -b` limpio) y `npm test` (147/147) en verde.
+
+**Severidad:** baja — solo lectura/filtrado sobre datos ya expuestos por QA-45, sin cambios de
+modelo ni de endpoints.

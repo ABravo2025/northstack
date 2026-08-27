@@ -17,6 +17,7 @@ import FieldCatalogMenu from '../components/entity-views/FieldCatalogMenu';
 import ColumnResizeHandle from '../components/entity-views/ColumnResizeHandle';
 import { useResizableColumns } from '../hooks/useResizableColumns';
 import ColumnVisibilityMenu from '../components/entity-views/ColumnVisibilityMenu';
+import MultiSelectDropdown from '../components/common/MultiSelectDropdown';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { useColumnOrder } from '../hooks/useColumnOrder';
 import CsvImportExportMenu, { type CsvImportExportMenuHandle } from '../components/entity-views/CsvImportExportMenu';
@@ -71,6 +72,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const [slideOverMode, setSlideOverMode] = useState<'add' | null>(null);
   const [deletingEmployee, setDeletingEmployee] = useState<any | null>(null);
   const [employeeSearch, setEmployeeSearch] = useState('');
+  const [selectedTagFilter, setSelectedTagFilter] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [employeeCustomFields, setEmployeeCustomFields] = useState<any[]>([]);
   const [employeeStatuses, setEmployeeStatuses] = useState<any[]>([]);
@@ -145,8 +147,22 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     );
   });
 
-  const viewFilteredEmployees = applyFilters(searchFilteredEmployees, fields, viewFilters);
+  // Tags are multi-valued per row, outside the generic single-value
+  // viewFields/applyFilters engine (same reason search above isn't routed
+  // through it either) — OR match: any row carrying at least one of the
+  // selected tags. `tags` comes embedded on each employee from listEmployees
+  // (backlog QA, 2026-08-27).
+  const tagFilteredEmployees =
+    selectedTagFilter.length === 0
+      ? searchFilteredEmployees
+      : searchFilteredEmployees.filter((emp) => (emp.tags || []).some((t: any) => selectedTagFilter.includes(t.name)));
+
+  const viewFilteredEmployees = applyFilters(tagFilteredEmployees, fields, viewFilters);
   const sortedEmployees = applySort(viewFilteredEmployees, fields, viewSort);
+
+  const allTagOptions = Array.from(new Set(employees.flatMap((emp: any) => (emp.tags || []).map((t: any) => t.name))))
+    .sort()
+    .map((name) => ({ value: name, label: name }));
 
   const pageCount = Math.max(1, Math.ceil(sortedEmployees.length / PAGE_SIZE));
   const pagedEmployees = paginate(sortedEmployees, page, PAGE_SIZE);
@@ -419,7 +435,11 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         (emp.departmentDefn?.name ?? '').toLowerCase().includes(query)
       );
     });
-    const filtered = applyFilters(searchFiltered, fields, viewFilters);
+    const tagFiltered =
+      selectedTagFilter.length === 0
+        ? searchFiltered
+        : searchFiltered.filter((emp) => (emp.tags || []).some((t: any) => selectedTagFilter.includes(t.name)));
+    const filtered = applyFilters(tagFiltered, fields, viewFilters);
     const sorted = applySort(filtered, fields, viewSort);
     const index = sorted.findIndex((e) => e.id === employeeId);
     if (index !== -1) setPage(Math.floor(index / PAGE_SIZE) + 1);
@@ -840,6 +860,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     ...columns,
     { key: 'managerName', label: 'Reports To' },
     { key: 'timeOffPolicies', label: 'Time Off Policies' },
+    { key: 'tags', label: 'Tags' },
     ...activeEmployeeCustomFields.map((field) => ({ key: `cf:${field.id}`, label: field.name })),
   ];
   const movableColumnKeys = columns.map((col) => col.key).filter((key) => !FROZEN_COLUMN_KEYS.includes(key));
@@ -864,6 +885,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   };
   const showManagerColumn = !isColumnHidden('managerName');
   const showTimeOffPoliciesColumn = !isColumnHidden('timeOffPolicies');
+  const showTagsColumn = !isColumnHidden('tags');
   const visibleCustomFields = activeEmployeeCustomFields.filter((field) => !isColumnHidden(`cf:${field.id}`));
 
   const groupFieldForKanban = activeView?.groupByField ? findField(fields, activeView.groupByField) : undefined;
@@ -880,6 +902,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     visibleColumns.length +
     (showManagerColumn ? 1 : 0) +
     (showTimeOffPoliciesColumn ? 1 : 0) +
+    (showTagsColumn ? 1 : 0) +
     visibleCustomFields.length +
     (canManageCustomFields ? 1 : 0) +
     1;
@@ -932,6 +955,21 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
           {emp.timeOffPolicies && emp.timeOffPolicies.length > 0
             ? emp.timeOffPolicies.map((a: any) => a.timeOffPolicy.name).join(', ')
             : '—'}
+        </td>
+      )}
+      {showTagsColumn && (
+        <td>
+          {emp.tags && emp.tags.length > 0 ? (
+            <div className="flex flex-wrap items-center">
+              {emp.tags.map((tag: any) => (
+                <span key={tag.tagAssignmentId} className="time-off-policy-chip">
+                  {tag.name}
+                </span>
+              ))}
+            </div>
+          ) : (
+            '—'
+          )}
         </td>
       )}
       {visibleCustomFields.map((field) => {
@@ -1393,6 +1431,16 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
             />
           </div>
         )}
+        {allTagOptions.length > 0 && (
+          <MultiSelectDropdown
+            id="employee-tag-filter"
+            options={allTagOptions}
+            selected={selectedTagFilter}
+            onChange={setSelectedTagFilter}
+            placeholder="Filter by tag"
+            emptyMessage="No tags yet."
+          />
+        )}
         {viewType !== 'kanban' && <FilterBar fields={fields} filters={viewFilters} onChange={setViewFilters} />}
         {viewType !== 'kanban' && (
           <ColumnVisibilityMenu columns={toggleableColumns} isHidden={isColumnHidden} onToggle={toggleColumn} />
@@ -1500,6 +1548,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                 ))}
                 {showManagerColumn && <col style={{ width: getColumnWidth('managerName') }} />}
                 {showTimeOffPoliciesColumn && <col style={{ width: getColumnWidth('timeOffPolicies') }} />}
+                {showTagsColumn && <col style={{ width: getColumnWidth('tags') }} />}
                 {visibleCustomFields.map((field) => (
                   <col key={field.id} style={{ width: getColumnWidth(`cf:${field.id}`) }} />
                 ))}
@@ -1590,6 +1639,12 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                     <th>
                       Time Off Policies
                       <ColumnResizeHandle onMouseDown={(e) => startResize('timeOffPolicies', e)} />
+                    </th>
+                  )}
+                  {showTagsColumn && (
+                    <th>
+                      Tags
+                      <ColumnResizeHandle onMouseDown={(e) => startResize('tags', e)} />
                     </th>
                   )}
                   {visibleCustomFields.map((field) => (

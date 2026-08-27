@@ -1,5 +1,6 @@
 import prisma from '../../lib/prisma.js';
 import { listCustomFieldValuesForEntities } from '../hr/customFieldService.js';
+import { listTagsForEntities } from '../crossModule/tagService.js';
 import type { Contact, LeadStatus, Prisma } from '@prisma/client';
 
 export interface CreateContactInput {
@@ -95,10 +96,12 @@ export async function listContacts(tenantId: string, includeInactive = false) {
     'contact',
     contacts.map((contact) => contact.id),
   );
+  const tags = await listTagsForEntities(tenantId, 'contact', contacts.map((contact) => contact.id));
 
   return contacts.map((contact) => ({
     ...contact,
     customFieldVals: values.filter((value) => value.entityId === contact.id),
+    tags: tags.filter((tag) => tag.entityId === contact.id),
   }));
 }
 

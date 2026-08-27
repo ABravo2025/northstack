@@ -2,6 +2,7 @@ import prisma from '../../lib/prisma.js';
 import { getDefaultStatusId, recordStatusChange } from './statusService.js';
 import { listCustomFieldValuesForEntities } from './customFieldService.js';
 import { findActiveTimeOffRequestsForEmployees } from './timeOffRequestService.js';
+import { listTagsForEntities } from '../crossModule/tagService.js';
 import type { ContractType, Employee, PersonType, Prisma } from '@prisma/client';
 
 export interface CreateEmployeeInput {
@@ -132,6 +133,7 @@ export async function listEmployees(tenantId: string | null | undefined) {
     where: { employeeId: { in: employeeIds }, effectiveTo: null },
     include: { payFrequency: true },
   });
+  const tags = await listTagsForEntities(tenantId, 'employee', employeeIds);
 
   return employees.map((employee) => {
     const activeTimeOff = activeTimeOffRequests.find((request) => request.employeeId === employee.id);
@@ -145,6 +147,7 @@ export async function listEmployees(tenantId: string | null | undefined) {
         : null,
       contractStatus: computeContractStatus(employee.personType, employee.userId, compensations[0]),
       payFrequencyName: currentCompensation?.payFrequency.name ?? null,
+      tags: tags.filter((tag) => tag.entityId === employee.id),
     };
 
     return result;

@@ -18,6 +18,7 @@ import FieldCatalogMenu from '../components/entity-views/FieldCatalogMenu';
 import ColumnResizeHandle from '../components/entity-views/ColumnResizeHandle';
 import { useResizableColumns } from '../hooks/useResizableColumns';
 import ColumnVisibilityMenu from '../components/entity-views/ColumnVisibilityMenu';
+import MultiSelectDropdown from '../components/common/MultiSelectDropdown';
 import { useColumnVisibility } from '../hooks/useColumnVisibility';
 import { useColumnOrder } from '../hooks/useColumnOrder';
 import Avatar, { getInitials } from '../components/common/Avatar';
@@ -75,6 +76,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
   const [cascadeToChildCompanies, setCascadeToChildCompanies] = useState(false);
   const tableWrapRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState('');
+  const [selectedTagFilter, setSelectedTagFilter] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [companyCustomFields, setCompanyCustomFields] = useState<any[]>([]);
   const [companyStatuses, setCompanyStatuses] = useState<any[]>([]);
@@ -302,7 +304,11 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
         (company.website ?? '').toLowerCase().includes(query)
       );
     });
-    const filtered = applyFilters(searchFiltered, fields, viewFilters);
+    const tagFiltered =
+      selectedTagFilter.length === 0
+        ? searchFiltered
+        : searchFiltered.filter((company: any) => (company.tags || []).some((t: any) => selectedTagFilter.includes(t.name)));
+    const filtered = applyFilters(tagFiltered, fields, viewFilters);
     const sorted = applySort(filtered, fields, viewSort);
     const index = sorted.findIndex((c) => c.id === companyId);
     if (index !== -1) setPage(Math.floor(index / PAGE_SIZE) + 1);
@@ -485,11 +491,20 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
     );
   });
 
-  const viewFilteredCompanies = applyFilters(searchFilteredCompanies, fields, viewFilters);
+  const tagFilteredCompanies =
+    selectedTagFilter.length === 0
+      ? searchFilteredCompanies
+      : searchFilteredCompanies.filter((company: any) => (company.tags || []).some((t: any) => selectedTagFilter.includes(t.name)));
+
+  const viewFilteredCompanies = applyFilters(tagFilteredCompanies, fields, viewFilters);
   const sortedCompanies = applySort(viewFilteredCompanies, fields, viewSort);
 
   const pageCount = Math.max(1, Math.ceil(sortedCompanies.length / PAGE_SIZE));
   const pagedCompanies = paginate(sortedCompanies, page, PAGE_SIZE);
+
+  const allTagOptions = Array.from(new Set(companies.flatMap((company: any) => (company.tags || []).map((t: any) => t.name))))
+    .sort()
+    .map((name) => ({ value: name, label: name }));
 
   useEffect(() => {
     setPage(1);
@@ -620,6 +635,22 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
       label: 'Account Owner',
       render: (company: Company) =>
         company.accountOwner ? `${company.accountOwner.firstName} ${company.accountOwner.lastName}` : '—',
+    },
+    {
+      key: 'tags',
+      label: 'Tags',
+      render: (company: any) =>
+        company.tags && company.tags.length > 0 ? (
+          <div className="flex flex-wrap items-center">
+            {company.tags.map((tag: any) => (
+              <span key={tag.tagAssignmentId} className="time-off-policy-chip">
+                {tag.name}
+              </span>
+            ))}
+          </div>
+        ) : (
+          '—'
+        ),
     },
   ];
 
@@ -1031,6 +1062,16 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
               placeholder="Search by name, industry or website..."
             />
           </div>
+        )}
+        {allTagOptions.length > 0 && (
+          <MultiSelectDropdown
+            id="company-tag-filter"
+            options={allTagOptions}
+            selected={selectedTagFilter}
+            onChange={setSelectedTagFilter}
+            placeholder="Filter by tag"
+            emptyMessage="No tags yet."
+          />
         )}
         {viewType !== 'kanban' && <FilterBar fields={fields} filters={viewFilters} onChange={setViewFilters} />}
         {viewType !== 'kanban' && (

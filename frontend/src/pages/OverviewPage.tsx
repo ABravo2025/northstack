@@ -6,6 +6,7 @@ import { ChevronLeftIcon, ChevronRightIcon } from '../components/common/Icons';
 import OnboardingChecklist from '../components/layout/OnboardingChecklist';
 import MyTasksWidget from '../components/tasks/MyTasksWidget';
 import TaskFormPopover, { type TaskFormPayload } from '../components/tasks/TaskFormPopover';
+import NewTaskFromCalendarPopover from '../components/tasks/NewTaskFromCalendarPopover';
 
 interface OverviewPageProps {
   token: string;
@@ -75,6 +76,9 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
   const [formOpen, setFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const taskAnchorRef = useRef<HTMLDivElement | null>(null);
+  const newTaskAnchorRef = useRef<HTMLTableCellElement | null>(null);
+  const [newTaskFormOpen, setNewTaskFormOpen] = useState(false);
+  const [newTaskDate, setNewTaskDate] = useState('');
 
   // 30s polling while the page is open — the only way changes made outside
   // Northstack (e.g. editing a synced Task's event directly in Google
@@ -128,6 +132,12 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
     taskAnchorRef.current = e.currentTarget;
     setEditingTask(task);
     setFormOpen(true);
+  };
+
+  const openNewTaskForm = (e: React.MouseEvent<HTMLTableCellElement>, dayKey: string) => {
+    newTaskAnchorRef.current = e.currentTarget;
+    setNewTaskDate(dayKey);
+    setNewTaskFormOpen(true);
   };
 
   const handleTaskSubmit = async (payload: TaskFormPayload) => {
@@ -260,7 +270,12 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
                         const dayTasks = tasksByDay[key] || [];
                         const dayBirthdays = birthdaysByDay[key] || [];
                         return (
-                          <td key={j} className={key === todayKey ? 'calendar-cell calendar-cell-today' : 'calendar-cell'}>
+                          <td
+                            key={j}
+                            className={key === todayKey ? 'calendar-cell calendar-cell-today' : 'calendar-cell'}
+                            onClick={(e) => openNewTaskForm(e, key)}
+                            style={{ cursor: 'pointer' }}
+                          >
                             <div className="calendar-cell-date">{day}</div>
                             {dayBirthdays.map((b) => (
                               <div
@@ -305,7 +320,10 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
                                   key={task.id}
                                   className="calendar-entry-task"
                                   title={`${timeLabel ? `${timeLabel} — ` : ''}${task.title}${task.entitySummary ? ` — ${task.entitySummary}` : ''}`}
-                                  onClick={(e) => openTaskForm(e, task)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openTaskForm(e, task);
+                                  }}
                                 >
                                   {timeLabel && <span className="calendar-entry-task-time">{timeLabel} </span>}
                                   {task.title}
@@ -337,6 +355,17 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
         defaultAssigneeId={user.id}
         onSubmit={handleTaskSubmit}
         onDelete={handleTaskDelete}
+      />
+
+      <NewTaskFromCalendarPopover
+        open={newTaskFormOpen}
+        onClose={() => setNewTaskFormOpen(false)}
+        anchorRef={newTaskAnchorRef}
+        token={token}
+        tenantUsers={tenantUsers}
+        defaultAssigneeId={user.id}
+        defaultDueDate={newTaskDate}
+        onCreated={refreshCalendarSilently}
       />
     </div>
   );

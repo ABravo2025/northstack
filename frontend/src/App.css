@@ -512,14 +512,12 @@
   @apply min-w-0 flex-1;
 }
 
-.settings-back-link {
-  @apply mb-4 inline-flex cursor-pointer items-center gap-1 text-sm font-medium text-ink-muted no-underline hover:text-brand-navy dark:text-dark-ink-muted dark:hover:text-gray-100;
-}
-
 /* ---------- Settings home — grid of category tiles (ClickUp visual direction, 4.1-4.3) ----------
-   Replaces the old always-visible vertical `.settings-nav`: this grid is the
-   /settings landing only — a tile navigates into its own page, which no
-   longer shows a persistent side nav (see `.settings-back-link` above). */
+   This grid is the /settings landing page itself. Subpages no longer show a
+   plain "back" link (`.settings-back-link`, removed 2026-08-27) — the left
+   panel becomes a persistent Settings section list instead
+   (SettingsSidebar.tsx, swapped in by AppLayout.tsx while under /settings),
+   reusing `.sidebar`/`.sidebar-link` from the main app nav. */
 .settings-grid-section {
   @apply pb-6;
 }

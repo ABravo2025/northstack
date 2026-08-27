@@ -1791,3 +1791,50 @@ QA-42). Los 3 items, verificados contra el mismo tenant de prueba en `staging`:
 
 **Severidad:** baja en los 3 — ninguno toca lógica de negocio existente, solo agregan un filtro,
 cambian un input de UI, o exponen un dato ya calculado en otro lado.
+
+## QA-44 — 3 features de esfuerzo medio: Time Off tabs, Settings nav lateral, Task desde el calendario (en `staging`)
+
+**Por qué existe esta tarea:** siguiente tanda del mismo backlog QA, esta vez las 3 piezas de
+"esfuerzo medio" (features nuevas con alcance ya definido, no solo bugs). Verificadas contra el
+mismo tenant de prueba en `staging`:
+
+1. **Time Off: tabs reordenados + "My Timeoff" nuevo**: orden final — My Timeoff, My Requests,
+   Approvals (todos los roles); Balances, All Requests, Policies, Assignments (solo admin/owner,
+   `canManagePolicies` — antes Assignments era visible para cualquiera). "My Timeoff" es una vista
+   nueva: reusa exactamente el mismo bloque expandible (allocated/used/pending/remaining +
+   histórico de requests) que ya existía en el SlideOver de "Balances" para admins, pero
+   auto-scopeada al empleado del usuario logueado (`myBalances`/`myRequests`, ya cargados en
+   `loadData`). Verificado: orden de tabs correcto; para un usuario sin Employee vinculado, muestra
+   el mensaje esperado en vez de romper.
+2. **Settings: nav lateral persistente + botón Volver**: `AppLayout.tsx` ahora renderiza
+   `SettingsSidebar.tsx` en vez del `Sidebar.tsx` global cuando la ruta empieza con `/settings`
+   (antes cada subpágina solo tenía un link de "volver" a la grilla de tiles). El nuevo sidebar
+   reusa las clases `.sidebar`/`.sidebar-link` del nav principal y una única fuente de datos
+   (`lib/settingsSections.tsx`) compartida con la grilla de `/settings` (`SettingsHomePage.tsx`),
+   para que el gating por rol no viva en dos lugares. "Volver" hace `navigate(-1)` (vuelve a lo que
+   sea que el usuario estaba viendo antes, no a un destino fijo). Verificado: los links navegan
+   correctamente entre secciones, "Volver" está presente, y las páginas fuera de `/settings` siguen
+   mostrando el nav global normal (no quedó pisado).
+3. **Crear Task desde el calendario**: click en cualquier celda del calendario de `/overview` ahora
+   abre `NewTaskFromCalendarPopover.tsx` — primero pide el tipo de entidad (Contact/Company/
+   Employee; "Cliente" del pedido original mapea a Contact, ya que el modelo `Client` legado está
+   en proceso de discontinuarse, ver sección CRM del backlog), busca por nombre/email
+   (`SearchableSelect`, mismo componente que QA-43), y recién ahí muestra el `TaskForm` existente
+   (reusado tal cual, con un nuevo prop `defaultDueDate` para pre-cargar el día clickeado). Verificado
+   de punta a punta **contra la base de datos directamente** (no solo el navegador): dos tasks de
+   prueba se crearon correctamente con el `entityType`/`entityId`/`dueDate` esperados — el primer
+   intento de verificación por navegador dio un falso negativo por el mismo cold-start de Neon que
+   viene apareciendo toda la sesión en escrituras (la tarea sí existía en la base, solo tardó más que
+   el timeout del script en aparecer reflejada).
+
+**Hallazgo aparte, no bloqueante:** al crear una task desde el calendario para el día 1 de un mes,
+el widget "My tasks" del Overview la mostró fechada el día anterior (31 en vez de 1) — posible
+desajuste de zona horaria en cómo `MyTasksWidget.tsx` formatea un `dueDate` date-only para
+mostrarlo, no en cómo se guarda (la fila en la base tenía la fecha UTC correcta,
+`2026-08-01T00:00:00.000Z`). No se investigó más a fondo — parece preexistente (no es código tocado
+en esta tanda) y no afecta la creación en sí, pero vale la pena que alguien lo mire.
+
+`npm run build`/`npm test` (147/147) en verde. Sin errores de consola en ninguna verificación.
+
+**Severidad:** baja en las 3 — mejoras de navegación/UX y una feature nueva aditiva, ninguna toca
+datos existentes ni lógica de negocio ya construida.

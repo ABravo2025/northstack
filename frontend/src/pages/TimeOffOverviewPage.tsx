@@ -20,7 +20,7 @@ interface TimeOffOverviewPageProps {
   token: string;
 }
 
-type Tab = 'assignments' | 'my-requests' | 'approvals' | 'all-requests' | 'balances' | 'policies';
+type Tab = 'my-timeoff' | 'my-requests' | 'approvals' | 'balances' | 'all-requests' | 'policies' | 'assignments';
 
 const STATUS_LABELS: Record<string, string> = {
   pending: 'Pending',
@@ -31,7 +31,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPageProps) {
   const toast = useToast();
-  const [tab, setTab] = useState<Tab>('assignments');
+  const [tab, setTab] = useState<Tab>('my-timeoff');
   const [employees, setEmployees] = useState<any[]>([]);
   const [timeOffPolicies, setTimeOffPolicies] = useState<any[]>([]);
   const [myRequests, setMyRequests] = useState<any[]>([]);
@@ -65,6 +65,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
   const [policiesFilter, setPoliciesFilter] = useState<'active' | 'inactive'>('active');
   const [balancesDetailEmployeeId, setBalancesDetailEmployeeId] = useState<string | null>(null);
   const [expandedBalancePolicyIds, setExpandedBalancePolicyIds] = useState<Set<string>>(new Set());
+  const [expandedMyBalancePolicyIds, setExpandedMyBalancePolicyIds] = useState<Set<string>>(new Set());
 
   const canManagePolicies = user.role === 'owner' || user.role === 'admin';
   const myEmployee = employees.find((emp) => emp.userId === user.id);
@@ -527,10 +528,10 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
       <div className="views-bar">
         <button
           type="button"
-          className={`view-tab ${tab === 'assignments' ? 'active' : ''}`}
-          onClick={() => setTab('assignments')}
+          className={`view-tab ${tab === 'my-timeoff' ? 'active' : ''}`}
+          onClick={() => setTab('my-timeoff')}
         >
-          Assignments
+          My Timeoff
         </button>
         <button
           type="button"
@@ -549,15 +550,6 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
         {canManagePolicies && (
           <button
             type="button"
-            className={`view-tab ${tab === 'all-requests' ? 'active' : ''}`}
-            onClick={() => setTab('all-requests')}
-          >
-            All Requests
-          </button>
-        )}
-        {canManagePolicies && (
-          <button
-            type="button"
             className={`view-tab ${tab === 'balances' ? 'active' : ''}`}
             onClick={() => setTab('balances')}
           >
@@ -567,10 +559,28 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
         {canManagePolicies && (
           <button
             type="button"
+            className={`view-tab ${tab === 'all-requests' ? 'active' : ''}`}
+            onClick={() => setTab('all-requests')}
+          >
+            All Requests
+          </button>
+        )}
+        {canManagePolicies && (
+          <button
+            type="button"
             className={`view-tab ${tab === 'policies' ? 'active' : ''}`}
             onClick={() => setTab('policies')}
           >
             Policies
+          </button>
+        )}
+        {canManagePolicies && (
+          <button
+            type="button"
+            className={`view-tab ${tab === 'assignments' ? 'active' : ''}`}
+            onClick={() => setTab('assignments')}
+          >
+            Assignments
           </button>
         )}
         {canManagePolicies && (
@@ -584,7 +594,88 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
       <div className="mt-4">
         {loading && <TableSkeleton />}
 
-        {!loading && tab === 'assignments' && (
+        {!loading && tab === 'my-timeoff' && (
+          <>
+            {!myEmployee ? (
+              <p>Your account isn't linked to an employee record, so there's no personal balance to show.</p>
+            ) : myBalances.length === 0 ? (
+              <p>You don't have any time off policies assigned yet — ask an admin to assign one.</p>
+            ) : (
+              myBalances.map((bal: any) => {
+                const isExpanded = expandedMyBalancePolicyIds.has(bal.timeOffPolicyId);
+                const policyRequests = myRequests
+                  .filter((req: any) => req.timeOffPolicyId === bal.timeOffPolicyId)
+                  .sort((a: any, b: any) => b.startDate.localeCompare(a.startDate));
+                return (
+                  <div key={bal.timeOffPolicyId} className="balance-detail-block">
+                    <button
+                      type="button"
+                      className="balance-detail-head balance-detail-toggle"
+                      onClick={() =>
+                        setExpandedMyBalancePolicyIds((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(bal.timeOffPolicyId)) next.delete(bal.timeOffPolicyId);
+                          else next.add(bal.timeOffPolicyId);
+                          return next;
+                        })
+                      }
+                      aria-expanded={isExpanded}
+                    >
+                      <span className="color-dot" style={{ background: bal.color || '#9ca3af' }} />
+                      <span className="font-semibold text-brand-navy dark:text-gray-100">{bal.policyName}</span>
+                      <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">{bal.remaining} left</span>
+                      <ChevronDownIcon className={`h-3.5 w-3.5 shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                    </button>
+                    {isExpanded && (
+                      <div className="balance-detail-body">
+                        <div className="balance-detail-stats">
+                          <div>
+                            <div className="balance-detail-stat-value">{bal.allocated}</div>
+                            <div className="balance-detail-stat-label">Allocated</div>
+                          </div>
+                          <div>
+                            <div className="balance-detail-stat-value">{bal.used}</div>
+                            <div className="balance-detail-stat-label">Used</div>
+                          </div>
+                          <div>
+                            <div className="balance-detail-stat-value">{bal.pending}</div>
+                            <div className="balance-detail-stat-label">Pending</div>
+                          </div>
+                          <div>
+                            <div className="balance-detail-stat-value highlight">{bal.remaining}</div>
+                            <div className="balance-detail-stat-label">Remaining</div>
+                          </div>
+                        </div>
+                        <p className="mb-1.5 text-xs font-semibold tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                          Accrual: {bal.accrualMethod === 'monthly' ? 'Monthly' : 'Fixed annual'}
+                        </p>
+                        {policyRequests.length > 0 ? (
+                          <div className="balance-detail-requests">
+                            {policyRequests.map((req: any) => (
+                              <div key={req.id} className="balance-detail-request-row">
+                                <span className="balance-detail-request-dates">
+                                  {req.startDate.slice(0, 10)} → {req.endDate.slice(0, 10)}
+                                </span>
+                                <span className="balance-detail-request-days">{req.daysRequested}d</span>
+                                <span className={`status-badge status-${req.status}`}>
+                                  {STATUS_LABELS[req.status] || req.status}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-xs text-gray-400 dark:text-gray-500">No requests made under this policy yet.</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </>
+        )}
+
+        {!loading && tab === 'assignments' && canManagePolicies && (
           <>
             <p className="text-sm text-gray-500 mb-3">
               Which time off policies apply to each employee. Manage the policies themselves (days per year, accrual,

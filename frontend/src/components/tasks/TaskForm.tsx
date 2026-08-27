@@ -20,6 +20,10 @@ interface TaskFormProps {
   task: Task | null; // null = composing a new task
   tenantUsers: TenantUserLite[];
   defaultAssigneeId: string;
+  // Pre-fills the due date for a *new* task (e.g. the day clicked on the
+  // Overview calendar) — ignored once `task` is set, which already has its
+  // own dueDate. YYYY-MM-DD, date-only (same convention as the field itself).
+  defaultDueDate?: string;
   onSubmit: (payload: TaskFormPayload) => void | Promise<void>;
   onDelete?: () => void | Promise<void>;
   onCancelEdit?: () => void;
@@ -46,7 +50,15 @@ function pad(n: number): string {
   return String(n).padStart(2, '0');
 }
 
-export default function TaskForm({ task, tenantUsers, defaultAssigneeId, onSubmit, onDelete, onCancelEdit }: TaskFormProps) {
+export default function TaskForm({
+  task,
+  tenantUsers,
+  defaultAssigneeId,
+  defaultDueDate,
+  onSubmit,
+  onDelete,
+  onCancelEdit,
+}: TaskFormProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [assigneeId, setAssigneeId] = useState(defaultAssigneeId);
@@ -62,10 +74,10 @@ export default function TaskForm({ task, tenantUsers, defaultAssigneeId, onSubmi
       setDueDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
       setDueTime(`${pad(d.getHours())}:${pad(d.getMinutes())}`);
     } else {
-      setDueDate(task?.dueDate ? task.dueDate.slice(0, 10) : '');
+      setDueDate(task?.dueDate ? task.dueDate.slice(0, 10) : defaultDueDate ?? '');
       setDueTime('');
     }
-  }, [task, defaultAssigneeId]);
+  }, [task, defaultAssigneeId, defaultDueDate]);
 
   const handleSubmit = async () => {
     if (!title.trim()) return;

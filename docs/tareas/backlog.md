@@ -16,9 +16,6 @@ los ítems.
   Companies/Contacts reciben el mismo tratamiento por consistencia.
 - [ ] **Falta proceso de termination de empleados**: pensar un flujo en Payroll para dar de baja
   empleados y marcarlos como inactivos.
-- [ ] **Reordenar tabs de Time Off**: vista para usuarios comunes — "My timeoff" (detalle de los
-  días libres que quedan según la política asignada), "My request", "Approvals"; vista para
-  administradores — igual que la anterior, agregando "Balances", "All request" y "Policies".
 
 ## CRM
 
@@ -83,9 +80,6 @@ los ítems.
   vía `<select>`, activar/desactivar vía ícono), sin panel de detalle propio como tienen
   Employees/Companies/Contacts/Opportunities. Es una decisión de producto, no una réplica mecánica de
   patrón — ¿qué mostraría que la tabla no muestre ya? A confirmar con el usuario antes de construirlo.
-- [ ] **Settings sin navegación lateral**: al abrir Settings, el panel izquierdo debería convertirse
-  en un listado de las secciones de Settings para que el usuario se mueva con fluidez entre ellas,
-  con un botón de "volver" agregado.
 - [ ] **Campos desplegables aparecen en blanco**: reportado en algunos selects, no en todos — a
   confirmar si es un bug real de la plataforma o algo puntual del entorno del usuario.
 
@@ -101,9 +95,12 @@ los ítems.
   autenticado del tenant puede crear/editar/borrar/completar cualquier Task — decisión deliberada por
   simplicidad mientras no exista permisología granular; anotado para reabrir esa decisión cuando el
   sistema de roles custom (Infra/Otros) exista.
-- [ ] **Crear Task desde el calendario incompleto**: al hacer click en el calendario para agregar
-  una task, falta el flujo con los campos obligatorios — seleccionar si corresponde a Client/
-  Company/Employee, elegir a quién, y completar título, descripción y fecha.
+- [ ] **`MyTasksWidget` puede mostrar el `dueDate` de una task un día antes del real**: encontrado al
+  verificar la creación de tasks desde el calendario (2026-08-27) — una task con `dueDate` guardado
+  como `2026-08-01T00:00:00.000Z` (correcto en la base) apareció fechada "31" en el widget "My
+  tasks" del Overview. Parece un desajuste de zona horaria al formatear un `dueDate` date-only para
+  mostrarlo (mismo tipo de bug que `TaskForm.tsx` ya documenta y evita en su propio código, ver
+  `hasTimeComponent`) — no investigado a fondo, `MyTasksWidget.tsx` no se tocó en esa tanda.
 
 ## Payments
 

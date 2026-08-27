@@ -1,5 +1,4 @@
-import { Link, Outlet, useLocation } from 'react-router-dom';
-import { ChevronLeftIcon } from '../components/common/Icons';
+import { Outlet, useLocation } from 'react-router-dom';
 
 export default function WorkspaceSettingsLayout() {
   const { pathname } = useLocation();
@@ -7,14 +6,7 @@ export default function WorkspaceSettingsLayout() {
 
   return (
     <div className="page-full">
-      {isIndex ? (
-        <h2 className="mb-5 text-xl font-semibold">Settings</h2>
-      ) : (
-        <Link to="/settings" className="settings-back-link">
-          <ChevronLeftIcon className="h-3.5 w-3.5" />
-          Settings
-        </Link>
-      )}
+      {isIndex && <h2 className="mb-5 text-xl font-semibold">Settings</h2>}
       <div className="settings-content">
         <Outlet />
       </div>

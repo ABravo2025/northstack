@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
+import SettingsSidebar from '../components/layout/SettingsSidebar';
 import TopBar from '../components/layout/TopBar';
 import MobileTabbar from '../components/layout/MobileTabbar';
 import PlansModal from '../components/common/PlansModal';
@@ -79,7 +80,11 @@ export default function AppLayout({ user, token, tenant, onTenantUpdated, onLogo
     <div className="app">
       <TopBar user={user} token={token} onLogout={onLogout} onMenuClick={() => setMobileSidebarOpen(true)} />
       <div className="app-shell">
-        <Sidebar user={user} mobileOpen={mobileSidebarOpen} onMobileClose={() => setMobileSidebarOpen(false)} />
+        {location.pathname.startsWith('/settings') ? (
+          <SettingsSidebar user={user} mobileOpen={mobileSidebarOpen} onMobileClose={() => setMobileSidebarOpen(false)} />
+        ) : (
+          <Sidebar user={user} mobileOpen={mobileSidebarOpen} onMobileClose={() => setMobileSidebarOpen(false)} />
+        )}
         <main className="app-main">
           {tenant?.status === 'suspended' && user.role === 'owner' && (
             <div className="alert alert-error mx-4 mt-4 sm:mx-6 flex items-center justify-between gap-3">

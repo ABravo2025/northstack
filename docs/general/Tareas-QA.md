@@ -1757,3 +1757,37 @@ ninguna de las verificaciones.
 
 **Severidad:** baja en los 6 — todos son fixes de UX/legibilidad o de un `onClick` faltante, ninguno
 toca lógica de negocio ni datos.
+
+## QA-43 — 3 bugs chicos más del backlog QA 2026-08-27: Payroll filter, Company↔Contact buscador, Pay Frequency en Employees (en `staging`)
+
+**Por qué existe esta tarea:** siguiente pieza de la misma pasada de QA manual (después de QA-41 y
+QA-42). Los 3 items, verificados contra el mismo tenant de prueba en `staging`:
+
+1. **Payroll "Add person" no filtraba por pay frequency**: `openAddPersonModal`
+   (`PayrollRunDetailPage.tsx`) ahora excluye del listado a cualquier candidato cuyo
+   `currentCompensation.payFrequencyName` no coincida con el `payFrequency` del run — antes ofrecía
+   a cualquiera con una compensación activa, sin importar la frecuencia. Mensaje de estado vacío
+   actualizado para reflejar el nuevo motivo de exclusión. **Descubrimiento aparte durante esta
+   verificación**: un payroll run nuevo ya auto-incluye a los empleados elegibles (contrato
+   confirmado + misma pay frequency) al crearse — "Add person" solo hace falta para sumar a alguien
+   después. Verificado con un empleado real: al confirmarle el contrato, apareció solo en el "Add
+   person" de un run de su misma frecuencia (Weekly), no en uno de otra frecuencia (no se pudo
+   probar cross-frequency de punta a punta por un error de Prisma al sembrar el segundo empleado de
+   prueba a mano — la lógica del filtro es una comparación de string trivial, revisada por código).
+2. **Company↔Contact: dropdown reemplazado por buscador**: `CompanyDetailModal.tsx`'s "link
+   existing contact" ahora usa `SearchableSelect` (mismo componente ya usado en este archivo para
+   "Parent company", y en `ContactsPage.tsx` para elegir Company) en vez de un `<select>` plano —
+   sigue restringido a contacts sin compañía. Verificado: escribir "unlinked" o el dominio del email
+   ("acmetest.local") filtra correctamente al contact esperado.
+3. **Employees list sin columna Pay Frequency**: `listEmployees` (`employeeService.ts`) ahora trae
+   también la compensación *actual* (`effectiveTo: null`) de cada empleado, separada de la
+   primera-siempre que ya se usaba para `contractStatus` — antes esa segunda relación no se pedía
+   para nada, así que el dato no existía en el objeto que llega al frontend. Nueva columna "Pay
+   Frequency" (toggleable, misma infraestructura de columnas existente) + entrada en
+   `buildEmployeeFields` para que sea ordenable. Verificado: la columna aparece y muestra "Weekly"
+   para el empleado de prueba con esa frecuencia.
+
+`npm run build`/`npm test` (147/147) en verde. Sin errores de consola.
+
+**Severidad:** baja en los 3 — ninguno toca lógica de negocio existente, solo agregan un filtro,
+cambian un input de UI, o exponen un dato ya calculado en otro lado.

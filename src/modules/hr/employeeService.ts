@@ -122,9 +122,20 @@ export async function listEmployees(tenantId: string | null | undefined) {
   const employeeIds = employees.map((employee) => employee.id);
   const values = await listCustomFieldValuesForEntities(tenantId, 'employee', employeeIds);
   const activeTimeOffRequests = await findActiveTimeOffRequestsForEmployees(tenantId, employeeIds);
+  // Separate query for the *current* (effectiveTo: null) compensation, kept
+  // apart from the first-ever one above (contractStatus needs the original,
+  // not the latest — see the comment on `compensations` in the include).
+  // Only Pay Frequency is surfaced here (backlog QA, 2026-08-27 — the list
+  // view had no way to sort/filter who's due for which pay run); expand this
+  // if another current-compensation field needs to reach the list later.
+  const currentCompensations = await prisma.employeeCompensation.findMany({
+    where: { employeeId: { in: employeeIds }, effectiveTo: null },
+    include: { payFrequency: true },
+  });
 
   return employees.map((employee) => {
     const activeTimeOff = activeTimeOffRequests.find((request) => request.employeeId === employee.id);
+    const currentCompensation = currentCompensations.find((c) => c.employeeId === employee.id);
     const { compensations, ...employeeFields } = employee;
     const result: any = {
       ...employeeFields,
@@ -133,6 +144,7 @@ export async function listEmployees(tenantId: string | null | undefined) {
         ? { policyName: activeTimeOff.timeOffPolicy.name, color: activeTimeOff.timeOffPolicy.color }
         : null,
       contractStatus: computeContractStatus(employee.personType, employee.userId, compensations[0]),
+      payFrequencyName: currentCompensation?.payFrequency.name ?? null,
     };
 
     return result;

@@ -829,6 +829,11 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
           '—'
         ),
     },
+    {
+      key: 'payFrequencyName',
+      label: 'Pay Frequency',
+      render: (emp: any) => emp.payFrequencyName || '—',
+    },
   ];
 
   const toggleableColumns = [

@@ -160,6 +160,12 @@ export function buildEmployeeFields(
       getValue: (item: any) =>
         item.contractType === 'part_time' ? 'Part Time' : item.contractType === 'full_time' ? 'Full Time' : '',
     },
+    {
+      key: 'payFrequencyName',
+      label: 'Pay Frequency',
+      valueType: 'text',
+      getValue: (item: any) => item.payFrequencyName ?? '',
+    },
     ...buildCustomFieldColumns(customFields),
   ];
 }

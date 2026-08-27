@@ -146,7 +146,18 @@ export default function PayrollRunDetailPage({ user, token }: PayrollRunDetailPa
     try {
       const status = await api.getCompensationStatus(token);
       const includedIds = new Set(detail?.employeeRows.map((r) => r.employeeId));
-      setAddPersonCandidates(status.filter((entry) => !includedIds.has(entry.employeeId)));
+      const runPayFrequencyName = detail?.run.payFrequency?.name;
+      // Only people already on this run's pay frequency — adding someone on
+      // a different frequency to a run wouldn't make sense (backlog QA,
+      // 2026-08-27). currentCompensation is null for Profile-type people
+      // (nothing to pay), so they're excluded too, same as before.
+      setAddPersonCandidates(
+        status.filter(
+          (entry) =>
+            !includedIds.has(entry.employeeId) &&
+            entry.currentCompensation?.payFrequencyName === runPayFrequencyName,
+        ),
+      );
       setAddPersonModalOpen(true);
     } catch (error) {
       toast.error('Failed to load people: ' + (error as Error).message);
@@ -428,7 +439,10 @@ export default function PayrollRunDetailPage({ user, token }: PayrollRunDetailPa
 
       <Modal open={addPersonModalOpen} title="Add person to this run" onClose={() => setAddPersonModalOpen(false)}>
         {addPersonCandidates.length === 0 ? (
-          <p className="text-sm text-ink-muted">Everyone with an active compensation is already in this run.</p>
+          <p className="text-sm text-ink-muted">
+            No one left to add — either everyone on this pay frequency is already in this run, or no one else has an
+            active compensation on {detail.run.payFrequency?.name ?? 'this run’s pay frequency'}.
+          </p>
         ) : (
           <div className="flex flex-col gap-2">
             {addPersonCandidates.map((entry) => (

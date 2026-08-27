@@ -14,14 +14,6 @@ los ítems.
   Aplicaría a `department`, `statusId`, `managerId`, custom fields embebidos. Sin definir: patrón de
   edición (click-to-edit por celda vs. fila entera en modo edición), autosave vs. confirmar, y si
   Companies/Contacts reciben el mismo tratamiento por consistencia.
-- [ ] **Vista de lista de People/Employees oculta campos usados para filtrar**: al crear un perfil
-  se completan campos que no quedan visibles en el formato lista (ej. "Pay frequency", útil para
-  saber a quiénes hay que pagar) — deberían mostrarse todos los campos relevantes en la lista, no
-  solo un subconjunto.
-- [ ] **"Add person" de un Payroll run no sigue el patrón estándar de alta**: al crear un payroll
-  run, el botón "Add person" no respeta el formato/flujo que usa el resto de la plataforma para
-  agregar personas o compañías; además debería filtrar automáticamente por las personas cuyo "pay
-  frequency" coincida con el del run seleccionado.
 - [ ] **Falta proceso de termination de empleados**: pensar un flujo en Payroll para dar de baja
   empleados y marcarlos como inactivos.
 - [ ] **Reordenar tabs de Time Off**: vista para usuarios comunes — "My timeoff" (detalle de los
@@ -78,10 +70,6 @@ los ítems.
   tiempo-en-stage para marcar deals "en riesgo" (depende de que exista reporting); jerarquía de
   Company (matriz/sucursal, solo relevante si aparece un tenant B2B enterprise); resaltar visualmente
   si una Opportunity tiene un solo Contact asociado (multi-threading).
-- [ ] **Company de un Contact solo editable desde el perfil de la Company**: una vez que un Contact
-  queda vinculado a una Company, no se puede cambiar esa Company desde el perfil del Contact — solo
-  se pueden agregar/quitar contacts desde el perfil de la Company. A confirmar si es el
-  comportamiento deseado o hace falta simetría.
 - [ ] **Sistema de tags para Contact/Company/Employee**: permitir agregar tags en los tres tipos de
   perfil para que el usuario pueda filtrar y organizar en base a ellos. Sin definir alcance (tags
   libres vs. predefinidos, compartidos entre módulos o por separado).

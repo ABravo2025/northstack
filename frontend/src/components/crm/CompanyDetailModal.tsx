@@ -426,18 +426,17 @@ export default function CompanyDetailModal({
               {addingContact && (
                 <div className="mt-2 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-gray-800">
                   <div className="flex items-center gap-1.5">
-                    <select
-                      className="select-compact flex-1"
-                      value={linkContactId}
-                      onChange={(e) => setLinkContactId(e.target.value)}
-                    >
-                      <option value="">Link existing contact…</option>
-                      {unlinkedContacts.map((c) => (
-                        <option key={c.id} value={c.id}>
-                          {c.firstName} {c.lastName} ({c.email})
-                        </option>
-                      ))}
-                    </select>
+                    <div className="flex-1">
+                      <SearchableSelect
+                        value={linkContactId}
+                        onChange={setLinkContactId}
+                        placeholder="Search by name or email…"
+                        options={unlinkedContacts.map((c) => ({
+                          value: c.id,
+                          label: `${c.firstName} ${c.lastName} (${c.email})`,
+                        }))}
+                      />
+                    </div>
                     <button type="button" className="btn-secondary" onClick={handleLinkContact} disabled={!linkContactId}>
                       Link
                     </button>

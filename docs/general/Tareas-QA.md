@@ -2252,6 +2252,37 @@ terminar un empleado de prueba con fecha de hoy y confirmar status/endDate/que d
 Payroll/que se cancela su Time Off/que el pago final aparece en el timeline; programar una baja a
 futuro y confirmar que no se aplica hasta que corra el cron.
 
+**3 problemas reales encontrados por el usuario probando en vivo, corregidos en el mismo día:**
+
+1. **El campo Status quedaba editable después de la baja, y encima mostraba "-- select --"** en vez
+   de "Terminated": `activeEmployeeStatuses` (`EmployeesPage.tsx`) se había cargado antes de que
+   `getOrCreateTerminatedStatusId` creara el status "Terminated" por primera vez en ese tenant — el
+   `<select>` no encontraba esa opción en su lista y caía al placeholder. Peor aún, aunque hubiera
+   mostrado bien el valor, seguía siendo un `AutoSaveSelect` editable — cualquiera podía revertir la
+   baja a mano eligiendo "Active" de nuevo, sin pasar por ningún flujo real de "rehire" (que
+   deliberadamente no se construyó en esta ronda) y sin deshacer ninguno de los otros efectos
+   (compensación, acceso, Time Off). **Fix**: `EmployeeOverviewPanel.tsx` ahora renderiza un
+   `StatusChip` de solo lectura en vez del `AutoSaveSelect` cuando `employee.statusDefn?.name ===
+   'Terminated'` — no depende de que la lista de statuses esté actualizada, y cierra el backdoor.
+2. **El pago final (y cualquier "One-off Payment" de Payroll, no solo los de termination) aparecía
+   como "undefined undefined" en el Timeline** — bug preexistente, no introducido por esta tarea,
+   pero recién visible ahora que el usuario probó con datos reales. Causa:
+   `listOffPayments` (`payrollOffPaymentService.ts`) devolvía el include anidado crudo de Prisma
+   (`{ employee: { firstName, lastName } }`) en vez de aplanarlo a `employeeFirstName`/
+   `employeeLastName` — que es el contrato que espera el frontend y el patrón que sigue *todo* el
+   resto de las funciones de listado de este módulo (`payrollRunService`,
+   `employeeCompensationService`, etc.). Sin tests que lo hubieran agarrado antes (el módulo de
+   Payroll no tenía tests unitarios para esta función). **Fix**: se aplanó la respuesta; se sumó
+   `tests/payrollPaymentHistory.test.ts` como regresión.
+3. **Feature nueva pedida por el usuario**: tab "Payment History" en el perfil de cada empleado
+   (gateado por `canManagePayroll`, mismo criterio que la sección Compensation), con fecha/motivo/
+   descripción de cada pago — corridas confirmadas de Payroll y pagos sueltos, no solo los de
+   termination. Nueva `listPaymentHistoryForEmployee(tenantId, employeeId)` en
+   `payrollEntryService.ts` (excluye entries de runs en `draft`, todavía no son un pago real) + ruta
+   `GET /api/hr/employees/:employeeId/payment-history`.
+
+`npm run build`/`npm test` en verde (174/174, 171 + 3 nuevos).
+
 **Fuera de alcance, anotado para más adelante:** reactivar/rehire a alguien terminado; arreglar el
 hard-delete roto preexistente de `deleteEmployee` (bug real pero no de esta tarea — termination es
 la alternativa correcta a usar en su lugar); campo de "razón de baja" (no se pidió, `EmployeeTermination`

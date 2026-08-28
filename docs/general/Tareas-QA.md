@@ -2283,6 +2283,18 @@ futuro y confirmar que no se aplica hasta que corra el cron.
 
 `npm run build`/`npm test` en verde (174/174, 171 + 3 nuevos).
 
+**Ronda 3 (mismo día)**: el usuario todavía no podía "abrir" el pago desde ninguno de los dos
+lugares, y pidió también poder ver el "recibo de sueldo" del que se había hablado en una
+conversación anterior. Investigando, ese recibo **ya existía** — Payroll Unidad 20
+(`payslipService.ts`, `buildPayslipForEntry`/`buildPayslipForRunEmployee`, PDF "PREVIEW — NOT
+ISSUED" vía `pdf-lib`) — con sus dos rutas (`GET .../entries/:id/payslip` y `GET
+.../runs/:runId/employees/:employeeId/payslip`) y su cliente frontend (`api.getEntryPayslip`/
+`api.getRunEmployeePayslip`) completos de punta a punta, pero **nunca se había conectado a ninguna
+UI salvo el botón de vista previa por persona dentro del detalle de un Run**. Se sumó el mismo
+ícono de ojo ("Payslip preview", `PayslipPreviewModal` reusado tal cual) a las filas de pagos
+sueltos en el Timeline de Payroll y a cada fila de la nueva tab Payment History del perfil — sin
+tocar nada del backend, la funcionalidad ya estaba completa, solo faltaba el link.
+
 **Fuera de alcance, anotado para más adelante:** reactivar/rehire a alguien terminado; arreglar el
 hard-delete roto preexistente de `deleteEmployee` (bug real pero no de esta tarea — termination es
 la alternativa correcta a usar en su lugar); campo de "razón de baja" (no se pidió, `EmployeeTermination`

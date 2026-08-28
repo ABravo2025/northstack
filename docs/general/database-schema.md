@@ -779,7 +779,7 @@ Pago). Solo lectura: nada acá crea charges/invoices/subscriptions.
 
 Unit 4 (notificaciones proactivas) se **rediseñó 2026-08-28** (ver QA-49/QA-50 en `Tareas-QA.md`):
 originalmente un webhook que cada tenant tenía que registrar a mano en su dashboard de Stripe
-(URL + signing secret) — reemplazado por un cron de 2x/día (`src/routes/internal.ts`,
+(URL + signing secret) — reemplazado por un cron diario (`src/routes/internal.ts`,
 `runStripeEventPolling`) que hace polling de `GET /v1/events` con la misma Restricted Key. Cero
 pasos manuales extra para el tenant; `StripeConnection.webhookSigningSecretEncrypted` se sacó del
 schema, se agregó `lastEventPollAt` (cursor del cron, arranca en `connectedAt` en el primer poll).

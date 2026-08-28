@@ -2064,8 +2064,9 @@ Vercel a la URL. El usuario pidió una alternativa más simple.
    todavía — mismo bloqueo ya documentado en `specpaymentsv1.md` decisión #2 desde que se diseñó
    Unidad 1. Sin entidad, no es viable, punto.
 
-**Elegido: polling de la Events API de Stripe, cron fijo 2x/día** (no configurable por tenant, para
-no sumar UI/complejidad — decisión explícita del usuario). `GET /v1/events` devuelve exactamente los
+**Elegido: polling de la Events API de Stripe, cron fijo diario** (no configurable por tenant, para
+no sumar UI/complejidad — decisión explícita del usuario; originalmente 2x/día, bajado a 1x/día tras
+el primer intento de deploy — ver nota de Vercel Hobby más abajo). `GET /v1/events` devuelve exactamente los
 mismos objetos Event que un webhook hubiera entregado, así que `processStripeWebhookEvent`
 (`stripePaymentsService.ts`) se **reusa sin ningún cambio** — ni a la función ni a sus 14 tests
 existentes. El cron solo pide eventos nuevos desde el último poll y se los pasa uno por uno.
@@ -2081,8 +2082,13 @@ existentes. El cron solo pide eventos nuevos desde el último poll y se los pasa
   ya viejos/resueltos), procesa cada evento, actualiza el cursor. Un tenant que falla (401/403 →
   `markNeedsAttention`, cualquier otro error) no frena a los demás.
 - `src/routes/internal.ts`: nueva `GET /api/internal/stripe-events/poll` (mismo patrón
-  `checkCronSecret` que las otras 3 rutas de cron). `vercel.json`: nueva entrada de cron, `0 6,18 *
-  * *` (6am/6pm UTC).
+  `checkCronSecret` que las otras 3 rutas de cron). `vercel.json`: nueva entrada de cron, `0 9 * * *`
+  (9am UTC) — **corregido después del primer deploy real**: el plan original era `0 6,18 * * *`
+  (2x/día), pero el pipeline de deploy (`.github/workflows/deploy.yml`, `npx vercel deploy`) lo
+  rechazó en seco: "Hobby accounts are limited to daily cron jobs." Cada cron individual de Vercel
+  Hobby no puede correr más de una vez por día — no importa que ya hubiera 3 crons distintos en
+  `vercel.json`, cada uno corriendo 1x/día es lo permitido; este era el primero con más de un
+  horario en la misma entrada. Bajado a 1x/día para poder deployar.
 - Se sacaron por completo: `POST /api/webhooks/stripe/:tenantId` (`routes/webhooks.ts`, y el mount
   `express.raw()` de `app.ts` que solo era para esa ruta), `POST
   /api/integrations/stripe/webhook-secret`, `saveStripeWebhookSecret` (`stripeService.ts`).
@@ -2093,7 +2099,7 @@ existentes. El cron solo pide eventos nuevos desde el último poll y se los pasa
 **Frontend** (`IntegrationsSettingsPage.tsx`): se eliminó toda la sección "Webhook" del estado
 conectado (URL, botón de copiar, form de signing secret, aviso de bypass de Vercel) — el estado
 conectado ahora es solo el status row (chip test/live, fecha, Disconnect) más una línea explicando
-que los eventos se revisan 2x/día. El checklist de permisos recomendados de la Restricted Key sumó
+que los eventos se revisan una vez por día. El checklist de permisos recomendados de la Restricted Key sumó
 **Events** (de solo lectura, igual que el resto).
 
 **Tests**: se sacaron los ~6 tests de `saveStripeWebhookSecret`/`verifyStripeSignature` (ya no
@@ -2106,6 +2112,16 @@ mismo total que antes, 6 sacados + 6 agregados.
 prueba disparado a mano en Stripe) una vez que `CRON_SECRET` esté confirmada en Vercel para Preview
 — dado lo que pasó con `DATABASE_URL`/`STRIPE_TOKEN_ENCRYPTION_KEY` en QA-49, no se asume que ya
 está.
+
+**Hallazgo real sobre cómo deploya este proyecto, encontrado tratando de entender por qué nada
+llegaba a `staging`**: el deploy **no** pasa por la integración nativa de Git de Vercel (aunque el
+proyecto la tiene conectada en el dashboard) — pasa por `.github/workflows/deploy.yml`, que corre
+`npx vercel deploy` a mano con un `VERCEL_TOKEN`, y alía el resultado a `staging.joinnorthstack.com`
+con `vercel alias set` al final de cada corrida. Toda la investigación de QA-49 sobre el dominio sin
+conectar en el dashboard nativo era sobre un camino que este proyecto no usa para deployar en
+absoluto — lo que de verdad frenó todos los pushes después de `1f790df` fue el error de Vercel
+Hobby de arriba, visible recién en el Actions run del repo (`github.com/.../actions`), no en el
+dashboard de Vercel.
 
 **Severidad:** baja — elimina superficie (menos rutas, menos campos), no agrega riesgo nuevo; el
 único caso a confirmar en vivo es que el cron real dispare la notificación esperada.

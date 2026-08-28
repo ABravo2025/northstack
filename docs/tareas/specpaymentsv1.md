@@ -170,8 +170,10 @@ Orden pensado por dependencias: la Unidad 1 es prerrequisito de todo lo demás (
 **Rediseño 2026-08-28 (reemplaza el webhook de arriba, ver QA-49/QA-50 en `Tareas-QA.md`):**
 probando la conexión real en `staging` quedó claro que pedirle a un tenant real que cree un webhook
 a mano en su dashboard de Stripe (+ en `staging`, agregarle el bypass secret de Vercel a la URL) era
-fricción que ningún tenant real debería enfrentar. Reemplazado por un **cron de 2x/día**
-(`runStripeEventPolling`, `src/routes/internal.ts`) que hace polling de `GET /v1/events` con la
+fricción que ningún tenant real debería enfrentar. Reemplazado por un **cron diario**
+(`runStripeEventPolling`, `src/routes/internal.ts` — el plan original era 2x/día, bajado a 1x/día
+recién al primer deploy real: el plan Hobby de Vercel no permite más de una corrida diaria por cron)
+que hace polling de `GET /v1/events` con la
 misma Restricted Key — `processStripeWebhookEvent` se reusa sin cambios, Stripe devuelve el mismo
 shape de Event por polling o por webhook. Se evaluó también automatizar la creación del webhook vía
 API (agregándole permiso de escritura a la key), y por separado Stripe Connect/OAuth completo —

@@ -44,6 +44,10 @@ Leaf module (sin imports) — extraído 2026-08-18 de `tenantService.ts` para qu
 - **encryptGoogleToken(plaintext)** / **decryptGoogleToken(payload)** — mismo AES-256-GCM que `encryption.ts`, pero con su propia key (`GOOGLE_TOKEN_ENCRYPTION_KEY`) — no reusar la de Payroll, un key por propósito. Único uso: `GoogleCalendarConnection.accessTokenEncrypted`/`refreshTokenEncrypted`.
 - **isGoogleTokenEncryptionConfigured()** — usado por `googleCalendarConfigured()` en `googleCalendarAuthService.ts`.
 
+### `src/lib/stripeEncryption.ts` (Payments v1, `docs/tareas/specpaymentsv1.md`, 2026-08-26)
+- **encryptStripeSecret(plaintext)** / **decryptStripeSecret(payload)** — mismo AES-256-GCM que los dos de arriba, key propia (`STRIPE_TOKEN_ENCRYPTION_KEY`). Un solo par de funciones cubre tanto `StripeConnection.apiKeyEncrypted` como `.webhookSigningSecretEncrypted` — ambos son secretos de Stripe pegados por el tenant, no ameritan una función por campo.
+- **isStripeEncryptionConfigured()** — mismo patrón que `isGoogleTokenEncryptionConfigured()`.
+
 ### `src/lib/httpAuth.ts`
 - **getBearerToken(req)** — extrae el token `Authorization: Bearer`.
 - **getClientIp(req)** — IP del cliente, para rate limiting.
@@ -88,6 +92,15 @@ Wrapper propio, mismo criterio que `mercadopago.ts` de arriba.
 - **verifyPaddleSignature(input)** — header `Paddle-Signature` (`ts=...;h1=...`), signed payload `{ts}:{rawBody}`, HMAC-SHA256 hex, `timingSafeEqual`. Fail closed si `PADDLE_WEBHOOK_SECRET` no está configurado.
 - Verificado 2026-08-19 contra Paddle sandbox real: un precio no-catálogo necesita un `product` inline anidado (`name`+`tax_category`), no alcanza con `price` solo — `createNonCatalogTransaction`/`updateSubscriptionItems` ya lo incluyen. Segundo bug real encontrado el mismo día: toda respuesta de la API de Paddle envuelve la entidad real en `{ data, meta }` — `paddleRequest()` (helper interno) ahora desenvuelve `.data` siempre; sin esto, `transaction.id` volvía `undefined` en silencio. `POST /transactions` end-to-end confirmado funcionando contra sandbox real (`checkout.url` + `items[0].price` con totales correctos), incluido el webhook completo (`transaction.completed` → `Subscription` activa + `Invoice` real).
 
+### `src/lib/stripe.ts` (Payments v1, `docs/tareas/specpaymentsv1.md`, 2026-08-26)
+Wrapper propio (`fetch` + `crypto` nativos, sin SDK) contra la API de Stripe — mismo criterio que `mercadopago.ts`/`paddle.ts` de arriba (ver esos dos para el razonamiento explícito de por qué no una librería). A diferencia de esos dos, no hay una sola API key fija leída de una env var — cada tenant tiene la suya propia (`StripeConnection`), así que toda función acá la recibe como parámetro.
+- **retrieveAccount(apiKey)** — `GET /account`, validación de una key recién pegada (Unit 1). Una Restricted Key sin el permiso de lectura "Account" la rechaza (401/403) aunque sea válida — `connectStripe()` (`stripeService.ts`) cae a `listCustomers` en ese caso en vez de rechazar la key.
+- **listCustomers(apiKey, { email?, limit?, starting_after? })** — `GET /customers`; fallback de validación de Unit 1, y base del matching Company↔Customer de Unit 2.
+- **listCharges(apiKey, { customer, limit?, starting_after? })** (Unit 3, 2026-08-26) — `GET /charges`. Es la única fuente de refunds/failed/eventos (ver `StripeCharge` abajo) — confirmado contra la documentación real de Stripe que `GET /refunds` **no acepta un filtro `customer`** (solo `charge`/`payment_intent`), así que "listar refunds de este customer" no es una llamada que la API soporte directo; un Charge ya trae `refunded`/`amount_refunded`/`status` propios, que es lo que lo hace la fuente correcta en vez de un rodeo.
+- **listSubscriptions(apiKey, { customer, status?, limit?, starting_after? })** (Unit 3) — `GET /subscriptions`. Se llama con `status: 'all'` (confirmado en la doc real) porque el default silenciosamente excluye canceladas.
+- **listEvents(apiKey, { createdGte, limit?, starting_after? })** (Unit 4, rediseñada 2026-08-28) — `GET /events`, filtrado por `created[gte]`. Reemplazó el webhook manual entero: devuelve los mismos objetos Event que un webhook hubiera entregado, así que `processStripeWebhookEvent` (`stripePaymentsService.ts`) se reusa sin cambios sea cual sea el origen. Sin filtro de `type` en la request — se filtra client-side en esa misma función.
+- Stripe acepta bodies `application/x-www-form-urlencoded` (nunca JSON) con notación de corchetes para objetos anidados (`toFormPairs()`, helper interno) — a diferencia de Paddle/Mercado Pago, que sí toman JSON.
+
 ### `src/lib/rateLimit.ts`
 - **AUTH_RATE_LIMIT** (const) — 5 intentos / 15 min, más estricto que el default por ser blanco de fuerza bruta.
 - **isRateLimited(key, options?)** — chequeo genérico de rate limit por key (IP, endpoint, etc.).
@@ -111,7 +124,7 @@ Wrapper propio, mismo criterio que `mercadopago.ts` de arriba.
 
 ### `src/modules/auth/permissionService.ts`
 Todas son `(role: UserRole) => boolean`, la fuente de verdad de qué puede hacer cada rol:
-**canViewHr**, **canCreateHr**, **canManageCustomFields**, **canInviteUsers**, **canManageUsers**, **canManagePayroll** (owner-only, a diferencia del resto — ver Payroll en `docs/spec-payroll.md`), **canManageBilling** (owner-only, mismo criterio que Payroll — Subscription Plans, `docs/spec-subscription-plans.md`).
+**canViewHr**, **canCreateHr**, **canManageCustomFields**, **canInviteUsers**, **canManageUsers**, **canManagePayroll** (owner-only, a diferencia del resto — ver Payroll en `docs/spec-payroll.md`), **canManageBilling** (owner-only, mismo criterio que Payroll — Subscription Plans, `docs/spec-subscription-plans.md`), **canManagePayments** (owner-only, 2026-08-26 — Payments v1, `docs/tareas/specpaymentsv1.md`: conectar el Stripe del tenant y ver pagos de sus Companies).
 
 ### `src/modules/clients/clientService.ts` (módulo legado, ver `features-overview.md`)
 CRUD estándar: **createClient**, **listClients(tenantId)**, **findClientById(id)**, **updateClient(id, input, changedByUserId)**, **deleteClient(id)**.
@@ -134,7 +147,14 @@ CRUD estándar: **createContact**, **listContacts(tenantId)**, **findContactById
 
 ### `src/modules/crossModule/entityLookup.ts`
 - **isSupportedCrossModuleEntityType(entityType)** — type guard de `EntityType`.
-- **findEntityTenantId(entityType, entityId)** — resuelve el tenant dueño de una entidad polimórfica (Task/Note apuntan a Employee/Company/Contact/Opportunity sin FK real) — chequeo anti-IDOR obligatorio antes de adjuntar un Task/Note a algo.
+- **findEntityTenantId(entityType, entityId)** — resuelve el tenant dueño de una entidad polimórfica (Task/Note/Tag apuntan a Employee/Company/Contact/Opportunity sin FK real) — chequeo anti-IDOR obligatorio antes de adjuntar un Task/Note/Tag a algo.
+
+### `src/modules/crossModule/tagService.ts` (backlog QA, 2026-08-27)
+- Reexporta **findEntityTenantId**/`isSupportedCrossModuleEntityType` (como `isSupportedTagEntityType`) de `entityLookup.ts` — mismo chequeo anti-IDOR que Task/Note.
+- **listTagDefinitions(tenantId)** — todos los nombres de tag usados alguna vez en el tenant, para el autocomplete del input (tags libres, no hay catálogo predefinido).
+- **listTagsForEntity(tenantId, entityType, entityId)** / **listTagsForEntities(tenantId, entityType, entityIds)** (batch, misma forma que `listCustomFieldValuesForEntities`).
+- **assignTag(tenantId, entityType, entityId, tagName)** — find-or-create por nombre exacto (`@@unique([tenantId, name])`) + asignación, en un solo paso; idempotente si la entidad ya tiene ese tag.
+- **findTagAssignmentById(id)** / **removeTagAssignment(id)**.
 
 ### `src/modules/csv/csvService.ts`
 - **exportEmployeesToCsv(tenantId, viewerRole)** / **getEmployeesCsvTemplate(tenantId, viewerRole)** / **importEmployeesFromCsv(tenantId, csvText, viewerRole)**.
@@ -215,6 +235,12 @@ CRUD estándar: **createSavedView**, **listSavedViews(...)**, **findSavedViewByI
 - **createStatusDefinition**, **listStatusDefinitions(...)**, **findStatusDefinitionById(id)**, **updateStatusDefinition(...)**.
 - **recordStatusChange(input)** — escribe una fila en `StatusHistoryEntry`.
 
+### `src/modules/hr/terminationService.ts` (baja de empleados — status change, no delete)
+- **createTermination(input)** — valida no-duplicado, arma la lista completa de reasignaciones de reportes directos, crea el pago final off-cycle si se incluyó (reusa `payrollOffPaymentService.createOffPayments`), y ejecuta de inmediato si `terminationDate <= hoy`.
+- **cancelTermination(terminationId, tenantId)** — solo antes de `executedAt`; idempotente si ya cancelada.
+- **runScheduledTerminations()** — cron diario (10am), ejecuta las bajas vencidas; una falla no frena a las demás.
+- **listDirectReports(employeeId)**, **getLatestTermination(employeeId)** — el registro no-cancelado más reciente (ejecutado o programado).
+
 ### `src/modules/hr/timeOffBalanceService.ts`
 - **calculateEmployeeTimeOffBalances(tenantId, employeeId)** / **calculateAllTimeOffBalances(tenantId)** — allocated/used/pending/remaining por política, con prorrateo mensual o fijo anual según `accrualMethod`.
 
@@ -247,6 +273,30 @@ Leg inversa (Google → Northstack) de Task sync, solo Tasks — ver el comentar
 - **processInboundCalendarChanges(userId)** — ante una notificación real (no el handshake `sync`), pide el diff vía `events.list(syncToken)`, persiste el `syncToken` nuevo, y aplica cada cambio con `prisma.task.update` directo (nunca `taskService.updateTask` — evita re-disparar el sync de salida sobre el mismo cambio). Un evento borrado en Google **marca la Task completada** (2026-08-23, corregido tras probar — antes solo le limpiaba la fecha) y agrega una nota a la descripción registrando que fue por borrado en Google, no un check manual; la Task nunca se borra, solo se completa.
 - **renewExpiringWatchChannels()** — corrida diaria vía el cron `/api/internal/google-calendar-channels/renew` (`src/routes/internal.ts`); los canales de Google no se renuevan in-place, así que cierra y vuelve a abrir cada uno que vence dentro de 48hs.
 - No llamar ninguna de las tres desde otro lugar sin releer la tabla de decisión de cada una en el archivo (reasignación de assignee, completar/borrar, cambio de status de Time Off).
+
+### `src/modules/integrations/stripeService.ts` (Payments v1, `docs/tareas/specpaymentsv1.md`, Unit 1 — 2026-08-26)
+Conexión de un tenant a su propia cuenta de Stripe. Unidades 2-4 (lookup, resúmenes en vivo, webhook) agregan sus propias funciones acá cuando se construyan, no descritas todavía.
+- **detectApiKeyMode(apiKey)** — `test`/`live` por el prefijo (`sk_`/`rk_` + `_test_`/`_live_`); tira un error legible si la key no matchea ninguno de los dos, antes de intentar cualquier llamada de red.
+- **connectStripe({ tenantId, userId, apiKey })** — valida contra Stripe real (`retrieveAccount`, con fallback a `listCustomers` si la Restricted Key no tiene permiso de leer Account — ver `stripe.ts`), cifra, `upsert` de `StripeConnection` por `tenantId`. Reconectar (tenant ya tenía una fila, disconnected o no) reusa el mismo `upsert`, nunca crea una segunda fila.
+- **getStripeConnectionStatus(tenantId)** — versión saneada para el frontend (nunca el key cifrado). Una conexión con `disconnectedAt` seteado se reporta como `connected: false`, sin borrar la fila.
+- **disconnectStripe(tenantId)** — soft (`disconnectedAt`, mismo criterio que `Contact.isActive`/`Opportunity.isActive` del rediseño de Sales v2) — nunca borra la fila. Idempotente: llamarlo sin conexión activa (nunca conectado, o ya desconectado) es un no-op, no un crash de Prisma.
+- **getActiveConnectionForTenant(tenantId)** (2026-08-26) — desencripta la key y devuelve también `apiKeyMode` (Units 2-4 lo necesitan para armar el link correcto a `dashboard.stripe.com/{test/}...`). Tira si no hay conexión activa. **getApiKeyForTenant(tenantId)** es un wrapper delgado que solo devuelve la key, sin romper el contrato que ya usaban los tests de Unit 1.
+- **markNeedsAttention(tenantId)** — para cuando Units 2-4 detecten un 401/403 real de Stripe contra una key ya guardada (key revocada/editada del lado de Stripe) — nunca falla silenciosamente, deja la conexión visible como "necesita atención" en vez de que las lecturas fallen sin explicación.
+
+### `src/modules/integrations/stripePaymentsService.ts` (Payments v1, `docs/tareas/specpaymentsv1.md`, Units 2-4 — 2026-08-26, Unit 4 rediseñada 2026-08-28)
+Lookup/matching Company↔Stripe Customer, visibilidad de pagos en vivo (sin store local), y las notificaciones proactivas (Unit 4 — ver `runStripeEventPolling` abajo). El ownership de la Company (tenantId) se valida en la ruta (`routes/payments.ts`) para Units 2-3 — estas funciones reciben una Company ya validada. `processStripeWebhookEvent` resuelve la Company él mismo por `stripeCustomerId`, porque no parte de una sesión/ownership check — ni el cron ni (antes) el webhook tienen uno.
+- **searchStripeCustomersForCompany(tenantId, companyId)** — itera el email de cada Contact activo de la Company contra `listCustomers` (nunca por dominio), consolida duplicados por `customer.id` quedándose con el primer Contact que lo encontró.
+- **linkCompanyToStripeCustomer({ companyId, stripeCustomerId, matchedViaEmail })** — solo persiste; el chequeo de "ya vinculado a otro customer, pedir confirmación" (409) vive en la ruta, que ya tiene la Company cargada.
+- **getCompanyPaymentSummary(tenantId, company)** — "sin vincular" sin tocar Stripe si `company.stripeCustomerId` es null. Si no, `listCharges`/`listSubscriptions` en paralelo; refunds/failed salen de la misma lista de Charges (`amount_refunded > 0` / `status === 'failed'`), nunca de un `/refunds` separado (ver `lib/stripe.ts`). `subscriptionStatus` prioriza active/trialing/past_due sobre lo primero que devuelva Stripe.
+- **getCompanyPaymentEvents(tenantId, company, cursor?)** — paginado nativo de Stripe (`starting_after`), cada Charge se clasifica en `charge_failed`/`charge_refunded`/`charge_succeeded` y trae su propio `dashboardUrl` (con o sin `/test/` según `apiKeyMode`).
+- **getPaymentsOverview(tenantId)** — chequea la conexión una sola vez antes del fan-out (si no hay conexión activa, devuelve `connected: false` sin intentar ninguna Company, en vez de N fallas idénticas); trae las Companies con `stripeCustomerId` no nulo, `summary` de cada una en paralelo con un límite de concurrencia (`mapWithConcurrency`, helper interno hand-rolled — sin dependencia `p-limit`, mismo criterio de "no SDK/paquete nuevo para algo chico" que el resto de esta spec), agrega totales.
+- Toda llamada real a Stripe en este archivo pasa por `withNeedsAttentionTracking` (helper interno) — un 401/403 marca la conexión antes de relanzar el error, igual que Unit 1.
+- **notifyCompanyStripeEvent(tenantId, company, type, message)** / **processStripeWebhookEvent(tenantId, event)** (Unit 4) — la segunda decide qué notificar para cada tipo de Event de Stripe (`charge.refunded`/`charge.failed`/`payment_intent.payment_failed`/`customer.subscription.updated`(→`past_due`)/`customer.subscription.deleted`), la primera resuelve el destinatario (`Company.accountOwnerId`, si no el primer owner activo — nunca un admin, Payments es owner-only). Agnóstica de cómo llegó el Event — la usa tanto el cron (`runStripeEventPolling`) como, hasta 2026-08-28, el webhook ya eliminado.
+- **runStripeEventPolling()** (Unit 4, rediseñada 2026-08-28 — reemplaza el webhook manual entero, ver QA-50 en `Tareas-QA.md`) — cron diario (`src/routes/internal.ts`; el plan original era 2x/día, bajado a 1x/día porque Vercel Hobby no permite más de una corrida diaria por cron): por cada `StripeConnection` activa, primero corre `autoLinkUnmatchedCompanies` (ver abajo), después trae eventos nuevos vía `listEvents` desde `lastEventPollAt` (o `connectedAt` en el primer poll — nunca barre el historial completo de la cuenta) y se los pasa uno por uno a `processStripeWebhookEvent` — el orden importa: una Company recién vinculada en ese mismo pase ya puede recibir notificación si hay un evento suyo más abajo. Un tenant que falla (401/403 → `markNeedsAttention`, o cualquier otro error) no frena a los demás.
+- **autoLinkUnmatchedCompanies(tenantId)** (Unit 2, automatizada 2026-08-28 — ver QA-51) — contraparte automática de "Search on Stripe" (`CompanyDetailModal.tsx`), llamada desde `runStripeEventPolling` en cada corrida del cron. Busca Companies con `stripeCustomerId: null`, reusa `searchStripeCustomersForCompany` para cada una (fan-out con `mapWithConcurrency`, límite 10) y solo vincula automático cuando hay **exactamente 1** match — 0 matches se reintenta en el próximo cron (sin cursor de "ya probado"), 2+ matches queda para que un humano lo resuelva a mano vía el flujo manual existente. Un error en una Company no frena a las demás.
+- `StripePaymentSummary.currency`/`PaymentsOverviewTotals.currency` — moneda del Charge, no necesariamente la del tenant; simplificación conocida y documentada si un mismo customer tuviera charges en más de una moneda (no se banca en v1, no justifica el desglose).
+- **notifyCompanyStripeEvent(tenantId, company, type, message)** (Unit 4) — resuelve destinatario: `Company.accountOwnerId` si está seteado, si no el primer `owner` activo del tenant — **nunca un admin**, aunque exista uno, porque Payments es owner-only (`canManagePayments`) y notificar a alguien que no puede ni abrir la página no serviría. Sin destinatario posible (rarísimo, ningún owner activo), no hace nada — no revienta.
+- **processStripeWebhookEvent(tenantId, event)** (Unit 4) — recibe el evento ya parseado y con la firma ya verificada (eso queda en `routes/webhooks.ts`, junto a Paddle/Mercado Pago); resuelve la Company por `stripeCustomerId` dentro de ese tenant (sin match → descarta sin guardar nada) y despacha `charge.refunded`/`charge.failed`/`payment_intent.payment_failed`/`customer.subscription.deleted` directo. `customer.subscription.updated` es el único caso con guarda: solo notifica si `data.previous_attributes.status` existe y el status nuevo es `past_due` — sin esto, cualquier otro cambio a una subscription ya `past_due` (ej. cambiar la cantidad) generaría una notificación repetida cada vez. Devuelve un string corto (`'notified'`/`'no matching Company'`/etc.) que la ruta pasa tal cual en la respuesta — útil para leer el log de deliveries del lado de Stripe sin acceso a los logs del servidor.
 
 ### `src/modules/notes/noteService.ts`
 CRUD estándar, cross-entidad vía `entityType`/`entityId`: **createNote**, **findNoteById(id)**, **listNotesForEntity(tenantId, entityType, entityId)**, **updateNote(id, input)**, **deleteNote(id)**.
@@ -384,7 +434,8 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 | `onboarding.ts` | getOnboardingStatus, seedSampleData |
 | `feedback.ts` | sendFeedback |
 | `http.ts` | apiFetch(url, init?), throwApiError(res) — base compartida, no un dominio |
-| `integrations.ts` (2026-08-22) | getGoogleCalendarStatus, getGoogleCalendarConnectUrl (devuelve `{url}` para que el frontend haga `window.location.href` — no redirige el propio backend, porque este endpoint se llama con fetch autenticado, no con navegación directa), disconnectGoogleCalendar |
+| `integrations.ts` (2026-08-22, +Stripe 2026-08-26, +listGoogleCalendarEvents 2026-08-27, webhook→cron 2026-08-28) | getGoogleCalendarStatus, getGoogleCalendarConnectUrl (devuelve `{url}` para que el frontend haga `window.location.href` — no redirige el propio backend, porque este endpoint se llama con fetch autenticado, no con navegación directa), disconnectGoogleCalendar, listGoogleCalendarEvents(token, start, end) (overlay de solo lectura del Overview, eventos propios no linkeados a un Task), getStripeStatus, connectStripe(token, apiKey), disconnectStripe |
+| `payments.ts` (Payments v1, Units 2-3, 2026-08-26) | searchStripeCustomersForCompany, linkCompanyToStripe (lanza `ApiError` con `.status === 409` si la Company ya está vinculada a otro customer — reintentar con `confirmOverwrite: true`), getCompanyPaymentSummary, getCompanyPaymentEvents(token, companyId, cursor?), getPaymentsOverview |
 | `billing.ts` (Billing Integration, Etapa E) | getSubscription, startCheckout, changeSubscriptionPlan (post-billing, distinto de `updateTenantPlan` de arriba que es la elección pre-billing durante trial), cancelSubscription, resumeSubscription, getInvoiceDocumentUrl(token, invoiceId, disposition?) (2026-08-19, Paddle-only, URL temporal ~1h, se pide fresca en cada click — `BillingPage.tsx` la usa dos veces por fila de Invoice: "View invoice" con `inline`, "Download" con `attachment`) |
 
 ### `frontend/src/components/common/` — componentes reusables genéricos, no ligados a una entidad
@@ -414,6 +465,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 - **SlideOver** — panel lateral para forms de "entidad completa"; default para forms nuevos salvo que el diseño pida `Modal` centrado.
 - **StatusChip** — chip de status con punto de color.
 - **TableSkeleton** — loading state de tabla; usar en vez de `<p>Loading...</p>`.
+- **TagInput** (backlog QA, 2026-08-27) — chips + input con autocomplete (`Popover`) para el sistema de tags libres; "Enter" agrega el tag tipeado (crea uno nuevo o reusa uno existente vía `api.addTag`), click en el chip lo quita (`api.removeTag`). Montado en `ContactDetailModal`/`CompanyDetailModal`/`EmployeeOverviewPanel` (mismos 3 tipos de entidad que soporta el backend hoy). Reusa `.time-off-policy-chip`/`.time-off-policy-chip-remove` para el look del chip en vez de una clase nueva.
 - **ToastProvider** (+ **useToast**) — `success`/`error`, nunca `alert()`.
 
 ### `frontend/src/components/entity-views/` — piezas del motor genérico de Views/Filters/Kanban/tabla
@@ -431,6 +483,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 
 ### `frontend/src/components/crm/`
 - **CompanyDetailModal**, **ContactDetailModal**, **OpportunityDetailModal** — paneles de detalle 70vw×70vh con tabs Notes/Tasks/Activity (mismo shell que `EmployeeOverviewPanel`, ver `DetailSidebar` abajo).
+- **CompanyStripeSection** (Payments v1, Units 2-3, `docs/tareas/specpaymentsv1.md`, 2026-08-26) — sección "Payments" del `CompanyDetailModal`, owner-only. Sin `stripeCustomerId`: botón "Search on Stripe" + lista de matches con "Link" (0/1/2+ resultados). Con uno: link al customer en el dashboard de Stripe + resumen (refunds/failed/subscription) + lista de eventos recientes con "Load more" (paginación cursor de Stripe) + "Change link" para re-buscar. Un 409 de `linkCompanyToStripe` (ya vinculado a otro customer) abre un `ConfirmDialog` antes de reintentar con `confirmOverwrite: true`.
 
 ### `frontend/src/components/hr/`
 - **EmployeeOverviewPanel** — panel de detalle de Employee; edición 100% inline vía `AutoSaveField`/`AutoSaveSelect`, sin botón "Edit" ni modo edición separado.

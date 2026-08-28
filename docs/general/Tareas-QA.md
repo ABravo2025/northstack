@@ -943,8 +943,1319 @@ el código de esta pieza:
 
 ---
 
+## QA-21 — Sales v2, Unidad 1: gate de Company blindado en backend + `Pipeline.type` inmutable (2026-08-24, en `staging`)
+
+**Por qué existe esta tarea:** primera unidad de `docs/tareas/specredisenosalesv2.md`. No agrega
+ningún campo nuevo de negocio visible — cierra dos huecos sobre un mecanismo que ya estaba
+construido desde el 2026-07-29 (`Pipeline.type`, `'lead'`/`'account'`, con una Company placeholder
+creada al vuelo para leads sin empresa confirmada, ver `ContactDetailModal.tsx`): (1) el gate de
+"un pipeline `account` exige una Company ya identificada" solo vivía en el frontend, así que pegarle
+directo a la API lo saltaba entero; (2) `Pipeline.type` se podía cambiar después de creado desde un
+`<select>` en Settings → Pipelines, pudiendo reclasificar un pipeline con Opportunities ya creadas.
+Verificado de punta a punta con un script contra `staging` real (tenant de prueba creado y borrado
+vía Prisma, sin necesitar contraseña de nadie): placeholder creada con `isPlaceholder: true`, 400 al
+crear una Opportunity `account` con esa Company, 201 al crear una Opportunity `lead` con la misma
+Company, y `type` de un pipeline sin cambiar tras un PATCH que lo intentaba. `npm run build`/`npm
+test` (91/91) backend y `npm run build` frontend en verde.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | `/settings/pipelines`, cualquier pipeline existente | Ya no hay un `<select>` de tipo editable junto al nombre — aparece como texto de solo lectura ("Leads"/"Account") |
+| 2 | Crear un Contact sin Company, abrir su detalle → "+ Add" en Opportunities, elegir un pipeline `account`, sin asignarle Company antes | Bloqueado con el mismo toast de siempre ("This pipeline is account-only...") — comportamiento sin cambios, ya existía |
+| 3 | Mismo Contact sin Company, elegir un pipeline `lead`, cargar un nombre de Company y crear la Opportunity | Se crea una Company nueva con `isPlaceholder: true` (confirmar con una query directa, no hay indicador visual todavía — eso es una unidad futura) y la Opportunity queda creada en ese pipeline |
+| 4 | Con `curl`/Postman: `POST /api/opportunities` directo, `companyId` de una Company `isPlaceholder: true`, `pipelineId` de un pipeline `account` | 400, `"This pipeline requires an already-identified company — this one is still a placeholder."` — antes de esta unidad, esto pasaba sin chequeo |
+| 5 | Mismo caso pero con `pipelineId` de un pipeline `lead` | 201 — sigue permitido |
+| 6 | `PATCH /api/opportunities/:id` cambiando `companyId` a una Company placeholder, en una Opportunity que ya vive en un pipeline `account` | 400, mismo mensaje que el caso 4 — el gate también corre en update, no solo en create |
+| 7 | `PATCH /api/pipelines/:id` con `{ "type": "account" }` sobre un pipeline `lead` existente (curl directo, sin pasar por la UI) | 200, pero el `type` de la respuesta sigue siendo `"lead"` — el campo se ignora en vez de rechazar con error, para no romper un PATCH que además cambia `name`/`order`/`isActive` en el mismo request |
+| 8 | Regresión: flujo normal de alta de Company desde `/companies` (no desde un Contact) | La Company creada tiene `isPlaceholder: false` — el flag nunca se filtra a ningún otro punto de creación |
+
+**Severidad:** el caso 4 es el corazón de esta unidad — si un pipeline `account` termina con una
+Company placeholder colgada (por saltear el frontend), es alta severidad, mismo criterio que
+cualquier gap de validación server-side. El resto es media/baja salvo regresión funcional real.
+
+---
+
+## QA-22 — Sales v2, Unidad 2: jerarquía de Company (2026-08-24, en `staging`)
+
+**Por qué existe esta tarea:** `Company.parentCompanyId` nuevo (matriz/sucursal, un nivel,
+autoreferencial), con anti-ciclo, borrado que desvincula por default (o cascadea si se pide), y una
+sección "Hierarchy" nueva en el detalle de Company. De paso se confirmó que el tab de Contacts en el
+detalle de Company (que la spec original marcaba como pendiente) ya existía — nada que verificar ahí,
+sigue funcionando igual que siempre. Verificado con un script contra `staging` real (2 tenants de
+prueba): parent seteado con nombre correcto, ciclo de 2 pasos rechazado, self-reference rechazado,
+Company de otro tenant rechazada como parent, delete sin cascada desvincula, delete con cascada borra
+la hija. `npm run build`/`npm test` (91/91) backend y build frontend en verde.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | `/companies`, abrir el detalle de cualquier Company | Nueva sección "Hierarchy" — selector "Parent company" (buscador tipo autocomplete) |
+| 2 | Elegir otra Company del tenant como parent | Se guarda al elegir (autosave, sin botón Save); si la Company elegida tiene un padre a su vez, no aparece en la lista de opciones para ninguna de sus propias descendientes |
+| 3 | Con un parent ya asignado | Aparece un link "Open →" al lado del selector — click navega al detalle de esa Company (cierra este modal, abre el otro) |
+| 4 | Una Company con hijas asignadas | Sección "Associated companies (N)" debajo del selector, cada nombre es clickeable y navega al detalle de esa hija |
+| 5 | Intentar armar un ciclo (A es padre de B, después intentar que B sea padre de A) desde la UI | La Company que crearía el ciclo no debería ni aparecer como opción en el selector (excluida client-side); si se fuerza por API, 400 |
+| 6 | Borrar una Company que tiene hijas asignadas, **sin** tildar el checkbox nuevo | Las hijas quedan intactas, solo pierden el parent (visible en su propia sección Hierarchy después) |
+| 7 | Borrar una Company con hijas **y** Opportunities vinculadas | El `ConfirmDialog` muestra **dos** checkboxes independientes (uno por cada cascada) — tildar uno no afecta al otro |
+| 8 | Borrar con el checkbox de hijas tildado | Las hijas (y las hijas de las hijas, si las tuvieran) se borran también, no solo se desvinculan |
+| 9 | Regresión: cualquier otro `ConfirmDialog` de un solo checkbox en la app (ej. borrar un Employee con Opportunities, archivar un Pipeline) | Sigue viéndose y funcionando igual que siempre — la extensión de `ConfirmDialog` es aditiva, no debería haber cambiado nada visual en los casos de un solo checkbox |
+| 10 | Detalle de cualquier Company (regresión) | La sección "Contacts (N)" sigue funcionando exactamente igual que antes — no se tocó |
+
+**Severidad:** el caso 5 (ciclo) es alta si se logra crear de verdad — dejaría el árbol de
+jerarquía en un estado irrecuperable por la UI normal (loop infinito si algo intentara caminar la
+cadena). El caso 9 (regresión de ConfirmDialog) es alta si algo rompió — es un componente compartido
+por casi toda la app.
+
+---
+
 ## Próximas tareas de QA (a definir)
 
 Cuando se construyan los módulos grandes en curso (rediseño de Clients, Payroll), esta tabla de
 casos va a necesitar extenderse con sus endpoints nuevos — no asumir que quedan cubiertos por los
 casos de Employee/Client de arriba.
+
+---
+
+## QA-23 — Sales v2, Unidad 3: isPrimary único, soft-delete de Contact/Opportunity, multi-threading (2026-08-24, en `staging`)
+
+**Por qué existe esta tarea:** tres piezas chicas del mismo grupo. (1) `isPrimary` de Contact ahora
+es único por Company (crear/editar un 2do primary demueve al anterior). (2) "Delete" de Contact pasa
+a "Deactivate" — nunca borra de verdad; si el Contact era el único vínculo activo de una Opportunity,
+la Opportunity se desactiva también, si no, solo se desvincula. (3) Badge ámbar en el Kanban de
+Opportunity para deals con un solo Contact vinculado + métrica nueva en `scripts/metrics-report.ts`.
+Verificado con un script contra `staging` real (9 casos, un tenant de prueba). `npm run build`/`npm
+test` (91/91) backend y build frontend en verde.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Marcar un Contact como "Primary" cuando otro Contact de la misma Company ya lo era | El anterior deja de ser primary automáticamente — solo uno a la vez por Company |
+| 2 | Marcar como Primary un Contact **sin** Company asignada | Se guarda igual, sin afectar el primary de ninguna Company real |
+| 3 | `/contacts`, ícono de la fila (antes "Delete", ahora "Deactivate") | El tooltip dice "Deactivate"; el `ConfirmDialog` ya no tiene checkbox — el texto explica qué va a pasar (nada se borra) |
+| 4 | Desactivar un Contact que es el **único** vinculado a una Opportunity | La Opportunity también queda desactivada — confirmar que desaparece de `/opportunities` (Kanban) pero sigue existiendo (query directa) |
+| 5 | Desactivar un Contact que comparte una Opportunity con otro Contact activo | La Opportunity sigue activa/visible; el Contact desactivado desaparece de su lista de "Contacts involucrados", el otro sigue ahí |
+| 6 | `/contacts` después de desactivar alguno | El Contact desactivado ya no aparece en la tabla — no hay (todavía) forma de verlo/reactivarlo desde la UI, es un gap conocido y aceptado por ahora |
+| 7 | `/opportunities`, Kanban, cualquier deal con un solo Contact vinculado | Badge ámbar chico "1 contact" en la esquina inferior de la card; con 2+ Contacts no aparece |
+| 8 | `npx tsx scripts/metrics-report.ts` (o revisar el output de una corrida) | Sección nueva "Sales: multi-threading" con % de Opportunities abiertas de 1 solo Contact vs. 2+ |
+| 9 | Regresión: Employee/Company/Client — cualquier botón de "Delete" existente en esos módulos | Sigue siendo borrado real, sin cambios — este patrón no se tocó fuera de Contact/Opportunity |
+
+**Severidad:** el caso 4 (desactivar el contacto único de una Opportunity) es el corazón de esta
+unidad — si la Opportunity no se desactiva junto con su único Contact, o si se desactiva quedando
+huérfana de forma incorrecta cuando hay otros Contacts, es alta. El caso 9 (regresión fuera de
+Contact/Opportunity) es alta si algo cambió ahí — el alcance de esta unidad es explícitamente
+acotado.
+
+## QA-24 — Sales v2, Unidad 4: cambio de Pipeline + gate de Company real + oferta de mover un lead ganado (2026-08-24, en `staging`)
+
+**Por qué existe esta tarea:** dos piezas relacionadas (spec §3.3 + §3.6). (1) `updateOpportunity`
+ahora acepta reasignar `pipelineId` — resetea `stageId` al primer stage activo del pipeline destino
+(el `stageId` que venga en el mismo body se ignora si el pipeline cambió), y rechaza el cambio si el
+pipeline destino no tiene ningún stage activo. (2) El gate de "no se puede mover una Opportunity a un
+pipeline `account` si su Company sigue siendo un placeholder" (ya existía para cambios de `companyId`
+desde la Unidad 1) ahora también corre en una reasignación de `pipelineId` pura — antes de esta unidad
+ese camino no se chequeaba. En el frontend, `OpportunityDetailModal.tsx` gana un selector de Pipeline
++ un formulario inline para completar los datos reales de la Company cuando el gate bloquea el cambio,
+y un banner "Move to account pipeline?" que aparece solo cuando la Opportunity está en un stage `won`
+de un pipeline `lead` — tanto al cambiar de stage dentro del modal como al abrirlo ya en ese estado
+(incluye el caso de un drag-and-drop ganador en el Kanban de `OpportunitiesPage.tsx`, que ahora abre el
+detail modal automáticamente en ese caso). Verificado con un script contra `staging` real (tenant +
+pipelines + companies + opportunity de punta a punta vía HTTP, todo descartado al final). `npm run
+build`/`npm test` (91/91) backend y build frontend en verde — sin cambios de schema en esta unidad.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Opportunity en pipeline `lead`, Company todavía placeholder → cambiar el selector "Pipeline" del detail modal a un pipeline `account` | Aparece el formulario inline "Confirm company details to move pipeline" en vez de guardar directo; la Opportunity no se mueve hasta completarlo |
+| 2 | Completar el formulario inline (industry/website/phone) y confirmar "Confirm & Move" | La Company pasa a `isPlaceholder: false` con esos datos, y la Opportunity se mueve al pipeline elegido en la misma operación — verificar que el `stageId` resultante es el primer stage activo del pipeline destino |
+| 3 | Repetir el caso 1 pero pegándole directo a la API (`PATCH /api/opportunities/:id` con solo `pipelineId`, sin tocar `companyId`) | 400 con mensaje sobre placeholder — antes de esta unidad este camino no estaba cubierto y el cambio pasaba igual |
+| 4 | Company ya real (`isPlaceholder: false`) → cambiar de pipeline a uno `account` | Se mueve directo, sin pedir nada extra |
+| 5 | Cambiar a un pipeline `type: 'lead'` con Company placeholder | Nunca bloquea — el gate solo aplica para pipelines `account` |
+| 6 | Mover una Opportunity a un pipeline sin ningún stage activo | La operación falla (error genérico del servidor, no un 400 dedicado — ver nota en la spec §3.6) y la Opportunity no cambia de pipeline |
+| 7 | Dentro del detail modal, cambiar el Stage de una Opportunity en un pipeline `lead` a un stage `won` | Aparece el banner "Move to account pipeline?" con un selector de pipelines `account` activos; "Not now" lo descarta sin guardar nada, "Move" dispara el mismo mecanismo del caso 1/2 |
+| 8 | Kanban de `/opportunities`: arrastrar una card de un pipeline `lead` a una columna `won` | El detail modal de esa Opportunity se abre automáticamente mostrando el banner del caso 7 — no hace falta abrirlo a mano |
+| 9 | Arrastrar una card a un stage `won` dentro de un pipeline `account` (no `lead`) | No pasa nada especial — ni se abre el modal automáticamente ni aparece el banner, es terminal |
+| 10 | Regresión: cambiar solo el Stage (sin tocar Pipeline) de una Opportunity que no aterriza en `won`, o que está en un pipeline `account` | Comportamiento sin cambios respecto a antes de esta unidad |
+
+**Severidad:** el caso 3 es el corazón real de esta unidad — es el gap concreto que existía antes (el
+gate solo cubría `companyId`, no `pipelineId`) y si se rompe, vuelve a ser posible mover una
+Opportunity a un pipeline `account` con una Company sin identificar todavía, salteando la razón de ser
+de todo el mecanismo de placeholder. Los casos 2 y 6 (reseteo de `stageId` server-computed y rechazo
+sin stages activos) son altos porque dejan a la Opportunity en un estado inconsistente (stage que no
+pertenece a su pipeline) si fallan silenciosamente.
+
+## QA-25 — Sales v2, Unidad 5: UI de creación de Opportunity contextual — pipelines filtrados por tipo (2026-08-24, en `staging`)
+
+**Por qué existe esta tarea:** dos piezas del mismo punto (spec §3.4), 100% frontend — no se agregó
+ningún endpoint nuevo, solo se reordenó cómo el frontend usa los que ya existían. (1)
+`CompanyDetailModal.tsx`'s "Agregar Opportunity" ahora filtra el selector de Pipeline a solo `type:
+'account'` (antes mostraba todos, incluyendo `lead`, algo que no tenía sentido para una Company ya
+identificada) y suma un selector opcional de Contact acotado a los ya vinculados a esa Company. (2) El
+"Add Opportunity" genérico de `/opportunities` (sin partir de un perfil) ahora pide Pipeline primero y
+según su `type` muestra el buscador de Company existente (`account`) o el flujo de Contact +
+Company-placeholder (`lead`, mismo patrón que `ContactDetailModal.tsx` pero generalizado). **Importante:
+esta unidad no se pudo probar visualmente en navegador** — no hay herramienta de automatización de
+navegador en este entorno. Se verificó contra `staging` real replicando por HTTP la secuencia exacta de
+llamadas de cada rama del frontend, más una revisión manual del JSX (renderizado condicional, atributos
+`required` nativos). `npm run build` (backend y frontend) en verde — sin cambios de schema ni de tests
+backend en esta unidad (91/91 sigue en verde, sin tests nuevos porque no hay lógica de servidor nueva).
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | `CompanyDetailModal.tsx`, "Agregar Opportunity", selector de Pipeline | Solo aparecen pipelines `type: 'account'` activos — ningún `lead` en la lista |
+| 2 | Mismo formulario, sin pipelines `account` activos en el tenant | El selector muestra "No active account pipelines" y el botón "Create opportunity" queda deshabilitado (sigue atado a `!newOppPipelineId`) |
+| 3 | Mismo formulario, elegir un Contact del selector opcional antes de crear | La Opportunity creada queda con ese Contact vinculado (`GET .../contacts` o el detail modal lo muestra) |
+| 4 | `/opportunities`, "Add Opportunity", elegir un pipeline `lead` | Desaparece el selector de Company; aparecen "Contact" (existente) + campos de contacto nuevo + "Company name" |
+| 5 | Mismo caso, elegir un Contact existente que **ya tiene** Company | El campo "Company name" desaparece — no hace falta, se va a reusar la Company de ese Contact directamente |
+| 6 | Mismo caso, dejar "Contact" vacío y completar los 3 campos de contacto nuevo + "Company name" | Al crear: nuevo Contact + nueva Company placeholder (`isPlaceholder: true`) + Opportunity vinculando ambos, todo en la secuencia correcta |
+| 7 | Mismo formulario, cambiar de un pipeline `account` (con Company ya elegida) a uno `lead` | Los campos del tipo anterior (Company elegida) se limpian — no queda un `companyId` viejo colgado que no aplica al nuevo tipo |
+| 8 | Mismo formulario, pipeline `account`, selector de Company | Solo aparecen Companies con `isPlaceholder: false` — evita elegir una que el backend rechazaría igual |
+| 9 | Regresión: pegarle directo a la API creando una Opportunity con una Company placeholder en un pipeline `account` | Sigue bloqueado con 400 — el filtro del paso 8 es solo cosmético, la garantía real sigue siendo el gate del backend (Unidad 1/4) |
+
+**Severidad:** media — es una mejora de UX/consistencia (evitar ofrecer combinaciones que el backend ya
+rechazaba), no un gate de seguridad nuevo; el caso 9 es el que confirma que no se debilitó nada real. La
+falta de prueba visual en navegador es la mayor incertidumbre de esta unidad — si algo se rompe en el
+renderizado condicional (por ejemplo, un campo que no aparece cuando debería), no quedaría capturado por
+esta verificación y solo se vería al usarlo en la UI real.
+
+## QA-26 — Sales v2, Unidad 6: forecast ponderado + cierre simétrico Won/Lost (2026-08-24, en `staging`)
+
+**Por qué existe esta tarea:** dos piezas independientes del mismo build-order step (spec §3.5 + §3.7).
+(1) `PipelineStageDefinition.probability` (0-100, forzado a 100/won y 0/lost en backend, editable por
+tenant solo para stages `open`) alimenta un cálculo de pipeline value ponderado (`Σ amount ×
+probability/100` sobre deals abiertos) que reemplaza la suma simple en el header de `/opportunities` y en
+el subtotal por stage del Kanban. (2) `winReasonId`/`closeNote` en Opportunity, simétricos a
+`lossReasonId` ya existente — obligatorio a nivel de aplicación al mover a un stage `won`. **Descubrimiento
+importante durante la implementación**: ni `lossReason` ni `leadSource` tenían ninguna UI para que el
+tenant creara nuevas opciones de catálogo — solo se podían leer. Replicar `winReasonId` tal cual iba a
+dejar a todo tenant sin forma de cerrar ningún deal como Won (ver la decisión documentada en
+`specredisenosalesv2.md` §3.7). Se agregó un menú "add option" (reusando `FieldCatalogMenu.tsx`) junto a
+ambos selects en `OpportunityDetailModal.tsx`, arreglando el gap para los dos catálogos. Verificado contra
+`staging` real de punta a punta vía HTTP (seed formula del tenant-registration, ad-hoc stage add, edición
+de probability, gate de winReasonId, gate de lossReason sigue intacto, catálogo de la kind equivocada
+rechazado). `npm run build`/`npm test` (91/91) backend y build frontend en verde. Schema aditivo pusheado
+a staging (`probability` con default, `winReasonId`/`closeNote` nullable, enum `winReason` agregado — sin
+paso destructivo).
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Tenant nuevo, pipelines "Leads"/"Clientes" recién sembrados | Stages `New`=10%, `In Progress`=80%, `Won`=100%, `Lost`=0% |
+| 2 | `/settings` → Pipelines, agregar un stage nuevo `open` a mano ("Add Stage") | Nace con 50% (no hay N conocido de antemano para interpolar) |
+| 3 | Mismo lugar, cambiar el outcome de un stage a `won` o `lost` | El campo de probabilidad deja de ser editable y muestra 100%/0% fijo |
+| 4 | Intentar mandar `probability` fuera de 0-100 directo a la API | 400 |
+| 5 | `/opportunities`, header del pipeline activo | Muestra "Weighted value: ..." — suma ponderada de los deals abiertos, no la suma simple |
+| 6 | Kanban, subtotal de una columna `open` vs. una columna `won`/`lost` | La columna `open` muestra el monto ponderado por la probabilidad del stage; `won`/`lost` muestran el monto real sin ponderar (evita mostrar $0 en Lost) |
+| 7 | Mover una Opportunity a un stage `won` sin elegir Win Reason | Bloqueado — mismo mensaje de error que ya existía para Lost sin Loss Reason |
+| 8 | Confirmar el cierre con Win Reason + Close Note | Se guardan ambos; el Close Note también funciona en un cierre Lost |
+| 9 | `OpportunityDetailModal.tsx`, selects de Loss/Win Reason | Cada uno tiene un menú "..." al lado para agregar una opción nueva sin salir del modal — antes no existía ningún camino para esto |
+| 10 | Regresión: `GET /api/field-catalog?kind=winReason` | 200, no 400 — el bug ya conocido de olvidar actualizar `VALID_CATALOG_KINDS` (documentado en la spec) no se repitió |
+| 11 | Regresión: mover a Lost sin Loss Reason | Sigue bloqueado igual que antes de esta unidad |
+
+**Severidad:** alta en el caso 9 — sin eso, la Unidad 6 completa habría sido inutilizable en producción
+(ningún tenant puede cerrar un deal como Won sin al menos una opción de Win Reason, y no había forma de
+crear una). El caso 6 es media — mostrar $0 en una columna Lost habría sido confuso pero no habría roto
+ningún flujo. El resto son verificaciones de correctitud estándar del gate simétrico.
+
+## QA-27 — Sales v2, Unidad 7: notificaciones in-app, versión mínima (2026-08-24, en `staging`)
+
+**Por qué existe esta tarea:** la base de plomería para notificaciones (spec §3.9) — modelo
+`Notification` (destinatario, tipo, entidad genérica, mensaje pre-renderizado, leído/no leído),
+endpoints de listado/contador/marcar-leída, y el bell icon en la barra superior con polling cada 30s.
+**Importante:** esta unidad no incluye ningún productor real — nada dispara todavía una notificación de
+verdad (eso es la Unidad 8, `opportunity_stage_changed` al cambiar de stage). El bell icon queda
+funcional pero en cero hasta entonces, tal como lo anticipa el orden de build de la spec. Se verificó
+sembrando filas de `Notification` directamente vía Prisma (simulando al futuro productor) contra
+`staging` real, ejercitando los 4 endpoints de punta a punta con dos Users del mismo tenant para
+confirmar el aislamiento por destinatario. De paso, se liberó el ícono de campana (antes usado por
+"What's new") para las notificaciones reales, dándole a "What's new" un ícono nuevo (`SparklesIcon`).
+`npm run build`/`npm test` (91/91) backend y build frontend en verde. Schema aditivo pusheado a staging
+(tabla nueva + enum nuevo, sin tocar nada existente).
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Tenant nuevo, sin notificaciones | `GET /api/notifications` devuelve `[]`, `unread-count` devuelve `0` |
+| 2 | Sembrar 3 notificaciones para un User y 1 para otro User del mismo tenant | Cada User solo ve las suyas al listar — nunca las del otro, aunque compartan tenant |
+| 3 | Marcar una notificación individual como leída | El contador de no leídas baja en 1; la fila queda `read: true` |
+| 4 | Intentar marcar como leída una notificación de **otro** User (id real, pero no tuyo) | Rechazado — el ownership check es por `userId`, no solo `tenantId` |
+| 5 | Intentar marcar como leída un id que no existe | 404 |
+| 6 | "Mark all read" | Todas las no leídas del User pasan a `read: true`, contador queda en 0 |
+| 7 | Barra superior: ícono de campana | Es el `BellIcon`; el contador de no leídas aparece como badge numérico cuando hay alguna |
+| 8 | Barra superior: ícono junto al de notificaciones ("What's new") | Ahora es un ícono distinto (chispas), ya no comparte la campana con notificaciones |
+| 9 | Abrir el dropdown de notificaciones sin ninguna sembrada | Muestra "No notifications yet." — no queda vacío/roto |
+
+**Severidad:** baja — esta unidad es infraestructura sin productor real todavía, así que ningún flujo de
+negocio depende de ella hasta que la Unidad 8 la conecte. El caso 4 (ownership por destinatario, no solo
+tenant) es el más importante de esta ronda — una fuga ahí dejaría a un User leer/marcar notificaciones
+de un compañero de tenant.
+
+## QA-28 — Fix: pantalla de Pipelines en Settings, hallazgo del usuario al revisar staging (2026-08-25)
+
+**Por qué existe esta tarea:** Alejandro revisó visualmente `/settings` → Pipelines (no es parte de
+ninguna Unidad de la spec, preexistente) y encontró tres problemas en el alta de un Pipeline nuevo: (1)
+usaba `SlideOver` (panel lateral) en vez de `Modal` (centrado) — inconsistente con el resto de los "Add
+X" del sistema (Opportunities/Companies/Contacts/Employees, todos usan `Modal`); (2) el alta de stages no
+permitía asignar `probability` (el "value" del stage, spec §3.5) — solo estaba disponible al editar un
+Pipeline ya creado; (3) el selector Won/Open/Lost no explicaba qué implica cada opción. Se corrigieron los
+tres: `PipelinesSettingsPage.tsx` ahora usa `Modal wide`, el alta de stages tiene el mismo input de
+probability que la vista expandida (default 50%, forzado a 100/0 para won/lost), y se agregó una línea de
+ayuda explicando Open/Won/Lost tanto en el alta como en la vista expandida. Ningún cambio de schema — solo
+frontend. `npm run build`/`npm test` (91/91) backend y build frontend en verde.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | `/settings` → Pipelines → "New Pipeline" | Se abre un modal centrado con overlay, no un panel lateral |
+| 2 | Mismo modal, agregar un stage con outcome `Open` | Aparece un input numérico de probability (0-100), default 50 |
+| 3 | Mismo modal, cambiar el outcome de un stage a `Won` o `Lost` | El input de probability desaparece, se muestra 100%/0% fijo como texto |
+| 4 | Crear el pipeline con esos stages | Los stages nacen con la probability indicada (o forzada a 100/0) — verificar en la vista expandida del pipeline ya creado |
+| 5 | Alta y vista expandida de un pipeline existente | Ambas muestran la misma línea de ayuda explicando qué hace cada outcome |
+
+**Severidad:** baja — es un fix de UX/consistencia sobre una pantalla de Settings, no afecta ningún gate
+de negocio ni dato existente.
+
+## QA-29 — Fix: Pipelines settings como tabla columnar + auditoría (creado/editado por) (2026-08-25)
+
+**Por qué existe esta tarea:** siguiendo la revisión de QA-28, Alejandro pidió tres cosas más sobre la
+misma pantalla: (1) que se distinga Lead vs Account de un vistazo — antes era texto plano fácil de pasar
+por alto; (2) formato columnar con headers, sorteable; (3) fecha de creación/última edición y usuario
+que creó/editó cada Pipeline. Los puntos (1) y (2) eran solo de frontend. El punto (3) necesitó schema
+nuevo — `Pipeline` no rastreaba quién la creó/editó, solo `createdAt` (sin `updatedAt` siquiera). Se
+agregó `Pipeline.updatedAt` (`@updatedAt`, con `@default(now())` porque había 155 filas existentes sin
+valor — sin ese default `db push` lo hubiera rechazado por requerir un paso destructivo),
+`Pipeline.createdById`/`updatedById` (ambos FK a `User`, nullable — no hay forma de reconstruir quién
+creó un Pipeline que ya existía, incluidos los dos que se siembran en cada registro de tenant nuevo).
+`createPipeline`/`updatePipeline` ahora reciben el id del User autenticado y lo persisten; `updatePipeline`
+lo requiere siempre (no es opcional como el resto de sus campos). El listado de Pipelines pasó de tarjetas
+apiladas a una tabla real (`<table className="table full-table">`, mismo patrón que usan
+Companies/Contacts/Employees) con columnas Type/Name/Stages/Created/Updated ordenables por click, Type
+como chip de color fijo (violeta=Lead, verde azulado=Account, no hasheado — para que el color sea siempre
+el mismo), y la fila se sigue pudiendo expandir para editar sus stages (ahora dentro de una fila de tabla
+con colSpan, mismo contenido que antes). Verificado contra staging real (crear pipeline → createdBy/
+updatedBy = el usuario que lo creó; el pipeline default sembrado en el registro del tenant tiene ambos en
+null, sin romper; renombrar → updatedAt avanza y updatedBy se actualiza, createdBy no cambia). `npm run
+build`/`npm test` (91/91) backend y build frontend en verde. Schema aditivo pusheado a staging.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | `/settings` → Pipelines | Ahora es una tabla con headers: Type, Name, Stages, Created, Updated |
+| 2 | Columna Type | Chip de color relleno (no solo texto) — Lead y Account siempre con el mismo color cada uno |
+| 3 | Click en cualquier header ordenable | Ordena la tabla por esa columna; un segundo click invierte el orden |
+| 4 | Columnas Created/Updated | Muestran fecha + nombre del usuario, o "—" si no hay dato (pipelines viejos, sembrados antes de este fix) |
+| 5 | Crear un Pipeline nuevo | Created y Updated muestran la fecha de hoy y tu propio nombre en ambas |
+| 6 | Renombrar o archivar/reactivar un Pipeline existente | La columna Updated cambia (fecha + tu nombre); Created no se toca |
+| 7 | Click en la fila (fuera de los botones de acción) | Sigue expandiendo/colapsando la edición de stages, igual que antes |
+| 8 | Click en "Rename" o "Archive/Reactivate" | No dispara el expand/collapse de la fila (el click no se propaga) |
+
+**Severidad:** baja — mejora de UX/auditoría sobre una pantalla de Settings, sin gate de negocio
+involucrado. El caso 8 es el más fácil de romper sin querer (un evento de click mal delegado) — vale la
+pena confirmarlo primero al probar.
+
+## QA-30 — Fix: menú "..." en vez de click-to-expand + edición de Pipeline en el modal (2026-08-25)
+
+**Por qué existe esta tarea:** siguiente ronda de feedback sobre la misma pantalla (reemplaza el
+comportamiento de "click en la fila expande stages" de QA-29, casos 7-8, que ya no existe). Alejandro
+pidió reemplazar el lápiz (rename) + botón Archive al final de la fila por un menú "..." con las opciones
+Edit/Archive, y que "Edit" abra el mismo modal que "New Pipeline" mostrando los datos de esa Pipeline —
+tanto el nombre como sus stages se editan ahí, no inline en la tabla. Sin cambios de schema ni backend,
+solo `PipelinesSettingsPage.tsx`. La fila ahora es plana (sin fila-hija expandible): Type/Name/Stages/
+Created/Updated + una columna final con el trigger "...". El menú "..." reusa el mismo patrón de Popover
+que ya existía en `TimeOffOverviewPage.tsx` (un solo Popover compartido, anclado dinámicamente a la fila
+que se clickeó). El modal ahora tiene dos modos: Create (sin cambios respecto a QA-28/29 — nombre + type
++ stages en borrador, todo se crea junto al hacer Save) y Edit (nombre editable con auto-save al perder
+foco, mismo patrón que el rename anterior; Type se muestra de solo lectura, con el mismo tooltip de
+"no se puede cambiar"; y el editor de stages — que antes vivía en la fila expandida — se movió tal cual
+adentro del modal, sin cambiar su comportamiento: cada campo de cada stage sigue guardando al instante
+igual que antes, no hay un botón "Save" separado para los stages). El botón del footer en modo Edit es
+solo "Done" (cierra el modal) porque no hay nada pendiente de guardar — todo ya se guardó solo.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | `/settings` → Pipelines, fila de un Pipeline | Ya no hay lápiz ni botón Archive visibles — solo un ícono de "..." al final de la fila |
+| 2 | Click en "..." | Abre un menú con "Edit" y "Archive" (o "Reactivate" si está archivado) |
+| 3 | Click en la fila fuera del botón "..." | Ya no pasa nada — no hay más expand/collapse inline |
+| 4 | Menú "...", elegir "Edit" | Abre el modal titulado "Edit Pipeline", con el nombre actual precargado y el editor de stages debajo |
+| 5 | Mismo modal, cambiar el nombre y hacer click afuera del campo (blur) | Se guarda solo — no hace falta tocar "Done" para que el nombre se guarde |
+| 6 | Mismo modal, campo Type | Solo texto, de solo lectura, con tooltip explicando que no se puede cambiar |
+| 7 | Mismo modal, editar/agregar/archivar un stage | Mismo comportamiento de siempre (auto-save por campo) — ahora ocurre adentro del modal en vez de en la fila expandida |
+| 8 | Botón "Done" del modal en modo Edit | Solo cierra el modal — no hay ninguna acción de guardado pendiente atada a ese botón |
+| 9 | Menú "...", elegir "Archive"/"Reactivate" | Mismo diálogo de confirmación que ya existía, sin cambios |
+| 10 | Crear un Pipeline nuevo ("New Pipeline") | Sigue funcionando exactamente igual que en QA-28/29 — este flujo no se tocó |
+
+**Severidad:** baja — reorganización de UX sobre una pantalla de Settings. El caso 5 es el más fácil de
+pasar por alto (¿el auto-save del nombre sigue andando después de mover el input al modal?) — confirmarlo
+primero.
+
+## QA-31 — Fix: reordenar stages por drag-and-drop en vez de flechas ▲▼ (2026-08-25)
+
+**Por qué existe esta tarea:** siguiente ronda de feedback sobre el editor de stages (dentro del modal
+Edit desde QA-30). Alejandro pidió reemplazar los botones ▲/▼ por el grip de 6 puntitos + drag-and-drop,
+mismo patrón que ya usa `FieldCatalogMenu.tsx` para reordenar opciones de catálogo (Loss/Win Reason,
+Department, etc. — ver Unidad 6). Se reusó ese patrón tal cual: arrastrar el grip de un stage sobre otro
+reordena la lista completa localmente y persiste el nuevo `order` de cada stage que cambió (mismo
+mecanismo que ya tenían las flechas, solo cambia cómo se dispara). Sin cambios de backend/schema — el
+endpoint `PATCH /api/pipelines/:id/stages/:stageId` con `{ order }` ya existía y no se tocó. Solo
+frontend: `PipelinesSettingsPage.tsx`. `npm run build` (backend y frontend) y `npm test` (91/91) en verde.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Modal Edit de un Pipeline con 2+ stages | Cada stage tiene un ícono de 6 puntitos a la izquierda (donde antes estaban las flechas ▲/▼) |
+| 2 | Arrastrar el grip de un stage y soltarlo sobre otro | La lista se reordena; el stage soltado queda en la posición del que recibió el drop |
+| 3 | Mientras se arrastra | El stage arrastrado se ve semi-transparente; el stage sobre el que está encima muestra un borde superior de color |
+| 4 | Soltar un stage sobre sí mismo, o arrastrar y soltar fuera de cualquier fila | No hace nada — no llama a la API sin necesidad |
+| 5 | Reordenar y volver a abrir el modal (cerrar y re-abrir Edit) | El nuevo orden persiste — quedó guardado en el backend, no es solo un reorder visual |
+
+**Severidad:** baja — mejora de interacción sobre un editor de Settings, sin gate de negocio ni cambio de
+datos involucrado más allá del campo `order` que ya se movía con las flechas.
+
+## QA-32 — Fix: "refresh" al arrastrar stages + desalineación de columnas + ícono de Archive (2026-08-25)
+
+**Por qué existe esta tarea:** tres problemas reportados al probar el drag-and-drop de QA-31. (1) Al
+arrastrar un stage, la pantalla hacía algo parecido a un refresh — molesto. Causa real: el estado del
+drag (`draggedStageId`/`dragOverStageId`) vivía en `PipelinesSettingsPage` (el componente de la página
+completa), así que cada evento `dragover` — que dispara docenas de veces por segundo mientras se mueve
+el mouse — re-renderizaba la página entera, incluyendo la tabla completa de Pipelines que sigue montada
+debajo del modal aunque no se vea. Fix real, no cosmético: se extrajo el editor de stages a un componente
+de React separado (`StageEditor`), con su propio estado local — ahora un evento de drag solo re-renderiza
+ese subárbol chico, no la tabla entera. (2) "Stage Name"/"Outcome"/"Win %" quedaron desalineados respecto
+a los datos de la fila — causa: el ancho del espaciador del header (adivinado en 20px) no coincidía con
+el ancho real que ocupa el ícono de grip. Fix: mismo valor exacto (`STAGE_GRIP_COLUMN_WIDTH = 24`) fijado
+tanto en el header como en el propio grip, para que no puedan desalinearse de nuevo por casualidad. (3) El
+botón "Archive"/"Reactivate" de cada stage pasó de texto a un ícono (ojo abierto = activo, click archiva;
+ojo tachado = archivado, click reactiva), con tooltip. Sin cambios de backend — todo en
+`PipelinesSettingsPage.tsx`. `npm run build` (backend y frontend) y `npm test` (91/91) en verde.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Modal Edit, arrastrar un stage | Ya no hay parpadeo/refresh visible de la pantalla — el drag se siente fluido |
+| 2 | Header "Stage name / Outcome / Win %" vs. los datos de cada fila | Alineados exactamente, sin importar cuántos stages haya |
+| 3 | Columna final de cada stage | Un solo ícono (ojo o ojo tachado) en vez del botón de texto "Archive"/"Reactivate" |
+| 4 | Hover sobre ese ícono | Tooltip dice "Archive" o "Reactivate" según corresponda |
+| 5 | Click en el ícono | Mismo comportamiento de siempre (toggle `isActive` del stage, auto-save) |
+| 6 | Reordenar por drag-and-drop | Sigue funcionando igual que en QA-31 — el fix de performance no cambió el comportamiento, solo dónde vive el estado |
+
+**Severidad:** media en el caso 1 — un "refresh" visible cada vez que se intenta reordenar un stage es el
+tipo de fricción que hace que una función se sienta rota aunque funcione. El resto son ajustes visuales
+menores.
+
+## QA-33 — Fix real del "refresh" (loadPipelines bloqueaba toda la página) + color del ícono Archive (2026-08-25)
+
+**Por qué existe esta tarea:** el fix de QA-32 (mover el estado del drag a su propio componente) era una
+mejora real pero no la causa principal — el usuario confirmó que seguía sin ser fluido, "se renderiza por
+cualquier cosa ahora". Causa raíz encontrada: `loadPipelines()` — la función que se llama después de
+**cualquier** guardado (rename, color/outcome/probability/archive/reorder de un stage, agregar stage,
+crear/archivar/reactivar un pipeline) — hacía `setLoading(true)` al arrancar. Como el componente entero
+tiene `if (loading) return <p>Loading...</p>`, cada uno de esos guardados desmontaba la página completa
+(tabla + modal + editor) y la volvía a montar de cero al terminar. Eso es el "refresh": no era un problema
+de qué tan grande era el árbol que se re-renderizaba (lo de QA-32), sino que la página entera se
+desmontaba literalmente en cada guardado, sin excepción. Fix: `loadPipelines()` ya no toca `loading` —
+ese estado ahora lo maneja solo el `useEffect` de montaje inicial (donde sí tiene sentido, porque todavía
+no hay nada en pantalla). Cualquier refresh posterior es silencioso, mismo patrón "instant update + fetch
+en segundo plano sin pantalla de carga" que ya usan otras páginas del proyecto (ej. `OpportunitiesPage.tsx`).
+De paso, el ícono de Archive/Reactivate de cada stage ahora es verde (ojo abierto, activo) o rojo (ojo
+tachado, archivado) en vez de un solo color neutro. Ambos cambios solo en `PipelinesSettingsPage.tsx`, sin
+tocar backend. `npm run build` (backend y frontend) y `npm test` (91/91) en verde.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Modal Edit, cambiar el color de un stage, el outcome, la probability, o archivar/reactivar | Ya no hay ningún parpadeo de "Loading..." — el cambio se guarda y la pantalla no se mueve |
+| 2 | Modal Edit, arrastrar un stage para reordenar | Igual de fluido que los casos anteriores, sin flash |
+| 3 | Renombrar un pipeline (nombre en el modal), crear uno nuevo, o archivar/reactivar desde el menú "..." | Tampoco muestran el flash de "Loading..." — antes también lo tenían, aunque el usuario no lo haya mencionado explícitamente |
+| 4 | Recargar la página completa (F5) manualmente | Sigue mostrando "Loading..." normalmente — ese caso no cambió, es el único momento en que corresponde |
+| 5 | Ícono de Archive/Reactivate de un stage activo | Ojo abierto, color verde |
+| 6 | Ícono de Archive/Reactivate de un stage archivado | Ojo tachado, color rojo |
+
+**Severidad:** alta en el caso 1 — era la causa real del problema reportado dos veces seguidas; el fix de
+QA-32 solo atacaba un síntoma secundario. Vale la pena confirmar explícitamente que ya no hay ningún
+parpadeo antes de dar el tema por cerrado.
+
+## QA-34 — Sales v2, Unidad 8: automatizaciones — round-robin, account owner, recordatorio de deal estancado (2026-08-25, en `staging`)
+
+**Por qué existe esta tarea:** cierra la spec §3.8 — el último bloque grande del rediseño de Sales v2.
+Agrega auto-asignación de owner por Pipeline (`round_robin` o `account_owner`, configurable en el modal de
+Edit de Pipelines), el primer cron real del proyecto (recordatorio de deal estancado), y el primer productor
+real de `Notification` (cambio de stage), conectando el bell icon que Unidad 7 dejó construido pero en cero.
+Varias decisiones no estaban en el spec original y se resolvieron con el usuario esta misma ronda: el
+disparador del round-robin (en la creación, nunca sobreescribe un `ownerId` explícito), el alta masiva de
+participantes por Departamento (una sola vez, no un vínculo vivo), la elegibilidad del round-robin (Employee
+activo + User activo, nunca por nombre de status), y que `account_owner` aplica tanto en la creación directa
+como en el movimiento de pipeline (no solo en el movimiento, como decía el spec original). `Opportunity.ownerId`
+pasó a nullable — consecuencia necesaria de la degradación prolija ("sin owner" en vez de romper), no una
+decisión aparte. El email de cambio de stage sale en cada cambio por ahora (decisión explícita del usuario),
+con un pendiente de backlog anotado para una futura pantalla de preferencias de notificación por usuario.
+
+Verificado contra `staging` real con dos tenants descartables (uno para probar aislamiento) y 40 chequeos de
+punta a punta: rotación en orden con persistencia del cursor sin tocar `Pipeline.updatedAt`, participantes
+inelegibles salteados, degradación a `ownerId: null`, `ownerId` explícito siempre respetado, `account_owner`
+con override/fallback en ambos puntos de entrada, notificación de cambio de stage (no-actor sí, self-change
+no), el cron completo (crea → dedupe en re-corrida → re-notifica tras nuevo estancamiento → auth 401/200),
+alta masiva por departamento, y aislamiento entre tenants. `npm run build`/`npm test` (91/91) backend y
+`npm run build` frontend en verde. Schema aditivo salvo `Opportunity.ownerId` (`NOT NULL` → nullable, no
+destructivo) pusheado a staging.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Pipeline con `assignmentMode: round_robin` y 2+ participantes activos, crear Opportunity sin Owner | Se asigna al siguiente participante elegible en orden; el cursor (`lastAssignedUserId`) avanza sin tocar `updatedAt` del Pipeline |
+| 2 | Mismo caso, pero con un `ownerId` explícito en el request | Se usa tal cual — el round-robin nunca se consulta ni avanza el cursor |
+| 3 | Pipeline `round_robin` sin participantes, o con todos los participantes inelegibles (Employee inactivo o User inactivo) | La Opportunity se crea igual, con `ownerId: null` — nunca un error 500 |
+| 4 | Pipeline `type: 'account'` + `assignmentMode: account_owner`, Company con `accountOwnerId` seteado, crear u mover una Opportunity hacia ese pipeline | El owner queda en el Account Owner de la Company — sobreescribe un owner existente en el caso de movimiento |
+| 5 | Mismo caso pero la Company no tiene `accountOwnerId` | Cae a round-robin sobre los participantes de ese mismo Pipeline; en un movimiento, solo rellena si la Opportunity no tenía owner (no sobreescribe uno existente) |
+| 6 | Crear un Pipeline `type: 'lead'` con `assignmentMode: 'account_owner'`, o editarlo para setearlo así | Rechazado con 400 — esa combinación no tiene sentido |
+| 7 | Pipeline con `assignmentMode: null`, crear una Opportunity sin `ownerId` | Rechazado con 400 — sigue siendo obligatorio como antes de esta unidad |
+| 8 | Cambiar el stage de una Opportunity ajena (el que cambia no es el owner) | El owner recibe una `Notification` (`opportunity_stage_changed`) y un email |
+| 9 | El owner cambia el stage de su propia Opportunity | No se genera notificación ni email para sí mismo |
+| 10 | Pipeline con `stalledThresholdDays` seteado, una Opportunity abierta estancada más de ese umbral | El cron crea una `Notification` (`opportunity_stalled`) + email al owner; una Opportunity sin owner se cuenta como salteada, nunca se le manda a otro |
+| 11 | Correr el cron de nuevo inmediatamente sobre el mismo estancamiento | No duplica la notificación (dedup vía último `Notification.createdAt` vs. `stageHistory[0].enteredAt`) |
+| 12 | La Opportunity cambia de stage y vuelve a estancarse en la nueva | El cron genera una segunda notificación — el cambio de stage invalida la deduplicación anterior |
+| 13 | Pegarle al endpoint del cron sin `Authorization` o con un Bearer incorrecto | 401 en ambos casos |
+| 14 | Pegarle al endpoint del cron con el `CRON_SECRET` correcto | 200, devuelve el resumen de la corrida |
+| 15 | En el modal de Edit de un Pipeline, agregar participantes por Departamento (multi-select) | Agrega a todos los Users que hoy tienen un Employee en esos departamentos; repetir la operación no duplica ni rompe |
+| 16 | Formulario de alta de Opportunity, Pipeline con automatización activa | El campo Owner deja de ser obligatorio y muestra "-- auto-assign --"; el alta automática (`attemptAutoCreateOpportunity`) no dispara antes de que el usuario llegue a ese campo |
+| 17 | Dos tenants distintos, cada uno con su propio round-robin | Nunca se cruzan — ni en la rotación, ni en el listado de participantes, ni al intentar asignar manualmente |
+
+**Severidad:** media-alta — toca la creación/movimiento de Opportunities (camino muy transitado) y agrega el
+primer cron real del proyecto. Los casos 3 y 7 (degradación prolija vs. seguir exigiendo `ownerId` sin
+automatización) son los más importantes: una regresión ahí rompería altas de Opportunity para tenants sin
+esta feature configurada. El caso 11 (dedup del cron) es el segundo más importante — sin él, cada corrida
+diaria le mandaría un email repetido a cada owner con un deal estancado.
+
+## QA-35 — Sales v2, Unidad 8 follow-up: Automations en la creación + multi-select + notificación por stage (2026-08-25, en `staging`)
+
+**Por qué existe esta tarea:** feedback directo del usuario al revisar QA-34 en staging. Tres pedidos: (1) la
+sección "Automations" vivía solo en el modal de Edit — un usuario nunca se enteraría de que la feature existe
+salvo que se le ocurriera editar un pipeline ya creado, así que se movió también al modal de creación, antes
+de Stages en ambos modales; (2) los checklists de participantes/departamentos (siempre visibles, un checkbox
+por fila) se reemplazan por un dropdown multi-select nuevo (`MultiSelectDropdown.tsx` — no existía nada así en
+el proyecto, se construyó sobre `Popover.tsx` siguiendo el mismo patrón que `ColumnVisibilityMenu.tsx`); (3)
+la tabla de Stages gana una columna "Notify" (`PipelineStageDefinition.notifyOwnerOnEnter`, boolean, default
+`true`) para poder apagar la notificación/email de cambio de stage en un stage puntual sin afectar al resto
+del Pipeline.
+
+En el modal de creación, Automations queda como estado en borrador (assignmentMode, participantes,
+departamentos, `stalledThresholdDays`) que recién se aplica después de `createPipeline`, mismo patrón que ya
+usan las stages en borrador — nada se persiste hasta el submit. `notifyOwnerOnEnter` se valida en las rutas de
+stage (POST/PATCH) y `updateOpportunity` chequea el flag del stage de **destino** (no el de origen) antes de
+notificar/emailear, sumado al chequeo ya existente de "nunca al propio actor". `npm run build`/`npm test`
+(91/91) backend y `npm run build` frontend en verde. Schema aditivo (`notifyOwnerOnEnter` con default `true`,
+sin migración destructiva) pusheado a staging.
+
+**Verificado visualmente 2026-08-26** con un dev server local (frontend + backend) apuntado a
+`STAGING_DATABASE_URL` y un tenant descartable, manejado con Playwright de punta a punta: modal de creación
+con Automations antes de Stages, dropdown multi-select de participantes (abrir/cerrar, resolución real de
+Users del tenant), columna Notify en la tabla de Stages (Create y Edit), y el reset de `assignmentMode` al
+cambiar Type. **Encontrado y corregido en el proceso**: el dropdown de participantes mostraba "No users in
+this tenant yet." por un instante al abrirlo justo después de elegir `round_robin`, porque `options` (todavía
+`[]` mientras el fetch de Users/Departments seguía en curso) era indistinguible de "confirmado vacío".
+`MultiSelectDropdown.tsx` gana un prop `loading` explícito para separar ambos estados; sin él, cualquier
+usuario en una conexión más lenta que localhost habría visto ese mensaje incorrecto de forma mucho más
+notoria. Vuelto a verificar tras el fix: el popover ahora muestra "Loading…" y luego resuelve al usuario real.
+Tenant descartable limpiado, servidores de dev y screenshots temporales borrados al terminar.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Abrir "New Pipeline" | La sección Automations aparece antes de Stages, sin necesidad de crear el pipeline primero |
+| 2 | Crear un pipeline con `round_robin` + 2 participantes + 1 departamento seleccionados | Al guardar, el pipeline queda creado con esos participantes ya asignados (individuales + los resueltos por departamento) |
+| 3 | Abrir el dropdown de participantes (Create o Edit) | Aparece cerrado por default mostrando "N selected" o los nombres; al abrirlo, checklist con scroll; un User inactivo se ve con nota "(inactive)" |
+| 4 | Elegir Type "Leads" después de haber seleccionado `assignmentMode: account_owner` | Se resetea a "Off" automáticamente — esa combinación es inválida y el backend la rechaza |
+| 5 | En Stages (Create o Edit), destildar "Notify" en un stage puntual | Un cambio de stage hacia ese stage ya no genera `Notification` ni email para el owner; otros stages del mismo pipeline siguen notificando normalmente |
+| 6 | Stage nuevo creado sin tocar "Notify" | Queda con notificación activada por default (compatibilidad con el comportamiento previo a este fix) |
+
+**Severidad:** media — es una mejora de descubribilidad/UX sobre una feature que ya estaba correcta a nivel de
+backend (QA-34), no un fix de un bug de negocio. El caso 4 (reset de `assignmentMode` al cambiar Type) es el
+más importante: sin él, un submit podría mandar una combinación inválida y el usuario vería un 400 sin
+entender por qué.
+
+## QA-36 — Fix: picker de participantes de round-robin, elección obligatoria en vez de dos opcionales + fix de `MultiSelectDropdown` durante su propio loading (2026-08-26, en `staging`)
+
+**Por qué existe esta tarea:** dos hallazgos del usuario al revisar QA-35 en staging. (1) Mostrar el picker
+individual de Users y el de alta-por-Departamento **a la vez**, ambos con aspecto de "opcionales", leía como
+un error de diseño — daba la sensación de dos mecanismos sueltos en vez de una sola forma clara de armar la
+lista de round-robin. Se reemplazó por un `<select>` obligatorio (sin opción en blanco, default "Add
+participants by user") que decide cuál de los dos pickers se muestra — nunca ambos a la vez — y cambiar de
+opción limpia el borrador de la otra. (2) Al verificar esto visualmente (Playwright contra un tenant
+descartable con departamentos reales), se encontró que `MultiSelectDropdown` podía mostrar "No users in this
+tenant yet." / el `emptyMessage` que corresponda por un instante al abrirse, mientras el fetch de opciones del
+componente padre todavía estaba en curso — `options` arranca en `[]`, indistinguible de "confirmado vacío".
+Se agregó un prop `loading` explícito (ya existía desde QA-35 para el picker de Users; ahora también se pasa
+al picker de Departamentos) para que el popover muestre "Loading…" mientras corresponda. La mecánica de fondo
+de round-robin no cambió — esto es puramente de presentación, el modelo de datos (`PipelineAssignmentUser`,
+`assignUsersByDepartments`) es el mismo de QA-34.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Pipeline con `assignmentMode: round_robin` (Create o Edit) | Un único `<select>` "Add participants by user / by department" — nunca ambos pickers visibles al mismo tiempo |
+| 2 | Cambiar de "by user" a "by department" con participantes ya elegidos individualmente | El picker de usuarios se oculta; la selección de departamentos arranca vacía |
+| 3 | En modo Edit, agregar por Departamento y confirmar "Add selected" | Vuelve automáticamente a "by user", mostrando la lista de participantes ya combinada (individuales + resueltos por departamento) |
+| 4 | Abrir cualquiera de los dos dropdowns apenas se revela la sección (antes de que el fetch de Users/Departments del tenant termine) | Muestra "Loading…" — nunca "No users/departments..." de forma prematura |
+
+**Severidad:** media — mismo nivel que QA-35, mejora de claridad de UX sobre una feature ya correcta a nivel de
+negocio (QA-34). El caso 4 es el más importante de esta ronda: sin el fix, un tenant con usuarios/departamentos
+reales podía ver un mensaje de "vacío" incorrecto justo al momento de configurar la automatización, la primera
+vez que interactúa con la feature.
+
+## QA-37 — Round-robin: select unificado (3-4 opciones directas) + campo obligatorio + 3 stages default (2026-08-26, en `staging`)
+
+**Por qué existe esta tarea:** el fix de QA-36 (select anidado "Add participants by user/department" debajo del
+select de modo) seguía leyendo como dos pasos separados — feedback directo del usuario. Se colapsó en **un solo
+select** de "Owner auto-assignment": `Off`, `Round robin — by user`, `Round robin — by department`, y (solo para
+`type: 'account'`) `Account owner`. `Pipeline.assignmentMode` no cambió en la base (sigue siendo `round_robin |
+account_owner | null`) — la distinción "by user" vs. "by department" nunca se persiste, es pura UI: el resultado
+final es la misma lista plana de `PipelineAssignmentUser` sin importar qué picker se usó. Al reabrir Edit de un
+pipeline `round_robin` ya configurado, el select cae en "by user" por default, mostrando la lista actual completa
+sin importar cómo se armó originalmente.
+
+**Campo obligatorio (pedido explícito del usuario, comparado con Name/Type)**: en el modal de creación, elegir
+cualquiera de los dos `round_robin` sin seleccionar ningún participante (ni por usuario ni por departamento)
+bloquea el Save con un toast de error — `account_owner` queda exento, se degrada solo. En Edit no hay bloqueo
+equivalente (no hay un "Save" único que interceptar); se mantiene la degradación prolija ya decidida para
+pipelines existentes (QA-34).
+
+**Además**: el modal de "New Pipeline" ahora arranca con 3 stages precargados (`Lead`/open/50%, `Won`/won/100%,
+`Lost`/lost/0%) en vez de una fila en blanco — totalmente editables/borrables como cualquier draft row. No toca
+el seed de tenant-registration (`seedDefaultPipelines`), que es código separado.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Abrir "New Pipeline" con Type "Leads" | El select de Owner auto-assignment tiene exactamente 3 opciones: Off, Round robin — by user, Round robin — by department (sin Account owner) |
+| 2 | Cambiar Type a "Account" | Aparece una 4ª opción, Account owner |
+| 3 | Elegir "Round robin — by user" | Se muestra únicamente el picker de usuarios, con asterisco de obligatorio en el label |
+| 4 | Elegir "Round robin — by department" | Se muestra únicamente el picker de departamentos, mismo asterisco |
+| 5 | Completar Name pero dejar el picker de participantes vacío con `round_robin` seleccionado, click Save | Toast de error, el modal no se cierra |
+| 6 | Elegir un departamento y click Save | El pipeline se crea correctamente, toast de éxito |
+| 7 | Elegir "Account owner" (pipeline `account`) | Se muestra la sección de participantes como fallback, sin asterisco de obligatorio, con copy distinta ("Used only as a fallback...") |
+| 8 | Abrir "New Pipeline" | Ya vienen 3 stages precargados: Lead (Open, 50%), Won (Won, 100%), Lost (Lost, 0%), todos con Notify tildado |
+
+**Severidad:** media-alta — el caso 5 es el más importante: sin el bloqueo, era fácil crear un pipeline
+`round_robin` completamente vacío (ningún participante) y que cada Opportunity quedara sin owner de forma
+silenciosa, sin que el usuario se diera cuenta de que faltaba un paso. Verificado de punta a punta con Playwright
+contra un tenant descartable (2 departamentos, un pipeline `account`) cubriendo los 8 casos de la tabla.
+`npm run build` frontend y `npm test` (91/91) backend en verde (backend no tuvo cambios esta ronda).
+
+## QA-38 — Payments v1, Unidad 1: conexión con Stripe (2026-08-26, en `staging`)
+
+**Por qué existe esta tarea:** cierra la Unidad 1 de `docs/tareas/specpaymentsv1.md` — el cimiento del
+módulo Payments (`docs/tareas/tareaspaymentsv1.md` para el checklist). Cada tenant conecta su propia
+cuenta de Stripe pegando una API key (Restricted Key recomendada, sin OAuth/Connect — Northstack no
+tiene entidad de negocio para eso todavía), desde una card nueva en Settings → Integrations (gateada a
+owner). Solo lectura: nada de esta unidad crea charges/invoices/subscriptions. Dos correcciones reales
+encontradas antes de escribir código, no bugs de esta ronda sino gaps de la spec original: (1) no se
+instaló el SDK `stripe` — `src/lib/stripe.ts` es un cliente REST a mano, mismo criterio ya usado por
+`paddle.ts`/`mercadopago.ts`; (2) el gate de permisos quedó owner-only (confirmado con Alejandro), no
+"owner/admin" como decía la spec citando mal el precedente de Payroll.
+
+**Verificado por Claude** contra `staging` real con un tenant + owner + member descartables (creados y
+borrados vía Prisma directo): gating de permisos (403 para member en los 3 endpoints mutables), rechazo
+inmediato de una key mal formada sin tocar la red, 400 al guardar webhook secret sin conexión previa,
+disconnect sin conexión da 204 limpio (bug real encontrado y corregido: antes crasheaba con un error
+crudo de Prisma), y una llamada real a `api.stripe.com` con una key inventada de prefijo válido —
+confirma que el cliente a mano arma bien la request y parsea el error real de Stripe. `npm run
+build`/`npm test` (116/116, 22 nuevos)/`npm run lint` backend y build/lint frontend en verde.
+
+**Lo que Claude NO pudo probar — necesita a Alejandro con una cuenta de test de Stripe real:** todo el
+camino feliz de conectar de verdad. Sin una cuenta de Stripe (ni siquiera de test/sandbox) disponible en
+este entorno, no se probó: crear una Restricted Key real con los permisos de lectura sugeridos y pegarla
+en el formulario, que `apiKeyMode` detecte `test` correctamente, que `stripeAccountId` se guarde (o que
+el fallback a `listCustomers` entre en juego si la key no tiene permiso de leer Account), guardar un
+webhook signing secret real, y forzar un 401 revocando la key desde el dashboard de Stripe para confirmar
+que `needsAttention` se prende y el banner de reconectar aparece.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Como owner, ir a Settings → Integrations | Card nueva "Stripe" debajo de Google Calendar, con el copy de Restricted Key + checklist de permisos + campo para la key |
+| 2 | Como member o admin, ir a Settings → Integrations | La card de Stripe no aparece en absoluto (a diferencia de la de Google Calendar, que sí es visible para todos) |
+| 3 | Crear una Restricted Key real en Stripe (modo test) con los permisos sugeridos (Customers, Charges, Refunds, Invoices, Subscriptions, PaymentMethods) y pegarla | "Test connection" tiene éxito, la card pasa a estado conectado con el chip "test" |
+| 4 | Repetir con una Secret Key completa (`sk_test_...`) en vez de Restricted | También conecta (el gate solo exige el prefijo `sk_`/`rk_` + `test`/`live`, no distingue el tipo) |
+| 5 | Pegar una key con un typo o de otro formato (ej. una Publishable Key `pk_test_...`) | Rechazada al instante con el mensaje "doesn't look like a Stripe secret or restricted key", sin loading ni delay de red |
+| 6 | Una vez conectado, ver el Paso 2 (Webhook) | Muestra la URL `.../api/webhooks/stripe/<tenantId>`, botón de copiar funcional, checklist de los 5 eventos, campo para el signing secret |
+| 7 | Crear el webhook en Stripe con esa URL + esos eventos, pegar el signing secret real y guardar | Se guarda sin error, la card indica que ya hay un secret guardado |
+| 8 | Ir al dashboard de Stripe y revocar/borrar la Restricted Key ya conectada, después recargar Settings → Integrations | El estado pasa a mostrar el banner de "needsAttention" (rechazada, reconectar) — puede tardar hasta la próxima acción que dispare una llamada real a Stripe con esa key, confirmar si hace falta una lectura activa para que se detecte |
+| 9 | Con la key revocada, click "Disconnect" y volver a conectar con una key nueva | Reconecta sin problema — no queda una segunda fila ni un estado inconsistente |
+| 10 | Revisar `staging.joinnorthstack.com` específicamente (no `app.joinnorthstack.com`) en el Paso 2 | Aparece la nota extra sobre `?x-vercel-protection-bypass=<secret>` — confirmar que de verdad hace falta ahí antes de que Alejandro configure el webhook real en Stripe contra staging |
+
+**Severidad:** media — es la base de todo el módulo Payments, pero v1 es de solo lectura y no hay
+ningún endpoint mutable expuesto más allá de la conexión misma (nada de esto puede cobrar ni mover
+dinero). El caso 8 es el más importante de validar con una cuenta real: si `needsAttention` no se
+prende de verdad ante una key revocada, un tenant puede quedar pensando que su conexión sigue viva
+cuando ya no lo está.
+
+## QA-39 — Payments v1, Unidades 2-3: matching Company↔Stripe + visibilidad de pagos en vivo (2026-08-26, en `staging`)
+
+**Por qué existe esta tarea:** cierra las Unidades 2 y 3 de `docs/tareas/specpaymentsv1.md` — matchear
+una Company con su customer de Stripe (por email de Contact, nunca dominio) y ver refunds/pagos
+fallidos/estado de subscripción en vivo, sin store local. Depende de que QA-38 (Unidad 1, conexión)
+esté resuelta con una cuenta de Stripe real antes de poder probar esto de punta a punta — sin
+conexión activa, todo lo de acá se degrada a estados limpios ("sin vincular"/"sin conexión") en vez
+de fallar, que es exactamente lo único que Claude pudo verificar sin credenciales.
+
+**Corrección real de la spec, resuelta contra la documentación oficial de Stripe (no una suposición):**
+`GET /refunds` no acepta un filtro `customer` — solo Charges lo soporta, y un Charge ya trae
+`refunded`/`amount_refunded`/`status` propios, así que es la única fuente tanto del resumen como del
+historial de eventos (no Payment Intents, no un `/refunds` separado). Esto también resuelve qué
+permisos de lectura necesita la Restricted Key de la Unidad 1: Customers, Charges, Subscriptions —
+Refunds no hace falta como permiso separado.
+
+**Verificado por Claude** contra `staging` real con 2 tenants descartables (uno para probar
+aislamiento): 400 limpio al buscar/vincular sin conexión activa, 403 para member en los 5 endpoints,
+404 (no leak) al pedir una Company de otro tenant, summary/events de una Company sin vincular
+devuelven "sin vincular"/vacío sin llamar a Stripe, overview sin conexión da `connected: false` sin
+intentar ningún Company. 17 tests nuevos con mocks cubren lo que no se pudo probar en vivo:
+consolidación de duplicados en el matching, Contacts inactivos ignorados, conteo de refunds/failed
+desde la misma lista de Charges, preferencia de subscription activa sobre cancelada, paginación y
+clasificación de eventos, agregación de totales en el overview, aislamiento entre tenants, y
+`needsAttention` marcándose ante un 401 real de Stripe. `npm run build`/`npm test` (133/133)/`npm run
+lint` backend y build/lint frontend en verde.
+
+**Lo que Claude NO pudo probar — necesita a Alejandro con la cuenta de Stripe real de QA-38:** todo
+el camino feliz con datos reales.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Con Stripe conectado, abrir una Company cuyo Contact tiene el mismo email que un customer real de Stripe, click "Search on Stripe" | Aparece 1 resultado con el nombre/email del customer y "(via <email del Contact>)" |
+| 2 | Click "Link" sobre ese resultado | La Company pasa a mostrar "Connected to Stripe →", el link abre el customer correcto en el dashboard (con `/test/` si la conexión es de test) |
+| 3 | Una Company con 2+ Contacts, cada uno matcheando un customer de Stripe distinto | Aparecen los 2 resultados, cada uno con su propio Contact de origen — ninguno se pierde ni se duplica |
+| 4 | Una Company sin ningún Contact con email que matchee nada en Stripe | "No matching Stripe customers found..." sin errores |
+| 5 | Con una Company ya vinculada, click "Change link" y elegir un customer distinto | Aparece el diálogo de confirmación ("Replace the existing Stripe link?"); confirmar reemplaza el link, cancelar lo deja igual |
+| 6 | Una Company vinculada a un customer real con al menos un refund, un pago fallido, y una subscripción activa | La sección Payments muestra los 3 conteos correctos + el monto de refunds en la moneda real del charge |
+| 7 | La lista de eventos recientes de esa Company | Cada fila muestra el tipo correcto (Payment/Failed payment/Refund), el monto, la fecha, y el link abre el charge correcto en el dashboard de Stripe |
+| 8 | "Load more" en la lista de eventos, con más de 20 charges reales | Trae la página siguiente sin duplicar ni saltear ninguno |
+| 9 | Ir a la sección "Payments" del sidebar (solo visible para owner) | Tarjetas de refunds/failed/subscripciones activas/companies vinculadas con los totales correctos, tabla de Companies abajo |
+| 10 | Click en el nombre de una Company desde esa tabla | Navega a `/companies` y abre el detalle de esa Company puntual (no solo la lista) |
+| 11 | Como member o admin, intentar ver `/payments` por URL directa | Mensaje "Payments is only visible to the tenant owner" — mismo criterio que Payroll |
+| 12 | Un tenant con varias decenas de Companies vinculadas, abrir `/payments` | Carga en un tiempo razonable (fan-out con límite de concurrencia 10) sin disparar rate limits de Stripe |
+
+**Severidad:** media — solo lectura, no hay riesgo de mover dinero por error. El caso 10 es el más
+importante de los que Claude no pudo probar en vivo: si el deep-link no abre la Company correcta, la
+tabla de la Unidad 3 pierde buena parte de su utilidad práctica.
+
+## QA-40 — Payments v1, Unidad 4: webhook de notificaciones proactivas (2026-08-26, en `staging`)
+
+**Por qué existe esta tarea:** cierra `docs/tareas/specpaymentsv1.md` completa (Unidades 1-4). Un
+tenant conecta el webhook de su propia cuenta de Stripe (URL + eventos, ver Paso 2 en Settings →
+Integrations de QA-38) y a partir de ahí, un refund/pago fallido/cambio de subscripción en una
+Company vinculada genera una `Notification` real (bell icon) para el Account Owner de esa Company,
+o el owner del tenant si no tiene uno asignado — nunca un admin, porque Payments es owner-only.
+
+**A diferencia de QA-38/QA-39, esto SÍ se pudo verificar de punta a punta sin una cuenta de Stripe
+real** — a Claude: se sembró un `StripeConnection` descartable con un webhook secret conocido
+directo en la base, y se firmaron a mano payloads de evento con el mismo algoritmo HMAC que usa
+Stripe de verdad, simulando deliveries reales. Confirmado con una query directa a la base: una
+firma válida contra un customer vinculado crea la `Notification` correcta (tipo, mensaje, y
+destinatario — cayó en el owner del tenant porque la Company de prueba no tenía Account Owner);
+firma inválida, header faltante, o tenant sin conexión → 400 sin crear nada; customer sin ninguna
+Company vinculada → 200 sin crear nada. 14 tests nuevos con mocks cubren además el caso más
+delicado: que un `customer.subscription.updated` **no** relacionado al status (ej. cambiar la
+cantidad) sobre una subscription que ya está `past_due` no dispare una notificación repetida —
+solo notifica cuando el status recién transicionó a `past_due` (usando `previous_attributes`, que
+Stripe solo llena con lo que cambió en ese evento puntual). `npm run build`/`npm test`
+(147/147)/`npm run lint` backend en verde.
+
+**Lo único que falta probar con Stripe real:** que un evento real disparado desde el dashboard de
+test de Stripe (no simulado a mano) efectivamente le llegue al endpoint — la firma HMAC en sí ya
+está confirmada bit a bit contra el algoritmo real, así que el riesgo residual es más de
+configuración (URL mal copiada, evento no tildado al crear el webhook en Stripe) que de código.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Con el webhook creado en Stripe (URL + los 5 eventos, ver QA-38 Paso 2), disparar un refund real desde el dashboard de test sobre un customer vinculado a una Company | Aparece una `Notification` nueva en el bell icon del Account Owner (o el owner del tenant si la Company no tiene uno) con el monto correcto |
+| 2 | Repetir con un pago fallido (`charge.failed`) | Notificación con el tipo/mensaje de pago fallido |
+| 3 | Cancelar una subscription real de test sobre un customer vinculado | Notificación de subscription cancelada |
+| 4 | Forzar que una subscription real pase a `past_due` (ej. una tarjeta de test que declina) | Notificación de subscription past due — una sola vez, no una por cada evento relacionado que dispare Stripe en el camino |
+| 5 | Cualquier evento sobre un customer que no está vinculado a ninguna Company del tenant | Ninguna notificación — nada roto, Stripe ve un 200 igual |
+| 6 | Revisar en el dashboard de Stripe → Developers → Webhooks → el endpoint, la pestaña de intentos | Todos los deliveries devuelven 200 (o 400 solo si de verdad hubo un problema de firma/configuración, nunca un 500) |
+
+**Severidad:** media — solo lectura/aviso, no hay riesgo de mover dinero ni de romper el resto de la
+app si algo falla acá (un 400/200 limpio en todos los casos, nunca un crash). El caso 4 es el más
+importante: es el único de los 5 eventos con lógica de deduplicación real, y es exactamente donde un
+bug se sentiría como spam de notificaciones para el usuario.
+
+## QA-41 — Fix: auto-create en Add Opportunity/Company/Contact/Employee ya no salta a la vista de detalle (2026-08-27, en `staging`)
+
+**Por qué existe esta tarea:** hallazgo de QA manual del usuario — al completar los campos
+obligatorios del formulario de alta, el registro se auto-creaba en background (patrón
+`useAutoCreateGuard`, 2026-08) pero además cerraba el formulario y saltaba a la vista de detalle de
+inmediato, sin dejar completar los campos opcionales restantes. Reproducible en las 4 pantallas que
+usan el hook: Opportunities, Companies, Contacts, Employees.
+
+**Fix:** se separó "crear/persistir en background" de "cerrar el formulario y navegar". El
+auto-create sigue disparando igual que antes (sigue siendo la red de seguridad contra perder el
+formulario), pero ya no cierra nada — el usuario sigue completando campos opcionales con el
+formulario abierto. El botón "Create" ahora: si el registro ya se auto-creó, hace un PATCH con los
+campos actuales (incluyendo lo agregado después del auto-create) antes de recién ahí cerrar y
+navegar a la vista de detalle; si por alguna carrera el auto-create todavía no disparó, crea de
+una. El botón queda deshabilitado mientras el auto-create está en vuelo (`autoCreateGuard.isBusy`,
+nuevo) para evitar una carrera doble-submit.
+
+**Verificado de punta a punta con Playwright contra un tenant de prueba real en `staging`**
+(creado con seed directo vía Prisma, no por signup — reutiliza `createCompany`/`createContact`
+reales) para **Opportunity, Company y Contact**: en los 3 casos, se confirmó que el formulario
+queda abierto después de completar los campos obligatorios, que un campo opcional completado
+después del auto-create (Next Step Note / Industry / Title) efectivamente queda guardado tras
+tocar "Create", y que recién ahí se cierra el formulario y abre el detalle — sin errores de
+consola. **Employee** recibió el mismo cambio de código (compila y tipa limpio) pero no se llegó a
+verificar en navegador — su formulario de alta requiere más datos de prueba (departamento, manager,
+pay frequency, etc.) que no se armaron en esta ronda.
+
+**Gaps aceptados a propósito** (mismo patrón en las 4 pantallas): si el usuario **cambia** un campo
+que ya se había enviado en el auto-create (ej. reelige el Contact de una Opportunity de tipo lead,
+o edita los datos de compensación de un Employee) en vez de solo completar campos nuevos, ese
+cambio puntual no se resincroniza al tocar Create — solo lo agregado de cero después del
+auto-create queda garantizado. No se detectó evidencia de que esto ocurra en el uso normal (llenar
+el form de arriba hacia abajo), pero queda como gap conocido.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Abrir "Add Employee", completar todos los campos obligatorios (incluida la compensación si el person type lo requiere) y esperar unos segundos sin tocar "Create" | El formulario sigue abierto, no salta a ningún lado |
+| 2 | Completar además un campo opcional (ej. Personal Email o Nationality) y recién ahí tocar "Create" | Se cierra el formulario, abre el panel del empleado, y el campo opcional queda guardado |
+| 3 | Repetir 1-2 en Opportunity/Company/Contact como confirmación manual adicional (ya verificado por Claude vía Playwright, pero vale un check visual humano) | Mismo comportamiento |
+
+**Actualización 2026-08-27 (misma ronda que QA-42):** Employee quedó verificado en navegador —
+confirmado el mismo comportamiento (formulario abierto tras auto-create, cierra recién al tocar
+Create) al crear un empleado real de prueba.
+
+**Severidad:** baja — es una mejora de UX sobre un flujo que ya persistía los datos correctamente
+(el auto-create en sí no cambió), no hay riesgo de pérdida de datos ni de escritura incorrecta.
+
+## QA-42 — 6 bugs chicos de CRM/HR/Payroll del backlog QA 2026-08-27 (en `staging`)
+
+**Por qué existe esta tarea:** siguiente tanda de la pasada de QA manual del usuario, priorizando
+los bugs chicos ya diagnosticados antes de las piezas grandes (tags, Settings, Google Calendar).
+Los 6 items, verificados de punta a punta con Playwright contra un tenant de prueba real en
+`staging` (mismo tenant que QA-41):
+
+1. **Opportunity creada desde un Contact no se podía reabrir** (`ContactDetailModal.tsx`): la fila
+   de cada Opportunity vinculada no tenía `onClick`. Ahora abre `OpportunityDetailModal` (nuevo prop
+   `onOpenOpportunity`, cableado en `ContactsPage.tsx` con su propio `viewingOpportunityId` +
+   `lossReasons`/`winReasons` fetch + delete). Verificado: crear una Opportunity desde un Contact,
+   click en la fila resultante, se abre el detalle completo con los Contacts vinculados.
+2. **Sección "Opportunities" desalineada en la card de Contact**: usaba `.overview-field` (pensada
+   para una fila label/valor) alrededor de una lista de varias filas. Ahora es un `.field-group`
+   propio, igual que Identity/Role/Source. Verificado visualmente (screenshot).
+3. **Opportunity card sin link a Contact/Company**: el nombre de la Company en la card del Kanban
+   ahora es un link a `/companies?open=<id>` (reusa el deep-link `open` que ya usaba Payments
+   Overview); si hay un único Contact vinculado, su nombre es un link a `/contacts?open=<id>`
+   (antes decía literal "1 contact", sin link). Se agregó el mismo patrón `open` a `ContactsPage.tsx`
+   (ya existía en `CompaniesPage.tsx`). Verificado: click en el nombre de la Company abre su
+   `CompanyDetailModal` correctamente.
+4. **Time Off: asignar/quitar una política a un empleado disparaba un refresh completo** (6
+   endpoints, con `<p>Loading...</p>` reemplazando toda la pantalla). Ahora
+   `refreshAfterAssignmentChange` solo refetchea empleados + balances (lo único que la acción puede
+   afectar), sin `setLoading(true)`. El `<p>Loading...</p>` del loading real (carga inicial de la
+   pestaña) se reemplazó por `TableSkeleton`. Verificado: 0 elementos de skeleton aparecen
+   inmediatamente después de asignar, la tabla nunca se desmonta, y la asignación persiste
+   correctamente tras reload.
+5. **Payroll "Base" poco entendible**: en vez de `123 hs × $65.00 = $7,995.00` corrido, ahora
+   muestra "Hours" con label + input más visible (`.select-compact`, borde visible) en una línea, y
+   "Rate $X/hr · Base $Y" en la siguiente. Verificado con un run real: "Hours" + "Rate $50.00/hr ·
+   Base $0.00" se ven como dos líneas separadas y legibles.
+6. **Contract "Pending" no se veía en el perfil del empleado**: ya existía como columna en la lista
+   de Employees (visible por default, no estaba oculta — se descartó esa hipótesis), pero
+   `EmployeeOverviewPanel.tsx` no lo mostraba en ningún lado. Se agregó el mismo chip
+   (Confirmed/Pending/Expired) al lado del status general en el header del panel. Verificado: un
+   empleado recién creado muestra "Active · Contract pending" en el header.
+
+**Efecto secundario descubierto (no un bug, documentado para contexto):** un Payroll run nuevo
+auto-incluye a los empleados elegibles (contrato confirmado + misma pay frequency) al crearse —
+"Add person" solo hace falta para agregar a alguien después. Un empleado con contrato sin confirmar
+queda explícitamente excluido ("1 person excluded — contract not confirmed yet."), no se puede
+agregar ni manualmente vía "Add person" hasta confirmar el contrato.
+
+`npm run build` (frontend) y `npm test` (backend, 147/147) en verde. Sin errores de consola en
+ninguna de las verificaciones.
+
+**Severidad:** baja en los 6 — todos son fixes de UX/legibilidad o de un `onClick` faltante, ninguno
+toca lógica de negocio ni datos.
+
+## QA-43 — 3 bugs chicos más del backlog QA 2026-08-27: Payroll filter, Company↔Contact buscador, Pay Frequency en Employees (en `staging`)
+
+**Por qué existe esta tarea:** siguiente pieza de la misma pasada de QA manual (después de QA-41 y
+QA-42). Los 3 items, verificados contra el mismo tenant de prueba en `staging`:
+
+1. **Payroll "Add person" no filtraba por pay frequency**: `openAddPersonModal`
+   (`PayrollRunDetailPage.tsx`) ahora excluye del listado a cualquier candidato cuyo
+   `currentCompensation.payFrequencyName` no coincida con el `payFrequency` del run — antes ofrecía
+   a cualquiera con una compensación activa, sin importar la frecuencia. Mensaje de estado vacío
+   actualizado para reflejar el nuevo motivo de exclusión. **Descubrimiento aparte durante esta
+   verificación**: un payroll run nuevo ya auto-incluye a los empleados elegibles (contrato
+   confirmado + misma pay frequency) al crearse — "Add person" solo hace falta para sumar a alguien
+   después. Verificado con un empleado real: al confirmarle el contrato, apareció solo en el "Add
+   person" de un run de su misma frecuencia (Weekly), no en uno de otra frecuencia (no se pudo
+   probar cross-frequency de punta a punta por un error de Prisma al sembrar el segundo empleado de
+   prueba a mano — la lógica del filtro es una comparación de string trivial, revisada por código).
+2. **Company↔Contact: dropdown reemplazado por buscador**: `CompanyDetailModal.tsx`'s "link
+   existing contact" ahora usa `SearchableSelect` (mismo componente ya usado en este archivo para
+   "Parent company", y en `ContactsPage.tsx` para elegir Company) en vez de un `<select>` plano —
+   sigue restringido a contacts sin compañía. Verificado: escribir "unlinked" o el dominio del email
+   ("acmetest.local") filtra correctamente al contact esperado.
+3. **Employees list sin columna Pay Frequency**: `listEmployees` (`employeeService.ts`) ahora trae
+   también la compensación *actual* (`effectiveTo: null`) de cada empleado, separada de la
+   primera-siempre que ya se usaba para `contractStatus` — antes esa segunda relación no se pedía
+   para nada, así que el dato no existía en el objeto que llega al frontend. Nueva columna "Pay
+   Frequency" (toggleable, misma infraestructura de columnas existente) + entrada en
+   `buildEmployeeFields` para que sea ordenable. Verificado: la columna aparece y muestra "Weekly"
+   para el empleado de prueba con esa frecuencia.
+
+`npm run build`/`npm test` (147/147) en verde. Sin errores de consola.
+
+**Severidad:** baja en los 3 — ninguno toca lógica de negocio existente, solo agregan un filtro,
+cambian un input de UI, o exponen un dato ya calculado en otro lado.
+
+## QA-44 — 3 features de esfuerzo medio: Time Off tabs, Settings nav lateral, Task desde el calendario (en `staging`)
+
+**Por qué existe esta tarea:** siguiente tanda del mismo backlog QA, esta vez las 3 piezas de
+"esfuerzo medio" (features nuevas con alcance ya definido, no solo bugs). Verificadas contra el
+mismo tenant de prueba en `staging`:
+
+1. **Time Off: tabs reordenados + "My Timeoff" nuevo**: orden final — My Timeoff, My Requests,
+   Approvals (todos los roles); Balances, All Requests, Policies, Assignments (solo admin/owner,
+   `canManagePolicies` — antes Assignments era visible para cualquiera). "My Timeoff" es una vista
+   nueva: reusa exactamente el mismo bloque expandible (allocated/used/pending/remaining +
+   histórico de requests) que ya existía en el SlideOver de "Balances" para admins, pero
+   auto-scopeada al empleado del usuario logueado (`myBalances`/`myRequests`, ya cargados en
+   `loadData`). Verificado: orden de tabs correcto; para un usuario sin Employee vinculado, muestra
+   el mensaje esperado en vez de romper.
+2. **Settings: nav lateral persistente + botón Volver**: `AppLayout.tsx` ahora renderiza
+   `SettingsSidebar.tsx` en vez del `Sidebar.tsx` global cuando la ruta empieza con `/settings`
+   (antes cada subpágina solo tenía un link de "volver" a la grilla de tiles). El nuevo sidebar
+   reusa las clases `.sidebar`/`.sidebar-link` del nav principal y una única fuente de datos
+   (`lib/settingsSections.tsx`) compartida con la grilla de `/settings` (`SettingsHomePage.tsx`),
+   para que el gating por rol no viva en dos lugares. "Volver" hace `navigate(-1)` (vuelve a lo que
+   sea que el usuario estaba viendo antes, no a un destino fijo). Verificado: los links navegan
+   correctamente entre secciones, "Volver" está presente, y las páginas fuera de `/settings` siguen
+   mostrando el nav global normal (no quedó pisado).
+3. **Crear Task desde el calendario**: click en cualquier celda del calendario de `/overview` ahora
+   abre `NewTaskFromCalendarPopover.tsx` — primero pide el tipo de entidad (Contact/Company/
+   Employee; "Cliente" del pedido original mapea a Contact, ya que el modelo `Client` legado está
+   en proceso de discontinuarse, ver sección CRM del backlog), busca por nombre/email
+   (`SearchableSelect`, mismo componente que QA-43), y recién ahí muestra el `TaskForm` existente
+   (reusado tal cual, con un nuevo prop `defaultDueDate` para pre-cargar el día clickeado). Verificado
+   de punta a punta **contra la base de datos directamente** (no solo el navegador): dos tasks de
+   prueba se crearon correctamente con el `entityType`/`entityId`/`dueDate` esperados — el primer
+   intento de verificación por navegador dio un falso negativo por el mismo cold-start de Neon que
+   viene apareciendo toda la sesión en escrituras (la tarea sí existía en la base, solo tardó más que
+   el timeout del script en aparecer reflejada).
+
+**Hallazgo aparte, no bloqueante:** al crear una task desde el calendario para el día 1 de un mes,
+el widget "My tasks" del Overview la mostró fechada el día anterior (31 en vez de 1) — posible
+desajuste de zona horaria en cómo `MyTasksWidget.tsx` formatea un `dueDate` date-only para
+mostrarlo, no en cómo se guarda (la fila en la base tenía la fecha UTC correcta,
+`2026-08-01T00:00:00.000Z`). No se investigó más a fondo — parece preexistente (no es código tocado
+en esta tanda) y no afecta la creación en sí, pero vale la pena que alguien lo mire.
+
+`npm run build`/`npm test` (147/147) en verde. Sin errores de consola en ninguna verificación.
+
+**Severidad:** baja en las 3 — mejoras de navegación/UX y una feature nueva aditiva, ninguna toca
+datos existentes ni lógica de negocio ya construida.
+
+## QA-45 — Sistema de tags, Entrega 1: CRUD + autocomplete en Contact/Company/Employee (en `staging`)
+
+**Por qué existe esta tarea:** pieza más grande del backlog QA — el usuario eligió tags libres y
+compartidos (no un catálogo predefinido). Dado el tamaño, se parte en 2 entregas: esta (modelo +
+backend + UI de agregar/ver/sacar tags en los 3 perfiles) y una segunda (mostrar tags en las vistas
+de lista + filtrar por ellos), todavía sin arrancar.
+
+**Modelo nuevo** (`prisma/schema.prisma`, push aditivo a `staging` — tablas nuevas, sin tocar datos
+existentes): `TagDefinition` (`tenantId` + `name`, `@@unique([tenantId, name])` — un tag es el mismo
+objeto sin importar en qué entidad se use) y `TagAssignment` (`tenantId` + `tagDefinitionId` +
+`entityType` + `entityId`, mismo patrón polimórfico que `CustomFieldValue`/`Task`/`Note`,
+`@@unique([tagDefinitionId, entityType, entityId])` para que asignar el mismo tag dos veces sea un
+no-op en vez de un error). `entityType` reusa el `EntityType` existente, acotado a
+contact/company/employee (los mismos 3 que Task/Note ya soportan vía
+`crossModule/entityLookup.ts`, reusado tal cual para el chequeo anti-IDOR).
+
+**Backend**: `src/modules/crossModule/tagService.ts` + `src/routes/tags.ts`
+(`GET /api/tags` para el catálogo completo del tenant — alimenta el autocomplete —,
+`GET/POST /api/tags/:entityType/:entityId`, `DELETE /api/tags/assignments/:id`). `assignTag` hace
+find-or-create por nombre exacto + asignación en un solo paso.
+
+**Frontend**: `TagInput.tsx` (nuevo, en `components/common/`) — chips + input con autocomplete
+(`Popover`, mismo mecanismo que `SearchableSelect`), Enter para agregar (crea el tag si no existía),
+click en el chip para sacarlo. Montado en el header de `ContactDetailModal`/`CompanyDetailModal`/
+`EmployeeOverviewPanel`.
+
+**Verificado end-to-end** contra el tenant de prueba en `staging`: se agregó "VIP" a una Company, y
+al abrir un Contact distinto el autocomplete lo sugirió como tag ya existente (confirma que el
+catálogo es realmente compartido entre los 3 módulos, no por separado) — se agregó también ahí, se
+sacó, y una consulta directa a la base confirmó el estado final correcto (VIP sigue en la Company,
+ausente en el Contact). Varios chequeos automáticos del script de Playwright dieron falsos negativos
+por el mismo cold-start de Neon que viene apareciendo toda la sesión en escrituras — no es un bug
+real, confirmado contra la base directamente.
+
+`npm run build`/`npm test` (147/147) en verde. Sin errores de consola.
+
+**Severidad:** baja — tabla nueva, aditiva, no toca ningún modelo ni endpoint existente.
+
+## QA-46 — Sistema de tags, Entrega 2: columna/chip + filtro en las listas de Contacts/Companies/Employees (en `staging`)
+
+**Por qué existe esta tarea:** segunda mitad del pedido original de tags, dejada pendiente en
+QA-45 ("Falta la segunda mitad del pedido original: mostrar los tags como columna/chip en las
+vistas de lista... y poder filtrar por ellos").
+
+**Por qué no se integró al motor de Views genérico**: `viewFields.ts`/`applyFilters`/`applySort`
+no soportan campos multi-valor (un registro puede tener N tags). Mismo caso ya resuelto para
+"Time Off Policies" en `EmployeesPage.tsx` — se sigue el mismo patrón: columna toggleable de solo
+lectura fuera del motor genérico, más un paso de filtrado bespoke aplicado *antes* de
+`applyFilters` (ver `tagFilteredEmployees`/`tagFilteredContacts`/`tagFilteredCompanies` en cada
+página), con match OR (cualquier tag seleccionado matchea).
+
+**Backend**: `listContacts`/`listCompanies`/`listEmployees` (`contactService.ts`,
+`companyService.ts`, `employeeService.ts`) ahora traen `tags` embebido en cada fila vía
+`listTagsForEntities` (ya existía desde QA-45, una sola query batch en vez de N).
+
+**Frontend**, mismo patrón replicado en `ContactsPage.tsx`, `CompaniesPage.tsx` y
+`EmployeesPage.tsx`:
+- Columna "Tags" (en `ContactsPage`/`CompaniesPage` es una entrada más de su array `columns`
+  genérico; en `EmployeesPage` sigue el patrón bespoke ya usado por "Time Off Policies", con su
+  propio `showTagsColumn`) — chips de solo lectura reusando `.time-off-policy-chip`.
+- Filtro `MultiSelectDropdown` ("Filter by tag") en el toolbar, al lado del buscador — solo se
+  renderiza si el tenant ya tiene al menos un tag asignado en esa lista.
+- `jumpToEmployeePage`/`jumpToContactPage`/`jumpToCompanyPage` (recalculan a qué página saltar
+  tras crear un registro) actualizados con el mismo paso de filtrado por tag, para no quedar
+  desincronizados del pipeline que usa el render.
+
+**Bug encontrado y corregido antes de pushear**: el chip de cada tag usaba `key={tag.id}` — pero
+el shape que devuelve `listTagsForEntities` no tiene `id`, solo `tagAssignmentId` (visto en
+`tagService.ts`). Daba un warning de React "unique key" en las 3 páginas (key `undefined`
+repetida). Corregido a `key={tag.tagAssignmentId}`, mismo campo que ya usaba `TagInput.tsx`.
+
+**Verificado end-to-end** contra el tenant de prueba en `staging` (Playwright): login, se agregó
+el tag "VIP" a un Employee/Contact/Company desde su detalle, se confirmó el chip en la columna
+"Tags" de las 3 listas, se abrió el dropdown "Filter by tag", se marcó "VIP" y se confirmó que la
+lista filtró correctamente. Sin errores de consola tras el fix del `key`. Tag de prueba "VIP"
+borrado de la base al terminar (no queda como catálogo real del tenant de QA).
+
+`npm run build` (frontend, `tsc -b` limpio) y `npm test` (147/147) en verde.
+
+**Severidad:** baja — solo lectura/filtrado sobre datos ya expuestos por QA-45, sin cambios de
+modelo ni de endpoints.
+
+## QA-47 — Overview: overlay de solo lectura para eventos de Google Calendar no vinculados a un Task (en `staging`)
+
+**Por qué existe esta tarea:** el usuario reportó que al vincular Google Calendar, los eventos que
+ya tenía cargados ahí no aparecían en Northstack. Investigando el código existente se confirmó que
+el sync de Tasks YA es bidireccional (`googleCalendarWatchService.ts`, canal de push notifications
++ `events.list(syncToken)`, probado en vivo con Alejandro el 2026-08-23, ver nota en QA-19) — pero
+solo para eventos que se originaron como Task en Northstack; cualquier otro evento del calendario
+del usuario se ignora explícitamente (`applyInboundEventChange`: "not a Task-tracked event —
+ignore anything else").
+
+**Decisión de producto** (preguntada directo al usuario, dado que `Task.entityType`/`entityId` son
+obligatorios — un evento personal no tiene a qué Company/Contact/Employee/Opportunity atribuirse):
+de las 3 opciones planteadas (convertir en Task forzando una entidad, crear un tipo nuevo
+"recordatorio personal" sin entidad, o solo mostrar sin importar), el usuario eligió **"Solo
+mostrar, no importar"** — evita el problema del modelo de datos por completo, sin crear ninguna
+fila nueva en la base.
+
+**Backend**: `listGoogleEventsForCalendarView(userId, timeMinISO, timeMaxISO)` (nueva, en
+`googleCalendarSyncService.ts`) — reusa `getAuthorizedClientForUser` (misma auth que el resto del
+módulo, mismo scope OAuth ya otorgado, `calendar.events`, no hace falta reconexión); trae
+`calendar.events.list` paginado (`singleEvents: true` para expandir recurrencias) acotado a
+`[timeMin, timeMax]`, excluye eventos ya linkeados a un Task del usuario (`Task.googleCalendarEventId`)
+para no duplicar lo que ya se muestra como Task, y eventos cancelados. Nunca tira — mismo contrato
+best-effort que el resto del archivo (sin conexión o con error, devuelve `[]`). Nueva ruta
+`GET /api/integrations/google-calendar/events?start&end`.
+
+**Frontend**: `OverviewPage.tsx` — nuevo estado `googleEvents`, con su propio `useEffect` acotado a
+`[cursor]` (a diferencia de Time Off/Tasks/birthdays, que traen todo una sola vez y filtran por día
+en el cliente, acá hace falta re-pedir a Google en cada navegación de mes porque no se le puede
+pedir "todo" sin rango). Nueva entrada `calendar-entry-google` (celeste, sin click — a diferencia
+de `calendar-entry-task`, no dispara ningún popover) en cada celda del día.
+
+**Verificado**: `npm run build`/`npm test` (147/147) en verde en back y front. Contra el tenant de
+prueba en `staging` (sin cuenta de Google conectada): `GET .../events` responde 200 con `[]`, el
+Overview renderiza el calendario sin errores de consola. **No verificado con una cuenta de Google
+real** — a diferencia del sync de Tasks (QA-19), que se probó en vivo con Alejandro porque requiere
+completar un consentimiento OAuth real, esto quedó pendiente de que él lo pruebe con su propia
+cuenta ya conectada (los servidores locales quedaron corriendo para eso).
+
+**Severidad:** baja — solo lectura, no crea ni modifica ninguna fila; el único caso a confirmar en
+vivo es que el rango de fechas y el filtro de "ya es un Task" devuelvan lo esperado contra datos
+reales.
+
+## QA-48 — Fix: opciones de `<select>` ilegibles en dark mode (en `staging`)
+
+**Por qué existe esta tarea:** el usuario mandó una captura del selector "Stage" de Opportunity en
+dark mode — las opciones no seleccionadas ("In Progress", "Won", "Lost") se veían como texto gris
+pálido casi invisible sobre fondo blanco, no el estilo oscuro del resto de la app.
+
+**Causa real**: es un `<select>` nativo del navegador (`dropdown-trigger.dt-status`, usado en Stage
+de Opportunity, Pipeline, y cualquier otro `<select>` con esa clase). Dos problemas compuestos:
+1. La página nunca declaraba `color-scheme`, así que Chrome/Firefox renderizan el popup nativo de
+   opciones siempre con el chrome claro por defecto, sin importar la clase `.dark` propia de la
+   app — la única forma de que el navegador tiña sus propios controles nativos (popup de `<select>`,
+   selectores de fecha, scrollbars) es ese CSS.
+2. Aun agregando `color-scheme`, `.dropdown-trigger` tiene `background-color: transparent` — con un
+   fondo no opaco, Chrome igual cae al blanco por defecto para el popup. El texto sí seguía la regla
+   de dark mode (`dark:text-brand-blue-light`, un celeste pensado para fondo oscuro) — celeste claro
+   sobre blanco es exactamente el "casi en blanco" que se ve en la captura.
+
+**Fix** (`frontend/src/index.css`): `html { color-scheme: light } html.dark { color-scheme: dark }`
+más, como refuerzo directo (no depende de que el navegador respete `color-scheme` para el popup),
+`color`/`background-color` explícitos y opacos en `select option` — `surface-1`/`ink` para claro,
+`dark-surface`/`dark-ink` para oscuro. Alcance: todos los `<select>` de la app (nativo, no solo
+`dt-status`), no una clase puntual.
+
+**Verificado con Playwright** (`colorScheme: 'dark'` + `localStorage` con el tema de la app en
+`'dark'`, tenant de prueba en `staging`): abrir el Stage select de una Opportunity — antes del fix,
+"In Progress"/"Won"/"Lost" ilegibles (texto pálido sobre blanco); después, texto blanco sobre fondo
+oscuro, igual de legible que "New" (la opción seleccionada). Repetido también en modo claro para
+confirmar que no rompió nada ahí — sin cambios visuales. `npm run build`/`npm test` (147/147) en
+verde en back y front. Sin errores de consola.
+
+**Severidad:** baja — puramente visual/CSS, no toca lógica ni datos.
+
+## QA-49 — Fix real: `staging.joinnorthstack.com` nunca estuvo conectado a nada (Vercel, no código)
+
+**Por qué existe esta tarea:** el usuario reportó que la conexión con Stripe fallaba incluso con una
+key con permisos de lectura completos. La investigación arrancó ahí, pero terminó destapando que
+`staging.joinnorthstack.com` — el dominio contra el que se venía "probando en staging" en sesiones
+anteriores (Google Calendar, Tags, etc.) — **nunca estuvo realmente enchufado**: ni como dominio del
+proyecto de Vercel, ni con una rama de Preview asignada, ni con `DATABASE_URL` configurada para
+Preview. Nada de código roto — todo config/infra de Vercel, encontrado y corregido en vivo con
+Alejandro, capa por capa:
+
+1. **`STRIPE_TOKEN_ENCRYPTION_KEY` no estaba en Vercel** (`src/lib/stripeEncryption.ts`) — generada
+   en 2026-08 y cargada solo en `.env` local, nunca subida a Vercel (pendiente ya documentado en
+   `docs/tareas/specpaymentsv1.md` desde que se construyó Payments v1 Unit 1). Sin ella, `connectStripe()`
+   tira antes de llegar a validar la key del tenant contra la API de Stripe — el mensaje real no
+   tenía nada que ver con permisos/scopes de la key que el usuario probaba.
+2. **`staging.joinnorthstack.com` no figuraba en Settings → Domains del proyecto** — solo estaban
+   `app.joinnorthstack.com` y `northstack-two.vercel.app`, ambos Production. El dominio nunca se
+   había agregado a este proyecto de Vercel.
+3. Al agregarlo, hacía falta asignarlo a un ambiente Preview **atado a la rama `staging`** — no
+   Custom Environments (función paga que el proyecto no tiene), sino el selector de rama estándar
+   dentro del mismo diálogo "Add Domain" (gratis). Más un registro DNS (CNAME) nuevo, que tampoco
+   existía.
+4. Con el dominio ya bien enchufado a la rama, apareció el problema real y más grave:
+   **`DATABASE_URL` solo estaba seteada para Production, nunca para Preview** — ningún deployment de
+   Preview de este proyecto pudo tocar la base de datos, nunca, hasta hoy. Esto es anterior y
+   más importante que el tema de Stripe: significa que todo lo "probado en staging" en sesiones
+   previas (Google Calendar QA-19/23, Tags QA-45/46, etc.) se verificó por otra vía — en esta sesión
+   puntual, contra un backend local apuntado a `STAGING_DATABASE_URL` vía override de env var, nunca
+   contra este dominio real.
+5. Agregada la variable (mismo mecanismo que con Stripe: nueva entrada, mismo nombre, scope Preview
+   sin tocar la de Production), el primer intento pareció fallar — resultó ser que el campo "Value"
+   se había quedado con el placeholder de ejemplo de Vercel (`postgres://user:pass@db.example.com...`)
+   en vez del valor real pegado.
+6. Confusión adicional en el camino: varios redeploys se dispararon sobre deployments equivocados
+   (una fila no relacionada, arriba de todo en una lista sin filtrar) — se resolvió empujando un
+   commit vacío a `staging` para forzar un deployment inequívocamente nuevo en vez de seguir
+   adivinando cuál redeployar desde el dashboard.
+
+**Incidente de seguridad en el camino, descartado por el usuario**: durante el paso 1, el usuario
+pegó por error una Stripe secret key con prefijo `sk_live_...` en el campo de valor de
+`STRIPE_TOKEN_ENCRYPTION_KEY` en Vercel — corregido. Se sugirió rotarla dado el prefijo `live`, pero
+el usuario confirmó que la cuenta de Stripe en cuestión es de test, sin riesgo real — no se rotó,
+sacado del backlog.
+
+**Resultado final**: `staging.joinnorthstack.com` conecta, loguea, y la conexión de Stripe con una
+key de test terminó funcionando — confirmado en vivo por el usuario. Ningún cambio de código en
+este ítem, todo config de Vercel (env vars + dominio + rama).
+
+**Severidad:** alta mientras estuvo — bloqueaba cualquier prueba real contra el dominio de staging,
+no solo Stripe. Resuelta.
+
+## QA-50 — Reemplazo del webhook manual de Stripe por un cron de polling 2x/día (Payments v1, Unidad 4 rediseñada)
+
+**Por qué existe esta tarea:** al confirmar la conexión de Stripe en QA-49, el flujo de Unidad 4
+(notificaciones proactivas) pedía un paso manual poco razonable para un tenant real: crear un
+endpoint a mano en Developers → Webhooks de su propio dashboard de Stripe, tildar 5 eventos, y
+copiar/pegar un signing secret de vuelta — y en `staging` encima sumarle el query param de bypass de
+Vercel a la URL. El usuario pidió una alternativa más simple.
+
+**Se evaluaron 2 alternativas antes de esta**, ambas descartadas:
+1. **Auto-crear el webhook vía API** (con la misma Restricted Key + permiso "Webhook Endpoints:
+   Write") — funcional, pero seguía dependiendo de un mecanismo push (webhook) más su complejidad
+   asociada.
+2. **Stripe Connect (OAuth)** — el usuario confirmó directo con el soporte de Stripe que requiere
+   que Northstack tenga una entidad legal (LLC o equivalente) dada de alta, algo que no tiene
+   todavía — mismo bloqueo ya documentado en `specpaymentsv1.md` decisión #2 desde que se diseñó
+   Unidad 1. Sin entidad, no es viable, punto.
+
+**Elegido: polling de la Events API de Stripe, cron fijo diario** (no configurable por tenant, para
+no sumar UI/complejidad — decisión explícita del usuario; originalmente 2x/día, bajado a 1x/día tras
+el primer intento de deploy — ver nota de Vercel Hobby más abajo). `GET /v1/events` devuelve exactamente los
+mismos objetos Event que un webhook hubiera entregado, así que `processStripeWebhookEvent`
+(`stripePaymentsService.ts`) se **reusa sin ningún cambio** — ni a la función ni a sus 14 tests
+existentes. El cron solo pide eventos nuevos desde el último poll y se los pasa uno por uno.
+
+**Backend**:
+- `src/lib/stripe.ts`: nueva `listEvents(apiKey, { createdGte, limit?, starting_after? })` (`GET
+  /events`, sin filtro de `type` — se filtra client-side en `processStripeWebhookEvent`, que ya
+  ignora tipos no manejados). Se sacó `verifyStripeSignature` (sin uso posible una vez eliminado el
+  webhook).
+- `src/modules/integrations/stripePaymentsService.ts`: nueva `runStripeEventPolling()` — por cada
+  `StripeConnection` activa, pagina `listEvents` desde `lastEventPollAt` (o `connectedAt` en el
+  primer poll — nunca barre el historial completo, evitaría un aluvión de notificaciones de eventos
+  ya viejos/resueltos), procesa cada evento, actualiza el cursor. Un tenant que falla (401/403 →
+  `markNeedsAttention`, cualquier otro error) no frena a los demás.
+- `src/routes/internal.ts`: nueva `GET /api/internal/stripe-events/poll` (mismo patrón
+  `checkCronSecret` que las otras 3 rutas de cron). `vercel.json`: nueva entrada de cron, `0 9 * * *`
+  (9am UTC) — **corregido después del primer deploy real**: el plan original era `0 6,18 * * *`
+  (2x/día), pero el pipeline de deploy (`.github/workflows/deploy.yml`, `npx vercel deploy`) lo
+  rechazó en seco: "Hobby accounts are limited to daily cron jobs." Cada cron individual de Vercel
+  Hobby no puede correr más de una vez por día — no importa que ya hubiera 3 crons distintos en
+  `vercel.json`, cada uno corriendo 1x/día es lo permitido; este era el primero con más de un
+  horario en la misma entrada. Bajado a 1x/día para poder deployar.
+- Se sacaron por completo: `POST /api/webhooks/stripe/:tenantId` (`routes/webhooks.ts`, y el mount
+  `express.raw()` de `app.ts` que solo era para esa ruta), `POST
+  /api/integrations/stripe/webhook-secret`, `saveStripeWebhookSecret` (`stripeService.ts`).
+- Schema (`StripeConnection`, push aditivo contra `STAGING_DATABASE_URL`): se sacó
+  `webhookSigningSecretEncrypted`, se agregó `lastEventPollAt DateTime?`.
+- `StripeConnectionStatus` perdió el campo `hasWebhookSecret` (backend y frontend).
+
+**Frontend** (`IntegrationsSettingsPage.tsx`): se eliminó toda la sección "Webhook" del estado
+conectado (URL, botón de copiar, form de signing secret, aviso de bypass de Vercel) — el estado
+conectado ahora es solo el status row (chip test/live, fecha, Disconnect) más una línea explicando
+que los eventos se revisan una vez por día. El checklist de permisos recomendados de la Restricted Key sumó
+**Events** (de solo lectura, igual que el resto).
+
+**Tests**: se sacaron los ~6 tests de `saveStripeWebhookSecret`/`verifyStripeSignature` (ya no
+existen), se agregaron 6 nuevos para `runStripeEventPolling` (cursor desde `connectedAt` vs.
+`lastEventPollAt`, paginación, aislamiento entre tenants, `needsAttention` en 401/403, un tenant
+fallando no frena a los demás). `npm run build`/`npm test` (147/147) en verde en back y front —
+mismo total que antes, 6 sacados + 6 agregados.
+
+**Verificado en vivo 2026-08-28** contra `staging` real: `CRON_SECRET` rotado (el original del 18 de
+agosto se había perdido, nunca quedó anotado en ningún lado — el nuevo sí quedó en `.env` local esta
+vez). Cron disparado a mano contra `staging.joinnorthstack.com/api/internal/stripe-events/poll` —
+`{tenantsPolled: 1, eventsProcessed: 7, failed: 0}`, sin errores, contra eventos reales de una
+cuenta de Stripe de test con pagos ya hechos. El disparo tuvo que hacerse desde la consola del
+navegador del usuario (`fetch()` con el `CRON_SECRET` como header), no vía `curl` externo — la
+Deployment Protection de Vercel bloquea requests externas incluso con el bypass secret de
+"Protection Bypass for Automation" (no se logró hacerlo funcionar por query param esta vez, a
+diferencia de cómo sí funcionó para el webhook de Google Calendar en QA-19); la sesión ya autenticada
+del navegador esquiva la protección sin necesitarlo.
+
+**Hallazgo real sobre cómo deploya este proyecto, encontrado tratando de entender por qué nada
+llegaba a `staging`**: el deploy **no** pasa por la integración nativa de Git de Vercel (aunque el
+proyecto la tiene conectada en el dashboard) — pasa por `.github/workflows/deploy.yml`, que corre
+`npx vercel deploy` a mano con un `VERCEL_TOKEN`, y alía el resultado a `staging.joinnorthstack.com`
+con `vercel alias set` al final de cada corrida. Toda la investigación de QA-49 sobre el dominio sin
+conectar en el dashboard nativo era sobre un camino que este proyecto no usa para deployar en
+absoluto — lo que de verdad frenó todos los pushes después de `1f790df` fue el error de Vercel
+Hobby de arriba, visible recién en el Actions run del repo (`github.com/.../actions`), no en el
+dashboard de Vercel.
+
+**Severidad:** baja — elimina superficie (menos rutas, menos campos), no agrega riesgo nuevo; el
+único caso a confirmar en vivo es que el cron real dispare la notificación esperada.
+
+## QA-51 — Auto-vincular Companies a su Stripe Customer desde el cron diario
+
+**Por qué existe esta tarea:** probando el cron de QA-50 en vivo, el dashboard de Payments mostraba
+todo en cero — ninguna Company estaba vinculada a un Stripe Customer todavía, porque el único camino
+para vincular era manual ("Search on Stripe" en `CompanyDetailModal`, Unit 2). El usuario pidió que
+el cron mismo se encargue: revisar las Companies sin vincular, buscar coincidencias por email de sus
+Contacts contra los Customers de Stripe (mismo mecanismo que ya usa "Search on Stripe"), y vincular
+automático cuando el match es inequívoco.
+
+**Backend** (`src/modules/integrations/stripePaymentsService.ts`): nueva
+`autoLinkUnmatchedCompanies(tenantId)` — reusa `searchStripeCustomersForCompany`/
+`linkCompanyToStripeCustomer` tal cual, sin tocarlas. Busca `Company` con `stripeCustomerId: null`,
+fan-out con `mapWithConcurrency` (límite 10, mismo helper que ya usaba `getPaymentsOverview`).
+Decisión de cuándo vincular: **exactamente 1 match** → vincula solo; **0 matches** → no hace nada,
+se reintenta en el próximo cron (sin cursor de "ya probado" — se agrega si el volumen lo justifica
+más adelante); **2+ matches** → ambiguo, se deja para el flujo manual (que ya sabe mostrar 2+
+resultados para que un humano elija). Llamada desde `runStripeEventPolling`, una vez por conexión
+activa, **antes** de pedir eventos — una Company recién vinculada en la misma corrida ya puede
+recibir su notificación si hay un evento suyo más abajo en el mismo pase. El JSON que devuelve la
+ruta del cron (`/api/internal/stripe-events/poll`) suma el campo `companiesLinked`.
+
+**Sin UI nueva**: `CompanyDetailModal.tsx` ya renderiza "Connected to Stripe →" apenas
+`Company.stripeCustomerId` está seteado (Unit 2) — vincular automático alimenta esa misma UI
+existente, sin importar qué camino hizo el vínculo.
+
+**Tests**: `tests/stripePaymentsService.test.ts` — nuevo `describe('autoLinkUnmatchedCompanies', ...)`
+(1 match vincula, 0 no hace nada, 2+ no hace nada, ya-vinculada se ignora sin llamar a Stripe, una
+Company fallando no frena a las demás) + un test de integración en `runStripeEventPolling`
+confirmando que vincula y notifica en la misma corrida. Se corrigió de paso un bug en el mock de
+`prisma.company.findMany` de este archivo de tests (no distinguía `stripeCustomerId: null` de
+`{ not: null }`, encubría el escenario que este QA necesitaba probar). `npm run build`/`npm test`
+(153/153, 147 + 6 nuevos) en verde.
+
+**Severidad:** baja — solo automatiza un flujo manual ya existente y probado (Unit 2), mismas
+funciones, mismas reglas de ambigüedad.
+
+**Bug real encontrado al probar en vivo** (primera vez que este código corrió contra una Company
+realmente vinculada, con charges reales — nada lo había ejercitado hasta ahora): "Blue Harbor
+Logistics" se auto-vinculó bien, pero el panel de pagos tiraba "Failed to load payment history:
+Failed to construct 'URL': Invalid URL". Causa: `getCompanyPaymentEvents`
+(`frontend/src/api/payments.ts`) armaba la URL con `new URL(...)`, que tira si el string es
+relativo sin un `base` — y `API_BASE_URL` es `''` en producción/staging (frontend y backend
+comparten origen ahí), a diferencia de local donde apunta a `http://localhost:3000`. El resto de
+las funciones de ese archivo ya concatenaban el string directo; se corrigió `getCompanyPaymentEvents`
+para hacer lo mismo.
+
+## QA-52 — Fix: botón "Volver" de Settings dejaba al usuario varado
+
+**Bug:** `SettingsSidebar.tsx` usaba `navigate(-1)` (volver al historial del navegador). Si alguien
+llegaba a `/settings` directo (link compartido, refresh, nueva pestaña) sin historial previo dentro
+de la app, el botón no llevaba a ningún lado útil.
+
+**Fix:** `navigate('/overview')` — destino fijo, mismo criterio que el resto de la navegación de
+Settings (no depende del historial del navegador).
+
+**Severidad:** baja — un solo caso de borde de navegación, sin impacto en datos.
+
+## QA-53 — Proceso de Termination de empleados (baja definitiva)
+
+**Por qué existe esta tarea:** ítem pendiente del backlog original de la sesión ("falta proceso de
+termination para dar de baja empleados y marcarlos inactivos"), que el usuario había dejado
+explícitamente parado hasta poder definirlo. Se planificó con el usuario (`AskUserQuestion` +
+`ExitPlanMode`, plan completo revisado y aprobado — incluida una vuelta extra pidiendo el detalle de
+qué ve el usuario desde el front antes de aprobar).
+
+**Decisiones clave confirmadas con el usuario:** (1) status nuevo "Terminated" propio, no reusar
+"Inactive"; (2) cortar acceso a la plataforma es un checkbox opcional, no automático; (3) los
+reportes directos se avisan y se pueden reasignar en el mismo flujo, no bloquean la baja; (4)
+**la fecha de baja soporta pasado, hoy, y futuro** — esta última decisión es la que obligó a un
+modelo de ejecución diferida (ver abajo) en vez de una simple mutación síncrona.
+
+**Modelo nuevo** (`prisma/schema.prisma`): `EmployeeTermination` (registro de auditoría — nunca se
+pisa ni se borra, se marca `executedAt`/`cancelledAt`) y `EmployeeTerminationReassignment` (un row
+por cada reporte directo del empleado dado de baja, con su `newManagerId` elegido o `null`).
+
+**Backend** (`src/modules/hr/terminationService.ts`, nuevo):
+- `createTermination` — valida que el empleado no esté ya Terminated y que no tenga una baja
+  programada pendiente; arma la lista completa de reasignaciones (los reportes no tocados por el
+  admin también quedan con `newManagerId: null`, no solo los que aparecieron en el modal); si se
+  incluyó un pago final, lo crea de inmediato vía `createOffPayments` (Payroll Unidad 18/19, sin
+  código nuevo ahí) sin importar si la baja es inmediata o futura; si `terminationDate <= hoy`,
+  ejecuta todo en el mismo request.
+- `executeTermination` (interna, reusada por el camino inmediato y por el cron) — status →
+  "Terminated" (find-or-create por tenant, nunca `isDefault`), `endDate`, cierra la
+  `EmployeeCompensation` abierta (`effectiveTo = terminationDate`, lo que realmente saca al empleado
+  de futuros Payroll runs), corta acceso (`User.status = 'inactive'`) si `revokeAccess` y hay
+  usuario vinculado, cancela Time Off pendiente/aprobado-a-futuro disparando
+  `syncTimeOffCalendarEvent` (no un update crudo, para que la limpieza en Google Calendar de otros
+  usuarios se dispare sola), y aplica cada reasignación de manager.
+- `runScheduledTerminations` — cron diario nuevo (`GET /api/internal/employee-terminations/run`,
+  10am, mismo patrón que los otros 4 crons de `src/routes/internal.ts`), ejecuta lo vencido, una
+  falla no frena a las demás.
+- `cancelTermination` — solo antes de `executedAt`; idempotente si ya estaba cancelada.
+- Rutas nuevas en `src/routes/employees.ts`: `GET/POST .../termination`, `POST
+  employee-terminations/:id/cancel`. Incluir un pago final requiere `canManagePayroll` además del
+  `canCreateHr` que ya gatea toda la ruta.
+
+**Frontend**: `EmployeeOverviewPanel.tsx` suma una entrada "Terminate" al menú de acciones (oculta
+si el empleado ya está Terminated o tiene una baja programada pendiente) y un aviso "Scheduled
+termination: [fecha]" con botón Cancel cuando corresponde. Nuevo
+`TerminateEmployeeModal.tsx`: date picker de último día, sección de reportes directos con un
+`SearchableSelect` de reasignación por cada uno (solo si tiene), checkbox "Also revoke their access
+to Northstack" (solo si tiene usuario vinculado), checkbox "Include a final payment" con su
+sub-formulario (monto/moneda/fecha/label — solo visible si el usuario tiene `canManagePayroll`), y
+botón de confirmar con texto dinámico: "Terminate now" vs "Schedule termination" según la fecha
+elegida.
+
+**Tests**: `tests/terminationService.test.ts`, nuevo, 18 tests (creación inmediata, creación
+programada, cancelación, el cron, `listDirectReports`/`getLatestTermination`). `npm run
+build`/`npm test` en verde (171/171). Además, verificado con un script ad-hoc corriendo
+`runScheduledTerminations()` directo contra `STAGING_DATABASE_URL` real (no solo el mock de los
+tests) para confirmar que el schema nuevo (`EmployeeTermination`/
+`EmployeeTerminationReassignment`) llegó bien a la base de staging — corrió sin errores.
+
+**Pendiente de verificación en vivo por el usuario en `staging.joinnorthstack.com`** (esta vez no lo
+hice yo — no había una sesión de browser automation disponible en este entorno para hacerlo):
+terminar un empleado de prueba con fecha de hoy y confirmar status/endDate/que desaparece de
+Payroll/que se cancela su Time Off/que el pago final aparece en el timeline; programar una baja a
+futuro y confirmar que no se aplica hasta que corra el cron.
+
+**Fuera de alcance, anotado para más adelante:** reactivar/rehire a alguien terminado; arreglar el
+hard-delete roto preexistente de `deleteEmployee` (bug real pero no de esta tarea — termination es
+la alternativa correcta a usar en su lugar); campo de "razón de baja" (no se pidió, `EmployeeTermination`
+es el lugar natural si se suma después).
+
+**Severidad:** — (feature nueva, no bug). Plan completo:
+`C:\Users\aleja\.claude\plans\bueno-yo-te-voy-valiant-whisper.md`.

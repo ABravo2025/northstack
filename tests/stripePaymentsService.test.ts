@@ -39,7 +39,12 @@ vi.mock('../src/lib/prisma.js', () => ({
     },
     company: {
       findMany: vi.fn(async ({ where }: any) =>
-        companies.filter((c) => c.tenantId === where.tenantId && (where.stripeCustomerId ? c.stripeCustomerId != null : true)),
+        companies.filter((c) => {
+          if (c.tenantId !== where.tenantId) return false;
+          if (where.stripeCustomerId === null) return c.stripeCustomerId == null;
+          if (where.stripeCustomerId?.not === null) return c.stripeCustomerId != null;
+          return true;
+        }),
       ),
       findFirst: vi.fn(async ({ where }: any) =>
         companies.find((c) => c.tenantId === where.tenantId && c.stripeCustomerId === where.stripeCustomerId) ?? null,
@@ -85,6 +90,7 @@ vi.mock('../src/lib/stripe.js', async () => {
 
 import { StripeApiError } from '../src/lib/stripe.js';
 import {
+  autoLinkUnmatchedCompanies,
   getCompanyPaymentEvents,
   getCompanyPaymentSummary,
   getPaymentsOverview,
@@ -504,7 +510,7 @@ describe('runStripeEventPolling', () => {
 
     const result = await runStripeEventPolling();
 
-    expect(result).toEqual({ tenantsPolled: 1, eventsProcessed: 1, failed: 0 });
+    expect(result).toEqual({ tenantsPolled: 1, eventsProcessed: 1, companiesLinked: 0, failed: 0 });
     expect(createNotificationMock).toHaveBeenCalledTimes(1);
     const [, params] = listEventsMock.mock.calls[0];
     expect(params.createdGte).toBe(Math.floor(connections[0].connectedAt.getTime() / 1000));
@@ -539,7 +545,7 @@ describe('runStripeEventPolling', () => {
 
     const result = await runStripeEventPolling();
 
-    expect(result).toEqual({ tenantsPolled: 0, eventsProcessed: 0, failed: 0 });
+    expect(result).toEqual({ tenantsPolled: 0, eventsProcessed: 0, companiesLinked: 0, failed: 0 });
     expect(listEventsMock).not.toHaveBeenCalled();
   });
 
@@ -548,7 +554,7 @@ describe('runStripeEventPolling', () => {
 
     const result = await runStripeEventPolling();
 
-    expect(result).toEqual({ tenantsPolled: 1, eventsProcessed: 0, failed: 1 });
+    expect(result).toEqual({ tenantsPolled: 1, eventsProcessed: 0, companiesLinked: 0, failed: 1 });
     expect(connections[0].needsAttention).toBe(true);
   });
 
@@ -561,6 +567,96 @@ describe('runStripeEventPolling', () => {
 
     const result = await runStripeEventPolling();
 
-    expect(result).toEqual({ tenantsPolled: 2, eventsProcessed: 1, failed: 1 });
+    expect(result).toEqual({ tenantsPolled: 2, eventsProcessed: 1, companiesLinked: 0, failed: 1 });
+  });
+
+  it('auto-links an unambiguous Company match before polling, so it can be notified in the same run', async () => {
+    companies = [{ id: 'c1', tenantId: 't1', name: 'Acme', stripeCustomerId: null, accountOwnerId: 'u1' }];
+    contacts = [{ tenantId: 't1', companyId: 'c1', isActive: true, email: 'a@example.com' }];
+    listCustomersMock.mockResolvedValue({ data: [{ id: 'cus_1', email: 'a@example.com', name: 'A Co' }], has_more: false });
+    listEventsMock.mockResolvedValueOnce({
+      data: [{ id: 'evt_1', type: 'charge.refunded', data: { object: { customer: 'cus_1' } } }],
+      has_more: false,
+    });
+
+    const result = await runStripeEventPolling();
+
+    expect(result).toEqual({ tenantsPolled: 1, eventsProcessed: 1, companiesLinked: 1, failed: 0 });
+    expect(companies[0].stripeCustomerId).toBe('cus_1');
+    expect(createNotificationMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+// Automatic counterpart to the manual "Search on Stripe" flow (routes/payments.ts) — reuses
+// searchStripeCustomersForCompany/linkCompanyToStripeCustomer unchanged, so this only tests the
+// checked/linked bookkeeping and the 0/1/2+ match decision, not the matching logic itself (already
+// covered by searchStripeCustomersForCompany's own tests above).
+describe('autoLinkUnmatchedCompanies', () => {
+  beforeEach(resetMocks);
+
+  it('auto-links a Company with exactly one Stripe Customer match', async () => {
+    companies = [{ id: 'c1', tenantId: 't1', name: 'Acme', stripeCustomerId: null, accountOwnerId: 'u1' }];
+    contacts = [{ tenantId: 't1', companyId: 'c1', isActive: true, email: 'a@example.com' }];
+    listCustomersMock.mockResolvedValue({ data: [{ id: 'cus_1', email: 'a@example.com', name: 'A Co' }], has_more: false });
+
+    const result = await autoLinkUnmatchedCompanies('t1');
+
+    expect(result).toEqual({ checked: 1, linked: 1 });
+    expect(companies[0].stripeCustomerId).toBe('cus_1');
+    expect(companies[0].stripeCustomerMatchedVia).toBe('a@example.com');
+  });
+
+  it('does not link when there are zero matches', async () => {
+    companies = [{ id: 'c1', tenantId: 't1', name: 'Acme', stripeCustomerId: null, accountOwnerId: 'u1' }];
+    contacts = [{ tenantId: 't1', companyId: 'c1', isActive: true, email: 'nobody@example.com' }];
+
+    const result = await autoLinkUnmatchedCompanies('t1');
+
+    expect(result).toEqual({ checked: 1, linked: 0 });
+    expect(companies[0].stripeCustomerId).toBeNull();
+  });
+
+  it('does not link when there are 2+ matches — leaves it for the manual flow to disambiguate', async () => {
+    companies = [{ id: 'c1', tenantId: 't1', name: 'Acme', stripeCustomerId: null, accountOwnerId: 'u1' }];
+    contacts = [
+      { tenantId: 't1', companyId: 'c1', isActive: true, email: 'a@example.com' },
+      { tenantId: 't1', companyId: 'c1', isActive: true, email: 'b@example.com' },
+    ];
+    listCustomersMock
+      .mockResolvedValueOnce({ data: [{ id: 'cus_1', email: 'a@example.com', name: 'A Co' }], has_more: false })
+      .mockResolvedValueOnce({ data: [{ id: 'cus_2', email: 'b@example.com', name: 'B Co' }], has_more: false });
+
+    const result = await autoLinkUnmatchedCompanies('t1');
+
+    expect(result).toEqual({ checked: 1, linked: 0 });
+    expect(companies[0].stripeCustomerId).toBeNull();
+  });
+
+  it('ignores Companies that are already linked', async () => {
+    companies = [{ id: 'c1', tenantId: 't1', name: 'Acme', stripeCustomerId: 'cus_existing', accountOwnerId: 'u1' }];
+
+    const result = await autoLinkUnmatchedCompanies('t1');
+
+    expect(result).toEqual({ checked: 0, linked: 0 });
+    expect(listCustomersMock).not.toHaveBeenCalled();
+  });
+
+  it('one Company failing does not stop the others from being checked', async () => {
+    companies = [
+      { id: 'c1', tenantId: 't1', name: 'Acme', stripeCustomerId: null, accountOwnerId: 'u1' },
+      { id: 'c2', tenantId: 't1', name: 'Beta', stripeCustomerId: null, accountOwnerId: 'u1' },
+    ];
+    contacts = [
+      { tenantId: 't1', companyId: 'c1', isActive: true, email: 'broken@example.com' },
+      { tenantId: 't1', companyId: 'c2', isActive: true, email: 'b@example.com' },
+    ];
+    listCustomersMock
+      .mockRejectedValueOnce(new Error('network blip'))
+      .mockResolvedValueOnce({ data: [{ id: 'cus_2', email: 'b@example.com', name: 'B Co' }], has_more: false });
+
+    const result = await autoLinkUnmatchedCompanies('t1');
+
+    expect(result).toEqual({ checked: 2, linked: 1 });
+    expect(companies[1].stripeCustomerId).toBe('cus_2');
   });
 });

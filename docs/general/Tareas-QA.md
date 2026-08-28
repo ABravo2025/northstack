@@ -2131,3 +2131,39 @@ dashboard de Vercel.
 
 **Severidad:** baja — elimina superficie (menos rutas, menos campos), no agrega riesgo nuevo; el
 único caso a confirmar en vivo es que el cron real dispare la notificación esperada.
+
+## QA-51 — Auto-vincular Companies a su Stripe Customer desde el cron diario
+
+**Por qué existe esta tarea:** probando el cron de QA-50 en vivo, el dashboard de Payments mostraba
+todo en cero — ninguna Company estaba vinculada a un Stripe Customer todavía, porque el único camino
+para vincular era manual ("Search on Stripe" en `CompanyDetailModal`, Unit 2). El usuario pidió que
+el cron mismo se encargue: revisar las Companies sin vincular, buscar coincidencias por email de sus
+Contacts contra los Customers de Stripe (mismo mecanismo que ya usa "Search on Stripe"), y vincular
+automático cuando el match es inequívoco.
+
+**Backend** (`src/modules/integrations/stripePaymentsService.ts`): nueva
+`autoLinkUnmatchedCompanies(tenantId)` — reusa `searchStripeCustomersForCompany`/
+`linkCompanyToStripeCustomer` tal cual, sin tocarlas. Busca `Company` con `stripeCustomerId: null`,
+fan-out con `mapWithConcurrency` (límite 10, mismo helper que ya usaba `getPaymentsOverview`).
+Decisión de cuándo vincular: **exactamente 1 match** → vincula solo; **0 matches** → no hace nada,
+se reintenta en el próximo cron (sin cursor de "ya probado" — se agrega si el volumen lo justifica
+más adelante); **2+ matches** → ambiguo, se deja para el flujo manual (que ya sabe mostrar 2+
+resultados para que un humano elija). Llamada desde `runStripeEventPolling`, una vez por conexión
+activa, **antes** de pedir eventos — una Company recién vinculada en la misma corrida ya puede
+recibir su notificación si hay un evento suyo más abajo en el mismo pase. El JSON que devuelve la
+ruta del cron (`/api/internal/stripe-events/poll`) suma el campo `companiesLinked`.
+
+**Sin UI nueva**: `CompanyDetailModal.tsx` ya renderiza "Connected to Stripe →" apenas
+`Company.stripeCustomerId` está seteado (Unit 2) — vincular automático alimenta esa misma UI
+existente, sin importar qué camino hizo el vínculo.
+
+**Tests**: `tests/stripePaymentsService.test.ts` — nuevo `describe('autoLinkUnmatchedCompanies', ...)`
+(1 match vincula, 0 no hace nada, 2+ no hace nada, ya-vinculada se ignora sin llamar a Stripe, una
+Company fallando no frena a las demás) + un test de integración en `runStripeEventPolling`
+confirmando que vincula y notifica en la misma corrida. Se corrigió de paso un bug en el mock de
+`prisma.company.findMany` de este archivo de tests (no distinguía `stripeCustomerId: null` de
+`{ not: null }`, encubría el escenario que este QA necesitaba probar). `npm run build`/`npm test`
+(153/153, 147 + 6 nuevos) en verde.
+
+**Severidad:** baja — solo automatiza un flujo manual ya existente y probado (Unit 2), mismas
+funciones, mismas reglas de ambigüedad.

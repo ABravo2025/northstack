@@ -406,21 +406,66 @@ async function listAllEventsSince(apiKey: string, createdGteUnix: number): Promi
   return events;
 }
 
+// Runs before event polling in the same cron pass (below) so a Company linked just now can still
+// get notified this same run if there's a matching event further down. Reuses
+// searchStripeCustomersForCompany/linkCompanyToStripeCustomer unchanged — the exact same matching
+// "Search on Stripe" already does by hand (CompanyDetailModal.tsx), just applied automatically.
+// Only auto-links an unambiguous single match; 0 matches is retried next run (no "already tried"
+// cursor — keep it simple until a tenant's unmatched-Company count makes that worth adding), 2+
+// matches is left for a human to pick via the existing manual flow. No apiKey param —
+// searchStripeCustomersForCompany resolves its own via getActiveConnectionForTenant, same as
+// every other call site of it.
+export async function autoLinkUnmatchedCompanies(tenantId: string): Promise<{ checked: number; linked: number }> {
+  const companies = await prisma.company.findMany({ where: { tenantId, stripeCustomerId: null }, select: { id: true } });
+  if (companies.length === 0) {
+    return { checked: 0, linked: 0 };
+  }
+
+  let linked = 0;
+  await mapWithConcurrency(companies, 10, async (company) => {
+    try {
+      const matches = await searchStripeCustomersForCompany(tenantId, company.id);
+      if (matches.length === 1) {
+        await linkCompanyToStripeCustomer({
+          companyId: company.id,
+          stripeCustomerId: matches[0].id,
+          matchedViaEmail: matches[0].matchedViaEmail,
+        });
+        linked++;
+      }
+    } catch (error) {
+      console.error(`Auto-link failed for company ${company.id}:`, error);
+    }
+  });
+
+  return { checked: companies.length, linked };
+}
+
 // Twice-daily cron (src/routes/internal.ts) — replaced the per-tenant manual webhook entirely
 // (backlog QA, 2026-08-28: no real tenant should have to hand-create a webhook endpoint and
 // copy/paste a signing secret just to get notified about a refund). Reuses
 // processStripeWebhookEvent unchanged — Stripe's Events API returns the exact same Event shape a
 // webhook would have delivered, so from that function's point of view there's no difference
 // between push and pull.
-export async function runStripeEventPolling(): Promise<{ tenantsPolled: number; eventsProcessed: number; failed: number }> {
+export async function runStripeEventPolling(): Promise<{
+  tenantsPolled: number;
+  eventsProcessed: number;
+  companiesLinked: number;
+  failed: number;
+}> {
   const connections = await prisma.stripeConnection.findMany({ where: { disconnectedAt: null } });
 
   let eventsProcessed = 0;
+  let companiesLinked = 0;
   let failed = 0;
 
   for (const connection of connections) {
     try {
       const apiKey = decryptStripeSecret(connection.apiKeyEncrypted);
+
+      const { linked } = await autoLinkUnmatchedCompanies(connection.tenantId);
+      companiesLinked += linked;
+
       const sinceUnix = Math.floor((connection.lastEventPollAt ?? connection.connectedAt).getTime() / 1000);
       const events = await listAllEventsSince(apiKey, sinceUnix);
 
@@ -439,5 +484,5 @@ export async function runStripeEventPolling(): Promise<{ tenantsPolled: number; 
     }
   }
 
-  return { tenantsPolled: connections.length, eventsProcessed, failed };
+  return { tenantsPolled: connections.length, eventsProcessed, companiesLinked, failed };
 }

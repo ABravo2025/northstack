@@ -3,6 +3,7 @@ import type {
   Employee,
   EmployeeBirthday,
   EmployeeCompensationSummary,
+  EmployeePaymentHistoryEntry,
   EmployeeTermination,
   EmployeeTerminationOptions,
   Invitation,
@@ -110,6 +111,14 @@ export const employeesApi = {
 
   listEmployeeBirthdays: async (token: string): Promise<EmployeeBirthday[]> => {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/birthdays`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  getEmployeePaymentHistory: async (token: string, employeeId: string): Promise<EmployeePaymentHistoryEntry[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/payment-history`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);

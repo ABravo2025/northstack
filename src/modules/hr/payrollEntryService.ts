@@ -73,6 +73,46 @@ export async function deleteEntry(tenantId: string, entryId: string): Promise<De
   return { success: true };
 }
 
+export interface EmployeePaymentHistoryEntry {
+  id: string;
+  type: PayrollEntryType;
+  amountCents: number;
+  currency: string;
+  label: string | null;
+  paymentDate: string;
+  source: 'run' | 'off-cycle';
+  periodLabel: string | null;
+}
+
+// Employee profile's Payment History tab — every entry actually paid to this person, run-based or
+// off-cycle. Draft run entries are excluded (nothing has actually been paid yet); off-cycle entries
+// have no draft state (createOffPayments writes them as final), so all of those count.
+export async function listPaymentHistoryForEmployee(
+  tenantId: string,
+  employeeId: string,
+): Promise<EmployeePaymentHistoryEntry[]> {
+  const entries = await prisma.payrollEntry.findMany({
+    where: {
+      tenantId,
+      employeeId,
+      OR: [{ runId: null }, { run: { status: 'confirmed' } }],
+    },
+    include: { run: { select: { periodLabel: true } } },
+    orderBy: { paymentDate: 'desc' },
+  });
+
+  return entries.map((entry) => ({
+    id: entry.id,
+    type: entry.type,
+    amountCents: entry.amountCents,
+    currency: entry.currency,
+    label: entry.label,
+    paymentDate: entry.paymentDate.toISOString(),
+    source: entry.runId ? 'run' : 'off-cycle',
+    periodLabel: entry.run?.periodLabel ?? null,
+  }));
+}
+
 export interface UpdateHoursResult {
   success: boolean;
   entry?: PayrollEntry;

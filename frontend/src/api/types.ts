@@ -119,6 +119,17 @@ export interface EmployeeTerminationOptions {
   directReports: { id: string; firstName: string; lastName: string }[];
 }
 
+export interface EmployeePaymentHistoryEntry {
+  id: string;
+  type: PayrollEntryType;
+  amountCents: number;
+  currency: string;
+  label: string | null;
+  paymentDate: string;
+  source: 'run' | 'off-cycle';
+  periodLabel: string | null;
+}
+
 export interface GoogleCalendarStatus {
   connected: boolean;
   googleAccountEmail: string | null;

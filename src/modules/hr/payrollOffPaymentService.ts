@@ -22,11 +22,19 @@ export interface OffPaymentEntryResult {
 
 // Unidad 19 — the loose (runId: null) entries side of the unified timeline.
 export async function listOffPayments(tenantId: string) {
-  return prisma.payrollEntry.findMany({
+  const entries = await prisma.payrollEntry.findMany({
     where: { tenantId, runId: null },
     include: { employee: { select: { firstName: true, lastName: true } } },
     orderBy: { paymentDate: 'desc' },
   });
+  // Flatten to employeeFirstName/employeeLastName, matching every other per-employee list
+  // function in this module (payrollRunService, employeeCompensationService, etc.) — the frontend's
+  // OffCyclePayrollEntry type expects flat fields, not the raw Prisma `employee` include.
+  return entries.map(({ employee, ...entry }) => ({
+    ...entry,
+    employeeFirstName: employee.firstName,
+    employeeLastName: employee.lastName,
+  }));
 }
 
 // Unidad 18 — one-off/off-cycle payments, entirely outside any PayrollRun:

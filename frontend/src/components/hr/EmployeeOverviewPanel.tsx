@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api';
-import type { EmployeeCompensationSummary } from '../../api';
+import type { EmployeeCompensationSummary, EmployeePaymentHistoryEntry } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import Avatar from '../common/Avatar';
 import StatusChip from '../common/StatusChip';
@@ -51,6 +51,16 @@ const CONTRACT_STATUS_CHIPS = {
   vencido: { color: '#dc2626', label: 'Contract expired' },
 };
 
+// Same labels as PayrollPage.tsx's timeline ("Reason" column here) — kept in sync manually,
+// same as ADJUSTMENT_TYPE_LABELS there (no shared constants file for payroll UI yet).
+const PAYMENT_TYPE_LABELS: Record<string, string> = {
+  base: 'Payment',
+  bonus: 'Bonus',
+  commission: 'Commission',
+  reimbursement: 'Reimbursement',
+  deduction: 'Deduction',
+};
+
 // Unified with the Company/Contact/Opportunity detail pattern (Checkpoint F,
 // docs/tareas-desarrollo.md): no tabs, no "Edit employee" button — every field
 // is editable in place via AutoSaveField/AutoSaveSelect. Name/business email
@@ -84,6 +94,9 @@ export default function EmployeeOverviewPanel({
   const [tags, setTags] = useState<TagAssignmentLite[]>([]);
   const [terminationOptions, setTerminationOptions] = useState<EmployeeTerminationOptions | null>(null);
   const [terminateModalOpen, setTerminateModalOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'payments'>('overview');
+  const [paymentHistory, setPaymentHistory] = useState<EmployeePaymentHistoryEntry[]>([]);
+  const [loadingPaymentHistory, setLoadingPaymentHistory] = useState(false);
   const hasContract = canManagePayroll && HAS_CONTRACT_STATUSES.has(employee.contractStatus);
 
   const loadTags = () => {
@@ -98,8 +111,20 @@ export default function EmployeeOverviewPanel({
   useEffect(() => {
     loadTags();
     loadTerminationOptions();
+    setActiveTab('overview');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [employee.id]);
+
+  useEffect(() => {
+    if (!canManagePayroll) return;
+    setLoadingPaymentHistory(true);
+    api
+      .getEmployeePaymentHistory(token, employee.id)
+      .then(setPaymentHistory)
+      .catch(() => setPaymentHistory([]))
+      .finally(() => setLoadingPaymentHistory(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [employee.id, canManagePayroll]);
 
   const handleCancelTermination = async () => {
     if (!terminationOptions?.pendingTermination) return;
@@ -248,7 +273,70 @@ export default function EmployeeOverviewPanel({
           </div>
         </div>
 
+        {canManagePayroll && (
+          <div className="mini-toggle-row mx-4 mt-3">
+            <button
+              type="button"
+              className={`mini-toggle-opt ${activeTab === 'overview' ? 'active' : ''}`}
+              onClick={() => setActiveTab('overview')}
+            >
+              Overview
+            </button>
+            <button
+              type="button"
+              className={`mini-toggle-opt ${activeTab === 'payments' ? 'active' : ''}`}
+              onClick={() => setActiveTab('payments')}
+            >
+              Payment History
+            </button>
+          </div>
+        )}
+
         <div className="overview-panel-main">
+        {activeTab === 'payments' ? (
+          <div className="overview-panel-left">
+            <div className="field-group">
+              <h4 className="field-group-title">Payment History</h4>
+              <div className="field-group-body">
+                {loadingPaymentHistory ? (
+                  <>
+                    {[0, 1, 2].map((i) => (
+                      <div key={i} className="skeleton-row" style={{ height: 28, animationDelay: `${i * 0.08}s` }}>
+                        <span className="skeleton-bar" style={{ width: 80, marginRight: 16 }} />
+                        <span className="skeleton-bar" style={{ width: 130 }} />
+                      </div>
+                    ))}
+                  </>
+                ) : paymentHistory.length === 0 ? (
+                  <p className="text-sm text-ink-faint">No payments recorded yet.</p>
+                ) : (
+                  <div className="overview-field overview-field-full">
+                    <table className="table">
+                      <thead>
+                        <tr>
+                          <th>Date</th>
+                          <th>Reason</th>
+                          <th>Description</th>
+                          <th>Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paymentHistory.map((entry) => (
+                          <tr key={entry.id}>
+                            <td>{entry.paymentDate.slice(0, 10)}</td>
+                            <td>{PAYMENT_TYPE_LABELS[entry.type] || entry.type}</td>
+                            <td>{entry.label || (entry.periodLabel ? `Payroll: ${entry.periodLabel}` : '—')}</td>
+                            <td>{formatMoney(entry.amountCents, entry.currency)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
         <div className="overview-panel-left">
           <div className="field-group">
             <h4 className="field-group-title">Identity</h4>
@@ -277,13 +365,17 @@ export default function EmployeeOverviewPanel({
             <h4 className="field-group-title">Role</h4>
             <div className="field-group-body">
               <Field label="Status">
-                <AutoSaveSelect
-                  label="Status"
-                  value={employee.statusId}
-                  onSave={(v) => save({ statusId: v })}
-                  options={statuses.map((s) => ({ value: s.id, label: s.name }))}
-                  emptyLabel="-- select --"
-                />
+                {employee.statusDefn?.name === 'Terminated' ? (
+                  <StatusChip color={employee.statusDefn.color || '#6b7280'} label="Terminated" />
+                ) : (
+                  <AutoSaveSelect
+                    label="Status"
+                    value={employee.statusId}
+                    onSave={(v) => save({ statusId: v })}
+                    options={statuses.map((s) => ({ value: s.id, label: s.name }))}
+                    emptyLabel="-- select --"
+                  />
+                )}
               </Field>
               <Field label="Department">
                 <AutoSaveSelect
@@ -499,6 +591,7 @@ export default function EmployeeOverviewPanel({
             </div>
           )}
         </div>
+        )}
 
         <DetailSidebar
           token={token}

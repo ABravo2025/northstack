@@ -22,6 +22,7 @@ import {
   unassignTimeOffPolicyFromEmployee,
 } from '../modules/hr/employeeTimeOffPolicyService.js';
 import { findFieldCatalogDefinitionById } from '../modules/hr/fieldCatalogService.js';
+import { listPaymentHistoryForEmployee } from '../modules/hr/payrollEntryService.js';
 import { findStatusDefinitionById } from '../modules/hr/statusService.js';
 import { calculateEmployeeTimeOffBalances } from '../modules/hr/timeOffBalanceService.js';
 import { cancelTermination, createTermination, getLatestTermination, listDirectReports } from '../modules/hr/terminationService.js';
@@ -396,6 +397,24 @@ employeesRouter.get('/api/hr/employees/:employeeId/compensation', async (req, re
     return res.status(404).json({ error: result.error });
   }
   return res.json(result.summary);
+});
+
+employeesRouter.get('/api/hr/employees/:employeeId/payment-history', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!canManagePayroll(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const employee = await findEmployeeById(req.params.employeeId);
+  if (!employee || employee.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Employee not found' });
+  }
+
+  const history = await listPaymentHistoryForEmployee(user.tenantId!, req.params.employeeId);
+  return res.json(history);
 });
 
 employeesRouter.get('/api/hr/employees/:employeeId/contract-pdf', async (req, res) => {

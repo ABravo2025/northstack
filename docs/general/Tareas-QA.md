@@ -2295,6 +2295,20 @@ UI salvo el botón de vista previa por persona dentro del detalle de un Run**. S
 sueltos en el Timeline de Payroll y a cada fila de la nueva tab Payment History del perfil — sin
 tocar nada del backend, la funcionalidad ya estaba completa, solo faltaba el link.
 
+**Ronda 4 (mismo día)**: pedido explícito de que el pago final de Terminate soporte "exactamente las
+mismas opciones que cuando se desarrolla un payroll normal" — es decir, no solo un monto suelto sino
+también bonus/commission/reimbursement/deduction, igual que las líneas de "+ Adjustments" de un Run
+o el modal "One-off Payment" de Payroll. El modal de Terminate ahora deja agregar N líneas
+adicionales (mismo Type/Amount/Note que esos dos lugares, mismos 4 tipos, mismo signo negativo
+automático para `deduction`) debajo del pago principal. Cada línea se crea como su propio
+`PayrollEntry` (un `createOffPayments` por línea, porque esa función solo acepta un `type` por
+llamada). `EmployeeTermination.finalPaymentEntryId` (uno solo) pasó a `finalPaymentEntryIds`
+(array) — el campo nunca se leía en ninguna UI, así que es un rename limpio, no un cambio de
+comportamiento visible. Se pusheó el schema (`prisma db push`) contra `STAGING_DATABASE_URL`,
+aceptando la pérdida de 1 valor no-nulo del campo viejo (el `PayrollEntry` real al que apuntaba
+sigue intacto, solo se perdió el puntero interno no usado). `npm run build`/`npm test` en verde
+(175/175, 174 + 1 nuevo).
+
 **Fuera de alcance, anotado para más adelante:** reactivar/rehire a alguien terminado; arreglar el
 hard-delete roto preexistente de `deleteEmployee` (bug real pero no de esta tarea — termination es
 la alternativa correcta a usar en su lugar); campo de "razón de baja" (no se pidió, `EmployeeTermination`

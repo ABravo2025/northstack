@@ -1,7 +1,7 @@
 import prisma from '../../lib/prisma.js';
 import { createOffPayments } from './payrollOffPaymentService.js';
 import { syncTimeOffCalendarEvent } from '../integrations/googleCalendarSyncService.js';
-import type { EmployeeTermination } from '@prisma/client';
+import type { EmployeeTermination, PayrollEntryType } from '@prisma/client';
 
 // Termination is a status change with several coordinated side effects, not a delete — matches
 // the "hide, don't destroy" pattern already used for Contact/Opportunity (isActive). Every
@@ -57,11 +57,21 @@ export async function getLatestTermination(employeeId: string): Promise<Employee
   });
 }
 
+// Bonus/commission/reimbursement/deduction — the same adjustment types a normal payroll run
+// offers (payrollEntryService.createAdjustment), minus 'base' which isn't user-selectable there
+// either (it's the implicit primary line, same role the amount/currency/date fields play below).
+export interface FinalPaymentLineInput {
+  type: Exclude<PayrollEntryType, 'base'>;
+  amountCents: number;
+  label?: string | null;
+}
+
 export interface FinalPaymentInput {
   amountCents: number;
   currency: string;
   paymentDate: string;
   label?: string | null;
+  additionalLines?: FinalPaymentLineInput[];
 }
 
 export interface CreateTerminationInput {
@@ -110,25 +120,33 @@ export async function createTermination(input: CreateTerminationInput): Promise<
     newManagerId: chosen.get(report.id) ?? null,
   }));
 
-  let finalPaymentEntryId: string | null = null;
+  const finalPaymentEntryIds: string[] = [];
   if (input.finalPayment) {
     // Independent of whether the termination itself is immediate or scheduled — an off-cycle
     // PayrollEntry (payrollOffPaymentService.ts, existing Payroll Unit 18/19) already carries its
-    // own paymentDate, so it's created right away regardless.
-    const [result] = await createOffPayments({
-      tenantId: input.tenantId,
-      type: 'base',
-      paymentDate: input.finalPayment.paymentDate,
-      entries: [
-        {
-          employeeId: input.employeeId,
-          amountCents: input.finalPayment.amountCents,
-          currency: input.finalPayment.currency,
-          label: input.finalPayment.label ?? 'Final payment',
-        },
-      ],
-    });
-    finalPaymentEntryId = result.entryId;
+    // own paymentDate, so it's created right away regardless. One createOffPayments call per line
+    // since it only takes a single `type` per call — the primary payment plus each additional
+    // bonus/commission/reimbursement/deduction line all become their own PayrollEntry.
+    const lines: { type: PayrollEntryType; amountCents: number; label?: string | null }[] = [
+      { type: 'base', amountCents: input.finalPayment.amountCents, label: input.finalPayment.label ?? 'Final payment' },
+      ...(input.finalPayment.additionalLines ?? []),
+    ];
+    for (const line of lines) {
+      const [result] = await createOffPayments({
+        tenantId: input.tenantId,
+        type: line.type,
+        paymentDate: input.finalPayment.paymentDate,
+        entries: [
+          {
+            employeeId: input.employeeId,
+            amountCents: line.amountCents,
+            currency: input.finalPayment.currency,
+            label: line.label,
+          },
+        ],
+      });
+      finalPaymentEntryIds.push(result.entryId);
+    }
   }
 
   const termination = await prisma.employeeTermination.create({
@@ -137,7 +155,7 @@ export async function createTermination(input: CreateTerminationInput): Promise<
       employeeId: input.employeeId,
       terminationDate,
       revokeAccess: input.revokeAccess,
-      finalPaymentEntryId,
+      finalPaymentEntryIds,
       createdByUserId: input.createdByUserId,
       reassignments: { create: reassignmentRows },
     },

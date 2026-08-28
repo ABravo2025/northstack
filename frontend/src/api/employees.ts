@@ -7,6 +7,7 @@ import type {
   EmployeeTermination,
   EmployeeTerminationOptions,
   Invitation,
+  PayrollEntryType,
 } from './types.js';
 
 export const employeesApi = {
@@ -140,7 +141,13 @@ export const employeesApi = {
       terminationDate: string;
       revokeAccess: boolean;
       reassignments?: { reportEmployeeId: string; newManagerId: string | null }[];
-      finalPayment?: { amountCents: number; currency: string; paymentDate: string; label?: string | null };
+      finalPayment?: {
+        amountCents: number;
+        currency: string;
+        paymentDate: string;
+        label?: string | null;
+        additionalLines?: { type: Exclude<PayrollEntryType, 'base'>; amountCents: number; label?: string | null }[];
+      };
     },
   ): Promise<{ termination: EmployeeTermination; executedNow: boolean }> => {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/termination`, {

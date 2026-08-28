@@ -116,9 +116,14 @@ vi.mock('../src/lib/prisma.js', () => ({
   },
 }));
 
-const { createOffPaymentsMock } = vi.hoisted(() => ({
-  createOffPaymentsMock: vi.fn(async (input: any) => input.entries.map((e: any) => ({ employeeId: e.employeeId, entryId: 'entry-1' }))),
-}));
+const { createOffPaymentsMock } = vi.hoisted(() => {
+  let entrySeq = 0;
+  return {
+    createOffPaymentsMock: vi.fn(async (input: any) =>
+      input.entries.map((e: any) => ({ employeeId: e.employeeId, entryId: `entry-${++entrySeq}` })),
+    ),
+  };
+});
 vi.mock('../src/modules/hr/payrollOffPaymentService.js', () => ({
   createOffPayments: createOffPaymentsMock,
 }));
@@ -298,7 +303,33 @@ describe('createTermination — immediate (today/past)', () => {
     expect(createOffPaymentsMock).toHaveBeenCalledWith(
       expect.objectContaining({ tenantId: 't1', type: 'base', paymentDate: '2026-01-15' }),
     );
-    expect(result.termination.finalPaymentEntryId).toBe('entry-1');
+    expect(result.termination.finalPaymentEntryIds).toHaveLength(1);
+  });
+
+  it('creates one PayrollEntry per additional line (bonus/commission/reimbursement/deduction), same adjustment types as a normal payroll run', async () => {
+    const result = await createTermination({
+      tenantId: 't1',
+      employeeId: 'e1',
+      terminationDate: '2026-01-01',
+      revokeAccess: false,
+      createdByUserId: 'u1',
+      finalPayment: {
+        amountCents: 50000,
+        currency: 'USD',
+        paymentDate: '2026-01-15',
+        label: 'Severance',
+        additionalLines: [
+          { type: 'bonus', amountCents: 10000, label: 'Retention bonus' },
+          { type: 'deduction', amountCents: -2000, label: 'Equipment not returned' },
+        ],
+      },
+    });
+
+    expect(createOffPaymentsMock).toHaveBeenCalledTimes(3);
+    expect(createOffPaymentsMock).toHaveBeenCalledWith(expect.objectContaining({ type: 'base', paymentDate: '2026-01-15' }));
+    expect(createOffPaymentsMock).toHaveBeenCalledWith(expect.objectContaining({ type: 'bonus', paymentDate: '2026-01-15' }));
+    expect(createOffPaymentsMock).toHaveBeenCalledWith(expect.objectContaining({ type: 'deduction', paymentDate: '2026-01-15' }));
+    expect(result.termination.finalPaymentEntryIds).toHaveLength(3);
   });
 
   it('rejects terminating an employee who is already terminated', async () => {

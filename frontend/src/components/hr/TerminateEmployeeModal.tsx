@@ -1,10 +1,27 @@
 import { useEffect, useState } from 'react';
 import { api } from '../../api';
+import type { PayrollEntryType } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import Modal from '../common/Modal';
 import Field from '../common/Field';
 import SearchableSelect from '../common/SearchableSelect';
+import { TrashIcon } from '../common/Icons';
 import { CURRENCY_CODES } from '../../lib/currencies';
+
+type AdjustmentType = Exclude<PayrollEntryType, 'base'>;
+
+const ADJUSTMENT_TYPE_LABELS: Record<AdjustmentType, string> = {
+  bonus: 'Bonus',
+  commission: 'Commission',
+  reimbursement: 'Reimbursement',
+  deduction: 'Deduction',
+};
+
+interface AdditionalLine {
+  type: AdjustmentType;
+  amount: string;
+  label: string;
+}
 
 interface TerminateEmployeeModalProps {
   open: boolean;
@@ -44,6 +61,7 @@ export default function TerminateEmployeeModal({
   const [finalCurrency, setFinalCurrency] = useState(defaultCurrency || 'USD');
   const [finalPaymentDate, setFinalPaymentDate] = useState(todayIso());
   const [finalLabel, setFinalLabel] = useState('Final payment');
+  const [additionalLines, setAdditionalLines] = useState<AdditionalLine[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -56,12 +74,18 @@ export default function TerminateEmployeeModal({
     setFinalCurrency(defaultCurrency || 'USD');
     setFinalPaymentDate(todayIso());
     setFinalLabel('Final payment');
+    setAdditionalLines([]);
     api
       .getTerminationOptions(token, employee.id)
       .then((options) => setDirectReports(options.directReports))
       .catch(() => setDirectReports([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, employee.id]);
+
+  const addLine = () => setAdditionalLines((prev) => [...prev, { type: 'bonus', amount: '', label: '' }]);
+  const removeLine = (index: number) => setAdditionalLines((prev) => prev.filter((_, i) => i !== index));
+  const updateLine = (index: number, patch: Partial<AdditionalLine>) =>
+    setAdditionalLines((prev) => prev.map((line, i) => (i === index ? { ...line, ...patch } : line)));
 
   const isFuture = lastDay > todayIso();
   const managerOptions = [
@@ -75,6 +99,13 @@ export default function TerminateEmployeeModal({
       if (!finalAmount || Number.isNaN(cents) || cents <= 0) {
         toast.error('Enter a valid final payment amount.');
         return;
+      }
+      for (const line of additionalLines) {
+        const lineCents = Math.round(parseFloat(line.amount) * 100);
+        if (!line.amount || Number.isNaN(lineCents) || lineCents <= 0) {
+          toast.error('Enter a valid amount for every additional payment line.');
+          return;
+        }
       }
     }
 
@@ -93,6 +124,14 @@ export default function TerminateEmployeeModal({
               currency: finalCurrency,
               paymentDate: finalPaymentDate,
               label: finalLabel || null,
+              additionalLines: additionalLines.map((line) => ({
+                type: line.type,
+                amountCents:
+                  line.type === 'deduction'
+                    ? -Math.abs(Math.round(parseFloat(line.amount) * 100))
+                    : Math.round(parseFloat(line.amount) * 100),
+                label: line.label || null,
+              })),
             }
           : undefined,
       });
@@ -202,6 +241,52 @@ export default function TerminateEmployeeModal({
                 <Field label="Label">
                   <input type="text" value={finalLabel} onChange={(e) => setFinalLabel(e.target.value)} />
                 </Field>
+
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-medium text-ink-muted">
+                      Additional payments — same options as a normal payroll run
+                    </span>
+                    <button type="button" className="btn-secondary btn-sm" onClick={addLine}>
+                      + Add line
+                    </button>
+                  </div>
+                  {additionalLines.map((line, index) => (
+                    <div key={index} className="flex items-end gap-2">
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label>Type</label>
+                        <select
+                          value={line.type}
+                          onChange={(e) => updateLine(index, { type: e.target.value as AdjustmentType })}
+                        >
+                          {(Object.keys(ADJUSTMENT_TYPE_LABELS) as AdjustmentType[]).map((type) => (
+                            <option key={type} value={type}>
+                              {ADJUSTMENT_TYPE_LABELS[type]}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label>Amount</label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          style={{ width: 100 }}
+                          value={line.amount}
+                          onChange={(e) => updateLine(index, { amount: e.target.value })}
+                        />
+                      </div>
+                      <div className="form-group" style={{ marginBottom: 0 }}>
+                        <label>Note</label>
+                        <input type="text" value={line.label} onChange={(e) => updateLine(index, { label: e.target.value })} />
+                      </div>
+                      <button type="button" className="icon-btn" onClick={() => removeLine(index)} aria-label="Remove line">
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>

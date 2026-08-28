@@ -108,7 +108,7 @@ export interface EmployeeTermination {
   employeeId: string;
   terminationDate: string;
   revokeAccess: boolean;
-  finalPaymentEntryId: string | null;
+  finalPaymentEntryIds: string[];
   createdAt: string;
   executedAt: string | null;
   cancelledAt: string | null;

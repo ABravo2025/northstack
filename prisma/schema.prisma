@@ -585,9 +585,11 @@ model EmployeeTermination {
   employee            Employee  @relation(fields: [employeeId], references: [id])
   terminationDate     DateTime
   revokeAccess        Boolean   @default(false)
-  // PayrollEntry.id of the off-cycle payment created alongside this termination, if any
+  // PayrollEntry.ids of the off-cycle payment(s) created alongside this termination, if any
   // (payrollOffPaymentService.ts's createOffPayments — reused as-is, not a new payroll concept).
-  finalPaymentEntryId String?
+  // One per line: the primary final payment plus any bonus/commission/reimbursement/deduction
+  // lines added alongside it (same adjustment types a normal payroll run offers).
+  finalPaymentEntryIds String[] @default([])
   createdByUserId     String
   createdBy           User      @relation(fields: [createdByUserId], references: [id])
   createdAt           DateTime  @default(now())

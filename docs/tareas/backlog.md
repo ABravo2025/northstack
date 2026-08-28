@@ -97,12 +97,15 @@ los ítems.
 
 ## Payments
 
-- [ ] **Conexión con Stripe no funciona en modo test (Payments v1)**: probado con una restricted key
-  recién generada — la conexión falla. Nota aparte: esa key quedó pegada en el chat del usuario;
-  conviene rotarla una vez resuelto el bug, aunque sea de test.
-
 ## Infra/Otros
 
+- [ ] **Rotar una Stripe secret key `sk_live_...` que quedó pegada por error en un campo de Vercel
+  (y visible en el chat)**: durante el debugging de QA-49 (conexión de Stripe en staging), el usuario
+  pegó por error su Stripe secret key real (modo live, no test) en el campo de valor de
+  `STRIPE_TOKEN_ENCRYPTION_KEY` en Vercel, en vez de la key de cifrado de 64 hex. Se corrigió el
+  campo, pero la key live ya pasó por el portapapeles y quedó visible en el chat — rotarla/revocarla
+  en el dashboard de Stripe (Developers → API keys) aunque Vercel la haya guardado como "Secret"
+  (write-only).
 - [ ] **Prorrateo al cambiar de plan**: `changePlan` (self-serve, Billing Integration) llama al
   proveedor y agenda el cambio para el próximo ciclo de facturación — no calcula ni cobra/acredita la
   diferencia del ciclo en curso. Sin definir si hace falta prorratear de verdad o si "aplica desde el

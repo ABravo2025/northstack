@@ -1995,3 +1995,53 @@ confirmar que no rompió nada ahí — sin cambios visuales. `npm run build`/`np
 verde en back y front. Sin errores de consola.
 
 **Severidad:** baja — puramente visual/CSS, no toca lógica ni datos.
+
+## QA-49 — Fix real: `staging.joinnorthstack.com` nunca estuvo conectado a nada (Vercel, no código)
+
+**Por qué existe esta tarea:** el usuario reportó que la conexión con Stripe fallaba incluso con una
+key con permisos de lectura completos. La investigación arrancó ahí, pero terminó destapando que
+`staging.joinnorthstack.com` — el dominio contra el que se venía "probando en staging" en sesiones
+anteriores (Google Calendar, Tags, etc.) — **nunca estuvo realmente enchufado**: ni como dominio del
+proyecto de Vercel, ni con una rama de Preview asignada, ni con `DATABASE_URL` configurada para
+Preview. Nada de código roto — todo config/infra de Vercel, encontrado y corregido en vivo con
+Alejandro, capa por capa:
+
+1. **`STRIPE_TOKEN_ENCRYPTION_KEY` no estaba en Vercel** (`src/lib/stripeEncryption.ts`) — generada
+   en 2026-08 y cargada solo en `.env` local, nunca subida a Vercel (pendiente ya documentado en
+   `docs/tareas/specpaymentsv1.md` desde que se construyó Payments v1 Unit 1). Sin ella, `connectStripe()`
+   tira antes de llegar a validar la key del tenant contra la API de Stripe — el mensaje real no
+   tenía nada que ver con permisos/scopes de la key que el usuario probaba.
+2. **`staging.joinnorthstack.com` no figuraba en Settings → Domains del proyecto** — solo estaban
+   `app.joinnorthstack.com` y `northstack-two.vercel.app`, ambos Production. El dominio nunca se
+   había agregado a este proyecto de Vercel.
+3. Al agregarlo, hacía falta asignarlo a un ambiente Preview **atado a la rama `staging`** — no
+   Custom Environments (función paga que el proyecto no tiene), sino el selector de rama estándar
+   dentro del mismo diálogo "Add Domain" (gratis). Más un registro DNS (CNAME) nuevo, que tampoco
+   existía.
+4. Con el dominio ya bien enchufado a la rama, apareció el problema real y más grave:
+   **`DATABASE_URL` solo estaba seteada para Production, nunca para Preview** — ningún deployment de
+   Preview de este proyecto pudo tocar la base de datos, nunca, hasta hoy. Esto es anterior y
+   más importante que el tema de Stripe: significa que todo lo "probado en staging" en sesiones
+   previas (Google Calendar QA-19/23, Tags QA-45/46, etc.) se verificó por otra vía — en esta sesión
+   puntual, contra un backend local apuntado a `STAGING_DATABASE_URL` vía override de env var, nunca
+   contra este dominio real.
+5. Agregada la variable (mismo mecanismo que con Stripe: nueva entrada, mismo nombre, scope Preview
+   sin tocar la de Production), el primer intento pareció fallar — resultó ser que el campo "Value"
+   se había quedado con el placeholder de ejemplo de Vercel (`postgres://user:pass@db.example.com...`)
+   en vez del valor real pegado.
+6. Confusión adicional en el camino: varios redeploys se dispararon sobre deployments equivocados
+   (una fila no relacionada, arriba de todo en una lista sin filtrar) — se resolvió empujando un
+   commit vacío a `staging` para forzar un deployment inequívocamente nuevo en vez de seguir
+   adivinando cuál redeployar desde el dashboard.
+
+**Incidente de seguridad en el camino**: durante el paso 1, el usuario pegó por error su Stripe
+secret key **real** (`sk_live_...`, no test) en el campo de valor de `STRIPE_TOKEN_ENCRYPTION_KEY`
+en Vercel — corregido, pero la key ya pasó por el chat y el portapapeles. Anotado en
+`docs/tareas/backlog.md` para rotarla en el dashboard de Stripe.
+
+**Resultado final**: `staging.joinnorthstack.com` conecta, loguea, y la conexión de Stripe con una
+key de test terminó funcionando — confirmado en vivo por el usuario. Ningún cambio de código en
+este ítem, todo config de Vercel (env vars + dominio + rama).
+
+**Severidad:** alta mientras estuvo — bloqueaba cualquier prueba real contra el dominio de staging,
+no solo Stripe. Resuelta.

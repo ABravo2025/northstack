@@ -109,6 +109,13 @@ export interface GoogleCalendarStatus {
   needsReconnect: boolean;
 }
 
+export interface GoogleCalendarViewEvent {
+  id: string;
+  title: string;
+  start: string;
+  allDay: boolean;
+}
+
 export interface StripeConnectionStatus {
   connected: boolean;
   apiKeyMode: 'test' | 'live' | null;

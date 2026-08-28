@@ -5,7 +5,10 @@ import {
   googleCalendarConfigured,
   handleGoogleOAuthCallback,
 } from '../modules/integrations/googleCalendarAuthService.js';
-import { backfillCalendarSyncForUser } from '../modules/integrations/googleCalendarSyncService.js';
+import {
+  backfillCalendarSyncForUser,
+  listGoogleEventsForCalendarView,
+} from '../modules/integrations/googleCalendarSyncService.js';
 import {
   openWatchChannelForUser,
   processInboundCalendarChanges,
@@ -78,6 +81,27 @@ googleCalendarIntegrationRouter.get('/api/integrations/google-calendar/callback'
   await openWatchChannelForUser(result.userId!);
 
   return res.redirect(`${appBaseUrl()}/settings/profile?googleCalendarConnected=1`);
+});
+
+// Read-only overlay for the Overview calendar (backlog QA, 2026-08-27) —
+// the caller's own Google Calendar events that aren't already synced Tasks,
+// scoped to the visible month so this never asks Google for a user's entire
+// calendar history. See listGoogleEventsForCalendarView's own comment for
+// why these are shown, never imported as Tasks.
+googleCalendarIntegrationRouter.get('/api/integrations/google-calendar/events', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  const start = req.query.start as string | undefined;
+  const end = req.query.end as string | undefined;
+  if (!start || !end) {
+    return res.status(400).json({ error: 'start and end query params are required.' });
+  }
+
+  const events = await listGoogleEventsForCalendarView(user.id, start, end);
+  return res.json(events);
 });
 
 googleCalendarIntegrationRouter.post('/api/integrations/google-calendar/disconnect', async (req, res) => {

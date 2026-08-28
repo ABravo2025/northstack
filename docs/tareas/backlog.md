@@ -138,18 +138,16 @@ los ítems.
   Northstack); webhooks salientes (URL + eventos elegibles); Slack como app instalable vía OAuth real
   (no un webhook simple). Incluye también la contraparte entrante: API pública protegida por token
   para integraciones externas. Sin spec técnico todavía, explícitamente no bloqueante para el beta.
-- [x] **OAuth de Google — sync de Task/Time Off al Google Calendar personal** (2026-08-22, solo
-  local todavía, ver `docs/general/database-schema.md` grupo 9 y QA-19 en `Tareas-QA.md`):
-  construido — cada usuario conecta su cuenta desde Settings → Profile, y sus Tasks con fecha
-  límite + Time Off aprobados se sincronizan (best-effort, unidireccional) para que Google dé las
-  notificaciones. Bloqueado para probar de punta a punta y pushear a `staging`: falta que
-  Alejandro cargue `GOOGLE_CALENDAR_CLIENT_SECRET`/`GOOGLE_CALENDAR_REDIRECT_URI` reales (Google
-  Cloud Console) — el `GOOGLE_CALENDAR_CLIENT_ID` que ya estaba en `.env` no tenía código atrás
-  hasta ahora.
-- [ ] **Sync de Google Calendar no trae los eventos ya existentes**: al vincular Google Calendar, no
-  se sincronizan los elementos que el usuario ya tenía registrados en su calendario — el sync
-  construido arriba es unidireccional (Northstack → Google); falta evaluar si además hace falta
-  traer eventos existentes desde Google hacia la plataforma.
+- [x] **OAuth de Google — sync de Task/Time Off al Google Calendar personal** (2026-08-22/23, en
+  `staging`, ver `docs/general/database-schema.md` grupo 9 y QA-19/QA-47 en `Tareas-QA.md`):
+  cada usuario conecta su cuenta desde Settings → Profile; sus Tasks con fecha límite y los Time
+  Off aprobados del tenant se empujan a Google (best-effort). Para Tasks el sync es realmente
+  bidireccional: un canal de push notifications (`events.watch`) trae de vuelta a Northstack
+  cualquier edición/borrado hecho directamente en Google — probado en vivo con Alejandro en
+  `staging` el 2026-08-23. Alcance: solo eventos que se originaron como Task en Northstack: los que
+  el usuario ya tenía cargados directamente en Google se muestran de solo lectura en el calendario
+  del Overview (QA-47), no se importan como Task (`Task.entityType`/`entityId` son obligatorios, no
+  hay a qué entidad atribuirle un evento personal).
 - [ ] **"Sign in with Google" en registro/login**: comparte el mismo Google Cloud OAuth client que
   el punto de arriba, pero es un flujo de autenticación distinto (reemplaza/complementa
   email+password), no construido todavía. Evaluar junto con el ítem de abajo si conviene un solo

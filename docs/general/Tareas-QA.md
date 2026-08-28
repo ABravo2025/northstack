@@ -1920,3 +1920,46 @@ borrado de la base al terminar (no queda como catálogo real del tenant de QA).
 
 **Severidad:** baja — solo lectura/filtrado sobre datos ya expuestos por QA-45, sin cambios de
 modelo ni de endpoints.
+
+## QA-47 — Overview: overlay de solo lectura para eventos de Google Calendar no vinculados a un Task (en `staging`)
+
+**Por qué existe esta tarea:** el usuario reportó que al vincular Google Calendar, los eventos que
+ya tenía cargados ahí no aparecían en Northstack. Investigando el código existente se confirmó que
+el sync de Tasks YA es bidireccional (`googleCalendarWatchService.ts`, canal de push notifications
++ `events.list(syncToken)`, probado en vivo con Alejandro el 2026-08-23, ver nota en QA-19) — pero
+solo para eventos que se originaron como Task en Northstack; cualquier otro evento del calendario
+del usuario se ignora explícitamente (`applyInboundEventChange`: "not a Task-tracked event —
+ignore anything else").
+
+**Decisión de producto** (preguntada directo al usuario, dado que `Task.entityType`/`entityId` son
+obligatorios — un evento personal no tiene a qué Company/Contact/Employee/Opportunity atribuirse):
+de las 3 opciones planteadas (convertir en Task forzando una entidad, crear un tipo nuevo
+"recordatorio personal" sin entidad, o solo mostrar sin importar), el usuario eligió **"Solo
+mostrar, no importar"** — evita el problema del modelo de datos por completo, sin crear ninguna
+fila nueva en la base.
+
+**Backend**: `listGoogleEventsForCalendarView(userId, timeMinISO, timeMaxISO)` (nueva, en
+`googleCalendarSyncService.ts`) — reusa `getAuthorizedClientForUser` (misma auth que el resto del
+módulo, mismo scope OAuth ya otorgado, `calendar.events`, no hace falta reconexión); trae
+`calendar.events.list` paginado (`singleEvents: true` para expandir recurrencias) acotado a
+`[timeMin, timeMax]`, excluye eventos ya linkeados a un Task del usuario (`Task.googleCalendarEventId`)
+para no duplicar lo que ya se muestra como Task, y eventos cancelados. Nunca tira — mismo contrato
+best-effort que el resto del archivo (sin conexión o con error, devuelve `[]`). Nueva ruta
+`GET /api/integrations/google-calendar/events?start&end`.
+
+**Frontend**: `OverviewPage.tsx` — nuevo estado `googleEvents`, con su propio `useEffect` acotado a
+`[cursor]` (a diferencia de Time Off/Tasks/birthdays, que traen todo una sola vez y filtran por día
+en el cliente, acá hace falta re-pedir a Google en cada navegación de mes porque no se le puede
+pedir "todo" sin rango). Nueva entrada `calendar-entry-google` (celeste, sin click — a diferencia
+de `calendar-entry-task`, no dispara ningún popover) en cada celda del día.
+
+**Verificado**: `npm run build`/`npm test` (147/147) en verde en back y front. Contra el tenant de
+prueba en `staging` (sin cuenta de Google conectada): `GET .../events` responde 200 con `[]`, el
+Overview renderiza el calendario sin errores de consola. **No verificado con una cuenta de Google
+real** — a diferencia del sync de Tasks (QA-19), que se probó en vivo con Alejandro porque requiere
+completar un consentimiento OAuth real, esto quedó pendiente de que él lo pruebe con su propia
+cuenta ya conectada (los servidores locales quedaron corriendo para eso).
+
+**Severidad:** baja — solo lectura, no crea ni modifica ninguna fila; el único caso a confirmar en
+vivo es que el rango de fechas y el filtro de "ya es un Task" devuelvan lo esperado contra datos
+reales.

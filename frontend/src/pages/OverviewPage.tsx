@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
-import { api, type EmployeeBirthday, type Task } from '../api';
+import { api, type EmployeeBirthday, type GoogleCalendarViewEvent, type Task } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import TableSkeleton from '../components/common/TableSkeleton';
 import { ChevronLeftIcon, ChevronRightIcon } from '../components/common/Icons';
@@ -67,6 +67,7 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
   const [requests, setRequests] = useState<any[]>([]);
   const [calendarTasks, setCalendarTasks] = useState<Task[]>([]);
   const [birthdays, setBirthdays] = useState<EmployeeBirthday[]>([]);
+  const [googleEvents, setGoogleEvents] = useState<GoogleCalendarViewEvent[]>([]);
   const [tenantUsers, setTenantUsers] = useState<{ id: string; firstName: string; lastName: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [cursor, setCursor] = useState(() => {
@@ -95,6 +96,21 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Own effect, keyed on the visible month: unlike the team-wide sources
+  // above (Tasks/Time Off/birthdays fetch everything once and filter
+  // client-side per day), Google's API needs a bounded time range, so this
+  // has to refetch on every month navigation instead. Silent on failure —
+  // no Google connection just means nothing extra to show, not an error.
+  useEffect(() => {
+    const monthStart = new Date(Date.UTC(cursor.year, cursor.month, 1)).toISOString();
+    const monthEnd = new Date(Date.UTC(cursor.year, cursor.month + 1, 1)).toISOString();
+    api
+      .listGoogleCalendarEvents(token, monthStart, monthEnd)
+      .then(setGoogleEvents)
+      .catch(() => setGoogleEvents([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cursor]);
 
   const fetchCalendarData = () =>
     Promise.all([
@@ -208,6 +224,18 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
     return map;
   }, [grid, birthdays, cursor]);
 
+  const googleEventsByDay = useMemo(() => {
+    const map: Record<string, GoogleCalendarViewEvent[]> = {};
+    for (let week = 0; week < grid.length; week++) {
+      for (const day of grid[week]) {
+        if (day === null) continue;
+        const key = dateKey(cursor.year, cursor.month, day);
+        map[key] = googleEvents.filter((e) => taskDueDateKey(e.start) === key);
+      }
+    }
+    return map;
+  }, [grid, googleEvents, cursor]);
+
   const goToPrevMonth = () => {
     setCursor((c) => (c.month === 0 ? { year: c.year - 1, month: 11 } : { year: c.year, month: c.month - 1 }));
   };
@@ -269,6 +297,7 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
                         const dayRequests = requestsByDay[key] || [];
                         const dayTasks = tasksByDay[key] || [];
                         const dayBirthdays = birthdaysByDay[key] || [];
+                        const dayGoogleEvents = googleEventsByDay[key] || [];
                         return (
                           <td
                             key={j}
@@ -327,6 +356,23 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
                                 >
                                   {timeLabel && <span className="calendar-entry-task-time">{timeLabel} </span>}
                                   {task.title}
+                                </div>
+                              );
+                            })}
+                            {dayGoogleEvents.map((event) => {
+                              const eventDate = new Date(event.start);
+                              const timeLabel = event.allDay
+                                ? null
+                                : eventDate.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+                              return (
+                                <div
+                                  key={event.id}
+                                  className="calendar-entry-google"
+                                  title={`${timeLabel ? `${timeLabel} — ` : ''}${event.title} (from your Google Calendar)`}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {timeLabel && <span className="calendar-entry-task-time">{timeLabel} </span>}
+                                  {event.title}
                                 </div>
                               );
                             })}

@@ -1,5 +1,5 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
-import type { GoogleCalendarStatus, StripeConnectionStatus } from './types.js';
+import type { GoogleCalendarStatus, GoogleCalendarViewEvent, StripeConnectionStatus } from './types.js';
 
 export const integrationsApi = {
   getGoogleCalendarStatus: async (token: string): Promise<GoogleCalendarStatus> => {
@@ -26,6 +26,17 @@ export const integrationsApi = {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);
+  },
+
+  // Read-only overlay for the Overview calendar — the caller's own Google
+  // events that aren't already synced Tasks, scoped to [start, end).
+  listGoogleCalendarEvents: async (token: string, start: string, end: string): Promise<GoogleCalendarViewEvent[]> => {
+    const params = new URLSearchParams({ start, end });
+    const res = await apiFetch(`${API_BASE_URL}/api/integrations/google-calendar/events?${params}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
   },
 
   getStripeStatus: async (token: string): Promise<StripeConnectionStatus> => {

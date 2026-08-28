@@ -230,6 +230,70 @@ export async function syncTimeOffCalendarEvent(
   }
 }
 
+export interface GoogleCalendarViewEvent {
+  id: string;
+  title: string;
+  start: string; // ISO date (all-day) or ISO datetime, mirrors Task.dueDate's own dual format
+  allDay: boolean;
+}
+
+// Read-only overlay for the Overview calendar (backlog QA, 2026-08-27) — a
+// user's own Google Calendar events that were never created as a Northstack
+// Task (e.g. a personal appointment) have nowhere to live in this schema:
+// Task.entityType/entityId are required, so an event can't become a Task
+// without picking a Company/Contact/Employee/Opportunity for it first.
+// Rather than forcing that pick on import, these are only ever displayed —
+// no DB row is ever created for them, and nothing here is ever pushed back
+// to Google. Task-linked events are excluded since the caller already
+// renders those as their own calendar-entry-task from `calendarTasks`;
+// listing them again here would show every synced Task twice.
+export async function listGoogleEventsForCalendarView(
+  userId: string,
+  timeMinISO: string,
+  timeMaxISO: string,
+): Promise<GoogleCalendarViewEvent[]> {
+  try {
+    const calendar = await getAuthorizedClientForUser(userId);
+    if (!calendar) return [];
+
+    const linkedTasks = await prisma.task.findMany({
+      where: { assigneeId: userId, googleCalendarEventId: { not: null } },
+      select: { googleCalendarEventId: true },
+    });
+    const linkedEventIds = new Set(linkedTasks.map((t) => t.googleCalendarEventId));
+
+    const items: calendar_v3.Schema$Event[] = [];
+    let pageToken: string | undefined;
+    do {
+      const { data } = await calendar.events.list({
+        calendarId: 'primary',
+        timeMin: timeMinISO,
+        timeMax: timeMaxISO,
+        singleEvents: true, // expands recurring events into per-day instances
+        orderBy: 'startTime',
+        maxResults: 250,
+        pageToken,
+      });
+      items.push(...(data.items ?? []));
+      pageToken = data.nextPageToken ?? undefined;
+    } while (pageToken);
+
+    return items
+      .filter((event) => event.id && event.status !== 'cancelled' && !linkedEventIds.has(event.id))
+      .map((event) => ({
+        id: event.id!,
+        title: event.summary ?? '(No title)',
+        start: event.start?.date ?? event.start?.dateTime ?? '',
+        allDay: !!event.start?.date,
+      }))
+      .filter((event) => event.start);
+  } catch (err) {
+    await markNeedsReconnectIfRevoked(userId, err);
+    console.error('listGoogleEventsForCalendarView failed:', err);
+    return [];
+  }
+}
+
 // Sync only ever fires reactively, on the next create/update/delete after a
 // user connects (see taskService.ts/timeOffRequestService.ts's call sites) —
 // it never looks backward. Without this, everything a user already had

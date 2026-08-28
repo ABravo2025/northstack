@@ -1,12 +1,7 @@
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { canManagePayments } from '../modules/auth/permissionService.js';
-import {
-  connectStripe,
-  disconnectStripe,
-  getStripeConnectionStatus,
-  saveStripeWebhookSecret,
-} from '../modules/integrations/stripeService.js';
+import { connectStripe, disconnectStripe, getStripeConnectionStatus } from '../modules/integrations/stripeService.js';
 
 export const stripeIntegrationRouter = createAsyncRouter();
 
@@ -41,24 +36,6 @@ stripeIntegrationRouter.post('/api/integrations/stripe/connect', async (req, res
 
   try {
     const status = await connectStripe({ tenantId: user.tenantId!, userId: user.id, apiKey });
-    return res.json(status);
-  } catch (error) {
-    return res.status(400).json({ error: (error as Error).message });
-  }
-});
-
-stripeIntegrationRouter.post('/api/integrations/stripe/webhook-secret', async (req, res) => {
-  const user = await validateSession(req, res);
-  if (!user) return;
-  if (!requirePaymentsAccess(user, res)) return;
-
-  const secret = typeof req.body?.secret === 'string' ? req.body.secret : '';
-  if (!secret.trim()) {
-    return res.status(400).json({ error: 'secret is required' });
-  }
-
-  try {
-    const status = await saveStripeWebhookSecret(user.tenantId!, secret);
     return res.json(status);
   } catch (error) {
     return res.status(400).json({ error: (error as Error).message });

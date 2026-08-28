@@ -771,13 +771,18 @@ Notas:
 
 ## 10. Payments v1 — conexión con Stripe
 
-Pedido por Alejandro 2026-08-26 (`docs/tareas/specpaymentsv1.md`), Unit 1 únicamente — conectar la
-cuenta de Stripe **propia de cada tenant** (Restricted Key pegada a mano, sin OAuth/Connect —
-Northstack no tiene entidad de negocio para darse de alta como plataforma de Stripe, mismo bloqueo
-ya anotado para la suscripción propia de Northstack vía Paddle/Mercado Pago). Solo lectura: nada
-acá crea charges/invoices/subscriptions. Units 2-4 (lookup Company↔Customer, resúmenes de pagos en
-vivo, webhook de notificaciones) agregan campos/modelos propios cuando se construyan — no
-anticipados acá. **Solo en `staging` — nada pusheado a `main` todavía.**
+Pedido por Alejandro 2026-08-26 (`docs/tareas/specpaymentsv1.md`), Units 1-4 completas y ya en
+`main`. Cada tenant conecta su **propia** cuenta de Stripe (Restricted Key pegada a mano — Northstack
+confirmó con el soporte de Stripe que OAuth/Connect requiere una entidad legal tipo LLC que
+Northstack no tiene todavía, mismo bloqueo ya anotado para su propia suscripción vía Paddle/Mercado
+Pago). Solo lectura: nada acá crea charges/invoices/subscriptions.
+
+Unit 4 (notificaciones proactivas) se **rediseñó 2026-08-28** (ver QA-49/QA-50 en `Tareas-QA.md`):
+originalmente un webhook que cada tenant tenía que registrar a mano en su dashboard de Stripe
+(URL + signing secret) — reemplazado por un cron de 2x/día (`src/routes/internal.ts`,
+`runStripeEventPolling`) que hace polling de `GET /v1/events` con la misma Restricted Key. Cero
+pasos manuales extra para el tenant; `StripeConnection.webhookSigningSecretEncrypted` se sacó del
+schema, se agregó `lastEventPollAt` (cursor del cron, arranca en `connectedAt` en el primer poll).
 
 ```mermaid
 erDiagram

@@ -63,7 +63,6 @@ import {
   getApiKeyForTenant,
   getStripeConnectionStatus,
   markNeedsAttention,
-  saveStripeWebhookSecret,
 } from '../src/modules/integrations/stripeService.js';
 
 function resetMocks() {
@@ -98,7 +97,6 @@ describe('connectStripe', () => {
       apiKeyMode: 'test',
       connectedAt: expect.any(String),
       needsAttention: false,
-      hasWebhookSecret: false,
     });
     expect(connections[0].apiKeyEncrypted).not.toContain('sk_test_abc123');
     expect(connections[0].stripeAccountId).toBe('acct_123');
@@ -139,7 +137,6 @@ describe('connectStripe', () => {
       apiKeyMode: 'live',
       connectedAt: expect.any(String),
       needsAttention: false,
-      hasWebhookSecret: false,
     });
     expect(connections[0].connectedByUserId).toBe('u2');
   });
@@ -154,7 +151,6 @@ describe('getStripeConnectionStatus / disconnectStripe / getApiKeyForTenant', ()
       apiKeyMode: null,
       connectedAt: null,
       needsAttention: false,
-      hasWebhookSecret: false,
     });
   });
 
@@ -180,20 +176,6 @@ describe('getStripeConnectionStatus / disconnectStripe / getApiKeyForTenant', ()
   it('getApiKeyForTenant decrypts back to the exact key that was stored', async () => {
     await connectStripe({ tenantId: 't1', userId: 'u1', apiKey: 'sk_test_roundtrip' });
     expect(await getApiKeyForTenant('t1')).toBe('sk_test_roundtrip');
-  });
-});
-
-describe('saveStripeWebhookSecret', () => {
-  beforeEach(resetMocks);
-
-  it('rejects saving a webhook secret before connecting', async () => {
-    await expect(saveStripeWebhookSecret('t1', 'whsec_abc')).rejects.toThrow(/Connect Stripe first/);
-  });
-
-  it('saves the secret and reflects it in status once connected', async () => {
-    await connectStripe({ tenantId: 't1', userId: 'u1', apiKey: 'sk_test_abc' });
-    const status = await saveStripeWebhookSecret('t1', 'whsec_abc');
-    expect(status.hasWebhookSecret).toBe(true);
   });
 });
 

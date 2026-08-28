@@ -13,6 +13,15 @@ vi.mock('../src/lib/prisma.js', () => ({
   default: {
     stripeConnection: {
       findUnique: vi.fn(async ({ where }: any) => connections.find((c) => c.tenantId === where.tenantId) ?? null),
+      findMany: vi.fn(async ({ where }: any) =>
+        connections.filter((c) => where?.disconnectedAt === undefined || c.disconnectedAt === where.disconnectedAt),
+      ),
+      update: vi.fn(async ({ where, data }: any) => {
+        const existing = connections.find((c) => c.tenantId === where.tenantId);
+        if (!existing) throw new Error('not found');
+        Object.assign(existing, data);
+        return existing;
+      }),
       updateMany: vi.fn(async ({ where, data }: any) => {
         const matches = connections.filter(
           (c) => c.tenantId === where.tenantId && (where.disconnectedAt === undefined || c.disconnectedAt === where.disconnectedAt),
@@ -57,10 +66,11 @@ vi.mock('../src/modules/notifications/notificationService.js', () => ({
   createNotification: createNotificationMock,
 }));
 
-const { listCustomersMock, listChargesMock, listSubscriptionsMock } = vi.hoisted(() => ({
+const { listCustomersMock, listChargesMock, listSubscriptionsMock, listEventsMock } = vi.hoisted(() => ({
   listCustomersMock: vi.fn(async () => ({ data: [], has_more: false })),
   listChargesMock: vi.fn(async () => ({ data: [], has_more: false })),
   listSubscriptionsMock: vi.fn(async () => ({ data: [], has_more: false })),
+  listEventsMock: vi.fn(async () => ({ data: [], has_more: false })),
 }));
 vi.mock('../src/lib/stripe.js', async () => {
   const actual = await vi.importActual<typeof import('../src/lib/stripe.js')>('../src/lib/stripe.js');
@@ -69,6 +79,7 @@ vi.mock('../src/lib/stripe.js', async () => {
     listCustomers: listCustomersMock,
     listCharges: listChargesMock,
     listSubscriptions: listSubscriptionsMock,
+    listEvents: listEventsMock,
   };
 });
 
@@ -80,6 +91,7 @@ import {
   linkCompanyToStripeCustomer,
   notifyCompanyStripeEvent,
   processStripeWebhookEvent,
+  runStripeEventPolling,
   searchStripeCustomersForCompany,
 } from '../src/modules/integrations/stripePaymentsService.js';
 
@@ -90,6 +102,8 @@ function activeConnection(tenantId: string) {
     apiKeyMode: 'test',
     disconnectedAt: null,
     needsAttention: false,
+    connectedAt: new Date('2026-08-01T00:00:00Z'),
+    lastEventPollAt: null as Date | null,
   };
 }
 
@@ -101,6 +115,7 @@ function resetMocks() {
   listCustomersMock.mockReset().mockResolvedValue({ data: [], has_more: false });
   listChargesMock.mockReset().mockResolvedValue({ data: [], has_more: false });
   listSubscriptionsMock.mockReset().mockResolvedValue({ data: [], has_more: false });
+  listEventsMock.mockReset().mockResolvedValue({ data: [], has_more: false });
   createNotificationMock.mockClear();
 }
 
@@ -469,5 +484,83 @@ describe('processStripeWebhookEvent', () => {
     const result = await processStripeWebhookEvent('t1', stripeEvent('customer.created', { customer: 'cus_1' }));
     expect(result).toBe('unhandled event type');
     expect(createNotificationMock).not.toHaveBeenCalled();
+  });
+});
+
+// Twice-daily cron replacement for the per-tenant manual webhook (backlog QA, 2026-08-28) — feeds
+// polled Events through the exact same processStripeWebhookEvent tested above, so these tests
+// focus on the polling mechanics (cursor, pagination, per-tenant isolation) rather than
+// re-covering event-type handling.
+describe('runStripeEventPolling', () => {
+  beforeEach(resetMocks);
+
+  function stripeEvent(type: string, dataObject: Record<string, unknown>) {
+    return { id: `evt_${Math.random()}`, type, data: { object: dataObject } };
+  }
+
+  it('polls from connectedAt when lastEventPollAt has never been set, and advances the cursor after', async () => {
+    companies = [{ id: 'c1', tenantId: 't1', name: 'Acme', stripeCustomerId: 'cus_1', accountOwnerId: 'u1' }];
+    listEventsMock.mockResolvedValueOnce({ data: [stripeEvent('charge.refunded', { customer: 'cus_1' })], has_more: false });
+
+    const result = await runStripeEventPolling();
+
+    expect(result).toEqual({ tenantsPolled: 1, eventsProcessed: 1, failed: 0 });
+    expect(createNotificationMock).toHaveBeenCalledTimes(1);
+    const [, params] = listEventsMock.mock.calls[0];
+    expect(params.createdGte).toBe(Math.floor(connections[0].connectedAt.getTime() / 1000));
+    expect(connections[0].lastEventPollAt).toBeInstanceOf(Date);
+  });
+
+  it('polls from lastEventPollAt, not connectedAt, once a previous run has happened', async () => {
+    const lastPoll = new Date('2026-08-15T00:00:00Z');
+    connections[0].lastEventPollAt = lastPoll;
+
+    await runStripeEventPolling();
+
+    const [, params] = listEventsMock.mock.calls[0];
+    expect(params.createdGte).toBe(Math.floor(lastPoll.getTime() / 1000));
+  });
+
+  it('follows pagination (starting_after/has_more) to collect every event before processing', async () => {
+    companies = [{ id: 'c1', tenantId: 't1', name: 'Acme', stripeCustomerId: 'cus_1', accountOwnerId: 'u1' }];
+    listEventsMock
+      .mockResolvedValueOnce({ data: [stripeEvent('charge.refunded', { customer: 'cus_1' })], has_more: true })
+      .mockResolvedValueOnce({ data: [stripeEvent('charge.failed', { customer: 'cus_1' })], has_more: false });
+
+    const result = await runStripeEventPolling();
+
+    expect(result.eventsProcessed).toBe(2);
+    expect(listEventsMock).toHaveBeenCalledTimes(2);
+    expect(createNotificationMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('skips disconnected connections entirely', async () => {
+    connections = [{ ...activeConnection('t1'), disconnectedAt: new Date() }];
+
+    const result = await runStripeEventPolling();
+
+    expect(result).toEqual({ tenantsPolled: 0, eventsProcessed: 0, failed: 0 });
+    expect(listEventsMock).not.toHaveBeenCalled();
+  });
+
+  it('marks needsAttention on a revoked/expired key (401/403), without throwing', async () => {
+    listEventsMock.mockRejectedValueOnce(new StripeApiError(401, 'revoked'));
+
+    const result = await runStripeEventPolling();
+
+    expect(result).toEqual({ tenantsPolled: 1, eventsProcessed: 0, failed: 1 });
+    expect(connections[0].needsAttention).toBe(true);
+  });
+
+  it('one tenant failing does not stop the rest from being polled', async () => {
+    connections = [activeConnection('t1'), activeConnection('t2')];
+    companies = [{ id: 'c2', tenantId: 't2', name: 'Beta', stripeCustomerId: 'cus_2', accountOwnerId: 'u1' }];
+    listEventsMock
+      .mockRejectedValueOnce(new Error('network blip'))
+      .mockResolvedValueOnce({ data: [stripeEvent('charge.refunded', { customer: 'cus_2' })], has_more: false });
+
+    const result = await runStripeEventPolling();
+
+    expect(result).toEqual({ tenantsPolled: 2, eventsProcessed: 1, failed: 1 });
   });
 });

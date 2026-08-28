@@ -1365,18 +1365,22 @@ model GoogleCalendarWatchChannel {
 // subscriptions. needsAttention flips true when Stripe rejects the stored key (401/403) instead
 // of failing silently — same "reconnect" signal as GoogleCalendarConnection.needsReconnect above.
 model StripeConnection {
-  id                            String    @id @default(uuid())
-  tenantId                      String    @unique
-  tenant                        Tenant    @relation(fields: [tenantId], references: [id])
-  apiKeyEncrypted               String
-  apiKeyMode                    String // "test" | "live", detected from the key's own prefix
-  stripeAccountId               String?
-  webhookSigningSecretEncrypted String?
-  connectedByUserId             String
-  connectedBy                   User      @relation(fields: [connectedByUserId], references: [id])
-  connectedAt                   DateTime  @default(now())
-  disconnectedAt                DateTime?
-  needsAttention                Boolean   @default(false)
+  id                 String    @id @default(uuid())
+  tenantId           String    @unique
+  tenant             Tenant    @relation(fields: [tenantId], references: [id])
+  apiKeyEncrypted    String
+  apiKeyMode         String // "test" | "live", detected from the key's own prefix
+  stripeAccountId    String?
+  // Cursor for the twice-daily Stripe Events poll (runStripeEventPolling) — proactive
+  // notifications replaced a per-tenant manual webhook entirely (backlog QA, 2026-08-28).
+  // Null until the first poll; defaults to connectedAt then, not epoch, so a freshly connected
+  // tenant never gets flooded with notifications for months-old already-resolved events.
+  lastEventPollAt    DateTime?
+  connectedByUserId  String
+  connectedBy        User      @relation(fields: [connectedByUserId], references: [id])
+  connectedAt        DateTime  @default(now())
+  disconnectedAt     DateTime?
+  needsAttention     Boolean   @default(false)
 }
 
 model Invitation {

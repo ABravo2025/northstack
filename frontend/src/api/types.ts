@@ -121,7 +121,6 @@ export interface StripeConnectionStatus {
   apiKeyMode: 'test' | 'live' | null;
   connectedAt: string | null;
   needsAttention: boolean;
-  hasWebhookSecret: boolean;
 }
 
 export interface Company {

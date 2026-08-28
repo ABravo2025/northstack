@@ -23,7 +23,6 @@ export interface StripeConnectionStatus {
   apiKeyMode: 'test' | 'live' | null;
   connectedAt: string | null;
   needsAttention: boolean;
-  hasWebhookSecret: boolean;
 }
 
 const DISCONNECTED_STATUS: StripeConnectionStatus = {
@@ -31,7 +30,6 @@ const DISCONNECTED_STATUS: StripeConnectionStatus = {
   apiKeyMode: null,
   connectedAt: null,
   needsAttention: false,
-  hasWebhookSecret: false,
 };
 
 export async function getStripeConnectionStatus(tenantId: string): Promise<StripeConnectionStatus> {
@@ -44,7 +42,6 @@ export async function getStripeConnectionStatus(tenantId: string): Promise<Strip
     apiKeyMode: connection.apiKeyMode as 'test' | 'live',
     connectedAt: connection.connectedAt.toISOString(),
     needsAttention: connection.needsAttention,
-    hasWebhookSecret: !!connection.webhookSigningSecretEncrypted,
   };
 }
 
@@ -99,19 +96,6 @@ export async function connectStripe({ tenantId, userId, apiKey }: ConnectStripeI
     },
   });
 
-  return getStripeConnectionStatus(tenantId);
-}
-
-export async function saveStripeWebhookSecret(tenantId: string, secret: string): Promise<StripeConnectionStatus> {
-  const connection = await prisma.stripeConnection.findUnique({ where: { tenantId } });
-  if (!connection || connection.disconnectedAt) {
-    throw new Error('Connect Stripe first before saving a webhook signing secret.');
-  }
-
-  await prisma.stripeConnection.update({
-    where: { tenantId },
-    data: { webhookSigningSecretEncrypted: encryptStripeSecret(secret.trim()) },
-  });
   return getStripeConnectionStatus(tenantId);
 }
 

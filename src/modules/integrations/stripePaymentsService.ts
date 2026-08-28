@@ -2,11 +2,14 @@ import prisma from '../../lib/prisma.js';
 import {
   listCharges,
   listCustomers,
+  listEvents,
   listSubscriptions,
   StripeApiError,
   type StripeCharge,
+  type StripeEvent,
 } from '../../lib/stripe.js';
 import { getActiveConnectionForTenant, markNeedsAttention } from './stripeService.js';
+import { decryptStripeSecret } from '../../lib/stripeEncryption.js';
 import { createNotification } from '../notifications/notificationService.js';
 import type { NotificationType } from '@prisma/client';
 
@@ -383,4 +386,58 @@ export async function processStripeWebhookEvent(tenantId: string, event: any): P
     default:
       return 'unhandled event type';
   }
+}
+
+// Fetches every page of events created since `createdGteUnix` — same starting_after/has_more loop
+// shape as googleCalendarWatchService.ts's listChangedEvents, just for Stripe's pagination instead
+// of Google's.
+async function listAllEventsSince(apiKey: string, createdGteUnix: number): Promise<StripeEvent[]> {
+  const events: StripeEvent[] = [];
+  let startingAfter: string | undefined;
+  let hasMore = true;
+
+  while (hasMore) {
+    const page = await listEvents(apiKey, { createdGte: createdGteUnix, limit: 100, starting_after: startingAfter });
+    events.push(...page.data);
+    hasMore = page.has_more;
+    startingAfter = page.data[page.data.length - 1]?.id;
+  }
+
+  return events;
+}
+
+// Twice-daily cron (src/routes/internal.ts) — replaced the per-tenant manual webhook entirely
+// (backlog QA, 2026-08-28: no real tenant should have to hand-create a webhook endpoint and
+// copy/paste a signing secret just to get notified about a refund). Reuses
+// processStripeWebhookEvent unchanged — Stripe's Events API returns the exact same Event shape a
+// webhook would have delivered, so from that function's point of view there's no difference
+// between push and pull.
+export async function runStripeEventPolling(): Promise<{ tenantsPolled: number; eventsProcessed: number; failed: number }> {
+  const connections = await prisma.stripeConnection.findMany({ where: { disconnectedAt: null } });
+
+  let eventsProcessed = 0;
+  let failed = 0;
+
+  for (const connection of connections) {
+    try {
+      const apiKey = decryptStripeSecret(connection.apiKeyEncrypted);
+      const sinceUnix = Math.floor((connection.lastEventPollAt ?? connection.connectedAt).getTime() / 1000);
+      const events = await listAllEventsSince(apiKey, sinceUnix);
+
+      for (const event of events) {
+        await processStripeWebhookEvent(connection.tenantId, event);
+        eventsProcessed++;
+      }
+
+      await prisma.stripeConnection.update({ where: { tenantId: connection.tenantId }, data: { lastEventPollAt: new Date() } });
+    } catch (error) {
+      failed++;
+      if (error instanceof StripeApiError && (error.status === 401 || error.status === 403)) {
+        await markNeedsAttention(connection.tenantId);
+      }
+      console.error(`Stripe event poll failed for tenant ${connection.tenantId}:`, error);
+    }
+  }
+
+  return { tenantsPolled: connections.length, eventsProcessed, failed };
 }

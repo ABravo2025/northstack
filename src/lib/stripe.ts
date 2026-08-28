@@ -1,4 +1,3 @@
-import { createHmac, timingSafeEqual } from 'crypto';
 
 // Payments v1 (spec-payments-v1.md) — hand-rolled wrapper (fetch + native crypto) instead of the
 // official `stripe` SDK, matching this codebase's existing bias against a dependency for a small
@@ -130,37 +129,25 @@ export async function listSubscriptions(
   return stripeRequest<StripeList<StripeSubscription>>(apiKey, 'GET', '/subscriptions', params);
 }
 
-export interface VerifyStripeSignatureInput {
-  signatureHeader: string;
-  rawBody: string;
-  secret: string;
+export interface StripeEvent {
+  id: string;
+  type: string;
+  data: { object: any; previous_attributes?: any };
 }
 
-// Stripe's webhook contract: header `Stripe-Signature` is "t=<unix>,v1=<hex>[,v0=<hex>]"
-// (comma-separated, same shape as Mercado Pago's x-signature but with `t` instead of `ts`).
-// Signed payload is "{t}.{rawBody}" (literal dot — Paddle uses a colon, Mercado Pago a
-// semicolon-delimited manifest string), HMAC-SHA256 with the secret, hex digest, compared
-// against v1. Per-tenant secret (StripeConnection.webhookSigningSecretEncrypted), not a single
-// env var like Paddle/Mercado Pago's *_WEBHOOK_SECRET — confirmed against Stripe's own docs
-// (stripe.com/docs/webhooks/signatures). Unused until Unit 4 (the webhook route itself).
-export function verifyStripeSignature(input: VerifyStripeSignatureInput): boolean {
-  const parts = new Map<string, string>();
-  for (const part of input.signatureHeader.split(',')) {
-    const [key, value] = part.split('=');
-    if (key && value) {
-      parts.set(key.trim(), value.trim());
-    }
-  }
-  const t = parts.get('t');
-  const v1 = parts.get('v1');
-  if (!t || !v1) {
-    return false;
-  }
-
-  const signedPayload = `${t}.${input.rawBody}`;
-  const expected = createHmac('sha256', input.secret).update(signedPayload).digest('hex');
-
-  const expectedBuffer = Buffer.from(expected, 'utf8');
-  const actualBuffer = Buffer.from(v1, 'utf8');
-  return expectedBuffer.length === actualBuffer.length && timingSafeEqual(expectedBuffer, actualBuffer);
+// Powers the twice-daily notification poll (runStripeEventPolling, stripePaymentsService.ts) —
+// replaced the per-tenant manual webhook entirely (backlog QA, 2026-08-28): Stripe's Events API
+// returns the exact same Event objects a webhook would have delivered, so
+// processStripeWebhookEvent can be reused unchanged regardless of push vs. pull. No `type` filter
+// on the request — that function already discards anything it doesn't handle via its own
+// `default:` case, so filtering here would just be a second place to keep the event list in sync.
+export async function listEvents(
+  apiKey: string,
+  params: { createdGte: number; limit?: number; starting_after?: string },
+): Promise<StripeList<StripeEvent>> {
+  return stripeRequest<StripeList<StripeEvent>>(apiKey, 'GET', '/events', {
+    created: { gte: params.createdGte },
+    limit: params.limit,
+    starting_after: params.starting_after,
+  });
 }

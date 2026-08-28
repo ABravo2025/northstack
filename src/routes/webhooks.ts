@@ -2,11 +2,8 @@ import { createAsyncRouter } from '../lib/asyncRouter.js';
 import prisma from '../lib/prisma.js';
 import { getAuthorizedPayment, getPreapproval, verifyMercadoPagoSignature } from '../lib/mercadopago.js';
 import { getTransaction, verifyPaddleSignature } from '../lib/paddle.js';
-import { verifyStripeSignature } from '../lib/stripe.js';
-import { decryptStripeSecret } from '../lib/stripeEncryption.js';
 import { GRACE_PERIOD_DAYS } from '../modules/tenant/planTransitionService.js';
 import { syncSubscriptionAndTenant } from '../modules/tenant/subscriptionService.js';
-import { processStripeWebhookEvent } from '../modules/integrations/stripePaymentsService.js';
 import type { PaymentProvider } from '@prisma/client';
 import type express from 'express';
 
@@ -307,35 +304,3 @@ webhooksRouter.post('/api/webhooks/paddle', async (req, res) => {
   }
 });
 
-// Payments v1, Unit 4 (spec-payments-v1.md) — a tenant's own Stripe account, not Northstack's
-// (unlike Paddle/Mercado Pago above), so the URL carries :tenantId and the signing secret comes
-// from that tenant's own StripeConnection, not a single env var. Deliberately reduced scope per
-// the spec (decision #8): proactive notifications only, no local event store, no
-// ProcessedWebhookEvent-style idempotency (an occasional duplicate Notification is an accepted
-// cost here, unlike Paddle/Mercado Pago where a duplicate could double-charge or double-activate).
-webhooksRouter.post('/api/webhooks/stripe/:tenantId', async (req, res) => {
-  const { tenantId } = req.params;
-
-  // Looked up before verifying the signature — there's nothing to verify against otherwise, and
-  // a 400 here doesn't tell an outside caller anything a stripeCustomerId lookup wouldn't already
-  // (this URL is only ever registered by the tenant that owns it, in their own Stripe dashboard).
-  const connection = await prisma.stripeConnection.findUnique({ where: { tenantId } });
-  if (!connection || connection.disconnectedAt || !connection.webhookSigningSecretEncrypted) {
-    return res.status(400).json({ error: 'No active Stripe connection with a webhook secret configured for this tenant' });
-  }
-
-  const signatureHeader = req.headers['stripe-signature'];
-  if (typeof signatureHeader !== 'string') {
-    return res.status(400).json({ error: 'Missing Stripe-Signature header' });
-  }
-
-  const rawBody = rawBodyText(req);
-  const secret = decryptStripeSecret(connection.webhookSigningSecretEncrypted);
-  if (!verifyStripeSignature({ signatureHeader, rawBody, secret })) {
-    return res.status(400).json({ error: 'Invalid signature' });
-  }
-
-  const event = JSON.parse(rawBody || '{}');
-  const result = await processStripeWebhookEvent(tenantId, event);
-  return res.status(200).json({ status: result });
-});

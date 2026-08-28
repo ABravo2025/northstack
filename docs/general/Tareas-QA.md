@@ -2046,3 +2046,66 @@ este ítem, todo config de Vercel (env vars + dominio + rama).
 
 **Severidad:** alta mientras estuvo — bloqueaba cualquier prueba real contra el dominio de staging,
 no solo Stripe. Resuelta.
+
+## QA-50 — Reemplazo del webhook manual de Stripe por un cron de polling 2x/día (Payments v1, Unidad 4 rediseñada)
+
+**Por qué existe esta tarea:** al confirmar la conexión de Stripe en QA-49, el flujo de Unidad 4
+(notificaciones proactivas) pedía un paso manual poco razonable para un tenant real: crear un
+endpoint a mano en Developers → Webhooks de su propio dashboard de Stripe, tildar 5 eventos, y
+copiar/pegar un signing secret de vuelta — y en `staging` encima sumarle el query param de bypass de
+Vercel a la URL. El usuario pidió una alternativa más simple.
+
+**Se evaluaron 2 alternativas antes de esta**, ambas descartadas:
+1. **Auto-crear el webhook vía API** (con la misma Restricted Key + permiso "Webhook Endpoints:
+   Write") — funcional, pero seguía dependiendo de un mecanismo push (webhook) más su complejidad
+   asociada.
+2. **Stripe Connect (OAuth)** — el usuario confirmó directo con el soporte de Stripe que requiere
+   que Northstack tenga una entidad legal (LLC o equivalente) dada de alta, algo que no tiene
+   todavía — mismo bloqueo ya documentado en `specpaymentsv1.md` decisión #2 desde que se diseñó
+   Unidad 1. Sin entidad, no es viable, punto.
+
+**Elegido: polling de la Events API de Stripe, cron fijo 2x/día** (no configurable por tenant, para
+no sumar UI/complejidad — decisión explícita del usuario). `GET /v1/events` devuelve exactamente los
+mismos objetos Event que un webhook hubiera entregado, así que `processStripeWebhookEvent`
+(`stripePaymentsService.ts`) se **reusa sin ningún cambio** — ni a la función ni a sus 14 tests
+existentes. El cron solo pide eventos nuevos desde el último poll y se los pasa uno por uno.
+
+**Backend**:
+- `src/lib/stripe.ts`: nueva `listEvents(apiKey, { createdGte, limit?, starting_after? })` (`GET
+  /events`, sin filtro de `type` — se filtra client-side en `processStripeWebhookEvent`, que ya
+  ignora tipos no manejados). Se sacó `verifyStripeSignature` (sin uso posible una vez eliminado el
+  webhook).
+- `src/modules/integrations/stripePaymentsService.ts`: nueva `runStripeEventPolling()` — por cada
+  `StripeConnection` activa, pagina `listEvents` desde `lastEventPollAt` (o `connectedAt` en el
+  primer poll — nunca barre el historial completo, evitaría un aluvión de notificaciones de eventos
+  ya viejos/resueltos), procesa cada evento, actualiza el cursor. Un tenant que falla (401/403 →
+  `markNeedsAttention`, cualquier otro error) no frena a los demás.
+- `src/routes/internal.ts`: nueva `GET /api/internal/stripe-events/poll` (mismo patrón
+  `checkCronSecret` que las otras 3 rutas de cron). `vercel.json`: nueva entrada de cron, `0 6,18 *
+  * *` (6am/6pm UTC).
+- Se sacaron por completo: `POST /api/webhooks/stripe/:tenantId` (`routes/webhooks.ts`, y el mount
+  `express.raw()` de `app.ts` que solo era para esa ruta), `POST
+  /api/integrations/stripe/webhook-secret`, `saveStripeWebhookSecret` (`stripeService.ts`).
+- Schema (`StripeConnection`, push aditivo contra `STAGING_DATABASE_URL`): se sacó
+  `webhookSigningSecretEncrypted`, se agregó `lastEventPollAt DateTime?`.
+- `StripeConnectionStatus` perdió el campo `hasWebhookSecret` (backend y frontend).
+
+**Frontend** (`IntegrationsSettingsPage.tsx`): se eliminó toda la sección "Webhook" del estado
+conectado (URL, botón de copiar, form de signing secret, aviso de bypass de Vercel) — el estado
+conectado ahora es solo el status row (chip test/live, fecha, Disconnect) más una línea explicando
+que los eventos se revisan 2x/día. El checklist de permisos recomendados de la Restricted Key sumó
+**Events** (de solo lectura, igual que el resto).
+
+**Tests**: se sacaron los ~6 tests de `saveStripeWebhookSecret`/`verifyStripeSignature` (ya no
+existen), se agregaron 6 nuevos para `runStripeEventPolling` (cursor desde `connectedAt` vs.
+`lastEventPollAt`, paginación, aislamiento entre tenants, `needsAttention` en 401/403, un tenant
+fallando no frena a los demás). `npm run build`/`npm test` (147/147) en verde en back y front —
+mismo total que antes, 6 sacados + 6 agregados.
+
+**No verificado en vivo todavía**: falta correr el cron real contra `staging` (con un evento de
+prueba disparado a mano en Stripe) una vez que `CRON_SECRET` esté confirmada en Vercel para Preview
+— dado lo que pasó con `DATABASE_URL`/`STRIPE_TOKEN_ENCRYPTION_KEY` en QA-49, no se asume que ya
+está.
+
+**Severidad:** baja — elimina superficie (menos rutas, menos campos), no agrega riesgo nuevo; el
+único caso a confirmar en vivo es que el cron real dispare la notificación esperada.

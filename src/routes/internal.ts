@@ -1,6 +1,7 @@
 import { runPlanTransitions } from '../modules/tenant/planTransitionService.js';
 import { renewExpiringWatchChannels } from '../modules/integrations/googleCalendarWatchService.js';
 import { runStalledOpportunityReminders } from '../modules/crm/stalledOpportunityService.js';
+import { runStripeEventPolling } from '../modules/integrations/stripePaymentsService.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import type express from 'express';
 
@@ -64,5 +65,16 @@ internalRouter.get('/api/internal/opportunities/stalled-reminders/run', async (r
   if (!checkCronSecret(req, res, '/api/internal/opportunities/stalled-reminders/run')) return;
 
   const result = await runStalledOpportunityReminders();
+  return res.json(result);
+});
+
+// Triggered twice a day by Vercel Cron — replaces the per-tenant manual Stripe webhook entirely
+// (backlog QA, 2026-08-28). Polls each connected tenant's own Stripe account for new Events since
+// the last run and feeds them through the same notification logic a webhook would have triggered
+// (see stripePaymentsService.ts's runStripeEventPolling/processStripeWebhookEvent).
+internalRouter.get('/api/internal/stripe-events/poll', async (req, res) => {
+  if (!checkCronSecret(req, res, '/api/internal/stripe-events/poll')) return;
+
+  const result = await runStripeEventPolling();
   return res.json(result);
 });

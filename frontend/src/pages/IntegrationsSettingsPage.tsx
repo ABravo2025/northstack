@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { API_BASE_URL, api, type GoogleCalendarStatus, type StripeConnectionStatus, type Tenant } from '../api';
+import { api, type GoogleCalendarStatus, type StripeConnectionStatus, type Tenant } from '../api';
 import { useToast } from '../components/common/ToastProvider';
-import { CopyIcon } from '../components/common/Icons';
 
 interface IntegrationsSettingsPageProps {
   token: string;
@@ -46,13 +45,11 @@ function GoogleLogo({ className }: { className?: string }) {
 // Companies become visible (a later unit, the "Payments" sidebar section). Gated to owner-only
 // here, per this page's own established rule of gating an individual card rather than splitting
 // the page — see the comment on IntegrationsSettingsPage below.
-function StripeCard({ token, tenantId, isOwner }: { token: string; tenantId: string; isOwner: boolean }) {
+function StripeCard({ token, isOwner }: { token: string; isOwner: boolean }) {
   const toast = useToast();
   const [status, setStatus] = useState<StripeConnectionStatus | null>(null);
   const [apiKeyInput, setApiKeyInput] = useState('');
-  const [webhookSecretInput, setWebhookSecretInput] = useState('');
   const [connecting, setConnecting] = useState(false);
-  const [savingSecret, setSavingSecret] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
 
   const loadStatus = () => {
@@ -87,21 +84,6 @@ function StripeCard({ token, tenantId, isOwner }: { token: string; tenantId: str
     }
   };
 
-  const handleSaveWebhookSecret = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSavingSecret(true);
-    try {
-      const next = await api.saveStripeWebhookSecret(token, webhookSecretInput);
-      setStatus(next);
-      setWebhookSecretInput('');
-      toast.success('Webhook signing secret saved.');
-    } catch (error) {
-      toast.error((error as Error).message);
-    } finally {
-      setSavingSecret(false);
-    }
-  };
-
   const handleDisconnect = async () => {
     setDisconnecting(true);
     try {
@@ -114,17 +96,6 @@ function StripeCard({ token, tenantId, isOwner }: { token: string; tenantId: str
       setDisconnecting(false);
     }
   };
-
-  const handleCopyWebhookUrl = async () => {
-    await navigator.clipboard.writeText(webhookUrl);
-    toast.success('Webhook URL copied to clipboard.');
-  };
-
-  const webhookUrl = `${API_BASE_URL}/api/webhooks/stripe/${tenantId}`;
-  // Vercel Deployment Protection blocks any external POST to staging.joinnorthstack.com without
-  // this bypass secret — already hit for Google Calendar's and Mercado Pago's webhooks. Only
-  // relevant on staging (production has no such protection), so only shown there.
-  const isStagingHost = typeof window !== 'undefined' && window.location.hostname.includes('staging');
 
   return (
     <div className="card">
@@ -169,54 +140,10 @@ function StripeCard({ token, tenantId, isOwner }: { token: string; tenantId: str
               Disconnect
             </button>
           </div>
-
-          <div>
-            <p className="text-sm font-medium" style={{ marginBottom: '0.25rem' }}>
-              Webhook
-            </p>
-            <p className="text-xs text-ink-muted dark:text-dark-ink-muted" style={{ marginBottom: '0.5rem' }}>
-              In your Stripe dashboard, go to Developers → Webhooks and add an endpoint pointing at
-              this URL, listening for: charge.refunded, charge.failed,
-              payment_intent.payment_failed, customer.subscription.updated, and
-              customer.subscription.deleted.
-              {isStagingHost && (
-                <>
-                  {' '}
-                  On staging, Vercel's deployment protection requires appending{' '}
-                  <code>?x-vercel-protection-bypass=&lt;bypass secret&gt;</code> to this URL, or
-                  Stripe's requests never reach the app.
-                </>
-              )}
-            </p>
-            <div className="flex items-center gap-2" style={{ marginBottom: '0.75rem' }}>
-              <code className="text-xs" style={{ wordBreak: 'break-all' }}>
-                {webhookUrl}
-              </code>
-              <button type="button" className="icon-btn" onClick={handleCopyWebhookUrl} title="Copy webhook URL">
-                <CopyIcon />
-              </button>
-            </div>
-            <form onSubmit={handleSaveWebhookSecret} className="flex items-end gap-2">
-              <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
-                <label htmlFor="stripe-webhook-secret">Signing secret</label>
-                <input
-                  id="stripe-webhook-secret"
-                  type="password"
-                  value={webhookSecretInput}
-                  onChange={(e) => setWebhookSecretInput(e.target.value)}
-                  placeholder="whsec_..."
-                />
-              </div>
-              <button type="submit" className="btn-primary btn-md" disabled={savingSecret || !webhookSecretInput.trim()}>
-                Save
-              </button>
-            </form>
-            {status.hasWebhookSecret && (
-              <p className="text-xs text-ink-muted dark:text-dark-ink-muted" style={{ marginTop: '0.25rem' }}>
-                A signing secret is already saved — saving a new one replaces it.
-              </p>
-            )}
-          </div>
+          <p className="text-xs text-ink-muted dark:text-dark-ink-muted">
+            Refunds, failed payments, and subscription changes are checked twice a day — no webhook
+            to set up.
+          </p>
         </div>
       ) : (
         <form onSubmit={handleConnect} className="flex flex-col gap-3">
@@ -236,6 +163,7 @@ function StripeCard({ token, tenantId, isOwner }: { token: string; tenantId: str
               <li>Invoices</li>
               <li>Subscriptions</li>
               <li>PaymentMethods</li>
+              <li>Events</li>
             </ul>
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
@@ -266,7 +194,7 @@ function StripeCard({ token, tenantId, isOwner }: { token: string; tenantId: str
 // belong here too rather than a second entry point; gate an individual card
 // by role if one ends up admin-only, don't split the page — Stripe below
 // (Payments v1, owner-only) is the first case of that carve-out.
-export default function IntegrationsSettingsPage({ token, user, tenant }: IntegrationsSettingsPageProps) {
+export default function IntegrationsSettingsPage({ token, user }: IntegrationsSettingsPageProps) {
   const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [googleStatus, setGoogleStatus] = useState<GoogleCalendarStatus | null>(null);
@@ -366,7 +294,7 @@ export default function IntegrationsSettingsPage({ token, user, tenant }: Integr
         )}
       </div>
 
-      <StripeCard token={token} tenantId={tenant?.id ?? ''} isOwner={user?.role === 'owner'} />
+      <StripeCard token={token} isOwner={user?.role === 'owner'} />
     </div>
   );
 }

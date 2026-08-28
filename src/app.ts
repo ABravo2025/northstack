@@ -81,9 +81,6 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 // (see routes/webhooks.ts's rawBodyText helper). Every other route keeps the normal parsed body.
 app.use('/api/webhooks/paddle', express.raw({ type: '*/*', limit: '2mb' }));
 app.use('/api/webhooks/mercadopago', express.raw({ type: '*/*', limit: '2mb' }));
-// Payments v1 (spec-payments-v1.md, Unit 4) — a mount path, not an exact route, so this also
-// covers /api/webhooks/stripe/:tenantId.
-app.use('/api/webhooks/stripe', express.raw({ type: '*/*', limit: '2mb' }));
 app.use(express.json({ limit: '2mb' })); // default 100kb is too small for a CSV import body
 
 app.get('/health', (_req, res) => {

@@ -166,3 +166,18 @@ Orden pensado por dependencias: la Unidad 1 es prerrequisito de todo lo demás (
 - [x] **Corrección real, encontrada antes de escribir la lógica de `customer.subscription.updated`**: notificar en cada evento con `status: past_due` (como decía la spec original) hubiera re-notificado en cada cambio no relacionado a una subscription que ya está `past_due` (ej. cambiar la cantidad). Se agregó una guarda contra `data.previous_attributes.status` (confirmado contra la documentación real de Stripe — solo lista lo que cambió en ese evento): solo notifica si el status *recién* pasó a `past_due`.
 - [x] **Frontend:** el checklist de los 5 eventos en el Paso 2 ya estaba escrito desde la Unidad 1 (se construyó adelantado a propósito) — nada que agregar.
 - [x] **Verificado 2026-08-26 de punta a punta, sin necesitar una cuenta de Stripe real**: a diferencia de Units 1-3, esto sí se pudo simular por completo — un tenant descartable con un `StripeConnection` cuyo `webhookSigningSecretEncrypted` se sembró a mano (secret conocido), firmas HMAC calculadas con el mismo algoritmo que `verifyStripeSignature` para simular deliveries reales de Stripe. Confirmado: firma válida con customer vinculado → `Notification` real creada con el mensaje/destinatario/tipo correctos (verificado con una query directa a la base); firma inválida → 400; header faltante → 400; tenant sin conexión → 400; customer sin match → 200 sin crear nada. 14 tests nuevos con mocks cubren además la guarda de `previous_attributes` (transición real vs. update no relacionado) y el fallback de destinatario (nunca un admin). `npm run build`/`npm test` (147/147)/`npm run lint` en verde.
+
+**Rediseño 2026-08-28 (reemplaza el webhook de arriba, ver QA-49/QA-50 en `Tareas-QA.md`):**
+probando la conexión real en `staging` quedó claro que pedirle a un tenant real que cree un webhook
+a mano en su dashboard de Stripe (+ en `staging`, agregarle el bypass secret de Vercel a la URL) era
+fricción que ningún tenant real debería enfrentar. Reemplazado por un **cron de 2x/día**
+(`runStripeEventPolling`, `src/routes/internal.ts`) que hace polling de `GET /v1/events` con la
+misma Restricted Key — `processStripeWebhookEvent` se reusa sin cambios, Stripe devuelve el mismo
+shape de Event por polling o por webhook. Se evaluó también automatizar la creación del webhook vía
+API (agregándole permiso de escritura a la key), y por separado Stripe Connect/OAuth completo —
+descartado esto último tras confirmar con el soporte de Stripe que requiere que Northstack tenga una
+entidad legal (tipo LLC) dada de alta, que no tiene todavía (decisión #2 de la sección 0). Se quitó
+`POST /api/webhooks/stripe/:tenantId`, `saveStripeWebhookSecret`, `verifyStripeSignature`, y
+`StripeConnection.webhookSigningSecretEncrypted` del schema; se agregó `Events` a los permisos
+recomendados de la Restricted Key (decisión #11 sigue vigente: todo de solo lectura) y
+`lastEventPollAt` al schema como cursor del cron.

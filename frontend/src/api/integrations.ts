@@ -57,16 +57,6 @@ export const integrationsApi = {
     return res.json();
   },
 
-  saveStripeWebhookSecret: async (token: string, secret: string): Promise<StripeConnectionStatus> => {
-    const res = await apiFetch(`${API_BASE_URL}/api/integrations/stripe/webhook-secret`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ secret }),
-    });
-    if (!res.ok) await throwApiError(res);
-    return res.json();
-  },
-
   disconnectStripe: async (token: string): Promise<void> => {
     const res = await apiFetch(`${API_BASE_URL}/api/integrations/stripe`, {
       method: 'DELETE',

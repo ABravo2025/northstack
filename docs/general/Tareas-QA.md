@@ -2108,10 +2108,16 @@ existen), se agregaron 6 nuevos para `runStripeEventPolling` (cursor desde `conn
 fallando no frena a los demás). `npm run build`/`npm test` (147/147) en verde en back y front —
 mismo total que antes, 6 sacados + 6 agregados.
 
-**No verificado en vivo todavía**: falta correr el cron real contra `staging` (con un evento de
-prueba disparado a mano en Stripe) una vez que `CRON_SECRET` esté confirmada en Vercel para Preview
-— dado lo que pasó con `DATABASE_URL`/`STRIPE_TOKEN_ENCRYPTION_KEY` en QA-49, no se asume que ya
-está.
+**Verificado en vivo 2026-08-28** contra `staging` real: `CRON_SECRET` rotado (el original del 18 de
+agosto se había perdido, nunca quedó anotado en ningún lado — el nuevo sí quedó en `.env` local esta
+vez). Cron disparado a mano contra `staging.joinnorthstack.com/api/internal/stripe-events/poll` —
+`{tenantsPolled: 1, eventsProcessed: 7, failed: 0}`, sin errores, contra eventos reales de una
+cuenta de Stripe de test con pagos ya hechos. El disparo tuvo que hacerse desde la consola del
+navegador del usuario (`fetch()` con el `CRON_SECRET` como header), no vía `curl` externo — la
+Deployment Protection de Vercel bloquea requests externas incluso con el bypass secret de
+"Protection Bypass for Automation" (no se logró hacerlo funcionar por query param esta vez, a
+diferencia de cómo sí funcionó para el webhook de Google Calendar en QA-19); la sesión ya autenticada
+del navegador esquiva la protección sin necesitarlo.
 
 **Hallazgo real sobre cómo deploya este proyecto, encontrado tratando de entender por qué nada
 llegaba a `staging`**: el deploy **no** pasa por la integración nativa de Git de Vercel (aunque el

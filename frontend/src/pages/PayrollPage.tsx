@@ -22,7 +22,8 @@ import TableSkeleton from '../components/common/TableSkeleton';
 import StatusChip from '../components/common/StatusChip';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
 import { CURRENCY_CODES, currencyLabel, formatMoney } from '../lib/currencies';
-import { CalendarIcon, PencilIcon, PlusIcon, TeamIcon } from '../components/common/Icons';
+import { CalendarIcon, EyeIcon, PencilIcon, PlusIcon, TeamIcon } from '../components/common/Icons';
+import PayslipPreviewModal from '../components/payroll/PayslipPreviewModal';
 
 interface PayrollPageProps {
   user: any;
@@ -244,6 +245,7 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
   const [offPaymentLabel, setOffPaymentLabel] = useState('');
   const [offPaymentDate, setOffPaymentDate] = useState(new Date().toISOString().slice(0, 10));
   const [savingOffPayment, setSavingOffPayment] = useState(false);
+  const [payslipEntryId, setPayslipEntryId] = useState<string | null>(null);
 
   useEffect(() => {
     load();
@@ -644,7 +646,17 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
                               {item.entry.label ? ` · ${item.entry.label}` : ''}
                             </td>
                             <td>—</td>
-                            <td></td>
+                            <td>
+                              <button
+                                type="button"
+                                className="icon-btn"
+                                onClick={() => setPayslipEntryId(item.entry.id)}
+                                aria-label={`Payslip preview for ${item.entry.employeeFirstName} ${item.entry.employeeLastName}`}
+                              >
+                                <span className="tip">Payslip preview</span>
+                                <EyeIcon className="h-4 w-4" />
+                              </button>
+                            </td>
                           </tr>
                         ),
                       )}
@@ -1526,6 +1538,13 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
           </div>
         </form>
       </Modal>
+      {payslipEntryId && (
+        <PayslipPreviewModal
+          open={payslipEntryId !== null}
+          onClose={() => setPayslipEntryId(null)}
+          fetchPdf={() => api.getEntryPayslip(token, payslipEntryId)}
+        />
+      )}
     </div>
   );
 }

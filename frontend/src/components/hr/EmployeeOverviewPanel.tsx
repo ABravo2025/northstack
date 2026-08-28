@@ -12,7 +12,7 @@ import OverviewActionsMenu from '../common/OverviewActionsMenu';
 import PayslipPreviewModal from '../payroll/PayslipPreviewModal';
 import TerminateEmployeeModal from './TerminateEmployeeModal';
 import { formatMoney } from '../../lib/currencies';
-import { XIcon } from '../common/Icons';
+import { EyeIcon, XIcon } from '../common/Icons';
 import TagInput from '../common/TagInput';
 import type { TagAssignmentLite, EmployeeTerminationOptions } from '../../api';
 
@@ -88,6 +88,7 @@ export default function EmployeeOverviewPanel({
 }: EmployeeOverviewPanelProps) {
   const toast = useToast();
   const [contractPreviewOpen, setContractPreviewOpen] = useState(false);
+  const [paymentPayslipEntryId, setPaymentPayslipEntryId] = useState<string | null>(null);
   const [resendingContract, setResendingContract] = useState(false);
   const [compensation, setCompensation] = useState<EmployeeCompensationSummary | null>(null);
   const [loadingCompensation, setLoadingCompensation] = useState(false);
@@ -318,6 +319,7 @@ export default function EmployeeOverviewPanel({
                           <th>Reason</th>
                           <th>Description</th>
                           <th>Amount</th>
+                          <th></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -327,6 +329,17 @@ export default function EmployeeOverviewPanel({
                             <td>{PAYMENT_TYPE_LABELS[entry.type] || entry.type}</td>
                             <td>{entry.label || (entry.periodLabel ? `Payroll: ${entry.periodLabel}` : '—')}</td>
                             <td>{formatMoney(entry.amountCents, entry.currency)}</td>
+                            <td>
+                              <button
+                                type="button"
+                                className="icon-btn"
+                                onClick={() => setPaymentPayslipEntryId(entry.id)}
+                                aria-label="Payslip preview"
+                              >
+                                <span className="tip">Payslip preview</span>
+                                <EyeIcon className="h-4 w-4" />
+                              </button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -610,6 +623,13 @@ export default function EmployeeOverviewPanel({
           title="Contract"
           downloadFilename="contract.pdf"
           helperText="This is the exact document generated for this contract."
+        />
+      )}
+      {paymentPayslipEntryId && (
+        <PayslipPreviewModal
+          open={paymentPayslipEntryId !== null}
+          onClose={() => setPaymentPayslipEntryId(null)}
+          fetchPdf={() => api.getEntryPayslip(token, paymentPayslipEntryId)}
         />
       )}
       {terminateModalOpen && (

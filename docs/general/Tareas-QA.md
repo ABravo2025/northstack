@@ -1963,3 +1963,35 @@ cuenta ya conectada (los servidores locales quedaron corriendo para eso).
 **Severidad:** baja — solo lectura, no crea ni modifica ninguna fila; el único caso a confirmar en
 vivo es que el rango de fechas y el filtro de "ya es un Task" devuelvan lo esperado contra datos
 reales.
+
+## QA-48 — Fix: opciones de `<select>` ilegibles en dark mode (en `staging`)
+
+**Por qué existe esta tarea:** el usuario mandó una captura del selector "Stage" de Opportunity en
+dark mode — las opciones no seleccionadas ("In Progress", "Won", "Lost") se veían como texto gris
+pálido casi invisible sobre fondo blanco, no el estilo oscuro del resto de la app.
+
+**Causa real**: es un `<select>` nativo del navegador (`dropdown-trigger.dt-status`, usado en Stage
+de Opportunity, Pipeline, y cualquier otro `<select>` con esa clase). Dos problemas compuestos:
+1. La página nunca declaraba `color-scheme`, así que Chrome/Firefox renderizan el popup nativo de
+   opciones siempre con el chrome claro por defecto, sin importar la clase `.dark` propia de la
+   app — la única forma de que el navegador tiña sus propios controles nativos (popup de `<select>`,
+   selectores de fecha, scrollbars) es ese CSS.
+2. Aun agregando `color-scheme`, `.dropdown-trigger` tiene `background-color: transparent` — con un
+   fondo no opaco, Chrome igual cae al blanco por defecto para el popup. El texto sí seguía la regla
+   de dark mode (`dark:text-brand-blue-light`, un celeste pensado para fondo oscuro) — celeste claro
+   sobre blanco es exactamente el "casi en blanco" que se ve en la captura.
+
+**Fix** (`frontend/src/index.css`): `html { color-scheme: light } html.dark { color-scheme: dark }`
+más, como refuerzo directo (no depende de que el navegador respete `color-scheme` para el popup),
+`color`/`background-color` explícitos y opacos en `select option` — `surface-1`/`ink` para claro,
+`dark-surface`/`dark-ink` para oscuro. Alcance: todos los `<select>` de la app (nativo, no solo
+`dt-status`), no una clase puntual.
+
+**Verificado con Playwright** (`colorScheme: 'dark'` + `localStorage` con el tema de la app en
+`'dark'`, tenant de prueba en `staging`): abrir el Stage select de una Opportunity — antes del fix,
+"In Progress"/"Won"/"Lost" ilegibles (texto pálido sobre blanco); después, texto blanco sobre fondo
+oscuro, igual de legible que "New" (la opción seleccionada). Repetido también en modo claro para
+confirmar que no rompió nada ahí — sin cambios visuales. `npm run build`/`npm test` (147/147) en
+verde en back y front. Sin errores de consola.
+
+**Severidad:** baja — puramente visual/CSS, no toca lógica ni datos.

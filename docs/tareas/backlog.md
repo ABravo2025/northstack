@@ -76,9 +76,6 @@ los ítems.
   vía `<select>`, activar/desactivar vía ícono), sin panel de detalle propio como tienen
   Employees/Companies/Contacts/Opportunities. Es una decisión de producto, no una réplica mecánica de
   patrón — ¿qué mostraría que la tabla no muestre ya? A confirmar con el usuario antes de construirlo.
-- [ ] **Campos desplegables aparecen en blanco**: reportado en algunos selects, no en todos — a
-  confirmar si es un bug real de la plataforma o algo puntual del entorno del usuario.
-
 ## Notes/Tasks
 
 - [ ] **Activity Log — módulo entero sin construir**: al unificar los paneles de detalle se retiró el

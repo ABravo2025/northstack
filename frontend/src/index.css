@@ -64,6 +64,43 @@ body,
   padding: 0;
 }
 
+/* Without this, native form-control chrome (a <select>'s option list, date
+   pickers, scrollbars...) always renders with the browser's light-theme
+   default, no matter our own .dark class — Chrome/Firefox only switch that
+   chrome to dark when color-scheme says so. Bug this was fixing: dark mode's
+   dropdown-trigger.dt-status sets a light-blue text color (meant to read on
+   a dark background) with no matching dark background on the OS-native
+   option popup, so labels rendered as near-invisible pale blue on the
+   browser's default white (backlog QA, 2026-08-27 — "campos desplegables
+   aparecen en blanco"). html.dark (not just a prefers-color-scheme media
+   query) so this tracks the app's own light/dark/system toggle, not just OS
+   preference.
+*/
+html {
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
+}
+
+/* Belt-and-suspenders on top of color-scheme above: our <select> elements
+   set background-color: transparent (see .dropdown-trigger), and Chromium's
+   native option popup falls back to a plain white background when the
+   select's own resolved background isn't an opaque color, regardless of
+   color-scheme — so the dark-mode-only light-blue text (dropdown-trigger.dt-status)
+   still rendered on white, unreadably pale. Explicit opaque colors on
+   <option> itself sidestep that fallback (unlike scrollbars/date-pickers,
+   which really are pure OS chrome, <option> background-color/color are
+   respected by every mainstream browser). */
+select option {
+  background-color: var(--color-surface-1);
+  color: var(--color-ink);
+}
+html.dark select option {
+  background-color: var(--color-dark-surface);
+  color: var(--color-dark-ink);
+}
+
 body {
   @apply bg-surface-0 text-brand-navy font-sans antialiased dark:bg-dark-page dark:text-dark-ink;
 }

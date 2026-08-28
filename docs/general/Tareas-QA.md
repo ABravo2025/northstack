@@ -2167,3 +2167,13 @@ confirmando que vincula y notifica en la misma corrida. Se corrigió de paso un 
 
 **Severidad:** baja — solo automatiza un flujo manual ya existente y probado (Unit 2), mismas
 funciones, mismas reglas de ambigüedad.
+
+**Bug real encontrado al probar en vivo** (primera vez que este código corrió contra una Company
+realmente vinculada, con charges reales — nada lo había ejercitado hasta ahora): "Blue Harbor
+Logistics" se auto-vinculó bien, pero el panel de pagos tiraba "Failed to load payment history:
+Failed to construct 'URL': Invalid URL". Causa: `getCompanyPaymentEvents`
+(`frontend/src/api/payments.ts`) armaba la URL con `new URL(...)`, que tira si el string es
+relativo sin un `base` — y `API_BASE_URL` es `''` en producción/staging (frontend y backend
+comparten origen ahí), a diferencia de local donde apunta a `http://localhost:3000`. El resto de
+las funciones de ese archivo ya concatenaban el string directo; se corrigió `getCompanyPaymentEvents`
+para hacer lo mismo.

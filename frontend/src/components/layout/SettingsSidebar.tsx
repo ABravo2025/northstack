@@ -27,7 +27,11 @@ export default function SettingsSidebar({ user, mobileOpen, onMobileClose }: Set
         </button>
 
         <div>
-          <button type="button" className="sidebar-link w-full text-left" onClick={() => navigate(-1)}>
+          {/* A fixed destination, not navigate(-1) — landing on a Settings page
+              directly (bookmark, refresh, new tab) leaves no useful browser
+              history to go back to, and this is the only way out of /settings
+              back to the main app shell (backlog, 2026-08-28). */}
+          <button type="button" className="sidebar-link w-full text-left" onClick={() => navigate('/overview')}>
             <ChevronLeftIcon className="h-4 w-4 shrink-0" />
             Back
           </button>

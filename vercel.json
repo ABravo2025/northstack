@@ -11,6 +11,7 @@
     { "path": "/api/internal/plan-transitions/run", "schedule": "0 6 * * *" },
     { "path": "/api/internal/google-calendar-channels/renew", "schedule": "0 7 * * *" },
     { "path": "/api/internal/opportunities/stalled-reminders/run", "schedule": "0 8 * * *" },
-    { "path": "/api/internal/stripe-events/poll", "schedule": "0 9 * * *" }
+    { "path": "/api/internal/stripe-events/poll", "schedule": "0 9 * * *" },
+    { "path": "/api/internal/employee-terminations/run", "schedule": "0 10 * * *" }
   ]
 }

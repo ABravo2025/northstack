@@ -24,6 +24,7 @@ import {
 import { findFieldCatalogDefinitionById } from '../modules/hr/fieldCatalogService.js';
 import { findStatusDefinitionById } from '../modules/hr/statusService.js';
 import { calculateEmployeeTimeOffBalances } from '../modules/hr/timeOffBalanceService.js';
+import { cancelTermination, createTermination, getLatestTermination, listDirectReports } from '../modules/hr/terminationService.js';
 import { createInvitation } from '../modules/tenant/invitationService.js';
 import {
   getEmployeeCompensationSummary,
@@ -261,6 +262,89 @@ employeesRouter.delete('/api/hr/employees/:employeeId', async (req, res) => {
   }
 
   await deleteEmployee(req.params.employeeId);
+  return res.status(204).end();
+});
+
+// Everything the "Terminate" modal needs in one call — whether there's already a pending
+// scheduled termination to show instead of the form, and the direct reports list to build the
+// optional reassignment pickers.
+employeesRouter.get('/api/hr/employees/:employeeId/termination', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!canCreateHr(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const employee = await findEmployeeById(req.params.employeeId);
+  if (!employee || employee.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Employee not found' });
+  }
+
+  const [pendingTermination, directReports] = await Promise.all([
+    getLatestTermination(req.params.employeeId),
+    listDirectReports(req.params.employeeId),
+  ]);
+  return res.json({
+    pendingTermination: pendingTermination && !pendingTermination.executedAt ? pendingTermination : null,
+    directReports,
+  });
+});
+
+employeesRouter.post('/api/hr/employees/:employeeId/termination', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!canCreateHr(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const employee = await findEmployeeById(req.params.employeeId);
+  if (!employee || employee.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Employee not found' });
+  }
+
+  if (!req.body?.terminationDate) {
+    return res.status(400).json({ error: 'terminationDate is required' });
+  }
+
+  // Final payment touches Payroll (Unit 18/19's off-cycle entries), which is owner-only visibility
+  // everywhere else in the app — enforced here too, not just hidden client-side.
+  if (req.body?.finalPayment && !canManagePayroll(user.role)) {
+    return res.status(403).json({ error: 'Only the workspace owner can include a final payment' });
+  }
+
+  try {
+    const result = await createTermination({
+      tenantId: user.tenantId!,
+      employeeId: req.params.employeeId,
+      terminationDate: req.body.terminationDate,
+      revokeAccess: req.body.revokeAccess === true,
+      createdByUserId: user.id,
+      reassignments: Array.isArray(req.body.reassignments) ? req.body.reassignments : undefined,
+      finalPayment: req.body.finalPayment ?? undefined,
+    });
+    return res.status(201).json(result);
+  } catch (error) {
+    return res.status(400).json({ error: (error as Error).message });
+  }
+});
+
+employeesRouter.post('/api/hr/employee-terminations/:terminationId/cancel', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!canCreateHr(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const result = await cancelTermination(req.params.terminationId, user.tenantId!);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
   return res.status(204).end();
 });
 

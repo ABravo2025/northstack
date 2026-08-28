@@ -103,6 +103,22 @@ export interface EmployeeBirthday {
   birthdate: string;
 }
 
+export interface EmployeeTermination {
+  id: string;
+  employeeId: string;
+  terminationDate: string;
+  revokeAccess: boolean;
+  finalPaymentEntryId: string | null;
+  createdAt: string;
+  executedAt: string | null;
+  cancelledAt: string | null;
+}
+
+export interface EmployeeTerminationOptions {
+  pendingTermination: EmployeeTermination | null;
+  directReports: { id: string; firstName: string; lastName: string }[];
+}
+
 export interface GoogleCalendarStatus {
   connected: boolean;
   googleAccountEmail: string | null;

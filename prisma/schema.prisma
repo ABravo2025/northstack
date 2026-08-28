@@ -362,6 +362,7 @@ model Tenant {
   stripeConnection          StripeConnection?
   tagDefinitions            TagDefinition[]
   tagAssignments            TagAssignment[]
+  employeeTerminations      EmployeeTermination[]
 }
 
 // Billing Integration (spec-billing-integration.md). plan/lockedPriceCents are deliberately NOT
@@ -486,6 +487,7 @@ model User {
   timeOffCalendarSyncs    TimeOffCalendarSync[]
   googleCalendarWatchChannel GoogleCalendarWatchChannel?
   stripeConnectionsConnected StripeConnection[]
+  employeeTerminationsCreated EmployeeTermination[]
 
   @@index([emailDomain])
 }
@@ -565,8 +567,48 @@ model Employee {
   timeOffRequestsToApprove TimeOffRequest[]        @relation("TimeOffRequestApprover")
   compensations            EmployeeCompensation[]
   payrollEntries           PayrollEntry[]
+  terminations             EmployeeTermination[]
 
   @@unique([tenantId, email])
+}
+
+// Audit trail of every termination (past, executed, or still scheduled) — a business event with
+// its own history, not mutable state crammed onto Employee, same instinct as StatusHistoryEntry.
+// terminationDate can be in the past (recording a departure that already happened), today, or in
+// the future (scheduled — executeTermination doesn't run until the daily cron picks it up, see
+// runScheduledTerminations in terminationService.ts).
+model EmployeeTermination {
+  id                  String    @id @default(uuid())
+  tenantId            String
+  tenant              Tenant    @relation(fields: [tenantId], references: [id])
+  employeeId          String
+  employee            Employee  @relation(fields: [employeeId], references: [id])
+  terminationDate     DateTime
+  revokeAccess        Boolean   @default(false)
+  // PayrollEntry.id of the off-cycle payment created alongside this termination, if any
+  // (payrollOffPaymentService.ts's createOffPayments — reused as-is, not a new payroll concept).
+  finalPaymentEntryId String?
+  createdByUserId     String
+  createdBy           User      @relation(fields: [createdByUserId], references: [id])
+  createdAt           DateTime  @default(now())
+  executedAt          DateTime? // null = not applied yet (scheduled for the future)
+  cancelledAt         DateTime? // admin cancelled before it executed
+  reassignments       EmployeeTerminationReassignment[]
+
+  @@index([tenantId, employeeId])
+}
+
+// One row per direct report the admin chose to hand off to a new manager as part of a
+// termination — applied by executeTermination at the same time as everything else. Plain string
+// ids (no Prisma relation to Employee) on purpose: this is a write-once, rarely-read execution
+// record, not something ever traversed from the Employee side — same reasoning TagAssignment/Task
+// already apply to their own loosely-referenced ids elsewhere in this schema.
+model EmployeeTerminationReassignment {
+  id               String              @id @default(uuid())
+  terminationId    String
+  termination      EmployeeTermination @relation(fields: [terminationId], references: [id])
+  reportEmployeeId String
+  newManagerId     String?
 }
 
 model Client {

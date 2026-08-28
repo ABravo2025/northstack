@@ -1,5 +1,12 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
-import type { Employee, EmployeeBirthday, EmployeeCompensationSummary, Invitation } from './types.js';
+import type {
+  Employee,
+  EmployeeBirthday,
+  EmployeeCompensationSummary,
+  EmployeeTermination,
+  EmployeeTerminationOptions,
+  Invitation,
+} from './types.js';
 
 export const employeesApi = {
   // HR Employees
@@ -107,5 +114,40 @@ export const employeesApi = {
     });
     if (!res.ok) await throwApiError(res);
     return res.json();
+  },
+
+  getTerminationOptions: async (token: string, employeeId: string): Promise<EmployeeTerminationOptions> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/termination`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  createTermination: async (
+    token: string,
+    employeeId: string,
+    data: {
+      terminationDate: string;
+      revokeAccess: boolean;
+      reassignments?: { reportEmployeeId: string; newManagerId: string | null }[];
+      finalPayment?: { amountCents: number; currency: string; paymentDate: string; label?: string | null };
+    },
+  ): Promise<{ termination: EmployeeTermination; executedNow: boolean }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/termination`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  cancelTermination: async (token: string, terminationId: string): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employee-terminations/${terminationId}/cancel`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
   },
 };

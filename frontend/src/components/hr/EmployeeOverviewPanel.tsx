@@ -10,10 +10,11 @@ import DetailSidebar from '../layout/DetailSidebar';
 import Field from '../common/Field';
 import OverviewActionsMenu from '../common/OverviewActionsMenu';
 import PayslipPreviewModal from '../payroll/PayslipPreviewModal';
+import TerminateEmployeeModal from './TerminateEmployeeModal';
 import { formatMoney } from '../../lib/currencies';
 import { XIcon } from '../common/Icons';
 import TagInput from '../common/TagInput';
-import type { TagAssignmentLite } from '../../api';
+import type { TagAssignmentLite, EmployeeTerminationOptions } from '../../api';
 
 interface EmployeeOverviewPanelProps {
   employee: any;
@@ -81,16 +82,35 @@ export default function EmployeeOverviewPanel({
   const [compensation, setCompensation] = useState<EmployeeCompensationSummary | null>(null);
   const [loadingCompensation, setLoadingCompensation] = useState(false);
   const [tags, setTags] = useState<TagAssignmentLite[]>([]);
+  const [terminationOptions, setTerminationOptions] = useState<EmployeeTerminationOptions | null>(null);
+  const [terminateModalOpen, setTerminateModalOpen] = useState(false);
   const hasContract = canManagePayroll && HAS_CONTRACT_STATUSES.has(employee.contractStatus);
 
   const loadTags = () => {
     api.listTagsForEntity(token, 'employee', employee.id).then(setTags).catch(() => {});
   };
 
+  const loadTerminationOptions = () => {
+    if (!canManageEmployees) return;
+    api.getTerminationOptions(token, employee.id).then(setTerminationOptions).catch(() => {});
+  };
+
   useEffect(() => {
     loadTags();
+    loadTerminationOptions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [employee.id]);
+
+  const handleCancelTermination = async () => {
+    if (!terminationOptions?.pendingTermination) return;
+    try {
+      await api.cancelTermination(token, terminationOptions.pendingTermination.id);
+      toast.success('Scheduled termination cancelled.');
+      loadTerminationOptions();
+    } catch (error) {
+      toast.error('Failed to cancel termination: ' + (error as Error).message);
+    }
+  };
 
   useEffect(() => {
     if (!hasContract) {
@@ -189,6 +209,11 @@ export default function EmployeeOverviewPanel({
             className="overview-actions-trigger"
             items={[
               ...(canManageEmployees && !employee.userId ? [{ label: 'Invite to app', onClick: onInvite }] : []),
+              ...(canManageEmployees &&
+              employee.statusDefn?.name !== 'Terminated' &&
+              !terminationOptions?.pendingTermination
+                ? [{ label: 'Terminate', onClick: () => setTerminateModalOpen(true), danger: true }]
+                : []),
               { label: 'Delete', onClick: onRequestDelete, danger: true },
             ]}
           />
@@ -209,6 +234,16 @@ export default function EmployeeOverviewPanel({
                 <StatusChip {...CONTRACT_STATUS_CHIPS[employee.contractStatus as keyof typeof CONTRACT_STATUS_CHIPS]} />
               )}
             </div>
+            {terminationOptions?.pendingTermination && (
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-ink-faint">
+                  Scheduled termination: {terminationOptions.pendingTermination.terminationDate.slice(0, 10)}
+                </p>
+                <button type="button" className="btn-secondary btn-sm" onClick={handleCancelTermination}>
+                  Cancel
+                </button>
+              </div>
+            )}
             <TagInput token={token} entityType="employee" entityId={employee.id} tags={tags} onChanged={loadTags} />
           </div>
         </div>
@@ -482,6 +517,21 @@ export default function EmployeeOverviewPanel({
           title="Contract"
           downloadFilename="contract.pdf"
           helperText="This is the exact document generated for this contract."
+        />
+      )}
+      {terminateModalOpen && (
+        <TerminateEmployeeModal
+          open={terminateModalOpen}
+          onClose={() => setTerminateModalOpen(false)}
+          token={token}
+          employee={employee}
+          employees={employees}
+          canIncludeFinalPayment={canManagePayroll}
+          defaultCurrency={compensation?.currency}
+          onTerminated={() => {
+            loadTerminationOptions();
+            onChanged();
+          }}
         />
       )}
     </div>

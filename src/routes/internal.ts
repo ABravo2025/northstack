@@ -2,6 +2,7 @@ import { runPlanTransitions } from '../modules/tenant/planTransitionService.js';
 import { renewExpiringWatchChannels } from '../modules/integrations/googleCalendarWatchService.js';
 import { runStalledOpportunityReminders } from '../modules/crm/stalledOpportunityService.js';
 import { runStripeEventPolling } from '../modules/integrations/stripePaymentsService.js';
+import { runScheduledTerminations } from '../modules/hr/terminationService.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import type express from 'express';
 
@@ -76,5 +77,17 @@ internalRouter.get('/api/internal/stripe-events/poll', async (req, res) => {
   if (!checkCronSecret(req, res, '/api/internal/stripe-events/poll')) return;
 
   const result = await runStripeEventPolling();
+  return res.json(result);
+});
+
+// Triggered once a day by Vercel Cron — applies any EmployeeTermination whose terminationDate has
+// arrived (status, endDate, compensation close-out, access revocation, time off cleanup, manager
+// reassignment — see terminationService.ts's executeTermination). Terminations dated today or in
+// the past already execute synchronously when created; this only ever picks up ones that were
+// scheduled ahead of time.
+internalRouter.get('/api/internal/employee-terminations/run', async (req, res) => {
+  if (!checkCronSecret(req, res, '/api/internal/employee-terminations/run')) return;
+
+  const result = await runScheduledTerminations();
   return res.json(result);
 });

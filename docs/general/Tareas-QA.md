@@ -2034,10 +2034,11 @@ Alejandro, capa por capa:
    commit vacío a `staging` para forzar un deployment inequívocamente nuevo en vez de seguir
    adivinando cuál redeployar desde el dashboard.
 
-**Incidente de seguridad en el camino**: durante el paso 1, el usuario pegó por error su Stripe
-secret key **real** (`sk_live_...`, no test) en el campo de valor de `STRIPE_TOKEN_ENCRYPTION_KEY`
-en Vercel — corregido, pero la key ya pasó por el chat y el portapapeles. Anotado en
-`docs/tareas/backlog.md` para rotarla en el dashboard de Stripe.
+**Incidente de seguridad en el camino, descartado por el usuario**: durante el paso 1, el usuario
+pegó por error una Stripe secret key con prefijo `sk_live_...` en el campo de valor de
+`STRIPE_TOKEN_ENCRYPTION_KEY` en Vercel — corregido. Se sugirió rotarla dado el prefijo `live`, pero
+el usuario confirmó que la cuenta de Stripe en cuestión es de test, sin riesgo real — no se rotó,
+sacado del backlog.
 
 **Resultado final**: `staging.joinnorthstack.com` conecta, loguea, y la conexión de Stripe con una
 key de test terminó funcionando — confirmado en vivo por el usuario. Ningún cambio de código en

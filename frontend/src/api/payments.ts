@@ -37,9 +37,10 @@ export const paymentsApi = {
   },
 
   getCompanyPaymentEvents: async (token: string, companyId: string, cursor?: string): Promise<StripePaymentEventsPage> => {
-    const url = new URL(`${API_BASE_URL}/api/payments/companies/${companyId}/events`);
-    if (cursor) url.searchParams.set('cursor', cursor);
-    const res = await apiFetch(url.toString(), {
+    // Plain string concat, not new URL() — API_BASE_URL is '' in production/staging (same-origin
+    // frontend+backend), and new URL() throws on a relative-only string with no base.
+    const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
+    const res = await apiFetch(`${API_BASE_URL}/api/payments/companies/${companyId}/events${query}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);

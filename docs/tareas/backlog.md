@@ -14,9 +14,6 @@ los ítems.
   Aplicaría a `department`, `statusId`, `managerId`, custom fields embebidos. Sin definir: patrón de
   edición (click-to-edit por celda vs. fila entera en modo edición), autosave vs. confirmar, y si
   Companies/Contacts reciben el mismo tratamiento por consistencia.
-- [ ] **Falta proceso de termination de empleados**: pensar un flujo en Payroll para dar de baja
-  empleados y marcarlos como inactivos.
-
 ## CRM
 
 - [ ] **Vincular un Contact a una Opportunity al crearla**: no se puede asociar un Contact en el

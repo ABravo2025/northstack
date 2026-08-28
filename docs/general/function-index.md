@@ -235,6 +235,12 @@ CRUD estándar: **createSavedView**, **listSavedViews(...)**, **findSavedViewByI
 - **createStatusDefinition**, **listStatusDefinitions(...)**, **findStatusDefinitionById(id)**, **updateStatusDefinition(...)**.
 - **recordStatusChange(input)** — escribe una fila en `StatusHistoryEntry`.
 
+### `src/modules/hr/terminationService.ts` (baja de empleados — status change, no delete)
+- **createTermination(input)** — valida no-duplicado, arma la lista completa de reasignaciones de reportes directos, crea el pago final off-cycle si se incluyó (reusa `payrollOffPaymentService.createOffPayments`), y ejecuta de inmediato si `terminationDate <= hoy`.
+- **cancelTermination(terminationId, tenantId)** — solo antes de `executedAt`; idempotente si ya cancelada.
+- **runScheduledTerminations()** — cron diario (10am), ejecuta las bajas vencidas; una falla no frena a las demás.
+- **listDirectReports(employeeId)**, **getLatestTermination(employeeId)** — el registro no-cancelado más reciente (ejecutado o programado).
+
 ### `src/modules/hr/timeOffBalanceService.ts`
 - **calculateEmployeeTimeOffBalances(tenantId, employeeId)** / **calculateAllTimeOffBalances(tenantId)** — allocated/used/pending/remaining por política, con prorrateo mensual o fijo anual según `accrualMethod`.
 

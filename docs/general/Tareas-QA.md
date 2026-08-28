@@ -2177,3 +2177,85 @@ relativo sin un `base` — y `API_BASE_URL` es `''` en producción/staging (fron
 comparten origen ahí), a diferencia de local donde apunta a `http://localhost:3000`. El resto de
 las funciones de ese archivo ya concatenaban el string directo; se corrigió `getCompanyPaymentEvents`
 para hacer lo mismo.
+
+## QA-52 — Fix: botón "Volver" de Settings dejaba al usuario varado
+
+**Bug:** `SettingsSidebar.tsx` usaba `navigate(-1)` (volver al historial del navegador). Si alguien
+llegaba a `/settings` directo (link compartido, refresh, nueva pestaña) sin historial previo dentro
+de la app, el botón no llevaba a ningún lado útil.
+
+**Fix:** `navigate('/overview')` — destino fijo, mismo criterio que el resto de la navegación de
+Settings (no depende del historial del navegador).
+
+**Severidad:** baja — un solo caso de borde de navegación, sin impacto en datos.
+
+## QA-53 — Proceso de Termination de empleados (baja definitiva)
+
+**Por qué existe esta tarea:** ítem pendiente del backlog original de la sesión ("falta proceso de
+termination para dar de baja empleados y marcarlos inactivos"), que el usuario había dejado
+explícitamente parado hasta poder definirlo. Se planificó con el usuario (`AskUserQuestion` +
+`ExitPlanMode`, plan completo revisado y aprobado — incluida una vuelta extra pidiendo el detalle de
+qué ve el usuario desde el front antes de aprobar).
+
+**Decisiones clave confirmadas con el usuario:** (1) status nuevo "Terminated" propio, no reusar
+"Inactive"; (2) cortar acceso a la plataforma es un checkbox opcional, no automático; (3) los
+reportes directos se avisan y se pueden reasignar en el mismo flujo, no bloquean la baja; (4)
+**la fecha de baja soporta pasado, hoy, y futuro** — esta última decisión es la que obligó a un
+modelo de ejecución diferida (ver abajo) en vez de una simple mutación síncrona.
+
+**Modelo nuevo** (`prisma/schema.prisma`): `EmployeeTermination` (registro de auditoría — nunca se
+pisa ni se borra, se marca `executedAt`/`cancelledAt`) y `EmployeeTerminationReassignment` (un row
+por cada reporte directo del empleado dado de baja, con su `newManagerId` elegido o `null`).
+
+**Backend** (`src/modules/hr/terminationService.ts`, nuevo):
+- `createTermination` — valida que el empleado no esté ya Terminated y que no tenga una baja
+  programada pendiente; arma la lista completa de reasignaciones (los reportes no tocados por el
+  admin también quedan con `newManagerId: null`, no solo los que aparecieron en el modal); si se
+  incluyó un pago final, lo crea de inmediato vía `createOffPayments` (Payroll Unidad 18/19, sin
+  código nuevo ahí) sin importar si la baja es inmediata o futura; si `terminationDate <= hoy`,
+  ejecuta todo en el mismo request.
+- `executeTermination` (interna, reusada por el camino inmediato y por el cron) — status →
+  "Terminated" (find-or-create por tenant, nunca `isDefault`), `endDate`, cierra la
+  `EmployeeCompensation` abierta (`effectiveTo = terminationDate`, lo que realmente saca al empleado
+  de futuros Payroll runs), corta acceso (`User.status = 'inactive'`) si `revokeAccess` y hay
+  usuario vinculado, cancela Time Off pendiente/aprobado-a-futuro disparando
+  `syncTimeOffCalendarEvent` (no un update crudo, para que la limpieza en Google Calendar de otros
+  usuarios se dispare sola), y aplica cada reasignación de manager.
+- `runScheduledTerminations` — cron diario nuevo (`GET /api/internal/employee-terminations/run`,
+  10am, mismo patrón que los otros 4 crons de `src/routes/internal.ts`), ejecuta lo vencido, una
+  falla no frena a las demás.
+- `cancelTermination` — solo antes de `executedAt`; idempotente si ya estaba cancelada.
+- Rutas nuevas en `src/routes/employees.ts`: `GET/POST .../termination`, `POST
+  employee-terminations/:id/cancel`. Incluir un pago final requiere `canManagePayroll` además del
+  `canCreateHr` que ya gatea toda la ruta.
+
+**Frontend**: `EmployeeOverviewPanel.tsx` suma una entrada "Terminate" al menú de acciones (oculta
+si el empleado ya está Terminated o tiene una baja programada pendiente) y un aviso "Scheduled
+termination: [fecha]" con botón Cancel cuando corresponde. Nuevo
+`TerminateEmployeeModal.tsx`: date picker de último día, sección de reportes directos con un
+`SearchableSelect` de reasignación por cada uno (solo si tiene), checkbox "Also revoke their access
+to Northstack" (solo si tiene usuario vinculado), checkbox "Include a final payment" con su
+sub-formulario (monto/moneda/fecha/label — solo visible si el usuario tiene `canManagePayroll`), y
+botón de confirmar con texto dinámico: "Terminate now" vs "Schedule termination" según la fecha
+elegida.
+
+**Tests**: `tests/terminationService.test.ts`, nuevo, 18 tests (creación inmediata, creación
+programada, cancelación, el cron, `listDirectReports`/`getLatestTermination`). `npm run
+build`/`npm test` en verde (171/171). Además, verificado con un script ad-hoc corriendo
+`runScheduledTerminations()` directo contra `STAGING_DATABASE_URL` real (no solo el mock de los
+tests) para confirmar que el schema nuevo (`EmployeeTermination`/
+`EmployeeTerminationReassignment`) llegó bien a la base de staging — corrió sin errores.
+
+**Pendiente de verificación en vivo por el usuario en `staging.joinnorthstack.com`** (esta vez no lo
+hice yo — no había una sesión de browser automation disponible en este entorno para hacerlo):
+terminar un empleado de prueba con fecha de hoy y confirmar status/endDate/que desaparece de
+Payroll/que se cancela su Time Off/que el pago final aparece en el timeline; programar una baja a
+futuro y confirmar que no se aplica hasta que corra el cron.
+
+**Fuera de alcance, anotado para más adelante:** reactivar/rehire a alguien terminado; arreglar el
+hard-delete roto preexistente de `deleteEmployee` (bug real pero no de esta tarea — termination es
+la alternativa correcta a usar en su lugar); campo de "razón de baja" (no se pidió, `EmployeeTermination`
+es el lugar natural si se suma después).
+
+**Severidad:** — (feature nueva, no bug). Plan completo:
+`C:\Users\aleja\.claude\plans\bueno-yo-te-voy-valiant-whisper.md`.

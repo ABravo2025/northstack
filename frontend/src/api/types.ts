@@ -198,6 +198,11 @@ export interface StripePaymentSummary {
   currency: string | null;
   failedCount: number;
   subscriptionStatus: string | null;
+  paymentsCount: number;
+  paymentsAmountCents: number;
+  disputesCount: number;
+  disputesAmountCents: number;
+  firstPaymentAt: string | null;
 }
 
 export interface StripePaymentEvent {

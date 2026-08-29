@@ -189,16 +189,29 @@ describe('getCompanyPaymentSummary', () => {
   it('reports "not linked" without ever calling Stripe when the Company has no stripeCustomerId', async () => {
     const summary = await getCompanyPaymentSummary('t1', { stripeCustomerId: null });
 
-    expect(summary).toEqual({ linked: false, refundsCount: 0, refundsAmountCents: 0, currency: null, failedCount: 0, subscriptionStatus: null });
+    expect(summary).toEqual({
+      linked: false,
+      refundsCount: 0,
+      refundsAmountCents: 0,
+      currency: null,
+      failedCount: 0,
+      subscriptionStatus: null,
+      paymentsCount: 0,
+      paymentsAmountCents: 0,
+      disputesCount: 0,
+      disputesAmountCents: 0,
+      firstPaymentAt: null,
+    });
     expect(listChargesMock).not.toHaveBeenCalled();
   });
 
-  it('counts refunds (by amount_refunded > 0) and failed charges from the same Charges list', async () => {
+  it('counts payments, refunds, disputes, and failed charges from the same Charges list', async () => {
     listChargesMock.mockResolvedValue({
       data: [
-        { id: 'ch_1', amount: 1000, currency: 'usd', status: 'succeeded', refunded: false, amount_refunded: 0, created: 1 },
-        { id: 'ch_2', amount: 2000, currency: 'usd', status: 'succeeded', refunded: true, amount_refunded: 500, created: 2 }, // partial refund
-        { id: 'ch_3', amount: 3000, currency: 'usd', status: 'failed', refunded: false, amount_refunded: 0, created: 3 },
+        { id: 'ch_1', amount: 1000, currency: 'usd', status: 'succeeded', refunded: false, amount_refunded: 0, created: 1, disputed: false },
+        { id: 'ch_2', amount: 2000, currency: 'usd', status: 'succeeded', refunded: true, amount_refunded: 500, created: 2, disputed: false }, // partial refund
+        { id: 'ch_3', amount: 3000, currency: 'usd', status: 'failed', refunded: false, amount_refunded: 0, created: 3, disputed: false },
+        { id: 'ch_4', amount: 4000, currency: 'usd', status: 'succeeded', refunded: false, amount_refunded: 0, created: 4, disputed: true },
       ],
       has_more: false,
     });
@@ -213,6 +226,11 @@ describe('getCompanyPaymentSummary', () => {
       currency: 'usd',
       failedCount: 1,
       subscriptionStatus: 'active',
+      paymentsCount: 3,
+      paymentsAmountCents: 7000,
+      disputesCount: 1,
+      disputesAmountCents: 4000,
+      firstPaymentAt: new Date(1 * 1000).toISOString(),
     });
     expect(listChargesMock).toHaveBeenCalledWith('sk_test_abc', { customer: 'cus_1', limit: 100 });
     expect(listSubscriptionsMock).toHaveBeenCalledWith('sk_test_abc', { customer: 'cus_1', status: 'all', limit: 10 });

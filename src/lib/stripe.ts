@@ -107,6 +107,9 @@ export interface StripeCharge {
   // Stripe's own hosted, customer-facing receipt page — present on the Charge object by default,
   // no expand needed. null for a charge that hasn't succeeded (e.g. still failed/pending).
   receipt_url: string | null;
+  // Whether this charge has an open or resolved dispute against it — present on the Charge object
+  // by default, no separate /v1/disputes call needed for a company-level count/total.
+  disputed: boolean;
 }
 
 export async function listCharges(

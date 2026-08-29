@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, ApiError, type Company, type StripeCustomerMatch, type StripePaymentEvent, type StripePaymentSummary } from '../../api';
+import { api, ApiError, type Company, type StripeCustomerMatch, type StripePaymentSummary } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import ConfirmDialog from '../common/ConfirmDialog';
 import CompanyPaymentHistoryModal from './CompanyPaymentHistoryModal';
@@ -17,12 +17,6 @@ function dashboardCustomerUrl(customerId: string, apiKeyMode: 'test' | 'live' | 
   return `https://dashboard.stripe.com/${apiKeyMode === 'test' ? 'test/' : ''}customers/${customerId}`;
 }
 
-const EVENT_LABEL: Record<StripePaymentEvent['type'], string> = {
-  charge_succeeded: 'Payment',
-  charge_failed: 'Failed payment',
-  charge_refunded: 'Refund',
-};
-
 export default function CompanyStripeSection({ token, company, onLinked }: CompanyStripeSectionProps) {
   const toast = useToast();
   const [apiKeyMode, setApiKeyMode] = useState<'test' | 'live' | null>(null);
@@ -31,9 +25,6 @@ export default function CompanyStripeSection({ token, company, onLinked }: Compa
   const [linkingId, setLinkingId] = useState<string | null>(null);
   const [pendingOverwrite, setPendingOverwrite] = useState<StripeCustomerMatch | null>(null);
   const [summary, setSummary] = useState<StripePaymentSummary | null>(null);
-  const [events, setEvents] = useState<StripePaymentEvent[]>([]);
-  const [eventsCursor, setEventsCursor] = useState<string | null>(null);
-  const [loadingEvents, setLoadingEvents] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
 
   useEffect(() => {
@@ -48,30 +39,14 @@ export default function CompanyStripeSection({ token, company, onLinked }: Compa
   useEffect(() => {
     if (!company.stripeCustomerId) {
       setSummary(null);
-      setEvents([]);
-      setEventsCursor(null);
       return;
     }
     api
       .getCompanyPaymentSummary(token, company.id)
       .then(setSummary)
       .catch((error) => toast.error('Failed to load payment summary: ' + (error as Error).message));
-    loadEvents(undefined, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [company.id, company.stripeCustomerId]);
-
-  const loadEvents = async (cursor: string | undefined, replace: boolean) => {
-    setLoadingEvents(true);
-    try {
-      const page = await api.getCompanyPaymentEvents(token, company.id, cursor);
-      setEvents((prev) => (replace ? page.events : [...prev, ...page.events]));
-      setEventsCursor(page.nextCursor);
-    } catch (error) {
-      toast.error('Failed to load payment history: ' + (error as Error).message);
-    } finally {
-      setLoadingEvents(false);
-    }
-  };
 
   const handleSearch = async () => {
     setSearching(true);
@@ -136,41 +111,18 @@ export default function CompanyStripeSection({ token, company, onLinked }: Compa
         {summary && (
           <div className="mt-2 flex flex-wrap gap-4 text-xs text-ink-muted dark:text-dark-ink-muted">
             <span>
+              Payments: {summary.paymentsCount}
+              {summary.paymentsCount > 0 && summary.currency && ` (${formatMoney(summary.paymentsAmountCents, summary.currency.toUpperCase())})`}
+            </span>
+            <span>
               Refunds: {summary.refundsCount}
               {summary.refundsCount > 0 && summary.currency && ` (${formatMoney(summary.refundsAmountCents, summary.currency.toUpperCase())})`}
             </span>
-            <span>Failed payments: {summary.failedCount}</span>
-            <span>Subscription: {summary.subscriptionStatus ?? '—'}</span>
-          </div>
-        )}
-
-        {events.length > 0 && (
-          <div className="mt-2 flex flex-col gap-1">
-            {events.map((event) => (
-              <div key={event.id} className="flex items-center justify-between text-xs">
-                <a href={event.dashboardUrl} target="_blank" rel="noreferrer" className="table-link">
-                  {EVENT_LABEL[event.type]} · {formatMoney(event.amountCents, event.currency.toUpperCase())}
-                </a>
-                <div className="flex items-center gap-2">
-                  {event.receiptUrl && (
-                    <a href={event.receiptUrl} target="_blank" rel="noreferrer" className="table-link">
-                      Receipt
-                    </a>
-                  )}
-                  <span className="text-ink-faint">{new Date(event.createdAt).toLocaleDateString()}</span>
-                </div>
-              </div>
-            ))}
-            {eventsCursor && (
-              <button
-                type="button"
-                className="table-link self-start text-xs"
-                onClick={() => loadEvents(eventsCursor, false)}
-                disabled={loadingEvents}
-              >
-                {loadingEvents ? 'Loading…' : 'Load more'}
-              </button>
-            )}
+            <span>
+              Disputes: {summary.disputesCount}
+              {summary.disputesCount > 0 && summary.currency && ` (${formatMoney(summary.disputesAmountCents, summary.currency.toUpperCase())})`}
+            </span>
+            {summary.firstPaymentAt && <span>First payment: {new Date(summary.firstPaymentAt).toLocaleDateString()}</span>}
           </div>
         )}
 

@@ -105,6 +105,17 @@ export interface StripePaymentSummary {
   currency: string | null;
   failedCount: number;
   subscriptionStatus: string | null;
+  // Company profile overview (2026-08-29): total successful payments, disputes, and the date of
+  // the earliest one — kept alongside the existing fields above (still used by
+  // PaymentsOverviewPage's own totals/columns) rather than replacing them.
+  paymentsCount: number;
+  paymentsAmountCents: number;
+  disputesCount: number;
+  disputesAmountCents: number;
+  // ISO date of the earliest succeeded charge in the fetched window — same `limit: 100`
+  // simplification as the rest of this summary (see getCompanyPaymentSummary): a customer with
+  // more than 100 charges could have an even earlier one that this doesn't see.
+  firstPaymentAt: string | null;
 }
 
 const UNLINKED_SUMMARY: StripePaymentSummary = {
@@ -114,12 +125,22 @@ const UNLINKED_SUMMARY: StripePaymentSummary = {
   currency: null,
   failedCount: 0,
   subscriptionStatus: null,
+  paymentsCount: 0,
+  paymentsAmountCents: 0,
+  disputesCount: 0,
+  disputesAmountCents: 0,
+  firstPaymentAt: null,
 };
 
 function summarizeCharges(charges: StripeCharge[]): Omit<StripePaymentSummary, 'linked' | 'subscriptionStatus'> {
   let refundsCount = 0;
   let refundsAmountCents = 0;
   let failedCount = 0;
+  let paymentsCount = 0;
+  let paymentsAmountCents = 0;
+  let disputesCount = 0;
+  let disputesAmountCents = 0;
+  let firstPaymentAt: string | null = null;
   for (const charge of charges) {
     if (charge.amount_refunded > 0) {
       refundsCount += 1;
@@ -128,8 +149,28 @@ function summarizeCharges(charges: StripeCharge[]): Omit<StripePaymentSummary, '
     if (charge.status === 'failed') {
       failedCount += 1;
     }
+    if (charge.status === 'succeeded') {
+      paymentsCount += 1;
+      paymentsAmountCents += charge.amount;
+      const createdAt = new Date(charge.created * 1000).toISOString();
+      if (!firstPaymentAt || createdAt < firstPaymentAt) firstPaymentAt = createdAt;
+    }
+    if (charge.disputed) {
+      disputesCount += 1;
+      disputesAmountCents += charge.amount;
+    }
   }
-  return { refundsCount, refundsAmountCents, failedCount, currency: charges[0]?.currency ?? null };
+  return {
+    refundsCount,
+    refundsAmountCents,
+    failedCount,
+    currency: charges[0]?.currency ?? null,
+    paymentsCount,
+    paymentsAmountCents,
+    disputesCount,
+    disputesAmountCents,
+    firstPaymentAt,
+  };
 }
 
 // `limit: 100` (Stripe's max) for the summary — good enough for counts/totals at this stage; a

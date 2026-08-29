@@ -2309,6 +2309,12 @@ aceptando la pérdida de 1 valor no-nulo del campo viejo (el `PayrollEntry` real
 sigue intacto, solo se perdió el puntero interno no usado). `npm run build`/`npm test` en verde
 (175/175, 174 + 1 nuevo).
 
+**Ronda 5 (mismo día)**: feedback puramente de UI — el modal quedó comprimido una vez que se sumaron
+las líneas de ajuste. Se pasó de tamaño default (448px) a `wide` (768px, mismo prop que ya usa
+`Modal.tsx`), y se agregó una leyenda (`alert-info`) arriba de "Last day" explicando qué hace el
+botón antes de que el usuario elija una fecha: termina el contrato y el status pasa a Terminated.
+Cambio solo de frontend, sin tests nuevos.
+
 **Fuera de alcance, anotado para más adelante:** reactivar/rehire a alguien terminado; arreglar el
 hard-delete roto preexistente de `deleteEmployee` (bug real pero no de esta tarea — termination es
 la alternativa correcta a usar en su lugar); campo de "razón de baja" (no se pidió, `EmployeeTermination`

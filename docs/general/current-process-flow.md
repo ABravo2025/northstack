@@ -1,5 +1,15 @@
 # Current Process Flow
 
+- **2026-08-29: this file is significantly behind and was not fully rewritten in this pass** —
+  everything below the "Última actualización" lines is frozen at 2026-08-13. Since then: Tenant
+  Signup + Subscription Plans, Billing Integration (Paddle/Mercado Pago), Payroll, Sales v2, the
+  Client→Company/Contact production migration, Admin Center, Google Calendar sync, Payments v1, and
+  Employee Termination all shipped or advanced significantly — see `docs/general/features-overview.md`
+  (product-level, kept current as of 2026-08-29) and `docs/general/database-schema.md` (data model,
+  same date) for accurate current state instead of trusting the flow descriptions below. One
+  concrete architecture gap fixed here: a `staging` deploy pipeline now exists and is the default
+  target for every code push (`git push origin main:staging`, promoted to `main` only after the
+  user reviews it) — the deploy section below predates that and only describes the `main` pipeline.
 - Última actualización: 2026-08-13 (Tenant Signup con verificación de email + Subscription
   Plans — reemplaza el registro de un solo paso y agrega el modal de selección de plan post-
   signup; ver secciones dedicadas más abajo. Todo en `staging`, nada en producción todavía)
@@ -17,6 +27,7 @@ This document describes the current architecture and flows for Northstack, kept 
 - **Database**: Neon (serverless Postgres) via Prisma, same `DATABASE_URL` in both environments.
 - **Hosting**: Vercel, one project (`northstack`) serving both the static frontend and the `/api/*` + `/health` serverless function (`vercel.json` routes accordingly; `framework: null` so Vercel doesn't auto-detect "Express" and break the hybrid build).
 - **Deploys**: every push to `main` on GitHub triggers `.github/workflows/deploy.yml`, which runs `vercel deploy --prod` using a `VERCEL_TOKEN` repo secret (Vercel's native GitHub App integration couldn't be authorized headlessly, so this is the workaround).
+- **Staging (added 2026-07-27, the default target since then)**: a `staging` git branch with its own Neon database branch and its own domain (`staging.joinnorthstack.com`), deployed by the same `deploy.yml`'s `deploy-staging` job on push to `staging` (`npx vercel deploy` + `vercel alias set`, not Vercel's native Git integration either). Every code change (backend/frontend/schema, not docs) goes to `staging` first via `git push origin main:staging` — `main` itself is left untouched until the user reviews staging and gives an explicit go-ahead; only then does it get promoted with a normal `git push origin main`. A `prisma db push` needs to run against `STAGING_DATABASE_URL` separately from production's `DATABASE_URL`, or staging's schema silently drifts. Docs-only changes (`docs/*.md`) skip staging and go straight to `main`, since nothing renders/deploys them — when local `main` has an unreviewed code commit ahead of `origin/main`, that's done from an isolated `git worktree` checked out from `origin/main` (not local `main`), so the unreviewed commit's ancestry never leaks into what gets pushed.
 - **Domain**: `joinnorthstack.com` (Cloudflare Registrar), split across **two separate Vercel projects**, both on the same account:
   - `app.joinnorthstack.com` (A record → `76.76.21.21`, DNS only/no proxy) → the `northstack` project (the real app, static frontend + serverless backend).
   - `joinnorthstack.com` root (A record → `76.76.21.21`, same IP, different Vercel-side routing) → the `northstack-landing` project — a static marketing page (`landing/index.html`), no backend, no sign up/login yet (deliberately left out until the beta is live).

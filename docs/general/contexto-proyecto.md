@@ -1,6 +1,13 @@
 # Contexto de desarrollo del proyecto
 
 - Fecha de creación: 2026-07-02
+- **Nota 2026-08-29**: este archivo volvió a quedarse atrás, mismo patrón que ya le pasó una vez
+  (ver la nota de la entrada 2026-08-11 más abajo) — no se reescribió por completo en esta ronda.
+  Desde la última actualización real (2026-08-13) shippearon o avanzaron: Billing Integration,
+  Payroll completo, Sales v2, la migración de `Client` a producción, Admin Center, Google Calendar,
+  Payments v1, y Employee Termination. Para el estado real y actualizado, `docs/general/features-overview.md`
+  (nivel producto) y `docs/general/database-schema.md` (esquema de datos) son la fuente más al día,
+  ambos actualizados en esta misma ronda.
 - Última actualización: 2026-08-13 (Tenant Signup con verificación de email + Subscription
   Plans, solo en `staging` — ver sección al final de este archivo).
 - Última actualización anterior: 2026-08-11 (Admin Center completo, Blocks 1-8 — ver sección al final de este

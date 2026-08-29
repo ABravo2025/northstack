@@ -5,6 +5,11 @@ pieza-por-pieza ya usado en Payroll/Clients. Specs de referencia: `spec-tenant-s
 `spec-subscription-plans.md`. Mockups: `tenant-signup-mockup.html`,
 `subscription-plans-mockup.html`.
 
+**Estado (2026-08-29): todas las unidades de abajo están hechas y en producción desde 2026-08-18**
+(después de una revisión de código que encontró y corrigió 12 bugs antes del push a `main`). Las
+unidades 11, 16 y 17 se construyeron distinto de como están descriptas acá — ver notas inline en
+cada una; el resto coincide con lo escrito.
+
 ## Backend — Signup
 
 1. **Schema**: agregar modelo `EmailVerification` (aditivo), agregar `User.jobFunction`
@@ -41,7 +46,8 @@ pieza-por-pieza ya usado en Payroll/Clients. Specs de referencia: `spec-tenant-s
 10. Conectar el submit final del survey al `POST /api/tenants/register` actualizado (ahora
     incluye `verificationToken`).
 11. Actualizar el routing (`App.tsx`) para que un registro exitoso redirija a `/plans` en vez de
-    `/overview`.
+    `/overview`. **(Hecho distinto, 2026-08-29)** No hay ruta `/plans` — el redirect real sigue
+    siendo a `/overview` de siempre; ahí se monta `PlansModal.tsx` automáticamente (ver unidad 16).
 
 ## Backend — Subscription plans
 
@@ -55,7 +61,10 @@ pieza-por-pieza ya usado en Payroll/Clients. Specs de referencia: `spec-tenant-s
 14. **Cron** (mismo patrón de ventana de recuperación + idempotencia que el cron de Payroll):
     job diario que pasa `trialing` → `past_due` cuando vence `trialEndsAt`, y `past_due` →
     `suspended` cuando vence `gracePeriodEndsAt`. Setea `gracePeriodEndsAt = trialEndsAt + 14
-    días` en la primera transición.
+    días` en la primera transición. **(Nota 2026-08-29)** Payroll no tenía ningún cron —
+    el "mismo patrón" no existía todavía. Se resolvió antes de escribir código: Vercel Cron
+    (`vercel.json` → `crons`) contra `GET /api/internal/plan-transitions/run`, protegido por
+    `CRON_SECRET` opcional. La lógica en sí (`planTransitionService.ts`) sí quedó idempotente.
 15. **Tests**: transiciones del cron (con un "now" fijo/mockeado para simular que se cruzan
     ambos umbrales), chequeo de permiso en `PATCH /api/tenants/me/plan` (solo owner), el precio
     congelado no se mueve si cambia el precio de lista más adelante.
@@ -65,17 +74,31 @@ pieza-por-pieza ya usado en Payroll/Clients. Specs de referencia: `spec-tenant-s
 16. **`PlansPage.tsx`** nueva en `/plans`: 2 tarjetas visibles (Starter/Growth) según el mockup
     aprobado, badge "Recommended for you" según `Tenant.companySize`, banner de precio de
     lanzamiento + precio tachado, link discreto "Get in touch" para Scale (alcanza con un
-    `mailto:` simple en esta ronda).
+    `mailto:` simple en esta ronda). **(Hecho distinto, corregido 2026-08-13 antes de producción)**
+    No es una página/ruta — la primera pasada sí la construyó así y no coincidía con el mockup
+    real; quedó como `PlansModal.tsx` (`components/common/`), modal descartable que se abre solo
+    sobre `/overview`. Se sumó una 3ra tarjeta "Free Trial" no prevista en el mockup ni en el spec
+    original (a pedido explícito), que solo cierra el modal.
 17. **Route guard**: un tenant con `status: 'trialing'` y `plan: null` se redirige a `/plans` si
     intenta entrar a cualquier otra ruta primero (cubre el caso de cerrar la pestaña a mitad de
-    la elección).
+    la elección). **(No construido así, decisión de producto revertida el mismo día, 2026-08-13)**
+    No hay ningún redirect ni gate de ruta — el trial ya arrancó en el registro sin importar si se
+    elige un plan, así que no elegir uno no bloquea nada. En su lugar: el modal se reabre solo en
+    cada carga de `/overview` hasta que se elige un plan o se cierra manualmente (dismiss guardado
+    por tenant en `localStorage`), más el banner de la unidad 18.
 18. **Banner** en `AppLayout.tsx` (o un lugar compartido similar) para tenants en `past_due` —
     muestra los días restantes del período de gracia. No hace falta banner para `trialing` en
     esta ronda salvo que se prefiera agregarlo (no está en el mockup, decisión del desarrollador).
+    **(Se agregó igual, fix 2026-08-18)** Banner adicional para `trialing` + `plan: null` +
+    modal ya descartado: "You haven't picked a plan yet" con botón para reabrir `PlansModal`
+    (owner-only) — sin esto, cerrar el modal una vez dejaba a la persona sin ninguna forma de
+    volver a abrirlo.
 
 ## Explícitamente fuera de este breakdown
 
-- Integración con Paddle, checkout real, UI de "agregar método de pago".
-- Pantalla de autogestión de suscripción en `/settings`.
-- Flujo de venta real de Scale/Custom.
+- ~~Integración con Paddle, checkout real, UI de "agregar método de pago".~~ Construido después
+  en `task-breakdown-billing-integration.md` (Paddle + Mercado Pago).
+- ~~Pantalla de autogestión de suscripción en `/settings`.~~ `BillingPage.tsx`, mismo breakdown
+  de Billing Integration.
+- Flujo de venta real de Scale/Custom — sigue sin construir.
 - `AcceptInvitePage.tsx` — sin cambios.

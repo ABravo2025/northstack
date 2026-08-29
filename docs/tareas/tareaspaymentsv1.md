@@ -60,3 +60,28 @@ Criterio en cada unidad: build → `npm run build`/`npm test` → verificación 
 - [x] 29. Frontend: el checklist de eventos ya estaba en el Paso 2 desde la Unidad 1 (se construyó adelantado a propósito) — nada que agregar.
 - [x] 30. **Verificado 2026-08-26 de punta a punta, sin necesitar Stripe real**: tenant descartable con un `StripeConnection` sembrado a mano (secret conocido), firmas HMAC calculadas igual que `verifyStripeSignature` para simular deliveries reales. Confirmado con una query directa: firma válida + customer vinculado → `Notification` real con mensaje/tipo/destinatario correctos; firma inválida/header faltante/tenant sin conexión → 400; customer sin match → 200 sin crear nada. 14 tests nuevos (guarda de `previous_attributes`, fallback de destinatario, todos los tipos de evento). `npm run build`/`npm test` (147/147)/`npm run lint` en verde.
 - [x] 31. **Rediseño 2026-08-28** (ver QA-49/QA-50 en `Tareas-QA.md`, detalle en `specpaymentsv1.md` Unidad 4): el webhook (tareas 26-30 arriba) se reemplazó por un cron diario (`runStripeEventPolling`, `GET /v1/events` con la misma Restricted Key — el plan original era 2x/día, bajado a 1x/día porque el plan Hobby de Vercel no permite más de una corrida diaria por cron, descubierto recién en el primer deploy real) — cero setup manual para el tenant. Se sacaron `POST /api/webhooks/stripe/:tenantId`, `saveStripeWebhookSecret`, `verifyStripeSignature`, `StripeConnection.webhookSigningSecretEncrypted`; se agregó `lastEventPollAt` al schema y el permiso `Events` a la Restricted Key recomendada. `processStripeWebhookEvent` no cambió — el cron lo reusa tal cual.
+
+---
+
+## Unidad 5 — Auto-vincular Companies al cron diario — ✅ completa (2026-08-28, en `staging`)
+
+- [x] 32. Backend: `autoLinkUnmatchedCompanies(tenantId)` (`stripePaymentsService.ts`) — reusa el matching de la Unidad 2 sin tocarlo, fan-out con `mapWithConcurrency` (límite 10). Vincula solo si hay exactamente 1 match; 0 o 2+ no hacen nada (se reintenta / queda para el flujo manual). Llamada desde el cron de la Unidad 4, antes de pedir eventos.
+- [x] 33. **Bug real encontrado en la verificación en vivo** (primera Company con charges reales que ejercitó este código): `getCompanyPaymentEvents` (frontend, `api/payments.ts`) armaba la URL con `new URL(...)`, que rompe cuando `API_BASE_URL` es `''` (staging/producción) — corregido a concatenación de string, mismo patrón que el resto del archivo.
+- [x] 34. **Verificado 2026-08-28** contra `staging`: una Company real se auto-vinculó en la primera corrida del cron. `npm run build`/`npm test` (153/153, 6 nuevos) en verde.
+
+---
+
+## Unidad 6 — Modal de historial de pagos por Company — ✅ completa (2026-08-29, en `staging`)
+
+- [x] 35. Backend: `StripeCharge.receipt_url` (`lib/stripe.ts`) no estaba tipado — se agregó, y se expone como `receiptUrl` en `StripePaymentEvent` (`getCompanyPaymentEvents`, sin ruta nueva).
+- [x] 36. Frontend: `CompanyPaymentHistoryModal.tsx` — tabla Date/Amount/Status/Receipt paginada + link "View company profile →". **Corrección en la misma ronda**: primera versión era una página con ruta propia (`/payments/companies/:companyId`) — se convirtió a Modal para no romper el patrón del resto de la app (toda vista de detalle es un overlay).
+- [x] 37. Frontend: abierto desde `PaymentsOverviewPage.tsx` (el link de Company de cada fila, que antes iba directo al perfil) y desde `CompanyStripeSection.tsx` (nuevo link "View full payment history →" dentro de `CompanyDetailModal`).
+- [x] 38. **Verificado**: `npm run build`/`npm test` (175/175) en verde.
+
+---
+
+## Unidad 7 — Company profile: Payments pasa a ser una vista general — ✅ completa (2026-08-29, en `staging`)
+
+- [x] 39. Backend: `StripePaymentSummary` suma `paymentsCount`/`paymentsAmountCents` (cargos `succeeded` — no existía un total antes), `disputesCount`/`disputesAmountCents` (`charge.disputed`, campo nativo del Charge, sin llamada nueva a `/v1/disputes`), y `firstPaymentAt` (el `created` más antiguo entre los cargos exitosos ya traídos). Extensión aditiva — `PaymentsOverviewPage.tsx` sigue usando los campos viejos tal cual.
+- [x] 40. Frontend: se sacó de `CompanyStripeSection.tsx` la mini-lista de eventos + "Load more" (ahora vive en el modal de la Unidad 6). Quedó solo: Payments/Refunds/Disputes (cantidad + monto) + First payment (fecha). Se sacaron del render "Failed payments" y "Subscription".
+- [x] 41. **Verificado**: `npm run build`/`npm test` (175/175) en verde. Payments v1 dado por cerrado por el usuario.

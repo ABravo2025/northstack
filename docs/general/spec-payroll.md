@@ -3,6 +3,13 @@
 Esta versión reemplaza cualquier implementación anterior de Payroll — se pide arrancar de cero,
 no reconciliar con nada existente.
 
+**Nota 2026-08-29**: este spec quedó completo y en producción (ver `docs/general/database-schema.md`
+grupo 7). La baja de un empleado ("Employee Termination" — cierra su compensación activa, corta
+acceso opcional, cancela Time Off, pago final con las mismas líneas que un `PayrollEntry` normal) es
+una feature **posterior y separada**, no parte de las 21 unidades de este spec — documentada en
+`docs/general/database-schema.md` grupo 11 y `docs/general/Tareas-QA.md` (QA-53). Solo en `staging`
+todavía.
+
 ## Qué es y qué no es
 
 Carga manual de pagos a personas (contractors y empleados) + registro histórico de compensación,

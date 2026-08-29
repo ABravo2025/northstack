@@ -1,6 +1,6 @@
 # Database Schema
 
-- Última actualización: 2026-08-22 (Google Calendar sync + cumpleaños de empleados, solo local/sin pushear — ver grupo 9)
+- Última actualización: 2026-08-29 (Employee Termination — ver grupo 11 — y Payments v1 Units 5-7, ver grupo 10; todo en `staging`, sin pushear a `main`)
 - Fuente de verdad real: `prisma/schema.prisma`. Este documento es una vista legible de ese archivo — si difieren, el `.prisma` manda. Regenerar este archivo cuando el schema cambie de forma significativa (modelo nuevo, relación nueva), no hace falta para cambios chicos (un campo opcional más, un índice).
 - Todos los modelos son multi-tenant: casi todos tienen `tenantId` directo (no derivado por join), y el aislamiento entre tenants se verifica en el código de cada endpoint (ownership check), no solo por FK — ver `docs/current-process-flow.md` para el patrón de verificación.
 
@@ -17,6 +17,9 @@ Se dividen en grupos por área funcional, no uno solo gigante, para que sean leg
 7. **Payroll** — PayFrequencyDefinition, PaymentMethodDefinition, EmployeeCompensation, PayrollRun, PayrollEntry.
 8. **Tenant Signup + Subscription Plans** — EmailVerification, y los campos nuevos de Tenant (plan/trial/gracia/precio congelado).
 9. **Google Calendar sync + cumpleaños** — GoogleCalendarConnection, GoogleOAuthState, y los campos nuevos de Employee/Task/TimeOffRequest.
+10. **Payments v1** — StripeConnection, y los campos nuevos de Company (`stripeCustomerId`/`stripeCustomerMatchedVia`).
+11. **Employee Termination** — EmployeeTermination, EmployeeTerminationReassignment.
+12. **Billing Integration** — Subscription, Invoice, PlanPrice, ProcessedWebhookEvent (Northstack's own subscription — Paddle intl/USD, Mercado Pago AR/ARS — distinto de Payments v1, que es la suscripción de Stripe de *cada tenant*, no la de Northstack).
 
 ## 1. Identidad y acceso
 
@@ -771,8 +774,9 @@ Notas:
 
 ## 10. Payments v1 — conexión con Stripe
 
-Pedido por Alejandro 2026-08-26 (`docs/tareas/specpaymentsv1.md`), Units 1-4 completas y ya en
-`main`. Cada tenant conecta su **propia** cuenta de Stripe (Restricted Key pegada a mano — Northstack
+Pedido por Alejandro 2026-08-26 (`docs/tareas/specpaymentsv1.md`), Units 1-7 completas, todo en
+`staging` esperando revisión del usuario — nada de esto está en `main`/producción todavía. Cada
+tenant conecta su **propia** cuenta de Stripe (Restricted Key pegada a mano — Northstack
 confirmó con el soporte de Stripe que OAuth/Connect requiere una entidad legal tipo LLC que
 Northstack no tiene todavía, mismo bloqueo ya anotado para su propia suscripción vía Paddle/Mercado
 Pago). Solo lectura: nada acá crea charges/invoices/subscriptions.
@@ -795,11 +799,11 @@ erDiagram
         string apiKeyEncrypted "AES-256-GCM, lib/stripeEncryption.ts"
         string apiKeyMode "'test' | 'live', detected from the key's own prefix"
         string stripeAccountId "nullable - GET /account can 401 for a scoped Restricted Key"
-        string webhookSigningSecretEncrypted "nullable - set in a separate step, AES-256-GCM"
         string connectedByUserId FK
         datetime connectedAt
         datetime disconnectedAt "nullable - soft, row survives a disconnect"
         bool needsAttention "default false - flips true when Stripe rejects the stored key"
+        datetime lastEventPollAt "nullable - cursor for the daily events-polling cron"
     }
 ```
 
@@ -846,24 +850,201 @@ resuelve en vivo contra la API de Stripe (decisión #7 de la spec, sin store his
 dato persistido es el vínculo de Unit 2 de arriba; refunds/failed/subscripciones se recalculan en
 cada request.
 
-**Unit 4 (2026-08-26, en `staging`) — webhook de notificaciones proactivas**: aditivo sobre
-`enum NotificationType` (grupo de Sales v2/Notification), sin modelo nuevo — reusa `Notification`
-tal cual ya existía:
+**Unit 4 (2026-08-26, rediseñada 2026-08-28, en `staging`) — notificaciones proactivas**: aditivo
+sobre `enum NotificationType` (grupo de Sales v2/Notification), sin modelo nuevo — reusa
+`Notification` tal cual ya existía:
 
 ```
 NotificationType += stripe_charge_refunded | stripe_charge_failed | stripe_payment_failed
                   | stripe_subscription_past_due | stripe_subscription_canceled
 ```
 
-`POST /api/webhooks/stripe/:tenantId` (en `src/routes/webhooks.ts`, junto a Paddle/Mercado Pago,
-no en `/api/integrations/stripe/*` — ver decisión de la Unidad 1) resuelve la Company por
-`stripeCustomerId` y crea una `Notification` (`entityType: 'company'`). Deliberadamente sin
-`ProcessedWebhookEvent` (esa tabla es de Paddle/MP, `enum PaymentProvider` no ganó un valor
-`stripe`) — el propio spec acepta el riesgo de una notificación duplicada ante un reintento de
-Stripe, a cambio de no construir idempotencia pesada para una feature de solo-avisar.
-`customer.subscription.updated` es el único evento con una guarda real: solo notifica si
-`data.previous_attributes.status` está presente y el status nuevo es `past_due` — sin eso,
-cualquier otro cambio a una subscription ya `past_due` re-notificaría en cada delivery.
+Diseño original: `POST /api/webhooks/stripe/:tenantId` (`src/routes/webhooks.ts`, junto a
+Paddle/Mercado Pago), cada tenant registrando la URL + signing secret a mano en su dashboard de
+Stripe. **Reemplazado el 2026-08-28** por un cron diario (`runStripeEventPolling`,
+`src/routes/internal.ts`, `GET /api/internal/stripe-events/poll`, `0 9 * * *`) que hace polling de
+`GET /v1/events` con la misma Restricted Key — cero setup manual para el tenant. El handler que
+resuelve la Company por `stripeCustomerId` y crea la `Notification` (`processStripeWebhookEvent`,
+`stripePaymentsService.ts`) no cambió: Stripe devuelve el mismo shape de Event por polling o por
+push, solo cambió quién lo llama. Deliberadamente sin `ProcessedWebhookEvent` (esa tabla es de
+Paddle/MP, `enum PaymentProvider` no ganó un valor `stripe`) — el propio spec acepta el riesgo de
+una notificación duplicada, a cambio de no construir idempotencia pesada para una feature de
+solo-avisar; `lastEventPollAt` (arriba) es el único cursor. `customer.subscription.updated` es el
+único evento con una guarda real: solo notifica si `data.previous_attributes.status` está presente
+y el status nuevo es `past_due` — sin eso, cualquier otro cambio a una subscription ya `past_due`
+re-notificaría en cada corrida.
+
+**Unit 5 (2026-08-28, en `staging`) — auto-vincular Companies**: sin schema nuevo —
+`autoLinkUnmatchedCompanies(tenantId)` corre antes del polling de eventos de arriba, en la misma
+corrida del cron, y reusa el matching de la Unit 2 (mismo `stripeCustomerId`/
+`stripeCustomerMatchedVia`) sin tocarlo. Solo vincula automático cuando hay exactamente 1 match; 0 o
+2+ quedan para el flujo manual.
+
+**Unit 6 (2026-08-29, en `staging`) — historial de pagos por Company**: sin schema nuevo — el único
+campo que faltaba exponer era `receipt_url` del propio objeto Charge de Stripe (ya lo trae por
+default, no requería `expand`), ahora tipado en `StripeCharge` (`lib/stripe.ts`) y expuesto como
+`receiptUrl` en cada evento de `GET /api/payments/companies/:id/events` (Unit 3). Consumido por un
+Modal nuevo (`CompanyPaymentHistoryModal.tsx`), no por una ruta — mismo patrón de overlay que el
+resto del detalle de la app.
+
+**Unit 7 (2026-08-29, en `staging`) — Company profile: vista general de Payments**: sin schema
+nuevo — `summarizeCharges` (`stripePaymentsService.ts`) ahora también calcula, sobre la misma lista
+de Charges de la Unit 3, `paymentsCount`/`paymentsAmountCents` (cargos `succeeded`, no existía un
+total antes), `disputesCount`/`disputesAmountCents` (`charge.disputed`, campo nativo del Charge,
+mismo patrón que `refunded`/`amount_refunded`) y `firstPaymentAt` (el más antiguo entre los cargos
+exitosos ya traídos, mismo límite de 100 cargos que el resto de este resumen). Extensión aditiva de
+`StripePaymentSummary` — `PaymentsOverviewPage.tsx` sigue leyendo los campos viejos tal cual.
+
+## 11. Employee Termination
+
+Pedido pendiente desde el backlog original ("falta proceso de termination para dar de baja
+empleados"), planificado y construido 2026-08-29 — plan completo en
+`C:\Users\aleja\.claude\plans\bueno-yo-te-voy-valiant-whisper.md`. En `staging`, no en `main`.
+Status change coordinado, no un delete — mismo espíritu "hide, don't destroy" que
+`Contact.isActive`/`Opportunity.isActive` (grupo 5).
+
+```mermaid
+erDiagram
+    TENANT ||--o{ EMPLOYEE_TERMINATION : "has"
+    EMPLOYEE ||--o{ EMPLOYEE_TERMINATION : "terminated"
+    USER ||--o{ EMPLOYEE_TERMINATION : "created by"
+    EMPLOYEE_TERMINATION ||--o{ EMPLOYEE_TERMINATION_REASSIGNMENT : "has"
+
+    EMPLOYEE_TERMINATION {
+        string id PK
+        string tenantId FK
+        string employeeId FK
+        datetime terminationDate "last day — can be past, today, or future"
+        bool revokeAccess "default false"
+        string[] finalPaymentEntryIds "PayrollEntry.id per line — primary payment + any bonus/commission/reimbursement/deduction lines"
+        string createdByUserId FK
+        datetime createdAt
+        datetime executedAt "nullable - null = still scheduled (future date)"
+        datetime cancelledAt "nullable - admin cancelled before it executed"
+    }
+    EMPLOYEE_TERMINATION_REASSIGNMENT {
+        string id PK
+        string terminationId FK
+        string reportEmployeeId "the direct report being reassigned"
+        string newManagerId "nullable - null = explicitly left with no manager"
+    }
+```
+
+Notas:
+- **Registro de auditoría, nunca se pisa ni se borra** — cada baja (ejecutada o programada) queda
+  como una fila propia, mismo instinto que `StatusHistoryEntry`, pero para este evento de negocio
+  específico en vez de cambios de status genéricos.
+- **Ejecución diferida** — `terminationDate` soporta pasado/hoy/futuro (decisión confirmada con el
+  usuario, la que más cambió el diseño respecto a una simple mutación síncrona). Si
+  `terminationDate <= hoy` al crearla, `executeTermination` corre en el mismo request
+  (`executedAt` queda seteado). Si es futura, solo se crea el registro — un cron diario
+  (`runScheduledTerminations`, `src/routes/internal.ts`, `0 10 * * *`) busca
+  `terminationDate <= hoy AND executedAt: null AND cancelledAt: null` y ejecuta lo vencido.
+- **`executeTermination` (interna a `terminationService.ts`), reusada por ambos caminos**: status
+  del Employee → "Terminated" (find-or-create por tenant vía nombre — no está en
+  `DEFAULT_STATUSES`/`statusService.ts`, se crea la primera vez que se termina a alguien en ese
+  tenant, `isDefault: false`); `Employee.endDate = terminationDate`; cierra la
+  `EmployeeCompensation` abierta (`effectiveTo = terminationDate`, grupo 7 — esto es lo que
+  realmente saca al empleado de futuros Payroll runs, que filtran por `effectiveTo: null`); si
+  `revokeAccess` y hay `userId`, `User.status = 'inactive'`; cancela `TimeOffRequest` pendiente o
+  aprobada-a-futuro **a través del flujo real de cambio de status** (no un update crudo), para que
+  `syncTimeOffCalendarEvent` (grupo 9) limpie el evento en Google Calendar de otros usuarios; aplica
+  cada `EmployeeTerminationReassignment`.
+- **`finalPaymentEntryIds` es un array**, no una FK única — el pago final admite múltiples líneas
+  (la principal más cualquier bonus/commission/reimbursement/deduction agregado en el mismo modal,
+  mismas opciones que un `PayrollEntry` normal de Payroll, grupo 7), cada una su propio
+  `PayrollEntry` (`runId: null`, reusa `createOffPayments`/Payroll Unidad 18-19 tal cual). Se crea
+  siempre en el momento de dar de alta la baja, sea inmediata o programada — el pago suelto ya tiene
+  su propia fecha, independiente de cuándo se ejecute la baja en sí.
+- **Reasignación de reportes directos completa, no solo lo tocado en el modal** — al crear la baja
+  se arma la lista completa de reportes directos del empleado; los que el admin no reasignó
+  explícitamente también quedan con una fila (`newManagerId: null`), para que
+  `executeTermination` los limpie a todos, no solo a los tocados.
+- **Fuera de alcance deliberado**: reactivar/rehire (editar el status a mano ya es posible, pero sin
+  flujo dedicado ni vínculo con el `EmployeeTermination` anterior); el hard-delete roto preexistente
+  de `deleteEmployee` (bug real, no de esta feature — termination es la alternativa correcta a usar
+  en su lugar, no un fix de ese bug puntual); campo de "razón de baja" (no se pidió, este modelo es
+  el lugar natural si se agrega después).
+
+## 12. Billing Integration
+
+Suscripción propia de Northstack (no confundir con Payments v1, grupo 10, que es la conexión de
+Stripe de *cada tenant* con *sus propios* clientes) — Paddle para mercado internacional/USD,
+Mercado Pago para Argentina/ARS. Spec en `docs/general/spec-billing-integration.md`. **En
+producción (`main`)** desde 2026-08-23, después de una code review que encontró y corrigió 7 bugs
+antes de salir.
+
+```mermaid
+erDiagram
+    TENANT ||--o| SUBSCRIPTION : "has, 1:1"
+    SUBSCRIPTION ||--o{ INVOICE : "has"
+
+    SUBSCRIPTION {
+        string id PK
+        string tenantId FK UK "one live subscription per tenant"
+        enum plan "PlanTier — starter/growth/scale"
+        enum status "trialing/active/past_due/suspended/cancelled"
+        enum provider "nullable - paddle/mercadopago, null until a payment method is attached"
+        string externalSubscriptionId "nullable - Paddle subscription id, or MP preapproval_id"
+        int lockedPriceCents
+        string currency "USD (Paddle) | ARS (Mercado Pago)"
+        datetime trialEndsAt "nullable"
+        datetime gracePeriodEndsAt "nullable"
+        datetime currentPeriodStart "nullable"
+        datetime currentPeriodEnd "nullable"
+        datetime cancelledAt "nullable - when cancellation was requested"
+        datetime cancellationEffectiveAt "nullable - = currentPeriodEnd at request time"
+        string cancellationReason "nullable"
+        string paymentMethodBrand "nullable - display only, e.g. 'visa'"
+        string paymentMethodLast4 "nullable"
+    }
+    INVOICE {
+        string id PK
+        string subscriptionId FK
+        enum provider "paddle/mercadopago"
+        string externalInvoiceId "nullable"
+        int amountCents
+        string currency
+        string status "paid | failed | refunded"
+        datetime periodStart
+        datetime periodEnd
+        datetime paidAt "nullable"
+    }
+    PLAN_PRICE {
+        string id PK
+        enum plan "PlanTier"
+        string market "'international' | 'ar'"
+        string currency "USD | ARS"
+        int launchPriceCents
+        int regularPriceCents
+        datetime effectiveFrom
+    }
+    PROCESSED_WEBHOOK_EVENT {
+        string id PK
+        enum provider "paddle/mercadopago"
+        string externalEventId
+        datetime processedAt
+    }
+```
+
+Notas:
+- **`PlanPrice` — catálogo de precios versionado, nunca se edita una fila existente**: un cambio de
+  precio inserta una fila nueva con un `effectiveFrom` posterior en vez de sobreescribir —
+  `Subscription.lockedPriceCents` ya congela lo que cada tenant paga de verdad, así que este
+  catálogo solo importa para nuevas suscripciones.
+- **`ProcessedWebhookEvent` — idempotencia de webhooks vía `@@unique([provider, externalEventId])`**:
+  contrato "insert-then-process" — una entrega duplicada del mismo evento falla el insert (constraint
+  de unicidad) en vez de procesarse dos veces, incluso ante una carrera concurrente. Deliberadamente
+  **no compartida con Payments v1** (grupo 10) — ese usa polling con `lastEventPollAt` como cursor
+  en vez de un webhook, así que no necesita esta tabla; `PaymentProvider` nunca ganó un valor
+  `stripe`.
+- **Sin SDK de ningún proveedor** — `src/lib/paddle.ts`/`src/lib/mercadopago.ts` son wrappers
+  propios (`fetch` + `crypto` nativos), mismo criterio que después se repitió para `lib/stripe.ts`
+  (grupo 10).
+- **`Subscription.provider` nullable** — durante el trial, antes de que el tenant cargue un método
+  de pago, no hay proveedor asignado todavía.
+- **Enforcement real de `status: suspended`**: `httpAuth.ts` bloquea toda mutación (no-GET) de un
+  tenant suspendido — verificado en el código, no solo declarado en el schema.
 
 ## Enums
 
@@ -893,7 +1074,10 @@ cualquier otro cambio a una subscription ya `past_due` re-notificaría en cada d
 | `PayrollRunStatus` | `draft`, `confirmed` | `PayrollRun.status` |
 | `PayrollEntryType` | `base`, `bonus`, `commission`, `reimbursement`, `deduction` | `PayrollEntry.type` |
 | `JobFunction` | `founder_ceo`, `hr`, `ops_finance`, `sales`, `other` | `User.jobFunction` (grupo 8) |
-| `PlanTier` | `starter`, `growth`, `scale` | `Tenant.plan` (grupo 8) |
+| `PlanTier` | `starter`, `growth`, `scale` | `Tenant.plan` (grupo 8), `Subscription.plan`/`PlanPrice.plan` (grupo 12) |
+| `SubscriptionStatus` | `trialing`, `active`, `past_due`, `suspended`, `cancelled` | `Subscription.status` (grupo 12) |
+| `PaymentProvider` | `paddle`, `mercadopago` | `Subscription.provider`, `Invoice.provider`, `ProcessedWebhookEvent.provider` (grupo 12) |
+| `PlatformRole` | `platform_admin`, `platform_support`, `platform_viewer` | `User.platformRole` (nullable — null = no es staff de Northstack; usado por Admin Center, repo separado `northstack-devtasks`) |
 
 ## Qué falta / deuda conocida
 
@@ -906,7 +1090,8 @@ cualquier otro cambio a una subscription ya `past_due` re-notificaría en cada d
 - El sistema de Time Off está completo (7/7 piezas).
 - **Task/Note — permisos abiertos a cualquier rol** (ver grupo 6): revisar cuando exista el sistema de roles custom (Tier 5).
 - **Activity — layout confirmado, sin construir**: el usuario confirmó 2026-07-30 que Activity entra como tab en el panel de detalle (junto a Notes/Tasks), pero sin ningún modelo/backend real todavía — el tab hoy es un placeholder de texto. El sistema de auditoría real (quién hizo qué y cuándo) sigue en Tier 5 ("cola larga").
-- **Tasks/Notes/Company/Contact/Opportunity — nada de esto llegó a producción todavía**: todo el trabajo de esta sesión (2026-07-29/30, ver `docs/tareas-desarrollo.md`) está pusheado a `staging` únicamente, pendiente de que el usuario lo revise antes de promover a `main`.
-- **Payroll — Unidades 1-4 solo en local/commits, nada pusheado a `staging` todavía** (a pedido del usuario, 2026-08-07): schema + cifrado (U1), catálogo de políticas de pago (U2, backend+frontend), rename a People + `personType` + retiro de la compensación legada (U4) — ver grupo 7 arriba para el detalle completo.
-- **Tenant Signup + Subscription Plans — completo en local, nada pusheado todavía** (2026-08-13, ver grupo 8): a la espera de que el usuario lo pruebe en su entorno local antes de decidir si va a `staging`. Fuera de alcance de este spec, explícitamente pospuesto: integración real de Paddle/checkout, UI de "agregar método de pago", pantalla de autogestión de suscripción en `/settings`, y **cualquier enforcement de acceso para tenants `suspended`** (hoy el status cambia pero nada bloquea requests en base a él — un tenant suspendido sigue funcionando igual que uno activo).
-- **Payments v1 — Units 1-4 construidas y en `staging`** (2026-08-26, ver grupo 10): conexión con Stripe, lookup/matching Company↔Customer, visibilidad de pagos en vivo (overview + panel en Company), y webhook de notificaciones proactivas. Nada de esto llegó a `main` todavía. No probado de punta a punta con una cuenta de Stripe real (sin credenciales en este entorno) — Unit 4 sí se verificó de punta a punta simulando deliveries reales de Stripe (firma HMAC calculada a mano contra un secret conocido), Units 1-3 solo con mocks/estados sin conexión — pendiente de que Alejandro pruebe el resto con su propia cuenta.
+- **Ya en producción (`main`), verificado contra `git log origin/main`, 2026-08-29**: Tasks/Notes, Company/Contact/Pipeline/Opportunity (Clients redesign original, grupo 5) y la migración de datos `Client → Company/Contact`; Payroll completo (grupo 7); Tenant Signup + Subscription Plans (grupo 8), incluido el enforcement de tenants `suspended` (bloquea mutaciones, `httpAuth.ts` — el gap que esta sección marcaba como pendiente ya no existe); Admin Center (Platform Roles, Tenants, Tickets/Ideas — repo separado `northstack-devtasks`, ver `docs/Admin-platform/`); Billing Integration (Paddle + Mercado Pago, grupo 12); Google Calendar sync + cumpleaños (grupo 9).
+- **Sales v2 (redesign de Pipeline/Opportunity — round-robin de asignación, forecast ponderado, automations al crear, notificaciones in-app) — Units 1-8 completas, solo en `staging`**: distinto de la "Clients redesign" original de arriba (esa sí está en producción) — esta es una segunda ronda de mejoras sobre lo mismo, todavía sin promover.
+- **Payments v1 — Units 1-7 completas, solo en `staging`** (última ronda 2026-08-29, ver grupo 10): conexión con Stripe, lookup/matching, visibilidad de pagos en vivo, notificaciones proactivas (cron de polling, no webhook), auto-vinculación de Companies, modal de historial de pagos con recibos, y vista general con disputes en el perfil de Company. No probado de punta a punta con una cuenta de Stripe real (sin credenciales en este entorno) más allá de tests unitarios y verificación directa contra `STAGING_DATABASE_URL`.
+- **Employee Termination — completo, solo en `staging`** (2026-08-29, ver grupo 11): status change coordinado (status/endDate/compensación/acceso/Time Off/reasignación de reportes), soporta baja pasada/hoy/futura con ejecución diferida vía cron, pago final con líneas de bonus/commission/reimbursement/deduction.
+- **Lo único todavía sin promover a `main`, a la fecha de esta actualización (2026-08-29)**: Sales v2 (redesign), Payments v1, y Employee Termination — todo el resto de lo listado arriba ya está en producción.

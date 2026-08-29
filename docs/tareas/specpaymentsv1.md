@@ -1,7 +1,7 @@
 # Spec Payments v1 — Conexión Stripe + Visibilidad de Pagos
 
-**Estado:** ✅ Unidades 1-4 completas y verificadas en `staging` (2026-08-26) — conexión con Stripe, lookup/matching Company↔Customer, visibilidad de pagos en vivo, y webhook de notificaciones proactivas. Ver sección 8 para el detalle por unidad. Nada de esta spec está en `main`/producción; Units 1-3 no probadas con una cuenta de Stripe real (sin credenciales en este entorno) — Unit 4 sí se verificó de punta a punta simulando deliveries reales (firma HMAC calculada a mano contra un secret conocido, sin necesitar Stripe en sí).
-**Fecha de esta ronda:** 2026-08-26.
+**Estado:** ✅ Unidades 1-7 completas y en `staging` (última ronda 2026-08-29) — conexión con Stripe, lookup/matching Company↔Customer, visibilidad de pagos en vivo, notificaciones proactivas (rediseñadas de webhook a cron de polling el 2026-08-28), auto-vinculación de Companies, un modal de historial de pagos por Company (fecha/monto/estado/recibo), y una vista general simplificada de Payments en el perfil de Company (totales de payments/refunds/disputes + fecha del primer pago). Ver sección 8 para el detalle por unidad. Nada de esta spec está en `main`/producción todavía — todo pusheado a `staging`, esperando revisión del usuario antes de promover. Units 1-3 no probadas con una cuenta de Stripe real (sin credenciales en este entorno); el resto de las unidades sí se ejercitó contra `STAGING_DATABASE_URL` real y/o con tests unitarios exhaustivos.
+**Fecha de esta ronda:** 2026-08-29.
 **Contexto:** primera unidad del "Módulo Payments" ya anotado en backlog (`docs/tareas-desarrollo.md`, Tier 4, dentro del futuro Panel de Integraciones — punto 1, Stripe). Esta unidad es el cimiento: conexión con Stripe por tenant + visibilidad de refunds/pagos fallidos/subscripciones por Company, dejando la base lista para que una unidad futura agregue creación de charges/invoices desde Northstack. `Company.billingAddress` ya existía reservado para esto (ver `docs/database-schema.md`, grupo 5).
 
 Mismo criterio de ejecución que el resto de las specs del proyecto: cada unidad build → `npm run build`/`npm test` → verificación real (curl y/o Playwright contra un tenant de prueba) → commit → push exclusivamente a `staging`, nunca a `main`, hasta revisión del usuario.
@@ -30,19 +30,22 @@ Mismo criterio de ejecución que el resto de las specs del proyecto: cada unidad
 
 ```
 model StripeConnection {
-  id                            String    @id @default(uuid())
-  tenantId                      String    @unique
-  tenant                        Tenant    @relation(fields: [tenantId], references: [id])
-  apiKeyEncrypted               String
-  apiKeyMode                    String              // "test" | "live"
-  stripeAccountId               String?
-  webhookSigningSecretEncrypted String?
-  connectedByUserId             String
-  connectedAt                   DateTime  @default(now())
-  disconnectedAt                DateTime?
-  needsAttention                 Boolean  @default(false)
+  id                 String    @id @default(uuid())
+  tenantId           String    @unique
+  tenant             Tenant    @relation(fields: [tenantId], references: [id])
+  apiKeyEncrypted    String
+  apiKeyMode         String              // "test" | "live"
+  stripeAccountId    String?
+  connectedByUserId  String
+  connectedAt        DateTime  @default(now())
+  disconnectedAt     DateTime?
+  needsAttention     Boolean   @default(false)
+  lastEventPollAt    DateTime?           // cursor del cron de polling (Unidad 4, rediseño 2026-08-28)
 }
 ```
+
+*(`webhookSigningSecretEncrypted` existió hasta el rediseño de la Unidad 4 del 2026-08-28 — se
+quitó del schema junto con el webhook por tenant que dejó de existir. Ver esa unidad más abajo.)*
 
 ### 1.2 Backend
 
@@ -66,12 +69,28 @@ model StripeConnection {
 
 ---
 
-## 3. Webhook — solo para notificaciones proactivas
+## 3. Notificaciones proactivas — cron de polling, no webhook
 
-- Eventos: `charge.refunded`, `charge.failed`, `payment_intent.payment_failed`, `customer.subscription.updated`, `customer.subscription.deleted`.
-- `POST /api/webhooks/stripe/:tenantId` (en `src/routes/webhooks.ts`, junto a Paddle/Mercado Pago — **corregido 2026-08-26**: no va en `/api/integrations/stripe/*`, ese prefijo queda para setup/connect. La diferencia con Paddle/MP es que esos son webhooks *de Northstack* — una sola cuenta propia — mientras que este es *por tenant*: cada tenant conecta su propia cuenta de Stripe y pega en su propio dashboard la URL con su `:tenantId`, pero el endpoint que la recibe sigue siendo código de Northstack, así que el archivo que ya agrupa "webhooks de proveedor" es el lugar correcto) verifica firma, resuelve `companyId`, crea `Notification`. Sin backfill, sin idempotencia pesada, sin reprocesamiento de eventos sin match.
+**Reemplazado el 2026-08-28** (ver Unidad 4, sección 8, para la historia completa incluyendo el
+diseño original con webhook por tenant). Diseño actual:
 
-*(Detalle completo: ver Unidad 4 en la sección 8.)*
+- `GET /api/internal/stripe-events/poll` (`src/routes/internal.ts`, mismo patrón que los otros crons
+  internos del proyecto — `checkCronSecret`, `vercel.json`'s `crons`), corre 1x/día (`0 9 * * *` —
+  el plan Hobby de Vercel no permite más de una corrida diaria por cron).
+- `runStripeEventPolling()` (`stripePaymentsService.ts`): por cada `StripeConnection` activa, hace
+  `GET /v1/events` con `created[gte]: lastEventPollAt` (o desde 24hs atrás si nunca corrió) y la
+  misma Restricted Key ya guardada — sin necesitar que el tenant configure nada en su dashboard de
+  Stripe. `processStripeWebhookEvent` (el mismo handler de cuando esto era un webhook) se reusa sin
+  cambios: Stripe devuelve el mismo shape de Event por polling o por push. Antes de pedir eventos,
+  también corre `autoLinkUnmatchedCompanies` (ver Unidad 5) para que una Company recién vinculada en
+  la misma corrida ya pueda recibir su notificación si hay un evento suyo más abajo en el mismo pase.
+- Eventos manejados: `charge.refunded`, `charge.failed`, `payment_intent.payment_failed`,
+  `customer.subscription.updated`, `customer.subscription.deleted` — sin cambios respecto al diseño
+  original.
+- Sin backfill, sin idempotencia pesada más allá de `lastEventPollAt` como cursor, sin
+  reprocesamiento de eventos sin match de Company.
+
+*(Detalle completo y la razón del rediseño: ver Unidad 4 en la sección 8.)*
 
 ---
 
@@ -183,3 +202,68 @@ entidad legal (tipo LLC) dada de alta, que no tiene todavía (decisión #2 de la
 `StripeConnection.webhookSigningSecretEncrypted` del schema; se agregó `Events` a los permisos
 recomendados de la Restricted Key (decisión #11 sigue vigente: todo de solo lectura) y
 `lastEventPollAt` al schema como cursor del cron.
+
+### Unidad 5 — Auto-vincular Companies al cron diario — ✅ completa (2026-08-28, en `staging`)
+
+Probando el cron de la Unidad 4 en vivo, el dashboard de Payments mostraba todo en cero — ninguna
+Company estaba vinculada a un Stripe Customer todavía, porque el único camino para vincular era
+manual ("Search on Stripe" de la Unidad 2). Pedido explícito: que el cron mismo se encargue.
+
+- [x] **Backend — `autoLinkUnmatchedCompanies(tenantId)`** (`stripePaymentsService.ts`) — reusa
+  `searchStripeCustomersForCompany`/`linkCompanyToStripeCustomer` de la Unidad 2 tal cual, sin
+  tocarlas. Busca `Company` con `stripeCustomerId: null`, fan-out con `mapWithConcurrency` (límite
+  10, mismo helper de la Unidad 3). Regla de vinculación: **exactamente 1 match** → vincula solo; 0
+  matches → no hace nada, se reintenta en el próximo cron; **2+ matches** → ambiguo, se deja para el
+  flujo manual (que ya sabe mostrar 2+ resultados para que un humano elija). Llamada desde
+  `runStripeEventPolling`, una vez por conexión activa, antes de pedir eventos.
+- [x] **Sin UI nueva** — `CompanyDetailModal` ya renderiza "Connected to Stripe →" apenas
+  `Company.stripeCustomerId` está seteado (Unidad 2); vincular automático alimenta esa misma UI.
+- [x] **Verificado 2026-08-28** en vivo contra `staging`: una Company real se auto-vinculó
+  correctamente en la primera corrida del cron. Bug real encontrado en esa misma prueba (primera vez
+  que este código corrió contra una Company con charges reales): `getCompanyPaymentEvents`
+  (frontend) armaba la URL con `new URL(...)`, que tira "Invalid URL" cuando `API_BASE_URL` es `''`
+  (producción/staging, mismo origen) — corregido a concatenación de string plana, mismo patrón que
+  el resto de `api/payments.ts`. `npm run build`/`npm test` (153/153, 6 nuevos) en verde.
+
+### Unidad 6 — Modal de historial de pagos por Company — ✅ completa (2026-08-29, en `staging`)
+
+Pedido del usuario: desde Payments y desde el perfil de Company, poder abrir el historial completo
+de pagos de esa Company — fecha, monto, estado, y un link al recibo si existe.
+
+- [x] **Backend — `receiptUrl`**: `StripeCharge.receipt_url` (`lib/stripe.ts`) no estaba tipado —
+  el objeto Charge de Stripe ya lo trae por default (sin `expand`), solo faltaba declararlo. Se
+  agregó a la interfaz y se expone como `receiptUrl` en `StripePaymentEvent`
+  (`getCompanyPaymentEvents`, sin ruta nueva — reusa `GET /api/payments/companies/:id/events`, ya
+  paginado desde la Unidad 3).
+- [x] **Frontend — `CompanyPaymentHistoryModal.tsx`** (`components/crm/`): tabla Date/Amount/
+  Status/Receipt con "Load more", más un link "View company profile →". **Corrección en la misma
+  ronda**: la primera versión era una página con ruta propia (`/payments/companies/:companyId`) — el
+  usuario notó que rompía el patrón del resto de la app (toda vista de detalle es un overlay, no una
+  navegación de página) y se convirtió a Modal. Se abre desde `PaymentsOverviewPage.tsx` (el link de
+  Company de cada fila, que antes navegaba directo al perfil) y desde `CompanyStripeSection.tsx`
+  (nuevo link "View full payment history →", dentro de `CompanyDetailModal`) — un Modal anidado
+  dentro de otro, patrón ya resuelto en este proyecto (`Modal.tsx` ya hace `stopPropagation()` en
+  Escape para no cerrar las dos capas a la vez, mismo caso que `PayslipPreviewModal` desde
+  `EmployeeOverviewPanel`).
+- [x] **Verificado**: `npm run build`/`npm test` (175/175) en verde.
+
+### Unidad 7 — Company profile: Payments pasa a ser una vista general — ✅ completa (2026-08-29, en `staging`)
+
+Con el modal de la Unidad 6 cubriendo el detalle completo, la sección "Payments" del perfil de
+Company (`CompanyStripeSection.tsx`) se simplificó a un resumen — pedido explícito: solo totales,
+sin recibos ni fechas por evento salvo la del primer pago.
+
+- [x] **Backend — `StripePaymentSummary` suma 3 campos** (`stripePaymentsService.ts`, extensión
+  aditiva — `PaymentsOverviewPage.tsx`/`getPaymentsOverview` siguen usando los campos viejos tal
+  cual): `paymentsCount`/`paymentsAmountCents` (cargos `succeeded` — no existía un total antes, solo
+  refunds/failed), `disputesCount`/`disputesAmountCents` (`charge.disputed === true`, campo nativo
+  del objeto Charge, mismo patrón que `refunded`/`amount_refunded`, sin llamada nueva a
+  `/v1/disputes`), y `firstPaymentAt` (el `created` más antiguo entre los cargos `succeeded` ya
+  traídos — mismo límite de 100 cargos ya documentado para el resto de este resumen).
+- [x] **Frontend** — se eliminó de `CompanyStripeSection.tsx` la mini-lista de eventos + "Load
+  more" (ese detalle ahora vive en el modal de la Unidad 6, a un click). El resumen quedó en:
+  **Payments** (cantidad + monto), **Refunds** (cantidad + monto), **Disputes** (cantidad + monto),
+  **First payment** (fecha). Se sacaron del render "Failed payments" y "Subscription" (siguen
+  existiendo en el tipo/backend, solo dejaron de mostrarse acá).
+- [x] **Verificado**: `npm run build`/`npm test` (175/175) en verde. Con esto el usuario dio por
+  cerrado Payments v1.

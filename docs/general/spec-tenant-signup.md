@@ -17,7 +17,9 @@ Esto además agrupa un formulario largo (10 campos) en pasos más digeribles por
 
 ```
 Screen 1 (email) → Screen 2 (check inbox) → [click link en el mail] →
-Screen 3a (Company) → Screen 3b (You) → Screen 3c (Security) → cuenta creada → /plans
+Screen 3a (Company) → Screen 3b (You) → Screen 3c (Security) → cuenta creada → /overview
+                                                       (modal de selección de plan sobre /overview,
+                                                        no una ruta propia — ver nota en "Submit final")
 ```
 
 ## Screen 1 — Email
@@ -33,6 +35,13 @@ Screen 3a (Company) → Screen 3b (You) → Screen 3c (Security) → cuenta crea
      `sendSignupVerificationEmail` nueva, mismo patrón texto+HTML que `sendInvitationEmail`).
   4. El envío del mail es best-effort (igual que invitaciones) — un fallo de SMTP no bloquea
      el avance a Screen 2, salvo que el paso 3 ya haya rechazado por dominio duplicado.
+     **(Nota 2026-08-29)** "Best-effort" acá significa `await`ear el envío y tragarse el error
+     (`bestEffort()` en `src/lib/bestEffort.ts`), no lanzarlo sin esperar — confirmado en
+     producción el 2026-08-25 que este mismo call site venía perdiendo en silencio el mail de
+     verificación de signup por no estar awaited (Vercel mata la promesa colgada apenas responde
+     el request). Ya está corregido acá. El bug más amplio ("la mayoría de los mails
+     transaccionales no están awaited") sigue abierto para otros tipos de mail — no asumir que
+     está resuelto en el resto de la app solo porque lo está en este flujo.
 - Rate limiting: mismo criterio que login/register existente (ventana por IP), bucket propio
   para no pisar el rate limit de login/register actual.
 
@@ -105,17 +114,23 @@ El campo nuevo de "rol dentro de la empresa" necesita otro nombre — propuesta:
 - Consume el `EmailVerification` (marcarlo usado o borrarlo, no importa cuál mientras no se
   pueda reusar).
 - Redirect: **ya no** `/overview` → `/plans`.
+  **(Nota 2026-08-29 — desactualizado, corregido el mismo día de construcción, 2026-08-13)**
+  `/plans` como pantalla/ruta propia no llegó a producción. El redirect real es a `/overview`
+  de siempre; la elección de plan pasó a ser un modal (`PlansModal.tsx`) que se abre solo sobre
+  esa pantalla — ver `spec-subscription-plans.md` para el detalle actualizado.
 
 ## Modelo de datos
 
 ```prisma
 model EmailVerification {
-  id         String    @id @default(cuid())
+  id         String    @id @default(uuid())
   email      String
   token      String    @unique
   expiresAt  DateTime
   verifiedAt DateTime?
   createdAt  DateTime  @default(now())
+
+  @@index([email])
 }
 ```
 

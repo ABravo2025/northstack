@@ -1,7 +1,13 @@
 # Tareas de desarrollo
 
 - Fecha de creación: 2026-07-02
-- Última actualización: 2026-08-13 — **Tenant Signup + Subscription Plans implementado completo,
+- Última actualización: 2026-08-29 — **Payments v1 (Units 5-7) y Employee Termination completos, en
+  `staging`** — ver Tier 3.7/3.8 más abajo. Tenant Signup + Subscription Plans (entrada original de
+  abajo, 2026-08-13) ya está en producción desde entonces, igual que Payroll (Tier 3.5), Sales v2
+  (Tier 3.6), Billing Integration y Admin Center — ver `docs/general/features-overview.md` para el
+  estado real, actualizado, de qué está en producción vs. solo en `staging`.
+- Entrada histórica original de esta fecha, dejada tal cual para no perder el contexto de esa
+  sesión: **Tenant Signup + Subscription Plans implementado completo,
   solo en local, sin pushear** (`docs/spec-tenant-signup.md` + `docs/spec-subscription-plans.md`,
   breakdown en `docs/task-breakdown-signup-plans.md`, los 3 archivos existían sin trackear en el
   repo desde antes de esta sesión). Backend: modelo `EmailVerification`, `User.jobFunction`,
@@ -369,12 +375,91 @@ habitual de pasar por `staging` primero:
 Distinto del "Módulo Payments" de Tier 4 — Payments es facturarle a los *Clients* del tenant
 (cuentas por cobrar), Payroll es pagarle a los *Employees* (cuentas por pagar).
 
+**Tier 3.6 — Rediseño Sales v2 — COMPLETO (8/8 unidades, ítems 9-10 pendientes de spec propia) y en
+`staging` desde 2026-08-25/26, spec en `docs/tareas/specredisenosalesv2.md` (cierre 2026-08-24).**
+Ronda de ajustes sobre el Rediseño de Clients de Tier 3 — no lo reemplaza, corrige y extiende cuatro
+áreas puntuales de Opportunity/Pipeline. **Nada de esto está en `main`/producción todavía**, a la
+espera de que el usuario lo revise en staging.
+
+Resumen por unidad (detalle técnico completo en el spec, sección 6 para el orden de build y
+`docs/general/Tareas-QA.md` QA-24 a QA-37 para la verificación de cada pieza):
+- **U1 — Huecos de `Pipeline.type`/gate de Company**: inmutabilidad de `type` post-creación,
+  gate de Company (real vs. placeholder) replicado en el backend, no solo en el frontend.
+- **U2/U3 — Company hierarchy + Contact/Opportunity**: `parentCompanyId` con anti-ciclo,
+  `isPrimary` único, indicador de multi-threading, soft-delete (`isActive`) de Contact/Opportunity
+  con degradación en cascada.
+- **U4 — Cambio de Pipeline + cierre de lead**: mecanismo genérico de mover una Opportunity entre
+  Pipelines (gate de Company real) del que se cuelga el disparador de "lead ganado → ofrecer mover
+  a un pipeline de cuenta".
+- **U5 — UI de creación de Opportunity contextual**: el modal de alta filtra pipelines por tipo y
+  pide los campos que correspondan a cada uno (lead vs. cuenta ya identificada).
+- **U6 — Forecast ponderado + cierre simétrico**: `probability` por stage (0-100, forzado a 100/0 en
+  Won/Lost), reporte de forecast ponderado, Won y Lost con el mismo tratamiento (razón + nota).
+- **U7 — Notificaciones in-app (versión mínima)**: modelo `Notification`, bell icon con contador y
+  marcar leído — sin productor todavía, a propósito (lo conecta la unidad 8).
+- **U8 — Automatizaciones**: auto-asignación de owner por Pipeline (round-robin por usuario o por
+  departamento, o account-owner heredado de la Company), el primer cron real del proyecto
+  (recordatorio de deal estancado), y el productor de notificación de cambio de stage que U7 dejó
+  listo. Pasó por 3 rondas de ajuste de UX directo con el usuario tras revisar staging (select
+  unificado de 3-4 opciones en vez de dos pasos, campo de participantes obligatorio, 3 stages
+  default al crear un pipeline) — el diseño final quedó documentado en el spec §3.8 y QA-34 a QA-37.
+
+Pendientes, explícitamente fuera de esta ronda, cada uno necesita su propia sesión de spec antes de
+tocar código: **corte del `Client` legado** (migración de Custom Fields campo por campo + corte real
+de rutas/UI) y **dashboard de métrica de ciclo lead→cliente** (necesita definir ruta/nav y un mockup
+visual con el usuario primero).
+
+**Tier 3.7 — Payments v1 (conexión Stripe por tenant) — COMPLETO (Units 1-7) y en `staging`,
+última ronda 2026-08-29, spec en `docs/tareas/specpaymentsv1.md`.** No confundir con las
+suscripciones propias del SaaS (Tier 4, ya resuelto vía Billing Integration) — esto es que cada
+tenant conecte **su propia** cuenta de Stripe para ver los pagos de **sus propios** clientes.
+
+Resumen por unidad (detalle técnico completo en `docs/general/database-schema.md` grupo 10):
+- **U1-U4 — Cimientos**: conexión por Restricted Key (sin OAuth/Connect — Northstack no tiene
+  entidad legal habilitada todavía), lookup/matching Company↔Stripe Customer por email de Contact,
+  visibilidad de pagos en vivo sin store local (todo consultado a la API de Stripe en cada
+  request), notificaciones proactivas — **rediseñadas 2026-08-28** de un webhook por tenant (fricción
+  real: cada tenant tenía que configurarlo a mano en su propio dashboard) a un cron diario de
+  polling (`GET /v1/events`), cero setup manual.
+- **U5 — Auto-vincular Companies**: el mismo cron ahora también intenta vincular automáticamente
+  cualquier Company sin `stripeCustomerId` (solo si el match es inequívoco), antes de pedir eventos.
+- **U6-U7 — Historial completo + vista general por Company**: modal con fecha/monto/estado/link al
+  recibo de Stripe, paginado; el resumen dentro del perfil de Company se simplificó a solo
+  totales — Payments/Refunds/Disputes (cantidad + monto) y fecha del primer pago, pedido explícito
+  del usuario para sacar el detalle de ahí y dejarlo solo en el modal.
+
+**Tier 3.8 — Employee Termination (baja de empleados) — COMPLETO y en `staging`, 2026-08-29,
+plan en `C:\Users\aleja\.claude\plans\bueno-yo-te-voy-valiant-whisper.md`.** Ítem que venía del
+backlog original ("falta proceso de termination"), el usuario lo dejó parado hasta poder
+definirlo con detalle — se planificó y construyó en la misma sesión.
+
+Resumen (detalle técnico completo en `docs/general/database-schema.md` grupo 11):
+- **Modelo nuevo** `EmployeeTermination`/`EmployeeTerminationReassignment` — registro de auditoría,
+  status change coordinado en vez de un delete. Soporta fecha pasada/hoy/futura — la futura queda
+  programada y un cron diario (`0 10 * * *`) la ejecuta cuando corresponde, mismo patrón que los
+  otros crons internos del proyecto.
+- **Efectos al ejecutarse**: status → "Terminated" (se crea solo, la primera vez, por tenant);
+  cierra la compensación activa (sale de futuros Payroll runs); corte de acceso a la app opcional;
+  cancela Time Off pendiente/futuro con limpieza del evento en Google Calendar de otros usuarios;
+  reasigna los reportes directos a un nuevo manager (o los deja explícitamente sin uno).
+- **Pago final opcional**, con las mismas líneas que un `PayrollEntry` normal de Payroll
+  (bonus/commission/reimbursement/deduction) — pedido explícito del usuario después de ver la
+  primera versión (solo un monto suelto).
+- **3 rondas de feedback en vivo el mismo día**: el campo Status quedaba editable después de la
+  baja (backdoor real para deshacerla sin pasar por ningún flujo) — ahora se bloquea; un bug
+  preexistente en `listOffPayments` (no de esta feature) hacía que todo pago suelto de Payroll
+  mostrara "undefined undefined" en el Timeline — corregido; se agregó una tab "Payment History" al
+  perfil del empleado con vista previa de recibo (payslip), reusando una ruta de Payroll (Unidad 20)
+  que ya existía pero nunca se había conectado a ninguna UI fuera del detalle de un Run.
+- Detalle completo de las 5 rondas de esta feature: `docs/general/Tareas-QA.md` QA-53.
+
 **Tier 4 — Resto de iniciativas grandes**
-- Suscripciones propias del SaaS (Paddle, planes/precios, pantalla de administración autónoma)
-- Panel de Integraciones — Stripe + QuickBooks + evaluar Mercado Pago (módulo Payments de
-  facturación a Clients), webhooks salientes, Slack (app instalable vía OAuth), API pública
-  entrante con token
-- Admin panel de plataforma (usuario main, cross-tenant)
+- ~~Suscripciones propias del SaaS~~ — **hecho**, ver Billing Integration (Paddle + Mercado Pago,
+  en producción desde 2026-08-23, `docs/general/spec-billing-integration.md`).
+- ~~Panel de Integraciones — Stripe~~ — **hecho**, ver Tier 3.7 arriba. QuickBooks, Slack (app
+  instalable vía OAuth), y API pública entrante con token siguen sin construir.
+- ~~Admin panel de plataforma (usuario main, cross-tenant)~~ — **hecho**, Admin Center
+  (`admin.joinnorthstack.com`, repo separado `northstack-devtasks`) — ver `docs/Admin-platform/`.
 
 **Tier 5 — Cola larga**
 - i18n
@@ -382,8 +467,8 @@ Distinto del "Módulo Payments" de Tier 4 — Payments es facturarle a los *Clie
 - Sistema de logs de auditoría por usuario
 - Historial de valores previos de custom fields
 - Edición inline en la tabla de Employees
-- Ícono de notificaciones in-app (comparte el modelo de "evento" con el Panel de Integraciones —
-  spec-earlos juntos cuando llegue el turno)
+- ~~Ícono de notificaciones in-app~~ — **hecho**, Sales v2 Unit 7/8 (`Notification`, bell icon en
+  `TopBar.tsx`), reusado después por Payments v1 (Tier 3.7) para sus propios avisos.
 - **Permisología / sistema de roles custom** — deliberadamente al final: va a seguir mudando con
   cada módulo nuevo que se sume (Clients, Payments, Integraciones), así que conviene resolverlo una
   sola vez cuando el set de features esté más estable, no reconstruirlo varias veces en el camino.

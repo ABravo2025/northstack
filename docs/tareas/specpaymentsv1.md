@@ -1,0 +1,269 @@
+# Spec Payments v1 — Conexión Stripe + Visibilidad de Pagos
+
+**Estado:** ✅ Unidades 1-7 completas y en `staging` (última ronda 2026-08-29) — conexión con Stripe, lookup/matching Company↔Customer, visibilidad de pagos en vivo, notificaciones proactivas (rediseñadas de webhook a cron de polling el 2026-08-28), auto-vinculación de Companies, un modal de historial de pagos por Company (fecha/monto/estado/recibo), y una vista general simplificada de Payments en el perfil de Company (totales de payments/refunds/disputes + fecha del primer pago). Ver sección 8 para el detalle por unidad. Nada de esta spec está en `main`/producción todavía — todo pusheado a `staging`, esperando revisión del usuario antes de promover. Units 1-3 no probadas con una cuenta de Stripe real (sin credenciales en este entorno); el resto de las unidades sí se ejercitó contra `STAGING_DATABASE_URL` real y/o con tests unitarios exhaustivos.
+**Fecha de esta ronda:** 2026-08-29.
+**Contexto:** primera unidad del "Módulo Payments" ya anotado en backlog (`docs/tareas-desarrollo.md`, Tier 4, dentro del futuro Panel de Integraciones — punto 1, Stripe). Esta unidad es el cimiento: conexión con Stripe por tenant + visibilidad de refunds/pagos fallidos/subscripciones por Company, dejando la base lista para que una unidad futura agregue creación de charges/invoices desde Northstack. `Company.billingAddress` ya existía reservado para esto (ver `docs/database-schema.md`, grupo 5).
+
+Mismo criterio de ejecución que el resto de las specs del proyecto: cada unidad build → `npm run build`/`npm test` → verificación real (curl y/o Playwright contra un tenant de prueba) → commit → push exclusivamente a `staging`, nunca a `main`, hasta revisión del usuario.
+
+---
+
+## 0. Decisiones cerradas
+
+1. **Alcance v1:** solo lectura (buscar y mostrar). La arquitectura debe quedar lista para que una unidad futura agregue cobros sin rehacer la conexión.
+2. **Conexión:** API key pegada a mano por el tenant (no OAuth/Connect) — Northstack no tiene hoy una entidad de negocio habilitada para darse de alta como plataforma de Stripe Connect (mismo bloqueo que ya está anotado en el backlog para la suscripción propia de Northstack). Revisar esta decisión si en algún momento se resuelve lo de la entidad.
+3. **Matching Company ↔ Customer:** no por dominio, se itera el email exacto de cada Contact de la Company contra Stripe.
+4. **Persistencia del vínculo:** se guarda `stripeCustomerId` en la Company (esto sí conviene cachearlo — evita rehacer la búsqueda, y es un solo dato liviano, no un historial).
+5. **Seguridad:** toda credencial/dato sensible se cifra en reposo.
+6. **UI:** sección propia "Payments" en el sidebar (nombre en inglés, sin traducir).
+7. **Registro histórico:** sin store, todo en vivo contra la API de Stripe. Con cientos de Companies por tenant, el volumen de filas en sí no era el problema (es poco para Postgres), pero sí lo era la infraestructura a construir y mantener (backfill paginado, idempotencia de webhooks, manejo de drift) para una feature que el propio backlog marca como no bloqueante para el beta. Como Stripe ya es la fuente de verdad del historial completo, consultarlo en vivo evita además cualquier necesidad de backfill.
+8. **Webhook — alcance reducido:** se mantiene, pero solo para **notificaciones proactivas**, no para alimentar un store histórico. Dispara una `Notification` — **corregido 2026-08-26, verificado contra el código real**: el modelo `Notification` ya no es algo planeado, ya existe (`prisma/schema.prisma`, Sales v2 Unidad 7/8, en `staging` desde 2026-08-25/26, junto con el bell icon y los endpoints de listar/marcar leída). Esta unidad solo necesita sumar valores nuevos a `enum NotificationType` — ver Unidad 4.
+9. **Permisos:** gate por rol — **corregido 2026-08-26, confirmado con Alejandro**: owner-only (no "owner/admin" como decía originalmente esta decisión, citando mal el precedente de Payroll — el gate real de `canManagePayroll` también es owner-only). Enrutado vía un permiso nombrado (`canManagePayments`, `permissionService.ts`), no un chequeo inline, para no tener que tocar cada endpoint/componente cuando exista el sistema de roles custom (backlog Tier 5).
+10. **Auditoría del match:** `Company.stripeCustomerMatchedVia` — se guarda el email de Contact que produjo el match.
+11. **Permisos de la Restricted Key:** estrictamente de **lectura** en v1 — nada de escritura por adelantado. Se amplía recién cuando se construya la unidad de cobros.
+
+---
+
+## 1. Conexión con Stripe (API key manual)
+
+### 1.1 Schema
+
+```
+model StripeConnection {
+  id                 String    @id @default(uuid())
+  tenantId           String    @unique
+  tenant             Tenant    @relation(fields: [tenantId], references: [id])
+  apiKeyEncrypted    String
+  apiKeyMode         String              // "test" | "live"
+  stripeAccountId    String?
+  connectedByUserId  String
+  connectedAt        DateTime  @default(now())
+  disconnectedAt     DateTime?
+  needsAttention     Boolean   @default(false)
+  lastEventPollAt    DateTime?           // cursor del cron de polling (Unidad 4, rediseño 2026-08-28)
+}
+```
+
+*(`webhookSigningSecretEncrypted` existió hasta el rediseño de la Unidad 4 del 2026-08-28 — se
+quitó del schema junto con el webhook por tenant que dejó de existir. Ver esa unidad más abajo.)*
+
+### 1.2 Backend
+
+- `POST /api/integrations/stripe/connect`, `POST /api/integrations/stripe/webhook-secret`, `DELETE /api/integrations/stripe`, `stripeService.ts`.
+
+### 1.3 Frontend
+
+- Setup guiado en dos pasos (API key → webhook), estado conectado — card nueva en Settings → Integrations (no un ítem de sidebar, ver corrección en la Unidad 1 de la sección 8), owner-only.
+
+*(Detalle completo de estos tres puntos: ver Unidad 1 en la sección 8 de tareas.)*
+
+---
+
+## 2. Visibilidad de pagos: todo en vivo, sin store
+
+- `GET /api/payments/companies/:companyId/summary` y `/events` — en vivo contra Stripe, sin tabla local.
+- `GET /api/payments/overview` — fan-out con límite de concurrencia sobre las Companies vinculadas.
+- Frontend: vista global (sidebar "Payments") + panel dentro del detalle de Company.
+
+*(Detalle completo: ver Unidad 3 en la sección 8.)*
+
+---
+
+## 3. Notificaciones proactivas — cron de polling, no webhook
+
+**Reemplazado el 2026-08-28** (ver Unidad 4, sección 8, para la historia completa incluyendo el
+diseño original con webhook por tenant). Diseño actual:
+
+- `GET /api/internal/stripe-events/poll` (`src/routes/internal.ts`, mismo patrón que los otros crons
+  internos del proyecto — `checkCronSecret`, `vercel.json`'s `crons`), corre 1x/día (`0 9 * * *` —
+  el plan Hobby de Vercel no permite más de una corrida diaria por cron).
+- `runStripeEventPolling()` (`stripePaymentsService.ts`): por cada `StripeConnection` activa, hace
+  `GET /v1/events` con `created[gte]: lastEventPollAt` (o desde 24hs atrás si nunca corrió) y la
+  misma Restricted Key ya guardada — sin necesitar que el tenant configure nada en su dashboard de
+  Stripe. `processStripeWebhookEvent` (el mismo handler de cuando esto era un webhook) se reusa sin
+  cambios: Stripe devuelve el mismo shape de Event por polling o por push. Antes de pedir eventos,
+  también corre `autoLinkUnmatchedCompanies` (ver Unidad 5) para que una Company recién vinculada en
+  la misma corrida ya pueda recibir su notificación si hay un evento suyo más abajo en el mismo pase.
+- Eventos manejados: `charge.refunded`, `charge.failed`, `payment_intent.payment_failed`,
+  `customer.subscription.updated`, `customer.subscription.deleted` — sin cambios respecto al diseño
+  original.
+- Sin backfill, sin idempotencia pesada más allá de `lastEventPollAt` como cursor, sin
+  reprocesamiento de eventos sin match de Company.
+
+*(Detalle completo y la razón del rediseño: ver Unidad 4 en la sección 8.)*
+
+---
+
+## 4. Lookup / matching Company ↔ Stripe Customer
+
+```
+Company.stripeCustomerId          String?
+Company.stripeCustomerMatchedVia  String?
+```
+
+- `POST /api/payments/companies/:companyId/stripe-lookup` — email exacto de cada Contact, 0/1/2+ resultados, confirmación manual.
+
+*(Detalle completo: ver Unidad 2 en la sección 8.)*
+
+---
+
+## 5. Seguridad y manejo de datos sensibles
+
+- Secretos cifrados en reposo (AES-256-GCM), nunca logueados ni devueltos al frontend.
+- Ningún dato de tarjeta/pago persistido más allá de `stripeCustomerId`/`stripeCustomerMatchedVia`.
+- `needsAttention` en vez de fallar silenciosamente ante key revocada.
+- Todo gateado a owner-only (`canManagePayments`), placeholder hasta roles custom.
+
+---
+
+## 6. Explícitamente fuera de alcance de esta unidad
+
+- Crear/cobrar charges, invoices o subscriptions desde Northstack.
+- Store histórico local de eventos de pago.
+- Migrar a Stripe Connect (OAuth).
+- Sistema de roles custom.
+- QuickBooks, Mercado Pago, Panel de Integraciones genérico.
+
+---
+
+## 7. Decisiones abiertas — cerrada 2026-08-26
+
+- ~~Qué "resources" de lectura exactos permite acotar el creador de Restricted Keys de Stripe, y si "pagos fallidos" sale de Charges, Payment Intents, o ambos~~ — **resuelto contra la documentación real de Stripe**: Charges, no Payment Intents ni un `/refunds` separado. `GET /refunds` no acepta un filtro `customer` (confirmado en `docs.stripe.com/api/refunds/list`); un Charge ya trae `refunded`/`amount_refunded`/`status` propios, así que es la única fuente que necesita tanto Unit 3 (summary/events) como, indirectamente, define qué permisos de lectura hacen falta en la Restricted Key: Customers, Charges, Subscriptions — no hace falta Refunds ni Payment Intents como permisos separados.
+
+---
+
+## 8. Plan de construcción — tareas detalladas por unidad
+
+Orden pensado por dependencias: la Unidad 1 es prerrequisito de todo lo demás (nada funciona sin una conexión válida). Unidades 2 y 3 pueden avanzar en paralelo una vez cerrada la 1, aunque 3 muestra "sin vincular" con gracia para Companies que la Unidad 2 todavía no procesó. La Unidad 4 depende de 1 y 2, y tiene además una dependencia cruzada con otra spec (ver más abajo).
+
+### Unidad 1 — Conexión con Stripe (fundamento) — ✅ completo (2026-08-26, en `staging`)
+
+- [x] **Schema:** `model StripeConnection` (ver 1.1) — 1:1 con `Tenant` (`tenantId @unique`), `connectedByUserId` con FK real a `User` (mismo patrón que `createdByUserId`/`invitedByUserId` ya usados en el resto del schema). Push aditivo contra `STAGING_DATABASE_URL` únicamente, sin tocar producción.
+- [x] **Infra — cifrado:** `src/lib/stripeEncryption.ts`, `encryptStripeSecret`/`decryptStripeSecret` (AES-256-GCM) — calca `encryption.ts`/`googleTokenEncryption.ts`, key propia `STRIPE_TOKEN_ENCRYPTION_KEY` (generada y cargada en `.env` local; falta cargarla en Vercel — Preview y Production — antes de cualquier deploy real, mismo pendiente que ya existía para `PAYMENT_DATA_ENCRYPTION_KEY`/`GOOGLE_TOKEN_ENCRYPTION_KEY`). Una sola función cubre tanto `apiKeyEncrypted` como `webhookSigningSecretEncrypted`.
+- [x] **Corrección real 2026-08-26, encontrada antes de escribir código**: la spec original asumía el SDK oficial `stripe` (`stripe.accounts.retrieve()`, `stripe.webhooks.constructEvent()`, etc.). `src/lib/paddle.ts`/`src/lib/mercadopago.ts` documentan explícitamente que el proyecto evita SDKs de proveedores de pago a favor de un wrapper propio (`fetch` + `crypto` nativos) — mismo criterio aplicado acá: **no se instaló el paquete `stripe`**, `src/lib/stripe.ts` (nuevo) es un cliente REST a mano (`stripeRequest`, form-urlencoded — Stripe no acepta JSON, a diferencia de Paddle/Mercado Pago) con `retrieveAccount`/`listCustomers`/`verifyStripeSignature` (esta última sin uso hasta la Unidad 4).
+- [x] **Backend — `src/modules/integrations/stripeService.ts`** (no un archivo suelto — mismo módulo que `googleCalendarAuthService.ts`): `detectApiKeyMode`, `connectStripe`, `getStripeConnectionStatus`, `saveStripeWebhookSecret`, `disconnectStripe`, `getApiKeyForTenant` (para las Unidades 2-4), `markNeedsAttention`.
+- [x] **Backend — `POST /api/integrations/stripe/connect`** (router nuevo `src/routes/stripeIntegration.ts`, mismo patrón que `googleCalendarIntegration.ts`): valida el prefijo de la key antes de tocar la red (400 inmediato si no matchea `sk_`/`rk_`), llama `retrieveAccount` con fallback a `listCustomers({limit:1})` si la Restricted Key no tiene permiso de leer Account, detecta `apiKeyMode` por prefijo, cifra, upsert de `StripeConnection` por `tenantId`.
+- [x] **Backend — `POST /api/integrations/stripe/webhook-secret`** — igual que lo especificado, 400 si todavía no hay conexión.
+- [x] **Backend — `DELETE /api/integrations/stripe`** — soft (`disconnectedAt`, no borra la fila — mismo criterio que `Contact.isActive`/`Opportunity.isActive` de Sales v2). **Bug real encontrado y corregido durante la propia verificación**: la primera versión usaba `update()` puro, que tira un error crudo de Prisma ("record to update not found") si se llama sin haber conectado nunca — cambiado a `updateMany()` con `where: { disconnectedAt: null }`, idempotente (desconectar sin conexión, o una ya desconectada, es un no-op, nunca un 500).
+- [x] **Backend — `GET /api/integrations/stripe/status`** (no estaba en la spec original, agregado por necesidad real): la UI necesita poder leer el estado actual al montar la página, mismo patrón que `GET /api/integrations/google-calendar/status`.
+- [x] **Corrección real 2026-08-26, decidida con Alejandro antes de construir**: la spec original pedía gate `owner`/`admin` "mismo criterio que Payroll" — pero el gate real de Payroll (`canManagePayroll`) es owner-only, no owner/admin. Confirmado con Alejandro: **owner-only** por ahora, pero enrutado a través de un permiso nombrado (`canManagePayments`, `permissionService.ts`, nunca `role === 'owner'` inline en cada endpoint) para que sumar roles custom más adelante (Tier 5) solo signifique cambiar esa función, no cada call site.
+- [x] **Frontend — ubicación** — **corrección real 2026-08-26, encontrada antes de construir**: `IntegrationsSettingsPage.tsx` (2026-08-24, hace 2 días) ya consolidó **todas** las integraciones en una sola página ("The one home for every integration... gate an individual card by role if one ends up admin-only, don't split the page") — la spec pedía una sección nueva en el sidebar para la conexión en sí, lo que hubiera contradicho esa decisión reciente. Se construyó como una card nueva ahí (gateada a owner vía `isOwner`, oculta del todo para el resto), calcando la card de Google Calendar. La sección "Payments" en el sidebar sigue siendo correcta para la Unidad 3 (visibilidad de pagos, una pantalla de datos real) — no para el setup de la conexión.
+- [x] **Frontend — Paso 1 (API key):** copy sobre Restricted Key vs Secret key + link a `https://docs.stripe.com/keys`, checklist de permisos de lectura (Customers, Charges, Refunds, Invoices, Subscriptions, PaymentMethods), campo enmascarado (`type="password"`) para la key, botón "Test connection".
+- [x] **Frontend — Paso 2 (Webhook):** URL del webhook (`{API_BASE_URL}/api/webhooks/stripe/:tenantId` — ver corrección de ruta en la Unidad 4 de abajo), botón de copiar, checklist de los 5 eventos, campo para el signing secret. Incluye el aviso del bypass de Vercel, mostrado solo cuando `window.location.hostname` contiene `staging` (no aplica a producción, que no tiene Deployment Protection).
+- [x] **Frontend — estado conectado:** chip `test`/`live` (`role-chip`/`chip-neutral` para test, `chip-good` para live — reusa las clases ya existentes de chips categóricos, no un componente nuevo), fecha de conexión, botón desconectar, banner (`field-error`) si `needsAttention`.
+- [x] **Verificación real 2026-08-26** contra `staging` (dev server local apuntado a `STAGING_DATABASE_URL`, tenant + owner + member descartables creados/borrados vía Prisma directo): status sin conectar, 403 para `member` en los 3 endpoints mutables, 400 inmediato con una key mal formada (sin tocar la red), 400 "Connect Stripe first" al guardar webhook secret sin conexión, disconnect sin conexión previa devuelve 204 limpio (confirma el fix del bug de arriba), y **una llamada real a `api.stripe.com`** con una key con prefijo válido pero inventada — confirma que el cliente a mano arma bien la request (headers, form-encoding) y parsea la respuesta de error real de Stripe, más allá de lo que ya cubren los mocks de los tests unitarios. No se probó una conexión exitosa de punta a punta (hace falta una cuenta de test de Stripe real, no disponible en este entorno) — queda para que Alejandro la pruebe él mismo con su propia cuenta antes de dar la Unidad 1 por cerrada del todo. `npm run build`/`npm test` (116/116, 22 nuevos)/`npm run lint` backend y `npm run build`/`npm run lint` frontend en verde.
+
+### Unidad 2 — Lookup / matching Company ↔ Stripe Customer — ✅ completa (2026-08-26, en `staging`)
+
+- [x] **Schema:** `Company.stripeCustomerId`/`stripeCustomerMatchedVia` — igual que lo especificado, aditivo.
+- [x] **Backend — `POST /api/payments/companies/:companyId/stripe-lookup`** — **corregido 2026-08-26, ruta**: kebab-case, no camelCase (`stripeLookup` rompía la convención del resto del proyecto — ver `/api/integrations/google-calendar/status`, `/api/integrations/stripe/webhook-secret`). Valida `StripeConnection` activo, itera los Contact **activos** de la Company contra `listCustomers`, consolida por `customer.id`.
+- [x] **Backend — `POST /api/payments/companies/:companyId/stripe-link`** (endpoint dedicado, no el `PATCH` genérico de Company — necesitaba su propio chequeo de "ya vinculado, confirmar") — 409 con `{error: 'already_linked', currentStripeCustomerId}` si hay que confirmar sobreescritura; el frontend reintenta con `confirmOverwrite: true`.
+- [x] **Frontend — dentro de `CompanyDetailModal` (nueva sección "Payments", owner-only):** botón "Search on Stripe", 0/1/2+ resultados, cada uno mostrando el Contact de origen. Un 409 abre un `ConfirmDialog` en vez de fallar.
+- [x] **Frontend:** una vez vinculada, "Connected to Stripe →" con link a `dashboard.stripe.com/{test/}customers/{id}` (usa `GET /api/integrations/stripe/status` para saber `apiKeyMode`) + botón "Change link" para re-buscar.
+- [x] **Corrección real, encontrada durante la implementación**: `ApiError` (frontend, `api/http.ts`) no traía el status HTTP — necesario para distinguir el 409 de cualquier otro error sin parsear el mensaje. Se le agregó `.status` (cambio genérico, no rompe ningún call site existente).
+- [x] **Verificado 2026-08-26** contra `staging` real (2 tenants descartables, uno para aislamiento): 400 sin conexión activa, 403 para member, 404 en Company de otro tenant, 400 con campos faltantes en el link. No se probó el matching contra customers reales de Stripe (sin cuenta de test disponible en este entorno) — cubierto por tests unitarios con mocks (consolidación de duplicados, Contacts inactivos ignorados, `needsAttention` ante un 401). `npm run build`/`npm test` (133/133, 17 nuevos)/`npm run lint` backend y build/lint frontend en verde.
+
+### Unidad 3 — Visibilidad de pagos (resúmenes en vivo) — ✅ completa (2026-08-26, en `staging`)
+
+- [x] **Backend — `GET /api/payments/companies/:companyId/summary`** — **corrección real, resuelve el ítem 7 abierto**: confirmado contra la documentación real de Stripe (2026-08-26) que `GET /refunds` **no acepta un filtro `customer`** (solo `charge`/`payment_intent`) — "listar refunds de este customer" no es una llamada que la API soporte directo. En vez de eso, `GET /charges?customer=X` es la única fuente: cada Charge ya trae `refunded`/`amount_refunded`/`status` propios, de donde salen tanto refunds como failed. `listSubscriptions` con `status: 'all'` (el default excluye canceladas). Devuelve también `currency` (del Charge, no necesariamente la del tenant — simplificación documentada si un mismo customer tuviera charges en más de una moneda).
+- [x] **Backend — `GET /api/payments/companies/:companyId/events`** — paginación cursor-based nativa de Stripe sobre la misma lista de Charges, cada uno clasificado en `charge_failed`/`charge_refunded`/`charge_succeeded` con su propio `dashboardUrl`.
+- [x] **Backend — `GET /api/payments/overview`** — **sin `p-limit`**: mismo criterio de "no SDK/paquete nuevo para algo chico" ya aplicado en toda esta spec — `mapWithConcurrency`, ~15 líneas hand-rolled. Chequea la conexión una sola vez antes del fan-out (si no hay conexión activa, `connected: false` de una sola vez, no N fallas idénticas por Company).
+- [x] **Frontend — `PaymentsOverviewPage.tsx`** (nueva, sidebar "Payments", owner-only — item propio del sidebar, distinto de la card de conexión de la Unidad 1 que vive en Settings → Integrations): tarjetas de agregados + tabla de Companies con link a su detalle.
+- [x] **Corrección real, encontrada antes de que el link "al detalle" fuera de mentira**: `CompaniesPage.tsx` no soportaba abrir una Company específica por URL — el link de la tabla de arriba no hubiera hecho nada. Se agregó soporte de `?open=<companyId>` (lee una vez, limpia el query param — mismo patrón que `googleCalendarConnected` en `IntegrationsSettingsPage.tsx`).
+- [x] **Frontend — panel dentro de `CompanyDetailModal`:** mismo resumen + lista de eventos recientes con "Load more" (paginación cursor), dentro de la misma sección "Payments" de la Unidad 2 (no una sección aparte).
+- [x] **Gate: owner-only** (no "owner/admin" como decía la spec — mismo `canManagePayments` ya usado en toda la spec, ver corrección de la Unidad 1).
+- [x] **Verificado 2026-08-26** contra `staging` real: summary/events en una Company sin vincular devuelven "sin vincular"/vacío sin tocar Stripe, overview sin conexión activa devuelve `connected: false` limpio, 403 para member. El fan-out con concurrencia y el comportamiento contra datos reales de Stripe están cubiertos por tests unitarios (agregación de totales, aislamiento entre tenants, preferencia de subscription activa sobre cancelada) — no se midió contra decenas de Companies reales vinculadas (sin cuenta de test de Stripe disponible en este entorno). `npm run build`/`npm test`/`npm run lint` en verde (mismo run que la Unidad 2).
+
+### Unidad 4 — Webhook de notificaciones proactivas — ✅ completa (2026-08-26, en `staging`)
+
+**Corregido 2026-08-26 (verificado contra el código real, ya no es una decisión abierta):** el modelo `Notification` ya no está "planeado" — ya existe y está completo en `staging` (Sales v2 Unidad 7/8, `prisma/schema.prisma`, `src/routes/notifications.ts`, bell icon en `TopBar.tsx`). Esta unidad no construye nada de eso de nuevo, solo lo reusa.
+
+- [x] **Schema:** los 5 valores nuevos en `enum NotificationType` — igual que lo propuesto, sin cambios de nombre.
+- [x] **Backend — `POST /api/webhooks/stripe/:tenantId`** (en `src/routes/webhooks.ts`, junto a Paddle/Mercado Pago) — **corregido, sin SDK**: como el resto de la spec, no `stripe.webhooks.constructEvent()` — `verifyStripeSignature` (`lib/stripe.ts`, ya construido en la Unidad 1) hace la verificación a mano. Busca la conexión primero (400 si no hay una con webhook secret configurado), después verifica firma (400 si no valida).
+- [x] **Backend:** despacho por tipo de evento delegado a `processStripeWebhookEvent` (`stripePaymentsService.ts`, nuevo — extraído del handler para que sea testeable sin HTTP), que resuelve la Company por `stripeCustomerId` dentro del tenant y descarta sin guardar nada si no hay match.
+- [x] **Backend:** `notifyCompanyStripeEvent` (`stripePaymentsService.ts`) resuelve destinatario — **decisión tomada, corrigiendo la spec original**: nunca un admin, solo `Company.accountOwnerId` o, si no está seteado, el primer `owner` activo del tenant. Payments es owner-only (`canManagePayments`, decisión de la Unidad 1) — notificar a un admin que ni siquiera puede abrir la página no tendría sentido.
+- [x] **Corrección real, encontrada antes de escribir la lógica de `customer.subscription.updated`**: notificar en cada evento con `status: past_due` (como decía la spec original) hubiera re-notificado en cada cambio no relacionado a una subscription que ya está `past_due` (ej. cambiar la cantidad). Se agregó una guarda contra `data.previous_attributes.status` (confirmado contra la documentación real de Stripe — solo lista lo que cambió en ese evento): solo notifica si el status *recién* pasó a `past_due`.
+- [x] **Frontend:** el checklist de los 5 eventos en el Paso 2 ya estaba escrito desde la Unidad 1 (se construyó adelantado a propósito) — nada que agregar.
+- [x] **Verificado 2026-08-26 de punta a punta, sin necesitar una cuenta de Stripe real**: a diferencia de Units 1-3, esto sí se pudo simular por completo — un tenant descartable con un `StripeConnection` cuyo `webhookSigningSecretEncrypted` se sembró a mano (secret conocido), firmas HMAC calculadas con el mismo algoritmo que `verifyStripeSignature` para simular deliveries reales de Stripe. Confirmado: firma válida con customer vinculado → `Notification` real creada con el mensaje/destinatario/tipo correctos (verificado con una query directa a la base); firma inválida → 400; header faltante → 400; tenant sin conexión → 400; customer sin match → 200 sin crear nada. 14 tests nuevos con mocks cubren además la guarda de `previous_attributes` (transición real vs. update no relacionado) y el fallback de destinatario (nunca un admin). `npm run build`/`npm test` (147/147)/`npm run lint` en verde.
+
+**Rediseño 2026-08-28 (reemplaza el webhook de arriba, ver QA-49/QA-50 en `Tareas-QA.md`):**
+probando la conexión real en `staging` quedó claro que pedirle a un tenant real que cree un webhook
+a mano en su dashboard de Stripe (+ en `staging`, agregarle el bypass secret de Vercel a la URL) era
+fricción que ningún tenant real debería enfrentar. Reemplazado por un **cron diario**
+(`runStripeEventPolling`, `src/routes/internal.ts` — el plan original era 2x/día, bajado a 1x/día
+recién al primer deploy real: el plan Hobby de Vercel no permite más de una corrida diaria por cron)
+que hace polling de `GET /v1/events` con la
+misma Restricted Key — `processStripeWebhookEvent` se reusa sin cambios, Stripe devuelve el mismo
+shape de Event por polling o por webhook. Se evaluó también automatizar la creación del webhook vía
+API (agregándole permiso de escritura a la key), y por separado Stripe Connect/OAuth completo —
+descartado esto último tras confirmar con el soporte de Stripe que requiere que Northstack tenga una
+entidad legal (tipo LLC) dada de alta, que no tiene todavía (decisión #2 de la sección 0). Se quitó
+`POST /api/webhooks/stripe/:tenantId`, `saveStripeWebhookSecret`, `verifyStripeSignature`, y
+`StripeConnection.webhookSigningSecretEncrypted` del schema; se agregó `Events` a los permisos
+recomendados de la Restricted Key (decisión #11 sigue vigente: todo de solo lectura) y
+`lastEventPollAt` al schema como cursor del cron.
+
+### Unidad 5 — Auto-vincular Companies al cron diario — ✅ completa (2026-08-28, en `staging`)
+
+Probando el cron de la Unidad 4 en vivo, el dashboard de Payments mostraba todo en cero — ninguna
+Company estaba vinculada a un Stripe Customer todavía, porque el único camino para vincular era
+manual ("Search on Stripe" de la Unidad 2). Pedido explícito: que el cron mismo se encargue.
+
+- [x] **Backend — `autoLinkUnmatchedCompanies(tenantId)`** (`stripePaymentsService.ts`) — reusa
+  `searchStripeCustomersForCompany`/`linkCompanyToStripeCustomer` de la Unidad 2 tal cual, sin
+  tocarlas. Busca `Company` con `stripeCustomerId: null`, fan-out con `mapWithConcurrency` (límite
+  10, mismo helper de la Unidad 3). Regla de vinculación: **exactamente 1 match** → vincula solo; 0
+  matches → no hace nada, se reintenta en el próximo cron; **2+ matches** → ambiguo, se deja para el
+  flujo manual (que ya sabe mostrar 2+ resultados para que un humano elija). Llamada desde
+  `runStripeEventPolling`, una vez por conexión activa, antes de pedir eventos.
+- [x] **Sin UI nueva** — `CompanyDetailModal` ya renderiza "Connected to Stripe →" apenas
+  `Company.stripeCustomerId` está seteado (Unidad 2); vincular automático alimenta esa misma UI.
+- [x] **Verificado 2026-08-28** en vivo contra `staging`: una Company real se auto-vinculó
+  correctamente en la primera corrida del cron. Bug real encontrado en esa misma prueba (primera vez
+  que este código corrió contra una Company con charges reales): `getCompanyPaymentEvents`
+  (frontend) armaba la URL con `new URL(...)`, que tira "Invalid URL" cuando `API_BASE_URL` es `''`
+  (producción/staging, mismo origen) — corregido a concatenación de string plana, mismo patrón que
+  el resto de `api/payments.ts`. `npm run build`/`npm test` (153/153, 6 nuevos) en verde.
+
+### Unidad 6 — Modal de historial de pagos por Company — ✅ completa (2026-08-29, en `staging`)
+
+Pedido del usuario: desde Payments y desde el perfil de Company, poder abrir el historial completo
+de pagos de esa Company — fecha, monto, estado, y un link al recibo si existe.
+
+- [x] **Backend — `receiptUrl`**: `StripeCharge.receipt_url` (`lib/stripe.ts`) no estaba tipado —
+  el objeto Charge de Stripe ya lo trae por default (sin `expand`), solo faltaba declararlo. Se
+  agregó a la interfaz y se expone como `receiptUrl` en `StripePaymentEvent`
+  (`getCompanyPaymentEvents`, sin ruta nueva — reusa `GET /api/payments/companies/:id/events`, ya
+  paginado desde la Unidad 3).
+- [x] **Frontend — `CompanyPaymentHistoryModal.tsx`** (`components/crm/`): tabla Date/Amount/
+  Status/Receipt con "Load more", más un link "View company profile →". **Corrección en la misma
+  ronda**: la primera versión era una página con ruta propia (`/payments/companies/:companyId`) — el
+  usuario notó que rompía el patrón del resto de la app (toda vista de detalle es un overlay, no una
+  navegación de página) y se convirtió a Modal. Se abre desde `PaymentsOverviewPage.tsx` (el link de
+  Company de cada fila, que antes navegaba directo al perfil) y desde `CompanyStripeSection.tsx`
+  (nuevo link "View full payment history →", dentro de `CompanyDetailModal`) — un Modal anidado
+  dentro de otro, patrón ya resuelto en este proyecto (`Modal.tsx` ya hace `stopPropagation()` en
+  Escape para no cerrar las dos capas a la vez, mismo caso que `PayslipPreviewModal` desde
+  `EmployeeOverviewPanel`).
+- [x] **Verificado**: `npm run build`/`npm test` (175/175) en verde.
+
+### Unidad 7 — Company profile: Payments pasa a ser una vista general — ✅ completa (2026-08-29, en `staging`)
+
+Con el modal de la Unidad 6 cubriendo el detalle completo, la sección "Payments" del perfil de
+Company (`CompanyStripeSection.tsx`) se simplificó a un resumen — pedido explícito: solo totales,
+sin recibos ni fechas por evento salvo la del primer pago.
+
+- [x] **Backend — `StripePaymentSummary` suma 3 campos** (`stripePaymentsService.ts`, extensión
+  aditiva — `PaymentsOverviewPage.tsx`/`getPaymentsOverview` siguen usando los campos viejos tal
+  cual): `paymentsCount`/`paymentsAmountCents` (cargos `succeeded` — no existía un total antes, solo
+  refunds/failed), `disputesCount`/`disputesAmountCents` (`charge.disputed === true`, campo nativo
+  del objeto Charge, mismo patrón que `refunded`/`amount_refunded`, sin llamada nueva a
+  `/v1/disputes`), y `firstPaymentAt` (el `created` más antiguo entre los cargos `succeeded` ya
+  traídos — mismo límite de 100 cargos ya documentado para el resto de este resumen).
+- [x] **Frontend** — se eliminó de `CompanyStripeSection.tsx` la mini-lista de eventos + "Load
+  more" (ese detalle ahora vive en el modal de la Unidad 6, a un click). El resumen quedó en:
+  **Payments** (cantidad + monto), **Refunds** (cantidad + monto), **Disputes** (cantidad + monto),
+  **First payment** (fecha). Se sacaron del render "Failed payments" y "Subscription" (siguen
+  existiendo en el tipo/backend, solo dejaron de mostrarse acá).
+- [x] **Verificado**: `npm run build`/`npm test` (175/175) en verde. Con esto el usuario dio por
+  cerrado Payments v1.

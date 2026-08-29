@@ -13,6 +13,13 @@ contenido de agosto para que no quede enterrado en un archivo cada vez más larg
 organizada, no un reemplazo**: el contenido original sigue viviendo tal cual en
 `docs/general/tareas-desarrollo.md`, no se tocó ni se borró de ahí.
 
+**Nota 2026-08-29**: este archivo es una foto histórica hasta donde llegó a compilarse — no se
+extendió más allá de eso. Varios de los "pendiente"/"no pusheado" que aparecen abajo (Tenant Signup
++ Subscription Plans, enforcement de `suspended`, etc.) **ya se resolvieron y están en producción**
+desde entonces. Para el estado real y actualizado, ver `docs/general/tareas-desarrollo.md` (Tier
+3.5 en adelante) y `docs/general/features-overview.md` — este archivo queda como referencia
+histórica de esa ventana de tiempo, no como fuente de verdad del estado actual.
+
 **Qué cubre este período, a alto nivel:**
 - **Payroll** — módulo completo (21/21 unidades), construido en su tercer intento (los dos primeros
   se revirtieron), **en producción desde el 2026-08-09**.

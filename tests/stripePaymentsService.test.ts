@@ -250,9 +250,9 @@ describe('getCompanyPaymentEvents', () => {
   it('classifies each charge and builds the correct dashboard link for test mode', async () => {
     listChargesMock.mockResolvedValue({
       data: [
-        { id: 'ch_ok', amount: 1000, currency: 'usd', status: 'succeeded', refunded: false, amount_refunded: 0, created: 1700000000 },
-        { id: 'ch_refunded', amount: 2000, currency: 'usd', status: 'succeeded', refunded: true, amount_refunded: 2000, created: 1700000001 },
-        { id: 'ch_failed', amount: 3000, currency: 'usd', status: 'failed', refunded: false, amount_refunded: 0, created: 1700000002 },
+        { id: 'ch_ok', amount: 1000, currency: 'usd', status: 'succeeded', refunded: false, amount_refunded: 0, created: 1700000000, receipt_url: 'https://pay.stripe.com/receipts/ch_ok' },
+        { id: 'ch_refunded', amount: 2000, currency: 'usd', status: 'succeeded', refunded: true, amount_refunded: 2000, created: 1700000001, receipt_url: 'https://pay.stripe.com/receipts/ch_refunded' },
+        { id: 'ch_failed', amount: 3000, currency: 'usd', status: 'failed', refunded: false, amount_refunded: 0, created: 1700000002, receipt_url: null },
       ],
       has_more: true,
     });
@@ -267,6 +267,7 @@ describe('getCompanyPaymentEvents', () => {
         currency: 'usd',
         createdAt: new Date(1700000000 * 1000).toISOString(),
         dashboardUrl: 'https://dashboard.stripe.com/test/payments/ch_ok',
+        receiptUrl: 'https://pay.stripe.com/receipts/ch_ok',
       },
       {
         id: 'ch_refunded',
@@ -275,6 +276,7 @@ describe('getCompanyPaymentEvents', () => {
         currency: 'usd',
         createdAt: new Date(1700000001 * 1000).toISOString(),
         dashboardUrl: 'https://dashboard.stripe.com/test/payments/ch_refunded',
+        receiptUrl: 'https://pay.stripe.com/receipts/ch_refunded',
       },
       {
         id: 'ch_failed',
@@ -283,6 +285,7 @@ describe('getCompanyPaymentEvents', () => {
         currency: 'usd',
         createdAt: new Date(1700000002 * 1000).toISOString(),
         dashboardUrl: 'https://dashboard.stripe.com/test/payments/ch_failed',
+        receiptUrl: null,
       },
     ]);
     expect(page.nextCursor).toBe('ch_failed');

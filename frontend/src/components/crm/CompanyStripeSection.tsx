@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { api, ApiError, type Company, type StripeCustomerMatch, type StripePaymentEvent, type StripePaymentSummary } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import ConfirmDialog from '../common/ConfirmDialog';
@@ -121,9 +122,14 @@ export default function CompanyStripeSection({ token, company, onLinked }: Compa
               Connected to Stripe →
             </a>
           </div>
-          <button type="button" className="table-link text-xs" onClick={handleSearch} disabled={searching}>
-            {searching ? 'Searching…' : 'Change link'}
-          </button>
+          <div className="flex items-center gap-3">
+            <Link to={`/payments/companies/${company.id}`} className="table-link text-xs">
+              View full payment history →
+            </Link>
+            <button type="button" className="table-link text-xs" onClick={handleSearch} disabled={searching}>
+              {searching ? 'Searching…' : 'Change link'}
+            </button>
+          </div>
         </div>
 
         {summary && (
@@ -144,7 +150,14 @@ export default function CompanyStripeSection({ token, company, onLinked }: Compa
                 <a href={event.dashboardUrl} target="_blank" rel="noreferrer" className="table-link">
                   {EVENT_LABEL[event.type]} · {formatMoney(event.amountCents, event.currency.toUpperCase())}
                 </a>
-                <span className="text-ink-faint">{new Date(event.createdAt).toLocaleDateString()}</span>
+                <div className="flex items-center gap-2">
+                  {event.receiptUrl && (
+                    <a href={event.receiptUrl} target="_blank" rel="noreferrer" className="table-link">
+                      Receipt
+                    </a>
+                  )}
+                  <span className="text-ink-faint">{new Date(event.createdAt).toLocaleDateString()}</span>
+                </div>
               </div>
             ))}
             {eventsCursor && (

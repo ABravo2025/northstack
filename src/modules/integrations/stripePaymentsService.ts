@@ -169,6 +169,7 @@ export interface StripePaymentEvent {
   currency: string;
   createdAt: string;
   dashboardUrl: string;
+  receiptUrl: string | null;
 }
 
 export interface StripePaymentEventsPage {
@@ -186,6 +187,7 @@ function chargeToEvent(charge: StripeCharge, apiKeyMode: 'test' | 'live'): Strip
     currency: charge.currency,
     createdAt: new Date(charge.created * 1000).toISOString(),
     dashboardUrl: `https://dashboard.stripe.com/${apiKeyMode === 'test' ? 'test/' : ''}payments/${charge.id}`,
+    receiptUrl: charge.receipt_url,
   };
 }
 

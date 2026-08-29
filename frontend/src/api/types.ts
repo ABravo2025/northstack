@@ -207,6 +207,7 @@ export interface StripePaymentEvent {
   currency: string;
   createdAt: string;
   dashboardUrl: string;
+  receiptUrl: string | null;
 }
 
 export interface StripePaymentEventsPage {

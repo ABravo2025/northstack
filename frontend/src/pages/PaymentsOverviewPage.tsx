@@ -103,7 +103,7 @@ export default function PaymentsOverviewPage({ token, user }: PaymentsOverviewPa
                   {overview.companies.map((row) => (
                     <tr key={row.companyId}>
                       <td>
-                        <Link to={`/companies?open=${row.companyId}`} className="table-link">
+                        <Link to={`/payments/companies/${row.companyId}`} className="table-link">
                           {row.companyName}
                         </Link>
                       </td>

@@ -104,6 +104,9 @@ export interface StripeCharge {
   refunded: boolean;
   amount_refunded: number; // cents, partial or full
   created: number; // unix seconds
+  // Stripe's own hosted, customer-facing receipt page — present on the Charge object by default,
+  // no expand needed. null for a charge that hasn't succeeded (e.g. still failed/pending).
+  receipt_url: string | null;
 }
 
 export async function listCharges(

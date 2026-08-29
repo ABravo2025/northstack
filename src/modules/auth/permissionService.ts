@@ -10,6 +10,7 @@ export const rolePermissions: Record<UserRole, string[]> = {
     'manage_payroll',
     'manage_billing',
     'manage_payments',
+    'view_sales_leaderboard',
   ],
   admin: ['view_hr', 'create_hr', 'manage_custom_fields', 'invite_users', 'manage_users'],
   member: ['view_hr'],
@@ -57,4 +58,11 @@ export function canManageBilling(role: UserRole): boolean {
 // check at each call site, so swapping in custom roles later only means changing this function).
 export function canManagePayments(role: UserRole): boolean {
   return rolePermissions[role].includes('manage_payments');
+}
+
+// Owner-only, same reasoning as canManagePayroll — deals-by-owner is
+// per-person performance data inside the tenant (who's closing, who isn't),
+// not something every member should see about their teammates.
+export function canViewSalesLeaderboard(role: UserRole): boolean {
+  return rolePermissions[role].includes('view_sales_leaderboard');
 }

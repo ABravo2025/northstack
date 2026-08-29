@@ -94,6 +94,33 @@ los ítems.
 
 ## Payments
 
+## Métricas
+
+Catálogo completo (qué está construido, qué es solo posible hoy, qué está bloqueado) en
+`docs/metrics/tenant-metrics-spec.md`. Las métricas "Hoy" de ese documento ya están construidas
+(`src/modules/metrics/*MetricsService.ts`, expuestas en `GET /api/tenant-metrics/overview`,
+2026-08-29). Lo que sigue es lo que quedó explícitamente afuera de esa ronda:
+
+- [ ] **Attrition/turnover rate (HR)**: fórmula lista, usa `EmployeeTermination` — bloqueada solo
+  hasta que ese módulo se promueva a producción (hoy en `staging`). Cuando pase, se agrega a
+  `hrMetricsService.ts` sin trabajo nuevo de diseño.
+- [ ] **Forecast ponderado por stage (Sales)**: Sales v2 ya lo construyó
+  (`PipelineStageDefinition.probability`), solo en `staging`. Se hereda gratis al promoverlo —
+  agregar a `salesMetricsService.ts`.
+- [ ] **Métricas de Payments v1 agregadas tenant-wide** (total cobrado, disputes/refunds, revenue
+  por Company, tiempo a primer pago): el cálculo por-Company ya existe (`summarizeCharges`), falta
+  la agregación tenant-wide + que Payments v1 salga de `staging`.
+- [ ] **`Session.lastSeenAt`**: campo nuevo para frecuencia de login real — hoy
+  `adoptionMetricsService.ts` usa `Session.createdAt` como proxy débil (mismo gap ya anotado en
+  `basic-metrics-spec.md` §2.3, aplica igual acá).
+- [ ] **`Contact.source` (o similar)**: para trackear volumen/conversión real de Public Forms — hoy
+  un submit exitoso no deja ningún registro de que ocurrió, no hay forma de aislar ese subconjunto
+  de Contacts.
+- [ ] **Company churn confiable**: `Company.status: Churned` no tiene disparador automático —
+  depende de una entidad `Contract` que no existe ni está diseñada.
+- [ ] **Costo de nómina como % de ingresos**: cruzaría Payroll con Payments v1 (ingresos del
+  tenant) — decisión de producto sin tomar, no construir especulativamente.
+
 ## Infra/Otros
 
 - [ ] **Prorrateo al cambiar de plan**: `changePlan` (self-serve, Billing Integration) llama al

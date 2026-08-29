@@ -2358,3 +2358,33 @@ dashboard admin de Stripe, no un recibo apto para el cliente). Sin ruta nueva �
 `npm run build`/`npm test` en verde (175/175).
 
 **Severidad:** — (feature nueva, no bug).
+
+## QA-55 — Company profile: la sección Payments pasa a ser una vista general (cierra Payments v1)
+
+**Por qué existe esta tarea:** último pedido del usuario sobre Payments — la sección "Payments" de
+`CompanyDetailModal` (`CompanyStripeSection.tsx`) todavía mostraba una mini-lista de eventos con
+link al dashboard de Stripe, recibo y fecha por evento, duplicando lo que QA-54 ya resuelve del todo
+en el modal de historial completo. Pedido explícito: dejar ahí **solo** un resumen general —
+Payments/Refunds/Disputes con su conteo y monto — sin recibos ni fechas por evento, salvo la fecha
+del primer pago.
+
+**Frontend**: se eliminó la lista de eventos + "Load more" de `CompanyStripeSection.tsx` (ese detalle
+ya vive en el modal de QA-54, a un click via "View full payment history →", que se mantiene). El
+resumen ahora muestra: **Payments** (cantidad + monto), **Refunds** (cantidad + monto), **Disputes**
+(cantidad + monto), y **First payment** (fecha del más antiguo). Se sacaron del render "Failed
+payments" y "Subscription" — siguen existiendo en el tipo/backend (los sigue usando
+`PaymentsOverviewPage.tsx` para sus propias tarjetas/columnas), solo dejaron de mostrarse acá.
+
+**Backend**: `summarizeCharges` (`stripePaymentsService.ts`) suma 3 campos nuevos a
+`StripePaymentSummary` — `paymentsCount`/`paymentsAmountCents` (cargos `succeeded`, nunca se había
+expuesto un total, antes solo había refunds/failed) y `disputesCount`/`disputesAmountCents`
+(cargos con `charge.disputed === true` — campo nativo del objeto Charge de Stripe, mismo patrón que
+`refunded`/`amount_refunded`, sin llamada nueva a `/v1/disputes`). `firstPaymentAt` toma el `created`
+más antiguo entre los cargos `succeeded` ya traídos (mismo límite de 100 cargos ya documentado para
+el resto de este resumen — no pagina hasta el final solo para encontrar el primero). Extensión
+aditiva, no rompe `PaymentsOverviewPage.tsx` ni `getPaymentsOverview` (siguen usando los campos
+viejos tal cual).
+
+`npm run build`/`npm test` en verde (175/175). Con esto el usuario dio por cerrado Payments v1.
+
+**Severidad:** — (feature nueva, no bug).

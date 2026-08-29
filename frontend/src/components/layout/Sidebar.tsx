@@ -50,6 +50,10 @@ export default function Sidebar({ user, mobileOpen, onMobileClose }: SidebarProp
             <HomeIcon className="h-4 w-4 shrink-0" />
             {label('Overview')}
           </NavLink>
+          <NavLink to="/dashboards" className={linkClass} title="Dashboards" onClick={onMobileClose}>
+            <DashboardIcon className="h-4 w-4 shrink-0" />
+            {label('Dashboards')}
+          </NavLink>
         </div>
 
         <div className="sidebar-divider">
@@ -68,10 +72,6 @@ export default function Sidebar({ user, mobileOpen, onMobileClose }: SidebarProp
               {label('Payroll')}
             </NavLink>
           )}
-          <NavLink to="/hr/dashboard" className={linkClass} title="Human Resources – Dashboard" onClick={onMobileClose}>
-            <DashboardIcon className="h-4 w-4 shrink-0" />
-            {label('Dashboard')}
-          </NavLink>
         </div>
 
         <div className="sidebar-divider">

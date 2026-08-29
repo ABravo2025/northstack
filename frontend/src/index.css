@@ -114,3 +114,40 @@ body {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
+
+/* Chart colors (Dashboards, Recharts) — the dataviz skill's validated default
+   categorical/status palette, as CSS vars so SVG fill/stroke props swap with
+   .dark the same way the rest of the app's colors do (see html.dark overrides
+   below `select option` for the established pattern this follows). Slot order
+   is the CVD-safety mechanism, not cosmetic — validated as a set; don't reorder
+   without re-running the palette validator. */
+:root {
+  --chart-grid: #e1e0d9;
+  --chart-axis: #c3c2b7;
+  --chart-muted: #898781;
+  --chart-series-1: #2a78d6; /* blue */
+  --chart-series-2: #eb6834; /* orange */
+  --chart-series-3: #1baf7a; /* aqua */
+  --chart-series-4: #eda100; /* yellow */
+  --chart-series-5: #e87ba4; /* magenta */
+  --chart-series-6: #008300; /* green */
+  --chart-series-7: #4a3aa7; /* violet */
+  --chart-series-8: #e34948; /* red */
+  --chart-status-good: #0ca30c;
+  --chart-status-warning: #fab219;
+  --chart-status-serious: #ec835a;
+  --chart-status-critical: #d03b3b;
+}
+html.dark {
+  --chart-grid: #2c2c2a;
+  --chart-axis: #383835;
+  --chart-muted: #898781;
+  --chart-series-1: #3987e5;
+  --chart-series-2: #d95926;
+  --chart-series-3: #199e70;
+  --chart-series-4: #c98500;
+  --chart-series-5: #d55181;
+  --chart-series-6: #008300;
+  --chart-series-7: #9085e9;
+  --chart-series-8: #e66767;
+}

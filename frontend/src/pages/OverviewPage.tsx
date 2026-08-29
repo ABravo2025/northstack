@@ -7,6 +7,7 @@ import OnboardingChecklist from '../components/layout/OnboardingChecklist';
 import MyTasksWidget from '../components/tasks/MyTasksWidget';
 import TaskFormPopover, { type TaskFormPayload } from '../components/tasks/TaskFormPopover';
 import NewTaskFromCalendarPopover from '../components/tasks/NewTaskFromCalendarPopover';
+import OverviewMetricsStrip from '../components/metrics/OverviewMetricsStrip';
 
 interface OverviewPageProps {
   token: string;
@@ -257,6 +258,7 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
   return (
     <div className="container">
       {(user.role === 'owner' || user.role === 'admin') && <OnboardingChecklist token={token} />}
+      <OverviewMetricsStrip token={token} />
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
         <div className="min-w-0 flex-1">
           <div className="page-toolbar">

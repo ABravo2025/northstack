@@ -13,7 +13,13 @@ import AcceptInvitePage from './pages/AcceptInvitePage';
 import ContractConfirmationPage from './pages/ContractConfirmationPage';
 import OverviewPage from './pages/OverviewPage';
 import HelpPage from './pages/HelpPage';
-import HrDashboardPage from './pages/HrDashboardPage';
+import DashboardsLayout from './layouts/DashboardsLayout';
+import DashboardsHrPage from './pages/dashboards/DashboardsHrPage';
+import DashboardsTimeOffPage from './pages/dashboards/DashboardsTimeOffPage';
+import DashboardsPayrollPage from './pages/dashboards/DashboardsPayrollPage';
+import DashboardsSalesPage from './pages/dashboards/DashboardsSalesPage';
+import DashboardsTasksPage from './pages/dashboards/DashboardsTasksPage';
+import DashboardsAdoptionPage from './pages/dashboards/DashboardsAdoptionPage';
 import EmployeesPage from './pages/EmployeesPage';
 import TimeOffOverviewPage from './pages/TimeOffOverviewPage';
 import CompaniesPage from './pages/CompaniesPage';
@@ -231,7 +237,16 @@ export default function App() {
       >
         <Route path="/overview" element={<OverviewPage token={token ?? ''} user={user} />} />
         <Route path="/help" element={<HelpPage />} />
-        <Route path="/hr/dashboard" element={<HrDashboardPage />} />
+        <Route path="/hr/dashboard" element={<Navigate to="/dashboards/hr" replace />} />
+        <Route path="/dashboards" element={<DashboardsLayout user={user} />}>
+          <Route index element={<Navigate to="/dashboards/hr" replace />} />
+          <Route path="hr" element={<DashboardsHrPage token={token ?? ''} />} />
+          <Route path="time-off" element={<DashboardsTimeOffPage token={token ?? ''} />} />
+          <Route path="payroll" element={<DashboardsPayrollPage token={token ?? ''} />} />
+          <Route path="sales" element={<DashboardsSalesPage token={token ?? ''} />} />
+          <Route path="tasks" element={<DashboardsTasksPage token={token ?? ''} />} />
+          <Route path="adoption" element={<DashboardsAdoptionPage token={token ?? ''} />} />
+        </Route>
         <Route path="/hr/people" element={<EmployeesPage user={user} token={token ?? ''} />} />
         <Route path="/hr/employees" element={<Navigate to="/hr/people" replace />} />
         <Route path="/hr/time-off" element={<TimeOffOverviewPage user={user} token={token ?? ''} />} />

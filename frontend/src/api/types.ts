@@ -755,3 +755,122 @@ export interface OffCyclePayrollEntry extends PayrollRunEntry {
   employeeFirstName: string;
   employeeLastName: string;
 }
+
+// GET /api/tenant-metrics/overview — docs/metrics/tenant-metrics-spec.md.
+// One shape per src/modules/metrics/*MetricsService.ts, mirrored 1:1.
+export interface CurrencyAmount {
+  currency: string;
+  amountCents: number;
+}
+
+export interface MonthCount {
+  month: string;
+  count: number;
+}
+
+export interface TenantHrMetrics {
+  headcount: { total: number; byStatus: { statusId: string; name: string; color: string | null; count: number }[] };
+  growth: MonthCount[];
+  byDepartment: { id: string | null; name: string; count: number }[];
+  byJobTitle: { id: string | null; name: string; count: number }[];
+  contractTypeMix: { contractType: string; count: number }[];
+  personTypeMix: { personType: string; count: number }[];
+  tenure: { medianDays: number; avgDays: number; sampleSize: number };
+  spanOfControl: { managerCount: number; medianReports: number; avgReports: number };
+  customFields: {
+    activeDefinitionCount: number;
+    employeeCount: number;
+    fields: { id: string; name: string; filledCount: number; completionPct: number | null }[];
+  };
+}
+
+export interface TenantTimeOffMetrics {
+  approval: { approvalRatePct: number | null; medianApprovalHours: number; sampleSize: number };
+  pending: number;
+  policyAdoption: { employeesWithPolicy: number; totalEmployees: number; adoptionPct: number | null };
+  daysTaken: { totalDays: number; requestCount: number };
+  byPolicy: { policyId: string; name: string; color: string | null; requestCount: number; totalDays: number }[];
+}
+
+export interface TenantPayrollMetrics {
+  costByPeriod: { month: string; byCurrency: CurrencyAmount[] }[];
+  costByType: { type: string; currency: string; amountCents: number; count: number }[];
+  compensationByDepartment: {
+    departmentId: string | null;
+    departmentName: string;
+    compensationType: string;
+    currency: string;
+    medianRateCents: number;
+    avgRateCents: number;
+    sampleSize: number;
+  }[];
+  offCycle: { count: number; byCurrency: CurrencyAmount[] };
+  contractConfirmation: { confirmed: number; total: number; ratePct: number | null };
+}
+
+export interface TenantSalesMetrics {
+  openPipeline: { pipelineId: string; pipelineName: string; currency: string; amountCents: number; count: number }[];
+  winRateAndCycle: {
+    winRatePct: number | null;
+    wonCount: number;
+    lostCount: number;
+    dealSizeByCurrency: { currency: string; medianAmountCents: number; avgAmountCents: number; sampleSize: number }[];
+    cycleDaysMedian: number;
+    cycleSampleSize: number;
+  };
+  stageVelocity: {
+    byStage: { stageId: string; stageName: string; pipelineName: string; historicalMedianDays: number; sampleSize: number }[];
+    atRisk: {
+      opportunityId: string;
+      name: string;
+      companyId: string;
+      stageId: string;
+      stageName: string;
+      daysInStage: number;
+      stageMedianDays: number;
+    }[];
+  };
+  leadConversion: { leadsWithOpportunity: number; totalLeads: number; conversionPct: number | null };
+  leadSourceEffectiveness: {
+    leadSourceId: string | null;
+    name: string;
+    totalContacts: number;
+    contactsWithWonDeal: number;
+    winRatePct: number | null;
+  }[];
+  lossReasons: { lossReasonId: string | null; name: string; count: number }[];
+  multiThreading: { openCount: number; singleThreadedPct: number | null; multiThreadedPct: number | null };
+  companyGrowth: { byMonth: MonthCount[]; byStatus: { name: string; count: number }[] };
+  dealsByOwner: {
+    ownerId: string;
+    ownerName: string;
+    openCount: number;
+    openAmountByCurrency: CurrencyAmount[];
+    wonCount: number;
+    wonAmountByCurrency: CurrencyAmount[];
+  }[];
+}
+
+export interface TenantTasksMetrics {
+  completion: { completed: number; total: number; completionRatePct: number | null };
+  overdueCount: number;
+  timeToComplete: { medianHours: number; sampleSize: number };
+  notes: { total: number; byMonth: MonthCount[] };
+}
+
+export interface TenantAdoptionMetrics {
+  seatUtilization: { accepted: number; nonRevokedTotal: number; ratePct: number | null };
+  moduleUsage: { module: string; used: boolean; detail: string }[];
+  loginFrequency: { usersWithSession: number; medianDistinctLoginDays: number; avgDistinctLoginDays: number };
+}
+
+export interface TenantMetricsOverview {
+  generatedAt: string;
+  monthsBack: number;
+  hr: TenantHrMetrics;
+  timeOff: TenantTimeOffMetrics;
+  payroll: TenantPayrollMetrics | null;
+  sales: TenantSalesMetrics;
+  tasks: TenantTasksMetrics;
+  adoption: TenantAdoptionMetrics;
+}

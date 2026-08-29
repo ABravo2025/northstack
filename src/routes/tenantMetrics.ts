@@ -1,6 +1,6 @@
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
-import { canViewSalesLeaderboard } from '../modules/auth/permissionService.js';
+import { canManagePayroll, canViewSalesLeaderboard } from '../modules/auth/permissionService.js';
 import { getHrMetrics } from '../modules/metrics/hrMetricsService.js';
 import { getTimeOffMetrics } from '../modules/metrics/timeOffMetricsService.js';
 import { getPayrollMetrics } from '../modules/metrics/payrollMetricsService.js';
@@ -22,7 +22,9 @@ function parseMonthsBack(raw: unknown): number {
 // One combined snapshot for a tenant's own data (docs/metrics/tenant-metrics-spec.md) —
 // covers every metric marked "Hoy" (calculable now, no schema changes) in that
 // catalog. Deliberately read-only/aggregate, no per-record sensitive data
-// except `sales.dealsByOwner`, stripped below for anyone who isn't owner/admin.
+// except `sales.dealsByOwner` (owner/admin only) and `payroll` as a whole
+// (owner-only, same gate as the Payroll module itself — compensation-by-department
+// is still salary data even aggregated) — both stripped below by role.
 tenantMetricsRouter.get('/api/tenant-metrics/overview', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) {
@@ -31,11 +33,12 @@ tenantMetricsRouter.get('/api/tenant-metrics/overview', async (req, res) => {
 
   const monthsBack = parseMonthsBack(req.query.months);
   const tenantId = user.tenantId!;
+  const canSeePayroll = canManagePayroll(user.role);
 
   const [hr, timeOff, payroll, sales, tasks, adoption] = await Promise.all([
     getHrMetrics(tenantId, monthsBack),
     getTimeOffMetrics(tenantId, monthsBack),
-    getPayrollMetrics(tenantId, monthsBack),
+    canSeePayroll ? getPayrollMetrics(tenantId, monthsBack) : Promise.resolve(null),
     getSalesMetrics(tenantId, monthsBack),
     getTasksMetrics(tenantId, monthsBack),
     getAdoptionMetrics(tenantId),

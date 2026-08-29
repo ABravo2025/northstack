@@ -116,6 +116,15 @@ Catálogo completo (qué está construido, qué es solo posible hoy, qué está 
 - [ ] **`Contact.source` (o similar)**: para trackear volumen/conversión real de Public Forms — hoy
   un submit exitoso no deja ningún registro de que ocurrió, no hay forma de aislar ese subconjunto
   de Contacts.
+- [ ] **Condicionar qué métricas ve cada rol, de forma sistemática**: pedido explícito del usuario
+  (2026-08-29) — "algo que se debe definir más adelante, pero vale la pena dejarlo en tema". Hoy el
+  gating es ad-hoc, caso por caso (`payroll` entero owner-only vía `canManagePayroll`,
+  `sales.dealsByOwner` owner/admin vía `canViewSalesLeaderboard` — ver `tenantMetrics.ts`), no una
+  política definida para el resto del catálogo (ej. ¿debería un `member` ver compensación agregada
+  por departamento aunque no vea Payroll? ¿tenure/span of control de HR? ¿el leaderboard de owners
+  vs. solo sus propios números?). Depende del mismo ítem de más abajo (sistema de roles custom) —
+  no vale la pena diseñar un esquema de permisos propio para Dashboards antes de que exista eso,
+  para no terminar con dos mecanismos de permisología en paralelo.
 - [ ] **Company churn confiable**: `Company.status: Churned` no tiene disparador automático —
   depende de una entidad `Contract` que no existe ni está diseñada.
 - [ ] **Costo de nómina como % de ingresos**: cruzaría Payroll con Payments v1 (ingresos del

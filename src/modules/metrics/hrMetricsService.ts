@@ -1,5 +1,6 @@
 import prisma from '../../lib/prisma.js';
-import { avg, daysBetween, lastNMonthKeys, median, monthKey, monthsAgoUtc, pct } from './mathUtils.js';
+import { avg, daysBetween, median, monthKey, monthKeysInRange, pct } from './mathUtils.js';
+import type { DateRange } from './dateRange.js';
 
 interface StatusCount {
   statusId: string;
@@ -29,13 +30,18 @@ async function getHeadcountByStatus(tenantId: string): Promise<{ total: number; 
   return { total, byStatus };
 }
 
-async function getHeadcountGrowth(tenantId: string, monthsBack: number): Promise<{ month: string; count: number }[]> {
-  const since = monthsAgoUtc(monthsBack - 1);
+async function getHeadcountGrowth(tenantId: string, range: DateRange): Promise<{ month: string; count: number }[]> {
   const employees = await prisma.employee.findMany({
-    where: { tenantId, OR: [{ startDate: { gte: since } }, { AND: [{ startDate: null }, { createdAt: { gte: since } }] }] },
+    where: {
+      tenantId,
+      OR: [
+        { startDate: { gte: range.since, lte: range.until } },
+        { AND: [{ startDate: null }, { createdAt: { gte: range.since, lte: range.until } }] },
+      ],
+    },
     select: { startDate: true, createdAt: true },
   });
-  const months = lastNMonthKeys(monthsBack);
+  const months = monthKeysInRange(range.since, range.until);
   const counts = new Map<string, number>(months.map((m) => [m, 0]));
   for (const e of employees) {
     const key = monthKey(e.startDate ?? e.createdAt);
@@ -123,11 +129,11 @@ async function getCustomFieldCompletion(
   return { activeDefinitionCount: defs.length, employeeCount, fields };
 }
 
-export async function getHrMetrics(tenantId: string, monthsBack = 6) {
+export async function getHrMetrics(tenantId: string, range: DateRange) {
   const [headcount, growth, byDepartment, byJobTitle, contractTypeMix, personTypeMix, tenure, spanOfControl, customFields] =
     await Promise.all([
       getHeadcountByStatus(tenantId),
-      getHeadcountGrowth(tenantId, monthsBack),
+      getHeadcountGrowth(tenantId, range),
       getHeadcountByCatalog(tenantId, 'departmentId'),
       getHeadcountByCatalog(tenantId, 'jobTitleId'),
       getContractTypeMix(tenantId),

@@ -1,22 +1,21 @@
+import { useOutletContext } from 'react-router-dom';
 import BarChartCard from '../../components/metrics/BarChartCard';
 import StatTile from '../../components/metrics/StatTile';
 import { useTenantMetrics } from '../../lib/useTenantMetrics';
 import { seriesColor } from '../../lib/metricsFormat';
+import type { DashboardsOutletContext } from '../../layouts/DashboardsLayout';
 
-interface DashboardsTimeOffPageProps {
-  token: string;
-}
+export default function DashboardsTimeOffPage() {
+  const { token, range } = useOutletContext<DashboardsOutletContext>();
+  const { metrics, loading } = useTenantMetrics(token, range);
 
-export default function DashboardsTimeOffPage({ token }: DashboardsTimeOffPageProps) {
-  const { metrics, loading } = useTenantMetrics(token);
-
-  if (loading || !metrics) return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">Loading…</p>;
+  if (!metrics) return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">Loading…</p>;
 
   const { timeOff } = metrics;
   const byPolicy = timeOff.byPolicy.map((p) => ({ name: p.name, days: p.totalDays }));
 
   return (
-    <div>
+    <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile
           label="Approval rate"

@@ -1,12 +1,10 @@
+import { useOutletContext } from 'react-router-dom';
 import BarChartCard, { type BarSeries } from '../../components/metrics/BarChartCard';
 import StatTile from '../../components/metrics/StatTile';
 import { useTenantMetrics } from '../../lib/useTenantMetrics';
 import { seriesColor } from '../../lib/metricsFormat';
 import { formatMoney } from '../../lib/currencies';
-
-interface DashboardsSalesPageProps {
-  token: string;
-}
+import type { DashboardsOutletContext } from '../../layouts/DashboardsLayout';
 
 function pivotByCurrency(buckets: { name: string; amounts: { currency: string; amountCents: number }[] }[]) {
   const currencies = [...new Set(buckets.flatMap((b) => b.amounts.map((a) => a.currency)))];
@@ -19,10 +17,11 @@ function pivotByCurrency(buckets: { name: string; amounts: { currency: string; a
   return { data, series };
 }
 
-export default function DashboardsSalesPage({ token }: DashboardsSalesPageProps) {
-  const { metrics, loading } = useTenantMetrics(token);
+export default function DashboardsSalesPage() {
+  const { token, range } = useOutletContext<DashboardsOutletContext>();
+  const { metrics, loading } = useTenantMetrics(token, range);
 
-  if (loading || !metrics) return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">Loading…</p>;
+  if (!metrics) return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">Loading…</p>;
 
   const { sales } = metrics;
   const pipelineByCurrency = pivotByCurrency(
@@ -39,7 +38,7 @@ export default function DashboardsSalesPage({ token }: DashboardsSalesPageProps)
   const companyGrowthData = sales.companyGrowth.byMonth.map((m) => ({ name: m.month, count: m.count }));
 
   return (
-    <div>
+    <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile
           label="Win rate"

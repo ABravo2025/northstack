@@ -866,7 +866,7 @@ export interface TenantAdoptionMetrics {
 
 export interface TenantMetricsOverview {
   generatedAt: string;
-  monthsBack: number;
+  range: { since: string; until: string };
   hr: TenantHrMetrics;
   timeOff: TenantTimeOffMetrics;
   payroll: TenantPayrollMetrics | null;

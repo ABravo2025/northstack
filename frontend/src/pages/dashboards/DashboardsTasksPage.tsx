@@ -1,22 +1,21 @@
+import { useOutletContext } from 'react-router-dom';
 import BarChartCard from '../../components/metrics/BarChartCard';
 import StatTile from '../../components/metrics/StatTile';
 import { useTenantMetrics } from '../../lib/useTenantMetrics';
 import { seriesColor } from '../../lib/metricsFormat';
+import type { DashboardsOutletContext } from '../../layouts/DashboardsLayout';
 
-interface DashboardsTasksPageProps {
-  token: string;
-}
+export default function DashboardsTasksPage() {
+  const { token, range } = useOutletContext<DashboardsOutletContext>();
+  const { metrics, loading } = useTenantMetrics(token, range);
 
-export default function DashboardsTasksPage({ token }: DashboardsTasksPageProps) {
-  const { metrics, loading } = useTenantMetrics(token);
-
-  if (loading || !metrics) return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">Loading…</p>;
+  if (!metrics) return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">Loading…</p>;
 
   const { tasks } = metrics;
   const notesByMonth = tasks.notes.byMonth.map((m) => ({ name: m.month, count: m.count }));
 
   return (
-    <div>
+    <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile
           label="Completion rate"

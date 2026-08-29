@@ -1,12 +1,10 @@
+import { useOutletContext } from 'react-router-dom';
 import BarChartCard, { type BarSeries } from '../../components/metrics/BarChartCard';
 import StatTile from '../../components/metrics/StatTile';
 import { useTenantMetrics } from '../../lib/useTenantMetrics';
 import { seriesColor } from '../../lib/metricsFormat';
 import { formatMoney } from '../../lib/currencies';
-
-interface DashboardsPayrollPageProps {
-  token: string;
-}
+import type { DashboardsOutletContext } from '../../layouts/DashboardsLayout';
 
 // Pivots a list of {currency, amountCents} groups, one per x-axis bucket
 // (period or type), into Recharts rows — one column per currency, so
@@ -22,11 +20,12 @@ function pivotByCurrency(buckets: { name: string; amounts: { currency: string; a
   return { data, series };
 }
 
-export default function DashboardsPayrollPage({ token }: DashboardsPayrollPageProps) {
-  const { metrics, loading } = useTenantMetrics(token);
+export default function DashboardsPayrollPage() {
+  const { token, range } = useOutletContext<DashboardsOutletContext>();
+  const { metrics, loading } = useTenantMetrics(token, range);
 
-  if (loading) return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">Loading…</p>;
-  if (!metrics?.payroll) {
+  if (!metrics) return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">Loading…</p>;
+  if (!metrics.payroll) {
     return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">Payroll data is only visible to the workspace owner.</p>;
   }
 
@@ -40,7 +39,7 @@ export default function DashboardsPayrollPage({ token }: DashboardsPayrollPagePr
   const costByType = pivotByCurrency([...typeGroups].map(([name, amounts]) => ({ name, amounts })));
 
   return (
-    <div>
+    <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile
           label="Contract confirmation"

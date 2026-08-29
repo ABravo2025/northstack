@@ -1,5 +1,10 @@
 import prisma from '../../lib/prisma.js';
-import { avg, daysBetween, lastNMonthKeys, median, monthKey, monthsAgoUtc, pct } from './mathUtils.js';
+import { avg, daysBetween, median, monthKey, monthKeysInRange, pct } from './mathUtils.js';
+import type { DateRange } from './dateRange.js';
+
+function inRange(date: Date, range: DateRange): boolean {
+  return date >= range.since && date <= range.until;
+}
 
 interface PipelineValueBucket {
   pipelineId: string;
@@ -9,6 +14,9 @@ interface PipelineValueBucket {
   count: number;
 }
 
+// Not range-filtered — "what's open right now" is current state, not an
+// aggregate over a period. See docs/metrics/tenant-metrics-spec.md's
+// currency rule: grouped by currency, never summed across currencies.
 async function getOpenPipelineValue(tenantId: string): Promise<PipelineValueBucket[]> {
   const opps = await prisma.opportunity.findMany({
     where: { tenantId, isActive: true, stage: { outcome: 'open' } },
@@ -34,11 +42,11 @@ interface WinRateResult {
   cycleSampleSize: number;
 }
 
-// Opportunity has no dedicated "closedAt" column — cycle length and any
-// period-windowing both derive from OpportunityStageHistory (first entry =
-// entered the pipeline, last entry = entered the closing won/lost stage).
-async function getWinRateAndCycle(tenantId: string): Promise<WinRateResult> {
-  const closed = await prisma.opportunity.findMany({
+// Opportunity has no dedicated "closedAt" column — close date (and so the
+// range filter, and cycle length) both derive from OpportunityStageHistory's
+// last entry (when it entered the closing won/lost stage).
+async function getWinRateAndCycle(tenantId: string, range: DateRange): Promise<WinRateResult> {
+  const closedAll = await prisma.opportunity.findMany({
     where: { tenantId, isActive: true, stage: { outcome: { in: ['won', 'lost'] } } },
     select: {
       amountCents: true,
@@ -46,6 +54,10 @@ async function getWinRateAndCycle(tenantId: string): Promise<WinRateResult> {
       stage: { select: { outcome: true } },
       stageHistory: { select: { enteredAt: true }, orderBy: { enteredAt: 'asc' } },
     },
+  });
+  const closed = closedAll.filter((o) => {
+    const closedAt = o.stageHistory[o.stageHistory.length - 1]?.enteredAt;
+    return closedAt && inRange(closedAt, range);
   });
   const won = closed.filter((o) => o.stage.outcome === 'won');
   const lost = closed.filter((o) => o.stage.outcome === 'lost');
@@ -94,12 +106,11 @@ interface AtRiskOpportunity {
   stageMedianDays: number;
 }
 
-// "Historical" durations come only from *completed* stage visits (this stage
-// entry was followed by another) — mixing in still-open, in-progress visits
-// would bias the average down (a deal that just arrived hasn't had time to
-// look slow yet). At-risk opportunities are compared against that clean
-// baseline separately. Same underlying data as the "time in stage" indicator
-// already shown per-Opportunity in the detail panel — this aggregates it.
+// Not range-filtered, on purpose, even though everything else on this page
+// is: the historical median needs a large enough sample to mean anything, and
+// a narrow date range (e.g. "today") would starve it to noise. It's a
+// standing baseline, not a period metric — same reasoning for `atRisk`, which
+// is about which deals are stuck *right now*, not during some past window.
 async function getStageVelocity(tenantId: string): Promise<{ byStage: StageVelocity[]; atRisk: AtRiskOpportunity[] }> {
   const history = await prisma.opportunityStageHistory.findMany({
     where: { tenantId },
@@ -173,9 +184,12 @@ async function getStageVelocity(tenantId: string): Promise<{ byStage: StageVeloc
   return { byStage, atRisk: atRisk.sort((a, b) => b.daysInStage - a.daysInStage) };
 }
 
-async function getLeadToOpportunityConversion(tenantId: string): Promise<{ leadsWithOpportunity: number; totalLeads: number; conversionPct: number | null }> {
+async function getLeadToOpportunityConversion(
+  tenantId: string,
+  range: DateRange,
+): Promise<{ leadsWithOpportunity: number; totalLeads: number; conversionPct: number | null }> {
   const leads = await prisma.contact.findMany({
-    where: { tenantId, isActive: true, leadStatus: { not: null } },
+    where: { tenantId, isActive: true, leadStatus: { not: null }, createdAt: { gte: range.since, lte: range.until } },
     select: { id: true, opportunityLinks: { select: { id: true }, take: 1 } },
   });
   const withOpportunity = leads.filter((l) => l.opportunityLinks.length > 0).length;
@@ -190,9 +204,9 @@ interface LeadSourceBucket {
   winRatePct: number | null;
 }
 
-async function getLeadSourceEffectiveness(tenantId: string): Promise<LeadSourceBucket[]> {
+async function getLeadSourceEffectiveness(tenantId: string, range: DateRange): Promise<LeadSourceBucket[]> {
   const contacts = await prisma.contact.findMany({
-    where: { tenantId, isActive: true },
+    where: { tenantId, isActive: true, createdAt: { gte: range.since, lte: range.until } },
     select: {
       leadSourceId: true,
       leadSource: { select: { name: true } },
@@ -216,22 +230,35 @@ async function getLeadSourceEffectiveness(tenantId: string): Promise<LeadSourceB
   }));
 }
 
-async function getLossReasonDistribution(tenantId: string): Promise<{ lossReasonId: string | null; name: string; count: number }[]> {
-  const groups = await prisma.opportunity.groupBy({
-    by: ['lossReasonId'],
+async function getLossReasonDistribution(tenantId: string, range: DateRange): Promise<{ lossReasonId: string | null; name: string; count: number }[]> {
+  const lost = await prisma.opportunity.findMany({
     where: { tenantId, isActive: true, stage: { outcome: 'lost' } },
-    _count: true,
+    select: { lossReasonId: true, stageHistory: { select: { enteredAt: true }, orderBy: { enteredAt: 'desc' }, take: 1 } },
   });
-  const ids = groups.map((g) => g.lossReasonId).filter((id): id is string => id !== null);
+  const inWindow = lost.filter((o) => {
+    const closedAt = o.stageHistory[0]?.enteredAt;
+    return closedAt && inRange(closedAt, range);
+  });
+  const counts = new Map<string, number>();
+  for (const o of inWindow) {
+    const key = o.lossReasonId ?? 'none';
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  const ids = [...counts.keys()].filter((id) => id !== 'none');
   const defs = ids.length ? await prisma.fieldCatalogDefinition.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } }) : [];
   const byId = new Map(defs.map((d) => [d.id, d.name]));
-  return groups
-    .map((g) => ({ lossReasonId: g.lossReasonId, name: g.lossReasonId ? (byId.get(g.lossReasonId) ?? 'Unknown') : 'Not set', count: g._count }))
+  return [...counts]
+    .map(([lossReasonId, count]) => ({
+      lossReasonId: lossReasonId === 'none' ? null : lossReasonId,
+      name: lossReasonId === 'none' ? 'Not set' : (byId.get(lossReasonId) ?? 'Unknown'),
+      count,
+    }))
     .sort((a, b) => b.count - a.count);
 }
 
-// Same query shape as the cross-tenant version in scripts/metrics-report.ts,
-// scoped to one tenant.
+// Not range-filtered — a current snapshot of open deals, same reasoning as
+// getOpenPipelineValue. Same query shape as the cross-tenant version in
+// scripts/metrics-report.ts, scoped to one tenant.
 async function getMultiThreading(tenantId: string): Promise<{ openCount: number; singleThreadedPct: number | null; multiThreadedPct: number | null }> {
   const open = await prisma.opportunity.findMany({
     where: { tenantId, isActive: true, stage: { outcome: 'open' } },
@@ -242,15 +269,18 @@ async function getMultiThreading(tenantId: string): Promise<{ openCount: number;
   return { openCount: open.length, singleThreadedPct: pct(single, open.length), multiThreadedPct: pct(multi, open.length) };
 }
 
-async function getCompanyGrowth(tenantId: string, monthsBack: number): Promise<{ byMonth: { month: string; count: number }[]; byStatus: { name: string; count: number }[] }> {
-  const since = monthsAgoUtc(monthsBack - 1);
-  const [recent, all] = await Promise.all([
-    prisma.company.findMany({ where: { tenantId, createdAt: { gte: since } }, select: { createdAt: true } }),
+async function getCompanyGrowth(
+  tenantId: string,
+  range: DateRange,
+): Promise<{ byMonth: { month: string; count: number }[]; byStatus: { name: string; count: number }[] }> {
+  const [inWindow, all] = await Promise.all([
+    prisma.company.findMany({ where: { tenantId, createdAt: { gte: range.since, lte: range.until } }, select: { createdAt: true } }),
+    // byStatus is current state (Prospect/Customer/Churned right now), not range-filtered.
     prisma.company.groupBy({ by: ['statusId'], where: { tenantId }, _count: true }),
   ]);
-  const months = lastNMonthKeys(monthsBack);
+  const months = monthKeysInRange(range.since, range.until);
   const counts = new Map<string, number>(months.map((m) => [m, 0]));
-  for (const c of recent) {
+  for (const c of inWindow) {
     const key = monthKey(c.createdAt);
     if (counts.has(key)) counts.set(key, (counts.get(key) ?? 0) + 1);
   }
@@ -279,7 +309,9 @@ interface CurrencyTotal {
 // Sensitive — this is per-person performance data inside the tenant.
 // Deliberately not gated here (services don't know about roles); the route
 // layer must restrict this field to owner/admin before returning it.
-async function getDealsByOwner(tenantId: string): Promise<OwnerLeaderboardEntry[]> {
+// `open*` fields are current state (unfiltered); `won*` fields are filtered
+// to deals closed within `range`, same reasoning as getWinRateAndCycle.
+async function getDealsByOwner(tenantId: string, range: DateRange): Promise<OwnerLeaderboardEntry[]> {
   const opps = await prisma.opportunity.findMany({
     where: { tenantId, isActive: true, ownerId: { not: null } },
     select: {
@@ -288,6 +320,7 @@ async function getDealsByOwner(tenantId: string): Promise<OwnerLeaderboardEntry[
       currency: true,
       stage: { select: { outcome: true } },
       owner: { select: { firstName: true, lastName: true } },
+      stageHistory: { select: { enteredAt: true }, orderBy: { enteredAt: 'desc' }, take: 1 },
     },
   });
   const byOwner = new Map<string, { name: string; open: Map<string, number>; won: Map<string, number>; openCount: number; wonCount: number }>();
@@ -301,8 +334,11 @@ async function getDealsByOwner(tenantId: string): Promise<OwnerLeaderboardEntry[
       entry.openCount += 1;
       entry.open.set(o.currency, (entry.open.get(o.currency) ?? 0) + o.amountCents);
     } else if (o.stage.outcome === 'won') {
-      entry.wonCount += 1;
-      entry.won.set(o.currency, (entry.won.get(o.currency) ?? 0) + o.amountCents);
+      const closedAt = o.stageHistory[0]?.enteredAt;
+      if (closedAt && inRange(closedAt, range)) {
+        entry.wonCount += 1;
+        entry.won.set(o.currency, (entry.won.get(o.currency) ?? 0) + o.amountCents);
+      }
     }
   }
   const toCurrencyTotals = (m: Map<string, number>): CurrencyTotal[] => [...m].map(([currency, amountCents]) => ({ currency, amountCents }));
@@ -318,18 +354,18 @@ async function getDealsByOwner(tenantId: string): Promise<OwnerLeaderboardEntry[
     .sort((a, b) => b.wonCount - a.wonCount);
 }
 
-export async function getSalesMetrics(tenantId: string, monthsBack = 6) {
+export async function getSalesMetrics(tenantId: string, range: DateRange) {
   const [openPipeline, winRateAndCycle, stageVelocity, leadConversion, leadSourceEffectiveness, lossReasons, multiThreading, companyGrowth, dealsByOwner] =
     await Promise.all([
       getOpenPipelineValue(tenantId),
-      getWinRateAndCycle(tenantId),
+      getWinRateAndCycle(tenantId, range),
       getStageVelocity(tenantId),
-      getLeadToOpportunityConversion(tenantId),
-      getLeadSourceEffectiveness(tenantId),
-      getLossReasonDistribution(tenantId),
+      getLeadToOpportunityConversion(tenantId, range),
+      getLeadSourceEffectiveness(tenantId, range),
+      getLossReasonDistribution(tenantId, range),
       getMultiThreading(tenantId),
-      getCompanyGrowth(tenantId, monthsBack),
-      getDealsByOwner(tenantId),
+      getCompanyGrowth(tenantId, range),
+      getDealsByOwner(tenantId, range),
     ]);
   return { openPipeline, winRateAndCycle, stageVelocity, leadConversion, leadSourceEffectiveness, lossReasons, multiThreading, companyGrowth, dealsByOwner };
 }

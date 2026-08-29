@@ -1,5 +1,6 @@
 import prisma from '../../lib/prisma.js';
 import { avg, median, pct } from './mathUtils.js';
+import type { DateRange } from './dateRange.js';
 
 async function getSeatUtilization(tenantId: string): Promise<{ accepted: number; nonRevokedTotal: number; ratePct: number | null }> {
   const invitations = await prisma.invitation.findMany({ where: { tenantId }, select: { status: true } });
@@ -38,8 +39,14 @@ async function getModuleUsage(tenantId: string): Promise<ModuleUsage[]> {
 // marks the moment of login, not ongoing activity, and sessions slide for 30
 // days before writing again — so this undercounts anyone who logs in once and
 // stays "logged in". Real DAU/WAU/MAU needs Session.lastSeenAt, not built yet.
-async function getLoginFrequency(tenantId: string): Promise<{ usersWithSession: number; medianDistinctLoginDays: number; avgDistinctLoginDays: number }> {
-  const sessions = await prisma.session.findMany({ where: { user: { tenantId } }, select: { userId: true, createdAt: true } });
+async function getLoginFrequency(
+  tenantId: string,
+  range: DateRange,
+): Promise<{ usersWithSession: number; medianDistinctLoginDays: number; avgDistinctLoginDays: number }> {
+  const sessions = await prisma.session.findMany({
+    where: { user: { tenantId }, createdAt: { gte: range.since, lte: range.until } },
+    select: { userId: true, createdAt: true },
+  });
   const daysByUser = new Map<string, Set<string>>();
   for (const s of sessions) {
     const day = s.createdAt.toISOString().slice(0, 10);
@@ -54,11 +61,11 @@ async function getLoginFrequency(tenantId: string): Promise<{ usersWithSession: 
   };
 }
 
-export async function getAdoptionMetrics(tenantId: string) {
+export async function getAdoptionMetrics(tenantId: string, range: DateRange) {
   const [seatUtilization, moduleUsage, loginFrequency] = await Promise.all([
     getSeatUtilization(tenantId),
     getModuleUsage(tenantId),
-    getLoginFrequency(tenantId),
+    getLoginFrequency(tenantId, range),
   ]);
   return { seatUtilization, moduleUsage, loginFrequency };
 }

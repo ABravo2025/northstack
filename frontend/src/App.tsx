@@ -238,14 +238,14 @@ export default function App() {
         <Route path="/overview" element={<OverviewPage token={token ?? ''} user={user} />} />
         <Route path="/help" element={<HelpPage />} />
         <Route path="/hr/dashboard" element={<Navigate to="/dashboards/hr" replace />} />
-        <Route path="/dashboards" element={<DashboardsLayout user={user} />}>
+        <Route path="/dashboards" element={<DashboardsLayout user={user} token={token ?? ''} />}>
           <Route index element={<Navigate to="/dashboards/hr" replace />} />
-          <Route path="hr" element={<DashboardsHrPage token={token ?? ''} />} />
-          <Route path="time-off" element={<DashboardsTimeOffPage token={token ?? ''} />} />
-          <Route path="payroll" element={<DashboardsPayrollPage token={token ?? ''} />} />
-          <Route path="sales" element={<DashboardsSalesPage token={token ?? ''} />} />
-          <Route path="tasks" element={<DashboardsTasksPage token={token ?? ''} />} />
-          <Route path="adoption" element={<DashboardsAdoptionPage token={token ?? ''} />} />
+          <Route path="hr" element={<DashboardsHrPage />} />
+          <Route path="time-off" element={<DashboardsTimeOffPage />} />
+          <Route path="payroll" element={<DashboardsPayrollPage />} />
+          <Route path="sales" element={<DashboardsSalesPage />} />
+          <Route path="tasks" element={<DashboardsTasksPage />} />
+          <Route path="adoption" element={<DashboardsAdoptionPage />} />
         </Route>
         <Route path="/hr/people" element={<EmployeesPage user={user} token={token ?? ''} />} />
         <Route path="/hr/employees" element={<Navigate to="/hr/people" replace />} />

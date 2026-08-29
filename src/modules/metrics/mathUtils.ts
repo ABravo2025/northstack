@@ -21,20 +21,18 @@ export function monthKey(date: Date): string {
   return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
-// Last `n` month keys ending at the reference month (inclusive), oldest first —
-// shared bucketing window for every "trend by month" metric across services.
-export function lastNMonthKeys(n: number, reference: Date = new Date()): string[] {
+// Every month key from `since`'s month through `until`'s month inclusive,
+// oldest first — the bucketing window for every "trend by month" chart,
+// driven by the tenant-picked date range instead of a fixed month count.
+export function monthKeysInRange(since: Date, until: Date): string[] {
   const months: string[] = [];
-  for (let i = n - 1; i >= 0; i--) {
-    months.push(monthKey(new Date(Date.UTC(reference.getUTCFullYear(), reference.getUTCMonth() - i, 1))));
+  const cursor = new Date(Date.UTC(since.getUTCFullYear(), since.getUTCMonth(), 1));
+  const end = new Date(Date.UTC(until.getUTCFullYear(), until.getUTCMonth(), 1));
+  while (cursor <= end) {
+    months.push(monthKey(cursor));
+    cursor.setUTCMonth(cursor.getUTCMonth() + 1);
   }
   return months;
-}
-
-// UTC first-of-month, `n` months before the reference month — the standard
-// "since" bound for a last-N-months window query.
-export function monthsAgoUtc(n: number, reference: Date = new Date()): Date {
-  return new Date(Date.UTC(reference.getUTCFullYear(), reference.getUTCMonth() - n, 1));
 }
 
 export function daysBetween(from: Date, to: Date): number {

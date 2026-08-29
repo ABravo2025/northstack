@@ -1,9 +1,7 @@
+import { useOutletContext } from 'react-router-dom';
 import StatTile from '../../components/metrics/StatTile';
 import { useTenantMetrics } from '../../lib/useTenantMetrics';
-
-interface DashboardsAdoptionPageProps {
-  token: string;
-}
+import type { DashboardsOutletContext } from '../../layouts/DashboardsLayout';
 
 const MODULE_LABELS: Record<string, string> = {
   hr: 'HR',
@@ -12,15 +10,16 @@ const MODULE_LABELS: Record<string, string> = {
   payroll: 'Payroll',
 };
 
-export default function DashboardsAdoptionPage({ token }: DashboardsAdoptionPageProps) {
-  const { metrics, loading } = useTenantMetrics(token);
+export default function DashboardsAdoptionPage() {
+  const { token, range } = useOutletContext<DashboardsOutletContext>();
+  const { metrics, loading } = useTenantMetrics(token, range);
 
-  if (loading || !metrics) return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">Loading…</p>;
+  if (!metrics) return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">Loading…</p>;
 
   const { adoption } = metrics;
 
   return (
-    <div>
+    <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
         <StatTile
           label="Seat utilization"

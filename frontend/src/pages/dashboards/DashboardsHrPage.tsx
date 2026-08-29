@@ -1,16 +1,15 @@
+import { useOutletContext } from 'react-router-dom';
 import BarChartCard from '../../components/metrics/BarChartCard';
 import StatTile from '../../components/metrics/StatTile';
 import { useTenantMetrics } from '../../lib/useTenantMetrics';
 import { seriesColor } from '../../lib/metricsFormat';
+import type { DashboardsOutletContext } from '../../layouts/DashboardsLayout';
 
-interface DashboardsHrPageProps {
-  token: string;
-}
+export default function DashboardsHrPage() {
+  const { token, range } = useOutletContext<DashboardsOutletContext>();
+  const { metrics, loading } = useTenantMetrics(token, range);
 
-export default function DashboardsHrPage({ token }: DashboardsHrPageProps) {
-  const { metrics, loading } = useTenantMetrics(token);
-
-  if (loading || !metrics) return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">Loading…</p>;
+  if (!metrics) return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">Loading…</p>;
 
   const { hr } = metrics;
   const byDepartment = hr.byDepartment.map((d) => ({ name: d.name, count: d.count }));
@@ -20,7 +19,7 @@ export default function DashboardsHrPage({ token }: DashboardsHrPageProps) {
   const personMix = hr.personTypeMix.map((c) => ({ name: c.personType, count: c.count }));
 
   return (
-    <div>
+    <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile label="Headcount" value={String(hr.headcount.total)} />
         <StatTile label="Median tenure" value={`${hr.tenure.medianDays} days`} subtitle={`sample: ${hr.tenure.sampleSize}`} />

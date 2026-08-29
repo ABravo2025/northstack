@@ -1,9 +1,13 @@
 import prisma from '../../lib/prisma.js';
-import { median, monthsAgoUtc, pct } from './mathUtils.js';
+import { median, pct } from './mathUtils.js';
+import type { DateRange } from './dateRange.js';
 
-async function getApprovalStats(tenantId: string): Promise<{ approvalRatePct: number | null; medianApprovalHours: number; sampleSize: number }> {
+async function getApprovalStats(
+  tenantId: string,
+  range: DateRange,
+): Promise<{ approvalRatePct: number | null; medianApprovalHours: number; sampleSize: number }> {
   const decided = await prisma.timeOffRequest.findMany({
-    where: { tenantId, status: { in: ['approved', 'rejected'] } },
+    where: { tenantId, status: { in: ['approved', 'rejected'] }, createdAt: { gte: range.since, lte: range.until } },
     select: { status: true, createdAt: true, decidedAt: true },
   });
   const approved = decided.filter((r) => r.status === 'approved');
@@ -15,10 +19,13 @@ async function getApprovalStats(tenantId: string): Promise<{ approvalRatePct: nu
   };
 }
 
+// Not range-filtered — "how many requests need a decision right now" is
+// inherently a current-state question, not a historical one.
 async function getPendingCount(tenantId: string): Promise<number> {
   return prisma.timeOffRequest.count({ where: { tenantId, status: 'pending' } });
 }
 
+// Not range-filtered — "who has a policy assigned" is current state.
 async function getPolicyAdoption(tenantId: string): Promise<{ employeesWithPolicy: number; totalEmployees: number; adoptionPct: number | null }> {
   const [totalEmployees, withPolicy] = await Promise.all([
     prisma.employee.count({ where: { tenantId } }),
@@ -27,10 +34,9 @@ async function getPolicyAdoption(tenantId: string): Promise<{ employeesWithPolic
   return { employeesWithPolicy: withPolicy.length, totalEmployees, adoptionPct: pct(withPolicy.length, totalEmployees) };
 }
 
-async function getDaysTakenThisPeriod(tenantId: string, monthsBack: number): Promise<{ totalDays: number; requestCount: number }> {
-  const since = monthsAgoUtc(monthsBack - 1);
+async function getDaysTakenInRange(tenantId: string, range: DateRange): Promise<{ totalDays: number; requestCount: number }> {
   const requests = await prisma.timeOffRequest.findMany({
-    where: { tenantId, status: 'approved', startDate: { gte: since } },
+    where: { tenantId, status: 'approved', startDate: { gte: range.since, lte: range.until } },
     select: { daysRequested: true },
   });
   return { totalDays: requests.reduce((sum, r) => sum + r.daysRequested, 0), requestCount: requests.length };
@@ -44,10 +50,10 @@ interface PolicyBucket {
   totalDays: number;
 }
 
-async function getPolicyDistribution(tenantId: string): Promise<PolicyBucket[]> {
+async function getPolicyDistribution(tenantId: string, range: DateRange): Promise<PolicyBucket[]> {
   const groups = await prisma.timeOffRequest.groupBy({
     by: ['timeOffPolicyId'],
-    where: { tenantId, status: 'approved' },
+    where: { tenantId, status: 'approved', startDate: { gte: range.since, lte: range.until } },
     _count: true,
     _sum: { daysRequested: true },
   });
@@ -70,13 +76,13 @@ async function getPolicyDistribution(tenantId: string): Promise<PolicyBucket[]> 
     .sort((a, b) => b.totalDays - a.totalDays);
 }
 
-export async function getTimeOffMetrics(tenantId: string, monthsBack = 6) {
+export async function getTimeOffMetrics(tenantId: string, range: DateRange) {
   const [approval, pending, policyAdoption, daysTaken, byPolicy] = await Promise.all([
-    getApprovalStats(tenantId),
+    getApprovalStats(tenantId, range),
     getPendingCount(tenantId),
     getPolicyAdoption(tenantId),
-    getDaysTakenThisPeriod(tenantId, monthsBack),
-    getPolicyDistribution(tenantId),
+    getDaysTakenInRange(tenantId, range),
+    getPolicyDistribution(tenantId, range),
   ]);
   return { approval, pending, policyAdoption, daysTaken, byPolicy };
 }

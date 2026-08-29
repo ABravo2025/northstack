@@ -2332,12 +2332,20 @@ link de Payments debía abrir el historial de pagos, con un link aparte para lle
 hacía falta; y agregó que el mismo historial completo debía poder abrirse también desde el lado de
 la Company.
 
-**Frontend**: nueva `CompanyPaymentHistoryPage.tsx` en `/payments/companies/:companyId` — tabla
-Date/Amount/Status/Receipt con paginación ("Load more", reusa `getCompanyPaymentEvents` tal cual),
-más un link "View company profile →" en el header. El link de Company en
-`PaymentsOverviewPage.tsx` ahora apunta ahí en vez de `/companies?open=...`. Desde el lado de
-Company, `CompanyStripeSection.tsx` (la sección "Payments" de `CompanyDetailModal`) suma un link
+**Frontend**: tabla Date/Amount/Status/Receipt con paginación ("Load more", reusa
+`getCompanyPaymentEvents` tal cual), más un link "View company profile →" arriba. El link de
+Company en `PaymentsOverviewPage.tsx` abre esto en vez de navegar directo al perfil. Desde el lado
+de Company, `CompanyStripeSection.tsx` (la sección "Payments" de `CompanyDetailModal`) suma un link
 "View full payment history →" junto a "Connected to Stripe →".
+
+**Corrección (mismo día)**: la primera versión era una página con ruta propia
+(`/payments/companies/:companyId`). El usuario notó que rompía el patrón del resto de la app — toda
+vista de detalle (`CompanyDetailModal`, `EmployeeOverviewPanel`, etc.) es un overlay, no una
+navegación de página — así que se convirtió a `CompanyPaymentHistoryModal.tsx` (mismo `Modal`
+`wide`, mismo contenido) y se eliminó la ruta. Abrirlo desde dentro de `CompanyStripeSection`
+implica un Modal anidado dentro de otro (`CompanyDetailModal`) — patrón ya resuelto en este proyecto
+(mismo caso que `PayslipPreviewModal` desde `EmployeeOverviewPanel`, `Modal.tsx` ya hace
+`stopPropagation()` en Escape para no cerrar las dos capas a la vez).
 
 **Backend**: `StripeCharge` (`src/lib/stripe.ts`) no tenía tipado el campo `receipt_url` de
 Stripe — el objeto Charge ya lo trae por default (sin necesidad de `expand`), simplemente nunca se

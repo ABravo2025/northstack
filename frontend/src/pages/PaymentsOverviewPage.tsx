@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { api, type PaymentsOverview } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import TableSkeleton from '../components/common/TableSkeleton';
+import CompanyPaymentHistoryModal from '../components/crm/CompanyPaymentHistoryModal';
 import { formatMoney } from '../lib/currencies';
 
 interface PaymentsOverviewPageProps {
@@ -18,6 +18,7 @@ export default function PaymentsOverviewPage({ token, user }: PaymentsOverviewPa
   const toast = useToast();
   const [overview, setOverview] = useState<PaymentsOverview | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedCompany, setSelectedCompany] = useState<{ id: string; name: string } | null>(null);
   const isOwner = user.role === 'owner';
 
   useEffect(() => {
@@ -103,9 +104,13 @@ export default function PaymentsOverviewPage({ token, user }: PaymentsOverviewPa
                   {overview.companies.map((row) => (
                     <tr key={row.companyId}>
                       <td>
-                        <Link to={`/payments/companies/${row.companyId}`} className="table-link">
+                        <button
+                          type="button"
+                          className="table-link"
+                          onClick={() => setSelectedCompany({ id: row.companyId, name: row.companyName })}
+                        >
                           {row.companyName}
-                        </Link>
+                        </button>
                       </td>
                       <td>
                         {row.summary.refundsCount}
@@ -124,6 +129,15 @@ export default function PaymentsOverviewPage({ token, user }: PaymentsOverviewPa
             </div>
           )}
         </>
+      )}
+      {selectedCompany && (
+        <CompanyPaymentHistoryModal
+          open={selectedCompany !== null}
+          onClose={() => setSelectedCompany(null)}
+          token={token}
+          companyId={selectedCompany.id}
+          companyName={selectedCompany.name}
+        />
       )}
     </div>
   );

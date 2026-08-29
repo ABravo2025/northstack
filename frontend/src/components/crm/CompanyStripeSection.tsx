@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { api, ApiError, type Company, type StripeCustomerMatch, type StripePaymentEvent, type StripePaymentSummary } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import ConfirmDialog from '../common/ConfirmDialog';
+import CompanyPaymentHistoryModal from './CompanyPaymentHistoryModal';
 import { formatMoney } from '../../lib/currencies';
 
 interface CompanyStripeSectionProps {
@@ -34,6 +34,7 @@ export default function CompanyStripeSection({ token, company, onLinked }: Compa
   const [events, setEvents] = useState<StripePaymentEvent[]>([]);
   const [eventsCursor, setEventsCursor] = useState<string | null>(null);
   const [loadingEvents, setLoadingEvents] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   useEffect(() => {
     api
@@ -123,9 +124,9 @@ export default function CompanyStripeSection({ token, company, onLinked }: Compa
             </a>
           </div>
           <div className="flex items-center gap-3">
-            <Link to={`/payments/companies/${company.id}`} className="table-link text-xs">
+            <button type="button" className="table-link text-xs" onClick={() => setHistoryOpen(true)}>
               View full payment history →
-            </Link>
+            </button>
             <button type="button" className="table-link text-xs" onClick={handleSearch} disabled={searching}>
               {searching ? 'Searching…' : 'Change link'}
             </button>
@@ -189,6 +190,16 @@ export default function CompanyStripeSection({ token, company, onLinked }: Compa
             confirmLabel="Replace"
             onConfirm={() => link(pendingOverwrite, true)}
             onCancel={() => setPendingOverwrite(null)}
+          />
+        )}
+
+        {historyOpen && (
+          <CompanyPaymentHistoryModal
+            open={historyOpen}
+            onClose={() => setHistoryOpen(false)}
+            token={token}
+            companyId={company.id}
+            companyName={company.name}
           />
         )}
       </>

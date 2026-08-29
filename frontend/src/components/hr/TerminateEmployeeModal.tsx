@@ -150,6 +150,7 @@ export default function TerminateEmployeeModal({
       open={open}
       title={`Terminate ${employee.firstName} ${employee.lastName}`}
       onClose={onClose}
+      wide
       footer={
         <button type="button" className="btn-danger btn-md" onClick={handleSubmit} disabled={submitting}>
           {submitting ? 'Saving…' : isFuture ? 'Schedule termination' : 'Terminate now'}
@@ -157,6 +158,11 @@ export default function TerminateEmployeeModal({
       }
     >
       <div className="flex flex-col gap-4">
+        <div className="alert alert-info">
+          This will end {employee.firstName}'s contract in Northstack. Once it takes effect, their
+          status will change to Terminated.
+        </div>
+
         <Field label="Last day">
           <input type="date" value={lastDay} onChange={(e) => setLastDay(e.target.value)} />
         </Field>

@@ -2322,3 +2322,31 @@ es el lugar natural si se suma después).
 
 **Severidad:** — (feature nueva, no bug). Plan completo:
 `C:\Users\aleja\.claude\plans\bueno-yo-te-voy-valiant-whisper.md`.
+
+## QA-54 — Payments: página completa de historial de pagos por Company
+
+**Por qué existe esta tarea:** en `PaymentsOverviewPage.tsx` (Payments v1, Unidad 3), el link de
+cada fila de Company llevaba directo al perfil de la Company — sin forma de ver el historial de
+pagos real (fecha, monto, estado, recibo) desde ahí. El usuario pidió invertir esa navegación: el
+link de Payments debía abrir el historial de pagos, con un link aparte para llegar al perfil si
+hacía falta; y agregó que el mismo historial completo debía poder abrirse también desde el lado de
+la Company.
+
+**Frontend**: nueva `CompanyPaymentHistoryPage.tsx` en `/payments/companies/:companyId` — tabla
+Date/Amount/Status/Receipt con paginación ("Load more", reusa `getCompanyPaymentEvents` tal cual),
+más un link "View company profile →" en el header. El link de Company en
+`PaymentsOverviewPage.tsx` ahora apunta ahí en vez de `/companies?open=...`. Desde el lado de
+Company, `CompanyStripeSection.tsx` (la sección "Payments" de `CompanyDetailModal`) suma un link
+"View full payment history →" junto a "Connected to Stripe →".
+
+**Backend**: `StripeCharge` (`src/lib/stripe.ts`) no tenía tipado el campo `receipt_url` de
+Stripe — el objeto Charge ya lo trae por default (sin necesidad de `expand`), simplemente nunca se
+había declarado en la interfaz ni pasaba a través de `chargeToEvent`
+(`stripePaymentsService.ts`). Se agregó `receiptUrl` a `StripePaymentEvent` y se expone también en
+la lista abreviada que ya vivía inline en `CompanyStripeSection` (antes solo mostraba el link al
+dashboard admin de Stripe, no un recibo apto para el cliente). Sin ruta nueva — reusa
+`GET /api/payments/companies/:id/events` tal cual, ya paginado.
+
+`npm run build`/`npm test` en verde (175/175).
+
+**Severidad:** — (feature nueva, no bug).

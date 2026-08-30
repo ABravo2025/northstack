@@ -177,16 +177,19 @@ pipelinesRouter.post('/api/pipelines/:pipelineId/stages', async (req, res) => {
     return res.status(400).json({ error: 'notifyOwnerOnEnter must be a boolean' });
   }
 
-  const stage = await createPipelineStage({
-    tenantId: user.tenantId!,
-    pipelineId: req.params.pipelineId,
-    name: name.trim(),
-    color: req.body.color,
-    order: req.body.order,
-    outcome: req.body.outcome,
-    probability: req.body.probability,
-    notifyOwnerOnEnter: req.body.notifyOwnerOnEnter,
-  });
+  const stage = await createPipelineStage(
+    {
+      tenantId: user.tenantId!,
+      pipelineId: req.params.pipelineId,
+      name: name.trim(),
+      color: req.body.color,
+      order: req.body.order,
+      outcome: req.body.outcome,
+      probability: req.body.probability,
+      notifyOwnerOnEnter: req.body.notifyOwnerOnEnter,
+    },
+    user.id,
+  );
 
   return res.status(201).json(stage);
 });
@@ -218,15 +221,20 @@ pipelinesRouter.patch('/api/pipelines/:pipelineId/stages/:stageId', async (req, 
     return res.status(400).json({ error: 'notifyOwnerOnEnter must be a boolean' });
   }
 
-  const result = await updatePipelineStage(req.params.stageId, user.tenantId!, {
-    name: req.body.name,
-    color: req.body.color,
-    order: req.body.order,
-    outcome: req.body.outcome,
-    probability: req.body.probability,
-    isActive: req.body.isActive,
-    notifyOwnerOnEnter: req.body.notifyOwnerOnEnter,
-  });
+  const result = await updatePipelineStage(
+    req.params.stageId,
+    user.tenantId!,
+    {
+      name: req.body.name,
+      color: req.body.color,
+      order: req.body.order,
+      outcome: req.body.outcome,
+      probability: req.body.probability,
+      isActive: req.body.isActive,
+      notifyOwnerOnEnter: req.body.notifyOwnerOnEnter,
+    },
+    user.id,
+  );
 
   if (!result.success) {
     return res.status(400).json({ error: result.error });

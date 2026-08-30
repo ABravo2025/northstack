@@ -536,6 +536,17 @@ ahora llaman `recordActivity`: `timeOffPolicyService`/`timeOffRequestService`/`s
 tocado ganó un `changedByUserId` (requerido salvo `createFieldCatalogDefinition`, opcional por el
 mismo motivo que `createEmployee`: el seed de datos de ejemplo del onboarding lo llama sin actor).
 
+### Activity Log — Unidad 5 (2026-08-30, resto de CRM + cross-module + vistas/forms)
+7 field configs más: **pipelineFieldConfig.ts** (exporta `pipelineActivityFieldConfig` +
+`pipelineStageActivityFieldConfig`), **taskFieldConfig.ts**, **noteFieldConfig.ts**,
+**tagFieldConfig.ts** (una entrada `create`/`delete` por asignación/remoción de tag — no hay
+`update`, un tag solo se asigna o se saca), **savedViewFieldConfig.ts**, **publicFormFieldConfig.ts**.
+Servicios: `pipelineService`/`taskService`/`noteService`/`tagService`/`savedViewService`/
+`publicFormService` — mismo criterio de `changedByUserId` requerido salvo donde ya existía un actor
+inline (`createPipeline`/`updatePipeline`/`createTask`/`createNote`/`createSavedView`/
+`updateSavedView`/`deleteSavedView` ya traían `createdById`/`updatedById`/`userId`, no hicieron
+falta cambios de firma ahí).
+
 ### `frontend/src/components/tasks/`
 - **EntityTasksList** — tab "Tasks" compartido por los 4 paneles de detalle.
 - **MyTasksWidget** — widget "My tasks" de `/overview`, reusa el mismo popover de edición que `EntityTasksList` vía `TaskFormPopover`. Desde 2026-08-22, el propio endpoint (`listMyTasks`) ya no devuelve tareas completadas — el widget no filtra nada del lado del cliente, solo desaparecen del `state` en el próximo `load()`.

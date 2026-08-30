@@ -13,7 +13,8 @@ interface ActivityLogSettingsPageProps {
 }
 
 // Only entity types with a real caller so far (Unit 2: Employee/Company/Contact/Opportunity;
-// Unit 4: HR/Payroll catalogs+records) — widen this list once a later unit wires up more.
+// Unit 4: HR/Payroll catalogs+records; Unit 5: rest of CRM + cross-module + views/forms) — widen
+// this list once a later unit wires up more.
 const ENTITY_TYPE_OPTIONS: { value: ActivityEntityType; label: string }[] = [
   { value: 'employee', label: 'Employee' },
   { value: 'company', label: 'Company' },
@@ -29,6 +30,13 @@ const ENTITY_TYPE_OPTIONS: { value: ActivityEntityType; label: string }[] = [
   { value: 'statusDefinition', label: 'Status' },
   { value: 'customFieldDefinition', label: 'Custom Field' },
   { value: 'fieldCatalogDefinition', label: 'Field Catalog' },
+  { value: 'pipeline', label: 'Pipeline' },
+  { value: 'pipelineStage', label: 'Pipeline Stage' },
+  { value: 'task', label: 'Task' },
+  { value: 'note', label: 'Note' },
+  { value: 'tag', label: 'Tag' },
+  { value: 'savedView', label: 'Saved View' },
+  { value: 'publicForm', label: 'Public Form' },
 ];
 
 const ACTION_OPTIONS: { value: 'create' | 'update' | 'delete'; label: string }[] = [
@@ -58,6 +66,13 @@ const ENTITY_TYPE_LABEL: Record<ActivityEntityType, string> = {
   statusDefinition: 'Status',
   customFieldDefinition: 'Custom Field',
   fieldCatalogDefinition: 'Field Catalog',
+  pipeline: 'Pipeline',
+  pipelineStage: 'Pipeline Stage',
+  task: 'Task',
+  note: 'Note',
+  tag: 'Tag',
+  savedView: 'Saved View',
+  publicForm: 'Public Form',
 };
 
 function FeedRow({ entry }: { entry: ActivityLogEntry }) {

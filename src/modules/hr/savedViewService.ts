@@ -1,4 +1,6 @@
 import prisma from '../../lib/prisma.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { savedViewActivityFieldConfig } from '../activity/fieldConfigs/savedViewFieldConfig.js';
 import type { EntityType, SavedView, SavedViewType, SavedViewVisibility, UserRole } from '@prisma/client';
 
 export interface ViewFilter {
@@ -60,6 +62,17 @@ export async function createSavedView(input: CreateSavedViewInput): Promise<Save
       sortBy: input.sortBy ? JSON.stringify(input.sortBy) : null,
       groupByField: input.type === 'kanban' || input.type === 'list' ? input.groupByField : null,
     },
+  });
+
+  await recordActivity({
+    tenantId: input.tenantId,
+    entityType: 'savedView',
+    entityId: view.id,
+    entityLabel: view.name,
+    action: 'create',
+    changedByUserId: input.createdByUserId,
+    after: view,
+    fieldConfig: savedViewActivityFieldConfig,
   });
 
   return { success: true, view };
@@ -129,6 +142,18 @@ export async function updateSavedView(
     },
   });
 
+  await recordActivity({
+    tenantId,
+    entityType: 'savedView',
+    entityId: id,
+    entityLabel: view.name,
+    action: 'update',
+    changedByUserId: userId,
+    before: existing,
+    after: view,
+    fieldConfig: savedViewActivityFieldConfig,
+  });
+
   return { success: true, view };
 }
 
@@ -148,5 +173,17 @@ export async function deleteSavedView(
   }
 
   await prisma.savedView.delete({ where: { id } });
+
+  await recordActivity({
+    tenantId,
+    entityType: 'savedView',
+    entityId: id,
+    entityLabel: existing.name,
+    action: 'delete',
+    changedByUserId: userId,
+    before: existing,
+    fieldConfig: savedViewActivityFieldConfig,
+  });
+
   return { success: true };
 }

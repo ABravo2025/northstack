@@ -387,8 +387,9 @@ export interface Note {
 // resolved to display text server-side (FK ids -> names, cents -> formatted money) — nothing to
 // look up or format on the frontend, same "pre-rendered" idiom as Notification.message below.
 // ActivityEntityType lists only the values with a real caller so far (Unit 2: the 4 Tier 1
-// entities; Unit 4: HR/Payroll catalogs+records) — not the backend's full 27-value enum, which
-// also covers entity types no unit has wired up yet. Widen this as later units add callers.
+// entities; Unit 4: HR/Payroll catalogs+records; Unit 5: rest of CRM + cross-module + views/forms)
+// — not the backend's full 27-value enum, which also covers entity types no unit has wired up yet.
+// Widen this as later units add callers.
 export type ActivityEntityType =
   | TaskEntityType
   | 'timeOffPolicy'
@@ -398,6 +399,13 @@ export type ActivityEntityType =
   | 'payrollRun'
   | 'payFrequency'
   | 'paymentMethod'
+  | 'pipeline'
+  | 'pipelineStage'
+  | 'task'
+  | 'note'
+  | 'tag'
+  | 'savedView'
+  | 'publicForm'
   | 'statusDefinition'
   | 'customFieldDefinition'
   | 'fieldCatalogDefinition';

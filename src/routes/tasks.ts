@@ -121,13 +121,17 @@ tasksRouter.patch('/api/tasks/:taskId', async (req, res) => {
     }
   }
 
-  const updated = await updateTask(req.params.taskId, {
-    title: req.body.title,
-    description: req.body.description,
-    assigneeId: req.body.assigneeId,
-    dueDate: req.body.dueDate,
-    completedAt: req.body.completedAt,
-  });
+  const updated = await updateTask(
+    req.params.taskId,
+    {
+      title: req.body.title,
+      description: req.body.description,
+      assigneeId: req.body.assigneeId,
+      dueDate: req.body.dueDate,
+      completedAt: req.body.completedAt,
+    },
+    user.id,
+  );
   return res.json(updated);
 });
 
@@ -142,6 +146,6 @@ tasksRouter.delete('/api/tasks/:taskId', async (req, res) => {
     return res.status(404).json({ error: 'Task not found' });
   }
 
-  await deleteTask(req.params.taskId);
+  await deleteTask(req.params.taskId, user.id);
   return res.status(204).end();
 });

@@ -1,6 +1,8 @@
 # Spec Activity Log
 
-**Estado:** 🚧 Unidades 1-4 de 6 completas y en `staging` (2026-08-30). Unidad 4 (nueva): extendió el
+**Estado:** 🚧 Unidades 1-5 de 6 completas y en `staging` (2026-08-30). Unidad 5 (nueva): extendió el
+wiring al resto de CRM + cross-module + vistas/forms — Pipeline, PipelineStage, Task, Note, Tag,
+SavedView, PublicForm — mismo mecanismo, verificado contra `staging` real. Unidad 4: extendió el
 wiring de create/update a HR/Payroll — TimeOffPolicy, TimeOffRequest, StatusDefinition,
 CustomFieldDefinition, FieldCatalogDefinition, PayFrequency, PaymentMethod, EmployeeCompensation
 (create-only, versionado), EmployeeTermination, PayrollRun — mismo mecanismo genérico de Unidad 1,
@@ -240,7 +242,7 @@ de la plataforma" tal como se confirmó en la Decisión 1.
 | **2** ✅ | Wire-up de las 4 entidades con modal + sus custom field values | Employee, Company, Contact, Opportunity |
 | **3** ✅ | Frontend: tab de Activity en los 4 modales + página de Settings con filtros | (consume Unidad 1+2) |
 | **4** ✅ | Extensión HR/Payroll | TimeOffPolicy, TimeOffRequest, EmployeeCompensation, EmployeeTermination, PayrollRun, PayFrequency, PaymentMethod, StatusDefinition, CustomFieldDefinition, FieldCatalogDefinition |
-| **5** | Extensión CRM + cross-module + vistas/forms | Pipeline, PipelineStage, Task, Note, Tag, SavedView, PublicForm |
+| **5** ✅ | Extensión CRM + cross-module + vistas/forms | Pipeline, PipelineStage, Task, Note, Tag, SavedView, PublicForm |
 | **6** | Extensión cuenta/plataforma | Tenant (perfil/currency), User (rol/status), Invitation, Subscription, GoogleCalendarConnection, StripeConnection |
 
 Después de la Unidad 3 ya hay una feature end-to-end usable (que es el pedido original); las

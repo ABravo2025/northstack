@@ -1,5 +1,7 @@
 import prisma from '../../lib/prisma.js';
 import { findEntityTenantId, isSupportedCrossModuleEntityType } from '../crossModule/entityLookup.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { noteActivityFieldConfig } from '../activity/fieldConfigs/noteFieldConfig.js';
 import type { EntityType, Prisma } from '@prisma/client';
 
 export { findEntityTenantId, isSupportedCrossModuleEntityType as isSupportedNoteEntityType };
@@ -27,7 +29,7 @@ const noteInclude = {
 } satisfies Prisma.NoteInclude;
 
 export async function createNote(input: CreateNoteInput) {
-  return prisma.note.create({
+  const note = await prisma.note.create({
     data: {
       tenantId: input.tenantId,
       entityType: input.entityType,
@@ -38,6 +40,19 @@ export async function createNote(input: CreateNoteInput) {
     },
     include: noteInclude,
   });
+
+  await recordActivity({
+    tenantId: input.tenantId,
+    entityType: 'note',
+    entityId: note.id,
+    entityLabel: note.title,
+    action: 'create',
+    changedByUserId: input.createdById,
+    after: note,
+    fieldConfig: noteActivityFieldConfig,
+  });
+
+  return note;
 }
 
 export async function findNoteById(id: string) {
@@ -52,16 +67,43 @@ export async function listNotesForEntity(tenantId: string, entityType: EntityTyp
   });
 }
 
-export async function updateNote(id: string, input: UpdateNoteInput) {
+export async function updateNote(id: string, input: UpdateNoteInput, changedByUserId: string) {
   // Whitelist explicitly — never spread req.body straight through (same rule
   // as every other update service in the app).
   const data: Prisma.NoteUncheckedUpdateInput = {};
   if (input.title !== undefined) data.title = input.title;
   if (input.description !== undefined) data.description = input.description;
 
-  return prisma.note.update({ where: { id }, data, include: noteInclude });
+  const existing = await prisma.note.findUniqueOrThrow({ where: { id } });
+  const updated = await prisma.note.update({ where: { id }, data, include: noteInclude });
+
+  await recordActivity({
+    tenantId: existing.tenantId,
+    entityType: 'note',
+    entityId: id,
+    entityLabel: updated.title,
+    action: 'update',
+    changedByUserId,
+    before: existing,
+    after: updated,
+    fieldConfig: noteActivityFieldConfig,
+  });
+
+  return updated;
 }
 
-export async function deleteNote(id: string): Promise<void> {
+export async function deleteNote(id: string, changedByUserId: string): Promise<void> {
+  const existing = await prisma.note.findUniqueOrThrow({ where: { id } });
   await prisma.note.delete({ where: { id } });
+
+  await recordActivity({
+    tenantId: existing.tenantId,
+    entityType: 'note',
+    entityId: id,
+    entityLabel: existing.title,
+    action: 'delete',
+    changedByUserId,
+    before: existing,
+    fieldConfig: noteActivityFieldConfig,
+  });
 }

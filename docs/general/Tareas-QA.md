@@ -2565,3 +2565,40 @@ El caso A.5 es el más sensible — si aparece cualquier dato de cuenta bancaria
 entrada de Activity Log, es severidad **alta** (fuga de dato sensible), aunque esté "solo" en la
 base y no expuesto todavía en ninguna UI de Settings visible a todos. El resto sigue el mismo
 criterio que QA-57: dato incorrecto es media, regresión en la operación real es alta.
+
+---
+
+## QA-60 — Activity Log, Unidad 5: resto de CRM + cross-module + vistas/forms (2026-08-30, en `staging`)
+
+**Por qué existe esta tarea:** extiende el wiring a Pipeline, PipelineStage, Task, Note, Tag,
+SavedView, PublicForm. Ninguna tiene modal de detalle propio (Task/Note tienen su propio tab dentro
+del modal de otra entidad, pero **no** aparecen ahí como actividad — ver decisión #7 del spec: cada
+Task/Note genera su propia fila de Activity con `entityType: task/note` y `entityId` = el id de la
+Task/Note misma, no de la entidad a la que está adjunta, así que naturalmente no se mezcla con el
+tab de esa entidad). Solo visible en `Settings → Activity Log`. Verificado con una corrida directa
+contra `staging` (crear/editar/borrar una Task, crear una Note, asignar un Tag — 5 filas confirmadas
+con el summary correcto, incluyendo el borrado de la Task mostrando su último título).
+
+### A. Confirmar en `Settings → Activity Log`
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Crear/editar/archivar un Pipeline (`/settings/pipelines`) | Filas `Created/Updated Pipeline "..."` |
+| 2 | Agregar/editar/reordenar un Stage dentro de un Pipeline | Filas de tipo Pipeline Stage |
+| 3 | Crear/editar/completar/borrar una Task desde cualquier panel de detalle | 4 filas de tipo Task — la de completar es un `update` (`Completed: empty → <fecha>`) |
+| 4 | Crear/editar/borrar una Note | Filas de tipo Note |
+| 5 | Agregar/quitar un Tag en un Employee/Company/Contact | Filas `Created Tag "nombre (tipo)"` / `Deleted Tag "..."` |
+| 6 | Crear/editar/borrar una Saved View (personal o compartida) | Filas de tipo Saved View |
+| 7 | Crear/editar un Public Form (`/settings/public-forms`) | Filas de tipo Public Form — confirmar que un submit anónimo del form público (`/apply/...`) **no** genera ninguna fila (sin usuario autenticado, mismo criterio que Public Forms en QA-57 C.19) |
+
+### B. Regresión
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 8 | `npm run build`/`npm test` (backend, 207/207) y `npm run build` (frontend) | Los tres en verde |
+| 9 | Uso normal de cualquiera de las 7 entidades desde la UI | Sin cambios visibles — la escritura de Activity Log es invisible y best-effort |
+
+### Al encontrar una falla
+
+Mismo criterio que QA-57/QA-59: dato incorrecto o entrada faltante es severidad media; una
+regresión en la operación real (crear/editar/borrar deja de funcionar) es alta.

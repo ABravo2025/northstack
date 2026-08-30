@@ -8,6 +8,8 @@ import { createCustomFieldValue, isValueValidForFieldType } from './customFieldS
 import { GENERIC_EMAIL_DOMAINS } from '../tenant/tenantService.js';
 import { getEmailDomain } from '../../lib/email.js';
 import { sendPublicFormConfirmationEmail, sendPublicFormSubmissionEmail } from '../../lib/mailer.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { publicFormActivityFieldConfig } from '../activity/fieldConfigs/publicFormFieldConfig.js';
 import type { EntityType, Form, FormAccessMode } from '@prisma/client';
 
 export interface PublicFormFieldConfig {
@@ -40,7 +42,10 @@ export interface CreatePublicFormResult {
   error?: string;
 }
 
-export async function createPublicForm(input: CreatePublicFormInput): Promise<CreatePublicFormResult> {
+export async function createPublicForm(
+  input: CreatePublicFormInput,
+  changedByUserId: string,
+): Promise<CreatePublicFormResult> {
   const slug = normalizeSlug(input.slug);
   if (!slug) {
     return { success: false, error: 'Slug is required' };
@@ -65,6 +70,18 @@ export async function createPublicForm(input: CreatePublicFormInput): Promise<Cr
       pipelineId: input.entityType === 'contact' ? (input.pipelineId ?? null) : null,
     },
   });
+
+  await recordActivity({
+    tenantId: input.tenantId,
+    entityType: 'publicForm',
+    entityId: form.id,
+    entityLabel: form.name,
+    action: 'create',
+    changedByUserId,
+    after: form,
+    fieldConfig: publicFormActivityFieldConfig,
+  });
+
   return { success: true, form };
 }
 
@@ -98,6 +115,7 @@ export async function updatePublicForm(
   id: string,
   tenantId: string,
   input: UpdatePublicFormInput,
+  changedByUserId: string,
 ): Promise<UpdatePublicFormResult> {
   const existing = await prisma.form.findUnique({ where: { id } });
   if (!existing || existing.tenantId !== tenantId) {
@@ -114,6 +132,19 @@ export async function updatePublicForm(
       pipelineId: input.pipelineId !== undefined ? input.pipelineId : undefined,
     },
   });
+
+  await recordActivity({
+    tenantId,
+    entityType: 'publicForm',
+    entityId: id,
+    entityLabel: form.name,
+    action: 'update',
+    changedByUserId,
+    before: existing,
+    after: form,
+    fieldConfig: publicFormActivityFieldConfig,
+  });
+
   return { success: true, form };
 }
 

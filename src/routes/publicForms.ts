@@ -53,16 +53,19 @@ publicFormsRouter.post('/api/public-forms', async (req, res) => {
     pipelineId = pipeline.id;
   }
 
-  const result = await createPublicForm({
-    tenantId: user.tenantId!,
-    entityType,
-    name,
-    slug,
-    fields: req.body.fields ?? [],
-    thankYouMessage: req.body.thankYouMessage,
-    accessMode: req.body.accessMode,
-    pipelineId,
-  });
+  const result = await createPublicForm(
+    {
+      tenantId: user.tenantId!,
+      entityType,
+      name,
+      slug,
+      fields: req.body.fields ?? [],
+      thankYouMessage: req.body.thankYouMessage,
+      accessMode: req.body.accessMode,
+      pipelineId,
+    },
+    user.id,
+  );
 
   if (!result.success) {
     return res.status(400).json({ error: result.error });
@@ -88,13 +91,18 @@ publicFormsRouter.patch('/api/public-forms/:formId', async (req, res) => {
     }
   }
 
-  const result = await updatePublicForm(req.params.formId, user.tenantId!, {
-    name: req.body.name,
-    fields: req.body.fields,
-    isActive: req.body.isActive,
-    thankYouMessage: req.body.thankYouMessage,
-    pipelineId: req.body.pipelineId !== undefined ? req.body.pipelineId : undefined,
-  });
+  const result = await updatePublicForm(
+    req.params.formId,
+    user.tenantId!,
+    {
+      name: req.body.name,
+      fields: req.body.fields,
+      isActive: req.body.isActive,
+      thankYouMessage: req.body.thankYouMessage,
+      pipelineId: req.body.pipelineId !== undefined ? req.body.pipelineId : undefined,
+    },
+    user.id,
+  );
 
   if (!result.success) {
     return res.status(400).json({ error: result.error });

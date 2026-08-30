@@ -1,5 +1,7 @@
 import { randomUUID } from 'crypto';
 import prisma from '../../lib/prisma.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { pipelineActivityFieldConfig, pipelineStageActivityFieldConfig } from '../activity/fieldConfigs/pipelineFieldConfig.js';
 import type {
   Pipeline,
   PipelineAssignmentMode,
@@ -102,7 +104,7 @@ const PIPELINE_INCLUDE = {
 } satisfies Prisma.PipelineInclude;
 
 export async function createPipeline(input: CreatePipelineInput) {
-  return prisma.pipeline.create({
+  const pipeline = await prisma.pipeline.create({
     data: {
       tenantId: input.tenantId,
       name: input.name,
@@ -117,6 +119,19 @@ export async function createPipeline(input: CreatePipelineInput) {
     },
     include: PIPELINE_INCLUDE,
   });
+
+  await recordActivity({
+    tenantId: input.tenantId,
+    entityType: 'pipeline',
+    entityId: pipeline.id,
+    entityLabel: pipeline.name,
+    action: 'create',
+    changedByUserId: input.createdById,
+    after: pipeline,
+    fieldConfig: pipelineActivityFieldConfig,
+  });
+
+  return pipeline;
 }
 
 export async function listPipelines(tenantId: string) {
@@ -145,6 +160,19 @@ export async function updatePipeline(id: string, tenantId: string, input: Update
   if (input.stalledThresholdDays !== undefined) data.stalledThresholdDays = input.stalledThresholdDays;
 
   const pipeline = await prisma.pipeline.update({ where: { id }, data, include: PIPELINE_INCLUDE });
+
+  await recordActivity({
+    tenantId,
+    entityType: 'pipeline',
+    entityId: id,
+    entityLabel: pipeline.name,
+    action: 'update',
+    changedByUserId: input.updatedById,
+    before: existing,
+    after: pipeline,
+    fieldConfig: pipelineActivityFieldConfig,
+  });
+
   return { success: true, pipeline };
 }
 
@@ -189,9 +217,12 @@ function resolveProbability(outcome: PipelineStageOutcome, requested: number | u
   return requested ?? 50;
 }
 
-export async function createPipelineStage(input: CreatePipelineStageInput): Promise<PipelineStageDefinition> {
+export async function createPipelineStage(
+  input: CreatePipelineStageInput,
+  changedByUserId: string,
+): Promise<PipelineStageDefinition> {
   const outcome = input.outcome ?? 'open';
-  return prisma.pipelineStageDefinition.create({
+  const stage = await prisma.pipelineStageDefinition.create({
     data: {
       tenantId: input.tenantId,
       pipelineId: input.pipelineId,
@@ -203,6 +234,19 @@ export async function createPipelineStage(input: CreatePipelineStageInput): Prom
       notifyOwnerOnEnter: input.notifyOwnerOnEnter ?? true,
     },
   });
+
+  await recordActivity({
+    tenantId: input.tenantId,
+    entityType: 'pipelineStage',
+    entityId: stage.id,
+    entityLabel: stage.name,
+    action: 'create',
+    changedByUserId,
+    after: stage,
+    fieldConfig: pipelineStageActivityFieldConfig,
+  });
+
+  return stage;
 }
 
 export async function findPipelineStageById(id: string): Promise<PipelineStageDefinition | null> {
@@ -224,6 +268,7 @@ export async function updatePipelineStage(
   id: string,
   tenantId: string,
   input: UpdatePipelineStageInput,
+  changedByUserId: string,
 ): Promise<PipelineStageResult> {
   const existing = await prisma.pipelineStageDefinition.findUnique({ where: { id } });
   if (!existing || existing.tenantId !== tenantId) {
@@ -242,5 +287,18 @@ export async function updatePipelineStage(
   if (input.notifyOwnerOnEnter !== undefined) data.notifyOwnerOnEnter = input.notifyOwnerOnEnter;
 
   const stage = await prisma.pipelineStageDefinition.update({ where: { id }, data });
+
+  await recordActivity({
+    tenantId,
+    entityType: 'pipelineStage',
+    entityId: id,
+    entityLabel: stage.name,
+    action: 'update',
+    changedByUserId,
+    before: existing,
+    after: stage,
+    fieldConfig: pipelineStageActivityFieldConfig,
+  });
+
   return { success: true, stage };
 }

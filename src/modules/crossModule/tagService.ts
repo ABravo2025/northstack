@@ -1,4 +1,6 @@
 import prisma from '../../lib/prisma.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { tagActivityFieldConfig } from '../activity/fieldConfigs/tagFieldConfig.js';
 import type { EntityType } from '@prisma/client';
 
 export { findEntityTenantId, isSupportedCrossModuleEntityType as isSupportedTagEntityType } from './entityLookup.js';
@@ -44,7 +46,13 @@ export async function listTagsForEntities(tenantId: string, entityType: EntityTy
 // match, same as the @@unique constraint), typing a new one creates it.
 // Idempotent: assigning a tag the entity already has is a no-op, not an
 // error, since the UI's "add on Enter" flow can't easily pre-check itself.
-export async function assignTag(tenantId: string, entityType: EntityType, entityId: string, tagName: string) {
+export async function assignTag(
+  tenantId: string,
+  entityType: EntityType,
+  entityId: string,
+  tagName: string,
+  changedByUserId: string,
+) {
   const name = tagName.trim();
   const tagDefinition = await prisma.tagDefinition.upsert({
     where: { tenantId_name: { tenantId, name } },
@@ -58,6 +66,17 @@ export async function assignTag(tenantId: string, entityType: EntityType, entity
     update: {},
   });
 
+  await recordActivity({
+    tenantId,
+    entityType: 'tag',
+    entityId: assignment.id,
+    entityLabel: `${tagDefinition.name} (${entityType})`,
+    action: 'create',
+    changedByUserId,
+    after: { name: tagDefinition.name },
+    fieldConfig: tagActivityFieldConfig,
+  });
+
   return { tagAssignmentId: assignment.id, tagDefinitionId: tagDefinition.id, name: tagDefinition.name };
 }
 
@@ -65,6 +84,20 @@ export async function findTagAssignmentById(id: string) {
   return prisma.tagAssignment.findUnique({ where: { id } });
 }
 
-export async function removeTagAssignment(id: string): Promise<void> {
+export async function removeTagAssignment(id: string, changedByUserId: string): Promise<void> {
+  const existing = await prisma.tagAssignment.findUnique({ where: { id }, include: { tagDefinition: true } });
   await prisma.tagAssignment.delete({ where: { id } });
+
+  if (existing) {
+    await recordActivity({
+      tenantId: existing.tenantId,
+      entityType: 'tag',
+      entityId: id,
+      entityLabel: `${existing.tagDefinition.name} (${existing.entityType})`,
+      action: 'delete',
+      changedByUserId,
+      before: { name: existing.tagDefinition.name },
+      fieldConfig: tagActivityFieldConfig,
+    });
+  }
 }

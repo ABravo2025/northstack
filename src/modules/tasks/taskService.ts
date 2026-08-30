@@ -1,6 +1,8 @@
 import prisma from '../../lib/prisma.js';
 import { findEntityTenantId, isSupportedCrossModuleEntityType } from '../crossModule/entityLookup.js';
 import { syncTaskCalendarEvent } from '../integrations/googleCalendarSyncService.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { taskActivityFieldConfig } from '../activity/fieldConfigs/taskFieldConfig.js';
 import type { EntityType, Prisma } from '@prisma/client';
 
 export { findEntityTenantId };
@@ -48,6 +50,17 @@ export async function createTask(input: CreateTaskInput) {
   // Best-effort, never blocks the response — see googleCalendarSyncService.ts.
   void syncTaskCalendarEvent(null, task).catch((err) => console.error('Google Calendar task sync failed:', err));
 
+  await recordActivity({
+    tenantId: input.tenantId,
+    entityType: 'task',
+    entityId: task.id,
+    entityLabel: task.title,
+    action: 'create',
+    changedByUserId: input.createdById,
+    after: task,
+    fieldConfig: taskActivityFieldConfig,
+  });
+
   return task;
 }
 
@@ -63,7 +76,7 @@ export async function listTasksForEntity(tenantId: string, entityType: EntityTyp
   });
 }
 
-export async function updateTask(id: string, input: UpdateTaskInput) {
+export async function updateTask(id: string, input: UpdateTaskInput, changedByUserId: string) {
   // Whitelist explicitly — never spread req.body straight through (same rule
   // as every other update service in the app, since it may carry a tenantId/
   // entityId the caller shouldn't be able to reassign).
@@ -82,15 +95,40 @@ export async function updateTask(id: string, input: UpdateTaskInput) {
 
   void syncTaskCalendarEvent(previous, updated).catch((err) => console.error('Google Calendar task sync failed:', err));
 
+  if (previous) {
+    await recordActivity({
+      tenantId: previous.tenantId,
+      entityType: 'task',
+      entityId: id,
+      entityLabel: updated.title,
+      action: 'update',
+      changedByUserId,
+      before: previous,
+      after: updated,
+      fieldConfig: taskActivityFieldConfig,
+    });
+  }
+
   return updated;
 }
 
-export async function deleteTask(id: string): Promise<void> {
+export async function deleteTask(id: string, changedByUserId: string): Promise<void> {
   const task = await prisma.task.findUnique({ where: { id } });
   await prisma.task.delete({ where: { id } });
 
   if (task) {
     void syncTaskCalendarEvent(task, null).catch((err) => console.error('Google Calendar task sync failed:', err));
+
+    await recordActivity({
+      tenantId: task.tenantId,
+      entityType: 'task',
+      entityId: id,
+      entityLabel: task.title,
+      action: 'delete',
+      changedByUserId,
+      before: task,
+      fieldConfig: taskActivityFieldConfig,
+    });
   }
 }
 

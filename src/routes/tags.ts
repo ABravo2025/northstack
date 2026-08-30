@@ -67,7 +67,7 @@ tagsRouter.post('/api/tags/:entityType/:entityId', async (req, res) => {
     return res.status(404).json({ error: 'Entity not found' });
   }
 
-  const assignment = await assignTag(user.tenantId!, entityType, entityId, name);
+  const assignment = await assignTag(user.tenantId!, entityType, entityId, name, user.id);
   return res.status(201).json(assignment);
 });
 
@@ -82,6 +82,6 @@ tagsRouter.delete('/api/tags/assignments/:tagAssignmentId', async (req, res) => 
     return res.status(404).json({ error: 'Tag assignment not found' });
   }
 
-  await removeTagAssignment(req.params.tagAssignmentId);
+  await removeTagAssignment(req.params.tagAssignmentId, user.id);
   return res.status(204).end();
 });

@@ -81,10 +81,14 @@ notesRouter.patch('/api/notes/:noteId', async (req, res) => {
     return res.status(404).json({ error: 'Note not found' });
   }
 
-  const updated = await updateNote(req.params.noteId, {
-    title: req.body.title,
-    description: req.body.description,
-  });
+  const updated = await updateNote(
+    req.params.noteId,
+    {
+      title: req.body.title,
+      description: req.body.description,
+    },
+    user.id,
+  );
   return res.json(updated);
 });
 
@@ -99,6 +103,6 @@ notesRouter.delete('/api/notes/:noteId', async (req, res) => {
     return res.status(404).json({ error: 'Note not found' });
   }
 
-  await deleteNote(req.params.noteId);
+  await deleteNote(req.params.noteId, user.id);
   return res.status(204).end();
 });

@@ -2482,3 +2482,45 @@ contamina el dato que la Unidad 3 va a mostrarle al usuario). D es alta severida
 operación real (no solo el log) se rompió — la escritura de Activity Log nunca debería poder causar
 esto (`bestEffort`), así que si pasa, revisar primero si el bug está en el código nuevo alrededor de
 la llamada a `recordActivity`, no en `bestEffort` en sí.
+
+---
+
+## QA-58 — Activity Log, Unidad 3: frontend — tab del modal + Settings (2026-08-30, en `staging`)
+
+**Por qué existe esta tarea:** primera superficie visible del módulo — el tab "Activity" de los 4
+modales de detalle (Employee/Company/Contact/Opportunity) deja de ser un placeholder, y se agrega
+`Settings → Activity Log` (owner/admin) con filtros. Verificado con Playwright real contra `staging`
+durante el desarrollo (login, editar el campo Industry de una Company real, confirmar que la entrada
+aparece tanto en el tab del modal como en el feed de Settings, con el diff correcto) — screenshots
+tomados en esa sesión, no solo curl. Esta tarea es la pasada de confirmación humana que falta.
+
+### A. Tab "Activity" en los 4 modales de detalle
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Abrir el modal de detalle de un Employee/Company/Contact/Opportunity con actividad real | Tab "Activity (N)" con el conteo correcto, cada fila con avatar, ícono de acción (+/lápiz/tacho), summary, "Nombre · fecha y hora" |
+| 2 | Click en "Show detail" de una fila con cambios de campo | Expande una lista `Campo: valor viejo → valor nuevo` (o "empty" si vacío) — "Hide detail" para volver a colapsar |
+| 3 | Una fila de `create` o `delete` | Summary dice "Created/Deleted [Tipo] "Nombre"" — sin necesariamente listar cada campo en el summary (el detalle completo sigue disponible al expandir) |
+| 4 | Un registro sin actividad todavía (creado antes de esta unidad, o vía un origen que no genera log — CSV import, seed, Public Form) | Tab dice "Activity" sin número, cuerpo "No activity yet." — no un error |
+| 5 | Editar un campo en vivo (ej. cambiar el Status de un Employee) y volver a abrir el tab Activity sin cerrar el modal | La entrada nueva aparece sin necesidad de refrescar la página (el tab recarga al montarse — confirmar si hace falta cerrar/reabrir el tab para verla, y si eso se siente lento) |
+
+### B. `Settings → Activity Log`
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 6 | Usuario `owner` o `admin` → Settings → tile/nav "Activity Log" | Feed tenant-wide, más reciente primero, con badge de tipo de entidad (Employee/Company/Contact/Opportunity) en cada fila |
+| 7 | Usuario `member` → navegar a `/settings/activity` a mano | "Activity Log is only visible to workspace owners and admins." — sin tile/nav item visible tampoco en su Settings |
+| 8 | Filtro "All types" → elegir una entidad específica | El feed se reduce a solo esa entidad |
+| 9 | Filtro "All actions" → Created/Updated/Deleted | El feed se reduce a esa acción |
+| 10 | Filtro "Anyone" → elegir un usuario del tenant | El feed se reduce a lo que cambió esa persona |
+| 11 | Selector de rango de fecha (mismo componente que Dashboards) → cambiar el preset o un rango custom | El feed se recarga con esa ventana; default "Last 6 months" al entrar |
+| 12 | Con más de 50 entradas en el rango | Aparece "Load more" al pie; click trae la página siguiente sin perder lo ya cargado |
+| 13 | Sin ninguna entrada en el rango/filtro elegido | "No activity in this range." — no un error ni una tabla vacía sin mensaje |
+
+### Al encontrar una falla
+
+A.1-A.3 son el corazón de esta unidad — si el tab no carga, cuenta mal, o el diff sale con valores
+crudos en vez de nombres legibles, es severidad media-alta (dato visible pero incorrecto). B.7 es
+alta severidad si un `member` logra ver el feed (gate roto) — confirmar que también el `GET /api/activity/feed`
+da 403, no solo que la UI lo esconde. El resto es medio/bajo — filtros y paginación que no andan
+son molestos pero no exponen ni corrompen datos.

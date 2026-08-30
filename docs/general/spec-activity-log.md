@@ -1,12 +1,15 @@
 # Spec Activity Log
 
-**Estado:** 🚧 Unidades 1 y 2 de 6 completas y en `staging` (2026-08-30). Unidad 1: schema
+**Estado:** 🚧 Unidades 1-3 de 6 completas y en `staging` (2026-08-30). Unidad 1: schema
 (`ActivityLogEntry` + `ActivityEntityType`/`ActivityAction`), `activityLogService.ts` genérico,
 `canViewActivityLog`, rutas `src/routes/activity.ts`. Unidad 2: wiring real de Employee/Company/
 Contact/Opportunity (create/update/delete) + sus custom field values — ver §6 para el scope cut
 explícito (solo la ruta directa de cada entidad genera entradas; CSV import, onboarding seed data y
-Public Forms quedan deliberadamente afuera de esta ronda). **Todavía sin ninguna superficie de
-frontend** — Unidad 3 es la que lo hace visible (tab del modal + página de Settings).
+Public Forms quedan deliberadamente afuera de esta ronda). **Unidad 3: frontend** — tab "Activity"
+real en los 4 modales de detalle (`EntityActivityList`) y la página `Settings → Activity Log`
+(`ActivityLogSettingsPage`, owner/admin, filtros por tipo/acción/usuario/rango de fecha, "Load more"
+paginado). Verificado de punta a punta con Playwright contra `staging` real (login, editar un campo
+de una Company real y ver la entrada aparecer en ambas superficies con el diff correcto).
 `npm run build`/`npm test` (207/207) backend y `npm run build` frontend en verde en cada unidad.
 Nada de esto llegó a `main` todavía.
 **Fecha:** 2026-08-30.

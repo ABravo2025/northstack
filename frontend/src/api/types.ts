@@ -383,6 +383,38 @@ export interface Note {
   updatedAt: string;
 }
 
+// Activity Log (spec-activity-log.md, 2026-08-30) — read-only audit trail. `changes` is already
+// resolved to display text server-side (FK ids -> names, cents -> formatted money) — nothing to
+// look up or format on the frontend, same "pre-rendered" idiom as Notification.message below.
+// entityType typed as TaskEntityType (not the backend's full 27-value ActivityEntityType) because
+// only Employee/Company/Contact/Opportunity have any caller yet (Unit 2) — widen this once a later
+// unit wires up more entity types.
+export interface ActivityChange {
+  field: string;
+  label: string;
+  oldValue: string | null;
+  newValue: string | null;
+}
+
+export interface ActivityLogEntry {
+  id: string;
+  tenantId: string;
+  entityType: TaskEntityType;
+  entityId: string;
+  entityLabel: string;
+  action: 'create' | 'update' | 'delete';
+  summary: string;
+  changes: ActivityChange[] | null;
+  changedByUserId: string;
+  changedBy: { id: string; firstName: string; lastName: string };
+  changedAt: string;
+}
+
+export interface ActivityFeedPage {
+  items: ActivityLogEntry[];
+  nextCursor: string | null;
+}
+
 // Free-form tags (backlog QA, 2026-08-27) — Contact/Company/Employee only for
 // now, same entityType/entityId pattern as Note/Task above.
 export interface TagAssignmentLite {

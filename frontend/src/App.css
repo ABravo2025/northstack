@@ -1983,6 +1983,60 @@ input[type='number'] {
   @apply opacity-40;
 }
 
+/* ---------- Activity Log (EntityActivityList, ActivityLogSettingsPage) ---------- */
+
+.activity-list {
+  @apply flex flex-col gap-2;
+}
+
+.activity-row {
+  @apply rounded-md border border-line bg-surface-1 p-2.5 dark:border-dark-line dark:bg-dark-surface;
+}
+
+.activity-row-header {
+  @apply flex items-start gap-2;
+}
+
+.activity-row-main {
+  @apply min-w-0 flex-1;
+}
+
+.activity-row-summary {
+  @apply flex items-center gap-1.5 text-sm text-ink dark:text-dark-ink;
+}
+
+.activity-action-icon {
+  @apply flex h-4 w-4 shrink-0 items-center justify-center text-ink-faint dark:text-dark-ink-faint;
+}
+
+.activity-row-meta {
+  @apply mt-0.5 block text-[11px] text-ink-faint dark:text-dark-ink-faint;
+}
+
+.activity-row-toggle {
+  @apply shrink-0 whitespace-nowrap text-xs text-accent hover:underline;
+}
+
+.activity-row-changes {
+  @apply mt-2 flex flex-col gap-1 border-t border-line-soft pt-2 dark:border-dark-line-soft;
+}
+
+.activity-row-changes li {
+  @apply flex flex-wrap items-baseline gap-x-2 text-xs;
+}
+
+.activity-change-label {
+  @apply font-medium text-ink-muted dark:text-dark-ink-muted;
+}
+
+.activity-change-values {
+  @apply text-ink-faint dark:text-dark-ink-faint;
+}
+
+.activity-feed-row {
+  @apply flex items-start gap-2 border-b border-line-soft px-1 py-2.5 last:border-b-0 dark:border-dark-line-soft;
+}
+
 .kcard .kc-name {
   @apply text-[12.5px] leading-tight font-bold text-ink dark:text-dark-ink;
 }

@@ -3,12 +3,18 @@ import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import { canViewActivityLog } from '../modules/auth/permissionService.js';
 import { findEntityTenantId, isSupportedCrossModuleEntityType } from '../modules/crossModule/entityLookup.js';
-import { listActivityFeed, listActivityForEntity } from '../modules/activity/activityLogService.js';
+import { listActivityFeed, listActivityForEntity, type ActivityLogEntryWithUser } from '../modules/activity/activityLogService.js';
 
 export const activityRouter = createAsyncRouter();
 
 const ACTIVITY_ENTITY_TYPES = new Set<string>(Object.values(ActivityEntityType));
 const ACTIVITY_ACTIONS = new Set<string>(Object.values(ActivityAction));
+
+// `changes` is stored as a JSON string column (see the schema comment on ActivityLogEntry) —
+// parsed here so the frontend receives a real array, never a string it has to JSON.parse itself.
+function serializeEntry(entry: ActivityLogEntryWithUser) {
+  return { ...entry, changes: entry.changes ? JSON.parse(entry.changes) : null };
+}
 
 // Per-record "Activity" tab (Employee/Company/Contact/Opportunity detail modals). No permission
 // gate beyond tenant membership — same convention as Tasks/Notes: if you can open the modal, you
@@ -36,7 +42,7 @@ activityRouter.get('/api/activity', async (req, res) => {
   }
 
   const entries = await listActivityForEntity(user.tenantId!, entityType as ActivityEntityType, entityId);
-  return res.json(entries);
+  return res.json(entries.map(serializeEntry));
 });
 
 // Tenant-wide feed, Settings → Activity Log. owner/admin only today (canViewActivityLog), until a
@@ -77,5 +83,5 @@ activityRouter.get('/api/activity/feed', async (req, res) => {
     to,
     cursor: (req.query.cursor as string | undefined) || undefined,
   });
-  return res.json(page);
+  return res.json({ items: page.items.map(serializeEntry), nextCursor: page.nextCursor });
 });

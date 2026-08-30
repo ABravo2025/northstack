@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import {
   BriefcaseIcon,
   BuildingIcon,
+  ClockIcon,
   GridIcon,
   ListIcon,
   TeamIcon,
@@ -46,6 +47,7 @@ export function getSettingsSections(user: { role: string }): SettingsSectionGrou
         { to: 'users', label: 'Users', desc: 'Invite people and manage roles.', icon: <TeamIcon /> },
         { to: 'public-forms', label: 'Public Forms', desc: 'External intake forms per module.', icon: <ListIcon /> },
         { to: 'pipelines', label: 'Pipelines', desc: 'Sales stages and their outcomes.', icon: <TrendingIcon /> },
+        { to: 'activity', label: 'Activity Log', desc: 'Who created, changed, or deleted what.', icon: <ClockIcon /> },
       ],
     });
   }

@@ -29,6 +29,7 @@ import { billingApi } from './billing.js';
 import { integrationsApi } from './integrations.js';
 import { paymentsApi } from './payments.js';
 import { tenantMetricsApi } from './tenantMetrics.js';
+import { activityApi } from './activity.js';
 
 export { ApiError, API_BASE_URL } from './http.js';
 export * from './types.js';
@@ -65,4 +66,5 @@ export const api = {
   ...integrationsApi,
   ...paymentsApi,
   ...tenantMetricsApi,
+  ...activityApi,
 };

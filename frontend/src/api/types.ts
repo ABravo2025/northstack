@@ -433,6 +433,7 @@ export interface StatusDefinition {
   order: number;
   isDefault: boolean;
   isActive: boolean;
+  isTerminatedStatus: boolean;
 }
 
 export type CatalogKind = 'department' | 'jobTitle' | 'leadSource' | 'lossReason' | 'winReason' | 'companySize';

@@ -15,9 +15,22 @@ import type { EmployeeTermination, PayrollEntryType } from '@prisma/client';
 // backfill migration. Never set as isDefault.
 async function getOrCreateTerminatedStatusId(tenantId: string): Promise<string> {
   const existing = await prisma.statusDefinition.findFirst({
-    where: { tenantId, entityType: 'employee', name: 'Terminated' },
+    where: { tenantId, entityType: 'employee', isTerminatedStatus: true },
   });
   if (existing) return existing.id;
+
+  // Self-heal: a tenant whose Terminated status was created before isTerminatedStatus existed
+  // still has a row named 'Terminated' — claim it by flag instead of creating a duplicate.
+  const legacyByName = await prisma.statusDefinition.findFirst({
+    where: { tenantId, entityType: 'employee', name: 'Terminated' },
+  });
+  if (legacyByName) {
+    const healed = await prisma.statusDefinition.update({
+      where: { id: legacyByName.id },
+      data: { isTerminatedStatus: true },
+    });
+    return healed.id;
+  }
 
   const maxOrder = await prisma.statusDefinition.aggregate({
     where: { tenantId, entityType: 'employee' },
@@ -30,6 +43,7 @@ async function getOrCreateTerminatedStatusId(tenantId: string): Promise<string> 
       name: 'Terminated',
       order: (maxOrder._max.order ?? 0) + 1,
       isDefault: false,
+      isTerminatedStatus: true,
     },
   });
   return created.id;

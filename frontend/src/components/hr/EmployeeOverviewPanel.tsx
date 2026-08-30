@@ -236,7 +236,7 @@ export default function EmployeeOverviewPanel({
             items={[
               ...(canManageEmployees && !employee.userId ? [{ label: 'Invite to app', onClick: onInvite }] : []),
               ...(canManageEmployees &&
-              employee.statusDefn?.name !== 'Terminated' &&
+              !employee.statusDefn?.isTerminatedStatus &&
               !terminationOptions?.pendingTermination
                 ? [{ label: 'Terminate', onClick: () => setTerminateModalOpen(true), danger: true }]
                 : []),
@@ -378,8 +378,8 @@ export default function EmployeeOverviewPanel({
             <h4 className="field-group-title">Role</h4>
             <div className="field-group-body">
               <Field label="Status">
-                {employee.statusDefn?.name === 'Terminated' ? (
-                  <StatusChip color={employee.statusDefn.color || '#6b7280'} label="Terminated" />
+                {employee.statusDefn?.isTerminatedStatus ? (
+                  <StatusChip color={employee.statusDefn.color || '#6b7280'} label={employee.statusDefn.name} />
                 ) : (
                   <AutoSaveSelect
                     label="Status"

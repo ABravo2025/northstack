@@ -28,7 +28,8 @@ vi.mock('../src/lib/prisma.js', () => ({
             s.tenantId === where.tenantId &&
             s.entityType === where.entityType &&
             (where.name === undefined || s.name === where.name) &&
-            (where.isDefault === undefined || s.isDefault === where.isDefault),
+            (where.isDefault === undefined || s.isDefault === where.isDefault) &&
+            (where.isTerminatedStatus === undefined || Boolean(s.isTerminatedStatus) === where.isTerminatedStatus),
         ) ?? null,
       ),
       aggregate: vi.fn(async ({ where }: any) => {
@@ -39,6 +40,12 @@ vi.mock('../src/lib/prisma.js', () => ({
         const row = { id: `status-${++statusIdSeq}`, ...data };
         statusDefinitions.push(row);
         return row;
+      }),
+      update: vi.fn(async ({ where, data }: any) => {
+        const s = statusDefinitions.find((s) => s.id === where.id);
+        if (!s) throw new Error('status not found');
+        Object.assign(s, data);
+        return s;
       }),
     },
     employeeCompensation: {

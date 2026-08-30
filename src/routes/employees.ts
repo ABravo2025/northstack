@@ -215,7 +215,7 @@ employeesRouter.patch('/api/hr/employees/:employeeId', async (req, res) => {
   // reopen the door to a second real termination (and a second final payment) on the same person.
   if (req.body.statusId !== undefined && req.body.statusId !== employee.statusId) {
     const currentStatus = await findStatusDefinitionById(employee.statusId);
-    if (currentStatus?.name === 'Terminated') {
+    if (currentStatus?.isTerminatedStatus) {
       return res.status(400).json({ error: 'Cannot change the status of a terminated employee' });
     }
   }
@@ -379,7 +379,7 @@ employeesRouter.post('/api/hr/employees/:employeeId/invite', async (req, res) =>
   }
 
   const employeeStatus = await findStatusDefinitionById(employee.statusId);
-  if (employeeStatus?.name === 'Terminated') {
+  if (employeeStatus?.isTerminatedStatus) {
     return res.status(400).json({ error: 'Cannot invite a terminated employee' });
   }
 

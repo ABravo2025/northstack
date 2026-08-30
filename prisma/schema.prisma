@@ -678,6 +678,12 @@ model Company {
   opportunities  Opportunity[]
 
   @@index([tenantId])
+  // Nulls don't count toward Postgres uniqueness, so any number of Companies with no Stripe
+  // customer linked yet are still allowed — this only blocks two Companies in the same tenant
+  // from being linked to the *same* customer (see stripePaymentsService.ts's
+  // linkCompanyToStripeCustomer, which already checks this at the application layer; this is the
+  // DB-level backstop against a concurrent-request race).
+  @@unique([tenantId, stripeCustomerId])
 }
 
 model Contact {
@@ -894,6 +900,12 @@ model StatusDefinition {
   order      Int        @default(0)
   isDefault  Boolean    @default(false)
   isActive   Boolean    @default(true)
+  // Marks the one system-managed "Terminated" employee status per tenant (created on demand by
+  // terminationService.ts's getOrCreateTerminatedStatusId) — the source of truth for "is this
+  // employee terminated" checks, instead of comparing `name === 'Terminated'` (a tenant can rename
+  // any status, including this one, via the generic catalog endpoint; matching by name meant a
+  // rename would silently break both the re-termination guard and the frontend's status lock).
+  isTerminatedStatus Boolean @default(false)
   createdAt  DateTime   @default(now())
   employees  Employee[]
   clients    Client[]

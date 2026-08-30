@@ -2426,3 +2426,59 @@ Todo lo de esta unidad es plomería sin superficie de usuario — cualquier fall
 salvo que rompa algo de A (regresión sobre lo que ya funcionaba) o que el gate de permisos de B.6
 no se respete (eso sería alta severidad, mismo criterio que cualquier otro endpoint owner/admin-only
 de la app).
+
+---
+
+## QA-57 — Activity Log, Unidad 2: wiring real de Employee/Company/Contact/Opportunity (2026-08-30, en `staging`)
+
+**Por qué existe esta tarea:** primera unidad que genera filas reales de `ActivityLogEntry` —
+create/update/delete de las 4 entidades del CRM/HR (más sus custom field values) ahora registran
+actividad, pero **todavía no hay ninguna pantalla que la muestre** (eso es la Unidad 3). Esta tarea
+verifica por `curl`/query directa que el dato que se está grabando es correcto, antes de construir
+la UI encima. Ver `docs/general/spec-activity-log.md` §6 para el scope cut explícito: solo la ruta
+directa de cada entidad genera entradas — CSV import, onboarding seed data y Public Forms **no**
+todavía (documentado, no un bug).
+
+### A. Create/update/delete de cada entidad
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | `POST /api/hr/employees` con datos completos | Se crea una fila en `ActivityLogEntry` (`entityType: employee`, `action: create`, `changedByUserId` = el usuario del token), `summary` dice `Created Employee "Nombre Apellido"` |
+| 2 | `PATCH /api/hr/employees/:id` cambiando `departmentId`/`statusId`/`managerId` | Fila `action: update`; `changes` (JSON) trae el campo con `oldValue`/`newValue` ya como **nombre legible** (nombre del departamento/status/manager), no el id crudo |
+| 3 | `DELETE /api/hr/employees/:id` | Fila `action: delete`, `summary` dice `Deleted Employee "..."` |
+| 4-6 | Repetir 1-3 con `POST/PATCH/DELETE /api/companies` | Mismo patrón — `sizeId`/`accountOwnerId`/`parentCompanyId` resueltos a nombre, no id |
+| 7-9 | Repetir 1-3 con `POST/PATCH/DELETE /api/contacts` (el 3° es `DELETE`, que en realidad desactiva — ver `deactivateContact`) | El `DELETE` (desactivación) genera `action: delete` igual que un borrado real, no un `update` de `isActive` |
+| 10-12 | Repetir 1-3 con `POST/PATCH/DELETE /api/opportunities` | `amountCents` resuelto a monto formateado con símbolo de moneda (ej. `$10,000.00`), no el número de centavos crudo; `stageId`/`pipelineId`/`ownerId`/`lossReasonId`/`winReasonId` resueltos a nombre |
+| 13 | Un `PATCH` que no cambia ningún campo trackeado (ej. mandar el mismo valor que ya tenía) | **No** se crea ninguna fila — `recordActivity` salta un update sin cambios reales |
+
+### B. Custom field values
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 14 | Crear un valor de custom field en un Employee/Company/Contact | Fila `action: update` contra la entidad **dueña** (no un tipo de entidad propio) — `changes` trae `{field: <id de la definición>, label: <nombre del custom field>, oldValue: null, newValue: <valor>}` |
+| 15 | Editar ese valor | Fila `update`, `oldValue`/`newValue` correctos |
+| 16 | Borrarlo | Fila `update`, `newValue: null` |
+
+### C. Scope cut — confirmar que NO se genera nada en los 3 orígenes deferidos
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 17 | Importar Employees vía CSV (`POST /api/hr/employees/import/csv`) | Los empleados se crean normalmente (sin regresión), pero **no** aparece ninguna fila nueva en `ActivityLogEntry` para ellos — comportamiento esperado por ahora, documentado en el spec |
+| 18 | "Load sample data" del checklist de onboarding | Mismo caso — los empleados/clientes de ejemplo se crean, sin filas de Activity Log |
+| 19 | Enviar un Form público que crea un Contact/Opportunity | Mismo caso — sin filas de Activity Log (tampoco hay usuario autenticado a quien atribuirlas) |
+
+### D. Regresión
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 20 | `npm run build`/`npm test` (backend, 207/207) y `npm run build` (frontend) | Los tres en verde |
+| 21 | Uso normal de la app (crear/editar/borrar cualquiera de las 4 entidades desde la UI) | Se comporta exactamente igual que antes — nada visible cambió todavía, la escritura de Activity Log es invisible (best-effort, nunca puede romper ni frenar la operación real) |
+
+### Al encontrar una falla
+
+A/B son las que importan: si una entrada no se genera cuando debería, o los valores de FK quedan
+como id crudo en vez de nombre legible, es severidad media (no rompe nada visible hoy, pero
+contamina el dato que la Unidad 3 va a mostrarle al usuario). D es alta severidad si algo de la
+operación real (no solo el log) se rompió — la escritura de Activity Log nunca debería poder causar
+esto (`bestEffort`), así que si pasa, revisar primero si el bug está en el código nuevo alrededor de
+la llamada a `recordActivity`, no en `bestEffort` en sí.

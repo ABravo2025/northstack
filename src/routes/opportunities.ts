@@ -184,7 +184,7 @@ opportunitiesRouter.post('/api/opportunities', async (req, res) => {
     return res.status(400).json(refError);
   }
 
-  const opportunity = await createOpportunity({ ...req.body, tenantId: user.tenantId! });
+  const opportunity = await createOpportunity({ ...req.body, tenantId: user.tenantId! }, user.id);
   const full = await findOpportunityById(opportunity.id);
   return res.status(201).json(full);
 });
@@ -264,7 +264,7 @@ opportunitiesRouter.delete('/api/opportunities/:opportunityId', async (req, res)
     return res.status(404).json({ error: 'Opportunity not found' });
   }
 
-  await deleteOpportunity(req.params.opportunityId);
+  await deleteOpportunity(req.params.opportunityId, user.id);
   return res.status(204).end();
 });
 

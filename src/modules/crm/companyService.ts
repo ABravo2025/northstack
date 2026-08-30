@@ -4,6 +4,8 @@ import { listCustomFieldValuesForEntities } from '../hr/customFieldService.js';
 import { listTagsForEntities } from '../crossModule/tagService.js';
 import { deleteOpportunity } from './opportunityService.js';
 import { wouldCreateCycle } from '../../lib/cycleDetection.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { companyActivityFieldConfig } from '../activity/fieldConfigs/companyFieldConfig.js';
 import type { Company, Prisma } from '@prisma/client';
 
 export interface CreateCompanyInput {
@@ -70,10 +72,10 @@ export async function wouldCreateCompanyHierarchyCycle(companyId: string, propos
   });
 }
 
-export async function createCompany(input: CreateCompanyInput): Promise<Company> {
+export async function createCompany(input: CreateCompanyInput, changedByUserId: string): Promise<Company> {
   const statusId = input.statusId ?? (await getDefaultStatusId(input.tenantId, 'company'));
 
-  return prisma.$transaction(async (tx) => {
+  const company = await prisma.$transaction(async (tx) => {
     const company = await tx.company.create({
       data: {
         name: input.name,
@@ -106,6 +108,19 @@ export async function createCompany(input: CreateCompanyInput): Promise<Company>
 
     return company;
   });
+
+  await recordActivity({
+    tenantId: input.tenantId,
+    entityType: 'company',
+    entityId: company.id,
+    entityLabel: company.name,
+    action: 'create',
+    changedByUserId,
+    after: company,
+    fieldConfig: companyActivityFieldConfig,
+  });
+
+  return company;
 }
 
 export async function listCompanies(tenantId: string) {
@@ -133,7 +148,9 @@ export async function findCompanyById(id: string): Promise<Company | null> {
   });
 }
 
-export async function updateCompany(id: string, input: UpdateCompanyInput): Promise<Company> {
+export async function updateCompany(id: string, input: UpdateCompanyInput, changedByUserId: string): Promise<Company> {
+  const existing = await prisma.company.findUniqueOrThrow({ where: { id } });
+
   // Whitelist explicitly — never pass the input object straight through, since it
   // may originate from req.body and carry extra fields (e.g. tenantId/statusId)
   // that would otherwise reassign this row across tenants or bypass the
@@ -149,11 +166,25 @@ export async function updateCompany(id: string, input: UpdateCompanyInput): Prom
   if (input.parentCompanyId !== undefined) data.parentCompanyId = input.parentCompanyId;
   if (input.isPlaceholder !== undefined) data.isPlaceholder = input.isPlaceholder;
 
-  return prisma.company.update({
+  const updated = await prisma.company.update({
     where: { id },
     data,
     include: COMPANY_INCLUDE,
   });
+
+  await recordActivity({
+    tenantId: existing.tenantId,
+    entityType: 'company',
+    entityId: id,
+    entityLabel: updated.name,
+    action: 'update',
+    changedByUserId,
+    before: existing,
+    after: updated,
+    fieldConfig: companyActivityFieldConfig,
+  });
+
+  return updated;
 }
 
 export interface DeleteCompanyResult {
@@ -178,7 +209,13 @@ export interface DeleteCompanyOptions {
   cascadeToChildCompanies?: boolean;
 }
 
-export async function deleteCompany(id: string, options: DeleteCompanyOptions = {}): Promise<DeleteCompanyResult> {
+export async function deleteCompany(
+  id: string,
+  changedByUserId: string,
+  options: DeleteCompanyOptions = {},
+): Promise<DeleteCompanyResult> {
+  const existing = await prisma.company.findUniqueOrThrow({ where: { id } });
+
   const opportunityCount = await prisma.opportunity.count({ where: { companyId: id } });
   if (opportunityCount > 0 && !options.deleteLinkedOpportunities) {
     return { success: false, error: 'Cannot delete a company with existing opportunities' };
@@ -188,13 +225,13 @@ export async function deleteCompany(id: string, options: DeleteCompanyOptions = 
     const opportunities = await prisma.opportunity.findMany({ where: { companyId: id }, select: { id: true } });
     // Each deleteOpportunity call is its own transaction over disjoint rows (that Opportunity's
     // own history/contact-links/tags) — independent, so they run concurrently.
-    await Promise.all(opportunities.map((opportunity) => deleteOpportunity(opportunity.id)));
+    await Promise.all(opportunities.map((opportunity) => deleteOpportunity(opportunity.id, changedByUserId)));
   }
 
   if (options.cascadeToChildCompanies) {
     const children = await prisma.company.findMany({ where: { parentCompanyId: id }, select: { id: true } });
     for (const child of children) {
-      const childResult = await deleteCompany(child.id, options);
+      const childResult = await deleteCompany(child.id, changedByUserId, options);
       if (!childResult.success) {
         return childResult;
       }
@@ -208,5 +245,17 @@ export async function deleteCompany(id: string, options: DeleteCompanyOptions = 
     prisma.tagAssignment.deleteMany({ where: { entityType: 'company', entityId: id } }),
     prisma.company.delete({ where: { id } }),
   ]);
+
+  await recordActivity({
+    tenantId: existing.tenantId,
+    entityType: 'company',
+    entityId: id,
+    entityLabel: existing.name,
+    action: 'delete',
+    changedByUserId,
+    before: existing,
+    fieldConfig: companyActivityFieldConfig,
+  });
+
   return { success: true };
 }

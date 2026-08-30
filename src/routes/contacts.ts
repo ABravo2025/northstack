@@ -11,6 +11,8 @@ import {
   updateCustomFieldValue,
 } from '../modules/hr/customFieldService.js';
 import { findFieldCatalogDefinitionById } from '../modules/hr/fieldCatalogService.js';
+import { recordCustomFieldValueActivity } from '../modules/activity/customFieldActivity.js';
+import { contactDisplayName } from '../modules/activity/fieldConfigs/contactFieldConfig.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 
@@ -77,7 +79,7 @@ contactsRouter.post('/api/contacts', async (req, res) => {
   }
 
   try {
-    const contact = await createContact({ ...req.body, tenantId: user.tenantId! });
+    const contact = await createContact({ ...req.body, tenantId: user.tenantId! }, user.id);
     return res.status(201).json(contact);
   } catch (error) {
     // Contact.email is unique per tenant, but deactivating one doesn't free its email — without
@@ -129,7 +131,7 @@ contactsRouter.patch('/api/contacts/:contactId', async (req, res) => {
   }
 
   try {
-    const updated = await updateContact(req.params.contactId, req.body);
+    const updated = await updateContact(req.params.contactId, req.body, user.id);
     return res.json(updated);
   } catch (error) {
     if ((error as { code?: string }).code === 'P2002') {
@@ -158,7 +160,7 @@ contactsRouter.delete('/api/contacts/:contactId', async (req, res) => {
     return res.status(404).json({ error: 'Contact not found' });
   }
 
-  const result = await deactivateContact(req.params.contactId);
+  const result = await deactivateContact(req.params.contactId, user.id);
   return res.json(result);
 });
 
@@ -192,6 +194,18 @@ contactsRouter.post('/api/contacts/:contactId/custom-fields', async (req, res) =
     entityType: 'contact',
     entityId: req.params.contactId,
     value: req.body.value,
+  });
+
+  await recordCustomFieldValueActivity({
+    tenantId: user.tenantId!,
+    entityType: 'contact',
+    entityId: req.params.contactId,
+    entityLabel: contactDisplayName(contact),
+    fieldDefinitionId: definition.id,
+    fieldName: definition.name,
+    oldValue: null,
+    newValue: customFieldValue.value,
+    changedByUserId: user.id,
   });
 
   return res.status(201).json(customFieldValue);
@@ -228,6 +242,19 @@ contactsRouter.patch('/api/contacts/:contactId/custom-fields/:valueId', async (r
   }
 
   const updated = await updateCustomFieldValue(req.params.valueId, req.body.value);
+
+  await recordCustomFieldValueActivity({
+    tenantId: user.tenantId!,
+    entityType: 'contact',
+    entityId: req.params.contactId,
+    entityLabel: contactDisplayName(contact),
+    fieldDefinitionId: definition.id,
+    fieldName: definition.name,
+    oldValue: existingValue.value,
+    newValue: updated.value,
+    changedByUserId: user.id,
+  });
+
   return res.json(updated);
 });
 
@@ -257,6 +284,22 @@ contactsRouter.delete('/api/contacts/:contactId/custom-fields/:valueId', async (
   }
 
   await deleteCustomFieldValue(req.params.valueId);
+
+  const definition = await findCustomFieldDefinitionById(existingValue.customFieldDefinitionId);
+  if (definition) {
+    await recordCustomFieldValueActivity({
+      tenantId: user.tenantId!,
+      entityType: 'contact',
+      entityId: req.params.contactId,
+      entityLabel: contactDisplayName(contact),
+      fieldDefinitionId: definition.id,
+      fieldName: definition.name,
+      oldValue: existingValue.value,
+      newValue: null,
+      changedByUserId: user.id,
+    });
+  }
+
   return res.status(204).end();
 });
 

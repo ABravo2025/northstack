@@ -27,6 +27,8 @@ import { findStatusDefinitionById } from '../modules/hr/statusService.js';
 import { calculateEmployeeTimeOffBalances } from '../modules/hr/timeOffBalanceService.js';
 import { cancelTermination, createTermination, getLatestTermination, listDirectReports } from '../modules/hr/terminationService.js';
 import { createInvitation } from '../modules/tenant/invitationService.js';
+import { recordCustomFieldValueActivity } from '../modules/activity/customFieldActivity.js';
+import { employeeDisplayName } from '../modules/activity/fieldConfigs/employeeFieldConfig.js';
 import {
   getEmployeeCompensationSummary,
   getEmployeeContractPdf,
@@ -165,7 +167,7 @@ employeesRouter.post('/api/hr/employees', async (req, res) => {
     }
   }
 
-  const employee = await createEmployee({ ...req.body, tenantId: user.tenantId! });
+  const employee = await createEmployee({ ...req.body, tenantId: user.tenantId! }, user.id);
   return res.status(201).json(employee);
 });
 
@@ -272,7 +274,7 @@ employeesRouter.delete('/api/hr/employees/:employeeId', async (req, res) => {
     return res.status(404).json({ error: 'Employee not found' });
   }
 
-  await deleteEmployee(req.params.employeeId);
+  await deleteEmployee(req.params.employeeId, user.id);
   return res.status(204).end();
 });
 
@@ -579,6 +581,18 @@ employeesRouter.post('/api/hr/employees/:employeeId/custom-fields', async (req, 
     value: req.body.value,
   });
 
+  await recordCustomFieldValueActivity({
+    tenantId: user.tenantId!,
+    entityType: 'employee',
+    entityId: req.params.employeeId,
+    entityLabel: employeeDisplayName(employee),
+    fieldDefinitionId: definition.id,
+    fieldName: definition.name,
+    oldValue: null,
+    newValue: customFieldValue.value,
+    changedByUserId: user.id,
+  });
+
   return res.status(201).json(customFieldValue);
 });
 
@@ -613,6 +627,19 @@ employeesRouter.patch('/api/hr/employees/:employeeId/custom-fields/:valueId', as
   }
 
   const updated = await updateCustomFieldValue(req.params.valueId, req.body.value);
+
+  await recordCustomFieldValueActivity({
+    tenantId: user.tenantId!,
+    entityType: 'employee',
+    entityId: req.params.employeeId,
+    entityLabel: employeeDisplayName(employee),
+    fieldDefinitionId: definition.id,
+    fieldName: definition.name,
+    oldValue: existingValue.value,
+    newValue: updated.value,
+    changedByUserId: user.id,
+  });
+
   return res.json(updated);
 });
 
@@ -642,6 +669,22 @@ employeesRouter.delete('/api/hr/employees/:employeeId/custom-fields/:valueId', a
   }
 
   await deleteCustomFieldValue(req.params.valueId);
+
+  const definition = await findCustomFieldDefinitionById(existingValue.customFieldDefinitionId);
+  if (definition) {
+    await recordCustomFieldValueActivity({
+      tenantId: user.tenantId!,
+      entityType: 'employee',
+      entityId: req.params.employeeId,
+      entityLabel: employeeDisplayName(employee),
+      fieldDefinitionId: definition.id,
+      fieldName: definition.name,
+      oldValue: existingValue.value,
+      newValue: null,
+      changedByUserId: user.id,
+    });
+  }
+
   return res.status(204).end();
 });
 

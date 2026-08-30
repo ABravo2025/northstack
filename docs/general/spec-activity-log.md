@@ -1,10 +1,14 @@
 # Spec Activity Log
 
-**Estado:** 🚧 Unidad 1 de 6 completa y en `staging` (2026-08-30) — schema (`ActivityLogEntry` +
-`ActivityEntityType`/`ActivityAction`), `activityLogService.ts` genérico, `canViewActivityLog`,
-rutas `src/routes/activity.ts`. Sin ningún caller real todavía — Unidad 2 (Employee/Company/Contact/
-Opportunity) es la siguiente. `npm run build`/`npm test` (194/194) backend y `npm run build`
-frontend en verde. Nada de esto llegó a `main` todavía.
+**Estado:** 🚧 Unidades 1 y 2 de 6 completas y en `staging` (2026-08-30). Unidad 1: schema
+(`ActivityLogEntry` + `ActivityEntityType`/`ActivityAction`), `activityLogService.ts` genérico,
+`canViewActivityLog`, rutas `src/routes/activity.ts`. Unidad 2: wiring real de Employee/Company/
+Contact/Opportunity (create/update/delete) + sus custom field values — ver §6 para el scope cut
+explícito (solo la ruta directa de cada entidad genera entradas; CSV import, onboarding seed data y
+Public Forms quedan deliberadamente afuera de esta ronda). **Todavía sin ninguna superficie de
+frontend** — Unidad 3 es la que lo hace visible (tab del modal + página de Settings).
+`npm run build`/`npm test` (207/207) backend y `npm run build` frontend en verde en cada unidad.
+Nada de esto llegó a `main` todavía.
 **Fecha:** 2026-08-30.
 **Contexto:** ítem de backlog ya anotado hace tiempo (`docs/tareas/backlog.md` → Notes/Tasks →
 "Activity Log — módulo entero sin construir"; `docs/general/database-schema.md` grupo 6 y "Qué
@@ -241,6 +245,19 @@ service distintos a tocar en total, por eso separado en 3 rondas en vez de una s
 
 ## 6. Qué queda deliberadamente afuera (por ahora)
 
+- **Unidad 2 — scope cut real, decidido al implementar**: `changedByUserId` es requerido en
+  `updateEmployee`/`updateCompany`/`updateContact`/`deactivateContact`/`deleteEmployee`/
+  `deleteCompany`/`deleteOpportunity` (siempre hay un actor real en esos call sites), pero
+  **opcional** en los 4 `create*` — solo la ruta directa de cada entidad (`POST /api/hr/employees`,
+  `/api/companies`, `/api/contacts`, `/api/opportunities`) lo pasa hoy. Tres orígenes que también
+  crean estas entidades **no generan ninguna entrada de Activity Log todavía**: CSV import de
+  Employees (`csvService.ts`), el seed de datos de ejemplo del onboarding
+  (`onboardingService.ts`), y las submissions de Public Forms (`publicFormService.ts` — este último
+  además no tiene ningún `User` autenticado detrás, así que ni siquiera hay un actor real que
+  atribuirle). Decisión deliberada para mantener la Unidad 2 acotada a "una persona autenticada
+  crea/edita/borra un registro puntual desde su propia pantalla" — extenderlo a los otros tres
+  orígenes (bulk import, seed, formulario anónimo) queda como una unidad futura separada si hace
+  falta, no una que se coló sin documentar.
 - **Sesiones/login** (decisión 6).
 - **Revertir un cambio desde el log** (solo lectura, ninguna unidad de esta ronda escribe).
 - **Retención/purga** — el log crece sin límite por ahora, igual que `StatusHistoryEntry` hoy (sin

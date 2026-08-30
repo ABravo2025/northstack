@@ -37,7 +37,12 @@ const ENTITY_TYPE_LABELS: Record<ActivityEntityType, string> = {
   stripeConnection: 'Stripe Connection',
 };
 
-export type FieldChangeResolver = (value: unknown) => Promise<string | null> | string | null;
+// `record` is the full before/after snapshot the value came from (not just the one field) — a
+// resolver formatting Opportunity.amountCents needs its sibling `currency` field, for instance.
+export type FieldChangeResolver = (
+  value: unknown,
+  record: Record<string, unknown>,
+) => Promise<string | null> | string | null;
 
 export interface ActivityFieldConfig {
   label: string;
@@ -83,8 +88,8 @@ export async function diffEntity(
     const afterRaw = after ? after[field] : null;
     if (!hasChanged(beforeRaw, afterRaw)) continue;
 
-    const oldValue = config.resolve ? await config.resolve(beforeRaw) : defaultFormat(beforeRaw);
-    const newValue = config.resolve ? await config.resolve(afterRaw) : defaultFormat(afterRaw);
+    const oldValue = config.resolve ? await config.resolve(beforeRaw, before ?? {}) : defaultFormat(beforeRaw);
+    const newValue = config.resolve ? await config.resolve(afterRaw, after ?? {}) : defaultFormat(afterRaw);
     if (oldValue === newValue) continue; // resolved to the same display text (e.g. two different null-ish raw values) — not worth logging
 
     changes.push({ field, label: config.label, oldValue, newValue });

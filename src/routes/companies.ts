@@ -18,6 +18,7 @@ import {
   updateCustomFieldValue,
 } from '../modules/hr/customFieldService.js';
 import { findUserById } from '../modules/tenant/tenantService.js';
+import { recordCustomFieldValueActivity } from '../modules/activity/customFieldActivity.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 
@@ -72,7 +73,7 @@ companiesRouter.post('/api/companies', async (req, res) => {
     }
   }
 
-  const company = await createCompany({ ...req.body, contact, tenantId: user.tenantId! });
+  const company = await createCompany({ ...req.body, contact, tenantId: user.tenantId! }, user.id);
   return res.status(201).json(company);
 });
 
@@ -127,7 +128,7 @@ companiesRouter.patch('/api/companies/:companyId', async (req, res) => {
     }
   }
 
-  const updated = await updateCompany(req.params.companyId, req.body);
+  const updated = await updateCompany(req.params.companyId, req.body, user.id);
   return res.json(updated);
 });
 
@@ -146,7 +147,7 @@ companiesRouter.delete('/api/companies/:companyId', async (req, res) => {
     return res.status(404).json({ error: 'Company not found' });
   }
 
-  const result = await deleteCompany(req.params.companyId, {
+  const result = await deleteCompany(req.params.companyId, user.id, {
     deleteLinkedOpportunities: req.body?.deleteLinkedOpportunities === true,
     cascadeToChildCompanies: req.body?.cascadeToChildCompanies === true,
   });
@@ -189,6 +190,18 @@ companiesRouter.post('/api/companies/:companyId/custom-fields', async (req, res)
     value: req.body.value,
   });
 
+  await recordCustomFieldValueActivity({
+    tenantId: user.tenantId!,
+    entityType: 'company',
+    entityId: req.params.companyId,
+    entityLabel: company.name,
+    fieldDefinitionId: definition.id,
+    fieldName: definition.name,
+    oldValue: null,
+    newValue: customFieldValue.value,
+    changedByUserId: user.id,
+  });
+
   return res.status(201).json(customFieldValue);
 });
 
@@ -223,6 +236,19 @@ companiesRouter.patch('/api/companies/:companyId/custom-fields/:valueId', async 
   }
 
   const updated = await updateCustomFieldValue(req.params.valueId, req.body.value);
+
+  await recordCustomFieldValueActivity({
+    tenantId: user.tenantId!,
+    entityType: 'company',
+    entityId: req.params.companyId,
+    entityLabel: company.name,
+    fieldDefinitionId: definition.id,
+    fieldName: definition.name,
+    oldValue: existingValue.value,
+    newValue: updated.value,
+    changedByUserId: user.id,
+  });
+
   return res.json(updated);
 });
 
@@ -252,6 +278,22 @@ companiesRouter.delete('/api/companies/:companyId/custom-fields/:valueId', async
   }
 
   await deleteCustomFieldValue(req.params.valueId);
+
+  const definition = await findCustomFieldDefinitionById(existingValue.customFieldDefinitionId);
+  if (definition) {
+    await recordCustomFieldValueActivity({
+      tenantId: user.tenantId!,
+      entityType: 'company',
+      entityId: req.params.companyId,
+      entityLabel: company.name,
+      fieldDefinitionId: definition.id,
+      fieldName: definition.name,
+      oldValue: existingValue.value,
+      newValue: null,
+      changedByUserId: user.id,
+    });
+  }
+
   return res.status(204).end();
 });
 

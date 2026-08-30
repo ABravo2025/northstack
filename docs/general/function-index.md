@@ -134,17 +134,24 @@ Mecanismo genérico reusado por cada módulo que registra actividad — un solo 
 - **listActivityForEntity(tenantId, entityType, entityId)** — feed del tab de Activity de un registro (Employee/Company/Contact/Opportunity); ownership de `entityId` se valida en la ruta, esta función confía en el caller (mismo criterio que `listNotesForEntity`).
 - **listActivityFeed(input)** — feed tenant-wide de Settings, paginado por cursor `(changedAt, id)` — filtros por `entityType`/`userId`/`action`/`from`/`to`.
 
+### `src/modules/activity/customFieldActivity.ts` (2026-08-30)
+- **recordCustomFieldValueActivity(input)** — un valor de custom field creado/editado/borrado en Employee/Company/Contact se registra como una entrada `update` de Activity Log contra la entidad **dueña** (no como su propio tipo de entidad) — arma un record sintético de un solo campo y lo pasa por `diffEntity` como cualquier otro. Llamado desde `routes/employees.ts`/`companies.ts`/`contacts.ts`, no desde `customFieldService.ts` (ese archivo también sirve `client`/`ticket`/`idea`, fuera del alcance de Activity Log Tier 1).
+
+### `src/modules/activity/fieldConfigs/` (2026-08-30, Activity Log Unidad 2)
+- **resolvers.ts** — `resolveUserName`/`resolveEmployeeName`/`resolveStatusName`/`resolveCatalogName`/`resolveCompanyName`/`resolvePipelineName`/`resolveStageName` (todas `(id) => Promise<string | null>`, consultan Prisma directo, no el service layer — evita ciclos de import con managerId/parentCompanyId self-referenciales) + `resolveMoney(cents, record)` (usa `record.currency`, mismo formato que `frontend/src/lib/currencies.ts`'s `formatMoney`).
+- **employeeFieldConfig.ts** / **companyFieldConfig.ts** / **contactFieldConfig.ts** / **opportunityFieldConfig.ts** — un `ActivityFieldConfigMap` por entidad Tier 1, consumido por su service homónimo. `employeeDisplayName`/`contactDisplayName` (helpers de `${firstName} ${lastName}`) también exportados desde acá, reusados por las rutas para el `entityLabel` de los custom field values.
+
 ### `src/modules/clients/clientService.ts` (módulo legado, ver `features-overview.md`)
 CRUD estándar: **createClient**, **listClients(tenantId)**, **findClientById(id)**, **updateClient(id, input, changedByUserId)**, **deleteClient(id)**.
 
 ### `src/modules/crm/companyService.ts`
-CRUD estándar: **createCompany**, **listCompanies(tenantId)**, **findCompanyById(id)**, **updateCompany(id, input)**, **deleteCompany(id, options?)**.
+CRUD estándar: **createCompany(input, changedByUserId)**, **listCompanies(tenantId)**, **findCompanyById(id)**, **updateCompany(id, input, changedByUserId)**, **deleteCompany(id, changedByUserId, options?)**. Los 3 de escritura registran una entrada en Activity Log (`docs/general/spec-activity-log.md`, 2026-08-30) vía `companyActivityFieldConfig`.
 
 ### `src/modules/crm/contactService.ts`
-CRUD estándar: **createContact**, **listContacts(tenantId)**, **findContactById(id)**, **updateContact(id, input)**, **deleteContact(id, options?)**.
+CRUD estándar: **createContact(input, changedByUserId?)**, **listContacts(tenantId)**, **findContactById(id)**, **updateContact(id, input, changedByUserId)**, **deactivateContact(id, changedByUserId)** (soft-delete, Sales v2 — reemplazó el `deleteContact` legado). Los 3 de escritura registran Activity Log vía `contactActivityFieldConfig` — `createContact` no loguea si `changedByUserId` viene vacío (caso de `publicFormService.ts`, sin usuario autenticado).
 
 ### `src/modules/crm/opportunityService.ts`
-- CRUD estándar: **createOpportunity**, **listOpportunities(tenantId)**, **findOpportunityById(id)**, **updateOpportunity(...)**, **deleteOpportunity(id)**.
+- CRUD estándar: **createOpportunity(input, changedByUserId?)**, **listOpportunities(tenantId)**, **findOpportunityById(id)**, **updateOpportunity(id, tenantId, input)** (`input.changedByUserId` opcional), **deleteOpportunity(id, changedByUserId)**. Los 3 de escritura registran Activity Log vía `opportunityActivityFieldConfig` — mismo criterio de `changedByUserId` opcional en `create` que `contactService.ts`.
 - **addOpportunityContact(tenantId, opportunityId, contactId, role?)** / **removeOpportunityContact(opportunityId, contactId)** — relación N:N Opportunity↔Contact.
 - **listOpportunityStageHistory(tenantId, opportunityId)** — historial de cambios de stage.
 
@@ -191,7 +198,7 @@ CRUD estándar: **createContact**, **listContacts(tenantId)**, **findContactById
 - **findCompensationById(id)**.
 
 ### `src/modules/hr/employeeService.ts`
-- **createEmployee(input)**, **listEmployees(tenantId)** (suma `contractStatus` por fila — Unidad 11), **findEmployeeById(id)**, **findEmployeeByUserId(userId)**, **updateEmployee(...)**, **deleteEmployee(id)**.
+- **createEmployee(input, changedByUserId?)**, **listEmployees(tenantId)** (suma `contractStatus` por fila — Unidad 11), **findEmployeeById(id)**, **findEmployeeByUserId(userId)**, **updateEmployee(id, input, changedByUserId)**, **deleteEmployee(id, changedByUserId)**. Los 3 de escritura registran Activity Log (`docs/general/spec-activity-log.md`, 2026-08-30) vía `employeeActivityFieldConfig` — `changedByUserId` opcional solo en `createEmployee`: solo la ruta directa (`POST /api/hr/employees`) lo pasa hoy, así que solo esa genera entrada; CSV import, onboarding seed data y `publicFormService.ts` la llaman sin ese argumento a propósito (scope cut de Unidad 2, ver el spec) y no generan ninguna.
 - **wouldCreateManagerCycle(...)** — camina la cadena de `managerId` hacia arriba para detectar un ciclo antes de asignar un manager nuevo.
 - **listEmployeeBirthdaysForCalendar(tenantId)** (2026-08-22) — todo empleado con `birthdate` no nulo, para el calendario del Overview. Mismo criterio "devolver todo, filtrar en el frontend" que `listTasksForCalendar`/`listTimeOffRequestsForCalendar`.
 

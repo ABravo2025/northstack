@@ -3,6 +3,8 @@ import { advanceRoundRobinCursor, resolveNextRoundRobinUserId } from './pipeline
 import { createNotification } from '../notifications/notificationService.js';
 import { sendOpportunityStageChangedEmail } from '../../lib/mailer.js';
 import { bestEffort } from '../../lib/bestEffort.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { opportunityActivityFieldConfig } from '../activity/fieldConfigs/opportunityFieldConfig.js';
 import type { Opportunity, Prisma } from '@prisma/client';
 
 export interface CreateOpportunityInput {
@@ -140,7 +142,9 @@ async function maybeAdvanceCompanyToCustomer(tenantId: string, companyId: string
   await prisma.company.update({ where: { id: companyId }, data: { statusId: customerStatus.id } });
 }
 
-export async function createOpportunity(input: CreateOpportunityInput): Promise<Opportunity> {
+// changedByUserId is optional — see employeeService.ts's createEmployee for why
+// (publicFormService.ts's anonymous submission path doesn't pass one, and gets no Activity Log entry).
+export async function createOpportunity(input: CreateOpportunityInput, changedByUserId?: string): Promise<Opportunity> {
   let stageId = input.stageId;
   if (!stageId) {
     const firstStage = await prisma.pipelineStageDefinition.findFirst({
@@ -195,6 +199,19 @@ export async function createOpportunity(input: CreateOpportunityInput): Promise<
   const stage = await prisma.pipelineStageDefinition.findUnique({ where: { id: stageId } });
   if (stage?.outcome === 'won') {
     await maybeAdvanceCompanyToCustomer(input.tenantId, input.companyId);
+  }
+
+  if (changedByUserId) {
+    await recordActivity({
+      tenantId: input.tenantId,
+      entityType: 'opportunity',
+      entityId: opportunity.id,
+      entityLabel: opportunity.name,
+      action: 'create',
+      changedByUserId,
+      after: opportunity,
+      fieldConfig: opportunityActivityFieldConfig,
+    });
   }
 
   return opportunity;
@@ -349,10 +366,26 @@ export async function updateOpportunity(
     }
   }
 
+  if (input.changedByUserId) {
+    await recordActivity({
+      tenantId,
+      entityType: 'opportunity',
+      entityId: id,
+      entityLabel: updated.name,
+      action: 'update',
+      changedByUserId: input.changedByUserId,
+      before: existing,
+      after: updated,
+      fieldConfig: opportunityActivityFieldConfig,
+    });
+  }
+
   return updated;
 }
 
-export async function deleteOpportunity(id: string): Promise<void> {
+export async function deleteOpportunity(id: string, changedByUserId: string): Promise<void> {
+  const existing = await prisma.opportunity.findUniqueOrThrow({ where: { id } });
+
   // No onDelete cascade on OpportunityStageHistory/OpportunityContact's FKs —
   // every Opportunity has at least one history row from creation, so a plain
   // delete would always hit a foreign-key restrict. Clean up children first.
@@ -364,6 +397,17 @@ export async function deleteOpportunity(id: string): Promise<void> {
     prisma.tagAssignment.deleteMany({ where: { entityType: 'opportunity', entityId: id } }),
     prisma.opportunity.delete({ where: { id } }),
   ]);
+
+  await recordActivity({
+    tenantId: existing.tenantId,
+    entityType: 'opportunity',
+    entityId: id,
+    entityLabel: existing.name,
+    action: 'delete',
+    changedByUserId,
+    before: existing,
+    fieldConfig: opportunityActivityFieldConfig,
+  });
 }
 
 export async function addOpportunityContact(tenantId: string, opportunityId: string, contactId: string, role?: string | null) {

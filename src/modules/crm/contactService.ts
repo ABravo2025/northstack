@@ -1,6 +1,8 @@
 import prisma from '../../lib/prisma.js';
 import { listCustomFieldValuesForEntities } from '../hr/customFieldService.js';
 import { listTagsForEntities } from '../crossModule/tagService.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { contactActivityFieldConfig, contactDisplayName } from '../activity/fieldConfigs/contactFieldConfig.js';
 import type { Contact, LeadStatus, Prisma } from '@prisma/client';
 
 export interface CreateContactInput {
@@ -37,47 +39,63 @@ const CONTACT_INCLUDE = {
   leadSource: { select: { id: true, name: true } },
 } satisfies Prisma.ContactInclude;
 
-export async function createContact(input: CreateContactInput): Promise<Contact> {
+// changedByUserId is optional — see employeeService.ts's createEmployee for why
+// (publicFormService.ts's anonymous submission path doesn't pass one, and gets no Activity Log entry).
+export async function createContact(input: CreateContactInput, changedByUserId?: string): Promise<Contact> {
   const companyId = input.companyId ?? null;
   const isPrimary = input.isPrimary ?? false;
 
   // isPrimary is unique per Company (docs/tareas/specredisenosalesv2.md §2.3)
   // — a companyId-less Contact has no Company to be unique against, so the
   // flag is stored as-is but never triggers the demotion below.
-  if (isPrimary && companyId) {
-    return prisma.$transaction(async (tx) => {
-      await tx.contact.updateMany({ where: { companyId, isPrimary: true }, data: { isPrimary: false } });
-      return tx.contact.create({
-        data: {
-          firstName: input.firstName,
-          lastName: input.lastName,
-          email: input.email,
-          phone: input.phone ?? null,
-          companyId,
-          title: input.title ?? null,
-          isPrimary: true,
-          leadStatus: input.leadStatus ?? null,
-          leadSourceId: input.leadSourceId ?? null,
-          tenantId: input.tenantId,
-        },
-      });
+  const contact =
+    isPrimary && companyId
+      ? await prisma.$transaction(async (tx) => {
+          await tx.contact.updateMany({ where: { companyId, isPrimary: true }, data: { isPrimary: false } });
+          return tx.contact.create({
+            data: {
+              firstName: input.firstName,
+              lastName: input.lastName,
+              email: input.email,
+              phone: input.phone ?? null,
+              companyId,
+              title: input.title ?? null,
+              isPrimary: true,
+              leadStatus: input.leadStatus ?? null,
+              leadSourceId: input.leadSourceId ?? null,
+              tenantId: input.tenantId,
+            },
+          });
+        })
+      : await prisma.contact.create({
+          data: {
+            firstName: input.firstName,
+            lastName: input.lastName,
+            email: input.email,
+            phone: input.phone ?? null,
+            companyId,
+            title: input.title ?? null,
+            isPrimary,
+            leadStatus: input.leadStatus ?? null,
+            leadSourceId: input.leadSourceId ?? null,
+            tenantId: input.tenantId,
+          },
+        });
+
+  if (changedByUserId) {
+    await recordActivity({
+      tenantId: input.tenantId,
+      entityType: 'contact',
+      entityId: contact.id,
+      entityLabel: contactDisplayName(contact),
+      action: 'create',
+      changedByUserId,
+      after: contact,
+      fieldConfig: contactActivityFieldConfig,
     });
   }
 
-  return prisma.contact.create({
-    data: {
-      firstName: input.firstName,
-      lastName: input.lastName,
-      email: input.email,
-      phone: input.phone ?? null,
-      companyId,
-      title: input.title ?? null,
-      isPrimary,
-      leadStatus: input.leadStatus ?? null,
-      leadSourceId: input.leadSourceId ?? null,
-      tenantId: input.tenantId,
-    },
-  });
+  return contact;
 }
 
 // includeInactive defaults to false — a deactivated Contact (see
@@ -110,7 +128,9 @@ export async function findContactById(id: string): Promise<Contact | null> {
   });
 }
 
-export async function updateContact(id: string, input: UpdateContactInput): Promise<Contact> {
+export async function updateContact(id: string, input: UpdateContactInput, changedByUserId: string): Promise<Contact> {
+  const existing = await prisma.contact.findUniqueOrThrow({ where: { id } });
+
   // Whitelist explicitly — never pass the input object straight through, since it
   // may originate from req.body and carry extra fields (e.g. tenantId) that would
   // otherwise reassign this row across tenants.
@@ -131,27 +151,42 @@ export async function updateContact(id: string, input: UpdateContactInput): Prom
   // isPrimary: true and only gets relinked to a different company (companyId changes,
   // isPrimary isn't resent) still has to demote whoever's primary there today, or the target
   // company ends up with two primary contacts.
+  let demoteOthersInCompanyId: string | null = null;
   if (input.isPrimary !== undefined || input.companyId !== undefined) {
-    const current = await prisma.contact.findUnique({ where: { id }, select: { isPrimary: true, companyId: true } });
-    const effectiveIsPrimary = input.isPrimary !== undefined ? input.isPrimary : current?.isPrimary ?? false;
-    const effectiveCompanyId = input.companyId !== undefined ? input.companyId : current?.companyId ?? null;
-
+    const effectiveIsPrimary = input.isPrimary !== undefined ? input.isPrimary : existing.isPrimary;
+    const effectiveCompanyId = input.companyId !== undefined ? input.companyId : existing.companyId;
     if (effectiveIsPrimary && effectiveCompanyId) {
-      return prisma.$transaction(async (tx) => {
-        await tx.contact.updateMany({
-          where: { companyId: effectiveCompanyId, isPrimary: true, id: { not: id } },
-          data: { isPrimary: false },
-        });
-        return tx.contact.update({ where: { id }, data, include: CONTACT_INCLUDE });
-      });
+      demoteOthersInCompanyId = effectiveCompanyId;
     }
   }
 
-  return prisma.contact.update({
-    where: { id },
-    data,
-    include: CONTACT_INCLUDE,
+  const updated = demoteOthersInCompanyId
+    ? await prisma.$transaction(async (tx) => {
+        await tx.contact.updateMany({
+          where: { companyId: demoteOthersInCompanyId!, isPrimary: true, id: { not: id } },
+          data: { isPrimary: false },
+        });
+        return tx.contact.update({ where: { id }, data, include: CONTACT_INCLUDE });
+      })
+    : await prisma.contact.update({
+        where: { id },
+        data,
+        include: CONTACT_INCLUDE,
+      });
+
+  await recordActivity({
+    tenantId: existing.tenantId,
+    entityType: 'contact',
+    entityId: id,
+    entityLabel: contactDisplayName(updated),
+    action: 'update',
+    changedByUserId,
+    before: existing,
+    after: updated,
+    fieldConfig: contactActivityFieldConfig,
   });
+
+  return updated;
 }
 
 export interface DeactivateContactResult {
@@ -170,8 +205,8 @@ export interface DeactivateContactResult {
 // same "unlink, don't cascade-destroy" instinct as companyService.ts's
 // deleteCompany with Contacts. Never blocks, never destroys anything — there
 // was no destructive choice left to ask the user about.
-export async function deactivateContact(id: string): Promise<DeactivateContactResult> {
-  return prisma.$transaction(async (tx) => {
+export async function deactivateContact(id: string, changedByUserId: string): Promise<DeactivateContactResult> {
+  const result = await prisma.$transaction(async (tx) => {
     const links = await tx.opportunityContact.findMany({ where: { contactId: id }, select: { opportunityId: true } });
     const deactivatedOpportunityIds: string[] = [];
 
@@ -199,4 +234,17 @@ export async function deactivateContact(id: string): Promise<DeactivateContactRe
     const contact = await tx.contact.update({ where: { id }, data: { isActive: false }, include: CONTACT_INCLUDE });
     return { contact, deactivatedOpportunityIds };
   });
+
+  await recordActivity({
+    tenantId: result.contact.tenantId,
+    entityType: 'contact',
+    entityId: id,
+    entityLabel: contactDisplayName(result.contact),
+    action: 'delete',
+    changedByUserId,
+    before: result.contact,
+    fieldConfig: contactActivityFieldConfig,
+  });
+
+  return result;
 }

@@ -4,6 +4,8 @@ import { listCustomFieldValuesForEntities } from './customFieldService.js';
 import { findActiveTimeOffRequestsForEmployees } from './timeOffRequestService.js';
 import { listTagsForEntities } from '../crossModule/tagService.js';
 import { wouldCreateCycle } from '../../lib/cycleDetection.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { employeeActivityFieldConfig, employeeDisplayName } from '../activity/fieldConfigs/employeeFieldConfig.js';
 import type { ContractType, Employee, PersonType, Prisma } from '@prisma/client';
 
 export interface CreateEmployeeInput {
@@ -43,10 +45,14 @@ export interface UpdateEmployeeInput {
   managerId?: string | null;
 }
 
-export async function createEmployee(input: CreateEmployeeInput): Promise<Employee> {
+// changedByUserId is optional — every caller with a real authenticated actor (the route, CSV
+// import, onboarding sample data) passes it; publicFormService.ts's anonymous form submission
+// path doesn't (there's no User behind a public form fill-out), and simply doesn't get an Activity
+// Log entry — a deliberate scope cut, see docs/general/spec-activity-log.md.
+export async function createEmployee(input: CreateEmployeeInput, changedByUserId?: string): Promise<Employee> {
   const statusId = input.statusId ?? (await getDefaultStatusId(input.tenantId, 'employee'));
 
-  return prisma.employee.create({
+  const employee = await prisma.employee.create({
     data: {
       firstName: input.firstName,
       lastName: input.lastName,
@@ -66,6 +72,21 @@ export async function createEmployee(input: CreateEmployeeInput): Promise<Employ
       tenantId: input.tenantId,
     },
   });
+
+  if (changedByUserId) {
+    await recordActivity({
+      tenantId: input.tenantId,
+      entityType: 'employee',
+      entityId: employee.id,
+      entityLabel: employeeDisplayName(employee),
+      action: 'create',
+      changedByUserId,
+      after: employee,
+      fieldConfig: employeeActivityFieldConfig,
+    });
+  }
+
+  return employee;
 }
 
 // Walks up the reporting chain from `proposedManagerId` to check whether
@@ -228,12 +249,37 @@ export async function updateEmployee(
     });
   }
 
+  await recordActivity({
+    tenantId: existing.tenantId,
+    entityType: 'employee',
+    entityId: id,
+    entityLabel: employeeDisplayName(updated),
+    action: 'update',
+    changedByUserId,
+    before: existing,
+    after: updated,
+    fieldConfig: employeeActivityFieldConfig,
+  });
+
   return updated;
 }
 
-export async function deleteEmployee(id: string): Promise<void> {
+export async function deleteEmployee(id: string, changedByUserId: string): Promise<void> {
+  const existing = await prisma.employee.findUniqueOrThrow({ where: { id } });
+
   await prisma.employee.delete({
     where: { id },
+  });
+
+  await recordActivity({
+    tenantId: existing.tenantId,
+    entityType: 'employee',
+    entityId: id,
+    entityLabel: employeeDisplayName(existing),
+    action: 'delete',
+    changedByUserId,
+    before: existing,
+    fieldConfig: employeeActivityFieldConfig,
   });
 }
 

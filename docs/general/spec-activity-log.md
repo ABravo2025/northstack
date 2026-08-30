@@ -1,6 +1,10 @@
 # Spec Activity Log
 
-**Estado:** 🚧 Unidades 1-3 de 6 completas y en `staging` (2026-08-30). Unidad 1: schema
+**Estado:** 🚧 Unidades 1-4 de 6 completas y en `staging` (2026-08-30). Unidad 4 (nueva): extendió el
+wiring de create/update a HR/Payroll — TimeOffPolicy, TimeOffRequest, StatusDefinition,
+CustomFieldDefinition, FieldCatalogDefinition, PayFrequency, PaymentMethod, EmployeeCompensation
+(create-only, versionado), EmployeeTermination, PayrollRun — mismo mecanismo genérico de Unidad 1,
+verificado contra `staging` real. Unidad 1: schema
 (`ActivityLogEntry` + `ActivityEntityType`/`ActivityAction`), `activityLogService.ts` genérico,
 `canViewActivityLog`, rutas `src/routes/activity.ts`. Unidad 2: wiring real de Employee/Company/
 Contact/Opportunity (create/update/delete) + sus custom field values — ver §6 para el scope cut
@@ -214,7 +218,7 @@ de tipo "customFieldValue".
   "Activity" en `DetailSidebar.tsx` (los 4 modales lo comparten, mismo mecanismo que
   `EntityNotesList`/`EntityTasksList`). Solo lectura, sin compose — cada fila:
   avatar+nombre+timestamp+summary, expandible para ver el detalle campo por campo.
-- **`frontend/src/pages/ActivitySettingsPage.tsx`** — página nueva bajo `/settings`
+- **`frontend/src/pages/ActivityLogSettingsPage.tsx`** — página nueva bajo `/settings`
   (`SettingsSidebar.tsx`/`settingsSections.tsx`), gateada client-side (oculta si `!canViewActivityLog`,
   mismo patrón ya usado para ocultar secciones owner-only de Settings). Filtros reusando
   `FilterBar`/`DateRangeFilter.tsx` (ya existe, de Dashboards) por tipo de entidad, usuario y rango
@@ -232,10 +236,10 @@ de la plataforma" tal como se confirmó en la Decisión 1.
 
 | # | Contenido | Entidades |
 |---|---|---|
-| **1** | Schema (`ActivityLogEntry` + 2 enums), `activityLogService.ts` (diff/summary/record/list), `canViewActivityLog`, rutas `src/routes/activity.ts` | — (plomería, sin UI todavía) |
-| **2** | Wire-up de las 4 entidades con modal + sus custom field values | Employee, Company, Contact, Opportunity |
-| **3** | Frontend: tab de Activity en los 4 modales + página de Settings con filtros | (consume Unidad 1+2) |
-| **4** | Extensión HR/Payroll | TimeOffPolicy, TimeOffRequest, EmployeeCompensation, EmployeeTermination, PayrollRun, PayFrequency, PaymentMethod, StatusDefinition, CustomFieldDefinition, FieldCatalogDefinition |
+| **1** ✅ | Schema (`ActivityLogEntry` + 2 enums), `activityLogService.ts` (diff/summary/record/list), `canViewActivityLog`, rutas `src/routes/activity.ts` | — (plomería, sin UI todavía) |
+| **2** ✅ | Wire-up de las 4 entidades con modal + sus custom field values | Employee, Company, Contact, Opportunity |
+| **3** ✅ | Frontend: tab de Activity en los 4 modales + página de Settings con filtros | (consume Unidad 1+2) |
+| **4** ✅ | Extensión HR/Payroll | TimeOffPolicy, TimeOffRequest, EmployeeCompensation, EmployeeTermination, PayrollRun, PayFrequency, PaymentMethod, StatusDefinition, CustomFieldDefinition, FieldCatalogDefinition |
 | **5** | Extensión CRM + cross-module + vistas/forms | Pipeline, PipelineStage, Task, Note, Tag, SavedView, PublicForm |
 | **6** | Extensión cuenta/plataforma | Tenant (perfil/currency), User (rol/status), Invitation, Subscription, GoogleCalendarConnection, StripeConnection |
 

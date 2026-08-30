@@ -58,3 +58,21 @@ export function resolveMoney(cents: unknown, record: Record<string, unknown>): s
   const currency = typeof record.currency === 'string' ? record.currency : 'USD';
   return new Intl.NumberFormat('en-US', { style: 'currency', currency }).format(cents / 100);
 }
+
+export async function resolveTimeOffPolicyName(id: unknown): Promise<string | null> {
+  if (typeof id !== 'string') return null;
+  const policy = await prisma.timeOffPolicyDefinition.findUnique({ where: { id }, select: { name: true } });
+  return policy?.name ?? null;
+}
+
+export async function resolvePayFrequencyName(id: unknown): Promise<string | null> {
+  if (typeof id !== 'string') return null;
+  const freq = await prisma.payFrequencyDefinition.findUnique({ where: { id }, select: { name: true } });
+  return freq?.name ?? null;
+}
+
+export async function resolvePaymentMethodName(id: unknown): Promise<string | null> {
+  if (typeof id !== 'string') return null;
+  const method = await prisma.paymentMethodDefinition.findUnique({ where: { id }, select: { name: true } });
+  return method?.name ?? null;
+}

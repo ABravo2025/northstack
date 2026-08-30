@@ -1,4 +1,6 @@
 import prisma from '../../lib/prisma.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { statusDefinitionActivityFieldConfig } from '../activity/fieldConfigs/statusDefinitionFieldConfig.js';
 import type { EntityType, StatusDefinition } from '@prisma/client';
 
 type PrismaTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
@@ -61,7 +63,10 @@ export interface CreateStatusDefinitionInput {
   isDefault?: boolean;
 }
 
-export async function createStatusDefinition(input: CreateStatusDefinitionInput): Promise<StatusDefinition> {
+export async function createStatusDefinition(
+  input: CreateStatusDefinitionInput,
+  changedByUserId: string,
+): Promise<StatusDefinition> {
   if (input.isDefault) {
     await prisma.statusDefinition.updateMany({
       where: { tenantId: input.tenantId, entityType: input.entityType },
@@ -69,7 +74,7 @@ export async function createStatusDefinition(input: CreateStatusDefinitionInput)
     });
   }
 
-  return prisma.statusDefinition.create({
+  const status = await prisma.statusDefinition.create({
     data: {
       tenantId: input.tenantId,
       entityType: input.entityType,
@@ -79,6 +84,19 @@ export async function createStatusDefinition(input: CreateStatusDefinitionInput)
       isDefault: input.isDefault ?? false,
     },
   });
+
+  await recordActivity({
+    tenantId: input.tenantId,
+    entityType: 'statusDefinition',
+    entityId: status.id,
+    entityLabel: `${status.name} (${status.entityType})`,
+    action: 'create',
+    changedByUserId,
+    after: status,
+    fieldConfig: statusDefinitionActivityFieldConfig,
+  });
+
+  return status;
 }
 
 export async function listStatusDefinitions(
@@ -113,6 +131,7 @@ export async function updateStatusDefinition(
   id: string,
   tenantId: string,
   input: UpdateStatusDefinitionInput,
+  changedByUserId: string,
 ): Promise<StatusDefinitionUpdateResult> {
   const existing = await prisma.statusDefinition.findUnique({ where: { id } });
   if (!existing || existing.tenantId !== tenantId) {
@@ -134,6 +153,19 @@ export async function updateStatusDefinition(
   }
 
   const updated = await prisma.statusDefinition.update({ where: { id }, data: input });
+
+  await recordActivity({
+    tenantId,
+    entityType: 'statusDefinition',
+    entityId: id,
+    entityLabel: `${updated.name} (${updated.entityType})`,
+    action: 'update',
+    changedByUserId,
+    before: existing,
+    after: updated,
+    fieldConfig: statusDefinitionActivityFieldConfig,
+  });
+
   return { success: true, statusDefinition: updated };
 }
 

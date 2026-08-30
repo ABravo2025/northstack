@@ -2524,3 +2524,44 @@ crudos en vez de nombres legibles, es severidad media-alta (dato visible pero in
 alta severidad si un `member` logra ver el feed (gate roto) — confirmar que también el `GET /api/activity/feed`
 da 403, no solo que la UI lo esconde. El resto es medio/bajo — filtros y paginación que no andan
 son molestos pero no exponen ni corrompen datos.
+
+---
+
+## QA-59 — Activity Log, Unidad 4: extensión a HR/Payroll (2026-08-30, en `staging`)
+
+**Por qué existe esta tarea:** extiende el wiring de Unidad 2 a 10 entidades más de HR/Payroll —
+TimeOffPolicy, TimeOffRequest, StatusDefinition, CustomFieldDefinition, FieldCatalogDefinition,
+PayFrequency, PaymentMethod, EmployeeCompensation (create-only, versionado), EmployeeTermination,
+PayrollRun. Ninguna de estas tiene modal de detalle propio, así que solo se ven en
+`Settings → Activity Log` (ya construido en QA-58), no en un tab — no hay superficie nueva de UI en
+esta unidad. Verificado con una corrida directa contra `staging` (crear/editar una Time Off Policy,
+un Status y una Pay Frequency reales, confirmar las 5 filas resultantes con el diff correcto,
+incluyendo `daysPerYear: 10 → 15` y el nombre resuelto en vez del id crudo).
+
+### A. Confirmar en `Settings → Activity Log` (filtro "All types")
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Crear/editar una Time Off Policy (`/hr/time-off` → Policies) | Filas `Created Time Off Policy "..."` / `Changed Days per year: X → Y`, etc. |
+| 2 | Un empleado pide Time Off, y su manager lo aprueba/rechaza | Fila `create` al pedirlo, fila `update` al decidirlo — `changes` trae el nombre de la Policy, no su id |
+| 3 | Crear/editar un Status, un Custom Field, o un valor de catálogo (Department/Job Title/etc.) desde el header de columna de cualquier tabla | Filas correspondientes, `entityLabel` incluye a qué módulo pertenece (ej. "Active (employee)") |
+| 4 | Crear/editar una Pay Frequency o un Payment Method (`/hr/payroll` → Payment Policies) | Filas correspondientes |
+| 5 | Dar de alta el contrato inicial de un Contractor/Employee | Fila `create` de tipo Compensation — confirmar que **no** aparece ningún dato de cuenta bancaria/IBAN ni el PDF, ni siquiera cifrado |
+| 6 | Reasignar/dar un aumento a alguien ya confirmado | Nueva fila `create` de Compensation (nunca `update` — cada cambio es un registro nuevo) |
+| 7 | Dar de baja a un empleado (Terminate), y luego cancelar una baja programada a futuro | Fila `create` al dar de baja, fila `update` al cancelar |
+| 8 | Crear un Payroll Run y confirmarlo | Fila `create` al crearlo, fila `update` (`Status: draft → confirmed`) al confirmarlo |
+| 9 | Importar Employees vía CSV, o usar "Load sample data" del onboarding | Sin regresión (se crean igual que siempre) — pero **tampoco** deberían generar filas de EmployeeCompensation/etc. si esos flujos no pasan por las funciones tocadas acá (la mayoría de este caso ya está cubierto por QA-57 C, esto es solo para notar si algo cambió) |
+
+### B. Regresión
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 10 | `npm run build`/`npm test` (backend, 207/207) y `npm run build` (frontend) | Los tres en verde |
+| 11 | Uso normal de cualquiera de las 10 entidades desde la UI (crear/editar Time Off, Payroll, catálogos) | Se comporta exactamente igual que antes — la escritura de Activity Log es invisible y best-effort |
+
+### Al encontrar una falla
+
+El caso A.5 es el más sensible — si aparece cualquier dato de cuenta bancaria/IBAN/PDF en una
+entrada de Activity Log, es severidad **alta** (fuga de dato sensible), aunque esté "solo" en la
+base y no expuesto todavía en ninguna UI de Settings visible a todos. El resto sigue el mismo
+criterio que QA-57: dato incorrecto es media, regresión en la operación real es alta.

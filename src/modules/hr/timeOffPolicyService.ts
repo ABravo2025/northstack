@@ -1,4 +1,6 @@
 import prisma from '../../lib/prisma.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { timeOffPolicyActivityFieldConfig } from '../activity/fieldConfigs/timeOffPolicyFieldConfig.js';
 import type { TimeOffAccrualMethod, TimeOffPolicyDefinition } from '@prisma/client';
 
 export interface CreateTimeOffPolicyInput {
@@ -11,8 +13,11 @@ export interface CreateTimeOffPolicyInput {
   requiresApproval?: boolean;
 }
 
-export async function createTimeOffPolicy(input: CreateTimeOffPolicyInput): Promise<TimeOffPolicyDefinition> {
-  return prisma.timeOffPolicyDefinition.create({
+export async function createTimeOffPolicy(
+  input: CreateTimeOffPolicyInput,
+  changedByUserId: string,
+): Promise<TimeOffPolicyDefinition> {
+  const policy = await prisma.timeOffPolicyDefinition.create({
     data: {
       tenantId: input.tenantId,
       name: input.name,
@@ -23,6 +28,19 @@ export async function createTimeOffPolicy(input: CreateTimeOffPolicyInput): Prom
       requiresApproval: input.requiresApproval ?? true,
     },
   });
+
+  await recordActivity({
+    tenantId: input.tenantId,
+    entityType: 'timeOffPolicy',
+    entityId: policy.id,
+    entityLabel: policy.name,
+    action: 'create',
+    changedByUserId,
+    after: policy,
+    fieldConfig: timeOffPolicyActivityFieldConfig,
+  });
+
+  return policy;
 }
 
 export async function listTimeOffPolicies(tenantId: string): Promise<TimeOffPolicyDefinition[]> {
@@ -56,6 +74,7 @@ export async function updateTimeOffPolicy(
   id: string,
   tenantId: string,
   input: UpdateTimeOffPolicyInput,
+  changedByUserId: string,
 ): Promise<TimeOffPolicyUpdateResult> {
   const existing = await prisma.timeOffPolicyDefinition.findUnique({ where: { id } });
   if (!existing || existing.tenantId !== tenantId) {
@@ -63,5 +82,18 @@ export async function updateTimeOffPolicy(
   }
 
   const updated = await prisma.timeOffPolicyDefinition.update({ where: { id }, data: input });
+
+  await recordActivity({
+    tenantId,
+    entityType: 'timeOffPolicy',
+    entityId: id,
+    entityLabel: updated.name,
+    action: 'update',
+    changedByUserId,
+    before: existing,
+    after: updated,
+    fieldConfig: timeOffPolicyActivityFieldConfig,
+  });
+
   return { success: true, policy: updated };
 }

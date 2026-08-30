@@ -67,14 +67,17 @@ payrollRouter.post('/api/hr/pay-frequencies', async (req, res) => {
     return res.status(400).json({ error: 'Cadence and anchorConfig are required' });
   }
 
-  const frequency = await createPayFrequency({
-    tenantId: user.tenantId!,
-    name,
-    cadence: req.body.cadence,
-    anchorConfig: req.body.anchorConfig,
-    dueDateOffset: req.body.dueDateOffset,
-    dueDateCustomDays: req.body.dueDateCustomDays,
-  });
+  const frequency = await createPayFrequency(
+    {
+      tenantId: user.tenantId!,
+      name,
+      cadence: req.body.cadence,
+      anchorConfig: req.body.anchorConfig,
+      dueDateOffset: req.body.dueDateOffset,
+      dueDateCustomDays: req.body.dueDateCustomDays,
+    },
+    user.id,
+  );
   return res.status(201).json(frequency);
 });
 
@@ -93,15 +96,20 @@ payrollRouter.patch('/api/hr/pay-frequencies/:id', async (req, res) => {
     return res.status(404).json({ error: 'Pay frequency not found' });
   }
 
-  const result = await updatePayFrequency(req.params.id, user.tenantId!, {
-    name: req.body.name,
-    cadence: req.body.cadence,
-    anchorConfig: req.body.anchorConfig,
-    dueDateOffset: req.body.dueDateOffset,
-    dueDateCustomDays: req.body.dueDateCustomDays,
-    isActive: req.body.isActive,
-    order: req.body.order,
-  });
+  const result = await updatePayFrequency(
+    req.params.id,
+    user.tenantId!,
+    {
+      name: req.body.name,
+      cadence: req.body.cadence,
+      anchorConfig: req.body.anchorConfig,
+      dueDateOffset: req.body.dueDateOffset,
+      dueDateCustomDays: req.body.dueDateCustomDays,
+      isActive: req.body.isActive,
+      order: req.body.order,
+    },
+    user.id,
+  );
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }
@@ -135,7 +143,7 @@ payrollRouter.post('/api/hr/payment-methods', async (req, res) => {
     return res.status(400).json({ error: 'Name is required' });
   }
 
-  const method = await createPaymentMethod({ tenantId: user.tenantId!, name });
+  const method = await createPaymentMethod({ tenantId: user.tenantId!, name }, user.id);
   return res.status(201).json(method);
 });
 
@@ -154,11 +162,16 @@ payrollRouter.patch('/api/hr/payment-methods/:id', async (req, res) => {
     return res.status(404).json({ error: 'Payment method not found' });
   }
 
-  const result = await updatePaymentMethod(req.params.id, user.tenantId!, {
-    name: req.body.name,
-    isActive: req.body.isActive,
-    order: req.body.order,
-  });
+  const result = await updatePaymentMethod(
+    req.params.id,
+    user.tenantId!,
+    {
+      name: req.body.name,
+      isActive: req.body.isActive,
+      order: req.body.order,
+    },
+    user.id,
+  );
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }
@@ -392,7 +405,7 @@ payrollRouter.post('/api/hr/payroll/runs/:id/confirm', async (req, res) => {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  const result = await confirmRun(user.tenantId!, req.params.id);
+  const result = await confirmRun(user.tenantId!, req.params.id, user.id);
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }

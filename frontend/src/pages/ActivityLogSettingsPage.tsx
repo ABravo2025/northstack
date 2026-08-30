@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api, type ActivityLogEntry, type TaskEntityType, type TenantUser } from '../api';
+import { api, type ActivityEntityType, type ActivityLogEntry, type TenantUser } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import TableSkeleton from '../components/common/TableSkeleton';
 import Avatar from '../components/common/Avatar';
@@ -12,13 +12,23 @@ interface ActivityLogSettingsPageProps {
   user: { role: string };
 }
 
-// Only Employee/Company/Contact/Opportunity have any real data yet (Unit 2 of
-// spec-activity-log.md) — widen this list once a later unit wires up more entity types.
-const ENTITY_TYPE_OPTIONS: { value: TaskEntityType; label: string }[] = [
+// Only entity types with a real caller so far (Unit 2: Employee/Company/Contact/Opportunity;
+// Unit 4: HR/Payroll catalogs+records) — widen this list once a later unit wires up more.
+const ENTITY_TYPE_OPTIONS: { value: ActivityEntityType; label: string }[] = [
   { value: 'employee', label: 'Employee' },
   { value: 'company', label: 'Company' },
   { value: 'contact', label: 'Contact' },
   { value: 'opportunity', label: 'Opportunity' },
+  { value: 'timeOffPolicy', label: 'Time Off Policy' },
+  { value: 'timeOffRequest', label: 'Time Off Request' },
+  { value: 'employeeCompensation', label: 'Compensation' },
+  { value: 'employeeTermination', label: 'Termination' },
+  { value: 'payrollRun', label: 'Payroll Run' },
+  { value: 'payFrequency', label: 'Pay Frequency' },
+  { value: 'paymentMethod', label: 'Payment Method' },
+  { value: 'statusDefinition', label: 'Status' },
+  { value: 'customFieldDefinition', label: 'Custom Field' },
+  { value: 'fieldCatalogDefinition', label: 'Field Catalog' },
 ];
 
 const ACTION_OPTIONS: { value: 'create' | 'update' | 'delete'; label: string }[] = [
@@ -33,11 +43,21 @@ function ActionIcon({ action }: { action: ActivityLogEntry['action'] }) {
   return <PencilIcon className="h-3.5 w-3.5" />;
 }
 
-const ENTITY_TYPE_LABEL: Record<TaskEntityType, string> = {
+const ENTITY_TYPE_LABEL: Record<ActivityEntityType, string> = {
   employee: 'Employee',
   company: 'Company',
   contact: 'Contact',
   opportunity: 'Opportunity',
+  timeOffPolicy: 'Time Off Policy',
+  timeOffRequest: 'Time Off Request',
+  employeeCompensation: 'Compensation',
+  employeeTermination: 'Termination',
+  payrollRun: 'Payroll Run',
+  payFrequency: 'Pay Frequency',
+  paymentMethod: 'Payment Method',
+  statusDefinition: 'Status',
+  customFieldDefinition: 'Custom Field',
+  fieldCatalogDefinition: 'Field Catalog',
 };
 
 function FeedRow({ entry }: { entry: ActivityLogEntry }) {
@@ -96,7 +116,7 @@ export default function ActivityLogSettingsPage({ token, user }: ActivityLogSett
   const [loadingMore, setLoadingMore] = useState(false);
   const [users, setUsers] = useState<TenantUser[]>([]);
 
-  const [entityType, setEntityType] = useState<TaskEntityType | ''>('');
+  const [entityType, setEntityType] = useState<ActivityEntityType | ''>('');
   const [action, setAction] = useState<'create' | 'update' | 'delete' | ''>('');
   const [userId, setUserId] = useState('');
   const [presetKey, setPresetKey] = useState<PresetKey>(DEFAULT_PRESET);
@@ -172,7 +192,7 @@ export default function ActivityLogSettingsPage({ token, user }: ActivityLogSett
       </div>
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <select className="select-compact" value={entityType} onChange={(e) => setEntityType(e.target.value as TaskEntityType | '')}>
+        <select className="select-compact" value={entityType} onChange={(e) => setEntityType(e.target.value as ActivityEntityType | '')}>
           <option value="">All types</option>
           {ENTITY_TYPE_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>

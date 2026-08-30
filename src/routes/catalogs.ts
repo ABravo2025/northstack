@@ -30,14 +30,17 @@ catalogsRouter.post('/api/hr/custom-fields', async (req, res) => {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  const customField = await createCustomFieldDefinition({
-    tenantId: user.tenantId!,
-    name: req.body.name,
-    entityType: req.body.entityType,
-    fieldType: req.body.fieldType,
-    options: req.body.options,
-    required: Boolean(req.body.required),
-  });
+  const customField = await createCustomFieldDefinition(
+    {
+      tenantId: user.tenantId!,
+      name: req.body.name,
+      entityType: req.body.entityType,
+      fieldType: req.body.fieldType,
+      options: req.body.options,
+      required: Boolean(req.body.required),
+    },
+    user.id,
+  );
 
   return res.status(201).json(customField);
 });
@@ -57,12 +60,16 @@ catalogsRouter.patch('/api/hr/custom-fields/:definitionId', async (req, res) => 
     return res.status(404).json({ error: 'Custom field definition not found' });
   }
 
-  const updated = await updateCustomFieldDefinition(req.params.definitionId, {
-    name: req.body.name,
-    required: req.body.required,
-    options: req.body.options,
-    isActive: req.body.isActive,
-  });
+  const updated = await updateCustomFieldDefinition(
+    req.params.definitionId,
+    {
+      name: req.body.name,
+      required: req.body.required,
+      options: req.body.options,
+      isActive: req.body.isActive,
+    },
+    user.id,
+  );
   return res.json(updated);
 });
 
@@ -110,14 +117,17 @@ catalogsRouter.post('/api/status-definitions', async (req, res) => {
     return res.status(400).json({ error: 'Name is required' });
   }
 
-  const status = await createStatusDefinition({
-    tenantId: user.tenantId!,
-    entityType: req.body.entityType,
-    name: name.trim(),
-    color: req.body.color,
-    order: req.body.order,
-    isDefault: Boolean(req.body.isDefault),
-  });
+  const status = await createStatusDefinition(
+    {
+      tenantId: user.tenantId!,
+      entityType: req.body.entityType,
+      name: name.trim(),
+      color: req.body.color,
+      order: req.body.order,
+      isDefault: Boolean(req.body.isDefault),
+    },
+    user.id,
+  );
 
   return res.status(201).json(status);
 });
@@ -132,13 +142,18 @@ catalogsRouter.patch('/api/status-definitions/:definitionId', async (req, res) =
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  const result = await updateStatusDefinition(req.params.definitionId, user.tenantId!, {
-    name: req.body.name,
-    color: req.body.color,
-    order: req.body.order,
-    isDefault: req.body.isDefault,
-    isActive: req.body.isActive,
-  });
+  const result = await updateStatusDefinition(
+    req.params.definitionId,
+    user.tenantId!,
+    {
+      name: req.body.name,
+      color: req.body.color,
+      order: req.body.order,
+      isDefault: req.body.isDefault,
+      isActive: req.body.isActive,
+    },
+    user.id,
+  );
 
   if (!result.success) {
     return res.status(400).json({ error: result.error });
@@ -181,12 +196,15 @@ catalogsRouter.post('/api/field-catalog', async (req, res) => {
     return res.status(400).json({ error: `kind must be one of: ${VALID_CATALOG_KINDS.join(', ')}` });
   }
 
-  const definition = await createFieldCatalogDefinition({
-    tenantId: user.tenantId!,
-    kind: req.body.kind,
-    name: name.trim(),
-    order: req.body.order,
-  });
+  const definition = await createFieldCatalogDefinition(
+    {
+      tenantId: user.tenantId!,
+      kind: req.body.kind,
+      name: name.trim(),
+      order: req.body.order,
+    },
+    user.id,
+  );
 
   return res.status(201).json(definition);
 });
@@ -201,11 +219,16 @@ catalogsRouter.patch('/api/field-catalog/:definitionId', async (req, res) => {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  const result = await updateFieldCatalogDefinition(req.params.definitionId, user.tenantId!, {
-    name: req.body.name,
-    order: req.body.order,
-    isActive: req.body.isActive,
-  });
+  const result = await updateFieldCatalogDefinition(
+    req.params.definitionId,
+    user.tenantId!,
+    {
+      name: req.body.name,
+      order: req.body.order,
+      isActive: req.body.isActive,
+    },
+    user.id,
+  );
 
   if (!result.success) {
     return res.status(400).json({ error: result.error });

@@ -2,6 +2,8 @@ import prisma from '../../lib/prisma.js';
 import type { EmployeeCompensation, PayrollCompensationType, PersonType } from '@prisma/client';
 import { createInvitation } from '../tenant/invitationService.js';
 import { renderContractPdf } from './contractPdfService.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { employeeCompensationActivityFieldConfig } from '../activity/fieldConfigs/employeeCompensationFieldConfig.js';
 
 export interface CreateCompensationInput {
   tenantId: string;
@@ -93,6 +95,17 @@ export async function createCompensation(input: CreateCompensationInput): Promis
       createdByUserId: input.createdByUserId,
       contractPdf: draftPdfBuffer,
     },
+  });
+
+  await recordActivity({
+    tenantId: input.tenantId,
+    entityType: 'employeeCompensation',
+    entityId: compensation.id,
+    entityLabel: `${employee.firstName} ${employee.lastName} — compensation`,
+    action: 'create',
+    changedByUserId: input.createdByUserId,
+    after: compensation,
+    fieldConfig: employeeCompensationActivityFieldConfig,
   });
 
   // Unidad 6: only the person's very first-ever contract, while they have no

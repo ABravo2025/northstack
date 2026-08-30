@@ -1,5 +1,7 @@
 import { randomUUID } from 'crypto';
 import prisma from '../../lib/prisma.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { paymentMethodActivityFieldConfig } from '../activity/fieldConfigs/paymentMethodFieldConfig.js';
 import type { PaymentMethodDefinition } from '@prisma/client';
 
 type PrismaTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
@@ -22,19 +24,35 @@ export interface CreatePaymentMethodInput {
   name: string;
 }
 
-export async function createPaymentMethod(input: CreatePaymentMethodInput): Promise<PaymentMethodDefinition> {
+export async function createPaymentMethod(
+  input: CreatePaymentMethodInput,
+  changedByUserId: string,
+): Promise<PaymentMethodDefinition> {
   const maxOrder = await prisma.paymentMethodDefinition.aggregate({
     where: { tenantId: input.tenantId },
     _max: { order: true },
   });
 
-  return prisma.paymentMethodDefinition.create({
+  const method = await prisma.paymentMethodDefinition.create({
     data: {
       tenantId: input.tenantId,
       name: input.name,
       order: (maxOrder._max.order ?? -1) + 1,
     },
   });
+
+  await recordActivity({
+    tenantId: input.tenantId,
+    entityType: 'paymentMethod',
+    entityId: method.id,
+    entityLabel: method.name,
+    action: 'create',
+    changedByUserId,
+    after: method,
+    fieldConfig: paymentMethodActivityFieldConfig,
+  });
+
+  return method;
 }
 
 // Returns both active and inactive — same reasoning as
@@ -67,6 +85,7 @@ export async function updatePaymentMethod(
   id: string,
   tenantId: string,
   input: UpdatePaymentMethodInput,
+  changedByUserId: string,
 ): Promise<PaymentMethodUpdateResult> {
   const existing = await prisma.paymentMethodDefinition.findUnique({ where: { id } });
   if (!existing || existing.tenantId !== tenantId) {
@@ -74,5 +93,18 @@ export async function updatePaymentMethod(
   }
 
   const updated = await prisma.paymentMethodDefinition.update({ where: { id }, data: input });
+
+  await recordActivity({
+    tenantId,
+    entityType: 'paymentMethod',
+    entityId: id,
+    entityLabel: updated.name,
+    action: 'update',
+    changedByUserId,
+    before: existing,
+    after: updated,
+    fieldConfig: paymentMethodActivityFieldConfig,
+  });
+
   return { success: true, paymentMethod: updated };
 }

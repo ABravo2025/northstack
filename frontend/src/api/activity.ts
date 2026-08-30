@@ -1,8 +1,8 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
-import type { ActivityFeedPage, ActivityLogEntry, TaskEntityType } from './types.js';
+import type { ActivityEntityType, ActivityFeedPage, ActivityLogEntry, TaskEntityType } from './types.js';
 
 export interface ListActivityFeedParams {
-  entityType?: TaskEntityType;
+  entityType?: ActivityEntityType;
   userId?: string;
   action?: 'create' | 'update' | 'delete';
   from?: string;

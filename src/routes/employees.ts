@@ -354,7 +354,7 @@ employeesRouter.post('/api/hr/employee-terminations/:terminationId/cancel', asyn
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  const result = await cancelTermination(req.params.terminationId, user.tenantId!);
+  const result = await cancelTermination(req.params.terminationId, user.tenantId!, user.id);
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }

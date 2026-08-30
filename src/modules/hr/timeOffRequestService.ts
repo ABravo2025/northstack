@@ -1,7 +1,14 @@
 import prisma from '../../lib/prisma.js';
 import { sendTimeOffRequestDecidedEmail, sendTimeOffRequestPendingEmail } from '../../lib/mailer.js';
 import { syncTimeOffCalendarEvent } from '../integrations/googleCalendarSyncService.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { timeOffRequestActivityFieldConfig } from '../activity/fieldConfigs/timeOffRequestFieldConfig.js';
 import type { TimeOffRequest, TimeOffRequestStatus, User } from '@prisma/client';
+
+function timeOffRequestLabel(employeeName: string, startDate: Date, endDate: Date): string {
+  const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return `${employeeName} — ${fmt(startDate)} to ${fmt(endDate)}`;
+}
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -28,7 +35,10 @@ export interface CreateTimeOffRequestResult {
   error?: string;
 }
 
-export async function createTimeOffRequest(input: CreateTimeOffRequestInput): Promise<CreateTimeOffRequestResult> {
+export async function createTimeOffRequest(
+  input: CreateTimeOffRequestInput,
+  changedByUserId: string,
+): Promise<CreateTimeOffRequestResult> {
   const startDate = new Date(input.startDate);
   const endDate = new Date(input.endDate);
 
@@ -82,6 +92,17 @@ export async function createTimeOffRequest(input: CreateTimeOffRequestInput): Pr
 
   const employeeName = `${employee.firstName} ${employee.lastName}`;
   const manager = employee.managerId ? await prisma.employee.findUnique({ where: { id: employee.managerId } }) : null;
+
+  await recordActivity({
+    tenantId: input.tenantId,
+    entityType: 'timeOffRequest',
+    entityId: request.id,
+    entityLabel: timeOffRequestLabel(employeeName, startDate, endDate),
+    action: 'create',
+    changedByUserId,
+    after: request,
+    fieldConfig: timeOffRequestActivityFieldConfig,
+  });
 
   if (autoApprove) {
     // Nobody actively approved this, so unlike a manual decision, everyone who'd
@@ -234,6 +255,18 @@ export async function decideTimeOffRequest(
     }).catch((err) => console.error('Failed to send time off decided email:', err));
   }
 
+  await recordActivity({
+    tenantId,
+    entityType: 'timeOffRequest',
+    entityId: requestId,
+    entityLabel: employee ? timeOffRequestLabel(`${employee.firstName} ${employee.lastName}`, request.startDate, request.endDate) : requestId,
+    action: 'update',
+    changedByUserId: actingUser.id,
+    before: request,
+    after: updated,
+    fieldConfig: timeOffRequestActivityFieldConfig,
+  });
+
   return { success: true, request: updated };
 }
 
@@ -246,6 +279,7 @@ export async function cancelTimeOffRequest(
   requestId: string,
   tenantId: string,
   employeeId: string,
+  changedByUserId: string,
 ): Promise<CancelTimeOffRequestResult> {
   const request = await prisma.timeOffRequest.findUnique({ where: { id: requestId } });
   if (!request || request.tenantId !== tenantId) {
@@ -266,6 +300,19 @@ export async function cancelTimeOffRequest(
   // request never had a Google Calendar event yet — this call is a no-op in
   // practice, kept only for symmetry/defensiveness.
   void syncTimeOffCalendarEvent(request, updated).catch((err) => console.error('Google Calendar time off sync failed:', err));
+
+  const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
+  await recordActivity({
+    tenantId,
+    entityType: 'timeOffRequest',
+    entityId: requestId,
+    entityLabel: employee ? timeOffRequestLabel(`${employee.firstName} ${employee.lastName}`, request.startDate, request.endDate) : requestId,
+    action: 'update',
+    changedByUserId,
+    before: request,
+    after: updated,
+    fieldConfig: timeOffRequestActivityFieldConfig,
+  });
 
   return { success: true };
 }

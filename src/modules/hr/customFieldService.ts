@@ -1,6 +1,8 @@
 import prisma from '../../lib/prisma.js';
 import type { CustomFieldDefinition, CustomFieldValue, EntityType, FieldType } from '@prisma/client';
 import { isEmailFormatValid } from '../../lib/email.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { customFieldDefinitionActivityFieldConfig } from '../activity/fieldConfigs/customFieldDefinitionFieldConfig.js';
 
 export interface CreateCustomFieldInput {
   tenantId: string;
@@ -48,8 +50,9 @@ export function isValueValidForFieldType(
 
 export async function createCustomFieldDefinition(
   input: CreateCustomFieldInput,
+  changedByUserId: string,
 ): Promise<CustomFieldDefinition> {
-  return prisma.customFieldDefinition.create({
+  const definition = await prisma.customFieldDefinition.create({
     data: {
       tenantId: input.tenantId,
       name: input.name,
@@ -59,6 +62,19 @@ export async function createCustomFieldDefinition(
       required: input.required ?? false,
     },
   });
+
+  await recordActivity({
+    tenantId: input.tenantId,
+    entityType: 'customFieldDefinition',
+    entityId: definition.id,
+    entityLabel: `${definition.name} (${definition.entityType})`,
+    action: 'create',
+    changedByUserId,
+    after: definition,
+    fieldConfig: customFieldDefinitionActivityFieldConfig,
+  });
+
+  return definition;
 }
 
 export async function setCustomFieldDefinitionActive(
@@ -84,11 +100,28 @@ export interface UpdateCustomFieldDefinitionInput {
 export async function updateCustomFieldDefinition(
   id: string,
   input: UpdateCustomFieldDefinitionInput,
+  changedByUserId: string,
 ): Promise<CustomFieldDefinition> {
-  return prisma.customFieldDefinition.update({
+  const existing = await prisma.customFieldDefinition.findUniqueOrThrow({ where: { id } });
+
+  const updated = await prisma.customFieldDefinition.update({
     where: { id },
     data: input,
   });
+
+  await recordActivity({
+    tenantId: existing.tenantId,
+    entityType: 'customFieldDefinition',
+    entityId: id,
+    entityLabel: `${updated.name} (${updated.entityType})`,
+    action: 'update',
+    changedByUserId,
+    before: existing,
+    after: updated,
+    fieldConfig: customFieldDefinitionActivityFieldConfig,
+  });
+
+  return updated;
 }
 
 export async function findCustomFieldDefinitionById(

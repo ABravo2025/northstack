@@ -1,5 +1,7 @@
 import { randomUUID } from 'crypto';
 import prisma from '../../lib/prisma.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { payFrequencyActivityFieldConfig } from '../activity/fieldConfigs/payFrequencyFieldConfig.js';
 import type { DueDateOffset, PayFrequencyCadence, PayFrequencyDefinition } from '@prisma/client';
 
 type PrismaTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
@@ -46,13 +48,16 @@ export interface CreatePayFrequencyInput {
   dueDateCustomDays?: number | null;
 }
 
-export async function createPayFrequency(input: CreatePayFrequencyInput): Promise<PayFrequencyDefinition> {
+export async function createPayFrequency(
+  input: CreatePayFrequencyInput,
+  changedByUserId: string,
+): Promise<PayFrequencyDefinition> {
   const maxOrder = await prisma.payFrequencyDefinition.aggregate({
     where: { tenantId: input.tenantId },
     _max: { order: true },
   });
 
-  return prisma.payFrequencyDefinition.create({
+  const frequency = await prisma.payFrequencyDefinition.create({
     data: {
       tenantId: input.tenantId,
       name: input.name,
@@ -63,6 +68,19 @@ export async function createPayFrequency(input: CreatePayFrequencyInput): Promis
       order: (maxOrder._max.order ?? -1) + 1,
     },
   });
+
+  await recordActivity({
+    tenantId: input.tenantId,
+    entityType: 'payFrequency',
+    entityId: frequency.id,
+    entityLabel: frequency.name,
+    action: 'create',
+    changedByUserId,
+    after: frequency,
+    fieldConfig: payFrequencyActivityFieldConfig,
+  });
+
+  return frequency;
 }
 
 // Returns both active and inactive rows, same convention as
@@ -127,6 +145,7 @@ export async function updatePayFrequency(
   id: string,
   tenantId: string,
   input: UpdatePayFrequencyInput,
+  changedByUserId: string,
 ): Promise<PayFrequencyUpdateResult> {
   const existing = await prisma.payFrequencyDefinition.findUnique({ where: { id } });
   if (!existing || existing.tenantId !== tenantId) {
@@ -141,5 +160,18 @@ export async function updatePayFrequency(
       ...(anchorConfig !== undefined ? { anchorConfig: JSON.stringify(anchorConfig) } : {}),
     },
   });
+
+  await recordActivity({
+    tenantId,
+    entityType: 'payFrequency',
+    entityId: id,
+    entityLabel: updated.name,
+    action: 'update',
+    changedByUserId,
+    before: existing,
+    after: updated,
+    fieldConfig: payFrequencyActivityFieldConfig,
+  });
+
   return { success: true, payFrequency: updated };
 }

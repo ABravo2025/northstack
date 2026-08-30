@@ -521,6 +521,21 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 ### `frontend/src/components/activity/` (2026-08-30, Activity Log Unidad 3)
 - **EntityActivityList** — tab "Activity" compartido por los 4 paneles de detalle, mismo mecanismo que `EntityNotesList`/`EntityTasksList` pero de solo lectura (sin compose, sin click-to-edit). Cada fila es expandible ("Show detail") para ver el diff campo por campo.
 
+### Activity Log — Unidad 4 (2026-08-30, HR/Payroll)
+10 field configs más en `src/modules/activity/fieldConfigs/`, mismo mecanismo que Tier 1:
+**timeOffPolicyFieldConfig**, **timeOffRequestFieldConfig**, **statusDefinitionFieldConfig**,
+**customFieldDefinitionFieldConfig**, **fieldCatalogDefinitionFieldConfig**,
+**payFrequencyFieldConfig**, **paymentMethodFieldConfig**, **employeeCompensationFieldConfig**
+(excluye a propósito `paymentAccountDataEncrypted`/`contractPdf`/`confirmedIp` — nunca deben
+aparecer en un log, ni cifrados; create-only, `EmployeeCompensation` nunca se edita in-place),
+**employeeTerminationFieldConfig**, **payrollRunFieldConfig**. `resolvers.ts` ganó
+**resolveTimeOffPolicyName**/**resolvePayFrequencyName**/**resolvePaymentMethodName**. Servicios que
+ahora llaman `recordActivity`: `timeOffPolicyService`/`timeOffRequestService`/`statusService`/
+`customFieldService`/`fieldCatalogService`/`payFrequencyService`/`paymentMethodService`/
+`employeeCompensationService`/`terminationService`/`payrollRunService` — cada `create`/`update`
+tocado ganó un `changedByUserId` (requerido salvo `createFieldCatalogDefinition`, opcional por el
+mismo motivo que `createEmployee`: el seed de datos de ejemplo del onboarding lo llama sin actor).
+
 ### `frontend/src/components/tasks/`
 - **EntityTasksList** — tab "Tasks" compartido por los 4 paneles de detalle.
 - **MyTasksWidget** — widget "My tasks" de `/overview`, reusa el mismo popover de edición que `EntityTasksList` vía `TaskFormPopover`. Desde 2026-08-22, el propio endpoint (`listMyTasks`) ya no devuelve tareas completadas — el widget no filtra nada del lado del cliente, solo desaparecen del `state` en el próximo `load()`.

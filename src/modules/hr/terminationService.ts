@@ -2,6 +2,8 @@ import prisma from '../../lib/prisma.js';
 import { createOffPayments } from './payrollOffPaymentService.js';
 import { syncTimeOffCalendarEvent } from '../integrations/googleCalendarSyncService.js';
 import { findEmployeeById, wouldCreateManagerCycle } from './employeeService.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { employeeTerminationActivityFieldConfig } from '../activity/fieldConfigs/employeeTerminationFieldConfig.js';
 import type { EmployeeTermination, PayrollEntryType } from '@prisma/client';
 
 // Termination is a status change with several coordinated side effects, not a delete — matches
@@ -191,6 +193,17 @@ export async function createTermination(input: CreateTerminationInput): Promise<
     },
   });
 
+  await recordActivity({
+    tenantId: input.tenantId,
+    entityType: 'employeeTermination',
+    entityId: termination.id,
+    entityLabel: `Termination: ${employee.firstName} ${employee.lastName}`,
+    action: 'create',
+    changedByUserId: input.createdByUserId,
+    after: termination,
+    fieldConfig: employeeTerminationActivityFieldConfig,
+  });
+
   const isDue = terminationDate.getTime() <= Date.now();
   if (isDue) {
     await executeTermination(termination.id);
@@ -206,7 +219,11 @@ export interface CancelTerminationResult {
   error?: string;
 }
 
-export async function cancelTermination(terminationId: string, tenantId: string): Promise<CancelTerminationResult> {
+export async function cancelTermination(
+  terminationId: string,
+  tenantId: string,
+  changedByUserId: string,
+): Promise<CancelTerminationResult> {
   const termination = await prisma.employeeTermination.findUnique({ where: { id: terminationId } });
   if (!termination || termination.tenantId !== tenantId) {
     return { success: false, error: 'Termination not found' };
@@ -218,7 +235,21 @@ export async function cancelTermination(terminationId: string, tenantId: string)
     return { success: true }; // already cancelled — idempotent, not an error
   }
 
-  await prisma.employeeTermination.update({ where: { id: terminationId }, data: { cancelledAt: new Date() } });
+  const updated = await prisma.employeeTermination.update({ where: { id: terminationId }, data: { cancelledAt: new Date() } });
+
+  const employee = await findEmployeeById(termination.employeeId);
+  await recordActivity({
+    tenantId,
+    entityType: 'employeeTermination',
+    entityId: terminationId,
+    entityLabel: employee ? `Termination: ${employee.firstName} ${employee.lastName}` : `Termination ${terminationId}`,
+    action: 'update',
+    changedByUserId,
+    before: termination,
+    after: updated,
+    fieldConfig: employeeTerminationActivityFieldConfig,
+  });
+
   return { success: true };
 }
 

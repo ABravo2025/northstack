@@ -1,6 +1,6 @@
 # Database Schema
 
-- Última actualización: 2026-08-30 (Activity Log Unidades 1-3 — schema + mecanismo genérico + wiring de Employee/Company/Contact/Opportunity + frontend, ver grupo 13; en `staging`, sin pushear a `main`)
+- Última actualización: 2026-08-30 (Activity Log Unidades 1-4 — schema + mecanismo genérico + wiring de Employee/Company/Contact/Opportunity + frontend + HR/Payroll, ver grupo 13; en `staging`, sin pushear a `main`)
 - Actualización anterior: 2026-08-29 (Employee Termination — ver grupo 11 — y Payments v1 Units 5-7, ver grupo 10; todo en `staging`, sin pushear a `main`)
 - Fuente de verdad real: `prisma/schema.prisma`. Este documento es una vista legible de ese archivo — si difieren, el `.prisma` manda. Regenerar este archivo cuando el schema cambie de forma significativa (modelo nuevo, relación nueva), no hace falta para cambios chicos (un campo opcional más, un índice).
 - Todos los modelos son multi-tenant: casi todos tienen `tenantId` directo (no derivado por join), y el aislamiento entre tenants se verifica en el código de cada endpoint (ownership check), no solo por FK — ver `docs/current-process-flow.md` para el patrón de verificación.
@@ -1052,11 +1052,14 @@ Notas:
 Spec en `docs/general/spec-activity-log.md` (2026-08-30) — auditoría de "quién hizo qué" en la
 plataforma. Pedido explícito de Alejandro: un tab de actividad *por registro* dentro de los modales
 de detalle de Employee/Company/Contact/Opportunity, más un feed *tenant-wide* en Settings.
-**Unidades 1-3 completas, en `staging`**: schema + mecanismo genérico + permiso + rutas (Unidad 1),
+**Unidades 1-4 completas, en `staging`**: schema + mecanismo genérico + permiso + rutas (Unidad 1),
 wiring real de create/update/delete de Employee/Company/Contact/Opportunity + sus custom field
 values (Unidad 2, con un scope cut documentado — ver el spec §6: CSV import/onboarding seed/Public
-Forms no generan entradas todavía), y el frontend (Unidad 3) — tab "Activity" real en los 4 modales
-+ `Settings → Activity Log` con filtros. Verificado con Playwright contra `staging` real.
+Forms no generan entradas todavía), el frontend (Unidad 3) — tab "Activity" real en los 4 modales +
+`Settings → Activity Log` con filtros, verificado con Playwright contra `staging` real — y la
+extensión a HR/Payroll (Unidad 4: TimeOffPolicy/TimeOffRequest/StatusDefinition/
+CustomFieldDefinition/FieldCatalogDefinition/PayFrequency/PaymentMethod/EmployeeCompensation/
+EmployeeTermination/PayrollRun), verificada con una corrida directa contra `staging`.
 
 ```mermaid
 erDiagram
@@ -1152,5 +1155,5 @@ Notas:
 - **Sales v2 (redesign de Pipeline/Opportunity — round-robin de asignación, forecast ponderado, automations al crear, notificaciones in-app) — Units 1-8 completas, solo en `staging`**: distinto de la "Clients redesign" original de arriba (esa sí está en producción) — esta es una segunda ronda de mejoras sobre lo mismo, todavía sin promover.
 - **Payments v1 — Units 1-7 completas, solo en `staging`** (última ronda 2026-08-29, ver grupo 10): conexión con Stripe, lookup/matching, visibilidad de pagos en vivo, notificaciones proactivas (cron de polling, no webhook), auto-vinculación de Companies, modal de historial de pagos con recibos, y vista general con disputes en el perfil de Company. No probado de punta a punta con una cuenta de Stripe real (sin credenciales en este entorno) más allá de tests unitarios y verificación directa contra `STAGING_DATABASE_URL`.
 - **Employee Termination — completo, solo en `staging`** (2026-08-29, ver grupo 11): status change coordinado (status/endDate/compensación/acceso/Time Off/reasignación de reportes), soporta baja pasada/hoy/futura con ejecución diferida vía cron, pago final con líneas de bonus/commission/reimbursement/deduction.
-- **Activity Log — Unidades 1-3 de 6 completas, solo en `staging`** (2026-08-30, ver grupo 13 y `docs/general/spec-activity-log.md`): schema + `activityLogService.ts` genérico + `canViewActivityLog` + rutas (Unidad 1); wiring real de create/update/delete de Employee/Company/Contact/Opportunity + custom field values (Unidad 2); frontend — tab "Activity" en los 4 modales + `Settings → Activity Log` con filtros (Unidad 3), verificado con Playwright contra `staging` real. Unidades 4-6 extienden el feed de Settings al resto de la plataforma (HR/Payroll, CRM/cross-module/vistas, cuenta/plataforma).
+- **Activity Log — Unidades 1-4 de 6 completas, solo en `staging`** (2026-08-30, ver grupo 13 y `docs/general/spec-activity-log.md`): schema + `activityLogService.ts` genérico + `canViewActivityLog` + rutas (Unidad 1); wiring real de create/update/delete de Employee/Company/Contact/Opportunity + custom field values (Unidad 2); frontend — tab "Activity" en los 4 modales + `Settings → Activity Log` con filtros (Unidad 3); extensión a HR/Payroll — 10 entidades más (Unidad 4). Unidades 5-6 extienden el feed de Settings al resto de la plataforma (CRM/cross-module/vistas, cuenta/plataforma).
 - **Lo único todavía sin promover a `main`, a la fecha de esta actualización (2026-08-30)**: Sales v2 (redesign), Payments v1, Employee Termination, y Activity Log — todo el resto de lo listado arriba ya está en producción.

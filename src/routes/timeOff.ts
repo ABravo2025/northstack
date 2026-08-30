@@ -46,15 +46,18 @@ timeOffRouter.post('/api/time-off-policies', async (req, res) => {
     return res.status(400).json({ error: 'Days per year must be a non-negative number' });
   }
 
-  const policy = await createTimeOffPolicy({
-    tenantId: user.tenantId!,
-    name: name.trim(),
-    color: req.body.color,
-    accrualMethod: req.body.accrualMethod,
-    daysPerYear,
-    isPaid: req.body.isPaid,
-    requiresApproval: req.body.requiresApproval,
-  });
+  const policy = await createTimeOffPolicy(
+    {
+      tenantId: user.tenantId!,
+      name: name.trim(),
+      color: req.body.color,
+      accrualMethod: req.body.accrualMethod,
+      daysPerYear,
+      isPaid: req.body.isPaid,
+      requiresApproval: req.body.requiresApproval,
+    },
+    user.id,
+  );
 
   return res.status(201).json(policy);
 });
@@ -77,15 +80,20 @@ timeOffRouter.patch('/api/time-off-policies/:policyId', async (req, res) => {
     req.body.daysPerYear = daysPerYear;
   }
 
-  const result = await updateTimeOffPolicy(req.params.policyId, user.tenantId!, {
-    name: req.body.name,
-    color: req.body.color,
-    accrualMethod: req.body.accrualMethod,
-    daysPerYear: req.body.daysPerYear,
-    isPaid: req.body.isPaid,
-    requiresApproval: req.body.requiresApproval,
-    isActive: req.body.isActive,
-  });
+  const result = await updateTimeOffPolicy(
+    req.params.policyId,
+    user.tenantId!,
+    {
+      name: req.body.name,
+      color: req.body.color,
+      accrualMethod: req.body.accrualMethod,
+      daysPerYear: req.body.daysPerYear,
+      isPaid: req.body.isPaid,
+      requiresApproval: req.body.requiresApproval,
+      isActive: req.body.isActive,
+    },
+    user.id,
+  );
 
   if (!result.success) {
     return res.status(400).json({ error: result.error });
@@ -105,14 +113,17 @@ timeOffRouter.post('/api/hr/time-off-requests', async (req, res) => {
     return res.status(400).json({ error: 'Your account is not linked to an employee record' });
   }
 
-  const result = await createTimeOffRequest({
-    tenantId: user.tenantId!,
-    employeeId: employee.id,
-    timeOffPolicyId: req.body.timeOffPolicyId,
-    startDate: req.body.startDate,
-    endDate: req.body.endDate,
-    note: req.body.note,
-  });
+  const result = await createTimeOffRequest(
+    {
+      tenantId: user.tenantId!,
+      employeeId: employee.id,
+      timeOffPolicyId: req.body.timeOffPolicyId,
+      startDate: req.body.startDate,
+      endDate: req.body.endDate,
+      note: req.body.note,
+    },
+    user.id,
+  );
 
   if (!result.success) {
     return res.status(400).json({ error: result.error });
@@ -186,7 +197,7 @@ timeOffRouter.delete('/api/hr/time-off-requests/:requestId', async (req, res) =>
     return res.status(400).json({ error: 'Your account is not linked to an employee record' });
   }
 
-  const result = await cancelTimeOffRequest(req.params.requestId, user.tenantId!, employee.id);
+  const result = await cancelTimeOffRequest(req.params.requestId, user.tenantId!, employee.id, user.id);
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }

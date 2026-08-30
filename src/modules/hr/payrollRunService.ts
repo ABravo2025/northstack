@@ -1,5 +1,7 @@
 import prisma from '../../lib/prisma.js';
 import { getDefaultStatusId } from './statusService.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { payrollRunActivityFieldConfig } from '../activity/fieldConfigs/payrollRunFieldConfig.js';
 import type { PayrollCompensationType, PayrollEntryType, PayrollRun } from '@prisma/client';
 
 export interface CreateRunInput {
@@ -62,6 +64,17 @@ export async function createRun(input: CreateRunInput): Promise<CreateRunResult>
       })),
     });
   }
+
+  await recordActivity({
+    tenantId: input.tenantId,
+    entityType: 'payrollRun',
+    entityId: run.id,
+    entityLabel: `Payroll run: ${run.periodLabel}`,
+    action: 'create',
+    changedByUserId: input.createdByUserId,
+    after: run,
+    fieldConfig: payrollRunActivityFieldConfig,
+  });
 
   return { success: true, run };
 }
@@ -235,7 +248,7 @@ export interface ConfirmRunResult {
 // Unidad 17 — draft -> confirmed. Blocks on any hourly base entry still
 // missing hours (Unidad 15), checked via the linked EmployeeCompensation
 // since PayrollEntry itself doesn't carry compensationType.
-export async function confirmRun(tenantId: string, runId: string): Promise<ConfirmRunResult> {
+export async function confirmRun(tenantId: string, runId: string, changedByUserId: string): Promise<ConfirmRunResult> {
   const run = await prisma.payrollRun.findUnique({ where: { id: runId } });
   if (!run || run.tenantId !== tenantId) {
     return { success: false, error: 'Run not found' };
@@ -263,6 +276,19 @@ export async function confirmRun(tenantId: string, runId: string): Promise<Confi
     where: { id: runId },
     data: { status: 'confirmed', confirmedAt: new Date() },
   });
+
+  await recordActivity({
+    tenantId,
+    entityType: 'payrollRun',
+    entityId: runId,
+    entityLabel: `Payroll run: ${updated.periodLabel}`,
+    action: 'update',
+    changedByUserId,
+    before: run,
+    after: updated,
+    fieldConfig: payrollRunActivityFieldConfig,
+  });
+
   return { success: true, run: updated };
 }
 

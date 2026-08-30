@@ -386,9 +386,22 @@ export interface Note {
 // Activity Log (spec-activity-log.md, 2026-08-30) — read-only audit trail. `changes` is already
 // resolved to display text server-side (FK ids -> names, cents -> formatted money) — nothing to
 // look up or format on the frontend, same "pre-rendered" idiom as Notification.message below.
-// entityType typed as TaskEntityType (not the backend's full 27-value ActivityEntityType) because
-// only Employee/Company/Contact/Opportunity have any caller yet (Unit 2) — widen this once a later
-// unit wires up more entity types.
+// ActivityEntityType lists only the values with a real caller so far (Unit 2: the 4 Tier 1
+// entities; Unit 4: HR/Payroll catalogs+records) — not the backend's full 27-value enum, which
+// also covers entity types no unit has wired up yet. Widen this as later units add callers.
+export type ActivityEntityType =
+  | TaskEntityType
+  | 'timeOffPolicy'
+  | 'timeOffRequest'
+  | 'employeeCompensation'
+  | 'employeeTermination'
+  | 'payrollRun'
+  | 'payFrequency'
+  | 'paymentMethod'
+  | 'statusDefinition'
+  | 'customFieldDefinition'
+  | 'fieldCatalogDefinition';
+
 export interface ActivityChange {
   field: string;
   label: string;
@@ -399,7 +412,7 @@ export interface ActivityChange {
 export interface ActivityLogEntry {
   id: string;
   tenantId: string;
-  entityType: TaskEntityType;
+  entityType: ActivityEntityType;
   entityId: string;
   entityLabel: string;
   action: 'create' | 'update' | 'delete';

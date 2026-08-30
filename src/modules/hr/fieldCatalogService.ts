@@ -1,4 +1,6 @@
 import prisma from '../../lib/prisma.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { fieldCatalogDefinitionActivityFieldConfig } from '../activity/fieldConfigs/fieldCatalogDefinitionFieldConfig.js';
 import type { CatalogKind, FieldCatalogDefinition } from '@prisma/client';
 
 export async function listFieldCatalogDefinitions(
@@ -22,10 +24,14 @@ export interface CreateFieldCatalogDefinitionInput {
   order?: number;
 }
 
+// changedByUserId is optional — onboardingService.ts's seedSampleData seeds sample
+// Department/Job Title catalog rows with no acting user, and simply gets no Activity Log entry
+// (same "no real actor, no entry" convention as createEmployee et al.).
 export async function createFieldCatalogDefinition(
   input: CreateFieldCatalogDefinitionInput,
+  changedByUserId?: string,
 ): Promise<FieldCatalogDefinition> {
-  return prisma.fieldCatalogDefinition.create({
+  const definition = await prisma.fieldCatalogDefinition.create({
     data: {
       tenantId: input.tenantId,
       kind: input.kind,
@@ -33,6 +39,21 @@ export async function createFieldCatalogDefinition(
       order: input.order ?? 0,
     },
   });
+
+  if (changedByUserId) {
+    await recordActivity({
+      tenantId: input.tenantId,
+      entityType: 'fieldCatalogDefinition',
+      entityId: definition.id,
+      entityLabel: `${definition.name} (${definition.kind})`,
+      action: 'create',
+      changedByUserId,
+      after: definition,
+      fieldConfig: fieldCatalogDefinitionActivityFieldConfig,
+    });
+  }
+
+  return definition;
 }
 
 export interface UpdateFieldCatalogDefinitionInput {
@@ -51,6 +72,7 @@ export async function updateFieldCatalogDefinition(
   id: string,
   tenantId: string,
   input: UpdateFieldCatalogDefinitionInput,
+  changedByUserId: string,
 ): Promise<FieldCatalogDefinitionUpdateResult> {
   const existing = await prisma.fieldCatalogDefinition.findUnique({ where: { id } });
   if (!existing || existing.tenantId !== tenantId) {
@@ -58,6 +80,19 @@ export async function updateFieldCatalogDefinition(
   }
 
   const updated = await prisma.fieldCatalogDefinition.update({ where: { id }, data: input });
+
+  await recordActivity({
+    tenantId,
+    entityType: 'fieldCatalogDefinition',
+    entityId: id,
+    entityLabel: `${updated.name} (${updated.kind})`,
+    action: 'update',
+    changedByUserId,
+    before: existing,
+    after: updated,
+    fieldConfig: fieldCatalogDefinitionActivityFieldConfig,
+  });
+
   return { success: true, definition: updated };
 }
 

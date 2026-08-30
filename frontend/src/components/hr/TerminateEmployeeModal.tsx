@@ -34,8 +34,16 @@ interface TerminateEmployeeModalProps {
   onTerminated: () => void;
 }
 
+// Local calendar date, not `toISOString().slice(0, 10)` — the latter is the *UTC* date, which for
+// a negative-UTC-offset user (e.g. Argentina, UTC-3) between 9pm and midnight local time has
+// already rolled to tomorrow, defaulting "Last day" to the wrong date and mislabeling the
+// immediate-vs-scheduled copy below before the request even reaches the backend.
 function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 // Standalone modal, not folded into EmployeeOverviewPanel directly — same instinct as

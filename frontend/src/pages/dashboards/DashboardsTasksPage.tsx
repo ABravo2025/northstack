@@ -23,7 +23,11 @@ export default function DashboardsTasksPage() {
           subtitle={`${tasks.completion.completed} / ${tasks.completion.total}`}
         />
         <StatTile label="Overdue" value={String(tasks.overdueCount)} />
-        <StatTile label="Median time to complete" value={`${tasks.timeToComplete.medianHours}h`} subtitle={`sample: ${tasks.timeToComplete.sampleSize}`} />
+        <StatTile
+          label="Median time to complete"
+          value={tasks.timeToComplete.medianHours === null ? '—' : `${tasks.timeToComplete.medianHours}h`}
+          subtitle={`sample: ${tasks.timeToComplete.sampleSize}`}
+        />
         <StatTile label="Notes created" value={String(tasks.notes.total)} />
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">

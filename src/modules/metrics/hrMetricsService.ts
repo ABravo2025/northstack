@@ -78,20 +78,31 @@ async function getPersonTypeMix(tenantId: string): Promise<{ personType: string;
   return groups.map((g) => ({ personType: g.personType ?? 'not_set', count: g._count }));
 }
 
-async function getTenureStats(tenantId: string): Promise<{ medianDays: number; avgDays: number; sampleSize: number }> {
+async function getTenureStats(tenantId: string): Promise<{ medianDays: number | null; avgDays: number | null; sampleSize: number }> {
   const employees = await prisma.employee.findMany({
     where: { tenantId, startDate: { not: null } },
     select: { startDate: true, endDate: true },
   });
   const now = new Date();
   const days = employees.map((e) => daysBetween(e.startDate!, e.endDate ?? now));
-  return { medianDays: Math.round(median(days)), avgDays: Math.round(avg(days)), sampleSize: days.length };
+  const medianValue = median(days);
+  const avgValue = avg(days);
+  return {
+    medianDays: medianValue === null ? null : Math.round(medianValue),
+    avgDays: avgValue === null ? null : Math.round(avgValue),
+    sampleSize: days.length,
+  };
 }
 
-async function getSpanOfControl(tenantId: string): Promise<{ managerCount: number; medianReports: number; avgReports: number }> {
+async function getSpanOfControl(tenantId: string): Promise<{ managerCount: number; medianReports: number | null; avgReports: number | null }> {
   const groups = await prisma.employee.groupBy({ by: ['managerId'], where: { tenantId, managerId: { not: null } }, _count: true });
   const reportCounts = groups.map((g) => g._count);
-  return { managerCount: groups.length, medianReports: median(reportCounts), avgReports: Math.round(avg(reportCounts) * 10) / 10 };
+  const avgValue = avg(reportCounts);
+  return {
+    managerCount: groups.length,
+    medianReports: median(reportCounts),
+    avgReports: avgValue === null ? null : Math.round(avgValue * 10) / 10,
+  };
 }
 
 interface CustomFieldCompletion {

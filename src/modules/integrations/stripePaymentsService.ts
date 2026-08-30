@@ -155,6 +155,20 @@ const UNLINKED_SUMMARY: StripePaymentSummary = {
   firstPaymentAt: null,
 };
 
+// Stripe's zero-decimal currencies (https://docs.stripe.com/currencies#zero-decimal) store
+// Charge.amount in whole units, not subunits — a ¥10000 charge has amount: 10000, not
+// amount: 1000000. Every amountCents field elsewhere in this app is always hundredths of the
+// display unit regardless of currency, so a raw Stripe amount has to be scaled up right here, at
+// the boundary where it first becomes one of our amountCents values — otherwise formatMoney's
+// unconditional `cents / 100` would silently underreport these currencies by 100x.
+const STRIPE_ZERO_DECIMAL_CURRENCIES = new Set([
+  'bif', 'clp', 'djf', 'gnf', 'jpy', 'kmf', 'krw', 'mga', 'pyg', 'rwf', 'ugx', 'vnd', 'vuv', 'xaf', 'xof', 'xpf',
+]);
+
+function stripeAmountToCents(amount: number, currency: string): number {
+  return STRIPE_ZERO_DECIMAL_CURRENCIES.has(currency.toLowerCase()) ? amount * 100 : amount;
+}
+
 function summarizeCharges(charges: StripeCharge[]): Omit<StripePaymentSummary, 'linked' | 'subscriptionStatus'> {
   let refundsCount = 0;
   let refundsAmountCents = 0;
@@ -167,20 +181,20 @@ function summarizeCharges(charges: StripeCharge[]): Omit<StripePaymentSummary, '
   for (const charge of charges) {
     if (charge.amount_refunded > 0) {
       refundsCount += 1;
-      refundsAmountCents += charge.amount_refunded;
+      refundsAmountCents += stripeAmountToCents(charge.amount_refunded, charge.currency);
     }
     if (charge.status === 'failed') {
       failedCount += 1;
     }
     if (charge.status === 'succeeded') {
       paymentsCount += 1;
-      paymentsAmountCents += charge.amount;
+      paymentsAmountCents += stripeAmountToCents(charge.amount, charge.currency);
       const createdAt = new Date(charge.created * 1000).toISOString();
       if (!firstPaymentAt || createdAt < firstPaymentAt) firstPaymentAt = createdAt;
     }
     if (charge.disputed) {
       disputesCount += 1;
-      disputesAmountCents += charge.amount;
+      disputesAmountCents += stripeAmountToCents(charge.amount, charge.currency);
     }
   }
   return {
@@ -228,7 +242,7 @@ export async function getCompanyPaymentSummary(
 
 export interface StripePaymentEvent {
   id: string;
-  type: 'charge_failed' | 'charge_refunded' | 'charge_succeeded';
+  type: 'charge_failed' | 'charge_refunded' | 'charge_succeeded' | 'charge_pending';
   amountCents: number;
   currency: string;
   createdAt: string;
@@ -242,12 +256,20 @@ export interface StripePaymentEventsPage {
 }
 
 function chargeToEvent(charge: StripeCharge, apiKeyMode: 'test' | 'live'): StripePaymentEvent {
+  // charge.status is 'succeeded' | 'pending' | 'failed' — a pending charge (e.g. an ACH/bank-debit
+  // still settling) must never fall through to 'charge_succeeded' just because it isn't 'failed'.
   const type: StripePaymentEvent['type'] =
-    charge.status === 'failed' ? 'charge_failed' : charge.amount_refunded > 0 ? 'charge_refunded' : 'charge_succeeded';
+    charge.status === 'failed'
+      ? 'charge_failed'
+      : charge.amount_refunded > 0
+        ? 'charge_refunded'
+        : charge.status === 'pending'
+          ? 'charge_pending'
+          : 'charge_succeeded';
   return {
     id: charge.id,
     type,
-    amountCents: type === 'charge_refunded' ? charge.amount_refunded : charge.amount,
+    amountCents: stripeAmountToCents(type === 'charge_refunded' ? charge.amount_refunded : charge.amount, charge.currency),
     currency: charge.currency,
     createdAt: new Date(charge.created * 1000).toISOString(),
     dashboardUrl: `https://dashboard.stripe.com/${apiKeyMode === 'test' ? 'test/' : ''}payments/${charge.id}`,
@@ -335,11 +357,21 @@ export async function getPaymentsOverview(tenantId: string): Promise<PaymentsOve
     select: { id: true, name: true, stripeCustomerId: true },
   });
 
-  const rows = await mapWithConcurrency(companies, 10, async (company) => ({
-    companyId: company.id,
-    companyName: company.name,
-    summary: await getCompanyPaymentSummary(tenantId, company),
-  }));
+  // One Company's failure (a deleted Stripe customer, a rate limit, a scoped-key permission gap)
+  // must not 500 the whole overview for every other, healthy Company in the tenant — same
+  // per-item isolation autoLinkUnmatchedCompanies already applies to this exact kind of fan-out.
+  const rows = await mapWithConcurrency(companies, 10, async (company) => {
+    try {
+      return {
+        companyId: company.id,
+        companyName: company.name,
+        summary: await getCompanyPaymentSummary(tenantId, company),
+      };
+    } catch (error) {
+      console.error(`Failed to fetch payment summary for company ${company.id}:`, error);
+      return { companyId: company.id, companyName: company.name, summary: UNLINKED_SUMMARY };
+    }
+  });
 
   const totals = rows.reduce<PaymentsOverviewTotals>(
     (acc, row) => ({

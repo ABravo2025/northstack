@@ -93,6 +93,10 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
   // persisted the record — from then on, further field edits in the still-
   // open Add form get PATCHed onto this id instead of trying to create again.
   const [createdOpportunityId, setCreatedOpportunityId] = useState<string | null>(null);
+  // The Contact currently linked to createdOpportunityId (lead pipelines only) — lets
+  // updateOpportunityRecord tell "the user picked a different contact after auto-create already
+  // linked one" apart from "nothing changed", so it knows whether to re-link.
+  const [linkedContactId, setLinkedContactId] = useState<string | null>(null);
 
   const canEdit = user.role === 'owner' || user.role === 'admin';
 
@@ -191,6 +195,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
     setForm((f) => ({ ...emptyForm, currency: f.currency }));
     autoCreateGuard.reset();
     setCreatedOpportunityId(null);
+    setLinkedContactId(null);
   };
 
   const handleOpenAdd = () => {
@@ -198,6 +203,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
     setForm((f) => ({ ...emptyForm, currency: f.currency, pipelineId: currentPipeline?.id || '', stageId: firstStage?.id || '' }));
     autoCreateGuard.reset();
     setCreatedOpportunityId(null);
+    setLinkedContactId(null);
     setSlideOverMode('add');
   };
 
@@ -259,6 +265,33 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
     return true;
   };
 
+  // Shared by createOpportunityRecord and updateOpportunityRecord (lead pipelines only): links an
+  // existing Contact via candidate.contactId, or creates one from the newContact* fields, then
+  // resolves its Company (or creates a placeholder from leadCompanyName if it has none yet).
+  // Pulled out so an edit made *after* the background auto-create already linked a Contact — a
+  // different existing Contact picked, or the new-contact fields corrected — goes through the same
+  // resolution instead of being silently dropped by a PATCH that never touches contact linkage.
+  const resolveLeadContactAndCompany = async (candidate: typeof form): Promise<{ contactId: string; companyId: string }> => {
+    let contact = candidate.contactId ? contacts.find((c: any) => c.id === candidate.contactId) : null;
+    if (!contact) {
+      contact = await api.createContact(token, {
+        firstName: candidate.newContactFirstName.trim(),
+        lastName: candidate.newContactLastName.trim(),
+        email: candidate.newContactEmail.trim(),
+      });
+    }
+    let companyId = contact.companyId;
+    if (!companyId) {
+      const createdCompany = await api.createCompany(token, {
+        name: candidate.leadCompanyName.trim(),
+        contact: { contactId: contact.id },
+        isPlaceholder: true,
+      });
+      companyId = createdCompany.id;
+    }
+    return { contactId: contact.id, companyId };
+  };
+
   // Fires in the background as soon as the required fields are ready (see
   // attemptAutoCreateOpportunity below) — a safety net against losing the
   // form's work, not the point where the user is "done". Deliberately does
@@ -273,25 +306,9 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
     let contactIdToLink: string | null = null;
 
     if (pipeline?.type === 'lead') {
-      let contact = candidate.contactId ? contacts.find((c: any) => c.id === candidate.contactId) : null;
-      if (!contact) {
-        contact = await api.createContact(token, {
-          firstName: candidate.newContactFirstName.trim(),
-          lastName: candidate.newContactLastName.trim(),
-          email: candidate.newContactEmail.trim(),
-        });
-      }
-      contactIdToLink = contact.id;
-      if (contact.companyId) {
-        companyId = contact.companyId;
-      } else {
-        const createdCompany = await api.createCompany(token, {
-          name: candidate.leadCompanyName.trim(),
-          contact: { contactId: contact.id },
-          isPlaceholder: true,
-        });
-        companyId = createdCompany.id;
-      }
+      const resolved = await resolveLeadContactAndCompany(candidate);
+      contactIdToLink = resolved.contactId;
+      companyId = resolved.companyId;
     }
 
     const opportunity = await api.createOpportunity(token, {
@@ -317,6 +334,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
     });
     if (contactIdToLink) {
       await api.addOpportunityContact(token, opportunity.id, { contactId: contactIdToLink });
+      setLinkedContactId(contactIdToLink);
     }
     if (pipeline?.type === 'lead') {
       // A new Contact/placeholder Company may have just been created —
@@ -325,21 +343,46 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
       const [freshCompanies, freshContacts] = await Promise.all([api.listCompanies(token), api.listContacts(token)]);
       setCompanies(freshCompanies);
       setContacts(freshContacts);
+      // Sync the form's contactId/companyId to what was actually resolved (a brand-new contact
+      // wasn't reflected here before) — otherwise a later edit reads the still-blank contactId and
+      // resolveLeadContactAndCompany would create a second, duplicate Contact from the same
+      // newContact* fields instead of recognizing the one that already exists.
+      setForm((f) => ({ ...f, contactId: contactIdToLink ?? f.contactId, companyId }));
     }
     setCreatedOpportunityId(opportunity.id);
     reloadOpportunities();
     return opportunity;
   };
 
-  // PATCHes the record that createOpportunityRecord already persisted, with
-  // whatever the user filled in afterward — contact/company creation only
-  // happens once, at create time, so this only ever touches the Opportunity
-  // fields themselves.
+  // PATCHes the record that createOpportunityRecord already persisted, with whatever the user
+  // filled in afterward. For a lead pipeline, also re-resolves the Contact/Company: the user can
+  // still switch the Contact select, correct the new-contact fields, or edit the company name
+  // after the background auto-create already linked one — this reconciles that instead of
+  // silently leaving the Opportunity linked to whatever was auto-created first.
   const updateOpportunityRecord = async (id: string, candidate: typeof form) => {
     const amountCents = Math.round(Number.parseFloat(candidate.amountCents || '0') * 100);
+    const pipeline = activePipelines.find((p) => p.id === candidate.pipelineId);
+
+    let companyId = candidate.companyId || undefined;
+    if (pipeline?.type === 'lead') {
+      const resolved = await resolveLeadContactAndCompany(candidate);
+      companyId = resolved.companyId;
+      if (resolved.contactId !== linkedContactId) {
+        if (linkedContactId) {
+          await api.removeOpportunityContact(token, id, linkedContactId);
+        }
+        await api.addOpportunityContact(token, id, { contactId: resolved.contactId });
+        setLinkedContactId(resolved.contactId);
+      }
+      const [freshCompanies, freshContacts] = await Promise.all([api.listCompanies(token), api.listContacts(token)]);
+      setCompanies(freshCompanies);
+      setContacts(freshContacts);
+      setForm((f) => ({ ...f, contactId: resolved.contactId, companyId: resolved.companyId }));
+    }
+
     await api.updateOpportunity(token, id, {
       name: candidate.name.trim(),
-      companyId: candidate.companyId || undefined,
+      companyId,
       pipelineId: candidate.pipelineId,
       stageId: candidate.stageId || undefined,
       amountCents,
@@ -388,6 +431,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
       setOpportunities(freshList);
       setSlideOverMode(null);
       setCreatedOpportunityId(null);
+      setLinkedContactId(null);
       setForm((f) => ({ ...emptyForm, currency: f.currency }));
       setViewingId(id);
     } catch (error) {

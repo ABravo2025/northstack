@@ -1,7 +1,16 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Popover from '../common/Popover';
 import { CalendarIcon, CheckIcon } from '../common/Icons';
 import { DEFAULT_PRESET, PRESETS, presetLabel, rangeForPreset, toDateInputValue, type DateRange, type PresetKey } from '../../lib/dateRangePresets';
+
+// `<input type="date">` gives back a date-only string ("2026-08-01") — `new Date(str)` parses
+// that as *UTC* midnight, not local midnight, which then gets mixed with the local-midnight/
+// local-end-of-day math the rest of this component (and dateRangePresets.ts) does. Parsing from
+// the y/m/d components directly keeps everything on local time, consistently.
+function parseLocalDateInput(value: string): Date {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
 
 interface DateRangeFilterProps {
   presetKey: PresetKey;
@@ -19,6 +28,14 @@ export default function DateRangeFilter({ presetKey, range, onChange }: DateRang
   const [customSince, setCustomSince] = useState(() => toDateInputValue(range.since));
   const [customUntil, setCustomUntil] = useState(() => toDateInputValue(range.until));
 
+  // Resync the custom-range inputs whenever the applied range changes via a preset — otherwise
+  // switching presets, then reopening the popover, still shows whatever custom dates were left
+  // over from before, and clicking "Apply" without editing them would silently revert the range.
+  useEffect(() => {
+    setCustomSince(toDateInputValue(range.since));
+    setCustomUntil(toDateInputValue(range.until));
+  }, [range.since, range.until]);
+
   const selectPreset = (key: Exclude<PresetKey, 'custom'>) => {
     onChange(rangeForPreset(key), key);
     setOpen(false);
@@ -26,8 +43,8 @@ export default function DateRangeFilter({ presetKey, range, onChange }: DateRang
 
   const applyCustom = () => {
     if (!customSince || !customUntil) return;
-    const since = new Date(customSince);
-    const until = new Date(customUntil);
+    const since = parseLocalDateInput(customSince);
+    const until = parseLocalDateInput(customUntil);
     until.setHours(23, 59, 59, 999);
     if (since > until) return;
     onChange({ since, until }, 'custom');

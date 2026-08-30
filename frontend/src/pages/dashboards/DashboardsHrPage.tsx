@@ -22,8 +22,16 @@ export default function DashboardsHrPage() {
     <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
       <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile label="Headcount" value={String(hr.headcount.total)} />
-        <StatTile label="Median tenure" value={`${hr.tenure.medianDays} days`} subtitle={`sample: ${hr.tenure.sampleSize}`} />
-        <StatTile label="Avg. direct reports" value={String(hr.spanOfControl.avgReports)} subtitle={`${hr.spanOfControl.managerCount} managers`} />
+        <StatTile
+          label="Median tenure"
+          value={hr.tenure.medianDays === null ? '—' : `${hr.tenure.medianDays} days`}
+          subtitle={`sample: ${hr.tenure.sampleSize}`}
+        />
+        <StatTile
+          label="Avg. direct reports"
+          value={hr.spanOfControl.avgReports === null ? '—' : String(hr.spanOfControl.avgReports)}
+          subtitle={`${hr.spanOfControl.managerCount} managers`}
+        />
         <StatTile
           label="Custom fields"
           value={String(hr.customFields.activeDefinitionCount)}

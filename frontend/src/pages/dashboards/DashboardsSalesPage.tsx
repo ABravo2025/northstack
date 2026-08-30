@@ -45,7 +45,11 @@ export default function DashboardsSalesPage() {
           value={sales.winRateAndCycle.winRatePct === null ? '—' : `${sales.winRateAndCycle.winRatePct}%`}
           subtitle={`${sales.winRateAndCycle.wonCount} won / ${sales.winRateAndCycle.lostCount} lost`}
         />
-        <StatTile label="Median sales cycle" value={`${sales.winRateAndCycle.cycleDaysMedian} days`} />
+        <StatTile
+          label="Median sales cycle"
+          value={sales.winRateAndCycle.cycleDaysMedian === null ? '—' : `${sales.winRateAndCycle.cycleDaysMedian} days`}
+          subtitle={`sample: ${sales.winRateAndCycle.cycleSampleSize}`}
+        />
         <StatTile
           label="Multi-threaded deals"
           value={sales.multiThreading.multiThreadedPct === null ? '—' : `${sales.multiThreading.multiThreadedPct}%`}
@@ -58,7 +62,12 @@ export default function DashboardsSalesPage() {
         />
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <BarChartCard title="Open pipeline value" data={pipelineByCurrency.data} series={pipelineByCurrency.series} valueFormatter={(v) => `$${v}`} />
+        <BarChartCard
+          title="Open pipeline value"
+          data={pipelineByCurrency.data}
+          series={pipelineByCurrency.series}
+          valueFormatter={(v, currency) => formatMoney(v * 100, currency)}
+        />
         <BarChartCard title="Companies added by month" data={companyGrowthData} series={[{ key: 'count', label: 'Companies', color: seriesColor(0) }]} />
         <BarChartCard
           title="Win rate by lead source"

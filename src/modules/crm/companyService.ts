@@ -225,6 +225,7 @@ export async function deleteCompany(id: string, options: DeleteCompanyOptions = 
 
   await prisma.$transaction([
     prisma.contact.updateMany({ where: { companyId: id }, data: { companyId: null } }),
+    prisma.tagAssignment.deleteMany({ where: { entityType: 'company', entityId: id } }),
     prisma.company.delete({ where: { id } }),
   ]);
   return { success: true };

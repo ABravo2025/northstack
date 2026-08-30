@@ -10,7 +10,9 @@ interface BarChartCardProps {
   title: string;
   data: Record<string, string | number>[];
   series: BarSeries[];
-  valueFormatter?: (value: number) => string;
+  // seriesKey is the hovered/ticked series' `key` (e.g. a currency code for a pivotByCurrency
+  // chart) — a caller whose series aren't currency-denominated can ignore the second argument.
+  valueFormatter?: (value: number, seriesKey: string) => string;
   height?: number;
 }
 
@@ -24,6 +26,12 @@ const AXIS_TICK = { fill: 'var(--chart-muted)', fontSize: 12 };
 // which docs/metrics/tenant-metrics-spec.md's currency rule forbids.
 export default function BarChartCard({ title, data, series, valueFormatter, height = 260 }: BarChartCardProps) {
   const formatValue = valueFormatter ?? ((v: number) => String(v));
+  // The Y-axis is one shared scale across every series — for a single-series chart that's
+  // unambiguous (label it in that series' unit), but for a multi-currency chart no single
+  // series' formatter (e.g. one currency symbol) is correct for the whole axis, so it falls back
+  // to a plain number there. The Tooltip below doesn't have this problem — each hovered bar knows
+  // its own series key.
+  const formatAxisTick = (v: number) => (series.length === 1 ? formatValue(v, series[0].key) : String(v));
 
   return (
     <div className="card">
@@ -35,9 +43,9 @@ export default function BarChartCard({ title, data, series, valueFormatter, heig
           <BarChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
             <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
             <XAxis dataKey="name" tick={AXIS_TICK} axisLine={{ stroke: 'var(--chart-axis)' }} tickLine={false} />
-            <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} tickFormatter={formatValue} width={56} />
+            <YAxis tick={AXIS_TICK} axisLine={false} tickLine={false} tickFormatter={formatAxisTick} width={56} />
             <Tooltip
-              formatter={(value) => formatValue(Number(value))}
+              formatter={(value, _name, props) => formatValue(Number(value), String(props?.dataKey ?? series[0]?.key ?? ''))}
               contentStyle={{ background: 'var(--color-surface-1)', border: '1px solid var(--color-line)', borderRadius: 8, fontSize: 12 }}
               cursor={{ fill: 'var(--chart-grid)' }}
             />

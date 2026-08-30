@@ -42,7 +42,7 @@ async function getModuleUsage(tenantId: string): Promise<ModuleUsage[]> {
 async function getLoginFrequency(
   tenantId: string,
   range: DateRange,
-): Promise<{ usersWithSession: number; medianDistinctLoginDays: number; avgDistinctLoginDays: number }> {
+): Promise<{ usersWithSession: number; medianDistinctLoginDays: number | null; avgDistinctLoginDays: number | null }> {
   const sessions = await prisma.session.findMany({
     where: { user: { tenantId }, createdAt: { gte: range.since, lte: range.until } },
     select: { userId: true, createdAt: true },
@@ -54,10 +54,11 @@ async function getLoginFrequency(
     daysByUser.get(s.userId)!.add(day);
   }
   const dayCounts = [...daysByUser.values()].map((set) => set.size);
+  const avgValue = avg(dayCounts);
   return {
     usersWithSession: daysByUser.size,
     medianDistinctLoginDays: median(dayCounts),
-    avgDistinctLoginDays: Math.round(avg(dayCounts) * 10) / 10,
+    avgDistinctLoginDays: avgValue === null ? null : Math.round(avgValue * 10) / 10,
   };
 }
 

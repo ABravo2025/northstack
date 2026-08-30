@@ -28,6 +28,10 @@ export default function NotificationBell({ token }: NotificationBellProps) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loaded, setLoaded] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  // Bumped by every mutation (mark-one-read, mark-all-read) so a `listNotifications` response that
+  // was already in flight when the mutation fired gets ignored instead of overwriting it with
+  // stale (pre-mutation) data once it resolves.
+  const fetchSeq = useRef(0);
 
   const refreshUnreadCount = () => {
     api.getUnreadNotificationCount(token).then(setUnreadCount).catch(() => {});
@@ -43,10 +47,15 @@ export default function NotificationBell({ token }: NotificationBellProps) {
   const handleOpen = () => {
     const next = !open;
     setOpen(next);
-    if (next && !loaded) {
+    if (next) {
+      // Refetch on every open, not just the first — unreadCount already polls independently, so
+      // without this the badge count and the dropdown list can silently disagree until a full
+      // page reload once new notifications arrive between opens.
+      const seq = ++fetchSeq.current;
       api
         .listNotifications(token)
         .then((data) => {
+          if (seq !== fetchSeq.current) return;
           setNotifications(data);
           setLoaded(true);
         })
@@ -58,6 +67,7 @@ export default function NotificationBell({ token }: NotificationBellProps) {
     if (notification.read) return;
     try {
       await api.markNotificationRead(token, notification.id);
+      fetchSeq.current++;
       setNotifications((prev) => prev.map((n) => (n.id === notification.id ? { ...n, read: true } : n)));
       setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch {
@@ -68,6 +78,7 @@ export default function NotificationBell({ token }: NotificationBellProps) {
   const handleMarkAllRead = async () => {
     try {
       await api.markAllNotificationsRead(token);
+      fetchSeq.current++;
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch {

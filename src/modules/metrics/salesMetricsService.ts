@@ -38,7 +38,7 @@ interface WinRateResult {
   wonCount: number;
   lostCount: number;
   dealSizeByCurrency: { currency: string; medianAmountCents: number; avgAmountCents: number; sampleSize: number }[];
-  cycleDaysMedian: number;
+  cycleDaysMedian: number | null;
   cycleSampleSize: number;
 }
 
@@ -67,23 +67,26 @@ async function getWinRateAndCycle(tenantId: string, range: DateRange): Promise<W
     if (!byCurrency.has(o.currency)) byCurrency.set(o.currency, []);
     byCurrency.get(o.currency)!.push(o.amountCents);
   }
+  // `amounts` is never empty here — every entry in byCurrency had at least one amount pushed onto
+  // it at the point it was created, in the loop just above.
   const dealSizeByCurrency = [...byCurrency].map(([currency, amounts]) => ({
     currency,
-    medianAmountCents: Math.round(median(amounts)),
-    avgAmountCents: Math.round(avg(amounts)),
+    medianAmountCents: Math.round(median(amounts) ?? 0),
+    avgAmountCents: Math.round(avg(amounts) ?? 0),
     sampleSize: amounts.length,
   }));
 
   const cycleDays = closed
     .filter((o) => o.stageHistory.length >= 2)
     .map((o) => daysBetween(o.stageHistory[0].enteredAt, o.stageHistory[o.stageHistory.length - 1].enteredAt));
+  const cycleDaysMedianValue = median(cycleDays);
 
   return {
     winRatePct: pct(won.length, won.length + lost.length),
     wonCount: won.length,
     lostCount: lost.length,
     dealSizeByCurrency,
-    cycleDaysMedian: Math.round(median(cycleDays) * 10) / 10,
+    cycleDaysMedian: cycleDaysMedianValue === null ? null : Math.round(cycleDaysMedianValue * 10) / 10,
     cycleSampleSize: cycleDays.length,
   };
 }
@@ -146,11 +149,13 @@ async function getStageVelocity(tenantId: string): Promise<{ byStage: StageVeloc
     }
   }
 
+  // v.days is never empty here — same reasoning as dealSizeByCurrency above: each entry in
+  // durationsByStage had a day-count pushed onto it at the point it was created.
   const byStage = [...durationsByStage].map(([stageId, v]) => ({
     stageId,
     stageName: v.name,
     pipelineName: v.pipelineName,
-    historicalMedianDays: Math.round(median(v.days) * 10) / 10,
+    historicalMedianDays: Math.round((median(v.days) ?? 0) * 10) / 10,
     sampleSize: v.days.length,
   }));
   const medianByStage = new Map(byStage.map((s) => [s.stageId, s]));

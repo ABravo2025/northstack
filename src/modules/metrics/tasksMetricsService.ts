@@ -15,13 +15,14 @@ async function getOverdueCount(tenantId: string): Promise<number> {
   return prisma.task.count({ where: { tenantId, completedAt: null, dueDate: { lt: new Date() } } });
 }
 
-async function getMedianTimeToComplete(tenantId: string, range: DateRange): Promise<{ medianHours: number; sampleSize: number }> {
+async function getMedianTimeToComplete(tenantId: string, range: DateRange): Promise<{ medianHours: number | null; sampleSize: number }> {
   const completed = await prisma.task.findMany({
     where: { tenantId, completedAt: { not: null, gte: range.since, lte: range.until } },
     select: { createdAt: true, completedAt: true },
   });
   const hours = completed.map((t) => (t.completedAt!.getTime() - t.createdAt.getTime()) / 3600000);
-  return { medianHours: Math.round(median(hours) * 10) / 10, sampleSize: hours.length };
+  const medianValue = median(hours);
+  return { medianHours: medianValue === null ? null : Math.round(medianValue * 10) / 10, sampleSize: hours.length };
 }
 
 async function getNotesVolume(tenantId: string, range: DateRange): Promise<{ total: number; byMonth: { month: string; count: number }[] }> {

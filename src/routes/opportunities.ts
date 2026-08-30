@@ -287,6 +287,9 @@ opportunitiesRouter.post('/api/opportunities/:opportunityId/contacts', async (re
   if (!contact || contact.tenantId !== user.tenantId) {
     return res.status(400).json({ error: 'Contact not found' });
   }
+  if (!contact.isActive) {
+    return res.status(400).json({ error: 'Cannot link a deactivated contact' });
+  }
 
   const link = await addOpportunityContact(user.tenantId!, req.params.opportunityId, req.body.contactId, req.body.role);
   return res.status(201).json(link);

@@ -28,7 +28,7 @@ export default function DashboardsAdoptionPage() {
         />
         <StatTile
           label="Login frequency (proxy)"
-          value={String(adoption.loginFrequency.medianDistinctLoginDays)}
+          value={adoption.loginFrequency.medianDistinctLoginDays === null ? '—' : String(adoption.loginFrequency.medianDistinctLoginDays)}
           subtitle={`median distinct login days · ${adoption.loginFrequency.usersWithSession} users`}
         />
       </div>

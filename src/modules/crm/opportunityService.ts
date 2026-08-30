@@ -1,5 +1,5 @@
 import prisma from '../../lib/prisma.js';
-import { resolveNextRoundRobinUserId } from './pipelineAssignmentService.js';
+import { advanceRoundRobinCursor, resolveNextRoundRobinUserId } from './pipelineAssignmentService.js';
 import { createNotification } from '../notifications/notificationService.js';
 import { sendOpportunityStageChangedEmail } from '../../lib/mailer.js';
 import { bestEffort } from '../../lib/bestEffort.js';
@@ -69,39 +69,50 @@ export interface UpdateOpportunityInput {
 // gets overridden by company.accountOwnerId on purpose (the account's
 // designated manager takes over regardless of who worked the lead), while
 // round-robin only fills in when the Opportunity has no owner yet.
+interface ResolvedOwner {
+  ownerId: string | null;
+  // Set only when ownerId came from resolveNextRoundRobinUserId — the caller must advance the
+  // cursor (advanceRoundRobinCursor) after, and only after, the Opportunity write that uses this
+  // ownerId actually succeeds. Absent for every other path (explicit ownerId, account_owner
+  // override, fill-only-if-empty) since none of those touch the rotation cursor.
+  roundRobinCandidate?: string;
+}
+
 async function resolveAutoAssignedOwnerId(
   tenantId: string,
   pipelineId: string,
   companyId: string,
   options: { mode: 'create' } | { mode: 'move'; existingOwnerId: string | null },
-): Promise<string | null> {
+): Promise<ResolvedOwner> {
   const pipeline = await prisma.pipeline.findUnique({
     where: { id: pipelineId },
     select: { type: true, assignmentMode: true },
   });
   if (!pipeline?.assignmentMode) {
-    return options.mode === 'move' ? options.existingOwnerId : null;
+    return { ownerId: options.mode === 'move' ? options.existingOwnerId : null };
   }
 
   if (pipeline.type === 'account' && pipeline.assignmentMode === 'account_owner') {
     const company = await prisma.company.findUnique({ where: { id: companyId }, select: { accountOwnerId: true } });
     if (company?.accountOwnerId) {
-      return company.accountOwnerId; // override — always wins, both at creation and on a move
+      return { ownerId: company.accountOwnerId }; // override — always wins, both at creation and on a move
     }
     if (options.mode === 'move' && options.existingOwnerId) {
-      return options.existingOwnerId; // fill-only-if-empty: already has an owner, leave it
+      return { ownerId: options.existingOwnerId }; // fill-only-if-empty: already has an owner, leave it
     }
-    return resolveNextRoundRobinUserId(tenantId, pipelineId);
+    const candidate = await resolveNextRoundRobinUserId(tenantId, pipelineId);
+    return { ownerId: candidate, roundRobinCandidate: candidate ?? undefined };
   }
 
   if (pipeline.assignmentMode === 'round_robin') {
     if (options.mode === 'move' && options.existingOwnerId) {
-      return options.existingOwnerId;
+      return { ownerId: options.existingOwnerId };
     }
-    return resolveNextRoundRobinUserId(tenantId, pipelineId);
+    const candidate = await resolveNextRoundRobinUserId(tenantId, pipelineId);
+    return { ownerId: candidate, roundRobinCandidate: candidate ?? undefined };
   }
 
-  return options.mode === 'move' ? options.existingOwnerId : null;
+  return { ownerId: options.mode === 'move' ? options.existingOwnerId : null };
 }
 
 const OPPORTUNITY_INCLUDE = {
@@ -142,9 +153,15 @@ export async function createOpportunity(input: CreateOpportunityInput): Promise<
     stageId = firstStage.id;
   }
 
-  const ownerId = input.ownerId
-    ? input.ownerId
-    : await resolveAutoAssignedOwnerId(input.tenantId, input.pipelineId, input.companyId, { mode: 'create' });
+  let ownerId: string | null;
+  let roundRobinCandidate: string | undefined;
+  if (input.ownerId) {
+    ownerId = input.ownerId;
+  } else {
+    const resolved = await resolveAutoAssignedOwnerId(input.tenantId, input.pipelineId, input.companyId, { mode: 'create' });
+    ownerId = resolved.ownerId;
+    roundRobinCandidate = resolved.roundRobinCandidate;
+  }
 
   const opportunity = await prisma.opportunity.create({
     data: {
@@ -164,6 +181,12 @@ export async function createOpportunity(input: CreateOpportunityInput): Promise<
       nextStepNote: input.nextStepNote ?? null,
     },
   });
+
+  // Only now, after the write that actually used this candidate as owner has succeeded — see
+  // advanceRoundRobinCursor's own comment for why this can't happen any earlier.
+  if (roundRobinCandidate) {
+    await advanceRoundRobinCursor(input.pipelineId, roundRobinCandidate);
+  }
 
   await prisma.opportunityStageHistory.create({
     data: { tenantId: input.tenantId, opportunityId: opportunity.id, stageId },
@@ -221,6 +244,8 @@ export async function updateOpportunity(
   // call — the target pipeline's stage set is different, so the caller's
   // stageId (if any) almost certainly belongs to the *old* pipeline.
   let resolvedStageId: string | undefined;
+  let roundRobinCandidate: string | undefined;
+  let roundRobinPipelineId: string | undefined;
   if (input.pipelineId !== undefined && input.pipelineId !== existing.pipelineId) {
     data.pipelineId = input.pipelineId;
     const firstStage = await prisma.pipelineStageDefinition.findFirst({
@@ -238,10 +263,13 @@ export async function updateOpportunity(
     // call (an explicit choice, including an explicit null, always wins).
     if (input.ownerId === undefined) {
       const effectiveCompanyId = input.companyId ?? existing.companyId;
-      data.ownerId = await resolveAutoAssignedOwnerId(tenantId, input.pipelineId, effectiveCompanyId, {
+      const resolved = await resolveAutoAssignedOwnerId(tenantId, input.pipelineId, effectiveCompanyId, {
         mode: 'move',
         existingOwnerId: existing.ownerId,
       });
+      data.ownerId = resolved.ownerId;
+      roundRobinCandidate = resolved.roundRobinCandidate;
+      roundRobinPipelineId = input.pipelineId;
     }
   } else if (input.stageId !== undefined) {
     data.stageId = input.stageId;
@@ -249,6 +277,12 @@ export async function updateOpportunity(
   }
 
   const updated = await prisma.opportunity.update({ where: { id }, data });
+
+  // Only now, after the write that actually used this candidate as owner has succeeded — see
+  // advanceRoundRobinCursor's own comment for why this can't happen any earlier.
+  if (roundRobinCandidate && roundRobinPipelineId) {
+    await advanceRoundRobinCursor(roundRobinPipelineId, roundRobinCandidate);
+  }
 
   if (resolvedStageId && resolvedStageId !== existing.stageId) {
     await prisma.opportunityStageHistory.create({
@@ -322,9 +356,12 @@ export async function deleteOpportunity(id: string): Promise<void> {
   // No onDelete cascade on OpportunityStageHistory/OpportunityContact's FKs —
   // every Opportunity has at least one history row from creation, so a plain
   // delete would always hit a foreign-key restrict. Clean up children first.
+  // TagAssignment.entityId has no FK at all (loose reference, like CustomFieldValue) — cleaned up
+  // here too, or a hard-deleted Opportunity's tags become permanently orphaned rows.
   await prisma.$transaction([
     prisma.opportunityStageHistory.deleteMany({ where: { opportunityId: id } }),
     prisma.opportunityContact.deleteMany({ where: { opportunityId: id } }),
+    prisma.tagAssignment.deleteMany({ where: { entityType: 'opportunity', entityId: id } }),
     prisma.opportunity.delete({ where: { id } }),
   ]);
 }

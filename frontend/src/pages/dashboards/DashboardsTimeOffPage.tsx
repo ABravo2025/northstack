@@ -22,7 +22,10 @@ export default function DashboardsTimeOffPage() {
           value={timeOff.approval.approvalRatePct === null ? '—' : `${timeOff.approval.approvalRatePct}%`}
           subtitle={`sample: ${timeOff.approval.sampleSize}`}
         />
-        <StatTile label="Median time to decide" value={`${timeOff.approval.medianApprovalHours}h`} />
+        <StatTile
+          label="Median time to decide"
+          value={timeOff.approval.medianApprovalHours === null ? '—' : `${timeOff.approval.medianApprovalHours}h`}
+        />
         <StatTile label="Pending requests" value={String(timeOff.pending)} />
         <StatTile
           label="Policy adoption"

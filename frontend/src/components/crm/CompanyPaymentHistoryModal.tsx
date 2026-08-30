@@ -19,6 +19,7 @@ const STATUS_LABEL: Record<StripePaymentEvent['type'], string> = {
   charge_succeeded: 'Paid',
   charge_failed: 'Failed',
   charge_refunded: 'Refunded',
+  charge_pending: 'Pending',
 };
 
 // Reached from PaymentsOverviewPage's Company link and from CompanyStripeSection's "View full

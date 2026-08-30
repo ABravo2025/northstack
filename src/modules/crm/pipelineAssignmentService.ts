@@ -188,15 +188,23 @@ export async function resolveNextRoundRobinUserId(tenantId: string, pipelineId: 
   for (let i = 1; i <= orderedIds.length; i++) {
     const candidate = orderedIds[(cursorIndex + i) % orderedIds.length];
     if (eligibleIds.has(candidate)) {
-      // Bypasses prisma.pipeline.update on purpose — Pipeline.updatedAt is
-      // @default(now()) @updatedAt, and a normal update() would bump it (and
-      // look like a human edited the Pipeline) on every single Opportunity
-      // creation. Known race: two concurrent creates can read the same
-      // cursor and pick the same candidate — accepted at this volume.
-      await prisma.$executeRaw`UPDATE "Pipeline" SET "lastAssignedUserId" = ${candidate} WHERE id = ${pipelineId}`;
       return candidate;
     }
   }
 
   return null;
+}
+
+// The cursor commit is deliberately a separate step from resolveNextRoundRobinUserId above —
+// callers (opportunityService.ts's createOpportunity/updateOpportunity) must only call this after
+// the Opportunity write that used `userId` as its owner has actually succeeded. Committing the
+// cursor eagerly, before that write, would burn this user's turn even if the write then failed
+// (a constraint violation, a DB hiccup), skewing rotation fairness for no Opportunity created.
+export async function advanceRoundRobinCursor(pipelineId: string, userId: string): Promise<void> {
+  // Bypasses prisma.pipeline.update on purpose — Pipeline.updatedAt is
+  // @default(now()) @updatedAt, and a normal update() would bump it (and
+  // look like a human edited the Pipeline) on every single Opportunity
+  // creation. Known race: two concurrent creates can read the same
+  // cursor and pick the same candidate — accepted at this volume.
+  await prisma.$executeRaw`UPDATE "Pipeline" SET "lastAssignedUserId" = ${userId} WHERE id = ${pipelineId}`;
 }

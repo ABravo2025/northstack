@@ -5,16 +5,17 @@ import type { DateRange } from './dateRange.js';
 async function getApprovalStats(
   tenantId: string,
   range: DateRange,
-): Promise<{ approvalRatePct: number | null; medianApprovalHours: number; sampleSize: number }> {
+): Promise<{ approvalRatePct: number | null; medianApprovalHours: number | null; sampleSize: number }> {
   const decided = await prisma.timeOffRequest.findMany({
     where: { tenantId, status: { in: ['approved', 'rejected'] }, createdAt: { gte: range.since, lte: range.until } },
     select: { status: true, createdAt: true, decidedAt: true },
   });
   const approved = decided.filter((r) => r.status === 'approved');
   const hours = decided.filter((r) => r.decidedAt).map((r) => (r.decidedAt!.getTime() - r.createdAt.getTime()) / 3600000);
+  const medianValue = median(hours);
   return {
     approvalRatePct: pct(approved.length, decided.length),
-    medianApprovalHours: Math.round(median(hours) * 10) / 10,
+    medianApprovalHours: medianValue === null ? null : Math.round(medianValue * 10) / 10,
     sampleSize: decided.length,
   };
 }

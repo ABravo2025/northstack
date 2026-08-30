@@ -207,7 +207,7 @@ export interface StripePaymentSummary {
 
 export interface StripePaymentEvent {
   id: string;
-  type: 'charge_failed' | 'charge_refunded' | 'charge_succeeded';
+  type: 'charge_failed' | 'charge_refunded' | 'charge_succeeded' | 'charge_pending';
   amountCents: number;
   currency: string;
   createdAt: string;
@@ -776,8 +776,8 @@ export interface TenantHrMetrics {
   byJobTitle: { id: string | null; name: string; count: number }[];
   contractTypeMix: { contractType: string; count: number }[];
   personTypeMix: { personType: string; count: number }[];
-  tenure: { medianDays: number; avgDays: number; sampleSize: number };
-  spanOfControl: { managerCount: number; medianReports: number; avgReports: number };
+  tenure: { medianDays: number | null; avgDays: number | null; sampleSize: number };
+  spanOfControl: { managerCount: number; medianReports: number | null; avgReports: number | null };
   customFields: {
     activeDefinitionCount: number;
     employeeCount: number;
@@ -786,7 +786,7 @@ export interface TenantHrMetrics {
 }
 
 export interface TenantTimeOffMetrics {
-  approval: { approvalRatePct: number | null; medianApprovalHours: number; sampleSize: number };
+  approval: { approvalRatePct: number | null; medianApprovalHours: number | null; sampleSize: number };
   pending: number;
   policyAdoption: { employeesWithPolicy: number; totalEmployees: number; adoptionPct: number | null };
   daysTaken: { totalDays: number; requestCount: number };
@@ -816,7 +816,7 @@ export interface TenantSalesMetrics {
     wonCount: number;
     lostCount: number;
     dealSizeByCurrency: { currency: string; medianAmountCents: number; avgAmountCents: number; sampleSize: number }[];
-    cycleDaysMedian: number;
+    cycleDaysMedian: number | null;
     cycleSampleSize: number;
   };
   stageVelocity: {
@@ -855,14 +855,14 @@ export interface TenantSalesMetrics {
 export interface TenantTasksMetrics {
   completion: { completed: number; total: number; completionRatePct: number | null };
   overdueCount: number;
-  timeToComplete: { medianHours: number; sampleSize: number };
+  timeToComplete: { medianHours: number | null; sampleSize: number };
   notes: { total: number; byMonth: MonthCount[] };
 }
 
 export interface TenantAdoptionMetrics {
   seatUtilization: { accepted: number; nonRevokedTotal: number; ratePct: number | null };
   moduleUsage: { module: string; used: boolean; detail: string }[];
-  loginFrequency: { usersWithSession: number; medianDistinctLoginDays: number; avgDistinctLoginDays: number };
+  loginFrequency: { usersWithSession: number; medianDistinctLoginDays: number | null; avgDistinctLoginDays: number | null };
 }
 
 export interface TenantMetricsOverview {

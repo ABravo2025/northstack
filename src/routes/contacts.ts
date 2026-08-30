@@ -76,8 +76,18 @@ contactsRouter.post('/api/contacts', async (req, res) => {
     return res.status(400).json(refError);
   }
 
-  const contact = await createContact({ ...req.body, tenantId: user.tenantId! });
-  return res.status(201).json(contact);
+  try {
+    const contact = await createContact({ ...req.body, tenantId: user.tenantId! });
+    return res.status(201).json(contact);
+  } catch (error) {
+    // Contact.email is unique per tenant, but deactivating one doesn't free its email — without
+    // this, re-creating (or a public Form re-capturing) the same address as a deactivated Contact
+    // hits the DB constraint and would otherwise surface as an unhandled 500.
+    if ((error as { code?: string }).code === 'P2002') {
+      return res.status(400).json({ error: `A contact with email "${req.body.email}" already exists` });
+    }
+    throw error;
+  }
 });
 
 contactsRouter.get('/api/contacts/:contactId', async (req, res) => {
@@ -118,8 +128,15 @@ contactsRouter.patch('/api/contacts/:contactId', async (req, res) => {
     return res.status(400).json(refError);
   }
 
-  const updated = await updateContact(req.params.contactId, req.body);
-  return res.json(updated);
+  try {
+    const updated = await updateContact(req.params.contactId, req.body);
+    return res.json(updated);
+  } catch (error) {
+    if ((error as { code?: string }).code === 'P2002') {
+      return res.status(400).json({ error: `A contact with email "${req.body.email}" already exists` });
+    }
+    throw error;
+  }
 });
 
 // Soft: deactivates instead of deleting (docs/tareas/specredisenosalesv2.md

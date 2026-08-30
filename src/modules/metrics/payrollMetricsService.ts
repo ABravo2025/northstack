@@ -81,13 +81,16 @@ async function getCompensationByDepartment(tenantId: string): Promise<Compensati
     }
     groups.get(key)!.rates.push(c.rateCents);
   }
+  // `?? 0` is unreachable, not a silent "no data" fallback: every entry in groups.values() had at
+  // least one rate pushed onto it at the point it was created (see the loop above), so g.rates is
+  // never empty here — median/avg's null case (an empty array) can't actually occur.
   return [...groups.values()].map((g) => ({
     departmentId: g.departmentId,
     departmentName: g.departmentName,
     compensationType: g.compensationType,
     currency: g.currency,
-    medianRateCents: Math.round(median(g.rates)),
-    avgRateCents: Math.round(avg(g.rates)),
+    medianRateCents: Math.round(median(g.rates) ?? 0),
+    avgRateCents: Math.round(avg(g.rates) ?? 0),
     sampleSize: g.rates.length,
   }));
 }

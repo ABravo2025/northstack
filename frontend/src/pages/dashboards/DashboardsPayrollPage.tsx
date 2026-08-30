@@ -49,8 +49,18 @@ export default function DashboardsPayrollPage() {
         <StatTile label="Off-cycle payments" value={String(payroll.offCycle.count)} />
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <BarChartCard title="Payroll cost by month" data={costByPeriod.data} series={costByPeriod.series} valueFormatter={(v) => `$${v}`} />
-        <BarChartCard title="Cost by type" data={costByType.data} series={costByType.series} valueFormatter={(v) => `$${v}`} />
+        <BarChartCard
+          title="Payroll cost by month"
+          data={costByPeriod.data}
+          series={costByPeriod.series}
+          valueFormatter={(v, currency) => formatMoney(v * 100, currency)}
+        />
+        <BarChartCard
+          title="Cost by type"
+          data={costByType.data}
+          series={costByType.series}
+          valueFormatter={(v, currency) => formatMoney(v * 100, currency)}
+        />
       </div>
       {payroll.compensationByDepartment.length > 0 && (
         <div className="card mt-4">

@@ -1,6 +1,9 @@
 # Spec Activity Log
 
-**Estado:** 🚧 Unidades 1-5 de 6 completas y en `staging` (2026-08-30). Unidad 5 (nueva): extendió el
+**Estado:** ✅ Unidades 1-5 completas + Unidad 6 parcial, en `staging` (2026-08-30) — el spec se da
+por cerrado en esta ronda. Unidad 6 (nueva, parcial): Tenant (currency/plan), User (rol/status),
+Invitation (alta/cancelación/aceptación) — Subscription/GoogleCalendarConnection/StripeConnection
+deliberadamente afuera, ver §6 para el razonamiento completo. Unidad 5: extendió el
 wiring al resto de CRM + cross-module + vistas/forms — Pipeline, PipelineStage, Task, Note, Tag,
 SavedView, PublicForm — mismo mecanismo, verificado contra `staging` real. Unidad 4: extendió el
 wiring de create/update a HR/Payroll — TimeOffPolicy, TimeOffRequest, StatusDefinition,
@@ -243,7 +246,7 @@ de la plataforma" tal como se confirmó en la Decisión 1.
 | **3** ✅ | Frontend: tab de Activity en los 4 modales + página de Settings con filtros | (consume Unidad 1+2) |
 | **4** ✅ | Extensión HR/Payroll | TimeOffPolicy, TimeOffRequest, EmployeeCompensation, EmployeeTermination, PayrollRun, PayFrequency, PaymentMethod, StatusDefinition, CustomFieldDefinition, FieldCatalogDefinition |
 | **5** ✅ | Extensión CRM + cross-module + vistas/forms | Pipeline, PipelineStage, Task, Note, Tag, SavedView, PublicForm |
-| **6** | Extensión cuenta/plataforma | Tenant (perfil/currency), User (rol/status), Invitation, Subscription, GoogleCalendarConnection, StripeConnection |
+| **6** ⚠️ parcial | Extensión cuenta/plataforma | Tenant (currency/plan) ✅, User (rol/status) ✅, Invitation (alta/cancelación/aceptación) ✅ — Subscription/GoogleCalendarConnection/StripeConnection deliberadamente afuera, ver §6 |
 
 Después de la Unidad 3 ya hay una feature end-to-end usable (que es el pedido original); las
 Unidades 4-6 son las que llevan el feed de Settings de "las 4 entidades del CRM/HR" a "auditoría
@@ -267,6 +270,18 @@ service distintos a tocar en total, por eso separado en 3 rondas en vez de una s
   crea/edita/borra un registro puntual desde su propia pantalla" — extenderlo a los otros tres
   orígenes (bulk import, seed, formulario anónimo) queda como una unidad futura separada si hace
   falta, no una que se coló sin documentar.
+- **Unidad 6 — scope cut real, decidido al implementar**: de los 6 tipos que el roadmap original
+  listaba, se construyeron 3 (Tenant currency/plan, User rol/status, Invitation alta/cancelación/
+  aceptación) y se dejaron deliberadamente afuera **Subscription**, **GoogleCalendarConnection** y
+  **StripeConnection**. Motivo: los cambios de estado más interesantes de estas tres son
+  disparados por webhooks (Paddle/Mercado Pago/Stripe) o por el cron de `planTransitionService.ts`
+  — ninguno de esos caminos tiene un `User` actor real detrás, así que ni siquiera calificarían
+  para loguearse bajo el mismo criterio ya aplicado en toda la Unidad 2 ("sin actor real, sin
+  entrada"). Lo poco que sí tiene un actor humano (conectar/desconectar Google Calendar o Stripe,
+  cambiar de plan/cancelar desde `subscriptionSelfServeService.ts`) es en la práctica un toggle
+  booleano sin mucho campo que diffear, y su estado ya es visible directamente en la UI de
+  Settings (`connected`/`needsReconnect`/`needsAttention`). Se puede retomar como una unidad
+  separada si en algún momento se justifica.
 - **Sesiones/login** (decisión 6).
 - **Revertir un cambio desde el log** (solo lectura, ninguna unidad de esta ronda escribe).
 - **Retención/purga** — el log crece sin límite por ahora, igual que `StatusHistoryEntry` hoy (sin

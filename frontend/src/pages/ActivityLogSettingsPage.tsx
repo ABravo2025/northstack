@@ -37,6 +37,9 @@ const ENTITY_TYPE_OPTIONS: { value: ActivityEntityType; label: string }[] = [
   { value: 'tag', label: 'Tag' },
   { value: 'savedView', label: 'Saved View' },
   { value: 'publicForm', label: 'Public Form' },
+  { value: 'tenant', label: 'Workspace' },
+  { value: 'user', label: 'User' },
+  { value: 'invitation', label: 'Invitation' },
 ];
 
 const ACTION_OPTIONS: { value: 'create' | 'update' | 'delete'; label: string }[] = [
@@ -73,6 +76,9 @@ const ENTITY_TYPE_LABEL: Record<ActivityEntityType, string> = {
   tag: 'Tag',
   savedView: 'Saved View',
   publicForm: 'Public Form',
+  tenant: 'Workspace',
+  user: 'User',
+  invitation: 'Invitation',
 };
 
 function FeedRow({ entry }: { entry: ActivityLogEntry }) {

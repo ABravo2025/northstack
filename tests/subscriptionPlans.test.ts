@@ -6,6 +6,7 @@ const subscriptions: any[] = [];
 vi.mock('../src/lib/prisma.js', () => {
   const mockPrisma: any = {
     tenant: {
+      findUnique: vi.fn(async ({ where }: any) => tenants.find((t) => t.id === where.id) ?? null),
       update: vi.fn(async ({ where, data }: any) => {
         const tenant = tenants.find((t) => t.id === where.id);
         Object.assign(tenant, data);

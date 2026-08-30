@@ -547,6 +547,17 @@ inline (`createPipeline`/`updatePipeline`/`createTask`/`createNote`/`createSaved
 `updateSavedView`/`deleteSavedView` ya traían `createdById`/`updatedById`/`userId`, no hicieron
 falta cambios de firma ahí).
 
+### Activity Log — Unidad 6, parcial (2026-08-30, cuenta/plataforma)
+3 field configs más: **tenantFieldConfig.ts** (solo `currency`/`plan`, los únicos campos que
+`updateTenantCurrency`/`updateTenantPlan` tocan), **userFieldConfig.ts** (solo `role`/`status` —
+nunca `passwordHash`; exporta también `userDisplayName`), **invitationFieldConfig.ts**. Servicios:
+`tenantService.updateTenantCurrency`, `planService.updateTenantPlan`,
+`tenantUserService.updateTenantUser` (ya tenía `actingUser`, sin cambio de firma),
+`invitationService.createInvitation`/`cancelInvitation`/`acceptInvitation`. Deliberadamente
+**sin** Subscription/GoogleCalendarConnection/StripeConnection — ver
+`docs/general/spec-activity-log.md` §6 para el motivo (sin actor humano real en sus cambios de
+estado más relevantes, que vienen de webhooks/cron).
+
 ### `frontend/src/components/tasks/`
 - **EntityTasksList** — tab "Tasks" compartido por los 4 paneles de detalle.
 - **MyTasksWidget** — widget "My tasks" de `/overview`, reusa el mismo popover de edición que `EntityTasksList` vía `TaskFormPopover`. Desde 2026-08-22, el propio endpoint (`listMyTasks`) ya no devuelve tareas completadas — el widget no filtra nada del lado del cliente, solo desaparecen del `state` en el próximo `load()`.

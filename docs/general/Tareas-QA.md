@@ -2602,3 +2602,41 @@ con el summary correcto, incluyendo el borrado de la Task mostrando su último t
 
 Mismo criterio que QA-57/QA-59: dato incorrecto o entrada faltante es severidad media; una
 regresión en la operación real (crear/editar/borrar deja de funcionar) es alta.
+
+---
+
+## QA-61 — Activity Log, Unidad 6 (parcial): cuenta/plataforma (2026-08-30, en `staging`) — cierra el spec
+
+**Por qué existe esta tarea:** última unidad del spec — Tenant (currency/plan), User (rol/status),
+Invitation (alta/cancelación/aceptación). Deliberadamente **no** incluye Subscription/Google
+Calendar/Stripe (ver `docs/general/spec-activity-log.md` §6 para el motivo). Verificado con una
+corrida directa contra `staging` (cambiar la moneda del tenant, crear y cancelar una invitación —
+3 filas confirmadas, incluyendo el diff `Status: pending → revoked`).
+
+### A. Confirmar en `Settings → Activity Log`
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Cambiar la moneda del tenant (`/settings/appearance`) | Fila `Changed Currency: USD → ARS` (o el par que corresponda) |
+| 2 | Elegir/cambiar de plan desde `PlansModal` (antes de tener billing activo) | Fila de tipo Workspace con el cambio de `Plan` |
+| 3 | Promover a alguien a owner, o cambiar el rol/status de un usuario (`/settings/users`) | Fila de tipo User — confirmar que **nunca** aparece `passwordHash` en el detalle, solo `role`/`status` |
+| 4 | Invitar a alguien nuevo, y cancelar una invitación pendiente | Fila `create` al invitar, fila `update` (`Status: pending → revoked`) al cancelar |
+| 5 | Aceptar una invitación (crear cuenta desde el link) | Fila `update` (`Status: pending → accepted`) — el actor es la propia persona que acepta, no quien invitó |
+| 6 | Conectar/desconectar Google Calendar o Stripe, o cambiar de plan/cancelar la propia suscripción de Northstack desde Billing | **No** debería generar ninguna fila — scope cut deliberado de esta unidad, confirmar que no hay error ni comportamiento raro, solo ausencia de log |
+
+### B. Regresión
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 7 | `npm run build`/`npm test` (backend, 207/207) y `npm run build` (frontend) | Los tres en verde |
+| 8 | Uso normal de cuenta/usuarios/invitaciones desde la UI | Sin cambios visibles |
+
+### Al encontrar una falla
+
+El caso A.3 es el más sensible — si aparece `passwordHash` o cualquier dato de contraseña en una
+entrada de Activity Log, es severidad **alta** (fuga de credencial). El resto sigue el criterio ya
+establecido: dato incorrecto es media, regresión funcional es alta.
+
+**Con esta unidad el spec de Activity Log se da por cerrado** (5 unidades completas + 1 parcial,
+scope cut documentado) — cualquier extensión futura (Subscription/integraciones, u otros módulos no
+cubiertos) es una iniciativa nueva, no una unidad pendiente de este spec.

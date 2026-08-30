@@ -1,4 +1,6 @@
 import prisma from '../../lib/prisma.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { userActivityFieldConfig, userDisplayName } from '../activity/fieldConfigs/userFieldConfig.js';
 import type { User, UserRole, UserStatus } from '@prisma/client';
 
 export async function listTenantUsers(tenantId: string) {
@@ -61,6 +63,18 @@ export async function updateTenantUser(
       prisma.user.update({ where: { id: actingUser.id }, data: { role: 'admin' } }),
     ]);
 
+    await recordActivity({
+      tenantId,
+      entityType: 'user',
+      entityId: targetUserId,
+      entityLabel: userDisplayName(updatedTarget),
+      action: 'update',
+      changedByUserId: actingUser.id,
+      before: target,
+      after: updatedTarget,
+      fieldConfig: userActivityFieldConfig,
+    });
+
     return { success: true, user: updatedTarget };
   }
 
@@ -73,5 +87,18 @@ export async function updateTenantUser(
   }
 
   const updated = await prisma.user.update({ where: { id: targetUserId }, data });
+
+  await recordActivity({
+    tenantId,
+    entityType: 'user',
+    entityId: targetUserId,
+    entityLabel: userDisplayName(updated),
+    action: 'update',
+    changedByUserId: actingUser.id,
+    before: target,
+    after: updated,
+    fieldConfig: userActivityFieldConfig,
+  });
+
   return { success: true, user: updated };
 }

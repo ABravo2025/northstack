@@ -3,6 +3,8 @@ import prisma from '../../lib/prisma.js';
 import type { Invitation, UserRole } from '@prisma/client';
 import { sendInvitationEmail } from '../../lib/mailer.js';
 import type { TenantCreationResult } from './tenantService.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { invitationActivityFieldConfig } from '../activity/fieldConfigs/invitationFieldConfig.js';
 
 const INVITATION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -93,6 +95,17 @@ export async function createInvitation(input: CreateInvitationInput): Promise<In
     console.error('Failed to send invitation email:', error);
   });
 
+  await recordActivity({
+    tenantId: input.tenantId,
+    entityType: 'invitation',
+    entityId: invitation.id,
+    entityLabel: invitation.email,
+    action: 'create',
+    changedByUserId: input.invitedByUserId,
+    after: invitation,
+    fieldConfig: invitationActivityFieldConfig,
+  });
+
   return { success: true, invitation };
 }
 
@@ -161,6 +174,18 @@ export async function acceptInvitation(input: AcceptInvitationInput): Promise<Te
     return { tenant, user: updatedUser };
   }, { timeout: 15000 }); // default 5000ms is tight once seeding (statuses + pipelines) adds several round trips over Neon's network latency
 
+  await recordActivity({
+    tenantId: invitation.tenantId,
+    entityType: 'invitation',
+    entityId: invitation.id,
+    entityLabel: invitation.email,
+    action: 'update',
+    changedByUserId: input.userId,
+    before: invitation,
+    after: { ...invitation, status: 'accepted' },
+    fieldConfig: invitationActivityFieldConfig,
+  });
+
   return {
     success: true,
     tenant: result.tenant,
@@ -189,7 +214,11 @@ export interface CancelInvitationResult {
   error?: string;
 }
 
-export async function cancelInvitation(tenantId: string, invitationId: string): Promise<CancelInvitationResult> {
+export async function cancelInvitation(
+  tenantId: string,
+  invitationId: string,
+  changedByUserId: string,
+): Promise<CancelInvitationResult> {
   const invitation = await prisma.invitation.findUnique({ where: { id: invitationId } });
   if (!invitation || invitation.tenantId !== tenantId) {
     return { success: false, error: 'Invitation not found' };
@@ -199,6 +228,19 @@ export async function cancelInvitation(tenantId: string, invitationId: string): 
     return { success: false, error: 'Invitation is no longer pending' };
   }
 
-  await prisma.invitation.update({ where: { id: invitationId }, data: { status: 'revoked' } });
+  const updated = await prisma.invitation.update({ where: { id: invitationId }, data: { status: 'revoked' } });
+
+  await recordActivity({
+    tenantId,
+    entityType: 'invitation',
+    entityId: invitationId,
+    entityLabel: invitation.email,
+    action: 'update',
+    changedByUserId,
+    before: invitation,
+    after: updated,
+    fieldConfig: invitationActivityFieldConfig,
+  });
+
   return { success: true };
 }

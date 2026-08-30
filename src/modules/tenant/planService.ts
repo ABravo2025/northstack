@@ -1,6 +1,8 @@
 import prisma from '../../lib/prisma.js';
 import type { PlanTier, SubscriptionStatus, TenantStatus } from '@prisma/client';
 import { TENANT_SUMMARY_SELECT, type TenantSummary } from './tenantSummary.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { tenantActivityFieldConfig } from '../activity/fieldConfigs/tenantFieldConfig.js';
 
 // Same value set on both enums by design (see schema.prisma) — kept as an explicit map rather
 // than a cast, matching subscriptionService.ts's SUBSCRIPTION_TO_TENANT_STATUS convention.
@@ -30,11 +32,16 @@ export interface UpdateTenantPlanResult {
 
 // Scale has no self-serve checkout yet — only reachable via the "Get in touch" link, never
 // through this endpoint (spec-subscription-plans.md, "Scale/Custom — escondido, no borrado").
-export async function updateTenantPlan(tenantId: string, plan: PlanTier): Promise<UpdateTenantPlanResult> {
+export async function updateTenantPlan(
+  tenantId: string,
+  plan: PlanTier,
+  changedByUserId: string,
+): Promise<UpdateTenantPlanResult> {
   if (plan !== 'starter' && plan !== 'growth') {
     return { success: false, error: 'This plan is not available for self-service selection yet.' };
   }
 
+  const existing = await prisma.tenant.findUnique({ where: { id: tenantId }, select: TENANT_SUMMARY_SELECT });
   const lockedPriceCents = CURRENT_PLAN_PRICES_CENTS[plan];
 
   const tenant = await prisma.$transaction(async (tx) => {
@@ -80,6 +87,18 @@ export async function updateTenantPlan(tenantId: string, plan: PlanTier): Promis
     });
 
     return updated;
+  });
+
+  await recordActivity({
+    tenantId,
+    entityType: 'tenant',
+    entityId: tenantId,
+    entityLabel: tenant.name,
+    action: 'update',
+    changedByUserId,
+    before: existing,
+    after: tenant,
+    fieldConfig: tenantActivityFieldConfig,
   });
 
   return { success: true, tenant };

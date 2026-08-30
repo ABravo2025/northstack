@@ -16,6 +16,8 @@ import { seedDefaultPayFrequencies } from '../hr/payFrequencyService.js';
 import { seedDefaultPaymentMethods } from '../hr/paymentMethodService.js';
 import { getEmailDomain } from '../../lib/email.js';
 import { CURRENT_PLAN_PRICES_CENTS } from './planService.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { tenantActivityFieldConfig } from '../activity/fieldConfigs/tenantFieldConfig.js';
 
 // Personal/free email providers are excluded from the duplicate-domain check below —
 // otherwise the first person to register with @gmail.com would block every other
@@ -302,16 +304,34 @@ export interface UpdateTenantCurrencyResult {
   error?: string;
 }
 
-export async function updateTenantCurrency(tenantId: string, currency: string): Promise<UpdateTenantCurrencyResult> {
+export async function updateTenantCurrency(
+  tenantId: string,
+  currency: string,
+  changedByUserId: string,
+): Promise<UpdateTenantCurrencyResult> {
   if (!Intl.supportedValuesOf('currency').includes(currency)) {
     return { success: false, error: 'Invalid currency code' };
   }
 
+  const existing = await prisma.tenant.findUnique({ where: { id: tenantId }, select: TENANT_SUMMARY_SELECT });
   const tenant = await prisma.tenant.update({
     where: { id: tenantId },
     data: { currency },
     select: TENANT_SUMMARY_SELECT,
   });
+
+  await recordActivity({
+    tenantId,
+    entityType: 'tenant',
+    entityId: tenantId,
+    entityLabel: tenant.name,
+    action: 'update',
+    changedByUserId,
+    before: existing,
+    after: tenant,
+    fieldConfig: tenantActivityFieldConfig,
+  });
+
   return { success: true, tenant };
 }
 

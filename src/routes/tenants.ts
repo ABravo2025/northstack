@@ -123,7 +123,7 @@ tenantsRouter.patch('/api/tenants/me/plan', async (req, res) => {
     return res.status(400).json({ error: 'plan is required', field: 'plan' });
   }
 
-  const result = await updateTenantPlan(user.tenantId!, plan);
+  const result = await updateTenantPlan(user.tenantId!, plan, user.id);
   if (!result.success) {
     return res.status(400).json({ error: result.error, field: 'plan' });
   }
@@ -159,7 +159,7 @@ tenantsRouter.patch('/api/tenants/current', async (req, res) => {
     return res.status(400).json({ error: 'currency is required' });
   }
 
-  const result = await updateTenantCurrency(user.tenantId!, req.body.currency);
+  const result = await updateTenantCurrency(user.tenantId!, req.body.currency, user.id);
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }
@@ -227,7 +227,7 @@ tenantsRouter.delete('/api/tenants/invitations/:invitationId', async (req, res) 
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  const result = await cancelInvitation(user.tenantId!, req.params.invitationId);
+  const result = await cancelInvitation(user.tenantId!, req.params.invitationId, user.id);
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }

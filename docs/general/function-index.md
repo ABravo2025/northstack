@@ -124,7 +124,15 @@ Wrapper propio (`fetch` + `crypto` nativos, sin SDK) contra la API de Stripe —
 
 ### `src/modules/auth/permissionService.ts`
 Todas son `(role: UserRole) => boolean`, la fuente de verdad de qué puede hacer cada rol:
-**canViewHr**, **canCreateHr**, **canManageCustomFields**, **canInviteUsers**, **canManageUsers**, **canManagePayroll** (owner-only, a diferencia del resto — ver Payroll en `docs/spec-payroll.md`), **canManageBilling** (owner-only, mismo criterio que Payroll — Subscription Plans, `docs/spec-subscription-plans.md`), **canManagePayments** (owner-only, 2026-08-26 — Payments v1, `docs/tareas/specpaymentsv1.md`: conectar el Stripe del tenant y ver pagos de sus Companies).
+**canViewHr**, **canCreateHr**, **canManageCustomFields**, **canInviteUsers**, **canManageUsers**, **canManagePayroll** (owner-only, a diferencia del resto — ver Payroll en `docs/spec-payroll.md`), **canManageBilling** (owner-only, mismo criterio que Payroll — Subscription Plans, `docs/spec-subscription-plans.md`), **canManagePayments** (owner-only, 2026-08-26 — Payments v1, `docs/tareas/specpaymentsv1.md`: conectar el Stripe del tenant y ver pagos de sus Companies), **canViewActivityLog** (owner/admin, 2026-08-30 — Activity Log, `docs/general/spec-activity-log.md`: ver el feed tenant-wide de Settings; el tab del modal por registro no tiene gate propio).
+
+### `src/modules/activity/activityLogService.ts` (Activity Log, `docs/general/spec-activity-log.md`, 2026-08-30)
+Mecanismo genérico reusado por cada módulo que registra actividad — un solo punto de escritura en vez de que cada service arme su propio formato de diff/summary.
+- **diffEntity(before, after, fieldConfig)** — compara dos snapshots campo por campo según un `ActivityFieldConfigMap` (label + `resolve?` opcional para FKs/ids), devuelve `{field, label, oldValue, newValue}[]` ya con valores resueltos a texto legible. Mismo mecanismo para las 3 acciones: create diffea contra `before: null` (todo se ve como "set"), delete contra `after: null` ("cleared"), update entre dos snapshots reales.
+- **summarizeChanges(changes, action, entityType, entityLabel)** — arma el `summary` de una línea (create/delete no listan campos; 1 cambio → "Changed X: A → B"; 2 → "Changed X and Y"; 3+ → "Changed X, Y and N more").
+- **recordActivity(input)** — diff + summary + `prisma.activityLogEntry.create`, envuelto en `bestEffort()` (`src/lib/bestEffort.ts`) — nunca rompe ni bloquea la operación real que lo llama. Un `update` sin cambios reales no escribe nada.
+- **listActivityForEntity(tenantId, entityType, entityId)** — feed del tab de Activity de un registro (Employee/Company/Contact/Opportunity); ownership de `entityId` se valida en la ruta, esta función confía en el caller (mismo criterio que `listNotesForEntity`).
+- **listActivityFeed(input)** — feed tenant-wide de Settings, paginado por cursor `(changedAt, id)` — filtros por `entityType`/`userId`/`action`/`from`/`to`.
 
 ### `src/modules/clients/clientService.ts` (módulo legado, ver `features-overview.md`)
 CRUD estándar: **createClient**, **listClients(tenantId)**, **findClientById(id)**, **updateClient(id, input, changedByUserId)**, **deleteClient(id)**.

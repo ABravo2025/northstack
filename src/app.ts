@@ -30,6 +30,7 @@ import { googleCalendarIntegrationRouter } from './routes/googleCalendarIntegrat
 import { stripeIntegrationRouter } from './routes/stripeIntegration.js';
 import { paymentsRouter } from './routes/payments.js';
 import { tenantMetricsRouter } from './routes/tenantMetrics.js';
+import { activityRouter } from './routes/activity.js';
 
 dotenv.config();
 
@@ -121,6 +122,7 @@ app.use(googleCalendarIntegrationRouter);
 app.use(stripeIntegrationRouter);
 app.use(paymentsRouter);
 app.use(tenantMetricsRouter);
+app.use(activityRouter);
 
 // Catches anything an async route handler throws (e.g. Neon/Prisma dropping
 // the connection) so it becomes a clean JSON response instead of crashing

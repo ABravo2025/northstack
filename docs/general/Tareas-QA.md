@@ -2388,3 +2388,41 @@ viejos tal cual).
 `npm run build`/`npm test` en verde (175/175). Con esto el usuario dio por cerrado Payments v1.
 
 **Severidad:** — (feature nueva, no bug).
+
+---
+
+## QA-56 — Activity Log, Unidad 1: schema + mecanismo genérico, sin superficie funcional todavía (2026-08-30, en `staging`)
+
+**Por qué existe esta tarea:** primera unidad del módulo de Activity Log
+(`docs/general/spec-activity-log.md`, 6 unidades) — pedido explícito del usuario: un tab de
+actividad por registro en los modales de Employee/Company/Contact/Opportunity, más un feed
+tenant-wide en Settings. Esta unidad es **solo schema + el servicio genérico + rutas** — ningún
+service del resto de la app llama a `recordActivity` todavía, así que no hay ningún dato real que
+se pueda generar de uso normal de la app. El objetivo de esta tarea es una verificación de
+regresión + de plomería (rutas responden como se espera), no una prueba de feature nueva — eso
+llega con la Unidad 2 (wiring) y la Unidad 3 (frontend).
+
+### A. Regresión — nada existente se movió
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Uso normal de la app (crear/editar/borrar un Employee/Company/Contact/Opportunity) | Se comporta exactamente igual que antes — esta unidad no toca ningún service existente |
+| 2 | `npm run build`/`npm test` (backend, 194/194) y `npm run build` (frontend) | Los tres en verde |
+
+### B. Confirmar el estado en `staging`
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 3 | Listar tablas de `staging` (`information_schema.tables`) | Existe `ActivityLogEntry`, vacía (0 filas) — nada la escribe todavía |
+| 4 | `GET /api/activity?entityType=opportunity&entityId=<id-real>` con un token válido | `200`, array vacío `[]` (no hay filas), no 500 |
+| 5 | Mismo caso que 4, pero con un `entityId` que pertenece a otro tenant | `404` — mismo criterio de ownership que Tasks/Notes (`findEntityTenantId`) |
+| 6 | `GET /api/activity/feed` con un usuario `member` | `403` — `canViewActivityLog` es owner/admin únicamente |
+| 7 | `GET /api/activity/feed` con un usuario `owner` o `admin` | `200`, `{items: [], nextCursor: null}` |
+| 8 | `GET /api/activity/feed?entityType=algo-invalido` | `400` ("Unsupported entityType"), no 500 |
+
+### Al encontrar una falla
+
+Todo lo de esta unidad es plomería sin superficie de usuario — cualquier falla es baja prioridad
+salvo que rompa algo de A (regresión sobre lo que ya funcionaba) o que el gate de permisos de B.6
+no se respete (eso sería alta severidad, mismo criterio que cualquier otro endpoint owner/admin-only
+de la app).

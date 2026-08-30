@@ -4,6 +4,7 @@ import {
   canManageCustomFields,
   canManagePayments,
   canManagePayroll,
+  canViewActivityLog,
   canViewHr,
 } from '../src/modules/auth/permissionService.js';
 
@@ -34,5 +35,11 @@ describe('permission service', () => {
     expect(canManagePayments('owner')).toBe(true);
     expect(canManagePayments('admin')).toBe(false);
     expect(canManagePayments('member')).toBe(false);
+  });
+
+  it('allows owner and admin to view the tenant-wide Activity Log, unlike Payroll/Payments', () => {
+    expect(canViewActivityLog('owner')).toBe(true);
+    expect(canViewActivityLog('admin')).toBe(true);
+    expect(canViewActivityLog('member')).toBe(false);
   });
 });

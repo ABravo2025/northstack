@@ -1,6 +1,7 @@
 # Database Schema
 
-- Última actualización: 2026-08-29 (Employee Termination — ver grupo 11 — y Payments v1 Units 5-7, ver grupo 10; todo en `staging`, sin pushear a `main`)
+- Última actualización: 2026-08-30 (Activity Log Unidad 1 — schema + mecanismo genérico, ver grupo 13; en `staging`, sin pushear a `main`)
+- Actualización anterior: 2026-08-29 (Employee Termination — ver grupo 11 — y Payments v1 Units 5-7, ver grupo 10; todo en `staging`, sin pushear a `main`)
 - Fuente de verdad real: `prisma/schema.prisma`. Este documento es una vista legible de ese archivo — si difieren, el `.prisma` manda. Regenerar este archivo cuando el schema cambie de forma significativa (modelo nuevo, relación nueva), no hace falta para cambios chicos (un campo opcional más, un índice).
 - Todos los modelos son multi-tenant: casi todos tienen `tenantId` directo (no derivado por join), y el aislamiento entre tenants se verifica en el código de cada endpoint (ownership check), no solo por FK — ver `docs/current-process-flow.md` para el patrón de verificación.
 
@@ -1046,6 +1047,59 @@ Notas:
 - **Enforcement real de `status: suspended`**: `httpAuth.ts` bloquea toda mutación (no-GET) de un
   tenant suspendido — verificado en el código, no solo declarado en el schema.
 
+## 13. Activity Log
+
+Spec en `docs/general/spec-activity-log.md` (2026-08-30) — auditoría de "quién hizo qué" en la
+plataforma. Pedido explícito de Alejandro: un tab de actividad *por registro* dentro de los modales
+de detalle de Employee/Company/Contact/Opportunity, más un feed *tenant-wide* en Settings.
+**Unidad 1 completa (schema + mecanismo genérico + permiso + rutas), en `staging`** — todavía sin
+ningún caller real (Unidad 2 conecta las 4 entidades del CRM/HR, ver el spec para el roadmap
+completo de unidades).
+
+```mermaid
+erDiagram
+    TENANT ||--o{ ACTIVITY_LOG_ENTRY : "has"
+    USER ||--o{ ACTIVITY_LOG_ENTRY : "changed by"
+
+    ACTIVITY_LOG_ENTRY {
+        string id PK
+        string tenantId FK
+        enum entityType "ActivityEntityType — 27 valores, ver más abajo"
+        string entityId "no live FK, mismo patrón que Task/Note/StatusHistoryEntry"
+        string entityLabel "snapshot del nombre visible al momento"
+        enum action "create/update/delete"
+        string summary "una línea, auto-generada"
+        string changes "nullable, JSON de {field,label,oldValue,newValue}[]"
+        string changedByUserId FK
+        datetime changedAt
+    }
+```
+
+Notas:
+- **`ActivityEntityType` es un enum propio, no una extensión de `EntityType`** (grupo 2) — `EntityType`
+  está acoplado a qué módulos soportan custom fields/status/tags; la mayoría de los 27 valores de
+  `ActivityEntityType` (`payrollRun`, `invitation`, `subscription`...) nunca tendrían sentido ahí. Los
+  primeros 4 valores (`employee`/`company`/`contact`/`opportunity`) son las mismas strings que
+  `EntityType` a propósito, para reusar `findEntityTenantId` (`entityLookup.ts`) sin traducir.
+- **`entityLabel` es un snapshot, no una FK viva** — mismo criterio que
+  `StatusHistoryEntry.fromStatusName`/`toStatusName`: un rename o borrado posterior no reescribe lo
+  que significaba una entrada vieja.
+- **`changes` se arma con un solo mecanismo para las 3 acciones** (`activityLogService.ts`'s
+  `diffEntity`) — create diffea contra `before: null` (todo aparece como "set"), delete contra
+  `after: null` ("cleared"), update entre dos snapshots reales. Nunca tres formatos de mensaje
+  distintos escritos a mano por cada service.
+- **Escritura best-effort** (`src/lib/bestEffort.ts`) — si registrar la actividad falla, la
+  operación real (ya confirmada) no se revierte. No es fire-and-forget sin awaitear: ese patrón ya
+  rompió los emails de verificación de signup en Vercel serverless (ver la nota del propio archivo).
+- **Acceso**: el tab por registro no tiene gate propio (si podés abrir el modal, ves su Activity,
+  mismo criterio que Notes/Tasks). El feed tenant-wide de Settings sí — `canViewActivityLog`
+  (owner/admin hoy, `permissionService.ts`), a diferencia de Payroll/Billing/Payments que son
+  owner-only — decisión explícita de Alejandro, con la intención de que un custom role futuro pueda
+  heredar este permiso sin tocar cada call site.
+- **Sin backfill posible** — no existe ningún historial previo real de "quién cambió qué campo" en
+  el código (`StatusHistoryEntry` es el único precedente y solo cubre status). El log arranca vacío
+  desde que cada unidad se despliega.
+
 ## Enums
 
 | Enum | Valores | Usado en |
@@ -1078,6 +1132,8 @@ Notas:
 | `SubscriptionStatus` | `trialing`, `active`, `past_due`, `suspended`, `cancelled` | `Subscription.status` (grupo 12) |
 | `PaymentProvider` | `paddle`, `mercadopago` | `Subscription.provider`, `Invoice.provider`, `ProcessedWebhookEvent.provider` (grupo 12) |
 | `PlatformRole` | `platform_admin`, `platform_support`, `platform_viewer` | `User.platformRole` (nullable — null = no es staff de Northstack; usado por Admin Center, repo separado `northstack-devtasks`) |
+| `ActivityEntityType` | 27 valores (employee/company/contact/opportunity + HR/Payroll + CRM/cross-module + cuenta/plataforma, ver grupo 13) | `ActivityLogEntry.entityType` (grupo 13) |
+| `ActivityAction` | `create`, `update`, `delete` | `ActivityLogEntry.action` (grupo 13) |
 
 ## Qué falta / deuda conocida
 
@@ -1094,4 +1150,5 @@ Notas:
 - **Sales v2 (redesign de Pipeline/Opportunity — round-robin de asignación, forecast ponderado, automations al crear, notificaciones in-app) — Units 1-8 completas, solo en `staging`**: distinto de la "Clients redesign" original de arriba (esa sí está en producción) — esta es una segunda ronda de mejoras sobre lo mismo, todavía sin promover.
 - **Payments v1 — Units 1-7 completas, solo en `staging`** (última ronda 2026-08-29, ver grupo 10): conexión con Stripe, lookup/matching, visibilidad de pagos en vivo, notificaciones proactivas (cron de polling, no webhook), auto-vinculación de Companies, modal de historial de pagos con recibos, y vista general con disputes en el perfil de Company. No probado de punta a punta con una cuenta de Stripe real (sin credenciales en este entorno) más allá de tests unitarios y verificación directa contra `STAGING_DATABASE_URL`.
 - **Employee Termination — completo, solo en `staging`** (2026-08-29, ver grupo 11): status change coordinado (status/endDate/compensación/acceso/Time Off/reasignación de reportes), soporta baja pasada/hoy/futura con ejecución diferida vía cron, pago final con líneas de bonus/commission/reimbursement/deduction.
-- **Lo único todavía sin promover a `main`, a la fecha de esta actualización (2026-08-29)**: Sales v2 (redesign), Payments v1, y Employee Termination — todo el resto de lo listado arriba ya está en producción.
+- **Activity Log — Unidad 1 de 6 completa, solo en `staging`** (2026-08-30, ver grupo 13 y `docs/general/spec-activity-log.md`): schema + `activityLogService.ts` genérico + `canViewActivityLog` + rutas — sin ningún caller todavía. Unidad 2 conecta Employee/Company/Contact/Opportunity (lo que de verdad va a generar filas); Unidad 3 es el frontend (tab de modal + página de Settings); Unidades 4-6 extienden el feed de Settings al resto de la plataforma (HR/Payroll, CRM/cross-module/vistas, cuenta/plataforma).
+- **Lo único todavía sin promover a `main`, a la fecha de esta actualización (2026-08-30)**: Sales v2 (redesign), Payments v1, Employee Termination, y Activity Log — todo el resto de lo listado arriba ya está en producción.

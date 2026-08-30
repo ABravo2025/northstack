@@ -363,6 +363,7 @@ model Tenant {
   tagDefinitions            TagDefinition[]
   tagAssignments            TagAssignment[]
   employeeTerminations      EmployeeTermination[]
+  activityLogEntries        ActivityLogEntry[]
 }
 
 // Billing Integration (spec-billing-integration.md). plan/lockedPriceCents are deliberately NOT
@@ -488,6 +489,7 @@ model User {
   googleCalendarWatchChannel GoogleCalendarWatchChannel?
   stripeConnectionsConnected StripeConnection[]
   employeeTerminationsCreated EmployeeTermination[]
+  activityLogEntries         ActivityLogEntry[]
 
   @@index([emailDomain])
 }
@@ -961,6 +963,78 @@ model StatusHistoryEntry {
   changedAt       DateTime   @default(now())
 
   @@index([tenantId, entityType, entityId])
+}
+
+// Activity Log (spec-activity-log.md). Deliberately a separate enum from EntityType, not an
+// extension of it — EntityType is coupled to what CustomFieldDefinition/StatusDefinition/etc.
+// actually support, and most of the values below (payrollRun, invitation, subscription...) would
+// never be valid there. The first 4 values match EntityType's strings on purpose so
+// findEntityTenantId (entityLookup.ts) can be reused as-is for the 4 entities that have a detail
+// modal — see activityLogService.ts.
+enum ActivityEntityType {
+  // Tier 1 — has its own detail modal + Activity tab
+  employee
+  company
+  contact
+  opportunity
+  // Tier 2 — HR/Payroll, settings-wide feed only
+  timeOffPolicy
+  timeOffRequest
+  employeeCompensation
+  employeeTermination
+  payrollRun
+  payFrequency
+  paymentMethod
+  statusDefinition
+  customFieldDefinition
+  fieldCatalogDefinition
+  // Tier 3 — rest of CRM + cross-module + views/forms
+  pipeline
+  pipelineStage
+  task
+  note
+  tag
+  savedView
+  publicForm
+  // Tier 4 — account/platform level
+  tenant
+  user
+  invitation
+  subscription
+  googleCalendarConnection
+  stripeConnection
+}
+
+enum ActivityAction {
+  create
+  update
+  delete
+}
+
+// Generic, tenant-wide audit trail — feeds both the per-record "Activity" tab (Employee/Company/
+// Contact/Opportunity detail modals) and the tenant-wide feed in Settings. Same
+// tenantId+entityType+entityId polymorphic pattern as Task/Note/StatusHistoryEntry above, no live
+// FK on entityId. `entityLabel` snapshots the record's display name at the time (same reasoning
+// as StatusHistoryEntry's fromStatusName/toStatusName) so a later rename/delete doesn't rewrite
+// what an old entry meant. `changes` is a JSON array of {field, label, oldValue, newValue} built
+// by activityLogService.ts's diffEntity — always populated the same way for create (before=empty)/
+// update/delete (after=empty), never three different ad-hoc message formats.
+model ActivityLogEntry {
+  id              String             @id @default(uuid())
+  tenantId        String
+  tenant          Tenant             @relation(fields: [tenantId], references: [id])
+  entityType      ActivityEntityType
+  entityId        String
+  entityLabel     String
+  action          ActivityAction
+  summary         String
+  changes         String?
+  changedByUserId String
+  changedBy       User               @relation(fields: [changedByUserId], references: [id])
+  changedAt       DateTime           @default(now())
+
+  @@index([tenantId, entityType, entityId, changedAt])
+  @@index([tenantId, changedAt])
 }
 
 model TimeOffPolicyDefinition {

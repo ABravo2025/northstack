@@ -11,8 +11,16 @@ export const rolePermissions: Record<UserRole, string[]> = {
     'manage_billing',
     'manage_payments',
     'view_sales_leaderboard',
+    'view_activity_log',
   ],
-  admin: ['view_hr', 'create_hr', 'manage_custom_fields', 'invite_users', 'manage_users'],
+  admin: [
+    'view_hr',
+    'create_hr',
+    'manage_custom_fields',
+    'invite_users',
+    'manage_users',
+    'view_activity_log',
+  ],
   member: ['view_hr'],
 };
 
@@ -65,4 +73,13 @@ export function canManagePayments(role: UserRole): boolean {
 // not something every member should see about their teammates.
 export function canViewSalesLeaderboard(role: UserRole): boolean {
   return rolePermissions[role].includes('view_sales_leaderboard');
+}
+
+// Owner/admin, same tier as manage_users/manage_custom_fields — this gates only the tenant-wide
+// Activity Log feed in Settings (spec-activity-log.md decision #4); the per-record Activity tab in
+// each entity's detail modal has no gate of its own, same as Notes/Tasks. Routed through this named
+// permission (not an inline role check) so a future custom role granted "view activity log" only
+// needs this function to change, not every call site.
+export function canViewActivityLog(role: UserRole): boolean {
+  return rolePermissions[role].includes('view_activity_log');
 }

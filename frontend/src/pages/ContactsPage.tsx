@@ -490,9 +490,13 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
   const pageCount = Math.max(1, Math.ceil(sortedContacts.length / PAGE_SIZE));
   const pagedContacts = paginate(sortedContacts, page, PAGE_SIZE);
 
-  const allTagOptions = Array.from(new Set(contacts.flatMap((contact: any) => (contact.tags || []).map((t: any) => t.name))))
-    .sort()
-    .map((name) => ({ value: name, label: name }));
+  const allTagOptions = useMemo(
+    () =>
+      Array.from(new Set(contacts.flatMap((contact: any) => (contact.tags || []).map((t: any) => t.name))))
+        .sort()
+        .map((name) => ({ value: name, label: name })),
+    [contacts],
+  );
 
   useEffect(() => {
     setPage(1);

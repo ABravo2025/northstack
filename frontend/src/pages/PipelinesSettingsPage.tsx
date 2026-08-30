@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   api,
   type FieldCatalogDefinition,
@@ -71,12 +71,7 @@ interface DraftStage {
 }
 
 let draftStageCounter = 0;
-function newDraftStage(): DraftStage {
-  draftStageCounter += 1;
-  return { key: `draft-${draftStageCounter}`, name: '', outcome: 'open', probability: '50', notifyOwnerOnEnter: true };
-}
-
-function draftStage(name: string, outcome: DraftStage['outcome'], probability: string): DraftStage {
+function draftStage(name = '', outcome: DraftStage['outcome'] = 'open', probability = '50'): DraftStage {
   draftStageCounter += 1;
   return { key: `draft-${draftStageCounter}`, name, outcome, probability, notifyOwnerOnEnter: true };
 }
@@ -119,7 +114,11 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
   const [draggedStageId, setDraggedStageId] = useState<string | null>(null);
   const [dragOverStageId, setDragOverStageId] = useState<string | null>(null);
 
-  const sortedStages = [...pipeline.stages].sort((a, b) => a.order - b.order);
+  // Recomputed on every drag-over event otherwise (dragOverStageId updates continuously while
+  // dragging) even though only pipeline.stages actually changes what this list should be —
+  // exactly the kind of re-render this component was already scoped down here to avoid (see the
+  // comment above).
+  const sortedStages = useMemo(() => [...pipeline.stages].sort((a, b) => a.order - b.order), [pipeline.stages]);
 
   const handleAddStage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -467,8 +466,10 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
     const added = nextSelected.filter((id) => !currentIds.includes(id));
     const removed = currentIds.filter((id) => !nextSelected.includes(id));
     try {
-      for (const id of added) await api.assignUserToPipeline(token, pipeline.id, id);
-      for (const id of removed) await api.unassignUserFromPipeline(token, pipeline.id, id);
+      await Promise.all([
+        ...added.map((id) => api.assignUserToPipeline(token, pipeline.id, id)),
+        ...removed.map((id) => api.unassignUserFromPipeline(token, pipeline.id, id)),
+      ]);
       refreshParticipants();
     } catch (error) {
       toast.error('Failed to update participants: ' + (error as Error).message);
@@ -793,10 +794,27 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
     }
   };
 
+  const sortPipelines = (list: Pipeline[]): Pipeline[] => {
+    if (!sortField) return list;
+    const dir = sortDirection === 'asc' ? 1 : -1;
+    return [...list].sort((a, b) => {
+      const av = getPipelineSortValue(a, sortField);
+      const bv = getPipelineSortValue(b, sortField);
+      return av < bv ? -1 * dir : av > bv ? 1 * dir : 0;
+    });
+  };
+
+  // Recomputing this on every render (e.g. opening the row-menu Popover, editing modal state —
+  // neither touches the list itself) was wasted work; only pipelines/sortField/sortDirection
+  // actually change what these should be. Hooks must run unconditionally (before the `if
+  // (loading) return` below), so this — and the sortPipelines it depends on — moved up here.
+  const activePipelines = useMemo(() => sortPipelines(pipelines.filter((p) => p.isActive)), [pipelines, sortField, sortDirection]);
+  const archivedPipelines = useMemo(() => sortPipelines(pipelines.filter((p) => !p.isActive)), [pipelines, sortField, sortDirection]);
+
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState('');
   const [createType, setCreateType] = useState<'lead' | 'account'>('lead');
-  const [createStages, setCreateStages] = useState<DraftStage[]>([newDraftStage()]);
+  const [createStages, setCreateStages] = useState<DraftStage[]>([draftStage()]);
   const [creating, setCreating] = useState(false);
   // Automations, available from creation on (user feedback 2026-08-25: an
   // edit-only Automations section meant nobody would ever discover it).
@@ -854,7 +872,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
   };
 
   const addDraftStage = () => {
-    setCreateStages((prev) => [...prev, newDraftStage()]);
+    setCreateStages((prev) => [...prev, draftStage()]);
   };
 
   const removeDraftStage = (key: string) => {
@@ -979,18 +997,6 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
     return <p>Loading...</p>;
   }
 
-  const sortPipelines = (list: Pipeline[]): Pipeline[] => {
-    if (!sortField) return list;
-    const dir = sortDirection === 'asc' ? 1 : -1;
-    return [...list].sort((a, b) => {
-      const av = getPipelineSortValue(a, sortField);
-      const bv = getPipelineSortValue(b, sortField);
-      return av < bv ? -1 * dir : av > bv ? 1 * dir : 0;
-    });
-  };
-
-  const activePipelines = sortPipelines(pipelines.filter((p) => p.isActive));
-  const archivedPipelines = sortPipelines(pipelines.filter((p) => !p.isActive));
   const editingPipeline = editingPipelineId ? pipelines.find((p) => p.id === editingPipelineId) ?? null : null;
   const menuPipeline = pipelineRowMenuFor ? pipelines.find((p) => p.id === pipelineRowMenuFor) ?? null : null;
 

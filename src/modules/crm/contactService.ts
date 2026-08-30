@@ -91,12 +91,11 @@ export async function listContacts(tenantId: string, includeInactive = false) {
     include: CONTACT_INCLUDE,
   });
 
-  const values = await listCustomFieldValuesForEntities(
-    tenantId,
-    'contact',
-    contacts.map((contact) => contact.id),
-  );
-  const tags = await listTagsForEntities(tenantId, 'contact', contacts.map((contact) => contact.id));
+  const contactIds = contacts.map((contact) => contact.id);
+  const [values, tags] = await Promise.all([
+    listCustomFieldValuesForEntities(tenantId, 'contact', contactIds),
+    listTagsForEntities(tenantId, 'contact', contactIds),
+  ]);
 
   return contacts.map((contact) => ({
     ...contact,
@@ -176,12 +175,19 @@ export async function deactivateContact(id: string): Promise<DeactivateContactRe
     const links = await tx.opportunityContact.findMany({ where: { contactId: id }, select: { opportunityId: true } });
     const deactivatedOpportunityIds: string[] = [];
 
+    // One batched count for every linked Opportunity instead of one query per link — counted
+    // before this Contact's own row flips below, so it's still included here (a count of 1 means
+    // "just this one").
+    const opportunityIds = links.map((l) => l.opportunityId);
+    const activeCounts = await tx.opportunityContact.groupBy({
+      by: ['opportunityId'],
+      where: { opportunityId: { in: opportunityIds }, contact: { isActive: true } },
+      _count: { _all: true },
+    });
+    const activeCountByOpportunity = new Map(activeCounts.map((c) => [c.opportunityId, c._count._all]));
+
     for (const { opportunityId } of links) {
-      // Counted before this Contact's own row flips below, so it's still
-      // included here — a count of 1 means "just this one".
-      const activeLinkCount = await tx.opportunityContact.count({
-        where: { opportunityId, contact: { isActive: true } },
-      });
+      const activeLinkCount = activeCountByOpportunity.get(opportunityId) ?? 0;
       if (activeLinkCount <= 1) {
         await tx.opportunity.update({ where: { id: opportunityId }, data: { isActive: false } });
         deactivatedOpportunityIds.push(opportunityId);

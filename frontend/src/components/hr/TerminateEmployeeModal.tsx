@@ -102,19 +102,37 @@ export default function TerminateEmployeeModal({
   ];
 
   const handleSubmit = async () => {
+    // Parsed once per field here and reused for the payload below (instead of recomputing the
+    // identical Math.round(parseFloat(...) * 100) a second time) — the validated amount and the
+    // submitted amount are now provably the same value, not two separately-typed expressions that
+    // happen to agree today.
+    let finalPayment: Parameters<typeof api.createTermination>[2]['finalPayment'];
     if (includeFinalPayment) {
       const cents = Math.round(parseFloat(finalAmount) * 100);
       if (!finalAmount || Number.isNaN(cents) || cents <= 0) {
         toast.error('Enter a valid final payment amount.');
         return;
       }
+      const lineCentsByIndex: number[] = [];
       for (const line of additionalLines) {
         const lineCents = Math.round(parseFloat(line.amount) * 100);
         if (!line.amount || Number.isNaN(lineCents) || lineCents <= 0) {
           toast.error('Enter a valid amount for every additional payment line.');
           return;
         }
+        lineCentsByIndex.push(lineCents);
       }
+      finalPayment = {
+        amountCents: cents,
+        currency: finalCurrency,
+        paymentDate: finalPaymentDate,
+        label: finalLabel || null,
+        additionalLines: additionalLines.map((line, i) => ({
+          type: line.type,
+          amountCents: line.type === 'deduction' ? -Math.abs(lineCentsByIndex[i]) : lineCentsByIndex[i],
+          label: line.label || null,
+        })),
+      };
     }
 
     setSubmitting(true);
@@ -126,22 +144,7 @@ export default function TerminateEmployeeModal({
           reportEmployeeId: report.id,
           newManagerId: reassignments[report.id] || null,
         })),
-        finalPayment: includeFinalPayment
-          ? {
-              amountCents: Math.round(parseFloat(finalAmount) * 100),
-              currency: finalCurrency,
-              paymentDate: finalPaymentDate,
-              label: finalLabel || null,
-              additionalLines: additionalLines.map((line) => ({
-                type: line.type,
-                amountCents:
-                  line.type === 'deduction'
-                    ? -Math.abs(Math.round(parseFloat(line.amount) * 100))
-                    : Math.round(parseFloat(line.amount) * 100),
-                label: line.label || null,
-              })),
-            }
-          : undefined,
+        finalPayment,
       });
       toast.success(result.executedNow ? 'Employee terminated.' : `Termination scheduled for ${lastDay}.`);
       onTerminated();

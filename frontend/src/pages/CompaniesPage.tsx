@@ -502,9 +502,13 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
   const pageCount = Math.max(1, Math.ceil(sortedCompanies.length / PAGE_SIZE));
   const pagedCompanies = paginate(sortedCompanies, page, PAGE_SIZE);
 
-  const allTagOptions = Array.from(new Set(companies.flatMap((company: any) => (company.tags || []).map((t: any) => t.name))))
-    .sort()
-    .map((name) => ({ value: name, label: name }));
+  const allTagOptions = useMemo(
+    () =>
+      Array.from(new Set(companies.flatMap((company: any) => (company.tags || []).map((t: any) => t.name))))
+        .sort()
+        .map((name) => ({ value: name, label: name })),
+    [companies],
+  );
 
   useEffect(() => {
     setPage(1);

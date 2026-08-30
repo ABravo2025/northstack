@@ -54,12 +54,17 @@ export async function searchStripeCustomersForCompany(
     where: { tenantId, companyId, isActive: true },
   });
 
+  // One Stripe API call per Contact, run concurrently — mapWithConcurrency preserves result order
+  // by original index, so the merge below still resolves a shared customer.id match to whichever
+  // Contact came first in `contacts` (not whichever request happened to finish first).
+  const resultsByContact = await mapWithConcurrency(contacts, 10, async (contact) => ({
+    contact,
+    customers: (await withNeedsAttentionTracking(tenantId, () => listCustomers(apiKey, { email: contact.email, limit: 3 }))).data,
+  }));
+
   const matches = new Map<string, StripeCustomerMatch>();
-  for (const contact of contacts) {
-    const result = await withNeedsAttentionTracking(tenantId, () =>
-      listCustomers(apiKey, { email: contact.email, limit: 3 })
-    );
-    for (const customer of result.data) {
+  for (const { contact, customers } of resultsByContact) {
+    for (const customer of customers) {
       if (!matches.has(customer.id)) {
         matches.set(customer.id, {
           id: customer.id,
@@ -554,34 +559,37 @@ export async function runStripeEventPolling(): Promise<{
 }> {
   const connections = await prisma.stripeConnection.findMany({ where: { disconnectedAt: null } });
 
-  let eventsProcessed = 0;
-  let companiesLinked = 0;
-  let failed = 0;
-
-  for (const connection of connections) {
+  // Each tenant's Stripe calls use that tenant's own API key, so they don't share a rate-limit
+  // bucket with any other tenant — processing them fully sequentially made total cron runtime the
+  // *sum* of every tenant's Stripe latency instead of the max of a bounded batch. Concurrency kept
+  // modest (5) since autoLinkUnmatchedCompanies below does its own internal fan-out per tenant.
+  const results = await mapWithConcurrency(connections, 5, async (connection) => {
     try {
       const apiKey = decryptStripeSecret(connection.apiKeyEncrypted);
 
       const { linked } = await autoLinkUnmatchedCompanies(connection.tenantId);
-      companiesLinked += linked;
 
       const sinceUnix = Math.floor((connection.lastEventPollAt ?? connection.connectedAt).getTime() / 1000);
       const events = await listAllEventsSince(apiKey, sinceUnix);
 
       for (const event of events) {
         await processStripeWebhookEvent(connection.tenantId, event);
-        eventsProcessed++;
       }
 
       await prisma.stripeConnection.update({ where: { tenantId: connection.tenantId }, data: { lastEventPollAt: new Date() } });
+      return { eventsProcessed: events.length, companiesLinked: linked, failed: 0 };
     } catch (error) {
-      failed++;
       if (error instanceof StripeApiError && (error.status === 401 || error.status === 403)) {
         await markNeedsAttention(connection.tenantId);
       }
       console.error(`Stripe event poll failed for tenant ${connection.tenantId}:`, error);
+      return { eventsProcessed: 0, companiesLinked: 0, failed: 1 };
     }
-  }
+  });
+
+  const eventsProcessed = results.reduce((sum, r) => sum + r.eventsProcessed, 0);
+  const companiesLinked = results.reduce((sum, r) => sum + r.companiesLinked, 0);
+  const failed = results.reduce((sum, r) => sum + r.failed, 0);
 
   return { tenantsPolled: connections.length, eventsProcessed, companiesLinked, failed };
 }

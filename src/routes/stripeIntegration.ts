@@ -1,18 +1,12 @@
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import { validateSession } from '../lib/httpAuth.js';
-import { canManagePayments } from '../modules/auth/permissionService.js';
+import { requirePaymentsAccess as requirePaymentsAccessBase, type SessionUser } from '../lib/paymentsAccess.js';
 import { connectStripe, disconnectStripe, getStripeConnectionStatus } from '../modules/integrations/stripeService.js';
 
 export const stripeIntegrationRouter = createAsyncRouter();
 
-type SessionUser = NonNullable<Awaited<ReturnType<typeof validateSession>>>;
-
 function requirePaymentsAccess(user: SessionUser, res: import('express').Response): boolean {
-  if (!canManagePayments(user.role)) {
-    res.status(403).json({ error: 'Only the workspace owner can manage the Stripe connection.' });
-    return false;
-  }
-  return true;
+  return requirePaymentsAccessBase(user, res, 'Only the workspace owner can manage the Stripe connection.');
 }
 
 stripeIntegrationRouter.get('/api/integrations/stripe/status', async (req, res) => {

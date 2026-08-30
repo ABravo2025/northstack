@@ -115,16 +115,24 @@ interface AtRiskOpportunity {
 // standing baseline, not a period metric — same reasoning for `atRisk`, which
 // is about which deals are stuck *right now*, not during some past window.
 async function getStageVelocity(tenantId: string): Promise<{ byStage: StageVelocity[]; atRisk: AtRiskOpportunity[] }> {
-  const history = await prisma.opportunityStageHistory.findMany({
-    where: { tenantId },
-    select: {
-      opportunityId: true,
-      stageId: true,
-      enteredAt: true,
-      stage: { select: { name: true, pipeline: { select: { name: true } } } },
-    },
-    orderBy: [{ opportunityId: 'asc' }, { enteredAt: 'asc' }],
-  });
+  // openOpps (used further below) doesn't depend on history at all — fetched concurrently instead
+  // of paying for two sequential round-trips.
+  const [history, openOpps] = await Promise.all([
+    prisma.opportunityStageHistory.findMany({
+      where: { tenantId },
+      select: {
+        opportunityId: true,
+        stageId: true,
+        enteredAt: true,
+        stage: { select: { name: true, pipeline: { select: { name: true } } } },
+      },
+      orderBy: [{ opportunityId: 'asc' }, { enteredAt: 'asc' }],
+    }),
+    prisma.opportunity.findMany({
+      where: { tenantId, isActive: true, stage: { outcome: 'open' } },
+      select: { id: true, name: true, companyId: true, stageId: true },
+    }),
+  ]);
 
   const byOpportunity = new Map<string, typeof history>();
   for (const entry of history) {
@@ -160,10 +168,6 @@ async function getStageVelocity(tenantId: string): Promise<{ byStage: StageVeloc
   }));
   const medianByStage = new Map(byStage.map((s) => [s.stageId, s]));
 
-  const openOpps = await prisma.opportunity.findMany({
-    where: { tenantId, isActive: true, stage: { outcome: 'open' } },
-    select: { id: true, name: true, companyId: true, stageId: true },
-  });
   const now = new Date();
   const atRisk: AtRiskOpportunity[] = [];
   for (const o of openOpps) {

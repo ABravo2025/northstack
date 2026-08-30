@@ -3,6 +3,7 @@ import { getDefaultStatusId, recordStatusChange } from './statusService.js';
 import { listCustomFieldValuesForEntities } from './customFieldService.js';
 import { findActiveTimeOffRequestsForEmployees } from './timeOffRequestService.js';
 import { listTagsForEntities } from '../crossModule/tagService.js';
+import { wouldCreateCycle } from '../../lib/cycleDetection.js';
 import type { ContractType, Employee, PersonType, Prisma } from '@prisma/client';
 
 export interface CreateEmployeeInput {
@@ -73,30 +74,10 @@ export async function wouldCreateManagerCycle(
   employeeId: string,
   proposedManagerId: string,
 ): Promise<boolean> {
-  if (employeeId === proposedManagerId) {
-    return true;
-  }
-
-  let currentId: string | null = proposedManagerId;
-  const visited = new Set<string>();
-
-  while (currentId) {
-    if (currentId === employeeId) {
-      return true;
-    }
-    if (visited.has(currentId)) {
-      return false;
-    }
-    visited.add(currentId);
-
-    const manager: { managerId: string | null } | null = await prisma.employee.findUnique({
-      where: { id: currentId },
-      select: { managerId: true },
-    });
-    currentId = manager?.managerId ?? null;
-  }
-
-  return false;
+  return wouldCreateCycle(employeeId, proposedManagerId, async (id) => {
+    const manager = await prisma.employee.findUnique({ where: { id }, select: { managerId: true } });
+    return manager?.managerId ?? null;
+  });
 }
 
 export async function listEmployees(tenantId: string | null | undefined) {
@@ -121,19 +102,23 @@ export async function listEmployees(tenantId: string | null | undefined) {
   });
 
   const employeeIds = employees.map((employee) => employee.id);
-  const values = await listCustomFieldValuesForEntities(tenantId, 'employee', employeeIds);
-  const activeTimeOffRequests = await findActiveTimeOffRequestsForEmployees(tenantId, employeeIds);
-  // Separate query for the *current* (effectiveTo: null) compensation, kept
-  // apart from the first-ever one above (contractStatus needs the original,
-  // not the latest — see the comment on `compensations` in the include).
-  // Only Pay Frequency is surfaced here (backlog QA, 2026-08-27 — the list
-  // view had no way to sort/filter who's due for which pay run); expand this
-  // if another current-compensation field needs to reach the list later.
-  const currentCompensations = await prisma.employeeCompensation.findMany({
-    where: { employeeId: { in: employeeIds }, effectiveTo: null },
-    include: { payFrequency: true },
-  });
-  const tags = await listTagsForEntities(tenantId, 'employee', employeeIds);
+  // Independent queries — none reads another's result, so they run concurrently instead of paying
+  // for 4 sequential Neon round-trips.
+  const [values, activeTimeOffRequests, currentCompensations, tags] = await Promise.all([
+    listCustomFieldValuesForEntities(tenantId, 'employee', employeeIds),
+    findActiveTimeOffRequestsForEmployees(tenantId, employeeIds),
+    // Separate query for the *current* (effectiveTo: null) compensation, kept
+    // apart from the first-ever one above (contractStatus needs the original,
+    // not the latest — see the comment on `compensations` in the include).
+    // Only Pay Frequency is surfaced here (backlog QA, 2026-08-27 — the list
+    // view had no way to sort/filter who's due for which pay run); expand this
+    // if another current-compensation field needs to reach the list later.
+    prisma.employeeCompensation.findMany({
+      where: { employeeId: { in: employeeIds }, effectiveTo: null },
+      include: { payFrequency: true },
+    }),
+    listTagsForEntities(tenantId, 'employee', employeeIds),
+  ]);
 
   return employees.map((employee) => {
     const activeTimeOff = activeTimeOffRequests.find((request) => request.employeeId === employee.id);

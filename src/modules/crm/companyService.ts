@@ -3,6 +3,7 @@ import { getDefaultStatusId } from '../hr/statusService.js';
 import { listCustomFieldValuesForEntities } from '../hr/customFieldService.js';
 import { listTagsForEntities } from '../crossModule/tagService.js';
 import { deleteOpportunity } from './opportunityService.js';
+import { wouldCreateCycle } from '../../lib/cycleDetection.js';
 import type { Company, Prisma } from '@prisma/client';
 
 export interface CreateCompanyInput {
@@ -63,30 +64,10 @@ const COMPANY_INCLUDE = {
 // belongs to the same tenant before calling this — this function only walks
 // the chain, it doesn't re-check tenant ownership at each hop.
 export async function wouldCreateCompanyHierarchyCycle(companyId: string, proposedParentId: string): Promise<boolean> {
-  if (companyId === proposedParentId) {
-    return true;
-  }
-
-  let currentId: string | null = proposedParentId;
-  const visited = new Set<string>();
-
-  while (currentId) {
-    if (currentId === companyId) {
-      return true;
-    }
-    if (visited.has(currentId)) {
-      return false;
-    }
-    visited.add(currentId);
-
-    const parent: { parentCompanyId: string | null } | null = await prisma.company.findUnique({
-      where: { id: currentId },
-      select: { parentCompanyId: true },
-    });
-    currentId = parent?.parentCompanyId ?? null;
-  }
-
-  return false;
+  return wouldCreateCycle(companyId, proposedParentId, async (id) => {
+    const parent = await prisma.company.findUnique({ where: { id }, select: { parentCompanyId: true } });
+    return parent?.parentCompanyId ?? null;
+  });
 }
 
 export async function createCompany(input: CreateCompanyInput): Promise<Company> {
@@ -133,12 +114,11 @@ export async function listCompanies(tenantId: string) {
     include: COMPANY_INCLUDE,
   });
 
-  const values = await listCustomFieldValuesForEntities(
-    tenantId,
-    'company',
-    companies.map((company) => company.id),
-  );
-  const tags = await listTagsForEntities(tenantId, 'company', companies.map((company) => company.id));
+  const companyIds = companies.map((company) => company.id);
+  const [values, tags] = await Promise.all([
+    listCustomFieldValuesForEntities(tenantId, 'company', companyIds),
+    listTagsForEntities(tenantId, 'company', companyIds),
+  ]);
 
   return companies.map((company) => ({
     ...company,
@@ -206,9 +186,9 @@ export async function deleteCompany(id: string, options: DeleteCompanyOptions = 
 
   if (opportunityCount > 0) {
     const opportunities = await prisma.opportunity.findMany({ where: { companyId: id }, select: { id: true } });
-    for (const opportunity of opportunities) {
-      await deleteOpportunity(opportunity.id);
-    }
+    // Each deleteOpportunity call is its own transaction over disjoint rows (that Opportunity's
+    // own history/contact-links/tags) — independent, so they run concurrently.
+    await Promise.all(opportunities.map((opportunity) => deleteOpportunity(opportunity.id)));
   }
 
   if (options.cascadeToChildCompanies) {

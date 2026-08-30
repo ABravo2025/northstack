@@ -160,9 +160,13 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const viewFilteredEmployees = applyFilters(tagFilteredEmployees, fields, viewFilters);
   const sortedEmployees = applySort(viewFilteredEmployees, fields, viewSort);
 
-  const allTagOptions = Array.from(new Set(employees.flatMap((emp: any) => (emp.tags || []).map((t: any) => t.name))))
-    .sort()
-    .map((name) => ({ value: name, label: name }));
+  const allTagOptions = useMemo(
+    () =>
+      Array.from(new Set(employees.flatMap((emp: any) => (emp.tags || []).map((t: any) => t.name))))
+        .sort()
+        .map((name) => ({ value: name, label: name })),
+    [employees],
+  );
 
   const pageCount = Math.max(1, Math.ceil(sortedEmployees.length / PAGE_SIZE));
   const pagedEmployees = paginate(sortedEmployees, page, PAGE_SIZE);

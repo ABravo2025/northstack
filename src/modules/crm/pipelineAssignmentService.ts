@@ -1,6 +1,5 @@
 import prisma from '../../lib/prisma.js';
 import { getDefaultStatusId } from '../hr/statusService.js';
-import { findFieldCatalogDefinitionById } from '../hr/fieldCatalogService.js';
 import type { PipelineAssignmentUser } from '@prisma/client';
 
 // Round-robin participants for a Pipeline (docs/tareas/specredisenosalesv2.md
@@ -21,16 +20,14 @@ export interface AssignPipelineUserResult {
   error?: string;
 }
 
+// Pipeline ownership is already checked by the only caller (routes/pipelines.ts, which needs the
+// row loaded anyway for its own 404) — re-fetching it here would just be a second identical query
+// per request.
 export async function assignUserToPipeline(
   tenantId: string,
   pipelineId: string,
   userId: string,
 ): Promise<AssignPipelineUserResult> {
-  const pipeline = await prisma.pipeline.findUnique({ where: { id: pipelineId } });
-  if (!pipeline || pipeline.tenantId !== tenantId) {
-    return { success: false, error: 'Pipeline not found' };
-  }
-
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user || user.tenantId !== tenantId) {
     return { success: false, error: 'User not found' };
@@ -84,6 +81,7 @@ export interface AssignUsersByDepartmentsResult {
 // rows. A hire added to the department later is NOT automatically added;
 // re-run this (or add them by hand) to pick up new people. There is no
 // department↔Pipeline schema anywhere — this only ever writes User rows.
+// Pipeline ownership is already checked by the only caller, same as assignUserToPipeline above.
 export async function assignUsersByDepartments(
   tenantId: string,
   pipelineId: string,
@@ -91,16 +89,12 @@ export async function assignUsersByDepartments(
 ): Promise<AssignUsersByDepartmentsResult> {
   const empty = { resolvedUserCount: 0, addedCount: 0, alreadyAssignedCount: 0 };
 
-  const pipeline = await prisma.pipeline.findUnique({ where: { id: pipelineId } });
-  if (!pipeline || pipeline.tenantId !== tenantId) {
-    return { success: false, error: 'Pipeline not found', ...empty };
-  }
-
-  for (const departmentId of departmentIds) {
-    const dept = await findFieldCatalogDefinitionById(departmentId);
-    if (!dept || dept.tenantId !== tenantId || dept.kind !== 'department') {
-      return { success: false, error: 'Department not found', ...empty };
-    }
+  const departments = await prisma.fieldCatalogDefinition.findMany({
+    where: { id: { in: departmentIds }, tenantId, kind: 'department' },
+    select: { id: true },
+  });
+  if (departments.length !== departmentIds.length) {
+    return { success: false, error: 'Department not found', ...empty };
   }
 
   const employees = await prisma.employee.findMany({

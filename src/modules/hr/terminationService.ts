@@ -261,17 +261,22 @@ async function executeTermination(terminationId: string): Promise<void> {
       OR: [{ status: 'pending' }, { status: 'approved', startDate: { gte: terminationDate } }],
     },
   });
-  for (const request of requestsToClear) {
-    const updated = await prisma.timeOffRequest.update({
-      where: { id: request.id },
-      data: { status: 'cancelled', decidedAt: new Date() },
-    });
-    // Best-effort, same as every other call site of this function — a Google Calendar hiccup must
-    // never block the termination itself from completing.
-    await syncTimeOffCalendarEvent(request, updated).catch((err) =>
-      console.error('Google Calendar time off sync failed during termination:', err),
-    );
-  }
+  // Each request is a disjoint row with its own independent Google Calendar sync — no ordering
+  // dependency between them, so they run concurrently instead of serializing N DB updates plus N
+  // Calendar API round-trips.
+  await Promise.all(
+    requestsToClear.map(async (request) => {
+      const updated = await prisma.timeOffRequest.update({
+        where: { id: request.id },
+        data: { status: 'cancelled', decidedAt: new Date() },
+      });
+      // Best-effort, same as every other call site of this function — a Google Calendar hiccup
+      // must never block the termination itself from completing.
+      await syncTimeOffCalendarEvent(request, updated).catch((err) =>
+        console.error('Google Calendar time off sync failed during termination:', err),
+      );
+    }),
+  );
 
   for (const reassignment of termination.reassignments) {
     await prisma.employee.update({

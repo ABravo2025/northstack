@@ -1,4 +1,5 @@
 import prisma from '../src/lib/prisma.js';
+import { avg as avgOrNull, median as medianOrNull, monthKey } from '../src/modules/metrics/mathUtils.js';
 
 // Section 1 of docs/metrics/basic-metrics-spec.md — platform-wide growth/usage
 // metrics, calculable today with zero schema changes. This is a CLI report,
@@ -9,20 +10,16 @@ import prisma from '../src/lib/prisma.js';
 // to show this report would be scope creep — run this locally instead:
 //   npx tsx scripts/metrics-report.ts
 
+// This script's own display convention (0 for "no data" is fine in a CLI report meant for a
+// human skimming counts) differs from mathUtils.ts's null-for-empty contract (needed in-app to
+// tell "genuinely zero" apart from "no data" on a dashboard tile) — so callers below fall back to
+// 0 with `?? 0` rather than this script adopting that contract itself.
 function median(values: number[]): number {
-  if (values.length === 0) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(sorted.length / 2);
-  return sorted.length % 2 === 0 ? (sorted[mid - 1] + sorted[mid]) / 2 : sorted[mid];
+  return medianOrNull(values) ?? 0;
 }
 
 function avg(values: number[]): number {
-  if (values.length === 0) return 0;
-  return values.reduce((sum, v) => sum + v, 0) / values.length;
-}
-
-function monthKey(date: Date): string {
-  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+  return avgOrNull(values) ?? 0;
 }
 
 function pct(part: number, whole: number): string {

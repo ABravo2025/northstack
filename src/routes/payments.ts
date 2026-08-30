@@ -1,6 +1,6 @@
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import { validateSession } from '../lib/httpAuth.js';
-import { canManagePayments } from '../modules/auth/permissionService.js';
+import { requirePaymentsAccess as requirePaymentsAccessBase, type SessionUser } from '../lib/paymentsAccess.js';
 import { findCompanyById } from '../modules/crm/companyService.js';
 import {
   getCompanyPaymentEvents,
@@ -13,14 +13,8 @@ import {
 
 export const paymentsRouter = createAsyncRouter();
 
-type SessionUser = NonNullable<Awaited<ReturnType<typeof validateSession>>>;
-
 function requirePaymentsAccess(user: SessionUser, res: import('express').Response): boolean {
-  if (!canManagePayments(user.role)) {
-    res.status(403).json({ error: 'Only the workspace owner can view payments.' });
-    return false;
-  }
-  return true;
+  return requirePaymentsAccessBase(user, res, 'Only the workspace owner can view payments.');
 }
 
 // Same ownership pattern as routes/companies.ts — 404 (not 403) on a tenant mismatch, so a

@@ -1,21 +1,10 @@
 import { useOutletContext } from 'react-router-dom';
-import BarChartCard, { type BarSeries } from '../../components/metrics/BarChartCard';
+import BarChartCard from '../../components/metrics/BarChartCard';
 import StatTile from '../../components/metrics/StatTile';
 import { useTenantMetrics } from '../../lib/useTenantMetrics';
-import { seriesColor } from '../../lib/metricsFormat';
+import { pivotByCurrency, seriesColor } from '../../lib/metricsFormat';
 import { formatMoney } from '../../lib/currencies';
 import type { DashboardsOutletContext } from '../../layouts/DashboardsLayout';
-
-function pivotByCurrency(buckets: { name: string; amounts: { currency: string; amountCents: number }[] }[]) {
-  const currencies = [...new Set(buckets.flatMap((b) => b.amounts.map((a) => a.currency)))];
-  const data = buckets.map((b) => {
-    const row: Record<string, string | number> = { name: b.name };
-    for (const a of b.amounts) row[a.currency] = a.amountCents / 100;
-    return row;
-  });
-  const series: BarSeries[] = currencies.map((currency, i) => ({ key: currency, label: currency, color: seriesColor(i) }));
-  return { data, series };
-}
 
 export default function DashboardsSalesPage() {
   const { token, range } = useOutletContext<DashboardsOutletContext>();

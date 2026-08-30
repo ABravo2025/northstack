@@ -2,6 +2,7 @@ import prisma from '../../lib/prisma.js';
 import { resolveNextRoundRobinUserId } from './pipelineAssignmentService.js';
 import { createNotification } from '../notifications/notificationService.js';
 import { sendOpportunityStageChangedEmail } from '../../lib/mailer.js';
+import { bestEffort } from '../../lib/bestEffort.js';
 import type { Opportunity, Prisma } from '@prisma/client';
 
 export interface CreateOpportunityInput {
@@ -294,16 +295,19 @@ export async function updateOpportunity(
         if (recipient) {
           const company = await prisma.company.findUnique({ where: { id: updated.companyId }, select: { name: true } });
           const appUrl = `${process.env.APP_BASE_URL ?? 'http://localhost:5173'}/opportunities`;
-          sendOpportunityStageChangedEmail({
-            to: recipient.email,
-            ownerFirstName: recipient.firstName,
-            opportunityName: updated.name,
-            companyName: company?.name ?? '',
-            fromStage: oldStage?.name ?? 'a previous stage',
-            toStage: newStage?.name ?? 'a new stage',
-            changedByName: actorName,
-            appUrl,
-          }).catch((error) => console.error('Failed to send opportunity stage changed email:', error));
+          await bestEffort(
+            sendOpportunityStageChangedEmail({
+              to: recipient.email,
+              ownerFirstName: recipient.firstName,
+              opportunityName: updated.name,
+              companyName: company?.name ?? '',
+              fromStage: oldStage?.name ?? 'a previous stage',
+              toStage: newStage?.name ?? 'a new stage',
+              changedByName: actorName,
+              appUrl,
+            }),
+            'Failed to send opportunity stage changed email:',
+          );
         }
       } catch (error) {
         console.error('Failed to create opportunity stage changed notification:', error);

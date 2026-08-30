@@ -1,6 +1,7 @@
 import prisma from '../../lib/prisma.js';
 import { createOffPayments } from './payrollOffPaymentService.js';
 import { syncTimeOffCalendarEvent } from '../integrations/googleCalendarSyncService.js';
+import { findEmployeeById, wouldCreateManagerCycle } from './employeeService.js';
 import type { EmployeeTermination, PayrollEntryType } from '@prisma/client';
 
 // Termination is a status change with several coordinated side effects, not a delete — matches
@@ -119,6 +120,21 @@ export async function createTermination(input: CreateTerminationInput): Promise<
     reportEmployeeId: report.id,
     newManagerId: chosen.get(report.id) ?? null,
   }));
+
+  // newManagerId comes straight from the caller's request body — unlike the ordinary
+  // PATCH /employees/:id path (routes/employees.ts), which validates a new managerId belongs to
+  // the same tenant and wouldn't create a reporting cycle. Without the same checks here, a crafted
+  // termination request could point a report's managerId at another tenant's employee entirely.
+  for (const row of reassignmentRows) {
+    if (!row.newManagerId) continue;
+    const manager = await findEmployeeById(row.newManagerId);
+    if (!manager || manager.tenantId !== input.tenantId) {
+      throw new Error('Reassignment manager not found');
+    }
+    if (await wouldCreateManagerCycle(row.reportEmployeeId, row.newManagerId)) {
+      throw new Error('This reassignment would create a reporting cycle');
+    }
+  }
 
   const finalPaymentEntryIds: string[] = [];
   if (input.finalPayment) {

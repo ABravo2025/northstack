@@ -11,11 +11,12 @@ import {
   removeOpportunityContact,
   updateOpportunity,
 } from '../modules/crm/opportunityService.js';
-import { findPipelineById, findPipelineStageById } from '../modules/crm/pipelineService.js';
+import { findFirstActiveStage, findPipelineById, findPipelineStageById } from '../modules/crm/pipelineService.js';
 import { findFieldCatalogDefinitionById } from '../modules/hr/fieldCatalogService.js';
 import { findUserById } from '../modules/tenant/tenantService.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
+import type { PipelineStageOutcome } from '@prisma/client';
 
 export const opportunitiesRouter = createAsyncRouter();
 
@@ -32,6 +33,10 @@ async function validateOpportunityRefs(
   existingLossReasonId?: string | null,
   existingCompanyId?: string,
   existingWinReasonId?: string | null,
+  // undefined on create (there's no "existing" pipeline yet). On update, passing the
+  // Opportunity's current pipelineId lets this function tell "pipeline is changing" apart from
+  // "pipeline is unchanged" — see the effective-stage resolution below.
+  existingPipelineId?: string,
 ): Promise<{ error: string } | null> {
   const pipeline = await findPipelineById(pipelineId);
   if (!pipeline || pipeline.tenantId !== tenantId) {
@@ -81,15 +86,28 @@ async function validateOpportunityRefs(
   const resolvedLossReasonId = body.lossReasonId !== undefined ? body.lossReasonId : existingLossReasonId;
   const resolvedWinReasonId = body.winReasonId !== undefined ? body.winReasonId : existingWinReasonId;
 
+  // The stage this Opportunity will actually end up on. An explicit stageId always wins; absent
+  // that, a pipeline change (create, or an update whose pipelineId differs from the existing one)
+  // makes opportunityService.ts silently resolve the target pipeline's first active stage — that
+  // resolved stage needs the same won/lost-reason check an explicit stageId would get, or
+  // reordering a pipeline's stages (e.g. via the drag-and-drop editor) so a Won/Lost stage is
+  // first lets an Opportunity land there with no reason ever required.
+  let effectiveStage: { outcome: PipelineStageOutcome } | null = null;
   if (body.stageId !== undefined) {
     const stage = await findPipelineStageById(body.stageId);
     if (!stage || stage.tenantId !== tenantId || stage.pipelineId !== pipelineId) {
       return { error: 'Stage not found' };
     }
-    if (stage.outcome === 'lost' && !resolvedLossReasonId) {
+    effectiveStage = stage;
+  } else if (existingPipelineId === undefined || pipelineId !== existingPipelineId) {
+    effectiveStage = await findFirstActiveStage(pipelineId);
+  }
+
+  if (effectiveStage) {
+    if (effectiveStage.outcome === 'lost' && !resolvedLossReasonId) {
       return { error: 'A loss reason is required when moving an Opportunity to a Lost stage' };
     }
-    if (stage.outcome === 'won' && !resolvedWinReasonId) {
+    if (effectiveStage.outcome === 'won' && !resolvedWinReasonId) {
       return { error: 'A win reason is required when moving an Opportunity to a Won stage' };
     }
   }
@@ -217,6 +235,7 @@ opportunitiesRouter.patch('/api/opportunities/:opportunityId', async (req, res) 
     opportunity.lossReasonId,
     opportunity.companyId,
     opportunity.winReasonId,
+    opportunity.pipelineId,
   );
   if (refError) {
     return res.status(400).json(refError);

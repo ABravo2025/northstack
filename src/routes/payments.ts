@@ -8,6 +8,7 @@ import {
   getPaymentsOverview,
   linkCompanyToStripeCustomer,
   searchStripeCustomersForCompany,
+  StripeCustomerConflictError,
 } from '../modules/integrations/stripePaymentsService.js';
 
 export const paymentsRouter = createAsyncRouter();
@@ -72,12 +73,24 @@ paymentsRouter.post('/api/payments/companies/:companyId/stripe-link', async (req
     return res.status(409).json({ error: 'already_linked', currentStripeCustomerId: company.stripeCustomerId });
   }
 
-  const updated = await linkCompanyToStripeCustomer({ companyId: company.id, stripeCustomerId, matchedViaEmail });
-  return res.json({
-    id: updated.id,
-    stripeCustomerId: updated.stripeCustomerId,
-    stripeCustomerMatchedVia: updated.stripeCustomerMatchedVia,
-  });
+  try {
+    const updated = await linkCompanyToStripeCustomer({
+      tenantId: user.tenantId!,
+      companyId: company.id,
+      stripeCustomerId,
+      matchedViaEmail,
+    });
+    return res.json({
+      id: updated.id,
+      stripeCustomerId: updated.stripeCustomerId,
+      stripeCustomerMatchedVia: updated.stripeCustomerMatchedVia,
+    });
+  } catch (error) {
+    if (error instanceof StripeCustomerConflictError) {
+      return res.status(409).json({ error: 'customer_already_linked_elsewhere', message: error.message });
+    }
+    return res.status(400).json({ error: (error as Error).message });
+  }
 });
 
 paymentsRouter.get('/api/payments/companies/:companyId/summary', async (req, res) => {

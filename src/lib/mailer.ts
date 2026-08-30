@@ -1,5 +1,18 @@
 import nodemailer from 'nodemailer';
 
+// Opportunity/company names, stage labels, and display names are all tenant-user-controlled free
+// text that gets interpolated into HTML email bodies below — escape before interpolating so a
+// name like `<a href="...">` can't inject markup/links into a transactional email sent from
+// Northstack's own domain.
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 const transporter = nodemailer.createTransport({
   host: 'smtp.zoho.com',
   port: 465,
@@ -309,6 +322,7 @@ export async function sendOpportunityStageChangedEmail(input: SendOpportunitySta
   if (!mailerConfigured()) return;
 
   const actor = input.changedByName ? ` by ${input.changedByName}` : '';
+  const actorHtml = input.changedByName ? ` by ${escapeHtml(input.changedByName)}` : '';
 
   await transporter.sendMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
@@ -322,8 +336,8 @@ export async function sendOpportunityStageChangedEmail(input: SendOpportunitySta
       `View your pipeline: ${input.appUrl}`,
     ].join('\n'),
     html: [
-      `<p>Hi ${input.ownerFirstName},</p>`,
-      `<p><strong>${input.opportunityName}</strong> (${input.companyName}) moved from ${input.fromStage} to <strong>${input.toStage}</strong>${actor}.</p>`,
+      `<p>Hi ${escapeHtml(input.ownerFirstName)},</p>`,
+      `<p><strong>${escapeHtml(input.opportunityName)}</strong> (${escapeHtml(input.companyName)}) moved from ${escapeHtml(input.fromStage)} to <strong>${escapeHtml(input.toStage)}</strong>${actorHtml}.</p>`,
       `<p><a href="${input.appUrl}">View your pipeline</a></p>`,
     ].join('\n'),
   });
@@ -357,8 +371,8 @@ export async function sendOpportunityStalledEmail(input: SendOpportunityStalledE
       `View your pipeline: ${input.appUrl}`,
     ].join('\n'),
     html: [
-      `<p>Hi ${input.ownerFirstName},</p>`,
-      `<p><strong>${input.opportunityName}</strong> (${input.companyName}) has been sitting in <strong>${input.stageName}</strong> for ${input.daysInStage} days.</p>`,
+      `<p>Hi ${escapeHtml(input.ownerFirstName)},</p>`,
+      `<p><strong>${escapeHtml(input.opportunityName)}</strong> (${escapeHtml(input.companyName)}) has been sitting in <strong>${escapeHtml(input.stageName)}</strong> for ${input.daysInStage} days.</p>`,
       `<p><a href="${input.appUrl}">View your pipeline</a></p>`,
     ].join('\n'),
   });

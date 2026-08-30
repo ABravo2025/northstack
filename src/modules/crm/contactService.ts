@@ -127,14 +127,17 @@ export async function updateContact(id: string, input: UpdateContactInput): Prom
   if (input.leadSourceId !== undefined) data.leadSourceId = input.leadSourceId;
   if (input.isActive !== undefined) data.isActive = input.isActive;
 
-  // isPrimary is unique per Company (docs/tareas/specredisenosalesv2.md §2.3).
-  // The "effective" companyId is whichever this same PATCH sets it to, or the
-  // existing one if companyId isn't part of this call — either way, a
-  // companyId-less Contact has nothing to be unique against.
-  if (input.isPrimary === true) {
-    const effectiveCompanyId =
-      input.companyId !== undefined ? input.companyId : (await prisma.contact.findUnique({ where: { id }, select: { companyId: true } }))?.companyId;
-    if (effectiveCompanyId) {
+  // isPrimary is unique per Company (docs/tareas/specredisenosalesv2.md §2.3). Re-checked
+  // whenever this PATCH touches *either* isPrimary or companyId — a contact that's already
+  // isPrimary: true and only gets relinked to a different company (companyId changes,
+  // isPrimary isn't resent) still has to demote whoever's primary there today, or the target
+  // company ends up with two primary contacts.
+  if (input.isPrimary !== undefined || input.companyId !== undefined) {
+    const current = await prisma.contact.findUnique({ where: { id }, select: { isPrimary: true, companyId: true } });
+    const effectiveIsPrimary = input.isPrimary !== undefined ? input.isPrimary : current?.isPrimary ?? false;
+    const effectiveCompanyId = input.companyId !== undefined ? input.companyId : current?.companyId ?? null;
+
+    if (effectiveIsPrimary && effectiveCompanyId) {
       return prisma.$transaction(async (tx) => {
         await tx.contact.updateMany({
           where: { companyId: effectiveCompanyId, isPrimary: true, id: { not: id } },

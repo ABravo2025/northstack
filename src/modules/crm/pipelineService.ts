@@ -209,6 +209,17 @@ export async function findPipelineStageById(id: string): Promise<PipelineStageDe
   return prisma.pipelineStageDefinition.findUnique({ where: { id } });
 }
 
+// The stage an Opportunity lands on when it's created or moved into a pipeline without an
+// explicit stageId (opportunityService.ts's createOpportunity/updateOpportunity) — factored out
+// so callers that need to validate that resolved stage ahead of time (e.g. routes/opportunities.ts's
+// win/loss-reason check) can ask "what stage would this land on" without duplicating the query.
+export async function findFirstActiveStage(pipelineId: string): Promise<PipelineStageDefinition | null> {
+  return prisma.pipelineStageDefinition.findFirst({
+    where: { pipelineId, isActive: true },
+    orderBy: { order: 'asc' },
+  });
+}
+
 export async function updatePipelineStage(
   id: string,
   tenantId: string,

@@ -74,15 +74,38 @@ export async function searchStripeCustomersForCompany(
 }
 
 export interface LinkCompanyToStripeInput {
+  tenantId: string;
   companyId: string;
   stripeCustomerId: string;
   matchedViaEmail: string;
 }
 
+// Thrown when the target Stripe customer is already linked to a *different* Company in the same
+// tenant (e.g. a parent/subsidiary sharing a billing contact's email) — without this check, two
+// Companies could end up pointing at the same customer, and any webhook/poll event for that
+// customer would then attribute non-deterministically to whichever Company Prisma picks first.
+export class StripeCustomerConflictError extends Error {
+  constructor(public readonly conflictingCompanyId: string, public readonly conflictingCompanyName: string) {
+    super(`This Stripe customer is already linked to another company in your workspace (${conflictingCompanyName}).`);
+    this.name = 'StripeCustomerConflictError';
+  }
+}
+
 // The "already linked to a different customer, need confirmation" check lives in the route
 // (routes/payments.ts) — it already has the Company row loaded for the ownership check, so
-// re-fetching it here would just be a second round-trip for the same data.
+// re-fetching it here would just be a second round-trip for the same data. This function still
+// owns the reverse direction (is this *customer* already claimed by another Company?) since both
+// callers — the manual link route and the auto-link cron — need it and neither can see the other's
+// state.
 export async function linkCompanyToStripeCustomer(input: LinkCompanyToStripeInput) {
+  const conflict = await prisma.company.findFirst({
+    where: { tenantId: input.tenantId, stripeCustomerId: input.stripeCustomerId, id: { not: input.companyId } },
+    select: { id: true, name: true },
+  });
+  if (conflict) {
+    throw new StripeCustomerConflictError(conflict.id, conflict.name);
+  }
+
   return prisma.company.update({
     where: { id: input.companyId },
     data: { stripeCustomerId: input.stripeCustomerId, stripeCustomerMatchedVia: input.matchedViaEmail },
@@ -470,6 +493,7 @@ export async function autoLinkUnmatchedCompanies(tenantId: string): Promise<{ ch
       const matches = await searchStripeCustomersForCompany(tenantId, company.id);
       if (matches.length === 1) {
         await linkCompanyToStripeCustomer({
+          tenantId,
           companyId: company.id,
           stripeCustomerId: matches[0].id,
           matchedViaEmail: matches[0].matchedViaEmail,

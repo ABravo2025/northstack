@@ -210,6 +210,16 @@ employeesRouter.patch('/api/hr/employees/:employeeId', async (req, res) => {
     return res.status(404).json({ error: 'Employee not found' });
   }
 
+  // The frontend hides the Status field once an employee is Terminated, but that's UI-only —
+  // without this, any HR-permissioned caller could PATCH statusId back to Active directly and
+  // reopen the door to a second real termination (and a second final payment) on the same person.
+  if (req.body.statusId !== undefined && req.body.statusId !== employee.statusId) {
+    const currentStatus = await findStatusDefinitionById(employee.statusId);
+    if (currentStatus?.name === 'Terminated') {
+      return res.status(400).json({ error: 'Cannot change the status of a terminated employee' });
+    }
+  }
+
   if (req.body.managerId) {
     const manager = await findEmployeeById(req.body.managerId);
     if (!manager || manager.tenantId !== user.tenantId) {
@@ -366,6 +376,11 @@ employeesRouter.post('/api/hr/employees/:employeeId/invite', async (req, res) =>
 
   if (employee.userId) {
     return res.status(400).json({ error: 'Employee is already linked to a user' });
+  }
+
+  const employeeStatus = await findStatusDefinitionById(employee.statusId);
+  if (employeeStatus?.name === 'Terminated') {
+    return res.status(400).json({ error: 'Cannot invite a terminated employee' });
   }
 
   const result = await createInvitation({

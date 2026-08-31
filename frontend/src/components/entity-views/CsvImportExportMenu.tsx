@@ -1,25 +1,31 @@
 import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
-import { api } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import SlideOver from '../common/SlideOver';
 import RequiredMark from '../common/RequiredMark';
 import { DownloadIcon, UploadIcon } from '../common/Icons';
-
-interface CsvImportExportMenuProps {
-  token: string;
-  onImported: () => void;
-}
-
-export interface CsvImportExportMenuHandle {
-  openImport: () => void;
-}
 
 interface ImportResult {
   created: number;
   errors: { row: number; message: string }[];
 }
 
-const LABEL = { plural: 'Employees', filename: 'employees.csv', templateFilename: 'employees-import-template.csv' };
+interface CsvImportExportMenuProps {
+  token: string;
+  onImported: () => void;
+  // Plural label shown in button titles/toasts (e.g. "Companies") and the filenames the
+  // downloaded files use (lowercased — e.g. "companies.csv"/"companies-import-template.csv").
+  entityLabelPlural: string;
+  // Singular form for the "N created" toast/result message (e.g. "Company") — not derived
+  // from the plural (naive "strip trailing s" breaks on Company -> Companie).
+  entityLabelSingular: string;
+  exportCsv: (token: string) => Promise<string>;
+  importCsv: (token: string, csv: string) => Promise<ImportResult>;
+  csvTemplate: (token: string) => Promise<string>;
+}
+
+export interface CsvImportExportMenuHandle {
+  openImport: () => void;
+}
 
 function downloadCsvBlob(csv: string, filename: string) {
   const blob = new Blob([csv], { type: 'text/csv' });
@@ -34,9 +40,10 @@ function downloadCsvBlob(csv: string, filename: string) {
 }
 
 const CsvImportExportMenu = forwardRef<CsvImportExportMenuHandle, CsvImportExportMenuProps>(function CsvImportExportMenu(
-  { token, onImported },
+  { token, onImported, entityLabelPlural, entityLabelSingular, exportCsv, importCsv, csvTemplate },
   ref,
 ) {
+  const filenameBase = entityLabelPlural.toLowerCase();
   const toast = useToast();
   const [importOpen, setImportOpen] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -57,8 +64,8 @@ const CsvImportExportMenu = forwardRef<CsvImportExportMenuHandle, CsvImportExpor
   const handleExport = async () => {
     setExporting(true);
     try {
-      const csv = await api.exportEmployeesCsv(token);
-      downloadCsvBlob(csv, LABEL.filename);
+      const csv = await exportCsv(token);
+      downloadCsvBlob(csv, `${filenameBase}.csv`);
     } catch (error) {
       toast.error('Failed to export CSV: ' + (error as Error).message);
     } finally {
@@ -69,8 +76,8 @@ const CsvImportExportMenu = forwardRef<CsvImportExportMenuHandle, CsvImportExpor
   const handleDownloadTemplate = async () => {
     setDownloadingTemplate(true);
     try {
-      const csv = await api.employeesCsvTemplate(token);
-      downloadCsvBlob(csv, LABEL.templateFilename);
+      const csv = await csvTemplate(token);
+      downloadCsvBlob(csv, `${filenameBase}-import-template.csv`);
     } catch (error) {
       toast.error('Failed to download template: ' + (error as Error).message);
     } finally {
@@ -97,10 +104,10 @@ const CsvImportExportMenu = forwardRef<CsvImportExportMenuHandle, CsvImportExpor
     if (!csvText.trim()) return;
     setImporting(true);
     try {
-      const res = await api.importEmployeesCsv(token, csvText);
+      const res = await importCsv(token, csvText);
       setResult(res);
       if (res.created > 0) {
-        toast.success(`Imported ${res.created} ${res.created === 1 ? LABEL.plural.slice(0, -1) : LABEL.plural.toLowerCase()}.`);
+        toast.success(`Imported ${res.created} ${res.created === 1 ? entityLabelSingular : entityLabelPlural.toLowerCase()}.`);
         onImported();
       }
     } catch (error) {
@@ -112,7 +119,7 @@ const CsvImportExportMenu = forwardRef<CsvImportExportMenuHandle, CsvImportExpor
 
   return (
     <>
-      <button type="button" className="tb-btn" onClick={handleExport} disabled={exporting} aria-label={`Export ${LABEL.plural} to CSV`} title="Export to CSV">
+      <button type="button" className="tb-btn" onClick={handleExport} disabled={exporting} aria-label={`Export ${entityLabelPlural} to CSV`} title="Export to CSV">
         <DownloadIcon />
       </button>
       <button
@@ -122,13 +129,13 @@ const CsvImportExportMenu = forwardRef<CsvImportExportMenuHandle, CsvImportExpor
           resetImportState();
           setImportOpen(true);
         }}
-        aria-label={`Import ${LABEL.plural} from CSV`}
+        aria-label={`Import ${entityLabelPlural} from CSV`}
         title="Import from CSV"
       >
         <UploadIcon />
       </button>
 
-      <SlideOver open={importOpen} title={`Import ${LABEL.plural} from CSV`} onClose={() => setImportOpen(false)}>
+      <SlideOver open={importOpen} title={`Import ${entityLabelPlural} from CSV`} onClose={() => setImportOpen(false)}>
         <div className="nv-field">
           <p className="text-sm text-gray-600 dark:text-gray-300">
             Upload a CSV file with a header row. Not sure of the columns? Download a template below — it has the exact
@@ -162,7 +169,7 @@ const CsvImportExportMenu = forwardRef<CsvImportExportMenuHandle, CsvImportExpor
         {result && (
           <div className="nv-field">
             <p className="text-sm font-semibold text-brand-navy dark:text-gray-100">
-              {result.created} {result.created === 1 ? LABEL.plural.slice(0, -1).toLowerCase() : LABEL.plural.toLowerCase()} imported.
+              {result.created} {result.created === 1 ? entityLabelSingular.toLowerCase() : entityLabelPlural.toLowerCase()} imported.
             </p>
             {result.errors.length > 0 && (
               <div className="mt-2">

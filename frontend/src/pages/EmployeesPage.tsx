@@ -1449,7 +1449,18 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         {viewType !== 'kanban' && (
           <ColumnVisibilityMenu columns={toggleableColumns} isHidden={isColumnHidden} onToggle={toggleColumn} />
         )}
-        {canEditEmployees && <CsvImportExportMenu ref={csvMenuRef} token={token} onImported={loadEmployees} />}
+        {canEditEmployees && (
+          <CsvImportExportMenu
+            ref={csvMenuRef}
+            token={token}
+            onImported={loadEmployees}
+            entityLabelPlural="Employees"
+            entityLabelSingular="Employee"
+            exportCsv={api.exportEmployeesCsv}
+            importCsv={api.importEmployeesCsv}
+            csvTemplate={api.employeesCsvTemplate}
+          />
+        )}
         {showAddFallback && (
           <button className="btn-primary" onClick={handleOpenAdd}>
             <span className="inline-flex items-center gap-1.5">

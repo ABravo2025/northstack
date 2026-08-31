@@ -23,6 +23,7 @@ import KanbanBoard from '../components/entity-views/KanbanBoard';
 import CustomFieldColumnMenu from '../components/entity-views/CustomFieldColumnMenu';
 import AddCustomFieldColumn from '../components/entity-views/AddCustomFieldColumn';
 import ColumnResizeHandle from '../components/entity-views/ColumnResizeHandle';
+import CsvImportExportMenu from '../components/entity-views/CsvImportExportMenu';
 import { useResizableColumns } from '../hooks/useResizableColumns';
 import ColumnVisibilityMenu from '../components/entity-views/ColumnVisibilityMenu';
 import MultiSelectDropdown from '../components/common/MultiSelectDropdown';
@@ -1098,6 +1099,17 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
         {viewType !== 'kanban' && <FilterBar fields={fields} filters={viewFilters} onChange={setViewFilters} />}
         {viewType !== 'kanban' && (
           <ColumnVisibilityMenu columns={toggleableColumns} isHidden={isColumnHidden} onToggle={toggleColumn} />
+        )}
+        {canEditContacts && (
+          <CsvImportExportMenu
+            token={token}
+            onImported={loadContacts}
+            entityLabelPlural="Contacts"
+            entityLabelSingular="Contact"
+            exportCsv={api.exportContactsCsv}
+            importCsv={api.importContactsCsv}
+            csvTemplate={api.contactsCsvTemplate}
+          />
         )}
         {showAddFallback && (
           <button className="btn-primary" onClick={handleOpenAdd}>

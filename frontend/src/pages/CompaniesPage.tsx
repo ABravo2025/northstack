@@ -16,6 +16,7 @@ import AddCustomFieldColumn from '../components/entity-views/AddCustomFieldColum
 import StatusColumnMenu from '../components/entity-views/StatusColumnMenu';
 import FieldCatalogMenu from '../components/entity-views/FieldCatalogMenu';
 import ColumnResizeHandle from '../components/entity-views/ColumnResizeHandle';
+import CsvImportExportMenu from '../components/entity-views/CsvImportExportMenu';
 import { useResizableColumns } from '../hooks/useResizableColumns';
 import ColumnVisibilityMenu from '../components/entity-views/ColumnVisibilityMenu';
 import MultiSelectDropdown from '../components/common/MultiSelectDropdown';
@@ -1080,6 +1081,17 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
         {viewType !== 'kanban' && <FilterBar fields={fields} filters={viewFilters} onChange={setViewFilters} />}
         {viewType !== 'kanban' && (
           <ColumnVisibilityMenu columns={toggleableColumns} isHidden={isColumnHidden} onToggle={toggleColumn} />
+        )}
+        {canEditCompanies && (
+          <CsvImportExportMenu
+            token={token}
+            onImported={loadCompanies}
+            entityLabelPlural="Companies"
+            entityLabelSingular="Company"
+            exportCsv={api.exportCompaniesCsv}
+            importCsv={api.importCompaniesCsv}
+            csvTemplate={api.companiesCsvTemplate}
+          />
         )}
         {showAddFallback && (
           <button className="btn-primary" onClick={handleOpenAdd}>

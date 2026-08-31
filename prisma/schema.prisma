@@ -391,6 +391,14 @@ model Subscription {
   cancellationReason      String?
   paymentMethodBrand      String? // "visa" | "mastercard" | etc — display only, never sensitive
   paymentMethodLast4      String?
+  // Rolling "who last touched this" pointer, no history — written by startCheckout and the 3
+  // self-serve actions (changePlan/requestCancellation/resumeSubscription), read by
+  // syncSubscriptionAndTenant to best-effort attribute a webhook-confirmed change back to the
+  // user whose action triggered it (see activityLogService.ts / spec-activity-log.md). Never
+  // cleared after use — only gated by lastActionAt's freshness at read time.
+  lastActionByUserId      String?
+  lastActionBy            User?              @relation(fields: [lastActionByUserId], references: [id])
+  lastActionAt            DateTime?
   createdAt               DateTime           @default(now())
   updatedAt               DateTime           @updatedAt
   invoices                Invoice[]
@@ -490,6 +498,7 @@ model User {
   stripeConnectionsConnected StripeConnection[]
   employeeTerminationsCreated EmployeeTermination[]
   activityLogEntries         ActivityLogEntry[]
+  subscriptionsLastActedOn   Subscription[]
 
   @@index([emailDomain])
 }

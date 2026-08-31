@@ -2622,7 +2622,7 @@ corrida directa contra `staging` (cambiar la moneda del tenant, crear y cancelar
 | 3 | Promover a alguien a owner, o cambiar el rol/status de un usuario (`/settings/users`) | Fila de tipo User — confirmar que **nunca** aparece `passwordHash` en el detalle, solo `role`/`status` |
 | 4 | Invitar a alguien nuevo, y cancelar una invitación pendiente | Fila `create` al invitar, fila `update` (`Status: pending → revoked`) al cancelar |
 | 5 | Aceptar una invitación (crear cuenta desde el link) | Fila `update` (`Status: pending → accepted`) — el actor es la propia persona que acepta, no quien invitó |
-| 6 | Conectar/desconectar Google Calendar o Stripe, o cambiar de plan/cancelar la propia suscripción de Northstack desde Billing | **No** debería generar ninguna fila — scope cut deliberado de esta unidad, confirmar que no hay error ni comportamiento raro, solo ausencia de log |
+| 6 | Conectar/desconectar Google Calendar o Stripe, o cambiar de plan/cancelar la propia suscripción de Northstack desde Billing | Al momento de escribir esto (2026-08-30) **no** generaba ninguna fila — scope cut deliberado de esta unidad. **Actualizado 2026-08-31 en QA-63**: esto ya no es así, estos casos ahora sí quedan registrados — ver QA-63 |
 
 ### B. Regresión
 
@@ -2637,9 +2637,9 @@ El caso A.3 es el más sensible — si aparece `passwordHash` o cualquier dato d
 entrada de Activity Log, es severidad **alta** (fuga de credencial). El resto sigue el criterio ya
 establecido: dato incorrecto es media, regresión funcional es alta.
 
-**Con esta unidad el spec de Activity Log se da por cerrado** (5 unidades completas + 1 parcial,
-scope cut documentado) — cualquier extensión futura (Subscription/integraciones, u otros módulos no
-cubiertos) es una iniciativa nueva, no una unidad pendiente de este spec.
+**Nota (2026-08-31): esta afirmación quedó desactualizada un día después** — ver QA-63, Alejandro
+pidió explícitamente cubrir Subscription/GoogleCalendarConnection/StripeConnection y se completó
+la unidad.
 
 ---
 
@@ -2678,3 +2678,56 @@ confirmar que aparece en el feed de esa Company vía la misma función que usa e
 A.5 es la más importante — si una Note/Task/Tag de un registro aparece en el Activity de **otro**
 registro, es severidad alta (fuga de datos entre entidades, aunque sea dentro del mismo tenant). El
 resto es media (funcionalidad visible pero incompleta) salvo regresión real en B, que sería alta.
+
+---
+
+## QA-63 — Activity Log, Unidad 6 (cierre real): Subscription, Google Calendar, Stripe (2026-08-31, en `staging`)
+
+**Por qué existe esta tarea:** un día después de QA-61, Alejandro cuestionó el scope cut original
+("si los dispara un webhook pero salen desde un usuario específico, habría que registrar eso, ¿lo
+ves posible?") y después precisó: quiere loguear quién conecta/desconecta Google Calendar, quién
+toca las claves de Stripe (con permiso), y quién cambia de plan (con permiso). Investigación de
+código confirmó que Google Calendar y Stripe connect/desconnect ya tenían un actor real disponible
+de forma síncrona — solo faltaba cablearlo. Subscription era el caso genuinamente difícil: los
+webhooks de Paddle/Mercado Pago nunca traen un user id en su payload (limitación real de esas
+plataformas), así que se agregó `Subscription.lastActionByUserId`/`lastActionAt` — un puntero
+"quién tocó esto último", escrito por el checkout inicial y los 3 self-serve, leído por
+`syncSubscriptionAndTenant` al confirmar un cambio (solo si tiene menos de 60 minutos de
+antigüedad; si no, no loguea nada, mismo criterio de siempre). Verificado con una corrida directa
+contra `staging` (sin llamar a ningún proveedor externo): simular un checkout, confirmar por el
+camino del webhook, y ver la entrada atribuida correctamente al usuario que inició el checkout.
+
+### A. Confirmar en `Settings → Activity Log`
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Conectar Google Calendar (`Settings → Integraciones`) con un usuario | Fila `create` de tipo "Google Calendar Connection", actor = ese usuario, detalle muestra el email conectado |
+| 2 | Reconectar (después de un `needsReconnect`, o simplemente conectar de nuevo) | Fila `update` si el email cambió, o ninguna fila si es el mismo email (diff vacío, comportamiento esperado) |
+| 3 | Desconectar Google Calendar | Fila `delete` de tipo "Google Calendar Connection", actor = quien desconectó |
+| 4 | Conectar la clave de Stripe (owner) | Fila `create` de tipo "Stripe Connection", actor = el owner, detalle muestra `apiKeyMode`/cuenta — **nunca** la clave en sí |
+| 5 | Desconectar Stripe | Fila `delete` de tipo "Stripe Connection", actor correcto |
+| 6 | Cambiar de plan desde Billing (self-serve, con `Subscription.provider` ya seteado) | Fila `update` de tipo "Subscription", `Changed Plan: starter → growth` (o el par que corresponda), actor = quien lo hizo |
+| 7 | Cancelar/reanudar la propia suscripción desde Billing | Fila `update` con el cambio de `cancellationReason`/`cancellationEffectiveAt`, actor correcto |
+| 8 | Suscribirse por primera vez (checkout inicial, se confirma por webhook) — si hay forma de probarlo en `staging` con sandbox de Paddle/Mercado Pago | Una vez que el webhook confirma el pago, la fila `Changed Status: trialing → active` debería aparecer atribuida a quien inició el checkout, no sin actor — si el checkout tardó más de ~1 hora en confirmarse, **no** debería tener actor (ventana de confianza vencida, comportamiento esperado, no un bug) |
+| 9 | Un cambio de plan/renovación puramente automática (cron, o un webhook de renovación semanas después de la última acción humana) | **No** debería generar ninguna fila con actor — si aparece atribuida a alguien, es un bug (ventana de 60 min mal aplicada) |
+
+### B. Regresión
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 10 | `npm run build`/`npm test` (backend, 218/218) y `npm run build` (frontend) | Los tres en verde |
+| 11 | Todo lo ya cubierto en QA-56 a QA-62 | Sigue funcionando igual — esta unidad es aditiva |
+| 12 | Uso normal de Billing/Integraciones desde la UI (conectar, desconectar, cambiar de plan) | Sin cambios visibles de comportamiento — el Activity Log es una capa de auditoría, no debería alterar ningún flujo existente |
+
+### Al encontrar una falla
+
+El caso A.4 es el más sensible — si aparece la clave de Stripe (aunque sea parcial) en el detalle
+de una entrada de Activity Log, es severidad **alta** (fuga de credencial), igual criterio que
+QA-61/A.3 con `passwordHash`. El caso A.9 (atribución incorrecta de un evento automático a una
+persona) es severidad media-alta — no es una fuga de datos, pero es información engañosa en un
+log de auditoría. El resto sigue el criterio ya establecido: dato incorrecto es media, regresión
+funcional es alta.
+
+**Con esta unidad el spec de Activity Log queda completo de punta a punta** (6 unidades, sin
+scope cuts pendientes salvo los ya documentados y deliberados en el spec §6: sesiones/login,
+revertir un cambio, retención/purga, y Admin Center).

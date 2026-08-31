@@ -32,6 +32,9 @@ import { companyActivityFieldConfig } from '../src/modules/activity/fieldConfigs
 import { contactActivityFieldConfig, contactDisplayName } from '../src/modules/activity/fieldConfigs/contactFieldConfig.js';
 import { opportunityActivityFieldConfig } from '../src/modules/activity/fieldConfigs/opportunityFieldConfig.js';
 import { recordCustomFieldValueActivity } from '../src/modules/activity/customFieldActivity.js';
+import { googleCalendarConnectionActivityFieldConfig } from '../src/modules/activity/fieldConfigs/googleCalendarConnectionFieldConfig.js';
+import { stripeConnectionActivityFieldConfig } from '../src/modules/activity/fieldConfigs/stripeConnectionFieldConfig.js';
+import { subscriptionActivityFieldConfig } from '../src/modules/activity/fieldConfigs/subscriptionFieldConfig.js';
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -109,6 +112,27 @@ describe('field config maps', () => {
   it('opportunityActivityFieldConfig tracks amountCents with the money resolver', async () => {
     const value = await opportunityActivityFieldConfig.amountCents.resolve!(250000, { currency: 'EUR' });
     expect(value).toContain('2,500.00');
+  });
+
+  it('googleCalendarConnectionActivityFieldConfig only tracks googleAccountEmail (no tokens, no needsReconnect)', () => {
+    expect(Object.keys(googleCalendarConnectionActivityFieldConfig)).toEqual(['googleAccountEmail']);
+  });
+
+  it('stripeConnectionActivityFieldConfig tracks apiKeyMode/stripeAccountId, never apiKeyEncrypted', () => {
+    expect(Object.keys(stripeConnectionActivityFieldConfig).sort()).toEqual(['apiKeyMode', 'stripeAccountId']);
+    expect(stripeConnectionActivityFieldConfig.apiKeyEncrypted).toBeUndefined();
+    expect(stripeConnectionActivityFieldConfig.needsAttention).toBeUndefined();
+  });
+
+  it('subscriptionActivityFieldConfig tracks plan/status/cancellation fields, not internal billing ids or cancelledAt', () => {
+    expect(Object.keys(subscriptionActivityFieldConfig).sort()).toEqual([
+      'cancellationEffectiveAt',
+      'cancellationReason',
+      'plan',
+      'status',
+    ]);
+    expect(subscriptionActivityFieldConfig.cancelledAt).toBeUndefined();
+    expect(subscriptionActivityFieldConfig.externalSubscriptionId).toBeUndefined();
   });
 });
 

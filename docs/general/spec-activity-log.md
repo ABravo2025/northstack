@@ -1,12 +1,14 @@
 # Spec Activity Log
 
-**Estado:** ✅ Unidades 1-5 completas + Unidad 6 parcial, en `staging` (2026-08-30) — el spec se da
-por cerrado en esta ronda. **Fix el mismo día, tras revisión de Alejandro en `staging`**: el tab de
+**Estado:** ✅ Unidades 1-6 completas, en `staging` (2026-08-31) — el spec se da por cerrado en esta
+ronda. **Fix el mismo día (2026-08-30), tras revisión de Alejandro en `staging`**: el tab de
 Activity de un modal no mostraba Task/Note propias (decisión 7 original) — corregido con
-`parentEntityType`/`parentEntityId` en `ActivityLogEntry`, ver decisión 7 actualizada. Unidad 6
-(nueva, parcial): Tenant (currency/plan), User (rol/status),
-Invitation (alta/cancelación/aceptación) — Subscription/GoogleCalendarConnection/StripeConnection
-deliberadamente afuera, ver §6 para el razonamiento completo. Unidad 5: extendió el
+`parentEntityType`/`parentEntityId` en `ActivityLogEntry`, ver decisión 7 actualizada. **Unidad 6
+completada (2026-08-31)**: Alejandro cuestionó el scope cut original de Subscription/
+GoogleCalendarConnection/StripeConnection ("si los dispara un webhook pero salen desde un usuario
+específico, habría que registrar eso") y pidió explícitamente cubrirlas — ver §6 para el mecanismo
+de correlación agregado (`Subscription.lastActionByUserId`/`lastActionAt`) que permite atribuir un
+cambio confirmado por webhook al usuario real que lo disparó. Unidad 5: extendió el
 wiring al resto de CRM + cross-module + vistas/forms — Pipeline, PipelineStage, Task, Note, Tag,
 SavedView, PublicForm — mismo mecanismo, verificado contra `staging` real. Unidad 4: extendió el
 wiring de create/update a HR/Payroll — TimeOffPolicy, TimeOffRequest, StatusDefinition,
@@ -267,7 +269,7 @@ de la plataforma" tal como se confirmó en la Decisión 1.
 | **3** ✅ | Frontend: tab de Activity en los 4 modales + página de Settings con filtros | (consume Unidad 1+2) |
 | **4** ✅ | Extensión HR/Payroll | TimeOffPolicy, TimeOffRequest, EmployeeCompensation, EmployeeTermination, PayrollRun, PayFrequency, PaymentMethod, StatusDefinition, CustomFieldDefinition, FieldCatalogDefinition |
 | **5** ✅ | Extensión CRM + cross-module + vistas/forms | Pipeline, PipelineStage, Task, Note, Tag, SavedView, PublicForm |
-| **6** ⚠️ parcial | Extensión cuenta/plataforma | Tenant (currency/plan) ✅, User (rol/status) ✅, Invitation (alta/cancelación/aceptación) ✅ — Subscription/GoogleCalendarConnection/StripeConnection deliberadamente afuera, ver §6 |
+| **6** ✅ | Extensión cuenta/plataforma | Tenant (currency/plan), User (rol/status), Invitation (alta/cancelación/aceptación), Subscription (plan/status/cancelación, con atribución correlacionada para cambios confirmados por webhook), GoogleCalendarConnection (conectar/desconectar), StripeConnection (conectar/desconectar) |
 
 Después de la Unidad 3 ya hay una feature end-to-end usable (que es el pedido original); las
 Unidades 4-6 son las que llevan el feed de Settings de "las 4 entidades del CRM/HR" a "auditoría
@@ -291,18 +293,34 @@ service distintos a tocar en total, por eso separado en 3 rondas en vez de una s
   crea/edita/borra un registro puntual desde su propia pantalla" — extenderlo a los otros tres
   orígenes (bulk import, seed, formulario anónimo) queda como una unidad futura separada si hace
   falta, no una que se coló sin documentar.
-- **Unidad 6 — scope cut real, decidido al implementar**: de los 6 tipos que el roadmap original
-  listaba, se construyeron 3 (Tenant currency/plan, User rol/status, Invitation alta/cancelación/
-  aceptación) y se dejaron deliberadamente afuera **Subscription**, **GoogleCalendarConnection** y
-  **StripeConnection**. Motivo: los cambios de estado más interesantes de estas tres son
-  disparados por webhooks (Paddle/Mercado Pago/Stripe) o por el cron de `planTransitionService.ts`
-  — ninguno de esos caminos tiene un `User` actor real detrás, así que ni siquiera calificarían
-  para loguearse bajo el mismo criterio ya aplicado en toda la Unidad 2 ("sin actor real, sin
-  entrada"). Lo poco que sí tiene un actor humano (conectar/desconectar Google Calendar o Stripe,
-  cambiar de plan/cancelar desde `subscriptionSelfServeService.ts`) es en la práctica un toggle
-  booleano sin mucho campo que diffear, y su estado ya es visible directamente en la UI de
-  Settings (`connected`/`needsReconnect`/`needsAttention`). Se puede retomar como una unidad
-  separada si en algún momento se justifica.
+- **Unidad 6 — historia real, no un plan de una sola pasada**: la primera ronda (2026-08-30)
+  construyó Tenant/User/Invitation y dejó **Subscription**, **GoogleCalendarConnection** y
+  **StripeConnection** deliberadamente afuera, con el argumento de que sus cambios más
+  interesantes los dispara un webhook/cron sin `User` actor real. Alejandro cuestionó ese
+  argumento al día siguiente: varios de esos cambios sí nacen de un click concreto de un usuario
+  (conectar Google Calendar, tocar las claves de Stripe, cambiar de plan), aunque la escritura
+  final a veces ocurra dentro de un webhook handler. Investigación de código confirmó que:
+  - **GoogleCalendarConnection/StripeConnection** (conectar/desconectar): sí tienen un actor real
+    y disponible de forma síncrona en el mismo call site (`stateRow.userId` del callback OAuth;
+    `userId` pasado directo a `connectStripe`) — no había ninguna limitación real, solo faltaba
+    cablear `recordActivity`. Los flips en background (`needsReconnect`, `needsAttention`,
+    disparados por cron/webhooks de Google/Stripe) siguen sin loguear — ahí sí no hay actor real.
+  - **Subscription** es el caso genuinamente difícil: el payload de los webhooks de Paddle/
+    Mercado Pago nunca trae un user id (limitación real de esas plataformas, no del código). Se
+    agregó `Subscription.lastActionByUserId`/`lastActionAt` — un puntero "quién tocó esto
+    último", escrito por `startCheckout` (vía `recordSubscriptionActionAttempt`, que solo graba
+    metadata de atribución, nunca estado de facturación) y por los 3 self-serve
+    (`changePlan`/`requestCancellation`/`resumeSubscription`, que ya tenían el actor real
+    disponible en la ruta y ahora lo pasan). `syncSubscriptionAndTenant` — el único writer real,
+    llamado desde los 10 branches de webhook y el cron — lo lee al confirmar: si viene un
+    `changedByUserId` directo (self-serve) lo usa; si no, cae al puntero solo si tiene menos de
+    60 minutos de antigüedad (`SUBSCRIPTION_ACTOR_TRUST_WINDOW_MS`); si no hay ninguno de los dos,
+    no loguea nada — mismo criterio de "sin actor real, sin entrada" de siempre, pero ahora
+    aplicado *después* de intentar la correlación, no en vez de intentarla. Toda la lógica vive
+    una sola vez ahí — `webhooks.ts` y `planTransitionService.ts` no cambiaron. Decisión
+    consciente de Alejandro: prefiere esta atribución "best guess" (podría, en el peor caso,
+    atribuir un evento no relacionado que caiga dentro de la misma ventana de 60 min) a dejar el
+    checkout inicial sin loguear.
 - **Sesiones/login** (decisión 6).
 - **Revertir un cambio desde el log** (solo lectura, ninguna unidad de esta ronda escribe).
 - **Retención/purga** — el log crece sin límite por ahora, igual que `StatusHistoryEntry` hoy (sin

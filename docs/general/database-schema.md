@@ -1,6 +1,6 @@
 # Database Schema
 
-- Última actualización: 2026-08-30 (Activity Log — Unidades 1-5 completas + Unidad 6 parcial (cuenta/plataforma), spec cerrado en esta ronda, más un fix same-day de `parentEntityType`/`parentEntityId` tras revisión en vivo, ver grupo 13; en `staging`, sin pushear a `main`)
+- Última actualización: 2026-08-31 (Activity Log — Unidades 1-6 completas, spec cerrado; incluye el fix same-day de `parentEntityType`/`parentEntityId` (2026-08-30) y la Unidad 6 completa con Subscription/GoogleCalendarConnection/StripeConnection (2026-08-31, mecanismo de correlación `Subscription.lastActionByUserId`/`lastActionAt`), ver grupo 13; en `staging`, sin pushear a `main`)
 - Actualización anterior: 2026-08-29 (Employee Termination — ver grupo 11 — y Payments v1 Units 5-7, ver grupo 10; todo en `staging`, sin pushear a `main`)
 - Fuente de verdad real: `prisma/schema.prisma`. Este documento es una vista legible de ese archivo — si difieren, el `.prisma` manda. Regenerar este archivo cuando el schema cambie de forma significativa (modelo nuevo, relación nueva), no hace falta para cambios chicos (un campo opcional más, un índice).
 - Todos los modelos son multi-tenant: casi todos tienen `tenantId` directo (no derivado por join), y el aislamiento entre tenants se verifica en el código de cada endpoint (ownership check), no solo por FK — ver `docs/current-process-flow.md` para el patrón de verificación.
@@ -979,6 +979,7 @@ antes de salir.
 erDiagram
     TENANT ||--o| SUBSCRIPTION : "has, 1:1"
     SUBSCRIPTION ||--o{ INVOICE : "has"
+    USER ||--o{ SUBSCRIPTION : "last acted on (nullable, rolling pointer)"
 
     SUBSCRIPTION {
         string id PK
@@ -998,6 +999,8 @@ erDiagram
         string cancellationReason "nullable"
         string paymentMethodBrand "nullable - display only, e.g. 'visa'"
         string paymentMethodLast4 "nullable"
+        string lastActionByUserId FK "nullable - rolling 'who touched this last' pointer (Activity Log Unidad 6, grupo 13)"
+        datetime lastActionAt "nullable, paired with lastActionByUserId"
     }
     INVOICE {
         string id PK
@@ -1052,14 +1055,19 @@ Notas:
 Spec en `docs/general/spec-activity-log.md` (2026-08-30) — auditoría de "quién hizo qué" en la
 plataforma. Pedido explícito de Alejandro: un tab de actividad *por registro* dentro de los modales
 de detalle de Employee/Company/Contact/Opportunity, más un feed *tenant-wide* en Settings.
-**Unidades 1-4 completas, en `staging`**: schema + mecanismo genérico + permiso + rutas (Unidad 1),
+**Unidades 1-6 completas, en `staging`**: schema + mecanismo genérico + permiso + rutas (Unidad 1),
 wiring real de create/update/delete de Employee/Company/Contact/Opportunity + sus custom field
 values (Unidad 2, con un scope cut documentado — ver el spec §6: CSV import/onboarding seed/Public
 Forms no generan entradas todavía), el frontend (Unidad 3) — tab "Activity" real en los 4 modales +
-`Settings → Activity Log` con filtros, verificado con Playwright contra `staging` real — y la
+`Settings → Activity Log` con filtros, verificado con Playwright contra `staging` real — la
 extensión a HR/Payroll (Unidad 4: TimeOffPolicy/TimeOffRequest/StatusDefinition/
 CustomFieldDefinition/FieldCatalogDefinition/PayFrequency/PaymentMethod/EmployeeCompensation/
-EmployeeTermination/PayrollRun), verificada con una corrida directa contra `staging`.
+EmployeeTermination/PayrollRun), la extensión al resto de CRM + cross-module + vistas/forms
+(Unidad 5: Pipeline/PipelineStage/Task/Note/Tag/SavedView/PublicForm), y la extensión a
+cuenta/plataforma (Unidad 6: Tenant/User/Invitation, más — en una segunda pasada el 2026-08-31,
+tras una pregunta de Alejandro sobre atribución en cambios disparados por webhook — Subscription/
+GoogleCalendarConnection/StripeConnection). Todas verificadas contra `staging` real (Playwright o
+corrida directa contra la base según el caso).
 
 ```mermaid
 erDiagram
@@ -1116,6 +1124,24 @@ Notas:
   `listActivityForEntity` matchea por `(entityType, entityId)` **o**
   `(parentEntityType, parentEntityId)`. El feed tenant-wide de Settings no cambió — sigue sin usar
   `parentEntityType`, así que no hay filas duplicadas ahí.
+- **`Subscription.lastActionByUserId`/`lastActionAt` (2026-08-31, push aditivo)** — puntero
+  rolling "quién tocó esto último", sin historial. Los webhooks de Paddle/Mercado Pago nunca
+  traen un user id en su payload (limitación real de esas plataformas), así que
+  `syncSubscriptionAndTenant` (el único writer real de `Subscription`) lo lee al confirmar un
+  cambio: usa el `changedByUserId` directo si viene de un self-serve síncrono
+  (`changePlan`/`requestCancellation`/`resumeSubscription`), y si no, cae a este puntero — solo
+  si tiene menos de 60 minutos de antigüedad (`SUBSCRIPTION_ACTOR_TRUST_WINDOW_MS`,
+  `subscriptionService.ts`). Escrito por esos 3 self-serve y por `startCheckout` (vía
+  `recordSubscriptionActionAttempt`, que solo graba esta metadata, nunca estado de facturación).
+  Sin actor directo ni puntero fresco, no se loguea nada — mismo criterio de siempre. Verificado
+  contra `staging` real (sin llamar a ningún proveedor externo).
+- **GoogleCalendarConnection/StripeConnection (2026-08-31)** — conectar/desconectar sí tienen un
+  actor real disponible de forma síncrona en el mismo call site (`stateRow.userId` del callback
+  OAuth de Google; `userId` ya era parámetro de `connectStripe`, se agregó a `disconnectStripe`)
+  — sin necesidad de ningún mecanismo de correlación. Los flips en background (`needsReconnect`,
+  `needsAttention`) siguen sin loguear — no hay actor real ahí. `disconnectStripe` se loguea
+  como `action: 'delete'` (no `'update'` diffeando `disconnectedAt`, que no está en el field
+  config y produciría un diff vacío silenciosamente descartado).
 
 ## Enums
 
@@ -1167,5 +1193,5 @@ Notas:
 - **Sales v2 (redesign de Pipeline/Opportunity — round-robin de asignación, forecast ponderado, automations al crear, notificaciones in-app) — Units 1-8 completas, solo en `staging`**: distinto de la "Clients redesign" original de arriba (esa sí está en producción) — esta es una segunda ronda de mejoras sobre lo mismo, todavía sin promover.
 - **Payments v1 — Units 1-7 completas, solo en `staging`** (última ronda 2026-08-29, ver grupo 10): conexión con Stripe, lookup/matching, visibilidad de pagos en vivo, notificaciones proactivas (cron de polling, no webhook), auto-vinculación de Companies, modal de historial de pagos con recibos, y vista general con disputes en el perfil de Company. No probado de punta a punta con una cuenta de Stripe real (sin credenciales en este entorno) más allá de tests unitarios y verificación directa contra `STAGING_DATABASE_URL`.
 - **Employee Termination — completo, solo en `staging`** (2026-08-29, ver grupo 11): status change coordinado (status/endDate/compensación/acceso/Time Off/reasignación de reportes), soporta baja pasada/hoy/futura con ejecución diferida vía cron, pago final con líneas de bonus/commission/reimbursement/deduction.
-- **Activity Log — spec cerrado, solo en `staging`** (2026-08-30, ver grupo 13 y `docs/general/spec-activity-log.md`): schema + `activityLogService.ts` genérico + `canViewActivityLog` + rutas (Unidad 1); wiring real de create/update/delete de Employee/Company/Contact/Opportunity + custom field values (Unidad 2); frontend — tab "Activity" en los 4 modales + `Settings → Activity Log` con filtros (Unidad 3); extensión a HR/Payroll — 10 entidades más (Unidad 4); extensión al resto de CRM + cross-module + vistas/forms — Pipeline/PipelineStage/Task/Note/Tag/SavedView/PublicForm (Unidad 5); extensión parcial a cuenta/plataforma — Tenant currency/plan, User rol/status, Invitation (Unidad 6, Subscription/GoogleCalendarConnection/StripeConnection deliberadamente afuera — ver el spec §6).
-- **Lo único todavía sin promover a `main`, a la fecha de esta actualización (2026-08-30)**: Sales v2 (redesign), Payments v1, Employee Termination, y Activity Log — todo el resto de lo listado arriba ya está en producción.
+- **Activity Log — spec cerrado, solo en `staging`** (2026-08-31, ver grupo 13 y `docs/general/spec-activity-log.md`): schema + `activityLogService.ts` genérico + `canViewActivityLog` + rutas (Unidad 1); wiring real de create/update/delete de Employee/Company/Contact/Opportunity + custom field values (Unidad 2); frontend — tab "Activity" en los 4 modales + `Settings → Activity Log` con filtros (Unidad 3); extensión a HR/Payroll — 10 entidades más (Unidad 4); extensión al resto de CRM + cross-module + vistas/forms — Pipeline/PipelineStage/Task/Note/Tag/SavedView/PublicForm (Unidad 5); extensión completa a cuenta/plataforma — Tenant currency/plan, User rol/status, Invitation, Subscription (plan/status/cancelación, con atribución correlacionada para webhooks), GoogleCalendarConnection y StripeConnection (Unidad 6).
+- **Lo único todavía sin promover a `main`, a la fecha de esta actualización (2026-08-31)**: Sales v2 (redesign), Payments v1, Employee Termination, y Activity Log — todo el resto de lo listado arriba ya está en producción.

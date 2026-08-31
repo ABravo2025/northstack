@@ -1,6 +1,8 @@
 import prisma from '../../lib/prisma.js';
 import { listCustomers, retrieveAccount, StripeApiError } from '../../lib/stripe.js';
 import { decryptStripeSecret, encryptStripeSecret } from '../../lib/stripeEncryption.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { stripeConnectionActivityFieldConfig } from '../activity/fieldConfigs/stripeConnectionFieldConfig.js';
 
 // Payments v1, Unit 1 (spec-payments-v1.md) — connect/disconnect a tenant's own Stripe account.
 // Lookup/matching (Unit 2) and live payment summaries (Unit 3) build on getApiKeyForTenant below;
@@ -76,7 +78,9 @@ export async function connectStripe({ tenantId, userId, apiKey }: ConnectStripeI
     }
   }
 
-  await prisma.stripeConnection.upsert({
+  const existing = await prisma.stripeConnection.findUnique({ where: { tenantId } });
+
+  const connection = await prisma.stripeConnection.upsert({
     where: { tenantId },
     create: {
       tenantId,
@@ -96,6 +100,18 @@ export async function connectStripe({ tenantId, userId, apiKey }: ConnectStripeI
     },
   });
 
+  await recordActivity({
+    tenantId,
+    entityType: 'stripeConnection',
+    entityId: connection.id,
+    entityLabel: connection.stripeAccountId ?? `${connection.apiKeyMode} key`,
+    action: existing ? 'update' : 'create',
+    changedByUserId: userId,
+    before: existing,
+    after: connection,
+    fieldConfig: stripeConnectionActivityFieldConfig,
+  });
+
   return getStripeConnectionStatus(tenantId);
 }
 
@@ -104,10 +120,27 @@ export async function connectStripe({ tenantId, userId, apiKey }: ConnectStripeI
 // lets a future reconnect go through the same upsert() path as a first-time connect. Idempotent —
 // disconnecting a tenant with no connection (or one already disconnected) is a no-op, not a
 // Prisma "record to update not found" crash; the route doesn't gate this on current status.
-export async function disconnectStripe(tenantId: string): Promise<void> {
-  await prisma.stripeConnection.updateMany({
-    where: { tenantId, disconnectedAt: null },
+export async function disconnectStripe(tenantId: string, userId: string): Promise<void> {
+  const connection = await prisma.stripeConnection.findUnique({ where: { tenantId } });
+  if (!connection || connection.disconnectedAt) return;
+
+  await prisma.stripeConnection.update({
+    where: { tenantId },
     data: { disconnectedAt: new Date() },
+  });
+
+  // Logged as a delete (not an update diffing disconnectedAt — that field isn't in the field
+  // config, so an 'update' here would diff to nothing and recordActivity would silently skip
+  // it) — same convention as Contact/Opportunity's soft-delete via isActive.
+  await recordActivity({
+    tenantId,
+    entityType: 'stripeConnection',
+    entityId: connection.id,
+    entityLabel: connection.stripeAccountId ?? `${connection.apiKeyMode} key`,
+    action: 'delete',
+    changedByUserId: userId,
+    before: connection,
+    fieldConfig: stripeConnectionActivityFieldConfig,
   });
 }
 

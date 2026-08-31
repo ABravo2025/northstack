@@ -2,6 +2,8 @@ import { randomBytes } from 'node:crypto';
 import { google, calendar_v3, Auth } from 'googleapis';
 import prisma from '../../lib/prisma.js';
 import { decryptGoogleToken, encryptGoogleToken, isGoogleTokenEncryptionConfigured } from '../../lib/googleTokenEncryption.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { googleCalendarConnectionActivityFieldConfig } from '../activity/fieldConfigs/googleCalendarConnectionFieldConfig.js';
 
 // event CRUD only — no calendar-settings/list access, the minimal scope for
 // one-way Task/TimeOff -> Google Calendar sync. `userinfo.email` is also
@@ -92,7 +94,9 @@ export async function handleGoogleOAuthCallback(code: string, state: string): Pr
       return { success: false, error: 'Could not read the connected Google account email.' };
     }
 
-    await prisma.googleCalendarConnection.upsert({
+    const existing = await prisma.googleCalendarConnection.findUnique({ where: { userId: stateRow.userId } });
+
+    const connection = await prisma.googleCalendarConnection.upsert({
       where: { userId: stateRow.userId },
       create: {
         tenantId: stateRow.tenantId,
@@ -111,6 +115,18 @@ export async function handleGoogleOAuthCallback(code: string, state: string): Pr
         scope: tokens.scope ?? CALENDAR_SCOPE,
         needsReconnect: false,
       },
+    });
+
+    await recordActivity({
+      tenantId: stateRow.tenantId,
+      entityType: 'googleCalendarConnection',
+      entityId: connection.id,
+      entityLabel: connection.googleAccountEmail,
+      action: existing ? 'update' : 'create',
+      changedByUserId: stateRow.userId,
+      before: existing,
+      after: connection,
+      fieldConfig: googleCalendarConnectionActivityFieldConfig,
     });
 
     return { success: true, userId: stateRow.userId, tenantId: stateRow.tenantId };
@@ -148,6 +164,17 @@ export async function disconnectGoogleCalendar(userId: string): Promise<void> {
   }
 
   await prisma.googleCalendarConnection.delete({ where: { userId } });
+
+  await recordActivity({
+    tenantId: connection.tenantId,
+    entityType: 'googleCalendarConnection',
+    entityId: connection.id,
+    entityLabel: connection.googleAccountEmail,
+    action: 'delete',
+    changedByUserId: userId,
+    before: connection,
+    fieldConfig: googleCalendarConnectionActivityFieldConfig,
+  });
 }
 
 // Returns null (silent no-op for callers) if the user never connected or

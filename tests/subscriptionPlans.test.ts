@@ -37,6 +37,11 @@ vi.mock('../src/lib/prisma.js', () => {
             s.cancellationEffectiveAt <= where.cancellationEffectiveAt.lte,
         );
       }),
+      findUniqueOrThrow: vi.fn(async ({ where }: any) => {
+        const subscription = subscriptions.find((s) => s.tenantId === where.tenantId);
+        const tenant = tenants.find((t) => t.id === subscription.tenantId);
+        return { ...subscription, tenant: { name: tenant?.name ?? 'Test Tenant' } };
+      }),
       // updateTenantPlan also keeps Subscription's own plan/lockedPriceCents in sync
       // (subscriptionService.ts's sync path is cron/webhook-only, this is the separate
       // pre-billing "which plan do you want" write). No-ops if the fixture didn't seed a
@@ -61,6 +66,9 @@ vi.mock('../src/lib/prisma.js', () => {
         subscriptions.push(created);
         return created;
       }),
+    },
+    activityLogEntry: {
+      create: vi.fn(async ({ data }: any) => data),
     },
     $transaction: vi.fn(async (fn: any) => fn(mockPrisma)),
     // Mirrors runPlanTransitions' single UPDATE statement: trialing rows whose trialEndsAt has

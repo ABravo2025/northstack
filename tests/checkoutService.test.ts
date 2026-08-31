@@ -12,6 +12,11 @@ vi.mock('../src/lib/prisma.js', () => ({
   default: {
     subscription: {
       findUnique: vi.fn(async ({ where }: any) => subscriptions.find((s) => s.tenantId === where.tenantId) ?? null),
+      update: vi.fn(async ({ where, data }: any) => {
+        const subscription = subscriptions.find((s) => s.tenantId === where.tenantId);
+        if (subscription) Object.assign(subscription, data);
+        return subscription;
+      }),
     },
     planPrice: {
       findFirst: vi.fn(async ({ where }: any) => planPrices.find((p) => p.plan === where.plan && p.market === where.market) ?? null),
@@ -64,14 +69,14 @@ describe('startCheckout — subscribing for the first time (no provider yet)', (
   beforeEach(resetMocks);
 
   it('rejects when there is no Subscription row', async () => {
-    const result = await startCheckout(tenant({ id: 't1', country: 'United States' }), { email: 'a@example.com' });
+    const result = await startCheckout(tenant({ id: 't1', country: 'United States' }), { id: 'u1', email: 'a@example.com' });
     expect(result.success).toBe(false);
   });
 
   it('creates a new Paddle transaction for an international tenant', async () => {
     subscriptions.push({ tenantId: 't1', id: 'sub1', plan: 'starter', provider: null, externalSubscriptionId: null });
 
-    const result = await startCheckout(tenant({ id: 't1', country: 'United States' }), { email: 'a@example.com' });
+    const result = await startCheckout(tenant({ id: 't1', country: 'United States' }), { id: 'u1', email: 'a@example.com' });
 
     expect(result.success).toBe(true);
     expect(result.provider).toBe('paddle');
@@ -87,7 +92,7 @@ describe('startCheckout — subscribing for the first time (no provider yet)', (
     subscriptions.push({ tenantId: 't1', id: 'sub1', plan: 'starter', provider: null, externalSubscriptionId: null });
     planPrices.find((p) => p.plan === 'starter' && p.market === 'ar')!.launchPriceCents = 5000; // real price, not the AR placeholder
 
-    const result = await startCheckout(tenant({ id: 't1', country: 'Argentina' }), { email: 'a@example.com' });
+    const result = await startCheckout(tenant({ id: 't1', country: 'Argentina' }), { id: 'u1', email: 'a@example.com' });
 
     expect(result.success).toBe(true);
     expect(result.provider).toBe('mercadopago');
@@ -99,7 +104,7 @@ describe('startCheckout — subscribing for the first time (no provider yet)', (
   it('rejects when the market price is the AR placeholder (0 cents)', async () => {
     subscriptions.push({ tenantId: 't1', id: 'sub1', plan: 'growth', provider: null, externalSubscriptionId: null });
 
-    const result = await startCheckout(tenant({ id: 't1', country: 'Argentina' }), { email: 'a@example.com' });
+    const result = await startCheckout(tenant({ id: 't1', country: 'Argentina' }), { id: 'u1', email: 'a@example.com' });
 
     expect(result.success).toBe(false);
     expect(createPreapprovalMock).not.toHaveBeenCalled();
@@ -112,7 +117,7 @@ describe('startCheckout — updating payment method on an already-active subscri
   it('Paddle: calls getUpdatePaymentMethodTransaction, never creates a second subscription', async () => {
     subscriptions.push({ tenantId: 't1', id: 'sub1', plan: 'starter', provider: 'paddle', externalSubscriptionId: 'sub_paddle_1' });
 
-    const result = await startCheckout(tenant({ id: 't1', country: 'United States' }), { email: 'a@example.com' });
+    const result = await startCheckout(tenant({ id: 't1', country: 'United States' }), { id: 'u1', email: 'a@example.com' });
 
     expect(result.success).toBe(true);
     expect(result.paddleTransactionId).toBe('txn_update');
@@ -124,7 +129,7 @@ describe('startCheckout — updating payment method on an already-active subscri
     subscriptions.push({ tenantId: 't1', id: 'sub1', plan: 'starter', provider: 'mercadopago', externalSubscriptionId: 'preapproval_old' });
     planPrices.find((p) => p.plan === 'starter' && p.market === 'ar')!.launchPriceCents = 5000;
 
-    const result = await startCheckout(tenant({ id: 't1', country: 'Argentina' }), { email: 'a@example.com' });
+    const result = await startCheckout(tenant({ id: 't1', country: 'Argentina' }), { id: 'u1', email: 'a@example.com' });
 
     expect(result.success).toBe(true);
     expect(result.initPoint).toBe('https://mp.example/checkout');
@@ -137,7 +142,7 @@ describe('startCheckout — updating payment method on an already-active subscri
   it('rejects if the subscription has a provider but no externalSubscriptionId (inconsistent state)', async () => {
     subscriptions.push({ tenantId: 't1', id: 'sub1', plan: 'starter', provider: 'paddle', externalSubscriptionId: null });
 
-    const result = await startCheckout(tenant({ id: 't1', country: 'United States' }), { email: 'a@example.com' });
+    const result = await startCheckout(tenant({ id: 't1', country: 'United States' }), { id: 'u1', email: 'a@example.com' });
 
     expect(result.success).toBe(false);
     expect(getUpdatePaymentMethodTransactionMock).not.toHaveBeenCalled();
@@ -151,7 +156,7 @@ describe('startCheckout — outside real production billing (staging/local dev)'
     delete process.env.PADDLE_ENV;
     subscriptions.push({ tenantId: 't1', id: 'sub1', plan: 'starter', provider: null, externalSubscriptionId: null });
 
-    const result = await startCheckout(tenant({ id: 't1', country: 'United States' }), { email: 'a@example.com' });
+    const result = await startCheckout(tenant({ id: 't1', country: 'United States' }), { id: 'u1', email: 'a@example.com' });
 
     expect(result.success).toBe(true);
     expect(createNonCatalogTransactionMock).toHaveBeenCalledWith(expect.objectContaining({ trialDays: undefined }));
@@ -162,7 +167,7 @@ describe('startCheckout — outside real production billing (staging/local dev)'
     subscriptions.push({ tenantId: 't1', id: 'sub1', plan: 'starter', provider: null, externalSubscriptionId: null });
     planPrices.find((p) => p.plan === 'starter' && p.market === 'ar')!.launchPriceCents = 5000;
 
-    const result = await startCheckout(tenant({ id: 't1', country: 'Argentina' }), { email: 'a@example.com' });
+    const result = await startCheckout(tenant({ id: 't1', country: 'Argentina' }), { id: 'u1', email: 'a@example.com' });
 
     expect(result.success).toBe(true);
     expect(createPreapprovalMock).toHaveBeenCalledWith(expect.objectContaining({ trialDays: undefined }));
@@ -177,7 +182,7 @@ describe('startCheckout — trial length caps at what remains of the ORIGINAL tr
 
     const result = await startCheckout(
       tenant({ id: 't1', country: 'United States', trialEndsAt: new Date(Date.now() + 3 * DAY_MS) }),
-      { email: 'a@example.com' },
+      { id: 'u1', email: 'a@example.com' },
     );
 
     expect(result.success).toBe(true);
@@ -192,7 +197,7 @@ describe('startCheckout — trial length caps at what remains of the ORIGINAL tr
     // land a brand new 15-day runway — pushing out the real first charge indefinitely.
     const result = await startCheckout(
       tenant({ id: 't1', country: 'United States', trialEndsAt: new Date(Date.now() - 5 * DAY_MS) }),
-      { email: 'a@example.com' },
+      { id: 'u1', email: 'a@example.com' },
     );
 
     expect(result.success).toBe(true);

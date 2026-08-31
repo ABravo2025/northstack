@@ -13,6 +13,11 @@ vi.mock('../src/lib/prisma.js', () => {
   const mockPrisma: any = {
     subscription: {
       findUnique: vi.fn(async ({ where }: any) => subscriptions.find((s) => s.tenantId === where.tenantId) ?? null),
+      findUniqueOrThrow: vi.fn(async ({ where }: any) => {
+        const subscription = subscriptions.find((s) => s.tenantId === where.tenantId);
+        const tenant = tenants.find((t) => t.id === subscription.tenantId);
+        return { ...subscription, tenant: { name: tenant?.name ?? 'Test Tenant' } };
+      }),
       update: vi.fn(async ({ where, data }: any) => {
         const subscription = subscriptions.find((s) => s.tenantId === where.tenantId);
         Object.assign(subscription, data);
@@ -28,6 +33,9 @@ vi.mock('../src/lib/prisma.js', () => {
     },
     planPrice: {
       findFirst: vi.fn(async ({ where }: any) => planPrices.find((p) => p.plan === where.plan && p.market === where.market) ?? null),
+    },
+    activityLogEntry: {
+      create: vi.fn(async ({ data }: any) => data),
     },
     $transaction: vi.fn(async (fn: any) => fn(mockPrisma)),
   };
@@ -67,7 +75,7 @@ describe('changePlan', () => {
   beforeEach(resetMocks);
 
   it('rejects scale — no self-serve checkout for it', async () => {
-    const result = await changePlan('t1', 'scale' as any);
+    const result = await changePlan('t1', 'scale' as any, 'u1');
     expect(result.success).toBe(false);
   });
 
@@ -75,7 +83,7 @@ describe('changePlan', () => {
     tenants.push({ id: 't1', plan: 'starter' });
     subscriptions.push({ tenantId: 't1', provider: null, externalSubscriptionId: null, plan: 'starter' });
 
-    const result = await changePlan('t1', 'growth');
+    const result = await changePlan('t1', 'growth', 'u1');
     expect(result.success).toBe(false);
     expect(updateSubscriptionItemsMock).not.toHaveBeenCalled();
   });
@@ -90,7 +98,7 @@ describe('changePlan', () => {
       currency: 'USD',
     });
 
-    const result = await changePlan('t1', 'growth');
+    const result = await changePlan('t1', 'growth', 'u1');
 
     expect(result.success).toBe(true);
     expect(updateSubscriptionItemsMock).toHaveBeenCalledWith('sub_1', {
@@ -118,7 +126,7 @@ describe('changePlan', () => {
     // exercises the success path, not the "pricing not available" guard.
     planPrices.find((p) => p.plan === 'growth' && p.market === 'ar')!.launchPriceCents = 5000;
 
-    const result = await changePlan('t1', 'growth');
+    const result = await changePlan('t1', 'growth', 'u1');
 
     expect(result.success).toBe(true);
     expect(updatePreapprovalMock).toHaveBeenCalledWith('preapproval_1', { transactionAmount: 50 });
@@ -129,7 +137,7 @@ describe('changePlan', () => {
     tenants.push({ id: 't1', plan: 'starter' });
     subscriptions.push({ tenantId: 't1', provider: 'mercadopago', externalSubscriptionId: 'preapproval_2', plan: 'starter' });
 
-    const result = await changePlan('t1', 'starter');
+    const result = await changePlan('t1', 'starter', 'u1');
     expect(result.success).toBe(false);
     expect(updatePreapprovalMock).not.toHaveBeenCalled();
   });
@@ -140,7 +148,7 @@ describe('requestCancellation', () => {
 
   it('rejects when there is no active paid subscription', async () => {
     subscriptions.push({ tenantId: 't1', provider: null, currentPeriodEnd: null });
-    const result = await requestCancellation('t1', undefined);
+    const result = await requestCancellation('t1', undefined, 'u1');
     expect(result.success).toBe(false);
   });
 
@@ -152,7 +160,7 @@ describe('requestCancellation', () => {
       currentPeriodEnd: new Date('2026-09-01'),
       cancelledAt: new Date('2026-08-01'),
     });
-    const result = await requestCancellation('t1', undefined);
+    const result = await requestCancellation('t1', undefined, 'u1');
     expect(result.success).toBe(false);
     expect(cancelPaddleSubscriptionMock).not.toHaveBeenCalled();
   });
@@ -168,7 +176,7 @@ describe('requestCancellation', () => {
       cancelledAt: null,
     });
 
-    const result = await requestCancellation('t1', 'too expensive');
+    const result = await requestCancellation('t1', 'too expensive', 'u1');
 
     expect(result.success).toBe(true);
     expect(cancelPaddleSubscriptionMock).toHaveBeenCalledWith('sub_1', 'next_billing_period');
@@ -189,7 +197,7 @@ describe('requestCancellation', () => {
       cancelledAt: null,
     });
 
-    const result = await requestCancellation('t1', undefined);
+    const result = await requestCancellation('t1', undefined, 'u1');
 
     expect(result.success).toBe(true);
     expect(cancelPaddleSubscriptionMock).not.toHaveBeenCalled();
@@ -202,7 +210,7 @@ describe('resumeSubscription', () => {
 
   it('rejects when there is nothing pending to resume', async () => {
     subscriptions.push({ tenantId: 't1', cancelledAt: null, cancellationEffectiveAt: null });
-    const result = await resumeSubscription('t1');
+    const result = await resumeSubscription('t1', 'u1');
     expect(result.success).toBe(false);
   });
 
@@ -212,7 +220,7 @@ describe('resumeSubscription', () => {
       cancelledAt: new Date('2026-08-01'),
       cancellationEffectiveAt: new Date('2026-08-02'), // in the past relative to "now" in this test run
     });
-    const result = await resumeSubscription('t1');
+    const result = await resumeSubscription('t1', 'u1');
     expect(result.success).toBe(false);
   });
 
@@ -225,7 +233,7 @@ describe('resumeSubscription', () => {
       cancellationEffectiveAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     });
 
-    const result = await resumeSubscription('t1');
+    const result = await resumeSubscription('t1', 'u1');
 
     expect(result.success).toBe(true);
     expect(removeScheduledChangeMock).toHaveBeenCalledWith('sub_1');
@@ -242,7 +250,7 @@ describe('resumeSubscription', () => {
       cancellationEffectiveAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     });
 
-    const result = await resumeSubscription('t1');
+    const result = await resumeSubscription('t1', 'u1');
 
     expect(result.success).toBe(true);
     expect(removeScheduledChangeMock).not.toHaveBeenCalled();

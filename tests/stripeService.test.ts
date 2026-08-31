@@ -39,6 +39,9 @@ vi.mock('../src/lib/prisma.js', () => ({
         return { count: matches.length };
       }),
     },
+    activityLogEntry: {
+      create: vi.fn(async ({ data }: any) => data),
+    },
   },
 }));
 
@@ -55,6 +58,7 @@ vi.mock('../src/lib/stripe.js', async () => {
   };
 });
 
+import prisma from '../src/lib/prisma.js';
 import { StripeApiError } from '../src/lib/stripe.js';
 import {
   connectStripe,
@@ -69,6 +73,7 @@ function resetMocks() {
   connections = [];
   retrieveAccountMock.mockReset().mockResolvedValue({ id: 'acct_123' });
   listCustomersMock.mockReset().mockResolvedValue({ data: [], has_more: false });
+  (prisma.activityLogEntry.create as any).mockClear();
 }
 
 describe('detectApiKeyMode', () => {
@@ -127,7 +132,7 @@ describe('connectStripe', () => {
 
   it('reconnecting clears a previous disconnectedAt/needsAttention instead of creating a second row', async () => {
     await connectStripe({ tenantId: 't1', userId: 'u1', apiKey: 'sk_test_first' });
-    await disconnectStripe('t1');
+    await disconnectStripe('t1', 'u1');
 
     const status = await connectStripe({ tenantId: 't1', userId: 'u2', apiKey: 'sk_live_second' });
 
@@ -139,6 +144,16 @@ describe('connectStripe', () => {
       needsAttention: false,
     });
     expect(connections[0].connectedByUserId).toBe('u2');
+  });
+
+  it('logs an Activity Log entry attributed to the connecting user', async () => {
+    await connectStripe({ tenantId: 't1', userId: 'u1', apiKey: 'sk_test_abc123' });
+
+    expect(prisma.activityLogEntry.create).toHaveBeenCalledTimes(1);
+    const data = (prisma.activityLogEntry.create as any).mock.calls[0][0].data;
+    expect(data.entityType).toBe('stripeConnection');
+    expect(data.action).toBe('create');
+    expect(data.changedByUserId).toBe('u1');
   });
 });
 
@@ -155,18 +170,18 @@ describe('getStripeConnectionStatus / disconnectStripe / getApiKeyForTenant', ()
   });
 
   it('disconnecting a tenant that never connected is a no-op, not a crash', async () => {
-    await expect(disconnectStripe('never-connected-tenant')).resolves.toBeUndefined();
+    await expect(disconnectStripe('never-connected-tenant', 'u1')).resolves.toBeUndefined();
   });
 
   it('disconnecting an already-disconnected connection is a no-op', async () => {
     await connectStripe({ tenantId: 't1', userId: 'u1', apiKey: 'sk_test_abc' });
-    await disconnectStripe('t1');
-    await expect(disconnectStripe('t1')).resolves.toBeUndefined();
+    await disconnectStripe('t1', 'u1');
+    await expect(disconnectStripe('t1', 'u1')).resolves.toBeUndefined();
   });
 
   it('treats a disconnected connection as not connected, without deleting the row', async () => {
     await connectStripe({ tenantId: 't1', userId: 'u1', apiKey: 'sk_test_abc' });
-    await disconnectStripe('t1');
+    await disconnectStripe('t1', 'u1');
 
     expect(await getStripeConnectionStatus('t1')).toMatchObject({ connected: false });
     expect(connections).toHaveLength(1); // soft — the row survives
@@ -176,6 +191,24 @@ describe('getStripeConnectionStatus / disconnectStripe / getApiKeyForTenant', ()
   it('getApiKeyForTenant decrypts back to the exact key that was stored', async () => {
     await connectStripe({ tenantId: 't1', userId: 'u1', apiKey: 'sk_test_roundtrip' });
     expect(await getApiKeyForTenant('t1')).toBe('sk_test_roundtrip');
+  });
+
+  it('logs a delete-action Activity Log entry attributed to the disconnecting user', async () => {
+    await connectStripe({ tenantId: 't1', userId: 'u1', apiKey: 'sk_test_abc' });
+    (prisma.activityLogEntry.create as any).mockClear(); // ignore the connect entry above
+
+    await disconnectStripe('t1', 'u2');
+
+    expect(prisma.activityLogEntry.create).toHaveBeenCalledTimes(1);
+    const data = (prisma.activityLogEntry.create as any).mock.calls[0][0].data;
+    expect(data.entityType).toBe('stripeConnection');
+    expect(data.action).toBe('delete');
+    expect(data.changedByUserId).toBe('u2');
+  });
+
+  it('disconnecting a tenant that never connected does not log anything', async () => {
+    await disconnectStripe('never-connected-tenant', 'u1');
+    expect(prisma.activityLogEntry.create).not.toHaveBeenCalled();
   });
 });
 
@@ -190,7 +223,7 @@ describe('markNeedsAttention', () => {
 
   it('never sets it on an already-disconnected connection', async () => {
     await connectStripe({ tenantId: 't1', userId: 'u1', apiKey: 'sk_test_abc' });
-    await disconnectStripe('t1');
+    await disconnectStripe('t1', 'u1');
     await markNeedsAttention('t1');
     expect(connections[0].needsAttention).toBe(false);
   });

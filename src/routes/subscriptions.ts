@@ -62,7 +62,7 @@ subscriptionsRouter.post('/api/subscriptions/me/checkout', async (req, res) => {
     return res.status(404).json({ error: 'Tenant not found' });
   }
 
-  const result = await startCheckout(tenant, { email: user.email });
+  const result = await startCheckout(tenant, { id: user.id, email: user.email });
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }
@@ -90,7 +90,7 @@ subscriptionsRouter.post('/api/subscriptions/me/change-plan', async (req, res) =
     return res.status(400).json({ error: 'plan is required', field: 'plan' });
   }
 
-  const result = await changePlan(user.tenantId!, plan);
+  const result = await changePlan(user.tenantId!, plan, user.id);
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }
@@ -108,7 +108,7 @@ subscriptionsRouter.post('/api/subscriptions/me/cancel', async (req, res) => {
   }
 
   const reason = typeof req.body.reason === 'string' ? req.body.reason : undefined;
-  const result = await requestCancellation(user.tenantId!, reason);
+  const result = await requestCancellation(user.tenantId!, reason, user.id);
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }
@@ -125,7 +125,7 @@ subscriptionsRouter.post('/api/subscriptions/me/resume', async (req, res) => {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  const result = await resumeSubscription(user.tenantId!);
+  const result = await resumeSubscription(user.tenantId!, user.id);
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }

@@ -12,9 +12,6 @@ interface ActivityLogSettingsPageProps {
   user: { role: string };
 }
 
-// Only entity types with a real caller so far (Unit 2: Employee/Company/Contact/Opportunity;
-// Unit 4: HR/Payroll catalogs+records; Unit 5: rest of CRM + cross-module + views/forms) — widen
-// this list once a later unit wires up more.
 const ENTITY_TYPE_OPTIONS: { value: ActivityEntityType; label: string }[] = [
   { value: 'employee', label: 'Employee' },
   { value: 'company', label: 'Company' },
@@ -40,6 +37,9 @@ const ENTITY_TYPE_OPTIONS: { value: ActivityEntityType; label: string }[] = [
   { value: 'tenant', label: 'Workspace' },
   { value: 'user', label: 'User' },
   { value: 'invitation', label: 'Invitation' },
+  { value: 'subscription', label: 'Subscription' },
+  { value: 'googleCalendarConnection', label: 'Google Calendar Connection' },
+  { value: 'stripeConnection', label: 'Stripe Connection' },
 ];
 
 const ACTION_OPTIONS: { value: 'create' | 'update' | 'delete'; label: string }[] = [
@@ -79,6 +79,9 @@ const ENTITY_TYPE_LABEL: Record<ActivityEntityType, string> = {
   tenant: 'Workspace',
   user: 'User',
   invitation: 'Invitation',
+  subscription: 'Subscription',
+  googleCalendarConnection: 'Google Calendar Connection',
+  stripeConnection: 'Stripe Connection',
 };
 
 function FeedRow({ entry }: { entry: ActivityLogEntry }) {

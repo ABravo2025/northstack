@@ -1,6 +1,9 @@
 import prisma from '../../lib/prisma.js';
 import { getInvoicePdfUrl } from '../../lib/paddle.js';
 import { CURRENT_PLAN_PRICES_CENTS } from './planService.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { subscriptionActivityFieldConfig } from '../activity/fieldConfigs/subscriptionFieldConfig.js';
+import { bestEffort } from '../../lib/bestEffort.js';
 import type { PaymentProvider, Prisma, Subscription, SubscriptionStatus, TenantStatus } from '@prisma/client';
 
 // spec-billing-integration.md — Argentina is billed in ARS via Mercado Pago (its own,
@@ -150,6 +153,42 @@ export interface SyncSubscriptionAndTenantInput {
   cancellationReason?: string | null;
   paymentMethodBrand?: string | null;
   paymentMethodLast4?: string | null;
+  // Present only for the 3 synchronous self-serve actions (changePlan/requestCancellation/
+  // resumeSubscription), which have a real actor right there in the route handler. Every
+  // webhook/cron call site omits this — see resolveRecentActorId below for how those instead
+  // fall back to Subscription's own lastActionByUserId/lastActionAt pointer.
+  changedByUserId?: string;
+}
+
+// How long a user's own action (startCheckout, or one of the 3 self-serve functions) stays
+// "trusted" as the likely cause of a later webhook-confirmed change with no actor of its own.
+// Paddle's overlay checkout confirms in seconds; Mercado Pago's hosted-redirect flow can take a
+// user several minutes to complete. 60 min comfortably covers a real completion without
+// misattributing an unrelated later event (renewals/retries land days-to-weeks later, per
+// GRACE_PERIOD_DAYS/billing-cycle timing elsewhere in this module) — deliberately not cleared
+// after use, since Paddle/Mercado Pago commonly fire several related webhook events in a row for
+// one action and each should attribute to the same user.
+const SUBSCRIPTION_ACTOR_TRUST_WINDOW_MS = 60 * 60 * 1000;
+
+function resolveRecentActorId(before: { lastActionByUserId: string | null; lastActionAt: Date | null }): string | null {
+  if (!before.lastActionByUserId || !before.lastActionAt) return null;
+  if (Date.now() - before.lastActionAt.getTime() > SUBSCRIPTION_ACTOR_TRUST_WINDOW_MS) return null;
+  return before.lastActionByUserId;
+}
+
+// Records that a user just initiated a checkout for this subscription, without touching any
+// real billing state — startCheckout's own comment explains why it deliberately doesn't write
+// Subscription fields on the "subscribe" path; this is the one narrow exception (tracking
+// metadata for later webhook attribution, not billing state). Read back by
+// syncSubscriptionAndTenant via resolveRecentActorId once the webhook confirms.
+export async function recordSubscriptionActionAttempt(tenantId: string, userId: string): Promise<void> {
+  await bestEffort(
+    prisma.subscription.update({
+      where: { tenantId },
+      data: { lastActionByUserId: userId, lastActionAt: new Date() },
+    }),
+    `subscriptionService.recordSubscriptionActionAttempt(${tenantId})`,
+  );
 }
 
 // The single writer of Subscription.status + its mirror on Tenant.status/plan/trialEndsAt/
@@ -165,12 +204,20 @@ export interface SyncSubscriptionAndTenantInput {
 // only when actually present in this call — a webhook that only touches
 // paymentMethodBrand/Last4, for instance, never touches Tenant at all.
 export async function syncSubscriptionAndTenant(input: SyncSubscriptionAndTenantInput): Promise<Subscription> {
-  const { tenantId, ...fields } = input;
+  const { tenantId, changedByUserId, ...fields } = input;
 
-  return prisma.$transaction(async (tx) => {
+  const { before, subscription } = await prisma.$transaction(async (tx) => {
+    const before = await tx.subscription.findUniqueOrThrow({
+      where: { tenantId },
+      include: { tenant: { select: { name: true } } },
+    });
+
     const subscription = await tx.subscription.update({
       where: { tenantId },
-      data: fields,
+      data: {
+        ...fields,
+        ...(changedByUserId ? { lastActionByUserId: changedByUserId, lastActionAt: new Date() } : {}),
+      },
     });
 
     const tenantMirror: Prisma.TenantUpdateInput = {};
@@ -194,6 +241,26 @@ export async function syncSubscriptionAndTenant(input: SyncSubscriptionAndTenant
       await tx.tenant.update({ where: { id: tenantId }, data: tenantMirror });
     }
 
-    return subscription;
+    return { before, subscription };
   });
+
+  // changedByUserId (self-serve, synchronous) wins outright when present; otherwise this is a
+  // webhook/cron call with no actor of its own, so fall back to the subscription's own rolling
+  // "who touched this last" pointer, only if still fresh — see resolveRecentActorId's comment.
+  const actorId = changedByUserId ?? resolveRecentActorId(before);
+  if (actorId) {
+    await recordActivity({
+      tenantId,
+      entityType: 'subscription',
+      entityId: subscription.id,
+      entityLabel: before.tenant.name,
+      action: 'update',
+      changedByUserId: actorId,
+      before,
+      after: subscription,
+      fieldConfig: subscriptionActivityFieldConfig,
+    });
+  }
+
+  return subscription;
 }

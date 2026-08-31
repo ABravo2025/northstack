@@ -13,7 +13,7 @@ export interface SelfServeResult {
 // that already has a real provider attached; a trialing tenant without one should keep using
 // PATCH /api/tenants/me/plan (the pre-billing plan-selection flow). No proration in either
 // provider (spec: "Sin prorrateo").
-export async function changePlan(tenantId: string, plan: PlanTier): Promise<SelfServeResult> {
+export async function changePlan(tenantId: string, plan: PlanTier, userId: string): Promise<SelfServeResult> {
   if (plan !== 'starter' && plan !== 'growth') {
     return { success: false, error: 'This plan is not available for self-service selection yet.' };
   }
@@ -48,7 +48,7 @@ export async function changePlan(tenantId: string, plan: PlanTier): Promise<Self
   // to reflect locally now (confirmed with Alejandro rather than assumed). Still takes effect at
   // currentPeriodEnd on the provider's side (no proration), so the UI reads that existing field
   // as "applies from", not "now" — no new schema field needed for a "scheduled" plan.
-  await syncSubscriptionAndTenant({ tenantId, plan, lockedPriceCents: planPrice.launchPriceCents });
+  await syncSubscriptionAndTenant({ tenantId, plan, lockedPriceCents: planPrice.launchPriceCents, changedByUserId: userId });
 
   return { success: true };
 }
@@ -56,7 +56,7 @@ export async function changePlan(tenantId: string, plan: PlanTier): Promise<Self
 // POST /api/subscriptions/me/cancel (Unidad 14). Tenant.status only flips to 'cancelled' once
 // cancellationEffectiveAt is actually reached — Paddle's own subscription.canceled webhook, or
 // the Mercado Pago cron sweep (planTransitionService.ts) — never here, at request time.
-export async function requestCancellation(tenantId: string, reason: string | undefined): Promise<SelfServeResult> {
+export async function requestCancellation(tenantId: string, reason: string | undefined, userId: string): Promise<SelfServeResult> {
   const subscription = await prisma.subscription.findUnique({ where: { tenantId } });
   if (!subscription || !subscription.provider || !subscription.externalSubscriptionId || !subscription.currentPeriodEnd) {
     return { success: false, error: 'No active paid subscription to cancel.' };
@@ -78,13 +78,14 @@ export async function requestCancellation(tenantId: string, reason: string | und
     cancelledAt: new Date(),
     cancellationEffectiveAt: subscription.currentPeriodEnd,
     cancellationReason: reason ?? null,
+    changedByUserId: userId,
   });
 
   return { success: true };
 }
 
 // POST /api/subscriptions/me/resume (Unidad 15).
-export async function resumeSubscription(tenantId: string): Promise<SelfServeResult> {
+export async function resumeSubscription(tenantId: string, userId: string): Promise<SelfServeResult> {
   const subscription = await prisma.subscription.findUnique({ where: { tenantId } });
   if (!subscription || !subscription.cancelledAt || !subscription.cancellationEffectiveAt) {
     return { success: false, error: 'No pending cancellation to resume.' };
@@ -104,6 +105,7 @@ export async function resumeSubscription(tenantId: string): Promise<SelfServeRes
     cancelledAt: null,
     cancellationEffectiveAt: null,
     cancellationReason: null,
+    changedByUserId: userId,
   });
 
   return { success: true };

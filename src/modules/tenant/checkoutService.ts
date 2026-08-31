@@ -1,5 +1,5 @@
 import prisma from '../../lib/prisma.js';
-import { resolveProvider } from './subscriptionService.js';
+import { resolveProvider, recordSubscriptionActionAttempt } from './subscriptionService.js';
 import { SIGNUP_TRIAL_DAYS } from './tenantService.js';
 import { createPreapproval, updatePreapproval } from '../../lib/mercadopago.js';
 import { createNonCatalogTransaction, getUpdatePaymentMethodTransaction } from '../../lib/paddle.js';
@@ -21,19 +21,24 @@ const BILLING_CALLBACK_URL = 'https://app.joinnorthstack.com/billing/callback';
 // the "subscribe" path again for an already-active tenant would create a SECOND, competing
 // subscription on the provider's side (double billing), not update the existing one's card.
 //
-// Deliberately does NOT write anything to Subscription on the "subscribe" path: per the model's
-// comment, `provider` stays null until a payment is actually confirmed, so this only creates the
-// provider-side checkout artifact and hands back what the frontend needs to complete it.
-// syncSubscriptionAndTenant (called from the webhook once payment confirms) is the only place
-// that sets provider/externalSubscriptionId/currency for real.
+// Deliberately does NOT write any billing state to Subscription on the "subscribe" path: per
+// the model's comment, `provider` stays null until a payment is actually confirmed, so this
+// only creates the provider-side checkout artifact and hands back what the frontend needs to
+// complete it. syncSubscriptionAndTenant (called from the webhook once payment confirms) is the
+// only place that sets provider/externalSubscriptionId/currency for real. The one deliberate
+// exception is recordSubscriptionActionAttempt below — it writes actor-attribution metadata
+// only (who clicked this, when), not billing state, so the later webhook confirmation can
+// attribute the resulting Activity Log entry to this user (see subscriptionService.ts).
 export async function startCheckout(
   tenant: { id: string; country: string | null; trialEndsAt: Date | null },
-  user: { email: string },
+  user: { id: string; email: string },
 ): Promise<StartCheckoutResult> {
   const subscription = await prisma.subscription.findUnique({ where: { tenantId: tenant.id } });
   if (!subscription) {
     return { success: false, error: 'No subscription found for this tenant' };
   }
+
+  await recordSubscriptionActionAttempt(tenant.id, user.id);
 
   const isUpdatingPaymentMethod = subscription.provider !== null;
 

@@ -41,6 +41,6 @@ stripeIntegrationRouter.delete('/api/integrations/stripe', async (req, res) => {
   if (!user) return;
   if (!requirePaymentsAccess(user, res)) return;
 
-  await disconnectStripe(user.tenantId!);
+  await disconnectStripe(user.tenantId!, user.id);
   return res.status(204).end();
 });

@@ -2,6 +2,8 @@ import prisma from '../../lib/prisma.js';
 import { toCsv, parseCsv, rowsToRecords, getField } from '../../lib/csv.js';
 import { createEmployee } from '../hr/employeeService.js';
 import { createClient } from '../clients/clientService.js';
+import { createCompany, updateCompany } from '../crm/companyService.js';
+import { updateContact } from '../crm/contactService.js';
 import { findOrCreateFieldCatalogDefinition } from '../hr/fieldCatalogService.js';
 import { listStatusDefinitions } from '../hr/statusService.js';
 import { listCustomFieldDefinitions, listCustomFieldValuesForEntities, createCustomFieldValue, isValueValidForFieldType } from '../hr/customFieldService.js';
@@ -297,6 +299,202 @@ export async function importClientsFromCsv(tenantId: string, csvText: string): P
       result.created += 1;
     } catch (error: any) {
       const message = error?.code === 'P2002' ? `A client with email "${email}" already exists` : error?.message || 'Unknown error';
+      result.errors.push({ row: rowNumber, message });
+    }
+  }
+
+  return result;
+}
+
+// --- Company ---
+// `Client` (above) is legacy, out of scope — Company/Contact are the current CRM entities.
+
+const COMPANY_BASE_HEADERS = [
+  'Name',
+  'Industry',
+  'Website',
+  'Phone',
+  'Billing Address',
+  'Parent Company',
+  'Company Size',
+  'Account Owner Email',
+  'Primary Contact Email',
+  'Primary Contact First Name',
+  'Primary Contact Last Name',
+  'Status',
+];
+
+// Status is export-only, deliberately not accepted on import — Company.statusId is derived
+// from business events (an Opportunity reaching a `won` stage, a future Contract expiring),
+// never set by hand, same rule createCompany/updateCompany already enforce at the service layer.
+
+export async function exportCompaniesToCsv(tenantId: string): Promise<string> {
+  const companies = await prisma.company.findMany({
+    where: { tenantId },
+    include: { sizeDefn: true, statusDefn: true, parentCompany: true, accountOwner: true },
+    orderBy: { createdAt: 'asc' },
+  });
+  const customFields = (await listCustomFieldDefinitions(tenantId, 'company')).filter((f) => f.isActive);
+  const values = await listCustomFieldValuesForEntities(tenantId, 'company', companies.map((c) => c.id));
+  const primaryContacts = await prisma.contact.findMany({
+    where: { tenantId, companyId: { in: companies.map((c) => c.id) }, isPrimary: true },
+  });
+
+  const headers = [...COMPANY_BASE_HEADERS, ...customFields.map((f) => f.name)];
+
+  const rows = companies.map((company) => {
+    const primaryContact = primaryContacts.find((c) => c.companyId === company.id);
+    const base = [
+      company.name,
+      company.industry ?? '',
+      company.website ?? '',
+      company.phone ?? '',
+      company.billingAddress ?? '',
+      company.parentCompany?.name ?? '',
+      company.sizeDefn?.name ?? '',
+      company.accountOwner?.email ?? '',
+      primaryContact?.email ?? '',
+      primaryContact?.firstName ?? '',
+      primaryContact?.lastName ?? '',
+      company.statusDefn?.name ?? '',
+    ];
+    const customFieldCells = customFields.map(
+      (f) => values.find((v) => v.entityId === company.id && v.customFieldDefinitionId === f.id)?.value ?? '',
+    );
+    return [...base, ...customFieldCells];
+  });
+
+  return toCsv([headers, ...rows]);
+}
+
+export async function getCompaniesCsvTemplate(tenantId: string): Promise<string> {
+  const customFields = (await listCustomFieldDefinitions(tenantId, 'company')).filter((f) => f.isActive);
+  const headers = [...COMPANY_BASE_HEADERS.filter((h) => h !== 'Status'), ...customFields.map((f) => f.name)];
+  const example = [
+    'Acme Inc.',
+    'Software',
+    'https://acme.example.com',
+    '+1 555 0100',
+    '123 Main St, Springfield',
+    '',
+    'Small (1-10)',
+    'owner@example.com',
+    'jane.doe@acme.example.com',
+    'Jane',
+    'Doe',
+    ...customFields.map(() => ''),
+  ];
+
+  return toCsv([headers, example]);
+}
+
+export async function importCompaniesFromCsv(tenantId: string, csvText: string, changedByUserId: string): Promise<ImportResult> {
+  const records = rowsToRecords(parseCsv(csvText));
+  const customFields = (await listCustomFieldDefinitions(tenantId, 'company')).filter((f) => f.isActive);
+
+  const result: ImportResult = { created: 0, errors: [] };
+
+  for (let i = 0; i < records.length; i++) {
+    const rowNumber = i + 2;
+    const record = records[i];
+    const name = getField(record, 'Name', 'name');
+    const primaryContactEmail = getField(record, 'Primary Contact Email');
+
+    if (!name) {
+      result.errors.push({ row: rowNumber, message: 'Missing required field (Name)' });
+      continue;
+    }
+    if (!primaryContactEmail) {
+      result.errors.push({ row: rowNumber, message: 'Missing required field (Primary Contact Email) — every Company needs a linked Contact' });
+      continue;
+    }
+
+    try {
+      const parentCompanyName = getField(record, 'Parent Company');
+      const parentCompany = parentCompanyName
+        ? await prisma.company.findFirst({ where: { tenantId, name: { equals: parentCompanyName, mode: 'insensitive' } } })
+        : null;
+
+      const sizeName = getField(record, 'Company Size');
+      const sizeId = sizeName ? (await findOrCreateFieldCatalogDefinition(tenantId, 'companySize', sizeName, 0)).id : undefined;
+
+      const accountOwnerEmail = getField(record, 'Account Owner Email');
+      const accountOwner = accountOwnerEmail
+        ? await prisma.user.findFirst({ where: { tenantId, email: accountOwnerEmail.toLowerCase() } })
+        : null;
+
+      const existingContact = await prisma.contact.findFirst({ where: { tenantId, email: primaryContactEmail.toLowerCase() } });
+      const contactFirstName = getField(record, 'Primary Contact First Name');
+      const contactLastName = getField(record, 'Primary Contact Last Name');
+
+      let contact: { contactId: string } | { firstName: string; lastName: string; email: string };
+      if (existingContact) {
+        contact = { contactId: existingContact.id };
+      } else if (contactFirstName && contactLastName) {
+        contact = { firstName: contactFirstName, lastName: contactLastName, email: primaryContactEmail };
+      } else {
+        result.errors.push({
+          row: rowNumber,
+          message: `Contact "${primaryContactEmail}" not found — provide Primary Contact First Name/Last Name to create one`,
+        });
+        continue;
+      }
+
+      const company = await createCompany(
+        {
+          tenantId,
+          name,
+          industry: getField(record, 'Industry') || undefined,
+          website: getField(record, 'Website') || undefined,
+          phone: getField(record, 'Phone') || undefined,
+          billingAddress: getField(record, 'Billing Address') || undefined,
+          sizeId,
+          accountOwnerId: accountOwner?.id,
+          contact,
+        },
+        changedByUserId,
+      );
+
+      // No cycle check needed: this Company is brand new and has no children yet, so it
+      // structurally cannot be an ancestor of parentCompany (see wouldCreateCompanyHierarchyCycle).
+      if (parentCompany) {
+        await updateCompany(company.id, { parentCompanyId: parentCompany.id }, changedByUserId);
+      }
+
+      // createCompany links the contact but doesn't flag it primary (same as the "Add Company"
+      // form) — set it explicitly here so the "Primary Contact Email" column round-trips on export.
+      const linkedContact = await prisma.contact.findFirst({ where: { tenantId, companyId: company.id, email: primaryContactEmail.toLowerCase() } });
+      if (linkedContact && !linkedContact.isPrimary) {
+        await updateContact(linkedContact.id, { isPrimary: true }, changedByUserId);
+      }
+
+      for (const field of customFields) {
+        const raw = getField(record, field.name);
+        if (!raw) continue;
+        if (!isValueValidForFieldType(field.fieldType, raw, field.options)) continue;
+        await createCustomFieldValue({
+          tenantId,
+          customFieldDefinitionId: field.id,
+          entityType: 'company',
+          entityId: company.id,
+          value: raw,
+        });
+        await recordCustomFieldValueActivity({
+          tenantId,
+          entityType: 'company',
+          entityId: company.id,
+          entityLabel: company.name,
+          fieldDefinitionId: field.id,
+          fieldName: field.name,
+          oldValue: null,
+          newValue: raw,
+          changedByUserId,
+        });
+      }
+
+      result.created += 1;
+    } catch (error: any) {
+      const message = error?.code === 'P2002' ? `A contact with email "${primaryContactEmail}" already exists` : error?.message || 'Unknown error';
       result.errors.push({ row: rowNumber, message });
     }
   }

@@ -19,6 +19,7 @@ import {
 } from '../modules/hr/customFieldService.js';
 import { findUserById } from '../modules/tenant/tenantService.js';
 import { recordCustomFieldValueActivity } from '../modules/activity/customFieldActivity.js';
+import { exportCompaniesToCsv, getCompaniesCsvTemplate, importCompaniesFromCsv } from '../modules/csv/csvService.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 
@@ -310,4 +311,54 @@ companiesRouter.get('/api/companies/:companyId/custom-fields', async (req, res) 
 
   const values = await listCustomFieldValuesForEntity(user.tenantId!, 'company', req.params.companyId);
   return res.json(values);
+});
+
+companiesRouter.get('/api/companies/export/csv', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canViewHr(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const csv = await exportCompaniesToCsv(user.tenantId!);
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="companies.csv"');
+  return res.send(csv);
+});
+
+companiesRouter.post('/api/companies/import/csv', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canCreateHr(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  if (typeof req.body.csv !== 'string' || !req.body.csv.trim()) {
+    return res.status(400).json({ error: 'csv is required' });
+  }
+
+  const result = await importCompaniesFromCsv(user.tenantId!, req.body.csv, user.id);
+  return res.json(result);
+});
+
+companiesRouter.get('/api/companies/template/csv', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canCreateHr(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const csv = await getCompaniesCsvTemplate(user.tenantId!);
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="companies-import-template.csv"');
+  return res.send(csv);
 });

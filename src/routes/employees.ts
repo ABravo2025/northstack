@@ -108,7 +108,7 @@ employeesRouter.post('/api/hr/employees/import/csv', async (req, res) => {
     return res.status(400).json({ error: 'csv is required' });
   }
 
-  const result = await importEmployeesFromCsv(user.tenantId!, req.body.csv);
+  const result = await importEmployeesFromCsv(user.tenantId!, req.body.csv, user.id);
   return res.json(result);
 });
 

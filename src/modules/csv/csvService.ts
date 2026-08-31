@@ -5,6 +5,8 @@ import { createClient } from '../clients/clientService.js';
 import { findOrCreateFieldCatalogDefinition } from '../hr/fieldCatalogService.js';
 import { listStatusDefinitions } from '../hr/statusService.js';
 import { listCustomFieldDefinitions, listCustomFieldValuesForEntities, createCustomFieldValue, isValueValidForFieldType } from '../hr/customFieldService.js';
+import { recordCustomFieldValueActivity } from '../activity/customFieldActivity.js';
+import { employeeDisplayName } from '../activity/fieldConfigs/employeeFieldConfig.js';
 
 export interface ImportError {
   row: number;
@@ -26,6 +28,9 @@ const EMPLOYEE_BASE_HEADERS = [
   'Last Name',
   'Business Email',
   'Personal Email',
+  'Person Type',
+  'Nationality',
+  'Birthdate',
   'Department',
   'Job Title',
   'Status',
@@ -36,11 +41,22 @@ const EMPLOYEE_BASE_HEADERS = [
   'Contract Type',
 ];
 
+// Country of Residence is deliberately NOT a CSV column: it's set only via the
+// self-service contract-confirmation flow (contractConfirmationService.ts) — the owner/admin
+// running an import has no legitimate path to set it, same as they can't set it from any form.
+
 const CONTRACT_TYPE_LABELS: Record<string, string> = { part_time: 'Part Time', full_time: 'Full Time' };
 
 function contractTypeFromLabel(label: string): 'part_time' | 'full_time' | undefined {
   const normalized = label.trim().toLowerCase().replace(/\s+/g, '_');
   return normalized === 'part_time' || normalized === 'full_time' ? normalized : undefined;
+}
+
+const PERSON_TYPE_LABELS: Record<string, string> = { profile: 'Profile', contractor: 'Contractor', employee: 'Employee' };
+
+function personTypeFromLabel(label: string): 'profile' | 'contractor' | 'employee' | undefined {
+  const normalized = label.trim().toLowerCase();
+  return normalized === 'profile' || normalized === 'contractor' || normalized === 'employee' ? normalized : undefined;
 }
 
 export async function exportEmployeesToCsv(tenantId: string): Promise<string> {
@@ -61,6 +77,9 @@ export async function exportEmployeesToCsv(tenantId: string): Promise<string> {
       emp.lastName,
       emp.email,
       emp.personalEmail ?? '',
+      emp.personType ? PERSON_TYPE_LABELS[emp.personType] : '',
+      emp.nationality ?? '',
+      emp.birthdate ? emp.birthdate.toISOString().slice(0, 10) : '',
       emp.departmentDefn?.name ?? '',
       emp.jobTitleDefn?.name ?? '',
       emp.statusDefn?.name ?? '',
@@ -88,6 +107,9 @@ export async function getEmployeesCsvTemplate(tenantId: string): Promise<string>
     'Doe',
     'jane.doe@example.com',
     '',
+    'Employee',
+    'Argentine',
+    '1990-05-20',
     'Engineering',
     'Software Engineer',
     'Active',
@@ -102,7 +124,7 @@ export async function getEmployeesCsvTemplate(tenantId: string): Promise<string>
   return toCsv([headers, example]);
 }
 
-export async function importEmployeesFromCsv(tenantId: string, csvText: string): Promise<ImportResult> {
+export async function importEmployeesFromCsv(tenantId: string, csvText: string, changedByUserId: string): Promise<ImportResult> {
   const records = rowsToRecords(parseCsv(csvText));
   const statuses = await listStatusDefinitions(tenantId, 'employee');
   const customFields = (await listCustomFieldDefinitions(tenantId, 'employee')).filter((f) => f.isActive);
@@ -143,22 +165,29 @@ export async function importEmployeesFromCsv(tenantId: string, csvText: string):
         : null;
 
       const contractTypeLabel = getField(record, 'Contract Type');
+      const personTypeLabel = getField(record, 'Person Type');
 
-      const employee = await createEmployee({
-        tenantId,
-        firstName,
-        lastName,
-        email,
-        personalEmail: getField(record, 'Personal Email') || undefined,
-        departmentId,
-        jobTitleId,
-        statusId,
-        startDate: toDateOrUndefined(getField(record, 'Start Date')),
-        endDate: toDateOrUndefined(getField(record, 'End Date')),
-        contractUrl: getField(record, 'Contract URL') || undefined,
-        managerId: manager?.id,
-        contractType: contractTypeLabel ? contractTypeFromLabel(contractTypeLabel) : undefined,
-      });
+      const employee = await createEmployee(
+        {
+          tenantId,
+          firstName,
+          lastName,
+          email,
+          personalEmail: getField(record, 'Personal Email') || undefined,
+          personType: personTypeLabel ? personTypeFromLabel(personTypeLabel) : undefined,
+          nationality: getField(record, 'Nationality') || undefined,
+          birthdate: toDateOrUndefined(getField(record, 'Birthdate')),
+          departmentId,
+          jobTitleId,
+          statusId,
+          startDate: toDateOrUndefined(getField(record, 'Start Date')),
+          endDate: toDateOrUndefined(getField(record, 'End Date')),
+          contractUrl: getField(record, 'Contract URL') || undefined,
+          managerId: manager?.id,
+          contractType: contractTypeLabel ? contractTypeFromLabel(contractTypeLabel) : undefined,
+        },
+        changedByUserId,
+      );
 
       for (const field of customFields) {
         const raw = getField(record, field.name);
@@ -170,6 +199,17 @@ export async function importEmployeesFromCsv(tenantId: string, csvText: string):
           entityType: 'employee',
           entityId: employee.id,
           value: raw,
+        });
+        await recordCustomFieldValueActivity({
+          tenantId,
+          entityType: 'employee',
+          entityId: employee.id,
+          entityLabel: employeeDisplayName(employee),
+          fieldDefinitionId: field.id,
+          fieldName: field.name,
+          oldValue: null,
+          newValue: raw,
+          changedByUserId,
         });
       }
 

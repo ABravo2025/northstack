@@ -1,6 +1,6 @@
 # Database Schema
 
-- Última actualización: 2026-08-30 (Activity Log — Unidades 1-5 completas + Unidad 6 parcial (cuenta/plataforma), spec cerrado en esta ronda, ver grupo 13; en `staging`, sin pushear a `main`)
+- Última actualización: 2026-08-30 (Activity Log — Unidades 1-5 completas + Unidad 6 parcial (cuenta/plataforma), spec cerrado en esta ronda, más un fix same-day de `parentEntityType`/`parentEntityId` tras revisión en vivo, ver grupo 13; en `staging`, sin pushear a `main`)
 - Actualización anterior: 2026-08-29 (Employee Termination — ver grupo 11 — y Payments v1 Units 5-7, ver grupo 10; todo en `staging`, sin pushear a `main`)
 - Fuente de verdad real: `prisma/schema.prisma`. Este documento es una vista legible de ese archivo — si difieren, el `.prisma` manda. Regenerar este archivo cuando el schema cambie de forma significativa (modelo nuevo, relación nueva), no hace falta para cambios chicos (un campo opcional más, un índice).
 - Todos los modelos son multi-tenant: casi todos tienen `tenantId` directo (no derivado por join), y el aislamiento entre tenants se verifica en el código de cada endpoint (ownership check), no solo por FK — ver `docs/current-process-flow.md` para el patrón de verificación.
@@ -1072,6 +1072,8 @@ erDiagram
         enum entityType "ActivityEntityType — 27 valores, ver más abajo"
         string entityId "no live FK, mismo patrón que Task/Note/StatusHistoryEntry"
         string entityLabel "snapshot del nombre visible al momento"
+        enum parentEntityType "nullable — solo Task/Note/Tag, la entidad a la que están adjuntas (fix 2026-08-30)"
+        string parentEntityId "nullable, idem"
         enum action "create/update/delete"
         string summary "una línea, auto-generada"
         string changes "nullable, JSON de {field,label,oldValue,newValue}[]"
@@ -1104,6 +1106,16 @@ Notas:
 - **Sin backfill posible** — no existe ningún historial previo real de "quién cambió qué campo" en
   el código (`StatusHistoryEntry` es el único precedente y solo cubre status). El log arranca vacío
   desde que cada unidad se despliega.
+- **`parentEntityType`/`parentEntityId` (2026-08-30, push aditivo, mismo día que las Unidades 1-6)**
+  — fix encontrado al probar en vivo: el tab de Activity de un Employee/Company/Contact/Opportunity
+  no mostraba las Notes/Tasks/Tags creadas ahí (decisión original: ya tienen su propio tab, sería
+  ruido). En la práctica "Activity" se espera que muestre *todo* lo que le pasó al registro, no solo
+  cambios de sus propios campos. Una Task/Note/Tag sigue logueándose contra sí misma (`entityType:
+  task/note/tag`, el summary dice "Created Note ..." correctamente) pero ahora también carga
+  `parentEntityType`/`parentEntityId` con la entidad a la que está adjunta;
+  `listActivityForEntity` matchea por `(entityType, entityId)` **o**
+  `(parentEntityType, parentEntityId)`. El feed tenant-wide de Settings no cambió — sigue sin usar
+  `parentEntityType`, así que no hay filas duplicadas ahí.
 
 ## Enums
 

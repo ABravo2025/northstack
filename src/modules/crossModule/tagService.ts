@@ -1,7 +1,12 @@
 import prisma from '../../lib/prisma.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { tagActivityFieldConfig } from '../activity/fieldConfigs/tagFieldConfig.js';
-import type { EntityType } from '@prisma/client';
+import type { ActivityEntityType, EntityType } from '@prisma/client';
+
+// TagAssignment.entityType is narrower in practice than the full EntityType enum (never
+// client/ticket/idea — see isSupportedCrossModuleEntityType), so casting it to ActivityEntityType
+// for recordActivity's parentEntityType is always valid even though TS can't see that from the
+// wider Prisma type alone.
 
 export { findEntityTenantId, isSupportedCrossModuleEntityType as isSupportedTagEntityType } from './entityLookup.js';
 
@@ -75,6 +80,8 @@ export async function assignTag(
     changedByUserId,
     after: { name: tagDefinition.name },
     fieldConfig: tagActivityFieldConfig,
+    parentEntityType: entityType as ActivityEntityType,
+    parentEntityId: entityId,
   });
 
   return { tagAssignmentId: assignment.id, tagDefinitionId: tagDefinition.id, name: tagDefinition.name };
@@ -98,6 +105,8 @@ export async function removeTagAssignment(id: string, changedByUserId: string): 
       changedByUserId,
       before: { name: existing.tagDefinition.name },
       fieldConfig: tagActivityFieldConfig,
+      parentEntityType: existing.entityType as ActivityEntityType,
+      parentEntityId: existing.entityId,
     });
   }
 }

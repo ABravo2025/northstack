@@ -2640,3 +2640,41 @@ establecido: dato incorrecto es media, regresión funcional es alta.
 **Con esta unidad el spec de Activity Log se da por cerrado** (5 unidades completas + 1 parcial,
 scope cut documentado) — cualquier extensión futura (Subscription/integraciones, u otros módulos no
 cubiertos) es una iniciativa nueva, no una unidad pendiente de este spec.
+
+---
+
+## QA-62 — Fix same-day: Notes/Tasks/Tags no aparecían en el Activity del modal de su propia entidad (2026-08-30, en `staging`)
+
+**Por qué existe esta tarea:** Alejandro probó el módulo recién shippeado en un Employee real
+("Alejandro Bravo"), creó una Note, y el tab Activity de ese mismo modal seguía diciendo "No
+activity yet." — la decisión original (QA-58, decisión #7 del spec) excluía Task/Note del tab de
+Activity a propósito, asumiendo que sería redundante con sus propios tabs. En la práctica no era lo
+esperado. Fix: `ActivityLogEntry` ganó `parentEntityType`/`parentEntityId` (push aditivo) — Task/
+Note/Tag siguen logueándose contra sí mismas (el summary sigue diciendo "Created Note ...", no
+miente), pero ahora también cargan a qué entidad están adjuntas, y `listActivityForEntity` las
+incluye. Verificado con una corrida directa contra `staging` (crear una Note en una Company real,
+confirmar que aparece en el feed de esa Company vía la misma función que usa el tab del modal).
+
+### A. Confirmar en el tab Activity de cualquier modal de detalle
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Crear una Note en un Employee/Company/Contact/Opportunity, abrir el tab Activity de ese mismo registro | Aparece `Created Note "..."` — ya no dice "No activity yet." si es la única actividad |
+| 2 | Editar/borrar esa Note | Aparecen las filas correspondientes en el mismo tab |
+| 3 | Crear/editar/completar/borrar una Task en el mismo registro | Mismo comportamiento — aparece en el tab Activity, no solo en el tab Tasks |
+| 4 | Agregar/quitar un Tag | Aparece en el tab Activity |
+| 5 | Repetir 1-4 pero mirando el tab **Activity de un registro distinto** (ej. otra Company) | La Note/Task/Tag de otro registro **no** debe aparecer — el filtro por `parentEntityId` tiene que aislar correctamente |
+| 6 | `Settings → Activity Log` (feed tenant-wide) | Sigue mostrando cada Note/Task/Tag bajo su propio tipo ("Note"/"Task"/"Tag"), **sin duplicarse** — no debería aparecer dos veces la misma entrada |
+
+### B. Regresión
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 7 | `npm run build`/`npm test` (backend, 208/208) y `npm run build` (frontend) | Los tres en verde |
+| 8 | Todo lo ya cubierto en QA-56 a QA-61 | Sigue funcionando igual — este fix es aditivo, no debería romper nada de lo anterior |
+
+### Al encontrar una falla
+
+A.5 es la más importante — si una Note/Task/Tag de un registro aparece en el Activity de **otro**
+registro, es severidad alta (fuga de datos entre entidades, aunque sea dentro del mismo tenant). El
+resto es media (funcionalidad visible pero incompleta) salvo regresión real en B, que sería alta.

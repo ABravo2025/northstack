@@ -12,14 +12,26 @@ vi.mock('../src/lib/prisma.js', () => ({
         return row;
       }),
       findMany: vi.fn(async ({ where, orderBy, take, cursor, skip }: any) => {
+        // Matches a single flat condition object (entityType/entityId/parentEntityType/
+        // parentEntityId) — used both for the top-level where and each branch of an OR.
+        const matchesFlat = (e: any, cond: any) => {
+          if (cond.entityType !== undefined && e.entityType !== cond.entityType) return false;
+          if (cond.entityId !== undefined && e.entityId !== cond.entityId) return false;
+          if (cond.parentEntityType !== undefined && e.parentEntityType !== cond.parentEntityType) return false;
+          if (cond.parentEntityId !== undefined && e.parentEntityId !== cond.parentEntityId) return false;
+          return true;
+        };
         let rows = entries.filter((e) => {
           if (where.tenantId && e.tenantId !== where.tenantId) return false;
-          if (where.entityType && e.entityType !== where.entityType) return false;
-          if (where.entityId && e.entityId !== where.entityId) return false;
           if (where.changedByUserId && e.changedByUserId !== where.changedByUserId) return false;
           if (where.action && e.action !== where.action) return false;
           if (where.changedAt?.gte && e.changedAt < where.changedAt.gte) return false;
           if (where.changedAt?.lte && e.changedAt > where.changedAt.lte) return false;
+          if (where.OR) {
+            if (!where.OR.some((cond: any) => matchesFlat(e, cond))) return false;
+          } else if (!matchesFlat(e, where)) {
+            return false;
+          }
           return true;
         });
         // orderBy: [{changedAt: 'desc'}, {id: 'desc'}] — stable sort newest first
@@ -230,6 +242,31 @@ describe('listActivityForEntity / listActivityFeed', () => {
     const result = await listActivityForEntity('t1', 'opportunity' as any, 'o1');
     expect(result).toHaveLength(1);
     expect(result[0].entityLabel).toBe('Deal A');
+  });
+
+  it('also surfaces a child Note/Task/Tag attached to this record via parentEntityType/parentEntityId', async () => {
+    await seed();
+    await recordActivity({
+      tenantId: 't1',
+      entityType: 'note',
+      entityId: 'note1',
+      entityLabel: 'A note',
+      action: 'create',
+      changedByUserId: 'u1',
+      after: { name: 'A note' },
+      fieldConfig,
+      parentEntityType: 'opportunity' as any,
+      parentEntityId: 'o1',
+    });
+
+    const result = await listActivityForEntity('t1', 'opportunity' as any, 'o1');
+    expect(result).toHaveLength(2);
+    expect(result.some((r) => r.entityType === 'note' && r.entityLabel === 'A note')).toBe(true);
+    expect(result.some((r) => r.entityType === 'opportunity' && r.entityLabel === 'Deal A')).toBe(true);
+
+    // A note attached to a *different* record never leaks in.
+    const unrelated = await listActivityForEntity('t1', 'company' as any, 'c1');
+    expect(unrelated.some((r) => r.entityLabel === 'A note')).toBe(false);
   });
 
   it('scopes the tenant-wide feed to tenantId and never leaks another tenant', async () => {

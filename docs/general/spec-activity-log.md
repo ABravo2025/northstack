@@ -1,7 +1,10 @@
 # Spec Activity Log
 
 **Estado:** ✅ Unidades 1-5 completas + Unidad 6 parcial, en `staging` (2026-08-30) — el spec se da
-por cerrado en esta ronda. Unidad 6 (nueva, parcial): Tenant (currency/plan), User (rol/status),
+por cerrado en esta ronda. **Fix el mismo día, tras revisión de Alejandro en `staging`**: el tab de
+Activity de un modal no mostraba Task/Note propias (decisión 7 original) — corregido con
+`parentEntityType`/`parentEntityId` en `ActivityLogEntry`, ver decisión 7 actualizada. Unidad 6
+(nueva, parcial): Tenant (currency/plan), User (rol/status),
 Invitation (alta/cancelación/aceptación) — Subscription/GoogleCalendarConnection/StripeConnection
 deliberadamente afuera, ver §6 para el razonamiento completo. Unidad 5: extendió el
 wiring al resto de CRM + cross-module + vistas/forms — Pipeline, PipelineStage, Task, Note, Tag,
@@ -63,10 +66,19 @@ push).
 6. **Login/logout (`Session`) queda fuera de alcance** — esto es un log de cambios sobre
    *registros* (creación/modificación/eliminación), no un log de seguridad/acceso. Si más adelante
    se quiere eso, es una feature distinta (session/security log), no una unidad de este spec.
-7. **El tab del modal excluye Task/Note propios** — Task/Note ya tienen su tab dedicado dentro del
-   mismo modal; duplicarlos en el tab de Activity sería ruido en la misma pantalla. El feed
-   tenant-wide de Settings sí los incluye (ahí no hay duplicación posible, es la única vista de
-   "todo junto").
+7. ~~El tab del modal excluye Task/Note propios~~ **Corregido 2026-08-30, mismo día, tras probarlo
+   en vivo**: Alejandro creó una Note en un Employee real y el tab Activity de ese mismo modal
+   seguía vacío — la decisión original (Task/Note no aparecen en el Activity del modal porque ya
+   tienen su propio tab) resultó no ser lo esperado en la práctica: "Activity" se lee como *todo lo
+   que le pasó a este registro*, no solo los cambios de sus propios campos. Se agregó
+   `ActivityLogEntry.parentEntityType`/`parentEntityId` (push aditivo) — una Task/Note/Tag sigue
+   logueándose contra **sí misma** (`entityType: task/note/tag`, para que el summary diga "Created
+   Note ..." y no mienta diciendo que cambió el Employee), pero ahora *también* lleva
+   `parentEntityType`/`parentEntityId` apuntando a la entidad a la que está adjunta.
+   `listActivityForEntity` matchea por `(entityType, entityId)` **o** `(parentEntityType,
+   parentEntityId)`, así que el tab Activity de un Employee ahora sí muestra "Created Note ..."/
+   "Created Task ..." además de los cambios de sus propios campos. El feed tenant-wide de Settings
+   no cambió — sigue mostrando cada Task/Note/Tag bajo su propio tipo, sin duplicar filas.
 8. **Enum nuevo y separado (`ActivityEntityType`), no extender `EntityType`.** `EntityType` está
    acoplado a qué módulos soportan custom fields/status/tags (`CustomFieldDefinition.entityType`,
    etc.) — sumarle 20+ valores que nunca van a tener custom fields (`payrollRun`, `invitation`,
@@ -132,6 +144,10 @@ model ActivityLogEntry {
   entityType      ActivityEntityType
   entityId        String             // no FK real, mismo patrón que Task/Note/StatusHistoryEntry
   entityLabel     String             // snapshot del nombre visible al momento (ej. "Acme Renewal") — sobrevive un rename/borrado posterior, mismo criterio que StatusHistoryEntry
+  // Solo seteado para Task/Note/Tag (2026-08-30, fix posterior — ver decisión 7): la entidad a la
+  // que está adjunta, para que su tab de Activity la muestre sin mentir el entityType/entityLabel.
+  parentEntityType ActivityEntityType?
+  parentEntityId   String?
   action          ActivityAction
   summary         String             // una línea, auto-generada desde `changes` (ver §2)
   changes         String?            // JSON de {field, label, oldValue, newValue}[] — null solo si de verdad no hubo ningún campo con valor (raro)
@@ -141,6 +157,7 @@ model ActivityLogEntry {
 
   @@index([tenantId, entityType, entityId, changedAt])
   @@index([tenantId, changedAt])
+  @@index([tenantId, parentEntityType, parentEntityId, changedAt])
 }
 ```
 
@@ -174,6 +191,10 @@ reinventen su propio formato de diff/summary.
 - **`listActivityForEntity(tenantId, entityType, entityId)`** — feed acotado a un registro, para el
   tab del modal. Valida ownership con `findEntityTenantId` (reusado, ver decisión 8) para los 4
   tipos de Tier 1 — un tipo de Tier 2+ no tiene modal propio, así que no necesita este endpoint.
+  Matchea por `(entityType, entityId)` **o** `(parentEntityType, parentEntityId)` (fix 2026-08-30,
+  ver decisión 7) — así una Task/Note/Tag adjunta a este registro aparece también, sin duplicarse
+  en el feed tenant-wide de Settings (que no toca `parentEntityType`, sigue filtrando solo por
+  `entityType`).
 - **`listActivityFeed(tenantId, { entityType?, userId?, action?, from?, to?, cursor? })`** — feed
   tenant-wide para Settings, paginado por cursor (`changedAt`+`id`, mismo criterio que
   `getCompanyPaymentEvents` de Payments v1 — un feed que puede crecer sin techo, a diferencia de las

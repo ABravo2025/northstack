@@ -134,6 +134,12 @@ export interface RecordActivityInput {
   before?: Record<string, unknown> | null;
   after?: Record<string, unknown> | null;
   fieldConfig: ActivityFieldConfigMap;
+  // Set only when this entry's subject is itself attached to another record (Task/Note/Tag,
+  // always one of the 4 Tier-1 types) — lets listActivityForEntity surface "a Task/Note/Tag was
+  // added to me" on the parent's own tab without misrepresenting entityType/entityLabel as the
+  // parent (those stay accurate to what actually changed).
+  parentEntityType?: ActivityEntityType;
+  parentEntityId?: string;
 }
 
 // The single write path every service's create/update/delete calls after its real write commits.
@@ -163,6 +169,8 @@ async function recordActivityInternal(input: RecordActivityInput): Promise<void>
       summary,
       changes: changes.length > 0 ? JSON.stringify(changes) : null,
       changedByUserId: input.changedByUserId,
+      parentEntityType: input.parentEntityType,
+      parentEntityId: input.parentEntityId,
     },
   });
 }
@@ -173,14 +181,22 @@ export type ActivityLogEntryWithUser = ActivityLogEntry & {
 
 // Feeds the per-record "Activity" tab (Employee/Company/Contact/Opportunity detail modals).
 // Ownership of entityId is validated by the route before calling this, same convention as
-// listTasksForEntity/listNotesForEntity — this function trusts its caller.
+// listTasksForEntity/listNotesForEntity — this function trusts its caller. Matches both entries
+// directly about this record AND entries about a Task/Note/Tag attached to it (parentEntityType/
+// parentEntityId) — a Note added to this Employee shows up here too, not just its own Notes tab.
 export async function listActivityForEntity(
   tenantId: string,
   entityType: ActivityEntityType,
   entityId: string,
 ): Promise<ActivityLogEntryWithUser[]> {
   return prisma.activityLogEntry.findMany({
-    where: { tenantId, entityType, entityId },
+    where: {
+      tenantId,
+      OR: [
+        { entityType, entityId },
+        { parentEntityType: entityType, parentEntityId: entityId },
+      ],
+    },
     orderBy: [{ changedAt: 'desc' }, { id: 'desc' }],
     include: { changedBy: { select: { id: true, firstName: true, lastName: true } } },
   });

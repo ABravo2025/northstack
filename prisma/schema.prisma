@@ -1026,6 +1026,12 @@ model ActivityLogEntry {
   entityType      ActivityEntityType
   entityId        String
   entityLabel     String
+  // Set only for entries whose subject is itself attached to another record (Task/Note/Tag,
+  // always one of the 4 Tier-1 types) — lets the parent's own "Activity" tab surface "a Task/Note/
+  // Tag was added to me" without lying about entityType/entityLabel (those stay accurate to what
+  // actually changed — a Task, not the parent). See spec-activity-log.md's 2026-08-30 addendum.
+  parentEntityType ActivityEntityType?
+  parentEntityId   String?
   action          ActivityAction
   summary         String
   changes         String?
@@ -1035,6 +1041,7 @@ model ActivityLogEntry {
 
   @@index([tenantId, entityType, entityId, changedAt])
   @@index([tenantId, changedAt])
+  @@index([tenantId, parentEntityType, parentEntityId, changedAt])
 }
 
 model TimeOffPolicyDefinition {

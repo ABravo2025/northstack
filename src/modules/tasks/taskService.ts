@@ -3,7 +3,12 @@ import { findEntityTenantId, isSupportedCrossModuleEntityType } from '../crossMo
 import { syncTaskCalendarEvent } from '../integrations/googleCalendarSyncService.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { taskActivityFieldConfig } from '../activity/fieldConfigs/taskFieldConfig.js';
-import type { EntityType, Prisma } from '@prisma/client';
+import type { ActivityEntityType, EntityType, Prisma } from '@prisma/client';
+
+// Task.entityType is narrower in practice than the full EntityType enum (never client/ticket/idea
+// — see isSupportedCrossModuleEntityType), so casting it to ActivityEntityType for
+// recordActivity's parentEntityType is always valid even though TS can't see that from the wider
+// Prisma type alone.
 
 export { findEntityTenantId };
 export const isSupportedTaskEntityType = isSupportedCrossModuleEntityType;
@@ -59,6 +64,8 @@ export async function createTask(input: CreateTaskInput) {
     changedByUserId: input.createdById,
     after: task,
     fieldConfig: taskActivityFieldConfig,
+    parentEntityType: input.entityType as ActivityEntityType,
+    parentEntityId: input.entityId,
   });
 
   return task;
@@ -106,6 +113,8 @@ export async function updateTask(id: string, input: UpdateTaskInput, changedByUs
       before: previous,
       after: updated,
       fieldConfig: taskActivityFieldConfig,
+      parentEntityType: previous.entityType as ActivityEntityType,
+      parentEntityId: previous.entityId,
     });
   }
 
@@ -128,6 +137,8 @@ export async function deleteTask(id: string, changedByUserId: string): Promise<v
       changedByUserId,
       before: task,
       fieldConfig: taskActivityFieldConfig,
+      parentEntityType: task.entityType as ActivityEntityType,
+      parentEntityId: task.entityId,
     });
   }
 }

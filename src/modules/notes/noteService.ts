@@ -2,7 +2,12 @@ import prisma from '../../lib/prisma.js';
 import { findEntityTenantId, isSupportedCrossModuleEntityType } from '../crossModule/entityLookup.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { noteActivityFieldConfig } from '../activity/fieldConfigs/noteFieldConfig.js';
-import type { EntityType, Prisma } from '@prisma/client';
+import type { ActivityEntityType, EntityType, Prisma } from '@prisma/client';
+
+// Note.entityType is narrower in practice than the full EntityType enum (never client/ticket/idea
+// — see isSupportedCrossModuleEntityType), so casting it to ActivityEntityType for
+// recordActivity's parentEntityType is always valid even though TS can't see that from the wider
+// Prisma type alone.
 
 export { findEntityTenantId, isSupportedCrossModuleEntityType as isSupportedNoteEntityType };
 
@@ -50,6 +55,8 @@ export async function createNote(input: CreateNoteInput) {
     changedByUserId: input.createdById,
     after: note,
     fieldConfig: noteActivityFieldConfig,
+    parentEntityType: input.entityType as ActivityEntityType,
+    parentEntityId: input.entityId,
   });
 
   return note;
@@ -87,6 +94,8 @@ export async function updateNote(id: string, input: UpdateNoteInput, changedByUs
     before: existing,
     after: updated,
     fieldConfig: noteActivityFieldConfig,
+    parentEntityType: existing.entityType as ActivityEntityType,
+    parentEntityId: existing.entityId,
   });
 
   return updated;
@@ -105,5 +114,7 @@ export async function deleteNote(id: string, changedByUserId: string): Promise<v
     changedByUserId,
     before: existing,
     fieldConfig: noteActivityFieldConfig,
+    parentEntityType: existing.entityType as ActivityEntityType,
+    parentEntityId: existing.entityId,
   });
 }

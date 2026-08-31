@@ -3,7 +3,8 @@ import { toCsv, parseCsv, rowsToRecords, getField } from '../../lib/csv.js';
 import { createEmployee } from '../hr/employeeService.js';
 import { createClient } from '../clients/clientService.js';
 import { createCompany, updateCompany } from '../crm/companyService.js';
-import { updateContact } from '../crm/contactService.js';
+import { createContact, updateContact } from '../crm/contactService.js';
+import { contactDisplayName } from '../activity/fieldConfigs/contactFieldConfig.js';
 import { findOrCreateFieldCatalogDefinition } from '../hr/fieldCatalogService.js';
 import { listStatusDefinitions } from '../hr/statusService.js';
 import { listCustomFieldDefinitions, listCustomFieldValuesForEntities, createCustomFieldValue, isValueValidForFieldType } from '../hr/customFieldService.js';
@@ -495,6 +496,146 @@ export async function importCompaniesFromCsv(tenantId: string, csvText: string, 
       result.created += 1;
     } catch (error: any) {
       const message = error?.code === 'P2002' ? `A contact with email "${primaryContactEmail}" already exists` : error?.message || 'Unknown error';
+      result.errors.push({ row: rowNumber, message });
+    }
+  }
+
+  return result;
+}
+
+// --- Contact ---
+
+const CONTACT_BASE_HEADERS = ['First Name', 'Last Name', 'Email', 'Phone', 'Company', 'Title', 'Primary Contact', 'Lead Status', 'Lead Source'];
+
+const LEAD_STATUS_LABELS: Record<string, string> = { new: 'New', contacted: 'Contacted', qualified: 'Qualified', disqualified: 'Disqualified' };
+
+function leadStatusFromLabel(label: string): 'new' | 'contacted' | 'qualified' | 'disqualified' | undefined {
+  const normalized = label.trim().toLowerCase();
+  return normalized === 'new' || normalized === 'contacted' || normalized === 'qualified' || normalized === 'disqualified' ? normalized : undefined;
+}
+
+function parseYesNo(value: string): boolean {
+  const normalized = value.trim().toLowerCase();
+  return normalized === 'yes' || normalized === 'true';
+}
+
+// Deactivated (isActive: false) Contacts are excluded, same default as listContacts()/the
+// main Contacts table — export mirrors what's actually visible, not a full-history dump.
+export async function exportContactsToCsv(tenantId: string): Promise<string> {
+  const contacts = await prisma.contact.findMany({
+    where: { tenantId, isActive: true },
+    include: { company: true, leadSource: true },
+    orderBy: { createdAt: 'asc' },
+  });
+  const customFields = (await listCustomFieldDefinitions(tenantId, 'contact')).filter((f) => f.isActive);
+  const values = await listCustomFieldValuesForEntities(tenantId, 'contact', contacts.map((c) => c.id));
+
+  const headers = [...CONTACT_BASE_HEADERS, ...customFields.map((f) => f.name)];
+
+  const rows = contacts.map((contact) => {
+    const base = [
+      contact.firstName,
+      contact.lastName,
+      contact.email,
+      contact.phone ?? '',
+      contact.company?.name ?? '',
+      contact.title ?? '',
+      contact.isPrimary ? 'Yes' : 'No',
+      contact.leadStatus ? LEAD_STATUS_LABELS[contact.leadStatus] : '',
+      contact.leadSource?.name ?? '',
+    ];
+    const customFieldCells = customFields.map(
+      (f) => values.find((v) => v.entityId === contact.id && v.customFieldDefinitionId === f.id)?.value ?? '',
+    );
+    return [...base, ...customFieldCells];
+  });
+
+  return toCsv([headers, ...rows]);
+}
+
+export async function getContactsCsvTemplate(tenantId: string): Promise<string> {
+  const customFields = (await listCustomFieldDefinitions(tenantId, 'contact')).filter((f) => f.isActive);
+  const headers = [...CONTACT_BASE_HEADERS, ...customFields.map((f) => f.name)];
+  const example = ['Jane', 'Doe', 'jane.doe@example.com', '+1 555 0100', 'Acme Inc.', 'VP of Engineering', 'No', 'New', 'Website', ...customFields.map(() => '')];
+  return toCsv([headers, example]);
+}
+
+export async function importContactsFromCsv(tenantId: string, csvText: string, changedByUserId: string): Promise<ImportResult> {
+  const records = rowsToRecords(parseCsv(csvText));
+  const customFields = (await listCustomFieldDefinitions(tenantId, 'contact')).filter((f) => f.isActive);
+
+  const result: ImportResult = { created: 0, errors: [] };
+
+  for (let i = 0; i < records.length; i++) {
+    const rowNumber = i + 2;
+    const record = records[i];
+    const firstName = getField(record, 'First Name', 'firstName');
+    const lastName = getField(record, 'Last Name', 'lastName');
+    const email = getField(record, 'Email', 'email');
+
+    if (!firstName || !lastName || !email) {
+      result.errors.push({ row: rowNumber, message: 'Missing required field (First Name, Last Name, or Email)' });
+      continue;
+    }
+
+    try {
+      // Lenient by design, same as Employee's "Manager Email": if the named Company isn't
+      // found the Contact is still created, just unlinked — companyId is optional on Contact
+      // (a lead may not have a confirmed Company yet), so this isn't an error condition.
+      const companyName = getField(record, 'Company');
+      const company = companyName
+        ? await prisma.company.findFirst({ where: { tenantId, name: { equals: companyName, mode: 'insensitive' } } })
+        : null;
+
+      const leadSourceName = getField(record, 'Lead Source');
+      const leadSourceId = leadSourceName ? (await findOrCreateFieldCatalogDefinition(tenantId, 'leadSource', leadSourceName, 0)).id : undefined;
+
+      const leadStatusLabel = getField(record, 'Lead Status');
+      const primaryLabel = getField(record, 'Primary Contact');
+
+      const contact = await createContact(
+        {
+          tenantId,
+          firstName,
+          lastName,
+          email,
+          phone: getField(record, 'Phone') || undefined,
+          companyId: company?.id,
+          title: getField(record, 'Title') || undefined,
+          isPrimary: primaryLabel ? parseYesNo(primaryLabel) : undefined,
+          leadStatus: leadStatusLabel ? leadStatusFromLabel(leadStatusLabel) : undefined,
+          leadSourceId,
+        },
+        changedByUserId,
+      );
+
+      for (const field of customFields) {
+        const raw = getField(record, field.name);
+        if (!raw) continue;
+        if (!isValueValidForFieldType(field.fieldType, raw, field.options)) continue;
+        await createCustomFieldValue({
+          tenantId,
+          customFieldDefinitionId: field.id,
+          entityType: 'contact',
+          entityId: contact.id,
+          value: raw,
+        });
+        await recordCustomFieldValueActivity({
+          tenantId,
+          entityType: 'contact',
+          entityId: contact.id,
+          entityLabel: contactDisplayName(contact),
+          fieldDefinitionId: field.id,
+          fieldName: field.name,
+          oldValue: null,
+          newValue: raw,
+          changedByUserId,
+        });
+      }
+
+      result.created += 1;
+    } catch (error: any) {
+      const message = error?.code === 'P2002' ? `A contact with email "${email}" already exists` : error?.message || 'Unknown error';
       result.errors.push({ row: rowNumber, message });
     }
   }

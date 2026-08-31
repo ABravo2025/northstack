@@ -13,6 +13,7 @@ import {
 import { findFieldCatalogDefinitionById } from '../modules/hr/fieldCatalogService.js';
 import { recordCustomFieldValueActivity } from '../modules/activity/customFieldActivity.js';
 import { contactDisplayName } from '../modules/activity/fieldConfigs/contactFieldConfig.js';
+import { exportContactsToCsv, getContactsCsvTemplate, importContactsFromCsv } from '../modules/csv/csvService.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 
@@ -316,4 +317,54 @@ contactsRouter.get('/api/contacts/:contactId/custom-fields', async (req, res) =>
 
   const values = await listCustomFieldValuesForEntity(user.tenantId!, 'contact', req.params.contactId);
   return res.json(values);
+});
+
+contactsRouter.get('/api/contacts/export/csv', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canViewHr(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const csv = await exportContactsToCsv(user.tenantId!);
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="contacts.csv"');
+  return res.send(csv);
+});
+
+contactsRouter.post('/api/contacts/import/csv', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canCreateHr(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  if (typeof req.body.csv !== 'string' || !req.body.csv.trim()) {
+    return res.status(400).json({ error: 'csv is required' });
+  }
+
+  const result = await importContactsFromCsv(user.tenantId!, req.body.csv, user.id);
+  return res.json(result);
+});
+
+contactsRouter.get('/api/contacts/template/csv', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canCreateHr(user.role)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const csv = await getContactsCsvTemplate(user.tenantId!);
+  res.setHeader('Content-Type', 'text/csv');
+  res.setHeader('Content-Disposition', 'attachment; filename="contacts-import-template.csv"');
+  return res.send(csv);
 });

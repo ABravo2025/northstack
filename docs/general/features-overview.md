@@ -58,6 +58,11 @@ corrió contra producción):
 **Sales v2 (round-robin de asignación, forecast ponderado por probabilidad de stage, automations al
 crear un Pipeline, notificaciones in-app) — solo en `staging`**, todavía sin promover.
 
+**Import/Export CSV de Companies y Contacts — solo en `staging`** (2026-08-31), todavía sin
+promover: plantilla descargable con todos los fields + custom fields activos del tenant; alta de
+Company vía CSV resuelve el Contact fundador obligatorio (matchea uno existente por email o crea
+uno nuevo inline). Ver sección HR más abajo para el CSV de Employees (ya en producción).
+
 ## HR — Employees, Time Off, Payroll, Termination — en producción salvo Termination
 
 - **Employees**: legajo completo — departamento y puesto (catálogos configurables), tipo de
@@ -78,7 +83,8 @@ crear un Pipeline, notificaciones in-app) — solo en `staging`**, todavía sin 
   Una solicitud aprobada/cancelada se sincroniza (best-effort, bidireccional) al Google Calendar del
   empleado si tiene su cuenta conectada.
 - **Import/Export CSV**: alta masiva y exportación de Employees por archivo, con plantilla
-  descargable.
+  descargable. **Person Type/Nationality/Birthdate agregados a la plantilla — solo en `staging`**
+  (2026-08-31, todavía sin promover); el resto de las columnas ya está en producción.
 
 **Employee Termination — solo en `staging`**: baja de un empleado como cambio de status coordinado,
 no un delete — soporta fecha pasada, hoy, o futura (ejecución diferida vía cron para las

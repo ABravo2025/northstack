@@ -2731,3 +2731,74 @@ funcional es alta.
 **Con esta unidad el spec de Activity Log queda completo de punta a punta** (6 unidades, sin
 scope cuts pendientes salvo los ya documentados y deliberados en el spec §6: sesiones/login,
 revertir un cambio, retención/purga, y Admin Center).
+
+## QA-64 — Rediseño de CSV: Employee actualizado + Company/Contact nuevos (2026-08-31, en `staging`)
+
+**Por qué existe esta tarea:** Alejandro pidió revisar los módulos de CSV de punta a punta —
+Companies y Contacts nunca tuvieron import/export (solo Employee y el modelo legacy `Client` lo
+tenían), y el propio Employee estaba desactualizado (le faltaban 3 campos agregados después). El
+pedido explícito: al descargar la plantilla de ejemplo, tiene que incluir todos los fields y custom
+fields del workspace, no solo un subconjunto. `Client` queda fuera de alcance a propósito —
+confirmado por Alejandro como legacy, en camino a decommission completo (ver
+`docs/tareas/backlog.md`).
+
+### A. Employee — campos nuevos
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Descargar la plantilla de Employees | Incluye columnas "Person Type", "Nationality", "Birthdate" (nuevas) — **no** incluye "Country of Residence" (self-service only, nunca la completa el owner) |
+| 2 | Importar un CSV con esas 3 columnas completas | El empleado se crea con esos valores; verificar en el panel de detalle o exportando de nuevo |
+| 3 | Importar un empleado y revisar `Settings → Activity Log` (o el tab Activity del propio empleado) | Aparece la entrada de creación atribuida al usuario que hizo el import — **antes de este fix no aparecía atribuida a nadie**, es la regresión más importante a confirmar |
+| 4 | Importar un empleado con un custom field completado | La entrada de Activity Log del custom field también aparece atribuida al usuario que importó |
+
+### B. Company — nuevo
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 5 | Descargar la plantilla de Companies | Columnas: Name, Industry, Website, Phone, Billing Address, Parent Company, Company Size, Account Owner Email, Primary Contact Email, Primary Contact First Name, Primary Contact Last Name + custom fields activos — **sin** columna Status (es derivado, no importable) |
+| 6 | Importar una Company con "Primary Contact Email" de un Contact que ya existe en el tenant | Se crea la Company, vinculada a ese Contact existente (no se crea uno nuevo) |
+| 7 | Importar una Company con un email que no matchea ningún Contact, pero con First/Last Name completos | Se crea la Company + un Contact nuevo con esos datos, vinculado |
+| 8 | Importar una Company sin "Primary Contact Email" (o sin email y sin First/Last Name para crear uno) | La fila da error explícito ("every Company needs a linked Contact" / "provide Primary Contact First Name/Last Name"), no crea nada a medias |
+| 9 | Exportar Companies después de importar una con Primary Contact | La columna "Primary Contact Email"/First/Last Name del export muestra los datos correctos (round-trip) |
+| 10 | Importar con "Parent Company" apuntando a una Company ya existente por nombre | Queda vinculada como hija (verificar en el panel de detalle o `parentCompanyId`) |
+| 11 | Importar con "Company Size" nuevo (no existe todavía como catálogo) | Se crea automáticamente en `Settings` como una opción nueva del catálogo Company Size |
+| 12 | Importar con "Account Owner Email" que no matchea ningún usuario del tenant | La Company se crea igual, sin Account Owner (no es un error) |
+
+### C. Contact — nuevo
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 13 | Descargar la plantilla de Contacts | Columnas: First Name, Last Name, Email, Phone, Company, Title, Primary Contact, Lead Status, Lead Source + custom fields activos |
+| 14 | Importar un Contact con "Company" que matchea una Company existente por nombre | Queda vinculado a esa Company |
+| 15 | Importar un Contact con "Company" que **no** matchea ninguna Company | Se crea igual, sin Company vinculada — **no** es un error de fila (a diferencia de Company, acá `companyId` es opcional) |
+| 16 | Importar un Contact con "Primary Contact" = Yes | Queda marcado como contacto primario de su Company (si tiene una) |
+| 17 | Importar con "Lead Source" nuevo | Se crea automáticamente en el catálogo Lead Source |
+| 18 | Exportar Contacts con un Contact desactivado (soft-delete) entre los datos | El export **no** incluye al contacto desactivado, mismo criterio que la tabla principal de Contacts |
+
+### D. Frontend — botones nuevos
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 19 | Ir a `/companies` y `/contacts` como owner/admin | Aparecen los íconos de export (↓) e import (↑) en el toolbar, misma posición que ya tenía Employees |
+| 20 | Ir a `/companies`/`/contacts` como un rol `member` | Los íconos de CSV **no** aparecen (mismo gating que el botón "Add") |
+| 21 | Ir a `/hr/people` (Employees) | Sin cambios visuales ni de comportamiento respecto a antes de esta ronda |
+
+### E. Regresión
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 22 | `npm run build`/`npm test` (backend, 218/218) y `npm run build` (frontend) | Los tres en verde |
+| 23 | Import/export de Employees (flujo ya existente) | Sigue funcionando igual que antes, sin romper nada |
+
+### Al encontrar una falla
+
+El caso A.3 (atribución faltante en Activity Log) y los casos B.8/B.9 (Company sin Contact
+vinculado, o el round-trip roto) son los más importantes — reflejan el pedido explícito del
+usuario, no un detalle menor. Un import que crea una Company sin ningún Contact vinculado sería
+severidad **alta** (viola una regla de negocio explícita del modelo). El resto sigue el criterio ya
+establecido: dato incorrecto es media, regresión funcional es alta.
+
+Verificado por Claude contra `staging` real antes de este push: script directo para cada unidad de
+backend (casos 1-2, 4, 6-8, 10-12, 14-18) + Playwright real contra un dev server local apuntado a
+`staging` para el import completo desde el navegador — subir el archivo, ver el toast de éxito, y
+confirmar la fila nueva en la tabla (caso 19 en adelante). Falta la revisión humana de Alejandro.

@@ -172,8 +172,11 @@ CRUD estándar: **createContact(input, changedByUserId?)**, **listContacts(tenan
 - **findTagAssignmentById(id)** / **removeTagAssignment(id)**.
 
 ### `src/modules/csv/csvService.ts`
-- **exportEmployeesToCsv(tenantId, viewerRole)** / **getEmployeesCsvTemplate(tenantId, viewerRole)** / **importEmployeesFromCsv(tenantId, csvText, viewerRole)**.
-- **exportClientsToCsv(tenantId)** / **getClientsCsvTemplate(tenantId)** / **importClientsFromCsv(tenantId, csvText)**.
+Export/template always include every active custom field of the tenant for that entity type, appended after the fixed base columns — the template is meant to be a complete "fill this out" example, not just the base fields.
+- **exportEmployeesToCsv(tenantId)** / **getEmployeesCsvTemplate(tenantId)** / **importEmployeesFromCsv(tenantId, csvText, changedByUserId)** — includes Person Type/Nationality/Birthdate (2026-08-31); Country of Residence deliberately excluded (self-service only, set via `contractConfirmationService.ts`, never by the owner/admin). Import wires `changedByUserId` through to `createEmployee`/`recordCustomFieldValueActivity` so imported rows show up correctly attributed in the Activity Log.
+- **exportCompaniesToCsv(tenantId)** / **getCompaniesCsvTemplate(tenantId)** / **importCompaniesFromCsv(tenantId, csvText, changedByUserId)** (2026-08-31) — `createCompany` requires a linked Contact, so each row resolves "Primary Contact Email" against an existing Contact or, given First/Last Name too, creates one inline (and flags it `isPrimary` so the column round-trips on export); Parent Company/Account Owner match by name/email, lenient (left unlinked if not found); Company Size auto-creates a `FieldCatalogDefinition` like Department/Job Title. Status is export-only, never accepted on import (derived from Opportunity/Contract events).
+- **exportContactsToCsv(tenantId)** / **getContactsCsvTemplate(tenantId)** / **importContactsFromCsv(tenantId, csvText, changedByUserId)** (2026-08-31) — Company matches by name, lenient (contact created unlinked if not found, since `companyId` is genuinely optional); Lead Source auto-creates a catalog entry. Export excludes deactivated (`isActive: false`) contacts, same default as `listContacts()`.
+- **exportClientsToCsv(tenantId)** / **getClientsCsvTemplate(tenantId)** / **importClientsFromCsv(tenantId, csvText)** — legacy `Client` model, deliberately not extended (out of scope, on track for full decommission per `docs/tareas/backlog.md`).
 
 ### `src/modules/hr/customFieldService.ts`
 - **isValueValidForFieldType(...)** — valida un valor contra el `fieldType` de su definición.
@@ -442,7 +445,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 | `notes.ts` | listNotes, createNote, updateNote, deleteNote |
 | `payroll.ts` | listPayFrequencies, createPayFrequency, updatePayFrequency, listPaymentMethods, createPaymentMethod, updatePaymentMethod, createCompensation, getCompensationStatus, listTerminatedCompensations, createCompensationBulk, listPayrollRuns, createPayrollRun, getPayrollRunDetail, addEmployeeToPayrollRun, confirmPayrollRun, createPayrollAdjustment, deletePayrollEntry, updatePayrollEntryHours, listOffCyclePayments, createOffCyclePayments, getRunEmployeePayslip, getEntryPayslip |
 | `contractConfirmationPublic.ts` | getContractConfirmation, confirmContract — público, sin auth (standalone `/confirm-contract/:token`) |
-| `csv.ts` | exportEmployeesCsv, importEmployeesCsv, employeesCsvTemplate |
+| `csv.ts` | exportEmployeesCsv, importEmployeesCsv, employeesCsvTemplate, exportCompaniesCsv, importCompaniesCsv, companiesCsvTemplate, exportContactsCsv, importContactsCsv, contactsCsvTemplate (2026-08-31: `buildCsvEndpoints(basePath)` factors the shared export/import/template fetch pattern, all 3 entities built on it) |
 | `tenantUsers.ts` | listTenantUsers, updateTenantUser, listTenantInvitations, createTenantInvitation, cancelInvitation |
 | `publicFormsAdmin.ts` | listPublicForms, createPublicForm, updatePublicForm |
 | `publicFormsPublic.ts` | getPublicFormConfig, submitPublicForm |
@@ -488,7 +491,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 - **AddCustomFieldColumn** — columna "+" al final del header para agregar un custom field.
 - **ColumnResizeHandle** — handle de resize dentro de un `<th>`.
 - **ColumnVisibilityMenu** — menú de mostrar/ocultar columnas (usa el hook `useColumnVisibility`).
-- **CsvImportExportMenu** (`forwardRef`, expone `CsvImportExportMenuHandle`) — patrón genérico de import/export CSV con template descargable.
+- **CsvImportExportMenu** (`forwardRef`, expone `CsvImportExportMenuHandle`) — patrón genérico de import/export CSV con template descargable. Genérico desde 2026-08-31 (`entityLabelPlural`/`entityLabelSingular` + `exportCsv`/`importCsv`/`csvTemplate` como props) — usado por Employees/Companies/Contacts, no reinventar por módulo.
 - **CustomFieldColumnMenu** — dropdown de header de columna de custom field (Edit/Delete field).
 - **FieldCatalogMenu** — dropdown de header para columnas de catálogo (Department, Job Title).
 - **FilterBar** — barra de filtros sobre una lista de `ViewField`.

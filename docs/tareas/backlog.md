@@ -36,6 +36,9 @@ los ítems.
   separada. Bloqueado en migrar primero los Custom Fields y Public Forms con `entityType: 'client'` a
   `'company'`/`'contact'`. El backend (`clientService.ts`, tabla `Client`) sigue en uso real por
   `onboardingService.ts`/`publicFormService.ts`, no se puede cortar sin resolver eso antes.
+  Reconfirmado explícitamente por el usuario (2026-08-31, durante el rediseño de CSV): "es muy
+  legacy", dar de baja completa — no se le suma trabajo nuevo a `Client` (ver el ítem de CSV de
+  arriba) mientras se espera turno para esta unidad.
 - [ ] **Nota automática en Contact huérfano al borrar su Company**: al borrar una Company, sus
   Contacts quedan sin vincular (comportamiento ya construido) pero el usuario pidió además que quede
   registrado en Activity/Notes que perdieron esa company — no se armó ningún mecanismo provisorio,
@@ -47,10 +50,13 @@ los ítems.
   "N días en el stage" ya está construido, pero la alerta cuando una Opportunity supera el promedio
   histórico de su stage no — requeriría calcular tiempo promedio por stage entre todas las
   Opportunities, no construido todavía.
-- [ ] **CSV import/export sin extender a Companies/Contacts/Opportunities**: `csvService.ts` tiene
-  `importClientsFromCsv`/`exportClientsToCsv`, pero quedaron huérfanas de UI desde que se borró la
-  página de Clients del frontend — hoy la única entidad con botón real de import/export es Employees.
-  El alcance ampliado que pedía el backlog original ("casi todo" importable) no está resuelto.
+- [ ] **CSV import/export sin extender a Opportunities**: Employee/Company/Contact ya tienen CSV
+  completo (export/template/import, custom fields incluidos) desde 2026-08-31 — ver
+  `docs/general/function-index.md`. Opportunity queda como la única entidad grande sin cubrir; no
+  se armó por no tener un caso de uso concreto todavía (a diferencia de Company/Contact, altas
+  masivas de Opportunity son mucho menos frecuentes). `importClientsFromCsv`/`exportClientsToCsv`
+  (legacy `Client`) siguen huérfanas de UI a propósito — Client está en camino de decommission
+  completo, confirmado explícitamente por el usuario, no se le suma trabajo nuevo.
 - [ ] **Página de agradecimiento de Public Forms poco personalizable**: hoy solo el texto del párrafo
   (`Form.thankYouMessage`) es configurable — heading, layout y estilo del estado `submitted` quedan
   fijos. Candidatos sin alcance definido: heading personalizable, redirect a URL propia del tenant,

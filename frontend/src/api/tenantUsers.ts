@@ -14,7 +14,9 @@ export const tenantUsersApi = {
   updateTenantUser: async (
     token: string,
     userId: string,
-    data: { role?: string; status?: string },
+    // Custom Roles Fase I — roleId assigns any tenant role (seed or custom) directly; role stays
+    // for the legacy 3-value enum path (still used by the ownership-transfer action).
+    data: { role?: string; roleId?: string; status?: string },
   ): Promise<{ user: TenantUser }> => {
     const res = await apiFetch(`${API_BASE_URL}/api/tenants/users/${userId}`, {
       method: 'PATCH',
@@ -38,7 +40,9 @@ export const tenantUsersApi = {
 
   createTenantInvitation: async (
     token: string,
-    data: { email: string; role: string },
+    // Custom Roles Fase I — roleId invites into any tenant role (seed or custom) directly; role
+    // stays optional for backward compat.
+    data: { email: string; role?: string; roleId?: string },
   ): Promise<{ invitation: Invitation }> => {
     const res = await apiFetch(`${API_BASE_URL}/api/tenants/invitations`, {
       method: 'POST',

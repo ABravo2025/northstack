@@ -14,6 +14,9 @@ export interface CreateInvitationInput {
   invitedByUserId: string;
   email: string;
   role?: UserRole;
+  // Custom Roles Fase I — assigns any tenant role (seed or custom) directly by id. Takes
+  // precedence over `role` when both are present (the route only ever sends one or the other).
+  roleId?: string;
   employeeId?: string;
   // Where the emailed link sends the invitee — defaults to the generic
   // accept-invite screen. Payroll's contract-confirmation flow (Unidad 6)
@@ -80,14 +83,35 @@ export async function createInvitation(input: CreateInvitationInput): Promise<In
     return { success: false, error: 'User already belongs to a tenant' };
   }
 
-  const role = input.role ?? 'member';
+  // Custom Roles Fase I — inviting into any tenant role (seed or custom) directly by id, not just
+  // the 3 legacy enum values. Same reasoning as tenantUserService.ts's roleId branch: the legacy
+  // `role` column can't represent a custom role name, so it's set to the 'member' placeholder,
+  // purely cosmetic since acceptInvitation copies roleId onto the new User and that's what
+  // resolveRoleContextForUser actually reads.
+  let role: UserRole;
+  let roleId: string | null;
+  if (input.roleId) {
+    const targetRole = await prisma.role.findUnique({ where: { id: input.roleId } });
+    if (!targetRole || targetRole.tenantId !== input.tenantId) {
+      return { success: false, error: 'Role not found' };
+    }
+    if (targetRole.isOwner) {
+      return { success: false, error: 'Ownership can only be transferred to an existing user, not granted by invitation' };
+    }
+    role = 'member';
+    roleId = targetRole.id;
+  } else {
+    role = input.role ?? 'member';
+    roleId = await findSeedRoleId(input.tenantId, role);
+  }
+
   const invitation = await prisma.invitation.create({
     data: {
       tenantId: input.tenantId,
       invitedByUserId: input.invitedByUserId,
       email: normalizedEmail,
       role,
-      roleId: await findSeedRoleId(input.tenantId, role),
+      roleId,
       employeeId: input.employeeId,
       token: randomUUID(),
       expiresAt: new Date(Date.now() + INVITATION_EXPIRY_MS),
@@ -214,6 +238,10 @@ export async function listTenantInvitations(tenantId: string) {
       id: true,
       email: true,
       role: true,
+      // Custom Roles Fase I — real role name for display (CompanyUsersPage.tsx), same reasoning
+      // as tenantUserService.ts's listTenantUsers: a custom-role invitation leaves `role` at its
+      // 'member' placeholder.
+      roleRef: { select: { name: true } },
       status: true,
       token: true,
       createdAt: true,

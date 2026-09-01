@@ -1,7 +1,18 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
-import type { RestrictableField, Role } from './types.js';
+import type { AssignableRole, RestrictableField, Role } from './types.js';
 
 export const rolesApi = {
+  // Custom Roles Fase I — {id, name} only, excludes Owner, not owner-only server-side. For
+  // populating a role picker (CompanyUsersPage.tsx) — use listRoles instead when the caller needs
+  // permissions/hiddenFields and is already gated owner-only (Settings → Roles & Permissions).
+  listAssignableRoles: async (token: string): Promise<AssignableRole[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/roles/assignable`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
   listRoles: async (token: string): Promise<Role[]> => {
     const res = await apiFetch(`${API_BASE_URL}/api/roles`, {
       headers: { Authorization: `Bearer ${token}` },

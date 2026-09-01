@@ -18,15 +18,26 @@ vi.mock('../src/lib/prisma.js', () => ({
           fieldRestrictions: fieldRestrictionRows.filter((f) => f.roleId === role.id),
         };
       }),
-      findMany: vi.fn(async ({ where }: any) =>
-        roles
-          .filter((r) => r.tenantId === where.tenantId)
-          .map((r) => ({
-            ...r,
-            modulePermissions: permissionRows.filter((p) => p.roleId === r.id),
-            fieldRestrictions: fieldRestrictionRows.filter((f) => f.roleId === r.id),
-          })),
-      ),
+      findMany: vi.fn(async ({ where, select }: any) => {
+        const filtered = roles.filter(
+          (r) => r.tenantId === where.tenantId && (where.isOwner === undefined || r.isOwner === where.isOwner),
+        );
+        if (select) {
+          // listAssignableRoles (Custom Roles Fase I) uses `select: {id, name}` instead of the
+          // `include` shape listRolesForTenant needs — return only the selected fields, not the
+          // full row plus modulePermissions/fieldRestrictions.
+          return filtered.map((r) => {
+            const picked: Record<string, unknown> = {};
+            for (const key of Object.keys(select)) picked[key] = (r as any)[key];
+            return picked;
+          });
+        }
+        return filtered.map((r) => ({
+          ...r,
+          modulePermissions: permissionRows.filter((p) => p.roleId === r.id),
+          fieldRestrictions: fieldRestrictionRows.filter((f) => f.roleId === r.id),
+        }));
+      }),
       findFirst: vi.fn(async ({ where }: any) =>
         roles.find(
           (r) =>
@@ -96,7 +107,7 @@ vi.mock('../src/lib/prisma.js', () => ({
   },
 }));
 
-import { createRole, deleteRole, listRolesForTenant, renameRole, setRoleFieldRestriction, setRolePermission } from '../src/modules/auth/roleManagementService.js';
+import { createRole, deleteRole, listAssignableRoles, listRolesForTenant, renameRole, setRoleFieldRestriction, setRolePermission } from '../src/modules/auth/roleManagementService.js';
 
 describe('roleManagementService', () => {
   beforeEach(() => {
@@ -108,6 +119,17 @@ describe('roleManagementService', () => {
     fieldRestrictionRows = [];
     users = [];
     invitations = [];
+  });
+
+  it('listAssignableRoles (Fase I) excludes Owner and returns only {id, name}', async () => {
+    const result = await listAssignableRoles('t1');
+    expect(result).toEqual([{ id: 'role-admin', name: 'Admin' }]);
+  });
+
+  it('listAssignableRoles never leaks another tenant\'s roles', async () => {
+    roles.push({ id: 'role-other-tenant', tenantId: 't2', name: 'Other', isOwner: false, isEditable: true });
+    const result = await listAssignableRoles('t1');
+    expect(result.map((r) => r.id)).not.toContain('role-other-tenant');
   });
 
   it('lists roles with their permissions', async () => {

@@ -1,8 +1,17 @@
 import type { ActivityEntityType } from '@prisma/client';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
-import { createRole, deleteRole, listRolesForTenant, renameRole, setRoleFieldRestriction, setRolePermission } from '../modules/auth/roleManagementService.js';
+import {
+  createRole,
+  deleteRole,
+  listAssignableRoles,
+  listRolesForTenant,
+  renameRole,
+  setRoleFieldRestriction,
+  setRolePermission,
+} from '../modules/auth/roleManagementService.js';
 import { RESTRICTABLE_FIELDS_BY_ENTITY_TYPE } from '../modules/auth/fieldVisibilityService.js';
+import { canInviteUsers, canManageUsers } from '../modules/auth/permissionService.js';
 
 export const rolesRouter = createAsyncRouter();
 
@@ -67,6 +76,22 @@ rolesRouter.post('/api/roles', async (req, res) => {
   }
 
   return res.status(201).json(result.role);
+});
+
+// Custom Roles Fase I — deliberately NOT owner-only, unlike every other /api/roles* route:
+// assigning an existing role to a user/invitation (CompanyUsersPage.tsx) only needs to know which
+// roles exist, not the owner-level ability to reconfigure what they can do.
+rolesRouter.get('/api/roles/assignable', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!canManageUsers(user.roleContext) && !canInviteUsers(user.roleContext)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const roles = await listAssignableRoles(user.tenantId!);
+  return res.json(roles);
 });
 
 // Custom Roles Fase C — the field catalog the UI renders as toggles, straight from

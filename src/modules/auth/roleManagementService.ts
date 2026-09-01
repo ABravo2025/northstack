@@ -35,6 +35,26 @@ async function findRoleByNameCaseInsensitive(tenantId: string, name: string, exc
   });
 }
 
+export interface AssignableRole {
+  id: string;
+  name: string;
+}
+
+// Custom Roles Fase I — a deliberately narrower sibling of listRolesForTenant: just {id, name},
+// no permissions/hiddenFields, and NOT owner-only. Assigning an existing role to a user or
+// invitation (CompanyUsersPage.tsx) is a different action from reconfiguring what a role can do
+// (Settings → Roles & Permissions) — a role with canManageUsers/canInviteUsers needs to see which
+// roles exist to assign one, without needing owner-level access to the roles admin screen itself.
+// Owner is excluded — it's never "just another role" to assign; promoting someone to Owner is the
+// separate, atomic ownership-transfer flow in tenantUserService.ts.
+export async function listAssignableRoles(tenantId: string): Promise<AssignableRole[]> {
+  return prisma.role.findMany({
+    where: { tenantId, isOwner: false },
+    select: { id: true, name: true },
+    orderBy: { createdAt: 'asc' },
+  });
+}
+
 export async function listRolesForTenant(tenantId: string): Promise<RoleSummary[]> {
   const roles = await prisma.role.findMany({
     where: { tenantId },

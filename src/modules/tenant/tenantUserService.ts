@@ -15,6 +15,11 @@ export async function listTenantUsers(tenantId: string) {
       email: true,
       phone: true,
       role: true,
+      roleId: true,
+      // Custom Roles Fase I — the real role name for display (CompanyUsersPage.tsx), since a
+      // custom (non-seed) role assignment leaves the legacy `role` enum at its 'member' placeholder
+      // (see updateTenantUser's roleId branch below) — the enum alone can't represent it anymore.
+      roleRef: { select: { name: true } },
       status: true,
     },
     orderBy: { firstName: 'asc' },
@@ -23,6 +28,7 @@ export async function listTenantUsers(tenantId: string) {
 
 export interface UpdateTenantUserInput {
   role?: UserRole;
+  roleId?: string;
   status?: UserStatus;
 }
 
@@ -94,7 +100,22 @@ export async function updateTenantUser(
   }
 
   const data: { role?: UserRole; roleId?: string | null; status?: UserStatus } = {};
-  if (input.role) {
+  if (input.roleId) {
+    // Custom Roles Fase I — assigning any tenant role (seed or genuinely custom) directly by id,
+    // not just the 3 legacy enum values. The legacy `role` column can't represent a custom role
+    // name, so it's set to the least-privileged placeholder ('member') — purely cosmetic from here
+    // on, since resolveRoleContextForUser always prefers roleId when present. Ownership itself
+    // stays out of reach of this path: it can only move via the atomic transfer branch above.
+    const targetRole = await prisma.role.findUnique({ where: { id: input.roleId } });
+    if (!targetRole || targetRole.tenantId !== tenantId) {
+      return { success: false, error: 'Role not found' };
+    }
+    if (targetRole.isOwner) {
+      return { success: false, error: 'Use the ownership transfer action to grant Owner' };
+    }
+    data.role = 'member';
+    data.roleId = targetRole.id;
+  } else if (input.role) {
     data.role = input.role;
     // roleId kept in sync alongside the enum (Fase B, Custom Roles) — see findSeedRoleId's comment.
     data.roleId = await findSeedRoleId(tenantId, input.role);

@@ -1413,16 +1413,61 @@ Export/Import CSV pero NO la fila de agregar. Confirmado también que HR Only ah
 hacía). `npm test` 287/287 (+2 tests nuevos), ambos builds verdes. Nada de esto llegó a `main`
 todavía.
 
-**Deuda conocida, no parte de esta fase**: quedan ~15 archivos más con el mismo patrón
+**Deuda conocida, no parte de esta fase**: quedan ~14 archivos más con el mismo patrón
 `user.role === 'owner'/'admin'` inline (`Sidebar.tsx`, `AppLayout.tsx`, `CompaniesPage.tsx`,
 `ContactsPage.tsx`, `OpportunitiesPage.tsx`, `PayrollPage.tsx`, `PayrollRunDetailPage.tsx`,
-`TimeOffOverviewPage.tsx`, `PaymentsOverviewPage.tsx`, `CompanyUsersPage.tsx`,
-`ActivityLogSettingsPage.tsx`, `IntegrationsSettingsPage.tsx`, `OverviewPage.tsx`,
-`DashboardsLayout.tsx`, `settingsSections.tsx`) — la migración completa de esos es la Fase J. El
-botón "Add employee" del `EmptyState` de `EmployeesPage.tsx` sigue sin condicionar por permiso
-(muestra el botón aunque el `POST` vaya a devolver 403) — no se tocó en esta pasada porque el
+`TimeOffOverviewPage.tsx`, `PaymentsOverviewPage.tsx`, `ActivityLogSettingsPage.tsx`,
+`IntegrationsSettingsPage.tsx`, `OverviewPage.tsx`, `DashboardsLayout.tsx`,
+`settingsSections.tsx`) — la migración completa de esos es la Fase J.
+`CompanyUsersPage.tsx` sale de esta lista tras la Fase I (ver abajo), aunque conserva un
+`isOwner = user.role === 'owner'` propio — ese uso puntual es correcto tal cual: significa
+literalmente "es el Owner fijo del tenant" (nunca afectado por roles custom), no una aproximación
+de un permiso real, así que no hace falta migrarlo. El botón "Add employee" del `EmptyState` de
+`EmployeesPage.tsx` sigue sin condicionar por permiso (muestra el botón aunque el `POST` vaya a
+devolver 403) — no se tocó en esta pasada porque el
 componente `EmptyState` compartido no admite hoy un primary action opcional sin cambiar su
 contrato para todos sus consumidores, un cambio más grande que el alcance de esta fase.
+
+**Fase I (asignación dinámica de roles en invitaciones/usuarios): completa.** Hasta acá,
+`CompanyUsersPage.tsx` (invitar gente, cambiar el rol de alguien) solo conocía 3 opciones
+hardcodeadas (`member`/`admin`/`owner`, el enum legacy) — un tenant no tenía forma de invitar a
+alguien o reasignar a un usuario existente a un rol custom que hubiera creado en Settings → Roles
+& Permissions. Requirió tocar 2 servicios backend + un endpoint nuevo, no solo el frontend:
+
+- **`listAssignableRoles(tenantId)`** (nuevo, `roleManagementService.ts`) + `GET
+  /api/roles/assignable` — deliberadamente NO owner-only (a diferencia de cada otra ruta
+  `/api/roles*`): devuelve solo `{id, name}` de cada rol no-Owner del tenant, gateado por
+  `canManageUsers || canInviteUsers` — un rol con esos permisos necesita saber qué roles existen
+  para asignarlos, sin necesitar el nivel de acceso de owner que exige `Settings → Roles &
+  Permissions` en sí.
+- **`updateTenantUser`/`createInvitation`** (`tenantUserService.ts`/`invitationService.ts`) ganan
+  un parámetro `roleId?` que asigna/invita a CUALQUIER rol del tenant (semilla o custom)
+  directamente por id — toma precedencia sobre el `role` legacy cuando ambos llegan. Como el enum
+  `UserRole` solo tiene 3 valores y no puede representar un nombre de rol custom, se fija a
+  `'member'` (el más bajo privilegio) como placeholder puramente cosmético — `roleId` es lo único
+  que `resolveRoleContextForUser` realmente lee. Ambos caminos rechazan asignar el rol Owner por
+  esta vía (`targetRole.isOwner`): la transferencia de ownership sigue siendo exclusivamente el
+  flujo atómico ya existente en `updateTenantUser` (nunca "solo otro rol más" para asignar).
+  `listTenantUsers`/`listTenantInvitations` ahora incluyen `roleRef: {name}` para que el frontend
+  muestre el nombre real del rol asignado, no el enum legacy (que para un rol custom diría
+  "Member" engañosamente).
+- **Frontend**: `RoleChip` ahora acepta un `label` opcional para mostrar el nombre real de un rol
+  custom (con el color neutro de "member" como base, ya que solo owner/admin tienen su propio
+  color). `CompanyUsersPage.tsx`: los `<select>` de invitar y de cambiar rol por usuario ahora se
+  llenan con `listAssignableRoles` en vez de 2 `<option>` hardcodeados; la opción "Owner (transfer
+  ownership)" se mantiene como una entrada especial fija, aparte de la lista dinámica, solo visible
+  para quien ya es Owner — nunca "otro rol más" a elegir.
+
+Verificado con un tenant descartable en `staging`: un rol custom "Manager" creado de antemano
+aparece en el dropdown de invitar junto a Admin/Member (nombres reales, no strings hardcodeados);
+una invitación real creada eligiendo "Manager" quedó en la base con `role: "member"` (placeholder)
+y `roleRef.name: "Manager"` (confirmado vía `GET /api/tenants/invitations` real); reasignar a un
+usuario existente a ese mismo rol custom vía `PATCH /api/tenants/users/:id` con `roleId` funcionó
+igual; intentar asignar el rol Owner por este camino (incluso como el propio Owner actuando) fue
+rechazado con un mensaje claro pidiendo usar la transferencia de ownership. `npm test` 299/299
+(+15 tests nuevos: `listAssignableRoles`, y las nuevas ramas `roleId` de `updateTenantUser`/
+`createInvitation` con sus rechazos — cross-tenant, rol inexistente, rol Owner), ambos builds
+verdes. Nada de esto llegó a `main` todavía.
 
 ```mermaid
 erDiagram

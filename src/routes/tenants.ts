@@ -193,6 +193,7 @@ tenantsRouter.patch('/api/tenants/users/:userId', async (req, res) => {
 
   const result = await updateTenantUser(user.tenantId!, req.params.userId, user, {
     role: req.body.role,
+    roleId: req.body.roleId,
     status: req.body.status,
   });
 
@@ -255,6 +256,7 @@ tenantsRouter.post('/api/tenants/invitations', async (req, res) => {
     invitedByUserId: user.id,
     email: email.trim(),
     role: req.body.role,
+    roleId: req.body.roleId,
   });
 
   if (!result.success) {

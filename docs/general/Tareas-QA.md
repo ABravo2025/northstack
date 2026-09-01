@@ -3331,3 +3331,59 @@ real vía curl; Playwright real confirmando la fila "+ Add" y los botones de CSV
 exactamente para el rol correcto y no para el otro (capturas en ambos casos); y una traza de red
 confirmando que "HR Only" ahora sí dispara `GET .../termination` al abrir un empleado (antes del fix
 del prop, no lo hacía). Falta la revisión humana de Alejandro.
+
+## QA-74 — Custom Roles: asignación dinámica de roles en invitaciones/usuarios (Fase I, 2026-09-01, en `staging`)
+
+**Por qué existe esta tarea:** hasta esta fase, invitar a alguien o cambiarle el rol a un usuario
+existente (`Settings → Users`) solo ofrecía 3 opciones fijas (`member`/`admin`/`owner`) — un tenant
+que ya había creado un rol custom en `Settings → Roles & Permissions` no tenía forma de asignárselo
+a nadie desde acá. Esta tarea verifica que ahora sí puede.
+
+### A. Invitar a alguien con un rol custom
+
+Antes de empezar, crear un rol custom (ej. "Manager") en `Settings → Roles & Permissions`.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Abrir `Settings → Users → Invite`, mirar el selector "Role" | Lista los roles reales del tenant (nombres con mayúscula inicial: "Admin", "Member", "Manager", etc.) — nunca los 2 strings hardcodeados de antes |
+| 2 | Elegir "Manager" y enviar la invitación | Se crea con éxito |
+| 3 | La invitación aparece en "Pending invitations" | La columna Role muestra "Manager" — el nombre real, no "Member" ni ningún placeholder |
+| 4 | Intentar invitar eligiendo el rol Owner | La opción Owner ni siquiera debería aparecer en este selector — la única forma de que alguien sea Owner es la transferencia de ownership a un usuario ya existente |
+
+### B. Reasignar el rol de un usuario existente
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 5 | En la tabla de Users, cambiar el selector de rol de un usuario a "Manager" (el mismo rol custom) | Se guarda al instante, sin recargar |
+| 6 | Recargar la página | El usuario sigue mostrando "Manager" como su rol — quedó persistido de verdad |
+| 7 | El selector de rol de un usuario, para el Owner viendo la tabla | Incluye una opción aparte fija "Owner (transfer ownership)", separada de la lista dinámica de roles — elegirla dispara el flujo de confirmación de transferencia de ownership, no una asignación directa |
+
+### C. Verificación técnica
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 8 | `PATCH /api/tenants/users/:id` con un `roleId` que pertenece a OTRO tenant | Rechazado ("Role not found") |
+| 9 | El mismo endpoint con un `roleId` inexistente | Rechazado |
+| 10 | El mismo endpoint con el `roleId` del rol Owner del propio tenant, incluso actuando como el Owner mismo | Rechazado — "Use the ownership transfer action to grant Owner" |
+| 11 | `POST /api/tenants/invitations` con los mismos 3 casos anteriores usando `roleId` | Mismos 3 rechazos |
+| 12 | `npm test` (backend, 299/299, incluye 15 tests nuevos) y ambos builds | Los tres en verde |
+
+### Al encontrar una falla
+
+El caso 10 (y su equivalente en invitaciones, caso 11) es el de mayor severidad — si se pudiera
+asignar el rol Owner por este camino, un tenant podría terminar con dos Owners simultáneos,
+rompiendo la garantía de "exactamente un Owner por tenant" que sostiene toda la lógica de
+transferencia de ownership en el resto del sistema. El caso 8 (roleId de otro tenant) es alta
+también — sería una fuga de aislamiento entre tenants si un id de Role ajeno pudiera asignarse.
+El resto sigue el criterio ya establecido en tareas anteriores de este módulo.
+
+Verificado por Claude contra `staging` real antes de este push: `npm test` 299/299 (incluye 5
+tests nuevos en `tests/tenantUserService.test.ts`, 5 en `tests/invitationService.test.ts`, y 2 en
+`tests/roleManagementService.test.ts` para `listAssignableRoles`) y ambos builds verdes. Contra un
+tenant descartable en `staging` con un rol custom "Manager": el dropdown de invitar mostró los
+nombres reales de los roles; una invitación creada eligiendo "Manager" quedó en la base con
+`role: "member"` (placeholder) y `roleRef.name: "Manager"` (confirmado vía
+`GET /api/tenants/invitations` real); reasignar a un usuario existente al mismo rol vía
+`PATCH /api/tenants/users/:id` con `roleId` funcionó igual (confirmado vía
+`GET /api/tenants/users` real); los 3 casos de rechazo (otro tenant, inexistente, Owner) confirmados
+uno por uno con curl real. Falta la revisión humana de Alejandro.

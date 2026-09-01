@@ -38,6 +38,22 @@ const COLUMNS: { key: SortField; label: string }[] = [
   { key: 'status', label: 'Status' },
 ];
 
+// Custom Roles Fase I — a genuinely custom role assignment leaves the legacy `role` enum at a
+// 'member' placeholder (see tenantUserService.ts's roleId branch), so the real display name has
+// to come from `roleRef.name` when present, falling back to the enum only for the rare case of a
+// user/invitation with no roleId at all.
+function displayRoleName(u: { role: string; roleRef?: { name: string } | null }): string {
+  return u.roleRef?.name ?? u.role.charAt(0).toUpperCase() + u.role.slice(1);
+}
+
+// RoleChip only color-codes the 3 legacy tiers — a genuinely custom role rides the neutral
+// "member" color with its real name as the label.
+function roleChipProps(u: { role: string; roleRef?: { name: string } | null }): { role: 'owner' | 'admin' | 'member'; label?: string } {
+  if (u.role === 'owner' || u.role === 'admin') return { role: u.role };
+  const name = displayRoleName(u);
+  return { role: 'member', label: name === 'Member' ? undefined : name };
+}
+
 function getSortValue(u: any, field: SortField): string {
   switch (field) {
     case 'name':
@@ -47,7 +63,7 @@ function getSortValue(u: any, field: SortField): string {
     case 'phone':
       return u.phone.toLowerCase();
     case 'role':
-      return u.role.toLowerCase();
+      return displayRoleName(u).toLowerCase();
     case 'status':
       return u.status.toLowerCase();
   }
@@ -57,10 +73,16 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
   const toast = useToast();
   const [users, setUsers] = useState<any[]>([]);
   const [invitations, setInvitations] = useState<any[]>([]);
+  // Custom Roles Fase I — every assignable role in the tenant (seed + custom, Owner excluded),
+  // replacing the old hardcoded member/admin options.
+  const [assignableRoles, setAssignableRoles] = useState<{ id: string; name: string }[]>([]);
   const [pendingOwnerTransfer, setPendingOwnerTransfer] = useState<string | null>(null);
 
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [inviteForm, setInviteForm] = useState({ email: '', role: 'member' });
+  // `role` here holds a real roleId once assignableRoles has loaded (set once fetched, below) —
+  // starts empty rather than a hardcoded 'member' guess, since the tenant may not even have a
+  // role by that name anymore.
+  const [inviteForm, setInviteForm] = useState({ email: '', role: '' });
   const [inviting, setInviting] = useState(false);
 
   const [search, setSearch] = useState('');
@@ -101,6 +123,7 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
   useEffect(() => {
     loadUsers();
     loadInvitations();
+    loadAssignableRoles();
   }, []);
 
   const loadUsers = async () => {
@@ -121,26 +144,43 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
     }
   };
 
-  const applyRoleChange = async (userId: string, role: string) => {
+  const loadAssignableRoles = async () => {
     try {
-      await api.updateTenantUser(token, userId, { role });
-      loadUsers();
-      if (role === 'owner') {
+      const data = await api.listAssignableRoles(token);
+      setAssignableRoles(data);
+      // Default the invite form to whichever role the tenant calls "Member" (the least-privileged
+      // seed role) once it's known — same behavior as the old hardcoded default, just resolved
+      // dynamically instead of assumed.
+      setInviteForm((prev) => (prev.role ? prev : { ...prev, role: data.find((r) => r.name === 'Member')?.id ?? data[0]?.id ?? '' }));
+    } catch (error) {
+      toast.error((error as Error).message);
+    }
+  };
+
+  // `value` is either the sentinel "owner" (the ownership-transfer flow, still enum-based — see
+  // handleRoleChange) or a real roleId (Custom Roles Fase I) for any other role, seed or custom.
+  const applyRoleChange = async (userId: string, value: string) => {
+    try {
+      if (value === 'owner') {
+        await api.updateTenantUser(token, userId, { role: 'owner' });
         const { user: refreshedUser } = await api.getCurrentUser(token);
         onUserUpdated(refreshedUser);
+      } else {
+        await api.updateTenantUser(token, userId, { roleId: value });
       }
+      loadUsers();
       toast.success('Role updated.');
     } catch (error) {
       toast.error((error as Error).message);
     }
   };
 
-  const handleRoleChange = (userId: string, role: string) => {
-    if (role === 'owner') {
+  const handleRoleChange = (userId: string, value: string) => {
+    if (value === 'owner') {
       setPendingOwnerTransfer(userId);
       return;
     }
-    applyRoleChange(userId, role);
+    applyRoleChange(userId, value);
   };
 
   const handleStatusToggle = async (targetUser: any) => {
@@ -158,10 +198,10 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
     e.preventDefault();
     setInviting(true);
     try {
-      const { invitation } = await api.createTenantInvitation(token, inviteForm);
+      const { invitation } = await api.createTenantInvitation(token, { email: inviteForm.email, roleId: inviteForm.role });
       const link = `${window.location.origin}/accept-invite/${invitation.token}`;
       await navigator.clipboard.writeText(link);
-      setInviteForm({ email: '', role: 'member' });
+      setInviteForm((prev) => ({ email: '', role: prev.role }));
       setInviteOpen(false);
       toast.success('Invite sent and link copied to clipboard.');
       loadInvitations();
@@ -278,8 +318,11 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
               value={inviteForm.role}
               onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value })}
             >
-              <option value="member">member</option>
-              <option value="admin">admin</option>
+              {assignableRoles.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
             </select>
           </div>
         </form>
@@ -320,7 +363,7 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
             getKey={(u) => u.id}
             getInitials={(u) => getInitials(u.firstName, u.lastName)}
             getName={(u) => `${u.firstName} ${u.lastName}`}
-            getMeta={(u) => u.role.charAt(0).toUpperCase() + u.role.slice(1)}
+            getMeta={(u) => displayRoleName(u)}
             getStatusColor={(u) => (u.status === 'active' ? '#047857' : '#6b7280')}
           />
           <div className="full-table-wrap has-mobile-cards" ref={tableWrapRef}>
@@ -403,16 +446,19 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
                         <select
                           id={`role-${u.id}`}
                           className="select-compact"
-                          value={u.role}
+                          value={u.role === 'owner' ? 'owner' : (u.roleId ?? '')}
                           onChange={(e) => handleRoleChange(u.id, e.target.value)}
                         >
-                          <option value="member">member</option>
-                          <option value="admin">admin</option>
-                          {isOwner && <option value="owner">owner</option>}
+                          {assignableRoles.map((r) => (
+                            <option key={r.id} value={r.id}>
+                              {r.name}
+                            </option>
+                          ))}
+                          {isOwner && <option value="owner">Owner (transfer ownership)</option>}
                         </select>
                       </>
                     ) : (
-                      <RoleChip role={u.role} />
+                      <RoleChip {...roleChipProps(u)} />
                     ),
                     status: (
                       <StatusChip
@@ -499,7 +545,7 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
                 {invitations.map((inv) => (
                   <tr key={inv.id}>
                     <td>{inv.email}</td>
-                    <td>{inv.role}</td>
+                    <td>{displayRoleName(inv)}</td>
                     <td>{new Date(inv.expiresAt).toLocaleDateString()}</td>
                     <td>
                       <div className="icon-actions">

@@ -32,6 +32,7 @@ import { BuildingIcon, ChevronDownIcon, PlusIcon, SearchIcon, TrashIcon } from '
 import { applyFilters, applySort, buildCompanyFields, findField, groupableFields, parseFilters, parseSort } from '../lib/viewFields';
 import { isLikelyValidEmail } from '../lib/validation';
 import { useAutoCreateGuard } from '../hooks/useAutoCreateGuard';
+import { usePermissions } from '../contexts/PermissionsContext';
 
 const PAGE_SIZE = 20;
 const ACTIVE_VIEW_STORAGE_KEY = 'northstack:activeView:company';
@@ -98,8 +99,14 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
   const [viewFilters, setViewFilters] = useState<ViewFilter[]>([]);
   const [viewSort, setViewSort] = useState<ViewSort | null>(null);
 
-  const canManageCustomFields = user.role === 'owner' || user.role === 'admin';
-  const canEditCompanies = user.role === 'owner' || user.role === 'admin';
+  // Custom Roles Fase J — migrated off `user.role === 'owner'/'admin'`. Real backend gates:
+  // canManageCustomFields -> manage_custom_fields (status/size catalog menus, shared views);
+  // canEditCompanies -> manage_company (add/edit/delete records, kanban move); export/import CSV
+  // split further below since the backend gates them by 2 different permissions
+  // (view_company/manage_company), unlike Employee's single manage_payroll gate.
+  const permissions = usePermissions();
+  const canManageCustomFields = permissions.has('manage_custom_fields');
+  const canEditCompanies = permissions.has('manage_company');
   const columnStorageSuffix = activeViewId ?? 'default';
   const { getWidth: getColumnWidth, startResize } = useResizableColumns(
     `northstack:columnWidths:company:${columnStorageSuffix}`,
@@ -1013,7 +1020,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
           return (
             <CompanyDetailModal
               company={viewingCompany}
-              isOwner={user.role === 'owner'}
+              canManagePayments={permissions.has('manage_payments')}
               companies={companies}
               token={token}
               tenantUsers={tenantUsers}
@@ -1043,7 +1050,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
         activeViewId={activeViewId}
         onSelectView={setActiveViewId}
         canCreateShared={canManageCustomFields}
-        canDeleteShared={(view) => view.createdByUserId === user.id || user.role === 'owner'}
+        canDeleteShared={(view) => view.createdByUserId === user.id || permissions.isOwner}
         groupableFields={groupable}
         onCreateView={handleCreateView}
         onRenameView={handleRenameView}
@@ -1082,7 +1089,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
         {viewType !== 'kanban' && (
           <ColumnVisibilityMenu columns={toggleableColumns} isHidden={isColumnHidden} onToggle={toggleColumn} />
         )}
-        {canEditCompanies && (
+        {(permissions.has('view_company') || canEditCompanies) && (
           <CsvImportExportMenu
             token={token}
             onImported={loadCompanies}
@@ -1091,6 +1098,10 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
             exportCsv={api.exportCompaniesCsv}
             importCsv={api.importCompaniesCsv}
             csvTemplate={api.companiesCsvTemplate}
+            // Backend gates export by view_company and import/template by manage_company
+            // separately (routes/companies.ts) — not the same single permission.
+            canExport={permissions.has('view_company')}
+            canImport={canEditCompanies}
           />
         )}
         {showAddFallback && (

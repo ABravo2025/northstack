@@ -10,9 +10,9 @@ import PayslipPreviewModal from '../components/payroll/PayslipPreviewModal';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
 import { formatMoney } from '../lib/currencies';
 import { ChevronDownIcon, ChevronLeftIcon, EyeIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
+import { usePermissions } from '../contexts/PermissionsContext';
 
 interface PayrollRunDetailPageProps {
-  user: any;
   token: string;
 }
 
@@ -23,8 +23,11 @@ const ADJUSTMENT_TYPE_LABELS: Record<string, string> = {
   deduction: 'Deduction',
 };
 
-export default function PayrollRunDetailPage({ user, token }: PayrollRunDetailPageProps) {
-  const isOwner = user?.role === 'owner';
+export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProps) {
+  // Custom Roles Fase J — migrated off `user?.role === 'owner'` to the real backend gate,
+  // canManagePayroll, same as PayrollPage.tsx.
+  const permissions = usePermissions();
+  const canManagePayroll = permissions.has('manage_payroll');
   const toast = useToast();
   const navigate = useNavigate();
   const { runId } = useParams<{ runId: string }>();
@@ -50,7 +53,7 @@ export default function PayrollRunDetailPage({ user, token }: PayrollRunDetailPa
   }, [runId]);
 
   const load = async () => {
-    if (!runId || !isOwner) {
+    if (!runId || !canManagePayroll) {
       setLoading(false);
       return;
     }
@@ -179,7 +182,7 @@ export default function PayrollRunDetailPage({ user, token }: PayrollRunDetailPa
     }
   };
 
-  if (!isOwner) {
+  if (!canManagePayroll) {
     return (
       <div className="container">
         <p className="text-sm text-ink-muted">Payroll is only visible to the tenant owner.</p>

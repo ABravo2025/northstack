@@ -16,6 +16,7 @@ import Avatar, { getInitials } from '../components/common/Avatar';
 import RoleChip from '../components/common/RoleChip';
 import StatusChip from '../components/common/StatusChip';
 import EntityCardList from '../components/common/EntityCardList';
+import { usePermissions } from '../contexts/PermissionsContext';
 
 const PAGE_SIZE = 20;
 // Frozen columns stay pinned to the left through horizontal scroll and can't
@@ -92,7 +93,10 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
   const [draggedColKey, setDraggedColKey] = useState<string | null>(null);
   const [dragOverColKey, setDragOverColKey] = useState<string | null>(null);
 
-  const isOwner = user.role === 'owner';
+  // Custom Roles Fase J — migrated off `user.role === 'owner'` to PermissionsContext's isOwner
+  // (same underlying fact — literally the fixed Owner — read from the resolved RoleContext
+  // instead of the legacy enum, which never diverges from it anyway).
+  const isOwner = usePermissions().isOwner;
   const { getWidth: getColumnWidth, startResize } = useResizableColumns('northstack:columnWidths:companyUser');
   const { isHidden: isColumnHidden, toggle: toggleColumn } = useColumnVisibility('northstack:hiddenColumns:companyUser');
   const movableColumnKeys = COLUMNS.map((col) => col.key).filter((key) => !FROZEN_COLUMN_KEYS.includes(key));

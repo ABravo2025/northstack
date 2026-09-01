@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import DateRangeFilter, { DEFAULT_PRESET, rangeForPreset } from '../components/metrics/DateRangeFilter';
 import type { DateRange, PresetKey } from '../lib/dateRangePresets';
+import { usePermissions } from '../contexts/PermissionsContext';
 
 interface DashboardsLayoutProps {
-  user: any;
   token: string;
 }
 
@@ -16,7 +16,9 @@ export interface DashboardsOutletContext {
 const CATEGORIES = [
   { to: '/dashboards/hr', label: 'HR' },
   { to: '/dashboards/time-off', label: 'Time Off' },
-  { to: '/dashboards/payroll', label: 'Payroll', ownerOnly: true },
+  // Custom Roles Fase J — `permission` names the real backend gate for this dashboard's data
+  // (checked below via usePermissions()), replacing the old `ownerOnly` boolean.
+  { to: '/dashboards/payroll', label: 'Payroll', permission: 'manage_payroll' },
   { to: '/dashboards/sales', label: 'Sales' },
   { to: '/dashboards/tasks', label: 'Tasks' },
   { to: '/dashboards/adoption', label: 'Adoption' },
@@ -29,9 +31,9 @@ const CATEGORIES = [
 // is "one row above the content, scopes everything below it" — switching
 // tabs must not reset your selected range, so it's lifted to the layout and
 // handed down via Outlet context instead of each page owning its own copy.
-export default function DashboardsLayout({ user, token }: DashboardsLayoutProps) {
-  const isOwner = user?.role === 'owner';
-  const categories = CATEGORIES.filter((c) => !c.ownerOnly || isOwner);
+export default function DashboardsLayout({ token }: DashboardsLayoutProps) {
+  const permissions = usePermissions();
+  const categories = CATEGORIES.filter((c) => !c.permission || permissions.has(c.permission));
 
   const [presetKey, setPresetKey] = useState<PresetKey>(DEFAULT_PRESET);
   const [range, setRange] = useState<DateRange>(() => rangeForPreset(DEFAULT_PRESET));

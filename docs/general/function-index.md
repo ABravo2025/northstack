@@ -564,6 +564,16 @@ Solo datos (`COUNTRIES`, `CHANGELOG_ENTRIES`), sin funciones — no indexado má
 ### `frontend/src/lib/trial.ts` (2026-08-21, Billing Integration)
 - **daysRemainingUntil(target)** — días que faltan hasta una fecha tipo `Tenant.trialEndsAt`/`Subscription.trialEndsAt` (`Math.ceil`, nunca negativo — mismo redondeo que el `daysRemaining` de `checkoutService.ts` del lado del backend). Antes vivía duplicado inline en `AppLayout.tsx` (para el banner de `past_due`) — extraído para que `PlansModal`/`AddPaymentMethodModal` lo usen también y el copy de trial nunca prometa más días de los que el backend realmente va a dar.
 
+### `frontend/src/lib/settingsSections.tsx` (backlog QA 2026-08-27, ampliado Custom Roles Fase J)
+- **getSettingsSections(permissions)** — única fuente de qué aparece en Settings, consumida por
+  `SettingsHomePage.tsx` (tile grid) y `SettingsSidebar.tsx` (nav lateral). Toma un
+  `{isOwner, has}` (el shape de `usePermissions()`, no importa el context directamente para
+  seguir siendo una función plana). Desde Fase J cada ítem se gatea por su propio permiso real
+  (`manage_billing`/`manage_tenant_settings`/`manage_users`/`manage_custom_fields`/
+  `view_activity_log`/`isOwner` para Roles & Permissions) en vez de un único `isAdmin` cubriendo 5
+  páginas con 5 permisos distintos — el encabezado "Company" solo aparece si algún ítem sobrevivió
+  el filtro.
+
 ### `frontend/src/contexts/PermissionsContext.tsx` (Custom Roles Fase G, 2026-09)
 - **PermissionsProvider** — envuelve el árbol de rutas en `App.tsx`, poblado desde
   `permissions` (la respuesta de `GET /api/auth/me`, ver `serializeRoleContext` arriba). Deniega
@@ -660,7 +670,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 - **AddCustomFieldColumn** — columna "+" al final del header para agregar un custom field.
 - **ColumnResizeHandle** — handle de resize dentro de un `<th>`.
 - **ColumnVisibilityMenu** — menú de mostrar/ocultar columnas (usa el hook `useColumnVisibility`).
-- **CsvImportExportMenu** (`forwardRef`, expone `CsvImportExportMenuHandle`) — patrón genérico de import/export CSV con template descargable. Genérico desde 2026-08-31 (`entityLabelPlural`/`entityLabelSingular` + `exportCsv`/`importCsv`/`csvTemplate` como props) — usado por Employees/Companies/Contacts, no reinventar por módulo.
+- **CsvImportExportMenu** (`forwardRef`, expone `CsvImportExportMenuHandle`) — patrón genérico de import/export CSV con template descargable. Genérico desde 2026-08-31 (`entityLabelPlural`/`entityLabelSingular` + `exportCsv`/`importCsv`/`csvTemplate` como props) — usado por Employees/Companies/Contacts, no reinventar por módulo. Custom Roles Fase J: `canExport`/`canImport` opcionales (default `true`) — Company/Contact gatean exportar e importar por 2 permisos reales distintos (`view_*`/`manage_*`), a diferencia de Employee que usa `manage_payroll` parejo para ambos; el caller decide cuál pasar, el componente solo oculta el botón que corresponda.
 - **CustomFieldColumnMenu** — dropdown de header de columna de custom field (Edit/Delete field).
 - **FieldCatalogMenu** — dropdown de header para columnas de catálogo (Department, Job Title).
 - **FilterBar** — barra de filtros sobre una lista de `ViewField`.

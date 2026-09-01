@@ -49,6 +49,7 @@ import {
 } from '../lib/viewFields';
 import { isLikelyValidEmail } from '../lib/validation';
 import { useAutoCreateGuard } from '../hooks/useAutoCreateGuard';
+import { usePermissions } from '../contexts/PermissionsContext';
 
 const PAGE_SIZE = 20;
 const ACTIVE_VIEW_STORAGE_KEY = 'northstack:activeView:contact';
@@ -121,8 +122,12 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
   const [viewFilters, setViewFilters] = useState<ViewFilter[]>([]);
   const [viewSort, setViewSort] = useState<ViewSort | null>(null);
 
-  const canManageCustomFields = user.role === 'owner' || user.role === 'admin';
-  const canEditContacts = user.role === 'owner' || user.role === 'admin';
+  // Custom Roles Fase J — migrated off `user.role === 'owner'/'admin'`. Real backend gates:
+  // canManageCustomFields -> manage_custom_fields; canEditContacts -> manage_contact; export/
+  // import CSV split further below (view_contact vs manage_contact, 2 different permissions).
+  const permissions = usePermissions();
+  const canManageCustomFields = permissions.has('manage_custom_fields');
+  const canEditContacts = permissions.has('manage_contact');
   const columnStorageSuffix = activeViewId ?? 'default';
   const { getWidth: getColumnWidth, startResize } = useResizableColumns(
     `northstack:columnWidths:contact:${columnStorageSuffix}`,
@@ -1061,7 +1066,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
         activeViewId={activeViewId}
         onSelectView={setActiveViewId}
         canCreateShared={canManageCustomFields}
-        canDeleteShared={(view) => view.createdByUserId === user.id || user.role === 'owner'}
+        canDeleteShared={(view) => view.createdByUserId === user.id || permissions.isOwner}
         groupableFields={groupable}
         onCreateView={handleCreateView}
         onRenameView={handleRenameView}
@@ -1100,7 +1105,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
         {viewType !== 'kanban' && (
           <ColumnVisibilityMenu columns={toggleableColumns} isHidden={isColumnHidden} onToggle={toggleColumn} />
         )}
-        {canEditContacts && (
+        {(permissions.has('view_contact') || canEditContacts) && (
           <CsvImportExportMenu
             token={token}
             onImported={loadContacts}
@@ -1109,6 +1114,10 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
             exportCsv={api.exportContactsCsv}
             importCsv={api.importContactsCsv}
             csvTemplate={api.contactsCsvTemplate}
+            // Backend gates export by view_contact and import/template by manage_contact
+            // separately (routes/contacts.ts) — not the same single permission.
+            canExport={permissions.has('view_contact')}
+            canImport={canEditContacts}
           />
         )}
         {showAddFallback && (

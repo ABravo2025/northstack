@@ -17,6 +17,7 @@ import MultiSelectDropdown, { type MultiSelectOption } from '../components/commo
 import Popover from '../components/common/Popover';
 import RequiredMark from '../components/common/RequiredMark';
 import { DotsVerticalIcon, EyeIcon, EyeOffIcon, GripIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
+import { usePermissions } from '../contexts/PermissionsContext';
 
 // Fixed width shared by the stage editor's grip-handle column and its header
 // spacer, so "Stage name"/"Outcome"/"Win %" line up with the row below —
@@ -360,6 +361,7 @@ interface PipelineAutomationEditorProps {
 // table underneath the modal on every click.
 function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: PipelineAutomationEditorProps) {
   const toast = useToast();
+  const permissions = usePermissions();
   const [participants, setParticipants] = useState<PipelineAssignmentUser[]>([]);
   const [participantsLoading, setParticipantsLoading] = useState(true);
   const [tenantUsers, setTenantUsers] = useState<TenantUser[]>([]);
@@ -379,9 +381,13 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
   useEffect(() => {
     let cancelled = false;
     setParticipantsLoading(true);
+    // Custom Roles Fase J finding: GET /api/tenants/users is gated by manage_users, independent
+    // of manage_custom_fields (this page's own gate) — before Custom Roles, every role reaching
+    // this page also had manage_users implicitly. Guarded here so a role without it just gets an
+    // empty round-robin candidate list instead of this whole editor failing to load.
     Promise.all([
       api.listPipelineAssignmentUsers(token, pipeline.id),
-      api.listTenantUsers(token),
+      permissions.has('manage_users') ? api.listTenantUsers(token) : Promise.resolve([]),
       api.listFieldCatalogDefinitions(token, 'department'),
     ])
       .then(([assignmentUsers, users, depts]) => {
@@ -628,6 +634,7 @@ function PipelineAutomationCreateFields({
   onStalledThresholdDraftChange,
 }: PipelineAutomationCreateFieldsProps) {
   const toast = useToast();
+  const permissions = usePermissions();
   const [tenantUsers, setTenantUsers] = useState<TenantUser[]>([]);
   const [departments, setDepartments] = useState<FieldCatalogDefinition[]>([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
@@ -658,7 +665,11 @@ function PipelineAutomationCreateFields({
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([api.listTenantUsers(token), api.listFieldCatalogDefinitions(token, 'department')])
+    // Custom Roles Fase J finding — same as PipelineAutomationEditor above.
+    Promise.all([
+      permissions.has('manage_users') ? api.listTenantUsers(token) : Promise.resolve([]),
+      api.listFieldCatalogDefinitions(token, 'department'),
+    ])
       .then(([users, depts]) => {
         if (cancelled) return;
         setTenantUsers(users);

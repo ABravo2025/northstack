@@ -245,7 +245,7 @@ export default function App() {
         <Route path="/overview" element={<OverviewPage token={token ?? ''} user={user} />} />
         <Route path="/help" element={<HelpPage />} />
         <Route path="/hr/dashboard" element={<Navigate to="/dashboards/hr" replace />} />
-        <Route path="/dashboards" element={<DashboardsLayout user={user} token={token ?? ''} />}>
+        <Route path="/dashboards" element={<DashboardsLayout token={token ?? ''} />}>
           <Route index element={<Navigate to="/dashboards/hr" replace />} />
           <Route path="hr" element={<DashboardsHrPage />} />
           <Route path="time-off" element={<DashboardsTimeOffPage />} />
@@ -257,23 +257,23 @@ export default function App() {
         <Route path="/hr/people" element={<EmployeesPage user={user} token={token ?? ''} />} />
         <Route path="/hr/employees" element={<Navigate to="/hr/people" replace />} />
         <Route path="/hr/time-off" element={<TimeOffOverviewPage user={user} token={token ?? ''} />} />
-        <Route path="/hr/payroll" element={<PayrollPage user={user} token={token ?? ''} />} />
-        <Route path="/hr/payroll/runs/:runId" element={<PayrollRunDetailPage user={user} token={token ?? ''} />} />
+        <Route path="/hr/payroll" element={<PayrollPage token={token ?? ''} />} />
+        <Route path="/hr/payroll/runs/:runId" element={<PayrollRunDetailPage token={token ?? ''} />} />
         <Route path="/companies" element={<CompaniesPage user={user} token={token ?? ''} />} />
         <Route path="/contacts" element={<ContactsPage user={user} token={token ?? ''} />} />
         <Route path="/opportunities" element={<OpportunitiesPage user={user} token={token ?? ''} />} />
-        <Route path="/payments" element={<PaymentsOverviewPage user={user} token={token ?? ''} />} />
+        <Route path="/payments" element={<PaymentsOverviewPage token={token ?? ''} />} />
         <Route path="/profile" element={<Navigate to="/settings/profile" replace />} />
         <Route path="/company" element={<Navigate to="/settings/appearance" replace />} />
         <Route path="/settings" element={<WorkspaceSettingsLayout />}>
-          <Route index element={<SettingsHomePage user={user} />} />
+          <Route index element={<SettingsHomePage />} />
           <Route
             path="profile"
             element={<ProfileSettingsPage user={user} token={token ?? ''} onUserUpdated={setUser} />}
           />
           <Route
             path="integrations"
-            element={<IntegrationsSettingsPage token={token ?? ''} user={user} tenant={tenant} />}
+            element={<IntegrationsSettingsPage token={token ?? ''} tenant={tenant} />}
           />
           <Route path="appearance" element={<CompanyAppearancePage token={token ?? ''} />} />
           <Route
@@ -282,8 +282,8 @@ export default function App() {
           />
           <Route path="public-forms" element={<PublicFormsSettingsPage token={token ?? ''} />} />
           <Route path="pipelines" element={<PipelinesSettingsPage token={token ?? ''} />} />
-          <Route path="activity" element={<ActivityLogSettingsPage token={token ?? ''} user={user} />} />
-          <Route path="roles" element={<RolesPermissionsPage token={token ?? ''} user={user} />} />
+          <Route path="activity" element={<ActivityLogSettingsPage token={token ?? ''} />} />
+          <Route path="roles" element={<RolesPermissionsPage token={token ?? ''} />} />
           <Route path="billing" element={<BillingPage token={token ?? ''} tenant={tenant} onTenantUpdated={setTenant} />} />
         </Route>
       </Route>

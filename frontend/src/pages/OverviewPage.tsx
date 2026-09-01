@@ -8,6 +8,7 @@ import MyTasksWidget from '../components/tasks/MyTasksWidget';
 import TaskFormPopover, { type TaskFormPayload } from '../components/tasks/TaskFormPopover';
 import NewTaskFromCalendarPopover from '../components/tasks/NewTaskFromCalendarPopover';
 import OverviewMetricsStrip from '../components/metrics/OverviewMetricsStrip';
+import { usePermissions } from '../contexts/PermissionsContext';
 
 interface OverviewPageProps {
   token: string;
@@ -64,6 +65,12 @@ function buildMonthGrid(year: number, month: number): (number | null)[][] {
 }
 
 export default function OverviewPage({ token, user }: OverviewPageProps) {
+  // Custom Roles Fase J — migrated off `user.role === 'owner'/'admin'`. No single backend
+  // permission maps cleanly to "should see the getting-started checklist" (its 3 items touch
+  // manage_employee/invite_users/manage_custom_fields individually) — manage_users is used as the
+  // closest single stand-in for "this looks like an administrator of the workspace," matching
+  // today's exact owner/admin split (both seed roles have it, Member doesn't).
+  const permissions = usePermissions();
   const toast = useToast();
   const [requests, setRequests] = useState<any[]>([]);
   const [calendarTasks, setCalendarTasks] = useState<Task[]>([]);
@@ -113,11 +120,17 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cursor]);
 
+  // Custom Roles Fase J finding: GET /api/hr/employees/birthdays is gated by view_employee (not
+  // new — predates Custom Roles), but every legacy role always had it, so this Promise.all's
+  // all-or-nothing failure mode was never actually reachable before a tenant could create a role
+  // without HR access at all. Skipping the call outright (rather than letting it 403 into the
+  // catch below) avoids a guaranteed-failing request and keeps Time Off/Tasks loading normally for
+  // a role with no employee visibility, instead of a scary "failed to load" toast on every visit.
   const fetchCalendarData = () =>
     Promise.all([
       api.listTimeOffRequests(token, 'calendar'),
       api.listTasksForCalendar(token),
-      api.listEmployeeBirthdays(token),
+      permissions.has('view_employee') ? api.listEmployeeBirthdays(token) : Promise.resolve([]),
     ]);
 
   const loadCalendar = async () => {
@@ -257,7 +270,7 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
 
   return (
     <div className="container">
-      {(user.role === 'owner' || user.role === 'admin') && <OnboardingChecklist token={token} />}
+      {permissions.has('manage_users') && <OnboardingChecklist token={token} />}
       <OverviewMetricsStrip token={token} />
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
         <div className="min-w-0 flex-1">

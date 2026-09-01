@@ -6,10 +6,10 @@ import Avatar from '../components/common/Avatar';
 import { PencilIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
 import DateRangeFilter, { DEFAULT_PRESET, rangeForPreset } from '../components/metrics/DateRangeFilter';
 import type { DateRange, PresetKey } from '../lib/dateRangePresets';
+import { usePermissions } from '../contexts/PermissionsContext';
 
 interface ActivityLogSettingsPageProps {
   token: string;
-  user: { role: string };
 }
 
 const ENTITY_TYPE_OPTIONS: { value: ActivityEntityType; label: string }[] = [
@@ -131,8 +131,11 @@ function FeedRow({ entry }: { entry: ActivityLogEntry }) {
 // roles, see settingsSections.tsx). Distinct from EntityActivityList (the per-record modal tab) —
 // this one isn't scoped to a single Employee/Company/Contact/Opportunity, so every row carries its
 // own entity-type badge.
-export default function ActivityLogSettingsPage({ token, user }: ActivityLogSettingsPageProps) {
-  const isAdmin = user.role === 'owner' || user.role === 'admin';
+export default function ActivityLogSettingsPage({ token }: ActivityLogSettingsPageProps) {
+  // Custom Roles Fase J — migrated off `user.role === 'owner'/'admin'` to the real backend gate,
+  // canViewActivityLog (permissionService.ts).
+  const permissions = usePermissions();
+  const isAdmin = permissions.has('view_activity_log');
   const toast = useToast();
   const [entries, setEntries] = useState<ActivityLogEntry[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);

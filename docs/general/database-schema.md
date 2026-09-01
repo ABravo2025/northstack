@@ -1469,6 +1469,71 @@ rechazado con un mensaje claro pidiendo usar la transferencia de ownership. `npm
 `createInvitation` con sus rechazos — cross-tenant, rol inexistente, rol Owner), ambos builds
 verdes. Nada de esto llegó a `main` todavía.
 
+**Fase J (enforcement de campos en la UI — migración completa de los chequeos inline): completa.**
+El barrido final: los ~14 archivos restantes con `user.role === 'owner'/'admin'` inline
+(`Sidebar.tsx`, `AppLayout.tsx`, `CompaniesPage.tsx`, `ContactsPage.tsx`, `OpportunitiesPage.tsx`,
+`PayrollPage.tsx`, `PayrollRunDetailPage.tsx`, `TimeOffOverviewPage.tsx`,
+`PaymentsOverviewPage.tsx`, `ActivityLogSettingsPage.tsx`, `IntegrationsSettingsPage.tsx`,
+`OverviewPage.tsx`, `DashboardsLayout.tsx`, `settingsSections.tsx`, más `RolesPermissionsPage.tsx`/
+`CompanyUsersPage.tsx` por consistencia aunque su `isOwner` ya era correcto) migrados a
+`usePermissions()`. Cada chequeo se migró a su permiso real, no a una aproximación:
+`manage_payroll` (Sidebar/PayrollPage/PayrollRunDetailPage/DashboardsLayout),
+`manage_payments` (Sidebar/PaymentsOverviewPage/IntegrationsSettingsPage's Stripe card/
+CompanyDetailModal's Payments section — 2 props renombrados de `isOwner` a `canManagePayments` en
+el camino, mismo criterio que la Fase G), `manage_billing` (los 3 chequeos de billing en
+AppLayout.tsx + el ítem "Billing" de Settings), `manage_opportunity` (OpportunitiesPage),
+`view_activity_log` (ActivityLogSettingsPage + el ítem de Settings), `manage_custom_fields`
+(Public Forms/Pipelines en Settings, y el gate de Time Off — ver nota abajo), `manage_users`
+(Users en Settings + el disparador de `OnboardingChecklist`), `manage_tenant_settings`
+(Appearance en Settings). `settingsSections.tsx` (compartido por el tile grid y el nav lateral)
+pasó de un único `isAdmin` cubriendo 5 páginas con 5 permisos reales distintos a gatear cada ítem
+individualmente por el suyo — el encabezado "Company" ahora solo aparece si al menos un ítem
+sobrevive el filtro, en vez de asumir que "admin" implica las 5 cosas a la vez.
+
+**2 bugs reales encontrados y corregidos al migrar (no un simple find-and-replace)**:
+1. **CsvImportExportMenu (Company/Contact)**: el backend gatea exportar por `view_company`/
+   `view_contact` e importar+plantilla por `manage_company`/`manage_contact` — 2 permisos
+   distintos en el mismo menú (a diferencia de Employee, donde ambos van por `manage_payroll`
+   parejo). El componente ganó `canExport`/`canImport` opcionales (default `true`, no rompe el
+   uso de Employee) para reflejar esa separación real en vez de ocultar todo el menú por un solo
+   flag aproximado.
+2. **`Promise.all` todo-o-nada expuesto por primera vez por roles custom**: `OpportunitiesPage.tsx`
+   y las 2 automatizaciones de `PipelinesSettingsPage.tsx` incluían `GET /api/tenants/users`
+   (gateado por `manage_users`) dentro de un `Promise.all` junto con datos que SÍ debían cargar
+   sin ese permiso (pipelines, opportunities, companies, contacts, catálogos) — antes de Custom
+   Roles, todo rol que llegaba a esas páginas tenía `manage_users` implícito (owner/admin lo
+   traían empaquetado), así que este modo de falla nunca era alcanzable. Un rol real como
+   "Sales Manager" (`view_company`+`view_contact`+`manage_opportunity`, sin `manage_users`) lo
+   hace alcanzable por primera vez: sin el fix, la página entera fallaba con un toast "Failed to
+   load: Insufficient permissions" en vez de cargar todo lo demás con el selector de "owner" del
+   deal simplemente vacío. Corregido condicionando esa única llamada a `permissions.has('manage_users')`,
+   con `Promise.resolve([])` como alternativa — mismo patrón, no una nueva llamada al backend.
+   Encontrado el mismo patrón (y corregido igual) en `OverviewPage.tsx`: `GET
+   /api/hr/employees/birthdays` (gateado por `view_employee`, preexistente a Custom Roles) dentro
+   del `Promise.all` del calendario — cualquier rol sin `view_employee` (posible por primera vez)
+   veía "Failed to load the team calendar" en cada visita a Overview en vez de un calendario de
+   Time Off/Tasks funcionando con la sección de cumpleaños simplemente vacía.
+
+**Deuda conocida, no corregida en esta fase (fuera de alcance deliberado)**: el mismo patrón
+`GET /api/tenants/users` dentro de un `Promise.all` existe en al menos 3 lugares más
+(`CompaniesPage.tsx`, `ContactsPage.tsx`, `EmployeesPage.tsx` ya lo aíslan con su propio
+`.catch()` independiente, así que están a salvo — pero una revisión más sistemática de "qué
+páginas listan usuarios del tenant sin necesitar `manage_users` para el resto de sus datos" queda
+pendiente). La solución de fondo — un endpoint tipo "directorio" para Users, análogo al de
+Employee (Fase E), no gateado por `manage_users`, para poblar selectores de "asignar a" sin
+exigir el permiso completo de gestión de usuarios — es una pieza de tamaño propio, no algo para
+resolver de paso dentro de esta fase.
+
+Verificado con un tenant descartable en `staging` con 9 roles de un solo permiso cada uno
+(`OnlyBilling`, `OnlyPayroll`, `OnlyPayments`, `OnlyCustomFields`, `SalesManager`, `OnlyUsers`,
+`OnlyActivityLog`, `OnlyTenantSettings`, `Bare`) más el Owner — 20+ verificaciones puntuales vía
+Playwright real confirmaron que cada rol ve exactamente lo suyo y nada más (ej. `OnlyBilling` ve
+"Billing" pero ni siquiera el encabezado "Company", `OnlyPayroll` ve el link de Payroll pero no
+Payments y viceversa). El hallazgo de `OpportunitiesPage.tsx` se descubrió y confirmó en vivo con
+`SalesManager` (el toast de error desapareció después del fix, con el resto de la página cargando
+normalmente); el de `OverviewPage.tsx` se confirmó de la misma forma. `npm test` 299/299 (sin
+cambios, esta fase es 100% frontend), ambos builds verdes. Nada de esto llegó a `main` todavía.
+
 ```mermaid
 erDiagram
     TENANT ||--o{ ROLE : "has"

@@ -9,6 +9,7 @@ import EmptyState from '../components/common/EmptyState';
 import TableSkeleton from '../components/common/TableSkeleton';
 import RequiredMark from '../components/common/RequiredMark';
 import { CalendarIcon, ChevronDownIcon, DotsVerticalIcon, PlusIcon } from '../components/common/Icons';
+import { usePermissions } from '../contexts/PermissionsContext';
 
 const ACCRUAL_LABELS: Record<string, string> = {
   fixed_annual: 'Fixed',
@@ -67,7 +68,14 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
   const [expandedBalancePolicyIds, setExpandedBalancePolicyIds] = useState<Set<string>>(new Set());
   const [expandedMyBalancePolicyIds, setExpandedMyBalancePolicyIds] = useState<Set<string>>(new Set());
 
-  const canManagePolicies = user.role === 'owner' || user.role === 'admin';
+  // Custom Roles Fase J — migrated off `user.role === 'owner'/'admin'`. Backend note: the
+  // time-off-policy assignment routes (POST/DELETE .../time-off-policies) are still gated by
+  // manage_custom_fields on the server, a pre-existing mismatch from before Custom Roles that
+  // Fases D/E deliberately left alone (see database-schema.md's Fase E section) rather than
+  // reassigning it to a more sensible-sounding permission — doing that here without also fixing
+  // the backend would just be a different, newly-introduced mismatch. Mirrors the real gate.
+  const permissions = usePermissions();
+  const canManagePolicies = permissions.has('manage_custom_fields');
   const myEmployee = employees.find((emp) => emp.userId === user.id);
   const myAssignedPolicies = (myEmployee?.timeOffPolicies || []).map((a: any) => a.timeOffPolicy);
   const activeTimeOffPolicies = timeOffPolicies.filter((p) => p.isActive);

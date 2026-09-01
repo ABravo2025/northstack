@@ -1,9 +1,9 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { getSettingsSections } from '../../lib/settingsSections';
 import { ChevronLeftIcon, XIcon } from '../common/Icons';
+import { usePermissions } from '../../contexts/PermissionsContext';
 
 interface SettingsSidebarProps {
-  user: any;
   mobileOpen: boolean;
   onMobileClose: () => void;
 }
@@ -12,9 +12,10 @@ interface SettingsSidebarProps {
 // AppLayout.tsx) — the left panel becomes a list of the Settings sections
 // instead of the app's global nav, so moving between them doesn't require
 // going back to the tile grid each time (backlog QA, 2026-08-27).
-export default function SettingsSidebar({ user, mobileOpen, onMobileClose }: SettingsSidebarProps) {
+export default function SettingsSidebar({ mobileOpen, onMobileClose }: SettingsSidebarProps) {
   const navigate = useNavigate();
-  const sections = getSettingsSections(user);
+  const permissions = usePermissions();
+  const sections = getSettingsSections(permissions);
 
   const linkClass = ({ isActive }: { isActive: boolean }) => `sidebar-link${isActive ? ' active' : ''}`;
 

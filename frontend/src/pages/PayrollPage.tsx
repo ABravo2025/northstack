@@ -18,6 +18,7 @@ import Modal from '../components/common/Modal';
 import RequiredMark from '../components/common/RequiredMark';
 import EmptyState from '../components/common/EmptyState';
 import Field from '../components/common/Field';
+import { usePermissions } from '../contexts/PermissionsContext';
 import TableSkeleton from '../components/common/TableSkeleton';
 import StatusChip from '../components/common/StatusChip';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
@@ -26,7 +27,6 @@ import { CalendarIcon, EyeIcon, PencilIcon, PlusIcon, TeamIcon } from '../compon
 import PayslipPreviewModal from '../components/payroll/PayslipPreviewModal';
 
 interface PayrollPageProps {
-  user: any;
   token: string;
 }
 
@@ -195,7 +195,7 @@ function buildAnchorConfig(form: FrequencyFormState): Record<string, unknown> {
   return { preset: form.monthlyPreset };
 }
 
-export default function PayrollPage({ user, token }: PayrollPageProps) {
+export default function PayrollPage({ token }: PayrollPageProps) {
   const toast = useToast();
   const navigate = useNavigate();
   const timelineTableRef = useRef<HTMLDivElement>(null);
@@ -214,7 +214,10 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
   const [loading, setLoading] = useState(true);
   const [frequencyFilter, setFrequencyFilter] = useState<'active' | 'inactive'>('active');
 
-  const isOwner = user.role === 'owner';
+  // Custom Roles Fase J — migrated off `user.role === 'owner'` to the real backend gate,
+  // canManagePayroll (Payroll is owner-only by default, but a real toggleable permission).
+  const permissions = usePermissions();
+  const canManagePayroll = permissions.has('manage_payroll');
 
   const [frequencyModalOpen, setFrequencyModalOpen] = useState(false);
   const [editingFrequencyId, setEditingFrequencyId] = useState<string | null>(null);
@@ -253,7 +256,7 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
   }, []);
 
   const load = async () => {
-    if (!isOwner) {
+    if (!canManagePayroll) {
       // Payroll is owner-only at the nav level too (Unidad 21) — a
       // non-owner who guesses the URL shouldn't spend a round trip hitting
       // endpoints that will 403 anyway.
@@ -530,7 +533,7 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
     ...offCyclePayments.map((entry): TimelineItem => ({ kind: 'off-cycle', date: entry.paymentDate, entry })),
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  if (!isOwner) {
+  if (!canManagePayroll) {
     return (
       <div className="container">
         <div className="page-toolbar">
@@ -574,7 +577,7 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
                 <p className="text-sm text-ink-muted">
                   Every payroll run and one-off payment in one place, newest first.
                 </p>
-                {isOwner && (
+                {canManagePayroll && (
                   <div className="flex items-center gap-2">
                     <button type="button" className="btn-secondary gap-1.5" onClick={openOffPaymentModal}>
                       <PlusIcon className="h-3.5 w-3.5" />
@@ -674,7 +677,7 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
                   Retrofit people with no pay policy yet, or migrate a group to a new one. New people get their
                   first contract from their own alta, not here.
                 </p>
-                {isOwner && assignmentSubTab !== 'terminated' && (
+                {canManagePayroll && assignmentSubTab !== 'terminated' && (
                   <button
                     type="button"
                     className="btn-outline gap-1.5"
@@ -775,7 +778,7 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
                       <table className="table full-table">
                         <thead>
                           <tr>
-                            {isOwner && (
+                            {canManagePayroll && (
                               <th style={{ width: 32 }}>
                                 <input
                                   type="checkbox"
@@ -793,7 +796,7 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
                         <tbody>
                           {visibleAssignments.map((entry) => (
                             <tr key={entry.employeeId}>
-                              {isOwner && (
+                              {canManagePayroll && (
                                 <td>
                                   <input
                                     type="checkbox"
@@ -843,7 +846,7 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
                     Assigning a policy and an amount to each person happens from their profile, not here.
                   </p>
                 </div>
-                {isOwner && (
+                {canManagePayroll && (
                   <button type="button" className="btn-outline gap-1.5" onClick={openAddFrequency}>
                     <PlusIcon className="h-3.5 w-3.5" />
                     New policy
@@ -892,7 +895,7 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
                             <th>Pay day(s)</th>
                             <th>Due date</th>
                             <th>Assigned</th>
-                            {isOwner && <th>Actions</th>}
+                            {canManagePayroll && <th>Actions</th>}
                           </tr>
                         </thead>
                         <tbody>
@@ -905,7 +908,7 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
                               <td>{describeAnchorConfig(freq)}</td>
                               <td>{describeDueDate(freq)}</td>
                               <td>{freq.assignedCount ?? 0}</td>
-                              {isOwner && (
+                              {canManagePayroll && (
                                 <td>
                                   <button
                                     type="button"
@@ -930,7 +933,7 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
 
               <div className="flex items-start justify-between gap-4 mt-6 mb-3">
                 <h3 className="card-title">Payment methods</h3>
-                {isOwner && (
+                {canManagePayroll && (
                   <button type="button" className="btn-outline gap-1.5" onClick={openAddMethod}>
                     <PlusIcon className="h-3.5 w-3.5" />
                     Add method
@@ -945,7 +948,7 @@ export default function PayrollPage({ user, token }: PayrollPageProps) {
                     style={{ padding: '0.5rem 0.75rem' }}
                   >
                     <span className={!method.isActive ? 'line-through text-ink-muted' : ''}>{method.name}</span>
-                    {isOwner && (
+                    {canManagePayroll && (
                       <button type="button" className="btn-secondary btn-sm" onClick={() => handleToggleMethodActive(method)}>
                         {method.isActive ? 'Deactivate' : 'Activate'}
                       </button>

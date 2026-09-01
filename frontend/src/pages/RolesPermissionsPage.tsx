@@ -5,6 +5,7 @@ import TableSkeleton from '../components/common/TableSkeleton';
 import Modal from '../components/common/Modal';
 import RoleColumnMenu from '../components/settings/RoleColumnMenu';
 import { ChevronRightIcon, LockIcon, PlusIcon } from '../components/common/Icons';
+import { usePermissions } from '../contexts/PermissionsContext';
 
 const ENTITY_LABELS: Record<string, string> = {
   employee: 'Employee fields',
@@ -15,7 +16,6 @@ const ENTITY_LABELS: Record<string, string> = {
 
 interface RolesPermissionsPageProps {
   token: string;
-  user: { role: string };
 }
 
 interface PermissionRow {
@@ -146,8 +146,10 @@ function labelFor(key: string): string {
 // what other roles can do, or creating/renaming/deleting a role outright, is an ownership-level
 // decision, same bar as transferring ownership itself (see settingsSections.tsx for the nav entry,
 // also owner-only).
-export default function RolesPermissionsPage({ token, user }: RolesPermissionsPageProps) {
-  const isOwner = user.role === 'owner';
+export default function RolesPermissionsPage({ token }: RolesPermissionsPageProps) {
+  // Custom Roles Fase J — migrated off `user.role === 'owner'` to PermissionsContext's isOwner
+  // (same underlying fact, read from the resolved RoleContext instead of the legacy enum).
+  const isOwner = usePermissions().isOwner;
   const toast = useToast();
   const [roles, setRoles] = useState<Role[]>([]);
   const [fieldCatalog, setFieldCatalog] = useState<Record<string, RestrictableField[]>>({});

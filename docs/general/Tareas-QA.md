@@ -3387,3 +3387,70 @@ nombres reales de los roles; una invitación creada eligiendo "Manager" quedó e
 `PATCH /api/tenants/users/:id` con `roleId` funcionó igual (confirmado vía
 `GET /api/tenants/users` real); los 3 casos de rechazo (otro tenant, inexistente, Owner) confirmados
 uno por uno con curl real. Falta la revisión humana de Alejandro.
+
+## QA-75 — Custom Roles: migración completa de chequeos de rol inline en el frontend (Fase J, 2026-09-01, en `staging`)
+
+**Por qué existe esta tarea:** hasta esta fase, ~16 archivos del frontend seguían comparando
+`user.role === 'owner'/'admin'` (el enum legacy de 3 valores) para decidir qué mostrar, sin
+importar los permisos reales de un rol custom. Esta tarea verifica que cada uno de esos archivos
+ahora lee el permiso real correcto — y dos bugs reales que la migración destapó (una página entera
+que fallaba al cargar para una combinación de permisos que antes de Custom Roles no podía existir).
+
+### A. Un rol por permiso — verificar que cada uno ve exactamente lo suyo
+
+Crear (o pedirle a Claude) un tenant con un rol por cada fila de esta tabla, cada uno con
+ÚNICAMENTE el permiso indicado:
+
+| Rol de prueba | Permiso único | Qué debería ver | Qué NO debería ver |
+|---|---|---|---|
+| OnlyBilling | `manage_billing` | "Billing" en Settings → My account | El link "Payroll" en el nav principal; el encabezado "Company" en Settings (no tiene ningún permiso de ese grupo) |
+| OnlyPayroll | `manage_payroll` | El link "Payroll" en el nav principal; la página Payroll carga | El link "Payments" |
+| OnlyPayments | `manage_payments` | El link "Payments" en el nav principal | El link "Payroll" |
+| OnlyCustomFields | `manage_custom_fields` | "Public Forms" y "Pipelines" en Settings | "Users", "Billing" |
+| OnlyUsers | `manage_users` | "Users" en Settings; el checklist de onboarding en Overview | "Activity Log" |
+| OnlyActivityLog | `view_activity_log` | "Activity Log" en Settings | "Users" |
+| OnlyTenantSettings | `manage_tenant_settings` | "Appearance" en Settings | "Public Forms" |
+| Bare | `view_employee` (solo) | Nada especial — "Profile"/"Integrations" siempre visibles | Ningún link de Payroll/Payments; ningún encabezado "Company" en Settings; el checklist de onboarding |
+| (Owner real) | todo | TODO lo de arriba a la vez, incluido "Roles & Permissions" | — |
+
+### B. Los 2 bugs reales que la migración destapó (verificar que siguen corregidos)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Crear un rol "Sales Manager" con `view_company`+`view_contact`+`manage_opportunity` (SIN `manage_users`), loguearse y abrir Opportunities | La página carga normalmente (pipelines, deals, companies, contacts) — el selector de "owner" del deal puede estar vacío, pero NO debe aparecer un toast "Failed to load: Insufficient permissions" |
+| 2 | El mismo tipo de rol pero sin `view_employee`, ir a Overview | El calendario de Time Off/Tasks carga normalmente — la sección de cumpleaños puede estar vacía, pero NO debe aparecer un toast "Failed to load the team calendar" |
+| 3 | Un rol con `manage_custom_fields` (sin `manage_users`) editando la automatización de un Pipeline (Settings → Pipelines → una automatización de round-robin) | El editor de automatización carga sin toast de error — la lista de usuarios para el round-robin puede estar vacía |
+
+### C. Verificación técnica
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 4 | `npm run build` (frontend + backend) | Ambos en verde |
+| 5 | `npm test` (backend) | 299/299 — esta fase es 100% frontend, no debería cambiar el conteo |
+
+### Al encontrar una falla
+
+Los casos de la sección B son los más importantes: antes de esta fase, ese tipo de combinación de
+permisos (acceso real a un módulo, pero sin `manage_users`) simplemente no podía existir — todo rol
+legacy (owner/admin) traía `manage_users` empaquetado. Si estos casos vuelven a fallar, es la señal
+de que un `Promise.all` en algún componente está tratando una llamada opcional (poblar un selector
+de "asignar a") como si fuera obligatoria para cargar la página entera — el mismo patrón, revisar
+si se reintrodujo en `OpportunitiesPage.tsx`, `OverviewPage.tsx` o `PipelinesSettingsPage.tsx`. El
+resto de los casos (sección A) son de severidad media — un permiso mostrando de más filtra
+funcionalidad que no debería, uno mostrando de menos rompe la usabilidad de un rol legítimo.
+
+**Nota**: queda un patrón similar sin resolver del todo, documentado como deuda conocida (ver
+`docs/general/database-schema.md`, sección 14, Fase J) — `GET /api/tenants/users` sigue gateado
+por `manage_users` en general; solo se corrigieron los 3 lugares donde estaba embebido en un
+`Promise.all` que podía arrastrar otros datos a la falla. Una solución de fondo (un endpoint tipo
+"directorio" de Users, sin ese gate, análogo al de Employee de la Fase E) queda pendiente como una
+pieza de trabajo propia, no reportar como falla de esta tarea puntual.
+
+Verificado por Claude contra `staging` real antes de este push: `npm test` 299/299 (sin cambios,
+fase 100% frontend) y ambos builds verdes. Contra un tenant descartable en `staging` con 9 roles de
+un solo permiso más el Owner: 20+ verificaciones puntuales vía Playwright real confirmando que cada
+rol ve exactamente lo suyo (capturas de pantalla comparando OnlyBilling vs. OnlyPayroll vs.
+OnlyPayments, entre otros). Los 2 bugs de la sección B se descubrieron en vivo durante esta misma
+verificación (no se sabían de antemano) y se confirmó que el fix los resuelve: el toast de error
+desapareció en ambos casos después de la corrección, con el resto de cada página cargando con
+normalidad. Falta la revisión humana de Alejandro.

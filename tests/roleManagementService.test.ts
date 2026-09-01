@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 let roles: any[] = [];
 let permissionRows: any[] = [];
+let users: any[] = [];
+let invitations: any[] = [];
 
 vi.mock('../src/lib/prisma.js', () => ({
   default: {
@@ -16,6 +18,27 @@ vi.mock('../src/lib/prisma.js', () => ({
           .filter((r) => r.tenantId === where.tenantId)
           .map((r) => ({ ...r, modulePermissions: permissionRows.filter((p) => p.roleId === r.id) })),
       ),
+      findFirst: vi.fn(async ({ where }: any) =>
+        roles.find(
+          (r) =>
+            r.tenantId === where.tenantId &&
+            r.name.toLowerCase() === where.name.equals.toLowerCase() &&
+            (!where.id || r.id !== where.id.not),
+        ) ?? null,
+      ),
+      create: vi.fn(async ({ data }: any) => {
+        const role = { id: `role-${roles.length + 1}`, ...data };
+        roles.push(role);
+        return role;
+      }),
+      update: vi.fn(async ({ where, data }: any) => {
+        const role = roles.find((r) => r.id === where.id);
+        Object.assign(role, data);
+        return role;
+      }),
+      delete: vi.fn(async ({ where }: any) => {
+        roles = roles.filter((r) => r.id !== where.id);
+      }),
     },
     roleModulePermission: {
       upsert: vi.fn(async ({ where, create }: any) => {
@@ -24,14 +47,27 @@ vi.mock('../src/lib/prisma.js', () => ({
       }),
       deleteMany: vi.fn(async ({ where }: any) => {
         const before = permissionRows.length;
-        permissionRows = permissionRows.filter((p) => !(p.roleId === where.roleId && where.permission.in.includes(p.permission)));
+        permissionRows = permissionRows.filter((p) => {
+          if (p.roleId !== where.roleId) return true;
+          if (where.permission?.in) return !where.permission.in.includes(p.permission);
+          return false; // deleteMany({ where: { roleId } }) with no permission filter clears all
+        });
         return { count: before - permissionRows.length };
       }),
+      createMany: vi.fn(async ({ data }: any) => {
+        permissionRows.push(...data);
+      }),
+    },
+    user: {
+      count: vi.fn(async ({ where }: any) => users.filter((u) => u.roleId === where.roleId).length),
+    },
+    invitation: {
+      count: vi.fn(async ({ where }: any) => invitations.filter((i) => i.roleId === where.roleId && i.status === where.status).length),
     },
   },
 }));
 
-import { listRolesForTenant, setRolePermission } from '../src/modules/auth/roleManagementService.js';
+import { createRole, deleteRole, listRolesForTenant, renameRole, setRolePermission } from '../src/modules/auth/roleManagementService.js';
 
 describe('roleManagementService', () => {
   beforeEach(() => {
@@ -40,6 +76,8 @@ describe('roleManagementService', () => {
       { id: 'role-admin', tenantId: 't1', name: 'Admin', isOwner: false, isEditable: true },
     ];
     permissionRows = [{ roleId: 'role-admin', tenantId: 't1', permission: 'view_company' }];
+    users = [];
+    invitations = [];
   });
 
   it('lists roles with their permissions', async () => {
@@ -83,5 +121,65 @@ describe('roleManagementService', () => {
     expect(result.success).toBe(true);
     expect(result.permissions).not.toContain('view_company');
     expect(result.permissions).not.toContain('manage_opportunity');
+  });
+
+  it('creates a new role that persists with a blank permission set', async () => {
+    const result = await createRole('t1', 'Sales Manager');
+    expect(result.success).toBe(true);
+    expect(result.role?.name).toBe('Sales Manager');
+    expect(result.role?.permissions).toEqual([]);
+    expect(roles.some((r) => r.name === 'Sales Manager')).toBe(true);
+  });
+
+  it('duplicates permissions from an existing role when creating', async () => {
+    const result = await createRole('t1', 'Junior Admin', 'role-admin');
+    expect(result.success).toBe(true);
+    expect(result.role?.permissions).toEqual(['view_company']);
+  });
+
+  it('duplicating from Owner grants every toggleable permission (Owner itself has no rows)', async () => {
+    const result = await createRole('t1', 'Co-Owner-ish', 'role-owner');
+    expect(result.success).toBe(true);
+    expect(result.role!.permissions.length).toBeGreaterThan(1);
+    expect(result.role!.permissions).toContain('manage_payroll');
+  });
+
+  it('rejects creating a role named "owner" (case-insensitive)', async () => {
+    const result = await createRole('t1', 'OWNER');
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects creating a role with a name that already exists', async () => {
+    const result = await createRole('t1', 'admin');
+    expect(result.success).toBe(false);
+  });
+
+  it('renames an editable role', async () => {
+    const result = await renameRole('t1', 'role-admin', 'Ops');
+    expect(result.success).toBe(true);
+    expect(roles.find((r) => r.id === 'role-admin')?.name).toBe('Ops');
+  });
+
+  it('refuses to rename the Owner role', async () => {
+    const result = await renameRole('t1', 'role-owner', 'Not Owner');
+    expect(result.success).toBe(false);
+  });
+
+  it('deletes an editable role with nobody assigned to it', async () => {
+    const result = await deleteRole('t1', 'role-admin');
+    expect(result.success).toBe(true);
+    expect(roles.some((r) => r.id === 'role-admin')).toBe(false);
+  });
+
+  it('refuses to delete a role that still has users assigned', async () => {
+    users.push({ id: 'u1', roleId: 'role-admin' });
+    const result = await deleteRole('t1', 'role-admin');
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/1 user/);
+  });
+
+  it('refuses to delete the Owner role', async () => {
+    const result = await deleteRole('t1', 'role-owner');
+    expect(result.success).toBe(false);
   });
 });

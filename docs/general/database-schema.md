@@ -1,6 +1,7 @@
 # Database Schema
 
-- Última actualización: 2026-09-01 (Custom Roles — Fase B2: primera UI real, `Settings → Roles & Permissions` — owner reconfigura los permisos de Admin/Member con toggles, endpoints `GET/PATCH /api/roles*` — ver grupo 14; en `staging`, sin pushear a `main`)
+- Última actualización: 2026-09-01 (Custom Roles — Fase B2 extendida: crear/renombrar/borrar roles custom reales desde la UI, no solo reconfigurar Admin/Member — `POST/PATCH/DELETE /api/roles*` — ver grupo 14; en `staging`, sin pushear a `main`)
+- Actualización anterior: 2026-09-01 (Custom Roles — Fase B2: primera UI real, `Settings → Roles & Permissions` — owner reconfigura los permisos de Admin/Member con toggles, endpoints `GET/PATCH /api/roles*` — ver grupo 14; en `staging`, sin pushear a `main`)
 - Actualización anterior: 2026-09-01 (Custom Roles — Fase B completa: `permissionService.ts` migrado a `RoleContext`, entity-split de Employee/Company/Contact/Opportunity, 3 permisos nuevos reemplazan los últimos chequeos inline, gap de invitación con rol owner cerrado, CSV atado a Payroll — ver grupo 14; en `staging`, sin pushear a `main`)
 - Actualización anterior: 2026-09-01 (Custom Roles — Fase A completa: schema aditivo + seed/backfill + `RoleContext` sin consumidores todavía, ver grupo 14; en `staging`, sin pushear a `main`)
 - Actualización anterior: 2026-08-31 (Activity Log — Unidades 1-6 completas, spec cerrado; incluye el fix same-day de `parentEntityType`/`parentEntityId` (2026-08-30) y la Unidad 6 completa con Subscription/GoogleCalendarConnection/StripeConnection (2026-08-31, mecanismo de correlación `Subscription.lastActionByUserId`/`lastActionAt`), ver grupo 13; en `staging`, sin pushear a `main`)
@@ -1182,8 +1183,22 @@ todavía) y aplica `PERMISSION_PREREQUISITES`/`DEPENDENT_PERMISSIONS` (conceder 
 exige `view_company`+`view_contact` ya concedidos; revocar cualquiera de los dos cascada a revocar
 `manage_opportunity` también, para que nunca quede un permiso "dormido" que resucite solo al
 volver a conceder el prerrequisito). Verificado con Playwright real contra `staging` (toggle real,
-persistencia tras reload, bloqueo de la cascada, claro y oscuro). Nada de esto llegó a `main`
-todavía.
+persistencia tras reload, bloqueo de la cascada, claro y oscuro).
+
+**Extensión same-day**: Alejandro pidió explícitamente no perder de vista que un tenant tiene que
+poder crear un rol custom de verdad, con nombre propio, persistido — no solo reconfigurar Admin/
+Member. Agregado a la misma página: `POST /api/roles` (`name`, `duplicateFromRoleId?` — copia los
+permisos de un rol existente como punto de partida; duplicar desde Owner copia explícitamente todo
+`TOGGLEABLE_PERMISSION_KEYS`, porque Owner en sí no tiene filas de permiso), `PATCH /api/roles/:id`
+(rename) y `DELETE /api/roles/:id` — los 3 rechazan tocar el rol Owner o un nombre "owner"
+(case-insensitive), y `deleteRole` bloquea por completo (no reasigna en silencio) si todavía hay
+algún User/Invitation pendiente apuntando a ese rol. La matriz de la UI pasó de 4 columnas fijas
+(label+Owner+Admin+Member) a `N` columnas dinámicas (`grid-template-columns` calculado en JS según
+`editableRoles.length`) — cada rol nuevo aparece como una columna más, con su propio menú de
+Rename/Delete (`RoleColumnMenu.tsx`, mismo patrón Popover que `CustomFieldColumnMenu`). Verificado
+con Playwright real: crear un rol duplicando Admin, confirmar que copió los permisos, renombrarlo,
+intentar crear uno llamado "Owner" (rechazado), borrarlo, confirmar que la columna desaparece.
+Nada de esto llegó a `main` todavía.
 
 ```mermaid
 erDiagram

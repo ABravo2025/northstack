@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { api, type Role } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import TableSkeleton from '../components/common/TableSkeleton';
-import { LockIcon } from '../components/common/Icons';
+import Modal from '../components/common/Modal';
+import RoleColumnMenu from '../components/settings/RoleColumnMenu';
+import { LockIcon, PlusIcon } from '../components/common/Icons';
 
 interface RolesPermissionsPageProps {
   token: string;
@@ -107,6 +109,8 @@ const GROUPS: PermissionGroup[] = [
 // round-tripping to find out.
 const DEPENDENCIES: Record<string, string[]> = { manage_opportunity: ['view_company', 'view_contact'] };
 
+const COLUMN_WIDTH = 88;
+
 function labelFor(key: string): string {
   for (const group of GROUPS) {
     const row = group.rows.find((r) => r.key === key);
@@ -116,14 +120,20 @@ function labelFor(key: string): string {
 }
 
 // Owner-only page (gated here and, for real, server-side by every /api/roles* route) — changing
-// what Admin/Member can do is an ownership-level decision, same bar as transferring ownership
-// itself (see settingsSections.tsx for the nav entry, also owner-only).
+// what other roles can do, or creating/renaming/deleting a role outright, is an ownership-level
+// decision, same bar as transferring ownership itself (see settingsSections.tsx for the nav entry,
+// also owner-only).
 export default function RolesPermissionsPage({ token, user }: RolesPermissionsPageProps) {
   const isOwner = user.role === 'owner';
   const toast = useToast();
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState<string | null>(null);
+
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newRoleName, setNewRoleName] = useState('');
+  const [duplicateFrom, setDuplicateFrom] = useState('');
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     if (!isOwner) {
@@ -153,11 +163,10 @@ export default function RolesPermissionsPage({ token, user }: RolesPermissionsPa
     return <TableSkeleton rows={8} columns={4} />;
   }
 
-  // Seeded order is always Owner, Admin, Member (roleManagementService.ts's listRolesForTenant
-  // sorts isOwner first, then by creation order) — safe to assume exactly these 2 editable
-  // columns until Fase H lets a tenant add roles beyond the 3 seed ones, at which point this
-  // needs a dynamic column list instead of the hardcoded "Admin"/"Member" headers below.
+  // Owner is always first (listRolesForTenant sorts isOwner first) — everything after it is a
+  // real column in the matrix, however many a tenant has created.
   const editableRoles = roles.filter((role) => !role.isOwner);
+  const gridTemplateColumns = `1fr repeat(${1 + editableRoles.length}, ${COLUMN_WIDTH}px)`;
 
   function hasPermission(role: Role, key: string): boolean {
     return role.permissions.includes(key);
@@ -182,29 +191,86 @@ export default function RolesPermissionsPage({ token, user }: RolesPermissionsPa
     }
   }
 
+  async function handleCreateRole(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newRoleName.trim()) return;
+    setCreating(true);
+    try {
+      const role = await api.createRole(token, newRoleName.trim(), duplicateFrom || undefined);
+      setRoles((prev) => [...prev, role]);
+      toast.success(`Created role "${role.name}"`);
+      setShowCreateModal(false);
+      setNewRoleName('');
+      setDuplicateFrom('');
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function handleRenameRole(roleId: string, name: string) {
+    try {
+      await api.renameRole(token, roleId, name);
+      setRoles((prev) => prev.map((r) => (r.id === roleId ? { ...r, name } : r)));
+      toast.success(`Renamed to "${name}"`);
+    } catch (error) {
+      toast.error((error as Error).message);
+    }
+  }
+
+  async function handleDeleteRole(roleId: string) {
+    const role = roles.find((r) => r.id === roleId);
+    try {
+      await api.deleteRole(token, roleId);
+      setRoles((prev) => prev.filter((r) => r.id !== roleId));
+      toast.success(`Deleted role "${role?.name ?? ''}"`);
+    } catch (error) {
+      toast.error((error as Error).message);
+    }
+  }
+
   return (
     <div>
-      <div className="page-toolbar no-border">
+      <div className="page-toolbar">
         <h2>Roles &amp; Permissions</h2>
+        <button type="button" className="btn-primary" onClick={() => setShowCreateModal(true)}>
+          <PlusIcon className="h-4 w-4" />
+          New role
+        </button>
       </div>
       <p className="mb-6 max-w-2xl text-sm text-ink-muted dark:text-dark-ink-muted">
-        Control what Admin and Member can see and do. Owner always has full access and can&apos;t be limited — this keeps
-        someone able to fix things, transfer ownership, or manage billing no matter how the other roles are set up.
+        Control what each role can see and do. Owner always has full access and can&apos;t be limited — this keeps someone
+        able to fix things, transfer ownership, or manage billing no matter how the other roles are set up. Create as many
+        roles as your workspace needs — they&apos;re saved for good, not just a preview.
       </p>
 
       {GROUPS.map((group) => (
         <section key={group.title} className="card mb-4 overflow-hidden p-0">
-          <div className="grid grid-cols-[1fr_74px_74px_74px] items-center gap-3 border-b border-line bg-surface-0 px-5 py-3 dark:border-dark-line dark:bg-dark-raised">
+          <div
+            className="grid items-center gap-3 border-b border-line bg-surface-0 px-5 py-3 dark:border-dark-line dark:bg-dark-raised"
+            style={{ gridTemplateColumns }}
+          >
             <span className="text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">{group.title}</span>
             <span className="text-center text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">Owner</span>
-            <span className="text-center text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">Admin</span>
-            <span className="text-center text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">Member</span>
+            {editableRoles.map((role) => (
+              <div key={role.id} className="flex items-center justify-center gap-0.5 overflow-hidden">
+                <span
+                  className="truncate text-center text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint"
+                  title={role.name}
+                >
+                  {role.name}
+                </span>
+                <RoleColumnMenu role={role} onRename={handleRenameRole} onDelete={handleDeleteRole} />
+              </div>
+            ))}
           </div>
           {group.rows.map((row) => (
             <div
               key={row.key}
               data-permission-row={row.key}
-              className="grid grid-cols-[1fr_74px_74px_74px] items-center gap-3 border-b border-line-soft px-5 py-3.5 last:border-b-0 dark:border-dark-line-soft"
+              className="grid items-center gap-3 border-b border-line-soft px-5 py-3.5 last:border-b-0 dark:border-dark-line-soft"
+              style={{ gridTemplateColumns }}
             >
               <div>
                 <div className="text-sm font-medium text-ink dark:text-dark-ink">{row.label}</div>
@@ -238,6 +304,37 @@ export default function RolesPermissionsPage({ token, user }: RolesPermissionsPa
       <p className="mt-2 max-w-2xl text-xs text-ink-faint dark:text-dark-ink-faint">
         Changes save immediately and take effect the next time someone with that role loads the app.
       </p>
+
+      <Modal open={showCreateModal} title="New role" onClose={() => setShowCreateModal(false)}>
+        <form onSubmit={handleCreateRole}>
+          <div className="nv-field">
+            <label htmlFor="new-role-name">Role name</label>
+            <input
+              id="new-role-name"
+              type="text"
+              value={newRoleName}
+              onChange={(e) => setNewRoleName(e.target.value)}
+              placeholder="e.g. Sales Manager"
+              autoFocus
+              required
+            />
+          </div>
+          <div className="nv-field">
+            <label htmlFor="new-role-duplicate-from">Start from</label>
+            <select id="new-role-duplicate-from" value={duplicateFrom} onChange={(e) => setDuplicateFrom(e.target.value)}>
+              <option value="">Blank (nothing granted yet)</option>
+              {roles.map((role) => (
+                <option key={role.id} value={role.id}>
+                  Same as {role.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button type="submit" className="btn-primary w-full text-center" disabled={creating || !newRoleName.trim()}>
+            {creating ? 'Creating…' : 'Create role'}
+          </button>
+        </form>
+      </Modal>
     </div>
   );
 }

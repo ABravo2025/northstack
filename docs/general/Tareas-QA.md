@@ -2976,3 +2976,56 @@ por especificidad CSS) — en vez de forzar mi diseño, usé el checkbox estánd
 toda la plataforma (más consistente, menos código); y varias clases de texto sin su variante
 `dark:` correspondiente, que dejaban las etiquetas de los permisos casi ilegibles en dark mode.
 Falta la revisión humana de Alejandro.
+
+## QA-68 — Custom Roles: crear/renombrar/borrar roles reales (extensión same-day de la Fase B2, 2026-09-01, en `staging`)
+
+**Por qué existe esta tarea:** Alejandro marcó explícitamente que la UI de permisos no puede
+quedarse en "solo reconfigurar Admin/Member" — un tenant tiene que poder crear un rol propio, con
+su nombre, y que quede guardado de verdad. Esta tarea agrega esa pieza a la misma página de la
+Fase B2.
+
+### A. Crear un rol
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Click en "New role", completar un nombre, dejar "Start from" en "Blank" | Se crea un rol nuevo con 0 permisos — aparece como columna nueva en la matriz al instante |
+| 2 | Crear un rol eligiendo "Same as Admin" en "Start from" | El rol nuevo nace con exactamente los mismos permisos que Admin tiene en ese momento (no una referencia viva — cambiar Admin después no afecta al rol ya creado) |
+| 3 | Intentar crear un rol llamado "Owner" (mayúsculas o minúsculas) | Rechazado — mensaje claro de que el nombre está reservado |
+| 4 | Intentar crear un rol con un nombre que ya existe en el tenant | Rechazado — mensaje claro de nombre duplicado |
+| 5 | Recargar la página después de crear un rol | El rol nuevo sigue ahí — quedó guardado de verdad, no es solo estado del navegador |
+
+### B. Renombrar
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 6 | Menú "⋮" en el header de cualquier rol editable (Admin, Member, o uno custom) → "Rename role" | Input inline, guarda con Enter o el botón Save, el header se actualiza al instante |
+| 7 | Intentar renombrar a "Owner" | Rechazado |
+| 8 | Intentar renombrar a un nombre ya usado por otro rol del mismo tenant | Rechazado |
+
+### C. Borrar
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 9 | Menú "⋮" → "Delete role" en un rol sin nadie asignado | Confirmación (`ConfirmDialog`, no un `confirm()` nativo) → al confirmar, la columna desaparece de la matriz |
+| 10 | Intentar borrar un rol que todavía tiene al menos un usuario asignado | Rechazado — mensaje indicando cuántos usuarios (y/o invitaciones pendientes) hay que reasignar primero, la columna sigue ahí |
+| 11 | Intentar borrar o renombrar el rol Owner | La opción ni siquiera debería ofrecerse en su columna (Owner no tiene menú "⋮") |
+
+### D. Verificación técnica
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 12 | `npm run build`/`npm test` (backend, 234/234) y `npm run build` (frontend) | Los tres en verde |
+| 13 | Playwright real contra `staging`: crear un rol duplicando Admin → confirmar permisos copiados → renombrarlo → intentar "Owner" (rechazado) → borrarlo → confirmar que la columna desaparece | Todo pasa sin intervención manual |
+
+### Al encontrar una falla
+
+El caso B.10 es el más importante — si se puede borrar un rol con gente todavía asignada, esos
+usuarios quedarían con un `roleId` apuntando a un rol que ya no existe, severidad **alta** (rompe
+la resolución de permisos para esas personas en su próximo login). El caso A.3 (nombre "Owner"
+rechazado) también es alta si falla — permitiría un rol con nombre confuso que se lea como si fuera
+el verdadero owner. El resto sigue el criterio ya establecido.
+
+Verificado por Claude contra `staging` real antes de este push: `npm test`/`npm run build` en
+verde, y Playwright real de punta a punta (crear duplicando Admin, confirmar que copió los
+permisos, renombrar, intentar "Owner" y ver el rechazo, borrar, confirmar que la columna
+desaparece de la matriz). Falta la revisión humana de Alejandro.

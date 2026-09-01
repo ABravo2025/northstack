@@ -1,6 +1,6 @@
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
-import { listRolesForTenant, setRolePermission } from '../modules/auth/roleManagementService.js';
+import { createRole, deleteRole, listRolesForTenant, renameRole, setRolePermission } from '../modules/auth/roleManagementService.js';
 
 export const rolesRouter = createAsyncRouter();
 
@@ -41,4 +41,67 @@ rolesRouter.patch('/api/roles/:roleId/permissions', async (req, res) => {
   }
 
   return res.json({ permissions: result.permissions });
+});
+
+// Lets a tenant create a genuinely new role (not just reconfigure Admin/Member) — persists for
+// good, same as any other Role row.
+rolesRouter.post('/api/roles', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!user.roleContext.isOwner) {
+    return res.status(403).json({ error: 'Only the owner can create roles' });
+  }
+
+  const { name, duplicateFromRoleId } = req.body ?? {};
+  if (typeof name !== 'string') {
+    return res.status(400).json({ error: 'name is required' });
+  }
+
+  const result = await createRole(user.tenantId!, name, typeof duplicateFromRoleId === 'string' ? duplicateFromRoleId : undefined);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  return res.status(201).json(result.role);
+});
+
+rolesRouter.patch('/api/roles/:roleId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!user.roleContext.isOwner) {
+    return res.status(403).json({ error: 'Only the owner can rename roles' });
+  }
+
+  const { name } = req.body ?? {};
+  if (typeof name !== 'string') {
+    return res.status(400).json({ error: 'name is required' });
+  }
+
+  const result = await renameRole(user.tenantId!, req.params.roleId, name);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  return res.json({ success: true });
+});
+
+rolesRouter.delete('/api/roles/:roleId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!user.roleContext.isOwner) {
+    return res.status(403).json({ error: 'Only the owner can delete roles' });
+  }
+
+  const result = await deleteRole(user.tenantId!, req.params.roleId);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  return res.json({ success: true });
 });

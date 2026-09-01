@@ -176,14 +176,25 @@ componente por-rol de aprobar/rechazar Time Off — `timeOffRequestService.ts` s
   `PERMISSION_PREREQUISITES`, no mantenida a mano por separado.
 
 ### `src/modules/auth/roleManagementService.ts` (Custom Roles Fase B2, 2026-09)
-- **listRolesForTenant(tenantId)** — los 3 roles del tenant con sus permisos, para la UI de
-  Settings → Roles & Permissions.
+- **listRolesForTenant(tenantId)** — todos los roles del tenant (semilla + custom) con sus
+  permisos, para la UI de Settings → Roles & Permissions.
 - **setRolePermission(tenantId, roleId, permission, granted)** — valida contra
   `TOGGLEABLE_PERMISSION_KEYS`, rechaza tocar el rol Owner, aplica `PERMISSION_PREREQUISITES`/
   `DEPENDENT_PERMISSIONS` (bloquea conceder sin los prerrequisitos, cascadea al revocar). Gateado
   owner-only en la ruta (`src/routes/roles.ts`), no por un permiso nombrado — reconfigurar lo que
-  puede hacer Admin/Member es en sí una decisión de ownership, un rol nunca debería poder ampliar su
+  puede hacer un rol es en sí una decisión de ownership, un rol nunca debería poder ampliar su
   propia autoridad a través de un permiso que edita permisos.
+- **createRole(tenantId, name, duplicateFromRoleId?)** — crea un rol custom real, persistido (no
+  una vista previa). Rechaza el nombre "owner" (case-insensitive) y nombres duplicados dentro del
+  tenant. `duplicateFromRoleId` opcional copia los permisos de un rol existente como punto de
+  partida — si la fuente es Owner (que no tiene filas de permiso propias, bypasea todo vía
+  `isOwner`), copia explícitamente todo `TOGGLEABLE_PERMISSION_KEYS` en vez de producir un rol
+  vacío con nombre engañoso.
+- **renameRole(tenantId, roleId, name)** / **deleteRole(tenantId, roleId)** — ambos rechazan tocar
+  el rol Owner o uno con `isEditable: false`. `deleteRole` bloquea la operación por completo (no
+  reasigna en silencio) si todavía hay algún `User`/`Invitation` pendiente apuntando a ese rol —
+  a quién reasignar es una decisión de producto que no debería tomarse implícitamente dentro de un
+  delete.
 
 ### `src/modules/activity/activityLogService.ts` (Activity Log, `docs/general/spec-activity-log.md`, 2026-08-30)
 Mecanismo genérico reusado por cada módulo que registra actividad — un solo punto de escritura en vez de que cada service arme su propio formato de diff/summary.
@@ -515,7 +526,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 | `payments.ts` (Payments v1, Units 2-3, 2026-08-26) | searchStripeCustomersForCompany, linkCompanyToStripe (lanza `ApiError` con `.status === 409` si la Company ya está vinculada a otro customer — reintentar con `confirmOverwrite: true`), getCompanyPaymentSummary, getCompanyPaymentEvents(token, companyId, cursor?), getPaymentsOverview |
 | `billing.ts` (Billing Integration, Etapa E) | getSubscription, startCheckout, changeSubscriptionPlan (post-billing, distinto de `updateTenantPlan` de arriba que es la elección pre-billing durante trial), cancelSubscription, resumeSubscription, getInvoiceDocumentUrl(token, invoiceId, disposition?) (2026-08-19, Paddle-only, URL temporal ~1h, se pide fresca en cada click — `BillingPage.tsx` la usa dos veces por fila de Invoice: "View invoice" con `inline`, "Download" con `attachment`) |
 | `activity.ts` (2026-08-30, Activity Log) | listActivityForEntity(token, entityType, entityId) (tab del modal), listActivityFeed(token, params) (feed tenant-wide de Settings, cursor-paginado — `params.entityType` sigue el `TaskEntityType` de 4 valores, no el enum completo de 27 del backend, hasta que una unidad futura amplíe qué se puede filtrar) |
-| `roles.ts` (2026-09, Custom Roles Fase B2) | listRoles(token) (los 3 roles del tenant + sus permisos), setRolePermission(token, roleId, permission, granted) — owner-only server-side, usado por `RolesPermissionsPage.tsx` |
+| `roles.ts` (2026-09, Custom Roles Fase B2) | listRoles(token) (todos los roles del tenant + sus permisos), setRolePermission(token, roleId, permission, granted), createRole(token, name, duplicateFromRoleId?), renameRole(token, roleId, name), deleteRole(token, roleId) — todo owner-only server-side, usado por `RolesPermissionsPage.tsx` |
 
 ### `frontend/src/components/common/` — componentes reusables genéricos, no ligados a una entidad
 - **AddPaymentMethodModal** (2026-08-19, Billing Integration) — dispara `POST /api/subscriptions/me/checkout`; ambos proveedores abren en pestaña nueva vía `window.open` (Mercado Pago: `initPoint` directo; Paddle: `PaddleCheckoutPage`, ver abajo, en `/billing/checkout?transactionId=...`). Nunca arma un form de tarjeta propio. Prop `mode: 'subscribe' | 'update'` cambia el copy (elegir plan por primera vez vs. reemplazar la tarjeta de una suscripción ya activa — dos intents distintos, corrección de Alejandro). **2026-08-20 (corrección)**: ya no carga `paddle.js` ni llama `Paddle.Checkout.open()` en la pestaña actual — Alejandro pidió que el checkout se sienta como su propia ventana, no un overlay apilado sobre la actual; el componente ya no tiene prop `onCompleted` (no hay señal de vuelta a la pestaña original — `BillingPage.tsx` refetchea al recuperar foco en su lugar, ver abajo). **2026-08-21 (corrección)**: la regla "si no hay modal, pestaña nueva" valía para los dos proveedores, no solo Paddle — Mercado Pago todavía hacía `window.location.href = initPoint` (navegaba la pestaña actual fuera de Northstack por completo); ahora también `window.open(initPoint, '_blank', 'noopener,noreferrer')`, mismo patrón que Paddle. **2026-08-21 (misma tarde)**: nueva prop `trialDaysRemaining?: number` (solo relevante en `mode="subscribe"`) — el copy y el título ("Start your free trial" vs. "Subscribe") ahora reflejan si de verdad queda trial o no, en vez de prometer siempre "15 días" sin importar cuánto tiempo ya pasó; espejo exacto de lo que `checkoutService.ts` va a cobrar de verdad (ver su entry abajo). Montado tanto en `AppLayout.tsx` (banner de `past_due`/`suspended`, siempre `mode="subscribe"`, `trialDaysRemaining` calculado sobre `tenant.trialEndsAt` — normalmente 0 ahí, porque para llegar a ese banner el trial ya venció) como en `BillingPage.tsx` (modo según si ya hay `provider`, `trialDaysRemaining` sobre `subscription.trialEndsAt`).
@@ -559,6 +570,12 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 - **KanbanBoard** (genérico, `<T>`) — tablero drag-and-drop reusado por Employees/Companies/Contacts/Opportunities, recibe `renderCard` como prop.
 - **StatusColumnMenu** — dropdown de header de columna Status ("Manage options": color, orden, default, activar/desactivar).
 - **ViewsBar** — tabs de vistas guardadas (Grid/Kanban/List, personales o compartidas).
+
+### `frontend/src/components/settings/` (2026-09, Custom Roles Fase B2)
+- **RoleColumnMenu** — dropdown de header de columna de rol en `RolesPermissionsPage.tsx` (Rename/
+  Delete), mismo patrón que `CustomFieldColumnMenu`/`StatusColumnMenu` de arriba (Popover + edición
+  inline + `ConfirmDialog` para el delete) — reusar este patrón para cualquier "menú de columna"
+  nuevo en vez de reinventarlo.
 
 ### `frontend/src/components/crm/`
 - **CompanyDetailModal**, **ContactDetailModal**, **OpportunityDetailModal** — paneles de detalle 70vw×70vh con tabs Notes/Tasks/Activity (mismo shell que `EmployeeOverviewPanel`, ver `DetailSidebar` abajo).

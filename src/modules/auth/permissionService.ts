@@ -1,4 +1,4 @@
-import type { RoleContext } from './roleService.js';
+import { EDIT_EMPLOYEE_CUSTOM_FIELDS, VIEW_EMPLOYEE_CUSTOM_FIELDS, type RoleContext } from './roleService.js';
 
 // Fase B (Custom Roles) — every function here now reads from a resolved RoleContext instead of
 // the static rolePermissions map keyed by the legacy UserRole enum (owner/admin/member). `isOwner`
@@ -65,6 +65,19 @@ export function canManageOpportunity(role: RoleContext): boolean {
 
 export function canManageCustomFields(role: RoleContext): boolean {
   return has(role, 'manage_custom_fields');
+}
+
+// Fase D (Custom Roles) — the Employee custom-fields bundle (decision 2 in the plan: custom field
+// VALUES on an Employee are gated all-or-nothing, independent of `manage_custom_fields` above,
+// which only gates the SCHEMA — defining/editing CustomFieldDefinition itself). Layered on top of
+// canViewEmployee/canManageEmployee, not a replacement for them: a role that loses Employee access
+// entirely can't see its custom fields either just because this bundle is still on.
+export function canViewEmployeeCustomFields(role: RoleContext): boolean {
+  return canViewEmployee(role) && has(role, VIEW_EMPLOYEE_CUSTOM_FIELDS);
+}
+
+export function canEditEmployeeCustomFields(role: RoleContext): boolean {
+  return canManageEmployee(role) && has(role, EDIT_EMPLOYEE_CUSTOM_FIELDS);
 }
 
 export function canInviteUsers(role: RoleContext): boolean {

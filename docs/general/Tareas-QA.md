@@ -3082,3 +3082,55 @@ Verificado por Claude contra `staging` real antes de este push: `npm test`/`npm 
 verde, y Playwright real de punta a punta (toggle de "Personal email" para Member en la UI,
 confirmado por una llamada directa a `GET /api/hr/employees` que el campo vuelve `null`, revertido
 y confirmado que vuelve a aparecer). Falta la revisión humana de Alejandro.
+
+## QA-70 — Custom Roles: bundle de custom fields de Employee (Fase D, 2026-09-01, en `staging`)
+
+**Por qué existe esta tarea:** los 4 endpoints de valores de custom field de un Employee puntual
+(crear, editar, borrar, listar) usaban `manage_custom_fields` — el permiso que en realidad controla
+quién define el SCHEMA de custom fields (catálogo tenant-wide), no quién puede ver/editar los
+VALORES de un empleado concreto. El endpoint de listar (`GET`) ni siquiera tenía ese chequeo: hasta
+esta fase, cualquier persona autenticada del tenant podía ver los custom fields de cualquier
+empleado sin importar su rol. Esta tarea verifica que el bundle real
+(`view_employee_custom_fields`/`edit_employee_custom_fields`, ya expuesto en
+`Settings → Roles & Permissions → People`) ahora controla esto de verdad.
+
+### A. Comportamiento por rol
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Un rol con "View employees" pero sin "View employee custom fields" pide `GET /api/hr/employees/:id/custom-fields` | 403 |
+| 2 | Un rol con ambos "View employees" y "View employee custom fields" pide el mismo `GET` | 200, devuelve los valores |
+| 3 | Un rol con "View employee custom fields" pero al que se le quita "View employees" (módulo entero apagado) | 403 en el `GET` de custom fields — perder acceso al empleado en sí también saca el acceso a sus custom fields, aunque el bundle siga prendido |
+| 4 | Un rol con el bundle de vista pero sin "Edit employee custom fields" intenta `POST`/`PATCH`/`DELETE` sobre un valor | 403 en los 3 |
+| 5 | Un rol con "Manage employees" + "View employee custom fields" + "Edit employee custom fields" intenta `POST`/`PATCH`/`DELETE` | 200/201/204 según corresponda |
+| 6 | Owner, sin ningún permiso explícito (bypass estructural) | Los 4 endpoints funcionan siempre |
+
+### B. La UI (`Settings → Roles & Permissions → People`)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 7 | Intentar tildar "View employee custom fields" en un rol que no tiene "View employees" | Rechazado con un mensaje que indica el prerrequisito, sin llamar a la API |
+| 8 | Intentar tildar "Edit employee custom fields" sin tener ya "Manage employees" Y "View employee custom fields" | Rechazado igual, listando ambos prerrequisitos |
+| 9 | Con un rol que tiene los 4 permisos (View/Manage employees + el bundle completo), destildar "View employees" | Tanto "View employee custom fields" como "Edit employee custom fields" se destildan solos en la misma respuesta — sin recargar la página. Este es el caso más importante de esta tarea: es una cascada de 2 niveles (no 1, como el único otro caso que existía antes en el sistema, Sales), así que merece atención extra |
+| 10 | Recargar la página después del caso 9 | El estado persiste — los 3 permisos siguen destildados, no volvieron solos |
+
+### Al encontrar una falla
+
+El caso 9 es el de mayor severidad: si la cascada de revocación se queda en un solo nivel (revoca
+`view_employee` y `view_employee_custom_fields` pero deja `edit_employee_custom_fields` dormido en
+la base), un rol terminaría pudiendo crear/editar/borrar valores de custom fields de un empleado
+que ya no puede ni ver — exactamente el tipo de permiso "zombie" que este sistema fue diseñado para
+que nunca pase. El caso 3 (perder acceso a Employee en sí debe tapar también sus custom fields,
+aunque el bundle siga prendido) es alto también por la misma razón. El caso 1 (el `GET` de listar
+ahora exige permiso, cuando antes no exigía ninguno) es el cierre de un gap real de acceso, así que
+alta severidad si reaparece abierto.
+
+Verificado por Claude contra `staging` real antes de este push: `npm test` 253/253 (incluye 5 tests
+nuevos: 2 en `permission.test.ts` para las funciones compuestas, 3 en `roleManagementService.test.ts`
+para el bloqueo de prerrequisitos y la cascada transitiva de 2 niveles) y ambos builds verdes.
+Contra un tenant descartable en `staging`: login real de un usuario Owner y uno Member, y la
+secuencia completa `GET`/`POST` como Member (200/403 según el permiso), revocación en vivo vía
+`PATCH /api/roles/:roleId/permissions`, y reconfirmación de que el `GET` pasa a 403 — más la
+secuencia grant→grant→grant→revoke que dispara la cascada de 2 niveles, confirmada tanto por la
+respuesta de la API como visualmente en Playwright (captura en claro y oscuro). Falta la revisión
+humana de Alejandro.

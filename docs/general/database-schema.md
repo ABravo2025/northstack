@@ -1231,6 +1231,34 @@ una llamada directa a `GET /api/hr/employees` confirmando que ocultar "Personal 
 de verdad anula el campo en el JSON (y que revertirlo lo devuelve) — no solo que la UI lo tape.
 `npm test` 248/248, ambos builds verdes. Nada de esto llegó a `main` todavía.
 
+**Fase D (bundle de custom fields de Employee): completa.** Hasta acá `VIEW_EMPLOYEE_CUSTOM_FIELDS`/
+`EDIT_EMPLOYEE_CUSTOM_FIELDS` existían como constantes sembradas (Admin/Member ya las tenían desde
+el backfill de la Fase B) pero sin ningún consumidor real — los 4 endpoints de valores de custom
+field de Employee (`POST`/`PATCH`/`DELETE`/`GET .../custom-fields`) seguían gateados por
+`canManageCustomFields` (que en realidad gatea el SCHEMA de custom fields — crear/editar
+`CustomFieldDefinition` — no los valores de un Employee puntual), y el `GET` de lista no tenía
+ningún chequeo de permiso en absoluto. Agregado a `permissionService.ts`:
+`canViewEmployeeCustomFields`/`canEditEmployeeCustomFields`, cada una compuesta (no un reemplazo)
+sobre la base de Employee — `canViewEmployeeCustomFields = canViewEmployee && tiene el permiso`,
+`canEditEmployeeCustomFields = canManageEmployee && tiene el permiso` — para que perder acceso a
+Employee por completo también saque el acceso a sus custom fields, aunque el bundle siga prendido.
+Encontrado en el camino: esta relación (view_employee_custom_fields depende de view_employee;
+edit_employee_custom_fields depende de view_employee_custom_fields Y de manage_employee) es una
+cadena de **2 niveles**, distinta de la de `manage_opportunity` (1 nivel) que ya existía —
+`DEPENDENT_PERMISSIONS` solo calculaba dependientes directos, así que revocar `view_employee`
+hubiera dejado a `edit_employee_custom_fields` como un permiso "dormido" en la base de datos
+(revocado a un nivel, pero no dos). Corregido generalizando el cascade de revocación en
+`roleManagementService.ts` a un BFS que camina el grafo de dependencias a punto fijo, en vez de un
+solo salto — verificado con una prueba nueva y, en vivo contra `staging`, con la secuencia real
+grant→grant→grant→revoke vía `PATCH /api/roles/:roleId/permissions`. `VIEW_EMPLOYEE_CUSTOM_FIELDS`/
+`EDIT_EMPLOYEE_CUSTOM_FIELDS` se movieron de `PERMISSION_KEYS` (solo validación) a
+`TOGGLEABLE_PERMISSION_KEYS` (expuestas de verdad en la UI) ahora que tienen enforcement real — 2
+filas nuevas en la sección "People" de `Settings → Roles & Permissions`, mismo patrón de
+grid-toggle. Verificado con Playwright real contra `staging` + llamadas directas a la API
+(`GET`/`POST /api/hr/employees/:id/custom-fields` como Member antes/después de revocar el permiso,
+confirmando 200→403 real, no solo en el mock). `npm test` 253/253 (+5 tests nuevos), ambos builds
+verdes. Nada de esto llegó a `main` todavía.
+
 ```mermaid
 erDiagram
     TENANT ||--o{ ROLE : "has"
@@ -1272,8 +1300,9 @@ Notas:
   permisos crece cada vez que un módulo nuevo se gatea; un enum forzaría un push de schema por cada
   uno. Además de los ~10 permisos de módulo de hoy, codifica 2 convenciones especiales de Employee
   (ver `roleService.ts`): el scope (`view_employee_scope:self|department|all`, mutuamente
-  excluyentes) y el bundle de custom fields (`view_employee_custom_fields`/
-  `edit_employee_custom_fields`) — ninguna tiene un consumidor real todavía (Fase D/E).
+  excluyentes — todavía sin consumidor real, Fase E) y el bundle de custom fields
+  (`view_employee_custom_fields`/`edit_employee_custom_fields` — con enforcement real desde la
+  Fase D, ver arriba).
 - **`RoleFieldRestriction` es una denylist dispersa** — una fila significa "oculto", la ausencia
   significa "visible" (el default). Con ~15 entidades de 10-30 campos, una fila por combinación
   sería ~1500 filas por tenant solo para el estado por defecto; con denylist, un campo nuevo

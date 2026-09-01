@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   canCreateHr,
+  canEditEmployeeCustomFields,
   canManageCustomFields,
   canManagePayments,
   canManagePayroll,
   canViewActivityLog,
+  canViewEmployeeCustomFields,
   canViewHr,
 } from '../src/modules/auth/permissionService.js';
 import { ADMIN_SEED_PERMISSIONS, MEMBER_SEED_PERMISSIONS, type RoleContext } from '../src/modules/auth/roleService.js';
@@ -62,5 +64,29 @@ describe('permission service', () => {
     expect(canViewActivityLog(owner)).toBe(true);
     expect(canViewActivityLog(admin)).toBe(true);
     expect(canViewActivityLog(member)).toBe(false);
+  });
+
+  it('Fase D: the Employee custom-fields bundle matches pre-Fase-D behavior — everyone with view_employee can read them, only owner/admin can write', () => {
+    expect(canViewEmployeeCustomFields(owner)).toBe(true);
+    expect(canViewEmployeeCustomFields(admin)).toBe(true);
+    expect(canViewEmployeeCustomFields(member)).toBe(true);
+
+    expect(canEditEmployeeCustomFields(owner)).toBe(true);
+    expect(canEditEmployeeCustomFields(admin)).toBe(true);
+    expect(canEditEmployeeCustomFields(member)).toBe(false);
+  });
+
+  it('Fase D: the Employee custom-fields bundle is layered on top of base Employee access, not a substitute for it', () => {
+    const roleWithBundleButNoEmployeeAccess = roleContext({
+      permissions: new Set(['view_employee_custom_fields', 'edit_employee_custom_fields']),
+    });
+    expect(canViewEmployeeCustomFields(roleWithBundleButNoEmployeeAccess)).toBe(false);
+    expect(canEditEmployeeCustomFields(roleWithBundleButNoEmployeeAccess)).toBe(false);
+
+    const roleWithEmployeeAccessButNoBundle = roleContext({
+      permissions: new Set(['view_employee', 'manage_employee']),
+    });
+    expect(canViewEmployeeCustomFields(roleWithEmployeeAccessButNoBundle)).toBe(false);
+    expect(canEditEmployeeCustomFields(roleWithEmployeeAccessButNoBundle)).toBe(false);
   });
 });

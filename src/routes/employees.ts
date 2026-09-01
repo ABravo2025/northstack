@@ -35,11 +35,13 @@ import {
   resendEmployeeContract,
 } from '../modules/hr/contractPdfService.js';
 import {
+  canEditEmployeeCustomFields,
   canInviteUsers,
   canManageCustomFields,
   canManageEmployee,
   canManagePayroll,
   canViewEmployee,
+  canViewEmployeeCustomFields,
 } from '../modules/auth/permissionService.js';
 import { redactEntityFields, redactEntityListFields } from '../modules/auth/fieldVisibilityService.js';
 import { exportEmployeesToCsv, getEmployeesCsvTemplate, importEmployeesFromCsv } from '../modules/csv/csvService.js';
@@ -561,7 +563,7 @@ employeesRouter.post('/api/hr/employees/:employeeId/custom-fields', async (req, 
     return;
   }
 
-  if (!canManageCustomFields(user.roleContext)) {
+  if (!canEditEmployeeCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -608,7 +610,7 @@ employeesRouter.patch('/api/hr/employees/:employeeId/custom-fields/:valueId', as
     return;
   }
 
-  if (!canManageCustomFields(user.roleContext)) {
+  if (!canEditEmployeeCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -655,7 +657,7 @@ employeesRouter.delete('/api/hr/employees/:employeeId/custom-fields/:valueId', a
     return;
   }
 
-  if (!canManageCustomFields(user.roleContext)) {
+  if (!canEditEmployeeCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -698,6 +700,10 @@ employeesRouter.get('/api/hr/employees/:employeeId/custom-fields', async (req, r
   const user = await validateSession(req, res);
   if (!user) {
     return;
+  }
+
+  if (!canViewEmployeeCustomFields(user.roleContext)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
   const employee = await findEmployeeById(req.params.employeeId);

@@ -153,6 +153,36 @@ describe('roleManagementService', () => {
     expect(result.permissions).not.toContain('manage_opportunity');
   });
 
+  it('blocks granting view_employee_custom_fields without view_employee', async () => {
+    const result = await setRolePermission('t1', 'role-admin', 'view_employee_custom_fields', true);
+    expect(result.success).toBe(false);
+    expect(result.error).toMatch(/view_employee/);
+  });
+
+  it('blocks granting edit_employee_custom_fields without both its prerequisites', async () => {
+    permissionRows.push({ roleId: 'role-admin', tenantId: 't1', permission: 'view_employee' });
+    // view_employee alone is not enough — still missing view_employee_custom_fields and manage_employee.
+    const result = await setRolePermission('t1', 'role-admin', 'edit_employee_custom_fields', true);
+    expect(result.success).toBe(false);
+  });
+
+  it('cascades transitively: revoking view_employee also revokes view_employee_custom_fields AND edit_employee_custom_fields, two levels down', async () => {
+    permissionRows.push(
+      { roleId: 'role-admin', tenantId: 't1', permission: 'view_employee' },
+      { roleId: 'role-admin', tenantId: 't1', permission: 'manage_employee' },
+      { roleId: 'role-admin', tenantId: 't1', permission: 'view_employee_custom_fields' },
+      { roleId: 'role-admin', tenantId: 't1', permission: 'edit_employee_custom_fields' },
+    );
+
+    const result = await setRolePermission('t1', 'role-admin', 'view_employee', false);
+    expect(result.success).toBe(true);
+    expect(result.permissions).not.toContain('view_employee');
+    expect(result.permissions).not.toContain('view_employee_custom_fields');
+    expect(result.permissions).not.toContain('edit_employee_custom_fields');
+    // manage_employee has no prerequisite relationship to view_employee, so it's untouched.
+    expect(result.permissions).toContain('manage_employee');
+  });
+
   it('creates a new role that persists with a blank permission set', async () => {
     const result = await createRole('t1', 'Sales Manager');
     expect(result.success).toBe(true);

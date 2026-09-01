@@ -144,7 +144,14 @@ ver el feed tenant-wide de Settings; el tab del modal por registro no tiene gate
 moneda del tenant), **canManageSharedViews** (Fase B, reemplaza el inline `canManageShared` de
 `savedViewService.ts` — crear una Saved View compartida), **canDecideTimeOff** (Fase B, el
 componente por-rol de aprobar/rechazar Time Off — `timeOffRequestService.ts` sigue OR-eándolo con
-"es el manager asignado", una regla por relación que no se reemplaza por un permiso).
+"es el manager asignado", una regla por relación que no se reemplaza por un permiso),
+**canViewEmployeeCustomFields**/**canEditEmployeeCustomFields** (Fase D, 2026-09 — el bundle de
+custom fields de Employee: `canViewEmployee`/`canManageEmployee` **compuesto con**
+`VIEW_EMPLOYEE_CUSTOM_FIELDS`/`EDIT_EMPLOYEE_CUSTOM_FIELDS`, no un reemplazo — perder acceso al
+Employee en sí tapa también sus custom fields aunque el bundle siga prendido. Gatean los 4
+endpoints `.../custom-fields` de `routes/employees.ts`, que antes usaban `canManageCustomFields`
+— el permiso de SCHEMA de custom fields, no el de valores por-empleado — y en el caso del `GET` de
+listar, ningún chequeo en absoluto).
 
 ### `src/modules/auth/roleService.ts` (Custom Roles, `docs/tareas/backlog.md` "Sistema de roles custom", Fase A-B, 2026-09)
 - **seedDefaultRolesForTenant(tx, tenantId)** — crea los 3 roles semilla (Owner/Admin/Member) de un
@@ -168,12 +175,19 @@ componente por-rol de aprobar/rechazar Time Off — `timeOffRequestService.ts` s
   cuando exista un endpoint de edición de roles (Fase H). **ADMIN_SEED_PERMISSIONS**/
   **MEMBER_SEED_PERMISSIONS** — qué permisos concretos arma cada uno, importadas también por
   `scripts/backfill-fase-b-permissions.ts` para no duplicar la lista.
-- **TOGGLEABLE_PERMISSION_KEYS** (Fase B2) — subconjunto de `PERMISSION_KEYS` expuesto en la UI de
-  Settings → Roles & Permissions (excluye el legacy `view_hr`/`create_hr` y las convenciones de
-  Employee sin enforcement todavía). **PERMISSION_PREREQUISITES**/**DEPENDENT_PERMISSIONS** — la
-  regla de que `manage_opportunity` exige `view_company`+`view_contact` ya concedidos, y su inversa
-  (revocar un prerequisito cascadea a revocar lo que dependía de él) — derivada automáticamente de
-  `PERMISSION_PREREQUISITES`, no mantenida a mano por separado.
+- **TOGGLEABLE_PERMISSION_KEYS** (Fase B2, ampliado Fase D) — subconjunto de `PERMISSION_KEYS`
+  expuesto en la UI de Settings → Roles & Permissions (excluye el legacy `view_hr`/`create_hr` y el
+  scope de Employee — `view_employee_scope:*`, sin enforcement todavía, Fase E — pero desde la Fase
+  D SÍ incluye `view_employee_custom_fields`/`edit_employee_custom_fields`, ya que
+  `canViewEmployeeCustomFields`/`canEditEmployeeCustomFields` los hacen cumplir de verdad).
+  **PERMISSION_PREREQUISITES**/**DEPENDENT_PERMISSIONS** — la regla de que `manage_opportunity`
+  exige `view_company`+`view_contact` ya concedidos (1 nivel), y desde la Fase D también que
+  `view_employee_custom_fields` exige `view_employee` y `edit_employee_custom_fields` exige
+  `view_employee_custom_fields`+`manage_employee` (2 niveles, la primera cadena de más de 1 nivel
+  del sistema). `DEPENDENT_PERMISSIONS` es la inversa, derivada automáticamente de
+  `PERMISSION_PREREQUISITES` — el consumidor (`roleManagementService.ts`'s `setRolePermission`)
+  camina este mapa a punto fijo (BFS) al revocar, no solo un salto, para que una cadena de 2+
+  niveles cascadee completa.
 
 ### `src/modules/auth/fieldVisibilityService.ts` (Custom Roles Fase C, 2026-09)
 - **isFieldVisible(role, entityType, fieldKey)** — `role.isOwner` bypasea todo; si no, exige el

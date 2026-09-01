@@ -30,17 +30,29 @@ interface PermissionGroup {
   rows: PermissionRow[];
 }
 
-// Only the permissions Fase A/B actually enforce today (docs/tareas/backlog.md "Sistema de roles
-// custom") — deliberately excludes Employee scope (self/department/all) and the Employee
-// custom-fields bundle, since Fase D/E haven't shipped enforcement for those yet. A toggle that
-// silently did nothing would be worse than not showing it. Server-side, roleManagementService.ts's
-// TOGGLEABLE_PERMISSION_KEYS is the matching allowlist — keep both in sync if either changes.
+// Only the permissions Fase A-D actually enforce today (docs/tareas/backlog.md "Sistema de roles
+// custom") — deliberately excludes Employee scope (self/department/all), since Fase E hasn't
+// shipped row-level enforcement for it yet. A toggle that silently did nothing would be worse than
+// not showing it. Server-side, roleManagementService.ts's TOGGLEABLE_PERMISSION_KEYS is the
+// matching allowlist — keep both in sync if either changes.
 const GROUPS: PermissionGroup[] = [
   {
     title: 'People',
     rows: [
       { key: 'view_employee', label: 'View employees', description: "See the employee directory and each person's profile." },
       { key: 'manage_employee', label: 'Manage employees', description: 'Add, edit, and remove employee records.' },
+      {
+        key: 'view_employee_custom_fields',
+        label: 'View employee custom fields',
+        description: 'See the custom fields on an employee profile, separate from the profile itself.',
+        hint: 'Needs View employees',
+      },
+      {
+        key: 'edit_employee_custom_fields',
+        label: 'Edit employee custom fields',
+        description: 'Add, edit, and remove values in the custom fields on an employee profile.',
+        hint: 'Needs Manage employees + View employee custom fields',
+      },
     ],
   },
   {
@@ -110,11 +122,15 @@ const GROUPS: PermissionGroup[] = [
   },
 ];
 
-// Mirrors permissionService.ts's canManageOpportunity: granting requires both prerequisites
+// Mirrors roleService.ts's PERMISSION_PREREQUISITES: granting requires the listed prerequisites
 // already present on that same role. Server-side is the real enforcement (roleManagementService.ts
-// rejects the request otherwise) — this is just so the UI can explain why upfront instead of
-// round-tripping to find out.
-const DEPENDENCIES: Record<string, string[]> = { manage_opportunity: ['view_company', 'view_contact'] };
+// rejects the request otherwise, and its revoke cascade walks this same chain transitively) — this
+// is just so the UI can explain why upfront instead of round-tripping to find out.
+const DEPENDENCIES: Record<string, string[]> = {
+  manage_opportunity: ['view_company', 'view_contact'],
+  view_employee_custom_fields: ['view_employee'],
+  edit_employee_custom_fields: ['view_employee_custom_fields', 'manage_employee'],
+};
 
 const COLUMN_WIDTH = 88;
 

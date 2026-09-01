@@ -98,11 +98,24 @@ export async function setRolePermission(
     });
     current.add(permission);
   } else {
-    // Cascade: revoking a prerequisite also revokes whatever depends on it, so the role never
-    // ends up holding a dormant grant that would silently reactivate once the prerequisite comes
-    // back (see DEPENDENT_PERMISSIONS's comment in roleService.ts).
-    const toRevoke = [permission, ...(DEPENDENT_PERMISSIONS[permission as ToggleablePermissionKey] ?? [])];
-    await prisma.roleModulePermission.deleteMany({ where: { roleId, permission: { in: toRevoke } } });
+    // Cascade: revoking a prerequisite also revokes whatever depends on it, transitively — e.g.
+    // revoking view_employee must also drop view_employee_custom_fields AND, because that in turn
+    // is a prerequisite of edit_employee_custom_fields, that one too. Walked to a fixed point
+    // rather than one hop, so a role never ends up holding a dormant grant that would silently
+    // reactivate once the prerequisite comes back (see DEPENDENT_PERMISSIONS's comment in
+    // roleService.ts).
+    const toRevoke = new Set<ToggleablePermissionKey>([permission as ToggleablePermissionKey]);
+    const queue: ToggleablePermissionKey[] = [permission as ToggleablePermissionKey];
+    while (queue.length > 0) {
+      const next = queue.shift()!;
+      for (const dependent of DEPENDENT_PERMISSIONS[next] ?? []) {
+        if (!toRevoke.has(dependent)) {
+          toRevoke.add(dependent);
+          queue.push(dependent);
+        }
+      }
+    }
+    await prisma.roleModulePermission.deleteMany({ where: { roleId, permission: { in: Array.from(toRevoke) } } });
     for (const p of toRevoke) current.delete(p);
   }
 

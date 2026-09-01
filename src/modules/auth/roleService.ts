@@ -72,10 +72,13 @@ export type PermissionKey = (typeof PERMISSION_KEYS)[number];
 
 // Fase B2 — the subset of PERMISSION_KEYS actually exposed on the Settings → Roles & Permissions
 // toggle UI. Deliberately narrower than PERMISSION_KEYS: excludes the legacy `view_hr`/`create_hr`
-// pair (Client-only, not a real lever for a tenant to reach for), and excludes the Employee scope/
-// custom-fields-bundle keys (Fase D/E haven't shipped enforcement for them yet — exposing a toggle
-// that silently does nothing would be worse than not showing it). Validated server-side in
-// roleManagementService.ts so a request can't grant something this UI was never meant to expose.
+// pair (Client-only, not a real lever for a tenant to reach for) and the Employee scope keys
+// (self/department/all — Fase E hasn't shipped row-level enforcement for them yet, exposing a
+// toggle that silently does nothing would be worse than not showing it). The Employee
+// custom-fields bundle joined this list in Fase D, once permissionService.ts's
+// canViewEmployeeCustomFields/canEditEmployeeCustomFields actually enforce it. Validated
+// server-side in roleManagementService.ts so a request can't grant something this UI was never
+// meant to expose.
 export const TOGGLEABLE_PERMISSION_KEYS = [
   VIEW_EMPLOYEE,
   MANAGE_EMPLOYEE,
@@ -95,6 +98,8 @@ export const TOGGLEABLE_PERMISSION_KEYS = [
   MANAGE_TENANT_SETTINGS,
   MANAGE_SHARED_VIEWS,
   DECIDE_TIME_OFF,
+  VIEW_EMPLOYEE_CUSTOM_FIELDS,
+  EDIT_EMPLOYEE_CUSTOM_FIELDS,
 ] as const;
 export type ToggleablePermissionKey = (typeof TOGGLEABLE_PERMISSION_KEYS)[number];
 
@@ -102,15 +107,27 @@ export type ToggleablePermissionKey = (typeof TOGGLEABLE_PERMISSION_KEYS)[number
 // (permissionService.ts) — this is the same rule enforced at grant time: a role can't be given
 // manage_opportunity unless it already has both of these. Keyed by the permission that has
 // prerequisites, not the prerequisites themselves, since that's the direction the check runs.
+// Same idea for the Employee custom-fields bundle, this time 2 levels deep:
+// canViewEmployeeCustomFields is meaningless without canViewEmployee, and canEditEmployeeCustomFields
+// is meaningless without both canManageEmployee AND canViewEmployeeCustomFields (a role that can
+// create/edit a value it can never see back via GET would be a "dormant" grant, same failure mode
+// DEPENDENT_PERMISSIONS below exists to prevent). Because this chain is 2 levels deep — unlike
+// manage_opportunity's single level — the revoke cascade in roleManagementService.ts walks
+// DEPENDENT_PERMISSIONS to a fixed point (transitive closure), not just one hop.
 export const PERMISSION_PREREQUISITES: Partial<Record<ToggleablePermissionKey, ToggleablePermissionKey[]>> = {
   [MANAGE_OPPORTUNITY]: [VIEW_COMPANY, VIEW_CONTACT],
+  [VIEW_EMPLOYEE_CUSTOM_FIELDS]: [VIEW_EMPLOYEE],
+  [EDIT_EMPLOYEE_CUSTOM_FIELDS]: [VIEW_EMPLOYEE_CUSTOM_FIELDS, MANAGE_EMPLOYEE],
 };
 
 // The inverse of PERMISSION_PREREQUISITES — revoking one of these cascades into revoking whatever
-// depends on it too, so a role can never be left holding a "dormant" grant (manage_opportunity
-// with view_company since-revoked) that would silently reactivate the moment the prerequisite is
-// re-granted later. Derived from PERMISSION_PREREQUISITES at module load, not hand-maintained
-// separately, so the two can never drift apart.
+// depends on it too (directly), so a role can never be left holding a "dormant" grant
+// (manage_opportunity with view_company since-revoked) that would silently reactivate the moment
+// the prerequisite is re-granted later. Derived from PERMISSION_PREREQUISITES at module load, not
+// hand-maintained separately, so the two can never drift apart. Only direct dependents — a
+// multi-level chain (e.g. view_employee → view_employee_custom_fields → edit_employee_custom_fields)
+// needs the consumer to walk this map to a fixed point, which roleManagementService.ts's revoke
+// path does.
 export const DEPENDENT_PERMISSIONS: Partial<Record<ToggleablePermissionKey, ToggleablePermissionKey[]>> = (() => {
   const map: Partial<Record<ToggleablePermissionKey, ToggleablePermissionKey[]>> = {};
   for (const [dependent, prerequisites] of Object.entries(PERMISSION_PREREQUISITES) as [ToggleablePermissionKey, ToggleablePermissionKey[]][]) {
@@ -175,12 +192,13 @@ interface SeedRoleResult {
 // tenants, and once per pre-existing tenant by scripts/backfill-custom-roles.ts. Seeds the 3
 // fixed-name roles with the permission set that reproduces TODAY's owner/admin/member behavior
 // exactly: the current rolePermissions map (permissionService.ts) for Admin/Member, plus
-// EMPLOYEE_SCOPE_ALL and VIEW_EMPLOYEE_CUSTOM_FIELDS (both roles can read Employee custom fields
-// today) and EDIT_EMPLOYEE_CUSTOM_FIELDS for Admin only (only owner/admin can write custom field
-// values today, via manage_custom_fields) — defaulted this way so nothing regresses the moment
-// their enforcement actually ships (Fase D/E), even though nothing reads these two yet. Owner
-// gets isOwner=true and zero RoleModulePermission rows — it bypasses every check structurally
-// (see RoleContext.isOwner), by design never has restrictable rows.
+// EMPLOYEE_SCOPE_ALL (Fase E, no enforcement yet) and VIEW_EMPLOYEE_CUSTOM_FIELDS (both roles) /
+// EDIT_EMPLOYEE_CUSTOM_FIELDS (Admin only) — matches pre-Fase-D behavior where any tenant member
+// could read an Employee's custom field values but only owner/admin could write them (via
+// manage_custom_fields), now enforced for real by canViewEmployeeCustomFields/
+// canEditEmployeeCustomFields (permissionService.ts, Fase D). Owner gets isOwner=true and zero
+// RoleModulePermission rows — it bypasses every check structurally (see RoleContext.isOwner), by
+// design never has restrictable rows.
 // Idempotent: returns the existing rows untouched if this tenant already has roles.
 export async function seedDefaultRolesForTenant(tx: PrismaTx, tenantId: string): Promise<SeedRoleResult> {
   const existingOwner = await tx.role.findUnique({ where: { tenantId_name: { tenantId, name: 'Owner' } } });

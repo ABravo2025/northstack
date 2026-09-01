@@ -1316,6 +1316,61 @@ lista real, 200 en el directorio — confirma que el directorio no depende de es
 de "Reports To" verificado con Playwright real mostrando los 6 empleados completos. `npm test`
 265/265 (+12 tests nuevos), ambos builds verdes. Nada de esto llegó a `main` todavía.
 
+**Fase F (integración con Activity Log): completa.** Cierra la última fuga real de las Fases C/D/E:
+el feed de Activity Log guardaba `changes`/`summary` calculados en el momento de la escritura, sin
+saber nada de restricciones de campo ni de módulo — un rol con `personalEmail` restringido (Fase C)
+podía igual leer "Changed Personal email: X → Y" en la pestaña de Activity del propio Employee, y
+un rol con `view_activity_log` pero sin `canManagePayroll`/`canManagePayments` podía ver entradas de
+compensación o de la conexión de Stripe en el feed tenant-wide. Nuevo
+`src/modules/activity/activityVisibilityService.ts` (mismo patrón que `fieldVisibilityService.ts`
+de la Fase C — lógica pura, testeada aparte, sin acoplar `activityLogService.ts` al sistema de
+roles):
+- **`canViewEntryModule(role, entityType)`**: gate a nivel de MÓDULO para el feed tenant-wide — una
+  entrada cuyo `entityType` pertenece a un módulo que el rol no puede ver directamente
+  (`employeeCompensation`/`payrollRun`/`payFrequency`/`paymentMethod` → `canManagePayroll`,
+  `subscription` → `canManageBilling`, `stripeConnection` → `canManagePayments`,
+  `employeeTermination` → `canManageEmployee`, `statusDefinition`/`customFieldDefinition`/
+  `fieldCatalogDefinition`/`pipeline`/`pipelineStage`/`publicForm` → `canManageCustomFields`,
+  `tenant` → `canManageTenantSettings`, `user`/`invitation` → `canManageUsers`, más
+  `employee`/`company`/`contact`/`opportunity` con sus propios `canView*`) se saca del feed por
+  completo, no solo se redacta. Los tipos sin un permiso propio (Task/Note/Tag/SavedView/Time Off/
+  Google Calendar Connection) quedan sin gate, igual que su comportamiento de siempre en sus propias
+  pestañas.
+- **`isChangeVisible(role, entityType, change)`** + **`filterActivityEntryForRole(entry, role)`**:
+  gate a nivel de CAMPO — filtra el array `changes` de una entrada `update` por
+  `isFieldVisible` (Fase C) para los 4 tipos con field-level restriction, y por
+  `canViewEmployeeCustomFields` (Fase D) específicamente para cambios de custom fields en Employee
+  (detectados porque su `field` es el id de la `CustomFieldDefinition`, nunca una de las claves fijas
+  del `ActivityFieldConfigMap` — Company/Contact/Opportunity no tienen bundle propio, así que sus
+  cambios de custom fields caen en `isFieldVisible`, que los deja visibles automáticamente porque esa
+  clave nunca puede estar en la denylist de campos fijos). **Siempre que el filtrado saca algo**,
+  `summary` se recalcula con `summarizeChanges` sobre los cambios que sí quedaron visibles — nunca se
+  deja el `summary` original (calculado sobre el set completo sin filtrar), porque ese string por sí
+  solo ya nombra el campo oculto. Cuando no queda ningún cambio visible, `summarizeChanges` ya produce
+  el texto genérico correcto ("Updated Employee..."), sin necesidad de una rama de fallback aparte.
+- **`canAccessEntityActivity(user, entityType, entityId)`**: cierra un gap real y explotable que
+  existía antes de esta fase — `GET /api/activity` (la pestaña de Activity de un registro puntual)
+  no tenía NINGÚN chequeo de permiso o scope más allá de pertenencia al tenant (la decisión #4 del
+  spec de Activity Log asumía "si podés abrir el modal, ves su Activity", pero nada lo hacía cumplir
+  en el backend). Sin este chequeo, cualquier miembro del tenant podía pedir
+  `GET /api/activity?entityType=employee&entityId=<cualquiera>` directamente y ver el historial de
+  cambios completo de un Employee que el `GET /api/hr/employees/:id` real le habría bloqueado con
+  403/404 — un bypass total de la Fase C (campos) y la Fase E (scope). Ahora replica exactamente la
+  regla de acceso de cada entidad: Employee exige `canViewEmployee` + estar dentro del scope
+  (Fase E, 404 si no), Company/Contact/Opportunity exigen su `canView*` propio (403 si no, sin
+  concepto de scope para CRM).
+
+Verificado contra un tenant descartable en `staging`: un cambio real de `personalEmail` (vía
+`PATCH /api/hr/employees/:id`) apareció como "Changed Personal email: ... → ..." para el Owner, y
+como el genérico "Updated Employee \"Ana Lopez\"" con `changes: null` para un rol con ese campo
+restringido — la fuga confirmada cerrada de punta a punta, no solo en el mock. Un rol sin
+`view_employee` recibió 403 real en `GET /api/activity`; un rol con scope `self` vinculado a otro
+empleado recibió 404 real al pedir la actividad de un tercero y 200 al pedir la propia. En el feed
+tenant-wide, un rol con `view_activity_log` pero sin `canManagePayroll` no vio una entrada sintética
+de tipo `employeeCompensation` que el Owner sí veía. `npm test` 285/285 (+20 tests nuevos en
+`tests/activityVisibilityService.test.ts`), ambos builds verdes. Nada de esto llegó a `main`
+todavía.
+
 ```mermaid
 erDiagram
     TENANT ||--o{ ROLE : "has"

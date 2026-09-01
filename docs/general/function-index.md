@@ -241,6 +241,27 @@ listar, ningún chequeo en absoluto).
   a quién reasignar es una decisión de producto que no debería tomarse implícitamente dentro de un
   delete.
 
+### `src/modules/activity/activityVisibilityService.ts` (Custom Roles Fase F, 2026-09)
+Lógica pura de visibilidad para el Activity Log, mismo patrón que `fieldVisibilityService.ts` de la
+Fase C — mantiene `activityLogService.ts` desacoplado del sistema de roles.
+- **canViewEntryModule(role, entityType)** — gate a nivel de módulo para el feed tenant-wide: una
+  entrada cuyo `entityType` pertenece a un módulo que el rol no puede ver (Payroll, Stripe,
+  Billing, gestión de usuarios, etc. — ver el mapa `ACTIVITY_MODULE_GATE`) se excluye del feed por
+  completo. Los tipos sin permiso propio (Task/Note/Tag/SavedView/Time Off/Google Calendar
+  Connection) quedan sin gate.
+- **isChangeVisible(role, entityType, change)** — gate a nivel de campo: usa `isFieldVisible`
+  (Fase C) para las claves fijas de los 4 tipos Tier 1, y `canViewEmployeeCustomFields` (Fase D)
+  específicamente para cambios de custom fields en Employee (detectados porque su `field` es un id
+  de `CustomFieldDefinition`, nunca una clave fija del `ActivityFieldConfigMap`).
+- **filterActivityEntryForRole(entry, role)** — parsea `changes` y lo filtra con `isChangeVisible`;
+  si el filtrado saca algo, recalcula `summary` con `summarizeChanges` sobre lo que sí quedó visible
+  (nunca deja el `summary` original, que fue calculado sobre el set completo sin filtrar y podría
+  nombrar el campo oculto por sí solo).
+- **canAccessEntityActivity(user, entityType, entityId)** — cierra un gap real: `GET /api/activity`
+  no tenía ningún chequeo de permiso/scope más allá de pertenencia al tenant. Replica la regla de
+  acceso real de cada entidad: Employee exige `canViewEmployee` + estar en scope (Fase E, 404 si
+  no), Company/Contact/Opportunity exigen su `canView*` propio (403 si no).
+
 ### `src/modules/activity/activityLogService.ts` (Activity Log, `docs/general/spec-activity-log.md`, 2026-08-30)
 Mecanismo genérico reusado por cada módulo que registra actividad — un solo punto de escritura en vez de que cada service arme su propio formato de diff/summary.
 - **diffEntity(before, after, fieldConfig)** — compara dos snapshots campo por campo según un `ActivityFieldConfigMap` (label + `resolve?` opcional para FKs/ids), devuelve `{field, label, oldValue, newValue}[]` ya con valores resueltos a texto legible. Mismo mecanismo para las 3 acciones: create diffea contra `before: null` (todo se ve como "set"), delete contra `after: null` ("cleared"), update entre dos snapshots reales.

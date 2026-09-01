@@ -3,24 +3,19 @@ import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import { canViewActivityLog } from '../modules/auth/permissionService.js';
 import { findEntityTenantId, isSupportedCrossModuleEntityType } from '../modules/crossModule/entityLookup.js';
-import { listActivityFeed, listActivityForEntity, type ActivityLogEntryWithUser } from '../modules/activity/activityLogService.js';
+import { listActivityFeed, listActivityForEntity } from '../modules/activity/activityLogService.js';
+import { canAccessEntityActivity, canViewEntryModule, filterActivityEntryForRole } from '../modules/activity/activityVisibilityService.js';
 
 export const activityRouter = createAsyncRouter();
 
 const ACTIVITY_ENTITY_TYPES = new Set<string>(Object.values(ActivityEntityType));
 const ACTIVITY_ACTIONS = new Set<string>(Object.values(ActivityAction));
 
-// `changes` is stored as a JSON string column (see the schema comment on ActivityLogEntry) —
-// parsed here so the frontend receives a real array, never a string it has to JSON.parse itself.
-function serializeEntry(entry: ActivityLogEntryWithUser) {
-  return { ...entry, changes: entry.changes ? JSON.parse(entry.changes) : null };
-}
-
-// Per-record "Activity" tab (Employee/Company/Contact/Opportunity detail modals). No permission
-// gate beyond tenant membership — same convention as Tasks/Notes: if you can open the modal, you
-// see its Activity (spec-activity-log.md decision #5). Only the 4 Tier-1 entity types have a
-// detail modal, so this reuses the same cross-module entity type list/lookup Task/Note already
-// validate against, rather than the full ActivityEntityType enum.
+// Per-record "Activity" tab (Employee/Company/Contact/Opportunity detail modals). Only the 4
+// Tier-1 entity types have a detail modal, so this reuses the same cross-module entity type
+// list/lookup Task/Note already validate against, rather than the full ActivityEntityType enum.
+// Custom Roles Fase F added canAccessEntityActivity (module + Employee scope check, see
+// activityVisibilityService.ts) — this route used to only check tenant membership.
 activityRouter.get('/api/activity', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) {
@@ -41,12 +36,19 @@ activityRouter.get('/api/activity', async (req, res) => {
     return res.status(404).json({ error: 'Entity not found' });
   }
 
+  const access = await canAccessEntityActivity(user, entityType as ActivityEntityType, entityId);
+  if (!access.allowed) {
+    return res.status(access.status).json({ error: access.status === 404 ? 'Entity not found' : 'Insufficient permissions' });
+  }
+
   const entries = await listActivityForEntity(user.tenantId!, entityType as ActivityEntityType, entityId);
-  return res.json(entries.map(serializeEntry));
+  return res.json(entries.map((entry) => filterActivityEntryForRole(entry, user.roleContext)));
 });
 
 // Tenant-wide feed, Settings → Activity Log. owner/admin only today (canViewActivityLog), until a
-// custom role can be granted this permission (spec-activity-log.md decision #4).
+// custom role can be granted this permission (spec-activity-log.md decision #4). Custom Roles
+// Fase F added the per-entry module gate (canViewEntryModule) — see activityVisibilityService.ts's
+// doc comment for why a page can come back shorter than requested once some entries are gated out.
 activityRouter.get('/api/activity/feed', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) {
@@ -83,5 +85,7 @@ activityRouter.get('/api/activity/feed', async (req, res) => {
     to,
     cursor: (req.query.cursor as string | undefined) || undefined,
   });
-  return res.json({ items: page.items.map(serializeEntry), nextCursor: page.nextCursor });
+
+  const visibleItems = page.items.filter((item) => canViewEntryModule(user.roleContext, item.entityType));
+  return res.json({ items: visibleItems.map((entry) => filterActivityEntryForRole(entry, user.roleContext)), nextCursor: page.nextCursor });
 });

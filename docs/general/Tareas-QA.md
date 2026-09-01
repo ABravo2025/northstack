@@ -3214,3 +3214,66 @@ tenant descartable en `staging` con el organigrama de arriba: los 13 casos de es
 confirmados uno por uno vía curl real (login, `GET`/`PATCH` con los ids reales de cada empleado) y
 Playwright real (tabla scopeada, selector "Reports To" con el directorio completo). Falta la
 revisión humana de Alejandro.
+
+## QA-72 — Custom Roles: Activity Log respeta campos, custom-fields y scope (Fase F, 2026-09-01, en `staging`)
+
+**Por qué existe esta tarea:** las Fases C/D/E restringieron campos, custom fields y filas de
+Employee en TODA la app — excepto en el Activity Log, que hasta ahora mostraba `changes`/`summary`
+calculados en el momento de la escritura, sin saber nada de esas restricciones. Un rol con
+`personalEmail` oculto podía igual leer el valor viejo/nuevo en la pestaña de Activity del propio
+Employee; un rol con acceso al feed tenant-wide pero sin acceso a Payroll/Stripe podía ver entradas
+de esos módulos igual. Esta tarea verifica que ambas fugas están cerradas, y que un chequeo de
+acceso que antes no existía (`GET /api/activity`) ahora sí bloquea a quien corresponda.
+
+### A. Redacción de campo en la pestaña de Activity de un registro puntual
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Con "Personal email" oculto para un rol (Fase C), cambiar ese campo real de un Employee, luego abrir su pestaña Activity como ese rol | La entrada aparece con `changes: null` y un resumen genérico ("Updated Employee \"Nombre\"") — NO menciona "Personal email" ni el valor viejo/nuevo en ningún lado, ni en el detalle ni en el resumen de una línea |
+| 2 | La misma entrada, vista como Owner (o un rol sin esa restricción) | Muestra el detalle completo: campo, valor viejo, valor nuevo, y el resumen "Changed Personal email: ... → ..." |
+| 3 | Un `update` que cambió 2 campos, uno restringido y otro no | La entrada muestra solo el campo NO restringido en `changes`, y el resumen se recalcula para nombrar solo ese campo — nunca el resumen original de 2 campos |
+
+### B. El bundle de custom fields de Employee en Activity
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 4 | Cambiar un custom field de un Employee, luego ver su Activity como un rol SIN "View employee custom fields" | La entrada queda igual de redactada que el caso 1 — no se filtra por campo fijo (porque no lo es), sino por el permiso del bundle |
+| 5 | Mismo caso, con un rol que SÍ tiene "View employee custom fields" | El cambio del custom field se ve completo |
+| 6 | Cambiar un custom field de una Company/Contact/Opportunity y verlo con un rol que puede ver esa entidad pero no tiene ningún permiso especial de custom fields | Se ve completo — Company/Contact/Opportunity no tienen bundle propio (decisión 2), el custom field va con el permiso base de la entidad |
+
+### C. Acceso a la pestaña de Activity (gap cerrado en esta fase)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 7 | Un rol SIN "View employees" pide `GET /api/activity?entityType=employee&entityId=<cualquiera>` directamente | 403 — antes de esta fase esto no tenía ningún chequeo más allá de pertenecer al tenant |
+| 8 | Un rol con scope `self` (Fase E) pide la actividad de OTRO empleado (no el suyo) | 404 |
+| 9 | El mismo rol pide la actividad de su propio registro | 200, normal |
+| 10 | Un rol sin acceso a Companies pide la actividad de una Company | 403 |
+
+### D. Gate de módulo en el feed tenant-wide (`Settings → Activity Log`)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 11 | Un rol con "View activity log" pero SIN acceso a Payroll ve el feed completo | Ninguna entrada de tipo Compensation/Payroll Run/Pay Frequency/Payment Method aparece — no se redactan, se excluyen directamente de la lista |
+| 12 | El mismo rol, si tampoco tiene acceso a Stripe (Payments) | Ninguna entrada de Stripe Connection aparece tampoco |
+| 13 | Owner (o un rol con todos los permisos módulo) viendo el mismo feed | Ve TODAS las entradas, incluidas las de Payroll/Stripe |
+| 14 | Entradas de Task/Note/Tag/Saved View en el feed, para cualquier rol con "View activity log" | Siguen visibles siempre — no tienen gate de módulo propio, mismo comportamiento de siempre |
+
+### Al encontrar una falla
+
+El caso 1 (y su variante de custom fields, caso 4) es el más importante: si el `summary` original
+(no el array `changes`) se dejara sin recalcular, seguiría nombrando el campo oculto en texto plano
+aunque `changes` estuviera bien filtrado — es la clase de bug donde "arreglé el dato estructurado
+pero me olvidé del texto libre que dice lo mismo". El caso 7 (403 real en `GET /api/activity` para
+quien no tiene acceso al Employee) es alta severidad si falla: sería un bypass completo de las
+Fases C y E por una ruta lateral que nadie miraría primero. El resto sigue el criterio ya
+establecido en QA-65 a QA-71.
+
+Verificado por Claude contra `staging` real antes de este push: `npm test` 285/285 (incluye 20
+tests nuevos en `tests/activityVisibilityService.test.ts`) y ambos builds verdes. Contra un tenant
+descartable en `staging`: un cambio real de `personalEmail` vía `PATCH /api/hr/employees/:id`
+confirmado como redactado (summary genérico, `changes: null`) para un rol restringido y completo
+para el Owner; 403 real para un rol sin `view_employee` pidiendo `GET /api/activity`; 404/200 reales
+para un rol de scope `self` pidiendo la actividad de otro empleado vs. la propia; y en el feed
+tenant-wide, una entrada sintética de tipo `employeeCompensation` visible para el Owner pero ausente
+para un rol sin `canManagePayroll`. Falta la revisión humana de Alejandro.

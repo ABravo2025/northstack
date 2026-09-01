@@ -10,6 +10,7 @@ import {
   updateOwnProfile,
   validatePasswordResetToken,
 } from '../modules/auth/authService.js';
+import { serializeRoleContext } from '../modules/auth/roleService.js';
 import { AUTH_RATE_LIMIT, isRateLimited } from '../lib/rateLimit.js';
 import { authenticateUser, getBearerToken, getClientIp } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
@@ -111,10 +112,10 @@ authRouter.get('/api/auth/me', async (req, res) => {
 
   // roleContext carries a Set/Map (internal-only, resolved fresh per request by
   // authenticateToken) — JSON.stringify would silently flatten those to "{}" if spread into the
-  // response, so it's dropped here rather than sent as garbled junk. Fase G replaces this with a
-  // real, serializable `permissions` field once something on the frontend actually needs it.
-  const { roleContext: _roleContext, ...userWithoutRoleContext } = user;
-  return res.json({ user: sanitizeUser(userWithoutRoleContext) });
+  // response, so it's never sent as-is. Fase G: serializeRoleContext converts it to a real,
+  // serializable `permissions` payload the frontend's PermissionsContext consumes.
+  const { roleContext, ...userWithoutRoleContext } = user;
+  return res.json({ user: sanitizeUser(userWithoutRoleContext), permissions: serializeRoleContext(roleContext) });
 });
 
 authRouter.patch('/api/users/me', async (req, res) => {

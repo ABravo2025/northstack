@@ -175,6 +175,11 @@ listar, ningún chequeo en absoluto).
   cuando exista un endpoint de edición de roles (Fase H). **ADMIN_SEED_PERMISSIONS**/
   **MEMBER_SEED_PERMISSIONS** — qué permisos concretos arma cada uno, importadas también por
   `scripts/backfill-fase-b-permissions.ts` para no duplicar la lista.
+- **serializeRoleContext(role)** (Fase G, 2026-09) — convierte `RoleContext` (con `Set`/`Map`
+  internos, no serializables) a un objeto plano `{id, name, isOwner, permissions: string[],
+  hiddenFields: Record<string, string[]>}`, mismo shape que `RoleSummary` de
+  `roleManagementService.ts`. Usado por `GET /api/auth/me` (`routes/auth.ts`) para alimentar el
+  `PermissionsContext` del frontend.
 - **TOGGLEABLE_PERMISSION_KEYS** (Fase B2, ampliado Fase D) — subconjunto de `PERMISSION_KEYS`
   expuesto en la UI de Settings → Roles & Permissions (excluye el legacy `view_hr`/`create_hr` y el
   scope de Employee — `view_employee_scope:*`, sin enforcement todavía, Fase E — pero desde la Fase
@@ -548,6 +553,18 @@ Solo datos (`COUNTRIES`, `CHANGELOG_ENTRIES`), sin funciones — no indexado má
 
 ### `frontend/src/lib/trial.ts` (2026-08-21, Billing Integration)
 - **daysRemainingUntil(target)** — días que faltan hasta una fecha tipo `Tenant.trialEndsAt`/`Subscription.trialEndsAt` (`Math.ceil`, nunca negativo — mismo redondeo que el `daysRemaining` de `checkoutService.ts` del lado del backend). Antes vivía duplicado inline en `AppLayout.tsx` (para el banner de `past_due`) — extraído para que `PlansModal`/`AddPaymentMethodModal` lo usen también y el copy de trial nunca prometa más días de los que el backend realmente va a dar.
+
+### `frontend/src/contexts/PermissionsContext.tsx` (Custom Roles Fase G, 2026-09)
+- **PermissionsProvider** — envuelve el árbol de rutas en `App.tsx`, poblado desde
+  `permissions` (la respuesta de `GET /api/auth/me`, ver `serializeRoleContext` arriba). Deniega
+  por defecto (nunca lanza) si se usa sin Provider real todavía (rutas pre-auth, sesión
+  restaurándose).
+- **usePermissions()** — expone `{isOwner, roleName, has(permission), isFieldHidden(entityType,
+  fieldKey)}`. `has`/`isFieldHidden` replican exactamente `permissionService.ts`'s `has()` y
+  `fieldVisibilityService.ts`'s `isFieldVisible()` — mismo criterio que el backend, no una
+  aproximación aparte. Primer consumidor real: `EmployeesPage.tsx` (reemplazó 3 flags locales
+  `user.role === 'owner'/'admin'`); quedan ~15 archivos más con el mismo patrón inline, pendientes
+  de la Fase J.
 
 ### `frontend/src/hooks/useAutoCreateGuard.ts`
 - **useAutoCreateGuard()** — guard reusable para forms de "Add [Entity]" que auto-crean apenas sus campos requeridos están completos (2026-08, ver `EmployeeOverviewPanel`/`EmployeesPage.tsx`). Devuelve `{ attempt(isReady, run), reset() }`: `attempt` no hace nada si ya se creó, si hay una request en vuelo, o si `isReady` es false — así se puede llamar desde el commit de cada campo requerido (blur en texto, change en select) sin duplicar la entidad; `run` debe relanzar su error después de reportarlo (toast) para que el guard no marque la creación como exitosa y permita reintentar. `reset()` se llama al cerrar/reabrir el form.

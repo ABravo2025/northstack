@@ -182,6 +182,34 @@ export interface RoleContext {
   hiddenFieldsByEntity: Map<ActivityEntityType, Set<string>>;
 }
 
+// Custom Roles Fase G — the wire-format counterpart to RoleContext: same data, but Set/Map swapped
+// for array/plain-object so it survives JSON.stringify. Sent once on GET /api/auth/me and consumed
+// by the frontend's PermissionsContext — the single source `has()`/`isFieldHidden()` in that
+// context mirror permissionService.ts's `has()` and fieldVisibilityService.ts's `isFieldVisible()`
+// exactly, so a role's real UI feels the same as what the backend actually enforces, not an
+// approximation of it.
+export interface SerializedRoleContext {
+  id: string;
+  name: string;
+  isOwner: boolean;
+  permissions: string[];
+  hiddenFields: Record<string, string[]>;
+}
+
+export function serializeRoleContext(role: RoleContext): SerializedRoleContext {
+  const hiddenFields: Record<string, string[]> = {};
+  for (const [entityType, fields] of role.hiddenFieldsByEntity) {
+    hiddenFields[entityType] = Array.from(fields);
+  }
+  return {
+    id: role.id,
+    name: role.name,
+    isOwner: role.isOwner,
+    permissions: Array.from(role.permissions),
+    hiddenFields,
+  };
+}
+
 interface SeedRoleResult {
   owner: Role;
   admin: Role;

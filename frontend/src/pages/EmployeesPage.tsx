@@ -38,6 +38,7 @@ import {
   parseSort,
 } from '../lib/viewFields';
 import { isLikelyValidEmail } from '../lib/validation';
+import { usePermissions } from '../contexts/PermissionsContext';
 import { useAutoCreateGuard } from '../hooks/useAutoCreateGuard';
 import { COUNTRIES } from '../lib/countries';
 import { CURRENCY_CODES, currencyLabel } from '../lib/currencies';
@@ -67,6 +68,7 @@ interface EmployeesPageProps {
 
 export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const toast = useToast();
+  const permissions = usePermissions();
   const [employees, setEmployees] = useState<any[]>([]);
   // Custom Roles Fase E — unscoped roster (name/department/jobTitle/manager only, no PII) for
   // pickers that must point at anyone in the company regardless of the viewer's own HR scope:
@@ -103,9 +105,18 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const [draggedColKey, setDraggedColKey] = useState<string | null>(null);
   const [dragOverColKey, setDragOverColKey] = useState<string | null>(null);
 
-  const canManageCustomFields = user.role === 'owner' || user.role === 'admin';
-  const canEditEmployees = user.role === 'owner' || user.role === 'admin';
-  const canManagePayroll = user.role === 'owner';
+  // Custom Roles Fase G — migrated off the legacy `user.role === 'owner'/'admin'` inline checks to
+  // the real permission system (PermissionsContext). This uncovered 2 latent bugs, fixed alongside
+  // the migration rather than left in place with a "real" permission bolted onto the same wrong
+  // wiring: (1) the CSV import/export menu below was gated by canEditEmployees (manage_employee),
+  // but the backend has required manage_payroll for CSV since Fase B decision 4 — an Admin without
+  // manage_payroll would see a working-looking Import/Export UI that 403s on click; (2)
+  // EmployeeOverviewPanel's `canManageEmployees` prop was fed canManageCustomFields, not
+  // canEditEmployees — harmless only because both flags happened to be identical
+  // (owner||admin) before this migration.
+  const canManageCustomFields = permissions.has('manage_custom_fields');
+  const canEditEmployees = permissions.has('manage_employee');
+  const canManagePayroll = permissions.has('manage_payroll');
   const activeEmployeeCustomFields = employeeCustomFields.filter((field) => field.isActive);
   const activeEmployeeStatuses = employeeStatuses.filter((s) => s.isActive);
   // Column width/visibility/order are saved-view-scoped, not shared across
@@ -1467,7 +1478,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         {viewType !== 'kanban' && (
           <ColumnVisibilityMenu columns={toggleableColumns} isHidden={isColumnHidden} onToggle={toggleColumn} />
         )}
-        {canEditEmployees && (
+        {canManagePayroll && (
           <CsvImportExportMenu
             ref={csvMenuRef}
             token={token}
@@ -1498,8 +1509,8 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
           body="Add your team one by one, import a CSV, or load sample data."
           primaryLabel="Add employee"
           onPrimary={handleOpenAdd}
-          secondaryLabel={canEditEmployees ? 'Import CSV' : undefined}
-          onSecondary={canEditEmployees ? () => csvMenuRef.current?.openImport() : undefined}
+          secondaryLabel={canManagePayroll ? 'Import CSV' : undefined}
+          onSecondary={canManagePayroll ? () => csvMenuRef.current?.openImport() : undefined}
         >
           <button type="button" className="btn-ghost btn-md" onClick={handleLoadSampleData} disabled={seedingSample}>
             {seedingSample ? 'Loading…' : 'Load sample data'}
@@ -1757,7 +1768,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
             departments={employeeDepartments}
             jobTitles={employeeJobTitles}
             timeOffPolicies={timeOffPolicies}
-            canManageEmployees={canManageCustomFields}
+            canManageEmployees={canEditEmployees}
             canManagePayroll={canManagePayroll}
             onClose={() => setOverviewEmployeeId(null)}
             onChanged={refreshEmployeesSilently}

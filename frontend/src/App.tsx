@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { api } from './api';
-import type { Tenant } from './api';
+import type { PermissionsPayload, Tenant } from './api';
 import { useToast } from './components/common/ToastProvider';
+import { PermissionsProvider } from './contexts/PermissionsContext';
 import TableSkeleton from './components/common/TableSkeleton';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -55,6 +56,7 @@ export default function App() {
 
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [user, setUser] = useState<any>(null);
+  const [permissions, setPermissions] = useState<PermissionsPayload | null>(null);
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(
@@ -84,6 +86,7 @@ export default function App() {
       Promise.all([api.getCurrentUser(token), api.getCurrentTenant(token).catch(() => null)])
         .then(([userResponse, tenant]) => {
           setUser(userResponse.user);
+          setPermissions(userResponse.permissions);
           if (tenant) {
             setTenant(tenant);
           }
@@ -165,6 +168,7 @@ export default function App() {
     }
     setToken(null);
     setUser(null);
+    setPermissions(null);
     // Cleared alongside token/user — otherwise a second person logging in on the same tab
     // briefly (or, if the tenant fetch below then fails, indefinitely) sees the previous
     // account's tenant: its past_due/suspended banner, its PlansModal dismissal state, etc.
@@ -183,6 +187,7 @@ export default function App() {
   const isAuthenticated = Boolean(token && user);
 
   return (
+    <PermissionsProvider payload={permissions}>
     <Routes>
       <Route
         path="/login"
@@ -288,5 +293,6 @@ export default function App() {
         element={<Navigate to={isAuthenticated ? '/overview' : '/login'} replace />}
       />
     </Routes>
+    </PermissionsProvider>
   );
 }

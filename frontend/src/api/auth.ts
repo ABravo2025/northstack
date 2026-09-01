@@ -1,5 +1,5 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
-import type { AuthResponse, PlanTier, Tenant, TenantUser } from './types.js';
+import type { AuthResponse, PermissionsPayload, PlanTier, Tenant, TenantUser } from './types.js';
 
 // Tenant Signup — email verification (spec-tenant-signup.md). /start and /resend hit distinct
 // backend routes (own rate-limit buckets for the cooldown timer/analytics) but are otherwise
@@ -130,7 +130,7 @@ export const authApi = {
     if (!res.ok) await throwApiError(res);
   },
 
-  getCurrentUser: async (token: string) => {
+  getCurrentUser: async (token: string): Promise<{ user: any; permissions: PermissionsPayload }> => {
     const res = await apiFetch(`${API_BASE_URL}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     });

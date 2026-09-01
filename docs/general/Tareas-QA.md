@@ -3277,3 +3277,57 @@ para el Owner; 403 real para un rol sin `view_employee` pidiendo `GET /api/activ
 para un rol de scope `self` pidiendo la actividad de otro empleado vs. la propia; y en el feed
 tenant-wide, una entrada sintética de tipo `employeeCompensation` visible para el Owner pero ausente
 para un rol sin `canManagePayroll`. Falta la revisión humana de Alejandro.
+
+## QA-73 — Custom Roles: hook de permisos en el frontend + primera migración real (Fase G, 2026-09-01, en `staging`)
+
+**Por qué existe esta tarea:** hasta esta fase, el frontend no tenía ninguna forma de saber los
+permisos reales de un rol custom — cada página comparaba `user.role === 'owner'/'admin'` (el enum
+legacy de 3 valores), así que un rol custom con permisos reales concedidos por el sistema nuevo
+podía ver una UI que no coincidía con lo que el backend realmente le permitía hacer. Esta tarea
+verifica el nuevo `permissions` en `GET /api/auth/me` y la primera migración real (en
+`EmployeesPage.tsx`), que además corrigió 2 bugs reales que la migración destapó.
+
+### A. El payload de permisos
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Loguearse con cualquier usuario y llamar `GET /api/auth/me` | La respuesta incluye un campo `permissions` con `{id, name, isOwner, permissions: string[], hiddenFields: {...}}` — ya no se descarta el rol en silencio |
+| 2 | El mismo llamado para un usuario Owner | `isOwner: true`, `permissions: []` (Owner no tiene filas propias, bypasea todo estructuralmente) |
+| 3 | El mismo llamado para un rol custom con field restrictions (Fase C) | `hiddenFields` refleja exactamente lo configurado en `Settings → Roles & Permissions` para ese rol |
+
+### B. Comportamiento visible en People (`EmployeesPage.tsx`)
+
+Crear 2 roles custom para esta prueba: **"HR Only"** (`manage_employee`, sin `manage_payroll`) y
+**"Payroll Only"** (`manage_payroll`, sin `manage_employee`).
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 4 | Loguearse como "HR Only", ir a People | Aparece la fila fantasma "+ Add" al final de la tabla — puede agregar personas |
+| 5 | El mismo usuario, la barra de herramientas de la tabla | NO aparecen los íconos de exportar/importar CSV |
+| 6 | Loguearse como "Payroll Only", ir a People | Aparecen los íconos de exportar/importar CSV en la barra de herramientas |
+| 7 | El mismo usuario | NO aparece la fila fantasma "+ Add" — no puede crear empleados |
+| 8 | "HR Only" abre el panel de detalle de un empleado existente | El menú "⋮" del registro ofrece "Terminate"/"Invite to app" (antes de esta fase, este chequeo estaba mal cableado a un permiso distinto y estas opciones no aparecían para un rol así) |
+
+### Al encontrar una falla
+
+El caso 5/6 (CSV) es el más importante en términos de consistencia con el backend: antes de esta
+fase, cualquier rol con apariencia de "puede editar empleados" veía el botón de CSV aunque el
+backend (desde la Fase B) exige `manage_payroll` específicamente — un Admin sin ese permiso preciso
+veía un botón que fallaba con 403 al usarlo. Si el caso 5 falla (el botón vuelve a aparecer para
+quien no tiene `manage_payroll`), es la reaparición exacta de ese bug. El caso 8 confirma el
+segundo bug corregido (el prop `canManageEmployees` de `EmployeeOverviewPanel` estaba recibiendo el
+valor equivocado) — si un rol con `manage_employee` real no ve esas opciones, el prop volvió a
+cablearse mal.
+
+**Nota**: quedan ~15 archivos más en el frontend con el mismo patrón `user.role === 'owner'/'admin'`
+inline sin migrar todavía (Sidebar, AppLayout, Companies/Contacts/Opportunities, Payroll, Time Off,
+Payments, etc.) — es trabajo de una fase posterior (Fase J), no algo que esta tarea deba reportar
+como pendiente de esta fase puntual.
+
+Verificado por Claude contra `staging` real antes de este push: `npm test` 287/287 (+2 tests nuevos
+en `tests/roleService.test.ts` para `serializeRoleContext`) y ambos builds verdes. Contra un tenant
+descartable en `staging` con los 2 roles de arriba: `GET /api/auth/me` confirmado con el payload
+real vía curl; Playwright real confirmando la fila "+ Add" y los botones de CSV apareciendo
+exactamente para el rol correcto y no para el otro (capturas en ambos casos); y una traza de red
+confirmando que "HR Only" ahora sí dispara `GET .../termination` al abrir un empleado (antes del fix
+del prop, no lo hacía). Falta la revisión humana de Alejandro.

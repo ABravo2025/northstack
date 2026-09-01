@@ -1,3 +1,13 @@
+// Custom Roles Fase G — mirrors the backend's SerializedRoleContext (roleService.ts), sent on
+// GET /api/auth/me. Consumed by PermissionsContext, never read from directly by a page.
+export interface PermissionsPayload {
+  id: string;
+  name: string;
+  isOwner: boolean;
+  permissions: string[];
+  hiddenFields: Record<string, string[]>;
+}
+
 export interface AuthResponse {
   user: {
     id: string;

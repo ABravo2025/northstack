@@ -1371,6 +1371,59 @@ de tipo `employeeCompensation` que el Owner sí veía. `npm test` 285/285 (+20 t
 `tests/activityVisibilityService.test.ts`), ambos builds verdes. Nada de esto llegó a `main`
 todavía.
 
+**Fase G (hook de permisos en el frontend): completa.** Hasta acá el frontend no tenía ninguna
+forma de leer los permisos reales de un rol — cada página re-derivaba autoridad comparando
+`user.role === 'owner'/'admin'` inline (el enum legacy), sin importar qué permisos un rol custom
+tuviera de verdad concedidos. Esta fase construye la infraestructura: `GET /api/auth/me` ahora
+devuelve un campo `permissions` real (antes se descartaba explícitamente el `roleContext` entero
+porque `Set`/`Map` no sobreviven un `JSON.stringify`). Nuevo **`serializeRoleContext(role)`**
+(`roleService.ts`) — convierte `RoleContext` a un objeto plano (`{id, name, isOwner, permissions:
+string[], hiddenFields: Record<string, string[]>}`), mismo shape que `RoleSummary` de
+`roleManagementService.ts`. Nuevo **`frontend/src/contexts/PermissionsContext.tsx`** —
+`PermissionsProvider` envuelve todo el árbol de rutas en `App.tsx`, poblado desde la respuesta de
+`/api/auth/me`; `usePermissions()` expone `has(permission)`/`isFieldHidden(entityType, fieldKey)`
+que replican exactamente `permissionService.ts`'s `has()` y `fieldVisibilityService.ts`'s
+`isFieldVisible()` — para que la UI de un rol se sienta igual a lo que el backend realmente exige,
+no una aproximación aparte. Deniega por defecto (nunca lanza) cuando no hay `Provider` real
+todavía (rutas pre-auth) o mientras la sesión se está restaurando.
+
+**Primera migración real, como prueba y como fix**: `EmployeesPage.tsx` tenía 3 flags locales
+(`canManageCustomFields`, `canEditEmployees`, `canManagePayroll`) los 3 definidos como
+`user.role === 'owner'/'admin'` (o solo `'owner'`) — migrados a `permissions.has(...)`. Migrar
+esto de verdad (no un simple find-and-replace) destapó 2 bugs latentes que un reemplazo mecánico
+hubiera preservado silenciosamente:
+- El menú de **Import/Export CSV** estaba gateado por `canEditEmployees` (→ `manage_employee`),
+  pero el backend exige `manage_payroll` para CSV desde la Fase B (decisión 4) — un Admin sin
+  `manage_payroll` explícito veía un botón de Import/Export que funcionaba visualmente pero
+  devolvía 403 al usarlo. Corregido: ahora gatea por `canManagePayroll` (`manage_payroll`),
+  igual que el backend.
+- El prop `canManageEmployees` de `EmployeeOverviewPanel` (controla si se cargan las opciones de
+  terminación y si aparecen "Invite to app"/"Terminate" en el menú del registro) recibía
+  `canManageCustomFields` en vez de `canEditEmployees` — inofensivo solo porque ambos flags eran
+  literalmente la misma expresión antes de esta migración. Corregido: ahora recibe `canEditEmployees`
+  (`manage_employee`), la correspondencia semánticamente correcta.
+
+Verificado con un tenant descartable en `staging` con 2 roles reales — "HR Only"
+(`manage_employee`, sin `manage_payroll`) y "Payroll Only" (`manage_payroll`, sin
+`manage_employee`) — antes de esta fase, ambos habrían visto exactamente lo mismo (o nada) porque
+compartían un solo flag binario `owner||admin`; con Playwright real: HR Only ve la fila fantasma
+"+ Add" pero NINGÚN botón de CSV en la barra de herramientas; Payroll Only ve los botones de
+Export/Import CSV pero NO la fila de agregar. Confirmado también que HR Only ahora sí dispara el
+`GET .../termination` al abrir el panel de un empleado (antes, con el prop mal cableado, no lo
+hacía). `npm test` 287/287 (+2 tests nuevos), ambos builds verdes. Nada de esto llegó a `main`
+todavía.
+
+**Deuda conocida, no parte de esta fase**: quedan ~15 archivos más con el mismo patrón
+`user.role === 'owner'/'admin'` inline (`Sidebar.tsx`, `AppLayout.tsx`, `CompaniesPage.tsx`,
+`ContactsPage.tsx`, `OpportunitiesPage.tsx`, `PayrollPage.tsx`, `PayrollRunDetailPage.tsx`,
+`TimeOffOverviewPage.tsx`, `PaymentsOverviewPage.tsx`, `CompanyUsersPage.tsx`,
+`ActivityLogSettingsPage.tsx`, `IntegrationsSettingsPage.tsx`, `OverviewPage.tsx`,
+`DashboardsLayout.tsx`, `settingsSections.tsx`) — la migración completa de esos es la Fase J. El
+botón "Add employee" del `EmptyState` de `EmployeesPage.tsx` sigue sin condicionar por permiso
+(muestra el botón aunque el `POST` vaya a devolver 403) — no se tocó en esta pasada porque el
+componente `EmptyState` compartido no admite hoy un primary action opcional sin cambiar su
+contrato para todos sus consumidores, un cambio más grande que el alcance de esta fase.
+
 ```mermaid
 erDiagram
     TENANT ||--o{ ROLE : "has"

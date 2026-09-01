@@ -175,9 +175,40 @@ componente por-rol de aprobar/rechazar Time Off — `timeOffRequestService.ts` s
   (revocar un prerequisito cascadea a revocar lo que dependía de él) — derivada automáticamente de
   `PERMISSION_PREREQUISITES`, no mantenida a mano por separado.
 
-### `src/modules/auth/roleManagementService.ts` (Custom Roles Fase B2, 2026-09)
+### `src/modules/auth/fieldVisibilityService.ts` (Custom Roles Fase C, 2026-09)
+- **isFieldVisible(role, entityType, fieldKey)** — `role.isOwner` bypasea todo; si no, exige el
+  permiso base del módulo (`MODULE_GATE_BY_ENTITY_TYPE`: employee→canViewEmployee,
+  company→canViewCompany, contact→canViewContact, opportunity→canViewOpportunity) antes de mirar
+  `role.hiddenFieldsByEntity` — un rol sin acceso al módulo entero no ve ningún campo, restringido
+  o no.
+- **redactEntityFields(entity, entityType, role)** / **redactEntityListFields(entities, ...)** —
+  nullea (no borra la clave) cada campo restringido, y también nullea el objeto de relación
+  resuelto que lo acompaña si existe en la misma respuesta (ej. `Company.sizeId` oculto también
+  nullea `sizeDefn` — de lo contrario el valor legible seguiría filtrándose por ahí). Llamado en
+  cada ruta de Employee/Company/Contact/Opportunity, justo antes de `res.json()`, nunca dentro del
+  service (mismo criterio que `tenantMetrics.ts` vaciando el bloque `payroll`).
+- **RESTRICTABLE_FIELDS_BY_ENTITY_TYPE** — el catálogo de campos restringibles por entidad,
+  derivado de `fieldConfigs/index.ts` (Activity Log) menos el/los campo(s) de identidad de cada una
+  (`firstName`/`lastName` en Employee/Contact, `name` en Company/Opportunity — nunca restringibles,
+  ocultar el nombre dejaría filas/búsquedas sin nada que mostrar). Fuente única compartida con
+  `roleManagementService.ts` (valida un `fieldKey` entrante) y el endpoint
+  `GET /api/roles/field-catalog` que consume la UI.
+
+### `src/modules/activity/fieldConfigs/index.ts` (Custom Roles Fase C, 2026-09)
+- **ACTIVITY_FIELD_CONFIGS_BY_ENTITY_TYPE** — agregador nuevo (no existía antes) de los
+  `*FieldConfig` de Activity Log para Employee/Company/Contact/Opportunity — reusado tal cual como
+  el catálogo de "qué campos tiene esta entidad" en vez de inventar uno paralelo. Solo estas 4
+  entidades están registradas (las que field-level restriction cubre hoy), no las 23 restantes de
+  `ActivityEntityType`.
+
+### `src/modules/auth/roleManagementService.ts` (Custom Roles Fase B2-C, 2026-09)
 - **listRolesForTenant(tenantId)** — todos los roles del tenant (semilla + custom) con sus
-  permisos, para la UI de Settings → Roles & Permissions.
+  permisos y `hiddenFields` (campos fijos restringidos, por entidad), para la UI de Settings →
+  Roles & Permissions.
+- **setRoleFieldRestriction(tenantId, roleId, entityType, fieldKey, hidden)** (Fase C) — la
+  contraparte de campo de `setRolePermission`, con polaridad invertida:
+  `RoleFieldRestriction` es una denylist (una fila = oculto), así que `hidden: true` crea la fila y
+  `hidden: false` la borra. Valida `fieldKey` contra `RESTRICTABLE_FIELDS_BY_ENTITY_TYPE`.
 - **setRolePermission(tenantId, roleId, permission, granted)** — valida contra
   `TOGGLEABLE_PERMISSION_KEYS`, rechaza tocar el rol Owner, aplica `PERMISSION_PREREQUISITES`/
   `DEPENDENT_PERMISSIONS` (bloquea conceder sin los prerrequisitos, cascadea al revocar). Gateado
@@ -526,7 +557,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 | `payments.ts` (Payments v1, Units 2-3, 2026-08-26) | searchStripeCustomersForCompany, linkCompanyToStripe (lanza `ApiError` con `.status === 409` si la Company ya está vinculada a otro customer — reintentar con `confirmOverwrite: true`), getCompanyPaymentSummary, getCompanyPaymentEvents(token, companyId, cursor?), getPaymentsOverview |
 | `billing.ts` (Billing Integration, Etapa E) | getSubscription, startCheckout, changeSubscriptionPlan (post-billing, distinto de `updateTenantPlan` de arriba que es la elección pre-billing durante trial), cancelSubscription, resumeSubscription, getInvoiceDocumentUrl(token, invoiceId, disposition?) (2026-08-19, Paddle-only, URL temporal ~1h, se pide fresca en cada click — `BillingPage.tsx` la usa dos veces por fila de Invoice: "View invoice" con `inline`, "Download" con `attachment`) |
 | `activity.ts` (2026-08-30, Activity Log) | listActivityForEntity(token, entityType, entityId) (tab del modal), listActivityFeed(token, params) (feed tenant-wide de Settings, cursor-paginado — `params.entityType` sigue el `TaskEntityType` de 4 valores, no el enum completo de 27 del backend, hasta que una unidad futura amplíe qué se puede filtrar) |
-| `roles.ts` (2026-09, Custom Roles Fase B2) | listRoles(token) (todos los roles del tenant + sus permisos), setRolePermission(token, roleId, permission, granted), createRole(token, name, duplicateFromRoleId?), renameRole(token, roleId, name), deleteRole(token, roleId) — todo owner-only server-side, usado por `RolesPermissionsPage.tsx` |
+| `roles.ts` (2026-09, Custom Roles Fase B2-C) | listRoles(token) (todos los roles del tenant + sus permisos + `hiddenFields`), setRolePermission(token, roleId, permission, granted), createRole(token, name, duplicateFromRoleId?), renameRole(token, roleId, name), deleteRole(token, roleId), getFieldCatalog(token) (Fase C, catálogo de campos restringibles por entidad), setRoleFieldRestriction(token, roleId, entityType, fieldKey, hidden) (Fase C) — todo owner-only server-side, usado por `RolesPermissionsPage.tsx` |
 
 ### `frontend/src/components/common/` — componentes reusables genéricos, no ligados a una entidad
 - **AddPaymentMethodModal** (2026-08-19, Billing Integration) — dispara `POST /api/subscriptions/me/checkout`; ambos proveedores abren en pestaña nueva vía `window.open` (Mercado Pago: `initPoint` directo; Paddle: `PaddleCheckoutPage`, ver abajo, en `/billing/checkout?transactionId=...`). Nunca arma un form de tarjeta propio. Prop `mode: 'subscribe' | 'update'` cambia el copy (elegir plan por primera vez vs. reemplazar la tarjeta de una suscripción ya activa — dos intents distintos, corrección de Alejandro). **2026-08-20 (corrección)**: ya no carga `paddle.js` ni llama `Paddle.Checkout.open()` en la pestaña actual — Alejandro pidió que el checkout se sienta como su propia ventana, no un overlay apilado sobre la actual; el componente ya no tiene prop `onCompleted` (no hay señal de vuelta a la pestaña original — `BillingPage.tsx` refetchea al recuperar foco en su lugar, ver abajo). **2026-08-21 (corrección)**: la regla "si no hay modal, pestaña nueva" valía para los dos proveedores, no solo Paddle — Mercado Pago todavía hacía `window.location.href = initPoint` (navegaba la pestaña actual fuera de Northstack por completo); ahora también `window.open(initPoint, '_blank', 'noopener,noreferrer')`, mismo patrón que Paddle. **2026-08-21 (misma tarde)**: nueva prop `trialDaysRemaining?: number` (solo relevante en `mode="subscribe"`) — el copy y el título ("Start your free trial" vs. "Subscribe") ahora reflejan si de verdad queda trial o no, en vez de prometer siempre "15 días" sin importar cuánto tiempo ya pasó; espejo exacto de lo que `checkoutService.ts` va a cobrar de verdad (ver su entry abajo). Montado tanto en `AppLayout.tsx` (banner de `past_due`/`suspended`, siempre `mode="subscribe"`, `trialDaysRemaining` calculado sobre `tenant.trialEndsAt` — normalmente 0 ahí, porque para llegar a ese banner el trial ya venció) como en `BillingPage.tsx` (modo según si ya hay `provider`, `trialDaysRemaining` sobre `subscription.trialEndsAt`).

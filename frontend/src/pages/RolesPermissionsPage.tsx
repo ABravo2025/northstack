@@ -1,10 +1,17 @@
 import { useEffect, useState } from 'react';
-import { api, type Role } from '../api';
+import { api, type RestrictableField, type Role } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import TableSkeleton from '../components/common/TableSkeleton';
 import Modal from '../components/common/Modal';
 import RoleColumnMenu from '../components/settings/RoleColumnMenu';
-import { LockIcon, PlusIcon } from '../components/common/Icons';
+import { ChevronRightIcon, LockIcon, PlusIcon } from '../components/common/Icons';
+
+const ENTITY_LABELS: Record<string, string> = {
+  employee: 'Employee fields',
+  company: 'Company fields',
+  contact: 'Contact fields',
+  opportunity: 'Opportunity fields',
+};
 
 interface RolesPermissionsPageProps {
   token: string;
@@ -127,8 +134,10 @@ export default function RolesPermissionsPage({ token, user }: RolesPermissionsPa
   const isOwner = user.role === 'owner';
   const toast = useToast();
   const [roles, setRoles] = useState<Role[]>([]);
+  const [fieldCatalog, setFieldCatalog] = useState<Record<string, RestrictableField[]>>({});
   const [loading, setLoading] = useState(true);
   const [savingKey, setSavingKey] = useState<string | null>(null);
+  const [savingFieldKey, setSavingFieldKey] = useState<string | null>(null);
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newRoleName, setNewRoleName] = useState('');
@@ -140,9 +149,11 @@ export default function RolesPermissionsPage({ token, user }: RolesPermissionsPa
       setLoading(false);
       return;
     }
-    api
-      .listRoles(token)
-      .then(setRoles)
+    Promise.all([api.listRoles(token), api.getFieldCatalog(token)])
+      .then(([rolesResult, catalogResult]) => {
+        setRoles(rolesResult);
+        setFieldCatalog(catalogResult);
+      })
       .catch((error) => toast.error('Failed to load roles: ' + (error as Error).message))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -188,6 +199,33 @@ export default function RolesPermissionsPage({ token, user }: RolesPermissionsPa
       toast.error((error as Error).message);
     } finally {
       setSavingKey(null);
+    }
+  }
+
+  function isFieldHidden(role: Role, entityType: string, fieldKey: string): boolean {
+    return role.hiddenFields[entityType]?.includes(fieldKey) ?? false;
+  }
+
+  async function toggleFieldVisibility(role: Role, entityType: string, fieldKey: string, nextVisible: boolean) {
+    const savingId = `${role.id}:${entityType}:${fieldKey}`;
+    setSavingFieldKey(savingId);
+    try {
+      await api.setRoleFieldRestriction(token, role.id, entityType, fieldKey, !nextVisible);
+      setRoles((prev) =>
+        prev.map((r) => {
+          if (r.id !== role.id) return r;
+          const current = new Set(r.hiddenFields[entityType] ?? []);
+          if (nextVisible) current.delete(fieldKey);
+          else current.add(fieldKey);
+          return { ...r, hiddenFields: { ...r.hiddenFields, [entityType]: Array.from(current) } };
+        }),
+      );
+      const fieldLabel = fieldCatalog[entityType]?.find((f) => f.key === fieldKey)?.label ?? fieldKey;
+      toast.success(`${nextVisible ? 'Showing' : 'Hiding'} "${fieldLabel}" for ${role.name}`);
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setSavingFieldKey(null);
     }
   }
 
@@ -299,6 +337,68 @@ export default function RolesPermissionsPage({ token, user }: RolesPermissionsPa
             </div>
           ))}
         </section>
+      ))}
+
+      <h3 className="mb-2 text-base font-bold text-ink dark:text-dark-ink">Field visibility</h3>
+      <p className="mb-4 max-w-2xl text-sm text-ink-muted dark:text-dark-ink-muted">
+        Hide specific fields from a role — the name of each record always stays visible (otherwise a list or
+        search would have nothing to show), everything else is fair game. A role also needs the module
+        permission above before any of this applies.
+      </p>
+
+      {Object.entries(fieldCatalog).map(([entityType, fields]) => (
+        <details key={entityType} className="card mb-4 overflow-hidden p-0">
+          <summary className="flex cursor-pointer list-none items-center gap-2 bg-surface-0 px-5 py-3 text-sm font-semibold text-ink select-none dark:bg-dark-raised dark:text-dark-ink">
+            <ChevronRightIcon className="h-3.5 w-3.5 text-ink-faint dark:text-dark-ink-faint" />
+            {ENTITY_LABELS[entityType] ?? entityType}
+            <span className="text-xs font-normal text-ink-faint dark:text-dark-ink-faint">({fields.length})</span>
+          </summary>
+          <div
+            className="grid items-center gap-3 border-b border-t border-line bg-surface-0 px-5 py-2 dark:border-dark-line dark:bg-dark-raised"
+            style={{ gridTemplateColumns }}
+          >
+            <span />
+            <span className="text-center text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">Owner</span>
+            {editableRoles.map((role) => (
+              <span
+                key={role.id}
+                className="truncate text-center text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint"
+                title={role.name}
+              >
+                {role.name}
+              </span>
+            ))}
+          </div>
+          {fields.map((field) => (
+            <div
+              key={field.key}
+              data-field-row={`${entityType}:${field.key}`}
+              className="grid items-center gap-3 border-b border-line-soft px-5 py-3 last:border-b-0 dark:border-dark-line-soft"
+              style={{ gridTemplateColumns }}
+            >
+              <div className="text-sm text-ink dark:text-dark-ink">{field.label}</div>
+              <div className="flex justify-center">
+                <span
+                  className="flex h-[19px] w-[34px] items-center justify-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                  title="Owner always sees this"
+                >
+                  <LockIcon className="h-[11px] w-[11px]" />
+                </span>
+              </div>
+              {editableRoles.map((role) => (
+                <div key={role.id} className="flex justify-center">
+                  <input
+                    type="checkbox"
+                    checked={!isFieldHidden(role, entityType, field.key)}
+                    disabled={savingFieldKey === `${role.id}:${entityType}:${field.key}`}
+                    onChange={(e) => toggleFieldVisibility(role, entityType, field.key, e.target.checked)}
+                    aria-label={`${field.label} visible to ${role.name}`}
+                  />
+                </div>
+              ))}
+            </div>
+          ))}
+        </details>
       ))}
 
       <p className="mt-2 max-w-2xl text-xs text-ink-faint dark:text-dark-ink-faint">

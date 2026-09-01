@@ -1,5 +1,5 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
-import type { Role } from './types.js';
+import type { RestrictableField, Role } from './types.js';
 
 export const rolesApi = {
   listRoles: async (token: string): Promise<Role[]> => {
@@ -57,6 +57,32 @@ export const rolesApi = {
     const res = await apiFetch(`${API_BASE_URL}/api/roles/${roleId}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+  },
+
+  getFieldCatalog: async (token: string): Promise<Record<string, RestrictableField[]>> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/roles/field-catalog`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  setRoleFieldRestriction: async (
+    token: string,
+    roleId: string,
+    entityType: string,
+    fieldKey: string,
+    hidden: boolean,
+  ): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/roles/${roleId}/field-restrictions`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ entityType, fieldKey, hidden }),
     });
     if (!res.ok) await throwApiError(res);
   },

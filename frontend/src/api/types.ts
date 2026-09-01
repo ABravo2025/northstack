@@ -583,6 +583,12 @@ export interface Role {
   isOwner: boolean;
   isEditable: boolean;
   permissions: string[];
+  hiddenFields: Record<string, string[]>;
+}
+
+export interface RestrictableField {
+  key: string;
+  label: string;
 }
 
 export interface TenantUser {

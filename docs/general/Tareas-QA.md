@@ -3029,3 +3029,56 @@ Verificado por Claude contra `staging` real antes de este push: `npm test`/`npm 
 verde, y Playwright real de punta a punta (crear duplicando Admin, confirmar que copió los
 permisos, renombrar, intentar "Owner" y ver el rechazo, borrar, confirmar que la columna
 desaparece de la matriz). Falta la revisión humana de Alejandro.
+
+## QA-69 — Custom Roles: restricción de campos fijos (Fase C, 2026-09-01, en `staging`)
+
+**Por qué existe esta tarea:** hasta la Fase B un rol solo podía prender/apagar módulos enteros
+(ver Employee sí/no, ver Company sí/no). Esta fase agrega control campo por campo dentro de un
+módulo ya visible — por ejemplo, un rol puede ver el legajo de un Employee pero no su
+`personalEmail` o su `birthdate`. Solo aplica a campos FIJOS del schema (no a custom fields, que
+van por un permiso de paquete aparte, todavía sin construir — Fase D).
+
+### A. Matriz de campos en la UI (`Settings → Roles & Permissions → Field visibility`)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Abrir la sección "Field visibility", expandir "Employee" | Lista todos los campos fijos restringibles de Employee (personalEmail, birthdate, nationality, etc.) — NO incluye `firstName`/`lastName` |
+| 2 | Expandir "Company" | NO incluye `name` en la lista de campos restringibles |
+| 3 | Expandir "Contact" | NO incluye `firstName`/`lastName` |
+| 4 | Expandir "Opportunity" | NO incluye `name` |
+| 5 | Destildar "Personal email" en la columna de un rol editable (ej. Member) | Guarda al instante (autosave), sin necesidad de un botón "Guardar" aparte |
+| 6 | Recargar la página | El campo sigue destildado para ese rol — quedó persistido, no es solo estado local |
+| 7 | Columna Owner en la sección de campos | Sin checkboxes / siempre "visible" — Owner nunca es restringible, igual que en la matriz de permisos de módulo |
+
+### B. Efecto real en la respuesta de la API (no solo en la UI)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 8 | Con "Personal email" oculto para Member: loguearse como un usuario Member y pedir `GET /api/hr/employees` | El campo `personalEmail` viene en el JSON pero con valor `null` para cada empleado (la clave no desaparece del objeto) |
+| 9 | Mismo caso, pedir el detalle `GET /api/hr/employees/:id` | Mismo resultado — `personalEmail: null` |
+| 10 | Revertir el toggle (volver a tildar "Personal email" para Member) y repetir el request | El valor real vuelve a aparecer — la restricción es reversible sin dejar residuo |
+| 11 | Ocultar un campo que tiene un FK + su relación resuelta a la vez (ej. `accountOwnerId` en Company) | Tanto `accountOwnerId` como el objeto `accountOwner` completo vienen `null` — el valor no debe quedar visible "por la puerta de atrás" a través del objeto de relación |
+| 12 | Con un rol que directamente NO tiene `view_employee` (el módulo entero apagado), sin ninguna restricción de campo configurada | Ningún campo de Employee es visible para ese rol — el gate de módulo corta antes de mirar la denylist de campos |
+| 13 | Con un rol que tiene `view_company` pero no `view_contact` (o viceversa), pedir el detalle de una Opportunity | Ningún campo de Opportunity es visible — recordar que `canViewOpportunity` está derivado de ambos (Fase B), así que el gate de campos de Opportunity hereda esa misma regla |
+| 14 | El mismo toggle aplicado a un create/update (ej. `POST`/`PATCH /api/hr/employees`) | La respuesta de creación/edición también viene redactada igual que el GET — comportamiento consistente en toda la app, no solo en listas |
+
+### C. Verificación técnica
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 15 | `npm test` (backend, 248/248, incluye `tests/fieldVisibilityService.test.ts` nuevo) y `npm run build` (frontend + backend) | Los tres en verde |
+| 16 | Playwright real contra `staging`: destildar "Personal email" para Member en la UI → confirmar por API que `personalEmail` viene `null` → revertir en la UI → confirmar que vuelve | Pasa sin intervención manual |
+
+### Al encontrar una falla
+
+El caso 11 (relación resuelta filtrando el valor a pesar de que el FK esté redactado) es el más
+sutil y el de mayor severidad si reaparece — es exactamente el tipo de fuga que no se nota mirando
+la UI (que solo pinta el campo "de nombre"), solo inspeccionando el JSON crudo de la respuesta. El
+caso 12/13 (el gate de módulo debe cortar todo antes que la denylist de campos) es alto también: si
+falla, un rol sin acceso a un módulo entero podría igual ver campos sueltos de esa entidad. El resto
+sigue el criterio ya establecido en tareas anteriores de este mismo módulo (QA-65 a QA-68).
+
+Verificado por Claude contra `staging` real antes de este push: `npm test`/`npm run build` en
+verde, y Playwright real de punta a punta (toggle de "Personal email" para Member en la UI,
+confirmado por una llamada directa a `GET /api/hr/employees` que el campo vuelve `null`, revertido
+y confirmado que vuelve a aparecer). Falta la revisión humana de Alejandro.

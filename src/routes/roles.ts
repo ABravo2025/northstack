@@ -1,6 +1,8 @@
+import type { ActivityEntityType } from '@prisma/client';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
-import { createRole, deleteRole, listRolesForTenant, renameRole, setRolePermission } from '../modules/auth/roleManagementService.js';
+import { createRole, deleteRole, listRolesForTenant, renameRole, setRoleFieldRestriction, setRolePermission } from '../modules/auth/roleManagementService.js';
+import { RESTRICTABLE_FIELDS_BY_ENTITY_TYPE } from '../modules/auth/fieldVisibilityService.js';
 
 export const rolesRouter = createAsyncRouter();
 
@@ -65,6 +67,43 @@ rolesRouter.post('/api/roles', async (req, res) => {
   }
 
   return res.status(201).json(result.role);
+});
+
+// Custom Roles Fase C — the field catalog the UI renders as toggles, straight from
+// fieldVisibilityService.ts (itself reusing the Activity Log field-config labels) so the frontend
+// never hand-maintains a second copy of "what fields does Employee have."
+rolesRouter.get('/api/roles/field-catalog', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!user.roleContext.isOwner) {
+    return res.status(403).json({ error: 'Only the owner can view roles and permissions' });
+  }
+
+  return res.json(RESTRICTABLE_FIELDS_BY_ENTITY_TYPE);
+});
+
+rolesRouter.patch('/api/roles/:roleId/field-restrictions', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!user.roleContext.isOwner) {
+    return res.status(403).json({ error: 'Only the owner can change roles and permissions' });
+  }
+
+  const { entityType, fieldKey, hidden } = req.body ?? {};
+  if (typeof entityType !== 'string' || typeof fieldKey !== 'string' || typeof hidden !== 'boolean') {
+    return res.status(400).json({ error: 'entityType (string), fieldKey (string), and hidden (boolean) are required' });
+  }
+
+  const result = await setRoleFieldRestriction(user.tenantId!, req.params.roleId, entityType as ActivityEntityType, fieldKey, hidden);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  return res.json({ success: true });
 });
 
 rolesRouter.patch('/api/roles/:roleId', async (req, res) => {

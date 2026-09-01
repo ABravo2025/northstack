@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 let roles: any[] = [];
 let permissionRows: any[] = [];
+let fieldRestrictionRows: any[] = [];
 let users: any[] = [];
 let invitations: any[] = [];
 
@@ -11,12 +12,20 @@ vi.mock('../src/lib/prisma.js', () => ({
       findUnique: vi.fn(async ({ where }: any) => {
         const role = roles.find((r) => r.id === where.id);
         if (!role) return null;
-        return { ...role, modulePermissions: permissionRows.filter((p) => p.roleId === role.id) };
+        return {
+          ...role,
+          modulePermissions: permissionRows.filter((p) => p.roleId === role.id),
+          fieldRestrictions: fieldRestrictionRows.filter((f) => f.roleId === role.id),
+        };
       }),
       findMany: vi.fn(async ({ where }: any) =>
         roles
           .filter((r) => r.tenantId === where.tenantId)
-          .map((r) => ({ ...r, modulePermissions: permissionRows.filter((p) => p.roleId === r.id) })),
+          .map((r) => ({
+            ...r,
+            modulePermissions: permissionRows.filter((p) => p.roleId === r.id),
+            fieldRestrictions: fieldRestrictionRows.filter((f) => f.roleId === r.id),
+          })),
       ),
       findFirst: vi.fn(async ({ where }: any) =>
         roles.find(
@@ -58,6 +67,26 @@ vi.mock('../src/lib/prisma.js', () => ({
         permissionRows.push(...data);
       }),
     },
+    roleFieldRestriction: {
+      upsert: vi.fn(async ({ where, create }: any) => {
+        const key = where.roleId_entityType_fieldKey;
+        const exists = fieldRestrictionRows.find((f) => f.roleId === key.roleId && f.entityType === key.entityType && f.fieldKey === key.fieldKey);
+        if (!exists) fieldRestrictionRows.push({ ...create });
+      }),
+      deleteMany: vi.fn(async ({ where }: any) => {
+        const before = fieldRestrictionRows.length;
+        fieldRestrictionRows = fieldRestrictionRows.filter((f) => {
+          if (f.roleId !== where.roleId) return true;
+          if ('entityType' in where && f.entityType !== where.entityType) return true;
+          if ('fieldKey' in where && f.fieldKey !== where.fieldKey) return true;
+          return false;
+        });
+        return { count: before - fieldRestrictionRows.length };
+      }),
+      createMany: vi.fn(async ({ data }: any) => {
+        fieldRestrictionRows.push(...data);
+      }),
+    },
     user: {
       count: vi.fn(async ({ where }: any) => users.filter((u) => u.roleId === where.roleId).length),
     },
@@ -67,7 +96,7 @@ vi.mock('../src/lib/prisma.js', () => ({
   },
 }));
 
-import { createRole, deleteRole, listRolesForTenant, renameRole, setRolePermission } from '../src/modules/auth/roleManagementService.js';
+import { createRole, deleteRole, listRolesForTenant, renameRole, setRoleFieldRestriction, setRolePermission } from '../src/modules/auth/roleManagementService.js';
 
 describe('roleManagementService', () => {
   beforeEach(() => {
@@ -76,6 +105,7 @@ describe('roleManagementService', () => {
       { id: 'role-admin', tenantId: 't1', name: 'Admin', isOwner: false, isEditable: true },
     ];
     permissionRows = [{ roleId: 'role-admin', tenantId: 't1', permission: 'view_company' }];
+    fieldRestrictionRows = [];
     users = [];
     invitations = [];
   });
@@ -181,5 +211,37 @@ describe('roleManagementService', () => {
   it('refuses to delete the Owner role', async () => {
     const result = await deleteRole('t1', 'role-owner');
     expect(result.success).toBe(false);
+  });
+
+  it('hides a restrictable field for a role', async () => {
+    const result = await setRoleFieldRestriction('t1', 'role-admin', 'employee', 'personalEmail', true);
+    expect(result.success).toBe(true);
+    expect(fieldRestrictionRows).toContainEqual(
+      expect.objectContaining({ roleId: 'role-admin', entityType: 'employee', fieldKey: 'personalEmail' }),
+    );
+  });
+
+  it('un-hides a field by removing its restriction row', async () => {
+    fieldRestrictionRows.push({ roleId: 'role-admin', tenantId: 't1', entityType: 'employee', fieldKey: 'personalEmail' });
+    const result = await setRoleFieldRestriction('t1', 'role-admin', 'employee', 'personalEmail', false);
+    expect(result.success).toBe(true);
+    expect(fieldRestrictionRows).toHaveLength(0);
+  });
+
+  it('rejects restricting a field that is not in the restrictable catalog (e.g. the identity field)', async () => {
+    const result = await setRoleFieldRestriction('t1', 'role-admin', 'employee', 'firstName', true);
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects restricting a field on the Owner role', async () => {
+    const result = await setRoleFieldRestriction('t1', 'role-owner', 'employee', 'personalEmail', true);
+    expect(result.success).toBe(false);
+  });
+
+  it('is idempotent when creating a role and duplicating includes field restrictions', async () => {
+    fieldRestrictionRows.push({ roleId: 'role-admin', tenantId: 't1', entityType: 'employee', fieldKey: 'personalEmail' });
+    const result = await createRole('t1', 'Junior Admin', 'role-admin');
+    expect(result.success).toBe(true);
+    expect(result.role?.hiddenFields).toEqual({ employee: ['personalEmail'] });
   });
 });

@@ -41,6 +41,7 @@ import {
   canManagePayroll,
   canViewEmployee,
 } from '../modules/auth/permissionService.js';
+import { redactEntityFields, redactEntityListFields } from '../modules/auth/fieldVisibilityService.js';
 import { exportEmployeesToCsv, getEmployeesCsvTemplate, importEmployeesFromCsv } from '../modules/csv/csvService.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
@@ -61,7 +62,7 @@ employeesRouter.get('/api/hr/employees', async (req, res) => {
   }
 
   const employees = await listEmployees(user.tenantId);
-  return res.json(employees);
+  return res.json(redactEntityListFields(employees, 'employee', user.roleContext));
 });
 
 employeesRouter.get('/api/hr/employees/birthdays', async (req, res) => {
@@ -173,7 +174,7 @@ employeesRouter.post('/api/hr/employees', async (req, res) => {
   }
 
   const employee = await createEmployee({ ...req.body, tenantId: user.tenantId! }, user.id);
-  return res.status(201).json(employee);
+  return res.status(201).json(redactEntityFields(employee, 'employee', user.roleContext));
 });
 
 employeesRouter.get('/api/hr/employees/:employeeId', async (req, res) => {
@@ -191,7 +192,7 @@ employeesRouter.get('/api/hr/employees/:employeeId', async (req, res) => {
     return res.status(404).json({ error: 'Employee not found' });
   }
 
-  return res.json(employee);
+  return res.json(redactEntityFields(employee, 'employee', user.roleContext));
 });
 
 employeesRouter.patch('/api/hr/employees/:employeeId', async (req, res) => {
@@ -261,7 +262,7 @@ employeesRouter.patch('/api/hr/employees/:employeeId', async (req, res) => {
   }
 
   const updated = await updateEmployee(req.params.employeeId, req.body, user.id);
-  return res.json(updated);
+  return res.json(redactEntityFields(updated, 'employee', user.roleContext));
 });
 
 employeesRouter.delete('/api/hr/employees/:employeeId', async (req, res) => {

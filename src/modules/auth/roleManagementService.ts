@@ -1,4 +1,6 @@
+import type { ActivityEntityType } from '@prisma/client';
 import prisma from '../../lib/prisma.js';
+import { RESTRICTABLE_FIELDS_BY_ENTITY_TYPE } from './fieldVisibilityService.js';
 import { DEPENDENT_PERMISSIONS, PERMISSION_PREREQUISITES, TOGGLEABLE_PERMISSION_KEYS, type ToggleablePermissionKey } from './roleService.js';
 
 // Fase B2 (Custom Roles) — read/write for the Settings → Roles & Permissions page. Owner-only at
@@ -13,6 +15,10 @@ export interface RoleSummary {
   isOwner: boolean;
   isEditable: boolean;
   permissions: string[];
+  // Custom Roles Fase C — entityType -> the fixed schema fields hidden for this role. Absence of a
+  // key (or of a given fieldKey within it) means visible, matching RoleFieldRestriction's own
+  // sparse-denylist shape (see prisma/schema.prisma's comment on that model).
+  hiddenFields: Record<string, string[]>;
 }
 
 // "owner" is reserved so a tenant can never end up with a second role that reads as if it were
@@ -32,17 +38,24 @@ async function findRoleByNameCaseInsensitive(tenantId: string, name: string, exc
 export async function listRolesForTenant(tenantId: string): Promise<RoleSummary[]> {
   const roles = await prisma.role.findMany({
     where: { tenantId },
-    include: { modulePermissions: true },
+    include: { modulePermissions: true, fieldRestrictions: true },
     orderBy: [{ isOwner: 'desc' }, { createdAt: 'asc' }],
   });
 
-  return roles.map((role) => ({
-    id: role.id,
-    name: role.name,
-    isOwner: role.isOwner,
-    isEditable: role.isEditable,
-    permissions: role.modulePermissions.map((p) => p.permission),
-  }));
+  return roles.map((role) => {
+    const hiddenFields: Record<string, string[]> = {};
+    for (const restriction of role.fieldRestrictions) {
+      (hiddenFields[restriction.entityType] ??= []).push(restriction.fieldKey);
+    }
+    return {
+      id: role.id,
+      name: role.name,
+      isOwner: role.isOwner,
+      isEditable: role.isEditable,
+      permissions: role.modulePermissions.map((p) => p.permission),
+      hiddenFields,
+    };
+  });
 }
 
 export interface SetRolePermissionResult {
@@ -122,12 +135,21 @@ export async function createRole(tenantId: string, name: string, duplicateFromRo
   }
 
   let sourcePermissions: string[] = [];
+  let sourceFieldRestrictions: { entityType: ActivityEntityType; fieldKey: string }[] = [];
   if (duplicateFromRoleId) {
-    const source = await prisma.role.findUnique({ where: { id: duplicateFromRoleId }, include: { modulePermissions: true } });
+    const source = await prisma.role.findUnique({
+      where: { id: duplicateFromRoleId },
+      include: { modulePermissions: true, fieldRestrictions: true },
+    });
     if (!source || source.tenantId !== tenantId) {
       return { success: false, error: 'Role to duplicate from not found' };
     }
+    // Owner has zero rows in either table (bypasses both via isOwner) — a literal copy would
+    // produce an empty, misleadingly-named "based on Owner" role, so its module permissions are
+    // filled in explicitly. Field restrictions have no equivalent "everything" to fill in (Owner
+    // hides nothing, ever), so they're correctly left empty for that case.
     sourcePermissions = source.isOwner ? [...TOGGLEABLE_PERMISSION_KEYS] : source.modulePermissions.map((p) => p.permission);
+    sourceFieldRestrictions = source.fieldRestrictions.map((r) => ({ entityType: r.entityType, fieldKey: r.fieldKey }));
   }
 
   const role = await prisma.role.create({ data: { tenantId, name: trimmed, isOwner: false, isEditable: true } });
@@ -136,8 +158,21 @@ export async function createRole(tenantId: string, name: string, duplicateFromRo
       data: sourcePermissions.map((permission) => ({ tenantId, roleId: role.id, permission })),
     });
   }
+  if (sourceFieldRestrictions.length > 0) {
+    await prisma.roleFieldRestriction.createMany({
+      data: sourceFieldRestrictions.map((r) => ({ tenantId, roleId: role.id, entityType: r.entityType, fieldKey: r.fieldKey })),
+    });
+  }
 
-  return { success: true, role: { id: role.id, name: role.name, isOwner: false, isEditable: true, permissions: sourcePermissions } };
+  const hiddenFields: Record<string, string[]> = {};
+  for (const r of sourceFieldRestrictions) {
+    (hiddenFields[r.entityType] ??= []).push(r.fieldKey);
+  }
+
+  return {
+    success: true,
+    role: { id: role.id, name: role.name, isOwner: false, isEditable: true, permissions: sourcePermissions, hiddenFields },
+  };
 }
 
 export interface RenameRoleResult {
@@ -199,6 +234,49 @@ export async function deleteRole(tenantId: string, roleId: string): Promise<Dele
   }
 
   await prisma.roleModulePermission.deleteMany({ where: { roleId } });
+  await prisma.roleFieldRestriction.deleteMany({ where: { roleId } });
   await prisma.role.delete({ where: { id: roleId } });
+  return { success: true };
+}
+
+export interface SetRoleFieldRestrictionResult {
+  success: boolean;
+  error?: string;
+}
+
+// Custom Roles Fase C — the field-level counterpart to setRolePermission above, but inverted
+// polarity: RoleFieldRestriction is a denylist (a row means HIDDEN; absence means visible, the
+// default — see prisma/schema.prisma's comment on that model), so `hidden: true` creates a row and
+// `hidden: false` removes one, the opposite of setRolePermission's grant/revoke.
+export async function setRoleFieldRestriction(
+  tenantId: string,
+  roleId: string,
+  entityType: ActivityEntityType,
+  fieldKey: string,
+  hidden: boolean,
+): Promise<SetRoleFieldRestrictionResult> {
+  const restrictable = RESTRICTABLE_FIELDS_BY_ENTITY_TYPE[entityType];
+  if (!restrictable || !restrictable.some((f) => f.key === fieldKey)) {
+    return { success: false, error: 'This field cannot be restricted' };
+  }
+
+  const role = await prisma.role.findUnique({ where: { id: roleId } });
+  if (!role || role.tenantId !== tenantId) {
+    return { success: false, error: 'Role not found' };
+  }
+  if (role.isOwner) {
+    return { success: false, error: 'Owner always has full access and cannot be changed' };
+  }
+
+  if (hidden) {
+    await prisma.roleFieldRestriction.upsert({
+      where: { roleId_entityType_fieldKey: { roleId, entityType, fieldKey } },
+      create: { tenantId, roleId, entityType, fieldKey },
+      update: {},
+    });
+  } else {
+    await prisma.roleFieldRestriction.deleteMany({ where: { roleId, entityType, fieldKey } });
+  }
+
   return { success: true };
 }

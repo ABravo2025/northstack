@@ -1,4 +1,5 @@
 import { canManageContact, canManageCustomFields, canViewContact } from '../modules/auth/permissionService.js';
+import { redactEntityFields, redactEntityListFields } from '../modules/auth/fieldVisibilityService.js';
 import { findCompanyById } from '../modules/crm/companyService.js';
 import { createContact, deactivateContact, findContactById, listContacts, updateContact } from '../modules/crm/contactService.js';
 import {
@@ -57,7 +58,7 @@ contactsRouter.get('/api/contacts', async (req, res) => {
   }
 
   const contacts = await listContacts(user.tenantId!);
-  return res.json(contacts);
+  return res.json(redactEntityListFields(contacts, 'contact', user.roleContext));
 });
 
 contactsRouter.post('/api/contacts', async (req, res) => {
@@ -81,7 +82,7 @@ contactsRouter.post('/api/contacts', async (req, res) => {
 
   try {
     const contact = await createContact({ ...req.body, tenantId: user.tenantId! }, user.id);
-    return res.status(201).json(contact);
+    return res.status(201).json(redactEntityFields(contact, 'contact', user.roleContext));
   } catch (error) {
     // Contact.email is unique per tenant, but deactivating one doesn't free its email — without
     // this, re-creating (or a public Form re-capturing) the same address as a deactivated Contact
@@ -108,7 +109,7 @@ contactsRouter.get('/api/contacts/:contactId', async (req, res) => {
     return res.status(404).json({ error: 'Contact not found' });
   }
 
-  return res.json(contact);
+  return res.json(redactEntityFields(contact, 'contact', user.roleContext));
 });
 
 contactsRouter.patch('/api/contacts/:contactId', async (req, res) => {
@@ -133,7 +134,7 @@ contactsRouter.patch('/api/contacts/:contactId', async (req, res) => {
 
   try {
     const updated = await updateContact(req.params.contactId, req.body, user.id);
-    return res.json(updated);
+    return res.json(redactEntityFields(updated, 'contact', user.roleContext));
   } catch (error) {
     if ((error as { code?: string }).code === 'P2002') {
       return res.status(400).json({ error: `A contact with email "${req.body.email}" already exists` });

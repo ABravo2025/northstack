@@ -1200,6 +1200,37 @@ con Playwright real: crear un rol duplicando Admin, confirmar que copió los per
 intentar crear uno llamado "Owner" (rechazado), borrarlo, confirmar que la columna desaparece.
 Nada de esto llegó a `main` todavía.
 
+**Fase C (field-level, campos fijos): completa.** `RoleFieldRestriction` pasa de tabla sembrada-
+pero-sin-consumidor a enforcement real. `src/modules/auth/fieldVisibilityService.ts` (nuevo) es el
+único punto de decisión: `isFieldVisible(role, entityType, fieldKey)` primero corta camino si
+`role.isOwner`, después exige el permiso base del módulo (`MODULE_GATE_BY_ENTITY_TYPE` —
+`canViewEmployee`/`canViewCompany`/`canViewContact`/`canViewOpportunity`, este último ya derivado
+desde la Fase B) antes de mirar la denylist — un rol sin acceso al módulo no ve ningún campo, sin
+necesidad de sembrar una fila de restricción por campo. El catálogo de "qué campos son
+restringibles" no se mantiene a mano: `src/modules/activity/fieldConfigs/index.ts` (nuevo) agrega
+los 4 `fieldConfig` que el Activity Log ya define para Employee/Company/Contact/Opportunity (grupo
+13), y `RESTRICTABLE_FIELDS_BY_ENTITY_TYPE` los expone menos un puñado de campos de identidad
+(`firstName`/`lastName`/`name`) que nunca tiene sentido ocultar porque son lo mínimo para
+identificar el registro en cualquier lista o picker. `redactEntityFields`/`redactEntityListFields`
+anulan (nunca borran la clave) los campos restringidos en el JSON de respuesta, siguiendo el
+precedente ya existente de `tenantMetrics.ts` (que ya vaciaba el bloque `payroll`); se aplican en
+el borde HTTP (`src/routes/employees.ts`/`companies.ts`/`contacts.ts`/`opportunities.ts`), no
+dentro de los services, y cubren tanto las respuestas de lectura como las de creación/edición para
+que el comportamiento sea consistente en toda la app. Detalle no obvio encontrado durante la
+implementación: varias queries de lista/detalle (`Company`, `Contact`, `Opportunity`) incluyen a la
+vez el FK crudo (`sizeId`, `accountOwnerId`, `managerId`, etc.) y el objeto de relación ya resuelto
+(`sizeDefn`, `accountOwner`, `manager`) — anular solo el FK dejaría el valor legible igual a través
+del objeto de relación, así que `RELATION_KEYS_BY_FIELD` anula ambos juntos cuando corresponde.
+Nuevos endpoints owner-only: `GET /api/roles/field-catalog` (devuelve el catálogo restringible por
+entidad, para pintar la UI) y `PATCH /api/roles/:roleId/field-restrictions` (`entityType`,
+`fieldKey`, `hidden` — polaridad invertida respecto a `setRolePermission`: `hidden:true` crea la
+fila de restricción, `hidden:false` la borra). UI: nueva sección "Field visibility" en la misma
+página `Settings → Roles & Permissions`, un `<details>` colapsable por entidad, mismo patrón de
+grid-toggle que la matriz de permisos de módulo. Verificado con Playwright real contra `staging` +
+una llamada directa a `GET /api/hr/employees` confirmando que ocultar "Personal email" para Member
+de verdad anula el campo en el JSON (y que revertirlo lo devuelve) — no solo que la UI lo tape.
+`npm test` 248/248, ambos builds verdes. Nada de esto llegó a `main` todavía.
+
 ```mermaid
 erDiagram
     TENANT ||--o{ ROLE : "has"
@@ -1248,6 +1279,8 @@ Notas:
   sería ~1500 filas por tenant solo para el estado por defecto; con denylist, un campo nuevo
   (incluido un `CustomFieldDefinition` recién creado) es visible sin sembrar nada. Solo cubre
   campos FIJOS del schema — los custom fields van por el bundle de arriba, no por esta tabla.
+  Enforcement real desde la Fase C (`fieldVisibilityService.ts`), gateado siempre por el permiso de
+  módulo de la entidad primero (ver Fase C arriba).
 
 ## Enums
 

@@ -5,6 +5,7 @@ import {
   ClockIcon,
   GridIcon,
   ListIcon,
+  LockIcon,
   TeamIcon,
   TrendingIcon,
   UserCircleIcon,
@@ -40,16 +41,24 @@ export function getSettingsSections(user: { role: string }): SettingsSectionGrou
   const groups: SettingsSectionGroup[] = [{ groupLabel: 'My account', items: accountItems }];
 
   if (isAdmin) {
-    groups.push({
-      groupLabel: 'Company',
-      items: [
-        { to: 'appearance', label: 'Appearance', desc: 'Currency and theme for the workspace.', icon: <BuildingIcon /> },
-        { to: 'users', label: 'Users', desc: 'Invite people and manage roles.', icon: <TeamIcon /> },
-        { to: 'public-forms', label: 'Public Forms', desc: 'External intake forms per module.', icon: <ListIcon /> },
-        { to: 'pipelines', label: 'Pipelines', desc: 'Sales stages and their outcomes.', icon: <TrendingIcon /> },
-        { to: 'activity', label: 'Activity Log', desc: 'Who created, changed, or deleted what.', icon: <ClockIcon /> },
-      ],
-    });
+    const companyItems: SettingsSectionItem[] = [
+      { to: 'appearance', label: 'Appearance', desc: 'Currency and theme for the workspace.', icon: <BuildingIcon /> },
+      { to: 'users', label: 'Users', desc: 'Invite people and manage roles.', icon: <TeamIcon /> },
+      { to: 'public-forms', label: 'Public Forms', desc: 'External intake forms per module.', icon: <ListIcon /> },
+      { to: 'pipelines', label: 'Pipelines', desc: 'Sales stages and their outcomes.', icon: <TrendingIcon /> },
+      { to: 'activity', label: 'Activity Log', desc: 'Who created, changed, or deleted what.', icon: <ClockIcon /> },
+    ];
+    // Owner-only, unlike the rest of this group — deciding what Admin/Member can do is an
+    // ownership-level call, same bar as Billing above.
+    if (isOwner) {
+      companyItems.push({
+        to: 'roles',
+        label: 'Roles & Permissions',
+        desc: 'Control what Admin and Member can see and do.',
+        icon: <LockIcon />,
+      });
+    }
+    groups.push({ groupLabel: 'Company', items: companyItems });
   }
 
   return groups;

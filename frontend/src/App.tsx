@@ -32,6 +32,7 @@ import CompanyAppearancePage from './pages/CompanyAppearancePage';
 import CompanyUsersPage from './pages/CompanyUsersPage';
 import PublicFormsSettingsPage from './pages/PublicFormsSettingsPage';
 import ActivityLogSettingsPage from './pages/ActivityLogSettingsPage';
+import RolesPermissionsPage from './pages/RolesPermissionsPage';
 import PublicFormPage from './pages/PublicFormPage';
 import BillingPage from './pages/BillingPage';
 import PaymentsOverviewPage from './pages/PaymentsOverviewPage';
@@ -277,6 +278,7 @@ export default function App() {
           <Route path="public-forms" element={<PublicFormsSettingsPage token={token ?? ''} />} />
           <Route path="pipelines" element={<PipelinesSettingsPage token={token ?? ''} />} />
           <Route path="activity" element={<ActivityLogSettingsPage token={token ?? ''} user={user} />} />
+          <Route path="roles" element={<RolesPermissionsPage token={token ?? ''} user={user} />} />
           <Route path="billing" element={<BillingPage token={token ?? ''} tenant={tenant} onTenantUpdated={setTenant} />} />
         </Route>
       </Route>

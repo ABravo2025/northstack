@@ -70,6 +70,57 @@ export const PERMISSION_KEYS = [
 ] as const;
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];
 
+// Fase B2 — the subset of PERMISSION_KEYS actually exposed on the Settings → Roles & Permissions
+// toggle UI. Deliberately narrower than PERMISSION_KEYS: excludes the legacy `view_hr`/`create_hr`
+// pair (Client-only, not a real lever for a tenant to reach for), and excludes the Employee scope/
+// custom-fields-bundle keys (Fase D/E haven't shipped enforcement for them yet — exposing a toggle
+// that silently does nothing would be worse than not showing it). Validated server-side in
+// roleManagementService.ts so a request can't grant something this UI was never meant to expose.
+export const TOGGLEABLE_PERMISSION_KEYS = [
+  VIEW_EMPLOYEE,
+  MANAGE_EMPLOYEE,
+  VIEW_COMPANY,
+  MANAGE_COMPANY,
+  VIEW_CONTACT,
+  MANAGE_CONTACT,
+  MANAGE_OPPORTUNITY,
+  'manage_custom_fields',
+  'invite_users',
+  'manage_users',
+  'manage_payroll',
+  'manage_billing',
+  'manage_payments',
+  'view_sales_leaderboard',
+  'view_activity_log',
+  MANAGE_TENANT_SETTINGS,
+  MANAGE_SHARED_VIEWS,
+  DECIDE_TIME_OFF,
+] as const;
+export type ToggleablePermissionKey = (typeof TOGGLEABLE_PERMISSION_KEYS)[number];
+
+// canManageOpportunity requires canViewOpportunity (Company AND Contact view) as a prerequisite
+// (permissionService.ts) — this is the same rule enforced at grant time: a role can't be given
+// manage_opportunity unless it already has both of these. Keyed by the permission that has
+// prerequisites, not the prerequisites themselves, since that's the direction the check runs.
+export const PERMISSION_PREREQUISITES: Partial<Record<ToggleablePermissionKey, ToggleablePermissionKey[]>> = {
+  [MANAGE_OPPORTUNITY]: [VIEW_COMPANY, VIEW_CONTACT],
+};
+
+// The inverse of PERMISSION_PREREQUISITES — revoking one of these cascades into revoking whatever
+// depends on it too, so a role can never be left holding a "dormant" grant (manage_opportunity
+// with view_company since-revoked) that would silently reactivate the moment the prerequisite is
+// re-granted later. Derived from PERMISSION_PREREQUISITES at module load, not hand-maintained
+// separately, so the two can never drift apart.
+export const DEPENDENT_PERMISSIONS: Partial<Record<ToggleablePermissionKey, ToggleablePermissionKey[]>> = (() => {
+  const map: Partial<Record<ToggleablePermissionKey, ToggleablePermissionKey[]>> = {};
+  for (const [dependent, prerequisites] of Object.entries(PERMISSION_PREREQUISITES) as [ToggleablePermissionKey, ToggleablePermissionKey[]][]) {
+    for (const prerequisite of prerequisites) {
+      (map[prerequisite] ??= []).push(dependent);
+    }
+  }
+  return map;
+})();
+
 // Single source of truth for what Admin/Member get seeded with — reproduces TODAY's real
 // behavior (pre-Custom-Roles) exactly, so shipping this feature is a no-op for every existing
 // role until a tenant actively reconfigures one. Used both by seedDefaultRolesForTenant (new

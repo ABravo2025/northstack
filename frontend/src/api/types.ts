@@ -577,6 +577,14 @@ export interface CustomFieldValue {
   value: string;
 }
 
+export interface Role {
+  id: string;
+  name: string;
+  isOwner: boolean;
+  isEditable: boolean;
+  permissions: string[];
+}
+
 export interface TenantUser {
   id: string;
   firstName: string;

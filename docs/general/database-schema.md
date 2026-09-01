@@ -1,6 +1,7 @@
 # Database Schema
 
-- Última actualización: 2026-09-01 (Custom Roles — Fase B completa: `permissionService.ts` migrado a `RoleContext`, entity-split de Employee/Company/Contact/Opportunity, 3 permisos nuevos reemplazan los últimos chequeos inline, gap de invitación con rol owner cerrado, CSV atado a Payroll — ver grupo 14; en `staging`, sin pushear a `main`)
+- Última actualización: 2026-09-01 (Custom Roles — Fase B2: primera UI real, `Settings → Roles & Permissions` — owner reconfigura los permisos de Admin/Member con toggles, endpoints `GET/PATCH /api/roles*` — ver grupo 14; en `staging`, sin pushear a `main`)
+- Actualización anterior: 2026-09-01 (Custom Roles — Fase B completa: `permissionService.ts` migrado a `RoleContext`, entity-split de Employee/Company/Contact/Opportunity, 3 permisos nuevos reemplazan los últimos chequeos inline, gap de invitación con rol owner cerrado, CSV atado a Payroll — ver grupo 14; en `staging`, sin pushear a `main`)
 - Actualización anterior: 2026-09-01 (Custom Roles — Fase A completa: schema aditivo + seed/backfill + `RoleContext` sin consumidores todavía, ver grupo 14; en `staging`, sin pushear a `main`)
 - Actualización anterior: 2026-08-31 (Activity Log — Unidades 1-6 completas, spec cerrado; incluye el fix same-day de `parentEntityType`/`parentEntityId` (2026-08-30) y la Unidad 6 completa con Subscription/GoogleCalendarConnection/StripeConnection (2026-08-31, mecanismo de correlación `Subscription.lastActionByUserId`/`lastActionAt`), ver grupo 13; en `staging`, sin pushear a `main`)
 - Actualización anterior: 2026-08-29 (Employee Termination — ver grupo 11 — y Payments v1 Units 5-7, ver grupo 10; todo en `staging`, sin pushear a `main`)
@@ -1168,7 +1169,21 @@ lo bloqueaba). CSV de Employees pasó de `view_hr`/`create_hr` a requerir `canMa
 que Fase I los rediseñe para trabajar con `roleId` de cualquier rol custom. Backfill de Fase A
 corrido contra `staging` (184 tenants, 189 Users, 17 Invitations) + top-up de Fase B
 (`scripts/backfill-fase-b-permissions.ts`, agrega los permisos nuevos a los roles Admin/Member ya
-sembrados). Nada de esto llegó a `main` todavía.
+sembrados).
+
+**Fase B2 (primera UI real)**: `Settings → Roles & Permissions` (owner-only, ícono de candado,
+grupo "Company" del nav) — matriz de permisos × Owner/Admin/Member, toggles con autosave.
+`GET /api/roles` / `PATCH /api/roles/:roleId/permissions` (`src/routes/roles.ts`,
+`roleManagementService.ts`) gateados por `roleContext.isOwner` directo, no por un permiso nombrado
+— reconfigurar lo que puede hacer Admin/Member es en sí una decisión de ownership. Expone
+`TOGGLEABLE_PERMISSION_KEYS` (subconjunto de `PERMISSION_KEYS` con enforcement real hoy — 18
+permisos, excluye el legacy `view_hr`/`create_hr` y las convenciones de Employee sin Fase D/E
+todavía) y aplica `PERMISSION_PREREQUISITES`/`DEPENDENT_PERMISSIONS` (conceder `manage_opportunity`
+exige `view_company`+`view_contact` ya concedidos; revocar cualquiera de los dos cascada a revocar
+`manage_opportunity` también, para que nunca quede un permiso "dormido" que resucite solo al
+volver a conceder el prerrequisito). Verificado con Playwright real contra `staging` (toggle real,
+persistencia tras reload, bloqueo de la cascada, claro y oscuro). Nada de esto llegó a `main`
+todavía.
 
 ```mermaid
 erDiagram

@@ -2908,3 +2908,71 @@ Fase A: `npm test`/`npm run build` en verde, backfill de top-up corrido y verifi
 directa, y un smoke test real de extremo a extremo (servidor local + base de `staging`, tenant y 3
 usuarios descartables, borrados al terminar). Falta la revisión humana de Alejandro antes de
 continuar con la Fase C.
+
+## QA-67 — Custom Roles, Fase B2: primera UI real — Settings → Roles & Permissions (2026-09-01, en `staging`)
+
+**Por qué existe esta tarea:** Alejandro pidió una propuesta visual para "prender/apagar permisos
+de Admin/Member" (parte pendiente de la Fase B) antes de construir código — se le mostró un mockup
+(paleta/tipografía real de Northstack, matriz de 3 columnas Owner/Admin/Member, toggles
+interactivos con la cascada Sales ya simulada) y dio el visto bueno ("dale nomas, empeza"). Esta
+tarea es la implementación real: página nueva en Settings, 2 endpoints nuevos, verificados con
+Playwright real contra `staging` (no solo mockup).
+
+### A. Acceso y ubicación
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Entrar a `Settings` como owner | Nuevo ítem "Roles & Permissions" (ícono de candado) en el grupo "Company" del nav lateral, después de "Activity Log" |
+| 2 | Entrar a `Settings` como admin o member | El ítem "Roles & Permissions" **no aparece** en el nav — solo owner lo ve |
+| 3 | Un admin llama directo a `GET /api/roles` o `PATCH /api/roles/:id/permissions` (curl, no UI) | 403 — el gate es server-side, no solo ocultar el link |
+
+### B. La matriz de permisos
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 4 | Abrir la página | 8 secciones (People, Sales, Configuration, Team, Money, Reporting, Workspace, Time off), cada una con Owner (candado fijo, no clickeable) + Admin + Member |
+| 5 | Estado inicial de un tenant que nunca tocó esto | Coincide exactamente con el comportamiento de hoy: Admin tiene casi todo salvo Payroll/Billing/Payments/Sales leaderboard (owner-only); Member solo ve (no gestiona) Employees/Companies/Contacts |
+| 6 | Tildar/destildar cualquier permiso de Admin o Member | Toast de confirmación ("Granted"/"Revoked" + el nombre del permiso + el rol), el cambio se refleja al instante sin recargar la página |
+| 7 | Recargar la página después de un cambio | El cambio persiste — no es solo estado local del navegador |
+| 8 | Un usuario de ese rol vuelve a cargar la app después del cambio | Su acceso real cambió (ej. si le sacaste "Manage employees" a Admin, un admin ya no puede editar un Employee) |
+
+### C. La cascada Sales (Manage opportunities depende de View companies + View contacts)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 9 | Intentar conceder "Manage opportunities" a un rol que no tiene "View companies" y/o "View contacts" | Bloqueado, toast de error explicando qué falta conceder primero — el toggle vuelve a su estado anterior |
+| 10 | Conceder primero "View companies" y "View contacts", después "Manage opportunities" | Funciona sin problema |
+| 11 | Revocar "View companies" o "View contacts" de un rol que ya tenía "Manage opportunities" concedido | "Manage opportunities" se revoca también automáticamente (cascada) — confirmar recargando que no quedó "vivo" en el estado del rol |
+
+### D. Verificación técnica
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 12 | `npm run build`/`npm test` (backend, 224/224) y `npm run build` (frontend) | Los tres en verde |
+| 13 | Playwright real contra `staging` (servidor local + tenant/usuario descartables, borrados al terminar) | Login → navegar a la página vía clicks reales (no URL directa, ver nota abajo) → toggle real con persistencia → cascada bloqueada → capturas en claro y oscuro, todo legible |
+
+### Al encontrar una falla
+
+El caso C (cascada) es el más importante — si se puede conceder `manage_opportunity` sin los
+prerrequisitos, o si queda "vivo" tras revocar uno de ellos, es severidad **alta** (es exactamente
+el bug que el diseño busca prevenir). El caso A.3 (gate solo client-side) sería severidad alta
+también — un gate de solo UI en algo que cambia permisos de otros roles es una escalada de
+privilegios real. El resto sigue el criterio ya establecido: dato incorrecto es media, regresión
+funcional es alta.
+
+**Nota técnica para quien reproduzca manualmente**: navegar por URL directa a `/settings/roles`
+(pegar el link, F5) redirige a `/login` incluso estando logueado — esto es un comportamiento
+preexistente de la app entera (confirmado también en `/settings/activity`, no es un bug de esta
+unidad), la sesión se revalida en cada carga completa de página y esa revalidación no está lista
+todavía cuando el router decide la ruta. Navegar siempre por click dentro de la app.
+
+Verificado por Claude contra `staging` real antes de este push: `npm test`/`npm run build` en
+verde, y Playwright real de punta a punta (login, dismiss del modal de selección de plan, click
+por la navegación real hasta la página, toggle con toast y persistencia confirmada tras reload,
+cascada bloqueada y luego confirmada con los prerrequisitos, captura en dark mode). Encontré y
+corregí en el camino: un `.toggle-switch` custom que había diseñado para el mockup nunca se
+aplicaba de verdad (una regla global `input[type='checkbox']` ya existente en toda la app le ganaba
+por especificidad CSS) — en vez de forzar mi diseño, usé el checkbox estándar ya establecido en
+toda la plataforma (más consistente, menos código); y varias clases de texto sin su variante
+`dark:` correspondiente, que dejaban las etiquetas de los permisos casi ilegibles en dark mode.
+Falta la revisión humana de Alejandro.

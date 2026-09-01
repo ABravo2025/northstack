@@ -28,7 +28,7 @@ clientsRouter.get('/api/clients', async (req, res) => {
     return;
   }
 
-  if (!canViewHr(user.role)) {
+  if (!canViewHr(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -42,7 +42,7 @@ clientsRouter.get('/api/clients/export/csv', async (req, res) => {
     return;
   }
 
-  if (!canViewHr(user.role)) {
+  if (!canViewHr(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -58,7 +58,7 @@ clientsRouter.post('/api/clients/import/csv', async (req, res) => {
     return;
   }
 
-  if (!canCreateHr(user.role)) {
+  if (!canCreateHr(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -76,7 +76,7 @@ clientsRouter.get('/api/clients/template/csv', async (req, res) => {
     return;
   }
 
-  if (!canCreateHr(user.role)) {
+  if (!canCreateHr(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -92,7 +92,7 @@ clientsRouter.post('/api/clients', async (req, res) => {
     return;
   }
 
-  if (!canCreateHr(user.role)) {
+  if (!canCreateHr(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -106,7 +106,7 @@ clientsRouter.get('/api/clients/:clientId', async (req, res) => {
     return;
   }
 
-  if (!canViewHr(user.role)) {
+  if (!canViewHr(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -124,7 +124,7 @@ clientsRouter.patch('/api/clients/:clientId', async (req, res) => {
     return;
   }
 
-  if (!canCreateHr(user.role)) {
+  if (!canCreateHr(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -150,7 +150,7 @@ clientsRouter.delete('/api/clients/:clientId', async (req, res) => {
     return;
   }
 
-  if (!canCreateHr(user.role)) {
+  if (!canCreateHr(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -169,7 +169,7 @@ clientsRouter.post('/api/clients/:clientId/custom-fields', async (req, res) => {
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -204,7 +204,7 @@ clientsRouter.patch('/api/clients/:clientId/custom-fields/:valueId', async (req,
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -238,7 +238,7 @@ clientsRouter.delete('/api/clients/:clientId/custom-fields/:valueId', async (req
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 

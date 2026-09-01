@@ -102,14 +102,21 @@ vi.mock('../src/lib/mercadopago.js', () => ({
 }));
 
 import { canManageBilling } from '../src/modules/auth/permissionService.js';
+import { ADMIN_SEED_PERMISSIONS, MEMBER_SEED_PERMISSIONS, type RoleContext } from '../src/modules/auth/roleService.js';
 import { CURRENT_PLAN_PRICES_CENTS, updateTenantPlan } from '../src/modules/tenant/planService.js';
 import { runPlanTransitions } from '../src/modules/tenant/planTransitionService.js';
 
+// Fase B (Custom Roles) — canManageBilling now reads a RoleContext instead of the legacy UserRole
+// enum string; same fixture-building approach as tests/permission.test.ts.
+function roleContext(overrides: Partial<RoleContext>): RoleContext {
+  return { id: 'test-role', name: 'Test', isOwner: false, permissions: new Set(), hiddenFieldsByEntity: new Map(), ...overrides };
+}
+
 describe('canManageBilling', () => {
   it('is owner-only', () => {
-    expect(canManageBilling('owner')).toBe(true);
-    expect(canManageBilling('admin')).toBe(false);
-    expect(canManageBilling('member')).toBe(false);
+    expect(canManageBilling(roleContext({ isOwner: true }))).toBe(true);
+    expect(canManageBilling(roleContext({ permissions: new Set(ADMIN_SEED_PERMISSIONS) }))).toBe(false);
+    expect(canManageBilling(roleContext({ permissions: new Set(MEMBER_SEED_PERMISSIONS) }))).toBe(false);
   });
 });
 

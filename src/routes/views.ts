@@ -30,7 +30,7 @@ viewsRouter.post('/api/views', async (req, res) => {
   const result = await createSavedView({
     tenantId: user.tenantId!,
     createdByUserId: user.id,
-    createdByRole: user.role,
+    createdByRole: user.roleContext,
     entityType: req.body.entityType,
     name,
     type: req.body.type ?? 'grid',
@@ -53,7 +53,7 @@ viewsRouter.patch('/api/views/:viewId', async (req, res) => {
     return;
   }
 
-  const result = await updateSavedView(req.params.viewId, user.tenantId!, user.id, user.role, {
+  const result = await updateSavedView(req.params.viewId, user.tenantId!, user.id, user.roleContext, {
     name: req.body.name,
     filters: req.body.filters,
     sortBy: req.body.sortBy,
@@ -73,7 +73,7 @@ viewsRouter.delete('/api/views/:viewId', async (req, res) => {
     return;
   }
 
-  const result = await deleteSavedView(req.params.viewId, user.tenantId!, user.id, user.role);
+  const result = await deleteSavedView(req.params.viewId, user.tenantId!, user.id, user.roleContext);
 
   if (!result.success) {
     return res.status(400).json({ error: result.error });

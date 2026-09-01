@@ -2853,3 +2853,58 @@ query (0 Users sin `roleId` salvo 1 usuario huérfano sin tenant, preexistente y
 184 tenants = 184 roles `isOwner`; 0 mismatches entre `User.role` y `Role.name`; 0 Invitations sin
 `roleId`). Sin pasada de Playwright — no hay ninguna superficie de UI nueva que probar en esta fase.
 Falta la revisión humana de Alejandro antes de continuar con la Fase B.
+
+## QA-66 — Custom Roles, Fase B: generalización de permisos + 2 cambios reales de comportamiento (2026-09-01, en `staging`)
+
+**Por qué existe esta tarea:** segunda pieza de `docs/tareas/backlog.md` "Sistema de roles custom" —
+`permissionService.ts` pasó de leer el enum legacy `role` a leer el `RoleContext` real sembrado en
+la Fase A. La mayoría de esto es generalización interna sin cambio de comportamiento (los 10
+permisos de siempre, ahora resueltos desde la base en vez de un mapa estático) — pero **2 cosas sí
+cambian el comportamiento real de la app hoy**, marcadas explícitamente abajo. Se separó también el
+viejo `canViewHr`/`canCreateHr` (que gateaba Employee/Company/Contact/Opportunity todos juntos) en
+un par view/manage por entidad, más `canViewOpportunity` derivado de Company+Contact — esto es la
+base necesaria para que el trabajo de campo-por-campo y scope de las próximas fases tenga sentido,
+pero HOY no cambia nada visible (los 3 roles semilla siguen viendo exactamente lo mismo que antes,
+confirmado con el backfill de top-up — ver abajo).
+
+### A. Regresión — todo lo que NO debería cambiar
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Login con un usuario existente de cualquier rol | Funciona igual que siempre |
+| 2 | Ver la lista de Employees/Companies/Contacts/Opportunities con cualquier rol (owner/admin/member) | Los 3 roles siguen viendo la lista completa, igual que antes (verificado con un smoke test real contra `staging`: los 3 roles obtienen 200 en los 4 endpoints) |
+| 3 | Crear/editar/borrar un Employee/Company/Contact/Opportunity siendo owner o admin | Sigue funcionando igual — member sigue sin poder (mismo criterio que hoy, `create_hr` ya era admin+) |
+| 4 | Aprobar/rechazar una solicitud de Time Off siendo owner/admin, o siendo el manager asignado con cualquier rol | Sigue funcionando exactamente igual — la regla de "es mi manager asignado" no se tocó |
+| 5 | Crear una Saved View compartida siendo owner/admin | Sigue funcionando igual |
+| 6 | Cambiar la moneda del tenant (`Settings → Company`) siendo owner/admin | Sigue funcionando igual |
+| 7 | Transferir el ownership del tenant a otro usuario | Sigue funcionando igual — el usuario promovido queda con `roleId` apuntando a Owner, el que transfiere queda en Admin (antes esto podía quedar desincronizado, ver ítem B.10) |
+
+### B. Cambios de comportamiento reales — confirmar que son los esperados, no bugs
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 8 | Exportar/importar/descargar la plantilla de CSV de Employees siendo **admin** (no owner) | **Antes: funcionaba. Ahora: 403 "Insufficient permissions"** — el CSV completo de empleados quedó atado al mismo permiso que Payroll (decisión explícita: el archivo trae datos tan sensibles como Payroll). Solo el owner puede exportar/importar/descargar la plantilla ahora |
+| 9 | Un admin intenta invitar a alguien con rol `owner` (llamando directo a la API, no desde la UI — la UI ya lo bloqueaba) | Rechazado con "Ownership can only be transferred to an existing user, not granted by invitation" — antes esto pasaba sin error y, al aceptarse, el tenant quedaba con 2 owners |
+
+### C. Verificación técnica (sin superficie de UI nueva)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 10 | Los 184 tenants de `staging` que ya tenían roles sembrados por la Fase A | Sus roles Admin/Member recibieron un "top-up" idempotente con los permisos nuevos (`scripts/backfill-fase-b-permissions.ts`) — verificado con query directa: 0 de 184 Admin y 0 de 184 Member roles con algún permiso faltante |
+| 11 | `npm run build`/`npm test` (backend, 218/218) y `npm run build` (frontend) | Los tres en verde |
+| 12 | Smoke test real contra un dev server local apuntado a `staging` (tenant descartable, 3 usuarios owner/admin/member reales, borrados al final) | Employee/Company/Contact/Opportunity view: 200 para los 3 roles. CSV export: 200 owner, 403 admin, 403 member. Gestión de usuarios del tenant: 200 owner/admin, 403 member. Feed de Activity Log: 200 owner/admin, 403 member. Todo coincidió con lo esperado |
+
+### Al encontrar una falla
+
+Los casos B.8 y B.9 son cambios de comportamiento **a propósito** — si NO se ve el cambio (ej. un
+admin todavía puede exportar CSV), es un bug real, severidad alta (la decisión explícita no se
+aplicó). Cualquier cosa en la sección A que sí cambió es severidad alta — esta fase está diseñada
+para ser invisible salvo B.8/B.9. Un problema en C (roles con permisos faltantes) es severidad
+media — no rompe nada hoy porque las 4 entidades siguen abiertas a todos los roles semilla, pero
+bloquearía las próximas fases si no se corrige.
+
+Verificado por Claude contra `staging` real antes de este push, en el mismo worktree aislado de la
+Fase A: `npm test`/`npm run build` en verde, backfill de top-up corrido y verificado con query
+directa, y un smoke test real de extremo a extremo (servidor local + base de `staging`, tenant y 3
+usuarios descartables, borrados al terminar). Falta la revisión humana de Alejandro antes de
+continuar con la Fase C.

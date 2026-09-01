@@ -1,4 +1,4 @@
-import { canCreateHr, canViewHr } from '../modules/auth/permissionService.js';
+import { canManageOpportunity, canViewOpportunity } from '../modules/auth/permissionService.js';
 import { findCompanyById } from '../modules/crm/companyService.js';
 import { findContactById } from '../modules/crm/contactService.js';
 import {
@@ -135,7 +135,7 @@ opportunitiesRouter.get('/api/opportunities', async (req, res) => {
     return;
   }
 
-  if (!canViewHr(user.role)) {
+  if (!canViewOpportunity(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -149,7 +149,7 @@ opportunitiesRouter.post('/api/opportunities', async (req, res) => {
     return;
   }
 
-  if (!canCreateHr(user.role)) {
+  if (!canManageOpportunity(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -195,7 +195,7 @@ opportunitiesRouter.get('/api/opportunities/:opportunityId', async (req, res) =>
     return;
   }
 
-  if (!canViewHr(user.role)) {
+  if (!canViewOpportunity(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -213,7 +213,7 @@ opportunitiesRouter.patch('/api/opportunities/:opportunityId', async (req, res) 
     return;
   }
 
-  if (!canCreateHr(user.role)) {
+  if (!canManageOpportunity(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -255,7 +255,7 @@ opportunitiesRouter.delete('/api/opportunities/:opportunityId', async (req, res)
     return;
   }
 
-  if (!canCreateHr(user.role)) {
+  if (!canManageOpportunity(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -274,7 +274,7 @@ opportunitiesRouter.post('/api/opportunities/:opportunityId/contacts', async (re
     return;
   }
 
-  if (!canCreateHr(user.role)) {
+  if (!canManageOpportunity(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -301,7 +301,7 @@ opportunitiesRouter.delete('/api/opportunities/:opportunityId/contacts/:contactI
     return;
   }
 
-  if (!canCreateHr(user.role)) {
+  if (!canManageOpportunity(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 

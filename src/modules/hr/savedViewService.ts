@@ -1,7 +1,9 @@
 import prisma from '../../lib/prisma.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { savedViewActivityFieldConfig } from '../activity/fieldConfigs/savedViewFieldConfig.js';
-import type { EntityType, SavedView, SavedViewType, SavedViewVisibility, UserRole } from '@prisma/client';
+import { canManageSharedViews } from '../auth/permissionService.js';
+import type { RoleContext } from '../auth/roleService.js';
+import type { EntityType, SavedView, SavedViewType, SavedViewVisibility } from '@prisma/client';
 
 export interface ViewFilter {
   field: string;
@@ -17,7 +19,7 @@ export interface SortSpec {
 export interface CreateSavedViewInput {
   tenantId: string;
   createdByUserId: string;
-  createdByRole: UserRole;
+  createdByRole: RoleContext;
   entityType: EntityType;
   name: string;
   type: SavedViewType;
@@ -33,16 +35,14 @@ export interface SavedViewResult {
   error?: string;
 }
 
-function canManageShared(role: UserRole): boolean {
-  return role === 'owner' || role === 'admin';
-}
-
 export async function createSavedView(input: CreateSavedViewInput): Promise<SavedViewResult> {
   if (!input.name.trim()) {
     return { success: false, error: 'Name is required' };
   }
 
-  if (input.visibility === 'shared' && !canManageShared(input.createdByRole)) {
+  // Fase B (Custom Roles) — was an inline `role === 'owner' || role === 'admin'` check, now the
+  // named permission manage_shared_views (permissionService.ts).
+  if (input.visibility === 'shared' && !canManageSharedViews(input.createdByRole)) {
     return { success: false, error: 'Only owner/admin can create a shared view' };
   }
 
@@ -97,12 +97,17 @@ export async function findSavedViewById(id: string): Promise<SavedView | null> {
   return prisma.savedView.findUnique({ where: { id } });
 }
 
-function canEditOrDelete(view: SavedView, userId: string, role: UserRole): boolean {
+// Deliberately still a raw `role.isOwner` check, not a named permission — this is "the owner
+// specifically", not "owner or admin" (unlike canManageSharedViews above), so it stays exactly
+// what it was as an inline check, just reading isOwner off the resolved RoleContext instead of
+// comparing the legacy UserRole enum string (decision 4 in the Custom Roles plan: relationship/
+// ownership rules like this one stay layered on top of the permission system, not replaced by it).
+function canEditOrDelete(view: SavedView, userId: string, role: RoleContext): boolean {
   if (view.visibility === 'personal') {
     return view.createdByUserId === userId;
   }
   // Shared view: only the creator or the tenant owner.
-  return view.createdByUserId === userId || role === 'owner';
+  return view.createdByUserId === userId || role.isOwner;
 }
 
 export interface UpdateSavedViewInput {
@@ -116,7 +121,7 @@ export async function updateSavedView(
   id: string,
   tenantId: string,
   userId: string,
-  role: UserRole,
+  role: RoleContext,
   input: UpdateSavedViewInput,
 ): Promise<SavedViewResult> {
   const existing = await prisma.savedView.findUnique({ where: { id } });
@@ -161,7 +166,7 @@ export async function deleteSavedView(
   id: string,
   tenantId: string,
   userId: string,
-  role: UserRole,
+  role: RoleContext,
 ): Promise<{ success: boolean; error?: string }> {
   const existing = await prisma.savedView.findUnique({ where: { id } });
   if (!existing || existing.tenantId !== tenantId) {

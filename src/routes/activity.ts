@@ -52,7 +52,7 @@ activityRouter.get('/api/activity/feed', async (req, res) => {
   if (!user) {
     return;
   }
-  if (!canViewActivityLog(user.role)) {
+  if (!canViewActivityLog(user.roleContext)) {
     return res.status(403).json({ error: 'You do not have permission to view the Activity Log' });
   }
 

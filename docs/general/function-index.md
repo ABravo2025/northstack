@@ -123,14 +123,51 @@ Wrapper propio (`fetch` + `crypto` nativos, sin SDK) contra la API de Stripe —
 - **resetPassword(token, newPassword)** — valida el token (mismo chequeo de 3 pasos que `validatePasswordResetToken`) + `isPasswordValid`, y en una transacción: actualiza `passwordHash`, marca el token usado, **borra todas** las sesiones del usuario (a diferencia de `changeOwnPassword`, que preserva la sesión actual) y crea una sesión nueva.
 
 ### `src/modules/auth/permissionService.ts`
-Todas son `(role: UserRole) => boolean`, la fuente de verdad de qué puede hacer cada rol:
-**canViewHr**, **canCreateHr**, **canManageCustomFields**, **canInviteUsers**, **canManageUsers**, **canManagePayroll** (owner-only, a diferencia del resto — ver Payroll en `docs/spec-payroll.md`), **canManageBilling** (owner-only, mismo criterio que Payroll — Subscription Plans, `docs/spec-subscription-plans.md`), **canManagePayments** (owner-only, 2026-08-26 — Payments v1, `docs/tareas/specpaymentsv1.md`: conectar el Stripe del tenant y ver pagos de sus Companies), **canViewActivityLog** (owner/admin, 2026-08-30 — Activity Log, `docs/general/spec-activity-log.md`: ver el feed tenant-wide de Settings; el tab del modal por registro no tiene gate propio).
+Todas son `(role: RoleContext) => boolean` (Fase B, Custom Roles — antes tomaban el enum `UserRole`
+directo; `role.isOwner` cortocircuita cualquier función a `true`, un owner nunca tiene filas de
+permiso propias). La fuente de verdad de qué puede hacer cada rol:
+**canViewHr**/**canCreateHr** (legacy — solo `Client`/onboarding, ver más abajo),
+**canViewEmployee**/**canManageEmployee**, **canViewCompany**/**canManageCompany**,
+**canViewContact**/**canManageContact** (Fase B: reemplazan el `canViewHr`/`canCreateHr` que antes
+gateaba Employee/Company/Contact/Opportunity todos juntos — separados para que field-level/scope
+por entidad tengan sentido), **canViewOpportunity** (derivado, `canViewCompany && canViewContact`
+— nunca un permiso propio: quien no puede ver Contacts o Companies no ve nada de Sales),
+**canManageOpportunity** (permiso propio + exige `canViewOpportunity` como prerrequisito),
+**canManageCustomFields**, **canInviteUsers**, **canManageUsers**, **canManagePayroll** (owner-only,
+a diferencia del resto — ver Payroll en `docs/spec-payroll.md`), **canManageBilling** (owner-only,
+mismo criterio que Payroll — Subscription Plans, `docs/spec-subscription-plans.md`),
+**canManagePayments** (owner-only, 2026-08-26 — Payments v1, `docs/tareas/specpaymentsv1.md`:
+conectar el Stripe del tenant y ver pagos de sus Companies), **canViewSalesLeaderboard** (owner-only),
+**canViewActivityLog** (owner/admin, 2026-08-30 — Activity Log, `docs/general/spec-activity-log.md`:
+ver el feed tenant-wide de Settings; el tab del modal por registro no tiene gate propio),
+**canManageTenantSettings** (Fase B, reemplaza el inline check de `PATCH /api/tenants/current` —
+moneda del tenant), **canManageSharedViews** (Fase B, reemplaza el inline `canManageShared` de
+`savedViewService.ts` — crear una Saved View compartida), **canDecideTimeOff** (Fase B, el
+componente por-rol de aprobar/rechazar Time Off — `timeOffRequestService.ts` sigue OR-eándolo con
+"es el manager asignado", una regla por relación que no se reemplaza por un permiso).
 
-### `src/modules/auth/roleService.ts` (Custom Roles, `docs/tareas/backlog.md` "Sistema de roles custom", Fase A, 2026-09)
-- **seedDefaultRolesForTenant(tx, tenantId)** — crea los 3 roles semilla (Owner/Admin/Member) de un tenant reproduciendo el `rolePermissions` map actual de `permissionService.ts` 1:1 (más `EMPLOYEE_SCOPE_ALL`/`VIEW_EMPLOYEE_CUSTOM_FIELDS`/`EDIT_EMPLOYEE_CUSTOM_FIELDS` para no regresar nada el día que Fase D/E los empiecen a hacer cumplir). Idempotente. Llamada desde `registerTenantWithOwner` (tenant nuevo) y `scripts/backfill-custom-roles.ts` (tenants existentes).
-- **loadRoleContext(roleId)** / **resolveRoleContextForUser({roleId, role, tenantId})** — resuelven un `RoleContext` real desde `Role`+`RoleModulePermission`+`RoleFieldRestriction`; el segundo agrega 2 fallbacks (Role semilla por nombre, y por último `legacyRoleContext` sin DB) para que nada se rompa antes de que el backfill corra en un ambiente dado. Owner nunca tiene filas de permiso propias — `RoleContext.isOwner` cortocircuita cualquier chequeo.
-- **getEmployeeScope(role)** — lee cuál de los 3 permisos `view_employee_scope:*` tiene el rol (`self`/`department`/`all`/`none`) — todavía sin ningún consumidor real (Fase E la aplica a `listEmployees`).
-- **PERMISSION_KEYS** — allowlist completo de strings de permiso válidos (los 10 de hoy + las convenciones de Employee de arriba), fuente de verdad para cuando exista un endpoint de edición de roles (Fase H).
+### `src/modules/auth/roleService.ts` (Custom Roles, `docs/tareas/backlog.md` "Sistema de roles custom", Fase A-B, 2026-09)
+- **seedDefaultRolesForTenant(tx, tenantId)** — crea los 3 roles semilla (Owner/Admin/Member) de un
+  tenant usando `ADMIN_SEED_PERMISSIONS`/`MEMBER_SEED_PERMISSIONS` (listas exportadas, fuente única
+  compartida con el backfill de Fase B — reproducen el comportamiento actual exacto). Idempotente.
+  Llamada desde `registerTenantWithOwner` (tenant nuevo) y `scripts/backfill-custom-roles.ts`
+  (tenants existentes).
+- **loadRoleContext(roleId)** / **resolveRoleContextForUser({roleId, role, tenantId})** — resuelven
+  un `RoleContext` real desde `Role`+`RoleModulePermission`+`RoleFieldRestriction`; el segundo
+  agrega 2 fallbacks (Role semilla por nombre, y por último `legacyRoleContext` sin DB) para que
+  nada se rompa antes de que el backfill corra en un ambiente dado.
+- **findSeedRoleId(tenantId, userRole)** (Fase B) — resuelve el id del Role semilla de un tenant
+  que corresponde a un valor del enum legacy `UserRole`. Usado por `tenantUserService.ts` e
+  `invitationService.ts` para mantener `User.roleId`/`Invitation.roleId` sincronizados cada vez que
+  todavía escriben `role` (el enum) directamente — hasta que Fase I los rediseñe para aceptar un
+  `roleId` de cualquier rol custom, no solo los 3 semilla.
+- **getEmployeeScope(role)** — lee cuál de los 3 permisos `view_employee_scope:*` tiene el rol
+  (`self`/`department`/`all`/`none`) — todavía sin ningún consumidor real (Fase E la aplica a
+  `listEmployees`).
+- **PERMISSION_KEYS** — allowlist completo de strings de permiso válidos, fuente de verdad para
+  cuando exista un endpoint de edición de roles (Fase H). **ADMIN_SEED_PERMISSIONS**/
+  **MEMBER_SEED_PERMISSIONS** — qué permisos concretos arma cada uno, importadas también por
+  `scripts/backfill-fase-b-permissions.ts` para no duplicar la lista.
 
 ### `src/modules/activity/activityLogService.ts` (Activity Log, `docs/general/spec-activity-log.md`, 2026-08-30)
 Mecanismo genérico reusado por cada módulo que registra actividad — un solo punto de escritura en vez de que cada service arme su propio formato de diff/summary.

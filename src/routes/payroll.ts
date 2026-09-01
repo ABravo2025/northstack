@@ -55,7 +55,7 @@ payrollRouter.post('/api/hr/pay-frequencies', async (req, res) => {
     return;
   }
 
-  if (!canManagePayroll(user.role)) {
+  if (!canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -87,7 +87,7 @@ payrollRouter.patch('/api/hr/pay-frequencies/:id', async (req, res) => {
     return;
   }
 
-  if (!canManagePayroll(user.role)) {
+  if (!canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -134,7 +134,7 @@ payrollRouter.post('/api/hr/payment-methods', async (req, res) => {
     return;
   }
 
-  if (!canManagePayroll(user.role)) {
+  if (!canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -153,7 +153,7 @@ payrollRouter.patch('/api/hr/payment-methods/:id', async (req, res) => {
     return;
   }
 
-  if (!canManagePayroll(user.role)) {
+  if (!canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -188,7 +188,7 @@ payrollRouter.post('/api/hr/payroll/compensation', async (req, res) => {
     return;
   }
 
-  if (!canManagePayroll(user.role)) {
+  if (!canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -246,7 +246,7 @@ payrollRouter.get('/api/hr/payroll/compensation/status', async (req, res) => {
     return;
   }
 
-  if (!canManagePayroll(user.role)) {
+  if (!canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -260,7 +260,7 @@ payrollRouter.get('/api/hr/payroll/compensation/terminated', async (req, res) =>
     return;
   }
 
-  if (!canManagePayroll(user.role)) {
+  if (!canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -274,7 +274,7 @@ payrollRouter.post('/api/hr/payroll/compensation/bulk', async (req, res) => {
     return;
   }
 
-  if (!canManagePayroll(user.role)) {
+  if (!canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -325,7 +325,7 @@ payrollRouter.get('/api/hr/payroll/runs', async (req, res) => {
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.role)) {
+  if (!canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -338,7 +338,7 @@ payrollRouter.post('/api/hr/payroll/runs', async (req, res) => {
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.role)) {
+  if (!canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -364,7 +364,7 @@ payrollRouter.get('/api/hr/payroll/runs/:id', async (req, res) => {
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.role)) {
+  if (!canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -380,7 +380,7 @@ payrollRouter.post('/api/hr/payroll/runs/:id/employees', async (req, res) => {
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.role)) {
+  if (!canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -401,7 +401,7 @@ payrollRouter.post('/api/hr/payroll/runs/:id/confirm', async (req, res) => {
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.role)) {
+  if (!canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -421,7 +421,7 @@ payrollRouter.post('/api/hr/payroll/entries', async (req, res) => {
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.role)) {
+  if (!canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -459,7 +459,7 @@ payrollRouter.delete('/api/hr/payroll/entries/:id', async (req, res) => {
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.role)) {
+  if (!canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -475,7 +475,7 @@ payrollRouter.patch('/api/hr/payroll/entries/:id/hours', async (req, res) => {
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.role)) {
+  if (!canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -493,7 +493,7 @@ payrollRouter.get('/api/hr/payroll/off-payments', async (req, res) => {
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.role)) {
+  if (!canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -506,7 +506,7 @@ payrollRouter.post('/api/hr/payroll/off-payments', async (req, res) => {
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.role)) {
+  if (!canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -549,7 +549,7 @@ payrollRouter.get('/api/hr/payroll/runs/:runId/employees/:employeeId/payslip', a
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.role)) {
+  if (!canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -567,7 +567,7 @@ payrollRouter.get('/api/hr/payroll/entries/:id/payslip', async (req, res) => {
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.role)) {
+  if (!canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 

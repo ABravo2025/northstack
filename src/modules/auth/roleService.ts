@@ -15,14 +15,44 @@ export type EmployeeScope = 'self' | 'department' | 'all' | 'none';
 export const VIEW_EMPLOYEE_CUSTOM_FIELDS = 'view_employee_custom_fields';
 export const EDIT_EMPLOYEE_CUSTOM_FIELDS = 'edit_employee_custom_fields';
 
-// The 10 permission keys that reproduce today's rolePermissions map (permissionService.ts)
-// exactly, PLUS the Employee-only conventions above. This is the full allowlist a future
-// role-editing endpoint (Fase H) validates incoming permission strings against — kept here rather
-// than duplicated in permissionService.ts since both files need it and this one has no reverse
-// dependency on that one.
+// Fase B — permissionService.ts's `canViewHr`/`canCreateHr` used to gate Employee/Company/
+// Contact/Opportunity all together under one flag; that made the field-level/scope work (and the
+// Sales cascade — canViewOpportunity derives from canViewCompany && canViewContact) meaningless,
+// since none of the 4 could be independently granted. Split into one view/manage pair per entity.
+// `view_hr`/`create_hr` themselves are kept (see below) as a legacy pair used ONLY by the
+// soon-to-be-decommissioned `Client` module and the onboarding sample-data seeder — neither is
+// part of this redesign's scope (docs/tareas/backlog.md "Corte final del módulo Client legado").
+export const VIEW_EMPLOYEE = 'view_employee';
+export const MANAGE_EMPLOYEE = 'manage_employee';
+export const VIEW_COMPANY = 'view_company';
+export const MANAGE_COMPANY = 'manage_company';
+export const VIEW_CONTACT = 'view_contact';
+export const MANAGE_CONTACT = 'manage_contact';
+// No VIEW_OPPORTUNITY constant — it's derived (canViewCompany && canViewContact), never stored.
+export const MANAGE_OPPORTUNITY = 'manage_opportunity';
+
+// Fase B — replace the 3 remaining inline `role === 'owner' || role === 'admin'` checks (tenant
+// currency, creating a shared Saved View) with named permissions, same convention as everything
+// else. Time Off approval doesn't get a plain permission of its own logic here — see
+// `canDecideTimeOff` in permissionService.ts and timeOffRequestService.ts for why the "OR the
+// assigned manager" relationship rule has to stay layered on top, not replaced by this flag.
+export const MANAGE_TENANT_SETTINGS = 'manage_tenant_settings';
+export const MANAGE_SHARED_VIEWS = 'manage_shared_views';
+export const DECIDE_TIME_OFF = 'decide_time_off';
+
+// The full permission allowlist — the source a future role-editing endpoint (Fase H) validates
+// incoming permission strings against. Kept here rather than in permissionService.ts since both
+// files need it and this one has no reverse dependency on that one.
 export const PERMISSION_KEYS = [
   'view_hr',
   'create_hr',
+  VIEW_EMPLOYEE,
+  MANAGE_EMPLOYEE,
+  VIEW_COMPANY,
+  MANAGE_COMPANY,
+  VIEW_CONTACT,
+  MANAGE_CONTACT,
+  MANAGE_OPPORTUNITY,
   'manage_custom_fields',
   'invite_users',
   'manage_users',
@@ -31,11 +61,50 @@ export const PERMISSION_KEYS = [
   'manage_payments',
   'view_sales_leaderboard',
   'view_activity_log',
+  MANAGE_TENANT_SETTINGS,
+  MANAGE_SHARED_VIEWS,
+  DECIDE_TIME_OFF,
   VIEW_EMPLOYEE_CUSTOM_FIELDS,
   EDIT_EMPLOYEE_CUSTOM_FIELDS,
   ...EMPLOYEE_SCOPE_PERMISSIONS,
 ] as const;
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];
+
+// Single source of truth for what Admin/Member get seeded with — reproduces TODAY's real
+// behavior (pre-Custom-Roles) exactly, so shipping this feature is a no-op for every existing
+// role until a tenant actively reconfigures one. Used both by seedDefaultRolesForTenant (new
+// tenants) and scripts/backfill-fase-b-permissions.ts (topping up the 184 tenants' roles already
+// seeded by Fase A, which predate the entity split and the 3 new named permissions above).
+export const ADMIN_SEED_PERMISSIONS: string[] = [
+  'view_hr',
+  'create_hr',
+  VIEW_EMPLOYEE,
+  MANAGE_EMPLOYEE,
+  VIEW_COMPANY,
+  MANAGE_COMPANY,
+  VIEW_CONTACT,
+  MANAGE_CONTACT,
+  MANAGE_OPPORTUNITY,
+  'manage_custom_fields',
+  'invite_users',
+  'manage_users',
+  MANAGE_TENANT_SETTINGS,
+  MANAGE_SHARED_VIEWS,
+  DECIDE_TIME_OFF,
+  'view_activity_log',
+  VIEW_EMPLOYEE_CUSTOM_FIELDS,
+  EDIT_EMPLOYEE_CUSTOM_FIELDS,
+  EMPLOYEE_SCOPE_ALL,
+];
+
+export const MEMBER_SEED_PERMISSIONS: string[] = [
+  'view_hr',
+  VIEW_EMPLOYEE,
+  VIEW_COMPANY,
+  VIEW_CONTACT,
+  VIEW_EMPLOYEE_CUSTOM_FIELDS,
+  EMPLOYEE_SCOPE_ALL,
+];
 
 export interface RoleContext {
   id: string;
@@ -78,26 +147,12 @@ export async function seedDefaultRolesForTenant(tx: PrismaTx, tenantId: string):
 
   const admin = await tx.role.create({ data: { tenantId, name: 'Admin' } });
   await tx.roleModulePermission.createMany({
-    data: [
-      'view_hr',
-      'create_hr',
-      'manage_custom_fields',
-      'invite_users',
-      'manage_users',
-      'view_activity_log',
-      VIEW_EMPLOYEE_CUSTOM_FIELDS,
-      EDIT_EMPLOYEE_CUSTOM_FIELDS,
-      EMPLOYEE_SCOPE_ALL,
-    ].map((permission) => ({ tenantId, roleId: admin.id, permission })),
+    data: ADMIN_SEED_PERMISSIONS.map((permission) => ({ tenantId, roleId: admin.id, permission })),
   });
 
   const member = await tx.role.create({ data: { tenantId, name: 'Member' } });
   await tx.roleModulePermission.createMany({
-    data: ['view_hr', VIEW_EMPLOYEE_CUSTOM_FIELDS, EMPLOYEE_SCOPE_ALL].map((permission) => ({
-      tenantId,
-      roleId: member.id,
-      permission,
-    })),
+    data: MEMBER_SEED_PERMISSIONS.map((permission) => ({ tenantId, roleId: member.id, permission })),
   });
 
   return { owner, admin, member };
@@ -130,11 +185,26 @@ export async function loadRoleContext(roleId: string): Promise<RoleContext> {
   };
 }
 
-const SEED_ROLE_NAME_BY_USER_ROLE: Record<UserRole, string> = {
+export const SEED_ROLE_NAME_BY_USER_ROLE: Record<UserRole, string> = {
   owner: 'Owner',
   admin: 'Admin',
   member: 'Member',
 };
+
+// Looks up a tenant's seed Role id matching a legacy UserRole enum value. Used by
+// tenantUserService.ts's updateTenantUser to keep User.roleId in sync whenever it still changes
+// `role` (the enum) directly — until Fase I redesigns that endpoint to accept a roleId for any
+// custom role directly, this is what keeps RoleContext resolution correct in the interim (roleId
+// takes priority over the enum in resolveRoleContextForUser, so a stale roleId after a role change
+// would silently keep someone's OLD permissions). Returns null if this tenant somehow has no seed
+// roles yet (shouldn't happen post-backfill, but resolveRoleContextForUser's own fallback chain
+// covers it either way).
+export async function findSeedRoleId(tenantId: string, userRole: UserRole): Promise<string | null> {
+  const role = await prisma.role.findUnique({
+    where: { tenantId_name: { tenantId, name: SEED_ROLE_NAME_BY_USER_ROLE[userRole] } },
+  });
+  return role?.id ?? null;
+}
 
 // Last-resort, no-DB-write fallback used only when a User/Invitation predates the backfill
 // (scripts/backfill-custom-roles.ts) — reproduces the legacy rolePermissions map (permissionService.ts)
@@ -144,8 +214,8 @@ function legacyRoleContext(role: UserRole): RoleContext {
     role === 'owner'
       ? [] // isOwner below already bypasses every check for 'owner'
       : role === 'admin'
-        ? ['view_hr', 'create_hr', 'manage_custom_fields', 'invite_users', 'manage_users', 'view_activity_log', VIEW_EMPLOYEE_CUSTOM_FIELDS, EDIT_EMPLOYEE_CUSTOM_FIELDS, EMPLOYEE_SCOPE_ALL]
-        : ['view_hr', VIEW_EMPLOYEE_CUSTOM_FIELDS, EMPLOYEE_SCOPE_ALL];
+        ? ADMIN_SEED_PERMISSIONS
+        : MEMBER_SEED_PERMISSIONS;
 
   return {
     id: `legacy:${role}`,

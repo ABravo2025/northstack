@@ -5,6 +5,7 @@ import { sendInvitationEmail } from '../../lib/mailer.js';
 import type { TenantCreationResult } from './tenantService.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { invitationActivityFieldConfig } from '../activity/fieldConfigs/invitationFieldConfig.js';
+import { findSeedRoleId } from '../auth/roleService.js';
 
 const INVITATION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -51,6 +52,16 @@ export async function findInvitationByToken(token: string) {
 }
 
 export async function createInvitation(input: CreateInvitationInput): Promise<InvitationResult> {
+  // Fase B (Custom Roles) gap closed: ownership was never enforceable here before — an admin
+  // could set role:'owner' on an invitation and, once accepted, the tenant would end up with two
+  // owners (the transfer-safety-and-demotion logic only lives in tenantUserService.ts's
+  // updateTenantUser, which this bypassed entirely). Ownership can only ever move between two
+  // EXISTING users via that atomic transfer — never granted to someone who doesn't have an
+  // account yet — so it's rejected unconditionally here, regardless of who's inviting.
+  if (input.role === 'owner') {
+    return { success: false, error: 'Ownership can only be transferred to an existing user, not granted by invitation' };
+  }
+
   const tenant = await prisma.tenant.findUnique({
     where: { id: input.tenantId },
   });
@@ -69,12 +80,14 @@ export async function createInvitation(input: CreateInvitationInput): Promise<In
     return { success: false, error: 'User already belongs to a tenant' };
   }
 
+  const role = input.role ?? 'member';
   const invitation = await prisma.invitation.create({
     data: {
       tenantId: input.tenantId,
       invitedByUserId: input.invitedByUserId,
       email: normalizedEmail,
-      role: input.role ?? 'member',
+      role,
+      roleId: await findSeedRoleId(input.tenantId, role),
       employeeId: input.employeeId,
       token: randomUUID(),
       expiresAt: new Date(Date.now() + INVITATION_EXPIRY_MS),
@@ -152,6 +165,7 @@ export async function acceptInvitation(input: AcceptInvitationInput): Promise<Te
       data: {
         tenantId: invitation.tenantId,
         role: invitation.role,
+        roleId: invitation.roleId,
       },
     });
 

@@ -1,4 +1,4 @@
-import { canCreateHr, canManageCustomFields, canViewHr } from '../modules/auth/permissionService.js';
+import { canManageContact, canManageCustomFields, canViewContact } from '../modules/auth/permissionService.js';
 import { findCompanyById } from '../modules/crm/companyService.js';
 import { createContact, deactivateContact, findContactById, listContacts, updateContact } from '../modules/crm/contactService.js';
 import {
@@ -52,7 +52,7 @@ contactsRouter.get('/api/contacts', async (req, res) => {
     return;
   }
 
-  if (!canViewHr(user.role)) {
+  if (!canViewContact(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -66,7 +66,7 @@ contactsRouter.post('/api/contacts', async (req, res) => {
     return;
   }
 
-  if (!canCreateHr(user.role)) {
+  if (!canManageContact(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -99,7 +99,7 @@ contactsRouter.get('/api/contacts/:contactId', async (req, res) => {
     return;
   }
 
-  if (!canViewHr(user.role)) {
+  if (!canViewContact(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -117,7 +117,7 @@ contactsRouter.patch('/api/contacts/:contactId', async (req, res) => {
     return;
   }
 
-  if (!canCreateHr(user.role)) {
+  if (!canManageContact(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -152,7 +152,7 @@ contactsRouter.delete('/api/contacts/:contactId', async (req, res) => {
     return;
   }
 
-  if (!canCreateHr(user.role)) {
+  if (!canManageContact(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -171,7 +171,7 @@ contactsRouter.post('/api/contacts/:contactId/custom-fields', async (req, res) =
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -218,7 +218,7 @@ contactsRouter.patch('/api/contacts/:contactId/custom-fields/:valueId', async (r
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -265,7 +265,7 @@ contactsRouter.delete('/api/contacts/:contactId/custom-fields/:valueId', async (
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -325,7 +325,7 @@ contactsRouter.get('/api/contacts/export/csv', async (req, res) => {
     return;
   }
 
-  if (!canViewHr(user.role)) {
+  if (!canViewContact(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -341,7 +341,7 @@ contactsRouter.post('/api/contacts/import/csv', async (req, res) => {
     return;
   }
 
-  if (!canCreateHr(user.role)) {
+  if (!canManageContact(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -359,7 +359,7 @@ contactsRouter.get('/api/contacts/template/csv', async (req, res) => {
     return;
   }
 
-  if (!canCreateHr(user.role)) {
+  if (!canManageContact(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 

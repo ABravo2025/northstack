@@ -1,6 +1,7 @@
 # Database Schema
 
-- Última actualización: 2026-09-01 (Custom Roles — Fase A completa: schema aditivo + seed/backfill + `RoleContext` sin consumidores todavía, ver grupo 14; en `staging`, sin pushear a `main`)
+- Última actualización: 2026-09-01 (Custom Roles — Fase B completa: `permissionService.ts` migrado a `RoleContext`, entity-split de Employee/Company/Contact/Opportunity, 3 permisos nuevos reemplazan los últimos chequeos inline, gap de invitación con rol owner cerrado, CSV atado a Payroll — ver grupo 14; en `staging`, sin pushear a `main`)
+- Actualización anterior: 2026-09-01 (Custom Roles — Fase A completa: schema aditivo + seed/backfill + `RoleContext` sin consumidores todavía, ver grupo 14; en `staging`, sin pushear a `main`)
 - Actualización anterior: 2026-08-31 (Activity Log — Unidades 1-6 completas, spec cerrado; incluye el fix same-day de `parentEntityType`/`parentEntityId` (2026-08-30) y la Unidad 6 completa con Subscription/GoogleCalendarConnection/StripeConnection (2026-08-31, mecanismo de correlación `Subscription.lastActionByUserId`/`lastActionAt`), ver grupo 13; en `staging`, sin pushear a `main`)
 - Actualización anterior: 2026-08-29 (Employee Termination — ver grupo 11 — y Payments v1 Units 5-7, ver grupo 10; todo en `staging`, sin pushear a `main`)
 - Fuente de verdad real: `prisma/schema.prisma`. Este documento es una vista legible de ese archivo — si difieren, el `.prisma` manda. Regenerar este archivo cuando el schema cambie de forma significativa (modelo nuevo, relación nueva), no hace falta para cambios chicos (un campo opcional más, un índice).
@@ -1149,11 +1150,25 @@ Notas:
 Spec en `docs/tareas/backlog.md` ("Sistema de roles custom / permisología", Tier 5) — reemplaza el
 enum fijo `owner`/`admin`/`member` por roles editables por tenant, con permisos de módulo, un scope
 por registro para Employees (self/departamento/todos), y restricciones campo por campo. **Fase A
-completa, en `staging`**: schema (aditivo) + `seedDefaultRolesForTenant`/`resolveRoleContextForUser`
-(`src/modules/auth/roleService.ts`) + backfill (`scripts/backfill-custom-roles.ts`, corrido contra
-`staging`: 184 tenants, 189 Users, 17 Invitations) + `RoleContext` resuelto en `authenticateToken`
-(sin consumidores todavía — `permissionService.ts` sigue leyendo el enum `role` hasta Fase B). Nada
-de esto llegó a `main` todavía.
+completa** (schema aditivo + seed/backfill + `RoleContext` resuelto sin consumidores). **Fase B
+completa**: `permissionService.ts` migró sus 10 funciones a leer `RoleContext` en vez del enum
+legacy; el viejo `canViewHr`/`canCreateHr` (que gateaba Employee/Company/Contact/Opportunity todos
+juntos) se separó en un par view/manage por entidad (`canViewEmployee`/`canManageEmployee`,
+`canViewCompany`/`canManageCompany`, `canViewContact`/`canManageContact`) más `canViewOpportunity`
+**derivado** (`canViewCompany && canViewContact` — nunca un permiso propio, ver más abajo) y
+`canManageOpportunity`; `canViewHr`/`canCreateHr` se mantienen sin cambios semánticos, ahora solo
+para `Client` (legacy) y el seeder de datos de ejemplo del onboarding. 3 permisos nombrados nuevos
+(`manage_tenant_settings`, `manage_shared_views`, `decide_time_off`) reemplazan los últimos 3
+chequeos inline de rol del código (moneda del tenant, crear Saved View compartida, aprobar Time
+Off — este último sigue OR-eado con la regla de "es el manager asignado"). Gap real cerrado:
+`createInvitation` ya no permite `role: 'owner'` bajo ninguna circunstancia (antes solo el frontend
+lo bloqueaba). CSV de Employees pasó de `view_hr`/`create_hr` a requerir `canManagePayroll`.
+`User.roleId`/`Invitation.roleId` se mantienen sincronizados con el enum `role` cada vez que
+`tenantUserService.ts`/`invitationService.ts` todavía lo escriben directo (`findSeedRoleId`), hasta
+que Fase I los rediseñe para trabajar con `roleId` de cualquier rol custom. Backfill de Fase A
+corrido contra `staging` (184 tenants, 189 Users, 17 Invitations) + top-up de Fase B
+(`scripts/backfill-fase-b-permissions.ts`, agrega los permisos nuevos a los roles Admin/Member ya
+sembrados). Nada de esto llegó a `main` todavía.
 
 ```mermaid
 erDiagram

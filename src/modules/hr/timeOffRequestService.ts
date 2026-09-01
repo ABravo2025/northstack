@@ -3,7 +3,9 @@ import { sendTimeOffRequestDecidedEmail, sendTimeOffRequestPendingEmail } from '
 import { syncTimeOffCalendarEvent } from '../integrations/googleCalendarSyncService.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { timeOffRequestActivityFieldConfig } from '../activity/fieldConfigs/timeOffRequestFieldConfig.js';
-import type { TimeOffRequest, TimeOffRequestStatus, User } from '@prisma/client';
+import { canDecideTimeOff } from '../auth/permissionService.js';
+import type { AuthenticatedUser } from '../auth/authService.js';
+import type { TimeOffRequest, TimeOffRequestStatus } from '@prisma/client';
 
 function timeOffRequestLabel(employeeName: string, startDate: Date, endDate: Date): string {
   const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -205,7 +207,7 @@ export interface DecideTimeOffRequestResult {
 export async function decideTimeOffRequest(
   requestId: string,
   tenantId: string,
-  actingUser: User,
+  actingUser: AuthenticatedUser,
   decision: 'approved' | 'rejected',
   decisionNote?: string,
 ): Promise<DecideTimeOffRequestResult> {
@@ -218,11 +220,14 @@ export async function decideTimeOffRequest(
     return { success: false, error: 'This request has already been decided' };
   }
 
-  const isOwnerOrAdmin = actingUser.role === 'owner' || actingUser.role === 'admin';
+  // Fase B (Custom Roles) — canDecideTimeOff replaces the inline `role === 'owner' || role ===
+  // 'admin'` check, but the "OR is the assigned manager, regardless of role" relationship rule
+  // stays layered on top of it, not replaced by it (decision 4 in the plan).
+  const canDecideByRole = canDecideTimeOff(actingUser.roleContext);
   const actingEmployee = await prisma.employee.findUnique({ where: { userId: actingUser.id } });
   const isAssignedApprover = actingEmployee && request.approverId === actingEmployee.id;
 
-  if (!isOwnerOrAdmin && !isAssignedApprover) {
+  if (!canDecideByRole && !isAssignedApprover) {
     return { success: false, error: 'You are not authorized to decide this request' };
   }
 

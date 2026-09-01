@@ -1,4 +1,4 @@
-import { canCreateHr, canManageCustomFields, canViewHr } from '../modules/auth/permissionService.js';
+import { canManageCompany, canManageCustomFields, canViewCompany } from '../modules/auth/permissionService.js';
 import {
   createCompany,
   deleteCompany,
@@ -31,7 +31,7 @@ companiesRouter.get('/api/companies', async (req, res) => {
     return;
   }
 
-  if (!canViewHr(user.role)) {
+  if (!canViewCompany(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -45,7 +45,7 @@ companiesRouter.post('/api/companies', async (req, res) => {
     return;
   }
 
-  if (!canCreateHr(user.role)) {
+  if (!canManageCompany(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -84,7 +84,7 @@ companiesRouter.get('/api/companies/:companyId', async (req, res) => {
     return;
   }
 
-  if (!canViewHr(user.role)) {
+  if (!canViewCompany(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -102,7 +102,7 @@ companiesRouter.patch('/api/companies/:companyId', async (req, res) => {
     return;
   }
 
-  if (!canCreateHr(user.role)) {
+  if (!canManageCompany(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -139,7 +139,7 @@ companiesRouter.delete('/api/companies/:companyId', async (req, res) => {
     return;
   }
 
-  if (!canCreateHr(user.role)) {
+  if (!canManageCompany(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -165,7 +165,7 @@ companiesRouter.post('/api/companies/:companyId/custom-fields', async (req, res)
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -212,7 +212,7 @@ companiesRouter.patch('/api/companies/:companyId/custom-fields/:valueId', async 
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -259,7 +259,7 @@ companiesRouter.delete('/api/companies/:companyId/custom-fields/:valueId', async
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -319,7 +319,7 @@ companiesRouter.get('/api/companies/export/csv', async (req, res) => {
     return;
   }
 
-  if (!canViewHr(user.role)) {
+  if (!canViewCompany(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -335,7 +335,7 @@ companiesRouter.post('/api/companies/import/csv', async (req, res) => {
     return;
   }
 
-  if (!canCreateHr(user.role)) {
+  if (!canManageCompany(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -353,7 +353,7 @@ companiesRouter.get('/api/companies/template/csv', async (req, res) => {
     return;
   }
 
-  if (!canCreateHr(user.role)) {
+  if (!canManageCompany(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 

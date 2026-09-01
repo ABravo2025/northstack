@@ -50,7 +50,7 @@ subscriptionsRouter.post('/api/subscriptions/me/checkout', async (req, res) => {
     return;
   }
 
-  if (!canManageBilling(user.role)) {
+  if (!canManageBilling(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -81,7 +81,7 @@ subscriptionsRouter.post('/api/subscriptions/me/change-plan', async (req, res) =
   if (!user) {
     return;
   }
-  if (!canManageBilling(user.role)) {
+  if (!canManageBilling(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -103,7 +103,7 @@ subscriptionsRouter.post('/api/subscriptions/me/cancel', async (req, res) => {
   if (!user) {
     return;
   }
-  if (!canManageBilling(user.role)) {
+  if (!canManageBilling(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -121,7 +121,7 @@ subscriptionsRouter.post('/api/subscriptions/me/resume', async (req, res) => {
   if (!user) {
     return;
   }
-  if (!canManageBilling(user.role)) {
+  if (!canManageBilling(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 

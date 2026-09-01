@@ -1,6 +1,8 @@
 import prisma from '../../lib/prisma.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { userActivityFieldConfig, userDisplayName } from '../activity/fieldConfigs/userFieldConfig.js';
+import { findSeedRoleId } from '../auth/roleService.js';
+import type { AuthenticatedUser } from '../auth/authService.js';
 import type { User, UserRole, UserStatus } from '@prisma/client';
 
 export async function listTenantUsers(tenantId: string) {
@@ -33,7 +35,7 @@ export interface TenantUserUpdateResult {
 export async function updateTenantUser(
   tenantId: string,
   targetUserId: string,
-  actingUser: User,
+  actingUser: AuthenticatedUser,
   input: UpdateTenantUserInput,
 ): Promise<TenantUserUpdateResult> {
   const target = await prisma.user.findUnique({ where: { id: targetUserId } });
@@ -45,7 +47,11 @@ export async function updateTenantUser(
     return { success: false, error: 'Use your profile page to change your own account' };
   }
 
-  if ((input.role === 'owner' || target.role === 'owner') && actingUser.role !== 'owner') {
+  // Fase B (Custom Roles) — reads the resolved RoleContext instead of comparing the legacy
+  // UserRole enum string; still "the owner specifically", not a named permission (same reasoning
+  // as savedViewService.ts's canEditOrDelete — ownership-transfer safety isn't something a custom
+  // role should ever be able to grant itself).
+  if ((input.role === 'owner' || target.role === 'owner') && !actingUser.roleContext.isOwner) {
     return { success: false, error: 'Only an owner can manage owner access' };
   }
 
@@ -53,14 +59,23 @@ export async function updateTenantUser(
     // A tenant can only ever have one owner. Promoting someone to owner is a
     // transfer: the acting owner is demoted to admin in the same transaction,
     // so the tenant never has zero or two owners at once.
-    const targetData: { role: UserRole; status?: UserStatus } = { role: 'owner' };
+    // roleId is kept in sync alongside the enum (Fase B, Custom Roles) — see findSeedRoleId's
+    // comment for why this matters.
+    const [ownerRoleId, adminRoleId] = await Promise.all([
+      findSeedRoleId(tenantId, 'owner'),
+      findSeedRoleId(tenantId, 'admin'),
+    ]);
+    const targetData: { role: UserRole; roleId: string | null; status?: UserStatus } = {
+      role: 'owner',
+      roleId: ownerRoleId,
+    };
     if (input.status) {
       targetData.status = input.status;
     }
 
     const [updatedTarget] = await prisma.$transaction([
       prisma.user.update({ where: { id: targetUserId }, data: targetData }),
-      prisma.user.update({ where: { id: actingUser.id }, data: { role: 'admin' } }),
+      prisma.user.update({ where: { id: actingUser.id }, data: { role: 'admin', roleId: adminRoleId } }),
     ]);
 
     await recordActivity({
@@ -78,9 +93,11 @@ export async function updateTenantUser(
     return { success: true, user: updatedTarget };
   }
 
-  const data: { role?: UserRole; status?: UserStatus } = {};
+  const data: { role?: UserRole; roleId?: string | null; status?: UserStatus } = {};
   if (input.role) {
     data.role = input.role;
+    // roleId kept in sync alongside the enum (Fase B, Custom Roles) — see findSeedRoleId's comment.
+    data.roleId = await findSeedRoleId(tenantId, input.role);
   }
   if (input.status) {
     data.status = input.status;

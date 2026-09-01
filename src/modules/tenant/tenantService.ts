@@ -14,6 +14,7 @@ import { seedDefaultStatusDefinitions } from '../hr/statusService.js';
 import { seedDefaultPipelines } from '../crm/pipelineService.js';
 import { seedDefaultPayFrequencies } from '../hr/payFrequencyService.js';
 import { seedDefaultPaymentMethods } from '../hr/paymentMethodService.js';
+import { seedDefaultRolesForTenant } from '../auth/roleService.js';
 import { getEmailDomain } from '../../lib/email.js';
 import { CURRENT_PLAN_PRICES_CENTS } from './planService.js';
 import { recordActivity } from '../activity/activityLogService.js';
@@ -213,6 +214,7 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
     await seedDefaultPipelines(tx, tenant.id);
     await seedDefaultPayFrequencies(tx, tenant.id);
     await seedDefaultPaymentMethods(tx, tenant.id);
+    const { owner: ownerRole } = await seedDefaultRolesForTenant(tx, tenant.id);
 
     // Billing Integration (spec-billing-integration.md, Unidad 2) — every tenant gets a
     // Subscription from the moment it's created, not just backfilled for pre-existing ones.
@@ -239,6 +241,7 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
         emailDomain: getEmailDomain(normalizedEmail),
         passwordHash: hashPassword(input.ownerPassword),
         role: 'owner',
+        roleId: ownerRole.id,
         tenantId: tenant.id,
         acceptedTermsAt: new Date(),
         jobFunction: input.jobFunction,

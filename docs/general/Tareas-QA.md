@@ -2802,3 +2802,54 @@ Verificado por Claude contra `staging` real antes de este push: script directo p
 backend (casos 1-2, 4, 6-8, 10-12, 14-18) + Playwright real contra un dev server local apuntado a
 `staging` para el import completo desde el navegador — subir el archivo, ver el toast de éxito, y
 confirmar la fila nueva en la tabla (caso 19 en adelante). Falta la revisión humana de Alejandro.
+
+## QA-65 — Custom Roles, Fase A: fundacional, sin superficie funcional todavía (2026-09-01, en `staging`)
+
+**Por qué existe esta tarea:** primera pieza de `docs/tareas/backlog.md` "Sistema de roles custom /
+permisología" (plan completo en el archivo de plan de la sesión) — reemplaza el enum fijo
+`owner`/`admin`/`member` por roles editables por tenant, con permisos de módulo, un scope por
+registro para Employees (self/departamento/todos) y restricciones campo por campo. Esta Fase A es
+puramente fundacional: 3 modelos nuevos (`Role`/`RoleModulePermission`/`RoleFieldRestriction`,
+push aditivo), `seedDefaultRolesForTenant` enganchado al alta de tenant nuevo, un backfill corrido
+contra `staging` para los tenants existentes, y un `RoleContext` resuelto en cada login/request —
+**pero nada todavía lo consulta para tomar una decisión de autorización real** (`permissionService.ts`
+sigue leyendo el enum `role` de siempre hasta la Fase B). El objetivo de esta ronda de QA es
+confirmar que agregar toda esta plomería no cambió ningún comportamiento visible.
+
+### A. Regresión — nada debería verse distinto
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Login con un usuario existente de cualquier rol (owner/admin/member) | Funciona igual que siempre, sin cambios de comportamiento ni de permisos visibles |
+| 2 | `GET /api/auth/me` (o simplemente cargar la app y ver el usuario logueado) | La respuesta trae `user` normal — sin ningún campo `roleContext`/`{}` raro colado ahí |
+| 3 | Cualquier pantalla gateada por rol (Payroll, Billing, Activity Log, Settings de Users, etc.) | Se ve exactamente igual que antes para cada rol — nada se abrió ni se cerró de más |
+| 4 | Registrar un tenant nuevo de punta a punta (signup con verificación de email) | El flujo completo funciona igual que siempre; la cuenta queda creada y usable |
+
+### B. Nueva plomería — verificable solo con acceso directo a la base (no hay UI todavía)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 5 | Un tenant recién registrado (caso A.4) | Tiene exactamente 3 filas `Role` (Owner/Admin/Member) — la de Owner con `isOwner: true`, `isEditable: false` |
+| 6 | El `User` owner de ese tenant nuevo | Tiene `roleId` seteado, apuntando a la fila `Role` con `isOwner: true` |
+| 7 | Cualquier tenant que ya existía antes de este push | También tiene sus 3 roles semilla (backfill corrido: 184 tenants, 189 Users, 17 Invitations en `staging`) — verificado por Claude con queries directas antes de este push, ver el resumen en el plan de la sesión |
+
+### C. Build/tests
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 8 | `npm run build`/`npm test` (backend, 218/218) y `npm run build` (frontend) | Los tres en verde |
+
+### Al encontrar una falla
+
+Cualquier cambio de comportamiento visible (caso A) es severidad **alta** — esta unidad está
+diseñada para ser 100% invisible, así que cualquier regresión es una señal de que algo en el nuevo
+código (`resolveRoleContextForUser`, el hook en `authenticateToken`) está interfiriendo donde no
+debería. Un problema en el caso B (roles mal sembrados, `roleId` sin asignar) es severidad media —
+no rompe nada hoy porque nada lo consume todavía, pero bloquearía la Fase B si no se corrige antes.
+
+Verificado por Claude contra `staging` real antes de este push: `npm run build`/`npm test`
+(218/218) en un worktree aislado, backfill corrido contra `staging` con verificación directa por
+query (0 Users sin `roleId` salvo 1 usuario huérfano sin tenant, preexistente y fuera de alcance;
+184 tenants = 184 roles `isOwner`; 0 mismatches entre `User.role` y `Role.name`; 0 Invitations sin
+`roleId`). Sin pasada de Playwright — no hay ninguna superficie de UI nueva que probar en esta fase.
+Falta la revisión humana de Alejandro antes de continuar con la Fase B.

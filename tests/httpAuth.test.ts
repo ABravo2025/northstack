@@ -8,6 +8,12 @@ vi.mock('../src/lib/prisma.js', () => ({
       findUnique: vi.fn(async ({ where }: any) => sessions.find((s) => s.token === where.token) ?? null),
       update: vi.fn(async () => ({})),
     },
+    // authenticateToken (authService.ts) resolves a RoleContext via resolveRoleContextForUser
+    // (roleService.ts) on every call — no seed Role exists in this test's fixtures, so it falls
+    // through to the no-DB legacyRoleContext(user.role) fallback, which is all this suite needs.
+    role: {
+      findUnique: vi.fn(async () => null),
+    },
   },
 }));
 

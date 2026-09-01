@@ -109,7 +109,12 @@ authRouter.get('/api/auth/me', async (req, res) => {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  return res.json({ user: sanitizeUser(user) });
+  // roleContext carries a Set/Map (internal-only, resolved fresh per request by
+  // authenticateToken) — JSON.stringify would silently flatten those to "{}" if spread into the
+  // response, so it's dropped here rather than sent as garbled junk. Fase G replaces this with a
+  // real, serializable `permissions` field once something on the frontend actually needs it.
+  const { roleContext: _roleContext, ...userWithoutRoleContext } = user;
+  return res.json({ user: sanitizeUser(userWithoutRoleContext) });
 });
 
 authRouter.patch('/api/users/me', async (req, res) => {

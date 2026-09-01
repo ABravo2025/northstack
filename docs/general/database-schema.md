@@ -1,6 +1,7 @@
 # Database Schema
 
-- Última actualización: 2026-08-31 (Activity Log — Unidades 1-6 completas, spec cerrado; incluye el fix same-day de `parentEntityType`/`parentEntityId` (2026-08-30) y la Unidad 6 completa con Subscription/GoogleCalendarConnection/StripeConnection (2026-08-31, mecanismo de correlación `Subscription.lastActionByUserId`/`lastActionAt`), ver grupo 13; en `staging`, sin pushear a `main`)
+- Última actualización: 2026-09-01 (Custom Roles — Fase A completa: schema aditivo + seed/backfill + `RoleContext` sin consumidores todavía, ver grupo 14; en `staging`, sin pushear a `main`)
+- Actualización anterior: 2026-08-31 (Activity Log — Unidades 1-6 completas, spec cerrado; incluye el fix same-day de `parentEntityType`/`parentEntityId` (2026-08-30) y la Unidad 6 completa con Subscription/GoogleCalendarConnection/StripeConnection (2026-08-31, mecanismo de correlación `Subscription.lastActionByUserId`/`lastActionAt`), ver grupo 13; en `staging`, sin pushear a `main`)
 - Actualización anterior: 2026-08-29 (Employee Termination — ver grupo 11 — y Payments v1 Units 5-7, ver grupo 10; todo en `staging`, sin pushear a `main`)
 - Fuente de verdad real: `prisma/schema.prisma`. Este documento es una vista legible de ese archivo — si difieren, el `.prisma` manda. Regenerar este archivo cuando el schema cambie de forma significativa (modelo nuevo, relación nueva), no hace falta para cambios chicos (un campo opcional más, un índice).
 - Todos los modelos son multi-tenant: casi todos tienen `tenantId` directo (no derivado por join), y el aislamiento entre tenants se verifica en el código de cada endpoint (ownership check), no solo por FK — ver `docs/current-process-flow.md` para el patrón de verificación.
@@ -1143,11 +1144,71 @@ Notas:
   como `action: 'delete'` (no `'update'` diffeando `disconnectedAt`, que no está en el field
   config y produciría un diff vacío silenciosamente descartado).
 
+## 14. Custom Roles
+
+Spec en `docs/tareas/backlog.md` ("Sistema de roles custom / permisología", Tier 5) — reemplaza el
+enum fijo `owner`/`admin`/`member` por roles editables por tenant, con permisos de módulo, un scope
+por registro para Employees (self/departamento/todos), y restricciones campo por campo. **Fase A
+completa, en `staging`**: schema (aditivo) + `seedDefaultRolesForTenant`/`resolveRoleContextForUser`
+(`src/modules/auth/roleService.ts`) + backfill (`scripts/backfill-custom-roles.ts`, corrido contra
+`staging`: 184 tenants, 189 Users, 17 Invitations) + `RoleContext` resuelto en `authenticateToken`
+(sin consumidores todavía — `permissionService.ts` sigue leyendo el enum `role` hasta Fase B). Nada
+de esto llegó a `main` todavía.
+
+```mermaid
+erDiagram
+    TENANT ||--o{ ROLE : "has"
+    ROLE ||--o{ ROLE_MODULE_PERMISSION : "grants"
+    ROLE ||--o{ ROLE_FIELD_RESTRICTION : "hides"
+    ROLE ||--o{ USER : "assigned to"
+    ROLE ||--o{ INVITATION : "assigned to"
+
+    ROLE {
+        string id PK
+        string tenantId FK
+        string name
+        boolean isOwner "exactamente 1 por tenant, nunca editable/borrable"
+        boolean isEditable "false solo para la fila isOwner=true"
+    }
+    ROLE_MODULE_PERMISSION {
+        string id PK
+        string roleId FK
+        string permission "string libre, ver PERMISSION_KEYS en roleService.ts"
+    }
+    ROLE_FIELD_RESTRICTION {
+        string id PK
+        string roleId FK
+        enum entityType "ActivityEntityType — reusado, ver grupo 13"
+        string fieldKey "solo campos FIJOS del schema, nunca un CustomFieldDefinition.id"
+    }
+```
+
+Notas:
+- **`User.roleId`/`Invitation.roleId` son aditivos y nullable** — el enum `UserRole`
+  (`User.role`/`Invitation.role`) sigue siendo la fuente de verdad legacy hasta que todo el código
+  lea `RoleContext` en vez de compararlo directo; el corte del enum viejo queda deliberadamente
+  fuera de esta ronda (push destructivo diferido, solo tras confirmación prolongada en producción).
+- **`Role.isOwner` hace al owner estructuralmente no-restringible** — nunca tiene filas en
+  `RoleModulePermission`/`RoleFieldRestriction`; todo el enforcement corta camino en `isOwner` antes
+  de consultarlas. Garantiza que la transferencia de ownership y la facturación siempre tengan un
+  usuario con acceso total, sin importar cómo un tenant configure el resto de sus roles.
+- **`RoleModulePermission.permission` es un string libre, no un enum de Postgres** — la lista de
+  permisos crece cada vez que un módulo nuevo se gatea; un enum forzaría un push de schema por cada
+  uno. Además de los ~10 permisos de módulo de hoy, codifica 2 convenciones especiales de Employee
+  (ver `roleService.ts`): el scope (`view_employee_scope:self|department|all`, mutuamente
+  excluyentes) y el bundle de custom fields (`view_employee_custom_fields`/
+  `edit_employee_custom_fields`) — ninguna tiene un consumidor real todavía (Fase D/E).
+- **`RoleFieldRestriction` es una denylist dispersa** — una fila significa "oculto", la ausencia
+  significa "visible" (el default). Con ~15 entidades de 10-30 campos, una fila por combinación
+  sería ~1500 filas por tenant solo para el estado por defecto; con denylist, un campo nuevo
+  (incluido un `CustomFieldDefinition` recién creado) es visible sin sembrar nada. Solo cubre
+  campos FIJOS del schema — los custom fields van por el bundle de arriba, no por esta tabla.
+
 ## Enums
 
 | Enum | Valores | Usado en |
 |---|---|---|
-| `UserRole` | `owner`, `admin`, `member` | `User.role`, `Invitation.role` |
+| `UserRole` | `owner`, `admin`, `member` | `User.role`, `Invitation.role` — legacy, ver grupo 14 (Custom Roles) |
 | `UserStatus` | `active`, `inactive` | `User.status` |
 | `TenantStatus` | `active`, `trialing`, `past_due`, `suspended`, `cancelled` | `Tenant.status` (`trialing`/`past_due` nuevos, Subscription Plans — grupo 8) |
 | `AcquisitionChannel` | `organic`, `paid_ads`, `referral`, `content`, `outbound_sales`, `partnership`, `other` | `Tenant.acquisitionChannel` |

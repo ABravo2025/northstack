@@ -115,7 +115,7 @@ Wrapper propio (`fetch` + `crypto` nativos, sin SDK) contra la API de Stripe —
 - **isPhoneValid(phone)** — validación de teléfono.
 - **registerUser(input)** — alta de usuario suelto (no tenant nuevo — ver `tenantService.registerTenantWithOwner` para eso).
 - **loginUser(input)** — login, crea sesión.
-- **authenticateToken(token)** — resuelve un token de sesión a su `User`, con `tenant: {id, status} | null` incluido (2026-08-18) para que `validateSession` pueda gatear por status de tenant sin un round-trip extra.
+- **authenticateToken(token)** — resuelve un token de sesión a su `User`, con `tenant: {id, status} | null` incluido (2026-08-18) para que `validateSession` pueda gatear por status de tenant sin un round-trip extra, y desde 2026-09 con `roleContext: RoleContext` (ver `roleService.ts` abajo) resuelto en el mismo call — todavía sin consumidores reales (Fase A del sistema de Custom Roles), así que se descarta explícitamente antes de `sanitizeUser` en `GET /api/auth/me` (`routes/auth.ts`) para no serializar un `Set`/`Map` como `{}` en la respuesta.
 - **logoutUser(token)** — revoca una sesión.
 - **updateOwnProfile(userId, input)** / **changeOwnPassword(...)** — auto-gestión del propio usuario.
 - **requestPasswordReset(email)** (2026-08-09) — nunca revela si el email existe (misma respuesta genérica siempre); si existe, invalida cualquier `PasswordResetToken` sin usar de esa persona y crea uno nuevo (1h de expiración), dispara `sendPasswordResetEmail` best-effort.
@@ -125,6 +125,12 @@ Wrapper propio (`fetch` + `crypto` nativos, sin SDK) contra la API de Stripe —
 ### `src/modules/auth/permissionService.ts`
 Todas son `(role: UserRole) => boolean`, la fuente de verdad de qué puede hacer cada rol:
 **canViewHr**, **canCreateHr**, **canManageCustomFields**, **canInviteUsers**, **canManageUsers**, **canManagePayroll** (owner-only, a diferencia del resto — ver Payroll en `docs/spec-payroll.md`), **canManageBilling** (owner-only, mismo criterio que Payroll — Subscription Plans, `docs/spec-subscription-plans.md`), **canManagePayments** (owner-only, 2026-08-26 — Payments v1, `docs/tareas/specpaymentsv1.md`: conectar el Stripe del tenant y ver pagos de sus Companies), **canViewActivityLog** (owner/admin, 2026-08-30 — Activity Log, `docs/general/spec-activity-log.md`: ver el feed tenant-wide de Settings; el tab del modal por registro no tiene gate propio).
+
+### `src/modules/auth/roleService.ts` (Custom Roles, `docs/tareas/backlog.md` "Sistema de roles custom", Fase A, 2026-09)
+- **seedDefaultRolesForTenant(tx, tenantId)** — crea los 3 roles semilla (Owner/Admin/Member) de un tenant reproduciendo el `rolePermissions` map actual de `permissionService.ts` 1:1 (más `EMPLOYEE_SCOPE_ALL`/`VIEW_EMPLOYEE_CUSTOM_FIELDS`/`EDIT_EMPLOYEE_CUSTOM_FIELDS` para no regresar nada el día que Fase D/E los empiecen a hacer cumplir). Idempotente. Llamada desde `registerTenantWithOwner` (tenant nuevo) y `scripts/backfill-custom-roles.ts` (tenants existentes).
+- **loadRoleContext(roleId)** / **resolveRoleContextForUser({roleId, role, tenantId})** — resuelven un `RoleContext` real desde `Role`+`RoleModulePermission`+`RoleFieldRestriction`; el segundo agrega 2 fallbacks (Role semilla por nombre, y por último `legacyRoleContext` sin DB) para que nada se rompa antes de que el backfill corra en un ambiente dado. Owner nunca tiene filas de permiso propias — `RoleContext.isOwner` cortocircuita cualquier chequeo.
+- **getEmployeeScope(role)** — lee cuál de los 3 permisos `view_employee_scope:*` tiene el rol (`self`/`department`/`all`/`none`) — todavía sin ningún consumidor real (Fase E la aplica a `listEmployees`).
+- **PERMISSION_KEYS** — allowlist completo de strings de permiso válidos (los 10 de hoy + las convenciones de Employee de arriba), fuente de verdad para cuando exista un endpoint de edición de roles (Fase H).
 
 ### `src/modules/activity/activityLogService.ts` (Activity Log, `docs/general/spec-activity-log.md`, 2026-08-30)
 Mecanismo genérico reusado por cada módulo que registra actividad — un solo punto de escritura en vez de que cada service arme su propio formato de diff/summary.

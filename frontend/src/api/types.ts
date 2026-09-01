@@ -103,6 +103,22 @@ export interface EmployeeBirthday {
   birthdate: string;
 }
 
+// Custom Roles Fase E — the "directory tier" (docs/general/database-schema.md's Fase E section):
+// basic identity fields for every employee, unaffected by the viewer's HR scope. Feeds pickers
+// (manager selection, Task "who is this for", termination reassignment) that need to point at
+// anyone in the company. Deliberately excludes every PII/contract field on `Employee` above.
+export interface EmployeeDirectoryEntry {
+  id: string;
+  firstName: string;
+  lastName: string;
+  departmentId: string | null;
+  departmentDefn: { id: string; name: string } | null;
+  jobTitleId: string | null;
+  jobTitleDefn: { id: string; name: string } | null;
+  managerId: string | null;
+  manager: { id: string; firstName: string; lastName: string } | null;
+}
+
 export interface EmployeeTermination {
   id: string;
   employeeId: string;

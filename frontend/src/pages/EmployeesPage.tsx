@@ -68,6 +68,11 @@ interface EmployeesPageProps {
 export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const toast = useToast();
   const [employees, setEmployees] = useState<any[]>([]);
+  // Custom Roles Fase E — unscoped roster (name/department/jobTitle/manager only, no PII) for
+  // pickers that must point at anyone in the company regardless of the viewer's own HR scope:
+  // the "Reports To" select below and the same-shaped prop threaded into EmployeeOverviewPanel/
+  // TerminateEmployeeModal. `employees` above is the real, scope-filtered list for the table.
+  const [employeeDirectory, setEmployeeDirectory] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [slideOverMode, setSlideOverMode] = useState<'add' | null>(null);
   const [deletingEmployee, setDeletingEmployee] = useState<any | null>(null);
@@ -210,6 +215,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
 
   useEffect(() => {
     loadEmployees();
+    loadEmployeeDirectory();
     loadEmployeeCustomFields();
     loadEmployeeStatuses();
     loadEmployeeDepartments();
@@ -339,6 +345,15 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     }
   };
 
+  const loadEmployeeDirectory = async () => {
+    try {
+      const data = await api.listEmployeeDirectory(token);
+      setEmployeeDirectory(data);
+    } catch (error) {
+      toast.error('Failed to load the employee directory: ' + (error as Error).message);
+    }
+  };
+
   // Silent refresh — used as the Overview panel's onChanged, fired on every
   // autosave field/custom field/time-off-policy change while the panel stays
   // open. Unlike loadEmployees(), this doesn't toggle the page-level loading
@@ -383,6 +398,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       const result = await api.seedSampleData(token);
       toast.success(`Added ${result.employees} sample employees and ${result.clients} sample clients.`);
       await loadEmployees();
+      await loadEmployeeDirectory();
     } catch (error) {
       toast.error('Failed to load sample data: ' + (error as Error).message);
     } finally {
@@ -571,6 +587,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       toast.success('Employee added.');
       const freshList = await api.listEmployees(token);
       setEmployees(freshList);
+      loadEmployeeDirectory();
       jumpToEmployeePage(freshList, id);
       setSlideOverMode(null);
       setCreatedEmployeeId(null);
@@ -600,6 +617,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       toast.success(`${deletingEmployee.firstName} ${deletingEmployee.lastName} deleted.`);
       setDeletingEmployee(null);
       loadEmployees();
+      loadEmployeeDirectory();
     } catch (error) {
       toast.error('Failed to delete employee: ' + (error as Error).message);
       setDeletingEmployee(null);
@@ -1198,7 +1216,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                   >
                     <option value="">-- select --</option>
                     <option value="none">No manager</option>
-                    {employees.map((emp) => (
+                    {employeeDirectory.map((emp) => (
                       <option key={emp.id} value={emp.id}>
                         {emp.firstName} {emp.lastName}
                       </option>
@@ -1730,7 +1748,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         return (
           <EmployeeOverviewPanel
             employee={overviewEmployee}
-            employees={employees}
+            employees={employeeDirectory}
             token={token}
             tenantUsers={tenantUsers}
             currentUserId={user.id}

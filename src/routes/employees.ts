@@ -12,7 +12,9 @@ import {
   deleteEmployee,
   findEmployeeById,
   listEmployeeBirthdaysForCalendar,
+  listEmployeeDirectory,
   listEmployees,
+  resolveVisibleEmployeeIds,
   updateEmployee,
   wouldCreateManagerCycle,
 } from '../modules/hr/employeeService.js';
@@ -46,12 +48,25 @@ import {
 import { redactEntityFields, redactEntityListFields } from '../modules/auth/fieldVisibilityService.js';
 import { exportEmployeesToCsv, getEmployeesCsvTemplate, importEmployeesFromCsv } from '../modules/csv/csvService.js';
 import { validateSession } from '../lib/httpAuth.js';
+import type { AuthenticatedUser } from '../modules/auth/authService.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 
 const VALID_CONTRACT_TYPES = ['part_time', 'full_time'];
 const VALID_PERSON_TYPES = ['profile', 'contractor', 'employee'];
 
 export const employeesRouter = createAsyncRouter();
+
+// Custom Roles Fase E — the detail/edit/delete counterpart to the list route's scope filter above:
+// an Employee outside the acting user's scope should behave exactly like one in a different tenant
+// (404, never 403 — see the plan's decision 5, same criterion as an ownership check). Only checked
+// for detail/PATCH/DELETE, the 3 routes that answer "can this actor touch this specific employee" —
+// deliberately not extended to every sub-resource route (compensation, contract PDF, time-off
+// policies, termination, etc.): those are gated by canManagePayroll/canManageCustomFields, tiers
+// that are owner-only or pre-existing-quirky in practice today and out of scope for this pass.
+async function isEmployeeInScope(user: AuthenticatedUser, employeeId: string): Promise<boolean> {
+  const visibleIds = await resolveVisibleEmployeeIds(user.tenantId!, user.roleContext, user.id);
+  return visibleIds === null || visibleIds.has(employeeId);
+}
 
 employeesRouter.get('/api/hr/employees', async (req, res) => {
   const user = await validateSession(req, res);
@@ -63,8 +78,26 @@ employeesRouter.get('/api/hr/employees', async (req, res) => {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  const employees = await listEmployees(user.tenantId);
+  const visibleIds = await resolveVisibleEmployeeIds(user.tenantId!, user.roleContext, user.id);
+  const employees = await listEmployees(user.tenantId, visibleIds);
   return res.json(redactEntityListFields(employees, 'employee', user.roleContext));
+});
+
+// Custom Roles Fase E, decision 6 — the "directory tier": basic identity fields (name, department,
+// job title, manager) for EVERY employee in the tenant, deliberately NOT filtered by HR scope and
+// NOT gated by canViewEmployee. Feeds pickers that need to point at anyone in the company (manager
+// selection, the Task "who is this for" entity picker, termination reassignment) regardless of the
+// caller's own scope or HR permissions — a Member with zero HR access still needs to pick a
+// coworker's name for a Task. Never carries PII; the real GET /api/hr/employees (above) is where
+// scope + field-level restriction apply.
+employeesRouter.get('/api/hr/employees/directory', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  const directory = await listEmployeeDirectory(user.tenantId);
+  return res.json(directory);
 });
 
 employeesRouter.get('/api/hr/employees/birthdays', async (req, res) => {
@@ -190,7 +223,7 @@ employeesRouter.get('/api/hr/employees/:employeeId', async (req, res) => {
   }
 
   const employee = await findEmployeeById(req.params.employeeId);
-  if (!employee || employee.tenantId !== user.tenantId) {
+  if (!employee || employee.tenantId !== user.tenantId || !(await isEmployeeInScope(user, employee.id))) {
     return res.status(404).json({ error: 'Employee not found' });
   }
 
@@ -216,7 +249,7 @@ employeesRouter.patch('/api/hr/employees/:employeeId', async (req, res) => {
   }
 
   const employee = await findEmployeeById(req.params.employeeId);
-  if (!employee || employee.tenantId !== user.tenantId) {
+  if (!employee || employee.tenantId !== user.tenantId || !(await isEmployeeInScope(user, employee.id))) {
     return res.status(404).json({ error: 'Employee not found' });
   }
 
@@ -278,7 +311,7 @@ employeesRouter.delete('/api/hr/employees/:employeeId', async (req, res) => {
   }
 
   const employee = await findEmployeeById(req.params.employeeId);
-  if (!employee || employee.tenantId !== user.tenantId) {
+  if (!employee || employee.tenantId !== user.tenantId || !(await isEmployeeInScope(user, employee.id))) {
     return res.status(404).json({ error: 'Employee not found' });
   }
 

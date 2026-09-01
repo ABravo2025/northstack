@@ -1259,6 +1259,63 @@ grid-toggle. Verificado con Playwright real contra `staging` + llamadas directas
 confirmando 200→403 real, no solo en el mock). `npm test` 253/253 (+5 tests nuevos), ambos builds
 verdes. Nada de esto llegó a `main` todavía.
 
+**Fase E (HR scope: self/department/all): completa.** El eje que faltaba: hasta acá un rol veía
+TODOS los Employees del tenant o ninguno (según `view_employee`); ahora el permiso
+`view_employee_scope:self|department|all` (sembrado desde la Fase A, sin consumidor hasta ahora)
+decide QUÉ FILAS de Employee ve, antes de que el field-level restriction (Fase C) decida qué
+columnas de esas filas. `getManagedEmployeeIds(tenantId, employeeId)` (nuevo,
+`employeeService.ts`) resuelve el scope `department` como la unión de 2 criterios (decisión 5 del
+plan): pares con el mismo `departmentId`, MÁS toda la cadena de reportes directos e indirectos —
+un BFS sobre `managerId` en memoria, el reverso exacto de `wouldCreateManagerCycle` (esa camina
+hacia la raíz para detectar un ciclo; esta camina hacia las hojas para encontrar descendientes).
+Una sola query trae `{id, managerId, departmentId}` de todo el tenant — no N queries recursivas,
+misma asunción de tamaño de tenant que el resto del plan (decenas/cientos, no miles).
+`resolveVisibleEmployeeIds(tenantId, role, actingUserId)` es el punto de entrada único: `null`
+para scope `all` (el caller no filtra nada), un `Set` concreto para `self`/`department`/`none`. Un
+usuario sin `Employee` propio vinculado (`User` sin legajo) resuelve a un `Set` vacío para
+`self`/`department` — "nada más allá del directorio", no un error, tal como especifica el plan.
+Aplicado a `GET /api/hr/employees` (filtra la lista) y a `GET`/`PATCH`/`DELETE
+/api/hr/employees/:id` (404 si el id pedido no está en el scope del actor — mismo criterio que un
+employee de otro tenant, nunca 403). Deliberadamente NO extendido a las sub-rutas de Employee
+(compensación, PDF de contrato, políticas de time off, terminación) — esas están gateadas por
+`canManagePayroll`/`canManageCustomFields`, permisos ya owner-only o con una gatekeeping
+pre-existente no del todo alineada con el sistema de roles, fuera del alcance de esta pasada.
+
+**Directorio (decisión 6)**: `listEmployeeDirectory(tenantId)` (nuevo) + `GET
+/api/hr/employees/directory` — nombre, departamento, puesto y manager de TODOS los empleados,
+sin filtrar por scope y **sin gatear siquiera por `canViewEmployee`**: cualquier miembro del
+tenant lo ve, tenga o no acceso a HR, porque alimenta pickers que necesitan señalar a cualquier
+persona de la empresa sin importar el scope o los permisos de quien pregunta — elegir un manager al
+cargar un empleado, el picker "¿de quién es esta Task?", o reasignar los reportes directos de
+alguien al desvincularlo. Nunca lleva PII (ni `personalEmail`, ni `birthdate`, ni nada del perfil
+completo) — eso sigue exclusivamente detrás de `listEmployees`/`findEmployeeById` con scope +
+field-level restriction. Migrados a consumirlo: el selector "Reports To" de `EmployeesPage.tsx`
+("Add Person") y de `EmployeeOverviewPanel.tsx` (edición), el picker de reasignación de
+`TerminateEmployeeModal.tsx`, y el picker "¿de quién es esta Task?" de
+`NewTaskFromCalendarPopover.tsx` — los 4 casos reales identificados como "deben ver a toda la
+empresa" en el código existente.
+
+**Hallazgo real, deliberadamente no corregido en esta fase**: `EmployeesPage.tsx` sigue gateando
+el botón/fila "Add Person" con el chequeo legacy `user.role === 'owner' || user.role === 'admin'`
+(uno de los ~16-20 chequeos inline que la Fase G/J tiene pendiente migrar a
+`PermissionsContext`) — un rol custom con `manage_employee` concedido de verdad (enforcement
+backend confirmado con curl real) todavía no puede alcanzar esa UI hoy, porque el gate del botón
+nunca mira `roleContext`. No se tocó acá para no adelantar trabajo de Fase G de forma aislada e
+inconsistente con el resto de esos ~16-20 chequeos: queda documentado como que Fase G lo resuelve
+cuando le toque.
+
+Verificado con un tenant descartable en `staging` con un organigrama real (CEO → Manager
+[dept Sales] → RepA [Sales] + RepB [Engineering], más SalesPeer [Sales, reporta a CEO] y Stranger
+[Engineering, reporta a CEO]): un rol "Manager" con scope `department` vio exactamente
+{Manager, RepA, RepB, SalesPeer} — RepB por cadena de reportes pese a estar en otro departamento,
+SalesPeer por departamento pese a no ser su reporte — y NO vio a CEO (es su superior, no su
+reporte) ni a Stranger; el detalle/PATCH de CEO y Stranger devolvió 404 real; un rol con scope
+`self` vio únicamente su propio registro; `GET /api/hr/employees/directory` devolvió los 6 sin
+importar el scope, incluso para un rol al que se le quitó `view_employee` por completo (403 en la
+lista real, 200 en el directorio — confirma que el directorio no depende de ese permiso). Picker
+de "Reports To" verificado con Playwright real mostrando los 6 empleados completos. `npm test`
+265/265 (+12 tests nuevos), ambos builds verdes. Nada de esto llegó a `main` todavía.
+
 ```mermaid
 erDiagram
     TENANT ||--o{ ROLE : "has"
@@ -1300,7 +1357,7 @@ Notas:
   permisos crece cada vez que un módulo nuevo se gatea; un enum forzaría un push de schema por cada
   uno. Además de los ~10 permisos de módulo de hoy, codifica 2 convenciones especiales de Employee
   (ver `roleService.ts`): el scope (`view_employee_scope:self|department|all`, mutuamente
-  excluyentes — todavía sin consumidor real, Fase E) y el bundle de custom fields
+  excluyentes — con enforcement real desde la Fase E, ver arriba) y el bundle de custom fields
   (`view_employee_custom_fields`/`edit_employee_custom_fields` — con enforcement real desde la
   Fase D, ver arriba).
 - **`RoleFieldRestriction` es una denylist dispersa** — una fila significa "oculto", la ausencia

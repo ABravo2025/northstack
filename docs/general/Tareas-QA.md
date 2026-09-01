@@ -3134,3 +3134,83 @@ secuencia completa `GET`/`POST` como Member (200/403 según el permiso), revocac
 secuencia grant→grant→grant→revoke que dispara la cascada de 2 niveles, confirmada tanto por la
 respuesta de la API como visualmente en Playwright (captura en claro y oscuro). Falta la revisión
 humana de Alejandro.
+
+## QA-71 — Custom Roles: alcance por registro de Employee (Fase E, 2026-09-01, en `staging`)
+
+**Por qué existe esta tarea:** hasta esta fase, un rol veía TODOS los Employees del tenant o
+ninguno, según tuviera o no `view_employee` — no existía forma de que "un manager vea solo su
+equipo" o "un empleado común solo se vea a sí mismo". Esta tarea agrega y verifica ese tercer eje
+(scope: `self`/`department`/`all`), y el endpoint de "directorio" que existe para que los pickers
+(elegir un manager, asignar una Task a un compañero) sigan viendo a toda la empresa sin importar el
+scope de quien pregunta.
+
+### A. Setup — un organigrama de prueba real
+
+Para probar esto de verdad hace falta más de un empleado suelto: armar (o pedir a Claude que arme)
+un tenant con esta estructura mínima —
+- **CEO** (departamento Executive, sin manager).
+- **Manager** (departamento Sales, reporta a CEO).
+- **RepA** (departamento Sales, reporta a Manager) — mismo departamento que Manager Y su reporte.
+- **RepB** (departamento **Engineering**, reporta a Manager) — reporte de Manager pero en OTRO
+  departamento — el caso que prueba que la cadena de reportes cuenta aunque el departamento no
+  coincida.
+- **SalesPeer** (departamento Sales, reporta a CEO, NO a Manager) — mismo departamento que Manager
+  pero no es su reporte — el caso que prueba que el departamento cuenta aunque no haya relación de
+  reporte.
+- **Stranger** (departamento Engineering, reporta a CEO) — ni mismo departamento que Manager ni su
+  reporte — debe quedar completamente fuera del scope de Manager.
+- Dos roles custom: uno con scope `department` asignado a un usuario vinculado al Employee
+  "Manager", otro con scope `self` asignado a un usuario vinculado al Employee "Stranger".
+
+### B. Scope `department`
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Loguearse como el usuario con scope `department` (vinculado a "Manager"), ir a People | La tabla muestra exactamente 4 filas: Manager, RepA, RepB, SalesPeer |
+| 2 | La misma tabla NO debe mostrar | CEO (es superior de Manager, no su reporte) ni Stranger |
+| 3 | `GET /api/hr/employees/:id` sobre el id de CEO o de Stranger | 404 (no 403) |
+| 4 | `GET /api/hr/employees/:id` sobre el id de RepA, RepB o SalesPeer | 200 |
+| 5 | Si el rol también tiene "Manage employees": `PATCH /api/hr/employees/:id` sobre el id de Stranger | 404 — no se puede editar a alguien fuera del scope aunque se tenga el permiso de módulo |
+
+### C. Scope `self`
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 6 | Loguearse como el usuario con scope `self` (vinculado a "Stranger"), ir a People | La tabla muestra una sola fila: la propia (Stranger) |
+| 7 | `GET /api/hr/employees/:id` sobre cualquier otro id (Manager, CEO, etc.) | 404 |
+
+### D. El directorio (`GET /api/hr/employees/directory`)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 8 | Con el usuario de scope `self` (o cualquiera), pedir el directorio | Devuelve los 6 empleados completos — nombre, departamento, puesto, manager — sin importar el scope de quien pregunta |
+| 9 | Quitarle a un rol el permiso `view_employee` por completo y repetir `GET /api/hr/employees` vs. `GET /api/hr/employees/directory` | La lista real da 403; el directorio sigue dando 200 con los 6 — el directorio no depende de `view_employee` en absoluto, es el diseño |
+| 10 | En el formulario "Add Person" (`People`), abrir el selector "Reports To" | Lista los 6 empleados completos, incluidos los que están fuera del scope del usuario logueado |
+| 11 | En el panel de detalle de un empleado (editar), el selector "Reports To" | Mismo comportamiento que el punto 10 — la misma lista completa, no la lista scopeada de la tabla |
+| 12 | Al terminar a un empleado con reportes directos, el picker de reasignación de esos reportes | Debe poder apuntar a cualquier empleado de la empresa, no solo a los que están en el scope de quien ejecuta la terminación |
+| 13 | Al crear una Task desde el calendario eligiendo "Employee" como tipo de entidad | El picker de "¿de quién es esta Task?" lista a toda la empresa, no solo el scope del usuario actual |
+
+### Al encontrar una falla
+
+El caso 3/5 (404, no 403, y que cubra tanto lectura como escritura) es el más importante — si un
+`PATCH` a un empleado fuera de scope tuviera éxito, sería una fuga real de control de acceso, no
+solo un problema de UI. El caso 9 (el directorio funciona incluso sin `view_employee`) es
+intencional, no un bug — si alguna vez empieza a fallar (403 en el directorio), rompe el picker de
+Tasks para cualquier persona sin permisos de HR, que es exactamente el caso de uso que existe para
+resolver. El caso 2 (CEO fuera del scope de Manager pese a ser su superior) confirma que la
+cadena de reportes es unidireccional (hacia abajo, no hacia arriba) — si CEO apareciera, sería
+señal de que el BFS está caminando el árbol al revés.
+
+**Nota aparte, no es un bug de esta fase**: hoy el botón "Add Person" de la página People sigue
+oculto para cualquier rol que no sea el owner/admin legacy, incluso si el rol tiene
+"Manage employees" concedido de verdad — es un chequeo de UI viejo (`user.role === 'owner' ||
+'admin'`) que todavía no lee el sistema de permisos nuevo. Está en el backlog de una fase
+posterior (frontend `PermissionsContext`), no es algo que esta tarea deba reportar como falla.
+
+Verificado por Claude contra `staging` real antes de este push: `npm test` 265/265 (incluye 12
+tests nuevos en `tests/employeeService.test.ts` cubriendo el BFS de `getManagedEmployeeIds` en
+varios organigramas y `resolveVisibleEmployeeIds` en los 4 scopes) y ambos builds verdes. Contra un
+tenant descartable en `staging` con el organigrama de arriba: los 13 casos de esta tarea
+confirmados uno por uno vía curl real (login, `GET`/`PATCH` con los ids reales de cada empleado) y
+Playwright real (tabla scopeada, selector "Reports To" con el directorio completo). Falta la
+revisión humana de Alejandro.

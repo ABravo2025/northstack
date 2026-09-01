@@ -18,7 +18,9 @@ import type { TagAssignmentLite, EmployeeTerminationOptions } from '../../api';
 
 interface EmployeeOverviewPanelProps {
   employee: any;
-  employees: any[]; // full tenant roster, for the "Reports To" dropdown (excluding self)
+  employees: any[]; // the unscoped directory (api.listEmployeeDirectory, Custom Roles Fase E), for
+  // the "Reports To" dropdown (excluding self) — must show every employee company-wide regardless
+  // of the viewer's own HR scope, not just the scoped list the main table uses
   token: string;
   tenantUsers: { id: string; firstName: string; lastName: string }[];
   currentUserId: string;

@@ -3,6 +3,7 @@ import type {
   Employee,
   EmployeeBirthday,
   EmployeeCompensationSummary,
+  EmployeeDirectoryEntry,
   EmployeePaymentHistoryEntry,
   EmployeeTermination,
   EmployeeTerminationOptions,
@@ -14,6 +15,16 @@ export const employeesApi = {
   // HR Employees
   listEmployees: async (token: string): Promise<Employee[]> => {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/employees`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  // Custom Roles Fase E — unscoped, PII-free roster for pickers (manager selection, Task "who is
+  // this for", termination reassignment). See EmployeeDirectoryEntry's doc comment.
+  listEmployeeDirectory: async (token: string): Promise<EmployeeDirectoryEntry[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/directory`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);

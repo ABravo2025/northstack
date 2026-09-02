@@ -87,10 +87,11 @@ export const employeesApi = {
     if (!res.ok) await throwApiError(res);
   },
 
-  inviteEmployee: async (token: string, employeeId: string): Promise<{ invitation: Invitation }> => {
+  inviteEmployee: async (token: string, employeeId: string, roleId?: string): Promise<{ invitation: Invitation }> => {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/employees/${employeeId}/invite`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roleId }),
     });
     if (!res.ok) await throwApiError(res);
     return res.json();

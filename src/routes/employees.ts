@@ -426,11 +426,15 @@ employeesRouter.post('/api/hr/employees/:employeeId/invite', async (req, res) =>
     return res.status(400).json({ error: 'Cannot invite a terminated employee' });
   }
 
+  // Optional — lets the inviter pick a real tenant role (Custom Roles Fase I/J) instead of always
+  // defaulting to Member, the same as CompanyUsersPage.tsx's "Invite Someone" modal.
+  // createInvitation validates it belongs to this tenant and isn't Owner.
   const result = await createInvitation({
     tenantId: user.tenantId!,
     invitedByUserId: user.id,
     email: employee.email,
     role: 'member',
+    roleId: typeof req.body?.roleId === 'string' ? req.body.roleId : undefined,
     employeeId: employee.id,
   });
 

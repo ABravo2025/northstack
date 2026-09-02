@@ -93,6 +93,13 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const [collapsedListSections, setCollapsedListSections] = useState<Set<string>>(new Set());
   const [overviewEmployeeId, setOverviewEmployeeId] = useState<string | null>(null);
   const [seedingSample, setSeedingSample] = useState(false);
+  // "Invite to app" (EmployeeOverviewPanel's Actions menu) used to fire straight off with no role
+  // choice, always landing the invitee on the seed Member role — this lets the inviter pick any
+  // tenant role first, same as CompanyUsersPage.tsx's "Invite Someone" modal.
+  const [assignableRoles, setAssignableRoles] = useState<{ id: string; name: string }[]>([]);
+  const [invitingEmployee, setInvitingEmployee] = useState<any | null>(null);
+  const [inviteRoleId, setInviteRoleId] = useState('');
+  const [inviting, setInviting] = useState(false);
   const tableWrapRef = useRef<HTMLDivElement>(null);
   const csvMenuRef = useRef<CsvImportExportMenuHandle>(null);
 
@@ -239,6 +246,13 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       .then(setTenantUsers)
       .catch(() => {
         // Non-critical — the Tasks assignee dropdown just falls back to empty if it fails.
+      });
+    api
+      .listAssignableRoles(token)
+      .then(setAssignableRoles)
+      .catch(() => {
+        // Non-critical — the "Invite to app" role picker just falls back to the server's default
+        // (Member) if this fails to load.
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -609,15 +623,25 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     }
   };
 
-  const handleInviteEmployee = async (employeeId: string) => {
+  const openInviteEmployee = (employee: any) => {
+    setInvitingEmployee(employee);
+    setInviteRoleId(assignableRoles.find((r) => r.name === 'Member')?.id ?? assignableRoles[0]?.id ?? '');
+  };
+
+  const handleInviteEmployee = async () => {
+    if (!invitingEmployee) return;
+    setInviting(true);
     try {
-      const { invitation } = await api.inviteEmployee(token, employeeId);
+      const { invitation } = await api.inviteEmployee(token, invitingEmployee.id, inviteRoleId || undefined);
       const link = `${window.location.origin}/accept-invite/${invitation.token}`;
       await navigator.clipboard.writeText(link);
-      toast.success('Invite link copied to clipboard.');
+      toast.success('Invitation emailed. Link also copied to clipboard.');
+      setInvitingEmployee(null);
       loadEmployees();
     } catch (error) {
       toast.error('Failed to invite employee: ' + (error as Error).message);
+    } finally {
+      setInviting(false);
     }
   };
 
@@ -1025,7 +1049,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
             (emp.userId ? (
               <span className="chip-linked">Linked</span>
             ) : (
-              <button className="icon-btn" onClick={() => handleInviteEmployee(emp.id)}>
+              <button className="icon-btn" onClick={() => openInviteEmployee(emp)}>
                 <span className="tip">Invite</span>
                 <MailIcon />
               </button>
@@ -1059,6 +1083,39 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
           onCancel={() => setDeletingEmployee(null)}
         />
       )}
+
+      <Modal
+        open={invitingEmployee !== null}
+        title="Invite to app"
+        onClose={() => setInvitingEmployee(null)}
+        footer={
+          <>
+            <button type="button" className="btn-secondary" onClick={() => setInvitingEmployee(null)}>
+              Cancel
+            </button>
+            <button type="button" className="btn-primary" onClick={handleInviteEmployee} disabled={inviting}>
+              {inviting ? 'Sending…' : 'Send invitation'}
+            </button>
+          </>
+        }
+      >
+        {invitingEmployee && (
+          <div className="form-group">
+            <p className="mb-3">
+              Invite <strong>{invitingEmployee.firstName} {invitingEmployee.lastName}</strong> ({invitingEmployee.email}) to
+              create an account.
+            </p>
+            <label htmlFor="invite-employee-role">Role</label>
+            <select id="invite-employee-role" value={inviteRoleId} onChange={(e) => setInviteRoleId(e.target.value)}>
+              {assignableRoles.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </Modal>
 
       <Modal
         open={slideOverMode !== null}
@@ -1777,7 +1834,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
               setOverviewEmployeeId(null);
               setDeletingEmployee(overviewEmployee);
             }}
-            onInvite={() => handleInviteEmployee(overviewEmployee.id)}
+            onInvite={() => openInviteEmployee(overviewEmployee)}
           />
         );
       })()}

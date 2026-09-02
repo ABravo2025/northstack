@@ -3530,3 +3530,17 @@ respuesta de la API, y una invitación sin `roleId` siguió cayendo en Member po
 regresión de compatibilidad). `npm test` 299/299, ambos builds verdes. Falta la revisión humana de
 Alejandro — este fix nació de su propia revisión, así que lo esperable es que confirme ambos casos
 él mismo antes de darlos por cerrados.
+
+**Nota — fix same-day adicional (2026-09-02):** Alejandro probó el fix de "Invite to app" apenas
+llegó a `staging` y encontró que el diálogo de invitación quedaba **debajo** del panel de perfil en
+vez de encima. Causa: tanto el overlay del panel de perfil (`.detail-modal-overlay`) como el del
+nuevo `Modal` de invitación (`.modal-overlay`) son `position: fixed` con el mismo `z-index` (z-50)
+— entre elementos fixed con igual z-index, quien pinta encima lo decide el orden en el DOM, y el
+`Modal` de invitación estaba declarado ANTES que `EmployeeOverviewPanel` en el JSX de
+`EmployeesPage.tsx`, así que el panel (que se renderiza después) quedaba arriba. Fix: se movió el
+bloque del `Modal` de invitación para que se renderice DESPUÉS de `EmployeeOverviewPanel` — mismo
+criterio que ya usa `TerminateEmployeeModal` (declarado como hijo del propio panel). Sin cambios de
+CSS. Verificado con Playwright contra un tenant descartable: confirmado por evaluación directa del
+DOM que `.modal-overlay` (el de "Invite to app") ahora es el hermano posterior en el DOM respecto a
+`.detail-modal-overlay`, y una captura de pantalla confirma visualmente el diálogo correctamente
+por encima del panel. `npm test` 299/299 (sin cambios), ambos builds verdes.

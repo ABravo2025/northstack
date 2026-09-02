@@ -65,24 +65,33 @@ export async function assignTag(
     update: {},
   });
 
+  const existingAssignment = await prisma.tagAssignment.findUnique({
+    where: { tagDefinitionId_entityType_entityId: { tagDefinitionId: tagDefinition.id, entityType, entityId } },
+  });
+
   const assignment = await prisma.tagAssignment.upsert({
     where: { tagDefinitionId_entityType_entityId: { tagDefinitionId: tagDefinition.id, entityType, entityId } },
     create: { tenantId, tagDefinitionId: tagDefinition.id, entityType, entityId },
     update: {},
   });
 
-  await recordActivity({
-    tenantId,
-    entityType: 'tag',
-    entityId: assignment.id,
-    entityLabel: `${tagDefinition.name} (${entityType})`,
-    action: 'create',
-    changedByUserId,
-    after: { name: tagDefinition.name },
-    fieldConfig: tagActivityFieldConfig,
-    parentEntityType: entityType as ActivityEntityType,
-    parentEntityId: entityId,
-  });
+  // The upsert above is a documented no-op when the entity already has this tag (re-adding on a
+  // double-submit) — only log Activity when a row was actually created, or a no-op still shows up
+  // as a duplicate "Created Tag X" entry.
+  if (!existingAssignment) {
+    await recordActivity({
+      tenantId,
+      entityType: 'tag',
+      entityId: assignment.id,
+      entityLabel: `${tagDefinition.name} (${entityType})`,
+      action: 'create',
+      changedByUserId,
+      after: { name: tagDefinition.name },
+      fieldConfig: tagActivityFieldConfig,
+      parentEntityType: entityType as ActivityEntityType,
+      parentEntityId: entityId,
+    });
+  }
 
   return { tagAssignmentId: assignment.id, tagDefinitionId: tagDefinition.id, name: tagDefinition.name };
 }

@@ -6,7 +6,8 @@ import { deleteOpportunity } from './opportunityService.js';
 import { wouldCreateCycle } from '../../lib/cycleDetection.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { companyActivityFieldConfig } from '../activity/fieldConfigs/companyFieldConfig.js';
-import type { Company, Prisma } from '@prisma/client';
+import { contactActivityFieldConfig, contactDisplayName } from '../activity/fieldConfigs/contactFieldConfig.js';
+import type { Company, Contact, Prisma } from '@prisma/client';
 
 export interface CreateCompanyInput {
   name: string;
@@ -75,7 +76,7 @@ export async function wouldCreateCompanyHierarchyCycle(companyId: string, propos
 export async function createCompany(input: CreateCompanyInput, changedByUserId: string): Promise<Company> {
   const statusId = input.statusId ?? (await getDefaultStatusId(input.tenantId, 'company'));
 
-  const company = await prisma.$transaction(async (tx) => {
+  const { company, contact, contactAction, contactBefore } = await prisma.$transaction(async (tx) => {
     const company = await tx.company.create({
       data: {
         name: input.name,
@@ -92,10 +93,16 @@ export async function createCompany(input: CreateCompanyInput, changedByUserId: 
       include: COMPANY_INCLUDE,
     });
 
+    let contact: Contact;
+    let contactAction: 'create' | 'update';
+    let contactBefore: Contact | null = null;
+
     if ('contactId' in input.contact) {
-      await tx.contact.update({ where: { id: input.contact.contactId }, data: { companyId: company.id } });
+      contactBefore = await tx.contact.findUniqueOrThrow({ where: { id: input.contact.contactId } });
+      contact = await tx.contact.update({ where: { id: input.contact.contactId }, data: { companyId: company.id } });
+      contactAction = 'update';
     } else {
-      await tx.contact.create({
+      contact = await tx.contact.create({
         data: {
           tenantId: input.tenantId,
           firstName: input.contact.firstName,
@@ -104,9 +111,10 @@ export async function createCompany(input: CreateCompanyInput, changedByUserId: 
           companyId: company.id,
         },
       });
+      contactAction = 'create';
     }
 
-    return company;
+    return { company, contact, contactAction, contactBefore };
   });
 
   await recordActivity({
@@ -118,6 +126,22 @@ export async function createCompany(input: CreateCompanyInput, changedByUserId: 
     changedByUserId,
     after: company,
     fieldConfig: companyActivityFieldConfig,
+  });
+
+  // The linked/created Contact is written inside the same transaction as the Company (see the
+  // CreateCompanyInput.contact comment above — they can never drift apart), but that write was
+  // invisible to the Activity Log until now: this is the only place that touches Contact rows
+  // without going through contactService's createContact/updateContact.
+  await recordActivity({
+    tenantId: input.tenantId,
+    entityType: 'contact',
+    entityId: contact.id,
+    entityLabel: contactDisplayName(contact),
+    action: contactAction,
+    changedByUserId,
+    ...(contactAction === 'update' ? { before: contactBefore } : {}),
+    after: contact,
+    fieldConfig: contactActivityFieldConfig,
   });
 
   return company;
@@ -149,8 +173,6 @@ export async function findCompanyById(id: string): Promise<Company | null> {
 }
 
 export async function updateCompany(id: string, input: UpdateCompanyInput, changedByUserId: string): Promise<Company> {
-  const existing = await prisma.company.findUniqueOrThrow({ where: { id } });
-
   // Whitelist explicitly — never pass the input object straight through, since it
   // may originate from req.body and carry extra fields (e.g. tenantId/statusId)
   // that would otherwise reassign this row across tenants or bypass the
@@ -166,10 +188,17 @@ export async function updateCompany(id: string, input: UpdateCompanyInput, chang
   if (input.parentCompanyId !== undefined) data.parentCompanyId = input.parentCompanyId;
   if (input.isPlaceholder !== undefined) data.isPlaceholder = input.isPlaceholder;
 
-  const updated = await prisma.company.update({
-    where: { id },
-    data,
-    include: COMPANY_INCLUDE,
+  // Read and write in the same transaction (same pattern as subscriptionService.ts's
+  // syncSubscriptionAndTenant) so the "before" snapshot used for the Activity Log diff can't be
+  // made stale by a concurrent update to this row landing between the read and the write.
+  const { existing, updated } = await prisma.$transaction(async (tx) => {
+    const existing = await tx.company.findUniqueOrThrow({ where: { id } });
+    const updated = await tx.company.update({
+      where: { id },
+      data,
+      include: COMPANY_INCLUDE,
+    });
+    return { existing, updated };
   });
 
   await recordActivity({

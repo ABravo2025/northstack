@@ -424,7 +424,7 @@ export async function importCompaniesFromCsv(tenantId: string, csvText: string, 
         ? await prisma.user.findFirst({ where: { tenantId, email: accountOwnerEmail.toLowerCase() } })
         : null;
 
-      const existingContact = await prisma.contact.findFirst({ where: { tenantId, email: primaryContactEmail.toLowerCase() } });
+      const existingContact = await prisma.contact.findFirst({ where: { tenantId, email: { equals: primaryContactEmail, mode: 'insensitive' } } });
       const contactFirstName = getField(record, 'Primary Contact First Name');
       const contactLastName = getField(record, 'Primary Contact Last Name');
 
@@ -464,7 +464,7 @@ export async function importCompaniesFromCsv(tenantId: string, csvText: string, 
 
       // createCompany links the contact but doesn't flag it primary (same as the "Add Company"
       // form) — set it explicitly here so the "Primary Contact Email" column round-trips on export.
-      const linkedContact = await prisma.contact.findFirst({ where: { tenantId, companyId: company.id, email: primaryContactEmail.toLowerCase() } });
+      const linkedContact = await prisma.contact.findFirst({ where: { tenantId, companyId: company.id, email: { equals: primaryContactEmail, mode: 'insensitive' } } });
       if (linkedContact && !linkedContact.isPrimary) {
         await updateContact(linkedContact.id, { isPrimary: true }, changedByUserId);
       }

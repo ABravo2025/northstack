@@ -163,7 +163,12 @@ Catálogo completo (qué está construido, qué es solo posible hoy, qué está 
   Payments — cada tenant facturándole a sus propios Clients, distinto de la suscripción del propio
   Northstack); webhooks salientes (URL + eventos elegibles); Slack como app instalable vía OAuth real
   (no un webhook simple). Incluye también la contraparte entrante: API pública protegida por token
-  para integraciones externas. Sin spec técnico todavía, explícitamente no bloqueante para el beta.
+  para integraciones externas. **2026-09-02**: spec técnico de la contraparte entrante + su webhook
+  saliente ya está listo (`docs/general/spec-private-api-webhooks.md`) — API Keys por tenant con
+  scopes explícitos por módulo, `/api/external/v1/*`, logging de acceso obligatorio, webhooks
+  firmados con reintentos. No implementado todavía, sigue explícitamente no bloqueante para el beta;
+  el resto del Panel de Integraciones (hub de Settings, Stripe/QuickBooks/Mercado Pago, Slack OAuth)
+  sigue sin spec.
 - [x] **OAuth de Google — sync de Task/Time Off al Google Calendar personal** (2026-08-22/23, en
   `staging`, ver `docs/general/database-schema.md` grupo 9 y QA-19/QA-47 en `Tareas-QA.md`):
   cada usuario conecta su cuenta desde Settings → Profile; sus Tasks con fecha límite y los Time

@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto';
 import prisma from '../../lib/prisma.js';
 import type { Invitation, UserRole } from '@prisma/client';
 import { sendInvitationEmail } from '../../lib/mailer.js';
+import { bestEffort } from '../../lib/bestEffort.js';
 import type { TenantCreationResult } from './tenantService.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { invitationActivityFieldConfig } from '../activity/fieldConfigs/invitationFieldConfig.js';
@@ -90,6 +91,11 @@ export async function createInvitation(input: CreateInvitationInput): Promise<In
   // resolveRoleContextForUser actually reads.
   let role: UserRole;
   let roleId: string | null;
+  // The invitee-facing role name for the email below — the `role` enum is a cosmetic placeholder
+  // for a roleId-based invite (see comment above), so it can't be used for that: a custom role, or
+  // even the seed "Admin" role, would otherwise always email "as member" regardless of what was
+  // actually assigned.
+  let roleDisplayName: string;
   if (input.roleId) {
     const targetRole = await prisma.role.findUnique({ where: { id: input.roleId } });
     if (!targetRole || targetRole.tenantId !== input.tenantId) {
@@ -100,9 +106,11 @@ export async function createInvitation(input: CreateInvitationInput): Promise<In
     }
     role = 'member';
     roleId = targetRole.id;
+    roleDisplayName = targetRole.name;
   } else {
     role = input.role ?? 'member';
     roleId = await findSeedRoleId(input.tenantId, role);
+    roleDisplayName = role;
   }
 
   const invitation = await prisma.invitation.create({
@@ -120,17 +128,21 @@ export async function createInvitation(input: CreateInvitationInput): Promise<In
 
   const appBaseUrl = process.env.APP_BASE_URL ?? 'http://localhost:5173';
   const acceptPath = input.acceptPath ?? '/accept-invite';
-  sendInvitationEmail({
-    to: invitation.email,
-    tenantName: tenant.name,
-    role: invitation.role,
-    acceptUrl: `${appBaseUrl}${acceptPath}/${invitation.token}`,
-    attachments: input.attachments,
-  }).catch((error) => {
-    // Best-effort: the invitation itself (and its copyable link in the UI)
-    // already exists, so a failed email shouldn't fail the whole request.
-    console.error('Failed to send invitation email:', error);
-  });
+  // Awaited (not fire-and-forget) — see bestEffort.ts: an un-awaited send is not guaranteed to
+  // survive past the HTTP response on Vercel serverless, which was silently dropping this exact
+  // email. The invitation record itself (and its copyable link in the UI) already exists, so a
+  // failed send still doesn't fail the request — bestEffort just makes sure the send is actually
+  // given the chance to complete first.
+  await bestEffort(
+    sendInvitationEmail({
+      to: invitation.email,
+      tenantName: tenant.name,
+      role: roleDisplayName,
+      acceptUrl: `${appBaseUrl}${acceptPath}/${invitation.token}`,
+      attachments: input.attachments,
+    }),
+    'Failed to send invitation email:',
+  );
 
   await recordActivity({
     tenantId: input.tenantId,

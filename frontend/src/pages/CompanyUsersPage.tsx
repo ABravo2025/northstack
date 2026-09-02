@@ -207,7 +207,7 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
       await navigator.clipboard.writeText(link);
       setInviteForm((prev) => ({ email: '', role: prev.role }));
       setInviteOpen(false);
-      toast.success('Invite sent and link copied to clipboard.');
+      toast.success('Invitation emailed. Link also copied to clipboard.');
       loadInvitations();
     } catch (error) {
       toast.error((error as Error).message);

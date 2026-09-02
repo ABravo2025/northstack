@@ -3454,3 +3454,79 @@ OnlyPayments, entre otros). Los 2 bugs de la sección B se descubrieron en vivo 
 verificación (no se sabían de antemano) y se confirmó que el fix los resuelve: el toast de error
 desapareció en ambos casos después de la corrección, con el resto de cada página cargando con
 normalidad. Falta la revisión humana de Alejandro.
+
+---
+
+## QA-76 — Fix same-day: 2 bugs de invitaciones encontrados por Alejandro en su revisión de Custom Roles (2026-09-02, en `staging`)
+
+**Por qué existe esta tarea:** Alejandro empezó su revisión manual de Custom Roles (la que quedó
+pendiente al cierre de la Fase J) y reportó 2 problemas reales en el flujo de invitaciones, ninguno
+nuevo de Custom Roles en sí — ambos eran deuda preexistente que Custom Roles nunca tocó, y que su
+revisión fue la primera en ejercitar de punta a punta.
+
+**Bug 1 — el email de invitación no llegaba de forma confiable.** `invitationService.ts`'s
+`createInvitation` llamaba a `sendInvitationEmail(...).catch(...)` sin `await` — exactamente la
+misma clase de bug ya diagnosticada y arreglada para el email de verificación de signup
+([[project_email_fire_and_forget_bug_2026-08]], commit `43fd0be`): en Vercel, una promesa no
+esperada no sobrevive garantizado más allá de la respuesta HTTP, así que el envío podía morir en
+silencio. `invitationService.ts` estaba en la lista original de ~9 sitios con el mismo patrón,
+pendiente de arreglo. Fix: migrado a `bestEffort()` (mismo helper, mismo patrón mecánico de 2
+líneas). De paso se encontró un segundo bug real en el mismo call site: el cuerpo del email siempre
+decía "invited ... as member", sin importar el rol real asignado — porque leía el enum `role`
+(el placeholder cosmético que Fase I dejó fijo en `'member'` para cualquier invitación por
+`roleId`) en lugar del nombre real del rol resuelto. Fix: nueva variable `roleDisplayName` que usa
+`targetRole.name` cuando hay `roleId`, o el enum tal cual para el camino legacy.
+
+**Bug 2 — "Invite to app" (Actions del perfil de un Employee) no dejaba elegir el rol.** Alejandro
+señaló específicamente este flujo, no el modal "Invite Someone" de Settings → Users (que sí tiene
+selector de rol desde la Fase I). `POST /api/hr/employees/:employeeId/invite` tenía
+`role: 'member'` totalmente hardcodeado, sin aceptar ningún `roleId` — ni el botón de "Invite to
+app" en el panel de overview ni el ícono de invitar en la fila de la tabla de Employees ofrecían
+elección alguna, ambos llamaban al mismo endpoint. Fix: el endpoint ahora acepta un `roleId`
+opcional (mismo `createInvitation` que ya valida que el rol pertenezca al tenant y no sea Owner);
+ambos puntos de entrada del frontend ahora abren un modal chico (`Modal`, no `SlideOver` — es una
+confirmación puntual, no un formulario de entidad) con un selector de rol poblado desde
+`GET /api/roles/assignable` (el mismo endpoint de Fase I), default a Member igual que antes.
+
+### A. Email de invitación
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Invitar a alguien (cualquiera de los 2 flujos) con un rol específico (ej. Admin) | El email realmente llega (no solo el link copiado) y el cuerpo dice "as Admin", no "as member" |
+| 2 | Invitar con el rol default (Member) | El email dice "as member" — sigue siendo correcto para ese caso |
+| 3 | El toast tras enviar la invitación | Dice "Invitation emailed. Link also copied to clipboard." — ya no da a entender que copiar el link es la única forma de entregarla |
+
+### B. "Invite to app" desde el perfil de un Employee
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 4 | Abrir el overview de un Employee sin cuenta vinculada → Actions → "Invite to app" | Se abre un modal chico con el nombre/email del Employee y un selector de Role (poblado con los roles reales del tenant, Owner excluido) |
+| 5 | Elegir un rol distinto de Member (ej. un rol custom) y confirmar | La invitación se crea con ese `roleId` — confirmado vía la respuesta de la API, no solo visualmente |
+| 6 | Mismo flujo desde el ícono de invitar en la fila de la tabla de Employees (no desde el overview panel) | Mismo modal, mismo comportamiento — es el mismo código, no una segunda implementación |
+| 7 | No tocar el selector (dejarlo en el default) | Sigue invitando como Member — mismo comportamiento que antes de este fix, no hay regresión de default |
+
+### C. Regresión
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 8 | `npm test` (backend, 299/299) y ambos builds (`npm run build` backend + frontend) | Los tres en verde |
+| 9 | El modal "Invite Someone" de Settings → Users (Fase I) | Sigue funcionando igual — no tocado por este fix, comparte `createInvitation` pero no su propio código de UI |
+
+### Al encontrar una falla
+
+A.1 es la más importante — si el email sigue sin llegar de forma confiable en producción (a
+diferencia de local, donde el proceso de Node no se destruye entre requests y por eso un fix de
+`await` es más difícil de refutar localmente), es severidad alta: el mecanismo de invitación
+completo depende de que ese email llegue. El resto es severidad media — funcionalidad visible pero
+incompleta (no poder elegir rol) o cosmética (texto de email/toast incorrecto).
+
+Verificado por Claude: ambos bugs de email confirmados con un envío real a la bandeja de entrada de
+Alejandro (Gmail, vía `+alias`) desde un tenant descartable en `staging` — primero se confirmó que
+el email efectivamente llegaba tras el fix de `bestEffort`, después que dos invitaciones
+consecutivas con roles distintos (Member vs. Admin) generaban el texto correcto en cada una. El fix
+de "Invite to app" se verificó con un segundo tenant descartable (Owner + 1 Employee real vía
+`createEmployee`): una invitación con `roleId` explícito (Admin) devolvió ese `roleId` en la
+respuesta de la API, y una invitación sin `roleId` siguió cayendo en Member por default (sin
+regresión de compatibilidad). `npm test` 299/299, ambos builds verdes. Falta la revisión humana de
+Alejandro — este fix nació de su propia revisión, así que lo esperable es que confirme ambos casos
+él mismo antes de darlos por cerrados.

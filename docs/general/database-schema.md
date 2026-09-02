@@ -1534,6 +1534,25 @@ Payments y viceversa). El hallazgo de `OpportunitiesPage.tsx` se descubrió y co
 normalmente); el de `OverviewPage.tsx` se confirmó de la misma forma. `npm test` 299/299 (sin
 cambios, esta fase es 100% frontend), ambos builds verdes. Nada de esto llegó a `main` todavía.
 
+**QA-76 (2026-09-02, fix same-day, no una fase): 2 bugs de invitaciones encontrados por Alejandro en
+su revisión.** Ninguno de los dos es propiamente un bug de Custom Roles — ambos eran deuda
+preexistente en el flujo de invitaciones que su revisión fue la primera en ejercitar de punta a
+punta. (1) `invitationService.ts`'s `sendInvitationEmail(...).catch(...)` no estaba `await`eado —
+la misma clase de bug ya diagnosticada y corregida para el email de verificación de signup
+(commit `43fd0be`) — fijado acá con el mismo helper `bestEffort()`. De paso se encontró que el cuerpo del
+email siempre decía "as member" para cualquier invitación por `roleId` (Fase I dejó el enum `role`
+como placeholder cosmético `'member'` para esos casos, y el email lo leía tal cual) — ahora usa el
+nombre real del rol resuelto. (2) El endpoint `POST /api/hr/employees/:employeeId/invite` ("Invite
+to app" en el overview de un Employee, y el ícono de invitar en la tabla de Employees — ambos
+puntos de entrada llaman al mismo endpoint) tenía `role: 'member'` hardcodeado sin aceptar
+`roleId`, a diferencia del modal "Invite Someone" de Settings → Users (Fase I) que sí tiene
+selector. Ahora acepta un `roleId` opcional (validado por el mismo `createInvitation` de siempre);
+el frontend abre un `Modal` chico con selector de rol antes de enviar, default a Member igual que
+antes. Verificado con envío real a Gmail (confirma que el fix de `bestEffort` realmente entrega el
+email, algo que un `tsx watch` local de proceso largo no puede refutar por sí solo) y con un tenant
+descartable adicional para el endpoint de Employee (roleId explícito se guarda correcto; sin
+roleId sigue cayendo en Member). `npm test` 299/299, ambos builds verdes.
+
 ```mermaid
 erDiagram
     TENANT ||--o{ ROLE : "has"

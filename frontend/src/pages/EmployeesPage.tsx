@@ -1085,39 +1085,6 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       )}
 
       <Modal
-        open={invitingEmployee !== null}
-        title="Invite to app"
-        onClose={() => setInvitingEmployee(null)}
-        footer={
-          <>
-            <button type="button" className="btn-secondary" onClick={() => setInvitingEmployee(null)}>
-              Cancel
-            </button>
-            <button type="button" className="btn-primary" onClick={handleInviteEmployee} disabled={inviting}>
-              {inviting ? 'Sending…' : 'Send invitation'}
-            </button>
-          </>
-        }
-      >
-        {invitingEmployee && (
-          <div className="form-group">
-            <p className="mb-3">
-              Invite <strong>{invitingEmployee.firstName} {invitingEmployee.lastName}</strong> ({invitingEmployee.email}) to
-              create an account.
-            </p>
-            <label htmlFor="invite-employee-role">Role</label>
-            <select id="invite-employee-role" value={inviteRoleId} onChange={(e) => setInviteRoleId(e.target.value)}>
-              {assignableRoles.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-      </Modal>
-
-      <Modal
         open={slideOverMode !== null}
         title="Add Person"
         onClose={closeSlideOver}
@@ -1838,6 +1805,44 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
           />
         );
       })()}
+
+      {/* Rendered after EmployeeOverviewPanel (not near the page's other modals above) so it
+          paints on top: both this Modal and the overview panel's own .detail-modal-overlay wrapper
+          share the same z-50 stacking level, and among same-z-index fixed-position siblings DOM
+          order decides who's on top — rendering it earlier put it behind the panel whenever it was
+          opened from the panel's own Actions menu (found 2026-09-02, Alejandro's review). */}
+      <Modal
+        open={invitingEmployee !== null}
+        title="Invite to app"
+        onClose={() => setInvitingEmployee(null)}
+        footer={
+          <>
+            <button type="button" className="btn-secondary" onClick={() => setInvitingEmployee(null)}>
+              Cancel
+            </button>
+            <button type="button" className="btn-primary" onClick={handleInviteEmployee} disabled={inviting}>
+              {inviting ? 'Sending…' : 'Send invitation'}
+            </button>
+          </>
+        }
+      >
+        {invitingEmployee && (
+          <div className="form-group">
+            <p className="mb-3">
+              Invite <strong>{invitingEmployee.firstName} {invitingEmployee.lastName}</strong> ({invitingEmployee.email}) to
+              create an account.
+            </p>
+            <label htmlFor="invite-employee-role">Role</label>
+            <select id="invite-employee-role" value={inviteRoleId} onChange={(e) => setInviteRoleId(e.target.value)}>
+              {assignableRoles.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

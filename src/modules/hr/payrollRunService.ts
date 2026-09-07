@@ -1,4 +1,4 @@
-import prisma from '../../lib/prisma.js';
+import prisma, { type ExtendedPrismaClient } from '../../lib/prisma.js';
 import { getDefaultStatusId } from './statusService.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { payrollRunActivityFieldConfig } from '../activity/fieldConfigs/payrollRunFieldConfig.js';
@@ -296,6 +296,6 @@ export async function findRunById(id: string): Promise<PayrollRun | null> {
   return prisma.payrollRun.findUnique({ where: { id } });
 }
 
-export async function listRuns(tenantId: string): Promise<PayrollRun[]> {
-  return prisma.payrollRun.findMany({ where: { tenantId }, orderBy: { createdAt: 'desc' } });
+export async function listRuns(tenantId: string, client: ExtendedPrismaClient = prisma): Promise<PayrollRun[]> {
+  return client.payrollRun.findMany({ where: { tenantId }, orderBy: { createdAt: 'desc' } });
 }

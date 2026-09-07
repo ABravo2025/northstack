@@ -1,4 +1,4 @@
-import prisma from '../../lib/prisma.js';
+import prisma, { type ExtendedPrismaClient } from '../../lib/prisma.js';
 import { getDefaultStatusId } from '../hr/statusService.js';
 import { listCustomFieldValuesForEntities } from '../hr/customFieldService.js';
 import { listTagsForEntities } from '../crossModule/tagService.js';
@@ -147,8 +147,11 @@ export async function createCompany(input: CreateCompanyInput, changedByUserId: 
   return company;
 }
 
-export async function listCompanies(tenantId: string) {
-  const companies = await prisma.company.findMany({
+// client defaults to the shared pool; the external API router (routes/externalApi.ts, Private API
+// + Webhooks Unit 2) passes prismaExternal instead, so this same function serves both without
+// duplicating the query.
+export async function listCompanies(tenantId: string, client: ExtendedPrismaClient = prisma) {
+  const companies = await client.company.findMany({
     where: { tenantId },
     include: COMPANY_INCLUDE,
   });
@@ -166,8 +169,8 @@ export async function listCompanies(tenantId: string) {
   }));
 }
 
-export async function findCompanyById(id: string): Promise<Company | null> {
-  return prisma.company.findUnique({
+export async function findCompanyById(id: string, client: ExtendedPrismaClient = prisma): Promise<Company | null> {
+  return client.company.findUnique({
     where: { id },
   });
 }

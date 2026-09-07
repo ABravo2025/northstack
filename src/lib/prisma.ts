@@ -45,8 +45,15 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function createPrismaClient() {
-  return new PrismaClient().$extends({
+// Deliberately NOT imported by prismaExternal.ts (Private API + Webhooks, decision #11), even
+// though that client wants the exact same retry behavior — plenty of tests wholesale-mock
+// `'../lib/prisma.js'` (`vi.mock(...)` replacing the whole module), which would then be missing
+// this export for anything that pulls in prismaExternal.ts transitively. prismaExternal.ts keeps
+// its own copy of this $extends block instead, so it never depends on this module at runtime
+// (only on its exported `ExtendedPrismaClient` *type*, which is erased at compile time and can't
+// be broken by a mock).
+function createPrismaClient(datasourceUrl?: string) {
+  return new PrismaClient(datasourceUrl ? { datasources: { db: { url: datasourceUrl } } } : undefined).$extends({
     query: {
       async $allOperations({ args, query }) {
         for (let attempt = 0; ; attempt++) {
@@ -64,7 +71,7 @@ function createPrismaClient() {
   });
 }
 
-type ExtendedPrismaClient = ReturnType<typeof createPrismaClient>;
+export type ExtendedPrismaClient = ReturnType<typeof createPrismaClient>;
 
 const globalForPrisma = globalThis as unknown as { prisma?: ExtendedPrismaClient };
 

@@ -1,4 +1,4 @@
-import prisma from '../../lib/prisma.js';
+import prisma, { type ExtendedPrismaClient } from '../../lib/prisma.js';
 import { findEntityTenantId, isSupportedCrossModuleEntityType } from '../crossModule/entityLookup.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { noteActivityFieldConfig } from '../activity/fieldConfigs/noteFieldConfig.js';
@@ -62,13 +62,24 @@ export async function createNote(input: CreateNoteInput) {
   return note;
 }
 
-export async function findNoteById(id: string) {
-  return prisma.note.findUnique({ where: { id }, include: noteInclude });
+export async function findNoteById(id: string, client: ExtendedPrismaClient = prisma) {
+  return client.note.findUnique({ where: { id }, include: noteInclude });
 }
 
 export async function listNotesForEntity(tenantId: string, entityType: EntityType, entityId: string) {
   return prisma.note.findMany({
     where: { tenantId, entityType, entityId },
+    include: noteInclude,
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+// Private API + Webhooks (Unit 2) — same reasoning as taskService.ts's listAllTasksForTenant: Note
+// is polymorphic and every existing lister is per-entity, but a `notes:read`-scoped API key needs
+// every Note in the tenant.
+export async function listAllNotesForTenant(tenantId: string, client: ExtendedPrismaClient = prisma) {
+  return client.note.findMany({
+    where: { tenantId },
     include: noteInclude,
     orderBy: { createdAt: 'desc' },
   });

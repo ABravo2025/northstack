@@ -1,4 +1,4 @@
-import prisma from '../../lib/prisma.js';
+import prisma, { type ExtendedPrismaClient } from '../../lib/prisma.js';
 import { sendTimeOffRequestDecidedEmail, sendTimeOffRequestPendingEmail } from '../../lib/mailer.js';
 import { syncTimeOffCalendarEvent } from '../integrations/googleCalendarSyncService.js';
 import { recordActivity } from '../activity/activityLogService.js';
@@ -186,8 +186,8 @@ export async function listTimeOffRequestsForCalendar(tenantId: string) {
   });
 }
 
-export async function listAllTimeOffRequests(tenantId: string) {
-  return prisma.timeOffRequest.findMany({
+export async function listAllTimeOffRequests(tenantId: string, client: ExtendedPrismaClient = prisma) {
+  return client.timeOffRequest.findMany({
     where: { tenantId },
     include: {
       timeOffPolicy: true,

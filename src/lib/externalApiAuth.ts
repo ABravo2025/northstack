@@ -102,11 +102,17 @@ export async function authenticateApiKey(req: express.Request, res: express.Resp
   return { id: apiKey.id, tenantId: apiKey.tenantId, scopes: apiKey.scopes };
 }
 
+export function hasScope(apiKey: AuthenticatedApiKey, scope: string): boolean {
+  return apiKey.scopes.includes(scope);
+}
+
 // Called manually inside each route handler (like requirePaymentsAccess in paymentsAccess.ts) —
 // createAsyncRouter (asyncRouter.ts) only wraps exact (path, singleHandler) registrations, so a
-// real Express middleware chain here would silently lose the async-error-catching wrapper.
+// real Express middleware chain here would silently lose the async-error-catching wrapper. Routes
+// under /api/external/v1/* (routes/externalApi.ts, Unit 2) use `hasScope` directly instead, since
+// their 403 response also needs to write an ApiRequestLog row before responding.
 export function requireScope(apiKey: AuthenticatedApiKey, scope: string, res: express.Response): boolean {
-  if (!apiKey.scopes.includes(scope)) {
+  if (!hasScope(apiKey, scope)) {
     res.status(403).json({
       error: `This API key is missing the required scope: ${scope}`,
       code: 'missing_scope',

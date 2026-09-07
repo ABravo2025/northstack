@@ -33,6 +33,7 @@ import { tenantMetricsRouter } from './routes/tenantMetrics.js';
 import { activityRouter } from './routes/activity.js';
 import { rolesRouter } from './routes/roles.js';
 import { apiAccessIntegrationRouter } from './routes/apiAccessIntegration.js';
+import { externalApiRouter } from './routes/externalApi.js';
 
 dotenv.config();
 
@@ -127,6 +128,7 @@ app.use(tenantMetricsRouter);
 app.use(activityRouter);
 app.use(rolesRouter);
 app.use(apiAccessIntegrationRouter);
+app.use(externalApiRouter);
 
 // Catches anything an async route handler throws (e.g. Neon/Prisma dropping
 // the connection) so it becomes a clean JSON response instead of crashing

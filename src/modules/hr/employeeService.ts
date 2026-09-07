@@ -1,4 +1,4 @@
-import prisma from '../../lib/prisma.js';
+import prisma, { type ExtendedPrismaClient } from '../../lib/prisma.js';
 import { getDefaultStatusId, recordStatusChange } from './statusService.js';
 import { listCustomFieldValuesForEntities } from './customFieldService.js';
 import { findActiveTimeOffRequestsForEmployees } from './timeOffRequestService.js';
@@ -210,12 +210,12 @@ export async function listEmployeeDirectory(tenantId: string | null | undefined)
   });
 }
 
-export async function listEmployees(tenantId: string | null | undefined, visibleIds?: Set<string> | null) {
+export async function listEmployees(tenantId: string | null | undefined, visibleIds?: Set<string> | null, client: ExtendedPrismaClient = prisma) {
   if (!tenantId) {
     return [];
   }
 
-  const employees = await prisma.employee.findMany({
+  const employees = await client.employee.findMany({
     where: { tenantId, ...(visibleIds ? { id: { in: Array.from(visibleIds) } } : {}) },
     include: {
       statusDefn: true,
@@ -294,8 +294,8 @@ function computeContractStatus(
   return ageDays > CONTRACT_EXPIRY_DAYS ? 'vencido' : 'pendiente';
 }
 
-export async function findEmployeeById(id: string): Promise<Employee | null> {
-  return prisma.employee.findUnique({
+export async function findEmployeeById(id: string, client: ExtendedPrismaClient = prisma): Promise<Employee | null> {
+  return client.employee.findUnique({
     where: { id },
   });
 }

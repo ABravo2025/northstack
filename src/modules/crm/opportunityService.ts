@@ -1,4 +1,4 @@
-import prisma from '../../lib/prisma.js';
+import prisma, { type ExtendedPrismaClient } from '../../lib/prisma.js';
 import { advanceRoundRobinCursor, resolveNextRoundRobinUserId } from './pipelineAssignmentService.js';
 import { createNotification } from '../notifications/notificationService.js';
 import { sendOpportunityStageChangedEmail } from '../../lib/mailer.js';
@@ -219,15 +219,15 @@ export async function createOpportunity(input: CreateOpportunityInput, changedBy
 
 // includeInactive defaults to false — same isActive-gated-by-default idiom as
 // contactService.ts's listContacts. No caller passes `true` yet.
-export async function listOpportunities(tenantId: string, includeInactive = false) {
-  return prisma.opportunity.findMany({
+export async function listOpportunities(tenantId: string, includeInactive = false, client: ExtendedPrismaClient = prisma) {
+  return client.opportunity.findMany({
     where: { tenantId, ...(includeInactive ? {} : { isActive: true }) },
     include: OPPORTUNITY_INCLUDE,
   });
 }
 
-export async function findOpportunityById(id: string) {
-  return prisma.opportunity.findUnique({ where: { id }, include: OPPORTUNITY_INCLUDE });
+export async function findOpportunityById(id: string, client: ExtendedPrismaClient = prisma) {
+  return client.opportunity.findUnique({ where: { id }, include: OPPORTUNITY_INCLUDE });
 }
 
 export async function updateOpportunity(

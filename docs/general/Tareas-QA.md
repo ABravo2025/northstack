@@ -3616,3 +3616,64 @@ Alejandro antes de continuar con la Unidad 2 (endpoints de lectura de `/api/exte
 además, la decisión abierta #1 de la spec (si `hr.payroll:write` necesita un paso extra de
 confirmación o queda para v2) sigue sin cerrar y bloquea el tramo de escritura de Payroll en la
 Unidad 3, no la Unidad 1/2.
+
+---
+
+## QA-78 — Private API + Webhooks, Unidad 2: endpoints de lectura de `/api/external/v1/*` (2026-09-07, en `staging`)
+
+**Por qué existe esta tarea:** segunda unidad de `docs/tareas/spec-private-api-webhooks.md`. Trae
+los 9 recursos de lectura (`tasks`, `notes`, `crm/companies`, `crm/contacts`, `crm/opportunities`,
+`crm/pipelines`, `hr/employees`, `hr/timeoff`, `hr/payroll`) detrás de `requireScope` + paginación
+cursor-based + logging obligatorio por request. Sigue sin existir escritura (Unidad 3) ni webhooks
+salientes (Unidad 4) ni UI (Unidad 5) — verificación real posible solo por `curl`.
+
+**2 bugs reales encontrados y corregidos por Claude durante esta misma unidad, antes de pushear
+nada** (ninguno llegó a `staging` roto):
+1. **`prismaExternal.ts` validaba `DATABASE_URL` de forma eager al importar el módulo** — cualquier
+   test que importara `externalApiAuth.ts` (aunque solo usara sus helpers puros, sin tocar
+   `prismaExternal`) fallaba en un proceso de test sin esa env var. Corregido para no validar en
+   import time, igual que `prisma.ts` nunca lo hizo.
+2. **Un cursor de paginación que no matcheaba ninguna fila reiniciaba silenciosamente en la página
+   1** en vez de señalar el error — un consumidor que pide "la página siguiente" con un cursor
+   viejo/inválido recibiría la página 1 de nuevo sin ningún aviso. Corregido: `paginate()` tira
+   `InvalidCursorError`, el router responde 400 `{code: 'invalid_cursor'}`.
+
+### A. Lectura por recurso (`curl` contra `staging`, con una ApiKey de scopes acotados)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | `GET /api/external/v1/tasks` sin header `Authorization` | 401, no genera `ApiRequestLog` |
+| 2 | `GET /api/external/v1/tasks` con una key inválida/inventada | 401, no genera `ApiRequestLog` |
+| 3 | `GET /api/external/v1/tasks` con una key que tiene `tasks:read` | 200, `{data: [...], nextCursor}`, shape igual al que devuelve el `listTasksForEntity` interno |
+| 4 | `GET /api/external/v1/tasks/:id` con un id que pertenece a OTRO tenant | 404 (nunca 403 — no revela que el recurso existe en otro tenant) |
+| 5 | `GET /api/external/v1/crm/opportunities` con una key sin `crm.opportunities:read` (pero con otros scopes) | 403 `{code: 'missing_scope', required: 'crm.opportunities:read'}` |
+| 6 | Repetir el caso 5 para cada uno de los 9 recursos, cada uno con su propio scope sin otorgar | 403 en los 9 |
+| 7 | `GET /api/external/v1/tasks?cursor=algo-que-no-existe` | 400 `{code: 'invalid_cursor'}` (el bug #2 de arriba) |
+| 8 | `GET /api/external/v1/hr/payroll` con `hr.payroll:read` | 200, solo `PayrollRun[]` — confirmar que ningún campo de cuenta de cobro/compensación aparece en la respuesta |
+| 9 | Después de correr los casos 1-8, consultar `ApiRequestLog` directo por Prisma | Una fila por cada llamada **autenticada** (casos 3 a 8), exactamente 0 filas para los casos 1 y 2 (401 nunca se loguea, spec §6) |
+| 10 | `GET /api/integrations/api-keys` (gestión, Unidad 1) después de los casos de arriba | `lastUsedAt` de la key usada quedó actualizado |
+
+### B. Regresión
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 11 | `npm test` (raíz) | Verde — incluye `tests/externalApiPagination.test.ts` (7 tests) nuevo |
+| 12 | `npm run build` (raíz) y `npm run lint` | Ambos en verde/limpio |
+| 13 | Cualquier ruta interna (`/api/*`) que use `listCompanies`/`listContacts`/`listOpportunities`/`listPipelines`/`listEmployees`/`findCompanyById`/etc. — todas ganaron un parámetro `client?` opcional al final | Sin cambios de comportamiento — cada callsite interno sigue sin pasar ese argumento, así que sigue usando el `prisma` compartido por default |
+
+### Al encontrar una falla
+
+El caso 4 (aislamiento entre tenants en un `GET .../:id`) es el más importante — mismo tipo de
+chequeo que QA-01. El caso 9 (logging correcto, incluyendo que un 401 NO se loguea) es el segundo
+más importante porque es la garantía de auditoría central de la spec. El resto es severidad media.
+
+Verificado por Claude: los 13 casos se corrieron contra `staging` real (`ep-damp-union-atuat2jf...`)
+con 2 tenants descartables (uno para probar aislamiento cruzado) y una ApiKey con un subconjunto
+deliberado de scopes (`tasks:read`, `notes:read`, `crm.companies:read`, `hr.employees:read` — NO
+`crm.opportunities`/`crm.contacts`/`hr.timeoff`/`hr.payroll`/`crm.pipelines`, para poder probar el
+403 de cada uno de esos 5 sin otorgarlos). Confirmado por query directa a `ApiRequestLog`: 14 filas
+para 14 llamadas autenticadas, 0 filas para las 2 llamadas sin auth válida. `npm test` 665/665
+(658 previos + 7 nuevos), `npm run build` verde, `npm run lint` limpio (mismos 2 warnings
+preexistentes de siempre). Tenants de prueba borrados después. Falta la revisión de Alejandro.
+Sigue sin cerrar la decisión #1 de la spec (paso extra para `hr.payroll:write`) — no bloqueó esta
+unidad (solo lectura), sí bloquea el arranque de la Unidad 3.

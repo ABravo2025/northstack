@@ -1,4 +1,4 @@
-import prisma from '../../lib/prisma.js';
+import prisma, { type ExtendedPrismaClient } from '../../lib/prisma.js';
 import { findEntityTenantId, isSupportedCrossModuleEntityType } from '../crossModule/entityLookup.js';
 import { syncTaskCalendarEvent } from '../integrations/googleCalendarSyncService.js';
 import { recordActivity } from '../activity/activityLogService.js';
@@ -71,8 +71,8 @@ export async function createTask(input: CreateTaskInput) {
   return task;
 }
 
-export async function findTaskById(id: string) {
-  return prisma.task.findUnique({ where: { id }, include: taskInclude });
+export async function findTaskById(id: string, client: ExtendedPrismaClient = prisma) {
+  return client.task.findUnique({ where: { id }, include: taskInclude });
 }
 
 export async function listTasksForEntity(tenantId: string, entityType: EntityType, entityId: string) {
@@ -80,6 +80,18 @@ export async function listTasksForEntity(tenantId: string, entityType: EntityTyp
     where: { tenantId, entityType, entityId },
     include: taskInclude,
     orderBy: { createdAt: 'asc' },
+  });
+}
+
+// Private API + Webhooks (Unit 2) — Task is a cross-entity polymorphic model (tenantId +
+// entityType + entityId), so every existing lister is scoped to one entity, one assignee, or a
+// calendar date range; none returns "every Task in the tenant," which is what a `tasks:read`-
+// scoped API key needs (the scope grants tenant-wide access, not per-entity access).
+export async function listAllTasksForTenant(tenantId: string, client: ExtendedPrismaClient = prisma) {
+  return client.task.findMany({
+    where: { tenantId },
+    include: taskInclude,
+    orderBy: { createdAt: 'desc' },
   });
 }
 

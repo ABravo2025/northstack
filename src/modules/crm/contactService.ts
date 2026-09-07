@@ -1,4 +1,4 @@
-import prisma from '../../lib/prisma.js';
+import prisma, { type ExtendedPrismaClient } from '../../lib/prisma.js';
 import { listCustomFieldValuesForEntities } from '../hr/customFieldService.js';
 import { listTagsForEntities } from '../crossModule/tagService.js';
 import { recordActivity } from '../activity/activityLogService.js';
@@ -103,8 +103,8 @@ export async function createContact(input: CreateContactInput, changedByUserId?:
 // other isActive-gated catalog row does in this app. No caller passes `true`
 // yet (no "show deactivated" UI built), but the parameter exists so that's a
 // UI-only follow-up, not a service-layer one.
-export async function listContacts(tenantId: string, includeInactive = false) {
-  const contacts = await prisma.contact.findMany({
+export async function listContacts(tenantId: string, includeInactive = false, client: ExtendedPrismaClient = prisma) {
+  const contacts = await client.contact.findMany({
     where: { tenantId, ...(includeInactive ? {} : { isActive: true }) },
     include: CONTACT_INCLUDE,
   });
@@ -122,8 +122,8 @@ export async function listContacts(tenantId: string, includeInactive = false) {
   }));
 }
 
-export async function findContactById(id: string): Promise<Contact | null> {
-  return prisma.contact.findUnique({
+export async function findContactById(id: string, client: ExtendedPrismaClient = prisma): Promise<Contact | null> {
+  return client.contact.findUnique({
     where: { id },
   });
 }

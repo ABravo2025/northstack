@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import prisma from '../../lib/prisma.js';
+import prisma, { type ExtendedPrismaClient } from '../../lib/prisma.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { pipelineActivityFieldConfig, pipelineStageActivityFieldConfig } from '../activity/fieldConfigs/pipelineFieldConfig.js';
 import type {
@@ -134,8 +134,8 @@ export async function createPipeline(input: CreatePipelineInput) {
   return pipeline;
 }
 
-export async function listPipelines(tenantId: string) {
-  return prisma.pipeline.findMany({
+export async function listPipelines(tenantId: string, client: ExtendedPrismaClient = prisma) {
+  return client.pipeline.findMany({
     where: { tenantId },
     orderBy: { order: 'asc' },
     include: PIPELINE_INCLUDE,

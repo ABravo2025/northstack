@@ -85,6 +85,19 @@ sección 11 deja un plan de unidades listo para que una sesión futura lo ejecut
 10. **Sin SDK/dependencia nueva.** Firma HMAC con `node:crypto` (igual que `mercadopago.ts`), keys
     con `crypto.randomBytes`, entrega de webhooks con `fetch` nativo — mismo criterio que el resto
     del proyecto.
+11. **Aislamiento de blast radius — pool de conexiones a DB propio para la API externa, no una
+    función serverless/deployment separado.** Recomendación real evaluada con el usuario
+    (2026-09-02): que un ataque de volumen o un bug contra `/api/external/v1/*` no deje sin servicio
+    al resto de la plataforma. La pieza que efectivamente contiene ese escenario es barata — un
+    segundo `PrismaClient` (mismo proceso, mismo deploy, `src/lib/prismaExternal.ts`) apuntando al
+    mismo Postgres pero con su propio `connection_limit` acotado en el connection string, de forma
+    que agotar ese pool nunca le saca conexiones al `PrismaClient` que ya usa `/api/*`
+    (`src/lib/prisma.ts`). Separar en una función serverless propia (o peor, un subdominio) queda
+    **descartado para v1** — es trabajo real de infraestructura (deploy config, CORS, monitoreo
+    nuevo) para defender un escenario contra una API que hoy no tiene un solo consumidor externo
+    todavía, mismo criterio que el proyecto ya aplicó en otras decisiones de no construir
+    infraestructura por adelantado (rate limiting en memoria, webhook de Stripe simplificado a
+    polling). Ver sección 10 para cuándo revisitar esto.
 
 ---
 
@@ -282,7 +295,7 @@ desactualizadas apenas alguien agregue un endpoint nuevo.)
 
 ---
 
-## 5. Rate limiting
+## 5. Rate limiting y aislamiento de recursos
 
 - `isRateLimited(`apikey:${apiKeyId}`, { windowMs: 60_000, maxRequests: N })` (`rateLimit.ts`,
   reusado tal cual) antes de cada handler del router externo — 429 con `Retry-After`.
@@ -292,6 +305,14 @@ desactualizadas apenas alguien agregue un endpoint nuevo.)
   req/min por key) alcanza para v1.
 - El límite es **por key**, no por tenant — un tenant puede tener varias keys (una por integración)
   sin que una acapare el presupuesto de las demás.
+- **Pool de conexiones a la DB propio** (decisión #11, sección 0): el router externo usa un
+  `PrismaClient` propio (`src/lib/prismaExternal.ts`), no el `prisma` compartido de
+  `src/lib/prisma.ts` que usa el resto de la app. Mismo `DATABASE_URL`, pero con un
+  `connection_limit` bajo y explícito en el connection string (ej. 5, a ajustar con el límite total
+  de conexiones del plan de Neon). Esto es lo que efectivamente contiene un flood contra la API
+  externa: agota **su propio** presupuesto de conexiones, nunca el que usan las requests de la SPA.
+  `/api/*` y `/api/external/v1/*` siguen viviendo en el mismo proceso Express / misma función de
+  Vercel — ver sección 10 para por qué no se separa el deployment en v1.
 
 ---
 
@@ -424,6 +445,15 @@ tablas:
 3. **Rate limit en memoria vs. serverless** (misma limitación ya documentada en `rateLimit.ts`) —
    un ataque distribuido contra varias instancias cold-started no queda cubierto. Aceptable para v1,
    revisar si se mueve a un store compartido cuando el volumen real lo justifique.
+4. **Separar `/api/external/v1/*` en su propia función serverless (o subdominio) — descartado para
+   v1, no descartado para siempre.** Decisión #11 (sección 0): el pool de conexiones propio ya
+   contiene el escenario de "un flood contra la API externa deja sin DB al resto de la plataforma";
+   lo que ese pool separado **no** resuelve es la cuota de concurrencia de funciones del plan de
+   Vercel, compartida hoy por todo el proyecto. Revisar esto recién si aparece uno de estos dos
+   disparadores concretos, no antes: (a) un incidente real (un consumidor externo, propio o de un
+   tenant, satura la función y se nota degradación en `/api/*`), o (b) volumen real de integraciones
+   activas que justifique presupuestar el trabajo de infra. Hasta entonces, construir la separación
+   sería resolver un problema que todavía no existe.
 
 ---
 
@@ -435,10 +465,13 @@ Orden por dependencias, mismo criterio que el resto de las specs del proyecto (`
 1. **Fundamento:** schema (`ApiKey`, `ApiRequestLog`), `webhookEncryption.ts` no hace falta todavía
    acá (eso es de la Unidad 4), `externalApiAuth.ts` (autenticación + `requireScope`), gestión de
    keys (`POST/GET/DELETE /api/integrations/api-keys`, `canManageApiAccess` en
-   `permissionService.ts`), logging de cada request (`ApiRequestLog`).
+   `permissionService.ts`), logging de cada request (`ApiRequestLog`). Incluye también
+   `src/lib/prismaExternal.ts` (decisión #11, sección 0/5) — el router externo nunca debe llegar a
+   usar el `prisma` compartido, así que el `PrismaClient` propio se instala desde el día uno, no
+   como retrofit después.
 2. **Endpoints de lectura:** router externo `/api/external/v1/*` para todos los recursos de la
-   sección 3, solo `GET`, envolviendo los servicios existentes — deja la API usable (integraciones
-   de solo-consulta) antes de abrir escritura.
+   sección 3, solo `GET`, envolviendo los servicios existentes (a través de `prismaExternal`) — deja
+   la API usable (integraciones de solo-consulta) antes de abrir escritura.
 3. **Endpoints de escritura:** `POST/PATCH/DELETE` por recurso, mismos scopes `:write` — Payroll al
    final de la unidad, después de resolver el riesgo #1 de la sección 10 con el usuario.
 4. **Webhooks salientes:** schema (`WebhookSubscription`, `WebhookDelivery`), `webhookEncryption.ts`,

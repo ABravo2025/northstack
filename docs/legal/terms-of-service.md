@@ -50,11 +50,27 @@ as B2B SaaS and HR-SaaS comparables):
   worth revisiting if/when Northstack starts signing U.S. customers at real scale, since
   litigating in Argentina against a U.S. business customer (or vice versa) is more
   cumbersome than either arbitration or home-court litigation.
+
+2026-09-07 update — Section 5 (Fees) rewritten from scratch. It previously described a free
+beta with fees "to be introduced in the future"; that's now stale, since real subscription
+billing (Paddle for international/USD Tenants, Mercado Pago for Argentina/ARS Tenants) has
+been live in production since 2026-08-23, with a 15-day free trial from signup
+(`SIGNUP_TRIAL_DAYS` in tenantService.ts) and a new Refund Policy. Compared against Odoo,
+BambooHR, and Stripe's own subscription/billing terms for this pass — all three use the same
+core structure this section now follows: trial disclosure, recurring-charge authorization,
+named payment processors who actually hold the card/bank data, and a cross-reference to a
+standalone refund policy rather than restating refund mechanics inline. Flagging two things
+that are product/ops follow-ups, not drafting gaps: (1) Section 14 requires notifying Tenant
+owners of material Terms changes — introducing real fees is about as material as it gets, so
+existing pre-trial-era Tenants should get an email/in-app notice, not just a silent doc
+update; (2) this section states plans are billed "on a recurring basis (e.g., monthly)" —
+confirmed against PlansModal.tsx's `/month` price suffix and the absence of any annual-billing
+code path, but reconfirm before this section is touched again if annual billing ships.
 -->
 
 # Northstack Terms of Service
 
-**Effective Date:** July 13, 2026
+**Effective Date:** September 7, 2026
 
 Welcome to Northstack. These Terms of Service ("**Terms**") are a binding agreement between
 Alejandro Bravo, an individual operating under the trade name "Northstack" and based in
@@ -216,14 +232,51 @@ access, for any suspected violation of this Section.
 
 ---
 
-## 5. Fees
+## 5. Fees and Billing
 
-The Service is currently provided free of charge during the beta period described in
-Section 1.1. We may introduce paid subscription plans in the future. If we do, we will
-provide advance notice before charging any Tenant that is not already on a paid plan, and
-continued use of the Service after a paid plan takes effect for your Tenant will be subject
-to the pricing and payment terms disclosed to you at that time, which will supplement these
-Terms.
+### 5.1 Free trial
+
+Every new Tenant receives a free trial of fifteen (15) days from the date of registration.
+Our "Free Trial" plan requires no payment method at all. If you select a paid plan
+("Starter" or "Growth") during the trial, we may ask you to add a payment method upfront,
+but you will not be charged until the trial ends — you can see the exact number of days
+remaining in the Service at any time. We encourage you to use the trial period to evaluate
+whether the Service is a good fit before adding a payment method or letting a paid
+subscription begin.
+
+### 5.2 Subscription charges
+
+If you are on a paid plan when your trial ends, or you select a paid plan directly, you
+authorize us and our payment processors (Section 5.4) to charge your designated payment
+method on a recurring basis (e.g., monthly) in advance, until your subscription is cancelled
+in accordance with Section 5.5. Continuing to use a paid plan after your trial ends, or
+adding a payment method to a paid plan, constitutes your authorization for these recurring
+charges.
+
+### 5.3 Price changes
+
+We may change our fees from time to time. If a price change applies to your existing
+subscription, we will provide advance notice before it takes effect, consistent with
+Section 14 (Changes to these Terms).
+
+### 5.4 Payment processors
+
+Payments are processed by third-party payment processors, not Northstack directly: **Paddle**
+for Tenants billed internationally in USD, and **Mercado Pago** for Tenants billed in
+Argentina in ARS. These processors collect and store your payment card or bank account
+details directly, under their own terms of service and privacy policies — Northstack does
+not receive or store your full card or bank account number. See our
+[Privacy Policy](./privacy-policy.md) for more on how we handle billing-related data.
+
+### 5.5 Cancellation and refunds
+
+You may cancel a paid subscription at any time from the Billing section of the Service, or
+by contacting info@joinnorthstack.com. Cancellation stops future billing effective at the
+end of your current billing period; it does not, by itself, entitle you to a refund of fees
+already charged. **Fees are generally non-refundable — see our
+[Refund Policy](./refund-policy.md) for the full policy, including the limited exceptions.**
+We encourage you to review the Refund Policy, together with Section 5.1's free trial, before
+adding a payment method or upgrading to a paid plan.
 
 ---
 
@@ -374,9 +427,9 @@ and waives any objection to venue there.
 
 ## 16. General Provisions
 
-**Entire agreement.** These Terms, together with the Privacy Policy, constitute the entire
-agreement between the parties regarding the Service and supersede any prior agreements on
-the subject.
+**Entire agreement.** These Terms, together with the Privacy Policy and, if applicable to
+you, the Refund Policy, constitute the entire agreement between the parties regarding the
+Service and supersede any prior agreements on the subject.
 
 **Severability.** If any provision of these Terms is held unenforceable, the remaining
 provisions will remain in full force and effect, and the unenforceable provision will be

@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
 
-type LegalDoc = 'terms' | 'privacy';
+type LegalDoc = 'terms' | 'privacy' | 'refund';
 
 const DOC_TITLES: Record<LegalDoc, string> = {
   terms: 'Terms of Service',
   privacy: 'Privacy Policy',
+  refund: 'Refund Policy',
 };
 
 const DOC_URLS: Record<LegalDoc, string> = {
   terms: 'https://joinnorthstack.com/terms.html',
   privacy: 'https://joinnorthstack.com/privacy.html',
+  refund: 'https://joinnorthstack.com/refund.html',
 };
 
 interface LegalDocumentModalProps {
@@ -70,6 +72,9 @@ export default function LegalDocumentModal({ initialDoc, onClose }: LegalDocumen
     } else if (href === '/privacy.html') {
       e.preventDefault();
       setDoc('privacy');
+    } else if (href === '/refund.html') {
+      e.preventDefault();
+      setDoc('refund');
     }
   };
 

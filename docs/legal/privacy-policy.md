@@ -10,6 +10,17 @@ the product actively markets to or signs EU-based tenants, this policy needs a G
 (legal basis articulation, EU representative, SCCs for transfers, etc.) before that happens,
 not after.
 
+2026-09-07 update — added Paddle and Mercado Pago as subprocessors (Section 4.1) and billing
+data to Sections 2 and 3, since real subscription billing went live 2026-08-23 (see
+terms-of-service.md's matching 2026-09-07 note on its Section 5 rewrite). Northstack does not
+receive or store full payment card/bank account numbers — Paddle and Mercado Pago collect
+those directly — so this is scoped as billing metadata (plan, trial/subscription status,
+transaction amount/date/currency), not payment instrument data, consistent with the
+"we do not store full card numbers" language already used for Stripe Payments (Section 3.5
+gap note doesn't apply here — that's a Tenant-facing product feature, not something
+Northstack itself uses to bill Tenants, so it isn't a Northstack subprocessor for this
+Policy's purposes).
+
 Also flagging: this policy distinguishes two categories of personal data —
 (1) "Account Data" about the people who actually use Northstack (Tenant owners/admins/
 members) that we collect directly, where Northstack is the controller, and
@@ -23,7 +34,7 @@ doesn't actually control the purpose/use of.
 
 # Northstack Privacy Policy
 
-**Effective Date:** July 13, 2026
+**Effective Date:** September 7, 2026
 
 This Privacy Policy explains how Northstack ("**Northstack**," "**we**," "**us**," or
 "**our**"), operated by Alejandro Bravo, an individual based in Buenos Aires, Argentina,
@@ -65,6 +76,11 @@ such requests if they reach us directly.
   password (stored as a salted cryptographic hash, never in plain text).
 - Profile information you update after registration.
 - Content of support or contact communications you send us.
+- Billing and subscription information: the plan you select, trial and subscription status,
+  and transaction metadata (such as amount, date, and currency) for payments processed
+  through Paddle or Mercado Pago (Section 4.1). **We do not directly collect or store your
+  full payment card or bank account number** — our payment processors collect and hold that
+  information directly.
 
 ### 2.2 Processed Data Tenants submit
 
@@ -93,6 +109,8 @@ We use Account Data and Processed Data to:
 
 - provide, operate, secure, and maintain the Service (including authentication, tenant
   isolation, and permissions);
+- process subscription payments and manage billing, including free trials, plan changes,
+  and cancellations, through our payment processors (Section 4.1);
 - send transactional email, such as invitation emails, password-related notices, and
   service announcements;
 - diagnose technical issues, monitor for abuse, and improve reliability and security;
@@ -119,8 +137,11 @@ obligations consistent with the purpose for which we share data with them:
 | Vercel | Application hosting (frontend and backend) | All data transmitted through the Service |
 | Neon | Database hosting (PostgreSQL) | All Account Data and Processed Data at rest |
 | Zoho Mail | Transactional email delivery (e.g., invitations) | Recipient email address, name, and email content |
+| Paddle | Payment processing for Tenants billed internationally in USD | Billing contact information, plan/subscription data, and transaction data. Paddle collects and stores full payment card details directly — we do not store your full card number. |
+| Mercado Pago | Payment processing for Tenants billed in Argentina in ARS | Billing contact information, plan/subscription data, and transaction data. Mercado Pago collects and stores full payment/bank account details directly — we do not store your full account or card number. |
 
-These providers' infrastructure is located primarily in the United States; see Section 7
+These providers' infrastructure is located primarily in the United States, except Mercado
+Pago, which is based in Argentina and processes ARS transactions accordingly; see Section 7
 (International Data Transfers).
 
 ### 4.2 Within a Tenant
@@ -150,8 +171,9 @@ reasonable period afterward to allow for account recovery, comply with legal obl
 resolve disputes, and enforce our agreements. We retain Processed Data for as long as the
 Tenant's account is active, and for a reasonable period after a Tenant requests deletion or
 termination, after which it is deleted or anonymized, unless a longer retention period is
-required by applicable law. You (or your Tenant's owner/admin) can request earlier deletion
-by contacting info@joinnorthstack.com.
+required by applicable law. Billing and transaction records may be retained longer where
+needed to comply with tax, accounting, or financial recordkeeping obligations. You (or your
+Tenant's owner/admin) can request earlier deletion by contacting info@joinnorthstack.com.
 
 ---
 

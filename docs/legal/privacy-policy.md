@@ -34,7 +34,8 @@ the same "record-keeping only, we don't execute payments" framing added to
 terms-of-service.md's new Section 1.3. See that file's internal note for a real,
 pre-existing conflict this surfaced: Section 3.4 of the Terms bans Tenants from submitting
 full bank account numbers, but Payroll's contract-confirmation flow collects an encrypted
-one on purpose. Flagged to Alejandro, not yet resolved.
+one on purpose. **Resolved same day** — see terms-of-service.md's Section 3.4, which now
+carries an explicit, narrow exception for that one native Payroll field.
 
 Also flagging: this policy distinguishes two categories of personal data —
 (1) "Account Data" about the people who actually use Northstack (Tenant owners/admins/

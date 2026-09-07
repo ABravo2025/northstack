@@ -105,6 +105,17 @@ the platform's own flagship paid module is designed to collect. Raised to Alejan
 than silently patched, since fixing it means either narrowing 3.4 with an explicit
 payroll-disbursement-data carve-out (encrypted, purpose-limited) or reconsidering whether
 Payroll should collect that data at all — a product/legal call, not a wording call.
+
+2026-09-07 (still later same day) — resolved, at Alejandro's direction. He confirmed the
+Payroll payment-account field is collected out of real product necessity (the feature can't
+work without it) and isn't a custom field, so the fix is a narrow carve-out, not a rewrite of
+3.4's general prohibition. Added an explicit "Exception — Payroll disbursement account
+details" paragraph to Section 3.4, scoped specifically to that one native, encrypted,
+purpose-built field — the general ban on Tenant-configured custom fields collecting this
+category of data is untouched. Worth reconfirming with Alejandro whether "encrypted at rest"
+alone is a sufficient security representation to make in a public legal document, versus
+also naming access controls/who can decrypt it — flagging as a smaller follow-up, not
+blocking this fix.
 -->
 
 # Northstack Terms of Service
@@ -228,10 +239,20 @@ following to the Service:** government-issued identification numbers (including 
 Security numbers, national ID numbers, or passport numbers), full payment card or bank
 account numbers, health or medical information, biometric data, genetic data, or any other
 special category of data that requires heightened protection under applicable law. The
-Service is not designed or certified to store these categories of data. If you submit such
-data in violation of this Section, you do so at your own risk and remain fully responsible
-for that data and any resulting liability; Northstack disclaims responsibility for the
-consequences of Customer Data submitted in violation of this Section.
+Service is not designed or certified to store these categories of data, **except as
+described in the Payroll exception below.** If you submit such data in violation of this
+Section, you do so at your own risk and remain fully responsible for that data and any
+resulting liability; Northstack disclaims responsibility for the consequences of Customer
+Data submitted in violation of this Section.
+
+**Exception — Payroll disbursement account details.** This restriction does not apply to an
+employee's or contractor's own payment/bank account details entered through the Service's
+built-in Payroll module, for the sole purpose of recording where that person should be paid
+(Section 1.3). Northstack encrypts that specific field at rest (AES-256-GCM) and does not
+use it for any purpose other than storing and displaying it back to the Tenant. This
+exception is narrow: it covers only that native, purpose-built Payroll field, not any other
+bank account or payment card number, and does not extend to a Tenant-configured custom
+field, even one used for a similar purpose.
 
 ### 3.5 Data as processor
 

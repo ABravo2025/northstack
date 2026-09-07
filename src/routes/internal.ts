@@ -3,6 +3,7 @@ import { renewExpiringWatchChannels } from '../modules/integrations/googleCalend
 import { runStalledOpportunityReminders } from '../modules/crm/stalledOpportunityService.js';
 import { runStripeEventPolling } from '../modules/integrations/stripePaymentsService.js';
 import { runScheduledTerminations } from '../modules/hr/terminationService.js';
+import { runActivityLogRetention } from '../modules/activity/activityLogRetentionService.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import type express from 'express';
 
@@ -89,5 +90,16 @@ internalRouter.get('/api/internal/employee-terminations/run', async (req, res) =
   if (!checkCronSecret(req, res, '/api/internal/employee-terminations/run')) return;
 
   const result = await runScheduledTerminations();
+  return res.json(result);
+});
+
+// Triggered once a day by Vercel Cron — plan-tier Activity Log retention (2026-09-07): deletes
+// entries past the tenant's plan's retention window (Starter 7 days, Growth 30). Silent
+// housekeeping, same category as plan-transitions/google-calendar-channels above — nothing
+// user-visible happens here beyond old rows disappearing.
+internalRouter.get('/api/internal/activity-log-retention/run', async (req, res) => {
+  if (!checkCronSecret(req, res, '/api/internal/activity-log-retention/run')) return;
+
+  const result = await runActivityLogRetention();
   return res.json(result);
 });

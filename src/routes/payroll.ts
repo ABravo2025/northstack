@@ -1,4 +1,4 @@
-import { canManagePayroll } from '../modules/auth/permissionService.js';
+import { requirePayrollAccess } from '../lib/payrollAccess.js';
 import {
   createPayFrequency,
   findPayFrequencyById,
@@ -55,8 +55,8 @@ payrollRouter.post('/api/hr/pay-frequencies', async (req, res) => {
     return;
   }
 
-  if (!canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
+  if (!requirePayrollAccess(user, res)) {
+    return;
   }
 
   const name = (req.body.name as string)?.trim();
@@ -87,8 +87,8 @@ payrollRouter.patch('/api/hr/pay-frequencies/:id', async (req, res) => {
     return;
   }
 
-  if (!canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
+  if (!requirePayrollAccess(user, res)) {
+    return;
   }
 
   const existing = await findPayFrequencyById(req.params.id);
@@ -134,8 +134,8 @@ payrollRouter.post('/api/hr/payment-methods', async (req, res) => {
     return;
   }
 
-  if (!canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
+  if (!requirePayrollAccess(user, res)) {
+    return;
   }
 
   const name = (req.body.name as string)?.trim();
@@ -153,8 +153,8 @@ payrollRouter.patch('/api/hr/payment-methods/:id', async (req, res) => {
     return;
   }
 
-  if (!canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
+  if (!requirePayrollAccess(user, res)) {
+    return;
   }
 
   const existing = await findPaymentMethodById(req.params.id);
@@ -188,8 +188,8 @@ payrollRouter.post('/api/hr/payroll/compensation', async (req, res) => {
     return;
   }
 
-  if (!canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
+  if (!requirePayrollAccess(user, res)) {
+    return;
   }
 
   const employee = await findEmployeeById(req.body.employeeId);
@@ -246,8 +246,8 @@ payrollRouter.get('/api/hr/payroll/compensation/status', async (req, res) => {
     return;
   }
 
-  if (!canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
+  if (!requirePayrollAccess(user, res)) {
+    return;
   }
 
   const status = await getCompensationStatus(user.tenantId!);
@@ -260,8 +260,8 @@ payrollRouter.get('/api/hr/payroll/compensation/terminated', async (req, res) =>
     return;
   }
 
-  if (!canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
+  if (!requirePayrollAccess(user, res)) {
+    return;
   }
 
   const terminated = await listTerminatedCompensations(user.tenantId!);
@@ -274,8 +274,8 @@ payrollRouter.post('/api/hr/payroll/compensation/bulk', async (req, res) => {
     return;
   }
 
-  if (!canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
+  if (!requirePayrollAccess(user, res)) {
+    return;
   }
 
   const payFrequency = await findPayFrequencyById(req.body.payFrequencyId);
@@ -325,8 +325,8 @@ payrollRouter.get('/api/hr/payroll/runs', async (req, res) => {
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
+  if (!requirePayrollAccess(user, res)) {
+    return;
   }
 
   const runs = await listRuns(user.tenantId!);
@@ -338,8 +338,8 @@ payrollRouter.post('/api/hr/payroll/runs', async (req, res) => {
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
+  if (!requirePayrollAccess(user, res)) {
+    return;
   }
 
   if (!req.body.periodLabel?.trim()) {
@@ -364,8 +364,8 @@ payrollRouter.get('/api/hr/payroll/runs/:id', async (req, res) => {
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
+  if (!requirePayrollAccess(user, res)) {
+    return;
   }
 
   const result = await getRunDetail(user.tenantId!, req.params.id);
@@ -380,8 +380,8 @@ payrollRouter.post('/api/hr/payroll/runs/:id/employees', async (req, res) => {
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
+  if (!requirePayrollAccess(user, res)) {
+    return;
   }
 
   const employee = await findEmployeeById(req.body.employeeId);
@@ -401,8 +401,8 @@ payrollRouter.post('/api/hr/payroll/runs/:id/confirm', async (req, res) => {
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
+  if (!requirePayrollAccess(user, res)) {
+    return;
   }
 
   const result = await confirmRun(user.tenantId!, req.params.id, user.id);
@@ -421,8 +421,8 @@ payrollRouter.post('/api/hr/payroll/entries', async (req, res) => {
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
+  if (!requirePayrollAccess(user, res)) {
+    return;
   }
 
   if (!VALID_ADJUSTMENT_TYPES.includes(req.body.type)) {
@@ -459,8 +459,8 @@ payrollRouter.delete('/api/hr/payroll/entries/:id', async (req, res) => {
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
+  if (!requirePayrollAccess(user, res)) {
+    return;
   }
 
   const result = await deleteEntry(user.tenantId!, req.params.id);
@@ -475,8 +475,8 @@ payrollRouter.patch('/api/hr/payroll/entries/:id/hours', async (req, res) => {
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
+  if (!requirePayrollAccess(user, res)) {
+    return;
   }
 
   const result = await updateEntryHours(user.tenantId!, req.params.id, Number(req.body.hoursQty));
@@ -493,8 +493,8 @@ payrollRouter.get('/api/hr/payroll/off-payments', async (req, res) => {
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
+  if (!requirePayrollAccess(user, res)) {
+    return;
   }
 
   const entries = await listOffPayments(user.tenantId!);
@@ -506,8 +506,8 @@ payrollRouter.post('/api/hr/payroll/off-payments', async (req, res) => {
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
+  if (!requirePayrollAccess(user, res)) {
+    return;
   }
 
   if (!Array.isArray(req.body.entries) || req.body.entries.length === 0) {
@@ -549,8 +549,8 @@ payrollRouter.get('/api/hr/payroll/runs/:runId/employees/:employeeId/payslip', a
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
+  if (!requirePayrollAccess(user, res)) {
+    return;
   }
 
   const result = await buildPayslipForRunEmployee(user.tenantId!, req.params.runId, req.params.employeeId);
@@ -567,8 +567,8 @@ payrollRouter.get('/api/hr/payroll/entries/:id/payslip', async (req, res) => {
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
+  if (!requirePayrollAccess(user, res)) {
+    return;
   }
 
   const result = await buildPayslipForEntry(user.tenantId!, req.params.id);

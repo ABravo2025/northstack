@@ -15,8 +15,10 @@ import {
   unassignUserFromPipeline,
 } from '../modules/crm/pipelineAssignmentService.js';
 import { findUserById } from '../modules/tenant/tenantService.js';
+import { getPlanLimits } from '../modules/tenant/planLimits.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
+import prisma from '../lib/prisma.js';
 
 const VALID_OUTCOMES = ['open', 'won', 'lost'];
 const VALID_PIPELINE_TYPES = ['lead', 'account'];
@@ -84,6 +86,16 @@ pipelinesRouter.post('/api/pipelines', async (req, res) => {
 
   if (req.body.stalledThresholdDays !== undefined && !isValidStalledThreshold(req.body.stalledThresholdDays)) {
     return res.status(400).json({ error: 'stalledThresholdDays must be a positive integer or null' });
+  }
+
+  const maxPipelines = getPlanLimits(user.tenant).maxPipelines;
+  if (maxPipelines !== null) {
+    const existingCount = await prisma.pipeline.count({ where: { tenantId: user.tenantId!, isActive: true } });
+    if (existingCount >= maxPipelines) {
+      return res.status(400).json({
+        error: `Starter plan allows up to ${maxPipelines} pipelines. Upgrade to Growth for unlimited pipelines.`,
+      });
+    }
   }
 
   const pipeline = await createPipeline({

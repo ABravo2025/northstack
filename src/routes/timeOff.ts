@@ -11,8 +11,10 @@ import {
   listPendingApprovals,
   listTimeOffRequestsForCalendar,
 } from '../modules/hr/timeOffRequestService.js';
+import { getPlanLimits } from '../modules/tenant/planLimits.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
+import prisma from '../lib/prisma.js';
 
 export const timeOffRouter = createAsyncRouter();
 
@@ -44,6 +46,18 @@ timeOffRouter.post('/api/time-off-policies', async (req, res) => {
   const daysPerYear = Number(req.body.daysPerYear);
   if (!Number.isFinite(daysPerYear) || daysPerYear < 0) {
     return res.status(400).json({ error: 'Days per year must be a non-negative number' });
+  }
+
+  const maxTimeOffPolicies = getPlanLimits(user.tenant).maxTimeOffPolicies;
+  if (maxTimeOffPolicies !== null) {
+    const existingCount = await prisma.timeOffPolicyDefinition.count({
+      where: { tenantId: user.tenantId!, isActive: true },
+    });
+    if (existingCount >= maxTimeOffPolicies) {
+      return res.status(400).json({
+        error: `Starter plan allows up to ${maxTimeOffPolicies} Time Off policies. Upgrade to Growth for unlimited policies.`,
+      });
+    }
   }
 
   const policy = await createTimeOffPolicy(

@@ -7,6 +7,7 @@ import type { TenantCreationResult } from './tenantService.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { invitationActivityFieldConfig } from '../activity/fieldConfigs/invitationFieldConfig.js';
 import { findSeedRoleId } from '../auth/roleService.js';
+import { getPlanLimits, hasAdminSeatAvailable } from './planLimits.js';
 
 const INVITATION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -113,6 +114,20 @@ export async function createInvitation(input: CreateInvitationInput): Promise<In
     roleDisplayName = role;
   }
 
+  // Plan-tier enforcement (2026-09-07) — "admin user" for the seat cap means literally the
+  // default "Admin" role (see planLimits.ts's hasAdminSeatAvailable). Checked two ways because
+  // roleDisplayName isn't a reliable single signal: the legacy-enum path (`role`) sets it to the
+  // lowercase enum string ('admin'), not the DB row's real "Admin" name, while the roleId path
+  // sets it to the DB row's actual name — either can indicate the default Admin role.
+  const isAdminRole = role === 'admin' || roleDisplayName === 'Admin';
+  if (isAdminRole && !(await hasAdminSeatAvailable(tenant))) {
+    const { maxAdminUsers } = getPlanLimits(tenant);
+    return {
+      success: false,
+      error: `Starter plan allows up to ${maxAdminUsers} admin users. Upgrade to Growth for more.`,
+    };
+  }
+
   const invitation = await prisma.invitation.create({
     data: {
       tenantId: input.tenantId,
@@ -161,6 +176,7 @@ export async function createInvitation(input: CreateInvitationInput): Promise<In
 export async function acceptInvitation(input: AcceptInvitationInput): Promise<TenantCreationResult> {
   const invitation = await prisma.invitation.findUnique({
     where: { token: input.token },
+    include: { roleRef: { select: { name: true } } },
   });
 
   if (!invitation) {
@@ -193,6 +209,20 @@ export async function acceptInvitation(input: AcceptInvitationInput): Promise<Te
 
   if (user.email.toLowerCase() !== invitation.email) {
     return { success: false, error: 'Invitation was issued for a different email' };
+  }
+
+  // Re-checked here, not just at invite time (createInvitation) — an admin seat could have
+  // filled up in the days between sending this invite and it being accepted (another Admin
+  // invite accepted first, or someone promoted directly via updateTenantUser).
+  if (invitation.roleRef?.name === 'Admin') {
+    const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: invitation.tenantId } });
+    if (!(await hasAdminSeatAvailable(tenant))) {
+      const { maxAdminUsers } = getPlanLimits(tenant);
+      return {
+        success: false,
+        error: `This workspace has reached its Starter plan limit of ${maxAdminUsers} admin users. Ask the owner to upgrade to Growth.`,
+      };
+    }
   }
 
   const result = await prisma.$transaction(async (tx) => {

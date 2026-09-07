@@ -70,7 +70,12 @@ rolesRouter.post('/api/roles', async (req, res) => {
     return res.status(400).json({ error: 'name is required' });
   }
 
-  const result = await createRole(user.tenantId!, name, typeof duplicateFromRoleId === 'string' ? duplicateFromRoleId : undefined);
+  const result = await createRole(
+    user.tenantId!,
+    name,
+    typeof duplicateFromRoleId === 'string' ? duplicateFromRoleId : undefined,
+    user.tenant,
+  );
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }

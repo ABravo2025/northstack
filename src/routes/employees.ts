@@ -41,10 +41,10 @@ import {
   canInviteUsers,
   canManageCustomFields,
   canManageEmployee,
-  canManagePayroll,
   canViewEmployee,
   canViewEmployeeCustomFields,
 } from '../modules/auth/permissionService.js';
+import { requirePayrollAccess } from '../lib/payrollAccess.js';
 import { redactEntityFields, redactEntityListFields } from '../modules/auth/fieldVisibilityService.js';
 import { exportEmployeesToCsv, getEmployeesCsvTemplate, importEmployeesFromCsv } from '../modules/csv/csvService.js';
 import { validateSession } from '../lib/httpAuth.js';
@@ -123,8 +123,8 @@ employeesRouter.get('/api/hr/employees/export/csv', async (req, res) => {
   // Fase B (Custom Roles) — tied to Payroll, not the base view_employee permission: the export
   // contains a full HR extract (compensation-adjacent PII included) sensitive enough to warrant
   // the same bar as Payroll itself, not just "can see the employee list."
-  if (!canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
+  if (!requirePayrollAccess(user, res)) {
+    return;
   }
 
   const csv = await exportEmployeesToCsv(user.tenantId!);
@@ -140,8 +140,8 @@ employeesRouter.post('/api/hr/employees/import/csv', async (req, res) => {
   }
 
   // Fase B (Custom Roles) — same reasoning as the export route above.
-  if (!canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
+  if (!requirePayrollAccess(user, res)) {
+    return;
   }
 
   if (typeof req.body.csv !== 'string' || !req.body.csv.trim()) {
@@ -159,8 +159,8 @@ employeesRouter.get('/api/hr/employees/template/csv', async (req, res) => {
   }
 
   // Fase B (Custom Roles) — same reasoning as the export route above.
-  if (!canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
+  if (!requirePayrollAccess(user, res)) {
+    return;
   }
 
   const csv = await getEmployeesCsvTemplate(user.tenantId!);
@@ -366,8 +366,8 @@ employeesRouter.post('/api/hr/employees/:employeeId/termination', async (req, re
 
   // Final payment touches Payroll (Unit 18/19's off-cycle entries), which is owner-only visibility
   // everywhere else in the app — enforced here too, not just hidden client-side.
-  if (req.body?.finalPayment && !canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Only the workspace owner can include a final payment' });
+  if (req.body?.finalPayment && !requirePayrollAccess(user, res)) {
+    return;
   }
 
   try {
@@ -450,8 +450,8 @@ employeesRouter.get('/api/hr/employees/:employeeId/compensation', async (req, re
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
+  if (!requirePayrollAccess(user, res)) {
+    return;
   }
 
   const result = await getEmployeeCompensationSummary(user.tenantId!, req.params.employeeId);
@@ -466,8 +466,8 @@ employeesRouter.get('/api/hr/employees/:employeeId/payment-history', async (req,
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
+  if (!requirePayrollAccess(user, res)) {
+    return;
   }
 
   const employee = await findEmployeeById(req.params.employeeId);
@@ -484,8 +484,8 @@ employeesRouter.get('/api/hr/employees/:employeeId/contract-pdf', async (req, re
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
+  if (!requirePayrollAccess(user, res)) {
+    return;
   }
 
   const result = await getEmployeeContractPdf(user.tenantId!, req.params.employeeId);
@@ -502,8 +502,8 @@ employeesRouter.post('/api/hr/employees/:employeeId/resend-contract', async (req
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.roleContext)) {
-    return res.status(403).json({ error: 'Insufficient permissions' });
+  if (!requirePayrollAccess(user, res)) {
+    return;
   }
 
   const result = await resendEmployeeContract(user.tenantId!, req.params.employeeId, user.id);

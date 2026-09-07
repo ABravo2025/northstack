@@ -43,13 +43,14 @@ function planCtaLabel(card: PlanCardConfig, trialDaysLeft: number): string {
   return trialDaysLeft > 0 ? `Start ${trialDaysLeft}-day free trial` : 'Subscribe now';
 }
 
-// Copy/features match the approved mockup (subscription-plans-mockup.html) verbatim —
-// spec-subscription-plans.md only described the plans in prose, the actual visual/content
-// reference is this mockup. "Free Trial" is not in the mockup — added at Alejandro's request
-// (2026-08-13 feedback) as an explicit third option, same feature set as Starter, for anyone
-// who wants to keep exploring without committing to a plan yet (functionally identical to
-// closing the modal, since every tenant already has full access during the trial regardless
-// of `plan` — nothing in the backend gates features by plan today).
+// Plan-tier enforcement (2026-09-07) — copy now mirrors the real enforced limits in
+// src/modules/tenant/planLimits.ts exactly, not aspirational marketing text (the previous version
+// predated any backend enforcement at all — see that file's own history). "Free Trial" gets the
+// full Growth-level feature set: a tenant with no plan chosen yet (`Tenant.plan === null`) gets
+// Growth-equivalent access so they experience the whole platform before committing — the instant
+// they pick Starter, Starter's real limits apply (getEffectivePlan). Team member accounts
+// themselves are unlimited on every plan (invite your whole company) — "admin users" is the only
+// people-count cap left, since that's what actually gates elevated/configuration access.
 const PLAN_CARDS: PlanCardConfig[] = [
   {
     key: 'trial',
@@ -60,12 +61,15 @@ const PLAN_CARDS: PlanCardConfig[] = [
     cap: 'Full access, no card required',
     ctaLabel: 'Continue with free trial',
     features: [
-      { label: 'Sales / CRM', sub: '1 pipeline', included: true },
-      { label: 'HR core & Time Off', included: true },
-      { label: 'Notes, Tasks & Activity Log', included: true },
-      { label: 'Up to 2 active Forms', included: true },
-      { label: '2 admin users', included: true },
-      { label: 'Payroll', included: false },
+      { label: 'Sales / CRM', sub: 'unlimited pipelines', included: true },
+      { label: 'HR core & Time Off', sub: 'unlimited policies', included: true },
+      { label: 'Notes, Tasks, Tags & Custom Fields', included: true },
+      { label: 'Activity Log', sub: '30 days of history', included: true },
+      { label: 'Unlimited team members', included: true },
+      { label: 'Payroll', included: true },
+      { label: 'Payments', sub: 'Stripe payment history, read-only', included: true },
+      { label: 'Google Calendar integration', included: true },
+      { label: 'Custom roles & permissions', sub: 'unlimited', included: true },
       { label: 'Email support', included: true },
     ],
   },
@@ -76,14 +80,17 @@ const PLAN_CARDS: PlanCardConfig[] = [
     price: '$29',
     priceSuffix: '/month',
     strikePrice: '$39',
-    cap: 'Up to 10 people',
+    cap: '2 admin users',
     features: [
-      { label: 'Sales / CRM', sub: '1 pipeline', included: true },
-      { label: 'HR core & Time Off', included: true },
-      { label: 'Notes, Tasks & Activity Log', included: true },
-      { label: 'Up to 2 active Forms', included: true },
-      { label: '2 admin users', included: true },
+      { label: 'Sales / CRM', sub: 'up to 2 pipelines', included: true },
+      { label: 'HR core & Time Off', sub: 'up to 3 policies', included: true },
+      { label: 'Notes, Tasks, Tags & Custom Fields', included: true },
+      { label: 'Activity Log', sub: '7 days of history', included: true },
+      { label: 'Unlimited team members', included: true },
       { label: 'Payroll', included: false },
+      { label: 'Payments', included: false },
+      { label: 'Google Calendar integration', included: true },
+      { label: 'Custom roles & permissions', sub: 'up to 2 custom roles', included: true },
       { label: 'Email support', included: true },
     ],
   },
@@ -94,20 +101,17 @@ const PLAN_CARDS: PlanCardConfig[] = [
     price: '$79',
     priceSuffix: '/month',
     strikePrice: '$99',
-    cap: 'Up to 50 people',
+    cap: '5 admin users',
     features: [
       { label: 'Sales / CRM', sub: 'unlimited pipelines', included: true },
-      { label: 'HR core & Time Off', included: true },
-      { label: 'Notes, Tasks & Activity Log', included: true },
-      { label: 'Unlimited Forms', included: true },
-      { label: '5 admin users', included: true },
-      { label: 'Payroll*', included: true },
+      { label: 'HR core & Time Off', sub: 'unlimited policies', included: true },
+      { label: 'Notes, Tasks, Tags & Custom Fields', included: true },
+      { label: 'Activity Log', sub: '30 days of history', included: true },
+      { label: 'Unlimited team members', included: true },
+      { label: 'Payroll', included: true },
+      { label: 'Payments', sub: 'Stripe payment history, read-only', included: true },
       { label: 'Google Calendar integration', included: true },
-      {
-        label: 'Future integrations included',
-        sub: 'Payments (Stripe/QuickBooks), Slack, webhooks, public API — as they ship',
-        included: true,
-      },
+      { label: 'Custom roles & permissions', sub: 'unlimited', included: true },
       { label: 'Priority email support', included: true },
     ],
   },

@@ -59,6 +59,12 @@ vi.mock('../src/lib/prisma.js', () => ({
       delete: vi.fn(async ({ where }: any) => {
         roles = roles.filter((r) => r.id !== where.id);
       }),
+      count: vi.fn(
+        async ({ where }: any) =>
+          roles.filter(
+            (r) => r.tenantId === where.tenantId && r.isOwner === where.isOwner && !where.name.notIn.includes(r.name),
+          ).length,
+      ),
     },
     roleModulePermission: {
       upsert: vi.fn(async ({ where, create }: any) => {
@@ -295,5 +301,33 @@ describe('roleManagementService', () => {
     const result = await createRole('t1', 'Junior Admin', 'role-admin');
     expect(result.success).toBe(true);
     expect(result.role?.hiddenFields).toEqual({ employee: ['personalEmail'] });
+  });
+
+  describe('plan-tier custom role cap (2026-09-07)', () => {
+    it('a Growth tenant (or no tenant passed) is never capped', async () => {
+      const result = await createRole('t1', 'Sales Manager', undefined, { plan: 'growth' });
+      expect(result.success).toBe(true);
+    });
+
+    it('a Starter tenant can create up to 2 custom roles', async () => {
+      const first = await createRole('t1', 'Sales Manager', undefined, { plan: 'starter' });
+      expect(first.success).toBe(true);
+      const second = await createRole('t1', 'Support Lead', undefined, { plan: 'starter' });
+      expect(second.success).toBe(true);
+    });
+
+    it('a Starter tenant is blocked on the 3rd custom role (Admin/Member defaults never count)', async () => {
+      await createRole('t1', 'Sales Manager', undefined, { plan: 'starter' });
+      await createRole('t1', 'Support Lead', undefined, { plan: 'starter' });
+      const third = await createRole('t1', 'One Too Many', undefined, { plan: 'starter' });
+      expect(third.success).toBe(false);
+      expect(third.error).toMatch(/Starter plan allows up to 2/);
+      expect(roles.filter((r) => r.name === 'One Too Many')).toHaveLength(0);
+    });
+
+    it('a null tenant.plan (Free Trial, unchosen) behaves like Growth — unlimited', async () => {
+      const result = await createRole('t1', 'Sales Manager', undefined, { plan: null });
+      expect(result.success).toBe(true);
+    });
   });
 });

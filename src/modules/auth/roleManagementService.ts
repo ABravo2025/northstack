@@ -1,7 +1,8 @@
-import type { ActivityEntityType } from '@prisma/client';
+import type { ActivityEntityType, PlanTier } from '@prisma/client';
 import prisma from '../../lib/prisma.js';
 import { RESTRICTABLE_FIELDS_BY_ENTITY_TYPE } from './fieldVisibilityService.js';
 import { DEPENDENT_PERMISSIONS, PERMISSION_PREREQUISITES, TOGGLEABLE_PERMISSION_KEYS, type ToggleablePermissionKey } from './roleService.js';
+import { getPlanLimits } from '../tenant/planLimits.js';
 
 // Fase B2 (Custom Roles) — read/write for the Settings → Roles & Permissions page. Owner-only at
 // the route layer (roles.ts): reconfiguring what Admin/Member can do is itself an
@@ -155,7 +156,12 @@ export interface CreateRoleResult {
 // role every time. Duplicating from Owner copies every TOGGLEABLE_PERMISSION_KEYS explicitly
 // (Owner itself has zero permission rows — it bypasses via isOwner — so a literal copy of its rows
 // would produce an empty, misleadingly-named "based on Owner" role).
-export async function createRole(tenantId: string, name: string, duplicateFromRoleId?: string): Promise<CreateRoleResult> {
+export async function createRole(
+  tenantId: string,
+  name: string,
+  duplicateFromRoleId?: string,
+  tenantForPlanCheck?: { plan: PlanTier | null } | null,
+): Promise<CreateRoleResult> {
   const trimmed = name.trim();
   if (!trimmed) {
     return { success: false, error: 'Name is required' };
@@ -165,6 +171,23 @@ export async function createRole(tenantId: string, name: string, duplicateFromRo
   }
   if (await findRoleByNameCaseInsensitive(tenantId, trimmed)) {
     return { success: false, error: 'A role with this name already exists' };
+  }
+
+  // Plan-tier enforcement (2026-09-07) — custom roles beyond the 3 defaults (Owner/Admin/Member,
+  // excluded by name — see the module doc comment on how "custom" is identified) are capped on
+  // Starter. `tenantForPlanCheck` is optional so existing/internal callers that already know
+  // there's no cap concern (none today, but keeps this additive) aren't forced to fetch a tenant.
+  const maxCustomRoles = getPlanLimits(tenantForPlanCheck ?? null).maxCustomRoles;
+  if (maxCustomRoles !== null) {
+    const existingCustomRoles = await prisma.role.count({
+      where: { tenantId, isOwner: false, name: { notIn: ['Admin', 'Member'] } },
+    });
+    if (existingCustomRoles >= maxCustomRoles) {
+      return {
+        success: false,
+        error: `Starter plan allows up to ${maxCustomRoles} custom roles. Upgrade to Growth for unlimited roles.`,
+      };
+    }
   }
 
   let sourcePermissions: string[] = [];

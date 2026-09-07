@@ -1,6 +1,7 @@
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import { canManagePayroll, canViewSalesLeaderboard } from '../modules/auth/permissionService.js';
+import { isPayrollAllowed } from '../modules/tenant/planLimits.js';
 import { parseDateRange } from '../modules/metrics/dateRange.js';
 import { getHrMetrics } from '../modules/metrics/hrMetricsService.js';
 import { getTimeOffMetrics } from '../modules/metrics/timeOffMetricsService.js';
@@ -30,7 +31,7 @@ tenantMetricsRouter.get('/api/tenant-metrics/overview', async (req, res) => {
 
   const range = parseDateRange(req.query);
   const tenantId = user.tenantId!;
-  const canSeePayroll = canManagePayroll(user.roleContext);
+  const canSeePayroll = canManagePayroll(user.roleContext) && isPayrollAllowed(user.tenant);
 
   const [hr, timeOff, payroll, sales, tasks, adoption] = await Promise.all([
     getHrMetrics(tenantId, range),

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { usePermissions } from '../../contexts/PermissionsContext';
+import { isGrowthFeatureEnabled } from '../../lib/planLimits';
+import type { Tenant } from '../../api';
 import {
   BriefcaseIcon,
   BuildingIcon,
@@ -19,14 +21,18 @@ import {
 interface SidebarProps {
   mobileOpen: boolean;
   onMobileClose: () => void;
+  tenant: Tenant | null;
 }
 
-export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
+export default function Sidebar({ mobileOpen, onMobileClose, tenant }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   // Custom Roles Fase J — migrated off `user.role === 'owner'` (Payroll/Payments were shown to
   // owner only, matching their real backend gates being owner-only by default, but never
   // reachable by a custom role granted manage_payroll/manage_payments explicitly).
   const permissions = usePermissions();
+  // Plan-tier enforcement (2026-09-07) — Payroll/Payments are Growth-only; a Starter tenant
+  // simply doesn't see the nav item, rather than clicking through to a 403.
+  const growthPlan = isGrowthFeatureEnabled(tenant);
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `sidebar-link${isActive ? ' active' : ''}${collapsed ? ' justify-center' : ''}`;
@@ -69,7 +75,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
             <CalendarIcon className="h-4 w-4 shrink-0" />
             {label('Time Off')}
           </NavLink>
-          {permissions.has('manage_payroll') && (
+          {permissions.has('manage_payroll') && growthPlan && (
             <NavLink to="/hr/payroll" className={linkClass} title="Human Resources – Payroll" onClick={onMobileClose}>
               <BriefcaseIcon className="h-4 w-4 shrink-0" />
               {label('Payroll')}
@@ -91,7 +97,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
             <TargetIcon className="h-4 w-4 shrink-0" />
             {label('Opportunities')}
           </NavLink>
-          {permissions.has('manage_payments') && (
+          {permissions.has('manage_payments') && growthPlan && (
             <NavLink to="/payments" className={linkClass} title="Payments" onClick={onMobileClose}>
               <CreditCardIcon className="h-4 w-4 shrink-0" />
               {label('Payments')}

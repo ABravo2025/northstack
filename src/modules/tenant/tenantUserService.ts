@@ -2,6 +2,7 @@ import prisma from '../../lib/prisma.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { userActivityFieldConfig, userDisplayName } from '../activity/fieldConfigs/userFieldConfig.js';
 import { findSeedRoleId } from '../auth/roleService.js';
+import { getPlanLimits, hasAdminSeatAvailable } from './planLimits.js';
 import type { AuthenticatedUser } from '../auth/authService.js';
 import type { User, UserRole, UserStatus } from '@prisma/client';
 
@@ -113,9 +114,23 @@ export async function updateTenantUser(
     if (targetRole.isOwner) {
       return { success: false, error: 'Use the ownership transfer action to grant Owner' };
     }
+    if (targetRole.name === 'Admin') {
+      const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } });
+      if (!(await hasAdminSeatAvailable(tenant, target.id))) {
+        const { maxAdminUsers } = getPlanLimits(tenant);
+        return { success: false, error: `Starter plan allows up to ${maxAdminUsers} admin users. Upgrade to Growth for more.` };
+      }
+    }
     data.role = 'member';
     data.roleId = targetRole.id;
   } else if (input.role) {
+    if (input.role === 'admin') {
+      const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } });
+      if (!(await hasAdminSeatAvailable(tenant, target.id))) {
+        const { maxAdminUsers } = getPlanLimits(tenant);
+        return { success: false, error: `Starter plan allows up to ${maxAdminUsers} admin users. Upgrade to Growth for more.` };
+      }
+    }
     data.role = input.role;
     // roleId kept in sync alongside the enum (Fase B, Custom Roles) — see findSeedRoleId's comment.
     data.roleId = await findSeedRoleId(tenantId, input.role);

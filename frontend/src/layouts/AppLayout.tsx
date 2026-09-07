@@ -86,7 +86,7 @@ export default function AppLayout({ user, token, tenant, onTenantUpdated, onLogo
         {location.pathname.startsWith('/settings') ? (
           <SettingsSidebar mobileOpen={mobileSidebarOpen} onMobileClose={() => setMobileSidebarOpen(false)} />
         ) : (
-          <Sidebar mobileOpen={mobileSidebarOpen} onMobileClose={() => setMobileSidebarOpen(false)} />
+          <Sidebar mobileOpen={mobileSidebarOpen} onMobileClose={() => setMobileSidebarOpen(false)} tenant={tenant} />
         )}
         <main className="app-main">
           {tenant?.status === 'suspended' && permissions.has('manage_billing') && (

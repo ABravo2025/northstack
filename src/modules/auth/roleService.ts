@@ -40,6 +40,13 @@ export const MANAGE_TENANT_SETTINGS = 'manage_tenant_settings';
 export const MANAGE_SHARED_VIEWS = 'manage_shared_views';
 export const DECIDE_TIME_OFF = 'decide_time_off';
 
+// Private API + outbound webhooks (spec-private-api-webhooks.md, decision #5) — self-service,
+// owner-only by default: not in ADMIN_SEED_PERMISSIONS/MEMBER_SEED_PERMISSIONS below (same
+// treatment as manage_payroll/manage_billing/manage_payments), so a fresh Admin/Member role
+// doesn't get it automatically, but the owner can grant it to a custom role via Settings → Roles
+// & Permissions since it IS in TOGGLEABLE_PERMISSION_KEYS.
+export const MANAGE_API_ACCESS = 'manage_api_access';
+
 // The full permission allowlist — the source a future role-editing endpoint (Fase H) validates
 // incoming permission strings against. Kept here rather than in permissionService.ts since both
 // files need it and this one has no reverse dependency on that one.
@@ -59,6 +66,7 @@ export const PERMISSION_KEYS = [
   'manage_payroll',
   'manage_billing',
   'manage_payments',
+  MANAGE_API_ACCESS,
   'view_sales_leaderboard',
   'view_activity_log',
   MANAGE_TENANT_SETTINGS,
@@ -93,6 +101,7 @@ export const TOGGLEABLE_PERMISSION_KEYS = [
   'manage_payroll',
   'manage_billing',
   'manage_payments',
+  MANAGE_API_ACCESS,
   'view_sales_leaderboard',
   'view_activity_log',
   MANAGE_TENANT_SETTINGS,

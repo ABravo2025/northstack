@@ -93,6 +93,7 @@ const GROUPS: PermissionGroup[] = [
       { key: 'manage_payroll', label: 'Manage payroll', description: 'Compensation, payroll runs, and the CSV export of employee data.' },
       { key: 'manage_billing', label: 'Manage billing', description: 'Change plan, payment method, and cancel the subscription.' },
       { key: 'manage_payments', label: 'Manage payments', description: 'Connect Stripe and view customer payment history.' },
+      { key: 'manage_api_access', label: 'Manage API & webhooks', description: 'Create and revoke private API keys and outbound webhooks.' },
     ],
   },
   {

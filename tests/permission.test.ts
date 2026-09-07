@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   canCreateHr,
   canEditEmployeeCustomFields,
+  canManageApiAccess,
   canManageCustomFields,
   canManagePayments,
   canManagePayroll,
@@ -58,6 +59,17 @@ describe('permission service', () => {
     expect(canManagePayments(owner)).toBe(true);
     expect(canManagePayments(admin)).toBe(false);
     expect(canManagePayments(member)).toBe(false);
+  });
+
+  it('restricts API & webhooks access to owner only by default, same as Payroll/Payments', () => {
+    expect(canManageApiAccess(owner)).toBe(true);
+    expect(canManageApiAccess(admin)).toBe(false);
+    expect(canManageApiAccess(member)).toBe(false);
+  });
+
+  it('grants API & webhooks access to a custom role once explicitly toggled on', () => {
+    const customRole: RoleContext = { id: 'r1', name: 'Ops', isOwner: false, permissions: new Set(['manage_api_access']), hiddenFieldsByEntity: new Map() };
+    expect(canManageApiAccess(customRole)).toBe(true);
   });
 
   it('allows owner and admin to view the tenant-wide Activity Log, unlike Payroll/Payments', () => {

@@ -108,6 +108,34 @@ Wrapper propio (`fetch` + `crypto` nativos, sin SDK) contra la API de Stripe —
 ### `src/lib/turnstile.ts`
 - **verifyTurnstileToken(token, remoteIp?)** — valida un captcha de Cloudflare Turnstile server-side.
 
+### `src/lib/prismaExternal.ts` (Private API + Webhooks, `docs/tareas/spec-private-api-webhooks.md`, Unit 1 — 2026-09-07)
+- **prismaExternal** (default export) — `PrismaClient` propio para `/api/external/v1/*` (Unit 2),
+  mismo `DATABASE_URL` que el `prisma` compartido (`lib/prisma.ts`) pero con su propio
+  `connection_limit` (5) inyectado en el connection string, así un flood o bug contra la API externa
+  agota solo su propio presupuesto de conexiones, nunca el del resto de la app. Singleton anti-hot-
+  reload, mismo patrón que `lib/prisma.ts`. Solo para el router externo — las rutas de gestión de
+  keys (`routes/apiAccessIntegration.ts`, Session-autenticadas) usan el `prisma` compartido.
+
+### `src/lib/externalApiAuth.ts` (Private API + Webhooks, Unit 1 — 2026-09-07)
+- **generateApiKey()** — `nk_live_` + 32 bytes random (`crypto.randomBytes`) en base62 →
+  `{fullKey, keyPrefix}` (`keyPrefix` = primeros 14 chars, lo único que se vuelve a mostrar).
+- **hashApiKey(fullKey)** — SHA-256 simple (no `scrypt` — la key ya es 256 bits random, no una
+  contraseña de baja entropía), hex digest. Lookup por este hash usa el índice único de `ApiKey`,
+  no una comparación en memoria.
+- **authenticateApiKey(req, res)** — lee `Authorization: Bearer <key>` (reusa `getBearerToken` de
+  `httpAuth.ts`), hashea, busca en `ApiKey` vía `prismaExternal`. 401 si no existe o está
+  revocada (sin fallback anónimo). Actualiza `lastUsedAt` con `bestEffort` (awaited, no bloquea el
+  request si falla). Devuelve `{id, tenantId, scopes}` o `null`.
+- **requireScope(apiKey, scope, res)** — llamado a mano dentro de cada handler (no middleware real
+  de Express: `asyncRouter.ts` solo envuelve registros `(path, singleHandler)` de 2 argumentos, así
+  que una cadena de middlewares perdería el catch de errores async). 403 `{code: 'missing_scope',
+  required}` si falta el scope.
+- **API_SCOPES** — catálogo completo de scopes válidos (spec §3: `hr.employees`, `hr.timeoff`,
+  `hr.payroll`, `crm.companies`, `crm.contacts`, `crm.opportunities`, `crm.pipelines` (solo
+  `:read`), `tasks`, `notes`, cada uno con `:read`/`:write` salvo pipelines). Fuente de verdad que
+  `apiKeyService.createApiKey` valida contra, y la que cada endpoint de Unit 2/3 va a chequear vía
+  `requireScope`.
+
 ### `src/modules/auth/authService.ts`
 - **newSessionExpiry()** — fecha de expiración deslizante de una sesión.
 - **hashPassword(password)** / **verifyPassword(password, storedHash)** — hashing/verificación.
@@ -137,7 +165,9 @@ por entidad tengan sentido), **canViewOpportunity** (derivado, `canViewCompany &
 a diferencia del resto — ver Payroll en `docs/spec-payroll.md`), **canManageBilling** (owner-only,
 mismo criterio que Payroll — Subscription Plans, `docs/spec-subscription-plans.md`),
 **canManagePayments** (owner-only, 2026-08-26 — Payments v1, `docs/tareas/specpaymentsv1.md`:
-conectar el Stripe del tenant y ver pagos de sus Companies), **canViewSalesLeaderboard** (owner-only),
+conectar el Stripe del tenant y ver pagos de sus Companies), **canManageApiAccess** (owner-only por
+default, 2026-09-07 — Private API + Webhooks, `docs/tareas/spec-private-api-webhooks.md`: crear/
+revocar API Keys y suscripciones de webhook desde Settings → Integrations), **canViewSalesLeaderboard** (owner-only),
 **canViewActivityLog** (owner/admin, 2026-08-30 — Activity Log, `docs/general/spec-activity-log.md`:
 ver el feed tenant-wide de Settings; el tab del modal por registro no tiene gate propio),
 **canManageTenantSettings** (Fase B, reemplaza el inline check de `PATCH /api/tenants/current` —
@@ -174,7 +204,11 @@ listar, ningún chequeo en absoluto).
 - **PERMISSION_KEYS** — allowlist completo de strings de permiso válidos, fuente de verdad para
   cuando exista un endpoint de edición de roles (Fase H). **ADMIN_SEED_PERMISSIONS**/
   **MEMBER_SEED_PERMISSIONS** — qué permisos concretos arma cada uno, importadas también por
-  `scripts/backfill-fase-b-permissions.ts` para no duplicar la lista.
+  `scripts/backfill-fase-b-permissions.ts` para no duplicar la lista. **MANAGE_API_ACCESS**
+  (2026-09-07, Private API + Webhooks) — igual que `manage_payroll`/`manage_billing`/
+  `manage_payments`: en `PERMISSION_KEYS`/`TOGGLEABLE_PERMISSION_KEYS` pero fuera de los dos seeds,
+  así que un rol custom nuevo no lo tiene por default pero el owner puede otorgarlo desde Settings →
+  Roles & Permissions.
 - **serializeRoleContext(role)** (Fase G, 2026-09) — convierte `RoleContext` (con `Set`/`Map`
   internos, no serializables) a un objeto plano `{id, name, isOwner, permissions: string[],
   hiddenFields: Record<string, string[]>}`, mismo shape que `RoleSummary` de
@@ -419,6 +453,17 @@ CRUD estándar: **createTimeOffPolicy**, **listTimeOffPolicies(tenantId)**, **fi
 - **listMyTimeOffRequests**, **listPendingApprovals**, **listTimeOffRequestsForCalendar**, **listAllTimeOffRequests**.
 - **findActiveTimeOffRequestsForEmployees(tenantId, employeeIds)** — solo solicitudes activas *hoy*, no el historial completo.
 - **decideTimeOffRequest(...)** / **cancelTimeOffRequest(...)** — ambas disparan `syncTimeOffCalendarEvent` (best-effort) tras la escritura.
+
+### `src/modules/integrations/apiKeyService.ts` (Private API + Webhooks, `docs/tareas/spec-private-api-webhooks.md`, Unit 1 — 2026-09-07)
+- **createApiKey(tenantId, userId, {name, scopes})** — rechaza nombre vacío, scopes vacío, y
+  cualquier scope fuera de `externalApiAuth.ts`'s `API_SCOPES`; dedupea scopes repetidos. Devuelve
+  la key completa **una sola vez** (`fullKey`), junto al resto de los campos sanitizados. Usa el
+  `prisma` compartido, no `prismaExternal` (estos endpoints son tráfico normal de Settings,
+  autenticado por Session — ver la nota en `prismaExternal.ts`).
+- **listApiKeys(tenantId)** — nunca incluye `keyHash` ni la key completa, solo `keyPrefix`.
+- **revokeApiKey(tenantId, id)** — soft delete vía `updateMany({where: {..., revokedAt: null}})`,
+  mismo patrón anti-doble-revoke que `StripeConnection.disconnectedAt` (Payments v1 Unit 1):
+  revocar dos veces es un no-op silencioso, no un throw.
 
 ### `src/modules/integrations/googleCalendarAuthService.ts` (2026-08-22)
 - **googleCalendarConfigured()** — chequea que `GOOGLE_CALENDAR_CLIENT_ID`/`CLIENT_SECRET`/`REDIRECT_URI`/`GOOGLE_TOKEN_ENCRYPTION_KEY` estén seteados; mismo patrón best-effort que `mailerConfigured()` en `lib/mailer.ts`.

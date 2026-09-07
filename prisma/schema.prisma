@@ -367,6 +367,8 @@ model Tenant {
   roles                     Role[]
   roleModulePermissions     RoleModulePermission[]
   roleFieldRestrictions     RoleFieldRestriction[]
+  apiKeys                   ApiKey[]
+  apiRequestLogs            ApiRequestLog[]
 }
 
 // Billing Integration (spec-billing-integration.md). plan/lockedPriceCents are deliberately NOT
@@ -510,6 +512,7 @@ model User {
   employeeTerminationsCreated EmployeeTermination[]
   activityLogEntries          ActivityLogEntry[]
   subscriptionsLastActedOn    Subscription[]
+  apiKeysCreated              ApiKey[]
 
   @@index([emailDomain])
 }
@@ -1538,6 +1541,55 @@ model StripeConnection {
   connectedAt       DateTime  @default(now())
   disconnectedAt    DateTime?
   needsAttention    Boolean   @default(false)
+}
+
+// Private API + outbound webhooks (docs/tareas/spec-private-api-webhooks.md, Unit 1). One row per
+// key a tenant owner issues for machine-to-machine access to /api/external/v1/*. keyHash uses
+// plain SHA-256, not scrypt like User.passwordHash — the secret is 256 random bits from
+// crypto.randomBytes, not a human-chosen password, so brute-forcing it is infeasible either way;
+// a fast hash with a timingSafeEqual comparison at lookup time is the same approach Stripe/GitHub
+// use for their own API keys. scopes are the sole source of authorization for this key (see
+// externalApiAuth.ts's requireScope) — internal roles/permissions never apply to this traffic.
+model ApiKey {
+  id              String    @id @default(uuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  name            String
+  keyPrefix       String // e.g. "nk_live_ab12cd" — the only part shown again after creation
+  keyHash         String    @unique
+  scopes          String[]
+  createdByUserId String
+  createdByUser   User      @relation(fields: [createdByUserId], references: [id])
+  lastUsedAt      DateTime?
+  revokedAt       DateTime?
+  createdAt       DateTime  @default(now())
+
+  requestLogs     ApiRequestLog[]
+
+  @@index([tenantId, revokedAt])
+}
+
+// One row per authenticated request to /api/external/v1/* (spec decision #7) — a smaller, more
+// specific log than the tenant-wide Activity Log (ActivityLogEntry), which covers UI actions by
+// logged-in people, not this API's traffic. apiKeyId is nullable only in principle (an
+// unauthenticated request never reaches the point where a log row is written — see
+// externalApiAuth.ts's authenticateApiKey, 401s before any handler/logging middleware runs) but is
+// kept nullable to match the spec's schema exactly rather than assume that never changes. No
+// partition/retention from day one; a purge cron is Unit 5.
+model ApiRequestLog {
+  id         String   @id @default(uuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  apiKeyId   String?
+  apiKey     ApiKey?  @relation(fields: [apiKeyId], references: [id])
+  method     String
+  path       String
+  statusCode Int
+  ipAddress  String
+  createdAt  DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+  @@index([apiKeyId, createdAt])
 }
 
 model Invitation {

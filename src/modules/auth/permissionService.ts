@@ -112,6 +112,15 @@ export function canManagePayments(role: RoleContext): boolean {
   return has(role, 'manage_payments');
 }
 
+// Owner-only by default, same reasoning/pattern as canManagePayments above — private API keys and
+// outbound webhooks (spec-private-api-webhooks.md, decision #5) are self-service from Settings →
+// Integrations, gated by this named permission rather than an inline `role.isOwner` check so a
+// tenant owner can later delegate it to a custom role the same way they can with Payroll/Billing/
+// Payments.
+export function canManageApiAccess(role: RoleContext): boolean {
+  return has(role, 'manage_api_access');
+}
+
 // Owner-only, same reasoning as canManagePayroll — deals-by-owner is
 // per-person performance data inside the tenant (who's closing, who isn't),
 // not something every member should see about their teammates.

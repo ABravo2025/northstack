@@ -3544,3 +3544,75 @@ CSS. Verificado con Playwright contra un tenant descartable: confirmado por eval
 DOM que `.modal-overlay` (el de "Invite to app") ahora es el hermano posterior en el DOM respecto a
 `.detail-modal-overlay`, y una captura de pantalla confirma visualmente el diálogo correctamente
 por encima del panel. `npm test` 299/299 (sin cambios), ambos builds verdes.
+
+---
+
+## QA-77 — Private API + Webhooks, Unidad 1: schema + autenticación por API Key + gestión de keys (2026-09-07, en `staging`)
+
+**Por qué existe esta tarea:** primera unidad de `docs/tareas/spec-private-api-webhooks.md` (5
+unidades totales, checklist completo en `docs/tareas/task-breakdown-private-api-webhooks.md`) —
+solo la fundación: modelos `ApiKey`/`ApiRequestLog` (aditivos), autenticación por API Key
+(`src/lib/externalApiAuth.ts`), pool de DB propio para la futura API externa
+(`src/lib/prismaExternal.ts`), y los endpoints de gestión de keys desde Settings
+(`POST/GET/DELETE /api/integrations/api-keys`). **Todavía no existe `/api/external/v1/*` en sí**
+(los endpoints de recursos que un tercero consumiría) — eso es la Unidad 2, ni tampoco webhooks
+salientes (Unidad 4) ni la UI (Unidad 5, tabla de keys en Settings). Esta unidad es puramente
+backend, sin ninguna pantalla nueva que probar visualmente todavía; verificación real posible solo
+por `curl` contra `staging`.
+
+El punto de partida no era el que el spec asumía: la rama donde se escribió el spec/checklist
+(`claude/private-api-webhooks-auth-vlouiy`, 2026-09-02/07) se ramificó de un commit anterior al
+merge de Custom Roles a `main` (2026-09-07, commit `810c1a5`), así que el checklist original
+describía agregar `'manage_api_access'` al viejo mapa estático `rolePermissions.owner` — ese mapa ya
+no existe. Se adaptó al sistema de roles custom real: `MANAGE_API_ACCESS` se agregó a
+`PERMISSION_KEYS`/`TOGGLEABLE_PERMISSION_KEYS` (`roleService.ts`) pero **no** a
+`ADMIN_SEED_PERMISSIONS`/`MEMBER_SEED_PERMISSIONS` — mismo tratamiento que
+`manage_payroll`/`manage_billing`/`manage_payments`: owner-only por default, pero el owner puede
+otorgarlo a un rol custom desde Settings → Roles & Permissions (se agregó también el toggle ahí,
+grupo "Money"). El resto de la Unidad 1 se construyó tal cual el checklist original.
+
+### A. Gestión de API Keys (`Settings → Integrations` — la UI de la tabla es Unidad 5, así que por
+ahora solo hay backend; probar con `curl` o Postman)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | `POST /api/integrations/api-keys` como owner, `{"name": "Zapier", "scopes": ["tasks:read","tasks:write"]}` | 201, la respuesta trae `fullKey` (empieza con `nk_live_`) — **la única vez** que aparece completa |
+| 2 | `GET /api/integrations/api-keys` como owner, inmediatamente después | 200, la key aparece con `keyPrefix` (14 chars, ej. `nk_live_ab12cd`) pero **sin** `keyHash` ni `fullKey` en ningún campo |
+| 3 | `POST`/`GET`/`DELETE /api/integrations/api-keys*` con un usuario Member (rol sin `manage_api_access`) | 403 en los tres |
+| 4 | `POST /api/integrations/api-keys` con un usuario que tenga un rol custom con `manage_api_access` tildado a mano desde Settings → Roles & Permissions | 201 — confirma que el permiso no quedó hardcodeado a "owner únicamente" |
+| 5 | `POST /api/integrations/api-keys` con `scopes: []` | 400, "At least one scope is required." |
+| 6 | `POST /api/integrations/api-keys` con un scope inventado (ej. `"foo:bar"`) | 400, "Unknown scope(s): foo:bar" |
+| 7 | `POST /api/integrations/api-keys` con `name: ""` o solo espacios | 400, "Name is required." |
+| 8 | `DELETE /api/integrations/api-keys/:id` como owner | 204, y el `GET` posterior muestra esa key con `revokedAt` seteado (no desaparece de la lista) |
+| 9 | Repetir el mismo `DELETE` sobre una key ya revocada | 204 igual (no-op silencioso, no 404 ni 500) |
+| 10 | `GET`/`POST`/`DELETE /api/integrations/api-keys*` sin `Authorization` header | 401 en los tres |
+| 11 | Crear una key en el Tenant A, intentar `DELETE` con el id de esa key pero un token de sesión del Tenant B | 204 igual (updateMany no encuentra fila que matchee `tenantId`), pero la key del Tenant A **sigue sin revocar** — confirmar con un `GET` del Tenant A que `revokedAt` sigue `null` |
+
+### B. Regresión
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 12 | `npm test` (raíz, 658/658 al momento de escribir esto) | Verde, incluye `tests/externalApiAuth.test.ts` y `tests/apiKeyService.test.ts` nuevos |
+| 13 | `npm run build` (raíz) y `npm run build` (`frontend/`) | Ambos verdes — el frontend solo cambió por el label nuevo en `RolesPermissionsPage.tsx` |
+| 14 | Settings → Roles & Permissions, grupo "Money" | Aparece el toggle nuevo "Manage API & webhooks" junto a Payroll/Billing/Payments, tildable/destildable normalmente |
+
+### Al encontrar una falla
+
+El caso 2 (que la key completa nunca vuelva a aparecer tras la creación) es el más importante —
+es la garantía de seguridad central de todo el feature. El caso 11 (aislamiento entre tenants en el
+`DELETE`) es el segundo más importante — mismo tipo de chequeo que QA-01. El resto es severidad
+media (mensajes de validación, comportamiento de UI del toggle).
+
+Verificado por Claude: los 11 casos de la sección A se corrieron por `curl` real contra `staging`
+(`ep-damp-union-atuat2jf...`, nunca producción), con un tenant + owner + member descartables
+creados directo vía Prisma (mismo patrón que `qa-seed-tenant.ts`) y borrados después del run.
+`npm test` 658/658, `npm run build` raíz y `frontend/` verdes, `npm run lint` sin errores (2
+warnings preexistentes, no relacionados). El `prisma db push` del schema aditivo (`ApiKey`,
+`ApiRequestLog`) corrió únicamente contra `STAGING_DATABASE_URL`, con el connection string pasado
+inline (nunca se tocó el `.env` local, que además apunta a producción por default — ver
+`docs/general/database-schema.md`/memoria `reference_database_environments`). Sin verificación
+Playwright/visual porque esta unidad no tiene UI propia todavía (Unidad 5). Falta la revisión de
+Alejandro antes de continuar con la Unidad 2 (endpoints de lectura de `/api/external/v1/*`) —
+además, la decisión abierta #1 de la spec (si `hr.payroll:write` necesita un paso extra de
+confirmación o queda para v2) sigue sin cerrar y bloquea el tramo de escritura de Payroll en la
+Unidad 3, no la Unidad 1/2.

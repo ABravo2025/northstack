@@ -2,10 +2,10 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { api, type GoogleCalendarStatus, type StripeConnectionStatus, type Tenant } from '../api';
 import { useToast } from '../components/common/ToastProvider';
+import { usePermissions } from '../contexts/PermissionsContext';
 
 interface IntegrationsSettingsPageProps {
   token: string;
-  user: { role: 'owner' | 'admin' | 'member' } | null;
   tenant: Tenant | null;
 }
 
@@ -45,7 +45,10 @@ function GoogleLogo({ className }: { className?: string }) {
 // Companies become visible (a later unit, the "Payments" sidebar section). Gated to owner-only
 // here, per this page's own established rule of gating an individual card rather than splitting
 // the page — see the comment on IntegrationsSettingsPage below.
-function StripeCard({ token, isOwner }: { token: string; isOwner: boolean }) {
+// Custom Roles Fase J — prop renamed from `isOwner` to canManagePayments: it's owner-only by
+// default (Stripe connection is gated by manage_payments on the backend), but a real toggleable
+// permission, not structurally tied to being the fixed Owner.
+function StripeCard({ token, canManagePayments }: { token: string; canManagePayments: boolean }) {
   const toast = useToast();
   const [status, setStatus] = useState<StripeConnectionStatus | null>(null);
   const [apiKeyInput, setApiKeyInput] = useState('');
@@ -53,7 +56,7 @@ function StripeCard({ token, isOwner }: { token: string; isOwner: boolean }) {
   const [disconnecting, setDisconnecting] = useState(false);
 
   const loadStatus = () => {
-    if (!isOwner) return;
+    if (!canManagePayments) return;
     api
       .getStripeStatus(token)
       .then(setStatus)
@@ -63,9 +66,9 @@ function StripeCard({ token, isOwner }: { token: string; isOwner: boolean }) {
   useEffect(() => {
     loadStatus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOwner]);
+  }, [canManagePayments]);
 
-  if (!isOwner) {
+  if (!canManagePayments) {
     return null;
   }
 
@@ -194,8 +197,9 @@ function StripeCard({ token, isOwner }: { token: string; isOwner: boolean }) {
 // belong here too rather than a second entry point; gate an individual card
 // by role if one ends up admin-only, don't split the page — Stripe below
 // (Payments v1, owner-only) is the first case of that carve-out.
-export default function IntegrationsSettingsPage({ token, user }: IntegrationsSettingsPageProps) {
+export default function IntegrationsSettingsPage({ token }: IntegrationsSettingsPageProps) {
   const toast = useToast();
+  const permissions = usePermissions();
   const [searchParams, setSearchParams] = useSearchParams();
   const [googleStatus, setGoogleStatus] = useState<GoogleCalendarStatus | null>(null);
   const [googleBusy, setGoogleBusy] = useState(false);
@@ -294,7 +298,7 @@ export default function IntegrationsSettingsPage({ token, user }: IntegrationsSe
         )}
       </div>
 
-      <StripeCard token={token} isOwner={user?.role === 'owner'} />
+      <StripeCard token={token} canManagePayments={permissions.has('manage_payments')} />
     </div>
   );
 }

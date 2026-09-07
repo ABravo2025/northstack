@@ -21,7 +21,7 @@ onboardingRouter.post('/api/onboarding/seed-sample-data', async (req, res) => {
     return;
   }
 
-  if (!canCreateHr(user.role)) {
+  if (!canCreateHr(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 

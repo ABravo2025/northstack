@@ -9,6 +9,7 @@ import AddPaymentMethodModal from '../components/common/AddPaymentMethodModal';
 import { api } from '../api';
 import type { PlanTier, Tenant } from '../api';
 import { daysRemainingUntil } from '../lib/trial';
+import { usePermissions } from '../contexts/PermissionsContext';
 
 interface AppLayoutProps {
   user: any;
@@ -32,6 +33,7 @@ export default function AppLayout({ user, token, tenant, onTenantUpdated, onLogo
   const [plansModalForceOpen, setPlansModalForceOpen] = useState(false);
   const [showAddPaymentMethod, setShowAddPaymentMethod] = useState(false);
   const location = useLocation();
+  const permissions = usePermissions();
 
   useEffect(() => {
     setMobileSidebarOpen(false);
@@ -41,10 +43,11 @@ export default function AppLayout({ user, token, tenant, onTenantUpdated, onLogo
     return <Navigate to="/login" replace />;
   }
 
-  // Owner-only — PATCH /api/tenants/me/plan is owner-gated, and a member who happens to log in
-  // before the owner has picked a plan shouldn't be nagged about a decision they can't make.
+  // Custom Roles Fase J — migrated off `user.role === 'owner'`. PATCH /api/tenants/me/plan is
+  // gated by canManageBilling (Fase B), not a hardcoded owner check — a member who can't manage
+  // billing shouldn't be nagged about a decision they can't make.
   const needsPlanSelection =
-    Boolean(tenant) && tenant!.status === 'trialing' && tenant!.plan === null && user.role === 'owner';
+    Boolean(tenant) && tenant!.status === 'trialing' && tenant!.plan === null && permissions.has('manage_billing');
 
   const dismissedInStorage = tenant ? localStorage.getItem(plansModalDismissedKey(tenant.id)) === '1' : false;
 
@@ -81,12 +84,12 @@ export default function AppLayout({ user, token, tenant, onTenantUpdated, onLogo
       <TopBar user={user} token={token} onLogout={onLogout} onMenuClick={() => setMobileSidebarOpen(true)} />
       <div className="app-shell">
         {location.pathname.startsWith('/settings') ? (
-          <SettingsSidebar user={user} mobileOpen={mobileSidebarOpen} onMobileClose={() => setMobileSidebarOpen(false)} />
+          <SettingsSidebar mobileOpen={mobileSidebarOpen} onMobileClose={() => setMobileSidebarOpen(false)} />
         ) : (
-          <Sidebar user={user} mobileOpen={mobileSidebarOpen} onMobileClose={() => setMobileSidebarOpen(false)} />
+          <Sidebar mobileOpen={mobileSidebarOpen} onMobileClose={() => setMobileSidebarOpen(false)} />
         )}
         <main className="app-main">
-          {tenant?.status === 'suspended' && user.role === 'owner' && (
+          {tenant?.status === 'suspended' && permissions.has('manage_billing') && (
             <div className="alert alert-error mx-4 mt-4 sm:mx-6 flex items-center justify-between gap-3">
               <span>
                 Your workspace is in view-only mode — your subscription lapsed and the grace period ended. Add a
@@ -107,7 +110,7 @@ export default function AppLayout({ user, token, tenant, onTenantUpdated, onLogo
                 Your free trial ended. You have {daysRemainingUntil(tenant.gracePeriodEndsAt)} day
                 {daysRemainingUntil(tenant.gracePeriodEndsAt) === 1 ? '' : 's'} left before your account is suspended.
               </span>
-              {user.role === 'owner' && (
+              {permissions.has('manage_billing') && (
                 <button
                   type="button"
                   className="btn btn-outline btn-sm whitespace-nowrap"

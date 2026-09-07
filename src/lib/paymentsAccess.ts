@@ -7,7 +7,7 @@ export type SessionUser = NonNullable<Awaited<ReturnType<typeof validateSession>
 // Shared by routes/payments.ts and routes/stripeIntegration.ts — both gate on the same
 // owner-only canManagePayments check, just with a message tailored to what's being guarded.
 export function requirePaymentsAccess(user: SessionUser, res: express.Response, message: string): boolean {
-  if (!canManagePayments(user.role)) {
+  if (!canManagePayments(user.roleContext)) {
     res.status(403).json({ error: message });
     return false;
   }

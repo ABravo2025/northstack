@@ -18,9 +18,10 @@ import type { TagAssignmentLite } from '../../api';
 
 interface CompanyDetailModalProps {
   company: Company;
-  // Payments v1 (spec-payments-v1.md) — gates the "Payments" section below; owner-only, same as
-  // the rest of Payments v1 (canManagePayments on the backend).
-  isOwner: boolean;
+  // Payments v1 (spec-payments-v1.md) — gates the "Payments" section below. Custom Roles Fase J:
+  // renamed from `isOwner` to match what it's actually checking — canManagePayments on the
+  // backend, owner-only by default but a real toggleable permission a tenant could grant.
+  canManagePayments: boolean;
   // Full tenant list — used to compute direct children and the parent-company
   // selector's exclusion set (self + descendants) client-side, same pattern
   // as companyContacts/companyOpportunities below. Not a new endpoint: the
@@ -47,7 +48,7 @@ interface CompanyDetailModalProps {
 
 export default function CompanyDetailModal({
   company,
-  isOwner,
+  canManagePayments,
   companies,
   token,
   tenantUsers,
@@ -322,7 +323,7 @@ export default function CompanyDetailModal({
             </div>
           </div>
 
-          {isOwner && (
+          {canManagePayments && (
             <div className="field-group">
               <h4 className="field-group-title">Payments</h4>
               <div className="field-group-body">

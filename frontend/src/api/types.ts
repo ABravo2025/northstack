@@ -1,3 +1,13 @@
+// Custom Roles Fase G — mirrors the backend's SerializedRoleContext (roleService.ts), sent on
+// GET /api/auth/me. Consumed by PermissionsContext, never read from directly by a page.
+export interface PermissionsPayload {
+  id: string;
+  name: string;
+  isOwner: boolean;
+  permissions: string[];
+  hiddenFields: Record<string, string[]>;
+}
+
 export interface AuthResponse {
   user: {
     id: string;
@@ -101,6 +111,22 @@ export interface EmployeeBirthday {
   firstName: string;
   lastName: string;
   birthdate: string;
+}
+
+// Custom Roles Fase E — the "directory tier" (docs/general/database-schema.md's Fase E section):
+// basic identity fields for every employee, unaffected by the viewer's HR scope. Feeds pickers
+// (manager selection, Task "who is this for", termination reassignment) that need to point at
+// anyone in the company. Deliberately excludes every PII/contract field on `Employee` above.
+export interface EmployeeDirectoryEntry {
+  id: string;
+  firstName: string;
+  lastName: string;
+  departmentId: string | null;
+  departmentDefn: { id: string; name: string } | null;
+  jobTitleId: string | null;
+  jobTitleDefn: { id: string; name: string } | null;
+  managerId: string | null;
+  manager: { id: string; firstName: string; lastName: string } | null;
 }
 
 export interface EmployeeTermination {
@@ -577,6 +603,28 @@ export interface CustomFieldValue {
   value: string;
 }
 
+export interface Role {
+  id: string;
+  name: string;
+  isOwner: boolean;
+  isEditable: boolean;
+  permissions: string[];
+  hiddenFields: Record<string, string[]>;
+}
+
+export interface RestrictableField {
+  key: string;
+  label: string;
+}
+
+// Custom Roles Fase I — {id, name} only, for role pickers; excludes Owner. See
+// roleManagementService.ts's listAssignableRoles for why this is separate from the full `Role`
+// shape above (that one requires owner-level access; this one doesn't).
+export interface AssignableRole {
+  id: string;
+  name: string;
+}
+
 export interface TenantUser {
   id: string;
   firstName: string;
@@ -584,6 +632,11 @@ export interface TenantUser {
   email: string;
   phone: string;
   role: string;
+  // Custom Roles Fase I — present once a tenant assigns a role via roleId; `roleRef.name` is the
+  // real display name and should be preferred over `role` (the legacy enum, left at a 'member'
+  // placeholder for any genuinely custom role assignment).
+  roleId?: string | null;
+  roleRef?: { name: string } | null;
   status: string;
 }
 
@@ -591,6 +644,7 @@ export interface TenantInvitation {
   id: string;
   email: string;
   role: string;
+  roleRef?: { name: string } | null;
   status: string;
   token: string;
   createdAt: string;

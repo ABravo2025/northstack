@@ -13,7 +13,7 @@ publicFormsRouter.get('/api/public-forms', async (req, res) => {
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -30,7 +30,7 @@ publicFormsRouter.post('/api/public-forms', async (req, res) => {
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -80,7 +80,7 @@ publicFormsRouter.patch('/api/public-forms/:formId', async (req, res) => {
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 

@@ -69,7 +69,11 @@ export default function NewTaskFromCalendarPopover({
         const companies = await api.listCompanies(token);
         setEntityOptions(companies.map((c: any) => ({ value: c.id, label: c.name })));
       } else if (value === 'employee') {
-        const employees = await api.listEmployees(token);
+        // Custom Roles Fase E — the unscoped directory, not the scoped listEmployees: this picker
+        // is "which coworker is this Task about," not an HR view, so it must show everyone
+        // company-wide regardless of the current user's own HR scope (or whether they have any HR
+        // permission at all).
+        const employees = await api.listEmployeeDirectory(token);
         setEntityOptions(employees.map((e: any) => ({ value: e.id, label: `${e.firstName} ${e.lastName}` })));
       }
     } catch (error) {

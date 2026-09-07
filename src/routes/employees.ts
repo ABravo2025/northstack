@@ -12,7 +12,9 @@ import {
   deleteEmployee,
   findEmployeeById,
   listEmployeeBirthdaysForCalendar,
+  listEmployeeDirectory,
   listEmployees,
+  resolveVisibleEmployeeIds,
   updateEmployee,
   wouldCreateManagerCycle,
 } from '../modules/hr/employeeService.js';
@@ -35,14 +37,18 @@ import {
   resendEmployeeContract,
 } from '../modules/hr/contractPdfService.js';
 import {
-  canCreateHr,
+  canEditEmployeeCustomFields,
   canInviteUsers,
   canManageCustomFields,
+  canManageEmployee,
   canManagePayroll,
-  canViewHr,
+  canViewEmployee,
+  canViewEmployeeCustomFields,
 } from '../modules/auth/permissionService.js';
+import { redactEntityFields, redactEntityListFields } from '../modules/auth/fieldVisibilityService.js';
 import { exportEmployeesToCsv, getEmployeesCsvTemplate, importEmployeesFromCsv } from '../modules/csv/csvService.js';
 import { validateSession } from '../lib/httpAuth.js';
+import type { AuthenticatedUser } from '../modules/auth/authService.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 
 const VALID_CONTRACT_TYPES = ['part_time', 'full_time'];
@@ -50,18 +56,48 @@ const VALID_PERSON_TYPES = ['profile', 'contractor', 'employee'];
 
 export const employeesRouter = createAsyncRouter();
 
+// Custom Roles Fase E — the detail/edit/delete counterpart to the list route's scope filter above:
+// an Employee outside the acting user's scope should behave exactly like one in a different tenant
+// (404, never 403 — see the plan's decision 5, same criterion as an ownership check). Only checked
+// for detail/PATCH/DELETE, the 3 routes that answer "can this actor touch this specific employee" —
+// deliberately not extended to every sub-resource route (compensation, contract PDF, time-off
+// policies, termination, etc.): those are gated by canManagePayroll/canManageCustomFields, tiers
+// that are owner-only or pre-existing-quirky in practice today and out of scope for this pass.
+async function isEmployeeInScope(user: AuthenticatedUser, employeeId: string): Promise<boolean> {
+  const visibleIds = await resolveVisibleEmployeeIds(user.tenantId!, user.roleContext, user.id);
+  return visibleIds === null || visibleIds.has(employeeId);
+}
+
 employeesRouter.get('/api/hr/employees', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) {
     return;
   }
 
-  if (!canViewHr(user.role)) {
+  if (!canViewEmployee(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  const employees = await listEmployees(user.tenantId);
-  return res.json(employees);
+  const visibleIds = await resolveVisibleEmployeeIds(user.tenantId!, user.roleContext, user.id);
+  const employees = await listEmployees(user.tenantId, visibleIds);
+  return res.json(redactEntityListFields(employees, 'employee', user.roleContext));
+});
+
+// Custom Roles Fase E, decision 6 — the "directory tier": basic identity fields (name, department,
+// job title, manager) for EVERY employee in the tenant, deliberately NOT filtered by HR scope and
+// NOT gated by canViewEmployee. Feeds pickers that need to point at anyone in the company (manager
+// selection, the Task "who is this for" entity picker, termination reassignment) regardless of the
+// caller's own scope or HR permissions — a Member with zero HR access still needs to pick a
+// coworker's name for a Task. Never carries PII; the real GET /api/hr/employees (above) is where
+// scope + field-level restriction apply.
+employeesRouter.get('/api/hr/employees/directory', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  const directory = await listEmployeeDirectory(user.tenantId);
+  return res.json(directory);
 });
 
 employeesRouter.get('/api/hr/employees/birthdays', async (req, res) => {
@@ -70,7 +106,7 @@ employeesRouter.get('/api/hr/employees/birthdays', async (req, res) => {
     return;
   }
 
-  if (!canViewHr(user.role)) {
+  if (!canViewEmployee(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -84,7 +120,10 @@ employeesRouter.get('/api/hr/employees/export/csv', async (req, res) => {
     return;
   }
 
-  if (!canViewHr(user.role)) {
+  // Fase B (Custom Roles) — tied to Payroll, not the base view_employee permission: the export
+  // contains a full HR extract (compensation-adjacent PII included) sensitive enough to warrant
+  // the same bar as Payroll itself, not just "can see the employee list."
+  if (!canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -100,7 +139,8 @@ employeesRouter.post('/api/hr/employees/import/csv', async (req, res) => {
     return;
   }
 
-  if (!canCreateHr(user.role)) {
+  // Fase B (Custom Roles) — same reasoning as the export route above.
+  if (!canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -118,7 +158,8 @@ employeesRouter.get('/api/hr/employees/template/csv', async (req, res) => {
     return;
   }
 
-  if (!canCreateHr(user.role)) {
+  // Fase B (Custom Roles) — same reasoning as the export route above.
+  if (!canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -134,7 +175,7 @@ employeesRouter.post('/api/hr/employees', async (req, res) => {
     return;
   }
 
-  if (!canCreateHr(user.role)) {
+  if (!canManageEmployee(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -168,7 +209,7 @@ employeesRouter.post('/api/hr/employees', async (req, res) => {
   }
 
   const employee = await createEmployee({ ...req.body, tenantId: user.tenantId! }, user.id);
-  return res.status(201).json(employee);
+  return res.status(201).json(redactEntityFields(employee, 'employee', user.roleContext));
 });
 
 employeesRouter.get('/api/hr/employees/:employeeId', async (req, res) => {
@@ -177,16 +218,16 @@ employeesRouter.get('/api/hr/employees/:employeeId', async (req, res) => {
     return;
   }
 
-  if (!canViewHr(user.role)) {
+  if (!canViewEmployee(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
   const employee = await findEmployeeById(req.params.employeeId);
-  if (!employee || employee.tenantId !== user.tenantId) {
+  if (!employee || employee.tenantId !== user.tenantId || !(await isEmployeeInScope(user, employee.id))) {
     return res.status(404).json({ error: 'Employee not found' });
   }
 
-  return res.json(employee);
+  return res.json(redactEntityFields(employee, 'employee', user.roleContext));
 });
 
 employeesRouter.patch('/api/hr/employees/:employeeId', async (req, res) => {
@@ -195,7 +236,7 @@ employeesRouter.patch('/api/hr/employees/:employeeId', async (req, res) => {
     return;
   }
 
-  if (!canCreateHr(user.role)) {
+  if (!canManageEmployee(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -208,7 +249,7 @@ employeesRouter.patch('/api/hr/employees/:employeeId', async (req, res) => {
   }
 
   const employee = await findEmployeeById(req.params.employeeId);
-  if (!employee || employee.tenantId !== user.tenantId) {
+  if (!employee || employee.tenantId !== user.tenantId || !(await isEmployeeInScope(user, employee.id))) {
     return res.status(404).json({ error: 'Employee not found' });
   }
 
@@ -256,7 +297,7 @@ employeesRouter.patch('/api/hr/employees/:employeeId', async (req, res) => {
   }
 
   const updated = await updateEmployee(req.params.employeeId, req.body, user.id);
-  return res.json(updated);
+  return res.json(redactEntityFields(updated, 'employee', user.roleContext));
 });
 
 employeesRouter.delete('/api/hr/employees/:employeeId', async (req, res) => {
@@ -265,12 +306,12 @@ employeesRouter.delete('/api/hr/employees/:employeeId', async (req, res) => {
     return;
   }
 
-  if (!canCreateHr(user.role)) {
+  if (!canManageEmployee(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
   const employee = await findEmployeeById(req.params.employeeId);
-  if (!employee || employee.tenantId !== user.tenantId) {
+  if (!employee || employee.tenantId !== user.tenantId || !(await isEmployeeInScope(user, employee.id))) {
     return res.status(404).json({ error: 'Employee not found' });
   }
 
@@ -286,7 +327,7 @@ employeesRouter.get('/api/hr/employees/:employeeId/termination', async (req, res
   if (!user) {
     return;
   }
-  if (!canCreateHr(user.role)) {
+  if (!canManageEmployee(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -310,7 +351,7 @@ employeesRouter.post('/api/hr/employees/:employeeId/termination', async (req, re
   if (!user) {
     return;
   }
-  if (!canCreateHr(user.role)) {
+  if (!canManageEmployee(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -325,7 +366,7 @@ employeesRouter.post('/api/hr/employees/:employeeId/termination', async (req, re
 
   // Final payment touches Payroll (Unit 18/19's off-cycle entries), which is owner-only visibility
   // everywhere else in the app — enforced here too, not just hidden client-side.
-  if (req.body?.finalPayment && !canManagePayroll(user.role)) {
+  if (req.body?.finalPayment && !canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Only the workspace owner can include a final payment' });
   }
 
@@ -350,7 +391,7 @@ employeesRouter.post('/api/hr/employee-terminations/:terminationId/cancel', asyn
   if (!user) {
     return;
   }
-  if (!canCreateHr(user.role)) {
+  if (!canManageEmployee(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -367,7 +408,7 @@ employeesRouter.post('/api/hr/employees/:employeeId/invite', async (req, res) =>
     return;
   }
 
-  if (!canInviteUsers(user.role)) {
+  if (!canInviteUsers(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -385,11 +426,15 @@ employeesRouter.post('/api/hr/employees/:employeeId/invite', async (req, res) =>
     return res.status(400).json({ error: 'Cannot invite a terminated employee' });
   }
 
+  // Optional — lets the inviter pick a real tenant role (Custom Roles Fase I/J) instead of always
+  // defaulting to Member, the same as CompanyUsersPage.tsx's "Invite Someone" modal.
+  // createInvitation validates it belongs to this tenant and isn't Owner.
   const result = await createInvitation({
     tenantId: user.tenantId!,
     invitedByUserId: user.id,
     email: employee.email,
     role: 'member',
+    roleId: typeof req.body?.roleId === 'string' ? req.body.roleId : undefined,
     employeeId: employee.id,
   });
 
@@ -405,7 +450,7 @@ employeesRouter.get('/api/hr/employees/:employeeId/compensation', async (req, re
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.role)) {
+  if (!canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -421,7 +466,7 @@ employeesRouter.get('/api/hr/employees/:employeeId/payment-history', async (req,
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.role)) {
+  if (!canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -439,7 +484,7 @@ employeesRouter.get('/api/hr/employees/:employeeId/contract-pdf', async (req, re
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.role)) {
+  if (!canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -457,7 +502,7 @@ employeesRouter.post('/api/hr/employees/:employeeId/resend-contract', async (req
   if (!user) {
     return;
   }
-  if (!canManagePayroll(user.role)) {
+  if (!canManagePayroll(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -489,7 +534,7 @@ employeesRouter.post('/api/hr/employees/:employeeId/time-off-policies', async (r
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -512,7 +557,7 @@ employeesRouter.delete('/api/hr/employees/:employeeId/time-off-policies/:policyI
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -541,7 +586,7 @@ employeesRouter.get('/api/hr/employees/:employeeId/time-off-balance', async (req
   }
 
   const isSelf = employee.userId === user.id;
-  if (!isSelf && !canManageCustomFields(user.role)) {
+  if (!isSelf && !canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -555,7 +600,7 @@ employeesRouter.post('/api/hr/employees/:employeeId/custom-fields', async (req, 
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canEditEmployeeCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -602,7 +647,7 @@ employeesRouter.patch('/api/hr/employees/:employeeId/custom-fields/:valueId', as
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canEditEmployeeCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -649,7 +694,7 @@ employeesRouter.delete('/api/hr/employees/:employeeId/custom-fields/:valueId', a
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canEditEmployeeCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -692,6 +737,10 @@ employeesRouter.get('/api/hr/employees/:employeeId/custom-fields', async (req, r
   const user = await validateSession(req, res);
   if (!user) {
     return;
+  }
+
+  if (!canViewEmployeeCustomFields(user.roleContext)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
   const employee = await findEmployeeById(req.params.employeeId);

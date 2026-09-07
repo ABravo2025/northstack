@@ -26,7 +26,7 @@ catalogsRouter.post('/api/hr/custom-fields', async (req, res) => {
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -51,7 +51,7 @@ catalogsRouter.patch('/api/hr/custom-fields/:definitionId', async (req, res) => 
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -108,7 +108,7 @@ catalogsRouter.post('/api/status-definitions', async (req, res) => {
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -138,7 +138,7 @@ catalogsRouter.patch('/api/status-definitions/:definitionId', async (req, res) =
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -183,7 +183,7 @@ catalogsRouter.post('/api/field-catalog', async (req, res) => {
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -215,7 +215,7 @@ catalogsRouter.patch('/api/field-catalog/:definitionId', async (req, res) => {
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 

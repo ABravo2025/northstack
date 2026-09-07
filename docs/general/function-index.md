@@ -115,7 +115,7 @@ Wrapper propio (`fetch` + `crypto` nativos, sin SDK) contra la API de Stripe —
 - **isPhoneValid(phone)** — validación de teléfono.
 - **registerUser(input)** — alta de usuario suelto (no tenant nuevo — ver `tenantService.registerTenantWithOwner` para eso).
 - **loginUser(input)** — login, crea sesión.
-- **authenticateToken(token)** — resuelve un token de sesión a su `User`, con `tenant: {id, status} | null` incluido (2026-08-18) para que `validateSession` pueda gatear por status de tenant sin un round-trip extra.
+- **authenticateToken(token)** — resuelve un token de sesión a su `User`, con `tenant: {id, status} | null` incluido (2026-08-18) para que `validateSession` pueda gatear por status de tenant sin un round-trip extra, y desde 2026-09 con `roleContext: RoleContext` (ver `roleService.ts` abajo) resuelto en el mismo call — todavía sin consumidores reales (Fase A del sistema de Custom Roles), así que se descarta explícitamente antes de `sanitizeUser` en `GET /api/auth/me` (`routes/auth.ts`) para no serializar un `Set`/`Map` como `{}` en la respuesta.
 - **logoutUser(token)** — revoca una sesión.
 - **updateOwnProfile(userId, input)** / **changeOwnPassword(...)** — auto-gestión del propio usuario.
 - **requestPasswordReset(email)** (2026-08-09) — nunca revela si el email existe (misma respuesta genérica siempre); si existe, invalida cualquier `PasswordResetToken` sin usar de esa persona y crea uno nuevo (1h de expiración), dispara `sendPasswordResetEmail` best-effort.
@@ -123,8 +123,154 @@ Wrapper propio (`fetch` + `crypto` nativos, sin SDK) contra la API de Stripe —
 - **resetPassword(token, newPassword)** — valida el token (mismo chequeo de 3 pasos que `validatePasswordResetToken`) + `isPasswordValid`, y en una transacción: actualiza `passwordHash`, marca el token usado, **borra todas** las sesiones del usuario (a diferencia de `changeOwnPassword`, que preserva la sesión actual) y crea una sesión nueva.
 
 ### `src/modules/auth/permissionService.ts`
-Todas son `(role: UserRole) => boolean`, la fuente de verdad de qué puede hacer cada rol:
-**canViewHr**, **canCreateHr**, **canManageCustomFields**, **canInviteUsers**, **canManageUsers**, **canManagePayroll** (owner-only, a diferencia del resto — ver Payroll en `docs/spec-payroll.md`), **canManageBilling** (owner-only, mismo criterio que Payroll — Subscription Plans, `docs/spec-subscription-plans.md`), **canManagePayments** (owner-only, 2026-08-26 — Payments v1, `docs/tareas/specpaymentsv1.md`: conectar el Stripe del tenant y ver pagos de sus Companies), **canViewActivityLog** (owner/admin, 2026-08-30 — Activity Log, `docs/general/spec-activity-log.md`: ver el feed tenant-wide de Settings; el tab del modal por registro no tiene gate propio).
+Todas son `(role: RoleContext) => boolean` (Fase B, Custom Roles — antes tomaban el enum `UserRole`
+directo; `role.isOwner` cortocircuita cualquier función a `true`, un owner nunca tiene filas de
+permiso propias). La fuente de verdad de qué puede hacer cada rol:
+**canViewHr**/**canCreateHr** (legacy — solo `Client`/onboarding, ver más abajo),
+**canViewEmployee**/**canManageEmployee**, **canViewCompany**/**canManageCompany**,
+**canViewContact**/**canManageContact** (Fase B: reemplazan el `canViewHr`/`canCreateHr` que antes
+gateaba Employee/Company/Contact/Opportunity todos juntos — separados para que field-level/scope
+por entidad tengan sentido), **canViewOpportunity** (derivado, `canViewCompany && canViewContact`
+— nunca un permiso propio: quien no puede ver Contacts o Companies no ve nada de Sales),
+**canManageOpportunity** (permiso propio + exige `canViewOpportunity` como prerrequisito),
+**canManageCustomFields**, **canInviteUsers**, **canManageUsers**, **canManagePayroll** (owner-only,
+a diferencia del resto — ver Payroll en `docs/spec-payroll.md`), **canManageBilling** (owner-only,
+mismo criterio que Payroll — Subscription Plans, `docs/spec-subscription-plans.md`),
+**canManagePayments** (owner-only, 2026-08-26 — Payments v1, `docs/tareas/specpaymentsv1.md`:
+conectar el Stripe del tenant y ver pagos de sus Companies), **canViewSalesLeaderboard** (owner-only),
+**canViewActivityLog** (owner/admin, 2026-08-30 — Activity Log, `docs/general/spec-activity-log.md`:
+ver el feed tenant-wide de Settings; el tab del modal por registro no tiene gate propio),
+**canManageTenantSettings** (Fase B, reemplaza el inline check de `PATCH /api/tenants/current` —
+moneda del tenant), **canManageSharedViews** (Fase B, reemplaza el inline `canManageShared` de
+`savedViewService.ts` — crear una Saved View compartida), **canDecideTimeOff** (Fase B, el
+componente por-rol de aprobar/rechazar Time Off — `timeOffRequestService.ts` sigue OR-eándolo con
+"es el manager asignado", una regla por relación que no se reemplaza por un permiso),
+**canViewEmployeeCustomFields**/**canEditEmployeeCustomFields** (Fase D, 2026-09 — el bundle de
+custom fields de Employee: `canViewEmployee`/`canManageEmployee` **compuesto con**
+`VIEW_EMPLOYEE_CUSTOM_FIELDS`/`EDIT_EMPLOYEE_CUSTOM_FIELDS`, no un reemplazo — perder acceso al
+Employee en sí tapa también sus custom fields aunque el bundle siga prendido. Gatean los 4
+endpoints `.../custom-fields` de `routes/employees.ts`, que antes usaban `canManageCustomFields`
+— el permiso de SCHEMA de custom fields, no el de valores por-empleado — y en el caso del `GET` de
+listar, ningún chequeo en absoluto).
+
+### `src/modules/auth/roleService.ts` (Custom Roles, `docs/tareas/backlog.md` "Sistema de roles custom", Fase A-B, 2026-09)
+- **seedDefaultRolesForTenant(tx, tenantId)** — crea los 3 roles semilla (Owner/Admin/Member) de un
+  tenant usando `ADMIN_SEED_PERMISSIONS`/`MEMBER_SEED_PERMISSIONS` (listas exportadas, fuente única
+  compartida con el backfill de Fase B — reproducen el comportamiento actual exacto). Idempotente.
+  Llamada desde `registerTenantWithOwner` (tenant nuevo) y `scripts/backfill-custom-roles.ts`
+  (tenants existentes).
+- **loadRoleContext(roleId)** / **resolveRoleContextForUser({roleId, role, tenantId})** — resuelven
+  un `RoleContext` real desde `Role`+`RoleModulePermission`+`RoleFieldRestriction`; el segundo
+  agrega 2 fallbacks (Role semilla por nombre, y por último `legacyRoleContext` sin DB) para que
+  nada se rompa antes de que el backfill corra en un ambiente dado.
+- **findSeedRoleId(tenantId, userRole)** (Fase B) — resuelve el id del Role semilla de un tenant
+  que corresponde a un valor del enum legacy `UserRole`. Usado por `tenantUserService.ts` e
+  `invitationService.ts` para mantener `User.roleId`/`Invitation.roleId` sincronizados cada vez que
+  todavía escriben `role` (el enum) directamente — hasta que Fase I los rediseñe para aceptar un
+  `roleId` de cualquier rol custom, no solo los 3 semilla.
+- **getEmployeeScope(role)** — lee cuál de los 3 permisos `view_employee_scope:*` tiene el rol
+  (`self`/`department`/`all`/`none`) — todavía sin ningún consumidor real (Fase E la aplica a
+  `listEmployees`).
+- **PERMISSION_KEYS** — allowlist completo de strings de permiso válidos, fuente de verdad para
+  cuando exista un endpoint de edición de roles (Fase H). **ADMIN_SEED_PERMISSIONS**/
+  **MEMBER_SEED_PERMISSIONS** — qué permisos concretos arma cada uno, importadas también por
+  `scripts/backfill-fase-b-permissions.ts` para no duplicar la lista.
+- **serializeRoleContext(role)** (Fase G, 2026-09) — convierte `RoleContext` (con `Set`/`Map`
+  internos, no serializables) a un objeto plano `{id, name, isOwner, permissions: string[],
+  hiddenFields: Record<string, string[]>}`, mismo shape que `RoleSummary` de
+  `roleManagementService.ts`. Usado por `GET /api/auth/me` (`routes/auth.ts`) para alimentar el
+  `PermissionsContext` del frontend.
+- **TOGGLEABLE_PERMISSION_KEYS** (Fase B2, ampliado Fase D) — subconjunto de `PERMISSION_KEYS`
+  expuesto en la UI de Settings → Roles & Permissions (excluye el legacy `view_hr`/`create_hr` y el
+  scope de Employee — `view_employee_scope:*`, sin enforcement todavía, Fase E — pero desde la Fase
+  D SÍ incluye `view_employee_custom_fields`/`edit_employee_custom_fields`, ya que
+  `canViewEmployeeCustomFields`/`canEditEmployeeCustomFields` los hacen cumplir de verdad).
+  **PERMISSION_PREREQUISITES**/**DEPENDENT_PERMISSIONS** — la regla de que `manage_opportunity`
+  exige `view_company`+`view_contact` ya concedidos (1 nivel), y desde la Fase D también que
+  `view_employee_custom_fields` exige `view_employee` y `edit_employee_custom_fields` exige
+  `view_employee_custom_fields`+`manage_employee` (2 niveles, la primera cadena de más de 1 nivel
+  del sistema). `DEPENDENT_PERMISSIONS` es la inversa, derivada automáticamente de
+  `PERMISSION_PREREQUISITES` — el consumidor (`roleManagementService.ts`'s `setRolePermission`)
+  camina este mapa a punto fijo (BFS) al revocar, no solo un salto, para que una cadena de 2+
+  niveles cascadee completa.
+
+### `src/modules/auth/fieldVisibilityService.ts` (Custom Roles Fase C, 2026-09)
+- **isFieldVisible(role, entityType, fieldKey)** — `role.isOwner` bypasea todo; si no, exige el
+  permiso base del módulo (`MODULE_GATE_BY_ENTITY_TYPE`: employee→canViewEmployee,
+  company→canViewCompany, contact→canViewContact, opportunity→canViewOpportunity) antes de mirar
+  `role.hiddenFieldsByEntity` — un rol sin acceso al módulo entero no ve ningún campo, restringido
+  o no.
+- **redactEntityFields(entity, entityType, role)** / **redactEntityListFields(entities, ...)** —
+  nullea (no borra la clave) cada campo restringido, y también nullea el objeto de relación
+  resuelto que lo acompaña si existe en la misma respuesta (ej. `Company.sizeId` oculto también
+  nullea `sizeDefn` — de lo contrario el valor legible seguiría filtrándose por ahí). Llamado en
+  cada ruta de Employee/Company/Contact/Opportunity, justo antes de `res.json()`, nunca dentro del
+  service (mismo criterio que `tenantMetrics.ts` vaciando el bloque `payroll`).
+- **RESTRICTABLE_FIELDS_BY_ENTITY_TYPE** — el catálogo de campos restringibles por entidad,
+  derivado de `fieldConfigs/index.ts` (Activity Log) menos el/los campo(s) de identidad de cada una
+  (`firstName`/`lastName` en Employee/Contact, `name` en Company/Opportunity — nunca restringibles,
+  ocultar el nombre dejaría filas/búsquedas sin nada que mostrar). Fuente única compartida con
+  `roleManagementService.ts` (valida un `fieldKey` entrante) y el endpoint
+  `GET /api/roles/field-catalog` que consume la UI.
+
+### `src/modules/activity/fieldConfigs/index.ts` (Custom Roles Fase C, 2026-09)
+- **ACTIVITY_FIELD_CONFIGS_BY_ENTITY_TYPE** — agregador nuevo (no existía antes) de los
+  `*FieldConfig` de Activity Log para Employee/Company/Contact/Opportunity — reusado tal cual como
+  el catálogo de "qué campos tiene esta entidad" en vez de inventar uno paralelo. Solo estas 4
+  entidades están registradas (las que field-level restriction cubre hoy), no las 23 restantes de
+  `ActivityEntityType`.
+
+### `src/modules/auth/roleManagementService.ts` (Custom Roles Fase B2-C, 2026-09)
+- **listRolesForTenant(tenantId)** — todos los roles del tenant (semilla + custom) con sus
+  permisos y `hiddenFields` (campos fijos restringidos, por entidad), para la UI de Settings →
+  Roles & Permissions.
+- **setRoleFieldRestriction(tenantId, roleId, entityType, fieldKey, hidden)** (Fase C) — la
+  contraparte de campo de `setRolePermission`, con polaridad invertida:
+  `RoleFieldRestriction` es una denylist (una fila = oculto), así que `hidden: true` crea la fila y
+  `hidden: false` la borra. Valida `fieldKey` contra `RESTRICTABLE_FIELDS_BY_ENTITY_TYPE`.
+- **setRolePermission(tenantId, roleId, permission, granted)** — valida contra
+  `TOGGLEABLE_PERMISSION_KEYS`, rechaza tocar el rol Owner, aplica `PERMISSION_PREREQUISITES`/
+  `DEPENDENT_PERMISSIONS` (bloquea conceder sin los prerrequisitos, cascadea al revocar). Gateado
+  owner-only en la ruta (`src/routes/roles.ts`), no por un permiso nombrado — reconfigurar lo que
+  puede hacer un rol es en sí una decisión de ownership, un rol nunca debería poder ampliar su
+  propia autoridad a través de un permiso que edita permisos.
+- **listAssignableRoles(tenantId)** (Custom Roles Fase I, 2026-09) — `{id, name}[]` de cada rol
+  no-Owner del tenant, deliberadamente más liviano que `listRolesForTenant` y NO owner-only server
+  side (`GET /api/roles/assignable`, gateado por `canManageUsers || canInviteUsers`) — alimenta el
+  selector de rol de `CompanyUsersPage.tsx` sin exigir acceso de nivel owner solo para asignar un
+  rol ya existente.
+- **createRole(tenantId, name, duplicateFromRoleId?)** — crea un rol custom real, persistido (no
+  una vista previa). Rechaza el nombre "owner" (case-insensitive) y nombres duplicados dentro del
+  tenant. `duplicateFromRoleId` opcional copia los permisos de un rol existente como punto de
+  partida — si la fuente es Owner (que no tiene filas de permiso propias, bypasea todo vía
+  `isOwner`), copia explícitamente todo `TOGGLEABLE_PERMISSION_KEYS` en vez de producir un rol
+  vacío con nombre engañoso.
+- **renameRole(tenantId, roleId, name)** / **deleteRole(tenantId, roleId)** — ambos rechazan tocar
+  el rol Owner o uno con `isEditable: false`. `deleteRole` bloquea la operación por completo (no
+  reasigna en silencio) si todavía hay algún `User`/`Invitation` pendiente apuntando a ese rol —
+  a quién reasignar es una decisión de producto que no debería tomarse implícitamente dentro de un
+  delete.
+
+### `src/modules/activity/activityVisibilityService.ts` (Custom Roles Fase F, 2026-09)
+Lógica pura de visibilidad para el Activity Log, mismo patrón que `fieldVisibilityService.ts` de la
+Fase C — mantiene `activityLogService.ts` desacoplado del sistema de roles.
+- **canViewEntryModule(role, entityType)** — gate a nivel de módulo para el feed tenant-wide: una
+  entrada cuyo `entityType` pertenece a un módulo que el rol no puede ver (Payroll, Stripe,
+  Billing, gestión de usuarios, etc. — ver el mapa `ACTIVITY_MODULE_GATE`) se excluye del feed por
+  completo. Los tipos sin permiso propio (Task/Note/Tag/SavedView/Time Off/Google Calendar
+  Connection) quedan sin gate.
+- **isChangeVisible(role, entityType, change)** — gate a nivel de campo: usa `isFieldVisible`
+  (Fase C) para las claves fijas de los 4 tipos Tier 1, y `canViewEmployeeCustomFields` (Fase D)
+  específicamente para cambios de custom fields en Employee (detectados porque su `field` es un id
+  de `CustomFieldDefinition`, nunca una clave fija del `ActivityFieldConfigMap`).
+- **filterActivityEntryForRole(entry, role)** — parsea `changes` y lo filtra con `isChangeVisible`;
+  si el filtrado saca algo, recalcula `summary` con `summarizeChanges` sobre lo que sí quedó visible
+  (nunca deja el `summary` original, que fue calculado sobre el set completo sin filtrar y podría
+  nombrar el campo oculto por sí solo).
+- **canAccessEntityActivity(user, entityType, entityId)** — cierra un gap real: `GET /api/activity`
+  no tenía ningún chequeo de permiso/scope más allá de pertenencia al tenant. Replica la regla de
+  acceso real de cada entidad: Employee exige `canViewEmployee` + estar en scope (Fase E, 404 si
+  no), Company/Contact/Opportunity exigen su `canView*` propio (403 si no).
 
 ### `src/modules/activity/activityLogService.ts` (Activity Log, `docs/general/spec-activity-log.md`, 2026-08-30)
 Mecanismo genérico reusado por cada módulo que registra actividad — un solo punto de escritura en vez de que cada service arme su propio formato de diff/summary.
@@ -201,9 +347,12 @@ Export/template always include every active custom field of the tenant for that 
 - **findCompensationById(id)**.
 
 ### `src/modules/hr/employeeService.ts`
-- **createEmployee(input, changedByUserId?)**, **listEmployees(tenantId)** (suma `contractStatus` por fila — Unidad 11), **findEmployeeById(id)**, **findEmployeeByUserId(userId)**, **updateEmployee(id, input, changedByUserId)**, **deleteEmployee(id, changedByUserId)**. Los 3 de escritura registran Activity Log (`docs/general/spec-activity-log.md`, 2026-08-30) vía `employeeActivityFieldConfig` — `changedByUserId` opcional solo en `createEmployee`: solo la ruta directa (`POST /api/hr/employees`) lo pasa hoy, así que solo esa genera entrada; CSV import, onboarding seed data y `publicFormService.ts` la llaman sin ese argumento a propósito (scope cut de Unidad 2, ver el spec) y no generan ninguna.
+- **createEmployee(input, changedByUserId?)**, **listEmployees(tenantId, visibleIds?)** (suma `contractStatus` por fila — Unidad 11; `visibleIds` es Fase C, Custom Roles — `Set<string> | null | undefined`, filtra el `where` a esos ids cuando se pasa, sin filtrar cuando es `null`/`undefined`), **findEmployeeById(id)**, **findEmployeeByUserId(userId)**, **updateEmployee(id, input, changedByUserId)**, **deleteEmployee(id, changedByUserId)**. Los 3 de escritura registran Activity Log (`docs/general/spec-activity-log.md`, 2026-08-30) vía `employeeActivityFieldConfig` — `changedByUserId` opcional solo en `createEmployee`: solo la ruta directa (`POST /api/hr/employees`) lo pasa hoy, así que solo esa genera entrada; CSV import, onboarding seed data y `publicFormService.ts` la llaman sin ese argumento a propósito (scope cut de Unidad 2, ver el spec) y no generan ninguna.
 - **wouldCreateManagerCycle(...)** — camina la cadena de `managerId` hacia arriba para detectar un ciclo antes de asignar un manager nuevo.
-- **listEmployeeBirthdaysForCalendar(tenantId)** (2026-08-22) — todo empleado con `birthdate` no nulo, para el calendario del Overview. Mismo criterio "devolver todo, filtrar en el frontend" que `listTasksForCalendar`/`listTimeOffRequestsForCalendar`.
+- **getManagedEmployeeIds(tenantId, employeeId)** (Custom Roles Fase E, 2026-09) — resuelve el scope `department`: unión de pares con el mismo `departmentId` MÁS toda la cadena de reportes directos e indirectos (BFS en memoria sobre `managerId`, el reverso de `wouldCreateManagerCycle` — esa camina hacia la raíz, esta hacia las hojas). Una sola query trae `{id, managerId, departmentId}` de todo el tenant.
+- **resolveVisibleEmployeeIds(tenantId, role, actingUserId)** (Fase E) — punto de entrada único para "qué Employees puede ver este actor": `null` para scope `all` (sin filtrar), un `Set` concreto para `self`/`department`/`none`. Usado por el `GET` de lista (filtra) y por `routes/employees.ts`'s `isEmployeeInScope` (chequeo de membership para detalle/PATCH/DELETE, 404 si no está). Un usuario sin `Employee` propio vinculado resuelve a un `Set` vacío para `self`/`department`, no a un error.
+- **listEmployeeDirectory(tenantId)** (Fase E, decisión 6) — nombre/departamento/puesto/manager de TODOS los empleados, sin scope y sin gate de `canViewEmployee` (ver `GET /api/hr/employees/directory` en `routes/employees.ts`) — alimenta pickers que necesitan ver a cualquiera de la empresa (manager, reasignación de reportes al terminar a alguien, el picker "¿de quién es esta Task?"), nunca lleva PII.
+- **listEmployeeBirthdaysForCalendar(tenantId)** (2026-08-22) — todo empleado con `birthdate` no nulo, para el calendario del Overview. Mismo criterio "devolver todo, filtrar en el frontend" que `listTasksForCalendar`/`listTimeOffRequestsForCalendar`. Deliberadamente exento de scope, mismo espíritu que el directorio (widget social de baja sensibilidad, ya tenant-wide antes de la Fase E).
 
 ### `src/modules/hr/payrollRunService.ts` (Payroll, Unidad 12/13/16/17)
 - **createRun(input)** — preload automático: toda persona Contractor/Employee con `EmployeeCompensation` vigente en la frecuencia elegida, excluyendo a quien tenga el primer contrato sin confirmar (`blocksParticipation`+`confirmedAt: null`, Unidad 9).
@@ -356,8 +505,8 @@ CRUD estándar, cross-entidad vía `entityType`/`entityId`: **createNote**, **fi
 
 ### `src/modules/tenant/invitationService.ts`
 - **findInvitationByToken(token)** — incluye `employeeId`/`tenantId` en el select.
-- **createInvitation(input)** — acepta `acceptPath` opcional (default `/accept-invite`; Payroll usa `/confirm-contract` para el primer contrato de un Contractor/Employee, Unidad 6) para que el link del email apunte a una pantalla distinta de la genérica; también acepta `attachments` opcional, pasado tal cual a `sendInvitationEmail`.
-- **acceptInvitation(input)**, **listTenantInvitations(tenantId)**, **cancelInvitation(tenantId, invitationId)**.
+- **createInvitation(input)** — acepta `acceptPath` opcional (default `/accept-invite`; Payroll usa `/confirm-contract` para el primer contrato de un Contractor/Employee, Unidad 6) para que el link del email apunte a una pantalla distinta de la genérica; también acepta `attachments` opcional, pasado tal cual a `sendInvitationEmail`. Desde Custom Roles Fase I, también acepta `roleId?` — invita a cualquier rol del tenant (semilla o custom) directamente por id, con precedencia sobre `role` legacy; rechaza el rol Owner por este camino igual que antes rechazaba `role: 'owner'`.
+- **acceptInvitation(input)**, **listTenantInvitations(tenantId)** (incluye `roleRef: {name}` desde Fase I, para mostrar el nombre real de un rol custom en vez del enum legacy), **cancelInvitation(tenantId, invitationId)**.
 
 ### `src/modules/tenant/tenantService.ts`
 - **normalizeSlug(value)** — helper de string. (`getEmailDomain`/`isEmailFormatValid` viven en `src/lib/email.ts` desde 2026-08-18.)
@@ -384,7 +533,12 @@ Catálogo de `PlatformStatusDefinition` (plataforma, no por tenant) — `require
 - **listPlatformStatuses(entityType)** / **createPlatformStatus(input)** / **updatePlatformStatus(id, input)** — mismo guard que `statusService.updateStatusDefinition` (no se puede desactivar el status default); desactivar un status en uso pero no-default SÍ está permitido en el backend a propósito (el frontend confirma).
 
 ### `src/modules/tenant/tenantUserService.ts`
-- **listTenantUsers(tenantId)**, **updateTenantUser(...)**.
+- **listTenantUsers(tenantId)** (incluye `roleId`/`roleRef: {name}` desde Custom Roles Fase I),
+  **updateTenantUser(...)** — desde Fase I, `input.roleId?` asigna cualquier rol del tenant (semilla
+  o custom) directamente por id, con precedencia sobre `input.role` legacy; fija `role: 'member'`
+  como placeholder cosmético (el enum no puede representar un nombre custom) y rechaza el rol Owner
+  por este camino — la ownership solo se mueve por la transferencia atómica ya existente (rama
+  `input.role === 'owner'`, sin cambios).
 
 ---
 
@@ -410,6 +564,28 @@ Solo datos (`COUNTRIES`, `CHANGELOG_ENTRIES`), sin funciones — no indexado má
 ### `frontend/src/lib/trial.ts` (2026-08-21, Billing Integration)
 - **daysRemainingUntil(target)** — días que faltan hasta una fecha tipo `Tenant.trialEndsAt`/`Subscription.trialEndsAt` (`Math.ceil`, nunca negativo — mismo redondeo que el `daysRemaining` de `checkoutService.ts` del lado del backend). Antes vivía duplicado inline en `AppLayout.tsx` (para el banner de `past_due`) — extraído para que `PlansModal`/`AddPaymentMethodModal` lo usen también y el copy de trial nunca prometa más días de los que el backend realmente va a dar.
 
+### `frontend/src/lib/settingsSections.tsx` (backlog QA 2026-08-27, ampliado Custom Roles Fase J)
+- **getSettingsSections(permissions)** — única fuente de qué aparece en Settings, consumida por
+  `SettingsHomePage.tsx` (tile grid) y `SettingsSidebar.tsx` (nav lateral). Toma un
+  `{isOwner, has}` (el shape de `usePermissions()`, no importa el context directamente para
+  seguir siendo una función plana). Desde Fase J cada ítem se gatea por su propio permiso real
+  (`manage_billing`/`manage_tenant_settings`/`manage_users`/`manage_custom_fields`/
+  `view_activity_log`/`isOwner` para Roles & Permissions) en vez de un único `isAdmin` cubriendo 5
+  páginas con 5 permisos distintos — el encabezado "Company" solo aparece si algún ítem sobrevivió
+  el filtro.
+
+### `frontend/src/contexts/PermissionsContext.tsx` (Custom Roles Fase G, 2026-09)
+- **PermissionsProvider** — envuelve el árbol de rutas en `App.tsx`, poblado desde
+  `permissions` (la respuesta de `GET /api/auth/me`, ver `serializeRoleContext` arriba). Deniega
+  por defecto (nunca lanza) si se usa sin Provider real todavía (rutas pre-auth, sesión
+  restaurándose).
+- **usePermissions()** — expone `{isOwner, roleName, has(permission), isFieldHidden(entityType,
+  fieldKey)}`. `has`/`isFieldHidden` replican exactamente `permissionService.ts`'s `has()` y
+  `fieldVisibilityService.ts`'s `isFieldVisible()` — mismo criterio que el backend, no una
+  aproximación aparte. Primer consumidor real: `EmployeesPage.tsx` (reemplazó 3 flags locales
+  `user.role === 'owner'/'admin'`); quedan ~15 archivos más con el mismo patrón inline, pendientes
+  de la Fase J.
+
 ### `frontend/src/hooks/useAutoCreateGuard.ts`
 - **useAutoCreateGuard()** — guard reusable para forms de "Add [Entity]" que auto-crean apenas sus campos requeridos están completos (2026-08, ver `EmployeeOverviewPanel`/`EmployeesPage.tsx`). Devuelve `{ attempt(isReady, run), reset() }`: `attempt` no hace nada si ya se creó, si hay una request en vuelo, o si `isReady` es false — así se puede llamar desde el commit de cada campo requerido (blur en texto, change en select) sin duplicar la entidad; `run` debe relanzar su error después de reportarlo (toast) para que el guard no marque la creación como exitosa y permita reintentar. `reset()` se llama al cerrar/reabrir el form.
 
@@ -428,7 +604,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 | Archivo | Métodos |
 |---|---|
 | `auth.ts` | startSignup, resendSignup (ambas vía el helper interno `postSignupEmail`, no exportado), verifySignup, registerTenant, login, register, forgotPassword, validateResetToken, resetPassword, getInvitation, acceptInvitation, logout, getCurrentUser, updateProfile, changePassword, getCurrentTenant, updateTenantCurrency, getPlanPrices (2026-08-18, público, sin token), updateTenantPlan |
-| `employees.ts` | listEmployees, createEmployee, updateEmployee, deleteEmployee, inviteEmployee, getEmployeeCompensation, getEmployeeContractPdf, resendContract, listEmployeeBirthdays (2026-08-22) |
+| `employees.ts` | listEmployees, listEmployeeDirectory (Custom Roles Fase E, 2026-09 — unscoped roster for pickers), createEmployee, updateEmployee, deleteEmployee, inviteEmployee, getEmployeeCompensation, getEmployeeContractPdf, resendContract, listEmployeeBirthdays (2026-08-22) |
 | `companies.ts` | listCompanies, createCompany, updateCompany, deleteCompany, +custom field values |
 | `contacts.ts` | listContacts, createContact, updateContact, deleteContact, +custom field values |
 | `opportunities.ts` | listOpportunities, createOpportunity, updateOpportunity, deleteOpportunity, addOpportunityContact, removeOpportunityContact |
@@ -456,6 +632,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 | `payments.ts` (Payments v1, Units 2-3, 2026-08-26) | searchStripeCustomersForCompany, linkCompanyToStripe (lanza `ApiError` con `.status === 409` si la Company ya está vinculada a otro customer — reintentar con `confirmOverwrite: true`), getCompanyPaymentSummary, getCompanyPaymentEvents(token, companyId, cursor?), getPaymentsOverview |
 | `billing.ts` (Billing Integration, Etapa E) | getSubscription, startCheckout, changeSubscriptionPlan (post-billing, distinto de `updateTenantPlan` de arriba que es la elección pre-billing durante trial), cancelSubscription, resumeSubscription, getInvoiceDocumentUrl(token, invoiceId, disposition?) (2026-08-19, Paddle-only, URL temporal ~1h, se pide fresca en cada click — `BillingPage.tsx` la usa dos veces por fila de Invoice: "View invoice" con `inline`, "Download" con `attachment`) |
 | `activity.ts` (2026-08-30, Activity Log) | listActivityForEntity(token, entityType, entityId) (tab del modal), listActivityFeed(token, params) (feed tenant-wide de Settings, cursor-paginado — `params.entityType` sigue el `TaskEntityType` de 4 valores, no el enum completo de 27 del backend, hasta que una unidad futura amplíe qué se puede filtrar) |
+| `roles.ts` (2026-09, Custom Roles Fase B2-I) | listRoles(token) (todos los roles del tenant + sus permisos + `hiddenFields`), setRolePermission(token, roleId, permission, granted), createRole(token, name, duplicateFromRoleId?), renameRole(token, roleId, name), deleteRole(token, roleId), getFieldCatalog(token) (Fase C, catálogo de campos restringibles por entidad), setRoleFieldRestriction(token, roleId, entityType, fieldKey, hidden) (Fase C) — todo owner-only server-side, usado por `RolesPermissionsPage.tsx`; listAssignableRoles(token) (Fase I, `{id, name}[]` excluyendo Owner, NO owner-only — usado por `CompanyUsersPage.tsx`) |
 
 ### `frontend/src/components/common/` — componentes reusables genéricos, no ligados a una entidad
 - **AddPaymentMethodModal** (2026-08-19, Billing Integration) — dispara `POST /api/subscriptions/me/checkout`; ambos proveedores abren en pestaña nueva vía `window.open` (Mercado Pago: `initPoint` directo; Paddle: `PaddleCheckoutPage`, ver abajo, en `/billing/checkout?transactionId=...`). Nunca arma un form de tarjeta propio. Prop `mode: 'subscribe' | 'update'` cambia el copy (elegir plan por primera vez vs. reemplazar la tarjeta de una suscripción ya activa — dos intents distintos, corrección de Alejandro). **2026-08-20 (corrección)**: ya no carga `paddle.js` ni llama `Paddle.Checkout.open()` en la pestaña actual — Alejandro pidió que el checkout se sienta como su propia ventana, no un overlay apilado sobre la actual; el componente ya no tiene prop `onCompleted` (no hay señal de vuelta a la pestaña original — `BillingPage.tsx` refetchea al recuperar foco en su lugar, ver abajo). **2026-08-21 (corrección)**: la regla "si no hay modal, pestaña nueva" valía para los dos proveedores, no solo Paddle — Mercado Pago todavía hacía `window.location.href = initPoint` (navegaba la pestaña actual fuera de Northstack por completo); ahora también `window.open(initPoint, '_blank', 'noopener,noreferrer')`, mismo patrón que Paddle. **2026-08-21 (misma tarde)**: nueva prop `trialDaysRemaining?: number` (solo relevante en `mode="subscribe"`) — el copy y el título ("Start your free trial" vs. "Subscribe") ahora reflejan si de verdad queda trial o no, en vez de prometer siempre "15 días" sin importar cuánto tiempo ya pasó; espejo exacto de lo que `checkoutService.ts` va a cobrar de verdad (ver su entry abajo). Montado tanto en `AppLayout.tsx` (banner de `past_due`/`suspended`, siempre `mode="subscribe"`, `trialDaysRemaining` calculado sobre `tenant.trialEndsAt` — normalmente 0 ahí, porque para llegar a ese banner el trial ya venció) como en `BillingPage.tsx` (modo según si ya hay `provider`, `trialDaysRemaining` sobre `subscription.trialEndsAt`).
@@ -479,7 +656,9 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 - **PlansModal** (2026-08-13, Subscription Plans, **2026-08-21**: `ctaLabel`/copy de Starter/Growth ahora reflejan `daysRemainingUntil(tenant.trialEndsAt)` en vez de "15 días" fijo — "Start N-day free trial" mientras quede trial real, "Subscribe now" y copy sin mención de trial una vez que venció, espejo de lo que `checkoutService.ts` va a cobrar de verdad) — modal (`Modal` `xwide`) que se abre solo una vez, automáticamente, cuando un tenant recién creado (`status: 'trialing'`, `plan: null`) llega a cualquier pantalla — no es una ruta, no bloquea navegación (corregido de una versión anterior que sí lo era). 3 tarjetas: Free Trial (mismas features que Starter, cierra el modal sin llamar al backend), Starter, Growth — copy fiel al mockup aprobado. Precio de Starter/Growth traído en vivo de `GET /api/plans/prices` (2026-08-18, `api.getPlanPrices`) en vez de hardcodeado, para no divergir silenciosamente de `planService.ts`'s `CURRENT_PLAN_PRICES_CENTS`; fetch lazy en el primer `open`, cacheado en el componente (que queda montado, `AppLayout` solo togglea `open`). Dismiss persistido en `localStorage` por tenant (`northstack:dismissedPlansModal:<tenantId>`), owner-only (gateado también server-side por `canManageBilling`). Desde 2026-08-18 el dismiss ya no es un callejón sin salida: `AppLayout` muestra un banner "Choose a plan" mientras `plan === null` que puede reabrir el modal (`plansModalForceOpen`). Montado en `AppLayout.tsx`. Prop opcional `onSelectPlan` (2026-08-19) — reusado por `BillingPage.tsx`'s "Change plan" (mismo modal completo, no una versión reducida) para que la elección pase por `changeSubscriptionPlan` (post-billing) en vez de `updateTenantPlan` (pre-billing) cuando el tenant ya tiene un `provider` real; sin esto, cambiar de plan ya pagando nunca le avisaría a Paddle/Mercado Pago. Prop opcional `currentPlan` (2026-08-19) — marca esa tarjeta como "Current plan" (badge, botón deshabilitado) en vez de ofrecerla como si fuera una opción nueva; solo relevante para `BillingPage.tsx` (`AppLayout` solo abre el modal cuando `plan === null`, así que ahí nunca hay un plan "actual" que marcar). **Modelo de negocio final (2026-08-20, dos correcciones el mismo día)**: elegir Starter/Growth (nunca Free Trial) ahora abre el checkout real de una — pero sigue siendo "genuinely free for 15 days" (segunda corrección: la primera versión cobraba al toque, Alejandro pidió volver a un trial real pero con tarjeta ya cargada). `AppLayout.tsx`'s `handleSelectPlanAndCheckout` y `BillingPage.tsx`'s `handleSelectPlan` (rama `!hasProvider`) hacen `updateTenantPlan` y después abren `AddPaymentMethodModal` (`mode="subscribe"`) — se reusa ese componente en vez de duplicar la lógica de Paddle.js/redirect. El checkout mismo usa `trialDays` (`createNonCatalogTransaction`/`createPreapproval`, ver `src/lib/`) — la tarjeta se adjunta ahora, el primer cobro real recién a los 15 días. `ctaLabel` de Starter/Growth quedó en "Start 15-day free trial" y el copy de arriba aclara que Free Trial no pide tarjeta pero Starter/Growth sí (aunque no cobran hasta el día 15).
 - **PasswordChecklist** / **PasswordInput** — checklist en vivo de reglas de contraseña + toggle mostrar/ocultar.
 - **Popover** — portal a `document.body` + posicionamiento por coordenadas reales; mecanismo estándar para cualquier dropdown flotante, nunca un `<div absolute>` a mano.
-- **RoleChip** — chip de rol (owner/admin/member).
+- **RoleChip** — chip de rol (owner/admin/member); desde Custom Roles Fase I acepta un `label`
+  opcional que muestra el nombre real de un rol custom (color neutro de "member" como base, ya que
+  solo owner/admin tienen color propio).
 - **SearchableSelect** — input + dropdown filtrado para elegir una opción de una lista larga (construido sobre `Popover`).
 - **SlideOver** — panel lateral para forms de "entidad completa"; default para forms nuevos salvo que el diseño pida `Modal` centrado.
 - **StatusChip** — chip de status con punto de color.
@@ -491,7 +670,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 - **AddCustomFieldColumn** — columna "+" al final del header para agregar un custom field.
 - **ColumnResizeHandle** — handle de resize dentro de un `<th>`.
 - **ColumnVisibilityMenu** — menú de mostrar/ocultar columnas (usa el hook `useColumnVisibility`).
-- **CsvImportExportMenu** (`forwardRef`, expone `CsvImportExportMenuHandle`) — patrón genérico de import/export CSV con template descargable. Genérico desde 2026-08-31 (`entityLabelPlural`/`entityLabelSingular` + `exportCsv`/`importCsv`/`csvTemplate` como props) — usado por Employees/Companies/Contacts, no reinventar por módulo.
+- **CsvImportExportMenu** (`forwardRef`, expone `CsvImportExportMenuHandle`) — patrón genérico de import/export CSV con template descargable. Genérico desde 2026-08-31 (`entityLabelPlural`/`entityLabelSingular` + `exportCsv`/`importCsv`/`csvTemplate` como props) — usado por Employees/Companies/Contacts, no reinventar por módulo. Custom Roles Fase J: `canExport`/`canImport` opcionales (default `true`) — Company/Contact gatean exportar e importar por 2 permisos reales distintos (`view_*`/`manage_*`), a diferencia de Employee que usa `manage_payroll` parejo para ambos; el caller decide cuál pasar, el componente solo oculta el botón que corresponda.
 - **CustomFieldColumnMenu** — dropdown de header de columna de custom field (Edit/Delete field).
 - **FieldCatalogMenu** — dropdown de header para columnas de catálogo (Department, Job Title).
 - **FilterBar** — barra de filtros sobre una lista de `ViewField`.
@@ -499,6 +678,12 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 - **KanbanBoard** (genérico, `<T>`) — tablero drag-and-drop reusado por Employees/Companies/Contacts/Opportunities, recibe `renderCard` como prop.
 - **StatusColumnMenu** — dropdown de header de columna Status ("Manage options": color, orden, default, activar/desactivar).
 - **ViewsBar** — tabs de vistas guardadas (Grid/Kanban/List, personales o compartidas).
+
+### `frontend/src/components/settings/` (2026-09, Custom Roles Fase B2)
+- **RoleColumnMenu** — dropdown de header de columna de rol en `RolesPermissionsPage.tsx` (Rename/
+  Delete), mismo patrón que `CustomFieldColumnMenu`/`StatusColumnMenu` de arriba (Popover + edición
+  inline + `ConfirmDialog` para el delete) — reusar este patrón para cualquier "menú de columna"
+  nuevo en vez de reinventarlo.
 
 ### `frontend/src/components/crm/`
 - **CompanyDetailModal**, **ContactDetailModal**, **OpportunityDetailModal** — paneles de detalle 70vw×70vh con tabs Notes/Tasks/Activity (mismo shell que `EmployeeOverviewPanel`, ver `DetailSidebar` abajo).

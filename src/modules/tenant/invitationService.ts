@@ -2,9 +2,11 @@ import { randomUUID } from 'crypto';
 import prisma from '../../lib/prisma.js';
 import type { Invitation, UserRole } from '@prisma/client';
 import { sendInvitationEmail } from '../../lib/mailer.js';
+import { bestEffort } from '../../lib/bestEffort.js';
 import type { TenantCreationResult } from './tenantService.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { invitationActivityFieldConfig } from '../activity/fieldConfigs/invitationFieldConfig.js';
+import { findSeedRoleId } from '../auth/roleService.js';
 
 const INVITATION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -13,6 +15,9 @@ export interface CreateInvitationInput {
   invitedByUserId: string;
   email: string;
   role?: UserRole;
+  // Custom Roles Fase I — assigns any tenant role (seed or custom) directly by id. Takes
+  // precedence over `role` when both are present (the route only ever sends one or the other).
+  roleId?: string;
   employeeId?: string;
   // Where the emailed link sends the invitee — defaults to the generic
   // accept-invite screen. Payroll's contract-confirmation flow (Unidad 6)
@@ -51,6 +56,16 @@ export async function findInvitationByToken(token: string) {
 }
 
 export async function createInvitation(input: CreateInvitationInput): Promise<InvitationResult> {
+  // Fase B (Custom Roles) gap closed: ownership was never enforceable here before — an admin
+  // could set role:'owner' on an invitation and, once accepted, the tenant would end up with two
+  // owners (the transfer-safety-and-demotion logic only lives in tenantUserService.ts's
+  // updateTenantUser, which this bypassed entirely). Ownership can only ever move between two
+  // EXISTING users via that atomic transfer — never granted to someone who doesn't have an
+  // account yet — so it's rejected unconditionally here, regardless of who's inviting.
+  if (input.role === 'owner') {
+    return { success: false, error: 'Ownership can only be transferred to an existing user, not granted by invitation' };
+  }
+
   const tenant = await prisma.tenant.findUnique({
     where: { id: input.tenantId },
   });
@@ -69,12 +84,42 @@ export async function createInvitation(input: CreateInvitationInput): Promise<In
     return { success: false, error: 'User already belongs to a tenant' };
   }
 
+  // Custom Roles Fase I — inviting into any tenant role (seed or custom) directly by id, not just
+  // the 3 legacy enum values. Same reasoning as tenantUserService.ts's roleId branch: the legacy
+  // `role` column can't represent a custom role name, so it's set to the 'member' placeholder,
+  // purely cosmetic since acceptInvitation copies roleId onto the new User and that's what
+  // resolveRoleContextForUser actually reads.
+  let role: UserRole;
+  let roleId: string | null;
+  // The invitee-facing role name for the email below — the `role` enum is a cosmetic placeholder
+  // for a roleId-based invite (see comment above), so it can't be used for that: a custom role, or
+  // even the seed "Admin" role, would otherwise always email "as member" regardless of what was
+  // actually assigned.
+  let roleDisplayName: string;
+  if (input.roleId) {
+    const targetRole = await prisma.role.findUnique({ where: { id: input.roleId } });
+    if (!targetRole || targetRole.tenantId !== input.tenantId) {
+      return { success: false, error: 'Role not found' };
+    }
+    if (targetRole.isOwner) {
+      return { success: false, error: 'Ownership can only be transferred to an existing user, not granted by invitation' };
+    }
+    role = 'member';
+    roleId = targetRole.id;
+    roleDisplayName = targetRole.name;
+  } else {
+    role = input.role ?? 'member';
+    roleId = await findSeedRoleId(input.tenantId, role);
+    roleDisplayName = role;
+  }
+
   const invitation = await prisma.invitation.create({
     data: {
       tenantId: input.tenantId,
       invitedByUserId: input.invitedByUserId,
       email: normalizedEmail,
-      role: input.role ?? 'member',
+      role,
+      roleId,
       employeeId: input.employeeId,
       token: randomUUID(),
       expiresAt: new Date(Date.now() + INVITATION_EXPIRY_MS),
@@ -83,17 +128,21 @@ export async function createInvitation(input: CreateInvitationInput): Promise<In
 
   const appBaseUrl = process.env.APP_BASE_URL ?? 'http://localhost:5173';
   const acceptPath = input.acceptPath ?? '/accept-invite';
-  sendInvitationEmail({
-    to: invitation.email,
-    tenantName: tenant.name,
-    role: invitation.role,
-    acceptUrl: `${appBaseUrl}${acceptPath}/${invitation.token}`,
-    attachments: input.attachments,
-  }).catch((error) => {
-    // Best-effort: the invitation itself (and its copyable link in the UI)
-    // already exists, so a failed email shouldn't fail the whole request.
-    console.error('Failed to send invitation email:', error);
-  });
+  // Awaited (not fire-and-forget) — see bestEffort.ts: an un-awaited send is not guaranteed to
+  // survive past the HTTP response on Vercel serverless, which was silently dropping this exact
+  // email. The invitation record itself (and its copyable link in the UI) already exists, so a
+  // failed send still doesn't fail the request — bestEffort just makes sure the send is actually
+  // given the chance to complete first.
+  await bestEffort(
+    sendInvitationEmail({
+      to: invitation.email,
+      tenantName: tenant.name,
+      role: roleDisplayName,
+      acceptUrl: `${appBaseUrl}${acceptPath}/${invitation.token}`,
+      attachments: input.attachments,
+    }),
+    'Failed to send invitation email:',
+  );
 
   await recordActivity({
     tenantId: input.tenantId,
@@ -152,6 +201,7 @@ export async function acceptInvitation(input: AcceptInvitationInput): Promise<Te
       data: {
         tenantId: invitation.tenantId,
         role: invitation.role,
+        roleId: invitation.roleId,
       },
     });
 
@@ -200,6 +250,10 @@ export async function listTenantInvitations(tenantId: string) {
       id: true,
       email: true,
       role: true,
+      // Custom Roles Fase I — real role name for display (CompanyUsersPage.tsx), same reasoning
+      // as tenantUserService.ts's listTenantUsers: a custom-role invitation leaves `role` at its
+      // 'member' placeholder.
+      roleRef: { select: { name: true } },
       status: true,
       token: true,
       createdAt: true,

@@ -16,6 +16,13 @@ vi.mock('../src/modules/hr/payFrequencyService.js', () => ({
 vi.mock('../src/modules/hr/paymentMethodService.js', () => ({
   seedDefaultPaymentMethods: vi.fn(async () => {}),
 }));
+vi.mock('../src/modules/auth/roleService.js', () => ({
+  seedDefaultRolesForTenant: vi.fn(async () => ({
+    owner: { id: 'role-owner' },
+    admin: { id: 'role-admin' },
+    member: { id: 'role-member' },
+  })),
+}));
 
 vi.mock('../src/lib/prisma.js', () => {
   const mockPrisma: any = {

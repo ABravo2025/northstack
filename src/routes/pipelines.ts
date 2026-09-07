@@ -58,7 +58,7 @@ pipelinesRouter.post('/api/pipelines', async (req, res) => {
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -104,7 +104,7 @@ pipelinesRouter.patch('/api/pipelines/:pipelineId', async (req, res) => {
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -151,7 +151,7 @@ pipelinesRouter.post('/api/pipelines/:pipelineId/stages', async (req, res) => {
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -200,7 +200,7 @@ pipelinesRouter.patch('/api/pipelines/:pipelineId/stages/:stageId', async (req, 
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -267,7 +267,7 @@ pipelinesRouter.post('/api/pipelines/:pipelineId/assignment-users', async (req, 
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -298,7 +298,7 @@ pipelinesRouter.delete('/api/pipelines/:pipelineId/assignment-users/:userId', as
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -324,7 +324,7 @@ pipelinesRouter.post('/api/pipelines/:pipelineId/assignment-users/from-departmen
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 

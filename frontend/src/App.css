@@ -1132,6 +1132,7 @@
   @apply rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-300;
 }
 
+
 .slideover-overlay {
   @apply pointer-events-none fixed inset-0 z-40 bg-black/40 opacity-0 transition-opacity duration-200;
 }

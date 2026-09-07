@@ -4,6 +4,7 @@ import type { TenantStatus, UserRole } from '@prisma/client';
 import type { User, Session } from '@prisma/client';
 import { sendPasswordResetEmail } from '../../lib/mailer.js';
 import { getEmailDomain } from '../../lib/email.js';
+import { resolveRoleContextForUser, type RoleContext } from './roleService.js';
 
 export interface RegisterUserInput {
   firstName: string;
@@ -160,7 +161,11 @@ export async function loginUser(input: LoginUserInput): Promise<AuthResult> {
 
 // Minimal tenant projection alongside the user — just enough for validateSession (httpAuth.ts)
 // to gate mutations on a suspended workspace without a second round trip per request.
-export type AuthenticatedUser = User & { tenant: { id: string; status: TenantStatus } | null };
+// roleContext (Custom Roles, Fase A) is resolved here so it's available everywhere an
+// AuthenticatedUser already is, same reasoning as tenant above — nothing reads it for an
+// authorization decision yet (permissionService.ts still takes the legacy `role` enum until Fase
+// B), it's wired in now so a later unit doesn't need to touch this include/select shape again.
+export type AuthenticatedUser = User & { tenant: { id: string; status: TenantStatus } | null; roleContext: RoleContext };
 
 export async function authenticateToken(token: string): Promise<AuthenticatedUser | null> {
   const session = await prisma.session.findUnique({
@@ -195,7 +200,8 @@ export async function authenticateToken(token: string): Promise<AuthenticatedUse
     });
   }
 
-  return session.user;
+  const roleContext = await resolveRoleContextForUser(session.user);
+  return { ...session.user, roleContext };
 }
 
 export async function logoutUser(token: string): Promise<boolean> {

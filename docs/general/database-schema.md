@@ -1,6 +1,10 @@
 # Database Schema
 
-- Última actualización: 2026-08-31 (Activity Log — Unidades 1-6 completas, spec cerrado; incluye el fix same-day de `parentEntityType`/`parentEntityId` (2026-08-30) y la Unidad 6 completa con Subscription/GoogleCalendarConnection/StripeConnection (2026-08-31, mecanismo de correlación `Subscription.lastActionByUserId`/`lastActionAt`), ver grupo 13; en `staging`, sin pushear a `main`)
+- Última actualización: 2026-09-01 (Custom Roles — Fase B2 extendida: crear/renombrar/borrar roles custom reales desde la UI, no solo reconfigurar Admin/Member — `POST/PATCH/DELETE /api/roles*` — ver grupo 14; en `staging`, sin pushear a `main`)
+- Actualización anterior: 2026-09-01 (Custom Roles — Fase B2: primera UI real, `Settings → Roles & Permissions` — owner reconfigura los permisos de Admin/Member con toggles, endpoints `GET/PATCH /api/roles*` — ver grupo 14; en `staging`, sin pushear a `main`)
+- Actualización anterior: 2026-09-01 (Custom Roles — Fase B completa: `permissionService.ts` migrado a `RoleContext`, entity-split de Employee/Company/Contact/Opportunity, 3 permisos nuevos reemplazan los últimos chequeos inline, gap de invitación con rol owner cerrado, CSV atado a Payroll — ver grupo 14; en `staging`, sin pushear a `main`)
+- Actualización anterior: 2026-09-01 (Custom Roles — Fase A completa: schema aditivo + seed/backfill + `RoleContext` sin consumidores todavía, ver grupo 14; en `staging`, sin pushear a `main`)
+- Actualización anterior: 2026-08-31 (Activity Log — Unidades 1-6 completas, spec cerrado; incluye el fix same-day de `parentEntityType`/`parentEntityId` (2026-08-30) y la Unidad 6 completa con Subscription/GoogleCalendarConnection/StripeConnection (2026-08-31, mecanismo de correlación `Subscription.lastActionByUserId`/`lastActionAt`), ver grupo 13; en `staging`, sin pushear a `main`)
 - Actualización anterior: 2026-08-29 (Employee Termination — ver grupo 11 — y Payments v1 Units 5-7, ver grupo 10; todo en `staging`, sin pushear a `main`)
 - Fuente de verdad real: `prisma/schema.prisma`. Este documento es una vista legible de ese archivo — si difieren, el `.prisma` manda. Regenerar este archivo cuando el schema cambie de forma significativa (modelo nuevo, relación nueva), no hace falta para cambios chicos (un campo opcional más, un índice).
 - Todos los modelos son multi-tenant: casi todos tienen `tenantId` directo (no derivado por join), y el aislamiento entre tenants se verifica en el código de cada endpoint (ownership check), no solo por FK — ver `docs/current-process-flow.md` para el patrón de verificación.
@@ -1143,11 +1147,469 @@ Notas:
   como `action: 'delete'` (no `'update'` diffeando `disconnectedAt`, que no está en el field
   config y produciría un diff vacío silenciosamente descartado).
 
+## 14. Custom Roles
+
+Spec en `docs/tareas/backlog.md` ("Sistema de roles custom / permisología", Tier 5) — reemplaza el
+enum fijo `owner`/`admin`/`member` por roles editables por tenant, con permisos de módulo, un scope
+por registro para Employees (self/departamento/todos), y restricciones campo por campo. **Fase A
+completa** (schema aditivo + seed/backfill + `RoleContext` resuelto sin consumidores). **Fase B
+completa**: `permissionService.ts` migró sus 10 funciones a leer `RoleContext` en vez del enum
+legacy; el viejo `canViewHr`/`canCreateHr` (que gateaba Employee/Company/Contact/Opportunity todos
+juntos) se separó en un par view/manage por entidad (`canViewEmployee`/`canManageEmployee`,
+`canViewCompany`/`canManageCompany`, `canViewContact`/`canManageContact`) más `canViewOpportunity`
+**derivado** (`canViewCompany && canViewContact` — nunca un permiso propio, ver más abajo) y
+`canManageOpportunity`; `canViewHr`/`canCreateHr` se mantienen sin cambios semánticos, ahora solo
+para `Client` (legacy) y el seeder de datos de ejemplo del onboarding. 3 permisos nombrados nuevos
+(`manage_tenant_settings`, `manage_shared_views`, `decide_time_off`) reemplazan los últimos 3
+chequeos inline de rol del código (moneda del tenant, crear Saved View compartida, aprobar Time
+Off — este último sigue OR-eado con la regla de "es el manager asignado"). Gap real cerrado:
+`createInvitation` ya no permite `role: 'owner'` bajo ninguna circunstancia (antes solo el frontend
+lo bloqueaba). CSV de Employees pasó de `view_hr`/`create_hr` a requerir `canManagePayroll`.
+`User.roleId`/`Invitation.roleId` se mantienen sincronizados con el enum `role` cada vez que
+`tenantUserService.ts`/`invitationService.ts` todavía lo escriben directo (`findSeedRoleId`), hasta
+que Fase I los rediseñe para trabajar con `roleId` de cualquier rol custom. Backfill de Fase A
+corrido contra `staging` (184 tenants, 189 Users, 17 Invitations) + top-up de Fase B
+(`scripts/backfill-fase-b-permissions.ts`, agrega los permisos nuevos a los roles Admin/Member ya
+sembrados).
+
+**Fase B2 (primera UI real)**: `Settings → Roles & Permissions` (owner-only, ícono de candado,
+grupo "Company" del nav) — matriz de permisos × Owner/Admin/Member, toggles con autosave.
+`GET /api/roles` / `PATCH /api/roles/:roleId/permissions` (`src/routes/roles.ts`,
+`roleManagementService.ts`) gateados por `roleContext.isOwner` directo, no por un permiso nombrado
+— reconfigurar lo que puede hacer Admin/Member es en sí una decisión de ownership. Expone
+`TOGGLEABLE_PERMISSION_KEYS` (subconjunto de `PERMISSION_KEYS` con enforcement real hoy — 18
+permisos, excluye el legacy `view_hr`/`create_hr` y las convenciones de Employee sin Fase D/E
+todavía) y aplica `PERMISSION_PREREQUISITES`/`DEPENDENT_PERMISSIONS` (conceder `manage_opportunity`
+exige `view_company`+`view_contact` ya concedidos; revocar cualquiera de los dos cascada a revocar
+`manage_opportunity` también, para que nunca quede un permiso "dormido" que resucite solo al
+volver a conceder el prerrequisito). Verificado con Playwright real contra `staging` (toggle real,
+persistencia tras reload, bloqueo de la cascada, claro y oscuro).
+
+**Extensión same-day**: Alejandro pidió explícitamente no perder de vista que un tenant tiene que
+poder crear un rol custom de verdad, con nombre propio, persistido — no solo reconfigurar Admin/
+Member. Agregado a la misma página: `POST /api/roles` (`name`, `duplicateFromRoleId?` — copia los
+permisos de un rol existente como punto de partida; duplicar desde Owner copia explícitamente todo
+`TOGGLEABLE_PERMISSION_KEYS`, porque Owner en sí no tiene filas de permiso), `PATCH /api/roles/:id`
+(rename) y `DELETE /api/roles/:id` — los 3 rechazan tocar el rol Owner o un nombre "owner"
+(case-insensitive), y `deleteRole` bloquea por completo (no reasigna en silencio) si todavía hay
+algún User/Invitation pendiente apuntando a ese rol. La matriz de la UI pasó de 4 columnas fijas
+(label+Owner+Admin+Member) a `N` columnas dinámicas (`grid-template-columns` calculado en JS según
+`editableRoles.length`) — cada rol nuevo aparece como una columna más, con su propio menú de
+Rename/Delete (`RoleColumnMenu.tsx`, mismo patrón Popover que `CustomFieldColumnMenu`). Verificado
+con Playwright real: crear un rol duplicando Admin, confirmar que copió los permisos, renombrarlo,
+intentar crear uno llamado "Owner" (rechazado), borrarlo, confirmar que la columna desaparece.
+Nada de esto llegó a `main` todavía.
+
+**Fase C (field-level, campos fijos): completa.** `RoleFieldRestriction` pasa de tabla sembrada-
+pero-sin-consumidor a enforcement real. `src/modules/auth/fieldVisibilityService.ts` (nuevo) es el
+único punto de decisión: `isFieldVisible(role, entityType, fieldKey)` primero corta camino si
+`role.isOwner`, después exige el permiso base del módulo (`MODULE_GATE_BY_ENTITY_TYPE` —
+`canViewEmployee`/`canViewCompany`/`canViewContact`/`canViewOpportunity`, este último ya derivado
+desde la Fase B) antes de mirar la denylist — un rol sin acceso al módulo no ve ningún campo, sin
+necesidad de sembrar una fila de restricción por campo. El catálogo de "qué campos son
+restringibles" no se mantiene a mano: `src/modules/activity/fieldConfigs/index.ts` (nuevo) agrega
+los 4 `fieldConfig` que el Activity Log ya define para Employee/Company/Contact/Opportunity (grupo
+13), y `RESTRICTABLE_FIELDS_BY_ENTITY_TYPE` los expone menos un puñado de campos de identidad
+(`firstName`/`lastName`/`name`) que nunca tiene sentido ocultar porque son lo mínimo para
+identificar el registro en cualquier lista o picker. `redactEntityFields`/`redactEntityListFields`
+anulan (nunca borran la clave) los campos restringidos en el JSON de respuesta, siguiendo el
+precedente ya existente de `tenantMetrics.ts` (que ya vaciaba el bloque `payroll`); se aplican en
+el borde HTTP (`src/routes/employees.ts`/`companies.ts`/`contacts.ts`/`opportunities.ts`), no
+dentro de los services, y cubren tanto las respuestas de lectura como las de creación/edición para
+que el comportamiento sea consistente en toda la app. Detalle no obvio encontrado durante la
+implementación: varias queries de lista/detalle (`Company`, `Contact`, `Opportunity`) incluyen a la
+vez el FK crudo (`sizeId`, `accountOwnerId`, `managerId`, etc.) y el objeto de relación ya resuelto
+(`sizeDefn`, `accountOwner`, `manager`) — anular solo el FK dejaría el valor legible igual a través
+del objeto de relación, así que `RELATION_KEYS_BY_FIELD` anula ambos juntos cuando corresponde.
+Nuevos endpoints owner-only: `GET /api/roles/field-catalog` (devuelve el catálogo restringible por
+entidad, para pintar la UI) y `PATCH /api/roles/:roleId/field-restrictions` (`entityType`,
+`fieldKey`, `hidden` — polaridad invertida respecto a `setRolePermission`: `hidden:true` crea la
+fila de restricción, `hidden:false` la borra). UI: nueva sección "Field visibility" en la misma
+página `Settings → Roles & Permissions`, un `<details>` colapsable por entidad, mismo patrón de
+grid-toggle que la matriz de permisos de módulo. Verificado con Playwright real contra `staging` +
+una llamada directa a `GET /api/hr/employees` confirmando que ocultar "Personal email" para Member
+de verdad anula el campo en el JSON (y que revertirlo lo devuelve) — no solo que la UI lo tape.
+`npm test` 248/248, ambos builds verdes. Nada de esto llegó a `main` todavía.
+
+**Fase D (bundle de custom fields de Employee): completa.** Hasta acá `VIEW_EMPLOYEE_CUSTOM_FIELDS`/
+`EDIT_EMPLOYEE_CUSTOM_FIELDS` existían como constantes sembradas (Admin/Member ya las tenían desde
+el backfill de la Fase B) pero sin ningún consumidor real — los 4 endpoints de valores de custom
+field de Employee (`POST`/`PATCH`/`DELETE`/`GET .../custom-fields`) seguían gateados por
+`canManageCustomFields` (que en realidad gatea el SCHEMA de custom fields — crear/editar
+`CustomFieldDefinition` — no los valores de un Employee puntual), y el `GET` de lista no tenía
+ningún chequeo de permiso en absoluto. Agregado a `permissionService.ts`:
+`canViewEmployeeCustomFields`/`canEditEmployeeCustomFields`, cada una compuesta (no un reemplazo)
+sobre la base de Employee — `canViewEmployeeCustomFields = canViewEmployee && tiene el permiso`,
+`canEditEmployeeCustomFields = canManageEmployee && tiene el permiso` — para que perder acceso a
+Employee por completo también saque el acceso a sus custom fields, aunque el bundle siga prendido.
+Encontrado en el camino: esta relación (view_employee_custom_fields depende de view_employee;
+edit_employee_custom_fields depende de view_employee_custom_fields Y de manage_employee) es una
+cadena de **2 niveles**, distinta de la de `manage_opportunity` (1 nivel) que ya existía —
+`DEPENDENT_PERMISSIONS` solo calculaba dependientes directos, así que revocar `view_employee`
+hubiera dejado a `edit_employee_custom_fields` como un permiso "dormido" en la base de datos
+(revocado a un nivel, pero no dos). Corregido generalizando el cascade de revocación en
+`roleManagementService.ts` a un BFS que camina el grafo de dependencias a punto fijo, en vez de un
+solo salto — verificado con una prueba nueva y, en vivo contra `staging`, con la secuencia real
+grant→grant→grant→revoke vía `PATCH /api/roles/:roleId/permissions`. `VIEW_EMPLOYEE_CUSTOM_FIELDS`/
+`EDIT_EMPLOYEE_CUSTOM_FIELDS` se movieron de `PERMISSION_KEYS` (solo validación) a
+`TOGGLEABLE_PERMISSION_KEYS` (expuestas de verdad en la UI) ahora que tienen enforcement real — 2
+filas nuevas en la sección "People" de `Settings → Roles & Permissions`, mismo patrón de
+grid-toggle. Verificado con Playwright real contra `staging` + llamadas directas a la API
+(`GET`/`POST /api/hr/employees/:id/custom-fields` como Member antes/después de revocar el permiso,
+confirmando 200→403 real, no solo en el mock). `npm test` 253/253 (+5 tests nuevos), ambos builds
+verdes. Nada de esto llegó a `main` todavía.
+
+**Fase E (HR scope: self/department/all): completa.** El eje que faltaba: hasta acá un rol veía
+TODOS los Employees del tenant o ninguno (según `view_employee`); ahora el permiso
+`view_employee_scope:self|department|all` (sembrado desde la Fase A, sin consumidor hasta ahora)
+decide QUÉ FILAS de Employee ve, antes de que el field-level restriction (Fase C) decida qué
+columnas de esas filas. `getManagedEmployeeIds(tenantId, employeeId)` (nuevo,
+`employeeService.ts`) resuelve el scope `department` como la unión de 2 criterios (decisión 5 del
+plan): pares con el mismo `departmentId`, MÁS toda la cadena de reportes directos e indirectos —
+un BFS sobre `managerId` en memoria, el reverso exacto de `wouldCreateManagerCycle` (esa camina
+hacia la raíz para detectar un ciclo; esta camina hacia las hojas para encontrar descendientes).
+Una sola query trae `{id, managerId, departmentId}` de todo el tenant — no N queries recursivas,
+misma asunción de tamaño de tenant que el resto del plan (decenas/cientos, no miles).
+`resolveVisibleEmployeeIds(tenantId, role, actingUserId)` es el punto de entrada único: `null`
+para scope `all` (el caller no filtra nada), un `Set` concreto para `self`/`department`/`none`. Un
+usuario sin `Employee` propio vinculado (`User` sin legajo) resuelve a un `Set` vacío para
+`self`/`department` — "nada más allá del directorio", no un error, tal como especifica el plan.
+Aplicado a `GET /api/hr/employees` (filtra la lista) y a `GET`/`PATCH`/`DELETE
+/api/hr/employees/:id` (404 si el id pedido no está en el scope del actor — mismo criterio que un
+employee de otro tenant, nunca 403). Deliberadamente NO extendido a las sub-rutas de Employee
+(compensación, PDF de contrato, políticas de time off, terminación) — esas están gateadas por
+`canManagePayroll`/`canManageCustomFields`, permisos ya owner-only o con una gatekeeping
+pre-existente no del todo alineada con el sistema de roles, fuera del alcance de esta pasada.
+
+**Directorio (decisión 6)**: `listEmployeeDirectory(tenantId)` (nuevo) + `GET
+/api/hr/employees/directory` — nombre, departamento, puesto y manager de TODOS los empleados,
+sin filtrar por scope y **sin gatear siquiera por `canViewEmployee`**: cualquier miembro del
+tenant lo ve, tenga o no acceso a HR, porque alimenta pickers que necesitan señalar a cualquier
+persona de la empresa sin importar el scope o los permisos de quien pregunta — elegir un manager al
+cargar un empleado, el picker "¿de quién es esta Task?", o reasignar los reportes directos de
+alguien al desvincularlo. Nunca lleva PII (ni `personalEmail`, ni `birthdate`, ni nada del perfil
+completo) — eso sigue exclusivamente detrás de `listEmployees`/`findEmployeeById` con scope +
+field-level restriction. Migrados a consumirlo: el selector "Reports To" de `EmployeesPage.tsx`
+("Add Person") y de `EmployeeOverviewPanel.tsx` (edición), el picker de reasignación de
+`TerminateEmployeeModal.tsx`, y el picker "¿de quién es esta Task?" de
+`NewTaskFromCalendarPopover.tsx` — los 4 casos reales identificados como "deben ver a toda la
+empresa" en el código existente.
+
+**Hallazgo real, deliberadamente no corregido en esta fase**: `EmployeesPage.tsx` sigue gateando
+el botón/fila "Add Person" con el chequeo legacy `user.role === 'owner' || user.role === 'admin'`
+(uno de los ~16-20 chequeos inline que la Fase G/J tiene pendiente migrar a
+`PermissionsContext`) — un rol custom con `manage_employee` concedido de verdad (enforcement
+backend confirmado con curl real) todavía no puede alcanzar esa UI hoy, porque el gate del botón
+nunca mira `roleContext`. No se tocó acá para no adelantar trabajo de Fase G de forma aislada e
+inconsistente con el resto de esos ~16-20 chequeos: queda documentado como que Fase G lo resuelve
+cuando le toque.
+
+Verificado con un tenant descartable en `staging` con un organigrama real (CEO → Manager
+[dept Sales] → RepA [Sales] + RepB [Engineering], más SalesPeer [Sales, reporta a CEO] y Stranger
+[Engineering, reporta a CEO]): un rol "Manager" con scope `department` vio exactamente
+{Manager, RepA, RepB, SalesPeer} — RepB por cadena de reportes pese a estar en otro departamento,
+SalesPeer por departamento pese a no ser su reporte — y NO vio a CEO (es su superior, no su
+reporte) ni a Stranger; el detalle/PATCH de CEO y Stranger devolvió 404 real; un rol con scope
+`self` vio únicamente su propio registro; `GET /api/hr/employees/directory` devolvió los 6 sin
+importar el scope, incluso para un rol al que se le quitó `view_employee` por completo (403 en la
+lista real, 200 en el directorio — confirma que el directorio no depende de ese permiso). Picker
+de "Reports To" verificado con Playwright real mostrando los 6 empleados completos. `npm test`
+265/265 (+12 tests nuevos), ambos builds verdes. Nada de esto llegó a `main` todavía.
+
+**Fase F (integración con Activity Log): completa.** Cierra la última fuga real de las Fases C/D/E:
+el feed de Activity Log guardaba `changes`/`summary` calculados en el momento de la escritura, sin
+saber nada de restricciones de campo ni de módulo — un rol con `personalEmail` restringido (Fase C)
+podía igual leer "Changed Personal email: X → Y" en la pestaña de Activity del propio Employee, y
+un rol con `view_activity_log` pero sin `canManagePayroll`/`canManagePayments` podía ver entradas de
+compensación o de la conexión de Stripe en el feed tenant-wide. Nuevo
+`src/modules/activity/activityVisibilityService.ts` (mismo patrón que `fieldVisibilityService.ts`
+de la Fase C — lógica pura, testeada aparte, sin acoplar `activityLogService.ts` al sistema de
+roles):
+- **`canViewEntryModule(role, entityType)`**: gate a nivel de MÓDULO para el feed tenant-wide — una
+  entrada cuyo `entityType` pertenece a un módulo que el rol no puede ver directamente
+  (`employeeCompensation`/`payrollRun`/`payFrequency`/`paymentMethod` → `canManagePayroll`,
+  `subscription` → `canManageBilling`, `stripeConnection` → `canManagePayments`,
+  `employeeTermination` → `canManageEmployee`, `statusDefinition`/`customFieldDefinition`/
+  `fieldCatalogDefinition`/`pipeline`/`pipelineStage`/`publicForm` → `canManageCustomFields`,
+  `tenant` → `canManageTenantSettings`, `user`/`invitation` → `canManageUsers`, más
+  `employee`/`company`/`contact`/`opportunity` con sus propios `canView*`) se saca del feed por
+  completo, no solo se redacta. Los tipos sin un permiso propio (Task/Note/Tag/SavedView/Time Off/
+  Google Calendar Connection) quedan sin gate, igual que su comportamiento de siempre en sus propias
+  pestañas.
+- **`isChangeVisible(role, entityType, change)`** + **`filterActivityEntryForRole(entry, role)`**:
+  gate a nivel de CAMPO — filtra el array `changes` de una entrada `update` por
+  `isFieldVisible` (Fase C) para los 4 tipos con field-level restriction, y por
+  `canViewEmployeeCustomFields` (Fase D) específicamente para cambios de custom fields en Employee
+  (detectados porque su `field` es el id de la `CustomFieldDefinition`, nunca una de las claves fijas
+  del `ActivityFieldConfigMap` — Company/Contact/Opportunity no tienen bundle propio, así que sus
+  cambios de custom fields caen en `isFieldVisible`, que los deja visibles automáticamente porque esa
+  clave nunca puede estar en la denylist de campos fijos). **Siempre que el filtrado saca algo**,
+  `summary` se recalcula con `summarizeChanges` sobre los cambios que sí quedaron visibles — nunca se
+  deja el `summary` original (calculado sobre el set completo sin filtrar), porque ese string por sí
+  solo ya nombra el campo oculto. Cuando no queda ningún cambio visible, `summarizeChanges` ya produce
+  el texto genérico correcto ("Updated Employee..."), sin necesidad de una rama de fallback aparte.
+- **`canAccessEntityActivity(user, entityType, entityId)`**: cierra un gap real y explotable que
+  existía antes de esta fase — `GET /api/activity` (la pestaña de Activity de un registro puntual)
+  no tenía NINGÚN chequeo de permiso o scope más allá de pertenencia al tenant (la decisión #4 del
+  spec de Activity Log asumía "si podés abrir el modal, ves su Activity", pero nada lo hacía cumplir
+  en el backend). Sin este chequeo, cualquier miembro del tenant podía pedir
+  `GET /api/activity?entityType=employee&entityId=<cualquiera>` directamente y ver el historial de
+  cambios completo de un Employee que el `GET /api/hr/employees/:id` real le habría bloqueado con
+  403/404 — un bypass total de la Fase C (campos) y la Fase E (scope). Ahora replica exactamente la
+  regla de acceso de cada entidad: Employee exige `canViewEmployee` + estar dentro del scope
+  (Fase E, 404 si no), Company/Contact/Opportunity exigen su `canView*` propio (403 si no, sin
+  concepto de scope para CRM).
+
+Verificado contra un tenant descartable en `staging`: un cambio real de `personalEmail` (vía
+`PATCH /api/hr/employees/:id`) apareció como "Changed Personal email: ... → ..." para el Owner, y
+como el genérico "Updated Employee \"Ana Lopez\"" con `changes: null` para un rol con ese campo
+restringido — la fuga confirmada cerrada de punta a punta, no solo en el mock. Un rol sin
+`view_employee` recibió 403 real en `GET /api/activity`; un rol con scope `self` vinculado a otro
+empleado recibió 404 real al pedir la actividad de un tercero y 200 al pedir la propia. En el feed
+tenant-wide, un rol con `view_activity_log` pero sin `canManagePayroll` no vio una entrada sintética
+de tipo `employeeCompensation` que el Owner sí veía. `npm test` 285/285 (+20 tests nuevos en
+`tests/activityVisibilityService.test.ts`), ambos builds verdes. Nada de esto llegó a `main`
+todavía.
+
+**Fase G (hook de permisos en el frontend): completa.** Hasta acá el frontend no tenía ninguna
+forma de leer los permisos reales de un rol — cada página re-derivaba autoridad comparando
+`user.role === 'owner'/'admin'` inline (el enum legacy), sin importar qué permisos un rol custom
+tuviera de verdad concedidos. Esta fase construye la infraestructura: `GET /api/auth/me` ahora
+devuelve un campo `permissions` real (antes se descartaba explícitamente el `roleContext` entero
+porque `Set`/`Map` no sobreviven un `JSON.stringify`). Nuevo **`serializeRoleContext(role)`**
+(`roleService.ts`) — convierte `RoleContext` a un objeto plano (`{id, name, isOwner, permissions:
+string[], hiddenFields: Record<string, string[]>}`), mismo shape que `RoleSummary` de
+`roleManagementService.ts`. Nuevo **`frontend/src/contexts/PermissionsContext.tsx`** —
+`PermissionsProvider` envuelve todo el árbol de rutas en `App.tsx`, poblado desde la respuesta de
+`/api/auth/me`; `usePermissions()` expone `has(permission)`/`isFieldHidden(entityType, fieldKey)`
+que replican exactamente `permissionService.ts`'s `has()` y `fieldVisibilityService.ts`'s
+`isFieldVisible()` — para que la UI de un rol se sienta igual a lo que el backend realmente exige,
+no una aproximación aparte. Deniega por defecto (nunca lanza) cuando no hay `Provider` real
+todavía (rutas pre-auth) o mientras la sesión se está restaurando.
+
+**Primera migración real, como prueba y como fix**: `EmployeesPage.tsx` tenía 3 flags locales
+(`canManageCustomFields`, `canEditEmployees`, `canManagePayroll`) los 3 definidos como
+`user.role === 'owner'/'admin'` (o solo `'owner'`) — migrados a `permissions.has(...)`. Migrar
+esto de verdad (no un simple find-and-replace) destapó 2 bugs latentes que un reemplazo mecánico
+hubiera preservado silenciosamente:
+- El menú de **Import/Export CSV** estaba gateado por `canEditEmployees` (→ `manage_employee`),
+  pero el backend exige `manage_payroll` para CSV desde la Fase B (decisión 4) — un Admin sin
+  `manage_payroll` explícito veía un botón de Import/Export que funcionaba visualmente pero
+  devolvía 403 al usarlo. Corregido: ahora gatea por `canManagePayroll` (`manage_payroll`),
+  igual que el backend.
+- El prop `canManageEmployees` de `EmployeeOverviewPanel` (controla si se cargan las opciones de
+  terminación y si aparecen "Invite to app"/"Terminate" en el menú del registro) recibía
+  `canManageCustomFields` en vez de `canEditEmployees` — inofensivo solo porque ambos flags eran
+  literalmente la misma expresión antes de esta migración. Corregido: ahora recibe `canEditEmployees`
+  (`manage_employee`), la correspondencia semánticamente correcta.
+
+Verificado con un tenant descartable en `staging` con 2 roles reales — "HR Only"
+(`manage_employee`, sin `manage_payroll`) y "Payroll Only" (`manage_payroll`, sin
+`manage_employee`) — antes de esta fase, ambos habrían visto exactamente lo mismo (o nada) porque
+compartían un solo flag binario `owner||admin`; con Playwright real: HR Only ve la fila fantasma
+"+ Add" pero NINGÚN botón de CSV en la barra de herramientas; Payroll Only ve los botones de
+Export/Import CSV pero NO la fila de agregar. Confirmado también que HR Only ahora sí dispara el
+`GET .../termination` al abrir el panel de un empleado (antes, con el prop mal cableado, no lo
+hacía). `npm test` 287/287 (+2 tests nuevos), ambos builds verdes. Nada de esto llegó a `main`
+todavía.
+
+**Deuda conocida, no parte de esta fase**: quedan ~14 archivos más con el mismo patrón
+`user.role === 'owner'/'admin'` inline (`Sidebar.tsx`, `AppLayout.tsx`, `CompaniesPage.tsx`,
+`ContactsPage.tsx`, `OpportunitiesPage.tsx`, `PayrollPage.tsx`, `PayrollRunDetailPage.tsx`,
+`TimeOffOverviewPage.tsx`, `PaymentsOverviewPage.tsx`, `ActivityLogSettingsPage.tsx`,
+`IntegrationsSettingsPage.tsx`, `OverviewPage.tsx`, `DashboardsLayout.tsx`,
+`settingsSections.tsx`) — la migración completa de esos es la Fase J.
+`CompanyUsersPage.tsx` sale de esta lista tras la Fase I (ver abajo), aunque conserva un
+`isOwner = user.role === 'owner'` propio — ese uso puntual es correcto tal cual: significa
+literalmente "es el Owner fijo del tenant" (nunca afectado por roles custom), no una aproximación
+de un permiso real, así que no hace falta migrarlo. El botón "Add employee" del `EmptyState` de
+`EmployeesPage.tsx` sigue sin condicionar por permiso (muestra el botón aunque el `POST` vaya a
+devolver 403) — no se tocó en esta pasada porque el
+componente `EmptyState` compartido no admite hoy un primary action opcional sin cambiar su
+contrato para todos sus consumidores, un cambio más grande que el alcance de esta fase.
+
+**Fase I (asignación dinámica de roles en invitaciones/usuarios): completa.** Hasta acá,
+`CompanyUsersPage.tsx` (invitar gente, cambiar el rol de alguien) solo conocía 3 opciones
+hardcodeadas (`member`/`admin`/`owner`, el enum legacy) — un tenant no tenía forma de invitar a
+alguien o reasignar a un usuario existente a un rol custom que hubiera creado en Settings → Roles
+& Permissions. Requirió tocar 2 servicios backend + un endpoint nuevo, no solo el frontend:
+
+- **`listAssignableRoles(tenantId)`** (nuevo, `roleManagementService.ts`) + `GET
+  /api/roles/assignable` — deliberadamente NO owner-only (a diferencia de cada otra ruta
+  `/api/roles*`): devuelve solo `{id, name}` de cada rol no-Owner del tenant, gateado por
+  `canManageUsers || canInviteUsers` — un rol con esos permisos necesita saber qué roles existen
+  para asignarlos, sin necesitar el nivel de acceso de owner que exige `Settings → Roles &
+  Permissions` en sí.
+- **`updateTenantUser`/`createInvitation`** (`tenantUserService.ts`/`invitationService.ts`) ganan
+  un parámetro `roleId?` que asigna/invita a CUALQUIER rol del tenant (semilla o custom)
+  directamente por id — toma precedencia sobre el `role` legacy cuando ambos llegan. Como el enum
+  `UserRole` solo tiene 3 valores y no puede representar un nombre de rol custom, se fija a
+  `'member'` (el más bajo privilegio) como placeholder puramente cosmético — `roleId` es lo único
+  que `resolveRoleContextForUser` realmente lee. Ambos caminos rechazan asignar el rol Owner por
+  esta vía (`targetRole.isOwner`): la transferencia de ownership sigue siendo exclusivamente el
+  flujo atómico ya existente en `updateTenantUser` (nunca "solo otro rol más" para asignar).
+  `listTenantUsers`/`listTenantInvitations` ahora incluyen `roleRef: {name}` para que el frontend
+  muestre el nombre real del rol asignado, no el enum legacy (que para un rol custom diría
+  "Member" engañosamente).
+- **Frontend**: `RoleChip` ahora acepta un `label` opcional para mostrar el nombre real de un rol
+  custom (con el color neutro de "member" como base, ya que solo owner/admin tienen su propio
+  color). `CompanyUsersPage.tsx`: los `<select>` de invitar y de cambiar rol por usuario ahora se
+  llenan con `listAssignableRoles` en vez de 2 `<option>` hardcodeados; la opción "Owner (transfer
+  ownership)" se mantiene como una entrada especial fija, aparte de la lista dinámica, solo visible
+  para quien ya es Owner — nunca "otro rol más" a elegir.
+
+Verificado con un tenant descartable en `staging`: un rol custom "Manager" creado de antemano
+aparece en el dropdown de invitar junto a Admin/Member (nombres reales, no strings hardcodeados);
+una invitación real creada eligiendo "Manager" quedó en la base con `role: "member"` (placeholder)
+y `roleRef.name: "Manager"` (confirmado vía `GET /api/tenants/invitations` real); reasignar a un
+usuario existente a ese mismo rol custom vía `PATCH /api/tenants/users/:id` con `roleId` funcionó
+igual; intentar asignar el rol Owner por este camino (incluso como el propio Owner actuando) fue
+rechazado con un mensaje claro pidiendo usar la transferencia de ownership. `npm test` 299/299
+(+15 tests nuevos: `listAssignableRoles`, y las nuevas ramas `roleId` de `updateTenantUser`/
+`createInvitation` con sus rechazos — cross-tenant, rol inexistente, rol Owner), ambos builds
+verdes. Nada de esto llegó a `main` todavía.
+
+**Fase J (enforcement de campos en la UI — migración completa de los chequeos inline): completa.**
+El barrido final: los ~14 archivos restantes con `user.role === 'owner'/'admin'` inline
+(`Sidebar.tsx`, `AppLayout.tsx`, `CompaniesPage.tsx`, `ContactsPage.tsx`, `OpportunitiesPage.tsx`,
+`PayrollPage.tsx`, `PayrollRunDetailPage.tsx`, `TimeOffOverviewPage.tsx`,
+`PaymentsOverviewPage.tsx`, `ActivityLogSettingsPage.tsx`, `IntegrationsSettingsPage.tsx`,
+`OverviewPage.tsx`, `DashboardsLayout.tsx`, `settingsSections.tsx`, más `RolesPermissionsPage.tsx`/
+`CompanyUsersPage.tsx` por consistencia aunque su `isOwner` ya era correcto) migrados a
+`usePermissions()`. Cada chequeo se migró a su permiso real, no a una aproximación:
+`manage_payroll` (Sidebar/PayrollPage/PayrollRunDetailPage/DashboardsLayout),
+`manage_payments` (Sidebar/PaymentsOverviewPage/IntegrationsSettingsPage's Stripe card/
+CompanyDetailModal's Payments section — 2 props renombrados de `isOwner` a `canManagePayments` en
+el camino, mismo criterio que la Fase G), `manage_billing` (los 3 chequeos de billing en
+AppLayout.tsx + el ítem "Billing" de Settings), `manage_opportunity` (OpportunitiesPage),
+`view_activity_log` (ActivityLogSettingsPage + el ítem de Settings), `manage_custom_fields`
+(Public Forms/Pipelines en Settings, y el gate de Time Off — ver nota abajo), `manage_users`
+(Users en Settings + el disparador de `OnboardingChecklist`), `manage_tenant_settings`
+(Appearance en Settings). `settingsSections.tsx` (compartido por el tile grid y el nav lateral)
+pasó de un único `isAdmin` cubriendo 5 páginas con 5 permisos reales distintos a gatear cada ítem
+individualmente por el suyo — el encabezado "Company" ahora solo aparece si al menos un ítem
+sobrevive el filtro, en vez de asumir que "admin" implica las 5 cosas a la vez.
+
+**2 bugs reales encontrados y corregidos al migrar (no un simple find-and-replace)**:
+1. **CsvImportExportMenu (Company/Contact)**: el backend gatea exportar por `view_company`/
+   `view_contact` e importar+plantilla por `manage_company`/`manage_contact` — 2 permisos
+   distintos en el mismo menú (a diferencia de Employee, donde ambos van por `manage_payroll`
+   parejo). El componente ganó `canExport`/`canImport` opcionales (default `true`, no rompe el
+   uso de Employee) para reflejar esa separación real en vez de ocultar todo el menú por un solo
+   flag aproximado.
+2. **`Promise.all` todo-o-nada expuesto por primera vez por roles custom**: `OpportunitiesPage.tsx`
+   y las 2 automatizaciones de `PipelinesSettingsPage.tsx` incluían `GET /api/tenants/users`
+   (gateado por `manage_users`) dentro de un `Promise.all` junto con datos que SÍ debían cargar
+   sin ese permiso (pipelines, opportunities, companies, contacts, catálogos) — antes de Custom
+   Roles, todo rol que llegaba a esas páginas tenía `manage_users` implícito (owner/admin lo
+   traían empaquetado), así que este modo de falla nunca era alcanzable. Un rol real como
+   "Sales Manager" (`view_company`+`view_contact`+`manage_opportunity`, sin `manage_users`) lo
+   hace alcanzable por primera vez: sin el fix, la página entera fallaba con un toast "Failed to
+   load: Insufficient permissions" en vez de cargar todo lo demás con el selector de "owner" del
+   deal simplemente vacío. Corregido condicionando esa única llamada a `permissions.has('manage_users')`,
+   con `Promise.resolve([])` como alternativa — mismo patrón, no una nueva llamada al backend.
+   Encontrado el mismo patrón (y corregido igual) en `OverviewPage.tsx`: `GET
+   /api/hr/employees/birthdays` (gateado por `view_employee`, preexistente a Custom Roles) dentro
+   del `Promise.all` del calendario — cualquier rol sin `view_employee` (posible por primera vez)
+   veía "Failed to load the team calendar" en cada visita a Overview en vez de un calendario de
+   Time Off/Tasks funcionando con la sección de cumpleaños simplemente vacía.
+
+**Deuda conocida, no corregida en esta fase (fuera de alcance deliberado)**: el mismo patrón
+`GET /api/tenants/users` dentro de un `Promise.all` existe en al menos 3 lugares más
+(`CompaniesPage.tsx`, `ContactsPage.tsx`, `EmployeesPage.tsx` ya lo aíslan con su propio
+`.catch()` independiente, así que están a salvo — pero una revisión más sistemática de "qué
+páginas listan usuarios del tenant sin necesitar `manage_users` para el resto de sus datos" queda
+pendiente). La solución de fondo — un endpoint tipo "directorio" para Users, análogo al de
+Employee (Fase E), no gateado por `manage_users`, para poblar selectores de "asignar a" sin
+exigir el permiso completo de gestión de usuarios — es una pieza de tamaño propio, no algo para
+resolver de paso dentro de esta fase.
+
+Verificado con un tenant descartable en `staging` con 9 roles de un solo permiso cada uno
+(`OnlyBilling`, `OnlyPayroll`, `OnlyPayments`, `OnlyCustomFields`, `SalesManager`, `OnlyUsers`,
+`OnlyActivityLog`, `OnlyTenantSettings`, `Bare`) más el Owner — 20+ verificaciones puntuales vía
+Playwright real confirmaron que cada rol ve exactamente lo suyo y nada más (ej. `OnlyBilling` ve
+"Billing" pero ni siquiera el encabezado "Company", `OnlyPayroll` ve el link de Payroll pero no
+Payments y viceversa). El hallazgo de `OpportunitiesPage.tsx` se descubrió y confirmó en vivo con
+`SalesManager` (el toast de error desapareció después del fix, con el resto de la página cargando
+normalmente); el de `OverviewPage.tsx` se confirmó de la misma forma. `npm test` 299/299 (sin
+cambios, esta fase es 100% frontend), ambos builds verdes. Nada de esto llegó a `main` todavía.
+
+**QA-76 (2026-09-02, fix same-day, no una fase): 2 bugs de invitaciones encontrados por Alejandro en
+su revisión.** Ninguno de los dos es propiamente un bug de Custom Roles — ambos eran deuda
+preexistente en el flujo de invitaciones que su revisión fue la primera en ejercitar de punta a
+punta. (1) `invitationService.ts`'s `sendInvitationEmail(...).catch(...)` no estaba `await`eado —
+la misma clase de bug ya diagnosticada y corregida para el email de verificación de signup
+(commit `43fd0be`) — fijado acá con el mismo helper `bestEffort()`. De paso se encontró que el cuerpo del
+email siempre decía "as member" para cualquier invitación por `roleId` (Fase I dejó el enum `role`
+como placeholder cosmético `'member'` para esos casos, y el email lo leía tal cual) — ahora usa el
+nombre real del rol resuelto. (2) El endpoint `POST /api/hr/employees/:employeeId/invite` ("Invite
+to app" en el overview de un Employee, y el ícono de invitar en la tabla de Employees — ambos
+puntos de entrada llaman al mismo endpoint) tenía `role: 'member'` hardcodeado sin aceptar
+`roleId`, a diferencia del modal "Invite Someone" de Settings → Users (Fase I) que sí tiene
+selector. Ahora acepta un `roleId` opcional (validado por el mismo `createInvitation` de siempre);
+el frontend abre un `Modal` chico con selector de rol antes de enviar, default a Member igual que
+antes. Verificado con envío real a Gmail (confirma que el fix de `bestEffort` realmente entrega el
+email, algo que un `tsx watch` local de proceso largo no puede refutar por sí solo) y con un tenant
+descartable adicional para el endpoint de Employee (roleId explícito se guarda correcto; sin
+roleId sigue cayendo en Member). `npm test` 299/299, ambos builds verdes.
+
+```mermaid
+erDiagram
+    TENANT ||--o{ ROLE : "has"
+    ROLE ||--o{ ROLE_MODULE_PERMISSION : "grants"
+    ROLE ||--o{ ROLE_FIELD_RESTRICTION : "hides"
+    ROLE ||--o{ USER : "assigned to"
+    ROLE ||--o{ INVITATION : "assigned to"
+
+    ROLE {
+        string id PK
+        string tenantId FK
+        string name
+        boolean isOwner "exactamente 1 por tenant, nunca editable/borrable"
+        boolean isEditable "false solo para la fila isOwner=true"
+    }
+    ROLE_MODULE_PERMISSION {
+        string id PK
+        string roleId FK
+        string permission "string libre, ver PERMISSION_KEYS en roleService.ts"
+    }
+    ROLE_FIELD_RESTRICTION {
+        string id PK
+        string roleId FK
+        enum entityType "ActivityEntityType — reusado, ver grupo 13"
+        string fieldKey "solo campos FIJOS del schema, nunca un CustomFieldDefinition.id"
+    }
+```
+
+Notas:
+- **`User.roleId`/`Invitation.roleId` son aditivos y nullable** — el enum `UserRole`
+  (`User.role`/`Invitation.role`) sigue siendo la fuente de verdad legacy hasta que todo el código
+  lea `RoleContext` en vez de compararlo directo; el corte del enum viejo queda deliberadamente
+  fuera de esta ronda (push destructivo diferido, solo tras confirmación prolongada en producción).
+- **`Role.isOwner` hace al owner estructuralmente no-restringible** — nunca tiene filas en
+  `RoleModulePermission`/`RoleFieldRestriction`; todo el enforcement corta camino en `isOwner` antes
+  de consultarlas. Garantiza que la transferencia de ownership y la facturación siempre tengan un
+  usuario con acceso total, sin importar cómo un tenant configure el resto de sus roles.
+- **`RoleModulePermission.permission` es un string libre, no un enum de Postgres** — la lista de
+  permisos crece cada vez que un módulo nuevo se gatea; un enum forzaría un push de schema por cada
+  uno. Además de los ~10 permisos de módulo de hoy, codifica 2 convenciones especiales de Employee
+  (ver `roleService.ts`): el scope (`view_employee_scope:self|department|all`, mutuamente
+  excluyentes — con enforcement real desde la Fase E, ver arriba) y el bundle de custom fields
+  (`view_employee_custom_fields`/`edit_employee_custom_fields` — con enforcement real desde la
+  Fase D, ver arriba).
+- **`RoleFieldRestriction` es una denylist dispersa** — una fila significa "oculto", la ausencia
+  significa "visible" (el default). Con ~15 entidades de 10-30 campos, una fila por combinación
+  sería ~1500 filas por tenant solo para el estado por defecto; con denylist, un campo nuevo
+  (incluido un `CustomFieldDefinition` recién creado) es visible sin sembrar nada. Solo cubre
+  campos FIJOS del schema — los custom fields van por el bundle de arriba, no por esta tabla.
+  Enforcement real desde la Fase C (`fieldVisibilityService.ts`), gateado siempre por el permiso de
+  módulo de la entidad primero (ver Fase C arriba).
+
 ## Enums
 
 | Enum | Valores | Usado en |
 |---|---|---|
-| `UserRole` | `owner`, `admin`, `member` | `User.role`, `Invitation.role` |
+| `UserRole` | `owner`, `admin`, `member` | `User.role`, `Invitation.role` — legacy, ver grupo 14 (Custom Roles) |
 | `UserStatus` | `active`, `inactive` | `User.status` |
 | `TenantStatus` | `active`, `trialing`, `past_due`, `suspended`, `cancelled` | `Tenant.status` (`trialing`/`past_due` nuevos, Subscription Plans — grupo 8) |
 | `AcquisitionChannel` | `organic`, `paid_ads`, `referral`, `content`, `outbound_sales`, `partnership`, `other` | `Tenant.acquisitionChannel` |

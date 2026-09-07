@@ -13,6 +13,7 @@ import { formatMoney } from '../lib/currencies';
 import { getInitials } from '../components/common/Avatar';
 import { PlusIcon, TargetIcon } from '../components/common/Icons';
 import { useAutoCreateGuard } from '../hooks/useAutoCreateGuard';
+import { usePermissions } from '../contexts/PermissionsContext';
 
 // A deal that hasn't moved stage in this many days shows its age in red (.kc-age.late).
 const LATE_STAGE_DAYS_THRESHOLD = 14;
@@ -98,7 +99,10 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
   // linked one" apart from "nothing changed", so it knows whether to re-link.
   const [linkedContactId, setLinkedContactId] = useState<string | null>(null);
 
-  const canEdit = user.role === 'owner' || user.role === 'admin';
+  // Custom Roles Fase J — migrated off `user.role === 'owner'/'admin'` to the real backend gate,
+  // manage_opportunity (itself derived from view_company+view_contact — permissionService.ts).
+  const permissions = usePermissions();
+  const canEdit = permissions.has('manage_opportunity');
 
   // React.StrictMode (main.tsx) double-invokes effects in dev, so this body
   // runs twice on mount — without this guard, the second run's "default to
@@ -111,12 +115,19 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
   const hasSetInitialTab = useRef(false);
 
   useEffect(() => {
+    // Custom Roles Fase J finding: GET /api/tenants/users (the deal-owner dropdown's source) is
+    // gated by manage_users — a permission independent of manage_opportunity. Before Custom
+    // Roles, every role that could reach this page also had manage_users implicitly (owner/admin
+    // bundled everything), so this Promise.all's all-or-nothing failure mode was never actually
+    // reachable. Guarded here rather than always attempting it, same fix shape as
+    // OverviewPage.tsx's birthdays call — a role without manage_users just gets an empty owner
+    // dropdown instead of the whole page failing to load.
     Promise.all([
       api.listPipelines(token),
       api.listOpportunities(token),
       api.listCompanies(token),
       api.listContacts(token),
-      api.listTenantUsers(token),
+      permissions.has('manage_users') ? api.listTenantUsers(token) : Promise.resolve([]),
       api.listFieldCatalogDefinitions(token, 'lossReason'),
       api.listFieldCatalogDefinitions(token, 'winReason'),
       api.getCurrentTenant(token),

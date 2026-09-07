@@ -1,12 +1,10 @@
 import { Link } from 'react-router-dom';
 import { getSettingsSections } from '../lib/settingsSections';
+import { usePermissions } from '../contexts/PermissionsContext';
 
-interface SettingsHomePageProps {
-  user: any;
-}
-
-export default function SettingsHomePage({ user }: SettingsHomePageProps) {
-  const sections = getSettingsSections(user);
+export default function SettingsHomePage() {
+  const permissions = usePermissions();
+  const sections = getSettingsSections(permissions);
 
   return (
     <>

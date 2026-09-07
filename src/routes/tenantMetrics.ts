@@ -30,7 +30,7 @@ tenantMetricsRouter.get('/api/tenant-metrics/overview', async (req, res) => {
 
   const range = parseDateRange(req.query);
   const tenantId = user.tenantId!;
-  const canSeePayroll = canManagePayroll(user.role);
+  const canSeePayroll = canManagePayroll(user.roleContext);
 
   const [hr, timeOff, payroll, sales, tasks, adoption] = await Promise.all([
     getHrMetrics(tenantId, range),
@@ -41,7 +41,7 @@ tenantMetricsRouter.get('/api/tenant-metrics/overview', async (req, res) => {
     getAdoptionMetrics(tenantId, range),
   ]);
 
-  if (!canViewSalesLeaderboard(user.role)) {
+  if (!canViewSalesLeaderboard(user.roleContext)) {
     sales.dealsByOwner = [];
   }
 

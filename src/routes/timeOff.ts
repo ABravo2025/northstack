@@ -32,7 +32,7 @@ timeOffRouter.post('/api/time-off-policies', async (req, res) => {
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -68,7 +68,7 @@ timeOffRouter.patch('/api/time-off-policies/:policyId', async (req, res) => {
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -146,7 +146,7 @@ timeOffRouter.get('/api/hr/time-off-requests', async (req, res) => {
   }
 
   if (scope === 'all') {
-    if (!canManageCustomFields(user.role)) {
+    if (!canManageCustomFields(user.roleContext)) {
       return res.status(403).json({ error: 'Insufficient permissions' });
     }
     const requests = await listAllTimeOffRequests(user.tenantId!);
@@ -211,7 +211,7 @@ timeOffRouter.get('/api/hr/time-off-balances', async (req, res) => {
     return;
   }
 
-  if (!canManageCustomFields(user.role)) {
+  if (!canManageCustomFields(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 

@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { api } from './api';
-import type { Tenant } from './api';
+import type { PermissionsPayload, Tenant } from './api';
 import { useToast } from './components/common/ToastProvider';
+import { PermissionsProvider } from './contexts/PermissionsContext';
 import TableSkeleton from './components/common/TableSkeleton';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -32,6 +33,7 @@ import CompanyAppearancePage from './pages/CompanyAppearancePage';
 import CompanyUsersPage from './pages/CompanyUsersPage';
 import PublicFormsSettingsPage from './pages/PublicFormsSettingsPage';
 import ActivityLogSettingsPage from './pages/ActivityLogSettingsPage';
+import RolesPermissionsPage from './pages/RolesPermissionsPage';
 import PublicFormPage from './pages/PublicFormPage';
 import BillingPage from './pages/BillingPage';
 import PaymentsOverviewPage from './pages/PaymentsOverviewPage';
@@ -54,6 +56,7 @@ export default function App() {
 
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [user, setUser] = useState<any>(null);
+  const [permissions, setPermissions] = useState<PermissionsPayload | null>(null);
   const [tenant, setTenant] = useState<Tenant | null>(null);
   const [loading, setLoading] = useState(false);
   const [checkingSession, setCheckingSession] = useState(
@@ -83,6 +86,7 @@ export default function App() {
       Promise.all([api.getCurrentUser(token), api.getCurrentTenant(token).catch(() => null)])
         .then(([userResponse, tenant]) => {
           setUser(userResponse.user);
+          setPermissions(userResponse.permissions);
           if (tenant) {
             setTenant(tenant);
           }
@@ -164,6 +168,7 @@ export default function App() {
     }
     setToken(null);
     setUser(null);
+    setPermissions(null);
     // Cleared alongside token/user — otherwise a second person logging in on the same tab
     // briefly (or, if the tenant fetch below then fails, indefinitely) sees the previous
     // account's tenant: its past_due/suspended banner, its PlansModal dismissal state, etc.
@@ -182,6 +187,7 @@ export default function App() {
   const isAuthenticated = Boolean(token && user);
 
   return (
+    <PermissionsProvider payload={permissions}>
     <Routes>
       <Route
         path="/login"
@@ -239,7 +245,7 @@ export default function App() {
         <Route path="/overview" element={<OverviewPage token={token ?? ''} user={user} />} />
         <Route path="/help" element={<HelpPage />} />
         <Route path="/hr/dashboard" element={<Navigate to="/dashboards/hr" replace />} />
-        <Route path="/dashboards" element={<DashboardsLayout user={user} token={token ?? ''} />}>
+        <Route path="/dashboards" element={<DashboardsLayout token={token ?? ''} />}>
           <Route index element={<Navigate to="/dashboards/hr" replace />} />
           <Route path="hr" element={<DashboardsHrPage />} />
           <Route path="time-off" element={<DashboardsTimeOffPage />} />
@@ -251,23 +257,23 @@ export default function App() {
         <Route path="/hr/people" element={<EmployeesPage user={user} token={token ?? ''} />} />
         <Route path="/hr/employees" element={<Navigate to="/hr/people" replace />} />
         <Route path="/hr/time-off" element={<TimeOffOverviewPage user={user} token={token ?? ''} />} />
-        <Route path="/hr/payroll" element={<PayrollPage user={user} token={token ?? ''} />} />
-        <Route path="/hr/payroll/runs/:runId" element={<PayrollRunDetailPage user={user} token={token ?? ''} />} />
+        <Route path="/hr/payroll" element={<PayrollPage token={token ?? ''} />} />
+        <Route path="/hr/payroll/runs/:runId" element={<PayrollRunDetailPage token={token ?? ''} />} />
         <Route path="/companies" element={<CompaniesPage user={user} token={token ?? ''} />} />
         <Route path="/contacts" element={<ContactsPage user={user} token={token ?? ''} />} />
         <Route path="/opportunities" element={<OpportunitiesPage user={user} token={token ?? ''} />} />
-        <Route path="/payments" element={<PaymentsOverviewPage user={user} token={token ?? ''} />} />
+        <Route path="/payments" element={<PaymentsOverviewPage token={token ?? ''} />} />
         <Route path="/profile" element={<Navigate to="/settings/profile" replace />} />
         <Route path="/company" element={<Navigate to="/settings/appearance" replace />} />
         <Route path="/settings" element={<WorkspaceSettingsLayout />}>
-          <Route index element={<SettingsHomePage user={user} />} />
+          <Route index element={<SettingsHomePage />} />
           <Route
             path="profile"
             element={<ProfileSettingsPage user={user} token={token ?? ''} onUserUpdated={setUser} />}
           />
           <Route
             path="integrations"
-            element={<IntegrationsSettingsPage token={token ?? ''} user={user} tenant={tenant} />}
+            element={<IntegrationsSettingsPage token={token ?? ''} tenant={tenant} />}
           />
           <Route path="appearance" element={<CompanyAppearancePage token={token ?? ''} />} />
           <Route
@@ -276,7 +282,8 @@ export default function App() {
           />
           <Route path="public-forms" element={<PublicFormsSettingsPage token={token ?? ''} />} />
           <Route path="pipelines" element={<PipelinesSettingsPage token={token ?? ''} />} />
-          <Route path="activity" element={<ActivityLogSettingsPage token={token ?? ''} user={user} />} />
+          <Route path="activity" element={<ActivityLogSettingsPage token={token ?? ''} />} />
+          <Route path="roles" element={<RolesPermissionsPage token={token ?? ''} />} />
           <Route path="billing" element={<BillingPage token={token ?? ''} tenant={tenant} onTenantUpdated={setTenant} />} />
         </Route>
       </Route>
@@ -286,5 +293,6 @@ export default function App() {
         element={<Navigate to={isAuthenticated ? '/overview' : '/login'} replace />}
       />
     </Routes>
+    </PermissionsProvider>
   );
 }

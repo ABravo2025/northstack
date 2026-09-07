@@ -305,58 +305,58 @@ enum PayrollEntryType {
 }
 
 model Tenant {
-  id                       String                    @id @default(uuid())
-  name                     String
-  slug                     String                    @unique
-  status                   TenantStatus              @default(active)
-  createdAt                DateTime                  @default(now())
-  companySize              String?
-  industry                 String?
-  country                  String?
-  acquisitionChannel       AcquisitionChannel?
-  currency                 String                    @default("USD") // ISO-4217, tenant-wide default (Opportunity/EmployeeCompensation can override per record)
+  id                        String                     @id @default(uuid())
+  name                      String
+  slug                      String                     @unique
+  status                    TenantStatus               @default(active)
+  createdAt                 DateTime                   @default(now())
+  companySize               String?
+  industry                  String?
+  country                   String?
+  acquisitionChannel        AcquisitionChannel?
+  currency                  String                     @default("USD") // ISO-4217, tenant-wide default (Opportunity/EmployeeCompensation can override per record)
   // Subscription Plans (spec-subscription-plans.md) — all nullable/additive, no billing
   // provider integrated yet (Paddle is a separate, later round). trialEndsAt is set once at
   // registration; plan/lockedPriceCents/lockedPriceSetAt are set by PATCH /api/tenants/me/plan;
   // gracePeriodEndsAt is set by the plan-transitions job the first time a tenant lapses.
-  plan                     PlanTier?
-  trialEndsAt              DateTime?
-  gracePeriodEndsAt        DateTime?
-  lockedPriceCents         Int?
-  lockedPriceSetAt         DateTime?
-  subscription             Subscription?
-  users                    User[]
-  employees                Employee[]
-  clients                  Client[]
-  customFieldDefns         CustomFieldDefinition[]
-  customFieldValues        CustomFieldValue[]
-  invitations              Invitation[]
-  statusDefinitions        StatusDefinition[]
-  statusHistory            StatusHistoryEntry[]
-  timeOffPolicies          TimeOffPolicyDefinition[]
-  employeeTimeOffPolicies  EmployeeTimeOffPolicy[]
-  timeOffRequests          TimeOffRequest[]
-  savedViews               SavedView[]
-  forms                    Form[]
-  fieldCatalogDefinitions  FieldCatalogDefinition[]
-  companies                Company[]
-  contacts                 Contact[]
-  pipelines                Pipeline[]
-  pipelineStages           PipelineStageDefinition[]
-  pipelineAssignmentUsers  PipelineAssignmentUser[]
-  opportunities            Opportunity[]
-  opportunityContacts      OpportunityContact[]
-  opportunityStageHistory  OpportunityStageHistory[]
-  tasks                    Task[]
-  notes                    Note[]
-  notifications            Notification[]
-  tickets                  Ticket[]
-  ideas                    Idea[]
-  payFrequencyDefinitions  PayFrequencyDefinition[]
-  paymentMethodDefinitions PaymentMethodDefinition[]
-  employeeCompensations    EmployeeCompensation[]
-  payrollRuns              PayrollRun[]
-  payrollEntries           PayrollEntry[]
+  plan                      PlanTier?
+  trialEndsAt               DateTime?
+  gracePeriodEndsAt         DateTime?
+  lockedPriceCents          Int?
+  lockedPriceSetAt          DateTime?
+  subscription              Subscription?
+  users                     User[]
+  employees                 Employee[]
+  clients                   Client[]
+  customFieldDefns          CustomFieldDefinition[]
+  customFieldValues         CustomFieldValue[]
+  invitations               Invitation[]
+  statusDefinitions         StatusDefinition[]
+  statusHistory             StatusHistoryEntry[]
+  timeOffPolicies           TimeOffPolicyDefinition[]
+  employeeTimeOffPolicies   EmployeeTimeOffPolicy[]
+  timeOffRequests           TimeOffRequest[]
+  savedViews                SavedView[]
+  forms                     Form[]
+  fieldCatalogDefinitions   FieldCatalogDefinition[]
+  companies                 Company[]
+  contacts                  Contact[]
+  pipelines                 Pipeline[]
+  pipelineStages            PipelineStageDefinition[]
+  pipelineAssignmentUsers   PipelineAssignmentUser[]
+  opportunities             Opportunity[]
+  opportunityContacts       OpportunityContact[]
+  opportunityStageHistory   OpportunityStageHistory[]
+  tasks                     Task[]
+  notes                     Note[]
+  notifications             Notification[]
+  tickets                   Ticket[]
+  ideas                     Idea[]
+  payFrequencyDefinitions   PayFrequencyDefinition[]
+  paymentMethodDefinitions  PaymentMethodDefinition[]
+  employeeCompensations     EmployeeCompensation[]
+  payrollRuns               PayrollRun[]
+  payrollEntries            PayrollEntry[]
   googleCalendarConnections GoogleCalendarConnection[]
   timeOffCalendarSyncs      TimeOffCalendarSync[]
   stripeConnection          StripeConnection?
@@ -364,6 +364,9 @@ model Tenant {
   tagAssignments            TagAssignment[]
   employeeTerminations      EmployeeTermination[]
   activityLogEntries        ActivityLogEntry[]
+  roles                     Role[]
+  roleModulePermissions     RoleModulePermission[]
+  roleFieldRestrictions     RoleFieldRestriction[]
 }
 
 // Billing Integration (spec-billing-integration.md). plan/lockedPriceCents are deliberately NOT
@@ -451,54 +454,62 @@ model ProcessedWebhookEvent {
 }
 
 model User {
-  id                      String                 @id @default(uuid())
-  firstName               String
-  lastName                String
-  phone                   String
-  email                   String                 @unique
+  id                          String                      @id @default(uuid())
+  firstName                   String
+  lastName                    String
+  phone                       String
+  email                       String                      @unique
   // Lowercased domain portion of `email`, set at create time (src/lib/email.ts's
   // getEmailDomain) — lets checkEmailDomainNotAlreadyRegistered (tenantService.ts) do an
   // indexed equality lookup instead of an `endsWith` scan of the whole table, which can't use
   // a btree index. Nullable because it predates existing rows — see
   // scripts/backfill-user-email-domain.ts, run once after this column is added.
-  emailDomain             String?
-  passwordHash            String
-  role                    UserRole               @default(member)
-  status                  UserStatus             @default(active)
-  platformRole            PlatformRole?
-  createdAt               DateTime               @default(now())
-  tenantId                String?
-  tenant                  Tenant?                @relation(fields: [tenantId], references: [id])
-  sessions                Session[]
-  sentInvitations         Invitation[]
-  employee                Employee?
-  statusChanges           StatusHistoryEntry[]
-  savedViews              SavedView[]
-  acceptedTermsAt         DateTime?
-  jobFunction             JobFunction?
-  accountOwnerOfCompanies Company[]
-  ownedOpportunities      Opportunity[]
-  tasksAssigned           Task[]                 @relation("TaskAssignee")
-  tasksCreated            Task[]                 @relation("TaskCreatedBy")
-  notesCreated            Note[]
-  notifications           Notification[]
-  pipelinesCreated        Pipeline[]             @relation("PipelineCreatedBy")
-  pipelinesUpdated        Pipeline[]             @relation("PipelineUpdatedBy")
-  pipelinesLastAssigned   Pipeline[]             @relation("PipelineLastAssignedUser")
-  pipelineAssignments     PipelineAssignmentUser[]
-  ticketsReported         Ticket[]               @relation("TicketReporter")
-  ticketsAssignedTo       Ticket[]               @relation("TicketAssignee")
-  ideasReported           Idea[]                 @relation("IdeaReporter")
-  compensationsCreated    EmployeeCompensation[]
-  payrollRunsCreated      PayrollRun[]
-  passwordResetTokens     PasswordResetToken[]
-  googleCalendarConnection GoogleCalendarConnection?
-  timeOffCalendarSyncs    TimeOffCalendarSync[]
-  googleCalendarWatchChannel GoogleCalendarWatchChannel?
-  stripeConnectionsConnected StripeConnection[]
+  emailDomain                 String?
+  passwordHash                String
+  role                        UserRole                    @default(member)
+  // Custom Roles (docs/tareas/backlog.md "Sistema de roles custom") — additive, nullable during
+  // the migration window. `role` (enum above) stays the source of truth until the backfill script
+  // (scripts/backfill-custom-roles.ts) assigns every existing User a roleId and every code path
+  // reads RoleContext instead; only then does `role` become purely a legacy display label. Never
+  // read roleId directly for an authorization decision outside authenticateToken/roleService.ts —
+  // always go through the resolved RoleContext.
+  roleId                      String?
+  roleRef                     Role?                       @relation(fields: [roleId], references: [id])
+  status                      UserStatus                  @default(active)
+  platformRole                PlatformRole?
+  createdAt                   DateTime                    @default(now())
+  tenantId                    String?
+  tenant                      Tenant?                     @relation(fields: [tenantId], references: [id])
+  sessions                    Session[]
+  sentInvitations             Invitation[]
+  employee                    Employee?
+  statusChanges               StatusHistoryEntry[]
+  savedViews                  SavedView[]
+  acceptedTermsAt             DateTime?
+  jobFunction                 JobFunction?
+  accountOwnerOfCompanies     Company[]
+  ownedOpportunities          Opportunity[]
+  tasksAssigned               Task[]                      @relation("TaskAssignee")
+  tasksCreated                Task[]                      @relation("TaskCreatedBy")
+  notesCreated                Note[]
+  notifications               Notification[]
+  pipelinesCreated            Pipeline[]                  @relation("PipelineCreatedBy")
+  pipelinesUpdated            Pipeline[]                  @relation("PipelineUpdatedBy")
+  pipelinesLastAssigned       Pipeline[]                  @relation("PipelineLastAssignedUser")
+  pipelineAssignments         PipelineAssignmentUser[]
+  ticketsReported             Ticket[]                    @relation("TicketReporter")
+  ticketsAssignedTo           Ticket[]                    @relation("TicketAssignee")
+  ideasReported               Idea[]                      @relation("IdeaReporter")
+  compensationsCreated        EmployeeCompensation[]
+  payrollRunsCreated          PayrollRun[]
+  passwordResetTokens         PasswordResetToken[]
+  googleCalendarConnection    GoogleCalendarConnection?
+  timeOffCalendarSyncs        TimeOffCalendarSync[]
+  googleCalendarWatchChannel  GoogleCalendarWatchChannel?
+  stripeConnectionsConnected  StripeConnection[]
   employeeTerminationsCreated EmployeeTermination[]
-  activityLogEntries         ActivityLogEntry[]
-  subscriptionsLastActedOn   Subscription[]
+  activityLogEntries          ActivityLogEntry[]
+  subscriptionsLastActedOn    Subscription[]
 
   @@index([emailDomain])
 }
@@ -589,24 +600,24 @@ model Employee {
 // the future (scheduled — executeTermination doesn't run until the daily cron picks it up, see
 // runScheduledTerminations in terminationService.ts).
 model EmployeeTermination {
-  id                  String    @id @default(uuid())
-  tenantId            String
-  tenant              Tenant    @relation(fields: [tenantId], references: [id])
-  employeeId          String
-  employee            Employee  @relation(fields: [employeeId], references: [id])
-  terminationDate     DateTime
-  revokeAccess        Boolean   @default(false)
+  id                   String                            @id @default(uuid())
+  tenantId             String
+  tenant               Tenant                            @relation(fields: [tenantId], references: [id])
+  employeeId           String
+  employee             Employee                          @relation(fields: [employeeId], references: [id])
+  terminationDate      DateTime
+  revokeAccess         Boolean                           @default(false)
   // PayrollEntry.ids of the off-cycle payment(s) created alongside this termination, if any
   // (payrollOffPaymentService.ts's createOffPayments — reused as-is, not a new payroll concept).
   // One per line: the primary final payment plus any bonus/commission/reimbursement/deduction
   // lines added alongside it (same adjustment types a normal payroll run offers).
-  finalPaymentEntryIds String[] @default([])
-  createdByUserId     String
-  createdBy           User      @relation(fields: [createdByUserId], references: [id])
-  createdAt           DateTime  @default(now())
-  executedAt          DateTime? // null = not applied yet (scheduled for the future)
-  cancelledAt         DateTime? // admin cancelled before it executed
-  reassignments       EmployeeTerminationReassignment[]
+  finalPaymentEntryIds String[]                          @default([])
+  createdByUserId      String
+  createdBy            User                              @relation(fields: [createdByUserId], references: [id])
+  createdAt            DateTime                          @default(now())
+  executedAt           DateTime? // null = not applied yet (scheduled for the future)
+  cancelledAt          DateTime? // admin cancelled before it executed
+  reassignments        EmployeeTerminationReassignment[]
 
   @@index([tenantId, employeeId])
 }
@@ -645,14 +656,14 @@ model Client {
 // its own later, separate step, not part of this schema-only pass).
 
 model Company {
-  id             String                  @id @default(uuid())
-  tenantId       String
-  tenant         Tenant                  @relation(fields: [tenantId], references: [id])
-  name           String
-  industry       String?
-  website        String?
-  phone          String?
-  billingAddress String? // same field the future Payments module will need — not duplicated
+  id                       String                  @id @default(uuid())
+  tenantId                 String
+  tenant                   Tenant                  @relation(fields: [tenantId], references: [id])
+  name                     String
+  industry                 String?
+  website                  String?
+  phone                    String?
+  billingAddress           String? // same field the future Payments module will need — not duplicated
   // Payments v1, Unit 2 (spec-payments-v1.md) — matched by iterating this Company's Contact
   // emails against Stripe (no OAuth/Connect, no domain matching), confirmed manually by a human
   // (0/1/2+ results). matchedVia stores the Contact *email* that produced the match, a snapshot
@@ -665,15 +676,15 @@ model Company {
   // pattern as Employee.managerId's wouldCreateManagerCycle). Deleting a
   // Company always unlinks its direct children (parentCompanyId -> null)
   // unless the caller opts into cascading the delete — see deleteCompany.
-  parentCompanyId String?
-  parentCompany   Company?                @relation("CompanyHierarchy", fields: [parentCompanyId], references: [id])
-  childCompanies  Company[]               @relation("CompanyHierarchy")
-  sizeId         String?
-  sizeDefn       FieldCatalogDefinition? @relation(fields: [sizeId], references: [id])
-  accountOwnerId String?
-  accountOwner   User?                   @relation(fields: [accountOwnerId], references: [id])
-  statusId       String // lifecycle status (Prospect/Customer/Churned) — StatusDefinition-based
-  statusDefn     StatusDefinition        @relation(fields: [statusId], references: [id]) // like Employee/Client, but never manually edited: derived from Opportunity/Contract events
+  parentCompanyId          String?
+  parentCompany            Company?                @relation("CompanyHierarchy", fields: [parentCompanyId], references: [id])
+  childCompanies           Company[]               @relation("CompanyHierarchy")
+  sizeId                   String?
+  sizeDefn                 FieldCatalogDefinition? @relation(fields: [sizeId], references: [id])
+  accountOwnerId           String?
+  accountOwner             User?                   @relation(fields: [accountOwnerId], references: [id])
+  statusId                 String // lifecycle status (Prospect/Customer/Churned) — StatusDefinition-based
+  statusDefn               StatusDefinition        @relation(fields: [statusId], references: [id]) // like Employee/Client, but never manually edited: derived from Opportunity/Contract events
   // Set only by the ad-hoc "create a Company for this Contact" flow off a
   // `lead`-type Pipeline (ContactDetailModal.tsx's handleCreateOpportunity) —
   // never true for a Company created from /companies or a public Form. Marks
@@ -683,18 +694,18 @@ model Company {
   // a placeholder for a confirmed one. Cleared explicitly (not on every edit)
   // once the Sales v2 "close a won lead" flow exists — see
   // docs/tareas/specredisenosalesv2.md §3.6.
-  isPlaceholder  Boolean                 @default(false)
-  createdAt      DateTime                @default(now())
-  contacts       Contact[]
-  opportunities  Opportunity[]
+  isPlaceholder            Boolean                 @default(false)
+  createdAt                DateTime                @default(now())
+  contacts                 Contact[]
+  opportunities            Opportunity[]
 
-  @@index([tenantId])
   // Nulls don't count toward Postgres uniqueness, so any number of Companies with no Stripe
   // customer linked yet are still allowed — this only blocks two Companies in the same tenant
   // from being linked to the *same* customer (see stripePaymentsService.ts's
   // linkCompanyToStripeCustomer, which already checks this at the application layer; this is the
   // DB-level backstop against a concurrent-request race).
   @@unique([tenantId, stripeCustomerId])
+  @@index([tenantId])
 }
 
 model Contact {
@@ -726,25 +737,25 @@ model Contact {
 }
 
 model Pipeline {
-  id            String                    @id @default(uuid())
-  tenantId      String
-  tenant        Tenant                    @relation(fields: [tenantId], references: [id])
-  name          String
-  type          PipelineType              @default(lead)
-  order         Int                       @default(0)
-  isActive      Boolean                   @default(true) // archived when false
-  createdAt     DateTime                  @default(now())
+  id                   String                    @id @default(uuid())
+  tenantId             String
+  tenant               Tenant                    @relation(fields: [tenantId], references: [id])
+  name                 String
+  type                 PipelineType              @default(lead)
+  order                Int                       @default(0)
+  isActive             Boolean                   @default(true) // archived when false
+  createdAt            DateTime                  @default(now())
   // @default(now()) too (not just @updatedAt) — required so `db push` can add
   // this NOT NULL column against the 155 existing Pipeline rows without a
   // destructive step; @updatedAt still auto-bumps it on every future update.
-  updatedAt     DateTime                  @default(now()) @updatedAt
+  updatedAt            DateTime                  @default(now()) @updatedAt
   // Both nullable — added 2026-08-25, no way to backfill who created/edited
   // a Pipeline that predates this column (including the two tenant-
   // registration default pipelines). Null just means "unknown", not "system".
-  createdById   String?
-  createdBy     User?                     @relation("PipelineCreatedBy", fields: [createdById], references: [id])
-  updatedById   String?
-  updatedBy     User?                     @relation("PipelineUpdatedBy", fields: [updatedById], references: [id])
+  createdById          String?
+  createdBy            User?                     @relation("PipelineCreatedBy", fields: [createdById], references: [id])
+  updatedById          String?
+  updatedBy            User?                     @relation("PipelineUpdatedBy", fields: [updatedById], references: [id])
   // Auto-assignment (docs/tareas/specredisenosalesv2.md §3.8) — see
   // PipelineAssignmentMode's doc comment for what each mode does.
   assignmentMode       PipelineAssignmentMode?
@@ -758,11 +769,11 @@ model Pipeline {
   // `updatedAt`/`updatedBy` on every single Opportunity creation — those columns
   // are for human edits to the Pipeline itself, not this machine-driven cursor.
   lastAssignedUserId   String?
-  lastAssignedUser     User?                    @relation("PipelineLastAssignedUser", fields: [lastAssignedUserId], references: [id])
+  lastAssignedUser     User?                     @relation("PipelineLastAssignedUser", fields: [lastAssignedUserId], references: [id])
   assignmentUsers      PipelineAssignmentUser[]
-  stages        PipelineStageDefinition[]
-  opportunities Opportunity[]
-  forms         Form[]
+  stages               PipelineStageDefinition[]
+  opportunities        Opportunity[]
+  forms                Form[]
 
   @@index([tenantId])
 }
@@ -789,15 +800,15 @@ model PipelineAssignmentUser {
 }
 
 model PipelineStageDefinition {
-  id            String                    @id @default(uuid())
-  tenantId      String
-  tenant        Tenant                    @relation(fields: [tenantId], references: [id])
-  pipelineId    String
-  pipeline      Pipeline                  @relation(fields: [pipelineId], references: [id])
-  name          String
-  color         String?
-  order         Int                       @default(0)
-  outcome       PipelineStageOutcome      @default(open)
+  id                 String                    @id @default(uuid())
+  tenantId           String
+  tenant             Tenant                    @relation(fields: [tenantId], references: [id])
+  pipelineId         String
+  pipeline           Pipeline                  @relation(fields: [pipelineId], references: [id])
+  name               String
+  color              String?
+  order              Int                       @default(0)
+  outcome            PipelineStageOutcome      @default(open)
   // 0-100, weighted-forecast input (docs/tareas/specredisenosalesv2.md §3.5).
   // Forced by the backend (never trusts a client-supplied value) to 100 for
   // `won` and 0 for `lost` — only `open` stages take a tenant-editable value.
@@ -807,17 +818,17 @@ model PipelineStageDefinition {
   // interpolation, which is the one place N is genuinely known upfront).
   // 100% editable after creation either way, so the default's precision
   // isn't critical.
-  probability   Int                       @default(50)
+  probability        Int                       @default(50)
   // Per-stage override of the Unit 8 stage-change notification/email
   // (docs/tareas/specredisenosalesv2.md §3.8) — an Opportunity entering this
   // stage notifies+emails its owner only when true. Defaults to true so
   // existing behavior (notify on every stage change) is unchanged until a
   // tenant opts a specific stage out.
-  notifyOwnerOnEnter Boolean              @default(true)
-  isActive      Boolean                   @default(true)
-  createdAt     DateTime                  @default(now())
-  opportunities Opportunity[]
-  stageHistory  OpportunityStageHistory[]
+  notifyOwnerOnEnter Boolean                   @default(true)
+  isActive           Boolean                   @default(true)
+  createdAt          DateTime                  @default(now())
+  opportunities      Opportunity[]
+  stageHistory       OpportunityStageHistory[]
 
   @@index([tenantId, pipelineId])
 }
@@ -902,25 +913,25 @@ model OpportunityStageHistory {
 }
 
 model StatusDefinition {
-  id         String     @id @default(uuid())
-  tenantId   String
-  tenant     Tenant     @relation(fields: [tenantId], references: [id])
-  entityType EntityType
-  name       String
-  color      String?
-  order      Int        @default(0)
-  isDefault  Boolean    @default(false)
-  isActive   Boolean    @default(true)
+  id                 String     @id @default(uuid())
+  tenantId           String
+  tenant             Tenant     @relation(fields: [tenantId], references: [id])
+  entityType         EntityType
+  name               String
+  color              String?
+  order              Int        @default(0)
+  isDefault          Boolean    @default(false)
+  isActive           Boolean    @default(true)
   // Marks the one system-managed "Terminated" employee status per tenant (created on demand by
   // terminationService.ts's getOrCreateTerminatedStatusId) — the source of truth for "is this
   // employee terminated" checks, instead of comparing `name === 'Terminated'` (a tenant can rename
   // any status, including this one, via the generic catalog endpoint; matching by name meant a
   // rename would silently break both the re-termination guard and the frontend's status lock).
-  isTerminatedStatus Boolean @default(false)
-  createdAt  DateTime   @default(now())
-  employees  Employee[]
-  clients    Client[]
-  companies  Company[]
+  isTerminatedStatus Boolean    @default(false)
+  createdAt          DateTime   @default(now())
+  employees          Employee[]
+  clients            Client[]
+  companies          Company[]
 
   @@index([tenantId, entityType])
 }
@@ -1029,24 +1040,24 @@ enum ActivityAction {
 // by activityLogService.ts's diffEntity — always populated the same way for create (before=empty)/
 // update/delete (after=empty), never three different ad-hoc message formats.
 model ActivityLogEntry {
-  id              String             @id @default(uuid())
-  tenantId        String
-  tenant          Tenant             @relation(fields: [tenantId], references: [id])
-  entityType      ActivityEntityType
-  entityId        String
-  entityLabel     String
+  id               String              @id @default(uuid())
+  tenantId         String
+  tenant           Tenant              @relation(fields: [tenantId], references: [id])
+  entityType       ActivityEntityType
+  entityId         String
+  entityLabel      String
   // Set only for entries whose subject is itself attached to another record (Task/Note/Tag,
   // always one of the 4 Tier-1 types) — lets the parent's own "Activity" tab surface "a Task/Note/
   // Tag was added to me" without lying about entityType/entityLabel (those stay accurate to what
   // actually changed — a Task, not the parent). See spec-activity-log.md's 2026-08-30 addendum.
   parentEntityType ActivityEntityType?
   parentEntityId   String?
-  action          ActivityAction
-  summary         String
-  changes         String?
-  changedByUserId String
-  changedBy       User               @relation(fields: [changedByUserId], references: [id])
-  changedAt       DateTime           @default(now())
+  action           ActivityAction
+  summary          String
+  changes          String?
+  changedByUserId  String
+  changedBy        User                @relation(fields: [changedByUserId], references: [id])
+  changedAt        DateTime            @default(now())
 
   @@index([tenantId, entityType, entityId, changedAt])
   @@index([tenantId, changedAt])
@@ -1104,15 +1115,15 @@ model TimeOffRequest {
 // request fans out to N different people's calendars — each gets its own
 // Google event id. See googleCalendarSyncService.ts.
 model TimeOffCalendarSync {
-  id                    String          @id @default(uuid())
+  id                    String         @id @default(uuid())
   tenantId              String
-  tenant                Tenant          @relation(fields: [tenantId], references: [id])
+  tenant                Tenant         @relation(fields: [tenantId], references: [id])
   timeOffRequestId      String
-  timeOffRequest        TimeOffRequest  @relation(fields: [timeOffRequestId], references: [id])
+  timeOffRequest        TimeOffRequest @relation(fields: [timeOffRequestId], references: [id])
   userId                String
-  user                  User            @relation(fields: [userId], references: [id])
+  user                  User           @relation(fields: [userId], references: [id])
   googleCalendarEventId String
-  createdAt             DateTime        @default(now())
+  createdAt             DateTime       @default(now())
 
   @@unique([timeOffRequestId, userId])
   @@index([tenantId])
@@ -1313,21 +1324,21 @@ model TagAssignment {
 // tenantId + entityType + entityId pattern already used by CustomFieldValue —
 // no per-module FK. See docs/tareas-desarrollo.md, "Módulo de Tasks", item 1.
 model Task {
-  id          String     @id @default(uuid())
-  tenantId    String
-  tenant      Tenant     @relation(fields: [tenantId], references: [id])
-  entityType  EntityType
-  entityId    String
-  title       String
-  description String?
-  assigneeId  String
-  assignee    User       @relation("TaskAssignee", fields: [assigneeId], references: [id])
-  dueDate     DateTime?
-  completedAt DateTime? // presence/absence is the done/pending state, not a separate enum
-  createdById String
-  createdBy   User       @relation("TaskCreatedBy", fields: [createdById], references: [id])
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id                    String     @id @default(uuid())
+  tenantId              String
+  tenant                Tenant     @relation(fields: [tenantId], references: [id])
+  entityType            EntityType
+  entityId              String
+  title                 String
+  description           String?
+  assigneeId            String
+  assignee              User       @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  dueDate               DateTime?
+  completedAt           DateTime? // presence/absence is the done/pending state, not a separate enum
+  createdById           String
+  createdBy             User       @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
   googleCalendarEventId String? // set once this task's dueDate has been pushed to the assignee's connected Google Calendar; see googleCalendarSyncService.ts
 
   @@index([tenantId, entityType, entityId])
@@ -1452,19 +1463,19 @@ model Session {
 // revoked (invalid_grant) — the row is kept (not deleted) so the UI can show
 // "reconnect" with the last-known account email instead of "not connected".
 model GoogleCalendarConnection {
-  id                     String   @id @default(uuid())
-  tenantId               String
-  tenant                 Tenant   @relation(fields: [tenantId], references: [id])
-  userId                 String   @unique
-  user                   User     @relation(fields: [userId], references: [id])
-  googleAccountEmail     String
-  accessTokenEncrypted   String
-  refreshTokenEncrypted  String
-  accessTokenExpiresAt   DateTime
-  scope                  String
-  needsReconnect         Boolean  @default(false)
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
+  id                    String   @id @default(uuid())
+  tenantId              String
+  tenant                Tenant   @relation(fields: [tenantId], references: [id])
+  userId                String   @unique
+  user                  User     @relation(fields: [userId], references: [id])
+  googleAccountEmail    String
+  accessTokenEncrypted  String
+  refreshTokenEncrypted String
+  accessTokenExpiresAt  DateTime
+  scope                 String
+  needsReconnect        Boolean  @default(false)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   @@index([tenantId])
 }
@@ -1511,22 +1522,22 @@ model GoogleCalendarWatchChannel {
 // subscriptions. needsAttention flips true when Stripe rejects the stored key (401/403) instead
 // of failing silently — same "reconnect" signal as GoogleCalendarConnection.needsReconnect above.
 model StripeConnection {
-  id                 String    @id @default(uuid())
-  tenantId           String    @unique
-  tenant             Tenant    @relation(fields: [tenantId], references: [id])
-  apiKeyEncrypted    String
-  apiKeyMode         String // "test" | "live", detected from the key's own prefix
-  stripeAccountId    String?
+  id                String    @id @default(uuid())
+  tenantId          String    @unique
+  tenant            Tenant    @relation(fields: [tenantId], references: [id])
+  apiKeyEncrypted   String
+  apiKeyMode        String // "test" | "live", detected from the key's own prefix
+  stripeAccountId   String?
   // Cursor for the twice-daily Stripe Events poll (runStripeEventPolling) — proactive
   // notifications replaced a per-tenant manual webhook entirely (backlog QA, 2026-08-28).
   // Null until the first poll; defaults to connectedAt then, not epoch, so a freshly connected
   // tenant never gets flooded with notifications for months-old already-resolved events.
-  lastEventPollAt    DateTime?
-  connectedByUserId  String
-  connectedBy        User      @relation(fields: [connectedByUserId], references: [id])
-  connectedAt        DateTime  @default(now())
-  disconnectedAt     DateTime?
-  needsAttention     Boolean   @default(false)
+  lastEventPollAt   DateTime?
+  connectedByUserId String
+  connectedBy       User      @relation(fields: [connectedByUserId], references: [id])
+  connectedAt       DateTime  @default(now())
+  disconnectedAt    DateTime?
+  needsAttention    Boolean   @default(false)
 }
 
 model Invitation {
@@ -1535,6 +1546,11 @@ model Invitation {
   tenant          Tenant           @relation(fields: [tenantId], references: [id])
   email           String
   role            UserRole         @default(member)
+  // Custom Roles — additive, nullable during the migration window. Same rule as User.roleId
+  // above: `role` (enum) stays authoritative until the backfill assigns roleId to every existing
+  // pending/accepted Invitation.
+  roleId          String?
+  roleRef         Role?            @relation(fields: [roleId], references: [id])
   token           String           @unique
   status          InvitationStatus @default(pending)
   invitedByUserId String
@@ -1543,4 +1559,82 @@ model Invitation {
   employee        Employee?        @relation(fields: [employeeId], references: [id])
   createdAt       DateTime         @default(now())
   expiresAt       DateTime
+}
+
+// Custom Roles (docs/tareas/backlog.md "Sistema de roles custom") — replaces the fixed
+// owner/admin/member enum with per-tenant, tenant-editable roles. Additive: User.role/
+// Invitation.role (the enum) stay in place and authoritative until the backfill script assigns
+// every User/Invitation a roleId — see scripts/backfill-custom-roles.ts and
+// src/modules/auth/roleService.ts.
+model Role {
+  id         String   @id @default(uuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  name       String
+  // Exactly one Role per tenant has isOwner=true, seeded at tenant creation, never renamed or
+  // deleted, and never given rows in RoleModulePermission/RoleFieldRestriction — every
+  // enforcement check short-circuits on isOwner before consulting those tables (see
+  // roleService.ts's RoleContext), so the owner role is structurally unrestrictable. This is what
+  // guarantees ownership transfer/billing always have exactly one fully-privileged user to fall
+  // back to, no matter how a tenant configures its other roles.
+  isOwner    Boolean  @default(false)
+  // False only for the isOwner=true row. Admin/Member start isEditable=true (a tenant can rename,
+  // reconfigure, or delete them) — a tenant can also create as many additional roles as it wants.
+  isEditable Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  users             User[]
+  invitations       Invitation[]
+  modulePermissions RoleModulePermission[]
+  fieldRestrictions RoleFieldRestriction[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+}
+
+// One row per (role, permission) actually GRANTED — absence of a row means "not granted", so a
+// role with no rows here has zero module-level access beyond whatever is exempt by design (the
+// Employee "directory" tier, see fieldVisibilityService.ts). `permission` is a free string
+// validated against PERMISSION_KEYS in permissionService.ts rather than a Postgres enum, because
+// the set of permissions grows every time a module gets its own gate (adding one should never
+// require a schema push). Besides the plain module permissions (e.g. "manage_payroll"), this
+// table also encodes two special conventions used only for Employee (see roleService.ts):
+//   - scope, as one of three mutually-exclusive keys: "view_employee_scope:self" |
+//     "view_employee_scope:department" | "view_employee_scope:all"
+//   - the Employee custom-fields bundle: "view_employee_custom_fields" / "edit_employee_custom_fields"
+model RoleModulePermission {
+  id         String   @id @default(uuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  roleId     String
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission String
+  createdAt  DateTime @default(now())
+
+  @@unique([roleId, permission])
+  @@index([tenantId, roleId])
+}
+
+// Sparse denylist: a row means this (role, entity type, field) is HIDDEN — absence means visible.
+// Deliberately not "one row per field per role" (with ~15 entities x 10-30 fields, that would be
+// ~1500 rows per tenant just to represent "everything visible", the default state) — a brand new
+// field (including a newly-created CustomFieldDefinition, though see below) is visible to every
+// role automatically, with nothing to seed. `fieldKey` covers only FIXED schema fields (matching
+// the keys already used by src/modules/activity/fieldConfigs/*.ts, e.g. "personalEmail") — custom
+// fields are deliberately NOT restrictable field-by-field here (Employee custom fields are an
+// all-or-nothing bundle via RoleModulePermission instead; Company/Contact/Opportunity custom
+// fields simply inherit that entity's base view/edit permission with no extra layer at all).
+model RoleFieldRestriction {
+  id         String             @id @default(uuid())
+  tenantId   String
+  tenant     Tenant             @relation(fields: [tenantId], references: [id])
+  roleId     String
+  role       Role               @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  entityType ActivityEntityType
+  fieldKey   String
+  createdAt  DateTime           @default(now())
+
+  @@unique([roleId, entityType, fieldKey])
+  @@index([tenantId, roleId, entityType])
 }

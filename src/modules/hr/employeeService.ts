@@ -6,6 +6,8 @@ import { listTagsForEntities } from '../crossModule/tagService.js';
 import { wouldCreateCycle } from '../../lib/cycleDetection.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { employeeActivityFieldConfig, employeeDisplayName } from '../activity/fieldConfigs/employeeFieldConfig.js';
+import { getEmployeeScope } from '../auth/roleService.js';
+import type { RoleContext } from '../auth/roleService.js';
 import type { ContractType, Employee, PersonType, Prisma } from '@prisma/client';
 
 export interface CreateEmployeeInput {
@@ -101,13 +103,120 @@ export async function wouldCreateManagerCycle(
   });
 }
 
-export async function listEmployees(tenantId: string | null | undefined) {
+// Custom Roles Fase E — the `department` HR scope is the union of two criteria (decision 5 in the
+// plan): everyone sharing the acting employee's own `departmentId` catalog value, PLUS everyone in
+// their reporting chain (direct + indirect reports), the inverse walk of `wouldCreateManagerCycle`
+// above (that one walks UP toward the root to detect a cycle; this one walks DOWN from a manager to
+// find every descendant). Resolved with one full-tenant `{id, managerId, departmentId}` fetch and an
+// in-memory BFS rather than N recursive queries — tenants are expected to have tens/hundreds of
+// employees, not thousands (same assumption the plan makes explicitly).
+export async function getManagedEmployeeIds(tenantId: string, employeeId: string): Promise<Set<string>> {
+  const all = await prisma.employee.findMany({
+    where: { tenantId },
+    select: { id: true, managerId: true, departmentId: true },
+  });
+
+  const visible = new Set<string>([employeeId]);
+  const self = all.find((e) => e.id === employeeId);
+  if (self?.departmentId) {
+    for (const e of all) {
+      if (e.departmentId === self.departmentId) {
+        visible.add(e.id);
+      }
+    }
+  }
+
+  const directReportsByManagerId = new Map<string, string[]>();
+  for (const e of all) {
+    if (e.managerId) {
+      const siblings = directReportsByManagerId.get(e.managerId);
+      if (siblings) siblings.push(e.id);
+      else directReportsByManagerId.set(e.managerId, [e.id]);
+    }
+  }
+
+  const queue = [employeeId];
+  while (queue.length > 0) {
+    const currentId = queue.shift()!;
+    for (const reportId of directReportsByManagerId.get(currentId) ?? []) {
+      if (!visible.has(reportId)) {
+        visible.add(reportId);
+        queue.push(reportId);
+      }
+    }
+  }
+
+  return visible;
+}
+
+// Single entry point for "which Employee rows can this role's acting user see" — used by both
+// listEmployees (filters the list) and the detail/edit/delete routes (membership check, 404 if
+// not present). Returns `null` for scope `all` (the caller skips filtering entirely rather than
+// fetching every id just to filter nothing out). An acting user with no linked Employee record of
+// their own (a User with no `Employee.userId` back-reference) has no rows of their own to resolve
+// `self`/`department` against — per the plan, that's treated as "nothing beyond the directory
+// tier," not an error, so it resolves to an empty set rather than throwing.
+export async function resolveVisibleEmployeeIds(
+  tenantId: string,
+  role: RoleContext,
+  actingUserId: string,
+): Promise<Set<string> | null> {
+  const scope = getEmployeeScope(role);
+  if (scope === 'all') {
+    return null;
+  }
+
+  const actingEmployee = await findEmployeeByUserId(actingUserId);
+  if (!actingEmployee) {
+    return new Set();
+  }
+
+  if (scope === 'self') {
+    return new Set([actingEmployee.id]);
+  }
+  if (scope === 'department') {
+    return getManagedEmployeeIds(tenantId, actingEmployee.id);
+  }
+  return new Set(); // 'none' — no view_employee_scope:* permission at all
+}
+
+// Custom Roles Fase E, decision 6 — the "directory tier": name, department, job title, and manager
+// stay visible to every tenant member regardless of their HR scope (or even whether they have any
+// Employee/HR permission at all — this is intentionally NOT gated by canViewEmployee, see
+// routes/employees.ts). Feeds manager pickers, the Task "who is this for" entity picker, and
+// termination reassignment pickers — surfaces that need to point at anyone in the company, not just
+// whoever is inside the caller's own scope. Never includes PII (personalEmail, birthdate,
+// nationality, contractUrl, etc.) — those stay behind the real listEmployees/findEmployeeById scope
+// + field-level restriction.
+export async function listEmployeeDirectory(tenantId: string | null | undefined) {
+  if (!tenantId) {
+    return [];
+  }
+
+  return prisma.employee.findMany({
+    where: { tenantId },
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
+      departmentId: true,
+      departmentDefn: { select: { id: true, name: true } },
+      jobTitleId: true,
+      jobTitleDefn: { select: { id: true, name: true } },
+      managerId: true,
+      manager: { select: { id: true, firstName: true, lastName: true } },
+    },
+    orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+  });
+}
+
+export async function listEmployees(tenantId: string | null | undefined, visibleIds?: Set<string> | null) {
   if (!tenantId) {
     return [];
   }
 
   const employees = await prisma.employee.findMany({
-    where: { tenantId },
+    where: { tenantId, ...(visibleIds ? { id: { in: Array.from(visibleIds) } } : {}) },
     include: {
       statusDefn: true,
       departmentDefn: true,

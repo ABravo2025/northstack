@@ -2802,3 +2802,745 @@ Verificado por Claude contra `staging` real antes de este push: script directo p
 backend (casos 1-2, 4, 6-8, 10-12, 14-18) + Playwright real contra un dev server local apuntado a
 `staging` para el import completo desde el navegador — subir el archivo, ver el toast de éxito, y
 confirmar la fila nueva en la tabla (caso 19 en adelante). Falta la revisión humana de Alejandro.
+
+## QA-65 — Custom Roles, Fase A: fundacional, sin superficie funcional todavía (2026-09-01, en `staging`)
+
+**Por qué existe esta tarea:** primera pieza de `docs/tareas/backlog.md` "Sistema de roles custom /
+permisología" (plan completo en el archivo de plan de la sesión) — reemplaza el enum fijo
+`owner`/`admin`/`member` por roles editables por tenant, con permisos de módulo, un scope por
+registro para Employees (self/departamento/todos) y restricciones campo por campo. Esta Fase A es
+puramente fundacional: 3 modelos nuevos (`Role`/`RoleModulePermission`/`RoleFieldRestriction`,
+push aditivo), `seedDefaultRolesForTenant` enganchado al alta de tenant nuevo, un backfill corrido
+contra `staging` para los tenants existentes, y un `RoleContext` resuelto en cada login/request —
+**pero nada todavía lo consulta para tomar una decisión de autorización real** (`permissionService.ts`
+sigue leyendo el enum `role` de siempre hasta la Fase B). El objetivo de esta ronda de QA es
+confirmar que agregar toda esta plomería no cambió ningún comportamiento visible.
+
+### A. Regresión — nada debería verse distinto
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Login con un usuario existente de cualquier rol (owner/admin/member) | Funciona igual que siempre, sin cambios de comportamiento ni de permisos visibles |
+| 2 | `GET /api/auth/me` (o simplemente cargar la app y ver el usuario logueado) | La respuesta trae `user` normal — sin ningún campo `roleContext`/`{}` raro colado ahí |
+| 3 | Cualquier pantalla gateada por rol (Payroll, Billing, Activity Log, Settings de Users, etc.) | Se ve exactamente igual que antes para cada rol — nada se abrió ni se cerró de más |
+| 4 | Registrar un tenant nuevo de punta a punta (signup con verificación de email) | El flujo completo funciona igual que siempre; la cuenta queda creada y usable |
+
+### B. Nueva plomería — verificable solo con acceso directo a la base (no hay UI todavía)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 5 | Un tenant recién registrado (caso A.4) | Tiene exactamente 3 filas `Role` (Owner/Admin/Member) — la de Owner con `isOwner: true`, `isEditable: false` |
+| 6 | El `User` owner de ese tenant nuevo | Tiene `roleId` seteado, apuntando a la fila `Role` con `isOwner: true` |
+| 7 | Cualquier tenant que ya existía antes de este push | También tiene sus 3 roles semilla (backfill corrido: 184 tenants, 189 Users, 17 Invitations en `staging`) — verificado por Claude con queries directas antes de este push, ver el resumen en el plan de la sesión |
+
+### C. Build/tests
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 8 | `npm run build`/`npm test` (backend, 218/218) y `npm run build` (frontend) | Los tres en verde |
+
+### Al encontrar una falla
+
+Cualquier cambio de comportamiento visible (caso A) es severidad **alta** — esta unidad está
+diseñada para ser 100% invisible, así que cualquier regresión es una señal de que algo en el nuevo
+código (`resolveRoleContextForUser`, el hook en `authenticateToken`) está interfiriendo donde no
+debería. Un problema en el caso B (roles mal sembrados, `roleId` sin asignar) es severidad media —
+no rompe nada hoy porque nada lo consume todavía, pero bloquearía la Fase B si no se corrige antes.
+
+Verificado por Claude contra `staging` real antes de este push: `npm run build`/`npm test`
+(218/218) en un worktree aislado, backfill corrido contra `staging` con verificación directa por
+query (0 Users sin `roleId` salvo 1 usuario huérfano sin tenant, preexistente y fuera de alcance;
+184 tenants = 184 roles `isOwner`; 0 mismatches entre `User.role` y `Role.name`; 0 Invitations sin
+`roleId`). Sin pasada de Playwright — no hay ninguna superficie de UI nueva que probar en esta fase.
+Falta la revisión humana de Alejandro antes de continuar con la Fase B.
+
+## QA-66 — Custom Roles, Fase B: generalización de permisos + 2 cambios reales de comportamiento (2026-09-01, en `staging`)
+
+**Por qué existe esta tarea:** segunda pieza de `docs/tareas/backlog.md` "Sistema de roles custom" —
+`permissionService.ts` pasó de leer el enum legacy `role` a leer el `RoleContext` real sembrado en
+la Fase A. La mayoría de esto es generalización interna sin cambio de comportamiento (los 10
+permisos de siempre, ahora resueltos desde la base en vez de un mapa estático) — pero **2 cosas sí
+cambian el comportamiento real de la app hoy**, marcadas explícitamente abajo. Se separó también el
+viejo `canViewHr`/`canCreateHr` (que gateaba Employee/Company/Contact/Opportunity todos juntos) en
+un par view/manage por entidad, más `canViewOpportunity` derivado de Company+Contact — esto es la
+base necesaria para que el trabajo de campo-por-campo y scope de las próximas fases tenga sentido,
+pero HOY no cambia nada visible (los 3 roles semilla siguen viendo exactamente lo mismo que antes,
+confirmado con el backfill de top-up — ver abajo).
+
+### A. Regresión — todo lo que NO debería cambiar
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Login con un usuario existente de cualquier rol | Funciona igual que siempre |
+| 2 | Ver la lista de Employees/Companies/Contacts/Opportunities con cualquier rol (owner/admin/member) | Los 3 roles siguen viendo la lista completa, igual que antes (verificado con un smoke test real contra `staging`: los 3 roles obtienen 200 en los 4 endpoints) |
+| 3 | Crear/editar/borrar un Employee/Company/Contact/Opportunity siendo owner o admin | Sigue funcionando igual — member sigue sin poder (mismo criterio que hoy, `create_hr` ya era admin+) |
+| 4 | Aprobar/rechazar una solicitud de Time Off siendo owner/admin, o siendo el manager asignado con cualquier rol | Sigue funcionando exactamente igual — la regla de "es mi manager asignado" no se tocó |
+| 5 | Crear una Saved View compartida siendo owner/admin | Sigue funcionando igual |
+| 6 | Cambiar la moneda del tenant (`Settings → Company`) siendo owner/admin | Sigue funcionando igual |
+| 7 | Transferir el ownership del tenant a otro usuario | Sigue funcionando igual — el usuario promovido queda con `roleId` apuntando a Owner, el que transfiere queda en Admin (antes esto podía quedar desincronizado, ver ítem B.10) |
+
+### B. Cambios de comportamiento reales — confirmar que son los esperados, no bugs
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 8 | Exportar/importar/descargar la plantilla de CSV de Employees siendo **admin** (no owner) | **Antes: funcionaba. Ahora: 403 "Insufficient permissions"** — el CSV completo de empleados quedó atado al mismo permiso que Payroll (decisión explícita: el archivo trae datos tan sensibles como Payroll). Solo el owner puede exportar/importar/descargar la plantilla ahora |
+| 9 | Un admin intenta invitar a alguien con rol `owner` (llamando directo a la API, no desde la UI — la UI ya lo bloqueaba) | Rechazado con "Ownership can only be transferred to an existing user, not granted by invitation" — antes esto pasaba sin error y, al aceptarse, el tenant quedaba con 2 owners |
+
+### C. Verificación técnica (sin superficie de UI nueva)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 10 | Los 184 tenants de `staging` que ya tenían roles sembrados por la Fase A | Sus roles Admin/Member recibieron un "top-up" idempotente con los permisos nuevos (`scripts/backfill-fase-b-permissions.ts`) — verificado con query directa: 0 de 184 Admin y 0 de 184 Member roles con algún permiso faltante |
+| 11 | `npm run build`/`npm test` (backend, 218/218) y `npm run build` (frontend) | Los tres en verde |
+| 12 | Smoke test real contra un dev server local apuntado a `staging` (tenant descartable, 3 usuarios owner/admin/member reales, borrados al final) | Employee/Company/Contact/Opportunity view: 200 para los 3 roles. CSV export: 200 owner, 403 admin, 403 member. Gestión de usuarios del tenant: 200 owner/admin, 403 member. Feed de Activity Log: 200 owner/admin, 403 member. Todo coincidió con lo esperado |
+
+### Al encontrar una falla
+
+Los casos B.8 y B.9 son cambios de comportamiento **a propósito** — si NO se ve el cambio (ej. un
+admin todavía puede exportar CSV), es un bug real, severidad alta (la decisión explícita no se
+aplicó). Cualquier cosa en la sección A que sí cambió es severidad alta — esta fase está diseñada
+para ser invisible salvo B.8/B.9. Un problema en C (roles con permisos faltantes) es severidad
+media — no rompe nada hoy porque las 4 entidades siguen abiertas a todos los roles semilla, pero
+bloquearía las próximas fases si no se corrige.
+
+Verificado por Claude contra `staging` real antes de este push, en el mismo worktree aislado de la
+Fase A: `npm test`/`npm run build` en verde, backfill de top-up corrido y verificado con query
+directa, y un smoke test real de extremo a extremo (servidor local + base de `staging`, tenant y 3
+usuarios descartables, borrados al terminar). Falta la revisión humana de Alejandro antes de
+continuar con la Fase C.
+
+## QA-67 — Custom Roles, Fase B2: primera UI real — Settings → Roles & Permissions (2026-09-01, en `staging`)
+
+**Por qué existe esta tarea:** Alejandro pidió una propuesta visual para "prender/apagar permisos
+de Admin/Member" (parte pendiente de la Fase B) antes de construir código — se le mostró un mockup
+(paleta/tipografía real de Northstack, matriz de 3 columnas Owner/Admin/Member, toggles
+interactivos con la cascada Sales ya simulada) y dio el visto bueno ("dale nomas, empeza"). Esta
+tarea es la implementación real: página nueva en Settings, 2 endpoints nuevos, verificados con
+Playwright real contra `staging` (no solo mockup).
+
+### A. Acceso y ubicación
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Entrar a `Settings` como owner | Nuevo ítem "Roles & Permissions" (ícono de candado) en el grupo "Company" del nav lateral, después de "Activity Log" |
+| 2 | Entrar a `Settings` como admin o member | El ítem "Roles & Permissions" **no aparece** en el nav — solo owner lo ve |
+| 3 | Un admin llama directo a `GET /api/roles` o `PATCH /api/roles/:id/permissions` (curl, no UI) | 403 — el gate es server-side, no solo ocultar el link |
+
+### B. La matriz de permisos
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 4 | Abrir la página | 8 secciones (People, Sales, Configuration, Team, Money, Reporting, Workspace, Time off), cada una con Owner (candado fijo, no clickeable) + Admin + Member |
+| 5 | Estado inicial de un tenant que nunca tocó esto | Coincide exactamente con el comportamiento de hoy: Admin tiene casi todo salvo Payroll/Billing/Payments/Sales leaderboard (owner-only); Member solo ve (no gestiona) Employees/Companies/Contacts |
+| 6 | Tildar/destildar cualquier permiso de Admin o Member | Toast de confirmación ("Granted"/"Revoked" + el nombre del permiso + el rol), el cambio se refleja al instante sin recargar la página |
+| 7 | Recargar la página después de un cambio | El cambio persiste — no es solo estado local del navegador |
+| 8 | Un usuario de ese rol vuelve a cargar la app después del cambio | Su acceso real cambió (ej. si le sacaste "Manage employees" a Admin, un admin ya no puede editar un Employee) |
+
+### C. La cascada Sales (Manage opportunities depende de View companies + View contacts)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 9 | Intentar conceder "Manage opportunities" a un rol que no tiene "View companies" y/o "View contacts" | Bloqueado, toast de error explicando qué falta conceder primero — el toggle vuelve a su estado anterior |
+| 10 | Conceder primero "View companies" y "View contacts", después "Manage opportunities" | Funciona sin problema |
+| 11 | Revocar "View companies" o "View contacts" de un rol que ya tenía "Manage opportunities" concedido | "Manage opportunities" se revoca también automáticamente (cascada) — confirmar recargando que no quedó "vivo" en el estado del rol |
+
+### D. Verificación técnica
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 12 | `npm run build`/`npm test` (backend, 224/224) y `npm run build` (frontend) | Los tres en verde |
+| 13 | Playwright real contra `staging` (servidor local + tenant/usuario descartables, borrados al terminar) | Login → navegar a la página vía clicks reales (no URL directa, ver nota abajo) → toggle real con persistencia → cascada bloqueada → capturas en claro y oscuro, todo legible |
+
+### Al encontrar una falla
+
+El caso C (cascada) es el más importante — si se puede conceder `manage_opportunity` sin los
+prerrequisitos, o si queda "vivo" tras revocar uno de ellos, es severidad **alta** (es exactamente
+el bug que el diseño busca prevenir). El caso A.3 (gate solo client-side) sería severidad alta
+también — un gate de solo UI en algo que cambia permisos de otros roles es una escalada de
+privilegios real. El resto sigue el criterio ya establecido: dato incorrecto es media, regresión
+funcional es alta.
+
+**Nota técnica para quien reproduzca manualmente**: navegar por URL directa a `/settings/roles`
+(pegar el link, F5) redirige a `/login` incluso estando logueado — esto es un comportamiento
+preexistente de la app entera (confirmado también en `/settings/activity`, no es un bug de esta
+unidad), la sesión se revalida en cada carga completa de página y esa revalidación no está lista
+todavía cuando el router decide la ruta. Navegar siempre por click dentro de la app.
+
+Verificado por Claude contra `staging` real antes de este push: `npm test`/`npm run build` en
+verde, y Playwright real de punta a punta (login, dismiss del modal de selección de plan, click
+por la navegación real hasta la página, toggle con toast y persistencia confirmada tras reload,
+cascada bloqueada y luego confirmada con los prerrequisitos, captura en dark mode). Encontré y
+corregí en el camino: un `.toggle-switch` custom que había diseñado para el mockup nunca se
+aplicaba de verdad (una regla global `input[type='checkbox']` ya existente en toda la app le ganaba
+por especificidad CSS) — en vez de forzar mi diseño, usé el checkbox estándar ya establecido en
+toda la plataforma (más consistente, menos código); y varias clases de texto sin su variante
+`dark:` correspondiente, que dejaban las etiquetas de los permisos casi ilegibles en dark mode.
+Falta la revisión humana de Alejandro.
+
+## QA-68 — Custom Roles: crear/renombrar/borrar roles reales (extensión same-day de la Fase B2, 2026-09-01, en `staging`)
+
+**Por qué existe esta tarea:** Alejandro marcó explícitamente que la UI de permisos no puede
+quedarse en "solo reconfigurar Admin/Member" — un tenant tiene que poder crear un rol propio, con
+su nombre, y que quede guardado de verdad. Esta tarea agrega esa pieza a la misma página de la
+Fase B2.
+
+### A. Crear un rol
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Click en "New role", completar un nombre, dejar "Start from" en "Blank" | Se crea un rol nuevo con 0 permisos — aparece como columna nueva en la matriz al instante |
+| 2 | Crear un rol eligiendo "Same as Admin" en "Start from" | El rol nuevo nace con exactamente los mismos permisos que Admin tiene en ese momento (no una referencia viva — cambiar Admin después no afecta al rol ya creado) |
+| 3 | Intentar crear un rol llamado "Owner" (mayúsculas o minúsculas) | Rechazado — mensaje claro de que el nombre está reservado |
+| 4 | Intentar crear un rol con un nombre que ya existe en el tenant | Rechazado — mensaje claro de nombre duplicado |
+| 5 | Recargar la página después de crear un rol | El rol nuevo sigue ahí — quedó guardado de verdad, no es solo estado del navegador |
+
+### B. Renombrar
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 6 | Menú "⋮" en el header de cualquier rol editable (Admin, Member, o uno custom) → "Rename role" | Input inline, guarda con Enter o el botón Save, el header se actualiza al instante |
+| 7 | Intentar renombrar a "Owner" | Rechazado |
+| 8 | Intentar renombrar a un nombre ya usado por otro rol del mismo tenant | Rechazado |
+
+### C. Borrar
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 9 | Menú "⋮" → "Delete role" en un rol sin nadie asignado | Confirmación (`ConfirmDialog`, no un `confirm()` nativo) → al confirmar, la columna desaparece de la matriz |
+| 10 | Intentar borrar un rol que todavía tiene al menos un usuario asignado | Rechazado — mensaje indicando cuántos usuarios (y/o invitaciones pendientes) hay que reasignar primero, la columna sigue ahí |
+| 11 | Intentar borrar o renombrar el rol Owner | La opción ni siquiera debería ofrecerse en su columna (Owner no tiene menú "⋮") |
+
+### D. Verificación técnica
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 12 | `npm run build`/`npm test` (backend, 234/234) y `npm run build` (frontend) | Los tres en verde |
+| 13 | Playwright real contra `staging`: crear un rol duplicando Admin → confirmar permisos copiados → renombrarlo → intentar "Owner" (rechazado) → borrarlo → confirmar que la columna desaparece | Todo pasa sin intervención manual |
+
+### Al encontrar una falla
+
+El caso B.10 es el más importante — si se puede borrar un rol con gente todavía asignada, esos
+usuarios quedarían con un `roleId` apuntando a un rol que ya no existe, severidad **alta** (rompe
+la resolución de permisos para esas personas en su próximo login). El caso A.3 (nombre "Owner"
+rechazado) también es alta si falla — permitiría un rol con nombre confuso que se lea como si fuera
+el verdadero owner. El resto sigue el criterio ya establecido.
+
+Verificado por Claude contra `staging` real antes de este push: `npm test`/`npm run build` en
+verde, y Playwright real de punta a punta (crear duplicando Admin, confirmar que copió los
+permisos, renombrar, intentar "Owner" y ver el rechazo, borrar, confirmar que la columna
+desaparece de la matriz). Falta la revisión humana de Alejandro.
+
+## QA-69 — Custom Roles: restricción de campos fijos (Fase C, 2026-09-01, en `staging`)
+
+**Por qué existe esta tarea:** hasta la Fase B un rol solo podía prender/apagar módulos enteros
+(ver Employee sí/no, ver Company sí/no). Esta fase agrega control campo por campo dentro de un
+módulo ya visible — por ejemplo, un rol puede ver el legajo de un Employee pero no su
+`personalEmail` o su `birthdate`. Solo aplica a campos FIJOS del schema (no a custom fields, que
+van por un permiso de paquete aparte, todavía sin construir — Fase D).
+
+### A. Matriz de campos en la UI (`Settings → Roles & Permissions → Field visibility`)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Abrir la sección "Field visibility", expandir "Employee" | Lista todos los campos fijos restringibles de Employee (personalEmail, birthdate, nationality, etc.) — NO incluye `firstName`/`lastName` |
+| 2 | Expandir "Company" | NO incluye `name` en la lista de campos restringibles |
+| 3 | Expandir "Contact" | NO incluye `firstName`/`lastName` |
+| 4 | Expandir "Opportunity" | NO incluye `name` |
+| 5 | Destildar "Personal email" en la columna de un rol editable (ej. Member) | Guarda al instante (autosave), sin necesidad de un botón "Guardar" aparte |
+| 6 | Recargar la página | El campo sigue destildado para ese rol — quedó persistido, no es solo estado local |
+| 7 | Columna Owner en la sección de campos | Sin checkboxes / siempre "visible" — Owner nunca es restringible, igual que en la matriz de permisos de módulo |
+
+### B. Efecto real en la respuesta de la API (no solo en la UI)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 8 | Con "Personal email" oculto para Member: loguearse como un usuario Member y pedir `GET /api/hr/employees` | El campo `personalEmail` viene en el JSON pero con valor `null` para cada empleado (la clave no desaparece del objeto) |
+| 9 | Mismo caso, pedir el detalle `GET /api/hr/employees/:id` | Mismo resultado — `personalEmail: null` |
+| 10 | Revertir el toggle (volver a tildar "Personal email" para Member) y repetir el request | El valor real vuelve a aparecer — la restricción es reversible sin dejar residuo |
+| 11 | Ocultar un campo que tiene un FK + su relación resuelta a la vez (ej. `accountOwnerId` en Company) | Tanto `accountOwnerId` como el objeto `accountOwner` completo vienen `null` — el valor no debe quedar visible "por la puerta de atrás" a través del objeto de relación |
+| 12 | Con un rol que directamente NO tiene `view_employee` (el módulo entero apagado), sin ninguna restricción de campo configurada | Ningún campo de Employee es visible para ese rol — el gate de módulo corta antes de mirar la denylist de campos |
+| 13 | Con un rol que tiene `view_company` pero no `view_contact` (o viceversa), pedir el detalle de una Opportunity | Ningún campo de Opportunity es visible — recordar que `canViewOpportunity` está derivado de ambos (Fase B), así que el gate de campos de Opportunity hereda esa misma regla |
+| 14 | El mismo toggle aplicado a un create/update (ej. `POST`/`PATCH /api/hr/employees`) | La respuesta de creación/edición también viene redactada igual que el GET — comportamiento consistente en toda la app, no solo en listas |
+
+### C. Verificación técnica
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 15 | `npm test` (backend, 248/248, incluye `tests/fieldVisibilityService.test.ts` nuevo) y `npm run build` (frontend + backend) | Los tres en verde |
+| 16 | Playwright real contra `staging`: destildar "Personal email" para Member en la UI → confirmar por API que `personalEmail` viene `null` → revertir en la UI → confirmar que vuelve | Pasa sin intervención manual |
+
+### Al encontrar una falla
+
+El caso 11 (relación resuelta filtrando el valor a pesar de que el FK esté redactado) es el más
+sutil y el de mayor severidad si reaparece — es exactamente el tipo de fuga que no se nota mirando
+la UI (que solo pinta el campo "de nombre"), solo inspeccionando el JSON crudo de la respuesta. El
+caso 12/13 (el gate de módulo debe cortar todo antes que la denylist de campos) es alto también: si
+falla, un rol sin acceso a un módulo entero podría igual ver campos sueltos de esa entidad. El resto
+sigue el criterio ya establecido en tareas anteriores de este mismo módulo (QA-65 a QA-68).
+
+Verificado por Claude contra `staging` real antes de este push: `npm test`/`npm run build` en
+verde, y Playwright real de punta a punta (toggle de "Personal email" para Member en la UI,
+confirmado por una llamada directa a `GET /api/hr/employees` que el campo vuelve `null`, revertido
+y confirmado que vuelve a aparecer). Falta la revisión humana de Alejandro.
+
+## QA-70 — Custom Roles: bundle de custom fields de Employee (Fase D, 2026-09-01, en `staging`)
+
+**Por qué existe esta tarea:** los 4 endpoints de valores de custom field de un Employee puntual
+(crear, editar, borrar, listar) usaban `manage_custom_fields` — el permiso que en realidad controla
+quién define el SCHEMA de custom fields (catálogo tenant-wide), no quién puede ver/editar los
+VALORES de un empleado concreto. El endpoint de listar (`GET`) ni siquiera tenía ese chequeo: hasta
+esta fase, cualquier persona autenticada del tenant podía ver los custom fields de cualquier
+empleado sin importar su rol. Esta tarea verifica que el bundle real
+(`view_employee_custom_fields`/`edit_employee_custom_fields`, ya expuesto en
+`Settings → Roles & Permissions → People`) ahora controla esto de verdad.
+
+### A. Comportamiento por rol
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Un rol con "View employees" pero sin "View employee custom fields" pide `GET /api/hr/employees/:id/custom-fields` | 403 |
+| 2 | Un rol con ambos "View employees" y "View employee custom fields" pide el mismo `GET` | 200, devuelve los valores |
+| 3 | Un rol con "View employee custom fields" pero al que se le quita "View employees" (módulo entero apagado) | 403 en el `GET` de custom fields — perder acceso al empleado en sí también saca el acceso a sus custom fields, aunque el bundle siga prendido |
+| 4 | Un rol con el bundle de vista pero sin "Edit employee custom fields" intenta `POST`/`PATCH`/`DELETE` sobre un valor | 403 en los 3 |
+| 5 | Un rol con "Manage employees" + "View employee custom fields" + "Edit employee custom fields" intenta `POST`/`PATCH`/`DELETE` | 200/201/204 según corresponda |
+| 6 | Owner, sin ningún permiso explícito (bypass estructural) | Los 4 endpoints funcionan siempre |
+
+### B. La UI (`Settings → Roles & Permissions → People`)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 7 | Intentar tildar "View employee custom fields" en un rol que no tiene "View employees" | Rechazado con un mensaje que indica el prerrequisito, sin llamar a la API |
+| 8 | Intentar tildar "Edit employee custom fields" sin tener ya "Manage employees" Y "View employee custom fields" | Rechazado igual, listando ambos prerrequisitos |
+| 9 | Con un rol que tiene los 4 permisos (View/Manage employees + el bundle completo), destildar "View employees" | Tanto "View employee custom fields" como "Edit employee custom fields" se destildan solos en la misma respuesta — sin recargar la página. Este es el caso más importante de esta tarea: es una cascada de 2 niveles (no 1, como el único otro caso que existía antes en el sistema, Sales), así que merece atención extra |
+| 10 | Recargar la página después del caso 9 | El estado persiste — los 3 permisos siguen destildados, no volvieron solos |
+
+### Al encontrar una falla
+
+El caso 9 es el de mayor severidad: si la cascada de revocación se queda en un solo nivel (revoca
+`view_employee` y `view_employee_custom_fields` pero deja `edit_employee_custom_fields` dormido en
+la base), un rol terminaría pudiendo crear/editar/borrar valores de custom fields de un empleado
+que ya no puede ni ver — exactamente el tipo de permiso "zombie" que este sistema fue diseñado para
+que nunca pase. El caso 3 (perder acceso a Employee en sí debe tapar también sus custom fields,
+aunque el bundle siga prendido) es alto también por la misma razón. El caso 1 (el `GET` de listar
+ahora exige permiso, cuando antes no exigía ninguno) es el cierre de un gap real de acceso, así que
+alta severidad si reaparece abierto.
+
+Verificado por Claude contra `staging` real antes de este push: `npm test` 253/253 (incluye 5 tests
+nuevos: 2 en `permission.test.ts` para las funciones compuestas, 3 en `roleManagementService.test.ts`
+para el bloqueo de prerrequisitos y la cascada transitiva de 2 niveles) y ambos builds verdes.
+Contra un tenant descartable en `staging`: login real de un usuario Owner y uno Member, y la
+secuencia completa `GET`/`POST` como Member (200/403 según el permiso), revocación en vivo vía
+`PATCH /api/roles/:roleId/permissions`, y reconfirmación de que el `GET` pasa a 403 — más la
+secuencia grant→grant→grant→revoke que dispara la cascada de 2 niveles, confirmada tanto por la
+respuesta de la API como visualmente en Playwright (captura en claro y oscuro). Falta la revisión
+humana de Alejandro.
+
+## QA-71 — Custom Roles: alcance por registro de Employee (Fase E, 2026-09-01, en `staging`)
+
+**Por qué existe esta tarea:** hasta esta fase, un rol veía TODOS los Employees del tenant o
+ninguno, según tuviera o no `view_employee` — no existía forma de que "un manager vea solo su
+equipo" o "un empleado común solo se vea a sí mismo". Esta tarea agrega y verifica ese tercer eje
+(scope: `self`/`department`/`all`), y el endpoint de "directorio" que existe para que los pickers
+(elegir un manager, asignar una Task a un compañero) sigan viendo a toda la empresa sin importar el
+scope de quien pregunta.
+
+### A. Setup — un organigrama de prueba real
+
+Para probar esto de verdad hace falta más de un empleado suelto: armar (o pedir a Claude que arme)
+un tenant con esta estructura mínima —
+- **CEO** (departamento Executive, sin manager).
+- **Manager** (departamento Sales, reporta a CEO).
+- **RepA** (departamento Sales, reporta a Manager) — mismo departamento que Manager Y su reporte.
+- **RepB** (departamento **Engineering**, reporta a Manager) — reporte de Manager pero en OTRO
+  departamento — el caso que prueba que la cadena de reportes cuenta aunque el departamento no
+  coincida.
+- **SalesPeer** (departamento Sales, reporta a CEO, NO a Manager) — mismo departamento que Manager
+  pero no es su reporte — el caso que prueba que el departamento cuenta aunque no haya relación de
+  reporte.
+- **Stranger** (departamento Engineering, reporta a CEO) — ni mismo departamento que Manager ni su
+  reporte — debe quedar completamente fuera del scope de Manager.
+- Dos roles custom: uno con scope `department` asignado a un usuario vinculado al Employee
+  "Manager", otro con scope `self` asignado a un usuario vinculado al Employee "Stranger".
+
+### B. Scope `department`
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Loguearse como el usuario con scope `department` (vinculado a "Manager"), ir a People | La tabla muestra exactamente 4 filas: Manager, RepA, RepB, SalesPeer |
+| 2 | La misma tabla NO debe mostrar | CEO (es superior de Manager, no su reporte) ni Stranger |
+| 3 | `GET /api/hr/employees/:id` sobre el id de CEO o de Stranger | 404 (no 403) |
+| 4 | `GET /api/hr/employees/:id` sobre el id de RepA, RepB o SalesPeer | 200 |
+| 5 | Si el rol también tiene "Manage employees": `PATCH /api/hr/employees/:id` sobre el id de Stranger | 404 — no se puede editar a alguien fuera del scope aunque se tenga el permiso de módulo |
+
+### C. Scope `self`
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 6 | Loguearse como el usuario con scope `self` (vinculado a "Stranger"), ir a People | La tabla muestra una sola fila: la propia (Stranger) |
+| 7 | `GET /api/hr/employees/:id` sobre cualquier otro id (Manager, CEO, etc.) | 404 |
+
+### D. El directorio (`GET /api/hr/employees/directory`)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 8 | Con el usuario de scope `self` (o cualquiera), pedir el directorio | Devuelve los 6 empleados completos — nombre, departamento, puesto, manager — sin importar el scope de quien pregunta |
+| 9 | Quitarle a un rol el permiso `view_employee` por completo y repetir `GET /api/hr/employees` vs. `GET /api/hr/employees/directory` | La lista real da 403; el directorio sigue dando 200 con los 6 — el directorio no depende de `view_employee` en absoluto, es el diseño |
+| 10 | En el formulario "Add Person" (`People`), abrir el selector "Reports To" | Lista los 6 empleados completos, incluidos los que están fuera del scope del usuario logueado |
+| 11 | En el panel de detalle de un empleado (editar), el selector "Reports To" | Mismo comportamiento que el punto 10 — la misma lista completa, no la lista scopeada de la tabla |
+| 12 | Al terminar a un empleado con reportes directos, el picker de reasignación de esos reportes | Debe poder apuntar a cualquier empleado de la empresa, no solo a los que están en el scope de quien ejecuta la terminación |
+| 13 | Al crear una Task desde el calendario eligiendo "Employee" como tipo de entidad | El picker de "¿de quién es esta Task?" lista a toda la empresa, no solo el scope del usuario actual |
+
+### Al encontrar una falla
+
+El caso 3/5 (404, no 403, y que cubra tanto lectura como escritura) es el más importante — si un
+`PATCH` a un empleado fuera de scope tuviera éxito, sería una fuga real de control de acceso, no
+solo un problema de UI. El caso 9 (el directorio funciona incluso sin `view_employee`) es
+intencional, no un bug — si alguna vez empieza a fallar (403 en el directorio), rompe el picker de
+Tasks para cualquier persona sin permisos de HR, que es exactamente el caso de uso que existe para
+resolver. El caso 2 (CEO fuera del scope de Manager pese a ser su superior) confirma que la
+cadena de reportes es unidireccional (hacia abajo, no hacia arriba) — si CEO apareciera, sería
+señal de que el BFS está caminando el árbol al revés.
+
+**Nota aparte, no es un bug de esta fase**: hoy el botón "Add Person" de la página People sigue
+oculto para cualquier rol que no sea el owner/admin legacy, incluso si el rol tiene
+"Manage employees" concedido de verdad — es un chequeo de UI viejo (`user.role === 'owner' ||
+'admin'`) que todavía no lee el sistema de permisos nuevo. Está en el backlog de una fase
+posterior (frontend `PermissionsContext`), no es algo que esta tarea deba reportar como falla.
+
+Verificado por Claude contra `staging` real antes de este push: `npm test` 265/265 (incluye 12
+tests nuevos en `tests/employeeService.test.ts` cubriendo el BFS de `getManagedEmployeeIds` en
+varios organigramas y `resolveVisibleEmployeeIds` en los 4 scopes) y ambos builds verdes. Contra un
+tenant descartable en `staging` con el organigrama de arriba: los 13 casos de esta tarea
+confirmados uno por uno vía curl real (login, `GET`/`PATCH` con los ids reales de cada empleado) y
+Playwright real (tabla scopeada, selector "Reports To" con el directorio completo). Falta la
+revisión humana de Alejandro.
+
+## QA-72 — Custom Roles: Activity Log respeta campos, custom-fields y scope (Fase F, 2026-09-01, en `staging`)
+
+**Por qué existe esta tarea:** las Fases C/D/E restringieron campos, custom fields y filas de
+Employee en TODA la app — excepto en el Activity Log, que hasta ahora mostraba `changes`/`summary`
+calculados en el momento de la escritura, sin saber nada de esas restricciones. Un rol con
+`personalEmail` oculto podía igual leer el valor viejo/nuevo en la pestaña de Activity del propio
+Employee; un rol con acceso al feed tenant-wide pero sin acceso a Payroll/Stripe podía ver entradas
+de esos módulos igual. Esta tarea verifica que ambas fugas están cerradas, y que un chequeo de
+acceso que antes no existía (`GET /api/activity`) ahora sí bloquea a quien corresponda.
+
+### A. Redacción de campo en la pestaña de Activity de un registro puntual
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Con "Personal email" oculto para un rol (Fase C), cambiar ese campo real de un Employee, luego abrir su pestaña Activity como ese rol | La entrada aparece con `changes: null` y un resumen genérico ("Updated Employee \"Nombre\"") — NO menciona "Personal email" ni el valor viejo/nuevo en ningún lado, ni en el detalle ni en el resumen de una línea |
+| 2 | La misma entrada, vista como Owner (o un rol sin esa restricción) | Muestra el detalle completo: campo, valor viejo, valor nuevo, y el resumen "Changed Personal email: ... → ..." |
+| 3 | Un `update` que cambió 2 campos, uno restringido y otro no | La entrada muestra solo el campo NO restringido en `changes`, y el resumen se recalcula para nombrar solo ese campo — nunca el resumen original de 2 campos |
+
+### B. El bundle de custom fields de Employee en Activity
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 4 | Cambiar un custom field de un Employee, luego ver su Activity como un rol SIN "View employee custom fields" | La entrada queda igual de redactada que el caso 1 — no se filtra por campo fijo (porque no lo es), sino por el permiso del bundle |
+| 5 | Mismo caso, con un rol que SÍ tiene "View employee custom fields" | El cambio del custom field se ve completo |
+| 6 | Cambiar un custom field de una Company/Contact/Opportunity y verlo con un rol que puede ver esa entidad pero no tiene ningún permiso especial de custom fields | Se ve completo — Company/Contact/Opportunity no tienen bundle propio (decisión 2), el custom field va con el permiso base de la entidad |
+
+### C. Acceso a la pestaña de Activity (gap cerrado en esta fase)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 7 | Un rol SIN "View employees" pide `GET /api/activity?entityType=employee&entityId=<cualquiera>` directamente | 403 — antes de esta fase esto no tenía ningún chequeo más allá de pertenecer al tenant |
+| 8 | Un rol con scope `self` (Fase E) pide la actividad de OTRO empleado (no el suyo) | 404 |
+| 9 | El mismo rol pide la actividad de su propio registro | 200, normal |
+| 10 | Un rol sin acceso a Companies pide la actividad de una Company | 403 |
+
+### D. Gate de módulo en el feed tenant-wide (`Settings → Activity Log`)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 11 | Un rol con "View activity log" pero SIN acceso a Payroll ve el feed completo | Ninguna entrada de tipo Compensation/Payroll Run/Pay Frequency/Payment Method aparece — no se redactan, se excluyen directamente de la lista |
+| 12 | El mismo rol, si tampoco tiene acceso a Stripe (Payments) | Ninguna entrada de Stripe Connection aparece tampoco |
+| 13 | Owner (o un rol con todos los permisos módulo) viendo el mismo feed | Ve TODAS las entradas, incluidas las de Payroll/Stripe |
+| 14 | Entradas de Task/Note/Tag/Saved View en el feed, para cualquier rol con "View activity log" | Siguen visibles siempre — no tienen gate de módulo propio, mismo comportamiento de siempre |
+
+### Al encontrar una falla
+
+El caso 1 (y su variante de custom fields, caso 4) es el más importante: si el `summary` original
+(no el array `changes`) se dejara sin recalcular, seguiría nombrando el campo oculto en texto plano
+aunque `changes` estuviera bien filtrado — es la clase de bug donde "arreglé el dato estructurado
+pero me olvidé del texto libre que dice lo mismo". El caso 7 (403 real en `GET /api/activity` para
+quien no tiene acceso al Employee) es alta severidad si falla: sería un bypass completo de las
+Fases C y E por una ruta lateral que nadie miraría primero. El resto sigue el criterio ya
+establecido en QA-65 a QA-71.
+
+Verificado por Claude contra `staging` real antes de este push: `npm test` 285/285 (incluye 20
+tests nuevos en `tests/activityVisibilityService.test.ts`) y ambos builds verdes. Contra un tenant
+descartable en `staging`: un cambio real de `personalEmail` vía `PATCH /api/hr/employees/:id`
+confirmado como redactado (summary genérico, `changes: null`) para un rol restringido y completo
+para el Owner; 403 real para un rol sin `view_employee` pidiendo `GET /api/activity`; 404/200 reales
+para un rol de scope `self` pidiendo la actividad de otro empleado vs. la propia; y en el feed
+tenant-wide, una entrada sintética de tipo `employeeCompensation` visible para el Owner pero ausente
+para un rol sin `canManagePayroll`. Falta la revisión humana de Alejandro.
+
+## QA-73 — Custom Roles: hook de permisos en el frontend + primera migración real (Fase G, 2026-09-01, en `staging`)
+
+**Por qué existe esta tarea:** hasta esta fase, el frontend no tenía ninguna forma de saber los
+permisos reales de un rol custom — cada página comparaba `user.role === 'owner'/'admin'` (el enum
+legacy de 3 valores), así que un rol custom con permisos reales concedidos por el sistema nuevo
+podía ver una UI que no coincidía con lo que el backend realmente le permitía hacer. Esta tarea
+verifica el nuevo `permissions` en `GET /api/auth/me` y la primera migración real (en
+`EmployeesPage.tsx`), que además corrigió 2 bugs reales que la migración destapó.
+
+### A. El payload de permisos
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Loguearse con cualquier usuario y llamar `GET /api/auth/me` | La respuesta incluye un campo `permissions` con `{id, name, isOwner, permissions: string[], hiddenFields: {...}}` — ya no se descarta el rol en silencio |
+| 2 | El mismo llamado para un usuario Owner | `isOwner: true`, `permissions: []` (Owner no tiene filas propias, bypasea todo estructuralmente) |
+| 3 | El mismo llamado para un rol custom con field restrictions (Fase C) | `hiddenFields` refleja exactamente lo configurado en `Settings → Roles & Permissions` para ese rol |
+
+### B. Comportamiento visible en People (`EmployeesPage.tsx`)
+
+Crear 2 roles custom para esta prueba: **"HR Only"** (`manage_employee`, sin `manage_payroll`) y
+**"Payroll Only"** (`manage_payroll`, sin `manage_employee`).
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 4 | Loguearse como "HR Only", ir a People | Aparece la fila fantasma "+ Add" al final de la tabla — puede agregar personas |
+| 5 | El mismo usuario, la barra de herramientas de la tabla | NO aparecen los íconos de exportar/importar CSV |
+| 6 | Loguearse como "Payroll Only", ir a People | Aparecen los íconos de exportar/importar CSV en la barra de herramientas |
+| 7 | El mismo usuario | NO aparece la fila fantasma "+ Add" — no puede crear empleados |
+| 8 | "HR Only" abre el panel de detalle de un empleado existente | El menú "⋮" del registro ofrece "Terminate"/"Invite to app" (antes de esta fase, este chequeo estaba mal cableado a un permiso distinto y estas opciones no aparecían para un rol así) |
+
+### Al encontrar una falla
+
+El caso 5/6 (CSV) es el más importante en términos de consistencia con el backend: antes de esta
+fase, cualquier rol con apariencia de "puede editar empleados" veía el botón de CSV aunque el
+backend (desde la Fase B) exige `manage_payroll` específicamente — un Admin sin ese permiso preciso
+veía un botón que fallaba con 403 al usarlo. Si el caso 5 falla (el botón vuelve a aparecer para
+quien no tiene `manage_payroll`), es la reaparición exacta de ese bug. El caso 8 confirma el
+segundo bug corregido (el prop `canManageEmployees` de `EmployeeOverviewPanel` estaba recibiendo el
+valor equivocado) — si un rol con `manage_employee` real no ve esas opciones, el prop volvió a
+cablearse mal.
+
+**Nota**: quedan ~15 archivos más en el frontend con el mismo patrón `user.role === 'owner'/'admin'`
+inline sin migrar todavía (Sidebar, AppLayout, Companies/Contacts/Opportunities, Payroll, Time Off,
+Payments, etc.) — es trabajo de una fase posterior (Fase J), no algo que esta tarea deba reportar
+como pendiente de esta fase puntual.
+
+Verificado por Claude contra `staging` real antes de este push: `npm test` 287/287 (+2 tests nuevos
+en `tests/roleService.test.ts` para `serializeRoleContext`) y ambos builds verdes. Contra un tenant
+descartable en `staging` con los 2 roles de arriba: `GET /api/auth/me` confirmado con el payload
+real vía curl; Playwright real confirmando la fila "+ Add" y los botones de CSV apareciendo
+exactamente para el rol correcto y no para el otro (capturas en ambos casos); y una traza de red
+confirmando que "HR Only" ahora sí dispara `GET .../termination` al abrir un empleado (antes del fix
+del prop, no lo hacía). Falta la revisión humana de Alejandro.
+
+## QA-74 — Custom Roles: asignación dinámica de roles en invitaciones/usuarios (Fase I, 2026-09-01, en `staging`)
+
+**Por qué existe esta tarea:** hasta esta fase, invitar a alguien o cambiarle el rol a un usuario
+existente (`Settings → Users`) solo ofrecía 3 opciones fijas (`member`/`admin`/`owner`) — un tenant
+que ya había creado un rol custom en `Settings → Roles & Permissions` no tenía forma de asignárselo
+a nadie desde acá. Esta tarea verifica que ahora sí puede.
+
+### A. Invitar a alguien con un rol custom
+
+Antes de empezar, crear un rol custom (ej. "Manager") en `Settings → Roles & Permissions`.
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Abrir `Settings → Users → Invite`, mirar el selector "Role" | Lista los roles reales del tenant (nombres con mayúscula inicial: "Admin", "Member", "Manager", etc.) — nunca los 2 strings hardcodeados de antes |
+| 2 | Elegir "Manager" y enviar la invitación | Se crea con éxito |
+| 3 | La invitación aparece en "Pending invitations" | La columna Role muestra "Manager" — el nombre real, no "Member" ni ningún placeholder |
+| 4 | Intentar invitar eligiendo el rol Owner | La opción Owner ni siquiera debería aparecer en este selector — la única forma de que alguien sea Owner es la transferencia de ownership a un usuario ya existente |
+
+### B. Reasignar el rol de un usuario existente
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 5 | En la tabla de Users, cambiar el selector de rol de un usuario a "Manager" (el mismo rol custom) | Se guarda al instante, sin recargar |
+| 6 | Recargar la página | El usuario sigue mostrando "Manager" como su rol — quedó persistido de verdad |
+| 7 | El selector de rol de un usuario, para el Owner viendo la tabla | Incluye una opción aparte fija "Owner (transfer ownership)", separada de la lista dinámica de roles — elegirla dispara el flujo de confirmación de transferencia de ownership, no una asignación directa |
+
+### C. Verificación técnica
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 8 | `PATCH /api/tenants/users/:id` con un `roleId` que pertenece a OTRO tenant | Rechazado ("Role not found") |
+| 9 | El mismo endpoint con un `roleId` inexistente | Rechazado |
+| 10 | El mismo endpoint con el `roleId` del rol Owner del propio tenant, incluso actuando como el Owner mismo | Rechazado — "Use the ownership transfer action to grant Owner" |
+| 11 | `POST /api/tenants/invitations` con los mismos 3 casos anteriores usando `roleId` | Mismos 3 rechazos |
+| 12 | `npm test` (backend, 299/299, incluye 15 tests nuevos) y ambos builds | Los tres en verde |
+
+### Al encontrar una falla
+
+El caso 10 (y su equivalente en invitaciones, caso 11) es el de mayor severidad — si se pudiera
+asignar el rol Owner por este camino, un tenant podría terminar con dos Owners simultáneos,
+rompiendo la garantía de "exactamente un Owner por tenant" que sostiene toda la lógica de
+transferencia de ownership en el resto del sistema. El caso 8 (roleId de otro tenant) es alta
+también — sería una fuga de aislamiento entre tenants si un id de Role ajeno pudiera asignarse.
+El resto sigue el criterio ya establecido en tareas anteriores de este módulo.
+
+Verificado por Claude contra `staging` real antes de este push: `npm test` 299/299 (incluye 5
+tests nuevos en `tests/tenantUserService.test.ts`, 5 en `tests/invitationService.test.ts`, y 2 en
+`tests/roleManagementService.test.ts` para `listAssignableRoles`) y ambos builds verdes. Contra un
+tenant descartable en `staging` con un rol custom "Manager": el dropdown de invitar mostró los
+nombres reales de los roles; una invitación creada eligiendo "Manager" quedó en la base con
+`role: "member"` (placeholder) y `roleRef.name: "Manager"` (confirmado vía
+`GET /api/tenants/invitations` real); reasignar a un usuario existente al mismo rol vía
+`PATCH /api/tenants/users/:id` con `roleId` funcionó igual (confirmado vía
+`GET /api/tenants/users` real); los 3 casos de rechazo (otro tenant, inexistente, Owner) confirmados
+uno por uno con curl real. Falta la revisión humana de Alejandro.
+
+## QA-75 — Custom Roles: migración completa de chequeos de rol inline en el frontend (Fase J, 2026-09-01, en `staging`)
+
+**Por qué existe esta tarea:** hasta esta fase, ~16 archivos del frontend seguían comparando
+`user.role === 'owner'/'admin'` (el enum legacy de 3 valores) para decidir qué mostrar, sin
+importar los permisos reales de un rol custom. Esta tarea verifica que cada uno de esos archivos
+ahora lee el permiso real correcto — y dos bugs reales que la migración destapó (una página entera
+que fallaba al cargar para una combinación de permisos que antes de Custom Roles no podía existir).
+
+### A. Un rol por permiso — verificar que cada uno ve exactamente lo suyo
+
+Crear (o pedirle a Claude) un tenant con un rol por cada fila de esta tabla, cada uno con
+ÚNICAMENTE el permiso indicado:
+
+| Rol de prueba | Permiso único | Qué debería ver | Qué NO debería ver |
+|---|---|---|---|
+| OnlyBilling | `manage_billing` | "Billing" en Settings → My account | El link "Payroll" en el nav principal; el encabezado "Company" en Settings (no tiene ningún permiso de ese grupo) |
+| OnlyPayroll | `manage_payroll` | El link "Payroll" en el nav principal; la página Payroll carga | El link "Payments" |
+| OnlyPayments | `manage_payments` | El link "Payments" en el nav principal | El link "Payroll" |
+| OnlyCustomFields | `manage_custom_fields` | "Public Forms" y "Pipelines" en Settings | "Users", "Billing" |
+| OnlyUsers | `manage_users` | "Users" en Settings; el checklist de onboarding en Overview | "Activity Log" |
+| OnlyActivityLog | `view_activity_log` | "Activity Log" en Settings | "Users" |
+| OnlyTenantSettings | `manage_tenant_settings` | "Appearance" en Settings | "Public Forms" |
+| Bare | `view_employee` (solo) | Nada especial — "Profile"/"Integrations" siempre visibles | Ningún link de Payroll/Payments; ningún encabezado "Company" en Settings; el checklist de onboarding |
+| (Owner real) | todo | TODO lo de arriba a la vez, incluido "Roles & Permissions" | — |
+
+### B. Los 2 bugs reales que la migración destapó (verificar que siguen corregidos)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Crear un rol "Sales Manager" con `view_company`+`view_contact`+`manage_opportunity` (SIN `manage_users`), loguearse y abrir Opportunities | La página carga normalmente (pipelines, deals, companies, contacts) — el selector de "owner" del deal puede estar vacío, pero NO debe aparecer un toast "Failed to load: Insufficient permissions" |
+| 2 | El mismo tipo de rol pero sin `view_employee`, ir a Overview | El calendario de Time Off/Tasks carga normalmente — la sección de cumpleaños puede estar vacía, pero NO debe aparecer un toast "Failed to load the team calendar" |
+| 3 | Un rol con `manage_custom_fields` (sin `manage_users`) editando la automatización de un Pipeline (Settings → Pipelines → una automatización de round-robin) | El editor de automatización carga sin toast de error — la lista de usuarios para el round-robin puede estar vacía |
+
+### C. Verificación técnica
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 4 | `npm run build` (frontend + backend) | Ambos en verde |
+| 5 | `npm test` (backend) | 299/299 — esta fase es 100% frontend, no debería cambiar el conteo |
+
+### Al encontrar una falla
+
+Los casos de la sección B son los más importantes: antes de esta fase, ese tipo de combinación de
+permisos (acceso real a un módulo, pero sin `manage_users`) simplemente no podía existir — todo rol
+legacy (owner/admin) traía `manage_users` empaquetado. Si estos casos vuelven a fallar, es la señal
+de que un `Promise.all` en algún componente está tratando una llamada opcional (poblar un selector
+de "asignar a") como si fuera obligatoria para cargar la página entera — el mismo patrón, revisar
+si se reintrodujo en `OpportunitiesPage.tsx`, `OverviewPage.tsx` o `PipelinesSettingsPage.tsx`. El
+resto de los casos (sección A) son de severidad media — un permiso mostrando de más filtra
+funcionalidad que no debería, uno mostrando de menos rompe la usabilidad de un rol legítimo.
+
+**Nota**: queda un patrón similar sin resolver del todo, documentado como deuda conocida (ver
+`docs/general/database-schema.md`, sección 14, Fase J) — `GET /api/tenants/users` sigue gateado
+por `manage_users` en general; solo se corrigieron los 3 lugares donde estaba embebido en un
+`Promise.all` que podía arrastrar otros datos a la falla. Una solución de fondo (un endpoint tipo
+"directorio" de Users, sin ese gate, análogo al de Employee de la Fase E) queda pendiente como una
+pieza de trabajo propia, no reportar como falla de esta tarea puntual.
+
+Verificado por Claude contra `staging` real antes de este push: `npm test` 299/299 (sin cambios,
+fase 100% frontend) y ambos builds verdes. Contra un tenant descartable en `staging` con 9 roles de
+un solo permiso más el Owner: 20+ verificaciones puntuales vía Playwright real confirmando que cada
+rol ve exactamente lo suyo (capturas de pantalla comparando OnlyBilling vs. OnlyPayroll vs.
+OnlyPayments, entre otros). Los 2 bugs de la sección B se descubrieron en vivo durante esta misma
+verificación (no se sabían de antemano) y se confirmó que el fix los resuelve: el toast de error
+desapareció en ambos casos después de la corrección, con el resto de cada página cargando con
+normalidad. Falta la revisión humana de Alejandro.
+
+---
+
+## QA-76 — Fix same-day: 2 bugs de invitaciones encontrados por Alejandro en su revisión de Custom Roles (2026-09-02, en `staging`)
+
+**Por qué existe esta tarea:** Alejandro empezó su revisión manual de Custom Roles (la que quedó
+pendiente al cierre de la Fase J) y reportó 2 problemas reales en el flujo de invitaciones, ninguno
+nuevo de Custom Roles en sí — ambos eran deuda preexistente que Custom Roles nunca tocó, y que su
+revisión fue la primera en ejercitar de punta a punta.
+
+**Bug 1 — el email de invitación no llegaba de forma confiable.** `invitationService.ts`'s
+`createInvitation` llamaba a `sendInvitationEmail(...).catch(...)` sin `await` — exactamente la
+misma clase de bug ya diagnosticada y arreglada para el email de verificación de signup
+([[project_email_fire_and_forget_bug_2026-08]], commit `43fd0be`): en Vercel, una promesa no
+esperada no sobrevive garantizado más allá de la respuesta HTTP, así que el envío podía morir en
+silencio. `invitationService.ts` estaba en la lista original de ~9 sitios con el mismo patrón,
+pendiente de arreglo. Fix: migrado a `bestEffort()` (mismo helper, mismo patrón mecánico de 2
+líneas). De paso se encontró un segundo bug real en el mismo call site: el cuerpo del email siempre
+decía "invited ... as member", sin importar el rol real asignado — porque leía el enum `role`
+(el placeholder cosmético que Fase I dejó fijo en `'member'` para cualquier invitación por
+`roleId`) en lugar del nombre real del rol resuelto. Fix: nueva variable `roleDisplayName` que usa
+`targetRole.name` cuando hay `roleId`, o el enum tal cual para el camino legacy.
+
+**Bug 2 — "Invite to app" (Actions del perfil de un Employee) no dejaba elegir el rol.** Alejandro
+señaló específicamente este flujo, no el modal "Invite Someone" de Settings → Users (que sí tiene
+selector de rol desde la Fase I). `POST /api/hr/employees/:employeeId/invite` tenía
+`role: 'member'` totalmente hardcodeado, sin aceptar ningún `roleId` — ni el botón de "Invite to
+app" en el panel de overview ni el ícono de invitar en la fila de la tabla de Employees ofrecían
+elección alguna, ambos llamaban al mismo endpoint. Fix: el endpoint ahora acepta un `roleId`
+opcional (mismo `createInvitation` que ya valida que el rol pertenezca al tenant y no sea Owner);
+ambos puntos de entrada del frontend ahora abren un modal chico (`Modal`, no `SlideOver` — es una
+confirmación puntual, no un formulario de entidad) con un selector de rol poblado desde
+`GET /api/roles/assignable` (el mismo endpoint de Fase I), default a Member igual que antes.
+
+### A. Email de invitación
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | Invitar a alguien (cualquiera de los 2 flujos) con un rol específico (ej. Admin) | El email realmente llega (no solo el link copiado) y el cuerpo dice "as Admin", no "as member" |
+| 2 | Invitar con el rol default (Member) | El email dice "as member" — sigue siendo correcto para ese caso |
+| 3 | El toast tras enviar la invitación | Dice "Invitation emailed. Link also copied to clipboard." — ya no da a entender que copiar el link es la única forma de entregarla |
+
+### B. "Invite to app" desde el perfil de un Employee
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 4 | Abrir el overview de un Employee sin cuenta vinculada → Actions → "Invite to app" | Se abre un modal chico con el nombre/email del Employee y un selector de Role (poblado con los roles reales del tenant, Owner excluido) |
+| 5 | Elegir un rol distinto de Member (ej. un rol custom) y confirmar | La invitación se crea con ese `roleId` — confirmado vía la respuesta de la API, no solo visualmente |
+| 6 | Mismo flujo desde el ícono de invitar en la fila de la tabla de Employees (no desde el overview panel) | Mismo modal, mismo comportamiento — es el mismo código, no una segunda implementación |
+| 7 | No tocar el selector (dejarlo en el default) | Sigue invitando como Member — mismo comportamiento que antes de este fix, no hay regresión de default |
+
+### C. Regresión
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 8 | `npm test` (backend, 299/299) y ambos builds (`npm run build` backend + frontend) | Los tres en verde |
+| 9 | El modal "Invite Someone" de Settings → Users (Fase I) | Sigue funcionando igual — no tocado por este fix, comparte `createInvitation` pero no su propio código de UI |
+
+### Al encontrar una falla
+
+A.1 es la más importante — si el email sigue sin llegar de forma confiable en producción (a
+diferencia de local, donde el proceso de Node no se destruye entre requests y por eso un fix de
+`await` es más difícil de refutar localmente), es severidad alta: el mecanismo de invitación
+completo depende de que ese email llegue. El resto es severidad media — funcionalidad visible pero
+incompleta (no poder elegir rol) o cosmética (texto de email/toast incorrecto).
+
+Verificado por Claude: ambos bugs de email confirmados con un envío real a la bandeja de entrada de
+Alejandro (Gmail, vía `+alias`) desde un tenant descartable en `staging` — primero se confirmó que
+el email efectivamente llegaba tras el fix de `bestEffort`, después que dos invitaciones
+consecutivas con roles distintos (Member vs. Admin) generaban el texto correcto en cada una. El fix
+de "Invite to app" se verificó con un segundo tenant descartable (Owner + 1 Employee real vía
+`createEmployee`): una invitación con `roleId` explícito (Admin) devolvió ese `roleId` en la
+respuesta de la API, y una invitación sin `roleId` siguió cayendo en Member por default (sin
+regresión de compatibilidad). `npm test` 299/299, ambos builds verdes. Falta la revisión humana de
+Alejandro — este fix nació de su propia revisión, así que lo esperable es que confirme ambos casos
+él mismo antes de darlos por cerrados.
+
+**Nota — fix same-day adicional (2026-09-02):** Alejandro probó el fix de "Invite to app" apenas
+llegó a `staging` y encontró que el diálogo de invitación quedaba **debajo** del panel de perfil en
+vez de encima. Causa: tanto el overlay del panel de perfil (`.detail-modal-overlay`) como el del
+nuevo `Modal` de invitación (`.modal-overlay`) son `position: fixed` con el mismo `z-index` (z-50)
+— entre elementos fixed con igual z-index, quien pinta encima lo decide el orden en el DOM, y el
+`Modal` de invitación estaba declarado ANTES que `EmployeeOverviewPanel` en el JSX de
+`EmployeesPage.tsx`, así que el panel (que se renderiza después) quedaba arriba. Fix: se movió el
+bloque del `Modal` de invitación para que se renderice DESPUÉS de `EmployeeOverviewPanel` — mismo
+criterio que ya usa `TerminateEmployeeModal` (declarado como hijo del propio panel). Sin cambios de
+CSS. Verificado con Playwright contra un tenant descartable: confirmado por evaluación directa del
+DOM que `.modal-overlay` (el de "Invite to app") ahora es el hermano posterior en el DOM respecto a
+`.detail-modal-overlay`, y una captura de pantalla confirma visualmente el diálogo correctamente
+por encima del panel. `npm test` 299/299 (sin cambios), ambos builds verdes.

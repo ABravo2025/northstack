@@ -38,6 +38,7 @@ import {
   parseSort,
 } from '../lib/viewFields';
 import { isLikelyValidEmail } from '../lib/validation';
+import { usePermissions } from '../contexts/PermissionsContext';
 import { useAutoCreateGuard } from '../hooks/useAutoCreateGuard';
 import { COUNTRIES } from '../lib/countries';
 import { CURRENCY_CODES, currencyLabel } from '../lib/currencies';
@@ -67,7 +68,13 @@ interface EmployeesPageProps {
 
 export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const toast = useToast();
+  const permissions = usePermissions();
   const [employees, setEmployees] = useState<any[]>([]);
+  // Custom Roles Fase E — unscoped roster (name/department/jobTitle/manager only, no PII) for
+  // pickers that must point at anyone in the company regardless of the viewer's own HR scope:
+  // the "Reports To" select below and the same-shaped prop threaded into EmployeeOverviewPanel/
+  // TerminateEmployeeModal. `employees` above is the real, scope-filtered list for the table.
+  const [employeeDirectory, setEmployeeDirectory] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [slideOverMode, setSlideOverMode] = useState<'add' | null>(null);
   const [deletingEmployee, setDeletingEmployee] = useState<any | null>(null);
@@ -86,6 +93,13 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const [collapsedListSections, setCollapsedListSections] = useState<Set<string>>(new Set());
   const [overviewEmployeeId, setOverviewEmployeeId] = useState<string | null>(null);
   const [seedingSample, setSeedingSample] = useState(false);
+  // "Invite to app" (EmployeeOverviewPanel's Actions menu) used to fire straight off with no role
+  // choice, always landing the invitee on the seed Member role — this lets the inviter pick any
+  // tenant role first, same as CompanyUsersPage.tsx's "Invite Someone" modal.
+  const [assignableRoles, setAssignableRoles] = useState<{ id: string; name: string }[]>([]);
+  const [invitingEmployee, setInvitingEmployee] = useState<any | null>(null);
+  const [inviteRoleId, setInviteRoleId] = useState('');
+  const [inviting, setInviting] = useState(false);
   const tableWrapRef = useRef<HTMLDivElement>(null);
   const csvMenuRef = useRef<CsvImportExportMenuHandle>(null);
 
@@ -98,9 +112,18 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const [draggedColKey, setDraggedColKey] = useState<string | null>(null);
   const [dragOverColKey, setDragOverColKey] = useState<string | null>(null);
 
-  const canManageCustomFields = user.role === 'owner' || user.role === 'admin';
-  const canEditEmployees = user.role === 'owner' || user.role === 'admin';
-  const canManagePayroll = user.role === 'owner';
+  // Custom Roles Fase G — migrated off the legacy `user.role === 'owner'/'admin'` inline checks to
+  // the real permission system (PermissionsContext). This uncovered 2 latent bugs, fixed alongside
+  // the migration rather than left in place with a "real" permission bolted onto the same wrong
+  // wiring: (1) the CSV import/export menu below was gated by canEditEmployees (manage_employee),
+  // but the backend has required manage_payroll for CSV since Fase B decision 4 — an Admin without
+  // manage_payroll would see a working-looking Import/Export UI that 403s on click; (2)
+  // EmployeeOverviewPanel's `canManageEmployees` prop was fed canManageCustomFields, not
+  // canEditEmployees — harmless only because both flags happened to be identical
+  // (owner||admin) before this migration.
+  const canManageCustomFields = permissions.has('manage_custom_fields');
+  const canEditEmployees = permissions.has('manage_employee');
+  const canManagePayroll = permissions.has('manage_payroll');
   const activeEmployeeCustomFields = employeeCustomFields.filter((field) => field.isActive);
   const activeEmployeeStatuses = employeeStatuses.filter((s) => s.isActive);
   // Column width/visibility/order are saved-view-scoped, not shared across
@@ -210,6 +233,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
 
   useEffect(() => {
     loadEmployees();
+    loadEmployeeDirectory();
     loadEmployeeCustomFields();
     loadEmployeeStatuses();
     loadEmployeeDepartments();
@@ -222,6 +246,13 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       .then(setTenantUsers)
       .catch(() => {
         // Non-critical — the Tasks assignee dropdown just falls back to empty if it fails.
+      });
+    api
+      .listAssignableRoles(token)
+      .then(setAssignableRoles)
+      .catch(() => {
+        // Non-critical — the "Invite to app" role picker just falls back to the server's default
+        // (Member) if this fails to load.
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -339,6 +370,15 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     }
   };
 
+  const loadEmployeeDirectory = async () => {
+    try {
+      const data = await api.listEmployeeDirectory(token);
+      setEmployeeDirectory(data);
+    } catch (error) {
+      toast.error('Failed to load the employee directory: ' + (error as Error).message);
+    }
+  };
+
   // Silent refresh — used as the Overview panel's onChanged, fired on every
   // autosave field/custom field/time-off-policy change while the panel stays
   // open. Unlike loadEmployees(), this doesn't toggle the page-level loading
@@ -383,6 +423,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       const result = await api.seedSampleData(token);
       toast.success(`Added ${result.employees} sample employees and ${result.clients} sample clients.`);
       await loadEmployees();
+      await loadEmployeeDirectory();
     } catch (error) {
       toast.error('Failed to load sample data: ' + (error as Error).message);
     } finally {
@@ -571,6 +612,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       toast.success('Employee added.');
       const freshList = await api.listEmployees(token);
       setEmployees(freshList);
+      loadEmployeeDirectory();
       jumpToEmployeePage(freshList, id);
       setSlideOverMode(null);
       setCreatedEmployeeId(null);
@@ -581,15 +623,25 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     }
   };
 
-  const handleInviteEmployee = async (employeeId: string) => {
+  const openInviteEmployee = (employee: any) => {
+    setInvitingEmployee(employee);
+    setInviteRoleId(assignableRoles.find((r) => r.name === 'Member')?.id ?? assignableRoles[0]?.id ?? '');
+  };
+
+  const handleInviteEmployee = async () => {
+    if (!invitingEmployee) return;
+    setInviting(true);
     try {
-      const { invitation } = await api.inviteEmployee(token, employeeId);
+      const { invitation } = await api.inviteEmployee(token, invitingEmployee.id, inviteRoleId || undefined);
       const link = `${window.location.origin}/accept-invite/${invitation.token}`;
       await navigator.clipboard.writeText(link);
-      toast.success('Invite link copied to clipboard.');
+      toast.success('Invitation emailed. Link also copied to clipboard.');
+      setInvitingEmployee(null);
       loadEmployees();
     } catch (error) {
       toast.error('Failed to invite employee: ' + (error as Error).message);
+    } finally {
+      setInviting(false);
     }
   };
 
@@ -600,6 +652,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       toast.success(`${deletingEmployee.firstName} ${deletingEmployee.lastName} deleted.`);
       setDeletingEmployee(null);
       loadEmployees();
+      loadEmployeeDirectory();
     } catch (error) {
       toast.error('Failed to delete employee: ' + (error as Error).message);
       setDeletingEmployee(null);
@@ -996,7 +1049,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
             (emp.userId ? (
               <span className="chip-linked">Linked</span>
             ) : (
-              <button className="icon-btn" onClick={() => handleInviteEmployee(emp.id)}>
+              <button className="icon-btn" onClick={() => openInviteEmployee(emp)}>
                 <span className="tip">Invite</span>
                 <MailIcon />
               </button>
@@ -1198,7 +1251,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                   >
                     <option value="">-- select --</option>
                     <option value="none">No manager</option>
-                    {employees.map((emp) => (
+                    {employeeDirectory.map((emp) => (
                       <option key={emp.id} value={emp.id}>
                         {emp.firstName} {emp.lastName}
                       </option>
@@ -1449,7 +1502,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         {viewType !== 'kanban' && (
           <ColumnVisibilityMenu columns={toggleableColumns} isHidden={isColumnHidden} onToggle={toggleColumn} />
         )}
-        {canEditEmployees && (
+        {canManagePayroll && (
           <CsvImportExportMenu
             ref={csvMenuRef}
             token={token}
@@ -1480,8 +1533,8 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
           body="Add your team one by one, import a CSV, or load sample data."
           primaryLabel="Add employee"
           onPrimary={handleOpenAdd}
-          secondaryLabel={canEditEmployees ? 'Import CSV' : undefined}
-          onSecondary={canEditEmployees ? () => csvMenuRef.current?.openImport() : undefined}
+          secondaryLabel={canManagePayroll ? 'Import CSV' : undefined}
+          onSecondary={canManagePayroll ? () => csvMenuRef.current?.openImport() : undefined}
         >
           <button type="button" className="btn-ghost btn-md" onClick={handleLoadSampleData} disabled={seedingSample}>
             {seedingSample ? 'Loading…' : 'Load sample data'}
@@ -1730,7 +1783,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         return (
           <EmployeeOverviewPanel
             employee={overviewEmployee}
-            employees={employees}
+            employees={employeeDirectory}
             token={token}
             tenantUsers={tenantUsers}
             currentUserId={user.id}
@@ -1739,7 +1792,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
             departments={employeeDepartments}
             jobTitles={employeeJobTitles}
             timeOffPolicies={timeOffPolicies}
-            canManageEmployees={canManageCustomFields}
+            canManageEmployees={canEditEmployees}
             canManagePayroll={canManagePayroll}
             onClose={() => setOverviewEmployeeId(null)}
             onChanged={refreshEmployeesSilently}
@@ -1748,10 +1801,48 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
               setOverviewEmployeeId(null);
               setDeletingEmployee(overviewEmployee);
             }}
-            onInvite={() => handleInviteEmployee(overviewEmployee.id)}
+            onInvite={() => openInviteEmployee(overviewEmployee)}
           />
         );
       })()}
+
+      {/* Rendered after EmployeeOverviewPanel (not near the page's other modals above) so it
+          paints on top: both this Modal and the overview panel's own .detail-modal-overlay wrapper
+          share the same z-50 stacking level, and among same-z-index fixed-position siblings DOM
+          order decides who's on top — rendering it earlier put it behind the panel whenever it was
+          opened from the panel's own Actions menu (found 2026-09-02, Alejandro's review). */}
+      <Modal
+        open={invitingEmployee !== null}
+        title="Invite to app"
+        onClose={() => setInvitingEmployee(null)}
+        footer={
+          <>
+            <button type="button" className="btn-secondary" onClick={() => setInvitingEmployee(null)}>
+              Cancel
+            </button>
+            <button type="button" className="btn-primary" onClick={handleInviteEmployee} disabled={inviting}>
+              {inviting ? 'Sending…' : 'Send invitation'}
+            </button>
+          </>
+        }
+      >
+        {invitingEmployee && (
+          <div className="form-group">
+            <p className="mb-3">
+              Invite <strong>{invitingEmployee.firstName} {invitingEmployee.lastName}</strong> ({invitingEmployee.email}) to
+              create an account.
+            </p>
+            <label htmlFor="invite-employee-role">Role</label>
+            <select id="invite-employee-role" value={inviteRoleId} onChange={(e) => setInviteRoleId(e.target.value)}>
+              {assignableRoles.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

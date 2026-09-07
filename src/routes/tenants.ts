@@ -1,5 +1,5 @@
 import { sanitizeUser } from '../modules/auth/authService.js';
-import { canInviteUsers, canManageBilling, canManageUsers } from '../modules/auth/permissionService.js';
+import { canInviteUsers, canManageBilling, canManageTenantSettings, canManageUsers } from '../modules/auth/permissionService.js';
 import { getTenantById, registerTenantWithOwner, updateTenantCurrency } from '../modules/tenant/tenantService.js';
 import { startSignupVerification, verifySignupToken } from '../modules/tenant/emailVerificationService.js';
 import { CURRENT_PLAN_PRICES_CENTS, updateTenantPlan } from '../modules/tenant/planService.js';
@@ -114,7 +114,7 @@ tenantsRouter.patch('/api/tenants/me/plan', async (req, res) => {
     return;
   }
 
-  if (!canManageBilling(user.role)) {
+  if (!canManageBilling(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -151,7 +151,7 @@ tenantsRouter.patch('/api/tenants/current', async (req, res) => {
     return;
   }
 
-  if (user.role !== 'owner' && user.role !== 'admin') {
+  if (!canManageTenantSettings(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -173,7 +173,7 @@ tenantsRouter.get('/api/tenants/users', async (req, res) => {
     return;
   }
 
-  if (!canManageUsers(user.role)) {
+  if (!canManageUsers(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -187,12 +187,13 @@ tenantsRouter.patch('/api/tenants/users/:userId', async (req, res) => {
     return;
   }
 
-  if (!canManageUsers(user.role)) {
+  if (!canManageUsers(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
   const result = await updateTenantUser(user.tenantId!, req.params.userId, user, {
     role: req.body.role,
+    roleId: req.body.roleId,
     status: req.body.status,
   });
 
@@ -209,7 +210,7 @@ tenantsRouter.get('/api/tenants/invitations', async (req, res) => {
     return;
   }
 
-  if (!canManageUsers(user.role)) {
+  if (!canManageUsers(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -223,7 +224,7 @@ tenantsRouter.delete('/api/tenants/invitations/:invitationId', async (req, res) 
     return;
   }
 
-  if (!canManageUsers(user.role)) {
+  if (!canManageUsers(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -241,7 +242,7 @@ tenantsRouter.post('/api/tenants/invitations', async (req, res) => {
     return;
   }
 
-  if (!canInviteUsers(user.role)) {
+  if (!canInviteUsers(user.roleContext)) {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
@@ -255,6 +256,7 @@ tenantsRouter.post('/api/tenants/invitations', async (req, res) => {
     invitedByUserId: user.id,
     email: email.trim(),
     role: req.body.role,
+    roleId: req.body.roleId,
   });
 
   if (!result.success) {

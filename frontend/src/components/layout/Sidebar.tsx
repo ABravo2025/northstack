@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
+import { usePermissions } from '../../contexts/PermissionsContext';
 import {
   BriefcaseIcon,
   BuildingIcon,
@@ -16,14 +17,16 @@ import {
 } from '../common/Icons';
 
 interface SidebarProps {
-  user: any;
   mobileOpen: boolean;
   onMobileClose: () => void;
 }
 
-export default function Sidebar({ user, mobileOpen, onMobileClose }: SidebarProps) {
+export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const isOwner = user?.role === 'owner';
+  // Custom Roles Fase J — migrated off `user.role === 'owner'` (Payroll/Payments were shown to
+  // owner only, matching their real backend gates being owner-only by default, but never
+  // reachable by a custom role granted manage_payroll/manage_payments explicitly).
+  const permissions = usePermissions();
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `sidebar-link${isActive ? ' active' : ''}${collapsed ? ' justify-center' : ''}`;
@@ -66,7 +69,7 @@ export default function Sidebar({ user, mobileOpen, onMobileClose }: SidebarProp
             <CalendarIcon className="h-4 w-4 shrink-0" />
             {label('Time Off')}
           </NavLink>
-          {isOwner && (
+          {permissions.has('manage_payroll') && (
             <NavLink to="/hr/payroll" className={linkClass} title="Human Resources – Payroll" onClick={onMobileClose}>
               <BriefcaseIcon className="h-4 w-4 shrink-0" />
               {label('Payroll')}
@@ -88,7 +91,7 @@ export default function Sidebar({ user, mobileOpen, onMobileClose }: SidebarProp
             <TargetIcon className="h-4 w-4 shrink-0" />
             {label('Opportunities')}
           </NavLink>
-          {isOwner && (
+          {permissions.has('manage_payments') && (
             <NavLink to="/payments" className={linkClass} title="Payments" onClick={onMobileClose}>
               <CreditCardIcon className="h-4 w-4 shrink-0" />
               {label('Payments')}

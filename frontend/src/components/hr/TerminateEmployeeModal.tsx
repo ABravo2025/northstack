@@ -28,7 +28,9 @@ interface TerminateEmployeeModalProps {
   onClose: () => void;
   token: string;
   employee: { id: string; firstName: string; lastName: string; userId?: string | null };
-  employees: any[]; // full tenant roster, for reassignment pickers (same shape EmployeeOverviewPanel already gets)
+  employees: any[]; // the unscoped directory (api.listEmployeeDirectory, Custom Roles Fase E), for
+  // reassignment pickers — any direct report must be reassignable to anyone company-wide,
+  // regardless of the acting user's own HR scope (same array EmployeeOverviewPanel already gets)
   canIncludeFinalPayment: boolean; // Payroll is owner-only elsewhere in the app — mirrored here
   defaultCurrency?: string;
   onTerminated: () => void;

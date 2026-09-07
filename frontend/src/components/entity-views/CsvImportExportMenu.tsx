@@ -21,6 +21,13 @@ interface CsvImportExportMenuProps {
   exportCsv: (token: string) => Promise<string>;
   importCsv: (token: string, csv: string) => Promise<ImportResult>;
   csvTemplate: (token: string) => Promise<string>;
+  // Custom Roles Fase J — Company/Contact gate export by view_company/view_contact and
+  // import+template by manage_company/manage_contact (2 different real permissions on the same
+  // menu), unlike Employee where both are uniformly gated by manage_payroll one level up by the
+  // caller. Both default to true so existing single-permission callers (Employee) don't need to
+  // pass anything.
+  canExport?: boolean;
+  canImport?: boolean;
 }
 
 export interface CsvImportExportMenuHandle {
@@ -40,7 +47,7 @@ function downloadCsvBlob(csv: string, filename: string) {
 }
 
 const CsvImportExportMenu = forwardRef<CsvImportExportMenuHandle, CsvImportExportMenuProps>(function CsvImportExportMenu(
-  { token, onImported, entityLabelPlural, entityLabelSingular, exportCsv, importCsv, csvTemplate },
+  { token, onImported, entityLabelPlural, entityLabelSingular, exportCsv, importCsv, csvTemplate, canExport = true, canImport = true },
   ref,
 ) {
   const filenameBase = entityLabelPlural.toLowerCase();
@@ -119,23 +126,27 @@ const CsvImportExportMenu = forwardRef<CsvImportExportMenuHandle, CsvImportExpor
 
   return (
     <>
-      <button type="button" className="tb-btn" onClick={handleExport} disabled={exporting} aria-label={`Export ${entityLabelPlural} to CSV`} title="Export to CSV">
-        <DownloadIcon />
-      </button>
-      <button
-        type="button"
-        className="tb-btn"
-        onClick={() => {
-          resetImportState();
-          setImportOpen(true);
-        }}
-        aria-label={`Import ${entityLabelPlural} from CSV`}
-        title="Import from CSV"
-      >
-        <UploadIcon />
-      </button>
+      {canExport && (
+        <button type="button" className="tb-btn" onClick={handleExport} disabled={exporting} aria-label={`Export ${entityLabelPlural} to CSV`} title="Export to CSV">
+          <DownloadIcon />
+        </button>
+      )}
+      {canImport && (
+        <button
+          type="button"
+          className="tb-btn"
+          onClick={() => {
+            resetImportState();
+            setImportOpen(true);
+          }}
+          aria-label={`Import ${entityLabelPlural} from CSV`}
+          title="Import from CSV"
+        >
+          <UploadIcon />
+        </button>
+      )}
 
-      <SlideOver open={importOpen} title={`Import ${entityLabelPlural} from CSV`} onClose={() => setImportOpen(false)}>
+      <SlideOver open={importOpen && canImport} title={`Import ${entityLabelPlural} from CSV`} onClose={() => setImportOpen(false)}>
         <div className="nv-field">
           <p className="text-sm text-gray-600 dark:text-gray-300">
             Upload a CSV file with a header row. Not sure of the columns? Download a template below — it has the exact

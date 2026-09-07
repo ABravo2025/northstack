@@ -52,6 +52,13 @@ Known gaps / things to confirm before publishing:
    sole proprietor/consumer in some cases. This is the single biggest legal-review item on
    this document — flagged, not resolved.
 3. [Effective Date] set to match the same-day Terms of Service / Privacy Policy update.
+
+2026-09-07 (later same day) — added a beta-status callout to Section 1 and rewrote Section 7
+(Changes to this Policy) from "advance notice for material changes" to "no prior notice
+required, notified via email and an in-app notification instead," with an "except where
+applicable law requires otherwise" guardrail. Same reasoning and same-day companion change as
+terms-of-service.md's matching update to its Section 14 — see that file's internal note for
+the full explanation.
 -->
 
 # Northstack Refund Policy
@@ -82,6 +89,10 @@ Capitalized terms not defined here have the meaning given in the Terms of Servic
 
 Please read this Policy, together with the free trial terms in Section 2, before adding a
 payment method or subscribing to a paid plan.
+
+**Beta status.** The Service is currently offered as a beta / early-access product (see
+Section 1.1 of our Terms of Service). Our plans, pricing, and this Policy itself may change
+as the product evolves — see Section 7 (Changes to this Policy).
 
 ---
 
@@ -171,11 +182,13 @@ error and does not itself create a refund entitlement — see Section 5 for what
 
 ## 7. Changes to this Policy
 
-We may update this Policy from time to time. If we make material changes, we will post the
-updated Policy with a new effective date and, where practicable, notify Tenant owners by
-email or in-app notice, consistent with Section 14 of our Terms of Service. Changes to this
-Policy apply prospectively and do not affect charges already made under the version of this
-Policy in effect at the time of that charge.
+We may add, remove, or modify any provision of this Policy at any time and **without prior
+notice, except where applicable law requires otherwise**, consistent with Section 14 of our
+Terms of Service. When we make a change, we will post the updated Policy with a new
+effective date and notify Tenant owners **by email and by an in-app notification within the
+Service.** That notification may arrive at or after the time the change takes effect, not
+necessarily before it. Changes to this Policy apply prospectively and do not affect charges
+already made under the version of this Policy in effect at the time of that charge.
 
 ---
 

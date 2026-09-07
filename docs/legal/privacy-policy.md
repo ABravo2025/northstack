@@ -21,6 +21,14 @@ gap note doesn't apply here — that's a Tenant-facing product feature, not some
 Northstack itself uses to bill Tenants, so it isn't a Northstack subprocessor for this
 Policy's purposes).
 
+2026-09-07 (later same day) — added a beta-status callout and rewrote Section 10 (Changes to
+this Policy) from "advance notice before material changes" to "no prior notice required,
+notified via email and an in-app notification instead," with an "except where applicable law
+requires otherwise" guardrail. Same reasoning and same-day companion change as
+terms-of-service.md's matching update to its Section 14 — see that file's internal note for
+the full explanation (including why this uses "in-app notification" rather than "push
+notification": the product has a polled in-app notification inbox, not Web Push).
+
 Also flagging: this policy distinguishes two categories of personal data —
 (1) "Account Data" about the people who actually use Northstack (Tenant owners/admins/
 members) that we collect directly, where Northstack is the controller, and
@@ -41,6 +49,11 @@ This Privacy Policy explains how Northstack ("**Northstack**," "**we**," "**us**
 collects, uses, shares, and protects information in connection with the Northstack service
 (the "**Service**"). Capitalized terms not defined here have the meaning given in our
 [Terms of Service](./terms-of-service.md).
+
+**Beta status.** The Service is currently offered as a beta / early-access product (see
+Section 1.1 of our Terms of Service). Because of that, the Service — and this Policy — may
+change more often, and with less advance notice, than a mature, generally-available
+product; see Section 10 (Changes to this Policy).
 
 ---
 
@@ -247,10 +260,12 @@ info@joinnorthstack.com and we will take appropriate steps to delete it.
 
 ## 10. Changes to this Policy
 
-We may update this Policy from time to time. If we make material changes, we will post the
-updated Policy with a new effective date and, where practicable, notify Tenant owners by
-email or in-app notice. Your continued use of the Service after changes take effect
-constitutes acceptance of the updated Policy.
+We may add, remove, or modify any provision of this Policy at any time and **without prior
+notice, except where applicable law requires otherwise.** When we make a change, we will
+post the updated Policy with a new effective date and notify Tenant owners **by email and
+by an in-app notification within the Service.** That notification may arrive at or after
+the time the change takes effect, not necessarily before it. Your continued use of the
+Service after a change takes effect constitutes acceptance of the updated Policy.
 
 ---
 

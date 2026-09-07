@@ -66,6 +66,28 @@ existing pre-trial-era Tenants should get an email/in-app notice, not just a sil
 update; (2) this section states plans are billed "on a recurring basis (e.g., monthly)" —
 confirmed against PlansModal.tsx's `/month` price suffix and the absence of any annual-billing
 code path, but reconfirm before this section is touched again if annual billing ships.
+
+2026-09-07 (later same day) — Alejandro asked for two more things, applied across all three
+documents (this one, privacy-policy.md, refund-policy.md): (1) reinforce that the Service is
+still in beta, since Section 5's rewrite now reads like mature commercial billing and could
+read as contradicting Section 1.1; (2) change "Changes to these Terms" (Section 14) from
+"advance notice before it takes effect" to "no prior notice required, notified via email and
+an in-app notification instead." Section 5.3 (Price changes) previously promised advance
+notice directly — rewrote it to just point at Section 14 instead of duplicating (and
+contradicting) that promise. Added one guardrail not explicitly requested: "except where
+applicable law requires otherwise" on the no-prior-notice language, matching the "to the
+maximum extent permitted by applicable law" pattern already used elsewhere in this document
+(Sections 10-12) — some U.S. states have auto-renewal/negative-option statutes that mandate
+advance notice specifically for subscription price increases, so a flat "no notice, ever"
+promise could be unenforceable exactly where it matters most. This is a savings clause, not a
+watered-down version of the ask — in every case where no such law applies (the default), the
+behavior is exactly what was asked: change first, notify after, via email + in-app.
+On "push notification": checked the actual product (src/routes/notifications.ts,
+Notification model in schema.prisma) — it's a polled in-app notification inbox/bell, not
+Web Push (no VAPID keys, no service worker, no Notification.requestPermission anywhere in the
+codebase). Used "in-app notification" throughout instead of "push notification" so these
+documents don't promise a delivery mechanism (OS-level push, works when the tab's closed)
+that doesn't exist. Flagged this distinction to Alejandro rather than silently substituting it.
 -->
 
 # Northstack Terms of Service
@@ -234,6 +256,11 @@ access, for any suspected violation of this Section.
 
 ## 5. Fees and Billing
 
+**The Service remains in beta (Section 1.1).** While that's the case, you should expect
+fees, plans, and this Section to change more often, and with less advance warning, than a
+mature, generally-available product — see Section 14 (Changes to these Terms) for how we
+notify you.
+
 ### 5.1 Free trial
 
 Every new Tenant receives a free trial of fifteen (15) days from the date of registration.
@@ -255,9 +282,8 @@ charges.
 
 ### 5.3 Price changes
 
-We may change our fees from time to time. If a price change applies to your existing
-subscription, we will provide advance notice before it takes effect, consistent with
-Section 14 (Changes to these Terms).
+We may change our fees from time to time, including for your existing subscription. See
+Section 14 (Changes to these Terms) for how and when we notify you of a change.
 
 ### 5.4 Payment processors
 
@@ -407,11 +433,18 @@ the Service in violation of these Terms.
 
 ## 14. Changes to these Terms
 
-We may update these Terms from time to time. If we make material changes, we will provide
-notice by posting the updated Terms with a new effective date and, where practicable,
-notifying Tenant owners by email or in-app notice. Continued use of the Service after
-changes take effect constitutes acceptance of the updated Terms. If you do not agree to the
-updated Terms, you must stop using the Service and may request account deletion.
+**The Service remains in beta (Section 1.1).** While that's the case, you should expect
+these Terms, our pricing and plans, and the Service itself to change more often, and with
+less advance warning, than a mature, generally-available product.
+
+We may add, remove, or modify any provision of these Terms — including fees, plans, and
+features — at any time and **without prior notice, except where applicable law requires
+otherwise.** When we make a change, we will post the updated Terms with a new effective
+date and notify Tenant owners **by email and by an in-app notification within the
+Service.** That notification may arrive at or after the time the change takes effect, not
+necessarily before it. Continued use of the Service after a change takes effect constitutes
+acceptance of the updated Terms. If you do not agree to an updated Term, you must stop
+using the Service and may request account deletion.
 
 ---
 

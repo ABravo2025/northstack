@@ -18,8 +18,7 @@ export interface StartSignupVerificationResult {
 }
 
 // Backs both POST /api/tenants/signup/start and /resend — spec-tenant-signup.md describes
-// them as functionally identical (same validation, same "invalidate the previous link, send
-// a new one" behavior), so both routes call this same function.
+// them as functionally identical, so both routes call this same function.
 export async function startSignupVerification(email: string): Promise<StartSignupVerificationResult> {
   const normalizedEmail = email.toLowerCase().trim();
 
@@ -37,17 +36,34 @@ export async function startSignupVerification(email: string): Promise<StartSignu
     return { success: false, error: domainCheck.error, field: 'email' };
   }
 
-  // Only the most recently requested link should work — same "supersede the old one" idea as
-  // requestPasswordReset (authService.ts), adapted to this model's simpler shape (no
-  // usedAt/status column): every prior row for this email is deleted outright instead of
-  // marked invalid, whether or not it was already clicked — otherwise a verified-but-abandoned
-  // row stays valid for up to 24h after a resend, alongside the new one.
-  await prisma.emailVerification.deleteMany({ where: { email: normalizedEmail } });
-
-  const token = randomUUID();
-  await prisma.emailVerification.create({
-    data: { email: normalizedEmail, token, expiresAt: new Date(Date.now() + SIGNUP_VERIFICATION_EXPIRY_MS) },
+  // Reuse a still-unexpired row for this email instead of always deleting+recreating — a
+  // person is expected to click the link, land on CompleteSignupPage, and only submit the
+  // survey minutes later. A second request in that window (Resend email, a duplicate tab, a
+  // slow first email) must never invalidate the token their in-progress tab already holds, or
+  // the final submit rejects it out of nowhere and their whole survey is lost (confirmed
+  // 2026-09-07: a resend killed the original token mid-survey, final submit failed with
+  // "This verification link is invalid. Please start over."). Reusing also refreshes
+  // expiresAt, matching the "expires in 24 hours" copy shown on every send, including resends.
+  // Only a genuinely expired (or nonexistent) row gets replaced with a fresh token.
+  const existing = await prisma.emailVerification.findFirst({
+    where: { email: normalizedEmail },
+    orderBy: { createdAt: 'desc' },
   });
+
+  let token: string;
+  if (existing && existing.expiresAt > new Date()) {
+    token = existing.token;
+    await prisma.emailVerification.update({
+      where: { id: existing.id },
+      data: { expiresAt: new Date(Date.now() + SIGNUP_VERIFICATION_EXPIRY_MS) },
+    });
+  } else {
+    token = randomUUID();
+    await prisma.emailVerification.deleteMany({ where: { email: normalizedEmail } });
+    await prisma.emailVerification.create({
+      data: { email: normalizedEmail, token, expiresAt: new Date(Date.now() + SIGNUP_VERIFICATION_EXPIRY_MS) },
+    });
+  }
 
   const appBaseUrl = process.env.APP_BASE_URL ?? 'http://localhost:5173';
   // Best-effort, same reasoning as every other transactional send in mailer.ts: the row

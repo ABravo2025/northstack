@@ -76,6 +76,13 @@ vi.mock('../src/lib/prisma.js', () => {
       findUnique: vi.fn(
         async ({ where }: any) => emailVerifications.find((e) => e.token === where.token || e.id === where.id) ?? null,
       ),
+      // startSignupVerification's reuse check: latest row for the email, regardless of
+      // verifiedAt — mirrors `findFirst({ where: { email }, orderBy: { createdAt: 'desc' } })`.
+      findFirst: vi.fn(async ({ where }: any) => {
+        const matches = emailVerifications.filter((e) => e.email === where.email);
+        if (matches.length === 0) return null;
+        return matches.reduce((latest, e) => (e.createdAt > latest.createdAt ? e : latest));
+      }),
       create: vi.fn(async ({ data }: any) => {
         const record = { id: `ev-${emailVerifications.length + 1}`, verifiedAt: null, createdAt: new Date(), ...data };
         emailVerifications.push(record);
@@ -167,7 +174,7 @@ describe('emailVerificationService', () => {
     expect(allowed.success).toBe(true);
   });
 
-  it('creates a verification row and supersedes an earlier unverified one for the same email', async () => {
+  it('creates a verification row, then reuses (not replaces) it on a second request for the same email', async () => {
     const first = await startSignupVerification('alice@acme.com');
     expect(first.success).toBe(true);
     expect(emailVerifications).toHaveLength(1);
@@ -176,20 +183,43 @@ describe('emailVerificationService', () => {
     const second = await startSignupVerification('alice@acme.com');
     expect(second.success).toBe(true);
     expect(emailVerifications).toHaveLength(1);
-    expect(emailVerifications[0].token).not.toBe(firstToken);
+    // Same token — a duplicate request (resend, a second tab, a slow first email) must not
+    // invalidate a link the person may already have open in another tab.
+    expect(emailVerifications[0].token).toBe(firstToken);
   });
 
-  it('resend also invalidates a link that was already clicked but never consumed', async () => {
+  it('resend after the link was already clicked keeps the same token alive (regression: used to invalidate it mid-survey)', async () => {
     await startSignupVerification('alice@acme.com');
     const firstToken = emailVerifications[0].token;
     await verifySignupToken(firstToken); // clicks it — verifiedAt is now set, tenant never created
 
     const resend = await startSignupVerification('alice@acme.com');
     expect(resend.success).toBe(true);
-    // Only the fresh row survives — the previously-clicked one is gone, so a stale forwarded
-    // copy of the first link can no longer complete registration.
     expect(emailVerifications).toHaveLength(1);
-    expect(emailVerifications[0].token).not.toBe(firstToken);
+    // Same token, still verified — the tab already mid-survey with firstToken must still be
+    // able to complete registration after a resend (2026-09-07 bug: this used to be a fresh,
+    // unverified token, so the original tab's final submit failed with "invalid, start over").
+    expect(emailVerifications[0].token).toBe(firstToken);
+    expect(emailVerifications[0].verifiedAt).toBeInstanceOf(Date);
+
+    const result = await registerTenantWithOwner({ ...validPersonFields, verificationToken: firstToken });
+    expect(result.success).toBe(true);
+  });
+
+  it('a request after the previous token expired replaces it with a fresh one', async () => {
+    emailVerifications.push({
+      id: 'ev-old',
+      email: 'alice@acme.com',
+      token: 'stale-token',
+      expiresAt: new Date(Date.now() - 1000),
+      verifiedAt: null,
+      createdAt: new Date(Date.now() - 2000),
+    });
+
+    const result = await startSignupVerification('alice@acme.com');
+    expect(result.success).toBe(true);
+    expect(emailVerifications).toHaveLength(1);
+    expect(emailVerifications[0].token).not.toBe('stale-token');
   });
 
   it('verifies a fresh token and is idempotent on a second call', async () => {

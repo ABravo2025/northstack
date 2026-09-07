@@ -457,28 +457,11 @@ tablas:
 
 ---
 
-## 11. Plan de construcción sugerido (unidades)
+## 11. Plan de construcción
 
-Orden por dependencias, mismo criterio que el resto de las specs del proyecto (`build` → `npm test`
-→ verificación real → commit por unidad):
-
-1. **Fundamento:** schema (`ApiKey`, `ApiRequestLog`), `webhookEncryption.ts` no hace falta todavía
-   acá (eso es de la Unidad 4), `externalApiAuth.ts` (autenticación + `requireScope`), gestión de
-   keys (`POST/GET/DELETE /api/integrations/api-keys`, `canManageApiAccess` en
-   `permissionService.ts`), logging de cada request (`ApiRequestLog`). Incluye también
-   `src/lib/prismaExternal.ts` (decisión #11, sección 0/5) — el router externo nunca debe llegar a
-   usar el `prisma` compartido, así que el `PrismaClient` propio se instala desde el día uno, no
-   como retrofit después.
-2. **Endpoints de lectura:** router externo `/api/external/v1/*` para todos los recursos de la
-   sección 3, solo `GET`, envolviendo los servicios existentes (a través de `prismaExternal`) — deja
-   la API usable (integraciones de solo-consulta) antes de abrir escritura.
-3. **Endpoints de escritura:** `POST/PATCH/DELETE` por recurso, mismos scopes `:write` — Payroll al
-   final de la unidad, después de resolver el riesgo #1 de la sección 10 con el usuario.
-4. **Webhooks salientes:** schema (`WebhookSubscription`, `WebhookDelivery`), `webhookEncryption.ts`,
-   emisión desde cada `*Service.ts` (catálogo de la sección 7.1), cola de reintentos sobre el cron
-   interno existente, gestión (`POST/GET/PATCH/DELETE /api/integrations/webhooks`).
-5. **UI + cron de purga de logs:** sección "API & Webhooks" en `IntegrationsSettingsPage.tsx`
-   (sección 8), cron de purga de `ApiRequestLog` (>90 días).
+5 unidades por dependencias (fundamento → lectura → escritura → webhooks salientes → UI). Checklist
+ejecutable paso a paso, con el detalle de archivos/funciones de cada tarea:
+**`docs/general/task-breakdown-private-api-webhooks.md`**.
 
 ---
 

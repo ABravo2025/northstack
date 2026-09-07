@@ -296,11 +296,23 @@
         national ID numbers, or passport numbers), full payment card or bank account
         numbers, health or medical information, biometric data, genetic data, or any other
         special category of data that requires heightened protection under applicable law.
-        The Service is not designed or certified to store these categories of data. If you
-        submit such data in violation of this Section, you do so at your own risk and
-        remain fully responsible for that data and any resulting liability; Northstack
-        disclaims responsibility for the consequences of Customer Data submitted in
-        violation of this Section.
+        The Service is not designed or certified to store these categories of data,
+        <strong>except as described in the Payroll exception below.</strong> If you submit
+        such data in violation of this Section, you do so at your own risk and remain fully
+        responsible for that data and any resulting liability; Northstack disclaims
+        responsibility for the consequences of Customer Data submitted in violation of this
+        Section.
+      </p>
+      <p>
+        <strong>Exception — Payroll disbursement account details.</strong> This restriction
+        does not apply to an employee's or contractor's own payment/bank account details
+        entered through the Service's built-in Payroll module, for the sole purpose of
+        recording where that person should be paid (Section 1.3). Northstack encrypts that
+        specific field at rest (AES-256-GCM) and does not use it for any purpose other than
+        storing and displaying it back to the Tenant. This exception is narrow: it covers
+        only that native, purpose-built Payroll field, not any other bank account or payment
+        card number, and does not extend to a Tenant-configured custom field, even one used
+        for a similar purpose.
       </p>
 
       <h3>3.5 Data as processor</h3>

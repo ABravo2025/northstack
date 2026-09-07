@@ -142,12 +142,11 @@ Wrapper propio (`fetch` + `crypto` nativos, sin SDK) contra la API de Stripe —
   `apiKeyService.createApiKey` valida contra, y la que cada endpoint de Unit 2/3 va a chequear vía
   `requireScope`.
 
-### `src/routes/externalApi.ts` (Private API + Webhooks, Unit 2 — 2026-09-07)
-Router de rutas `GET /api/external/v1/*` — no reimplementa lógica, envuelve los servicios ya
+### `src/routes/externalApi.ts` (Private API + Webhooks, Units 2-3 — 2026-09-07)
+Router de rutas `/api/external/v1/*` — no reimplementa lógica, envuelve los servicios ya
 existentes (`taskService`/`noteService`/`companyService`/`contactService`/`opportunityService`/
 `pipelineService`/`employeeService`/`timeOffRequestService`/`payrollRunService`), cada uno llamado
-con `prismaExternal` en vez del `prisma` compartido. Piezas reusables (Unit 3 también las va a
-necesitar para los endpoints de escritura):
+con `prismaExternal` en vez del `prisma` compartido. Piezas reusables:
 - **paginate(items, req)** — cursor-based en memoria (no empuja `cursor`/`limit` a la query de DB
   — mismo criterio que Views/Filters del resto de la app, "traer todo y paginar después" dado el
   volumen actual). El cursor es el `id` de la última fila de la página anterior. Tira
@@ -165,7 +164,41 @@ necesitar para los endpoints de escritura):
 - **respond(req, res, apiKey, status, body)** — escribe el `ApiRequestLog` (vía `bestEffort`,
   **awaited antes de responder**, nunca en un listener `res.on('finish')` — esa función podría
   correr después de que Vercel ya mató el proceso, mismo bug ya encontrado una vez con emails
-  fire-and-forget, ver `bestEffort.ts`) y recién ahí manda la respuesta.
+  fire-and-forget, ver `bestEffort.ts`) y recién ahí manda la respuesta. `status: 204` hace
+  `res.end()`, nunca `res.json({})` (un 204 no puede llevar body, RFC 7231).
+- **parseBody(req, res, apiKey, schema)** (Unit 3) — primer uso de `zod` en el proyecto. Parsea
+  `req.body ?? {}` (un DELETE sin body/Content-Type deja `req.body` en `undefined`, no `{}` — el
+  fallback evita que un schema de puros opcionales falle igual) contra el `schema` dado; en error,
+  400 `{code: 'validation_error', details: [{path, message}, ...]}` y devuelve `null`.
+- **isoDateTime** / **dateString** (Unit 3) — dos validadores zod para campos de fecha: el primero
+  exige ISO 8601 completo con hora (Task.dueDate, Opportunity.estimatedCloseDate — son un momento
+  puntual); el segundo es más laxo, solo exige que `new Date(...)` no dé `NaN` (Time Off
+  startDate/endDate son fechas de calendario, "2026-09-10", sin componente de hora).
+- **requireScopeLogged** / **badRequest** / **notFound** / **verifyCrossModuleEntity** (Unit 3) —
+  helpers de escritura: el primero es la versión de `requireScope` (externalApiAuth.ts) que además
+  loggea antes del 403; el segundo/tercero arman `{error, code}` consistentes; el cuarto valida que
+  un `entityType`/`entityId` de Task/Note pertenezca al tenant (mismo chequeo anti-IDOR que
+  `routes/tasks.ts`/`routes/notes.ts` ya hacen antes de crear).
+- Cada recurso de escritura reusa la validación de referencias/reglas de negocio que ya existía del
+  lado interno en vez de reimplementarla: **validateOpportunityRefs** (`routes/opportunities.ts`,
+  exportada) y **validateContactRefs** (`routes/contacts.ts`, exportada). Company/Employee no tenían
+  una función de validación separada para exportar — sus checks (`accountOwnerId`, ciclo de
+  jerarquía, `departmentId`/`jobTitleId`, ciclo de manager, enum de `contractType`/`personType` vía
+  **VALID_CONTRACT_TYPES**/**VALID_PERSON_TYPES** exportadas de `routes/employees.ts`) están inline
+  en los handlers, calcados de `routes/companies.ts`/`routes/employees.ts`.
+- **Sin endpoint dedicado de cambio de stage para Opportunity** — el task breakdown original pedía
+  `PATCH .../opportunities/:id/stage` separado, asumiendo que la API interna ya lo separaba así; no
+  es cierto (`routes/opportunities.ts` mueve stage vía el PATCH genérico, igual que el drag-and-drop
+  de Kanban — ver `contexto-proyecto.md`, sección 2026-07-16). El PATCH genérico externo acepta
+  `stageId` igual que el interno, con el mismo chequeo de win/loss-reason vía `validateOpportunityRefs`.
+- **hr.timeoff** solo tiene `POST` (crear una solicitud) — sin decidir/cancelar vía API: esas
+  acciones dependen de "es el manager asignado", una relación que una ApiKey no tiene (spec
+  decisión #4). **hr.payroll:write no existe** — Alejandro, 2026-09-07: el scope de mayor riesgo del
+  catálogo queda fuera de v1 en vez de requerir un paso extra de confirmación; `createApiKey` lo
+  rechaza como scope desconocido.
+- Cada `create*`/`update*`/`delete*` llamado acá atribuye la acción a **`apiKey.createdByUserId`**
+  (quien creó la key) — una ApiKey no es un `User`/sesión, así que no tiene un actor propio para los
+  parámetros `createdById`/`changedByUserId` que cada service ya exige.
 
 ### `src/modules/auth/authService.ts`
 - **newSessionExpiry()** — fecha de expiración deslizante de una sesión.
@@ -356,13 +389,13 @@ Mecanismo genérico reusado por cada módulo que registra actividad — un solo 
 CRUD estándar: **createClient**, **listClients(tenantId)**, **findClientById(id)**, **updateClient(id, input, changedByUserId)**, **deleteClient(id)**.
 
 ### `src/modules/crm/companyService.ts`
-CRUD estándar: **createCompany(input, changedByUserId)**, **listCompanies(tenantId, client?)**, **findCompanyById(id, client?)**, **updateCompany(id, input, changedByUserId)**, **deleteCompany(id, changedByUserId, options?)**. Los 3 de escritura registran una entrada en Activity Log (`docs/general/spec-activity-log.md`, 2026-08-30) vía `companyActivityFieldConfig`. `client?` (Private API + Webhooks Unit 2, 2026-09-07) acepta `prismaExternal` en vez del `prisma` compartido — ver `routes/externalApi.ts`.
+CRUD estándar: **createCompany(input, changedByUserId, client?)**, **listCompanies(tenantId, client?)**, **findCompanyById(id, client?)**, **updateCompany(id, input, changedByUserId, client?)**, **deleteCompany(id, changedByUserId, options?, client?)**. Los 3 de escritura registran una entrada en Activity Log (`docs/general/spec-activity-log.md`, 2026-08-30) vía `companyActivityFieldConfig`. `client?` (Private API + Webhooks Units 2-3, 2026-09-07) acepta `prismaExternal` en vez del `prisma` compartido — ver `routes/externalApi.ts`.
 
 ### `src/modules/crm/contactService.ts`
-CRUD estándar: **createContact(input, changedByUserId?)**, **listContacts(tenantId, includeInactive?, client?)**, **findContactById(id, client?)**, **updateContact(id, input, changedByUserId)**, **deactivateContact(id, changedByUserId)** (soft-delete, Sales v2 — reemplazó el `deleteContact` legado). Los 3 de escritura registran Activity Log vía `contactActivityFieldConfig` — `createContact` no loguea si `changedByUserId` viene vacío (caso de `publicFormService.ts`, sin usuario autenticado). `client?` (Private API + Webhooks Unit 2) acepta `prismaExternal` — ver `routes/externalApi.ts`.
+CRUD estándar: **createContact(input, changedByUserId?, client?)**, **listContacts(tenantId, includeInactive?, client?)**, **findContactById(id, client?)**, **updateContact(id, input, changedByUserId, client?)**, **deactivateContact(id, changedByUserId, client?)** (soft-delete, Sales v2 — reemplazó el `deleteContact` legado). Los 3 de escritura registran Activity Log vía `contactActivityFieldConfig` — `createContact` no loguea si `changedByUserId` viene vacío (caso de `publicFormService.ts`, sin usuario autenticado). `client?` (Private API + Webhooks Units 2-3) acepta `prismaExternal` — ver `routes/externalApi.ts`. **validateContactRefs(tenantId, body)** (`routes/contacts.ts`, exportada en Unit 3 para reuso) — valida `companyId`/`leadStatus`/`leadSourceId` referenciados en el body.
 
 ### `src/modules/crm/opportunityService.ts`
-- CRUD estándar: **createOpportunity(input, changedByUserId?)**, **listOpportunities(tenantId, includeInactive?, client?)**, **findOpportunityById(id, client?)**, **updateOpportunity(id, tenantId, input)** (`input.changedByUserId` opcional), **deleteOpportunity(id, changedByUserId)**. Los 3 de escritura registran Activity Log vía `opportunityActivityFieldConfig` — mismo criterio de `changedByUserId` opcional en `create` que `contactService.ts`. `client?` (Private API + Webhooks Unit 2) acepta `prismaExternal` — ver `routes/externalApi.ts`.
+- CRUD estándar: **createOpportunity(input, changedByUserId?, client?)**, **listOpportunities(tenantId, includeInactive?, client?)**, **findOpportunityById(id, client?)**, **updateOpportunity(id, tenantId, input, client?)** (`input.changedByUserId` opcional), **deleteOpportunity(id, changedByUserId, client?)**. Los 3 de escritura registran Activity Log vía `opportunityActivityFieldConfig` — mismo criterio de `changedByUserId` opcional en `create` que `contactService.ts`. `client?` (Private API + Webhooks Units 2-3) acepta `prismaExternal` — ver `routes/externalApi.ts`. **validateOpportunityRefs(...)** (`routes/opportunities.ts`, exportada en Unit 3) — valida Pipeline activo, Company/gate de tipo de pipeline, `ownerId`, y la regla win/loss-reason según el stage efectivo; usada tanto por el PATCH interno como por el externo (no hay endpoint de cambio de stage separado en ninguno de los dos — cambiar `stageId` es un campo más del PATCH genérico).
 - **addOpportunityContact(tenantId, opportunityId, contactId, role?)** / **removeOpportunityContact(opportunityId, contactId)** — relación N:N Opportunity↔Contact.
 - **listOpportunityStageHistory(tenantId, opportunityId)** — historial de cambios de stage.
 
@@ -412,7 +445,7 @@ Export/template always include every active custom field of the tenant for that 
 - **findCompensationById(id)**.
 
 ### `src/modules/hr/employeeService.ts`
-- **createEmployee(input, changedByUserId?)**, **listEmployees(tenantId, visibleIds?, client?)** (suma `contractStatus` por fila — Unidad 11; `visibleIds` es Fase C, Custom Roles — `Set<string> | null | undefined`, filtra el `where` a esos ids cuando se pasa, sin filtrar cuando es `null`/`undefined`; el router externo, Unit 2, siempre pasa `null` — el scope de la ApiKey es la única autorización, el scope de Employee por-persona no aplica a ese tráfico), **findEmployeeById(id, client?)**, **findEmployeeByUserId(userId)**, **updateEmployee(id, input, changedByUserId)**, **deleteEmployee(id, changedByUserId)**. `client?` (Private API + Webhooks Unit 2) acepta `prismaExternal`. Los 3 de escritura registran Activity Log (`docs/general/spec-activity-log.md`, 2026-08-30) vía `employeeActivityFieldConfig` — `changedByUserId` opcional solo en `createEmployee`: solo la ruta directa (`POST /api/hr/employees`) lo pasa hoy, así que solo esa genera entrada; CSV import, onboarding seed data y `publicFormService.ts` la llaman sin ese argumento a propósito (scope cut de Unidad 2, ver el spec) y no generan ninguna.
+- **createEmployee(input, changedByUserId?, client?)**, **listEmployees(tenantId, visibleIds?, client?)** (suma `contractStatus` por fila — Unidad 11; `visibleIds` es Fase C, Custom Roles — `Set<string> | null | undefined`, filtra el `where` a esos ids cuando se pasa, sin filtrar cuando es `null`/`undefined`; el router externo, Unit 2, siempre pasa `null` — el scope de la ApiKey es la única autorización, el scope de Employee por-persona no aplica a ese tráfico), **findEmployeeById(id, client?)**, **findEmployeeByUserId(userId)**, **updateEmployee(id, input, changedByUserId, client?)**, **deleteEmployee(id, changedByUserId, client?)**. `client?` (Private API + Webhooks Units 2-3) acepta `prismaExternal`. **VALID_CONTRACT_TYPES**/**VALID_PERSON_TYPES** (`routes/employees.ts`, exportadas en Unit 3) — los 2 enums chicos que tanto la ruta interna como la externa validan contra. Los 3 de escritura registran Activity Log (`docs/general/spec-activity-log.md`, 2026-08-30) vía `employeeActivityFieldConfig` — `changedByUserId` opcional solo en `createEmployee`: solo la ruta directa (`POST /api/hr/employees`) lo pasa hoy, así que solo esa genera entrada; CSV import, onboarding seed data y `publicFormService.ts` la llaman sin ese argumento a propósito (scope cut de Unidad 2, ver el spec) y no generan ninguna.
 - **wouldCreateManagerCycle(...)** — camina la cadena de `managerId` hacia arriba para detectar un ciclo antes de asignar un manager nuevo.
 - **getManagedEmployeeIds(tenantId, employeeId)** (Custom Roles Fase E, 2026-09) — resuelve el scope `department`: unión de pares con el mismo `departmentId` MÁS toda la cadena de reportes directos e indirectos (BFS en memoria sobre `managerId`, el reverso de `wouldCreateManagerCycle` — esa camina hacia la raíz, esta hacia las hojas). Una sola query trae `{id, managerId, departmentId}` de todo el tenant.
 - **resolveVisibleEmployeeIds(tenantId, role, actingUserId)** (Fase E) — punto de entrada único para "qué Employees puede ver este actor": `null` para scope `all` (sin filtrar), un `Set` concreto para `self`/`department`/`none`. Usado por el `GET` de lista (filtra) y por `routes/employees.ts`'s `isEmployeeInScope` (chequeo de membership para detalle/PATCH/DELETE, 404 si no está). Un usuario sin `Employee` propio vinculado resuelve a un `Set` vacío para `self`/`department`, no a un error.
@@ -480,7 +513,7 @@ CRUD estándar: **createSavedView**, **listSavedViews(...)**, **findSavedViewByI
 CRUD estándar: **createTimeOffPolicy**, **listTimeOffPolicies(tenantId)**, **findTimeOffPolicyById(id)**, **updateTimeOffPolicy(...)**.
 
 ### `src/modules/hr/timeOffRequestService.ts`
-- **createTimeOffRequest(input)** — valida fechas + asignación de política, auto-aprueba si la política no requiere aprobación. Desde 2026-08-22, dispara `syncTimeOffCalendarEvent` (best-effort) si el resultado ya nace `approved`.
+- **createTimeOffRequest(input, changedByUserId, client?)** — valida fechas + asignación de política, auto-aprueba si la política no requiere aprobación. Desde 2026-08-22, dispara `syncTimeOffCalendarEvent` (best-effort) si el resultado ya nace `approved`. `client?` (Private API + Webhooks Unit 3, 2026-09-07) acepta `prismaExternal` — `POST /api/external/v1/hr/timeoff` es el único write de Time Off expuesto (sin decidir/cancelar vía API: eso depende de "es el manager asignado", una relación que una ApiKey no tiene).
 - **listMyTimeOffRequests**, **listPendingApprovals**, **listTimeOffRequestsForCalendar**, **listAllTimeOffRequests(tenantId, client?)** (`client?`: Private API + Webhooks Unit 2, acepta `prismaExternal` — ver `routes/externalApi.ts`).
 - **findActiveTimeOffRequestsForEmployees(tenantId, employeeIds)** — solo solicitudes activas *hoy*, no el historial completo.
 - **decideTimeOffRequest(...)** / **cancelTimeOffRequest(...)** — ambas disparan `syncTimeOffCalendarEvent` (best-effort) tras la escritura.
@@ -542,7 +575,7 @@ Lookup/matching Company↔Stripe Customer, visibilidad de pagos en vivo (sin sto
 - **processStripeWebhookEvent(tenantId, event)** (Unit 4) — recibe el evento ya parseado y con la firma ya verificada (eso queda en `routes/webhooks.ts`, junto a Paddle/Mercado Pago); resuelve la Company por `stripeCustomerId` dentro de ese tenant (sin match → descarta sin guardar nada) y despacha `charge.refunded`/`charge.failed`/`payment_intent.payment_failed`/`customer.subscription.deleted` directo. `customer.subscription.updated` es el único caso con guarda: solo notifica si `data.previous_attributes.status` existe y el status nuevo es `past_due` — sin esto, cualquier otro cambio a una subscription ya `past_due` (ej. cambiar la cantidad) generaría una notificación repetida cada vez. Devuelve un string corto (`'notified'`/`'no matching Company'`/etc.) que la ruta pasa tal cual en la respuesta — útil para leer el log de deliveries del lado de Stripe sin acceso a los logs del servidor.
 
 ### `src/modules/notes/noteService.ts`
-CRUD estándar, cross-entidad vía `entityType`/`entityId`: **createNote**, **findNoteById(id, client?)**, **listNotesForEntity(tenantId, entityType, entityId)**, **updateNote(id, input)**, **deleteNote(id)**.
+CRUD estándar, cross-entidad vía `entityType`/`entityId`: **createNote(input, client?)**, **findNoteById(id, client?)**, **listNotesForEntity(tenantId, entityType, entityId)**, **updateNote(id, input, changedByUserId, client?)**, **deleteNote(id, changedByUserId, client?)**. `client?` (Private API + Webhooks Unit 3) acepta `prismaExternal`.
 **listAllNotesForTenant(tenantId, client?)** (Private API + Webhooks Unit 2, 2026-09-07) — a
 diferencia de `listNotesForEntity`, trae *todas* las Notes del tenant sin importar a qué entidad
 están vinculadas; existe porque un scope `notes:read` de una ApiKey es tenant-wide, no por-entidad.
@@ -554,7 +587,7 @@ están vinculadas; existe porque un scope `notes:read` de una ApiKey es tenant-w
 - **getOnboardingStatus(tenantId)** — estado del checklist de onboarding (`/overview`).
 
 ### `src/modules/tasks/taskService.ts`
-- CRUD cross-entidad: **createTask**, **findTaskById(id, client?)**, **listTasksForEntity(tenantId, entityType, entityId)**, **updateTask(id, input)**, **deleteTask(id)** — las tres primeras (create/update/delete) disparan `syncTaskCalendarEvent` (best-effort, 2026-08-22) tras la escritura.
+- CRUD cross-entidad: **createTask(input, client?)**, **findTaskById(id, client?)**, **listTasksForEntity(tenantId, entityType, entityId)**, **updateTask(id, input, changedByUserId, client?)**, **deleteTask(id, changedByUserId, client?)** — las tres primeras (create/update/delete) disparan `syncTaskCalendarEvent` (best-effort, 2026-08-22) tras la escritura. `client?` (Private API + Webhooks Unit 3) acepta `prismaExternal`.
 - **listMyTasks(tenantId, assigneeId)** — pendientes primero (2026-08-22: además excluye completadas del todo, no solo las ordena al final), por fecha de vencimiento más próxima.
 - **listTasksForCalendar(tenantId)** — Task con `dueDate` y sin completar (2026-08-22: antes incluía completadas), el frontend filtra al mes visible.
 - **listAllTasksForTenant(tenantId, client?)** (Private API + Webhooks Unit 2, 2026-09-07) — mismo
@@ -598,7 +631,7 @@ están vinculadas; existe porque un scope `notes:read` de una ApiKey es tenant-w
 - **checkEmailDomainNotAlreadyRegistered(email)** — validador de dominio duplicado, compartido por `emailVerificationService.ts` (el gate real, en `signup/start`) y `registerTenantWithOwner` (defensa en profundidad); excluye tenants `cancelled` y `suspended` del match, no solo `active` (un trial abandonado no debe bloquear el dominio para siempre, ya que todavía no hay billing real que permita reactivarse self-serve). Desde 2026-08-18 filtra por `User.emailDomain` (igualdad, indexado) en vez de `email: {endsWith}` (scan completo de la tabla).
 - **registerTenantWithOwner(input)** — flujo completo de "Sign Up" (tenant + owner + seeds); requiere `verificationToken` (Tenant Signup, `docs/spec-tenant-signup.md`) validado y consumido al final, justo antes de la transacción — nunca antes, para no quemar el token si otra validación falla. Setea `Tenant.status: 'trialing'` + `trialEndsAt` (Subscription Plans). Desde Billing Integration (2026-08-18) también crea el `Subscription` del tenant en la misma transacción (placeholder `plan: 'starter'` hasta que elija uno real vía `updateTenantPlan`).
 - **findTenantNameById(tenantId)**, **getTenantById(tenantId)** (incluye `status`/`plan`/`companySize`/`trialEndsAt`/`gracePeriodEndsAt`), **updateTenantCurrency(tenantId, currency)**.
-- **findUserById(id)** — sin scope de tenant a propósito (mismo patrón que `findClientById`/`findEmployeeById`) — el caller valida `tenantId` antes de confiar en el resultado.
+- **findUserById(id, client?)** — sin scope de tenant a propósito (mismo patrón que `findClientById`/`findEmployeeById`) — el caller valida `tenantId` antes de confiar en el resultado. `client?` (Private API + Webhooks Unit 3, 2026-09-07) acepta `prismaExternal`.
 
 ### `src/modules/platform/platformTenantService.ts`
 Admin Center (`/api/platform/tenants*`, `requirePlatformRole('platform_support')`), no confundir con `tenantService.ts` (self-service tenant-scoped).

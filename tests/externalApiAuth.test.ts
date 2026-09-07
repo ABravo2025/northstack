@@ -121,17 +121,18 @@ describe('authenticateApiKey', () => {
       scopes: ['tasks:read', 'tasks:write'],
       revokedAt: null,
       lastUsedAt: null,
+      createdByUserId: 'user_1',
     });
 
     const res = fakeRes();
     const result = await authenticateApiKey(fakeReq(fullKey), res);
-    expect(result).toEqual({ id: 'key_1', tenantId: 'tenant_1', scopes: ['tasks:read', 'tasks:write'] });
+    expect(result).toEqual({ id: 'key_1', tenantId: 'tenant_1', scopes: ['tasks:read', 'tasks:write'], createdByUserId: 'user_1' });
     expect(apiKeys[0].lastUsedAt).toBeInstanceOf(Date);
   });
 });
 
 describe('requireScope', () => {
-  const key = { id: 'key_1', tenantId: 'tenant_1', scopes: ['tasks:read'] };
+  const key = { id: 'key_1', tenantId: 'tenant_1', scopes: ['tasks:read'], createdByUserId: 'user_1' };
 
   it('allows a key that has the required scope', () => {
     const res = fakeRes();

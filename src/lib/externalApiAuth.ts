@@ -57,10 +57,14 @@ export function hashApiKey(fullKey: string): string {
 // scope set against, and, as each resource's endpoints land in Unit 2/3, what each route's
 // requireScope call checks against. `crm.pipelines` is read-only on purpose (spec §3: pipelines
 // are configuration, not a "movimiento" a machine-to-machine integration should be writing).
+// `hr.payroll:write` is deliberately NOT in this catalog (Alejandro, 2026-09-07, spec §10 risk #1)
+// — it's the single highest-risk scope (a leaked key with it could trigger real pay runs), and no
+// extra safeguard (e.g. an email-confirmation step) is built for it in v1. `hr.payroll:read` stays
+// available; a key can never be granted the write half until that's revisited for v2.
 export const API_SCOPES = [
   'hr.employees:read', 'hr.employees:write',
   'hr.timeoff:read', 'hr.timeoff:write',
-  'hr.payroll:read', 'hr.payroll:write',
+  'hr.payroll:read',
   'crm.companies:read', 'crm.companies:write',
   'crm.contacts:read', 'crm.contacts:write',
   'crm.opportunities:read', 'crm.opportunities:write',
@@ -74,6 +78,10 @@ export interface AuthenticatedApiKey {
   id: string;
   tenantId: string;
   scopes: string[];
+  // Unit 3 (write endpoints) attributes every entity this key creates/edits to whoever created
+  // the key (createdById/changedByUserId — every existing service function requires a User id
+  // there, and an ApiKey isn't a User/session, so it has none of its own to supply).
+  createdByUserId: string;
 }
 
 // 401s immediately on any failure, no anonymous fallback — every route under /api/external/v1/*
@@ -99,7 +107,7 @@ export async function authenticateApiKey(req: express.Request, res: express.Resp
     `Failed to update ApiKey.lastUsedAt for ${apiKey.id}`,
   );
 
-  return { id: apiKey.id, tenantId: apiKey.tenantId, scopes: apiKey.scopes };
+  return { id: apiKey.id, tenantId: apiKey.tenantId, scopes: apiKey.scopes, createdByUserId: apiKey.createdByUserId };
 }
 
 export function hasScope(apiKey: AuthenticatedApiKey, scope: string): boolean {

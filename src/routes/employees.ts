@@ -51,8 +51,10 @@ import { validateSession } from '../lib/httpAuth.js';
 import type { AuthenticatedUser } from '../modules/auth/authService.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 
-const VALID_CONTRACT_TYPES = ['part_time', 'full_time'];
-const VALID_PERSON_TYPES = ['profile', 'contractor', 'employee'];
+// Exported for routes/externalApi.ts (Private API + Webhooks, Unit 3) — one source of truth for
+// the same enum check both surfaces need to make on Employee create/update.
+export const VALID_CONTRACT_TYPES = ['part_time', 'full_time'];
+export const VALID_PERSON_TYPES = ['profile', 'contractor', 'employee'];
 
 export const employeesRouter = createAsyncRouter();
 

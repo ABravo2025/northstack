@@ -37,8 +37,8 @@ const taskInclude = {
   createdBy: { select: { id: true, firstName: true, lastName: true } },
 } satisfies Prisma.TaskInclude;
 
-export async function createTask(input: CreateTaskInput) {
-  const task = await prisma.task.create({
+export async function createTask(input: CreateTaskInput, client: ExtendedPrismaClient = prisma) {
+  const task = await client.task.create({
     data: {
       tenantId: input.tenantId,
       entityType: input.entityType,
@@ -95,7 +95,7 @@ export async function listAllTasksForTenant(tenantId: string, client: ExtendedPr
   });
 }
 
-export async function updateTask(id: string, input: UpdateTaskInput, changedByUserId: string) {
+export async function updateTask(id: string, input: UpdateTaskInput, changedByUserId: string, client: ExtendedPrismaClient = prisma) {
   // Whitelist explicitly — never spread req.body straight through (same rule
   // as every other update service in the app, since it may carry a tenantId/
   // entityId the caller shouldn't be able to reassign).
@@ -109,8 +109,8 @@ export async function updateTask(id: string, input: UpdateTaskInput, changedByUs
   // Fetched before the write so the Google Calendar sync below can tell what
   // changed (e.g. reassignment, or dueDate/completedAt flipping) — see
   // syncTaskCalendarEvent's decision table.
-  const previous = await prisma.task.findUnique({ where: { id } });
-  const updated = await prisma.task.update({ where: { id }, data, include: taskInclude });
+  const previous = await client.task.findUnique({ where: { id } });
+  const updated = await client.task.update({ where: { id }, data, include: taskInclude });
 
   void syncTaskCalendarEvent(previous, updated).catch((err) => console.error('Google Calendar task sync failed:', err));
 
@@ -133,9 +133,9 @@ export async function updateTask(id: string, input: UpdateTaskInput, changedByUs
   return updated;
 }
 
-export async function deleteTask(id: string, changedByUserId: string): Promise<void> {
-  const task = await prisma.task.findUnique({ where: { id } });
-  await prisma.task.delete({ where: { id } });
+export async function deleteTask(id: string, changedByUserId: string, client: ExtendedPrismaClient = prisma): Promise<void> {
+  const task = await client.task.findUnique({ where: { id } });
+  await client.task.delete({ where: { id } });
 
   if (task) {
     void syncTaskCalendarEvent(task, null).catch((err) => console.error('Google Calendar task sync failed:', err));

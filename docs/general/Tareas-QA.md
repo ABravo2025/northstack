@@ -3677,3 +3677,81 @@ para 14 llamadas autenticadas, 0 filas para las 2 llamadas sin auth válida. `np
 preexistentes de siempre). Tenants de prueba borrados después. Falta la revisión de Alejandro.
 Sigue sin cerrar la decisión #1 de la spec (paso extra para `hr.payroll:write`) — no bloqueó esta
 unidad (solo lectura), sí bloquea el arranque de la Unidad 3.
+
+---
+
+## QA-79 — Private API + Webhooks, Unidad 3: endpoints de escritura de `/api/external/v1/*` (2026-09-07, en `staging`)
+
+**Por qué existe esta tarea:** tercera unidad de `docs/tareas/spec-private-api-webhooks.md` — trae
+`POST`/`PATCH`/`DELETE` para 7 de los 9 recursos (Tasks, Notes, CRM Companies/Contacts/
+Opportunities, HR Employees/Time Off — Pipelines es solo-lectura por diseño, Payroll queda afuera
+de v1 por la decisión de Alejandro de abajo). Primer uso real de `zod` en el proyecto. Sigue sin
+existir la UI (Unidad 5) ni webhooks salientes (Unidad 4).
+
+**Decisión de Alejandro (2026-09-07, antes de arrancar esta unidad):** `hr.payroll:write` **no se
+ofrece en v1** — quedó fuera del catálogo `API_SCOPES` (`externalApiAuth.ts`) por completo, así que
+`createApiKey` lo rechaza como "Unknown scope(s)" si alguien lo pide. `hr.payroll:read` (Unidad 2)
+no se tocó.
+
+**Hallazgo, no bloqueante:** el task breakdown original pedía un endpoint separado
+`PATCH .../opportunities/:id/stage`, sobre la premisa de que la API interna ya separaba el cambio
+de stage del resto de los campos. Es falso — `routes/opportunities.ts` mueve stage por el mismo
+PATCH genérico que todo lo demás (igual que el drag-and-drop de Kanban, ver
+`contexto-proyecto.md` 2026-07-16). Se construyó sin el endpoint separado: `stageId` es un campo
+más del PATCH genérico externo, validado con la misma `validateOpportunityRefs` que ya usa la ruta
+interna (exportada para reuso, igual que `validateContactRefs`) — evita duplicar la lógica de
+win/loss-reason en dos lugares.
+
+**2 bugs reales encontrados y corregidos antes de pushear:**
+1. Una `DELETE` sin body/`Content-Type` deja `req.body` en `undefined`, no `{}` — un schema zod de
+   puros campos opcionales igual lo rechazaba (`z.object` no acepta `undefined`). `parseBody` ahora
+   parsea `req.body ?? {}`.
+2. `respond()` mandaba `res.status(204).json({})` en los `DELETE` — un 204 no puede llevar body
+   (RFC 7231). Ahora hace `res.status(204).end()`.
+
+### A. Escritura por recurso (`curl` contra `staging`, key con todos los scopes `:write` salvo
+payroll, y una segunda key sin ningún scope `:write` para los 403)
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 1 | `POST /api/external/v1/tasks` con la key sin scopes `:write` | 403 |
+| 2 | `POST /api/external/v1/tasks` sin `entityType`/`entityId`/`assigneeId` | 400 `validation_error` con el detalle de los 3 campos faltantes |
+| 3 | `POST /api/external/v1/tasks` válido → `PATCH` con nuevo `title`/`completedAt` → `DELETE` → `GET` posterior | 201 con `createdById`/`assigneeId` = el usuario que creó la ApiKey (`apiKey.createdByUserId`), 200 en el PATCH, 204 en el DELETE, 404 en el GET final |
+| 4 | Mismo ciclo create → update → delete para **Notes** | Igual que Tasks |
+| 5 | `POST /api/external/v1/crm/companies` con `contact: {firstName, lastName, email}` (contacto nuevo) → `PATCH industry` → `DELETE` | 201 con el Company creado (y su Contact, aunque no se devuelve en la respuesta), 200, 204 |
+| 6 | `POST /api/external/v1/crm/contacts` vinculado a una Company existente → `PATCH title` → `DELETE` → `GET` posterior | 201, 200, 204, y el GET final muestra `isActive: false` (soft-delete, nunca se borra la fila) |
+| 7 | `POST /api/external/v1/crm/opportunities` a un Pipeline sin `assignmentMode` y sin `ownerId` en el body | 400 "ownerId is required" — igual que la ruta interna |
+| 8 | Repetir el caso 7 con `ownerId` explícito | 201 |
+| 9 | `PATCH .../opportunities/:id` con `stageId` de una stage `outcome: won`, sin `winReasonId` | 400 "A win reason is required..." — confirma que `validateOpportunityRefs` se reusa de verdad, no solo se reimplementó parecido |
+| 10 | Repetir el caso 9 moviendo a una stage `outcome: open` (sin reason requerido) | 200, `stageId` actualizado |
+| 11 | `POST /api/external/v1/hr/employees` con `contractType: "bogus"` | 400 "Invalid contract type" |
+| 12 | Ciclo completo create → update → delete para **Employees** | 201, 200, 204 |
+| 13 | `POST /api/external/v1/hr/timeoff` con un Employee que tiene una `TimeOffPolicyDefinition` asignada (`requiresApproval: false`) | 201, `status: "approved"` automático |
+| 14 | Repetir el caso 13 con `endDate` antes que `startDate` | 400 "End date must be on or after the start date" |
+| 15 | `GET /api/integrations/api-keys` (Unidad 1, sesión de owner) → `POST` una key con `scopes: ["hr.payroll:write"]` | 400 "Unknown scope(s): hr.payroll:write" — confirma la decisión de arriba |
+| 16 | Repetir el caso 15 con `scopes: ["hr.payroll:read"]` | 201 — confirma que solo `:write` quedó excluido, no todo el recurso |
+
+### B. Regresión
+
+| # | Caso | Resultado esperado |
+|---|---|---|
+| 17 | `npm test` (raíz) | Verde — 665/665, sin tests nuevos de ruta (el proyecto verifica rutas con `curl` real, no supertest; ver el resto de `docs/general/Tareas-QA.md`) |
+| 18 | `npm run build` (raíz) y `npm run lint` | Ambos en verde/limpio |
+| 19 | Cualquier caller interno de `createTask`/`updateTask`/`deleteTask`/`createNote`/.../`findUserById` — todos ganaron un `client?` opcional al final | Sin cambios de comportamiento, ningún callsite interno pasa ese argumento |
+
+### Al encontrar una falla
+
+El caso 3/6 (atribución correcta de `createdById`/`changedByUserId` a `apiKey.createdByUserId`,
+y que Contact nunca se borra de verdad) son los más importantes — una atribución incorrecta
+rompería el Activity Log de forma silenciosa. El caso 9 (reuso real de `validateOpportunityRefs`)
+es el segundo más importante: si fallara, significaría que el PATCH externo dejó pasar un
+Opportunity a Won sin motivo, un hueco de integridad de datos. El resto es severidad media.
+
+Verificado por Claude: los 19 casos se corrieron contra `staging` real con un tenant descartable,
+un Employee con una Time Off policy asignada (`requiresApproval: false`), una Company/Pipeline
+existentes, y 2 ApiKeys (una con todos los scopes `:write` salvo payroll, otra sin ninguno). Cada
+ciclo create→update→delete confirmado con un GET posterior mostrando 404 (hard-delete) o
+`isActive: false` (soft-delete de Contact) según corresponda. `npm test` 665/665, build/lint
+verdes. Tenant y ambas keys borrados después (incluidas las filas de `ActivityLogEntry` que generó
+cada escritura, necesarias antes de poder borrar los `User` del tenant). Falta la revisión de
+Alejandro.

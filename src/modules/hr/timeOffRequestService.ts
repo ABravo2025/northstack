@@ -40,6 +40,7 @@ export interface CreateTimeOffRequestResult {
 export async function createTimeOffRequest(
   input: CreateTimeOffRequestInput,
   changedByUserId: string,
+  client: ExtendedPrismaClient = prisma,
 ): Promise<CreateTimeOffRequestResult> {
   const startDate = new Date(input.startDate);
   const endDate = new Date(input.endDate);
@@ -51,17 +52,17 @@ export async function createTimeOffRequest(
     return { success: false, error: 'End date must be on or after the start date' };
   }
 
-  const employee = await prisma.employee.findUnique({ where: { id: input.employeeId } });
+  const employee = await client.employee.findUnique({ where: { id: input.employeeId } });
   if (!employee || employee.tenantId !== input.tenantId) {
     return { success: false, error: 'Employee not found' };
   }
 
-  const policy = await prisma.timeOffPolicyDefinition.findUnique({ where: { id: input.timeOffPolicyId } });
+  const policy = await client.timeOffPolicyDefinition.findUnique({ where: { id: input.timeOffPolicyId } });
   if (!policy || policy.tenantId !== input.tenantId || !policy.isActive) {
     return { success: false, error: 'Time off policy not found' };
   }
 
-  const assignment = await prisma.employeeTimeOffPolicy.findUnique({
+  const assignment = await client.employeeTimeOffPolicy.findUnique({
     where: { employeeId_timeOffPolicyId: { employeeId: input.employeeId, timeOffPolicyId: input.timeOffPolicyId } },
   });
   if (!assignment) {
@@ -71,7 +72,7 @@ export async function createTimeOffRequest(
   const daysRequested = countInclusiveDays(startDate, endDate);
   const autoApprove = !policy.requiresApproval;
 
-  const request = await prisma.timeOffRequest.create({
+  const request = await client.timeOffRequest.create({
     data: {
       tenantId: input.tenantId,
       employeeId: input.employeeId,

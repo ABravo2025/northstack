@@ -51,10 +51,10 @@ export interface UpdateEmployeeInput {
 // import, onboarding sample data) passes it; publicFormService.ts's anonymous form submission
 // path doesn't (there's no User behind a public form fill-out), and simply doesn't get an Activity
 // Log entry — a deliberate scope cut, see docs/general/spec-activity-log.md.
-export async function createEmployee(input: CreateEmployeeInput, changedByUserId?: string): Promise<Employee> {
+export async function createEmployee(input: CreateEmployeeInput, changedByUserId?: string, client: ExtendedPrismaClient = prisma): Promise<Employee> {
   const statusId = input.statusId ?? (await getDefaultStatusId(input.tenantId, 'employee'));
 
-  const employee = await prisma.employee.create({
+  const employee = await client.employee.create({
     data: {
       firstName: input.firstName,
       lastName: input.lastName,
@@ -310,8 +310,9 @@ export async function updateEmployee(
   id: string,
   input: UpdateEmployeeInput,
   changedByUserId: string,
+  client: ExtendedPrismaClient = prisma,
 ): Promise<Employee> {
-  const existing = await prisma.employee.findUniqueOrThrow({
+  const existing = await client.employee.findUniqueOrThrow({
     where: { id },
     include: { statusDefn: true },
   });
@@ -336,7 +337,7 @@ export async function updateEmployee(
   if (input.statusId !== undefined) data.statusId = input.statusId;
   if (input.managerId !== undefined) data.managerId = input.managerId;
 
-  const updated = await prisma.employee.update({
+  const updated = await client.employee.update({
     where: { id },
     data,
     include: {
@@ -373,10 +374,10 @@ export async function updateEmployee(
   return updated;
 }
 
-export async function deleteEmployee(id: string, changedByUserId: string): Promise<void> {
-  const existing = await prisma.employee.findUniqueOrThrow({ where: { id } });
+export async function deleteEmployee(id: string, changedByUserId: string, client: ExtendedPrismaClient = prisma): Promise<void> {
+  const existing = await client.employee.findUniqueOrThrow({ where: { id } });
 
-  await prisma.employee.delete({
+  await client.employee.delete({
     where: { id },
   });
 

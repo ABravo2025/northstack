@@ -27,7 +27,10 @@ export const opportunitiesRouter = createAsyncRouter();
 // are read-only — "no editables hasta desarchivar"), the stage has to belong
 // to that pipeline, and a `lost`-outcome stage requires a lossReasonId (a
 // `won`-outcome stage requires a winReasonId, symmetric — spec §3.7).
-async function validateOpportunityRefs(
+// Exported for routes/externalApi.ts (Private API + Webhooks, Unit 3) — the external API's
+// opportunity write endpoints reuse this exact validation (FK/tenant/business-rule checks) rather
+// than re-implementing it, so the two surfaces can never quietly drift apart on what's allowed.
+export async function validateOpportunityRefs(
   tenantId: string,
   body: any,
   pipelineId: string,

@@ -73,10 +73,10 @@ export async function wouldCreateCompanyHierarchyCycle(companyId: string, propos
   });
 }
 
-export async function createCompany(input: CreateCompanyInput, changedByUserId: string): Promise<Company> {
+export async function createCompany(input: CreateCompanyInput, changedByUserId: string, client: ExtendedPrismaClient = prisma): Promise<Company> {
   const statusId = input.statusId ?? (await getDefaultStatusId(input.tenantId, 'company'));
 
-  const { company, contact, contactAction, contactBefore } = await prisma.$transaction(async (tx) => {
+  const { company, contact, contactAction, contactBefore } = await client.$transaction(async (tx) => {
     const company = await tx.company.create({
       data: {
         name: input.name,
@@ -175,7 +175,7 @@ export async function findCompanyById(id: string, client: ExtendedPrismaClient =
   });
 }
 
-export async function updateCompany(id: string, input: UpdateCompanyInput, changedByUserId: string): Promise<Company> {
+export async function updateCompany(id: string, input: UpdateCompanyInput, changedByUserId: string, client: ExtendedPrismaClient = prisma): Promise<Company> {
   // Whitelist explicitly — never pass the input object straight through, since it
   // may originate from req.body and carry extra fields (e.g. tenantId/statusId)
   // that would otherwise reassign this row across tenants or bypass the
@@ -194,7 +194,7 @@ export async function updateCompany(id: string, input: UpdateCompanyInput, chang
   // Read and write in the same transaction (same pattern as subscriptionService.ts's
   // syncSubscriptionAndTenant) so the "before" snapshot used for the Activity Log diff can't be
   // made stale by a concurrent update to this row landing between the read and the write.
-  const { existing, updated } = await prisma.$transaction(async (tx) => {
+  const { existing, updated } = await client.$transaction(async (tx) => {
     const existing = await tx.company.findUniqueOrThrow({ where: { id } });
     const updated = await tx.company.update({
       where: { id },
@@ -245,8 +245,9 @@ export async function deleteCompany(
   id: string,
   changedByUserId: string,
   options: DeleteCompanyOptions = {},
+  client: ExtendedPrismaClient = prisma,
 ): Promise<DeleteCompanyResult> {
-  const existing = await prisma.company.findUniqueOrThrow({ where: { id } });
+  const existing = await client.company.findUniqueOrThrow({ where: { id } });
 
   const opportunityCount = await prisma.opportunity.count({ where: { companyId: id } });
   if (opportunityCount > 0 && !options.deleteLinkedOpportunities) {
@@ -272,10 +273,10 @@ export async function deleteCompany(
     await prisma.company.updateMany({ where: { parentCompanyId: id }, data: { parentCompanyId: null } });
   }
 
-  await prisma.$transaction([
-    prisma.contact.updateMany({ where: { companyId: id }, data: { companyId: null } }),
-    prisma.tagAssignment.deleteMany({ where: { entityType: 'company', entityId: id } }),
-    prisma.company.delete({ where: { id } }),
+  await client.$transaction([
+    client.contact.updateMany({ where: { companyId: id }, data: { companyId: null } }),
+    client.tagAssignment.deleteMany({ where: { entityType: 'company', entityId: id } }),
+    client.company.delete({ where: { id } }),
   ]);
 
   await recordActivity({

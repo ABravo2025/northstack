@@ -41,7 +41,7 @@ const CONTACT_INCLUDE = {
 
 // changedByUserId is optional — see employeeService.ts's createEmployee for why
 // (publicFormService.ts's anonymous submission path doesn't pass one, and gets no Activity Log entry).
-export async function createContact(input: CreateContactInput, changedByUserId?: string): Promise<Contact> {
+export async function createContact(input: CreateContactInput, changedByUserId?: string, client: ExtendedPrismaClient = prisma): Promise<Contact> {
   const companyId = input.companyId ?? null;
   const isPrimary = input.isPrimary ?? false;
 
@@ -50,7 +50,7 @@ export async function createContact(input: CreateContactInput, changedByUserId?:
   // flag is stored as-is but never triggers the demotion below.
   const contact =
     isPrimary && companyId
-      ? await prisma.$transaction(async (tx) => {
+      ? await client.$transaction(async (tx) => {
           await tx.contact.updateMany({ where: { companyId, isPrimary: true }, data: { isPrimary: false } });
           return tx.contact.create({
             data: {
@@ -67,7 +67,7 @@ export async function createContact(input: CreateContactInput, changedByUserId?:
             },
           });
         })
-      : await prisma.contact.create({
+      : await client.contact.create({
           data: {
             firstName: input.firstName,
             lastName: input.lastName,
@@ -128,8 +128,8 @@ export async function findContactById(id: string, client: ExtendedPrismaClient =
   });
 }
 
-export async function updateContact(id: string, input: UpdateContactInput, changedByUserId: string): Promise<Contact> {
-  const existing = await prisma.contact.findUniqueOrThrow({ where: { id } });
+export async function updateContact(id: string, input: UpdateContactInput, changedByUserId: string, client: ExtendedPrismaClient = prisma): Promise<Contact> {
+  const existing = await client.contact.findUniqueOrThrow({ where: { id } });
 
   // Whitelist explicitly — never pass the input object straight through, since it
   // may originate from req.body and carry extra fields (e.g. tenantId) that would
@@ -161,14 +161,14 @@ export async function updateContact(id: string, input: UpdateContactInput, chang
   }
 
   const updated = demoteOthersInCompanyId
-    ? await prisma.$transaction(async (tx) => {
+    ? await client.$transaction(async (tx) => {
         await tx.contact.updateMany({
           where: { companyId: demoteOthersInCompanyId!, isPrimary: true, id: { not: id } },
           data: { isPrimary: false },
         });
         return tx.contact.update({ where: { id }, data, include: CONTACT_INCLUDE });
       })
-    : await prisma.contact.update({
+    : await client.contact.update({
         where: { id },
         data,
         include: CONTACT_INCLUDE,
@@ -205,8 +205,8 @@ export interface DeactivateContactResult {
 // same "unlink, don't cascade-destroy" instinct as companyService.ts's
 // deleteCompany with Contacts. Never blocks, never destroys anything — there
 // was no destructive choice left to ask the user about.
-export async function deactivateContact(id: string, changedByUserId: string): Promise<DeactivateContactResult> {
-  const result = await prisma.$transaction(async (tx) => {
+export async function deactivateContact(id: string, changedByUserId: string, client: ExtendedPrismaClient = prisma): Promise<DeactivateContactResult> {
+  const result = await client.$transaction(async (tx) => {
     const links = await tx.opportunityContact.findMany({ where: { contactId: id }, select: { opportunityId: true } });
     const deactivatedOpportunityIds: string[] = [];
 

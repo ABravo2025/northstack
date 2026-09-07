@@ -144,7 +144,7 @@ async function maybeAdvanceCompanyToCustomer(tenantId: string, companyId: string
 
 // changedByUserId is optional — see employeeService.ts's createEmployee for why
 // (publicFormService.ts's anonymous submission path doesn't pass one, and gets no Activity Log entry).
-export async function createOpportunity(input: CreateOpportunityInput, changedByUserId?: string): Promise<Opportunity> {
+export async function createOpportunity(input: CreateOpportunityInput, changedByUserId?: string, client: ExtendedPrismaClient = prisma): Promise<Opportunity> {
   let stageId = input.stageId;
   if (!stageId) {
     const firstStage = await prisma.pipelineStageDefinition.findFirst({
@@ -167,7 +167,7 @@ export async function createOpportunity(input: CreateOpportunityInput, changedBy
     roundRobinCandidate = resolved.roundRobinCandidate;
   }
 
-  const opportunity = await prisma.opportunity.create({
+  const opportunity = await client.opportunity.create({
     data: {
       tenantId: input.tenantId,
       companyId: input.companyId,
@@ -192,7 +192,7 @@ export async function createOpportunity(input: CreateOpportunityInput, changedBy
     await advanceRoundRobinCursor(input.pipelineId, roundRobinCandidate);
   }
 
-  await prisma.opportunityStageHistory.create({
+  await client.opportunityStageHistory.create({
     data: { tenantId: input.tenantId, opportunityId: opportunity.id, stageId },
   });
 
@@ -234,8 +234,9 @@ export async function updateOpportunity(
   id: string,
   tenantId: string,
   input: UpdateOpportunityInput,
+  client: ExtendedPrismaClient = prisma,
 ): Promise<Opportunity> {
-  const existing = await prisma.opportunity.findUniqueOrThrow({ where: { id } });
+  const existing = await client.opportunity.findUniqueOrThrow({ where: { id } });
 
   // Whitelist explicitly — never pass the input object straight through, since it
   // may originate from req.body and carry extra fields (e.g. tenantId/pipelineId)
@@ -293,7 +294,7 @@ export async function updateOpportunity(
     resolvedStageId = input.stageId;
   }
 
-  const updated = await prisma.opportunity.update({ where: { id }, data });
+  const updated = await client.opportunity.update({ where: { id }, data });
 
   // Only now, after the write that actually used this candidate as owner has succeeded — see
   // advanceRoundRobinCursor's own comment for why this can't happen any earlier.
@@ -383,19 +384,19 @@ export async function updateOpportunity(
   return updated;
 }
 
-export async function deleteOpportunity(id: string, changedByUserId: string): Promise<void> {
-  const existing = await prisma.opportunity.findUniqueOrThrow({ where: { id } });
+export async function deleteOpportunity(id: string, changedByUserId: string, client: ExtendedPrismaClient = prisma): Promise<void> {
+  const existing = await client.opportunity.findUniqueOrThrow({ where: { id } });
 
   // No onDelete cascade on OpportunityStageHistory/OpportunityContact's FKs —
   // every Opportunity has at least one history row from creation, so a plain
   // delete would always hit a foreign-key restrict. Clean up children first.
   // TagAssignment.entityId has no FK at all (loose reference, like CustomFieldValue) — cleaned up
   // here too, or a hard-deleted Opportunity's tags become permanently orphaned rows.
-  await prisma.$transaction([
-    prisma.opportunityStageHistory.deleteMany({ where: { opportunityId: id } }),
-    prisma.opportunityContact.deleteMany({ where: { opportunityId: id } }),
-    prisma.tagAssignment.deleteMany({ where: { entityType: 'opportunity', entityId: id } }),
-    prisma.opportunity.delete({ where: { id } }),
+  await client.$transaction([
+    client.opportunityStageHistory.deleteMany({ where: { opportunityId: id } }),
+    client.opportunityContact.deleteMany({ where: { opportunityId: id } }),
+    client.tagAssignment.deleteMany({ where: { entityType: 'opportunity', entityId: id } }),
+    client.opportunity.delete({ where: { id } }),
   ]);
 
   await recordActivity({

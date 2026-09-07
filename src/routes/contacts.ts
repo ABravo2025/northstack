@@ -22,7 +22,9 @@ const VALID_LEAD_STATUSES = ['new', 'contacted', 'qualified', 'disqualified'];
 
 export const contactsRouter = createAsyncRouter();
 
-async function validateContactRefs(
+// Exported for routes/externalApi.ts (Private API + Webhooks, Unit 3) — same reasoning as
+// opportunities.ts's validateOpportunityRefs export.
+export async function validateContactRefs(
   tenantId: string,
   body: any,
 ): Promise<{ error: string } | null> {

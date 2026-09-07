@@ -33,8 +33,8 @@ const noteInclude = {
   createdBy: { select: { id: true, firstName: true, lastName: true, platformRole: true } },
 } satisfies Prisma.NoteInclude;
 
-export async function createNote(input: CreateNoteInput) {
-  const note = await prisma.note.create({
+export async function createNote(input: CreateNoteInput, client: ExtendedPrismaClient = prisma) {
+  const note = await client.note.create({
     data: {
       tenantId: input.tenantId,
       entityType: input.entityType,
@@ -85,15 +85,15 @@ export async function listAllNotesForTenant(tenantId: string, client: ExtendedPr
   });
 }
 
-export async function updateNote(id: string, input: UpdateNoteInput, changedByUserId: string) {
+export async function updateNote(id: string, input: UpdateNoteInput, changedByUserId: string, client: ExtendedPrismaClient = prisma) {
   // Whitelist explicitly — never spread req.body straight through (same rule
   // as every other update service in the app).
   const data: Prisma.NoteUncheckedUpdateInput = {};
   if (input.title !== undefined) data.title = input.title;
   if (input.description !== undefined) data.description = input.description;
 
-  const existing = await prisma.note.findUniqueOrThrow({ where: { id } });
-  const updated = await prisma.note.update({ where: { id }, data, include: noteInclude });
+  const existing = await client.note.findUniqueOrThrow({ where: { id } });
+  const updated = await client.note.update({ where: { id }, data, include: noteInclude });
 
   await recordActivity({
     tenantId: existing.tenantId,
@@ -112,9 +112,9 @@ export async function updateNote(id: string, input: UpdateNoteInput, changedByUs
   return updated;
 }
 
-export async function deleteNote(id: string, changedByUserId: string): Promise<void> {
-  const existing = await prisma.note.findUniqueOrThrow({ where: { id } });
-  await prisma.note.delete({ where: { id } });
+export async function deleteNote(id: string, changedByUserId: string, client: ExtendedPrismaClient = prisma): Promise<void> {
+  const existing = await client.note.findUniqueOrThrow({ where: { id } });
+  await client.note.delete({ where: { id } });
 
   await recordActivity({
     tenantId: existing.tenantId,

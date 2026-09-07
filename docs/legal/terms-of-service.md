@@ -88,6 +88,23 @@ Web Push (no VAPID keys, no service worker, no Notification.requestPermission an
 codebase). Used "in-app notification" throughout instead of "push notification" so these
 documents don't promise a delivery mechanism (OS-level push, works when the tab's closed)
 that doesn't exist. Flagged this distinction to Alejandro rather than silently substituting it.
+
+2026-09-07 (still later same day) — added new Section 1.3 clarifying that the Payroll module
+is a record-keeping tool, not a payment service: Northstack doesn't disburse anything to a
+Tenant's employees, and Payroll is unrelated to Northstack's own Paddle/Mercado Pago billing
+of Tenants (Section 5). Requested because "Payroll" as a feature name, sitting right next to
+all the new subscription-billing/refund language, invites exactly that confusion.
+
+Flagging a real, pre-existing issue surfaced while checking this, NOT yet fixed: Section 3.4
+(Prohibited categories of data) blanket-bans Tenants from submitting "full ... bank account
+numbers," but the Payroll module's own contract-confirmation flow
+(contractConfirmationService.ts, encryptPaymentAccountData) collects and stores an
+employee's payment/bank account details (AES-256-GCM encrypted) specifically so the Tenant
+knows where to pay them. That's a live contradiction — Section 3.4 currently prohibits data
+the platform's own flagship paid module is designed to collect. Raised to Alejandro rather
+than silently patched, since fixing it means either narrowing 3.4 with an explicit
+payroll-disbursement-data carve-out (encrypted, purpose-limited) or reconsidering whether
+Payroll should collect that data at all — a product/legal call, not a wording call.
 -->
 
 # Northstack Terms of Service
@@ -130,6 +147,16 @@ The Service is intended for business use only, is not directed at consumers, and
 directed at individuals under 18 years of age. By using the Service you represent that you
 are at least 18 years old and are using the Service for business purposes related to a
 Tenant, not for personal, household, or consumer purposes.
+
+### 1.3 Payroll is a record-keeping tool, not a payment service
+
+The Service includes a Payroll module that lets a Tenant record and track compensation,
+pay runs, pay stubs, and related employee/contractor records. **The Payroll module is a
+record-keeping tool only.** Northstack does not process, transmit, hold, or execute any
+payment or disbursement to a Tenant's employees or contractors on the Tenant's behalf, and
+the Payroll module is unrelated to, and has no effect on, Northstack's own billing of
+Tenants for the Service (Section 5). The Tenant remains solely responsible for actually
+paying its own employees and contractors, through its own banking, payroll, or other means.
 
 ---
 

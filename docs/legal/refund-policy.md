@@ -59,6 +59,12 @@ required, notified via email and an in-app notification instead," with an "excep
 applicable law requires otherwise" guardrail. Same reasoning and same-day companion change as
 terms-of-service.md's matching update to its Section 14 — see that file's internal note for
 the full explanation.
+
+2026-09-07 (still later same day) — added a Scope note to the intro clarifying this Policy
+covers only Northstack's own subscription fees, not a Tenant's payroll/employee-payment
+activity — same "Payroll is tracking, not payments" disambiguation added to
+terms-of-service.md's new Section 1.3, requested because "Refund Policy" sitting next to a
+product that has a "Payroll" module invites exactly that mix-up.
 -->
 
 # Northstack Refund Policy
@@ -70,6 +76,11 @@ service (the "**Service**"), operated by Alejandro Bravo, an individual based in
 Aires, Argentina ("**Northstack**," "**we**," "**us**," or "**our**"). This Policy
 supplements our [Terms of Service](./terms-of-service.md), Section 5 (Fees and Billing).
 Capitalized terms not defined here have the meaning given in the Terms of Service.
+
+**Scope.** This Policy covers only the fees Northstack charges a Tenant for the Service
+itself. It has nothing to do with a Tenant's own payroll, employee compensation, or any
+payment a Tenant makes to its own employees, contractors, or clients — Northstack does not
+process or execute those payments at all; see Section 1.3 of our Terms of Service.
 
 ---
 

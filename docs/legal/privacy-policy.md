@@ -29,6 +29,13 @@ terms-of-service.md's matching update to its Section 14 — see that file's inte
 the full explanation (including why this uses "in-app notification" rather than "push
 notification": the product has a polled in-app notification inbox, not Web Push).
 
+2026-09-07 (still later same day) — added Payroll/compensation records to Section 2.2, with
+the same "record-keeping only, we don't execute payments" framing added to
+terms-of-service.md's new Section 1.3. See that file's internal note for a real,
+pre-existing conflict this surfaced: Section 3.4 of the Terms bans Tenants from submitting
+full bank account numbers, but Payroll's contract-confirmation flow collects an encrypted
+one on purpose. Flagged to Alejandro, not yet resolved.
+
 Also flagging: this policy distinguishes two categories of personal data —
 (1) "Account Data" about the people who actually use Northstack (Tenant owners/admins/
 members) that we collect directly, where Northstack is the controller, and
@@ -101,6 +108,11 @@ such requests if they reach us directly.
   emails, phone numbers, departments, roles, employment/client status, and any custom
   fields a Tenant configures (subject to the prohibited-category restriction in Section 3.4
   of our Terms of Service).
+- Payroll and compensation records a Tenant enters for its own employees/contractors —
+  pay frequency, pay runs, pay stubs, and payment account details used to tell the Tenant
+  where to send that person's pay (stored encrypted). **Northstack does not use this data to
+  execute or transmit any payment — the Payroll module is a record-keeping tool only; see
+  Section 1.3 of our Terms of Service.**
 
 ### 2.3 Information collected automatically
 

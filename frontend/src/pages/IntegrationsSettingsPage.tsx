@@ -331,19 +331,22 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
               href="/developers"
               target="_blank"
               rel="noreferrer"
-              className="text-brand-blue hover:underline dark:text-brand-blue-light"
+              className="font-bold text-brand-blue hover:underline dark:text-brand-blue-light"
             >
               View API documentation
             </a>
             .
           </p>
         </div>
-        {keys && keys.length > 0 && (
+      </div>
+
+      {keys && keys.length > 0 && (
+        <div className="mb-3 flex justify-end">
           <button type="button" className="btn-primary btn-md" onClick={() => setShowCreateModal(true)}>
             Create key
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {keys === null ? (
         <TableSkeleton rows={2} columns={4} />

@@ -89,7 +89,16 @@ export default function DetailSidebar({
   );
 
   if (isParentControlled) {
-    return <div className="overview-panel-right-body">{sections}</div>;
+    // display:none (not just leaving all 3 sections hidden inside) when mobileActiveSection is
+    // null — otherwise this wrapper's own flex-1 still claims a share of the parent's height even
+    // though nothing inside it is visible, splitting the mobile Overview/Payments tab down to
+    // half the screen for no reason (found 2026-09-08 on a real phone: Overview only got half the
+    // available height, forcing a scroll for content that would otherwise fit on one screen).
+    return (
+      <div className="overview-panel-right-body" style={{ display: mobileActiveSection ? undefined : 'none' }}>
+        {sections}
+      </div>
+    );
   }
 
   return (

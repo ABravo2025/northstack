@@ -21,6 +21,96 @@ function Section({ id, title, children }: { id: string; title: string; children:
   );
 }
 
+interface FieldRow {
+  name: string;
+  type: string;
+  required?: boolean;
+  notes?: string;
+}
+
+function FieldsTable({ rows }: { rows: FieldRow[] }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full text-left text-xs">
+        <thead>
+          <tr className="border-b border-line-strong">
+            <th className="py-1 pr-4 font-medium">Field</th>
+            <th className="w-28 py-1 pr-4 font-medium">Type</th>
+            <th className="w-20 py-1 pr-4 font-medium">Required</th>
+            <th className="py-1 font-medium">Notes</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row) => (
+            <tr key={row.name} className="border-b border-line">
+              <td className="py-1.5 pr-4 align-top">
+                <code>{row.name}</code>
+              </td>
+              <td className="py-1.5 pr-4 align-top">{row.type}</td>
+              <td className="py-1.5 pr-4 align-top">{row.required ? 'Required' : 'Optional'}</td>
+              <td className="py-1.5 align-top">{row.notes ?? ''}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// One block per writable resource: exact request body (mirrors the zod schema in
+// routes/externalApi.ts field-for-field — keep these in sync if that file changes), a real
+// example request/response pair (trimmed from an actual verified call, ids replaced with
+// placeholders), and any resource-specific rules (defaults, enums, business logic).
+function ResourceDoc({
+  id,
+  title,
+  scopeNote,
+  intro,
+  createFields,
+  createExample,
+  createResponseExample,
+  updateNote,
+  deleteNote,
+}: {
+  id: string;
+  title: string;
+  scopeNote?: string;
+  intro?: ReactNode;
+  createFields?: FieldRow[];
+  createExample?: string;
+  createResponseExample?: string;
+  updateNote?: ReactNode;
+  deleteNote?: ReactNode;
+}) {
+  return (
+    <div id={id} className="mb-8 scroll-mt-20 border-t border-line pt-6">
+      <h4 className="mb-1 text-sm font-semibold text-ink dark:text-dark-ink">{title}</h4>
+      {scopeNote && <p className="mb-2 text-xs">{scopeNote}</p>}
+      {intro && <div className="mb-2">{intro}</div>}
+      {createFields && (
+        <>
+          <p className="mb-1 mt-3 text-xs font-medium text-ink dark:text-dark-ink">Body fields (create)</p>
+          <FieldsTable rows={createFields} />
+        </>
+      )}
+      {createExample && (
+        <>
+          <p className="mb-1 mt-3 text-xs font-medium text-ink dark:text-dark-ink">Example request</p>
+          <CodeBlock>{createExample}</CodeBlock>
+        </>
+      )}
+      {createResponseExample && (
+        <>
+          <p className="mb-1 mt-3 text-xs font-medium text-ink dark:text-dark-ink">Example response</p>
+          <CodeBlock>{createResponseExample}</CodeBlock>
+        </>
+      )}
+      {updateNote && <p className="mt-3 text-xs">{updateNote}</p>}
+      {deleteNote && <p className="mt-3 text-xs">{deleteNote}</p>}
+    </div>
+  );
+}
+
 interface ScopeRow {
   scope: string;
   covers: string;
@@ -205,6 +295,24 @@ export default function ApiDocsPage() {
             Base URL: <code>https://app.joinnorthstack.com/api/external/v1</code>. Every path below
             is relative to that.
           </p>
+          <p className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
+            <span className="text-ink-faint dark:text-dark-ink-faint">Jump to full request/response detail:</span>
+            {[
+              ['ref-tasks', 'Tasks'],
+              ['ref-notes', 'Notes'],
+              ['ref-companies', 'Companies'],
+              ['ref-contacts', 'Contacts'],
+              ['ref-opportunities', 'Opportunities'],
+              ['ref-pipelines', 'Pipelines'],
+              ['ref-employees', 'Employees'],
+              ['ref-timeoff', 'Time off'],
+              ['ref-payroll', 'Payroll'],
+            ].map(([anchor, label]) => (
+              <a key={anchor} href={`#${anchor}`} className="hover:underline">
+                {label}
+              </a>
+            ))}
+          </p>
           {ENDPOINTS.map((group) => (
             <div key={group.resource}>
               <h3 className="mb-1 mt-2 text-sm font-medium text-ink dark:text-dark-ink">{group.resource}</h3>
@@ -226,17 +334,389 @@ export default function ApiDocsPage() {
             </div>
           ))}
           <p className="mt-2">
-            Example — create a Task:
+            Sending data: every <code>POST</code>/<code>PATCH</code> body is JSON — set{' '}
+            <code>Content-Type: application/json</code> and send a raw JSON object, not form
+            fields. A field <code>PATCH</code> doesn't mention is left unchanged; a field sent as{' '}
+            <code>null</code> (where the table below allows it) clears it. Invalid input gets a{' '}
+            <code>400</code> with <code>code: "validation_error"</code> and a{' '}
+            <code>details</code> array naming exactly which field(s) and why.
           </p>
-          <CodeBlock>{`curl -X POST https://app.joinnorthstack.com/api/external/v1/tasks \\
-  -H "Authorization: Bearer nk_live_..." \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "entityType": "company",
-    "entityId": "...",
-    "title": "Follow up",
-    "assigneeId": "..."
-  }'`}</CodeBlock>
+
+          <h3 className="mb-1 mt-6 text-base font-semibold text-ink dark:text-dark-ink">
+            Request &amp; response reference
+          </h3>
+          <p>Full body/response detail for every writable resource, in the same order as the table above.</p>
+
+          <ResourceDoc
+            id="ref-tasks"
+            title="Tasks — POST /tasks, PATCH /tasks/:id, DELETE /tasks/:id"
+            scopeNote="Scope: tasks:write. Task is cross-entity — every Task hangs off exactly one Employee, Company, Contact, or Opportunity."
+            createFields={[
+              { name: 'entityType', type: 'string', required: true, notes: 'One of: employee, company, contact, opportunity.' },
+              { name: 'entityId', type: 'string', required: true, notes: 'Id of that record — must belong to your workspace, or you get a 404.' },
+              { name: 'title', type: 'string', required: true },
+              { name: 'description', type: 'string | null', notes: 'Defaults to null.' },
+              { name: 'assigneeId', type: 'string', required: true, notes: "A User id in your workspace — whoever the task is for." },
+              { name: 'dueDate', type: 'ISO 8601 datetime | null', notes: 'e.g. "2026-10-01T00:00:00.000Z". Defaults to null (no due date).' },
+            ]}
+            createExample={`{
+  "entityType": "employee",
+  "entityId": "3f9a1c2e-4b7d-4a1e-9c3a-employee0001",
+  "title": "Follow up on onboarding paperwork",
+  "assigneeId": "7b2d4e1a-8f3c-4d2b-a1e9-user00000001"
+}`}
+            createResponseExample={`{
+  "id": "010ee18b-c853-498f-bec6-c708e962b09b",
+  "tenantId": "88da8bee-a050-42c2-8b94-tenant00001",
+  "entityType": "employee",
+  "entityId": "3f9a1c2e-4b7d-4a1e-9c3a-employee0001",
+  "title": "Follow up on onboarding paperwork",
+  "description": null,
+  "assigneeId": "7b2d4e1a-8f3c-4d2b-a1e9-user00000001",
+  "dueDate": null,
+  "completedAt": null,
+  "createdById": "7b2d4e1a-8f3c-4d2b-a1e9-user00000001",
+  "createdAt": "2026-09-07T21:56:57.071Z",
+  "updatedAt": "2026-09-07T21:56:57.071Z",
+  "googleCalendarEventId": null,
+  "assignee": { "id": "7b2d4e1a-...", "firstName": "Owner", "lastName": "Test" },
+  "createdBy": { "id": "7b2d4e1a-...", "firstName": "Owner", "lastName": "Test" }
+}`}
+            updateNote={
+              <>
+                <code>PATCH</code> takes <code>title</code>, <code>description</code>,{' '}
+                <code>assigneeId</code>, <code>dueDate</code> — all optional, send only what
+                changes. <code>entityType</code>/<code>entityId</code> can't be changed (a Task
+                can't move to a different record). Set <code>completedAt</code> to an ISO datetime
+                to mark it done, or <code>null</code> to reopen it.
+              </>
+            }
+            deleteNote="DELETE takes no body. Hard delete — the row is gone, GET afterward is a 404."
+          />
+
+          <ResourceDoc
+            id="ref-notes"
+            title="Notes — POST /notes, PATCH /notes/:id, DELETE /notes/:id"
+            scopeNote="Scope: notes:write. Same cross-entity shape as Tasks, minus assignee/due date/completion — a Note is a record, not a to-do."
+            createFields={[
+              { name: 'entityType', type: 'string', required: true, notes: 'One of: employee, company, contact, opportunity.' },
+              { name: 'entityId', type: 'string', required: true, notes: 'Must belong to your workspace, or you get a 404.' },
+              { name: 'title', type: 'string', required: true },
+              { name: 'description', type: 'string', required: true, notes: "The note's body — not optional here, unlike Task's description." },
+            ]}
+            createExample={`{
+  "entityType": "employee",
+  "entityId": "3f9a1c2e-4b7d-4a1e-9c3a-employee0001",
+  "title": "Reference check",
+  "description": "Called the listed reference — confirmed dates and role."
+}`}
+            createResponseExample={`{
+  "id": "bf8a56cd-dfbc-47dd-a13c-ae6efab13156",
+  "tenantId": "88da8bee-a050-42c2-8b94-tenant00001",
+  "entityType": "employee",
+  "entityId": "3f9a1c2e-4b7d-4a1e-9c3a-employee0001",
+  "title": "Reference check",
+  "description": "Called the listed reference — confirmed dates and role.",
+  "createdById": "7b2d4e1a-8f3c-4d2b-a1e9-user00000001",
+  "createdAt": "2026-09-07T21:57:17.273Z",
+  "updatedAt": "2026-09-07T21:57:17.273Z",
+  "createdBy": { "id": "7b2d4e1a-...", "firstName": "Owner", "lastName": "Test", "platformRole": null }
+}`}
+            updateNote={
+              <>
+                <code>PATCH</code> takes <code>title</code>/<code>description</code>, both optional.
+              </>
+            }
+            deleteNote="DELETE takes no body. Hard delete."
+          />
+
+          <ResourceDoc
+            id="ref-companies"
+            title="Companies — POST /crm/companies, PATCH /crm/companies/:id, DELETE /crm/companies/:id"
+            scopeNote="Scope: crm.companies:write."
+            intro={
+              <p>
+                A Company can't exist without a Contact — <code>contact</code> is required on create,
+                either a brand-new person or a link to one that already exists.
+              </p>
+            }
+            createFields={[
+              { name: 'name', type: 'string', required: true },
+              {
+                name: 'contact',
+                type: 'object',
+                required: true,
+                notes: 'Either { "contactId": "..." } (link an existing Contact) or { "firstName", "lastName", "email" } (create a new one).',
+              },
+              { name: 'industry, website, phone, billingAddress', type: 'string | null', notes: 'Default to null.' },
+              { name: 'sizeId', type: 'string | null', notes: "A company-size catalog value's id. Default null." },
+              { name: 'accountOwnerId', type: 'string | null', notes: 'A User id in your workspace. Default null.' },
+              { name: 'isPlaceholder', type: 'boolean', notes: 'Default false. Leave this alone unless you know why you need it.' },
+            ]}
+            createExample={`{
+  "name": "Acme Corp",
+  "contact": {
+    "firstName": "Jane",
+    "lastName": "Doe",
+    "email": "jane@acmecorp.example"
+  },
+  "industry": "Software"
+}`}
+            createResponseExample={`{
+  "id": "bbd4f74c-74cb-40e8-996d-company00001",
+  "tenantId": "88da8bee-a050-42c2-8b94-tenant00001",
+  "name": "Acme Corp",
+  "industry": "Software",
+  "website": null,
+  "phone": null,
+  "billingAddress": null,
+  "parentCompanyId": null,
+  "sizeId": null,
+  "accountOwnerId": null,
+  "statusId": "310da8d8-f42a-4e0d-ac8d-status000001",
+  "isPlaceholder": false,
+  "createdAt": "2026-09-07T21:57:24.962Z",
+  "statusDefn": { "id": "310da8d8-...", "name": "Prospect", "isDefault": true, "...": "..." }
+}`}
+            updateNote={
+              <>
+                <code>PATCH</code> takes the same fields as create except <code>contact</code>{' '}
+                (can't be changed after creation this way), plus <code>parentCompanyId</code>{' '}
+                (string | null). <code>statusId</code> is never settable directly — it's derived
+                from business events (an Opportunity being won, for example).
+              </>
+            }
+            deleteNote={
+              <>
+                <code>DELETE</code> takes an optional JSON body:{' '}
+                <code>{'{ "deleteLinkedOpportunities": boolean, "cascadeToChildCompanies": boolean }'}</code>
+                , both default <code>false</code>. Without them, deleting a Company that still has
+                Opportunities fails with a <code>400</code> instead of silently taking them down too.
+              </>
+            }
+          />
+
+          <ResourceDoc
+            id="ref-contacts"
+            title="Contacts — POST /crm/contacts, PATCH /crm/contacts/:id, DELETE /crm/contacts/:id"
+            scopeNote="Scope: crm.contacts:write."
+            createFields={[
+              { name: 'firstName', type: 'string', required: true },
+              { name: 'lastName', type: 'string', required: true },
+              { name: 'email', type: 'string', required: true, notes: 'Must be a valid email; unique per workspace.' },
+              { name: 'phone, title', type: 'string | null', notes: 'Default null.' },
+              { name: 'companyId', type: 'string | null', notes: 'Default null (unlinked).' },
+              { name: 'isPrimary', type: 'boolean', notes: "Default false. Only one primary Contact per Company — setting this demotes any other." },
+              { name: 'leadStatus', type: 'string | null', notes: 'One of: new, contacted, qualified, disqualified. Default null.' },
+              { name: 'leadSourceId', type: 'string | null', notes: 'A lead-source catalog value id. Default null.' },
+            ]}
+            createExample={`{
+  "firstName": "John",
+  "lastName": "Smith",
+  "email": "john.smith@acmecorp.example",
+  "companyId": "bbd4f74c-74cb-40e8-996d-company00001"
+}`}
+            createResponseExample={`{
+  "id": "d483c8bb-d80e-4992-aade-contact00001",
+  "tenantId": "88da8bee-a050-42c2-8b94-tenant00001",
+  "firstName": "John",
+  "lastName": "Smith",
+  "email": "john.smith@acmecorp.example",
+  "phone": null,
+  "companyId": "bbd4f74c-74cb-40e8-996d-company00001",
+  "title": null,
+  "isPrimary": false,
+  "leadStatus": null,
+  "leadSourceId": null,
+  "isActive": true,
+  "createdAt": "2026-09-07T21:57:47.703Z"
+}`}
+            updateNote={<>All create fields are optional on <code>PATCH</code>, plus <code>isActive</code> (boolean).</>}
+            deleteNote={
+              <>
+                <code>DELETE</code> takes no body — soft delete (deactivates, sets{' '}
+                <code>isActive: false</code>). Never destroyed: a linked Opportunity where this was
+                the only active Contact gets deactivated too; otherwise it's just unlinked.
+              </>
+            }
+          />
+
+          <ResourceDoc
+            id="ref-opportunities"
+            title="Opportunities — POST /crm/opportunities, PATCH /crm/opportunities/:id, DELETE /crm/opportunities/:id"
+            scopeNote="Scope: crm.opportunities:write. Stage changes (moving a deal through the pipeline) go through the same PATCH via stageId — there's no separate endpoint for it."
+            createFields={[
+              { name: 'companyId', type: 'string', required: true },
+              { name: 'pipelineId', type: 'string', required: true },
+              { name: 'name', type: 'string', required: true },
+              { name: 'amountCents', type: 'integer ≥ 0', required: true, notes: 'Whole cents, e.g. 500000 = $5,000.00.' },
+              { name: 'currency', type: 'string', required: true, notes: 'e.g. "USD".' },
+              { name: 'stageId', type: 'string', notes: "Defaults to the pipeline's first active stage if omitted." },
+              {
+                name: 'ownerId',
+                type: 'string | null',
+                notes: 'Required only if the target pipeline has no automatic assignment configured — otherwise omit it and let assignment decide.',
+              },
+              { name: 'lossReasonId, winReasonId', type: 'string | null', notes: 'Required when stageId resolves to a lost/won stage respectively.' },
+              { name: 'estimatedCloseDate, nextStepDate', type: 'ISO 8601 datetime | null' },
+              { name: 'closeNote, nextStepNote', type: 'string | null' },
+            ]}
+            createExample={`{
+  "companyId": "bbd4f74c-74cb-40e8-996d-company00001",
+  "pipelineId": "8fa4e39d-c2a8-498e-8d54-pipeline0001",
+  "name": "Acme Corp — annual plan",
+  "amountCents": 500000,
+  "currency": "USD",
+  "ownerId": "7b2d4e1a-8f3c-4d2b-a1e9-user00000001"
+}`}
+            createResponseExample={`{
+  "id": "8f860568-c656-411b-97b4-opportunity1",
+  "tenantId": "88da8bee-a050-42c2-8b94-tenant00001",
+  "companyId": "bbd4f74c-74cb-40e8-996d-company00001",
+  "pipelineId": "8fa4e39d-c2a8-498e-8d54-pipeline0001",
+  "stageId": "79ae1f27-261c-4408-bedb-stage000001",
+  "name": "Acme Corp — annual plan",
+  "amountCents": 500000,
+  "currency": "USD",
+  "estimatedCloseDate": null,
+  "ownerId": "7b2d4e1a-8f3c-4d2b-a1e9-user00000001",
+  "lossReasonId": null,
+  "winReasonId": null,
+  "closeNote": null,
+  "nextStepDate": null,
+  "nextStepNote": null,
+  "isActive": true,
+  "createdAt": "2026-09-07T21:58:11.075Z"
+}`}
+            updateNote={
+              <>
+                All create fields are optional on <code>PATCH</code>, plus <code>isActive</code>. To
+                move a deal, send just <code>{'{ "stageId": "..." }'}</code> — if the target stage's
+                outcome is <code>won</code> or <code>lost</code>, the matching reason field is
+                required in the same request or you get a <code>400</code>.
+              </>
+            }
+            deleteNote="DELETE takes no body. Hard delete."
+          />
+
+          <ResourceDoc
+            id="ref-pipelines"
+            title="Pipelines — GET /crm/pipelines (read-only)"
+            scopeNote="Scope: crm.pipelines:read. No write scope exists — pipelines are configuration, not a record you create through automation."
+            createResponseExample={`{
+  "id": "8fa4e39d-c2a8-498e-8d54-pipeline0001",
+  "name": "Sales",
+  "type": "lead",
+  "order": 0,
+  "isActive": true,
+  "stages": [
+    { "id": "79ae1f27-...", "name": "New", "order": 0, "outcome": "open" },
+    { "id": "1a45ca5b-...", "name": "In Progress", "order": 1, "outcome": "open" },
+    { "id": "8f1cb650-...", "name": "Won", "order": 2, "outcome": "won" },
+    { "id": "8b0848fa-...", "name": "Lost", "order": 3, "outcome": "lost" }
+  ]
+}`}
+          />
+
+          <ResourceDoc
+            id="ref-employees"
+            title="Employees — POST /hr/employees, PATCH /hr/employees/:id, DELETE /hr/employees/:id"
+            scopeNote="Scope: hr.employees:write."
+            createFields={[
+              { name: 'firstName', type: 'string', required: true },
+              { name: 'lastName', type: 'string', required: true },
+              { name: 'email', type: 'string', required: true },
+              { name: 'contractType', type: 'string | null', notes: 'One of: part_time, full_time. Default null.' },
+              { name: 'personType', type: 'string | null', notes: 'One of: profile, contractor, employee. Default null.' },
+              { name: 'departmentId, jobTitleId', type: 'string | null', notes: 'Catalog value ids. Default null.' },
+              { name: 'managerId', type: 'string | null', notes: 'Another Employee id — must not create a reporting cycle.' },
+              { name: 'statusId', type: 'string', notes: "Defaults to the workspace's default Employee status if omitted." },
+              { name: 'nationality, contractUrl, personalEmail', type: 'string | null' },
+              { name: 'startDate, endDate, birthdate', type: 'ISO 8601 datetime | null' },
+            ]}
+            createExample={`{
+  "firstName": "Alice",
+  "lastName": "Wong",
+  "email": "alice.wong@example.com"
+}`}
+            createResponseExample={`{
+  "id": "efb8fb37-4ee9-4e3c-9396-employee0002",
+  "firstName": "Alice",
+  "lastName": "Wong",
+  "email": "alice.wong@example.com",
+  "departmentId": null,
+  "jobTitleId": null,
+  "contractType": null,
+  "personType": null,
+  "nationality": null,
+  "startDate": null,
+  "endDate": null,
+  "birthdate": null,
+  "contractUrl": null,
+  "personalEmail": null,
+  "statusId": "74268ff9-88f6-44d7-b937-status000002",
+  "managerId": null,
+  "tenantId": "88da8bee-a050-42c2-8b94-tenant00001",
+  "createdAt": "2026-09-07T21:58:46.084Z",
+  "userId": null
+}`}
+            updateNote={
+              <>
+                All create fields are optional on <code>PATCH</code> — send only what changes. A
+                terminated Employee's <code>statusId</code> can't be changed back this way.
+              </>
+            }
+            deleteNote="DELETE takes no body. Hard delete."
+          />
+
+          <ResourceDoc
+            id="ref-timeoff"
+            title="Time off — GET /hr/timeoff, POST /hr/timeoff (create only)"
+            scopeNote="Scope: hr.timeoff:read / hr.timeoff:write. No PATCH/DELETE, and no way to approve or reject a request through this API — deciding one is gated by 'is this person's assigned manager', a relationship an API key doesn't have."
+            createFields={[
+              { name: 'employeeId', type: 'string', required: true, notes: 'Must have timeOffPolicyId already assigned to them.' },
+              { name: 'timeOffPolicyId', type: 'string', required: true },
+              { name: 'startDate, endDate', type: 'date ("YYYY-MM-DD") or ISO datetime', required: true },
+              { name: 'note', type: 'string', notes: 'Default none.' },
+            ]}
+            createExample={`{
+  "employeeId": "3f9a1c2e-4b7d-4a1e-9c3a-employee0001",
+  "timeOffPolicyId": "f7562e91-d4eb-48da-a130-policy000001",
+  "startDate": "2026-10-01",
+  "endDate": "2026-10-03"
+}`}
+            createResponseExample={`{
+  "id": "015fcc2c-ad0e-49fc-a280-timeoff00001",
+  "tenantId": "88da8bee-a050-42c2-8b94-tenant00001",
+  "employeeId": "3f9a1c2e-4b7d-4a1e-9c3a-employee0001",
+  "timeOffPolicyId": "f7562e91-d4eb-48da-a130-policy000001",
+  "startDate": "2026-10-01T00:00:00.000Z",
+  "endDate": "2026-10-03T00:00:00.000Z",
+  "daysRequested": 3,
+  "note": null,
+  "status": "approved",
+  "approverId": null,
+  "decidedAt": "2026-09-07T21:59:04.128Z",
+  "decisionNote": "Auto-approved — this policy does not require approval",
+  "createdAt": "2026-09-07T21:59:04.129Z"
+}`}
+          />
+
+          <ResourceDoc
+            id="ref-payroll"
+            title="Payroll — GET /hr/payroll (read-only)"
+            scopeNote="Scope: hr.payroll:read. No write scope exists for Payroll in this API — none can be requested on a key, ever."
+            createResponseExample={`{
+  "id": "a1b2c3d4-...",
+  "tenantId": "88da8bee-a050-42c2-8b94-tenant00001",
+  "payFrequencyId": "e5f6a7b8-...",
+  "periodLabel": "September 2026",
+  "status": "confirmed",
+  "createdByUserId": "7b2d4e1a-...",
+  "confirmedAt": "2026-09-01T12:00:00.000Z",
+  "createdAt": "2026-08-25T09:00:00.000Z"
+}`}
+          />
         </Section>
 
         <Section id="pagination" title="Pagination">

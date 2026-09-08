@@ -327,7 +327,12 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
           <p className="text-xs text-ink-muted dark:text-dark-ink-muted">
             Create keys for your own scripts, Zapier, Make, or any tool that talks to Northstack's
             private API.{' '}
-            <a href="/developers" target="_blank" rel="noreferrer">
+            <a
+              href="/developers"
+              target="_blank"
+              rel="noreferrer"
+              className="text-brand-blue hover:underline dark:text-brand-blue-light"
+            >
               View API documentation
             </a>
             .

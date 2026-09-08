@@ -1,4 +1,6 @@
 import prisma, { type ExtendedPrismaClient } from '../../lib/prisma.js';
+import { bestEffort } from '../../lib/bestEffort.js';
+import { emitWebhookEvent } from '../integrations/webhookDispatchService.js';
 import { sendTimeOffRequestDecidedEmail, sendTimeOffRequestPendingEmail } from '../../lib/mailer.js';
 import { syncTimeOffCalendarEvent } from '../integrations/googleCalendarSyncService.js';
 import { recordActivity } from '../activity/activityLogService.js';
@@ -141,6 +143,19 @@ export async function createTimeOffRequest(
     }).catch((err) => console.error('Failed to send time off pending email:', err));
   }
 
+  await bestEffort(
+    emitWebhookEvent({ tenantId: input.tenantId, type: 'timeoff.requested', entity: { type: 'timeOffRequest', id: request.id }, data: request }),
+    'Failed to emit timeoff.requested webhook event',
+  );
+  // A request that didn't need approval is, from an integration's point of view, ALSO already
+  // approved — both events reflect something that genuinely happened, not two views of one thing.
+  if (autoApprove) {
+    await bestEffort(
+      emitWebhookEvent({ tenantId: input.tenantId, type: 'timeoff.approved', entity: { type: 'timeOffRequest', id: request.id }, data: request }),
+      'Failed to emit timeoff.approved (auto-approve) webhook event',
+    );
+  }
+
   return { success: true, request };
 }
 
@@ -272,6 +287,16 @@ export async function decideTimeOffRequest(
     after: updated,
     fieldConfig: timeOffRequestActivityFieldConfig,
   });
+
+  await bestEffort(
+    emitWebhookEvent({
+      tenantId,
+      type: decision === 'approved' ? 'timeoff.approved' : 'timeoff.rejected',
+      entity: { type: 'timeOffRequest', id: requestId },
+      data: updated,
+    }),
+    `Failed to emit timeoff.${decision} webhook event`,
+  );
 
   return { success: true, request: updated };
 }

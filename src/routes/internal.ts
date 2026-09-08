@@ -4,6 +4,7 @@ import { runStalledOpportunityReminders } from '../modules/crm/stalledOpportunit
 import { runStripeEventPolling } from '../modules/integrations/stripePaymentsService.js';
 import { runScheduledTerminations } from '../modules/hr/terminationService.js';
 import { runActivityLogRetention } from '../modules/activity/activityLogRetentionService.js';
+import { runWebhookDeliveryRetries } from '../modules/integrations/webhookDispatchService.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import type express from 'express';
 
@@ -101,5 +102,20 @@ internalRouter.get('/api/internal/activity-log-retention/run', async (req, res) 
   if (!checkCronSecret(req, res, '/api/internal/activity-log-retention/run')) return;
 
   const result = await runActivityLogRetention();
+  return res.json(result);
+});
+
+// Private API + Webhooks Unit 4 (spec §7.3) — retries. The FIRST attempt at any WebhookDelivery
+// happens immediately when it's created (webhookDispatchService.ts's emitWebhookEvent fires
+// deliverWebhookDelivery right away, fire-and-forget from the producer's perspective), NOT here —
+// this cron exists only to pick up whatever's still `pending` after that: a failed first attempt
+// waiting out its backoff window (+1min/+5min/+30min), or the rare case where the immediate
+// attempt never got to run at all (e.g. the process died right after the row was created). Not
+// yet wired into vercel.json's `crons` — see the note where this route is called out in the task
+// breakdown/QA log for why.
+internalRouter.get('/api/internal/webhooks/retry/run', async (req, res) => {
+  if (!checkCronSecret(req, res, '/api/internal/webhooks/retry/run')) return;
+
+  const result = await runWebhookDeliveryRetries();
   return res.json(result);
 });

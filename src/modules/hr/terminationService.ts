@@ -1,4 +1,6 @@
 import prisma from '../../lib/prisma.js';
+import { bestEffort } from '../../lib/bestEffort.js';
+import { emitWebhookEvent } from '../integrations/webhookDispatchService.js';
 import { createOffPayments } from './payrollOffPaymentService.js';
 import { syncTimeOffCalendarEvent } from '../integrations/googleCalendarSyncService.js';
 import { findEmployeeById, wouldCreateManagerCycle } from './employeeService.js';
@@ -317,6 +319,11 @@ async function executeTermination(terminationId: string): Promise<void> {
   }
 
   await prisma.employeeTermination.update({ where: { id: terminationId }, data: { executedAt: new Date() } });
+
+  await bestEffort(
+    emitWebhookEvent({ tenantId, type: 'employee.terminated', entity: { type: 'employee', id: employeeId }, data: employee }),
+    'Failed to emit employee.terminated webhook event',
+  );
 }
 
 // Daily cron (src/routes/internal.ts) — same "a failure for one doesn't stop the rest" shape as

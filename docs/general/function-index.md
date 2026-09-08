@@ -48,6 +48,12 @@ Leaf module (sin imports) — extraído 2026-08-18 de `tenantService.ts` para qu
 - **encryptStripeSecret(plaintext)** / **decryptStripeSecret(payload)** — mismo AES-256-GCM que los dos de arriba, key propia (`STRIPE_TOKEN_ENCRYPTION_KEY`). Un solo par de funciones cubre tanto `StripeConnection.apiKeyEncrypted` como `.webhookSigningSecretEncrypted` — ambos son secretos de Stripe pegados por el tenant, no ameritan una función por campo.
 - **isStripeEncryptionConfigured()** — mismo patrón que `isGoogleTokenEncryptionConfigured()`.
 
+### `src/lib/webhookEncryption.ts` (Private API + Webhooks, Unit 4 — 2026-09-07)
+- **encryptWebhookSecret(plaintext)** / **decryptWebhookSecret(payload)** — mismo AES-256-GCM que
+  `stripeEncryption.ts`, key propia (`WEBHOOK_SECRET_ENCRYPTION_KEY`). Cubre
+  `WebhookSubscription.secretEncrypted` — reversible a propósito (a diferencia de
+  `ApiKey.keyHash`), porque hay que releer el secreto en claro para firmar cada entrega.
+
 ### `src/lib/httpAuth.ts`
 - **getBearerToken(req)** — extrae el token `Authorization: Bearer`.
 - **getClientIp(req)** — IP del cliente, para rate limiting.
@@ -528,6 +534,60 @@ CRUD estándar: **createTimeOffPolicy**, **listTimeOffPolicies(tenantId)**, **fi
 - **revokeApiKey(tenantId, id)** — soft delete vía `updateMany({where: {..., revokedAt: null}})`,
   mismo patrón anti-doble-revoke que `StripeConnection.disconnectedAt` (Payments v1 Unit 1):
   revocar dos veces es un no-op silencioso, no un throw.
+
+### `src/modules/integrations/webhookService.ts` (Private API + Webhooks, Unit 4 — 2026-09-07)
+Management CRUD para Settings → Integrations → API & Webhooks (`routes/apiAccessIntegration.ts`,
+mismo router que `apiKeyService.ts` — comparten página y gate `canManageApiAccess`). Mismo
+criterio "unscoped lookup + verificar tenantId" que el resto del proyecto (`lib/prisma.ts`) para
+update/delete/regenerateSecret/listDeliveries/retryDelivery — todas devuelven `null` (no 404
+directo) si el recurso no es de este tenant, dejando que la ruta decida el código de respuesta.
+- **createSubscription(tenantId, userId, {url, events})** — `url` tiene que ser `https://` (no
+  pedido explícito por la spec, agregado como default de seguridad razonable — nada firma/entrega
+  sobre HTTP en claro). `events` validado contra `webhookDispatchService.ts`'s `WEBHOOK_EVENTS`.
+  Devuelve el secreto completo (`whsec_...`) **una sola vez**.
+- **listSubscriptions(tenantId)** — nunca incluye `secretEncrypted`.
+- **updateSubscription(tenantId, id, {url?, events?, isActive?})** — reactivar (`isActive: true`)
+  limpia `needsAttention` a mano, mismo criterio "chance nueva" que una entrega exitosa en
+  `webhookDispatchService.ts`.
+- **deleteSubscription(tenantId, id)** — soft (`isActive: false`, `updateMany` idempotente) — el
+  schema de la spec no tiene un `deletedAt` propio, así que "borrar" y "pausar a mano" son la misma
+  operación a nivel de datos.
+- **regenerateSecret(tenantId, id)** — invalida el secreto anterior de inmediato (nueva key
+  cifrada pisa la vieja), devuelve el nuevo en claro una sola vez.
+- **listDeliveries(tenantId, subscriptionId, limit?)** — log de últimas entregas para la UI (spec
+  §8), más reciente primero.
+- **retryDelivery(tenantId, deliveryId)** — reintento manual desde el botón por fila del log
+  (spec §7.4) — deliberadamente sin equivalente en `/api/external/v1/*`, un tercero no puede
+  disparar esto por su cuenta. Llama a `deliverWebhookDelivery` directo, sin pasar por la cola.
+
+### `src/modules/integrations/webhookDispatchService.ts` (Private API + Webhooks, Unit 4 — 2026-09-07)
+- **WEBHOOK_EVENTS** — catálogo de eventos (spec §7.1): `employee.created/.updated/.terminated`,
+  `timeoff.requested/.approved/.rejected`, `opportunity.created/.stage_changed/.won/.lost`,
+  `company.created`, `contact.created`, `task.created/.completed`. String libre, no enum de
+  Prisma — sumar un evento nuevo no pide migración.
+- **emitWebhookEvent({tenantId, type, entity, data})** — busca `WebhookSubscription` activas
+  suscriptas a `type`, crea un `WebhookDelivery` `pending` por cada una, y dispara la
+  **primera entrega de inmediato** (no espera al cron) sin esperarla — ver el comentario largo en
+  el archivo sobre por qué: esta función SÍ tiene que ser awaited por el caller (vía `bestEffort`,
+  nunca un `.catch()` suelto — la fila `pending` es lo que no se puede perder), pero la entrega en
+  sí (una llamada de red real, hasta 10s) no debe bloquear la respuesta al usuario; si Vercel mata
+  el proceso a mitad de esa entrega, la fila sigue `pending` y el cron de reintentos la agarra
+  igual. Insertada al final de cada `*Service.ts` relevante (`employeeService.ts`,
+  `terminationService.ts`, `timeOffRequestService.ts`, `opportunityService.ts`,
+  `companyService.ts`, `contactService.ts`, `taskService.ts`).
+- **deliverWebhookDelivery(delivery)** — firma `HMAC-SHA256(secret, `${timestamp}.${rawBody}`)`
+  (headers `X-Northstack-Signature`/`X-Northstack-Timestamp`), `fetch` con timeout 10s. Backoff
+  fijo: inmediato → +1min → +5min → +30min (4 intentos totales), `status: failed` al 4to. Llamado
+  tanto por `emitWebhookEvent` (intento inmediato) como por el cron de reintentos
+  (`routes/internal.ts`) — no le importa quién lo llamó.
+- **runWebhookDeliveryRetries()** — cron: escanea `WebhookDelivery` `pending` con `nextAttemptAt`
+  vencido, entrega cada uno secuencialmente (no hay usuario esperando, no vale la pena la
+  complejidad de paralelizar). **No está en `vercel.json` todavía** — ver
+  `docs/general/Tareas-QA.md` QA-80 para la decisión pendiente sobre el límite de crons del plan
+  de Vercel.
+- `needsAttention` en `WebhookSubscription` se prende tras 5 entregas **consecutivas** totalmente
+  fallidas de esa suscripción (no 5 intentos HTTP sueltos) y se apaga solo con la próxima entrega
+  exitosa.
 
 ### `src/modules/integrations/googleCalendarAuthService.ts` (2026-08-22)
 - **googleCalendarConfigured()** — chequea que `GOOGLE_CALENDAR_CLIENT_ID`/`CLIENT_SECRET`/`REDIRECT_URI`/`GOOGLE_TOKEN_ENCRYPTION_KEY` estén seteados; mismo patrón best-effort que `mailerConfigured()` en `lib/mailer.ts`.

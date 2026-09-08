@@ -1,4 +1,6 @@
 import prisma, { type ExtendedPrismaClient } from '../../lib/prisma.js';
+import { bestEffort } from '../../lib/bestEffort.js';
+import { emitWebhookEvent } from '../integrations/webhookDispatchService.js';
 import { listCustomFieldValuesForEntities } from '../hr/customFieldService.js';
 import { listTagsForEntities } from '../crossModule/tagService.js';
 import { recordActivity } from '../activity/activityLogService.js';
@@ -94,6 +96,14 @@ export async function createContact(input: CreateContactInput, changedByUserId?:
       fieldConfig: contactActivityFieldConfig,
     });
   }
+
+  // Unlike the Activity Log entry above, this fires even without changedByUserId — a real Contact
+  // exists regardless of who/what created it, and an anonymous public Form submission (a new lead)
+  // is exactly the kind of event an integration would want to know about.
+  await bestEffort(
+    emitWebhookEvent({ tenantId: input.tenantId, type: 'contact.created', entity: { type: 'contact', id: contact.id }, data: contact }),
+    'Failed to emit contact.created webhook event',
+  );
 
   return contact;
 }

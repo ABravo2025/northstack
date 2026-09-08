@@ -369,6 +369,7 @@ model Tenant {
   roleFieldRestrictions     RoleFieldRestriction[]
   apiKeys                   ApiKey[]
   apiRequestLogs            ApiRequestLog[]
+  webhookSubscriptions      WebhookSubscription[]
 }
 
 // Billing Integration (spec-billing-integration.md). plan/lockedPriceCents are deliberately NOT
@@ -513,6 +514,7 @@ model User {
   activityLogEntries          ActivityLogEntry[]
   subscriptionsLastActedOn    Subscription[]
   apiKeysCreated              ApiKey[]
+  webhookSubscriptionsCreated WebhookSubscription[]
 
   @@index([emailDomain])
 }
@@ -1590,6 +1592,58 @@ model ApiRequestLog {
 
   @@index([tenantId, createdAt])
   @@index([apiKeyId, createdAt])
+}
+
+// Private API + outbound webhooks, Unit 4 (docs/tareas/spec-private-api-webhooks.md §7) — Northstack
+// pushes a signed POST to `url` for each subscribed event, so a tenant doesn't have to poll
+// /api/external/v1/* for changes. `isActive` doubles as the soft-delete flag (spec's own schema has
+// no separate deletedAt) — DELETE /api/integrations/webhooks/:id sets it false, same as an owner
+// manually pausing a subscription; deliveries stay attached and readable either way.
+model WebhookSubscription {
+  id              String    @id @default(uuid())
+  tenantId        String
+  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  url             String
+  secretEncrypted String
+  events          String[]
+  isActive        Boolean   @default(true)
+  // Flips true after 5 CONSECUTIVE delivery failures for this subscription (not 5 failures total)
+  // — same "reconnect" signal as StripeConnection.needsAttention. Stops the retry cron from
+  // generating more traffic against a URL that's stopped working until the owner reviews it.
+  needsAttention  Boolean   @default(false)
+  createdByUserId String
+  createdByUser   User      @relation(fields: [createdByUserId], references: [id])
+  createdAt       DateTime  @default(now())
+
+  deliveries      WebhookDelivery[]
+
+  @@index([tenantId])
+}
+
+enum WebhookDeliveryStatus {
+  pending
+  success
+  failed
+}
+
+// One row per event this subscription was eligible for at emit time (webhookDispatchService.ts's
+// emitWebhookEvent) — created eagerly as `pending`, delivered separately (deliverWebhookDelivery),
+// retried by a cron scanning `status: pending AND nextAttemptAt <= now`.
+model WebhookDelivery {
+  id                    String                @id @default(uuid())
+  webhookSubscriptionId String
+  webhookSubscription   WebhookSubscription   @relation(fields: [webhookSubscriptionId], references: [id])
+  eventType             String
+  payload               Json
+  status                WebhookDeliveryStatus @default(pending)
+  attempts              Int                   @default(0)
+  lastAttemptAt         DateTime?
+  nextAttemptAt         DateTime?
+  responseStatusCode    Int?
+  createdAt             DateTime              @default(now())
+
+  @@index([webhookSubscriptionId, createdAt])
+  @@index([status, nextAttemptAt])
 }
 
 model Invitation {

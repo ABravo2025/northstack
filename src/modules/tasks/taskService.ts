@@ -1,4 +1,6 @@
 import prisma, { type ExtendedPrismaClient } from '../../lib/prisma.js';
+import { bestEffort } from '../../lib/bestEffort.js';
+import { emitWebhookEvent } from '../integrations/webhookDispatchService.js';
 import { findEntityTenantId, isSupportedCrossModuleEntityType } from '../crossModule/entityLookup.js';
 import { syncTaskCalendarEvent } from '../integrations/googleCalendarSyncService.js';
 import { recordActivity } from '../activity/activityLogService.js';
@@ -68,6 +70,11 @@ export async function createTask(input: CreateTaskInput, client: ExtendedPrismaC
     parentEntityId: input.entityId,
   });
 
+  await bestEffort(
+    emitWebhookEvent({ tenantId: input.tenantId, type: 'task.created', entity: { type: 'task', id: task.id }, data: task }),
+    'Failed to emit task.created webhook event',
+  );
+
   return task;
 }
 
@@ -128,6 +135,16 @@ export async function updateTask(id: string, input: UpdateTaskInput, changedByUs
       parentEntityType: previous.entityType as ActivityEntityType,
       parentEntityId: previous.entityId,
     });
+  }
+
+  // task.completed fires only on the null -> set transition, not every PATCH that happens to
+  // touch a Task that's already completed (e.g. editing its title afterward isn't "completing" it
+  // again).
+  if (previous && !previous.completedAt && updated.completedAt) {
+    await bestEffort(
+      emitWebhookEvent({ tenantId: previous.tenantId, type: 'task.completed', entity: { type: 'task', id }, data: updated }),
+      'Failed to emit task.completed webhook event',
+    );
   }
 
   return updated;

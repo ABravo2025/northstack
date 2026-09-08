@@ -1,4 +1,6 @@
 import prisma, { type ExtendedPrismaClient } from '../../lib/prisma.js';
+import { bestEffort } from '../../lib/bestEffort.js';
+import { emitWebhookEvent } from '../integrations/webhookDispatchService.js';
 import { getDefaultStatusId } from '../hr/statusService.js';
 import { listCustomFieldValuesForEntities } from '../hr/customFieldService.js';
 import { listTagsForEntities } from '../crossModule/tagService.js';
@@ -143,6 +145,20 @@ export async function createCompany(input: CreateCompanyInput, changedByUserId: 
     after: contact,
     fieldConfig: contactActivityFieldConfig,
   });
+
+  await bestEffort(
+    emitWebhookEvent({ tenantId: input.tenantId, type: 'company.created', entity: { type: 'company', id: company.id }, data: company }),
+    'Failed to emit company.created webhook event',
+  );
+  // Only when a genuinely new Contact was created alongside this Company — linking an existing one
+  // (the `contactId` branch above) isn't a contact.created event, same distinction the Activity Log
+  // entry just above already makes via contactAction.
+  if (contactAction === 'create') {
+    await bestEffort(
+      emitWebhookEvent({ tenantId: input.tenantId, type: 'contact.created', entity: { type: 'contact', id: contact.id }, data: contact }),
+      'Failed to emit contact.created webhook event',
+    );
+  }
 
   return company;
 }

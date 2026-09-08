@@ -3755,3 +3755,74 @@ ciclo create→update→delete confirmado con un GET posterior mostrando 404 (ha
 verdes. Tenant y ambas keys borrados después (incluidas las filas de `ActivityLogEntry` que generó
 cada escritura, necesarias antes de poder borrar los `User` del tenant). Falta la revisión de
 Alejandro.
+
+---
+
+## QA-80 — Private API + Webhooks, Unidad 4: webhooks salientes — PAUSADA, feature futura (2026-09-07/08, en `staging`)
+
+**Estado real, a diferencia de las Unidades 1-3: esta unidad quedó pausada a pedido explícito de
+Alejandro**, no cerrada. El código está completo, testeado y verificado en vivo contra `staging`
+(ver el detalle abajo) — lo único que falta, y lo que motivó la pausa, es decidir cómo programar el
+cron de reintentos dado el plan de Vercel actual (Hobby, ya con 6 crons diarios en `vercel.json`).
+Alejandro: *"frenemos el desarrollo de webhooks en este caso puntual, sera una feature futura"* —
+pusheado a `staging` de todos modos para no perder el trabajo (nada de esto es alcanzable por un
+usuario real: no hay UI, Unidad 5, todavía).
+
+**Lo que SÍ funciona, verificado en vivo:** schema (`WebhookSubscription`/`WebhookDelivery`),
+cifrado del secreto (`webhookEncryption.ts`, calca `stripeEncryption.ts`), gestión completa
+(`POST/GET/PATCH/DELETE /api/integrations/webhooks`, regenerar secreto, log de entregas, retry
+manual por fila), emisión + entrega **inmediata** (no espera a ningún cron — ver el hallazgo de
+arquitectura abajo), firma HMAC-SHA256 con anti-replay por timestamp, backoff completo
+(inmediato→+1min→+5min→+30min→failed), `needsAttention` tras 5 fallos consecutivos, y los 7
+eventos ya emitidos desde sus `*Service.ts` (`employee.created/.updated/.terminated`,
+`timeoff.requested/.approved/.rejected`, `opportunity.created/.stage_changed/.won/.lost`,
+`company.created`, `contact.created`, `task.created/.completed`).
+
+**Lo que falta, y por qué se pausó ahí:** `runWebhookDeliveryRetries()` (el escaneo de reintentos
+pendientes) existe como endpoint interno real
+(`GET /api/internal/webhooks/retry/run`, protegido por `CRON_SECRET`, mismo patrón que los otros 6)
+pero **no está en `vercel.json`**. Sin ese cron, un evento que falla su intento inmediato queda
+`pending` indefinidamente hasta que alguien dispare el endpoint a mano (o hasta que se resuelva
+esta pausa) — el caso común (entrega exitosa al primer intento) no depende del cron para nada,
+solo las retries si algo falla.
+
+**Hallazgo de arquitectura, no bloqueante:** el checklist original describía la entrega como
+"inmediato → +1min → +5min → +30min" pero también decía que `emitWebhookEvent` "no entrega
+sincrónicamente (eso es la tarea 28)" — literalmente, eso solo deja al cron como disparador de
+*cualquier* intento, incluido el primero. Con los 6 crons existentes corriendo una vez al día, eso
+significa hasta 24hs de latencia para la primera entrega de cualquier webhook — inutilizaría la
+feature para su propósito real (integraciones cercanas a tiempo real). Se resolvió así:
+`emitWebhookEvent` crea la fila `pending` (esa escritura sí es awaited por el caller vía
+`bestEffort`, nunca perdida) y dispara el primer intento de entrega de inmediato, sin que el
+caller lo espere (no bloquea la respuesta al usuario — una llamada de red real puede tardar hasta
+10s). Si Vercel mata el proceso a mitad de esa entrega, no se pierde nada: la fila sigue `pending`
+y el cron (cuando exista) la recoge como cualquier retry. El cron queda entonces exclusivamente
+para reintentos reales, no para el camino feliz.
+
+### Verificación real contra `staging`
+
+| # | Caso | Resultado |
+|---|---|---|
+| 1 | Crear una Task real vía la API interna, con una `WebhookSubscription` activa suscripta a `task.created` apuntando a un receptor HTTP local | El POST llegó en **segundos** (entrega inmediata, no esperó ningún cron), firma HMAC-SHA256 recalculada de forma independiente coincidió byte a byte con la recibida |
+| 2 | Completar esa Task (`completedAt`) | Disparó `task.completed` (no `task.created` de nuevo) — confirma que el evento depende de la transición `null → seteado`, no de cualquier PATCH |
+| 3 | Apuntar la suscripción a un puerto cerrado y repetir | `WebhookDelivery` quedó `pending`, `attempts: 1`, `responseStatusCode: null`, `nextAttemptAt` ≈ +60s exactos (primer escalón del backoff) |
+| 4 | Re-apuntar al receptor real, adelantar `nextAttemptAt` al pasado, disparar `GET /api/internal/webhooks/retry/run` con `CRON_SECRET` | `{processed: 1}`, la entrega pasó a `success`, `attempts: 2` |
+| 5 | Mismo endpoint sin `CRON_SECRET` | 401 |
+| 6 | Gestión completa vía sesión: crear (rechaza URL no-https), listar, actualizar `isActive`, regenerar secreto, borrar (soft), listar entregas, retry manual por fila | Cada uno devolvió el shape esperado; el secreto solo aparece completo en create/regenerate |
+
+### Regresión
+
+`npm test` 692/692 (665 previos + 27 nuevos: `webhookEncryption.test.ts` 4, `webhookService.test.ts`
+11, `webhookDispatchService.test.ts` 12 — este último cubre firma HMAC, las 3 escaladas de backoff
++ el 4to fallo, error de red tratado igual que una respuesta no-2xx, `needsAttention` tras 5 fallos
+consecutivos pero NO si alguna de esas 5 fue exitosa, y que un evento no suscripto no genera
+ningún `WebhookDelivery`). `npm run build` y `npm run lint` verdes. Tenant/suscripción/entregas de
+prueba borrados después.
+
+### Qué falta para cerrar esta unidad cuando se retome
+
+1. Decidir cómo programar `runWebhookDeliveryRetries()` dado el plan de Vercel real (sumar una 7ª
+   entrada a `vercel.json`, fusionarlo con uno de los 6 crons existentes, o mover a otro
+   mecanismo) — la pregunta que motivó esta pausa.
+2. Unidad 5 (fuera del alcance de esta ronda de todos modos): UI en Settings, cron de purga de
+   `ApiRequestLog`.

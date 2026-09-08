@@ -1,8 +1,9 @@
 import prisma, { type ExtendedPrismaClient } from '../../lib/prisma.js';
+import { bestEffort } from '../../lib/bestEffort.js';
+import { emitWebhookEvent } from '../integrations/webhookDispatchService.js';
 import { advanceRoundRobinCursor, resolveNextRoundRobinUserId } from './pipelineAssignmentService.js';
 import { createNotification } from '../notifications/notificationService.js';
 import { sendOpportunityStageChangedEmail } from '../../lib/mailer.js';
-import { bestEffort } from '../../lib/bestEffort.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { opportunityActivityFieldConfig } from '../activity/fieldConfigs/opportunityFieldConfig.js';
 import type { Opportunity, Prisma } from '@prisma/client';
@@ -214,6 +215,11 @@ export async function createOpportunity(input: CreateOpportunityInput, changedBy
     });
   }
 
+  await bestEffort(
+    emitWebhookEvent({ tenantId: input.tenantId, type: 'opportunity.created', entity: { type: 'opportunity', id: opportunity.id }, data: opportunity }),
+    'Failed to emit opportunity.created webhook event',
+  );
+
   return opportunity;
 }
 
@@ -310,6 +316,20 @@ export async function updateOpportunity(
     const stage = await prisma.pipelineStageDefinition.findUnique({ where: { id: resolvedStageId } });
     if (stage?.outcome === 'won') {
       await maybeAdvanceCompanyToCustomer(tenantId, updated.companyId);
+    }
+
+    await bestEffort(
+      emitWebhookEvent({ tenantId, type: 'opportunity.stage_changed', entity: { type: 'opportunity', id }, data: updated }),
+      'Failed to emit opportunity.stage_changed webhook event',
+    );
+    // .won/.lost are additional, more specific events layered on top of the generic
+    // stage_changed above — an integration that only cares about deals closing doesn't have to
+    // filter every stage move by outcome itself.
+    if (stage?.outcome === 'won' || stage?.outcome === 'lost') {
+      await bestEffort(
+        emitWebhookEvent({ tenantId, type: stage.outcome === 'won' ? 'opportunity.won' : 'opportunity.lost', entity: { type: 'opportunity', id }, data: updated }),
+        `Failed to emit opportunity.${stage.outcome} webhook event`,
+      );
     }
 
     // Stage-change notification + email (docs/tareas/specredisenosalesv2.md

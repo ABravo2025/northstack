@@ -1,4 +1,6 @@
 import prisma, { type ExtendedPrismaClient } from '../../lib/prisma.js';
+import { bestEffort } from '../../lib/bestEffort.js';
+import { emitWebhookEvent } from '../integrations/webhookDispatchService.js';
 import { getDefaultStatusId, recordStatusChange } from './statusService.js';
 import { listCustomFieldValuesForEntities } from './customFieldService.js';
 import { findActiveTimeOffRequestsForEmployees } from './timeOffRequestService.js';
@@ -87,6 +89,13 @@ export async function createEmployee(input: CreateEmployeeInput, changedByUserId
       fieldConfig: employeeActivityFieldConfig,
     });
   }
+
+  // Best-effort per bestEffort.ts (never a bare fire-and-forget `.catch()` — an un-awaited promise
+  // isn't guaranteed to survive past this function's own return on Vercel).
+  await bestEffort(
+    emitWebhookEvent({ tenantId: input.tenantId, type: 'employee.created', entity: { type: 'employee', id: employee.id }, data: employee }),
+    'Failed to emit employee.created webhook event',
+  );
 
   return employee;
 }
@@ -370,6 +379,11 @@ export async function updateEmployee(
     after: updated,
     fieldConfig: employeeActivityFieldConfig,
   });
+
+  await bestEffort(
+    emitWebhookEvent({ tenantId: existing.tenantId, type: 'employee.updated', entity: { type: 'employee', id }, data: updated }),
+    'Failed to emit employee.updated webhook event',
+  );
 
   return updated;
 }

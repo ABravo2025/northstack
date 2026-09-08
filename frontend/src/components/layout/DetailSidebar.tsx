@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { TaskEntityType } from '../../api';
 import EntityTasksList from '../tasks/EntityTasksList';
 import EntityNotesList from '../notes/EntityNotesList';
@@ -10,15 +10,26 @@ interface TenantUserLite {
   lastName: string;
 }
 
+type SidebarTab = 'notes' | 'tasks' | 'activity';
+
 interface DetailSidebarProps {
   token: string;
   entityType: TaskEntityType;
   entityId: string;
   tenantUsers: TenantUserLite[];
   currentUserId: string;
+  // Reported on every count change regardless of mode — the parent panel's own mobile tab strip
+  // (see below) needs these same numbers for its Notes/Tasks/Activity labels once the panel
+  // collapses to a single column.
+  onCountsChange?: (counts: { notes: number; tasks: number; activity: number }) => void;
+  // Present only on mobile, where the parent panel's own unified tab strip (Overview / Payments /
+  // Notes / Tasks / Activity — see EmployeeOverviewPanel.tsx etc.) replaces this component's own
+  // tab row: this then just shows whichever of its 3 sections is named here (or nothing, while
+  // the parent's current top-level tab is Overview/Payments) instead of managing its own visible
+  // tab. Omit entirely for the normal desktop rendering (own tab row, own 360px column, own local
+  // tab state) — that path is unchanged from before this prop existed.
+  mobileActiveSection?: SidebarTab | null;
 }
-
-type SidebarTab = 'notes' | 'tasks' | 'activity';
 
 // Right column of the 2026-07-30 detail-panel redesign — Notes/Tasks/Activity
 // tabs, shared verbatim across Employee/Company/Contact/Opportunity (the
@@ -26,11 +37,60 @@ type SidebarTab = 'notes' | 'tasks' | 'activity';
 // component instead of 4 near-copies of this section).
 // Activity: confirmed 2026-07-30 to enter as a tab now (reversing the
 // 2026-07-29 "side panel, not a tab" call) — real data since spec-activity-log.md (2026-08-30).
-export default function DetailSidebar({ token, entityType, entityId, tenantUsers, currentUserId }: DetailSidebarProps) {
+//
+// Mobile (2026-09-08): a fixed 360px side column with its own scroll doesn't have a natural mobile
+// equivalent — forcing it full-width below the profile fields just made the whole panel one very
+// long page with no clear "which section am I in" (found live: Notes/Tasks/Activity felt like
+// they'd swallowed the profile). The parent panel now drives one unified tab strip instead
+// (Overview / Payments / Notes / Tasks / Activity) via mobileActiveSection below.
+export default function DetailSidebar({
+  token,
+  entityType,
+  entityId,
+  tenantUsers,
+  currentUserId,
+  onCountsChange,
+  mobileActiveSection,
+}: DetailSidebarProps) {
   const [tab, setTab] = useState<SidebarTab>('notes');
   const [taskCount, setTaskCount] = useState(0);
   const [noteCount, setNoteCount] = useState(0);
   const [activityCount, setActivityCount] = useState(0);
+
+  useEffect(() => {
+    onCountsChange?.({ notes: noteCount, tasks: taskCount, activity: activityCount });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [noteCount, taskCount, activityCount]);
+
+  // undefined (prop omitted) => desktop, this component owns which of the 3 is visible.
+  // null/'notes'/'tasks'/'activity' => mobile, the parent's selection owns it instead.
+  const isParentControlled = mobileActiveSection !== undefined;
+  const visibleTab = isParentControlled ? mobileActiveSection : tab;
+
+  const sections = (
+    <>
+      <div style={{ display: visibleTab === 'notes' ? undefined : 'none' }}>
+        <EntityNotesList token={token} entityType={entityType} entityId={entityId} onCountChange={setNoteCount} />
+      </div>
+      <div style={{ display: visibleTab === 'tasks' ? undefined : 'none' }}>
+        <EntityTasksList
+          token={token}
+          entityType={entityType}
+          entityId={entityId}
+          tenantUsers={tenantUsers}
+          currentUserId={currentUserId}
+          onCountChange={setTaskCount}
+        />
+      </div>
+      <div style={{ display: visibleTab === 'activity' ? undefined : 'none' }}>
+        <EntityActivityList token={token} entityType={entityType} entityId={entityId} onCountChange={setActivityCount} />
+      </div>
+    </>
+  );
+
+  if (isParentControlled) {
+    return <div className="overview-panel-right-body">{sections}</div>;
+  }
 
   return (
     <div className="overview-panel-right">
@@ -45,27 +105,7 @@ export default function DetailSidebar({ token, entityType, entityId, tenantUsers
           Activity{activityCount > 0 ? ` (${activityCount})` : ''}
         </button>
       </div>
-      <div className="overview-panel-right-body">
-        {/* Notes/Tasks/Activity mounted regardless of the active tab (just hidden) so their count
-            badges stay accurate before the user opens that tab — same pattern the old top-level
-            Employee tabs used. */}
-        <div style={{ display: tab === 'notes' ? undefined : 'none' }}>
-          <EntityNotesList token={token} entityType={entityType} entityId={entityId} onCountChange={setNoteCount} />
-        </div>
-        <div style={{ display: tab === 'tasks' ? undefined : 'none' }}>
-          <EntityTasksList
-            token={token}
-            entityType={entityType}
-            entityId={entityId}
-            tenantUsers={tenantUsers}
-            currentUserId={currentUserId}
-            onCountChange={setTaskCount}
-          />
-        </div>
-        <div style={{ display: tab === 'activity' ? undefined : 'none' }}>
-          <EntityActivityList token={token} entityType={entityType} entityId={entityId} onCountChange={setActivityCount} />
-        </div>
-      </div>
+      <div className="overview-panel-right-body">{sections}</div>
     </div>
   );
 }

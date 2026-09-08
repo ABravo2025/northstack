@@ -12,6 +12,7 @@ import { PlusIcon, XIcon } from '../common/Icons';
 import { formatMoney } from '../../lib/currencies';
 import TagInput from '../common/TagInput';
 import type { TagAssignmentLite } from '../../api';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 const LEAD_STATUS_LABELS: Record<string, string> = {
   new: 'New',
@@ -68,12 +69,21 @@ export default function ContactDetailModal({
   const [newOppCompanyName, setNewOppCompanyName] = useState('');
   const [tags, setTags] = useState<TagAssignmentLite[]>([]);
 
+  // Mobile (2026-09-08): DetailSidebar's own Notes/Tasks/Activity column doesn't have a natural
+  // mobile equivalent stacked below a potentially-long profile — see EmployeeOverviewPanel.tsx's
+  // longer comment on the same pattern. Unifies with "Overview" into one tab strip on mobile only;
+  // desktop keeps the existing 2-column layout untouched.
+  const [mobileSection, setMobileSection] = useState<'overview' | 'notes' | 'tasks' | 'activity'>('overview');
+  const [sidebarCounts, setSidebarCounts] = useState({ notes: 0, tasks: 0, activity: 0 });
+  const isMobile = useIsMobile();
+
   const loadTags = () => {
     api.listTagsForEntity(token, 'contact', contact.id).then(setTags).catch(() => {});
   };
 
   useEffect(() => {
     loadTags();
+    setMobileSection('overview');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contact.id]);
 
@@ -190,6 +200,202 @@ export default function ContactDetailModal({
     }
   };
 
+  const overviewContent = (
+    <div className="overview-panel-left">
+      <div className="field-group">
+        <h4 className="field-group-title">Identity</h4>
+        <div className="field-group-body">
+          <Field label="Phone">
+            <AutoSaveField label="Phone" value={contact.phone || ''} onSave={(v) => save({ phone: v || null })} />
+          </Field>
+          <Field label="Company">
+            <AutoSaveSelect
+              label="Company"
+              value={contact.companyId || ''}
+              onSave={(v) => save({ companyId: v || null })}
+              options={companies.map((c) => ({ value: c.id, label: c.name }))}
+              emptyLabel="-- none (lead without a confirmed company) --"
+            />
+          </Field>
+        </div>
+      </div>
+
+      <div className="field-group">
+        <h4 className="field-group-title">Role</h4>
+        <div className="field-group-body">
+          <Field label="Title">
+            <AutoSaveField label="Title" value={contact.title || ''} onSave={(v) => save({ title: v || null })} />
+          </Field>
+          <Field label="Lead Status">
+            <AutoSaveSelect
+              label="Lead Status"
+              value={contact.leadStatus || ''}
+              onSave={(v) => save({ leadStatus: (v || null) as Contact['leadStatus'] })}
+              options={Object.entries(LEAD_STATUS_LABELS).map(([value, label]) => ({ value, label }))}
+            />
+          </Field>
+        </div>
+      </div>
+
+      <div className="field-group">
+        <h4 className="field-group-title">Source</h4>
+        <div className="field-group-body">
+          <Field label="Lead Source">
+            <AutoSaveSelect
+              label="Lead Source"
+              value={contact.leadSourceId || ''}
+              onSave={(v) => save({ leadSourceId: v || null })}
+              options={leadSources.map((ls) => ({ value: ls.id, label: ls.name }))}
+            />
+          </Field>
+        </div>
+      </div>
+
+      {customFields.length > 0 && (
+        <div className="field-group">
+          <h4 className="field-group-title">Custom fields</h4>
+          <div className="field-group-body">
+            {customFields.map((field) => {
+              const existing = contact.customFieldVals?.find((v) => v.customFieldDefinitionId === field.id);
+              return (
+                <Field key={field.id} label={field.name}>
+                  {field.fieldType === 'select' ? (
+                    <AutoSaveSelect
+                      label={field.name}
+                      value={existing?.value || ''}
+                      onSave={(v) => saveCustomField(field.id, v)}
+                      options={(JSON.parse(field.options || '[]') as string[]).map((opt) => ({ value: opt, label: opt }))}
+                    />
+                  ) : (
+                    <AutoSaveField
+                      label={field.name}
+                      type={field.fieldType === 'number' ? 'number' : field.fieldType === 'date' ? 'date' : field.fieldType === 'email' ? 'email' : 'text'}
+                      value={existing?.value || ''}
+                      onSave={(v) => saveCustomField(field.id, v)}
+                    />
+                  )}
+                </Field>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {isFullView && coContacts.length > 0 && (
+        <div className="overview-field overview-field-full">
+          <div className="min-w-0 flex-1">
+            <span className="overview-field-label">Other contacts at {company?.name}</span>
+            {coContacts.map((c) => (
+              <div key={c.id} className="py-1 text-sm">
+                {c.firstName} {c.lastName} {c.isPrimary ? '★' : ''}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="field-group">
+        <h4 className="field-group-title flex items-center justify-between">
+          <span>Opportunities ({linkedOpportunities.length})</span>
+          <button type="button" className="icon-btn normal-case tracking-normal" onClick={openAddOpportunity}>
+            <span className="tip">Add opportunity</span>
+            <PlusIcon className="h-3.5 w-3.5" />
+          </button>
+        </h4>
+        <div className="px-4 pb-3">
+          {linkedOpportunities.length === 0 && !addingOpportunity && (
+            <p className="text-xs text-ink-faint">No opportunities linked yet.</p>
+          )}
+          {linkedOpportunities.map((opp) => (
+            <button
+              type="button"
+              key={opp.id}
+              className="flex w-full items-center justify-between gap-2 py-1 text-left text-sm hover:underline"
+              onClick={() => onOpenOpportunity?.(opp.id)}
+            >
+              <span>{opp.name}</span>
+              <span className="text-xs text-ink-faint">
+                {opp.stage?.name} · {formatMoney(opp.amountCents, opp.currency)}
+                {opp.pipeline?.isActive === false && ' · Archived'}
+              </span>
+            </button>
+          ))}
+          {addingOpportunity && (
+            <div className="mt-2 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-dark-line">
+              {linkableOpportunities.length > 0 && (
+                <>
+                  <div className="flex items-center gap-1.5">
+                    <select className="select-compact flex-1" value={linkOppId} onChange={(e) => setLinkOppId(e.target.value)}>
+                      <option value="">Link existing opportunity…</option>
+                      {linkableOpportunities.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.name} ({o.stage?.name})
+                        </option>
+                      ))}
+                    </select>
+                    <button type="button" className="btn-secondary" onClick={handleLinkOpportunity} disabled={!linkOppId}>
+                      Link
+                    </button>
+                  </div>
+                  <p className="text-xs text-ink-faint">or create a new one:</p>
+                </>
+              )}
+              <label className="text-xs text-ink-muted" htmlFor="new-contact-opp-pipeline">
+                Pipeline
+                <RequiredMark />
+              </label>
+              <select
+                id="new-contact-opp-pipeline"
+                value={newOppPipelineId}
+                onChange={(e) => setNewOppPipelineId(e.target.value)}
+                required
+              >
+                {activePipelines.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} {p.type === 'account' ? '(needs a Company)' : ''}
+                  </option>
+                ))}
+              </select>
+              {!company && activePipelines.find((p) => p.id === newOppPipelineId)?.type === 'lead' && (
+                <>
+                  <label className="text-xs text-ink-muted" htmlFor="new-contact-opp-company">
+                    Company name (this contact has none yet)
+                    <RequiredMark />
+                  </label>
+                  <input
+                    id="new-contact-opp-company"
+                    value={newOppCompanyName}
+                    onChange={(e) => setNewOppCompanyName(e.target.value)}
+                    placeholder="e.g. Acme Inc."
+                    required
+                  />
+                </>
+              )}
+              <label className="text-xs text-ink-muted" htmlFor="new-contact-opp-name">
+                Deal name
+                <RequiredMark />
+              </label>
+              <input
+                id="new-contact-opp-name"
+                value={newOppName}
+                onChange={(e) => setNewOppName(e.target.value)}
+                required
+              />
+              <div className="flex justify-end gap-2">
+                <button type="button" className="btn-secondary" onClick={() => setAddingOpportunity(false)}>
+                  Cancel
+                </button>
+                <button type="button" className="btn-primary" onClick={handleCreateOpportunity}>
+                  Create opportunity
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="detail-modal-overlay" onClick={onClose}>
       <div
@@ -217,210 +423,62 @@ export default function ContactDetailModal({
           </div>
         </div>
 
-        <div className="overview-panel-main">
-        <div className="overview-panel-left">
-          <div className="field-group">
-            <h4 className="field-group-title">Identity</h4>
-            <div className="field-group-body">
-              <Field label="Phone">
-                <AutoSaveField label="Phone" value={contact.phone || ''} onSave={(v) => save({ phone: v || null })} />
-              </Field>
-              <Field label="Company">
-                <AutoSaveSelect
-                  label="Company"
-                  value={contact.companyId || ''}
-                  onSave={(v) => save({ companyId: v || null })}
-                  options={companies.map((c) => ({ value: c.id, label: c.name }))}
-                  emptyLabel="-- none (lead without a confirmed company) --"
-                />
-              </Field>
-            </div>
-          </div>
-
-          <div className="field-group">
-            <h4 className="field-group-title">Role</h4>
-            <div className="field-group-body">
-              <Field label="Title">
-                <AutoSaveField label="Title" value={contact.title || ''} onSave={(v) => save({ title: v || null })} />
-              </Field>
-              <Field label="Lead Status">
-                <AutoSaveSelect
-                  label="Lead Status"
-                  value={contact.leadStatus || ''}
-                  onSave={(v) => save({ leadStatus: (v || null) as Contact['leadStatus'] })}
-                  options={Object.entries(LEAD_STATUS_LABELS).map(([value, label]) => ({ value, label }))}
-                />
-              </Field>
-            </div>
-          </div>
-
-          <div className="field-group">
-            <h4 className="field-group-title">Source</h4>
-            <div className="field-group-body">
-              <Field label="Lead Source">
-                <AutoSaveSelect
-                  label="Lead Source"
-                  value={contact.leadSourceId || ''}
-                  onSave={(v) => save({ leadSourceId: v || null })}
-                  options={leadSources.map((ls) => ({ value: ls.id, label: ls.name }))}
-                />
-              </Field>
-            </div>
-          </div>
-
-          {customFields.length > 0 && (
-            <div className="field-group">
-              <h4 className="field-group-title">Custom fields</h4>
-              <div className="field-group-body">
-                {customFields.map((field) => {
-                  const existing = contact.customFieldVals?.find((v) => v.customFieldDefinitionId === field.id);
-                  return (
-                    <Field key={field.id} label={field.name}>
-                      {field.fieldType === 'select' ? (
-                        <AutoSaveSelect
-                          label={field.name}
-                          value={existing?.value || ''}
-                          onSave={(v) => saveCustomField(field.id, v)}
-                          options={(JSON.parse(field.options || '[]') as string[]).map((opt) => ({ value: opt, label: opt }))}
-                        />
-                      ) : (
-                        <AutoSaveField
-                          label={field.name}
-                          type={field.fieldType === 'number' ? 'number' : field.fieldType === 'date' ? 'date' : field.fieldType === 'email' ? 'email' : 'text'}
-                          value={existing?.value || ''}
-                          onSave={(v) => saveCustomField(field.id, v)}
-                        />
-                      )}
-                    </Field>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {isFullView && coContacts.length > 0 && (
-            <div className="overview-field overview-field-full">
-              <div className="min-w-0 flex-1">
-                <span className="overview-field-label">Other contacts at {company?.name}</span>
-                {coContacts.map((c) => (
-                  <div key={c.id} className="py-1 text-sm">
-                    {c.firstName} {c.lastName} {c.isPrimary ? '★' : ''}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="field-group">
-            <h4 className="field-group-title flex items-center justify-between">
-              <span>Opportunities ({linkedOpportunities.length})</span>
-              <button type="button" className="icon-btn normal-case tracking-normal" onClick={openAddOpportunity}>
-                <span className="tip">Add opportunity</span>
-                <PlusIcon className="h-3.5 w-3.5" />
+        {isMobile ? (
+          <div className="overview-panel-mobile-body">
+            <div className="overview-panel-tabs">
+              <button
+                type="button"
+                className={mobileSection === 'overview' ? 'active' : ''}
+                onClick={() => setMobileSection('overview')}
+              >
+                Overview
               </button>
-            </h4>
-            <div className="px-4 pb-3">
-              {linkedOpportunities.length === 0 && !addingOpportunity && (
-                <p className="text-xs text-ink-faint">No opportunities linked yet.</p>
-              )}
-              {linkedOpportunities.map((opp) => (
-                <button
-                  type="button"
-                  key={opp.id}
-                  className="flex w-full items-center justify-between gap-2 py-1 text-left text-sm hover:underline"
-                  onClick={() => onOpenOpportunity?.(opp.id)}
-                >
-                  <span>{opp.name}</span>
-                  <span className="text-xs text-ink-faint">
-                    {opp.stage?.name} · {formatMoney(opp.amountCents, opp.currency)}
-                    {opp.pipeline?.isActive === false && ' · Archived'}
-                  </span>
-                </button>
-              ))}
-              {addingOpportunity && (
-                <div className="mt-2 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-dark-line">
-                  {linkableOpportunities.length > 0 && (
-                    <>
-                      <div className="flex items-center gap-1.5">
-                        <select className="select-compact flex-1" value={linkOppId} onChange={(e) => setLinkOppId(e.target.value)}>
-                          <option value="">Link existing opportunity…</option>
-                          {linkableOpportunities.map((o) => (
-                            <option key={o.id} value={o.id}>
-                              {o.name} ({o.stage?.name})
-                            </option>
-                          ))}
-                        </select>
-                        <button type="button" className="btn-secondary" onClick={handleLinkOpportunity} disabled={!linkOppId}>
-                          Link
-                        </button>
-                      </div>
-                      <p className="text-xs text-ink-faint">or create a new one:</p>
-                    </>
-                  )}
-                  <label className="text-xs text-ink-muted" htmlFor="new-contact-opp-pipeline">
-                    Pipeline
-                    <RequiredMark />
-                  </label>
-                  <select
-                    id="new-contact-opp-pipeline"
-                    value={newOppPipelineId}
-                    onChange={(e) => setNewOppPipelineId(e.target.value)}
-                    required
-                  >
-                    {activePipelines.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} {p.type === 'account' ? '(needs a Company)' : ''}
-                      </option>
-                    ))}
-                  </select>
-                  {!company && activePipelines.find((p) => p.id === newOppPipelineId)?.type === 'lead' && (
-                    <>
-                      <label className="text-xs text-ink-muted" htmlFor="new-contact-opp-company">
-                        Company name (this contact has none yet)
-                        <RequiredMark />
-                      </label>
-                      <input
-                        id="new-contact-opp-company"
-                        value={newOppCompanyName}
-                        onChange={(e) => setNewOppCompanyName(e.target.value)}
-                        placeholder="e.g. Acme Inc."
-                        required
-                      />
-                    </>
-                  )}
-                  <label className="text-xs text-ink-muted" htmlFor="new-contact-opp-name">
-                    Deal name
-                    <RequiredMark />
-                  </label>
-                  <input
-                    id="new-contact-opp-name"
-                    value={newOppName}
-                    onChange={(e) => setNewOppName(e.target.value)}
-                    required
-                  />
-                  <div className="flex justify-end gap-2">
-                    <button type="button" className="btn-secondary" onClick={() => setAddingOpportunity(false)}>
-                      Cancel
-                    </button>
-                    <button type="button" className="btn-primary" onClick={handleCreateOpportunity}>
-                      Create opportunity
-                    </button>
-                  </div>
-                </div>
-              )}
+              <button
+                type="button"
+                className={mobileSection === 'notes' ? 'active' : ''}
+                onClick={() => setMobileSection('notes')}
+              >
+                Notes{sidebarCounts.notes > 0 ? ` (${sidebarCounts.notes})` : ''}
+              </button>
+              <button
+                type="button"
+                className={mobileSection === 'tasks' ? 'active' : ''}
+                onClick={() => setMobileSection('tasks')}
+              >
+                Tasks{sidebarCounts.tasks > 0 ? ` (${sidebarCounts.tasks})` : ''}
+              </button>
+              <button
+                type="button"
+                className={mobileSection === 'activity' ? 'active' : ''}
+                onClick={() => setMobileSection('activity')}
+              >
+                Activity{sidebarCounts.activity > 0 ? ` (${sidebarCounts.activity})` : ''}
+              </button>
             </div>
+            <div style={{ display: mobileSection === 'overview' ? 'contents' : 'none' }}>{overviewContent}</div>
+            <DetailSidebar
+              token={token}
+              entityType="contact"
+              entityId={contact.id}
+              tenantUsers={tenantUsers}
+              currentUserId={currentUserId}
+              onCountsChange={setSidebarCounts}
+              mobileActiveSection={mobileSection === 'overview' ? null : mobileSection}
+            />
           </div>
-
-        </div>
-
-        <DetailSidebar
-          token={token}
-          entityType="contact"
-          entityId={contact.id}
-          tenantUsers={tenantUsers}
-          currentUserId={currentUserId}
-        />
-        </div>
+        ) : (
+          <div className="overview-panel-main">
+            {overviewContent}
+            <DetailSidebar
+              token={token}
+              entityType="contact"
+              entityId={contact.id}
+              tenantUsers={tenantUsers}
+              currentUserId={currentUserId}
+              onCountsChange={setSidebarCounts}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

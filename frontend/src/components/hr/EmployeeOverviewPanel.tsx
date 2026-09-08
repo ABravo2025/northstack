@@ -15,6 +15,7 @@ import { formatMoney } from '../../lib/currencies';
 import { EyeIcon, XIcon } from '../common/Icons';
 import TagInput from '../common/TagInput';
 import type { TagAssignmentLite, EmployeeTerminationOptions } from '../../api';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface EmployeeOverviewPanelProps {
   employee: any;
@@ -102,6 +103,17 @@ export default function EmployeeOverviewPanel({
   const [loadingPaymentHistory, setLoadingPaymentHistory] = useState(false);
   const hasContract = canManagePayroll && HAS_CONTRACT_STATUSES.has(employee.contractStatus);
 
+  // Mobile (2026-09-08): Overview/Payment History (above) and DetailSidebar's own Notes/Tasks/
+  // Activity tabs are two INDEPENDENT desktop toggles (one per column) — on mobile there's only
+  // one column, so they collapse into a single unified strip driven by this instead. Kept as a
+  // separate piece of state from `activeTab` rather than reusing it, since unifying them would
+  // make the desktop mini-toggle-row (Overview vs Payment History) show neither as active the
+  // moment someone picks Notes/Tasks/Activity on the right column — those are genuinely
+  // independent selections on desktop and must stay that way.
+  const [mobileSection, setMobileSection] = useState<'overview' | 'payments' | 'notes' | 'tasks' | 'activity'>('overview');
+  const [sidebarCounts, setSidebarCounts] = useState({ notes: 0, tasks: 0, activity: 0 });
+  const isMobile = useIsMobile();
+
   const loadTags = () => {
     api.listTagsForEntity(token, 'employee', employee.id).then(setTags).catch(() => {});
   };
@@ -115,6 +127,7 @@ export default function EmployeeOverviewPanel({
     loadTags();
     loadTerminationOptions();
     setActiveTab('overview');
+    setMobileSection('overview');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [employee.id]);
 
@@ -223,6 +236,322 @@ export default function EmployeeOverviewPanel({
     }
   };
 
+  // Whichever toggle is relevant for the current layout picks this — see the mobileSection
+  // comment above for why desktop and mobile read from different state here.
+  const showingPayments = isMobile ? mobileSection === 'payments' : activeTab === 'payments';
+
+  const overviewContent = showingPayments ? (
+    <div className="overview-panel-left">
+      <div className="field-group">
+        <h4 className="field-group-title">Payment History</h4>
+        <div className="field-group-body">
+          {loadingPaymentHistory ? (
+            <>
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="skeleton-row" style={{ height: 28, animationDelay: `${i * 0.08}s` }}>
+                  <span className="skeleton-bar" style={{ width: 80, marginRight: 16 }} />
+                  <span className="skeleton-bar" style={{ width: 130 }} />
+                </div>
+              ))}
+            </>
+          ) : paymentHistory.length === 0 ? (
+            <p className="text-sm text-ink-faint">No payments recorded yet.</p>
+          ) : (
+            <div className="overview-field overview-field-full">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Reason</th>
+                    <th>Description</th>
+                    <th>Amount</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paymentHistory.map((entry) => (
+                    <tr key={entry.id}>
+                      <td>{entry.paymentDate.slice(0, 10)}</td>
+                      <td>{PAYMENT_TYPE_LABELS[entry.type] || entry.type}</td>
+                      <td>{entry.label || (entry.periodLabel ? `Payroll: ${entry.periodLabel}` : '—')}</td>
+                      <td>{formatMoney(entry.amountCents, entry.currency)}</td>
+                      <td>
+                        <button
+                          type="button"
+                          className="icon-btn"
+                          onClick={() => setPaymentPayslipEntryId(entry.id)}
+                          aria-label="Payslip preview"
+                        >
+                          <span className="tip">Payslip preview</span>
+                          <EyeIcon className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  ) : (
+    <div className="overview-panel-left">
+      <div className="field-group">
+        <h4 className="field-group-title">Identity</h4>
+        <div className="field-group-body">
+          <Field label="First Name">
+            <AutoSaveField label="First Name" value={employee.firstName} onSave={(v) => save({ firstName: v })} />
+          </Field>
+          <Field label="Last Name">
+            <AutoSaveField label="Last Name" value={employee.lastName} onSave={(v) => save({ lastName: v })} />
+          </Field>
+          <Field label="Business Email">
+            <AutoSaveField label="Business Email" type="email" value={employee.email} onSave={(v) => save({ email: v })} />
+          </Field>
+          <Field label="Personal Email">
+            <AutoSaveField
+              label="Personal Email"
+              type="email"
+              value={employee.personalEmail || ''}
+              onSave={(v) => save({ personalEmail: v || null })}
+            />
+          </Field>
+        </div>
+      </div>
+
+      <div className="field-group">
+        <h4 className="field-group-title">Role</h4>
+        <div className="field-group-body">
+          <Field label="Status">
+            {employee.statusDefn?.isTerminatedStatus ? (
+              <StatusChip color={employee.statusDefn.color || '#6b7280'} label={employee.statusDefn.name} />
+            ) : (
+              <AutoSaveSelect
+                label="Status"
+                value={employee.statusId}
+                onSave={(v) => save({ statusId: v })}
+                options={statuses.map((s) => ({ value: s.id, label: s.name }))}
+                emptyLabel="-- select --"
+              />
+            )}
+          </Field>
+          <Field label="Department">
+            <AutoSaveSelect
+              label="Department"
+              value={employee.departmentId || ''}
+              onSave={(v) => save({ departmentId: v || null })}
+              options={departments.filter((d) => d.isActive).map((d) => ({ value: d.id, label: d.name }))}
+            />
+          </Field>
+          <Field label="Job Title">
+            <AutoSaveSelect
+              label="Job Title"
+              value={employee.jobTitleId || ''}
+              onSave={(v) => save({ jobTitleId: v || null })}
+              options={jobTitles.filter((j) => j.isActive).map((j) => ({ value: j.id, label: j.name }))}
+            />
+          </Field>
+          <Field label="Reports To">
+            <AutoSaveSelect
+              label="Reports To"
+              value={employee.managerId || ''}
+              onSave={(v) => save({ managerId: v || null })}
+              emptyLabel="-- no manager --"
+              options={employees
+                .filter((e) => e.id !== employee.id)
+                .map((e) => ({ value: e.id, label: `${e.firstName} ${e.lastName}` }))}
+            />
+          </Field>
+        </div>
+      </div>
+
+      <div className="field-group">
+        <h4 className="field-group-title">Contract</h4>
+        <div className="field-group-body">
+          <Field label="Contract Type">
+            <AutoSaveSelect
+              label="Contract Type"
+              value={employee.contractType || ''}
+              onSave={(v) => save({ contractType: v || null })}
+              options={[
+                { value: 'part_time', label: 'Part Time' },
+                { value: 'full_time', label: 'Full Time' },
+              ]}
+            />
+          </Field>
+          <Field label="Start Date">
+            <AutoSaveField
+              label="Start Date"
+              type="date"
+              value={employee.startDate ? employee.startDate.slice(0, 10) : ''}
+              onSave={(v) => save({ startDate: v || null })}
+            />
+          </Field>
+          <Field label="End Date">
+            <AutoSaveField
+              label="End Date"
+              type="date"
+              value={employee.endDate ? employee.endDate.slice(0, 10) : ''}
+              onSave={(v) => save({ endDate: v || null })}
+            />
+          </Field>
+          <Field label="Contract URL">
+            <AutoSaveField
+              label="Contract URL"
+              type="url"
+              value={employee.contractUrl || ''}
+              onSave={(v) => save({ contractUrl: v || null })}
+            />
+          </Field>
+
+          <div className="overview-field overview-field-full">
+            <span className="overview-field-label">Time Off Policies ({assignedPolicies.length})</span>
+            <div className="min-w-0 flex-1">
+              {assignedPolicies.length === 0 && <p className="text-xs text-ink-faint">No policies assigned.</p>}
+              {assignedPolicies.map((policy) => (
+                <div key={policy.id} className="flex items-center justify-between gap-2 py-1 text-sm">
+                  <span>{policy.name}</span>
+                  <button type="button" className="icon-btn" onClick={() => handleUnassignPolicy(policy.id)}>
+                    <span className="tip">Unassign</span>
+                    <XIcon className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+              {unassignedPolicies.length > 0 && (
+                <select value="" onChange={(e) => handleAssignPolicy(e.target.value)} aria-label="Assign a time off policy">
+                  <option value="">+ Assign a policy…</option>
+                  {unassignedPolicies.map((policy) => (
+                    <option key={policy.id} value={policy.id}>
+                      {policy.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {hasContract && (
+        <div className="field-group">
+          <h4 className="field-group-title">Compensation</h4>
+          <div className="field-group-body">
+            {loadingCompensation ? (
+              <>
+                {[0, 1, 2, 3].map((i) => (
+                  <div key={i} className="skeleton-row" style={{ height: 28, animationDelay: `${i * 0.08}s` }}>
+                    <span className="skeleton-bar" style={{ width: 80, marginRight: 16 }} />
+                    <span className="skeleton-bar" style={{ width: 130 }} />
+                  </div>
+                ))}
+              </>
+            ) : !compensation ? (
+              <p className="text-sm text-ink-faint">No active compensation.</p>
+            ) : (
+              <>
+                <div className="overview-field">
+                  <span className="overview-field-label">Type</span>
+                  <span className="overview-field-value">
+                    {compensation.compensationType === 'hourly' ? 'Hourly' : 'Fixed'}
+                  </span>
+                </div>
+                <div className="overview-field">
+                  <span className="overview-field-label">Rate</span>
+                  <span className="overview-field-value">{formatMoney(compensation.rateCents, compensation.currency)}</span>
+                </div>
+                <div className="overview-field">
+                  <span className="overview-field-label">Pay Frequency</span>
+                  <span className="overview-field-value">{compensation.payFrequencyName}</span>
+                </div>
+                <div className="overview-field">
+                  <span className="overview-field-label">Effective From</span>
+                  <span className="overview-field-value">{compensation.effectiveFrom.slice(0, 10)}</span>
+                </div>
+                <div className="overview-field">
+                  <span className="overview-field-label">Job Title</span>
+                  <span className="overview-field-value">{compensation.jobTitle}</span>
+                </div>
+                <div className="overview-field overview-field-full">
+                  <span className="overview-field-label">Role Description</span>
+                  <span className="overview-field-value">{compensation.description}</span>
+                </div>
+                {compensation.note && (
+                  <div className="overview-field overview-field-full">
+                    <span className="overview-field-label">Note</span>
+                    <span className="overview-field-value">{compensation.note}</span>
+                  </div>
+                )}
+                <div className="overview-field">
+                  <span className="overview-field-label">Contract Status</span>
+                  <span className="overview-field-value">
+                    {compensation.confirmedAt
+                      ? `Confirmed on ${compensation.confirmedAt.slice(0, 10)}`
+                      : 'Pending signature'}
+                  </span>
+                </div>
+                <div className="overview-field overview-field-full">
+                  <span className="overview-field-label"></span>
+                  <div className="flex gap-2">
+                    <button type="button" className="btn-secondary btn-sm" onClick={() => setContractPreviewOpen(true)}>
+                      View contract
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary btn-sm"
+                      onClick={handleResendContract}
+                      disabled={resendingContract}
+                    >
+                      {resendingContract ? 'Resending…' : 'Resend contract'}
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {customFields.length > 0 && (
+        <div className="field-group">
+          <h4 className="field-group-title">Custom fields</h4>
+          <div className="field-group-body">
+            {customFields.map((field) => {
+              const existing = employee.customFieldVals?.find((v: any) => v.customFieldDefinitionId === field.id);
+              return (
+                <Field key={field.id} label={field.name}>
+                  {field.fieldType === 'select' ? (
+                    <AutoSaveSelect
+                      label={field.name}
+                      value={existing?.value || ''}
+                      onSave={(v) => saveCustomField(field.id, v)}
+                      options={(JSON.parse(field.options || '[]') as string[]).map((opt) => ({ value: opt, label: opt }))}
+                    />
+                  ) : (
+                    <AutoSaveField
+                      label={field.name}
+                      type={
+                        field.fieldType === 'number'
+                          ? 'number'
+                          : field.fieldType === 'date'
+                            ? 'date'
+                            : field.fieldType === 'email'
+                              ? 'email'
+                              : 'text'
+                      }
+                      value={existing?.value || ''}
+                      onSave={(v) => saveCustomField(field.id, v)}
+                    />
+                  )}
+                </Field>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div className="detail-modal-overlay" onClick={onClose}>
       <div
@@ -276,7 +605,7 @@ export default function EmployeeOverviewPanel({
           </div>
         </div>
 
-        {canManagePayroll && (
+        {!isMobile && canManagePayroll && (
           <div className="mini-toggle-row mx-4 mt-3">
             <button
               type="button"
@@ -295,327 +624,79 @@ export default function EmployeeOverviewPanel({
           </div>
         )}
 
-        <div className="overview-panel-main">
-        {activeTab === 'payments' ? (
-          <div className="overview-panel-left">
-            <div className="field-group">
-              <h4 className="field-group-title">Payment History</h4>
-              <div className="field-group-body">
-                {loadingPaymentHistory ? (
-                  <>
-                    {[0, 1, 2].map((i) => (
-                      <div key={i} className="skeleton-row" style={{ height: 28, animationDelay: `${i * 0.08}s` }}>
-                        <span className="skeleton-bar" style={{ width: 80, marginRight: 16 }} />
-                        <span className="skeleton-bar" style={{ width: 130 }} />
-                      </div>
-                    ))}
-                  </>
-                ) : paymentHistory.length === 0 ? (
-                  <p className="text-sm text-ink-faint">No payments recorded yet.</p>
-                ) : (
-                  <div className="overview-field overview-field-full">
-                    <table className="table">
-                      <thead>
-                        <tr>
-                          <th>Date</th>
-                          <th>Reason</th>
-                          <th>Description</th>
-                          <th>Amount</th>
-                          <th></th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {paymentHistory.map((entry) => (
-                          <tr key={entry.id}>
-                            <td>{entry.paymentDate.slice(0, 10)}</td>
-                            <td>{PAYMENT_TYPE_LABELS[entry.type] || entry.type}</td>
-                            <td>{entry.label || (entry.periodLabel ? `Payroll: ${entry.periodLabel}` : '—')}</td>
-                            <td>{formatMoney(entry.amountCents, entry.currency)}</td>
-                            <td>
-                              <button
-                                type="button"
-                                className="icon-btn"
-                                onClick={() => setPaymentPayslipEntryId(entry.id)}
-                                aria-label="Payslip preview"
-                              >
-                                <span className="tip">Payslip preview</span>
-                                <EyeIcon className="h-4 w-4" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
+        {isMobile ? (
+          <div className="overview-panel-mobile-body">
+            <div className="overview-panel-tabs">
+              <button
+                type="button"
+                className={mobileSection === 'overview' ? 'active' : ''}
+                onClick={() => setMobileSection('overview')}
+              >
+                Overview
+              </button>
+              {canManagePayroll && (
+                <button
+                  type="button"
+                  className={mobileSection === 'payments' ? 'active' : ''}
+                  onClick={() => setMobileSection('payments')}
+                >
+                  Payments
+                </button>
+              )}
+              <button
+                type="button"
+                className={mobileSection === 'notes' ? 'active' : ''}
+                onClick={() => setMobileSection('notes')}
+              >
+                Notes{sidebarCounts.notes > 0 ? ` (${sidebarCounts.notes})` : ''}
+              </button>
+              <button
+                type="button"
+                className={mobileSection === 'tasks' ? 'active' : ''}
+                onClick={() => setMobileSection('tasks')}
+              >
+                Tasks{sidebarCounts.tasks > 0 ? ` (${sidebarCounts.tasks})` : ''}
+              </button>
+              <button
+                type="button"
+                className={mobileSection === 'activity' ? 'active' : ''}
+                onClick={() => setMobileSection('activity')}
+              >
+                Activity{sidebarCounts.activity > 0 ? ` (${sidebarCounts.activity})` : ''}
+              </button>
             </div>
+            {/* display:contents (not a plain block wrapper) so overviewContent's own root
+                (.overview-panel-left, itself `flex flex-1`) becomes a direct flex child of
+                .overview-panel-mobile-body and sizes/scrolls against its bounded height —
+                a plain wrapper div here would swallow that flex-1 with no parent to grow into. */}
+            <div style={{ display: mobileSection === 'overview' || mobileSection === 'payments' ? 'contents' : 'none' }}>
+              {overviewContent}
+            </div>
+            <DetailSidebar
+              token={token}
+              entityType="employee"
+              entityId={employee.id}
+              tenantUsers={tenantUsers}
+              currentUserId={currentUserId}
+              onCountsChange={setSidebarCounts}
+              mobileActiveSection={
+                mobileSection === 'notes' || mobileSection === 'tasks' || mobileSection === 'activity' ? mobileSection : null
+              }
+            />
           </div>
         ) : (
-        <div className="overview-panel-left">
-          <div className="field-group">
-            <h4 className="field-group-title">Identity</h4>
-            <div className="field-group-body">
-              <Field label="First Name">
-                <AutoSaveField label="First Name" value={employee.firstName} onSave={(v) => save({ firstName: v })} />
-              </Field>
-              <Field label="Last Name">
-                <AutoSaveField label="Last Name" value={employee.lastName} onSave={(v) => save({ lastName: v })} />
-              </Field>
-              <Field label="Business Email">
-                <AutoSaveField label="Business Email" type="email" value={employee.email} onSave={(v) => save({ email: v })} />
-              </Field>
-              <Field label="Personal Email">
-                <AutoSaveField
-                  label="Personal Email"
-                  type="email"
-                  value={employee.personalEmail || ''}
-                  onSave={(v) => save({ personalEmail: v || null })}
-                />
-              </Field>
-            </div>
+          <div className="overview-panel-main">
+            {overviewContent}
+            <DetailSidebar
+              token={token}
+              entityType="employee"
+              entityId={employee.id}
+              tenantUsers={tenantUsers}
+              currentUserId={currentUserId}
+              onCountsChange={setSidebarCounts}
+            />
           </div>
-
-          <div className="field-group">
-            <h4 className="field-group-title">Role</h4>
-            <div className="field-group-body">
-              <Field label="Status">
-                {employee.statusDefn?.isTerminatedStatus ? (
-                  <StatusChip color={employee.statusDefn.color || '#6b7280'} label={employee.statusDefn.name} />
-                ) : (
-                  <AutoSaveSelect
-                    label="Status"
-                    value={employee.statusId}
-                    onSave={(v) => save({ statusId: v })}
-                    options={statuses.map((s) => ({ value: s.id, label: s.name }))}
-                    emptyLabel="-- select --"
-                  />
-                )}
-              </Field>
-              <Field label="Department">
-                <AutoSaveSelect
-                  label="Department"
-                  value={employee.departmentId || ''}
-                  onSave={(v) => save({ departmentId: v || null })}
-                  options={departments.filter((d) => d.isActive).map((d) => ({ value: d.id, label: d.name }))}
-                />
-              </Field>
-              <Field label="Job Title">
-                <AutoSaveSelect
-                  label="Job Title"
-                  value={employee.jobTitleId || ''}
-                  onSave={(v) => save({ jobTitleId: v || null })}
-                  options={jobTitles.filter((j) => j.isActive).map((j) => ({ value: j.id, label: j.name }))}
-                />
-              </Field>
-              <Field label="Reports To">
-                <AutoSaveSelect
-                  label="Reports To"
-                  value={employee.managerId || ''}
-                  onSave={(v) => save({ managerId: v || null })}
-                  emptyLabel="-- no manager --"
-                  options={employees
-                    .filter((e) => e.id !== employee.id)
-                    .map((e) => ({ value: e.id, label: `${e.firstName} ${e.lastName}` }))}
-                />
-              </Field>
-            </div>
-          </div>
-
-          <div className="field-group">
-            <h4 className="field-group-title">Contract</h4>
-            <div className="field-group-body">
-              <Field label="Contract Type">
-                <AutoSaveSelect
-                  label="Contract Type"
-                  value={employee.contractType || ''}
-                  onSave={(v) => save({ contractType: v || null })}
-                  options={[
-                    { value: 'part_time', label: 'Part Time' },
-                    { value: 'full_time', label: 'Full Time' },
-                  ]}
-                />
-              </Field>
-              <Field label="Start Date">
-                <AutoSaveField
-                  label="Start Date"
-                  type="date"
-                  value={employee.startDate ? employee.startDate.slice(0, 10) : ''}
-                  onSave={(v) => save({ startDate: v || null })}
-                />
-              </Field>
-              <Field label="End Date">
-                <AutoSaveField
-                  label="End Date"
-                  type="date"
-                  value={employee.endDate ? employee.endDate.slice(0, 10) : ''}
-                  onSave={(v) => save({ endDate: v || null })}
-                />
-              </Field>
-              <Field label="Contract URL">
-                <AutoSaveField
-                  label="Contract URL"
-                  type="url"
-                  value={employee.contractUrl || ''}
-                  onSave={(v) => save({ contractUrl: v || null })}
-                />
-              </Field>
-
-              <div className="overview-field overview-field-full">
-                <span className="overview-field-label">Time Off Policies ({assignedPolicies.length})</span>
-                <div className="min-w-0 flex-1">
-                  {assignedPolicies.length === 0 && <p className="text-xs text-ink-faint">No policies assigned.</p>}
-                  {assignedPolicies.map((policy) => (
-                    <div key={policy.id} className="flex items-center justify-between gap-2 py-1 text-sm">
-                      <span>{policy.name}</span>
-                      <button type="button" className="icon-btn" onClick={() => handleUnassignPolicy(policy.id)}>
-                        <span className="tip">Unassign</span>
-                        <XIcon className="h-3.5 w-3.5" />
-                      </button>
-                    </div>
-                  ))}
-                  {unassignedPolicies.length > 0 && (
-                    <select value="" onChange={(e) => handleAssignPolicy(e.target.value)} aria-label="Assign a time off policy">
-                      <option value="">+ Assign a policy…</option>
-                      {unassignedPolicies.map((policy) => (
-                        <option key={policy.id} value={policy.id}>
-                          {policy.name}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {hasContract && (
-            <div className="field-group">
-              <h4 className="field-group-title">Compensation</h4>
-              <div className="field-group-body">
-                {loadingCompensation ? (
-                  <>
-                    {[0, 1, 2, 3].map((i) => (
-                      <div key={i} className="skeleton-row" style={{ height: 28, animationDelay: `${i * 0.08}s` }}>
-                        <span className="skeleton-bar" style={{ width: 80, marginRight: 16 }} />
-                        <span className="skeleton-bar" style={{ width: 130 }} />
-                      </div>
-                    ))}
-                  </>
-                ) : !compensation ? (
-                  <p className="text-sm text-ink-faint">No active compensation.</p>
-                ) : (
-                  <>
-                    <div className="overview-field">
-                      <span className="overview-field-label">Type</span>
-                      <span className="overview-field-value">
-                        {compensation.compensationType === 'hourly' ? 'Hourly' : 'Fixed'}
-                      </span>
-                    </div>
-                    <div className="overview-field">
-                      <span className="overview-field-label">Rate</span>
-                      <span className="overview-field-value">{formatMoney(compensation.rateCents, compensation.currency)}</span>
-                    </div>
-                    <div className="overview-field">
-                      <span className="overview-field-label">Pay Frequency</span>
-                      <span className="overview-field-value">{compensation.payFrequencyName}</span>
-                    </div>
-                    <div className="overview-field">
-                      <span className="overview-field-label">Effective From</span>
-                      <span className="overview-field-value">{compensation.effectiveFrom.slice(0, 10)}</span>
-                    </div>
-                    <div className="overview-field">
-                      <span className="overview-field-label">Job Title</span>
-                      <span className="overview-field-value">{compensation.jobTitle}</span>
-                    </div>
-                    <div className="overview-field overview-field-full">
-                      <span className="overview-field-label">Role Description</span>
-                      <span className="overview-field-value">{compensation.description}</span>
-                    </div>
-                    {compensation.note && (
-                      <div className="overview-field overview-field-full">
-                        <span className="overview-field-label">Note</span>
-                        <span className="overview-field-value">{compensation.note}</span>
-                      </div>
-                    )}
-                    <div className="overview-field">
-                      <span className="overview-field-label">Contract Status</span>
-                      <span className="overview-field-value">
-                        {compensation.confirmedAt
-                          ? `Confirmed on ${compensation.confirmedAt.slice(0, 10)}`
-                          : 'Pending signature'}
-                      </span>
-                    </div>
-                    <div className="overview-field overview-field-full">
-                      <span className="overview-field-label"></span>
-                      <div className="flex gap-2">
-                        <button type="button" className="btn-secondary btn-sm" onClick={() => setContractPreviewOpen(true)}>
-                          View contract
-                        </button>
-                        <button
-                          type="button"
-                          className="btn-secondary btn-sm"
-                          onClick={handleResendContract}
-                          disabled={resendingContract}
-                        >
-                          {resendingContract ? 'Resending…' : 'Resend contract'}
-                        </button>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-
-          {customFields.length > 0 && (
-            <div className="field-group">
-              <h4 className="field-group-title">Custom fields</h4>
-              <div className="field-group-body">
-                {customFields.map((field) => {
-                  const existing = employee.customFieldVals?.find((v: any) => v.customFieldDefinitionId === field.id);
-                  return (
-                    <Field key={field.id} label={field.name}>
-                      {field.fieldType === 'select' ? (
-                        <AutoSaveSelect
-                          label={field.name}
-                          value={existing?.value || ''}
-                          onSave={(v) => saveCustomField(field.id, v)}
-                          options={(JSON.parse(field.options || '[]') as string[]).map((opt) => ({ value: opt, label: opt }))}
-                        />
-                      ) : (
-                        <AutoSaveField
-                          label={field.name}
-                          type={
-                            field.fieldType === 'number'
-                              ? 'number'
-                              : field.fieldType === 'date'
-                                ? 'date'
-                                : field.fieldType === 'email'
-                                  ? 'email'
-                                  : 'text'
-                          }
-                          value={existing?.value || ''}
-                          onSave={(v) => saveCustomField(field.id, v)}
-                        />
-                      )}
-                    </Field>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
         )}
-
-        <DetailSidebar
-          token={token}
-          entityType="employee"
-          entityId={employee.id}
-          tenantUsers={tenantUsers}
-          currentUserId={currentUserId}
-        />
-        </div>
       </div>
       {contractPreviewOpen && (
         <PayslipPreviewModal

@@ -1348,6 +1348,14 @@
   @apply flex h-full w-[360px] shrink-0 flex-col overflow-hidden border-l border-line bg-surface-2 dark:border-dark-line dark:bg-dark-page/20;
 }
 
+/* Mobile-only wrapper around the unified Overview/Payments/Notes/Tasks/Activity tab strip (see
+   EmployeeOverviewPanel.tsx etc.) — a flex column so exactly one section (whichever the strip
+   picked) fills the remaining height with its own scroll, instead of .overview-panel-main's
+   desktop 2-column row. */
+.overview-panel-mobile-body {
+  @apply flex min-h-0 flex-1 flex-col overflow-hidden;
+}
+
 .overview-panel-right-body {
   @apply flex min-h-0 flex-1 flex-col overflow-y-auto p-4;
 }

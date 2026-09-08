@@ -8,6 +8,7 @@ import Field from '../common/Field';
 import OverviewActionsMenu from '../common/OverviewActionsMenu';
 import FieldCatalogMenu from '../entity-views/FieldCatalogMenu';
 import { PlusIcon, XIcon } from '../common/Icons';
+import { useIsMobile } from '../../hooks/useIsMobile';
 
 interface OpportunityDetailModalProps {
   opportunity: Opportunity;
@@ -66,6 +67,13 @@ export default function OpportunityDetailModal({
   // pipeline?" offer banner. Null means no offer showing.
   const [wonOfferPipelineId, setWonOfferPipelineId] = useState<string | null>(null);
 
+  // Mobile (2026-09-08): see EmployeeOverviewPanel.tsx's longer comment on the same pattern —
+  // unifies DetailSidebar's Notes/Tasks/Activity with "Overview" into one tab strip on mobile
+  // only; desktop keeps the existing 2-column layout untouched.
+  const [mobileSection, setMobileSection] = useState<'overview' | 'notes' | 'tasks' | 'activity'>('overview');
+  const [sidebarCounts, setSidebarCounts] = useState({ notes: 0, tasks: 0, activity: 0 });
+  const isMobile = useIsMobile();
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
@@ -73,6 +81,10 @@ export default function OpportunityDetailModal({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
+
+  useEffect(() => {
+    setMobileSection('overview');
+  }, [opportunity.id]);
 
   const pipeline = pipelines.find((p) => p.id === opportunity.pipelineId);
   const sortedStages = (pipeline?.stages ?? []).filter((s) => s.isActive).sort((a, b) => a.order - b.order);
@@ -205,6 +217,279 @@ export default function OpportunityDetailModal({
     }
   };
 
+  const overviewContent = (
+    <div className="overview-panel-left">
+      <div className="field-group">
+        <h4 className="field-group-title">Deal</h4>
+        <div className="field-group-body">
+          <Field label="Deal Name">
+            <AutoSaveField label="Deal Name" value={opportunity.name} onSave={(v) => save({ name: v })} />
+          </Field>
+          <Field label="Company">
+            <AutoSaveSelect
+              label="Company"
+              value={opportunity.companyId}
+              onSave={(v) => save({ companyId: v })}
+              options={companies.map((c) => ({ value: c.id, label: c.name }))}
+              emptyLabel="-- select --"
+            />
+          </Field>
+          <Field label="Pipeline">
+            <div className="dropdown-trigger-wrap">
+              <select
+                className="dropdown-trigger dt-status"
+                value={opportunity.pipelineId}
+                onChange={(e) => handlePipelineChange(e.target.value)}
+              >
+                {pipelines
+                  .filter((p) => p.isActive)
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+              </select>
+              <svg className="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </div>
+          </Field>
+          {pendingPipelineId && (
+            <Field label="Confirm company details to move pipeline" full>
+              <div className="mt-1 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-dark-line">
+                <p className="text-xs text-ink-muted">
+                  {opportunity.company?.name} is still a placeholder — add its real details to move this deal into{' '}
+                  {pipelines.find((p) => p.id === pendingPipelineId)?.name}.
+                </p>
+                <label className="text-xs text-ink-muted" htmlFor="pending-company-industry">
+                  Industry
+                </label>
+                <input
+                  id="pending-company-industry"
+                  value={companyDraft.industry}
+                  onChange={(e) => setCompanyDraft((d) => ({ ...d, industry: e.target.value }))}
+                />
+                <label className="text-xs text-ink-muted" htmlFor="pending-company-website">
+                  Website
+                </label>
+                <input
+                  id="pending-company-website"
+                  value={companyDraft.website}
+                  onChange={(e) => setCompanyDraft((d) => ({ ...d, website: e.target.value }))}
+                />
+                <label className="text-xs text-ink-muted" htmlFor="pending-company-phone">
+                  Phone
+                </label>
+                <input
+                  id="pending-company-phone"
+                  value={companyDraft.phone}
+                  onChange={(e) => setCompanyDraft((d) => ({ ...d, phone: e.target.value }))}
+                />
+                <div className="flex justify-end gap-2">
+                  <button type="button" className="btn-secondary btn-sm" onClick={handleCancelPipelineChange} disabled={completingCompany}>
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-primary btn-sm"
+                    onClick={handleCompleteCompanyAndMove}
+                    disabled={completingCompany}
+                  >
+                    {completingCompany ? 'Saving...' : 'Confirm & Move'}
+                  </button>
+                </div>
+              </div>
+            </Field>
+          )}
+          <Field label="Amount">
+            <AutoSaveField
+              label="Amount"
+              type="number"
+              value={(opportunity.amountCents / 100).toString()}
+              onSave={(v) => save({ amountCents: Math.round(Number.parseFloat(v || '0') * 100) })}
+            />
+          </Field>
+          <Field label="Currency">
+            <AutoSaveField
+              label="Currency"
+              value={opportunity.currency}
+              onSave={(v) => save({ currency: v.toUpperCase() })}
+            />
+          </Field>
+          <Field label="Owner">
+            <AutoSaveSelect
+              label="Owner"
+              value={opportunity.ownerId ?? ''}
+              onSave={(v) => save({ ownerId: v || null })}
+              options={tenantUsers.map((u) => ({ value: u.id, label: `${u.firstName} ${u.lastName}` }))}
+              emptyLabel="-- unassigned --"
+            />
+          </Field>
+        </div>
+      </div>
+
+      <div className="field-group">
+        <h4 className="field-group-title">Stage</h4>
+        <div className="field-group-body">
+          <Field label="Stage">
+            <div className="dropdown-trigger-wrap">
+              <select
+                className="dropdown-trigger dt-status"
+                value={opportunity.stageId}
+                onChange={(e) => handleStageChange(e.target.value).catch(() => {})}
+              >
+                {sortedStages.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+              <svg className="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </div>
+          </Field>
+          {currentStage?.outcome === 'lost' && (
+            <div className="overview-field">
+              <div className="flex items-center justify-between">
+                <span className="overview-field-label">Loss Reason</span>
+                <FieldCatalogMenu token={token} kind="lossReason" label="Loss Reason" entries={lossReasons} onChanged={onReasonsChanged} />
+              </div>
+              <AutoSaveSelect
+                label="Loss Reason"
+                value={opportunity.lossReasonId || ''}
+                onSave={(v) => save({ lossReasonId: v || null })}
+                options={lossReasons.filter((lr) => lr.isActive).map((lr) => ({ value: lr.id, label: lr.name }))}
+              />
+            </div>
+          )}
+          {currentStage?.outcome === 'won' && (
+            <div className="overview-field">
+              <div className="flex items-center justify-between">
+                <span className="overview-field-label">Win Reason</span>
+                <FieldCatalogMenu token={token} kind="winReason" label="Win Reason" entries={winReasons} onChanged={onReasonsChanged} />
+              </div>
+              <AutoSaveSelect
+                label="Win Reason"
+                value={opportunity.winReasonId || ''}
+                onSave={(v) => save({ winReasonId: v || null })}
+                options={winReasons.filter((wr) => wr.isActive).map((wr) => ({ value: wr.id, label: wr.name }))}
+              />
+            </div>
+          )}
+          {(currentStage?.outcome === 'won' || currentStage?.outcome === 'lost') && (
+            <Field label="Close Note" full>
+              <AutoSaveField
+                label="Close Note"
+                value={opportunity.closeNote || ''}
+                onSave={(v) => save({ closeNote: v || null })}
+                placeholder="Optional details about how this deal closed"
+              />
+            </Field>
+          )}
+          {wonOfferPipelineId && (
+            <Field label="Move to account pipeline?" full>
+              <div className="mt-1 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-dark-line">
+                <p className="text-xs text-ink-muted">
+                  Won! Move this deal into an account pipeline to keep tracking it there.
+                </p>
+                <select
+                  value={wonOfferPipelineId}
+                  onChange={(e) => setWonOfferPipelineId(e.target.value)}
+                >
+                  {pipelines
+                    .filter((p) => p.type === 'account' && p.isActive)
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                </select>
+                <div className="flex justify-end gap-2">
+                  <button type="button" className="btn-secondary btn-sm" onClick={() => setWonOfferPipelineId(null)}>
+                    Not now
+                  </button>
+                  <button type="button" className="btn-primary btn-sm" onClick={handleAcceptWonOffer}>
+                    Move
+                  </button>
+                </div>
+              </div>
+            </Field>
+          )}
+        </div>
+      </div>
+
+      <div className="field-group">
+        <h4 className="field-group-title">Next step</h4>
+        <div className="field-group-body">
+          <Field label="Estimated Close Date">
+            <AutoSaveField
+              label="Estimated Close Date"
+              type="date"
+              value={opportunity.estimatedCloseDate ? opportunity.estimatedCloseDate.slice(0, 10) : ''}
+              onSave={(v) => save({ estimatedCloseDate: v || null })}
+            />
+          </Field>
+          <Field label="Next Step Date">
+            <AutoSaveField
+              label="Next Step Date"
+              type="date"
+              value={opportunity.nextStepDate ? opportunity.nextStepDate.slice(0, 10) : ''}
+              onSave={(v) => save({ nextStepDate: v || null })}
+            />
+          </Field>
+          <Field label="Next Step" full>
+            <AutoSaveField
+              label="Next Step"
+              value={opportunity.nextStepNote || ''}
+              onSave={(v) => save({ nextStepNote: v || null })}
+              placeholder="What's the next action?"
+            />
+          </Field>
+        </div>
+      </div>
+
+      <div className="overview-field overview-field-full">
+        <div className="min-w-0 flex-1">
+          <span className="overview-field-label">Contacts ({opportunity.contactLinks?.length ?? 0})</span>
+          {(opportunity.contactLinks ?? []).map((link) => (
+            <div key={link.id} className="flex items-center justify-between gap-2 py-1 text-sm">
+              <span>
+                {link.contact.firstName} {link.contact.lastName}
+                {link.role ? ` (${link.role})` : ''}
+              </span>
+              <button type="button" className="icon-btn danger" onClick={() => handleRemoveContact(link.contactId)}>
+                <span className="tip">Unlink</span>
+                <XIcon className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ))}
+          <div className="mt-2 flex items-center gap-1.5">
+            <select className="select-compact flex-1" value={newContactId} onChange={(e) => setNewContactId(e.target.value)}>
+              <option value="">-- add contact --</option>
+              {linkableContacts.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.firstName} {c.lastName}
+                </option>
+              ))}
+            </select>
+            <input
+              className="w-24"
+              type="text"
+              placeholder="Role"
+              value={newContactRole}
+              onChange={(e) => setNewContactRole(e.target.value)}
+            />
+            <button type="button" className="icon-btn" onClick={handleAddContact} disabled={!newContactId}>
+              <span className="tip">Add</span>
+              <PlusIcon className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="detail-modal-overlay" onClick={onClose}>
       <div
@@ -252,287 +537,62 @@ export default function OpportunityDetailModal({
           </div>
         )}
 
-        <div className="overview-panel-main">
-        <div className="overview-panel-left">
-          <div className="field-group">
-            <h4 className="field-group-title">Deal</h4>
-            <div className="field-group-body">
-              <Field label="Deal Name">
-                <AutoSaveField label="Deal Name" value={opportunity.name} onSave={(v) => save({ name: v })} />
-              </Field>
-              <Field label="Company">
-                <AutoSaveSelect
-                  label="Company"
-                  value={opportunity.companyId}
-                  onSave={(v) => save({ companyId: v })}
-                  options={companies.map((c) => ({ value: c.id, label: c.name }))}
-                  emptyLabel="-- select --"
-                />
-              </Field>
-              <Field label="Pipeline">
-                <div className="dropdown-trigger-wrap">
-                  <select
-                    className="dropdown-trigger dt-status"
-                    value={opportunity.pipelineId}
-                    onChange={(e) => handlePipelineChange(e.target.value)}
-                  >
-                    {pipelines
-                      .filter((p) => p.isActive)
-                      .map((p) => (
-                        <option key={p.id} value={p.id}>
-                          {p.name}
-                        </option>
-                      ))}
-                  </select>
-                  <svg className="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M6 9l6 6 6-6" />
-                  </svg>
-                </div>
-              </Field>
-              {pendingPipelineId && (
-                <Field label="Confirm company details to move pipeline" full>
-                  <div className="mt-1 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-dark-line">
-                    <p className="text-xs text-ink-muted">
-                      {opportunity.company?.name} is still a placeholder — add its real details to move this deal into{' '}
-                      {pipelines.find((p) => p.id === pendingPipelineId)?.name}.
-                    </p>
-                    <label className="text-xs text-ink-muted" htmlFor="pending-company-industry">
-                      Industry
-                    </label>
-                    <input
-                      id="pending-company-industry"
-                      value={companyDraft.industry}
-                      onChange={(e) => setCompanyDraft((d) => ({ ...d, industry: e.target.value }))}
-                    />
-                    <label className="text-xs text-ink-muted" htmlFor="pending-company-website">
-                      Website
-                    </label>
-                    <input
-                      id="pending-company-website"
-                      value={companyDraft.website}
-                      onChange={(e) => setCompanyDraft((d) => ({ ...d, website: e.target.value }))}
-                    />
-                    <label className="text-xs text-ink-muted" htmlFor="pending-company-phone">
-                      Phone
-                    </label>
-                    <input
-                      id="pending-company-phone"
-                      value={companyDraft.phone}
-                      onChange={(e) => setCompanyDraft((d) => ({ ...d, phone: e.target.value }))}
-                    />
-                    <div className="flex justify-end gap-2">
-                      <button type="button" className="btn-secondary btn-sm" onClick={handleCancelPipelineChange} disabled={completingCompany}>
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        className="btn-primary btn-sm"
-                        onClick={handleCompleteCompanyAndMove}
-                        disabled={completingCompany}
-                      >
-                        {completingCompany ? 'Saving...' : 'Confirm & Move'}
-                      </button>
-                    </div>
-                  </div>
-                </Field>
-              )}
-              <Field label="Amount">
-                <AutoSaveField
-                  label="Amount"
-                  type="number"
-                  value={(opportunity.amountCents / 100).toString()}
-                  onSave={(v) => save({ amountCents: Math.round(Number.parseFloat(v || '0') * 100) })}
-                />
-              </Field>
-              <Field label="Currency">
-                <AutoSaveField
-                  label="Currency"
-                  value={opportunity.currency}
-                  onSave={(v) => save({ currency: v.toUpperCase() })}
-                />
-              </Field>
-              <Field label="Owner">
-                <AutoSaveSelect
-                  label="Owner"
-                  value={opportunity.ownerId ?? ''}
-                  onSave={(v) => save({ ownerId: v || null })}
-                  options={tenantUsers.map((u) => ({ value: u.id, label: `${u.firstName} ${u.lastName}` }))}
-                  emptyLabel="-- unassigned --"
-                />
-              </Field>
+        {isMobile ? (
+          <div className="overview-panel-mobile-body">
+            <div className="overview-panel-tabs">
+              <button
+                type="button"
+                className={mobileSection === 'overview' ? 'active' : ''}
+                onClick={() => setMobileSection('overview')}
+              >
+                Overview
+              </button>
+              <button
+                type="button"
+                className={mobileSection === 'notes' ? 'active' : ''}
+                onClick={() => setMobileSection('notes')}
+              >
+                Notes{sidebarCounts.notes > 0 ? ` (${sidebarCounts.notes})` : ''}
+              </button>
+              <button
+                type="button"
+                className={mobileSection === 'tasks' ? 'active' : ''}
+                onClick={() => setMobileSection('tasks')}
+              >
+                Tasks{sidebarCounts.tasks > 0 ? ` (${sidebarCounts.tasks})` : ''}
+              </button>
+              <button
+                type="button"
+                className={mobileSection === 'activity' ? 'active' : ''}
+                onClick={() => setMobileSection('activity')}
+              >
+                Activity{sidebarCounts.activity > 0 ? ` (${sidebarCounts.activity})` : ''}
+              </button>
             </div>
+            <div style={{ display: mobileSection === 'overview' ? 'contents' : 'none' }}>{overviewContent}</div>
+            <DetailSidebar
+              token={token}
+              entityType="opportunity"
+              entityId={opportunity.id}
+              tenantUsers={tenantUsers}
+              currentUserId={currentUserId}
+              onCountsChange={setSidebarCounts}
+              mobileActiveSection={mobileSection === 'overview' ? null : mobileSection}
+            />
           </div>
-
-          <div className="field-group">
-            <h4 className="field-group-title">Stage</h4>
-            <div className="field-group-body">
-              <Field label="Stage">
-                <div className="dropdown-trigger-wrap">
-                  <select
-                    className="dropdown-trigger dt-status"
-                    value={opportunity.stageId}
-                    onChange={(e) => handleStageChange(e.target.value).catch(() => {})}
-                  >
-                    {sortedStages.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.name}
-                      </option>
-                    ))}
-                  </select>
-                  <svg className="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M6 9l6 6 6-6" />
-                  </svg>
-                </div>
-              </Field>
-              {currentStage?.outcome === 'lost' && (
-                <div className="overview-field">
-                  <div className="flex items-center justify-between">
-                    <span className="overview-field-label">Loss Reason</span>
-                    <FieldCatalogMenu token={token} kind="lossReason" label="Loss Reason" entries={lossReasons} onChanged={onReasonsChanged} />
-                  </div>
-                  <AutoSaveSelect
-                    label="Loss Reason"
-                    value={opportunity.lossReasonId || ''}
-                    onSave={(v) => save({ lossReasonId: v || null })}
-                    options={lossReasons.filter((lr) => lr.isActive).map((lr) => ({ value: lr.id, label: lr.name }))}
-                  />
-                </div>
-              )}
-              {currentStage?.outcome === 'won' && (
-                <div className="overview-field">
-                  <div className="flex items-center justify-between">
-                    <span className="overview-field-label">Win Reason</span>
-                    <FieldCatalogMenu token={token} kind="winReason" label="Win Reason" entries={winReasons} onChanged={onReasonsChanged} />
-                  </div>
-                  <AutoSaveSelect
-                    label="Win Reason"
-                    value={opportunity.winReasonId || ''}
-                    onSave={(v) => save({ winReasonId: v || null })}
-                    options={winReasons.filter((wr) => wr.isActive).map((wr) => ({ value: wr.id, label: wr.name }))}
-                  />
-                </div>
-              )}
-              {(currentStage?.outcome === 'won' || currentStage?.outcome === 'lost') && (
-                <Field label="Close Note" full>
-                  <AutoSaveField
-                    label="Close Note"
-                    value={opportunity.closeNote || ''}
-                    onSave={(v) => save({ closeNote: v || null })}
-                    placeholder="Optional details about how this deal closed"
-                  />
-                </Field>
-              )}
-              {wonOfferPipelineId && (
-                <Field label="Move to account pipeline?" full>
-                  <div className="mt-1 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-dark-line">
-                    <p className="text-xs text-ink-muted">
-                      Won! Move this deal into an account pipeline to keep tracking it there.
-                    </p>
-                    <select
-                      value={wonOfferPipelineId}
-                      onChange={(e) => setWonOfferPipelineId(e.target.value)}
-                    >
-                      {pipelines
-                        .filter((p) => p.type === 'account' && p.isActive)
-                        .map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name}
-                          </option>
-                        ))}
-                    </select>
-                    <div className="flex justify-end gap-2">
-                      <button type="button" className="btn-secondary btn-sm" onClick={() => setWonOfferPipelineId(null)}>
-                        Not now
-                      </button>
-                      <button type="button" className="btn-primary btn-sm" onClick={handleAcceptWonOffer}>
-                        Move
-                      </button>
-                    </div>
-                  </div>
-                </Field>
-              )}
-            </div>
+        ) : (
+          <div className="overview-panel-main">
+            {overviewContent}
+            <DetailSidebar
+              token={token}
+              entityType="opportunity"
+              entityId={opportunity.id}
+              tenantUsers={tenantUsers}
+              currentUserId={currentUserId}
+              onCountsChange={setSidebarCounts}
+            />
           </div>
-
-          <div className="field-group">
-            <h4 className="field-group-title">Next step</h4>
-            <div className="field-group-body">
-              <Field label="Estimated Close Date">
-                <AutoSaveField
-                  label="Estimated Close Date"
-                  type="date"
-                  value={opportunity.estimatedCloseDate ? opportunity.estimatedCloseDate.slice(0, 10) : ''}
-                  onSave={(v) => save({ estimatedCloseDate: v || null })}
-                />
-              </Field>
-              <Field label="Next Step Date">
-                <AutoSaveField
-                  label="Next Step Date"
-                  type="date"
-                  value={opportunity.nextStepDate ? opportunity.nextStepDate.slice(0, 10) : ''}
-                  onSave={(v) => save({ nextStepDate: v || null })}
-                />
-              </Field>
-              <Field label="Next Step" full>
-                <AutoSaveField
-                  label="Next Step"
-                  value={opportunity.nextStepNote || ''}
-                  onSave={(v) => save({ nextStepNote: v || null })}
-                  placeholder="What's the next action?"
-                />
-              </Field>
-            </div>
-          </div>
-
-          <div className="overview-field overview-field-full">
-            <div className="min-w-0 flex-1">
-              <span className="overview-field-label">Contacts ({opportunity.contactLinks?.length ?? 0})</span>
-              {(opportunity.contactLinks ?? []).map((link) => (
-                <div key={link.id} className="flex items-center justify-between gap-2 py-1 text-sm">
-                  <span>
-                    {link.contact.firstName} {link.contact.lastName}
-                    {link.role ? ` (${link.role})` : ''}
-                  </span>
-                  <button type="button" className="icon-btn danger" onClick={() => handleRemoveContact(link.contactId)}>
-                    <span className="tip">Unlink</span>
-                    <XIcon className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
-              <div className="mt-2 flex items-center gap-1.5">
-                <select className="select-compact flex-1" value={newContactId} onChange={(e) => setNewContactId(e.target.value)}>
-                  <option value="">-- add contact --</option>
-                  {linkableContacts.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.firstName} {c.lastName}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  className="w-24"
-                  type="text"
-                  placeholder="Role"
-                  value={newContactRole}
-                  onChange={(e) => setNewContactRole(e.target.value)}
-                />
-                <button type="button" className="icon-btn" onClick={handleAddContact} disabled={!newContactId}>
-                  <span className="tip">Add</span>
-                  <PlusIcon className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-        </div>
-
-        <DetailSidebar
-          token={token}
-          entityType="opportunity"
-          entityId={opportunity.id}
-          tenantUsers={tenantUsers}
-          currentUserId={currentUserId}
-        />
-        </div>
+        )}
       </div>
     </div>
   );

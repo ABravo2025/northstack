@@ -237,16 +237,21 @@ export default function App() {
       />
       <Route path="/apply/:tenantSlug/:formSlug" element={<PublicFormPage />} />
       <Route path="/billing/checkout" element={<PaddleCheckoutPage />} />
-      {/* Private API reference (spec-private-api-webhooks.md §8) — public/no-auth on purpose,
-          same reasoning as /apply: a developer wiring up a Zapier/Make flow needs to read this
-          without a Northstack login. Linked from Settings -> Integrations -> API & Webhooks.
+      {/* Private API reference (spec-private-api-webhooks.md §8) — authenticated-only (Alejandro,
+          2026-09-08: not public, only reachable by someone already logged into the workspace),
+          linked from Settings -> Integrations -> API & Webhooks. Deliberately NOT nested under
+          AppLayout below (which would render it squeezed next to Northstack's own sidebar) — Redoc
+          needs the full viewport for its own 3-panel layout, so this route does its own
+          isAuthenticated redirect instead, same ternary pattern as /login above. The token lives
+          in localStorage (read fresh on mount), so opening this in a new tab — the link opens
+          target="_blank" — still authenticates correctly against the same browser session.
           Deliberately NOT under /api-docs — the dev server's Vite proxy (vite.config.ts) matches
           any path starting with "/api" (including "/api-docs", no slash needed) and forwards it
           to the Express backend, which has no route for it ("Cannot GET /api-docs"). Vercel's own
           production rewrite (/api/(.*)) needs a literal trailing slash so it wouldn't have hit
           this in prod, but /developers avoids the footgun in both environments instead of relying
           on that regex boundary. */}
-      <Route path="/developers" element={<ApiDocsPage />} />
+      <Route path="/developers" element={isAuthenticated ? <ApiDocsPage /> : <Navigate to="/login" replace />} />
 
       <Route
         element={

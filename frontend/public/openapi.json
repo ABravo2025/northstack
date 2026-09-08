@@ -1,0 +1,508 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Northstack Private API",
+    "version": "1.0.0",
+    "description": "A REST API for your own scripts, Zapier, Make, or anything else you want to connect to your Northstack workspace. Manage keys from Settings → Integrations → API Keys.\n\nAn API key is not a person: it carries no role and no session. The scopes on the key are the only thing that determines what it can do — internal workspace roles/permissions don't apply to this traffic at all.\n\nEvery error response is the same shape: `{ \"error\": string, \"code\": string }`. A `400` from bad input additionally includes `details`, an array of `{ path, message }` naming exactly which field(s) failed."
+  },
+  "servers": [
+    { "url": "https://app.joinnorthstack.com/api/external/v1", "description": "Production" }
+  ],
+  "security": [{ "bearerAuth": [] }],
+  "tags": [
+    { "name": "Tasks" },
+    { "name": "Notes" },
+    { "name": "Companies" },
+    { "name": "Contacts" },
+    { "name": "Opportunities" },
+    { "name": "Pipelines" },
+    { "name": "Employees" },
+    { "name": "Time off" },
+    { "name": "Payroll" }
+  ],
+  "paths": {
+    "/tasks": {
+      "get": {
+        "tags": ["Tasks"],
+        "summary": "List tasks",
+        "description": "Requires scope `tasks:read`.",
+        "parameters": [
+          { "$ref": "#/components/parameters/cursor" },
+          { "$ref": "#/components/parameters/limit" }
+        ],
+        "responses": {
+          "200": { "description": "A page of Tasks", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TaskListResponse" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      },
+      "post": {
+        "tags": ["Tasks"],
+        "summary": "Create a task",
+        "description": "Requires scope `tasks:write`. A Task is cross-entity — it hangs off exactly one Employee, Company, Contact, or Opportunity in your workspace.",
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TaskCreateInput" }, "example": { "entityType": "employee", "entityId": "3f9a1c2e-4b7d-4a1e-9c3a-employee0001", "title": "Follow up on onboarding paperwork", "assigneeId": "7b2d4e1a-8f3c-4d2b-a1e9-user00000001" } } }
+        },
+        "responses": {
+          "201": { "description": "Task created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Task" }, "example": { "id": "010ee18b-c853-498f-bec6-c708e962b09b", "tenantId": "88da8bee-a050-42c2-8b94-tenant00001", "entityType": "employee", "entityId": "3f9a1c2e-4b7d-4a1e-9c3a-employee0001", "title": "Follow up on onboarding paperwork", "description": null, "assigneeId": "7b2d4e1a-8f3c-4d2b-a1e9-user00000001", "dueDate": null, "completedAt": null, "createdById": "7b2d4e1a-8f3c-4d2b-a1e9-user00000001", "createdAt": "2026-09-07T21:56:57.071Z", "updatedAt": "2026-09-07T21:56:57.071Z", "googleCalendarEventId": null } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "description": "entityId doesn't belong to your workspace", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/tasks/{id}": {
+      "get": {
+        "tags": ["Tasks"], "summary": "Get a task", "description": "Requires scope `tasks:read`.",
+        "parameters": [{ "$ref": "#/components/parameters/id" }],
+        "responses": { "200": { "description": "The Task", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Task" } } } }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      },
+      "patch": {
+        "tags": ["Tasks"], "summary": "Update a task",
+        "description": "Requires scope `tasks:write`. Send only the fields that change. `entityType`/`entityId` can't be changed — a Task can't move to a different record. Set `completedAt` to an ISO datetime to mark it done, or `null` to reopen it.",
+        "parameters": [{ "$ref": "#/components/parameters/id" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TaskUpdateInput" }, "example": { "completedAt": "2026-09-08T00:00:00.000Z" } } } },
+        "responses": { "200": { "description": "The updated Task", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Task" } } } }, "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      },
+      "delete": {
+        "tags": ["Tasks"], "summary": "Delete a task", "description": "Requires scope `tasks:write`. No request body. Hard delete — the row is gone; a GET afterward is a 404.",
+        "parameters": [{ "$ref": "#/components/parameters/id" }],
+        "responses": { "204": { "description": "Deleted" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/notes": {
+      "get": {
+        "tags": ["Notes"], "summary": "List notes", "description": "Requires scope `notes:read`.",
+        "parameters": [{ "$ref": "#/components/parameters/cursor" }, { "$ref": "#/components/parameters/limit" }],
+        "responses": { "200": { "description": "A page of Notes", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NoteListResponse" } } } }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" } }
+      },
+      "post": {
+        "tags": ["Notes"], "summary": "Create a note",
+        "description": "Requires scope `notes:write`. Same cross-entity shape as Tasks, minus assignee/due date/completion — a Note is a record, not a to-do.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NoteCreateInput" }, "example": { "entityType": "employee", "entityId": "3f9a1c2e-4b7d-4a1e-9c3a-employee0001", "title": "Reference check", "description": "Called the listed reference — confirmed dates and role." } } } },
+        "responses": {
+          "201": { "description": "Note created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Note" }, "example": { "id": "bf8a56cd-dfbc-47dd-a13c-ae6efab13156", "tenantId": "88da8bee-a050-42c2-8b94-tenant00001", "entityType": "employee", "entityId": "3f9a1c2e-4b7d-4a1e-9c3a-employee0001", "title": "Reference check", "description": "Called the listed reference — confirmed dates and role.", "createdById": "7b2d4e1a-8f3c-4d2b-a1e9-user00000001", "createdAt": "2026-09-07T21:57:17.273Z", "updatedAt": "2026-09-07T21:57:17.273Z" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "description": "entityId doesn't belong to your workspace", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/notes/{id}": {
+      "get": { "tags": ["Notes"], "summary": "Get a note", "description": "Requires scope `notes:read`.", "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "The Note", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Note" } } } }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } } },
+      "patch": {
+        "tags": ["Notes"], "summary": "Update a note", "description": "Requires scope `notes:write`. `title`/`description`, both optional.",
+        "parameters": [{ "$ref": "#/components/parameters/id" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/NoteUpdateInput" }, "example": { "description": "Updated after a second reference call." } } } },
+        "responses": { "200": { "description": "The updated Note", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Note" } } } }, "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      },
+      "delete": { "tags": ["Notes"], "summary": "Delete a note", "description": "Requires scope `notes:write`. No request body. Hard delete.", "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "204": { "description": "Deleted" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } } }
+    },
+    "/crm/companies": {
+      "get": { "tags": ["Companies"], "summary": "List companies", "description": "Requires scope `crm.companies:read`.", "parameters": [{ "$ref": "#/components/parameters/cursor" }, { "$ref": "#/components/parameters/limit" }], "responses": { "200": { "description": "A page of Companies", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CompanyListResponse" } } } }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" } } },
+      "post": {
+        "tags": ["Companies"], "summary": "Create a company",
+        "description": "Requires scope `crm.companies:write`. A Company can't exist without a Contact — `contact` is required, either a brand-new person or a link to one that already exists.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CompanyCreateInput" }, "example": { "name": "Acme Corp", "contact": { "firstName": "Jane", "lastName": "Doe", "email": "jane@acmecorp.example" }, "industry": "Software" } } } },
+        "responses": {
+          "201": { "description": "Company created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Company" }, "example": { "id": "bbd4f74c-74cb-40e8-996d-company00001", "tenantId": "88da8bee-a050-42c2-8b94-tenant00001", "name": "Acme Corp", "industry": "Software", "website": null, "phone": null, "billingAddress": null, "parentCompanyId": null, "sizeId": null, "accountOwnerId": null, "statusId": "310da8d8-f42a-4e0d-ac8d-status000001", "isPlaceholder": false, "createdAt": "2026-09-07T21:57:24.962Z" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/crm/companies/{id}": {
+      "get": { "tags": ["Companies"], "summary": "Get a company", "description": "Requires scope `crm.companies:read`.", "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "The Company", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Company" } } } }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } } },
+      "patch": {
+        "tags": ["Companies"], "summary": "Update a company",
+        "description": "Requires scope `crm.companies:write`. Same fields as create except `contact` (can't be changed this way), plus `parentCompanyId`. `statusId` is never settable directly — it's derived from business events (e.g. an Opportunity being won).",
+        "parameters": [{ "$ref": "#/components/parameters/id" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CompanyUpdateInput" }, "example": { "industry": "Fintech" } } } },
+        "responses": { "200": { "description": "The updated Company", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Company" } } } }, "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      },
+      "delete": {
+        "tags": ["Companies"], "summary": "Delete a company",
+        "description": "Requires scope `crm.companies:write`. Optional JSON body. Without it, deleting a Company that still has Opportunities fails with a 400 instead of silently taking them down too.",
+        "parameters": [{ "$ref": "#/components/parameters/id" }],
+        "requestBody": { "required": false, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CompanyDeleteOptions" }, "example": { "deleteLinkedOpportunities": true, "cascadeToChildCompanies": false } } } },
+        "responses": { "204": { "description": "Deleted" }, "400": { "description": "Blocked by existing Opportunities/child Companies", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/crm/contacts": {
+      "get": { "tags": ["Contacts"], "summary": "List contacts", "description": "Requires scope `crm.contacts:read`.", "parameters": [{ "$ref": "#/components/parameters/cursor" }, { "$ref": "#/components/parameters/limit" }], "responses": { "200": { "description": "A page of Contacts", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ContactListResponse" } } } }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" } } },
+      "post": {
+        "tags": ["Contacts"], "summary": "Create a contact", "description": "Requires scope `crm.contacts:write`.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ContactCreateInput" }, "example": { "firstName": "John", "lastName": "Smith", "email": "john.smith@acmecorp.example", "companyId": "bbd4f74c-74cb-40e8-996d-company00001" } } } },
+        "responses": {
+          "201": { "description": "Contact created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Contact" }, "example": { "id": "d483c8bb-d80e-4992-aade-contact00001", "tenantId": "88da8bee-a050-42c2-8b94-tenant00001", "firstName": "John", "lastName": "Smith", "email": "john.smith@acmecorp.example", "phone": null, "companyId": "bbd4f74c-74cb-40e8-996d-company00001", "title": null, "isPrimary": false, "leadStatus": null, "leadSourceId": null, "isActive": true, "createdAt": "2026-09-07T21:57:47.703Z" } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/crm/contacts/{id}": {
+      "get": { "tags": ["Contacts"], "summary": "Get a contact", "description": "Requires scope `crm.contacts:read`.", "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "The Contact", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Contact" } } } }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } } },
+      "patch": {
+        "tags": ["Contacts"], "summary": "Update a contact", "description": "Requires scope `crm.contacts:write`. All create fields are optional, plus `isActive`.",
+        "parameters": [{ "$ref": "#/components/parameters/id" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ContactUpdateInput" }, "example": { "title": "VP Engineering" } } } },
+        "responses": { "200": { "description": "The updated Contact", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Contact" } } } }, "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      },
+      "delete": {
+        "tags": ["Contacts"], "summary": "Deactivate a contact",
+        "description": "Requires scope `crm.contacts:write`. No request body. Soft delete — sets `isActive: false`, never destroyed. A linked Opportunity where this was the only active Contact gets deactivated too; otherwise it's just unlinked.",
+        "parameters": [{ "$ref": "#/components/parameters/id" }],
+        "responses": { "204": { "description": "Deactivated" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      }
+    },
+    "/crm/opportunities": {
+      "get": { "tags": ["Opportunities"], "summary": "List opportunities", "description": "Requires scope `crm.opportunities:read`.", "parameters": [{ "$ref": "#/components/parameters/cursor" }, { "$ref": "#/components/parameters/limit" }], "responses": { "200": { "description": "A page of Opportunities", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OpportunityListResponse" } } } }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" } } },
+      "post": {
+        "tags": ["Opportunities"], "summary": "Create an opportunity", "description": "Requires scope `crm.opportunities:write`.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OpportunityCreateInput" }, "example": { "companyId": "bbd4f74c-74cb-40e8-996d-company00001", "pipelineId": "8fa4e39d-c2a8-498e-8d54-pipeline0001", "name": "Acme Corp — annual plan", "amountCents": 500000, "currency": "USD", "ownerId": "7b2d4e1a-8f3c-4d2b-a1e9-user00000001" } } } },
+        "responses": {
+          "201": { "description": "Opportunity created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Opportunity" }, "example": { "id": "8f860568-c656-411b-97b4-opportunity1", "tenantId": "88da8bee-a050-42c2-8b94-tenant00001", "companyId": "bbd4f74c-74cb-40e8-996d-company00001", "pipelineId": "8fa4e39d-c2a8-498e-8d54-pipeline0001", "stageId": "79ae1f27-261c-4408-bedb-stage000001", "name": "Acme Corp — annual plan", "amountCents": 500000, "currency": "USD", "estimatedCloseDate": null, "ownerId": "7b2d4e1a-8f3c-4d2b-a1e9-user00000001", "lossReasonId": null, "winReasonId": null, "closeNote": null, "nextStepDate": null, "nextStepNote": null, "isActive": true, "createdAt": "2026-09-07T21:58:11.075Z" } } } },
+          "400": { "description": "Validation error, or `ownerId` required (no automatic assignment on this pipeline)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/crm/opportunities/{id}": {
+      "get": { "tags": ["Opportunities"], "summary": "Get an opportunity", "description": "Requires scope `crm.opportunities:read`.", "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "The Opportunity", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Opportunity" } } } }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } } },
+      "patch": {
+        "tags": ["Opportunities"], "summary": "Update an opportunity, including moving it to a new stage",
+        "description": "Requires scope `crm.opportunities:write`. There is no separate stage-change endpoint — send `stageId` here, alone or with other fields. If the target stage's outcome is `won` or `lost`, the matching reason field (`winReasonId`/`lossReasonId`) is required in the same request or you get a 400.",
+        "parameters": [{ "$ref": "#/components/parameters/id" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/OpportunityUpdateInput" }, "example": { "stageId": "8f1cb650-3ebc-406c-8dc2-896a09636243", "winReasonId": "9c1d2e3f-...-winreason01" } } } },
+        "responses": { "200": { "description": "The updated Opportunity", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Opportunity" } } } }, "400": { "description": "Validation error, or a win/loss reason is required for the target stage", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      },
+      "delete": { "tags": ["Opportunities"], "summary": "Delete an opportunity", "description": "Requires scope `crm.opportunities:write`. No request body. Hard delete.", "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "204": { "description": "Deleted" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } } }
+    },
+    "/crm/pipelines": {
+      "get": {
+        "tags": ["Pipelines"], "summary": "List pipelines", "description": "Requires scope `crm.pipelines:read`. Read-only — no write scope exists for Pipelines; they're configuration, not a record you create through automation.",
+        "parameters": [{ "$ref": "#/components/parameters/cursor" }, { "$ref": "#/components/parameters/limit" }],
+        "responses": { "200": { "description": "A page of Pipelines, each with its stages", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PipelineListResponse" }, "example": { "data": [{ "id": "8fa4e39d-c2a8-498e-8d54-pipeline0001", "name": "Sales", "type": "lead", "order": 0, "isActive": true, "stages": [{ "id": "79ae1f27-...", "name": "New", "order": 0, "outcome": "open" }, { "id": "1a45ca5b-...", "name": "In Progress", "order": 1, "outcome": "open" }, { "id": "8f1cb650-...", "name": "Won", "order": 2, "outcome": "won" }, { "id": "8b0848fa-...", "name": "Lost", "order": 3, "outcome": "lost" }] }], "nextCursor": null } } } }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" } }
+      }
+    },
+    "/hr/employees": {
+      "get": { "tags": ["Employees"], "summary": "List employees", "description": "Requires scope `hr.employees:read`.", "parameters": [{ "$ref": "#/components/parameters/cursor" }, { "$ref": "#/components/parameters/limit" }], "responses": { "200": { "description": "A page of Employees", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EmployeeListResponse" } } } }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" } } },
+      "post": {
+        "tags": ["Employees"], "summary": "Create an employee", "description": "Requires scope `hr.employees:write`.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EmployeeCreateInput" }, "example": { "firstName": "Alice", "lastName": "Wong", "email": "alice.wong@example.com" } } } },
+        "responses": {
+          "201": { "description": "Employee created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Employee" }, "example": { "id": "efb8fb37-4ee9-4e3c-9396-employee0002", "firstName": "Alice", "lastName": "Wong", "email": "alice.wong@example.com", "departmentId": null, "jobTitleId": null, "contractType": null, "personType": null, "nationality": null, "startDate": null, "endDate": null, "birthdate": null, "contractUrl": null, "personalEmail": null, "statusId": "74268ff9-88f6-44d7-b937-status000002", "managerId": null, "tenantId": "88da8bee-a050-42c2-8b94-tenant00001", "createdAt": "2026-09-07T21:58:46.084Z", "userId": null } } } },
+          "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/hr/employees/{id}": {
+      "get": { "tags": ["Employees"], "summary": "Get an employee", "description": "Requires scope `hr.employees:read`.", "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "The Employee", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Employee" } } } }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } } },
+      "patch": {
+        "tags": ["Employees"], "summary": "Update an employee", "description": "Requires scope `hr.employees:write`. All create fields are optional, send only what changes. A terminated Employee's `statusId` can't be changed back this way.",
+        "parameters": [{ "$ref": "#/components/parameters/id" }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EmployeeUpdateInput" }, "example": { "jobTitleId": "8c2d3e4f-...-jobtitle01" } } } },
+        "responses": { "200": { "description": "The updated Employee", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Employee" } } } }, "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } }
+      },
+      "delete": { "tags": ["Employees"], "summary": "Delete an employee", "description": "Requires scope `hr.employees:write`. No request body. Hard delete.", "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "204": { "description": "Deleted" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } } }
+    },
+    "/hr/timeoff": {
+      "get": { "tags": ["Time off"], "summary": "List time off requests", "description": "Requires scope `hr.timeoff:read`.", "parameters": [{ "$ref": "#/components/parameters/cursor" }, { "$ref": "#/components/parameters/limit" }], "responses": { "200": { "description": "A page of Time Off Requests", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TimeOffRequestListResponse" } } } }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" } } },
+      "post": {
+        "tags": ["Time off"], "summary": "Request time off",
+        "description": "Requires scope `hr.timeoff:write`. Creates a request only — there is no way to approve or reject one through this API: deciding a request is gated by \"is this person's assigned manager\", a relationship an API key doesn't have. The Employee must already have `timeOffPolicyId` assigned to them. If that policy doesn't require approval, the request comes back already `approved`.",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TimeOffCreateInput" }, "example": { "employeeId": "3f9a1c2e-4b7d-4a1e-9c3a-employee0001", "timeOffPolicyId": "f7562e91-d4eb-48da-a130-policy000001", "startDate": "2026-10-01", "endDate": "2026-10-03" } } } },
+        "responses": {
+          "201": { "description": "Request created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TimeOffRequest" }, "example": { "id": "015fcc2c-ad0e-49fc-a280-timeoff00001", "tenantId": "88da8bee-a050-42c2-8b94-tenant00001", "employeeId": "3f9a1c2e-4b7d-4a1e-9c3a-employee0001", "timeOffPolicyId": "f7562e91-d4eb-48da-a130-policy000001", "startDate": "2026-10-01T00:00:00.000Z", "endDate": "2026-10-03T00:00:00.000Z", "daysRequested": 3, "note": null, "status": "approved", "approverId": null, "decidedAt": "2026-09-07T21:59:04.128Z", "decisionNote": "Auto-approved — this policy does not require approval", "createdAt": "2026-09-07T21:59:04.129Z" } } } },
+          "400": { "description": "Validation error, invalid date range, Employee/policy not found, or the policy isn't assigned to this Employee", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }
+        }
+      }
+    },
+    "/hr/payroll": {
+      "get": {
+        "tags": ["Payroll"], "summary": "List payroll runs", "description": "Requires scope `hr.payroll:read`. Runs only — no payment-account data. No write scope exists for Payroll in this API; none can ever be requested on a key.",
+        "parameters": [{ "$ref": "#/components/parameters/cursor" }, { "$ref": "#/components/parameters/limit" }],
+        "responses": { "200": { "description": "A page of Payroll Runs", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PayrollRunListResponse" } } } }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" } }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "nk_live_...",
+        "description": "An API key created from Settings → Integrations → API Keys, shown in full exactly once. Example: `Authorization: Bearer nk_live_...`"
+      }
+    },
+    "parameters": {
+      "id": { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
+      "cursor": { "name": "cursor", "in": "query", "required": false, "description": "The id of the last row from the previous page.", "schema": { "type": "string" } },
+      "limit": { "name": "limit", "in": "query", "required": false, "description": "Default 50, max 200.", "schema": { "type": "integer", "default": 50, "maximum": 200 } }
+    },
+    "responses": {
+      "Unauthorized": { "description": "Missing, unknown, or revoked API key", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "Invalid or revoked API key", "code": "invalid_api_key" } } } },
+      "Forbidden": { "description": "Valid key, missing the required scope", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "This API key is missing the required scope: hr.employees:write", "code": "missing_scope", "required": "hr.employees:write" } } } },
+      "NotFound": { "description": "Doesn't exist, or belongs to a different workspace (this API never confirms which)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "Not found", "code": "not_found" } } } },
+      "BadRequest": { "description": "Validation error — see `details` for which field(s)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ValidationError" }, "example": { "error": "Invalid request body", "code": "validation_error", "details": [{ "path": "title", "message": "Required" }] } } } },
+      "RateLimited": { "description": "Too many requests for this key", "headers": { "Retry-After": { "description": "Seconds until you can retry", "schema": { "type": "integer" } } }, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" }, "example": { "error": "Too many requests. Slow down and try again shortly.", "code": "rate_limited" } } } }
+    },
+    "schemas": {
+      "Error": { "type": "object", "properties": { "error": { "type": "string" }, "code": { "type": "string" } }, "required": ["error", "code"] },
+      "ValidationError": { "allOf": [{ "$ref": "#/components/schemas/Error" }, { "type": "object", "properties": { "details": { "type": "array", "items": { "type": "object", "properties": { "path": { "type": "string" }, "message": { "type": "string" } } } } } }] },
+
+      "Task": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" }, "tenantId": { "type": "string" },
+          "entityType": { "type": "string", "enum": ["employee", "company", "contact", "opportunity"] },
+          "entityId": { "type": "string" }, "title": { "type": "string" },
+          "description": { "type": "string", "nullable": true }, "assigneeId": { "type": "string" },
+          "dueDate": { "type": "string", "format": "date-time", "nullable": true },
+          "completedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "createdById": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" }, "updatedAt": { "type": "string", "format": "date-time" },
+          "googleCalendarEventId": { "type": "string", "nullable": true }
+        }
+      },
+      "TaskCreateInput": {
+        "type": "object", "required": ["entityType", "entityId", "title", "assigneeId"],
+        "properties": {
+          "entityType": { "type": "string", "enum": ["employee", "company", "contact", "opportunity"] },
+          "entityId": { "type": "string", "description": "Must belong to your workspace." },
+          "title": { "type": "string" },
+          "description": { "type": "string", "nullable": true, "default": null },
+          "assigneeId": { "type": "string", "description": "A User id in your workspace." },
+          "dueDate": { "type": "string", "format": "date-time", "nullable": true, "default": null }
+        }
+      },
+      "TaskUpdateInput": {
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" }, "description": { "type": "string", "nullable": true },
+          "assigneeId": { "type": "string" }, "dueDate": { "type": "string", "format": "date-time", "nullable": true },
+          "completedAt": { "type": "string", "format": "date-time", "nullable": true, "description": "Set to mark done; set null to reopen." }
+        }
+      },
+      "TaskListResponse": { "type": "object", "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/Task" } }, "nextCursor": { "type": "string", "nullable": true } } },
+
+      "Note": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" }, "tenantId": { "type": "string" },
+          "entityType": { "type": "string", "enum": ["employee", "company", "contact", "opportunity"] },
+          "entityId": { "type": "string" }, "title": { "type": "string" }, "description": { "type": "string" },
+          "createdById": { "type": "string" }, "createdAt": { "type": "string", "format": "date-time" }, "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "NoteCreateInput": {
+        "type": "object", "required": ["entityType", "entityId", "title", "description"],
+        "properties": {
+          "entityType": { "type": "string", "enum": ["employee", "company", "contact", "opportunity"] },
+          "entityId": { "type": "string" }, "title": { "type": "string" }, "description": { "type": "string" }
+        }
+      },
+      "NoteUpdateInput": { "type": "object", "properties": { "title": { "type": "string" }, "description": { "type": "string" } } },
+      "NoteListResponse": { "type": "object", "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/Note" } }, "nextCursor": { "type": "string", "nullable": true } } },
+
+      "Company": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" }, "tenantId": { "type": "string" }, "name": { "type": "string" },
+          "industry": { "type": "string", "nullable": true }, "website": { "type": "string", "nullable": true },
+          "phone": { "type": "string", "nullable": true }, "billingAddress": { "type": "string", "nullable": true },
+          "parentCompanyId": { "type": "string", "nullable": true }, "sizeId": { "type": "string", "nullable": true },
+          "accountOwnerId": { "type": "string", "nullable": true }, "statusId": { "type": "string" },
+          "isPlaceholder": { "type": "boolean" }, "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CompanyContact": {
+        "description": "Either link an existing Contact, or create a new one.",
+        "oneOf": [
+          { "type": "object", "required": ["contactId"], "properties": { "contactId": { "type": "string" } } },
+          { "type": "object", "required": ["firstName", "lastName", "email"], "properties": { "firstName": { "type": "string" }, "lastName": { "type": "string" }, "email": { "type": "string", "format": "email" } } }
+        ]
+      },
+      "CompanyCreateInput": {
+        "type": "object", "required": ["name", "contact"],
+        "properties": {
+          "name": { "type": "string" }, "contact": { "$ref": "#/components/schemas/CompanyContact" },
+          "industry": { "type": "string", "nullable": true, "default": null }, "website": { "type": "string", "nullable": true, "default": null },
+          "phone": { "type": "string", "nullable": true, "default": null }, "billingAddress": { "type": "string", "nullable": true, "default": null },
+          "sizeId": { "type": "string", "nullable": true, "default": null }, "accountOwnerId": { "type": "string", "nullable": true, "default": null },
+          "isPlaceholder": { "type": "boolean", "default": false }
+        }
+      },
+      "CompanyUpdateInput": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" }, "industry": { "type": "string", "nullable": true }, "website": { "type": "string", "nullable": true },
+          "phone": { "type": "string", "nullable": true }, "billingAddress": { "type": "string", "nullable": true },
+          "sizeId": { "type": "string", "nullable": true }, "accountOwnerId": { "type": "string", "nullable": true },
+          "parentCompanyId": { "type": "string", "nullable": true }, "isPlaceholder": { "type": "boolean" }
+        }
+      },
+      "CompanyDeleteOptions": { "type": "object", "properties": { "deleteLinkedOpportunities": { "type": "boolean", "default": false }, "cascadeToChildCompanies": { "type": "boolean", "default": false } } },
+      "CompanyListResponse": { "type": "object", "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/Company" } }, "nextCursor": { "type": "string", "nullable": true } } },
+
+      "Contact": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" }, "tenantId": { "type": "string" }, "firstName": { "type": "string" }, "lastName": { "type": "string" },
+          "email": { "type": "string", "format": "email" }, "phone": { "type": "string", "nullable": true },
+          "companyId": { "type": "string", "nullable": true }, "title": { "type": "string", "nullable": true },
+          "isPrimary": { "type": "boolean" }, "leadStatus": { "type": "string", "nullable": true, "enum": ["new", "contacted", "qualified", "disqualified", null] },
+          "leadSourceId": { "type": "string", "nullable": true }, "isActive": { "type": "boolean" }, "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ContactCreateInput": {
+        "type": "object", "required": ["firstName", "lastName", "email"],
+        "properties": {
+          "firstName": { "type": "string" }, "lastName": { "type": "string" }, "email": { "type": "string", "format": "email" },
+          "phone": { "type": "string", "nullable": true, "default": null }, "companyId": { "type": "string", "nullable": true, "default": null },
+          "title": { "type": "string", "nullable": true, "default": null }, "isPrimary": { "type": "boolean", "default": false, "description": "Only one primary Contact per Company — setting this demotes any other." },
+          "leadStatus": { "type": "string", "nullable": true, "enum": ["new", "contacted", "qualified", "disqualified", null], "default": null },
+          "leadSourceId": { "type": "string", "nullable": true, "default": null }
+        }
+      },
+      "ContactUpdateInput": {
+        "type": "object",
+        "properties": {
+          "firstName": { "type": "string" }, "lastName": { "type": "string" }, "email": { "type": "string", "format": "email" },
+          "phone": { "type": "string", "nullable": true }, "companyId": { "type": "string", "nullable": true }, "title": { "type": "string", "nullable": true },
+          "isPrimary": { "type": "boolean" }, "leadStatus": { "type": "string", "nullable": true, "enum": ["new", "contacted", "qualified", "disqualified", null] },
+          "leadSourceId": { "type": "string", "nullable": true }, "isActive": { "type": "boolean" }
+        }
+      },
+      "ContactListResponse": { "type": "object", "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/Contact" } }, "nextCursor": { "type": "string", "nullable": true } } },
+
+      "Opportunity": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" }, "tenantId": { "type": "string" }, "companyId": { "type": "string" }, "pipelineId": { "type": "string" }, "stageId": { "type": "string" },
+          "name": { "type": "string" }, "amountCents": { "type": "integer" }, "currency": { "type": "string" },
+          "estimatedCloseDate": { "type": "string", "format": "date-time", "nullable": true }, "ownerId": { "type": "string", "nullable": true },
+          "lossReasonId": { "type": "string", "nullable": true }, "winReasonId": { "type": "string", "nullable": true },
+          "closeNote": { "type": "string", "nullable": true }, "nextStepDate": { "type": "string", "format": "date-time", "nullable": true },
+          "nextStepNote": { "type": "string", "nullable": true }, "isActive": { "type": "boolean" }, "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "OpportunityCreateInput": {
+        "type": "object", "required": ["companyId", "pipelineId", "name", "amountCents", "currency"],
+        "properties": {
+          "companyId": { "type": "string" }, "pipelineId": { "type": "string" }, "name": { "type": "string" },
+          "amountCents": { "type": "integer", "minimum": 0, "description": "Whole cents, e.g. 500000 = $5,000.00." },
+          "currency": { "type": "string", "example": "USD" },
+          "stageId": { "type": "string", "description": "Defaults to the pipeline's first active stage if omitted." },
+          "ownerId": { "type": "string", "nullable": true, "description": "Required only if the pipeline has no automatic assignment configured." },
+          "lossReasonId": { "type": "string", "nullable": true, "description": "Required if stageId resolves to a lost stage." },
+          "winReasonId": { "type": "string", "nullable": true, "description": "Required if stageId resolves to a won stage." },
+          "estimatedCloseDate": { "type": "string", "format": "date-time", "nullable": true },
+          "closeNote": { "type": "string", "nullable": true }, "nextStepDate": { "type": "string", "format": "date-time", "nullable": true },
+          "nextStepNote": { "type": "string", "nullable": true }
+        }
+      },
+      "OpportunityUpdateInput": {
+        "type": "object",
+        "properties": {
+          "companyId": { "type": "string" }, "name": { "type": "string" }, "amountCents": { "type": "integer", "minimum": 0 }, "currency": { "type": "string" },
+          "pipelineId": { "type": "string" }, "stageId": { "type": "string", "description": "Send this to move the deal to a new stage." },
+          "estimatedCloseDate": { "type": "string", "format": "date-time", "nullable": true }, "ownerId": { "type": "string", "nullable": true },
+          "lossReasonId": { "type": "string", "nullable": true }, "winReasonId": { "type": "string", "nullable": true },
+          "closeNote": { "type": "string", "nullable": true }, "nextStepDate": { "type": "string", "format": "date-time", "nullable": true },
+          "nextStepNote": { "type": "string", "nullable": true }, "isActive": { "type": "boolean" }
+        }
+      },
+      "OpportunityListResponse": { "type": "object", "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/Opportunity" } }, "nextCursor": { "type": "string", "nullable": true } } },
+
+      "PipelineStage": { "type": "object", "properties": { "id": { "type": "string" }, "name": { "type": "string" }, "order": { "type": "integer" }, "outcome": { "type": "string", "enum": ["open", "won", "lost"] } } },
+      "Pipeline": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" }, "name": { "type": "string" }, "type": { "type": "string", "enum": ["lead", "account"] },
+          "order": { "type": "integer" }, "isActive": { "type": "boolean" }, "stages": { "type": "array", "items": { "$ref": "#/components/schemas/PipelineStage" } }
+        }
+      },
+      "PipelineListResponse": { "type": "object", "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/Pipeline" } }, "nextCursor": { "type": "string", "nullable": true } } },
+
+      "Employee": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" }, "firstName": { "type": "string" }, "lastName": { "type": "string" }, "email": { "type": "string", "format": "email" },
+          "departmentId": { "type": "string", "nullable": true }, "jobTitleId": { "type": "string", "nullable": true },
+          "contractType": { "type": "string", "nullable": true, "enum": ["part_time", "full_time", null] },
+          "personType": { "type": "string", "nullable": true, "enum": ["profile", "contractor", "employee", null] },
+          "nationality": { "type": "string", "nullable": true },
+          "startDate": { "type": "string", "format": "date-time", "nullable": true }, "endDate": { "type": "string", "format": "date-time", "nullable": true },
+          "birthdate": { "type": "string", "format": "date-time", "nullable": true }, "contractUrl": { "type": "string", "nullable": true },
+          "personalEmail": { "type": "string", "nullable": true }, "statusId": { "type": "string" }, "managerId": { "type": "string", "nullable": true },
+          "tenantId": { "type": "string" }, "createdAt": { "type": "string", "format": "date-time" }, "userId": { "type": "string", "nullable": true }
+        }
+      },
+      "EmployeeCreateInput": {
+        "type": "object", "required": ["firstName", "lastName", "email"],
+        "properties": {
+          "firstName": { "type": "string" }, "lastName": { "type": "string" }, "email": { "type": "string", "format": "email" },
+          "departmentId": { "type": "string", "nullable": true, "default": null }, "jobTitleId": { "type": "string", "nullable": true, "default": null },
+          "contractType": { "type": "string", "nullable": true, "enum": ["part_time", "full_time", null], "default": null },
+          "personType": { "type": "string", "nullable": true, "enum": ["profile", "contractor", "employee", null], "default": null },
+          "nationality": { "type": "string", "nullable": true, "default": null },
+          "startDate": { "type": "string", "format": "date-time", "nullable": true, "default": null },
+          "endDate": { "type": "string", "format": "date-time", "nullable": true, "default": null },
+          "birthdate": { "type": "string", "format": "date-time", "nullable": true, "default": null },
+          "contractUrl": { "type": "string", "nullable": true, "default": null }, "personalEmail": { "type": "string", "nullable": true, "default": null },
+          "statusId": { "type": "string", "description": "Defaults to the workspace's default Employee status if omitted." },
+          "managerId": { "type": "string", "nullable": true, "default": null, "description": "Another Employee id — must not create a reporting cycle." }
+        }
+      },
+      "EmployeeUpdateInput": {
+        "type": "object",
+        "properties": {
+          "firstName": { "type": "string" }, "lastName": { "type": "string" }, "email": { "type": "string", "format": "email" },
+          "departmentId": { "type": "string", "nullable": true }, "jobTitleId": { "type": "string", "nullable": true },
+          "contractType": { "type": "string", "nullable": true, "enum": ["part_time", "full_time", null] },
+          "personType": { "type": "string", "nullable": true, "enum": ["profile", "contractor", "employee", null] },
+          "nationality": { "type": "string", "nullable": true }, "startDate": { "type": "string", "format": "date-time", "nullable": true },
+          "endDate": { "type": "string", "format": "date-time", "nullable": true }, "birthdate": { "type": "string", "format": "date-time", "nullable": true },
+          "contractUrl": { "type": "string", "nullable": true }, "personalEmail": { "type": "string", "nullable": true },
+          "statusId": { "type": "string", "description": "Can't be changed back from a terminated status this way." }, "managerId": { "type": "string", "nullable": true }
+        }
+      },
+      "EmployeeListResponse": { "type": "object", "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/Employee" } }, "nextCursor": { "type": "string", "nullable": true } } },
+
+      "TimeOffRequest": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" }, "tenantId": { "type": "string" }, "employeeId": { "type": "string" }, "timeOffPolicyId": { "type": "string" },
+          "startDate": { "type": "string", "format": "date-time" }, "endDate": { "type": "string", "format": "date-time" }, "daysRequested": { "type": "integer" },
+          "note": { "type": "string", "nullable": true }, "status": { "type": "string", "enum": ["pending", "approved", "rejected", "cancelled"] },
+          "approverId": { "type": "string", "nullable": true }, "decidedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "decisionNote": { "type": "string", "nullable": true }, "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "TimeOffCreateInput": {
+        "type": "object", "required": ["employeeId", "timeOffPolicyId", "startDate", "endDate"],
+        "properties": {
+          "employeeId": { "type": "string", "description": "Must already have timeOffPolicyId assigned to them." },
+          "timeOffPolicyId": { "type": "string" },
+          "startDate": { "type": "string", "example": "2026-10-01", "description": "A calendar date (\"YYYY-MM-DD\") or full ISO datetime." },
+          "endDate": { "type": "string", "example": "2026-10-03" },
+          "note": { "type": "string", "default": null }
+        }
+      },
+      "TimeOffRequestListResponse": { "type": "object", "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/TimeOffRequest" } }, "nextCursor": { "type": "string", "nullable": true } } },
+
+      "PayrollRun": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" }, "tenantId": { "type": "string" }, "payFrequencyId": { "type": "string", "nullable": true },
+          "periodLabel": { "type": "string" }, "status": { "type": "string", "enum": ["draft", "confirmed"] },
+          "createdByUserId": { "type": "string" }, "confirmedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "PayrollRunListResponse": { "type": "object", "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/PayrollRun" } }, "nextCursor": { "type": "string", "nullable": true } } }
+    }
+  }
+}

@@ -2211,8 +2211,18 @@ input[type='number'] {
     @apply grid-cols-1;
   }
 
+  /* Label-beside-value (desktop's w-28 label + remaining ~flex-1 value in one row) left barely
+     ~230px for the value itself once the Overview tab is a real full-screen mobile view — cramped
+     enough that a normal-length email or select value needed horizontal scrolling to read (user
+     feedback 2026-09-08: "moverse a los lados para ver la información"). Stack label above value
+     instead — items-stretch overrides the base rule's items-center so the value/input actually
+     spans the full row width, not just its own intrinsic size. */
+  .overview-field {
+    @apply flex-col items-stretch gap-1;
+  }
+
   .overview-field-label {
-    @apply w-24;
+    @apply w-auto;
   }
 
   /* Not flex-col: that forced every child onto its own full-width row,

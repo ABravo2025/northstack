@@ -35,6 +35,7 @@ import PublicFormsSettingsPage from './pages/PublicFormsSettingsPage';
 import ActivityLogSettingsPage from './pages/ActivityLogSettingsPage';
 import RolesPermissionsPage from './pages/RolesPermissionsPage';
 import PublicFormPage from './pages/PublicFormPage';
+import ApiDocsPage from './pages/ApiDocsPage';
 import BillingPage from './pages/BillingPage';
 import PaymentsOverviewPage from './pages/PaymentsOverviewPage';
 import PaddleCheckoutPage from './pages/PaddleCheckoutPage';
@@ -236,6 +237,16 @@ export default function App() {
       />
       <Route path="/apply/:tenantSlug/:formSlug" element={<PublicFormPage />} />
       <Route path="/billing/checkout" element={<PaddleCheckoutPage />} />
+      {/* Private API reference (spec-private-api-webhooks.md §8) — public/no-auth on purpose,
+          same reasoning as /apply: a developer wiring up a Zapier/Make flow needs to read this
+          without a Northstack login. Linked from Settings -> Integrations -> API & Webhooks.
+          Deliberately NOT under /api-docs — the dev server's Vite proxy (vite.config.ts) matches
+          any path starting with "/api" (including "/api-docs", no slash needed) and forwards it
+          to the Express backend, which has no route for it ("Cannot GET /api-docs"). Vercel's own
+          production rewrite (/api/(.*)) needs a literal trailing slash so it wouldn't have hit
+          this in prod, but /developers avoids the footgun in both environments instead of relying
+          on that regex boundary. */}
+      <Route path="/developers" element={<ApiDocsPage />} />
 
       <Route
         element={

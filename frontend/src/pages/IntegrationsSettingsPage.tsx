@@ -1,8 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { api, type GoogleCalendarStatus, type StripeConnectionStatus, type Tenant } from '../api';
+import { api, type ApiKeySummary, type GoogleCalendarStatus, type StripeConnectionStatus, type Tenant } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import { usePermissions } from '../contexts/PermissionsContext';
+import EmptyState from '../components/common/EmptyState';
+import TableSkeleton from '../components/common/TableSkeleton';
+import Modal from '../components/common/Modal';
+import ConfirmDialog from '../components/common/ConfirmDialog';
+import { CopyIcon, LockIcon, TrashIcon } from '../components/common/Icons';
 
 interface IntegrationsSettingsPageProps {
   token: string;
@@ -189,6 +194,317 @@ function StripeCard({ token, canManagePayments }: { token: string; canManagePaym
   );
 }
 
+// Private API (spec-private-api-webhooks.md §3) — mirrors the backend's API_SCOPES catalog
+// (src/lib/externalApiAuth.ts) grouped for the checklist below. hr.payroll has no `write` entry
+// on purpose — hr.payroll:write is excluded from v1 entirely (Alejandro, 2026-09-07, spec §10 risk
+// #1), so there's no checkbox for it to show in the first place. crm.pipelines is read-only by
+// design (spec §3: pipelines are configuration, not a "movimiento").
+const API_SCOPE_GROUPS: { label: string; resources: { key: string; label: string; write: boolean }[] }[] = [
+  {
+    label: 'Tasks & Notes',
+    resources: [
+      { key: 'tasks', label: 'Tasks', write: true },
+      { key: 'notes', label: 'Notes', write: true },
+    ],
+  },
+  {
+    label: 'CRM',
+    resources: [
+      { key: 'crm.companies', label: 'Companies', write: true },
+      { key: 'crm.contacts', label: 'Contacts', write: true },
+      { key: 'crm.opportunities', label: 'Opportunities', write: true },
+      { key: 'crm.pipelines', label: 'Pipelines', write: false },
+    ],
+  },
+  {
+    label: 'HR',
+    resources: [
+      { key: 'hr.employees', label: 'Employees', write: true },
+      { key: 'hr.timeoff', label: 'Time off', write: true },
+      { key: 'hr.payroll', label: 'Payroll', write: false },
+    ],
+  },
+];
+
+function formatRelativeOrDate(iso: string | null): string {
+  if (!iso) return 'Never';
+  return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+// Settings → Integrations → API & Webhooks (spec-private-api-webhooks.md §8) — self-service API
+// key management. Only the API Keys half of that section ships here; outbound webhooks (Unit 4)
+// are built and verified backend-only, paused before a UI (Alejandro, 2026-09-07/08 — see
+// docs/general/Tareas-QA.md QA-80), so no webhook UI exists yet.
+function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageApiAccess: boolean }) {
+  const toast = useToast();
+  const [keys, setKeys] = useState<ApiKeySummary[] | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newKeyName, setNewKeyName] = useState('');
+  const [selectedScopes, setSelectedScopes] = useState<Set<string>>(new Set());
+  const [creating, setCreating] = useState(false);
+  const [revealedKey, setRevealedKey] = useState<string | null>(null);
+  const [revokingKey, setRevokingKey] = useState<ApiKeySummary | null>(null);
+  const [revoking, setRevoking] = useState(false);
+
+  const loadKeys = () => {
+    if (!canManageApiAccess) return;
+    api
+      .listApiKeys(token)
+      .then(setKeys)
+      .catch((error) => toast.error('Failed to load API keys: ' + (error as Error).message));
+  };
+
+  useEffect(() => {
+    loadKeys();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canManageApiAccess]);
+
+  if (!canManageApiAccess) {
+    return null;
+  }
+
+  const resetCreateForm = () => {
+    setNewKeyName('');
+    setSelectedScopes(new Set());
+  };
+
+  const toggleScope = (scope: string) => {
+    setSelectedScopes((prev) => {
+      const next = new Set(prev);
+      if (next.has(scope)) next.delete(scope);
+      else next.add(scope);
+      return next;
+    });
+  };
+
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreating(true);
+    try {
+      const created = await api.createApiKey(token, { name: newKeyName.trim(), scopes: Array.from(selectedScopes) });
+      setRevealedKey(created.fullKey);
+      resetCreateForm();
+      loadKeys();
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleCopyKey = async () => {
+    if (!revealedKey) return;
+    try {
+      await navigator.clipboard.writeText(revealedKey);
+      toast.success('Key copied to clipboard.');
+    } catch (error) {
+      toast.error('Failed to copy key: ' + (error as Error).message);
+    }
+  };
+
+  const handleRevoke = async () => {
+    if (!revokingKey) return;
+    setRevoking(true);
+    try {
+      await api.revokeApiKey(token, revokingKey.id);
+      toast.success(`"${revokingKey.name}" revoked.`);
+      setRevokingKey(null);
+      loadKeys();
+    } catch (error) {
+      toast.error('Failed to revoke key: ' + (error as Error).message);
+    } finally {
+      setRevoking(false);
+    }
+  };
+
+  return (
+    <div className="card">
+      <div className="integration-header">
+        <div>
+          <h3 className="card-title" style={{ margin: 0 }}>
+            API Keys
+          </h3>
+          <p className="text-xs text-ink-muted dark:text-dark-ink-muted">
+            Create keys for your own scripts, Zapier, Make, or any tool that talks to Northstack's
+            private API.{' '}
+            <a href="/developers" target="_blank" rel="noreferrer">
+              View API documentation
+            </a>
+            .
+          </p>
+        </div>
+        {keys && keys.length > 0 && (
+          <button type="button" className="btn-primary btn-md" onClick={() => setShowCreateModal(true)}>
+            Create key
+          </button>
+        )}
+      </div>
+
+      {keys === null ? (
+        <TableSkeleton rows={2} columns={4} />
+      ) : keys.length === 0 ? (
+        <EmptyState
+          icon={<LockIcon />}
+          title="No API keys yet"
+          body="Create a key to let an external tool read or write your workspace's data through the private API."
+          primaryLabel="Create key"
+          onPrimary={() => setShowCreateModal(true)}
+        />
+      ) : (
+        <div className="full-table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Key</th>
+                <th>Scopes</th>
+                <th>Last used</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {keys.map((key) => (
+                <tr key={key.id}>
+                  <td>{key.name}</td>
+                  <td>
+                    <code className="text-xs">{key.keyPrefix}…</code>
+                  </td>
+                  <td>
+                    <div className="flex flex-wrap gap-1">
+                      {key.scopes.map((scope) => (
+                        <span key={scope} className="role-chip chip-neutral">
+                          {scope}
+                        </span>
+                      ))}
+                    </div>
+                  </td>
+                  <td>{formatRelativeOrDate(key.lastUsedAt)}</td>
+                  <td>
+                    <div className="icon-actions">
+                      <button className="icon-btn danger" onClick={() => setRevokingKey(key)}>
+                        <span className="tip">Revoke</span>
+                        <TrashIcon />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      <Modal
+        open={showCreateModal}
+        title={revealedKey ? 'Key created' : 'Create API key'}
+        wide
+        onClose={() => {
+          setShowCreateModal(false);
+          setRevealedKey(null);
+          resetCreateForm();
+        }}
+      >
+        {revealedKey ? (
+          <div className="flex flex-col gap-3">
+            <p className="text-sm">
+              Copy this key now — it won't be shown again. If you lose it, revoke it and create a
+              new one.
+            </p>
+            <div className="flex items-center gap-2">
+              <code className="text-xs" style={{ wordBreak: 'break-all', flex: 1 }}>
+                {revealedKey}
+              </code>
+              <button type="button" className="icon-btn" onClick={handleCopyKey}>
+                <span className="tip">Copy</span>
+                <CopyIcon />
+              </button>
+            </div>
+            <button
+              type="button"
+              className="btn-primary w-full text-center"
+              onClick={() => {
+                setShowCreateModal(false);
+                setRevealedKey(null);
+              }}
+            >
+              Done — I've copied it
+            </button>
+          </div>
+        ) : (
+          <form onSubmit={handleCreate} className="flex flex-col gap-3">
+            <div className="nv-field">
+              <label htmlFor="new-api-key-name">Name</label>
+              <input
+                id="new-api-key-name"
+                type="text"
+                value={newKeyName}
+                onChange={(e) => setNewKeyName(e.target.value)}
+                placeholder="e.g. Zapier — new Tasks"
+                autoFocus
+                required
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium">Scopes</label>
+              <p className="mb-2 text-xs text-ink-muted dark:text-dark-ink-muted">
+                A key starts with no access — tick exactly what it needs.
+              </p>
+              <div className="flex flex-col gap-3">
+                {API_SCOPE_GROUPS.map((group) => (
+                  <div key={group.label}>
+                    <div className="mb-1 text-xs font-medium text-ink-muted dark:text-dark-ink-muted">{group.label}</div>
+                    <div className="flex flex-col gap-1">
+                      {group.resources.map((resource) => (
+                        <div key={resource.key} className="flex items-center gap-4">
+                          <span className="text-sm" style={{ minWidth: '9rem' }}>
+                            {resource.label}
+                          </span>
+                          <label className="flex items-center gap-1 text-xs">
+                            <input
+                              type="checkbox"
+                              checked={selectedScopes.has(`${resource.key}:read`)}
+                              onChange={() => toggleScope(`${resource.key}:read`)}
+                            />
+                            Read
+                          </label>
+                          {resource.write && (
+                            <label className="flex items-center gap-1 text-xs">
+                              <input
+                                type="checkbox"
+                                checked={selectedScopes.has(`${resource.key}:write`)}
+                                onChange={() => toggleScope(`${resource.key}:write`)}
+                              />
+                              Write
+                            </label>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <button type="submit" className="btn-primary w-full text-center" disabled={creating || !newKeyName.trim() || selectedScopes.size === 0}>
+              {creating ? 'Creating…' : 'Create key'}
+            </button>
+          </form>
+        )}
+      </Modal>
+
+      {revokingKey && (
+        <ConfirmDialog
+          title={`Revoke "${revokingKey.name}"?`}
+          message="Any integration using this key will immediately stop working. This can't be undone — you'd need to create a new key."
+          confirmLabel={revoking ? 'Revoking…' : 'Revoke'}
+          confirmDisabled={revoking}
+          onConfirm={handleRevoke}
+          onCancel={() => setRevokingKey(null)}
+        />
+      )}
+    </div>
+  );
+}
+
 // The one home for every integration (2026-08-24) — reachable by every
 // role, not just admin/owner, since the first one (Google Calendar) is a
 // personal per-user connection: each person only ever sees and controls
@@ -299,6 +615,7 @@ export default function IntegrationsSettingsPage({ token }: IntegrationsSettings
       </div>
 
       <StripeCard token={token} canManagePayments={permissions.has('manage_payments')} />
+      <ApiKeysCard token={token} canManageApiAccess={permissions.has('manage_api_access')} />
     </div>
   );
 }

@@ -3826,3 +3826,51 @@ prueba borrados después.
    mecanismo) — la pregunta que motivó esta pausa.
 2. Unidad 5 (fuera del alcance de esta ronda de todos modos): UI en Settings, cron de purga de
    `ApiRequestLog`.
+
+---
+
+## QA-81 — Private API: UI de API Keys en Settings + documentación pública (2026-09-08, en `staging`)
+
+**Por qué existe esta tarea:** parte de la Unidad 5 del spec — solo la mitad de API Keys (gestión
+de webhooks vía UI queda pendiente, esa feature sigue pausada por QA-80). Se agregó además algo no
+pedido explícitamente por el spec original: una página de referencia de la API pública en
+`/developers`, a pedido directo de Alejandro ("necesito la url de la api documentation").
+
+**Lo que se construyó:**
+- `IntegrationsSettingsPage.tsx`: nueva tarjeta "API Keys" (mismo patrón que las tarjetas de Google
+  Calendar/Stripe ya existentes), gateada por `manage_api_access`. Tabla (nombre/prefijo/scopes/
+  último uso/revocar), modal "Create key" con checklist de scopes agrupado por recurso (Tasks &
+  Notes / CRM / HR, calcando `API_SCOPES` del backend — sin fila de Payroll write, porque no
+  existe), revelado de la key completa una sola vez con botón copiar, `EmptyState`/`TableSkeleton`
+  para los estados vacío/cargando, `ConfirmDialog` para revocar.
+- `/developers` (público, sin login — mismo criterio que `/apply/...`): referencia completa de la
+  API — autenticación, catálogo de scopes, los 9 recursos con sus endpoints y ejemplo `curl`,
+  paginación, tabla de errores, sección de Webhooks marcada "Coming soon" (honesto respecto al
+  estado real de QA-80).
+
+**Bug real encontrado y corregido antes de pushear:** la página se llamó originalmente
+`/api-docs`. El proxy de Vite en desarrollo (`vite.config.ts`) matchea por prefijo de string —
+cualquier ruta que empiece con `/api` (sin necesitar `/` después) se reenvía al backend Express,
+que no tiene ninguna ruta para eso ("Cannot GET /api-docs"). Rompía la página **solo en dev**: el
+rewrite de Vercel en producción (`/api/(.*)`)  exige una `/` literal, así que ahí no hubiera
+fallado — pero depender de esa diferencia de regex entre entornos era frágil. Renombrada a
+`/developers`, sin colisión en ninguno de los dos.
+
+### Verificación real (Playwright contra un dev server local apuntado a `staging`)
+
+| # | Caso | Resultado |
+|---|---|---|
+| 1 | Login real (form, no token inyectado) → Settings → Integrations | Tarjeta "API Keys" visible, `EmptyState` con CTA "Create key" |
+| 2 | Abrir "Create key", tildar Tasks (Read+Write) y Companies (Read), enviar | 201, modal cambia a "Key created" con la key completa (`nk_live_...`) y botón copiar |
+| 3 | Cerrar ("Done — I've copied it"), volver a la tabla | La key aparece con su prefijo, 3 chips de scope (`tasks:read`, `tasks:write`, `crm.companies:read`), "Last used: Never" |
+| 4 | Click revocar → `ConfirmDialog` → confirmar | Confirmado por query directa a la base: `revokedAt` seteado |
+| 5 | Navegar a `/developers` sin sesión | Página renderiza completa, 0 errores de consola |
+
+`npm run build` (frontend) y `npm test` (backend, 692/692, sin cambios de lógica backend en esta
+ronda) verdes. Tenant de prueba borrado después.
+
+### Qué falta
+
+La otra mitad de la Unidad 5 (tabla de Webhooks en el mismo lugar) sigue sin construirse — depende
+de que se retome QA-80 primero. El cron de purga de `ApiRequestLog` (90 días) tampoco se construyó
+todavía.

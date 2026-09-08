@@ -176,6 +176,22 @@ export interface StripeConnectionStatus {
   needsAttention: boolean;
 }
 
+// Private API + Webhooks (spec-private-api-webhooks.md) — Settings → Integrations → API & Webhooks.
+export interface ApiKeySummary {
+  id: string;
+  name: string;
+  keyPrefix: string;
+  scopes: string[];
+  lastUsedAt: string | null;
+  createdAt: string;
+  revokedAt: string | null;
+}
+
+// Only the create response carries the full key — never seen again after this.
+export interface CreateApiKeyResult extends ApiKeySummary {
+  fullKey: string;
+}
+
 export interface Company {
   id: string;
   name: string;

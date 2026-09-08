@@ -1,5 +1,5 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
-import type { GoogleCalendarStatus, GoogleCalendarViewEvent, StripeConnectionStatus } from './types.js';
+import type { ApiKeySummary, CreateApiKeyResult, GoogleCalendarStatus, GoogleCalendarViewEvent, StripeConnectionStatus } from './types.js';
 
 export const integrationsApi = {
   getGoogleCalendarStatus: async (token: string): Promise<GoogleCalendarStatus> => {
@@ -59,6 +59,33 @@ export const integrationsApi = {
 
   disconnectStripe: async (token: string): Promise<void> => {
     const res = await apiFetch(`${API_BASE_URL}/api/integrations/stripe`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+  },
+
+  listApiKeys: async (token: string): Promise<ApiKeySummary[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/integrations/api-keys`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  // Returns the full key in `fullKey` — the only time it's ever visible after this.
+  createApiKey: async (token: string, input: { name: string; scopes: string[] }): Promise<CreateApiKeyResult> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/integrations/api-keys`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  revokeApiKey: async (token: string, id: string): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/integrations/api-keys/${id}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
     });

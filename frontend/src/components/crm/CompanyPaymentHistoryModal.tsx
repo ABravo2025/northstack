@@ -79,7 +79,31 @@ export default function CompanyPaymentHistoryModal({
         ) : events.length === 0 ? (
           <p className="text-sm text-ink-muted dark:text-dark-ink-muted">No payments recorded for this company yet.</p>
         ) : (
-          <div className="full-table-wrap">
+          <>
+          <div className="entity-card-list">
+            {events.map((event) => (
+              <div key={event.id} className="entity-card" style={{ alignItems: 'flex-start' }}>
+                <span className="entity-card-body">
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="entity-card-name">{formatMoney(event.amountCents, event.currency.toUpperCase())}</span>
+                    <span className="entity-card-meta shrink-0">{new Date(event.createdAt).toLocaleDateString()}</span>
+                  </span>
+                  <span className="entity-card-meta">
+                    {STATUS_LABEL[event.type]}
+                    {event.receiptUrl && (
+                      <>
+                        {' · '}
+                        <a href={event.receiptUrl} target="_blank" rel="noreferrer" className="table-link">
+                          View receipt →
+                        </a>
+                      </>
+                    )}
+                  </span>
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="full-table-wrap has-mobile-cards">
             <table className="table full-table">
               <thead>
                 <tr>
@@ -109,6 +133,7 @@ export default function CompanyPaymentHistoryModal({
               </tbody>
             </table>
           </div>
+          </>
         )}
 
         {cursor && (

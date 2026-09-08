@@ -50,6 +50,7 @@ import {
 import { isLikelyValidEmail } from '../lib/validation';
 import { useAutoCreateGuard } from '../hooks/useAutoCreateGuard';
 import { usePermissions } from '../contexts/PermissionsContext';
+import { usePrimaryAction } from '../contexts/PrimaryActionContext';
 
 const PAGE_SIZE = 20;
 const ACTIVE_VIEW_STORAGE_KEY = 'northstack:activeView:contact';
@@ -292,6 +293,8 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
     sentContactCustomFieldIds.current = new Set();
     setSlideOverMode('add');
   };
+
+  usePrimaryAction({ label: 'Add contact', onClick: handleOpenAdd });
 
   const isContactAddReady = (cfValues: Record<string, string> = customFieldValues) => {
     if (!contactForm.firstName.trim() || !contactForm.lastName.trim()) return false;

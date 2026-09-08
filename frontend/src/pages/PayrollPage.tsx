@@ -19,8 +19,10 @@ import RequiredMark from '../components/common/RequiredMark';
 import EmptyState from '../components/common/EmptyState';
 import Field from '../components/common/Field';
 import { usePermissions } from '../contexts/PermissionsContext';
+import { usePrimaryAction } from '../contexts/PrimaryActionContext';
 import TableSkeleton from '../components/common/TableSkeleton';
 import StatusChip from '../components/common/StatusChip';
+import { getInitials } from '../components/common/Avatar';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
 import { CURRENCY_CODES, currencyLabel, formatMoney } from '../lib/currencies';
 import { CalendarIcon, EyeIcon, PencilIcon, PlusIcon, TeamIcon } from '../components/common/Icons';
@@ -461,6 +463,16 @@ export default function PayrollPage({ token }: PayrollPageProps) {
     setNewRunModalOpen(true);
   };
 
+  usePrimaryAction(
+    !canManagePayroll
+      ? null
+      : tab === 'timeline'
+        ? { label: 'New Run', onClick: openNewRunModal }
+        : tab === 'policies'
+          ? { label: 'New policy', onClick: openAddFrequency }
+          : null,
+  );
+
   const handleCreateRun = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newRunPayFrequencyId || !newRunPeriodLabel.trim()) return;
@@ -600,7 +612,53 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                   onPrimary={openNewRunModal}
                 />
               ) : (
-                <div className="full-table-wrap" ref={timelineTableRef}>
+                <>
+                <div className="entity-card-list">
+                  {timelineItems.map((item) =>
+                    item.kind === 'run' ? (
+                      <div key={`run-${item.run.id}`} className="entity-card" style={{ alignItems: 'flex-start' }}>
+                        <span className="entity-card-body">
+                          <span className="flex items-center justify-between gap-2">
+                            <span className="entity-card-name">{item.run.periodLabel}</span>
+                            <StatusChip
+                              color={item.run.status === 'confirmed' ? '#059669' : '#9ca3af'}
+                              label={item.run.status === 'confirmed' ? 'Confirmed' : 'Draft'}
+                            />
+                          </span>
+                          <span className="entity-card-meta">{item.date.slice(0, 10)} · Run</span>
+                          <button
+                            type="button"
+                            className="btn-secondary btn-sm mt-2"
+                            onClick={() => navigate(`/hr/payroll/runs/${item.run.id}`)}
+                          >
+                            Open
+                          </button>
+                        </span>
+                      </div>
+                    ) : (
+                      <div key={`entry-${item.entry.id}`} className="entity-card" style={{ alignItems: 'flex-start' }}>
+                        <span className="entity-card-body">
+                          <span className="entity-card-name">
+                            {item.entry.employeeFirstName} {item.entry.employeeLastName}
+                          </span>
+                          <span className="entity-card-meta">
+                            {item.date.slice(0, 10)} · One-off · {ADJUSTMENT_TYPE_LABELS[item.entry.type] || item.entry.type} ·{' '}
+                            {formatMoney(item.entry.amountCents, item.entry.currency)}
+                            {item.entry.label ? ` · ${item.entry.label}` : ''}
+                          </span>
+                          <button
+                            type="button"
+                            className="btn-secondary btn-sm mt-2"
+                            onClick={() => setPayslipEntryId(item.entry.id)}
+                          >
+                            Payslip preview
+                          </button>
+                        </span>
+                      </div>
+                    ),
+                  )}
+                </div>
+                <div className="full-table-wrap has-mobile-cards" ref={timelineTableRef}>
                   <table className="table full-table">
                     <thead>
                       <tr>
@@ -666,6 +724,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                     </tbody>
                   </table>
                 </div>
+                </>
               )}
               <HorizontalScrollbar targetRef={timelineTableRef} />
             </>
@@ -738,7 +797,26 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                     terminatedCompensations.length === 0 ? (
                       <p className="text-sm text-ink-muted">No terminated assignments.</p>
                     ) : (
-                      <div className="full-table-wrap" ref={assignmentsTableRef}>
+                      <>
+                      <div className="entity-card-list">
+                        {terminatedCompensations.map((entry) => (
+                          <div key={entry.compensationId} className="entity-card">
+                            <span className="entity-card-avatar">
+                              {getInitials(entry.employeeFirstName, entry.employeeLastName)}
+                            </span>
+                            <span className="entity-card-body">
+                              <span className="entity-card-name">
+                                {entry.employeeFirstName} {entry.employeeLastName}
+                              </span>
+                              <span className="entity-card-meta">
+                                {entry.employeeEmail} · {formatMoney(entry.rateCents, entry.currency)} ·{' '}
+                                {entry.payFrequencyName}
+                              </span>
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="full-table-wrap has-mobile-cards" ref={assignmentsTableRef}>
                         <table className="table full-table">
                           <thead>
                             <tr>
@@ -768,13 +846,55 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                           </tbody>
                         </table>
                       </div>
+                      </>
                     )
                   ) : visibleAssignments.length === 0 ? (
                     <p className="text-sm text-ink-muted">
                       No {assignmentSubTab === 'draft' ? 'draft' : 'confirmed'} assignments.
                     </p>
                   ) : (
-                    <div className="full-table-wrap" ref={assignmentsTableRef}>
+                    <>
+                    <div className="entity-card-list">
+                      {canManagePayroll && (
+                        <label className="flex items-center gap-2 px-1 pb-1 text-xs font-medium text-ink-muted">
+                          <input
+                            type="checkbox"
+                            checked={selectedEmployeeIds.size > 0 && selectedEmployeeIds.size === visibleAssignments.length}
+                            onChange={toggleSelectAll}
+                          />
+                          Select all
+                        </label>
+                      )}
+                      {visibleAssignments.map((entry) => (
+                        <div key={entry.employeeId} className="entity-card">
+                          {canManagePayroll && (
+                            <input
+                              type="checkbox"
+                              className="shrink-0"
+                              checked={selectedEmployeeIds.has(entry.employeeId)}
+                              onChange={() => toggleEmployeeSelected(entry.employeeId)}
+                            />
+                          )}
+                          <span className="entity-card-body">
+                            <span className="entity-card-name">
+                              {entry.employeeFirstName} {entry.employeeLastName}
+                            </span>
+                            <span className="entity-card-meta">
+                              {entry.employeeEmail}
+                              {entry.currentCompensation
+                                ? ` · ${formatMoney(entry.currentCompensation.rateCents, entry.currentCompensation.currency)} · ${entry.currentCompensation.payFrequencyName}`
+                                : ' · No policy assigned'}
+                            </span>
+                          </span>
+                          {entry.isConfirmed ? (
+                            <StatusChip color="#059669" label="Confirmed" />
+                          ) : (
+                            <StatusChip color="#9ca3af" label="Draft" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="full-table-wrap has-mobile-cards" ref={assignmentsTableRef}>
                       <table className="table full-table">
                         <thead>
                           <tr>
@@ -831,6 +951,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                         </tbody>
                       </table>
                     </div>
+                    </>
                   )}
                 </>
               )}
@@ -886,7 +1007,30 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                       {frequencyFilter === 'active' ? 'No active pay frequencies.' : 'No deactivated pay frequencies.'}
                     </p>
                   ) : (
-                    <div className="full-table-wrap" ref={frequenciesTableRef}>
+                    <>
+                    <div className="entity-card-list">
+                      {filteredFrequencies.map((freq) => (
+                        <div key={freq.id} className={`entity-card ${!freq.isActive ? 'opacity-60' : ''}`}>
+                          <span className="entity-card-body">
+                            <span className={`entity-card-name ${!freq.isActive ? 'line-through' : ''}`}>{freq.name}</span>
+                            <span className="entity-card-meta">
+                              {CADENCE_LABELS[freq.cadence]} · {describeAnchorConfig(freq)} · {freq.assignedCount ?? 0} assigned
+                            </span>
+                          </span>
+                          {canManagePayroll && (
+                            <button
+                              type="button"
+                              className="icon-btn shrink-0"
+                              onClick={() => openEditFrequency(freq)}
+                              aria-label={`Edit ${freq.name}`}
+                            >
+                              <PencilIcon className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="full-table-wrap has-mobile-cards" ref={frequenciesTableRef}>
                       <table className="table full-table">
                         <thead>
                           <tr>
@@ -926,6 +1070,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                         </tbody>
                       </table>
                     </div>
+                    </>
                   )}
                   <HorizontalScrollbar targetRef={frequenciesTableRef} />
                 </>

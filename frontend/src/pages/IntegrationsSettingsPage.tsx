@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
+import { App as CapacitorApp } from '@capacitor/app';
 import { api, type ApiKeySummary, type GoogleCalendarStatus, type StripeConnectionStatus, type Tenant } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import { usePermissions } from '../contexts/PermissionsContext';
@@ -548,11 +551,34 @@ export default function IntegrationsSettingsPage({ token }: IntegrationsSettings
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Google blocks OAuth sign-in inside an embedded WebView as a matter of policy, so on native
+  // handleGoogleConnect below opens the system browser instead of navigating the app's own
+  // WebView — which means there's no same-tab redirect back into the app once the user finishes
+  // in Google's consent screen. This listens for the user manually switching back to the app
+  // (home button / app switcher) and just re-checks the connection status then, closing the
+  // browser tab behind them — simpler than wiring up real Android App Links for a first version.
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const listener = CapacitorApp.addListener('resume', () => {
+      void Browser.close().catch(() => {});
+      loadGoogleStatus();
+    });
+    return () => {
+      void listener.then((handle) => handle.remove());
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleGoogleConnect = async () => {
     setGoogleBusy(true);
     try {
       const { url } = await api.getGoogleCalendarConnectUrl(token);
-      window.location.href = url;
+      if (Capacitor.isNativePlatform()) {
+        await Browser.open({ url });
+        setGoogleBusy(false);
+      } else {
+        window.location.href = url;
+      }
     } catch (error) {
       toast.error('Failed to start Google Calendar connection: ' + (error as Error).message);
       setGoogleBusy(false);
@@ -581,7 +607,7 @@ export default function IntegrationsSettingsPage({ token }: IntegrationsSettings
             <h3 className="card-title" style={{ margin: 0 }}>
               Google Calendar
             </h3>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-ink-faint dark:text-dark-ink-faint">
               Push your task due dates and approved time off to your personal Google Calendar, so
               Google's own reminders notify you.
             </p>
@@ -599,7 +625,7 @@ export default function IntegrationsSettingsPage({ token }: IntegrationsSettings
                 {googleStatus.needsReconnect ? (
                   <div className="field-error">Access was revoked — reconnect to resume syncing.</div>
                 ) : (
-                  <div className="text-xs text-gray-400">Connected</div>
+                  <div className="text-xs text-ink-faint dark:text-dark-ink-faint">Connected</div>
                 )}
               </div>
             </div>

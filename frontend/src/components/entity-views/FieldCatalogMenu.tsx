@@ -139,7 +139,7 @@ export default function FieldCatalogMenu({ token, kind, label, entries, onChange
                 </button>
               </div>
             ))}
-            {sorted.length === 0 && <p className="text-xs text-gray-500">No options yet.</p>}
+            {sorted.length === 0 && <p className="text-xs text-ink-muted dark:text-dark-ink-muted">No options yet.</p>}
           </div>
           <div className="nv-field mt-3">
             <label htmlFor={`catalog-new-${kind}`}>

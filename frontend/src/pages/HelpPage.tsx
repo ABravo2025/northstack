@@ -59,7 +59,7 @@ export default function HelpPage() {
 
       <div className="card mt-4">
         <h3 className="card-title">Contact us</h3>
-        <p className="text-sm text-brand-navy dark:text-gray-200">
+        <p className="text-sm text-brand-navy dark:text-dark-ink">
           Can't find what you're looking for? Reach us directly at{' '}
           <a className="table-link" href="mailto:info@joinnorthstack.com">
             info@joinnorthstack.com

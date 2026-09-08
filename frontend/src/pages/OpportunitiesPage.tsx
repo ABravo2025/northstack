@@ -14,6 +14,7 @@ import { getInitials } from '../components/common/Avatar';
 import { PlusIcon, TargetIcon } from '../components/common/Icons';
 import { useAutoCreateGuard } from '../hooks/useAutoCreateGuard';
 import { usePermissions } from '../contexts/PermissionsContext';
+import { usePrimaryAction } from '../contexts/PrimaryActionContext';
 
 // A deal that hasn't moved stage in this many days shows its age in red (.kc-age.late).
 const LATE_STAGE_DAYS_THRESHOLD = 14;
@@ -217,6 +218,8 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
     setLinkedContactId(null);
     setSlideOverMode('add');
   };
+
+  usePrimaryAction({ label: 'Add opportunity', onClick: handleOpenAdd });
 
   // Switching Pipeline resets the type-specific fields (Company vs.
   // Contact/placeholder-Company-name) — carrying over, say, a chosen Company
@@ -668,7 +671,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                     ))}
                   </select>
                   {formPipeline?.assignmentMode && !form.ownerId && (
-                    <p className="mt-1 text-xs text-gray-500">
+                    <p className="mt-1 text-xs text-ink-muted dark:text-dark-ink-muted">
                       This pipeline will assign an owner automatically if left blank.
                     </p>
                   )}

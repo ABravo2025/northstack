@@ -5,6 +5,7 @@ import SlideOver from '../components/common/SlideOver';
 import EmptyState from '../components/common/EmptyState';
 import RequiredMark from '../components/common/RequiredMark';
 import { GripIcon, ListIcon, PlusIcon, XIcon } from '../components/common/Icons';
+import { usePrimaryAction } from '../contexts/PrimaryActionContext';
 
 interface PublicFormsSettingsPageProps {
   token: string;
@@ -137,6 +138,8 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
     setSlideOverMode('add');
   };
 
+  usePrimaryAction({ label: 'New Form', onClick: handleOpenCreate });
+
   const handleOpenEdit = (form: Form) => {
     const fields: PublicFormFieldConfig[] = JSON.parse(form.fieldsConfig);
     const savedKeys = fields.map((f) => f.key);
@@ -264,7 +267,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
   const renderPreviewInput = (field: (typeof allFields)[number]) => {
     if (field.fieldType === 'select') {
       return (
-        <select disabled className="bg-gray-50 dark:bg-gray-800">
+        <select disabled className="bg-surface-2 dark:bg-dark-raised">
           <option>-- select --</option>
           {(JSON.parse(field.options || '[]') as string[]).map((opt) => (
             <option key={opt}>{opt}</option>
@@ -274,7 +277,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
     }
     const inputType =
       field.fieldType === 'number' ? 'number' : field.fieldType === 'date' ? 'date' : field.fieldType === 'email' ? 'email' : 'text';
-    return <input disabled type={inputType} className="bg-gray-50 dark:bg-gray-800" />;
+    return <input disabled type={inputType} className="bg-surface-2 dark:bg-dark-raised" />;
   };
 
   return (
@@ -328,11 +331,11 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
               required
             />
             {slideOverMode === 'edit' ? (
-              <p className="mt-1 text-xs text-gray-500">The link slug can't be changed once a form is created.</p>
+              <p className="mt-1 text-xs text-ink-muted dark:text-dark-ink-muted">The link slug can't be changed once a form is created.</p>
             ) : (
               tenantSlug &&
               formSlug && (
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-ink-muted dark:text-dark-ink-muted">
                   {window.location.origin}/apply/{tenantSlug}/{formSlug}
                 </p>
               )
@@ -350,7 +353,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
                   </option>
                 ))}
               </select>
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-ink-muted dark:text-dark-ink-muted">
                 If set, a submission that matches an existing Company also creates an Opportunity in this pipeline's
                 first stage.
               </p>
@@ -359,7 +362,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
 
           <div className="form-group">
             <span>Fields</span>
-            <p className="mb-2 text-xs text-gray-500">
+            <p className="mb-2 text-xs text-ink-muted dark:text-dark-ink-muted">
               Drag a field from the left into the preview on the right, at the position you want it to appear.
               Drag a field already in the preview to reorder it, or back to the left to remove it.
             </p>
@@ -370,14 +373,14 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
                 className={`min-h-[120px] rounded border border-dashed p-2 transition-colors ${
                   dragOverKey === PALETTE_DROP_ZONE
                     ? 'border-brand-blue bg-brand-blue/5'
-                    : 'border-gray-300 dark:border-gray-700'
+                    : 'border-line-strong dark:border-dark-line'
                 }`}
               >
-                <p className="mb-2 text-xs font-semibold tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                <p className="mb-2 text-xs font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">
                   Available fields
                 </p>
                 {availableFields.length === 0 ? (
-                  <p className="text-xs text-gray-500">All fields have been added to the form.</p>
+                  <p className="text-xs text-ink-muted dark:text-dark-ink-muted">All fields have been added to the form.</p>
                 ) : (
                   availableFields.map((field) => (
                     <div
@@ -385,17 +388,17 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
                       draggable
                       onDragStart={() => handleDragStart(field.key)}
                       onDragEnd={handleDragEnd}
-                      className={`mb-1.5 flex cursor-move items-center gap-2 rounded border border-gray-200 px-2 py-1.5 dark:border-gray-700 ${draggedKey === field.key ? 'opacity-50' : ''}`}
+                      className={`mb-1.5 flex cursor-move items-center gap-2 rounded border border-line px-2 py-1.5 dark:border-dark-line ${draggedKey === field.key ? 'opacity-50' : ''}`}
                     >
-                      <GripIcon className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                      <GripIcon className="h-3.5 w-3.5 shrink-0 text-ink-faint dark:text-dark-ink-faint" />
                       <span className="text-sm">{field.label}</span>
                     </div>
                   ))
                 )}
               </div>
 
-              <div className="rounded border border-gray-200 p-3 dark:border-gray-700">
-                <p className="mb-2 text-xs font-semibold tracking-wide text-gray-400 uppercase dark:text-gray-500">
+              <div className="rounded border border-line p-3 dark:border-dark-line">
+                <p className="mb-2 text-xs font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">
                   Form preview
                 </p>
                 <div className="mb-3">
@@ -403,21 +406,21 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
                     First Name
                     <RequiredMark />
                   </label>
-                  <input disabled className="bg-gray-50 dark:bg-gray-800" />
+                  <input disabled className="bg-surface-2 dark:bg-dark-raised" />
                 </div>
                 <div className="mb-3">
                   <label className="mb-1 block text-sm font-medium">
                     Last Name
                     <RequiredMark />
                   </label>
-                  <input disabled className="bg-gray-50 dark:bg-gray-800" />
+                  <input disabled className="bg-surface-2 dark:bg-dark-raised" />
                 </div>
                 <div className="mb-3">
                   <label className="mb-1 block text-sm font-medium">
                     Email
                     <RequiredMark />
                   </label>
-                  <input disabled className="bg-gray-50 dark:bg-gray-800" />
+                  <input disabled className="bg-surface-2 dark:bg-dark-raised" />
                 </div>
 
                 {includedFields.map((field) => (
@@ -434,15 +437,15 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
                         e.stopPropagation();
                         handleDropOnPreview(field.key);
                       }}
-                      className={`mb-3 cursor-move rounded border border-gray-200 p-2 dark:border-gray-700 ${draggedKey === field.key ? 'opacity-50' : ''}`}
+                      className={`mb-3 cursor-move rounded border border-line p-2 dark:border-dark-line ${draggedKey === field.key ? 'opacity-50' : ''}`}
                     >
                       <div className="mb-1 flex items-center gap-2">
-                        <GripIcon className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+                        <GripIcon className="h-3.5 w-3.5 shrink-0 text-ink-faint dark:text-dark-ink-faint" />
                         <label className="flex-1 text-sm font-medium">
                           {field.label}
                           {requiredFields[field.key] && <RequiredMark />}
                         </label>
-                        <label className="inline-flex items-center gap-1 text-xs font-normal text-gray-500">
+                        <label className="inline-flex items-center gap-1 text-xs font-normal text-ink-muted dark:text-dark-ink-muted">
                           <input
                             type="checkbox"
                             className="w-auto"
@@ -473,7 +476,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
                   className={`rounded border border-dashed py-3 text-center text-xs transition-colors ${
                     dragOverKey === END_DROP_ZONE
                       ? 'border-brand-blue text-brand-blue'
-                      : 'border-gray-300 text-gray-400 dark:border-gray-700 dark:text-gray-500'
+                      : 'border-line-strong text-ink-faint dark:border-dark-line dark:text-dark-ink-faint'
                   }`}
                 >
                   Drop here to add to the end
@@ -491,7 +494,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
               onChange={(e) => setThankYouMessage(e.target.value)}
               placeholder="Thank you! Your submission has been received."
             />
-            <p className="mt-1 text-xs text-gray-500">Shown after a successful submit. Leave blank to use the default above.</p>
+            <p className="mt-1 text-xs text-ink-muted dark:text-dark-ink-muted">Shown after a successful submit. Leave blank to use the default above.</p>
           </div>
         </form>
       </SlideOver>
@@ -527,7 +530,37 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
           />
         )}
         {!loading && filteredForms.length > 0 && (
-          <div className="full-table-wrap">
+          <>
+          <div className="entity-card-list">
+            {filteredForms.map((form) => (
+              <div
+                key={form.id}
+                className={`entity-card ${!form.isActive ? 'opacity-60' : ''}`}
+                style={{ alignItems: 'flex-start' }}
+              >
+                <span className="entity-card-body">
+                  <span className="entity-card-name">{form.name}</span>
+                  <span className="entity-card-meta">{form.isActive ? 'Active' : 'Inactive'}</span>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <button type="button" className="btn-secondary px-2 py-1 text-xs" onClick={() => handleCopyLink(form)}>
+                      Copy link
+                    </button>
+                    <button type="button" className="btn-secondary px-2 py-1 text-xs" onClick={() => handleOpenEdit(form)}>
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      className="btn-secondary px-2 py-1 text-xs"
+                      onClick={() => handleToggleActive(form)}
+                    >
+                      {form.isActive ? 'Deactivate' : 'Activate'}
+                    </button>
+                  </div>
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="full-table-wrap has-mobile-cards">
             <table className="table full-table">
               <thead>
                 <tr>
@@ -564,6 +597,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
               </tbody>
             </table>
           </div>
+          </>
         )}
       </div>
     </div>

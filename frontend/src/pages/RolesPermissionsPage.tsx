@@ -303,7 +303,7 @@ export default function RolesPermissionsPage({ token }: RolesPermissionsPageProp
       </p>
 
       {GROUPS.map((group) => (
-        <section key={group.title} className="card mb-4 overflow-hidden p-0">
+        <section key={group.title} className="card full-table-wrap mb-4 p-0">
           <div
             className="grid items-center gap-3 border-b border-line bg-surface-0 px-5 py-3 dark:border-dark-line dark:bg-dark-raised"
             style={{ gridTemplateColumns }}
@@ -366,7 +366,7 @@ export default function RolesPermissionsPage({ token }: RolesPermissionsPageProp
       </p>
 
       {Object.entries(fieldCatalog).map(([entityType, fields]) => (
-        <details key={entityType} className="card mb-4 overflow-hidden p-0">
+        <details key={entityType} className="card full-table-wrap mb-4 p-0">
           <summary className="flex cursor-pointer list-none items-center gap-2 bg-surface-0 px-5 py-3 text-sm font-semibold text-ink select-none dark:bg-dark-raised dark:text-dark-ink">
             <ChevronRightIcon className="h-3.5 w-3.5 text-ink-faint dark:text-dark-ink-faint" />
             {ENTITY_LABELS[entityType] ?? entityType}

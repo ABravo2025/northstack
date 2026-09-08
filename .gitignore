@@ -4,6 +4,9 @@ dist/
 coverage/
 .vercel
 .env*
+# Holds only a public API URL (no secret) for the Capacitor Android build — meant to be committed
+# and shared, unlike every other .env* file above.
+!frontend/.env.capacitor
 *.tsbuildinfo
 
 # Local-only scratch scripts (underscore prefix = never committed, e.g. scripts/_create-local-test-user.ts)

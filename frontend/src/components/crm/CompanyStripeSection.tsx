@@ -196,7 +196,7 @@ function StripeMatchList({
   }
 
   return (
-    <div className="mt-2 flex flex-col gap-1 rounded-md border border-line p-2 dark:border-gray-800">
+    <div className="mt-2 flex flex-col gap-1 rounded-md border border-line p-2 dark:border-dark-line">
       {matches.map((match) => (
         <div key={match.id} className="flex items-center justify-between gap-2 py-0.5 text-sm">
           <span>

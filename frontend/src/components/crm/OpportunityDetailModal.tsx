@@ -236,7 +236,7 @@ export default function OpportunityDetailModal({
                 <div
                   key={stage.id}
                   className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold ${
-                    isCurrent ? 'text-white' : 'bg-surface-2 text-ink-muted dark:bg-gray-800 dark:text-gray-400'
+                    isCurrent ? 'text-white' : 'bg-surface-2 text-ink-muted dark:bg-dark-raised dark:text-dark-ink-faint'
                   }`}
                   style={isCurrent ? { backgroundColor: stage.color || '#3c6da1' } : undefined}
                 >
@@ -291,7 +291,7 @@ export default function OpportunityDetailModal({
               </Field>
               {pendingPipelineId && (
                 <Field label="Confirm company details to move pipeline" full>
-                  <div className="mt-1 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-gray-800">
+                  <div className="mt-1 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-dark-line">
                     <p className="text-xs text-ink-muted">
                       {opportunity.company?.name} is still a placeholder — add its real details to move this deal into{' '}
                       {pipelines.find((p) => p.id === pendingPipelineId)?.name}.
@@ -424,7 +424,7 @@ export default function OpportunityDetailModal({
               )}
               {wonOfferPipelineId && (
                 <Field label="Move to account pipeline?" full>
-                  <div className="mt-1 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-gray-800">
+                  <div className="mt-1 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-dark-line">
                     <p className="text-xs text-ink-muted">
                       Won! Move this deal into an account pipeline to keep tracking it there.
                     </p>

@@ -42,7 +42,14 @@ const app = express();
 // Known Northstack origins — the SPA (Vercel rewrites /api/* to this same
 // function in prod/staging, so the app itself is same-origin there; this
 // list matters for local dev, where frontend/backend run on separate ports).
-const ALLOWED_ORIGINS = new Set(['https://app.joinnorthstack.com', 'https://staging.joinnorthstack.com']);
+// 'https://localhost' (no port) is the Capacitor Android app's WebView origin (Capacitor's
+// default androidScheme) — it talks to the API cross-origin via VITE_API_BASE_URL, unlike the
+// web app, so it needs an explicit allowlist entry the same way localhost:<port> dev does.
+const ALLOWED_ORIGINS = new Set([
+  'https://app.joinnorthstack.com',
+  'https://staging.joinnorthstack.com',
+  'https://localhost',
+]);
 const LOCALHOST_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1):\d+$/;
 
 function isAllowedOrigin(origin: string): boolean {

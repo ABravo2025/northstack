@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Modal from './Modal';
 import { useToast } from './ToastProvider';
 import { api } from '../../api';
+import { openAppPath, openExternalUrl } from '../../lib/nativeBrowser';
 
 interface AddPaymentMethodModalProps {
   open: boolean;
@@ -54,12 +55,12 @@ export default function AddPaymentMethodModal({
     try {
       const result = await api.startCheckout(token);
       if (result.provider === 'mercadopago' && result.initPoint) {
-        window.open(result.initPoint, '_blank', 'noopener,noreferrer');
+        openExternalUrl(result.initPoint);
         onClose();
         return;
       }
       if (result.provider === 'paddle' && result.paddleTransactionId) {
-        window.open(`/billing/checkout?transactionId=${result.paddleTransactionId}`, '_blank', 'noopener,noreferrer');
+        openAppPath(`/billing/checkout?transactionId=${result.paddleTransactionId}`);
         onClose();
         return;
       }

@@ -438,7 +438,7 @@ export default function CompanyDetailModal({
                 </div>
               ))}
               {addingContact && (
-                <div className="mt-2 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-gray-800">
+                <div className="mt-2 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-dark-line">
                   <div className="flex items-center gap-1.5">
                     <div className="flex-1">
                       <SearchableSelect
@@ -536,7 +536,7 @@ export default function CompanyDetailModal({
                 </div>
               ))}
               {addingOpportunity && (
-                <div className="mt-2 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-gray-800">
+                <div className="mt-2 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-dark-line">
                   <label className="text-xs text-ink-muted" htmlFor="new-opp-pipeline">
                     Pipeline
                     <RequiredMark />

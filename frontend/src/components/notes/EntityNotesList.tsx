@@ -80,8 +80,8 @@ export default function EntityNotesList({ token, entityType, entityId, onCountCh
       />
 
       <div className="note-list">
-        {loading && <p className="text-xs text-gray-400">Loading notes…</p>}
-        {!loading && notes.length === 0 && <p className="text-xs text-gray-400">No notes yet.</p>}
+        {loading && <p className="text-xs text-ink-faint dark:text-dark-ink-faint">Loading notes…</p>}
+        {!loading && notes.length === 0 && <p className="text-xs text-ink-faint dark:text-dark-ink-faint">No notes yet.</p>}
         {notes.map((note) => (
           <div
             key={note.id}

@@ -4,12 +4,14 @@ import Sidebar from '../components/layout/Sidebar';
 import SettingsSidebar from '../components/layout/SettingsSidebar';
 import TopBar from '../components/layout/TopBar';
 import MobileTabbar from '../components/layout/MobileTabbar';
+import PrimaryActionFab from '../components/layout/PrimaryActionFab';
 import PlansModal from '../components/common/PlansModal';
 import AddPaymentMethodModal from '../components/common/AddPaymentMethodModal';
 import { api } from '../api';
 import type { PlanTier, Tenant } from '../api';
 import { daysRemainingUntil } from '../lib/trial';
 import { usePermissions } from '../contexts/PermissionsContext';
+import { PrimaryActionProvider } from '../contexts/PrimaryActionContext';
 
 interface AppLayoutProps {
   user: any;
@@ -80,6 +82,7 @@ export default function AppLayout({ user, token, tenant, onTenantUpdated, onLogo
   };
 
   return (
+    <PrimaryActionProvider>
     <div className="app">
       <TopBar user={user} token={token} onLogout={onLogout} onMenuClick={() => setMobileSidebarOpen(true)} />
       <div className="app-shell">
@@ -137,6 +140,7 @@ export default function AppLayout({ user, token, tenant, onTenantUpdated, onLogo
         </main>
       </div>
       <MobileTabbar />
+      <PrimaryActionFab />
       <AddPaymentMethodModal
         open={showAddPaymentMethod}
         token={token}
@@ -162,5 +166,6 @@ export default function AppLayout({ user, token, tenant, onTenantUpdated, onLogo
         onSelectPlan={handleSelectPlanAndCheckout}
       />
     </div>
+    </PrimaryActionProvider>
   );
 }

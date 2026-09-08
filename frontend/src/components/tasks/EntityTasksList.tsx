@@ -111,8 +111,8 @@ export default function EntityTasksList({
       />
 
       <div className="task-list">
-        {loading && <p className="text-xs text-gray-400">Loading tasks…</p>}
-        {!loading && ordered.length === 0 && <p className="text-xs text-gray-400">No tasks yet.</p>}
+        {loading && <p className="text-xs text-ink-faint dark:text-dark-ink-faint">Loading tasks…</p>}
+        {!loading && ordered.length === 0 && <p className="text-xs text-ink-faint dark:text-dark-ink-faint">No tasks yet.</p>}
         {ordered.map((task) => (
           <div key={task.id} className={`task-row ${editingTask?.id === task.id ? 'task-row-active' : ''}`}>
             <input

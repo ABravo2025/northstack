@@ -6,8 +6,14 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#0d2a48" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- iOS Safari doesn't read manifest.json for "Add to Home Screen" the way Android/desktop
+         Chrome does — these are its own separate opt-in for standalone (no browser chrome) mode. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Northstack" />
     <!-- The app renders tenant/employee/contact data (names, addresses, custom fields) as
          plain text throughout the UI. Browser/extension auto-translation can't distinguish
          that from static UI copy and will rewrite it (e.g. an employee named "Ale Alfa" shown

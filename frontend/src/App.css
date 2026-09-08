@@ -2127,6 +2127,17 @@ input[type='number'] {
   @apply text-accent dark:text-accent;
 }
 
+.primary-action-fab {
+  @apply fixed right-4 z-30 flex h-[52px] w-[52px] cursor-pointer items-center justify-center rounded-full border-none text-white md:hidden;
+  bottom: 76px;
+  background: var(--color-accent);
+  box-shadow: 0 6px 18px rgba(184, 80, 47, 0.4);
+}
+
+.primary-action-fab:hover {
+  background: var(--color-accent-hover);
+}
+
 .app-main {
   @apply pb-[60px] md:pb-0;
 }
@@ -2154,6 +2165,14 @@ input[type='number'] {
   .slideover-panel {
     @apply max-w-none;
     width: 100%;
+  }
+
+  .modal-overlay {
+    @apply p-0;
+  }
+
+  .modal-panel {
+    @apply h-full max-h-none w-full max-w-none rounded-none;
   }
 
   .overview-panel {

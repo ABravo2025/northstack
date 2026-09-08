@@ -104,8 +104,8 @@ export default function MyTasksWidget({ token, tenantUsers, currentUserId }: MyT
   return (
     <div className="card">
       <h3 className="card-title">My tasks</h3>
-      {loading && <p className="text-xs text-gray-400">Loading…</p>}
-      {!loading && tasks.length === 0 && <p className="text-xs text-gray-400">Nothing assigned to you.</p>}
+      {loading && <p className="text-xs text-ink-faint dark:text-dark-ink-faint">Loading…</p>}
+      {!loading && tasks.length === 0 && <p className="text-xs text-ink-faint dark:text-dark-ink-faint">Nothing assigned to you.</p>}
       <div className="task-list">
         {tasks.map((task) => (
           <div key={task.id} className="task-row task-row-clickable" onClick={(e) => openEditForm(e, task)}>
@@ -121,7 +121,7 @@ export default function MyTasksWidget({ token, tenantUsers, currentUserId }: MyT
               <div className="task-row-title" style={{ display: 'block' }}>
                 {task.title}
               </div>
-              {task.entitySummary && <div className="text-xs text-gray-400 truncate">{task.entitySummary}</div>}
+              {task.entitySummary && <div className="text-xs text-ink-faint dark:text-dark-ink-faint truncate">{task.entitySummary}</div>}
             </div>
             {task.dueDate && <span className="task-row-date">{formatDueDate(task.dueDate)}</span>}
           </div>

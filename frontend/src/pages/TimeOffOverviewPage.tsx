@@ -9,6 +9,8 @@ import EmptyState from '../components/common/EmptyState';
 import TableSkeleton from '../components/common/TableSkeleton';
 import RequiredMark from '../components/common/RequiredMark';
 import { CalendarIcon, ChevronDownIcon, DotsVerticalIcon, PlusIcon } from '../components/common/Icons';
+import EntityCardList from '../components/common/EntityCardList';
+import { getInitials } from '../components/common/Avatar';
 import { usePermissions } from '../contexts/PermissionsContext';
 
 const ACCRUAL_LABELS: Record<string, string> = {
@@ -418,11 +420,11 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
       >
         {assignStepPolicy ? (
           <div>
-            <p className="mb-3 text-sm text-gray-500">
+            <p className="mb-3 text-sm text-ink-muted dark:text-dark-ink-muted">
               Who should have "{assignStepPolicy.name}"? You can also do this later from the Assignments tab.
             </p>
             {assignStepAvailableEmployees.length === 0 ? (
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-ink-muted dark:text-dark-ink-muted">
                 {employees.length === 0 ? 'No employees yet.' : 'Every employee already has this policy.'}
               </p>
             ) : (
@@ -630,8 +632,8 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                       aria-expanded={isExpanded}
                     >
                       <span className="color-dot" style={{ background: bal.color || '#9ca3af' }} />
-                      <span className="font-semibold text-brand-navy dark:text-gray-100">{bal.policyName}</span>
-                      <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">{bal.remaining} left</span>
+                      <span className="font-semibold text-brand-navy dark:text-dark-ink">{bal.policyName}</span>
+                      <span className="ml-auto text-xs text-ink-faint dark:text-dark-ink-faint">{bal.remaining} left</span>
                       <ChevronDownIcon className={`h-3.5 w-3.5 shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                     </button>
                     {isExpanded && (
@@ -654,7 +656,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                             <div className="balance-detail-stat-label">Remaining</div>
                           </div>
                         </div>
-                        <p className="mb-1.5 text-xs font-semibold tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                        <p className="mb-1.5 text-xs font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">
                           Accrual: {bal.accrualMethod === 'monthly' ? 'Monthly' : 'Fixed annual'}
                         </p>
                         {policyRequests.length > 0 ? (
@@ -672,7 +674,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                             ))}
                           </div>
                         ) : (
-                          <p className="text-xs text-gray-400 dark:text-gray-500">No requests made under this policy yet.</p>
+                          <p className="text-xs text-ink-faint dark:text-dark-ink-faint">No requests made under this policy yet.</p>
                         )}
                       </div>
                     )}
@@ -685,7 +687,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
 
         {!loading && tab === 'assignments' && canManagePolicies && (
           <>
-            <p className="text-sm text-gray-500 mb-3">
+            <p className="text-sm text-ink-muted dark:text-dark-ink-muted mb-3">
               Which time off policies apply to each employee. Manage the policies themselves (days per year, accrual,
               etc.) from the Policies tab.
             </p>
@@ -694,7 +696,61 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
             ) : employees.length === 0 ? (
               <p>No employees yet.</p>
             ) : (
-              <div className="full-table-wrap">
+              <>
+                <div className="entity-card-list">
+                  {employees.map((emp) => {
+                    const assignedIds = (emp.timeOffPolicies || []).map((a: any) => a.timeOffPolicyId);
+                    const availableToAdd = activeTimeOffPolicies.filter((p) => !assignedIds.includes(p.id));
+                    return (
+                      <div key={emp.id} className="entity-card" style={{ alignItems: 'flex-start' }}>
+                        <span className="entity-card-avatar">{getInitials(emp.firstName, emp.lastName)}</span>
+                        <span className="entity-card-body">
+                          <span className="entity-card-name">
+                            {emp.firstName} {emp.lastName}
+                          </span>
+                          <span className="entity-card-meta">{emp.departmentDefn?.name || '—'}</span>
+                          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                            {(emp.timeOffPolicies || []).length === 0 && !canManagePolicies && (
+                              <span className="text-xs text-ink-faint dark:text-dark-ink-faint">—</span>
+                            )}
+                            {emp.timeOffPolicies?.map((a: any) => (
+                              <span key={a.id} className="time-off-policy-chip">
+                                <span className="color-dot" style={{ background: a.timeOffPolicy.color || '#9ca3af' }} />
+                                {a.timeOffPolicy.name}
+                                {canManagePolicies && (
+                                  <button
+                                    type="button"
+                                    className="time-off-policy-chip-remove"
+                                    onClick={() => handleUnassign(emp.id, a.timeOffPolicyId)}
+                                    aria-label={`Remove ${a.timeOffPolicy.name}`}
+                                    title="Remove"
+                                  >
+                                    ×
+                                  </button>
+                                )}
+                              </span>
+                            ))}
+                            {canManagePolicies && availableToAdd.length > 0 && (
+                              <button
+                                type="button"
+                                className="col-add-trigger"
+                                onClick={(e) => {
+                                  assignMenuAnchorRef.current = e.currentTarget;
+                                  setAssignMenuFor(emp.id);
+                                }}
+                                aria-label={`Add policy for ${emp.firstName} ${emp.lastName}`}
+                                title="Add policy"
+                              >
+                                <PlusIcon />
+                              </button>
+                            )}
+                          </div>
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="full-table-wrap has-mobile-cards">
                 <table className="table full-table">
                   <thead>
                     <tr>
@@ -716,7 +772,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                           <td>
                             <div className="flex flex-wrap items-center gap-1.5">
                               {(emp.timeOffPolicies || []).length === 0 && !canManagePolicies && (
-                                <span className="text-gray-400 dark:text-gray-500">—</span>
+                                <span className="text-ink-faint dark:text-dark-ink-faint">—</span>
                               )}
                               {emp.timeOffPolicies?.map((a: any) => (
                                 <span key={a.id} className="time-off-policy-chip">
@@ -756,7 +812,8 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                     })}
                   </tbody>
                 </table>
-              </div>
+                </div>
+              </>
             )}
           </>
         )}
@@ -769,7 +826,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
               const assignedIds = (menuEmployee.timeOffPolicies || []).map((a: any) => a.timeOffPolicyId);
               const menuAvailable = activeTimeOffPolicies.filter((p) => !assignedIds.includes(p.id));
               if (menuAvailable.length === 0) {
-                return <p className="text-xs text-gray-500">No more policies to assign.</p>;
+                return <p className="text-xs text-ink-muted dark:text-dark-ink-muted">No more policies to assign.</p>;
               }
               return menuAvailable.map((p) => (
                 <button
@@ -872,7 +929,33 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                 {myRequests.length === 0 ? (
                   <p>You haven't requested any time off yet.</p>
                 ) : (
-                  <div className="full-table-wrap">
+                  <>
+                  <div className="entity-card-list">
+                    {myRequests.map((req) => (
+                      <div key={req.id} className="entity-card" style={{ alignItems: 'flex-start' }}>
+                        <span className="entity-card-body">
+                          <span className="flex items-center justify-between gap-2">
+                            <span className="entity-card-name">{req.timeOffPolicy.name}</span>
+                            <span className={`status-badge status-${req.status} shrink-0`}>
+                              {STATUS_LABELS[req.status] || req.status}
+                            </span>
+                          </span>
+                          <span className="entity-card-meta">
+                            {req.startDate.slice(0, 10)} → {req.endDate.slice(0, 10)} · {req.daysRequested}d
+                          </span>
+                          {req.status === 'pending' && (
+                            <button
+                              className="btn-danger mt-2 px-2 py-1 text-xs"
+                              onClick={() => setCancellingRequestId(req.id)}
+                            >
+                              Cancel
+                            </button>
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="full-table-wrap has-mobile-cards">
                   <table className="table full-table">
                     <thead>
                       <tr>
@@ -909,6 +992,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                     </tbody>
                   </table>
                   </div>
+                  </>
                 )}
               </>
             )}
@@ -920,7 +1004,38 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
             {pendingApprovals.length === 0 ? (
               <p>No pending requests waiting on your approval.</p>
             ) : (
-              <div className="full-table-wrap">
+              <>
+              <div className="entity-card-list">
+                {pendingApprovals.map((req) => (
+                  <div key={req.id} className="entity-card" style={{ alignItems: 'flex-start' }}>
+                    <span className="entity-card-avatar">{getInitials(req.employee.firstName, req.employee.lastName)}</span>
+                    <span className="entity-card-body">
+                      <span className="entity-card-name">
+                        {req.employee.firstName} {req.employee.lastName}
+                      </span>
+                      <span className="entity-card-meta">
+                        {req.timeOffPolicy.name} · {req.startDate.slice(0, 10)} → {req.endDate.slice(0, 10)} ·{' '}
+                        {req.daysRequested}d
+                      </span>
+                      <div className="mt-2 flex gap-1.5">
+                        <button
+                          className="btn-success px-2 py-1 text-xs"
+                          onClick={() => handleDecideRequest(req.id, 'approved')}
+                        >
+                          Approve
+                        </button>
+                        <button
+                          className="btn-danger px-2 py-1 text-xs"
+                          onClick={() => handleDecideRequest(req.id, 'rejected')}
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="full-table-wrap has-mobile-cards">
               <table className="table full-table">
                 <thead>
                   <tr>
@@ -963,6 +1078,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                 </tbody>
               </table>
               </div>
+              </>
             )}
           </>
         )}
@@ -972,7 +1088,45 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
             {allRequests.length === 0 ? (
               <p>No time off requests yet.</p>
             ) : (
-              <div className="full-table-wrap">
+              <>
+              <div className="entity-card-list">
+                {allRequests.map((req) => (
+                  <div key={req.id} className="entity-card" style={{ alignItems: 'flex-start' }}>
+                    <span className="entity-card-avatar">{getInitials(req.employee.firstName, req.employee.lastName)}</span>
+                    <span className="entity-card-body">
+                      <span className="flex items-center justify-between gap-2">
+                        <span className="entity-card-name">
+                          {req.employee.firstName} {req.employee.lastName}
+                        </span>
+                        <span className={`status-badge status-${req.status} shrink-0`}>
+                          {STATUS_LABELS[req.status] || req.status}
+                        </span>
+                      </span>
+                      <span className="entity-card-meta">
+                        {req.timeOffPolicy.name} · {req.startDate.slice(0, 10)} → {req.endDate.slice(0, 10)} ·{' '}
+                        {req.daysRequested}d
+                      </span>
+                      {req.status === 'pending' && (
+                        <div className="mt-2 flex gap-1.5">
+                          <button
+                            className="btn-success px-2 py-1 text-xs"
+                            onClick={() => handleDecideRequest(req.id, 'approved')}
+                          >
+                            Approve
+                          </button>
+                          <button
+                            className="btn-danger px-2 py-1 text-xs"
+                            onClick={() => handleDecideRequest(req.id, 'rejected')}
+                          >
+                            Reject
+                          </button>
+                        </div>
+                      )}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="full-table-wrap has-mobile-cards">
               <table className="table full-table">
                 <thead>
                   <tr>
@@ -1023,6 +1177,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                 </tbody>
               </table>
               </div>
+              </>
             )}
           </>
         )}
@@ -1032,7 +1187,16 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
             {balancesByEmployee.length === 0 ? (
               <p>No time off policy assignments yet.</p>
             ) : (
-              <div className="full-table-wrap">
+              <>
+                <EntityCardList
+                  items={balancesByEmployee}
+                  getKey={(row) => row.employeeId}
+                  getInitials={(row) => getInitials(row.employeeFirstName, row.employeeLastName)}
+                  getName={(row) => `${row.employeeFirstName} ${row.employeeLastName}`}
+                  getMeta={(row) => `${row.department || '—'} · ${row.policies.length} polic${row.policies.length === 1 ? 'y' : 'ies'} · ${row.totalRemaining}d remaining`}
+                  onSelect={(row) => setBalancesDetailEmployeeId(row.employeeId)}
+                />
+                <div className="full-table-wrap has-mobile-cards">
                 <table className="table full-table">
                   <thead>
                     <tr>
@@ -1061,7 +1225,8 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                     ))}
                   </tbody>
                 </table>
-              </div>
+                </div>
+              </>
             )}
           </>
         )}
@@ -1100,8 +1265,8 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                     aria-expanded={isExpanded}
                   >
                     <span className="color-dot" style={{ background: bal.color || '#9ca3af' }} />
-                    <span className="font-semibold text-brand-navy dark:text-gray-100">{bal.policyName}</span>
-                    <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">{bal.remaining} left</span>
+                    <span className="font-semibold text-brand-navy dark:text-dark-ink">{bal.policyName}</span>
+                    <span className="ml-auto text-xs text-ink-faint dark:text-dark-ink-faint">{bal.remaining} left</span>
                     <ChevronDownIcon className={`h-3.5 w-3.5 shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                   </button>
                   {isExpanded && (
@@ -1124,7 +1289,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                           <div className="balance-detail-stat-label">Remaining</div>
                         </div>
                       </div>
-                      <p className="mb-1.5 text-xs font-semibold tracking-wide text-gray-400 uppercase dark:text-gray-500">
+                      <p className="mb-1.5 text-xs font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">
                         Accrual: {bal.accrualMethod === 'monthly' ? 'Monthly' : 'Fixed annual'}
                       </p>
                       {policyRequests.length > 0 ? (
@@ -1142,7 +1307,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                           ))}
                         </div>
                       ) : (
-                        <p className="text-xs text-gray-400 dark:text-gray-500">No requests made under this policy yet.</p>
+                        <p className="text-xs text-ink-faint dark:text-dark-ink-faint">No requests made under this policy yet.</p>
                       )}
                     </div>
                   )}
@@ -1180,11 +1345,43 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                   </button>
                 </div>
                 {filteredTimeOffPolicies.length === 0 ? (
-                  <p className="text-sm text-gray-500">
+                  <p className="text-sm text-ink-muted dark:text-dark-ink-muted">
                     {policiesFilter === 'active' ? 'No active policies.' : 'No deactivated policies.'}
                   </p>
                 ) : (
-                  <div className="full-table-wrap">
+                  <>
+                  <div className="entity-card-list">
+                    {filteredTimeOffPolicies.map((policy) => {
+                      const employeeCount = employees.filter((emp) =>
+                        (emp.timeOffPolicies || []).some((a: any) => a.timeOffPolicyId === policy.id),
+                      ).length;
+                      return (
+                        <div key={policy.id} className={`entity-card ${!policy.isActive ? 'opacity-60' : ''}`}>
+                          <span className="entity-card-avatar" style={{ background: policy.color || '#9ca3af' }} />
+                          <span className="entity-card-body">
+                            <span className={`entity-card-name ${!policy.isActive ? 'line-through' : ''}`}>{policy.name}</span>
+                            <span className="entity-card-meta">
+                              {ACCRUAL_LABELS[policy.accrualMethod] || policy.accrualMethod} · {policy.daysPerYear}d/yr ·{' '}
+                              {employeeCount} employee{employeeCount === 1 ? '' : 's'}
+                            </span>
+                          </span>
+                          <button
+                            type="button"
+                            className="icon-btn shrink-0"
+                            onClick={(e) => {
+                              policyRowMenuAnchorRef.current = e.currentTarget;
+                              setPolicyRowMenuFor(policyRowMenuFor === policy.id ? null : policy.id);
+                            }}
+                            aria-label={`Actions for ${policy.name}`}
+                            title="Actions"
+                          >
+                            <DotsVerticalIcon />
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="full-table-wrap has-mobile-cards">
                     <table className="table full-table">
                       <thead>
                         <tr>
@@ -1233,6 +1430,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                       </tbody>
                     </table>
                   </div>
+                  </>
                 )}
               </>
             )}

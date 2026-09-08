@@ -17,7 +17,9 @@ import MultiSelectDropdown, { type MultiSelectOption } from '../components/commo
 import Popover from '../components/common/Popover';
 import RequiredMark from '../components/common/RequiredMark';
 import { DotsVerticalIcon, EyeIcon, EyeOffIcon, GripIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
+import CompactRowGroup from '../components/common/CompactRow';
 import { usePermissions } from '../contexts/PermissionsContext';
+import { usePrimaryAction } from '../contexts/PrimaryActionContext';
 
 // Fixed width shared by the stage editor's grip-handle column and its header
 // spacer, so "Stage name"/"Outcome"/"Win %" line up with the row below —
@@ -231,98 +233,100 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
 
   return (
     <>
-      {sortedStages.length > 0 && <p className="mb-2 text-xs text-gray-500">{OUTCOME_HELP}</p>}
-      {sortedStages.length > 0 && (
-        <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
-          <span style={{ width: STAGE_GRIP_COLUMN_WIDTH }} />
-          <span style={{ width: 28 }} />
-          <span className="flex-1">Stage name</span>
-          <span style={{ width: 110 }}>Outcome</span>
-          <span style={{ width: 56, textAlign: 'center' }}>Win %</span>
-          <span style={{ width: 56, textAlign: 'center' }} title="Notify the owner (in-app + email) when a deal enters this stage">
-            Notify
-          </span>
-        </div>
-      )}
-      <div className="flex flex-col gap-2">
-        {sortedStages.map((stage) => (
-          <div
-            key={stage.id}
-            className={`flex items-center gap-2 rounded-md border-t-2 border-transparent ${
-              draggedStageId === stage.id ? 'opacity-40' : ''
-            } ${dragOverStageId === stage.id && draggedStageId && draggedStageId !== stage.id ? 'border-t-brand-blue' : ''}`}
-            onDragOver={(e) => handleDragOver(e, stage.id)}
-            onDrop={() => handleDrop(stage.id)}
-          >
-            <span
-              className="status-manage-grip"
-              style={{ width: STAGE_GRIP_COLUMN_WIDTH, justifyContent: 'center' }}
-              draggable
-              onDragStart={() => handleDragStart(stage.id)}
-              onDragEnd={handleDragEnd}
-              aria-label={`Drag to reorder ${stage.name}`}
-            >
-              <GripIcon className="h-3.5 w-3.5" />
+      {sortedStages.length > 0 && <p className="mb-2 text-xs text-ink-muted dark:text-dark-ink-muted">{OUTCOME_HELP}</p>}
+      <CompactRowGroup minWidth={520}>
+        {sortedStages.length > 0 && (
+          <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
+            <span style={{ width: STAGE_GRIP_COLUMN_WIDTH }} />
+            <span style={{ width: 28 }} />
+            <span className="flex-1">Stage name</span>
+            <span style={{ width: 110 }}>Outcome</span>
+            <span style={{ width: 56, textAlign: 'center' }}>Win %</span>
+            <span style={{ width: 56, textAlign: 'center' }} title="Notify the owner (in-app + email) when a deal enters this stage">
+              Notify
             </span>
-            <ColorPicker value={stage.color || '#6b7280'} onChange={(color) => handleColorChange(stage, color)} />
-            <span className={`flex-1 text-sm ${!stage.isActive ? 'inactive' : ''}`}>{stage.name}</span>
-            <select
-              className="select-compact"
-              style={{ width: 110 }}
-              value={stage.outcome}
-              onChange={(e) => handleOutcomeChange(stage, e.target.value)}
-            >
-              {Object.entries(OUTCOME_LABELS).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            {stage.outcome === 'open' ? (
-              <input
-                type="number"
-                min={0}
-                max={100}
-                className="select-compact"
-                style={{ width: 56 }}
-                value={getProbabilityDraft(stage)}
-                onChange={(e) => setProbabilityDrafts({ ...probabilityDrafts, [stage.id]: e.target.value })}
-                onBlur={() => handleProbabilityBlur(stage)}
-                title="Win probability (%) — used for the weighted pipeline forecast"
-              />
-            ) : (
-              <span
-                className="text-xs text-ink-faint"
-                style={{ width: 56, textAlign: 'center' }}
-                title="Forced — Won is always 100%, Lost is always 0%"
-              >
-                {stage.probability}%
-              </span>
-            )}
-            <span style={{ width: 56, display: 'flex', justifyContent: 'center' }}>
-              <input
-                type="checkbox"
-                checked={stage.notifyOwnerOnEnter}
-                onChange={() => toggleNotifyOwnerOnEnter(stage)}
-                title="Notify the owner (in-app + email) when a deal enters this stage"
-              />
-            </span>
-            <button
-              type="button"
-              className="icon-btn"
-              onClick={() => toggleArchive(stage)}
-              aria-label={stage.isActive ? 'Archive stage' : 'Reactivate stage'}
-            >
-              <span className="tip">{stage.isActive ? 'Archive' : 'Reactivate'}</span>
-              {stage.isActive ? (
-                <EyeIcon className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-              ) : (
-                <EyeOffIcon className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
-              )}
-            </button>
           </div>
-        ))}
-      </div>
+        )}
+        <div className="flex flex-col gap-2">
+          {sortedStages.map((stage) => (
+            <div
+              key={stage.id}
+              className={`flex items-center gap-2 rounded-md border-t-2 border-transparent ${
+                draggedStageId === stage.id ? 'opacity-40' : ''
+              } ${dragOverStageId === stage.id && draggedStageId && draggedStageId !== stage.id ? 'border-t-brand-blue' : ''}`}
+              onDragOver={(e) => handleDragOver(e, stage.id)}
+              onDrop={() => handleDrop(stage.id)}
+            >
+              <span
+                className="status-manage-grip"
+                style={{ width: STAGE_GRIP_COLUMN_WIDTH, justifyContent: 'center' }}
+                draggable
+                onDragStart={() => handleDragStart(stage.id)}
+                onDragEnd={handleDragEnd}
+                aria-label={`Drag to reorder ${stage.name}`}
+              >
+                <GripIcon className="h-3.5 w-3.5" />
+              </span>
+              <ColorPicker value={stage.color || '#6b7280'} onChange={(color) => handleColorChange(stage, color)} />
+              <span className={`flex-1 text-sm ${!stage.isActive ? 'inactive' : ''}`}>{stage.name}</span>
+              <select
+                className="select-compact"
+                style={{ width: 110 }}
+                value={stage.outcome}
+                onChange={(e) => handleOutcomeChange(stage, e.target.value)}
+              >
+                {Object.entries(OUTCOME_LABELS).map(([value, label]) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              {stage.outcome === 'open' ? (
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  className="select-compact"
+                  style={{ width: 56 }}
+                  value={getProbabilityDraft(stage)}
+                  onChange={(e) => setProbabilityDrafts({ ...probabilityDrafts, [stage.id]: e.target.value })}
+                  onBlur={() => handleProbabilityBlur(stage)}
+                  title="Win probability (%) — used for the weighted pipeline forecast"
+                />
+              ) : (
+                <span
+                  className="text-xs text-ink-faint"
+                  style={{ width: 56, textAlign: 'center' }}
+                  title="Forced — Won is always 100%, Lost is always 0%"
+                >
+                  {stage.probability}%
+                </span>
+              )}
+              <span style={{ width: 56, display: 'flex', justifyContent: 'center' }}>
+                <input
+                  type="checkbox"
+                  checked={stage.notifyOwnerOnEnter}
+                  onChange={() => toggleNotifyOwnerOnEnter(stage)}
+                  title="Notify the owner (in-app + email) when a deal enters this stage"
+                />
+              </span>
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={() => toggleArchive(stage)}
+                aria-label={stage.isActive ? 'Archive stage' : 'Reactivate stage'}
+              >
+                <span className="tip">{stage.isActive ? 'Archive' : 'Reactivate'}</span>
+                {stage.isActive ? (
+                  <EyeIcon className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                ) : (
+                  <EyeOffIcon className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+                )}
+              </button>
+            </div>
+          ))}
+        </div>
+      </CompactRowGroup>
 
       <form className="flex items-center gap-2 mt-3" onSubmit={handleAddStage}>
         <input
@@ -523,7 +527,7 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
           )}
         </select>
         {pipeline.assignmentMode === 'account_owner' && (
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-ink-muted dark:text-dark-ink-muted">
             Used when the Company has an Account Owner set. Falls back to round robin over the participants below
             when it doesn't.
           </p>
@@ -533,7 +537,7 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
       {pipeline.assignmentMode && (
         <div className="form-group">
           <label htmlFor={participantMode === 'user' ? 'pipeline-participants' : 'pipeline-departments'}>Round-robin participants</label>
-          <p className="mb-1 text-xs text-gray-500">
+          <p className="mb-1 text-xs text-ink-muted dark:text-dark-ink-muted">
             Only currently-active employees are ever picked when it's their turn. A user with no linked Employee
             record can be added here but will always be skipped.
           </p>
@@ -550,7 +554,7 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
             />
           ) : (
             <>
-              <p className="mb-1 text-xs text-gray-500">
+              <p className="mb-1 text-xs text-ink-muted dark:text-dark-ink-muted">
                 One-time add — adds whoever currently has an Employee in the selected department(s). Not a live
                 link: later department changes won't update this list automatically.
               </p>
@@ -594,7 +598,7 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
             onChange={(e) => setStalledDraft(e.target.value)}
             onBlur={handleStalledBlur}
           />
-          <span className="text-sm text-gray-500">days in the same stage before notifying the owner</span>
+          <span className="text-sm text-ink-muted dark:text-dark-ink-muted">days in the same stage before notifying the owner</span>
         </div>
       </div>
     </>
@@ -703,7 +707,7 @@ function PipelineAutomationCreateFields({
           {type === 'account' && <option value="account_owner">Account owner — use the Company's Account Owner</option>}
         </select>
         {assignmentMode === 'account_owner' && (
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-ink-muted dark:text-dark-ink-muted">
             Used when the Company has an Account Owner set. Falls back to round robin over the participants below
             when it doesn't.
           </p>
@@ -716,7 +720,7 @@ function PipelineAutomationCreateFields({
             Round-robin participants
             {assignmentMode === 'round_robin' && <RequiredMark />}
           </label>
-          <p className="mb-1 text-xs text-gray-500">
+          <p className="mb-1 text-xs text-ink-muted dark:text-dark-ink-muted">
             {assignmentMode === 'account_owner'
               ? "Used only as a fallback, when the Company has no Account Owner set. Only currently-active employees are ever picked."
               : "Only currently-active employees are ever picked when it's their turn. Can be changed later too."}
@@ -734,7 +738,7 @@ function PipelineAutomationCreateFields({
             />
           ) : (
             <>
-              <p className="mb-1 text-xs text-gray-500">
+              <p className="mb-1 text-xs text-ink-muted dark:text-dark-ink-muted">
                 One-time add — adds whoever currently has an Employee in the selected department(s) as participants,
                 once this pipeline is created.
               </p>
@@ -765,7 +769,7 @@ function PipelineAutomationCreateFields({
             value={stalledThresholdDraft}
             onChange={(e) => onStalledThresholdDraftChange(e.target.value)}
           />
-          <span className="text-sm text-gray-500">days in the same stage before notifying the owner</span>
+          <span className="text-sm text-ink-muted dark:text-dark-ink-muted">days in the same stage before notifying the owner</span>
         </div>
       </div>
     </>
@@ -870,6 +874,8 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
     setCreateStalledThresholdDraft('');
     setCreateOpen(true);
   };
+
+  usePrimaryAction({ label: 'Add pipeline', onClick: openCreate });
 
   const handleStartEdit = (pipeline: Pipeline) => {
     setRenameValue(pipeline.name);
@@ -1071,7 +1077,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
       <div className="flex items-start justify-between gap-4 mb-3">
         <div>
           <h3 className="card-title mb-1">Pipelines</h3>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-ink-muted dark:text-dark-ink-muted">
             Sales pipelines for Opportunities. Each pipeline has its own stages — archiving a pipeline keeps its
             Opportunities visible read-only, it just disappears from creation menus.
           </p>
@@ -1103,29 +1109,64 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
         </div>
       )}
 
-      <table className="table full-table">
-        <thead>
-          <tr>
-            <th className={`sortable ${sortField === 'type' ? 'sorted' : ''}`} onClick={() => handleSort('type')}>
-              Type {sortArrow('type')}
-            </th>
-            <th className={`sortable ${sortField === 'name' ? 'sorted' : ''}`} onClick={() => handleSort('name')}>
-              Name {sortArrow('name')}
-            </th>
-            <th className={`sortable ${sortField === 'stages' ? 'sorted' : ''}`} onClick={() => handleSort('stages')}>
-              Stages {sortArrow('stages')}
-            </th>
-            <th className={`sortable ${sortField === 'createdAt' ? 'sorted' : ''}`} onClick={() => handleSort('createdAt')}>
-              Created {sortArrow('createdAt')}
-            </th>
-            <th className={`sortable ${sortField === 'updatedAt' ? 'sorted' : ''}`} onClick={() => handleSort('updatedAt')}>
-              Updated {sortArrow('updatedAt')}
-            </th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>{(pipelineTab === 'archived' ? archivedPipelines : activePipelines).map(renderPipelineRow)}</tbody>
-      </table>
+      <div className="entity-card-list">
+        {(pipelineTab === 'archived' ? archivedPipelines : activePipelines).map((pipeline) => (
+          <div key={pipeline.id} className="entity-card">
+            <span className="entity-card-body">
+              <span className="flex items-center gap-2">
+                <span
+                  className={`category-chip chip-${PIPELINE_TYPE_CHIP_COLOR[pipeline.type]}`}
+                  title="Pipeline type can't be changed after creation"
+                >
+                  {PIPELINE_TYPE_LABELS[pipeline.type]}
+                </span>
+                <span className="entity-card-name">{pipeline.name}</span>
+              </span>
+              <span className="entity-card-meta">
+                {pipeline.stages.length} stage{pipeline.stages.length === 1 ? '' : 's'} · Updated{' '}
+                {formatPipelineDate(pipeline.updatedAt)}
+              </span>
+            </span>
+            <button
+              type="button"
+              className="icon-btn shrink-0"
+              onClick={(e) => {
+                pipelineRowMenuAnchorRef.current = e.currentTarget;
+                setPipelineRowMenuFor(pipelineRowMenuFor === pipeline.id ? null : pipeline.id);
+              }}
+              aria-label={`Actions for ${pipeline.name}`}
+              title="Actions"
+            >
+              <DotsVerticalIcon />
+            </button>
+          </div>
+        ))}
+      </div>
+      <div className="full-table-wrap has-mobile-cards">
+        <table className="table full-table">
+          <thead>
+            <tr>
+              <th className={`sortable ${sortField === 'type' ? 'sorted' : ''}`} onClick={() => handleSort('type')}>
+                Type {sortArrow('type')}
+              </th>
+              <th className={`sortable ${sortField === 'name' ? 'sorted' : ''}`} onClick={() => handleSort('name')}>
+                Name {sortArrow('name')}
+              </th>
+              <th className={`sortable ${sortField === 'stages' ? 'sorted' : ''}`} onClick={() => handleSort('stages')}>
+                Stages {sortArrow('stages')}
+              </th>
+              <th className={`sortable ${sortField === 'createdAt' ? 'sorted' : ''}`} onClick={() => handleSort('createdAt')}>
+                Created {sortArrow('createdAt')}
+              </th>
+              <th className={`sortable ${sortField === 'updatedAt' ? 'sorted' : ''}`} onClick={() => handleSort('updatedAt')}>
+                Updated {sortArrow('updatedAt')}
+              </th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>{(pipelineTab === 'archived' ? archivedPipelines : activePipelines).map(renderPipelineRow)}</tbody>
+        </table>
+      </div>
 
       <Popover
         open={pipelineRowMenuFor !== null}
@@ -1282,83 +1323,85 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
 
             <div className="form-group">
               <span>Stages</span>
-              <p className="mb-1 text-xs text-gray-500">
+              <p className="mb-1 text-xs text-ink-muted dark:text-dark-ink-muted">
                 Add the stages a deal moves through in this pipeline. You can leave this empty and add stages
                 later, or reorder/color them once the pipeline is created.
               </p>
-              <p className="mb-2 text-xs text-gray-500">{OUTCOME_HELP}</p>
-              {createStages.length > 0 && (
-                <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
-                  <span className="flex-1">Stage name</span>
-                  <span style={{ width: 110 }}>Outcome</span>
-                  <span style={{ width: 56, textAlign: 'center' }}>Win %</span>
-                  <span style={{ width: 56, textAlign: 'center' }} title="Notify the owner (in-app + email) when a deal enters this stage">
-                    Notify
-                  </span>
-                  <span style={{ width: 32 }} />
-                </div>
-              )}
-              <div className="flex flex-col gap-2">
-                {createStages.map((stage, i) => (
-                  <div key={stage.key} className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      className="flex-1"
-                      placeholder={`Stage ${i + 1} name`}
-                      value={stage.name}
-                      onChange={(e) => updateDraftStage(stage.key, { name: e.target.value })}
-                    />
-                    <select
-                      className="select-compact"
-                      style={{ width: 110 }}
-                      value={stage.outcome}
-                      onChange={(e) => updateDraftStage(stage.key, { outcome: e.target.value as DraftStage['outcome'] })}
-                    >
-                      {Object.entries(OUTCOME_LABELS).map(([value, label]) => (
-                        <option key={value} value={value}>
-                          {label}
-                        </option>
-                      ))}
-                    </select>
-                    {stage.outcome === 'open' ? (
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        className="select-compact"
-                        style={{ width: 56 }}
-                        value={stage.probability}
-                        onChange={(e) => updateDraftStage(stage.key, { probability: e.target.value })}
-                        title="Win probability (%) — used for the weighted pipeline forecast"
-                      />
-                    ) : (
-                      <span
-                        className="text-xs text-ink-faint"
-                        style={{ width: 56, textAlign: 'center' }}
-                        title="Forced — Won is always 100%, Lost is always 0%"
-                      >
-                        {stage.outcome === 'won' ? 100 : 0}%
-                      </span>
-                    )}
-                    <span style={{ width: 56, display: 'flex', justifyContent: 'center' }}>
-                      <input
-                        type="checkbox"
-                        checked={stage.notifyOwnerOnEnter}
-                        onChange={(e) => updateDraftStage(stage.key, { notifyOwnerOnEnter: e.target.checked })}
-                        title="Notify the owner (in-app + email) when a deal enters this stage"
-                      />
+              <p className="mb-2 text-xs text-ink-muted dark:text-dark-ink-muted">{OUTCOME_HELP}</p>
+              <CompactRowGroup minWidth={460}>
+                {createStages.length > 0 && (
+                  <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
+                    <span className="flex-1">Stage name</span>
+                    <span style={{ width: 110 }}>Outcome</span>
+                    <span style={{ width: 56, textAlign: 'center' }}>Win %</span>
+                    <span style={{ width: 56, textAlign: 'center' }} title="Notify the owner (in-app + email) when a deal enters this stage">
+                      Notify
                     </span>
-                    <button
-                      type="button"
-                      className="icon-btn"
-                      onClick={() => removeDraftStage(stage.key)}
-                      aria-label="Remove stage"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </button>
+                    <span style={{ width: 32 }} />
                   </div>
-                ))}
-              </div>
+                )}
+                <div className="flex flex-col gap-2">
+                  {createStages.map((stage, i) => (
+                    <div key={stage.key} className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        className="flex-1"
+                        placeholder={`Stage ${i + 1} name`}
+                        value={stage.name}
+                        onChange={(e) => updateDraftStage(stage.key, { name: e.target.value })}
+                      />
+                      <select
+                        className="select-compact"
+                        style={{ width: 110 }}
+                        value={stage.outcome}
+                        onChange={(e) => updateDraftStage(stage.key, { outcome: e.target.value as DraftStage['outcome'] })}
+                      >
+                        {Object.entries(OUTCOME_LABELS).map(([value, label]) => (
+                          <option key={value} value={value}>
+                            {label}
+                          </option>
+                        ))}
+                      </select>
+                      {stage.outcome === 'open' ? (
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          className="select-compact"
+                          style={{ width: 56 }}
+                          value={stage.probability}
+                          onChange={(e) => updateDraftStage(stage.key, { probability: e.target.value })}
+                          title="Win probability (%) — used for the weighted pipeline forecast"
+                        />
+                      ) : (
+                        <span
+                          className="text-xs text-ink-faint"
+                          style={{ width: 56, textAlign: 'center' }}
+                          title="Forced — Won is always 100%, Lost is always 0%"
+                        >
+                          {stage.outcome === 'won' ? 100 : 0}%
+                        </span>
+                      )}
+                      <span style={{ width: 56, display: 'flex', justifyContent: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={stage.notifyOwnerOnEnter}
+                          onChange={(e) => updateDraftStage(stage.key, { notifyOwnerOnEnter: e.target.checked })}
+                          title="Notify the owner (in-app + email) when a deal enters this stage"
+                        />
+                      </span>
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        onClick={() => removeDraftStage(stage.key)}
+                        aria-label="Remove stage"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </CompactRowGroup>
               <button type="button" className="btn-secondary mt-2" onClick={addDraftStage}>
                 <span className="inline-flex items-center gap-1.5">
                   <PlusIcon className="h-3.5 w-3.5" />

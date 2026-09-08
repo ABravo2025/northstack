@@ -338,7 +338,7 @@ export default function ContactDetailModal({
                 </button>
               ))}
               {addingOpportunity && (
-                <div className="mt-2 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-gray-800">
+                <div className="mt-2 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-dark-line">
                   {linkableOpportunities.length > 0 && (
                     <>
                       <div className="flex items-center gap-1.5">

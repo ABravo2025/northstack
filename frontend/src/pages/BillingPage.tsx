@@ -7,6 +7,7 @@ import TableSkeleton from '../components/common/TableSkeleton';
 import { BriefcaseIcon } from '../components/common/Icons';
 import { formatMoney } from '../lib/currencies';
 import { daysRemainingUntil } from '../lib/trial';
+import { openExternalUrl } from '../lib/nativeBrowser';
 import AddPaymentMethodModal from '../components/common/AddPaymentMethodModal';
 import PlansModal from '../components/common/PlansModal';
 
@@ -184,7 +185,7 @@ export default function BillingPage({ token, tenant, onTenantUpdated }: BillingP
       // 'attachment' disposition already makes Paddle's own response carry a
       // Content-Disposition header that tells the browser to save it — a plain navigation is
       // enough to trigger that, same as 'inline' just opens it in a new tab either way.
-      window.open(url, '_blank', 'noopener,noreferrer');
+      openExternalUrl(url);
     } catch (error) {
       toast.error((error as Error).message);
     } finally {
@@ -275,6 +276,7 @@ export default function BillingPage({ token, tenant, onTenantUpdated }: BillingP
         {subscription.invoices.length === 0 ? (
           <p className="text-sm text-ink-muted">No invoices yet.</p>
         ) : (
+          <div className="full-table-wrap">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-ink-faint">
@@ -319,6 +321,7 @@ export default function BillingPage({ token, tenant, onTenantUpdated }: BillingP
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

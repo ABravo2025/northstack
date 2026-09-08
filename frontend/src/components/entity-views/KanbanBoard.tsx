@@ -1,4 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+
+// Touch pointers get no native HTML5 drag-and-drop (mobile browsers don't fire drag events from
+// touch input at all, so `draggable`/onDragStart below is silently inert there) — this is the
+// minimum distance a touch has to move before it counts as a card drag rather than a tap or a
+// column scroll. Kept small since kanban cards are already deliberately small drop targets.
+const TOUCH_DRAG_THRESHOLD_PX = 8;
 
 export interface KanbanColumn {
   key: string;
@@ -30,6 +36,7 @@ export default function KanbanBoard<T>({
 }: KanbanBoardProps<T>) {
   const [draggingKey, setDraggingKey] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
+  const touchDrag = useRef<{ itemKey: string; startX: number; startY: number; active: boolean } | null>(null);
 
   const itemsByColumn = new Map<string, T[]>();
   for (const col of columns) itemsByColumn.set(col.key, []);
@@ -48,6 +55,41 @@ export default function KanbanBoard<T>({
     onMove(item, columnKey);
   };
 
+  const columnKeyAt = (x: number, y: number): string | undefined =>
+    (document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-kanban-column]') ?? undefined)?.dataset.kanbanColumn;
+
+  const handleCardPointerDown = (e: React.PointerEvent, key: string) => {
+    if (e.pointerType !== 'touch') return;
+    touchDrag.current = { itemKey: key, startX: e.clientX, startY: e.clientY, active: false };
+  };
+
+  const handleCardPointerMove = (e: React.PointerEvent) => {
+    const drag = touchDrag.current;
+    if (!drag) return;
+    if (!drag.active) {
+      const moved = Math.hypot(e.clientX - drag.startX, e.clientY - drag.startY);
+      if (moved < TOUCH_DRAG_THRESHOLD_PX) return;
+      drag.active = true;
+      setDraggingKey(drag.itemKey);
+      e.currentTarget.setPointerCapture(e.pointerId);
+    }
+    e.preventDefault();
+    setDragOverColumn(columnKeyAt(e.clientX, e.clientY) ?? null);
+  };
+
+  const handleCardPointerUp = (e: React.PointerEvent) => {
+    const drag = touchDrag.current;
+    touchDrag.current = null;
+    if (!drag?.active) return;
+    const columnKey = columnKeyAt(e.clientX, e.clientY);
+    if (columnKey) {
+      handleDrop(columnKey);
+    } else {
+      setDraggingKey(null);
+      setDragOverColumn(null);
+    }
+  };
+
   return (
     <div className="kanban-wrap">
       {columns.map((col) => {
@@ -62,6 +104,7 @@ export default function KanbanBoard<T>({
             </div>
             <div
               className={`kanban-body ${dragOverColumn === col.key ? 'drag-over' : ''}`}
+              data-kanban-column={col.key}
               onDragOver={(e) => {
                 e.preventDefault();
                 setDragOverColumn(col.key);
@@ -81,6 +124,11 @@ export default function KanbanBoard<T>({
                     draggable
                     onDragStart={() => setDraggingKey(key)}
                     onDragEnd={() => setDraggingKey(null)}
+                    onPointerDown={(e) => handleCardPointerDown(e, key)}
+                    onPointerMove={handleCardPointerMove}
+                    onPointerUp={handleCardPointerUp}
+                    onPointerCancel={handleCardPointerUp}
+                    style={{ touchAction: draggingKey === key ? 'none' : undefined }}
                   >
                     {renderCard(item)}
                   </div>

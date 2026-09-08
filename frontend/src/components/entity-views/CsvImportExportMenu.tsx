@@ -148,7 +148,7 @@ const CsvImportExportMenu = forwardRef<CsvImportExportMenuHandle, CsvImportExpor
 
       <SlideOver open={importOpen && canImport} title={`Import ${entityLabelPlural} from CSV`} onClose={() => setImportOpen(false)}>
         <div className="nv-field">
-          <p className="text-sm text-gray-600 dark:text-gray-300">
+          <p className="text-sm text-ink-muted dark:text-dark-ink-muted">
             Upload a CSV file with a header row. Not sure of the columns? Download a template below — it has the exact
             column names and one filled-in example row showing the expected format (e.g. dates as YYYY-MM-DD).
           </p>
@@ -179,7 +179,7 @@ const CsvImportExportMenu = forwardRef<CsvImportExportMenuHandle, CsvImportExpor
         )}
         {result && (
           <div className="nv-field">
-            <p className="text-sm font-semibold text-brand-navy dark:text-gray-100">
+            <p className="text-sm font-semibold text-brand-navy dark:text-dark-ink">
               {result.created} {result.created === 1 ? entityLabelSingular.toLowerCase() : entityLabelPlural.toLowerCase()} imported.
             </p>
             {result.errors.length > 0 && (

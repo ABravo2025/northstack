@@ -56,7 +56,7 @@ export default function SearchableSelect({ id, options, value, onChange, placeho
       />
       <Popover open={open} onClose={() => setOpen(false)} anchorRef={anchorRef} width={280}>
         <div className="status-manage-list">
-          {filtered.length === 0 && <p className="text-xs text-gray-500 px-2 py-1">No matches.</p>}
+          {filtered.length === 0 && <p className="text-xs text-ink-muted dark:text-dark-ink-muted px-2 py-1">No matches.</p>}
           {filtered.map((opt) => (
             <button
               key={opt.value}

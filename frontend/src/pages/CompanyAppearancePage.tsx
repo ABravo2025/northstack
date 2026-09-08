@@ -52,7 +52,7 @@ export default function CompanyAppearancePage({ token }: CompanyAppearancePagePr
     <div className="max-w-6xl flex flex-col gap-4">
       <div className="card">
         <h3 className="card-title">Company</h3>
-        <p className="mb-3 text-sm text-gray-500">
+        <p className="mb-3 text-sm text-ink-muted dark:text-dark-ink-muted">
           Applies to compensation amounts across the company (Hourly/Monthly Rate on Employee).
         </p>
         <div className="nv-field max-w-xs">
@@ -73,7 +73,7 @@ export default function CompanyAppearancePage({ token }: CompanyAppearancePagePr
       </div>
       <div className="card">
         <h3 className="card-title">Appearance</h3>
-        <p className="mb-3 text-sm text-gray-500">Choose how Northstack looks on this device.</p>
+        <p className="mb-3 text-sm text-ink-muted dark:text-dark-ink-muted">Choose how Northstack looks on this device.</p>
         <div className="nav">
           {THEME_OPTIONS.map((option) => (
             <button

@@ -68,9 +68,9 @@ export default function MultiSelectDropdown({
       <Popover open={open} onClose={() => setOpen(false)} anchorRef={triggerRef} width={260}>
         <div className="col-visibility-list" style={{ maxHeight: 220, overflowY: 'auto' }}>
           {loading ? (
-            <p className="text-xs text-gray-500 px-2 py-1">Loading…</p>
+            <p className="text-xs text-ink-muted dark:text-dark-ink-muted px-2 py-1">Loading…</p>
           ) : options.length === 0 ? (
-            <p className="text-xs text-gray-500 px-2 py-1">{emptyMessage}</p>
+            <p className="text-xs text-ink-muted dark:text-dark-ink-muted px-2 py-1">{emptyMessage}</p>
           ) : null}
           {!loading &&
             options.map((opt) => (

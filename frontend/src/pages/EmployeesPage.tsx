@@ -39,6 +39,7 @@ import {
 } from '../lib/viewFields';
 import { isLikelyValidEmail } from '../lib/validation';
 import { usePermissions } from '../contexts/PermissionsContext';
+import { usePrimaryAction } from '../contexts/PrimaryActionContext';
 import { useAutoCreateGuard } from '../hooks/useAutoCreateGuard';
 import { COUNTRIES } from '../lib/countries';
 import { CURRENCY_CODES, currencyLabel } from '../lib/currencies';
@@ -416,6 +417,8 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     assignedTimeOffPolicyIds.current = new Set();
     setSlideOverMode('add');
   };
+
+  usePrimaryAction({ label: 'Add employee', onClick: handleOpenAdd });
 
   const handleLoadSampleData = async () => {
     setSeedingSample(true);

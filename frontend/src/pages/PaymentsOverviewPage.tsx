@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { api, type PaymentsOverview } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import TableSkeleton from '../components/common/TableSkeleton';
+import EntityCardList from '../components/common/EntityCardList';
 import CompanyPaymentHistoryModal from '../components/crm/CompanyPaymentHistoryModal';
 import { formatMoney } from '../lib/currencies';
 import { usePermissions } from '../contexts/PermissionsContext';
@@ -93,7 +94,18 @@ export default function PaymentsOverviewPage({ token }: PaymentsOverviewPageProp
               No Companies linked to Stripe yet — open a Company and use "Search on Stripe" under Payments.
             </p>
           ) : (
-            <div className="full-table-wrap">
+            <>
+            <EntityCardList
+              items={overview.companies}
+              getKey={(row) => row.companyId}
+              getInitials={(row) => row.companyName.slice(0, 2).toUpperCase()}
+              getName={(row) => row.companyName}
+              getMeta={(row) =>
+                `${row.summary.refundsCount} refund${row.summary.refundsCount === 1 ? '' : 's'} · ${row.summary.failedCount} failed · ${row.summary.subscriptionStatus ?? 'no subscription'}`
+              }
+              onSelect={(row) => setSelectedCompany({ id: row.companyId, name: row.companyName })}
+            />
+            <div className="full-table-wrap has-mobile-cards">
               <table className="table full-table">
                 <thead>
                   <tr>
@@ -130,6 +142,7 @@ export default function PaymentsOverviewPage({ token }: PaymentsOverviewPageProp
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </>
       )}

@@ -33,6 +33,7 @@ import { applyFilters, applySort, buildCompanyFields, findField, groupableFields
 import { isLikelyValidEmail } from '../lib/validation';
 import { useAutoCreateGuard } from '../hooks/useAutoCreateGuard';
 import { usePermissions } from '../contexts/PermissionsContext';
+import { usePrimaryAction } from '../contexts/PrimaryActionContext';
 
 const PAGE_SIZE = 20;
 const ACTIVE_VIEW_STORAGE_KEY = 'northstack:activeView:company';
@@ -286,6 +287,8 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
     sentCompanyCustomFieldIds.current = new Set();
     setSlideOverMode('add');
   };
+
+  usePrimaryAction({ label: 'Add company', onClick: handleOpenAdd });
 
   // Ready once Name + the founding contact's 3 fields (a Company can't be
   // created without one — see emptyCompanyForm above) + any required custom

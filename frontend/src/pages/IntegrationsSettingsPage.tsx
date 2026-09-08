@@ -369,6 +369,7 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
                 <th>Name</th>
                 <th>Key</th>
                 <th>Scopes</th>
+                <th>Status</th>
                 <th>Last used</th>
                 <th></th>
               </tr>
@@ -389,14 +390,25 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
                       ))}
                     </div>
                   </td>
+                  <td>
+                    {key.revokedAt ? (
+                      <span className="role-chip chip-neutral" title={`Revoked ${formatRelativeOrDate(key.revokedAt)}`}>
+                        Revoked
+                      </span>
+                    ) : (
+                      <span className="role-chip chip-good">Active</span>
+                    )}
+                  </td>
                   <td>{formatRelativeOrDate(key.lastUsedAt)}</td>
                   <td>
-                    <div className="icon-actions">
-                      <button className="icon-btn danger" onClick={() => setRevokingKey(key)}>
-                        <span className="tip">Revoke</span>
-                        <TrashIcon />
-                      </button>
-                    </div>
+                    {!key.revokedAt && (
+                      <div className="icon-actions">
+                        <button className="icon-btn danger" onClick={() => setRevokingKey(key)}>
+                          <span className="tip">Revoke</span>
+                          <TrashIcon />
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}

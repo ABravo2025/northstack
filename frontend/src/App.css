@@ -2180,8 +2180,13 @@ input[type='number'] {
     @apply w-24;
   }
 
+  /* Not flex-col: that forced every child onto its own full-width row,
+     including fixed-size 36px icon buttons (.tb-btn) that should sit
+     together in a row instead of stacking one per line. The base rule's
+     flex-wrap already lets .toolbar-search (w-full below) force itself onto
+     its own line while the small buttons wrap together after it. */
   .page-toolbar {
-    @apply flex-col items-stretch gap-2;
+    @apply gap-2;
   }
 
   .toolbar-search {

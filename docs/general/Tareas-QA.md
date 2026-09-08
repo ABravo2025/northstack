@@ -3874,3 +3874,53 @@ ronda) verdes. Tenant de prueba borrado después.
 La otra mitad de la Unidad 5 (tabla de Webhooks en el mismo lugar) sigue sin construirse — depende
 de que se retome QA-80 primero. El cron de purga de `ApiRequestLog` (90 días) tampoco se construyó
 todavía.
+
+## QA-82 — Fix: toolbar de listas (People/Companies/Contacts/Users) rota en mobile — bug preexistente, no del overhaul de hoy (2026-09-08, en `staging`)
+
+**Por qué existe esta tarea:** Alejandro reportó "en staging sigue sin funcionar correctamente el
+responsive" después de `e99bf4c` ("Mobile-responsive UI overhaul + Capacitor Android foundation",
+pusheado directo a `staging` por otra sesión).
+
+**Investigación:** `staging.joinnorthstack.com` está detrás de Vercel Deployment Protection (SSO),
+no accesible por Playwright/curl externos (ver QA-50 sobre el mismo límite). Se reprodujo local
+contra el mismo código — `main` rebaseado sobre `origin/staging` tras el push anterior de esta
+sesión — con el backend apuntado a la DB de `staging`.
+
+Las dos bugs puntuales que el commit de hoy decía haber arreglado (matriz de Roles/Permissions
+clippeada, editor de stages de Pipelines inalcanzable) sí funcionan al probarlas: la matriz es
+scrolleable de verdad (`overflow-x: auto`, `scrollWidth` > `clientWidth` confirmado), el editor de
+stages abre en un modal full-screen sin clipping.
+
+El bug real es otro, y preexistente (confirmado con `git show` contra el commit inmediato anterior
+a `e99bf4c` — la regla ya estaba ahí antes del overhaul de hoy): la regla mobile de
+`.page-toolbar` (`@media max-width:767px`) forzaba `flex-col items-stretch`, apilando cada hijo del
+toolbar en su propia fila de ancho completo — incluidos los botones de ícono de tamaño fijo (36×36,
+`.tb-btn`: Filter/ColumnVisibility/CSV import-export) que deberían ir juntos en una sola fila.
+Afecta a **todas** las páginas de listado con este patrón (People, Companies, Contacts, Company
+Users): 3-4 filas extra de espacio mayormente vacío antes de llegar al contenido real.
+
+**Fix:** una línea de CSS (`frontend/src/App.css`) — se saca `flex-col items-stretch` de la regla
+mobile, dejando solo `gap-2`; el toolbar vuelve a heredar `flex flex-wrap items-center` de la regla
+base (igual que desktop), y `.toolbar-search` (que ya tiene `w-full` en mobile) sigue forzando su
+propia fila por ser 100% de ancho, con los íconos fluyendo juntos después de esa fila.
+
+### Verificación real (Playwright, viewport 390×844, contra dev server local apuntado a `staging`)
+
+| Página | Antes | Después |
+|---|---|---|
+| People | search, luego 4 filas verticales (1 ícono c/u) | search, luego 1 fila con los 4 íconos |
+| Companies | search, dropdown de tag, luego 4 filas | search, luego 1 fila (dropdown + 4 íconos) |
+| Company Users | search, fila ícono, fila "+ Invite" separada | search, luego 1 fila (ícono + "+ Invite") |
+
+Desktop (1280px) sin cambios — la regla tocada está dentro de `@media (max-width: 767px)`, verificado
+visualmente. `npm run build` (frontend) verde.
+
+### Qué falta
+
+No bloqueante, no reportado por Alejandro, notado de paso — no se tocó en esta ronda:
+- La matriz de Roles/Permissions no tiene columna de etiqueta fija (`sticky`): al scrollear
+  horizontalmente se pierde de vista a qué permiso corresponde cada fila.
+- Las pestañas de Time Off (`My Timeoff/My Requests/Approvals/Balances`) y tablas cortas tipo
+  "Pending invitations" son scrolleables por swipe pero sin ninguna señal visual de que hay más
+  contenido a la derecha (mismo patrón `.views-bar`/`.full-table-wrap`, scrollbar oculto a propósito
+  en toda la app — no es un bug nuevo, pero podría confundir en mobile).

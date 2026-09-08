@@ -577,7 +577,12 @@
 }
 
 .sidebar {
-  @apply fixed inset-y-0 left-0 z-30 flex w-64 -translate-x-full flex-col overflow-y-auto border-r border-line bg-surface-0 p-3 transition-transform duration-200 dark:border-dark-line dark:bg-dark-page md:static md:z-auto md:w-48 md:shrink-0 md:translate-x-0 md:overflow-visible md:transition-[width];
+  /* z-40, above .mobile-tabbar/.primary-action-fab (both z-30) — otherwise, since those two
+     render later in the DOM, an equal z-index makes them paint on top of the drawer's own bottom
+     edge on mobile, hiding whatever sits there (the Settings link in .sidebar-footer, found by
+     the user 2026-09-08 testing the mobile drawer on a real phone: it scrolled into that band and
+     visually disappeared behind the tabbar). */
+  @apply fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col overflow-y-auto border-r border-line bg-surface-0 p-3 transition-transform duration-200 dark:border-dark-line dark:bg-dark-page md:static md:z-auto md:w-48 md:shrink-0 md:translate-x-0 md:overflow-visible md:transition-[width];
 }
 
 .sidebar.mobile-open {
@@ -585,7 +590,10 @@
 }
 
 .sidebar-backdrop {
-  @apply fixed inset-0 z-20 bg-black/40 md:hidden;
+  /* z-35 — above .mobile-tabbar/.primary-action-fab (z-30) so both are correctly dimmed/covered
+     while the drawer is open too, not just the page content behind them; below .sidebar (z-40)
+     itself. */
+  @apply fixed inset-0 z-[35] bg-black/40 md:hidden;
 }
 
 .sidebar-collapsed {

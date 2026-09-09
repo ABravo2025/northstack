@@ -1,0 +1,62 @@
+name: Build Android APK
+
+# Builds an installable (unsigned) debug APK of the Capacitor-wrapped app — the "first APK" checkpoint
+# from the mobile-responsive/Capacitor foundation work, not a Play Store release build (that needs a
+# signing keystore + Play Console, deliberately out of scope here). Runs on every push to main that
+# touches the frontend, and on demand via workflow_dispatch (Actions tab -> this workflow -> Run
+# workflow) so it can be tried out from a branch before merging.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/android-build.yml'
+  workflow_dispatch: {}
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      # --mode capacitor picks up frontend/.env.capacitor (VITE_API_BASE_URL=https://app.joinnorthstack.com)
+      # so the packaged app talks to production over an absolute URL — the Capacitor WebView has no
+      # "same origin" to fall back to the way the browser build does.
+      - name: Build the web bundle for Capacitor
+        working-directory: frontend
+        run: npm run build:android
+
+      - name: Sync the Capacitor Android project with the built bundle
+        working-directory: frontend
+        run: npx cap sync android
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      # gradlew is committed without the executable bit (generated on Windows, where that bit isn't
+      # tracked) — set it explicitly rather than relying on git to have preserved it.
+      - name: Build debug APK
+        working-directory: frontend/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: northstack-debug-apk
+          path: frontend/android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30

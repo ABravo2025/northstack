@@ -503,14 +503,23 @@ export interface TagDefinition {
 // In-app notifications, minimal version (docs/tareas/specredisenosalesv2.md
 // §3.9). `message` is already-rendered text — nothing to resolve/compute on
 // the frontend.
-export type NotificationType = 'opportunity_stage_changed' | 'opportunity_stalled';
+export type NotificationType =
+  | 'opportunity_stage_changed'
+  | 'opportunity_stalled'
+  | 'stripe_charge_refunded'
+  | 'stripe_charge_failed'
+  | 'stripe_payment_failed'
+  | 'stripe_subscription_past_due'
+  | 'stripe_subscription_canceled'
+  | 'time_off_requested'
+  | 'time_off_decided';
 
 export interface Notification {
   id: string;
   tenantId: string;
   userId: string;
   type: NotificationType;
-  entityType: TaskEntityType;
+  entityType: ActivityEntityType;
   entityId: string;
   message: string;
   read: boolean;

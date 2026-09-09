@@ -1390,20 +1390,30 @@ enum NotificationType {
   stripe_payment_failed
   stripe_subscription_past_due
   stripe_subscription_canceled
+  // Time Off — mirrors the recipients of the existing pending/decided emails
+  // (timeOffRequestService.ts), entityType is always 'timeOffRequest'.
+  time_off_requested
+  time_off_decided
 }
 
 model Notification {
-  id         String           @id @default(uuid())
+  id         String             @id @default(uuid())
   tenantId   String
-  tenant     Tenant           @relation(fields: [tenantId], references: [id])
+  tenant     Tenant             @relation(fields: [tenantId], references: [id])
   userId     String
-  user       User             @relation(fields: [userId], references: [id])
+  user       User               @relation(fields: [userId], references: [id])
   type       NotificationType
-  entityType EntityType
+  // ActivityEntityType, not the narrower EntityType — Time Off needed
+  // 'timeOffRequest', which only exists on the broader enum (EntityType is
+  // reserved for entities with their own custom fields/statuses/saved views,
+  // none of which apply to a TimeOffRequest). Every value Notification has
+  // ever used ('opportunity', 'company') exists on both enums, so this is a
+  // widening, not a breaking change to existing rows.
+  entityType ActivityEntityType
   entityId   String
   message    String
-  read       Boolean          @default(false)
-  createdAt  DateTime         @default(now())
+  read       Boolean            @default(false)
+  createdAt  DateTime           @default(now())
 
   @@index([tenantId, userId, read])
 }
@@ -1566,7 +1576,7 @@ model ApiKey {
   revokedAt       DateTime?
   createdAt       DateTime  @default(now())
 
-  requestLogs     ApiRequestLog[]
+  requestLogs ApiRequestLog[]
 
   @@index([tenantId, revokedAt])
 }
@@ -1600,22 +1610,22 @@ model ApiRequestLog {
 // no separate deletedAt) — DELETE /api/integrations/webhooks/:id sets it false, same as an owner
 // manually pausing a subscription; deliveries stay attached and readable either way.
 model WebhookSubscription {
-  id              String    @id @default(uuid())
+  id              String   @id @default(uuid())
   tenantId        String
-  tenant          Tenant    @relation(fields: [tenantId], references: [id])
+  tenant          Tenant   @relation(fields: [tenantId], references: [id])
   url             String
   secretEncrypted String
   events          String[]
-  isActive        Boolean   @default(true)
+  isActive        Boolean  @default(true)
   // Flips true after 5 CONSECUTIVE delivery failures for this subscription (not 5 failures total)
   // — same "reconnect" signal as StripeConnection.needsAttention. Stops the retry cron from
   // generating more traffic against a URL that's stopped working until the owner reviews it.
-  needsAttention  Boolean   @default(false)
+  needsAttention  Boolean  @default(false)
   createdByUserId String
-  createdByUser   User      @relation(fields: [createdByUserId], references: [id])
-  createdAt       DateTime  @default(now())
+  createdByUser   User     @relation(fields: [createdByUserId], references: [id])
+  createdAt       DateTime @default(now())
 
-  deliveries      WebhookDelivery[]
+  deliveries WebhookDelivery[]
 
   @@index([tenantId])
 }

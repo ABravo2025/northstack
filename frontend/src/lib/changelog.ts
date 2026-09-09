@@ -10,6 +10,87 @@ export interface ChangelogEntry {
 // for the person using the app, not as engineering commit messages.
 export const CHANGELOG_ENTRIES: ChangelogEntry[] = [
   {
+    id: '2026-09-09-timeoff-notifications',
+    date: '2026-09-09',
+    title: 'Time Off shows up in your notifications',
+    description:
+      'Requesting time off now notifies your manager (and the account owner) right away, and approving or denying a request notifies the employee — both in the bell icon, not just email.',
+  },
+  {
+    id: '2026-09-08-mobile-android',
+    date: '2026-09-08',
+    title: 'Northstack on mobile, and a downloadable Android app',
+    description:
+      'The whole app is now redesigned for phones and tablets — tables, panels, and navigation all adapt to a smaller screen. An early Android app build is also available for testing.',
+  },
+  {
+    id: '2026-09-08-private-api',
+    date: '2026-09-08',
+    title: 'Private API and API keys',
+    description: 'Generate API keys from Settings to read and write your data programmatically. Full reference docs live at /developers.',
+  },
+  {
+    id: '2026-09-07-custom-roles',
+    date: '2026-09-07',
+    title: 'Custom roles and permissions',
+    description:
+      'Replace the fixed Owner/Admin/Member roles with your own — control exactly what each role can view, edit, and approve, down to individual fields.',
+  },
+  {
+    id: '2026-08-31-csv',
+    date: '2026-08-31',
+    title: 'CSV import/export for Companies and Contacts',
+    description:
+      'Companies and Contacts now support the same CSV export, template download, and import that Employees already had, plus a few Employee CSV fixes.',
+  },
+  {
+    id: '2026-08-30-activity-log',
+    date: '2026-08-30',
+    title: 'Activity Log',
+    description: "See a full history of who changed what and when, on any record's own Activity tab or the tenant-wide feed in Settings.",
+  },
+  {
+    id: '2026-08-24-notifications',
+    date: '2026-08-24',
+    title: 'In-app notifications',
+    description: 'The bell icon in the header now surfaces real-time updates, starting with Opportunity stage changes and Stripe billing alerts.',
+  },
+  {
+    id: '2026-08-23-google-calendar',
+    date: '2026-08-23',
+    title: 'Google Calendar sync and birthdays',
+    description:
+      "Connect Google Calendar to sync Tasks and Time Off both ways, give Tasks a specific time of day, and see the whole team's birthdays and time off on one calendar.",
+  },
+  {
+    id: '2026-08-21-billing',
+    date: '2026-08-21',
+    title: 'Real subscription billing',
+    description:
+      'Subscriptions now run through real payment providers — Paddle internationally, Mercado Pago in Argentina — with plan upgrades, downgrades, and billing history in Settings.',
+  },
+  {
+    id: '2026-08-13-signup-plans',
+    date: '2026-08-13',
+    title: 'Plans and self-service signup',
+    description:
+      'New workspaces sign up with email verification and choose a plan (Starter or Growth) up front. Existing workspaces can see and change their plan from Settings.',
+  },
+  {
+    id: '2026-08-09-payroll',
+    date: '2026-08-09',
+    title: 'Payroll',
+    description:
+      'Track compensation, run payroll per pay period, handle one-off payments and adjustments, and generate payslip PDFs — all from a new Payroll section.',
+  },
+  {
+    id: '2026-07-30-crm-redesign',
+    date: '2026-07-30',
+    title: 'Companies, Contacts, Opportunities, and Pipelines replace Clients',
+    description:
+      'Clients has been replaced by a full CRM: Companies and Contacts with a hierarchy, Opportunities tracked through custom Pipelines with a Kanban board, plus Tasks and Notes you can attach to any record.',
+  },
+  {
     id: '2026-07-23-column-controls',
     date: '2026-07-23',
     title: 'Full control over table columns',

@@ -193,12 +193,13 @@ Catálogo completo (qué está construido, qué es solo posible hoy, qué está 
   inglés.
 - [ ] **Sistema de logs de auditoría por usuario**: cuándo loguea y qué movimientos/modificaciones
   realiza dentro del sistema. Sin empezar, sin detalle.
-- [ ] **Notificaciones in-app** (ícono de campana con contador, dropdown de recientes): distinto del
-  canal de email ya existente. Se solapa conceptualmente con Slack/webhooks salientes — conviene
-  diseñar un solo modelo de "evento" compartido entre los canales (in-app, email, Slack, webhook)
-  antes de construir cualquiera. **2026-08-22**: para el caso puntual de recordatorios de Tasks/Time
-  Off, se optó por sync a Google Calendar en vez de esto (ver el ítem de OAuth de Google arriba) —
-  sigue sin existir nada in-app para el resto de los eventos de la plataforma.
+- [x] **Notificaciones in-app** (ícono de campana con contador, dropdown de recientes): construido
+  2026-08-24 (Sales v2 Unit 7, spec 3.9) y 2026-09-09 (Time Off). Productores actuales: Opportunity
+  stage change, cron de deal estancado, eventos de billing de Stripe, Time Off solicitado/decidido.
+  Sigue sin existir un modelo de "evento" compartido entre canales (in-app/email/Slack/webhook) —
+  cada productor llama a `createNotification` directo, no hay diseño unificado todavía; evaluar si
+  vale la pena antes de sumar el próximo productor (ver también el backlog de preferencias de
+  notificación por usuario, pendiente de construir).
 - [ ] **Historial de valores previos de custom fields** (con retención por tiempo): evaluado y
   pospuesto a propósito.
 - [ ] **Hallazgos de seguridad sin resolver de la auditoría 2026-07-16** (`docs/informe-tecnico/

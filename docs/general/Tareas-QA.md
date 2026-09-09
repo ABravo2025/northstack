@@ -3924,3 +3924,51 @@ No bloqueante, no reportado por Alejandro, notado de paso — no se tocó en est
   "Pending invitations" son scrolleables por swipe pero sin ninguna señal visual de que hay más
   contenido a la derecha (mismo patrón `.views-bar`/`.full-table-wrap`, scrollbar oculto a propósito
   en toda la app — no es un bug nuevo, pero podría confundir en mobile).
+
+## QA-83 — Notificaciones de Time Off + resurrección del changelog (2026-09-09, en `main`/producción)
+
+**Por qué existe esta tarea:** Alejandro reportó que nunca vio funcionar ni la campanita de
+notificaciones ni el ícono de changelog. Investigación encontró dos causas distintas: (1) la
+campanita está bien conectada de punta a punta, pero la tabla `Notification` en producción estaba
+**vacía** (0 filas) — nunca se disparó ningún productor real (solo Opportunity stage-change, cron de
+deal estancado, y eventos de Stripe billing generan notificaciones; nada de Time Off/HR); (2) el
+changelog (`frontend/src/lib/changelog.ts`) es un array hardcodeado que no se actualizaba desde el
+23 de julio, pese a que se shippeó Custom Roles, CSV overhaul, Payments, Sales v2, notificaciones
+in-app, Activity Log y el overhaul mobile/Android sin anunciar nada ahí.
+
+Esta tarea agrega dos productores nuevos de `Notification` para Time Off y repuebla el changelog con
+entradas reales de todo lo shippeado desde el 30 de julio. También agrega una regla en
+`docs/Skills/Skills-Development.md` para que todo push a staging/producción con cambio visible sume
+una entrada al changelog como parte de la misma tarea — no vuelva a quedar abandonado.
+
+### Cambios de schema (ya aplicados en producción)
+
+- `NotificationType` suma `time_off_requested` y `time_off_decided`.
+- `Notification.entityType` pasó de `EntityType` a `ActivityEntityType` (el enum más chico no
+  incluía `timeOffRequest`). Verificado contra la DB de producción antes del push: la tabla estaba
+  vacía, así que la conversión de tipo no tuvo datos existentes que migrar. Verificado después del
+  push: `NotificationType` tiene los 9 valores esperados, la columna `entityType` es
+  `ActivityEntityType`.
+
+### Qué probar (requiere 2 cuentas del mismo tenant: un Employee con manager asignado, y el owner)
+
+1. **Time off pendiente (con manager):** como el Employee, crear un Time Off Request contra una
+   policy con `requiresApproval = true`. Loguearse como el manager asignado (si tiene cuenta de
+   usuario) y como el owner del tenant — ambos deberían ver un item nuevo en la campanita
+   ("`<empleado>` requested `<policy>` (`<fechas>`)"), tipo `time_off_requested`.
+2. **Decisión:** como el manager u owner, aprobar o rechazar ese request desde Time Off →
+   Approvals. Loguearse como el Employee — debería ver una notificación nueva ("Your `<policy>`
+   request (`<fechas>`) was approved/rejected"), tipo `time_off_decided`.
+3. **Auto-aprobado:** crear un Time Off Request contra una policy con `requiresApproval = false`.
+   El Employee debería recibir directamente la notificación `time_off_decided` ("...was
+   automatically approved"), sin pasar por `time_off_requested`.
+4. **Sin manager asignado:** repetir el caso 1 con un Employee sin `managerId`. Antes de este fix,
+   nadie se enteraba de que existía el request (ni email ni notificación); ahora el owner debería
+   recibir igual la notificación `time_off_requested` aunque no haya manager.
+5. **Bell general:** confirmar que las notificaciones de Opportunity/Stripe (si hay alguna
+   disponible para generar) siguen funcionando igual que antes — este cambio no debería haberlas
+   tocado, solo se amplió el tipo de `entityType`.
+6. **Changelog:** abrir el ícono de changelog en el header (desktop y mobile) y confirmar que
+   muestra las 13 entradas nuevas (más nuevas primero, desde "Time Off shows up in your
+   notifications" hasta "Companies, Contacts, Opportunities, and Pipelines replace Clients"),
+   sin romper el layout ni el estado de "visto" (`localStorage['northstack:changelogLastSeen']`).

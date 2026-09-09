@@ -5,6 +5,7 @@ import { sendTimeOffRequestDecidedEmail, sendTimeOffRequestPendingEmail } from '
 import { syncTimeOffCalendarEvent } from '../integrations/googleCalendarSyncService.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { timeOffRequestActivityFieldConfig } from '../activity/fieldConfigs/timeOffRequestFieldConfig.js';
+import { createNotification } from '../notifications/notificationService.js';
 import { canDecideTimeOff } from '../auth/permissionService.js';
 import type { AuthenticatedUser } from '../auth/authService.js';
 import type { TimeOffRequest, TimeOffRequestStatus } from '@prisma/client';
@@ -131,16 +132,51 @@ export async function createTimeOffRequest(
         autoApproved: true,
       }).catch((err) => console.error('Failed to send time off decided email:', err));
     }
-  } else if (manager) {
-    sendTimeOffRequestPendingEmail({
-      to: manager.email,
-      approverName: manager.firstName,
-      employeeName,
-      policyName: policy.name,
-      startDate: formatDate(startDate),
-      endDate: formatDate(endDate),
-      daysRequested,
-    }).catch((err) => console.error('Failed to send time off pending email:', err));
+
+    if (employee.userId) {
+      await createNotification({
+        tenantId: input.tenantId,
+        userId: employee.userId,
+        type: 'time_off_decided',
+        entityType: 'timeOffRequest',
+        entityId: request.id,
+        message: `Your ${policy.name} request (${formatDate(startDate)} to ${formatDate(endDate)}) was automatically approved`,
+      });
+    }
+  } else {
+    // Needs a decision — notify whoever can act on it: the assigned manager
+    // (if any) and always the owner, since a request with no manager
+    // assigned would otherwise notify nobody (canDecideTimeOff below still
+    // lets a custom-role admin decide it, but they'd have no way to know it
+    // exists). Unlike the email above, this doesn't require a manager.
+    if (manager) {
+      sendTimeOffRequestPendingEmail({
+        to: manager.email,
+        approverName: manager.firstName,
+        employeeName,
+        policyName: policy.name,
+        startDate: formatDate(startDate),
+        endDate: formatDate(endDate),
+        daysRequested,
+      }).catch((err) => console.error('Failed to send time off pending email:', err));
+    }
+
+    const owner = await prisma.user.findFirst({ where: { tenantId: input.tenantId, role: 'owner' } });
+    const approverUserIds = new Set<string>();
+    if (manager?.userId) approverUserIds.add(manager.userId);
+    if (owner) approverUserIds.add(owner.id);
+
+    const message = `${employeeName} requested ${policy.name} (${formatDate(startDate)} to ${formatDate(endDate)})`;
+    for (const userId of approverUserIds) {
+      await createNotification({
+        tenantId: input.tenantId,
+        userId,
+        type: 'time_off_requested',
+        entityType: 'timeOffRequest',
+        entityId: request.id,
+        message,
+      });
+    }
   }
 
   await bestEffort(
@@ -274,6 +310,17 @@ export async function decideTimeOffRequest(
       decision,
       decisionNote,
     }).catch((err) => console.error('Failed to send time off decided email:', err));
+
+    if (employee.userId) {
+      await createNotification({
+        tenantId,
+        userId: employee.userId,
+        type: 'time_off_decided',
+        entityType: 'timeOffRequest',
+        entityId: requestId,
+        message: `Your ${policy.name} request (${formatDate(request.startDate)} to ${formatDate(request.endDate)}) was ${decision}${decisionNote ? `: ${decisionNote}` : ''}`,
+      });
+    }
   }
 
   await recordActivity({

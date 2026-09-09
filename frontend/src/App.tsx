@@ -14,6 +14,7 @@ import AcceptInvitePage from './pages/AcceptInvitePage';
 import ContractConfirmationPage from './pages/ContractConfirmationPage';
 import OverviewPage from './pages/OverviewPage';
 import HelpPage from './pages/HelpPage';
+import GuidePage from './pages/GuidePage';
 import DashboardsLayout from './layouts/DashboardsLayout';
 import DashboardsHrPage from './pages/dashboards/DashboardsHrPage';
 import DashboardsTimeOffPage from './pages/dashboards/DashboardsTimeOffPage';
@@ -260,6 +261,7 @@ export default function App() {
       >
         <Route path="/overview" element={<OverviewPage token={token ?? ''} user={user} />} />
         <Route path="/help" element={<HelpPage />} />
+        <Route path="/guide" element={<GuidePage />} />
         <Route path="/hr/dashboard" element={<Navigate to="/dashboards/hr" replace />} />
         <Route path="/dashboards" element={<DashboardsLayout token={token ?? ''} />}>
           <Route index element={<Navigate to="/dashboards/hr" replace />} />

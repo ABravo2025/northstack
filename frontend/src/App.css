@@ -263,32 +263,377 @@
 }
 
 .faq-list {
-  @apply flex flex-col;
+  @apply flex flex-col gap-2;
 }
 
 .faq-item {
-  @apply border-b border-line py-3 last:border-0 last:pb-0 dark:border-dark-line;
+  @apply rounded-lg border border-line bg-surface-0 dark:border-dark-line dark:bg-dark-page;
+}
+
+.faq-item[open] {
+  @apply border-line-strong dark:border-gray-600;
 }
 
 .faq-question {
-  @apply cursor-pointer list-none text-sm font-semibold text-brand-navy select-none dark:text-dark-ink;
+  @apply flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-semibold text-brand-navy select-none dark:text-dark-ink;
 }
 
 .faq-question::-webkit-details-marker {
   display: none;
 }
 
-.faq-question::before {
-  content: '+';
-  @apply mr-2 inline-block w-3 text-accent;
+.faq-chevron {
+  @apply h-4 w-4 shrink-0 text-ink-faint transition-transform dark:text-dark-ink-faint;
 }
 
-.faq-item[open] .faq-question::before {
-  content: '−';
+.faq-item[open] .faq-chevron {
+  @apply rotate-180;
 }
 
 .faq-answer {
-  @apply mt-2 pl-5 text-sm text-ink-muted dark:text-dark-ink-muted;
+  @apply px-4 pb-3.5 text-sm text-ink-muted dark:text-dark-ink-muted;
+}
+
+/* ---------------------------------------------------------------
+   Help Center — User Guide + Help & FAQ (GuidePage.tsx, HelpPage.tsx).
+   Two-column "docs site" layout: a sticky left nav (.help-nav) + a
+   content column, reused as-is by both pages with different content.
+   --------------------------------------------------------------- */
+
+.help-lede {
+  @apply mt-3 mb-1 max-w-2xl text-sm text-ink-muted dark:text-dark-ink-muted;
+}
+
+.help-lede strong {
+  @apply font-semibold text-brand-navy dark:text-dark-ink;
+}
+
+.help-crosslink {
+  @apply mb-6 text-xs text-ink-muted dark:text-dark-ink-muted;
+}
+
+.help-crosslink a {
+  @apply font-semibold text-accent no-underline hover:underline;
+}
+
+.help-shell {
+  @apply grid grid-cols-[216px_minmax(0,1fr)] gap-9 pt-2;
+}
+
+.help-nav {
+  @apply sticky top-0 max-h-[calc(100vh-120px)] self-start overflow-y-auto pr-1;
+}
+
+.help-nav-group {
+  @apply mb-4;
+}
+
+.help-nav-group.divided {
+  @apply mt-1 border-t border-line pt-3 dark:border-dark-line;
+}
+
+.help-nav-label {
+  @apply mb-1.5 px-2 text-[11px] font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint;
+}
+
+.help-nav-link {
+  @apply flex items-center gap-2 rounded-md px-2 py-1.5 text-xs font-medium text-ink-muted no-underline dark:text-dark-ink-muted;
+}
+
+.help-nav-link svg {
+  @apply h-3.5 w-3.5 shrink-0 opacity-70;
+}
+
+.help-nav-link:hover {
+  @apply bg-surface-2 text-brand-navy dark:bg-white/[0.06] dark:text-dark-ink;
+}
+
+.help-nav-link.active {
+  @apply bg-accent-tint font-semibold text-accent;
+}
+
+.help-nav-link.active svg {
+  @apply opacity-100;
+}
+
+.help-content {
+  @apply min-w-0;
+}
+
+.help-module-map {
+  @apply mb-10 grid grid-cols-3 gap-2.5;
+}
+
+.help-module-card {
+  @apply block rounded-lg border border-line bg-surface-0 p-3.5 no-underline dark:border-dark-line dark:bg-dark-page;
+}
+
+.help-module-card:hover {
+  @apply border-accent;
+}
+
+.help-module-card-top {
+  @apply mb-1.5 flex items-center gap-2;
+}
+
+.help-module-card-top svg {
+  @apply h-4 w-4 shrink-0 text-accent;
+}
+
+.help-module-card-top span {
+  @apply text-sm font-bold text-brand-navy dark:text-dark-ink;
+}
+
+.help-module-card p {
+  @apply m-0 text-xs text-ink-muted dark:text-dark-ink-muted;
+}
+
+.help-section {
+  @apply scroll-mt-5 border-t border-line pt-9 first:border-0 first:pt-0 dark:border-dark-line;
+}
+
+.help-eyebrow {
+  @apply mb-2 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-accent uppercase;
+}
+
+.help-eyebrow svg {
+  @apply h-3.5 w-3.5;
+}
+
+.help-section h2 {
+  @apply mb-1.5 text-xl font-extrabold tracking-tight text-brand-navy dark:text-dark-ink;
+}
+
+.help-intro {
+  @apply mb-5 max-w-2xl text-sm text-ink-muted dark:text-dark-ink-muted;
+}
+
+.help-sub h3 {
+  @apply mt-6 mb-2 text-[15px] font-bold text-brand-navy first:mt-0 dark:text-dark-ink;
+}
+
+.help-sub p {
+  @apply mb-2.5 max-w-2xl text-sm text-ink-muted dark:text-dark-ink-muted;
+}
+
+.help-sub ul,
+.help-sub ol {
+  @apply mb-3.5 max-w-2xl pl-5 text-sm text-ink-muted dark:text-dark-ink-muted;
+}
+
+.help-sub li {
+  @apply mb-1.5;
+}
+
+.help-sub li strong {
+  @apply font-semibold text-brand-navy dark:text-dark-ink;
+}
+
+.help-tagrow {
+  @apply mb-3 flex flex-wrap gap-1.5;
+}
+
+.help-pill {
+  @apply inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold whitespace-nowrap;
+}
+
+.help-pill-role {
+  @apply border-brand-blue/30 bg-brand-blue/10 text-brand-blue dark:border-brand-blue-light/40 dark:bg-brand-blue-light/10 dark:text-brand-blue-light;
+}
+
+.help-pill-plan {
+  @apply border-accent/30 bg-accent-tint text-accent;
+}
+
+.help-callout {
+  @apply mb-4 flex max-w-2xl gap-2.5 rounded-lg border p-3 text-[13px];
+}
+
+.help-callout svg {
+  @apply mt-0.5 h-4 w-4 shrink-0;
+}
+
+.help-callout p {
+  @apply m-0 text-[13px];
+}
+
+.help-callout strong {
+  @apply font-semibold text-brand-navy dark:text-dark-ink;
+}
+
+.help-callout-note {
+  @apply border-brand-blue/25 bg-brand-blue/10 text-ink dark:border-brand-blue-light/30 dark:bg-brand-blue-light/10 dark:text-dark-ink;
+}
+
+.help-callout-note svg {
+  @apply text-brand-blue dark:text-brand-blue-light;
+}
+
+.help-callout-warn {
+  @apply border-amber-400/40 bg-amber-50 text-ink dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-dark-ink;
+}
+
+.help-callout-warn svg {
+  @apply text-amber-600 dark:text-amber-400;
+}
+
+.help-callout-danger {
+  @apply border-red-300 bg-red-50 text-ink dark:border-red-900 dark:bg-red-950/40 dark:text-dark-ink;
+}
+
+.help-callout-danger svg {
+  @apply text-red-600 dark:text-red-400;
+}
+
+.help-steps {
+  counter-reset: help-step;
+  @apply mb-4 ml-2.5 max-w-2xl list-none border-l border-line pl-0 dark:border-dark-line;
+}
+
+.help-steps li {
+  counter-increment: help-step;
+  @apply relative mb-3.5 pb-0 pl-7 text-sm text-ink-muted last:mb-0 dark:text-dark-ink-muted;
+}
+
+.help-steps li::before {
+  content: counter(help-step);
+  @apply absolute top-[-1px] left-[-11px] flex h-5 w-5 items-center justify-center rounded-full border border-line-strong bg-surface-1 font-mono text-[10px] font-semibold text-brand-navy;
+}
+
+/* Tailwind v4 gotcha (see design-system.md §1): a `dark:` variant `@apply`-ed onto a rule
+   targeting `::before` compiles to an empty, invalid `:where()` block and gets dropped
+   entirely — same class of bug already worked around for `.sidebar-link.active` below.
+   Scoping via the literal `.dark` ancestor instead of the `dark:` variant sidesteps it. */
+.dark .help-steps li::before {
+  @apply border-dark-line bg-dark-surface text-dark-ink;
+}
+
+.help-steps li strong {
+  @apply font-semibold text-brand-navy dark:text-dark-ink;
+}
+
+.help-table-wrap {
+  @apply mb-5 overflow-x-auto rounded-lg border border-line dark:border-dark-line;
+}
+
+table.help-ref {
+  @apply w-full min-w-[380px] border-collapse text-[13px];
+}
+
+table.help-ref th {
+  @apply border-b border-line bg-surface-2 px-3.5 py-2 text-left text-[11px] font-bold tracking-wide text-ink-faint uppercase whitespace-nowrap dark:border-dark-line dark:bg-dark-raised dark:text-dark-ink-faint;
+}
+
+table.help-ref td {
+  @apply border-b border-line px-3.5 py-2 align-top text-ink-muted dark:border-dark-line dark:text-dark-ink-muted;
+}
+
+table.help-ref tr:last-child td {
+  @apply border-0;
+}
+
+table.help-ref td:first-child {
+  @apply font-semibold whitespace-nowrap text-brand-navy dark:text-dark-ink;
+}
+
+table.help-ref td.num {
+  @apply font-mono text-brand-navy tabular-nums dark:text-dark-ink;
+}
+
+table.help-ref td.yes {
+  @apply font-bold text-emerald-600 dark:text-emerald-400;
+}
+
+table.help-ref td.no {
+  @apply text-ink-faint dark:text-dark-ink-faint;
+}
+
+.help-fieldgrid {
+  @apply mb-5 grid max-w-2xl grid-cols-2 gap-x-6 gap-y-0;
+}
+
+.help-fielddef {
+  @apply border-b border-line py-2 dark:border-dark-line;
+}
+
+.help-fielddef dt {
+  @apply text-[13px] font-semibold text-brand-navy dark:text-dark-ink;
+}
+
+.help-fielddef dd {
+  @apply m-0 mt-0.5 text-[13px] text-ink-muted dark:text-dark-ink-muted;
+}
+
+.help-search {
+  @apply relative mb-6 max-w-sm;
+}
+
+.help-search svg {
+  @apply pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-ink-faint dark:text-dark-ink-faint;
+}
+
+.help-search input {
+  @apply w-full rounded-md border border-line-strong bg-surface-1 py-2 pr-3 pl-8 text-sm text-brand-navy dark:border-gray-600 dark:bg-gray-800 dark:text-dark-ink;
+}
+
+.help-faq-cat {
+  @apply mb-7 scroll-mt-5;
+}
+
+.help-faq-cat-title {
+  @apply mb-2.5 flex items-center gap-1.5 text-[11px] font-bold tracking-wide text-accent uppercase;
+}
+
+.help-faq-cat-title svg {
+  @apply h-3.5 w-3.5;
+}
+
+.help-empty {
+  @apply py-4 text-sm text-ink-faint dark:text-dark-ink-faint;
+}
+
+.help-contact-card {
+  @apply scroll-mt-5;
+}
+
+@media (max-width: 900px) {
+  .help-shell {
+    @apply grid-cols-1;
+  }
+
+  .help-nav {
+    @apply static mb-2 flex max-h-none gap-1.5 overflow-x-auto border-b border-line pb-3 dark:border-dark-line;
+  }
+
+  .help-nav-group {
+    display: contents;
+  }
+
+  .help-nav-group.divided {
+    @apply border-0 pt-0;
+  }
+
+  .help-nav-label {
+    @apply hidden;
+  }
+
+  .help-nav-link {
+    @apply shrink-0 bg-surface-2 whitespace-nowrap dark:bg-white/[0.06];
+  }
+
+  .help-module-map {
+    @apply grid-cols-2;
+  }
+
+  .help-fieldgrid {
+    @apply grid-cols-1;
+  }
+}
+
+@media (max-width: 560px) {
+  .help-module-map {
+    @apply grid-cols-1;
+  }
 }
 
 .changelog-trigger {

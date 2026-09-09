@@ -128,6 +128,16 @@ export default function TopBar({ user, token, onLogout, onMenuClick }: TopBarPro
               role="menuitem"
               onClick={() => {
                 setOpen(false);
+                navigate('/guide');
+              }}
+            >
+              User Guide
+            </button>
+            <button
+              className="user-menu-item"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
                 navigate('/help');
               }}
             >

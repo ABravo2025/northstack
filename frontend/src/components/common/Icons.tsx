@@ -370,3 +370,69 @@ export function ClockIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+// Help Center (GuidePage/HelpPage) — module map + doc nav icons not already covered above.
+export function RocketIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M5 16c-1.5 1.5-2 5-2 5s3.5-.5 5-2" />
+      <path d="M12 15c4-1 7-6 7-11-5 0-10 3-11 7-.6 2 .5 3.5 1.5 4.5s2.5 2.1 4.5 1.5Z" />
+      <circle cx="14.5" cy="9.5" r="1.5" />
+    </svg>
+  );
+}
+
+export function PlugIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M9 2v4M15 2v4" />
+      <path d="M6 6h12v4a6 6 0 0 1-12 0V6Z" />
+      <path d="M12 16v6" />
+    </svg>
+  );
+}
+
+export function FormIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="4" y="2.5" width="16" height="19" rx="2" />
+      <path d="M8 8h8M8 12h8M8 16h5" />
+    </svg>
+  );
+}
+
+export function DeviceIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="6.5" y="2.5" width="11" height="19" rx="2.2" />
+      <path d="M11 18.2h2" />
+    </svg>
+  );
+}
+
+// Help Center callout boxes — note/warn/danger.
+export function InfoIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 16v-4M12 8h.01" />
+    </svg>
+  );
+}
+
+export function AlertTriangleIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M12 9v4M12 17h.01M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+    </svg>
+  );
+}
+
+export function AlertCircleIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <circle cx="12" cy="12" r="10" />
+      <path d="m15 9-6 6M9 9l6 6" />
+    </svg>
+  );
+}

@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronDownIcon, MenuIcon, UserCircleIcon } from '../common/Icons';
 import SlideOver from '../common/SlideOver';
-import ChangelogMenu from './ChangelogMenu';
 import NotificationBell from './NotificationBell';
 import { useToast } from '../common/ToastProvider';
 import { api } from '../../api';
@@ -93,9 +92,9 @@ export default function TopBar({ user, token, onLogout, onMenuClick }: TopBarPro
         <button type="button" className="menu-toggle" onClick={onMenuClick} aria-label="Open menu">
           <MenuIcon className="h-5 w-5" />
         </button>
-        {/* Below md the horizontal wordmark (~195px) overlaps the bell/changelog buttons that
-            follow it in this flex row (header is too narrow for both) — swap to the square
-            icon mark, which leaves room. */}
+        {/* Below md the horizontal wordmark (~195px) overlaps the bell button that follows it
+            in this flex row (header is too narrow for both) — swap to the square icon mark,
+            which leaves room. */}
         <img src="/icon-color.svg" alt="Northstack" className="h-8 w-8 md:hidden" />
         <span className="hidden items-center md:flex">
           <img src="/logo-horizontal-light.svg" alt="Northstack" className="dark:hidden" />
@@ -105,7 +104,6 @@ export default function TopBar({ user, token, onLogout, onMenuClick }: TopBarPro
 
       <div className="flex items-center gap-2">
       <NotificationBell token={token} />
-      <ChangelogMenu />
       <div className="user-menu" ref={menuRef}>
         <button
           ref={triggerRef}

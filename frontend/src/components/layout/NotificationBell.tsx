@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, type Notification } from '../../api';
+import { api, type Notification, type PlatformAnnouncement } from '../../api';
 import Popover from '../common/Popover';
-import { BellIcon } from '../common/Icons';
+import { BellIcon, SparklesIcon } from '../common/Icons';
+import AnnouncementDetailModal from './AnnouncementDetailModal';
 
 interface NotificationBellProps {
   token: string;
@@ -25,8 +26,11 @@ function formatRelativeTime(iso: string): string {
 export default function NotificationBell({ token }: NotificationBellProps) {
   const [open, setOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [announcementUnreadCount, setAnnouncementUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [announcements, setAnnouncements] = useState<PlatformAnnouncement[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [viewingAnnouncement, setViewingAnnouncement] = useState<PlatformAnnouncement | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   // Bumped by every mutation (mark-one-read, mark-all-read) so a `listNotifications` response that
   // was already in flight when the mutation fired gets ignored instead of overwriting it with
@@ -35,6 +39,7 @@ export default function NotificationBell({ token }: NotificationBellProps) {
 
   const refreshUnreadCount = () => {
     api.getUnreadNotificationCount(token).then(setUnreadCount).catch(() => {});
+    api.getUnreadAnnouncementCount(token).then(setAnnouncementUnreadCount).catch(() => {});
   };
 
   useEffect(() => {
@@ -60,6 +65,19 @@ export default function NotificationBell({ token }: NotificationBellProps) {
           setLoaded(true);
         })
         .catch(() => {});
+      api
+        .listAnnouncements(token)
+        .then((data) => {
+          if (seq !== fetchSeq.current) return;
+          setAnnouncements(data);
+        })
+        .catch(() => {});
+      // Announcements use a single per-user cursor (not a per-row `read` flag like
+      // Notification), so opening the list is itself the "seen" action — same behavior the
+      // old standalone changelog icon had via localStorage, just server-side now.
+      if (announcementUnreadCount > 0) {
+        api.markAnnouncementsSeen(token).then(() => setAnnouncementUnreadCount(0)).catch(() => {});
+      }
     }
   };
 
@@ -86,6 +104,8 @@ export default function NotificationBell({ token }: NotificationBellProps) {
     }
   };
 
+  const totalUnread = unreadCount + announcementUnreadCount;
+
   return (
     <>
       <button
@@ -93,11 +113,11 @@ export default function NotificationBell({ token }: NotificationBellProps) {
         type="button"
         className="changelog-trigger"
         onClick={handleOpen}
-        aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : 'Notifications'}
+        aria-label={totalUnread > 0 ? `Notifications (${totalUnread} unread)` : 'Notifications'}
         title="Notifications"
       >
         <BellIcon className="h-4.5 w-4.5" />
-        {unreadCount > 0 && <span className="notification-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}
+        {totalUnread > 0 && <span className="notification-badge">{totalUnread > 99 ? '99+' : totalUnread}</span>}
       </button>
       <Popover open={open} onClose={() => setOpen(false)} anchorRef={triggerRef} align="right" width={320}>
         <div className="flex items-center justify-between">
@@ -122,7 +142,34 @@ export default function NotificationBell({ token }: NotificationBellProps) {
             </button>
           ))}
         </div>
+        {announcements.length > 0 && (
+          <>
+            <div className="color-picker-section-label mt-3 flex items-center gap-1">
+              <SparklesIcon className="h-3.5 w-3.5" />
+              What's new
+            </div>
+            <div className="notification-list mt-2">
+              {announcements.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  className={`notification-item ${a.isUnread ? 'unread' : ''}`}
+                  onClick={() => {
+                    setOpen(false);
+                    setViewingAnnouncement(a);
+                  }}
+                >
+                  <span>{a.title}</span>
+                  <span className="notification-item-time">{formatRelativeTime(a.publishedAt)}</span>
+                </button>
+              ))}
+            </div>
+          </>
+        )}
       </Popover>
+      {viewingAnnouncement && (
+        <AnnouncementDetailModal announcement={viewingAnnouncement} onClose={() => setViewingAnnouncement(null)} />
+      )}
     </>
   );
 }

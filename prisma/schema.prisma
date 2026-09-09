@@ -496,6 +496,11 @@ model User {
   tasksCreated                Task[]                      @relation("TaskCreatedBy")
   notesCreated                Note[]
   notifications               Notification[]
+  // Cursor, not a join table — see PlatformAnnouncement above. Null means "never seen
+  // anything", so every existing announcement counts as unread the first time a user opens
+  // the bell after this ships (deliberate: it's the only way for existing users to see what
+  // they missed while this system didn't exist yet).
+  lastAnnouncementSeenAt      DateTime?
   pipelinesCreated            Pipeline[]                  @relation("PipelineCreatedBy")
   pipelinesUpdated            Pipeline[]                  @relation("PipelineUpdatedBy")
   pipelinesLastAssigned       Pipeline[]                  @relation("PipelineLastAssignedUser")
@@ -1416,6 +1421,41 @@ model Notification {
   createdAt  DateTime           @default(now())
 
   @@index([tenantId, userId, read])
+}
+
+enum PlatformAnnouncementType {
+  feature_update
+  policy_change
+}
+
+enum LegalPolicyType {
+  terms_of_service
+  privacy_policy
+  refund_policy
+}
+
+// Platform-wide, not tenant-scoped — deliberately no tenantId, same exception as
+// Ticket/Idea (PlatformEntityType above): every user of every tenant sees the same feed.
+// Unlike Notification (one row per recipient), this is one row per announcement regardless
+// of how many users exist — User.lastAnnouncementSeenAt is a single per-user read cursor
+// (same "compare against the newest thing" idiom the old frontend-only changelog dot used
+// via localStorage, just server-side now so it also drives the bell's unread count instead
+// of a separate icon). Published by scripts/publish-announcement.ts, not a user-facing form
+// — see docs/Skills/Skills-Development.md for when a push is required to publish one.
+// policy_change also triggers an email (Terms of Service §14 promises "notified via email
+// and an in-app notification" for policy changes) — feature_update does not, to avoid the
+// unconditional-email-spam pattern already flagged in Sales v2 Unit 8 (docs/tareas/backlog.md).
+model PlatformAnnouncement {
+  id          String                   @id @default(uuid())
+  type        PlatformAnnouncementType
+  title       String
+  summary     String // one line, shown in the bell dropdown row
+  body        String // full description of what changed, shown in the detail modal
+  policyType  LegalPolicyType? // set only when type = policy_change
+  publishedAt DateTime                 @default(now())
+  createdAt   DateTime                 @default(now())
+
+  @@index([publishedAt])
 }
 
 // @@map keeps the physical table name "PublicForm" — only the Prisma model/

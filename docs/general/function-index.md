@@ -75,6 +75,11 @@ Todas siguen el mismo patrón: `if (!mailerConfigured()) return;` (no rompen el 
 - **sendPasswordResetEmail(input)** — link de "¿olvidaste tu contraseña?" (2026-08-09), expira en 1 hora.
 - **sendTicketNoteCreatedEmail(input)** — Admin Center: aviso al reporter de un Ticket cuando staff de plataforma responde.
 - **sendSignupVerificationEmail(input)** — Tenant Signup (`docs/spec-tenant-signup.md`), link de verificación de email antes de crear el Tenant/User, expira en 24hs.
+- **sendPolicyChangeEmail(input)** (2026-09-09) — mitad email de la promesa del ToS §14 ("notified via email and an in-app notification" ante un cambio de política, sin previo aviso). Llamada desde `platformAnnouncementService.createAnnouncement` a cada usuario activo cuando `type: 'policy_change'`, nunca para `feature_update`.
+
+### `src/modules/notifications/` (bell in-app, `docs/tareas/specredisenosalesv2.md` §3.9 + `docs/Skills/Skills-Development.md`)
+- **notificationService.ts**: `createNotification(input)` — un row por destinatario puntual (Opportunity stage-change, deal estancado, Stripe billing, Time Off). `listNotificationsForUser`/`countUnreadNotifications`/`markNotificationRead`/`markAllNotificationsRead`. `findLatestNotificationTimestamps` — dedup del cron de deal estancado.
+- **platformAnnouncementService.ts** (2026-09-09) — distinto patrón: un solo row por anuncio (no uno por usuario), visto/no-visto vía `User.lastAnnouncementSeenAt` (cursor único, no tabla de lecturas). `createAnnouncement(input)` — dispara `sendPolicyChangeEmail` a todo usuario activo si `type: 'policy_change'`; publicado solo vía `scripts/publish-announcement.ts`, sin endpoint de creación expuesto. `listAnnouncementsForUser`/`countUnreadAnnouncements`/`markAnnouncementsSeen`.
 
 ### `src/lib/mercadopago.ts` (Billing Integration, `docs/general/spec-billing-integration.md`)
 Wrapper propio (`fetch` + `crypto` nativos, sin SDK) contra la API de Mercado Pago — mismo criterio que `src/lib/encryption.ts`.

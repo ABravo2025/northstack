@@ -399,3 +399,40 @@ export async function sendTicketNoteCreatedEmail(input: SendTicketNoteCreatedEma
     ].join('\n'),
   });
 }
+
+export interface SendPolicyChangeEmailInput {
+  to: string;
+  firstName: string;
+  policyTitle: string;
+  summary: string;
+  appUrl: string;
+}
+
+// Terms of Service §14 (and the matching sections in Privacy/Refund) promise "notified via
+// email and an in-app notification" for policy changes, without prior notice — this fulfills
+// the email half. Sent to every active tenant user, not gated by any future notification
+// preferences (a legal notice, not a marketing/product email).
+export async function sendPolicyChangeEmail(input: SendPolicyChangeEmailInput): Promise<void> {
+  if (!mailerConfigured()) return;
+
+  await transporter.sendMail({
+    from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
+    to: input.to,
+    subject: `Updated: ${input.policyTitle}`,
+    text: [
+      `Hi ${input.firstName},`,
+      '',
+      `We've updated our ${input.policyTitle}.`,
+      '',
+      input.summary,
+      '',
+      `Review the full document: ${input.appUrl}`,
+    ].join('\n'),
+    html: [
+      `<p>Hi ${escapeHtml(input.firstName)},</p>`,
+      `<p>We've updated our <strong>${escapeHtml(input.policyTitle)}</strong>.</p>`,
+      `<p>${escapeHtml(input.summary)}</p>`,
+      `<p><a href="${input.appUrl}">Review the full document</a></p>`,
+    ].join('\n'),
+  });
+}

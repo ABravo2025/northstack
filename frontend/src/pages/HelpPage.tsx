@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useScrollSpy } from '../hooks/useScrollSpy';
+import LegalDocumentModal from '../components/common/LegalDocumentModal';
 import {
   BriefcaseIcon,
   ChevronDownIcon,
   CreditCardIcon,
+  FormIcon,
   LockIcon,
   MailIcon,
   PlugIcon,
@@ -210,11 +212,12 @@ const FAQ_CATEGORIES: FaqCategory[] = [
 ];
 
 const TOTAL_QUESTIONS = FAQ_CATEGORIES.reduce((sum, cat) => sum + cat.items.length, 0);
-const NAV_IDS = [...FAQ_CATEGORIES.map((c) => c.id), 'f-contact'];
+const NAV_IDS = [...FAQ_CATEGORIES.map((c) => c.id), 'f-contact', 'f-legal'];
 
 export default function HelpPage() {
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
+  const [legalDoc, setLegalDoc] = useState<'terms' | 'privacy' | 'refund' | null>(null);
   const activeId = useScrollSpy(NAV_IDS);
 
   const filteredCategories = useMemo(() => {
@@ -267,6 +270,14 @@ export default function HelpPage() {
               <MailIcon />
               Contact us
             </a>
+            <a
+              className={`help-nav-link${activeId === 'f-legal' ? ' active' : ''}`}
+              href="#f-legal"
+              onClick={(e) => { e.preventDefault(); scrollTo('f-legal'); }}
+            >
+              <FormIcon />
+              Legal
+            </a>
           </div>
         </nav>
 
@@ -314,10 +325,29 @@ export default function HelpPage() {
               , or use "Send feedback" from your account menu to report a bug or share an idea.
             </p>
           </div>
+
+          <div className="card help-contact-card" id="f-legal">
+            <h3 className="card-title">Legal</h3>
+            <p className="text-sm text-brand-navy dark:text-dark-ink mb-2">
+              You'll be notified here and by email whenever one of these changes.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <button type="button" className="table-link text-sm" onClick={() => setLegalDoc('terms')}>
+                Terms of Service
+              </button>
+              <button type="button" className="table-link text-sm" onClick={() => setLegalDoc('privacy')}>
+                Privacy Policy
+              </button>
+              <button type="button" className="table-link text-sm" onClick={() => setLegalDoc('refund')}>
+                Refund Policy
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
       <p className="mt-4 text-xs text-ink-faint dark:text-dark-ink-faint">{TOTAL_QUESTIONS} questions</p>
+      {legalDoc && <LegalDocumentModal initialDoc={legalDoc} onClose={() => setLegalDoc(null)} />}
     </div>
   );
 }

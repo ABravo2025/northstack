@@ -23,6 +23,7 @@ import { tasksApi } from './tasks.js';
 import { notesApi } from './notes.js';
 import { tagsApi } from './tags.js';
 import { notificationsApi } from './notifications.js';
+import { announcementsApi } from './announcements.js';
 import { payrollApi } from './payroll.js';
 import { contractConfirmationPublicApi } from './contractConfirmationPublic.js';
 import { billingApi } from './billing.js';
@@ -61,6 +62,7 @@ export const api = {
   ...notesApi,
   ...tagsApi,
   ...notificationsApi,
+  ...announcementsApi,
   ...payrollApi,
   ...contractConfirmationPublicApi,
   ...billingApi,

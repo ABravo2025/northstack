@@ -526,6 +526,24 @@ export interface Notification {
   createdAt: string;
 }
 
+// Platform-wide announcements (2026-09-09) — distinct from Notification above: one row per
+// announcement (not per recipient), read state is a single per-user cursor server-side
+// (User.lastAnnouncementSeenAt), not a `read` flag on each row. See platformAnnouncementService.ts.
+export type PlatformAnnouncementType = 'feature_update' | 'policy_change';
+export type LegalPolicyType = 'terms_of_service' | 'privacy_policy' | 'refund_policy';
+
+export interface PlatformAnnouncement {
+  id: string;
+  type: PlatformAnnouncementType;
+  title: string;
+  summary: string;
+  body: string;
+  policyType: LegalPolicyType | null;
+  publishedAt: string;
+  createdAt: string;
+  isUnread: boolean;
+}
+
 export interface CustomFieldDefinition {
   id: string;
   name: string;

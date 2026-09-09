@@ -504,16 +504,20 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
       <div className="page-toolbar no-border">
         <h2>Public Forms</h2>
         {/* Hidden below md: the mobile FAB (usePrimaryAction below) already exposes this same
-            "New Form" action there — showing both would be two ways to do one thing.
-            `hidden` goes on this wrapper, not the button — .btn-outline is unlayered custom CSS
-            (App.css) that also sets `display`, which beats the `hidden` utility on the same
-            element (Tailwind's utilities layer loses to unlayered CSS either way). */}
-        <span className="hidden ml-auto md:inline-block">
-          <button type="button" className="btn-outline gap-1.5" onClick={handleOpenCreate}>
-            <PlusIcon className="h-3.5 w-3.5" />
-            New Form
-          </button>
-        </span>
+            "New Form" action there. Hidden entirely once the current tab has no forms: the
+            EmptyState below has its own "Build a form" button then. Either way it'd be two ways
+            to do one thing. `hidden` goes on this wrapper, not the button — .btn-outline is
+            unlayered custom CSS (App.css) that also sets `display`, which beats the `hidden`
+            utility on the same element (Tailwind's utilities layer loses to unlayered CSS
+            either way). */}
+        {filteredForms.length > 0 && (
+          <span className="hidden ml-auto md:inline-block">
+            <button type="button" className="btn-outline gap-1.5" onClick={handleOpenCreate}>
+              <PlusIcon className="h-3.5 w-3.5" />
+              New Form
+            </button>
+          </span>
+        )}
       </div>
       <div className="views-bar" ref={viewsBarRef}>
         <button type="button" className={`view-tab ${tab === 'employee' ? 'active' : ''}`} onClick={() => setTab('employee')}>

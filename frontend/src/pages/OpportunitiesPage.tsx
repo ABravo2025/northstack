@@ -843,21 +843,11 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
             Weighted value: {formatMoney(Math.round(weightedPipelineTotalCents), weightedPipelineCurrency)}
           </span>
         )}
-        {canEdit && currentPipeline && (
-          // Hidden below md: the mobile FAB (usePrimaryAction above) already exposes this same
-          // "Add opportunity" action there — showing both would be two ways to do one thing.
-          // `hidden` goes on this wrapper, not the button itself — .btn-primary is unlayered
-          // custom CSS (App.css) that also sets `display`, which beats the `hidden` utility on
-          // the same element (Tailwind's utilities layer loses to unlayered CSS either way).
-          <span className="hidden md:inline-block">
-            <button className="btn-primary" onClick={handleOpenAdd}>
-              <span className="inline-flex items-center gap-1.5">
-                <PlusIcon className="h-4 w-4" />
-                Add Opportunity
-              </span>
-            </button>
-          </span>
-        )}
+        {/* No header "Add" button, on any width: the FAB (usePrimaryAction above) covers mobile,
+            and desktop already has its own "Add opportunity" affordance either way — the
+            EmptyState button when the pipeline has no opportunities, or each Kanban column's own
+            ghost-add card (renderColumnFooter below) once it does. A persistent button here would
+            be a third way to do the same thing. */}
       </div>
 
       <div className="views-bar" ref={viewsBarRef}>

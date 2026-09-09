@@ -598,18 +598,21 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                       One-off Payment
                     </button>
                     {/* Hidden below md: the mobile FAB (usePrimaryAction below) already exposes
-                        this same "New Run" action there — showing both would be two ways to do
-                        one thing. "One-off Payment" above has no FAB equivalent, so it stays.
-                        `hidden` goes on this wrapper, not the button — .btn-primary is unlayered
-                        custom CSS (App.css) that also sets `display`, which beats the `hidden`
-                        utility on the same element (Tailwind's utilities layer loses to
-                        unlayered CSS either way). */}
-                    <span className="hidden md:inline-block">
-                      <button type="button" className="btn-primary gap-1.5" onClick={openNewRunModal}>
-                        <PlusIcon className="h-3.5 w-3.5" />
-                        New Run
-                      </button>
-                    </span>
+                        this same "New Run" action there. Hidden entirely once the list is empty:
+                        the EmptyState below has its own "New Run" button then. Either way it'd be
+                        two ways to do one thing. "One-off Payment" above has no equivalent in
+                        either place, so it always stays. `hidden` goes on this wrapper, not the
+                        button — .btn-primary is unlayered custom CSS (App.css) that also sets
+                        `display`, which beats the `hidden` utility on the same element (Tailwind's
+                        utilities layer loses to unlayered CSS either way). */}
+                    {timelineItems.length > 0 && (
+                      <span className="hidden md:inline-block">
+                        <button type="button" className="btn-primary gap-1.5" onClick={openNewRunModal}>
+                          <PlusIcon className="h-3.5 w-3.5" />
+                          New Run
+                        </button>
+                      </span>
+                    )}
                   </div>
                 )}
               </div>
@@ -978,20 +981,6 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                     Assigning a policy and an amount to each person happens from their profile, not here.
                   </p>
                 </div>
-                {canManagePayroll && (
-                  // Hidden below md: the mobile FAB (usePrimaryAction) already exposes this same
-                  // "New policy" action there — showing both would be two ways to do one thing.
-                  // `hidden` goes on this wrapper, not the button — .btn-outline is unlayered
-                  // custom CSS (App.css) that also sets `display`, which beats the `hidden`
-                  // utility on the same element (Tailwind's utilities layer loses to unlayered
-                  // CSS either way).
-                  <span className="hidden md:inline-block">
-                    <button type="button" className="btn-outline gap-1.5" onClick={openAddFrequency}>
-                      <PlusIcon className="h-3.5 w-3.5" />
-                      New policy
-                    </button>
-                  </span>
-                )}
               </div>
 
               {frequencies.length === 0 ? (
@@ -1086,6 +1075,18 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                               )}
                             </tr>
                           ))}
+                          {canManagePayroll && (
+                            <tr className="ghost-row">
+                              <td colSpan={6} className="ghost-row-cell" onClick={openAddFrequency}>
+                                <span className="ghost-row-inner">
+                                  <span className="ghost-plus-box">
+                                    <PlusIcon className="h-3 w-3" />
+                                  </span>
+                                  Add
+                                </span>
+                              </td>
+                            </tr>
+                          )}
                         </tbody>
                       </table>
                     </div>

@@ -4,6 +4,7 @@ import type { ViewField } from '../../lib/viewFields';
 import ConfirmDialog from '../common/ConfirmDialog';
 import Popover from '../common/Popover';
 import RequiredMark from '../common/RequiredMark';
+import HorizontalScrollbar from './HorizontalScrollbar';
 import { DotsVerticalIcon, GridIcon, KanbanIcon, ListIcon, LockIcon, PlusIcon, TeamIcon } from '../common/Icons';
 
 interface NewViewInput {
@@ -53,6 +54,7 @@ export default function ViewsBar({
 
   const newViewButtonRef = useRef<HTMLButtonElement>(null);
   const menuAnchorRef = useRef<HTMLElement | null>(null);
+  const barRef = useRef<HTMLDivElement>(null);
 
   const resetNewViewForm = () => {
     setNvName('');
@@ -90,7 +92,8 @@ export default function ViewsBar({
   const activeMenuView = views.find((v) => v.id === menuOpenFor) ?? null;
 
   return (
-    <div className="views-bar">
+    <>
+    <div className="views-bar" ref={barRef}>
       {deletingView && (
         <ConfirmDialog
           title="Delete view"
@@ -262,5 +265,7 @@ export default function ViewsBar({
         </button>
       </Popover>
     </div>
+    <HorizontalScrollbar targetRef={barRef} />
+    </>
   );
 }

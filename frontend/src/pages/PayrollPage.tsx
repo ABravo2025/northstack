@@ -200,6 +200,7 @@ function buildAnchorConfig(form: FrequencyFormState): Record<string, unknown> {
 export default function PayrollPage({ token }: PayrollPageProps) {
   const toast = useToast();
   const navigate = useNavigate();
+  const viewsBarRef = useRef<HTMLDivElement>(null);
   const timelineTableRef = useRef<HTMLDivElement>(null);
   const assignmentsTableRef = useRef<HTMLDivElement>(null);
   const frequenciesTableRef = useRef<HTMLDivElement>(null);
@@ -562,7 +563,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
         <h2 className="page-title">Payroll</h2>
       </div>
 
-      <div className="views-bar">
+      <div className="views-bar" ref={viewsBarRef}>
         <button type="button" className={`view-tab ${tab === 'timeline' ? 'active' : ''}`} onClick={() => setTab('timeline')}>
           Timeline
         </button>
@@ -577,6 +578,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
           Payment Policies
         </button>
       </div>
+      <HorizontalScrollbar targetRef={viewsBarRef} />
 
       <div className="mt-4">
         {loading ? (
@@ -595,10 +597,19 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                       <PlusIcon className="h-3.5 w-3.5" />
                       One-off Payment
                     </button>
-                    <button type="button" className="btn-primary gap-1.5" onClick={openNewRunModal}>
-                      <PlusIcon className="h-3.5 w-3.5" />
-                      New Run
-                    </button>
+                    {/* Hidden below md: the mobile FAB (usePrimaryAction below) already exposes
+                        this same "New Run" action there — showing both would be two ways to do
+                        one thing. "One-off Payment" above has no FAB equivalent, so it stays.
+                        `hidden` goes on this wrapper, not the button — .btn-primary is unlayered
+                        custom CSS (App.css) that also sets `display`, which beats the `hidden`
+                        utility on the same element (Tailwind's utilities layer loses to
+                        unlayered CSS either way). */}
+                    <span className="hidden md:inline-block">
+                      <button type="button" className="btn-primary gap-1.5" onClick={openNewRunModal}>
+                        <PlusIcon className="h-3.5 w-3.5" />
+                        New Run
+                      </button>
+                    </span>
                   </div>
                 )}
               </div>
@@ -968,10 +979,18 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                   </p>
                 </div>
                 {canManagePayroll && (
-                  <button type="button" className="btn-outline gap-1.5" onClick={openAddFrequency}>
-                    <PlusIcon className="h-3.5 w-3.5" />
-                    New policy
-                  </button>
+                  // Hidden below md: the mobile FAB (usePrimaryAction) already exposes this same
+                  // "New policy" action there — showing both would be two ways to do one thing.
+                  // `hidden` goes on this wrapper, not the button — .btn-outline is unlayered
+                  // custom CSS (App.css) that also sets `display`, which beats the `hidden`
+                  // utility on the same element (Tailwind's utilities layer loses to unlayered
+                  // CSS either way).
+                  <span className="hidden md:inline-block">
+                    <button type="button" className="btn-outline gap-1.5" onClick={openAddFrequency}>
+                      <PlusIcon className="h-3.5 w-3.5" />
+                      New policy
+                    </button>
+                  </span>
                 )}
               </div>
 

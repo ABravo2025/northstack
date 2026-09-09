@@ -317,11 +317,15 @@ nombre + monto, `.kcard-foot` fila inferior con owner + edad-en-stage):
 sueltos, fuera de paleta, que no codificaban nada). Ahora: ícono solo en `text-ink` (`text-ink-faint`
 si `disabled`), sin wrapper de color, + una línea de descripción debajo del label. El grid usa
 `gap-px` sobre `bg-line` para dibujar una línea de 1px entre celdas en vez de gap + hover con borde
-(que hacía "saltar" el tile al pasar el mouse).
+(que hacía "saltar" el tile al pasar el mouse). Grid de 2 columnas debajo de `md`, 3 columnas en
+`md`+ (no `sm` — ver §13). Con una cantidad impar de tiles en una sección (ej. "My account" con
+Billing visible: 3 tiles en 2 columnas), la última celda queda vacía mostrando el `bg-line` crudo —
+`.settings-grid > a:nth-child(odd):last-child { grid-column: span 2 }` (solo dentro del media query
+mobile de `App.css`) estira el último tile en vez de dejar el hueco. Arreglado 2026-09-09.
 
 ## 13. Patrón mobile (< 768px, breakpoint `md`)
 
-- **`EntityCardList.tsx`** (nuevo, genérico) — reemplaza `.full-table-wrap` por una lista de tarjetas
+- **`EntityCardList.tsx`** (genérico) — reemplaza `.full-table-wrap` por una lista de tarjetas
   tocables (avatar + nombre + meta + punto de status) en Employees, Companies, Contacts y Company
   Users. El wrap de la tabla necesita la clase modificadora `.has-mobile-cards` además de
   `.full-table-wrap` — **la base de `.full-table-wrap` sigue siendo visible/con scroll horizontal en
@@ -330,7 +334,7 @@ si `disabled`), sin wrapper de color, + una línea de descripción debajo del la
   fila), así que su `EntityCardList` no pasa `onSelect` — la tarjeta no es clickeable ahí, a propósito.
 - **Zonas tocables ≥ 44px** debajo de 768px: `.icon-btn`, `.menu-toggle` suben a 44×44; `.seg-nav
   button` a 40px; `.task-checkbox` a 20×20.
-- **`MobileTabbar.tsx`** (nuevo, `components/layout/`, montado en `AppLayout.tsx`) — 4 tabs fijos
+- **`MobileTabbar.tsx`** (`components/layout/`, montado en `AppLayout.tsx`) — 4 tabs fijos
   abajo (Overview, Employees, Time Off, Sales). "Sales" agrupa Companies/Contacts/Opportunities bajo
   un solo tab que linkea a `/opportunities` y se marca activo si la ruta actual empieza con
   cualquiera de los tres. El resto de las secciones (Dashboard, Settings, Contacts/Companies
@@ -338,8 +342,39 @@ si `disabled`), sin wrapper de color, + una línea de descripción debajo del la
 - **Paneles a pantalla completa**: `.slideover-panel`, `.overview-panel` pierden max-width/rounded y
   ocupan `100%`; `.overview-panel-main` pasa a columna (fields arriba, sidebar de Notes/Tasks/Activity
   abajo); `.field-group-body` baja a 1 columna.
-- **Pendiente**: el FAB de acción primaria (52×52, descrito en `docs/tareas-ux-ui.md` Tarea 9c) no se
-  implementó — requiere un mecanismo de "acción primaria por página" que `AppLayout.tsx` no tiene hoy
-  (cada página maneja su propio `handleOpenAdd`, no hay forma de que el layout global sepa cuál
-  invocar). El toolbar "Add" de arriba de cada página sigue siendo el único camino en mobile.
+- **FAB de acción primaria** (`.primary-action-fab`, `md:hidden`, 52×52) — implementado vía
+  `PrimaryActionContext`/`usePrimaryAction({ label, onClick })`; cada página que quiere un FAB llama
+  el hook una vez con su `handleOpenAdd`. **Regla:** si una página además tiene un botón "Add/New X"
+  fijo en su header que dispara la misma acción, ese botón debe ocultarse debajo de `md` (el FAB ya
+  cubre mobile) — si no, quedan dos formas de hacer lo mismo apiladas en una pantalla chica. Ver
+  Opportunities/Payroll/Pipelines/PublicForms para el patrón (2026-09-09 fix).
+- **Ningún breakpoint de Tailwind por defecto (`sm`=640px, `lg`=1024px) para decidir mobile vs.
+  desktop** — el layout global (drawer vs. sidebar, tabbar, FAB) cambia en `md`=768px y en ningún
+  otro lado. Un componente que usa `sm:grid-cols-N` para su propio grid de stat-tiles, por ejemplo,
+  crea una franja 640-767px donde ese grid ya se ve "desktop" mientras el resto de la página sigue en
+  modo mobile — bug real encontrado y corregido 2026-09-09 en `OverviewMetricsStrip`,
+  `PaymentsOverviewPage`, los 5 `Dashboards*Page`, `PlansModal` y `.settings-grid`. `lg`/`xl` están bien
+  para refinamientos dentro del modo desktop (ej. 1 vs. 2 columnas de gráficos a 1024px) — el problema
+  es específicamente usar un breakpoint por debajo de 768px para algo que debería alinearse con el
+  corte mobile/desktop.
+- **Tab strips horizontales que pueden desbordar** (`.views-bar`/`.view-tab`, cualquier cantidad
+  variable de tabs: pipelines, roles custom, etc.) — igual que `.full-table-wrap`, `.views-bar` oculta
+  su scrollbar nativo y espera un `<HorizontalScrollbar targetRef={ref} />` (`components/entity-views/
+  HorizontalScrollbar.tsx`) como hermano inmediato después del div. Sin eso, el desborde es invisible
+  (scrollbar nativo oculto y no reemplazado) — los tabs de más se cortan a mitad de palabra sin ningún
+  indicio de que existen. Todo `.full-table-wrap` sin `.has-mobile-cards` (tablas anchas de settings,
+  no solo listados de entidades — ej. la matriz de Roles & Permissions, API Keys) necesita el mismo
+  `<HorizontalScrollbar>`; si el wrapper es un `<section>`/`<details>` en vez de un `<div>`, extraer esa
+  sección a su propio componente para poder darle su propio `useRef` (un ref por iteración de `.map()`
+  no es válido — viola reglas de hooks).
+- **Gotcha de Tailwind v4 (cascade layers): `hidden`/`md:*` no le puede ganar a una clase custom que
+  también fija `display`.** Las clases de `App.css` (`.btn-primary`, `.btn-secondary`, etc., via
+  `@apply` con `@reference` en vez de `@layer components`) quedan **sin capa** ("unlayered"), y sin
+  capa le gana a CUALQUIER capa nombrada por spec de CSS — incluida la capa `utilities` de Tailwind,
+  sin importar el orden en el archivo. Poner `className="btn-primary hidden md:inline-flex"` en el
+  mismo elemento no oculta nada: `.btn-primary` sigue ganando el `display`. Solución: poner
+  `hidden`/`md:*` en un `<span>`/`<div>` envolvente sin clases custom, con el botón adentro (ver
+  logo del header en `TopBar.tsx` y los botones "Add/New X" de Opportunities/Payroll/Pipelines/
+  PublicForms, arreglados 2026-09-09). Mismo cuidado que la nota de §1 sobre tokens con dígito final +
+  `dark:` — otra clase de bug de Tailwind v4 que compila sin error pero no hace lo que el código sugiere.
 - **Verificación**: sin scroll horizontal a nivel `body` en 390×844 y 768×1024, medido con Playwright.

@@ -5,6 +5,7 @@ import { useToast } from '../components/common/ToastProvider';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Modal from '../components/common/Modal';
 import KanbanBoard from '../components/entity-views/KanbanBoard';
+import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
 import OpportunityDetailModal from '../components/crm/OpportunityDetailModal';
 import EmptyState from '../components/common/EmptyState';
 import TableSkeleton from '../components/common/TableSkeleton';
@@ -114,6 +115,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
   // deps array is `[]`, so checking `!activeTab` here would never see the
   // update from invocation one by the time invocation two runs.
   const hasSetInitialTab = useRef(false);
+  const viewsBarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Custom Roles Fase J finding: GET /api/tenants/users (the deal-owner dropdown's source) is
@@ -842,16 +844,23 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
           </span>
         )}
         {canEdit && currentPipeline && (
-          <button className="btn-primary" onClick={handleOpenAdd}>
-            <span className="inline-flex items-center gap-1.5">
-              <PlusIcon className="h-4 w-4" />
-              Add Opportunity
-            </span>
-          </button>
+          // Hidden below md: the mobile FAB (usePrimaryAction above) already exposes this same
+          // "Add opportunity" action there — showing both would be two ways to do one thing.
+          // `hidden` goes on this wrapper, not the button itself — .btn-primary is unlayered
+          // custom CSS (App.css) that also sets `display`, which beats the `hidden` utility on
+          // the same element (Tailwind's utilities layer loses to unlayered CSS either way).
+          <span className="hidden md:inline-block">
+            <button className="btn-primary" onClick={handleOpenAdd}>
+              <span className="inline-flex items-center gap-1.5">
+                <PlusIcon className="h-4 w-4" />
+                Add Opportunity
+              </span>
+            </button>
+          </span>
         )}
       </div>
 
-      <div className="views-bar">
+      <div className="views-bar" ref={viewsBarRef}>
         {activePipelines.map((p) => (
           <button
             key={p.id}
@@ -872,6 +881,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
           </button>
         )}
       </div>
+      <HorizontalScrollbar targetRef={viewsBarRef} />
 
       {activeTab === 'archived' ? (
         <div className="mt-4 flex flex-col gap-2">

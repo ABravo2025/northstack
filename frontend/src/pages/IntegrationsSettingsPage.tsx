@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
@@ -10,6 +10,7 @@ import EmptyState from '../components/common/EmptyState';
 import TableSkeleton from '../components/common/TableSkeleton';
 import Modal from '../components/common/Modal';
 import ConfirmDialog from '../components/common/ConfirmDialog';
+import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
 import { CopyIcon, LockIcon, TrashIcon } from '../components/common/Icons';
 
 interface IntegrationsSettingsPageProps {
@@ -248,6 +249,7 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
   const [revealedKey, setRevealedKey] = useState<string | null>(null);
   const [revokingKey, setRevokingKey] = useState<ApiKeySummary | null>(null);
   const [revoking, setRevoking] = useState(false);
+  const tableWrapRef = useRef<HTMLDivElement>(null);
 
   const loadKeys = () => {
     if (!canManageApiAccess) return;
@@ -362,7 +364,8 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
           onPrimary={() => setShowCreateModal(true)}
         />
       ) : (
-        <div className="full-table-wrap">
+        <>
+        <div className="full-table-wrap" ref={tableWrapRef}>
           <table className="table">
             <thead>
               <tr>
@@ -377,7 +380,11 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
             <tbody>
               {keys.map((key) => (
                 <tr key={key.id}>
-                  <td>{key.name}</td>
+                  <td>
+                    <span className="block max-w-[160px] truncate" title={key.name}>
+                      {key.name}
+                    </span>
+                  </td>
                   <td>
                     <code className="text-xs">{key.keyPrefix}…</code>
                   </td>
@@ -415,6 +422,8 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
             </tbody>
           </table>
         </div>
+        <HorizontalScrollbar targetRef={tableWrapRef} />
+        </>
       )}
 
       <Modal

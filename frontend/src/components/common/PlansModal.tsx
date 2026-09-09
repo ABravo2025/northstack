@@ -218,7 +218,7 @@ export default function PlansModal({ open, tenant, token, onClose, onPlanChosen,
         stay subscribed.
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-3">
         {PLAN_CARDS.map((card) => {
           const isCurrent = card.key === currentPlan;
           const isRecommended = !isCurrent && card.key === recommended;

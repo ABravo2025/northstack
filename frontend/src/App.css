@@ -537,7 +537,7 @@
 }
 
 .settings-grid {
-  @apply grid grid-cols-2 gap-px border border-line bg-line sm:grid-cols-3 dark:border-dark-line dark:bg-gray-800;
+  @apply grid grid-cols-2 gap-px border border-line bg-line md:grid-cols-3 dark:border-dark-line dark:bg-gray-800;
 }
 
 .settings-tile {
@@ -1577,8 +1577,16 @@
 
 /* ---------- Views bar (saved views tabs) ---------- */
 
+/* Native scrollbar hidden — pairs with a <HorizontalScrollbar> at each call site (same
+   convention as .full-table-wrap), since the plain overflow scrollbar gives no visual cue
+   that a tab strip has more tabs than fit (they just clip mid-word at the edge otherwise). */
 .views-bar {
   @apply flex items-center gap-1 overflow-x-auto overflow-y-hidden border-b border-line px-1 dark:border-dark-line;
+  scrollbar-width: none;
+}
+
+.views-bar::-webkit-scrollbar {
+  display: none;
 }
 
 .view-tab {
@@ -2236,6 +2244,13 @@ input[type='number'] {
 
   .toolbar-search {
     @apply w-full flex-none;
+  }
+
+  /* .settings-grid is grid-cols-2 here — when a section has an odd tile count (e.g. My Account
+     with Billing visible: Profile/Integrations/Billing), the dangling last tile otherwise leaves
+     an empty cell showing the bare grid gap color. Stretch it across both columns instead. */
+  .settings-grid > a:nth-child(odd):last-child {
+    grid-column: span 2;
   }
 
   .views-bar {

@@ -13,6 +13,7 @@ import { useToast } from '../components/common/ToastProvider';
 import ColorPicker from '../components/common/ColorPicker';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Modal from '../components/common/Modal';
+import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
 import MultiSelectDropdown, { type MultiSelectOption } from '../components/common/MultiSelectDropdown';
 import Popover from '../components/common/Popover';
 import RequiredMark from '../components/common/RequiredMark';
@@ -799,6 +800,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
   // TimeOffOverviewPage.tsx's policy row menu.
   const [pipelineRowMenuFor, setPipelineRowMenuFor] = useState<string | null>(null);
   const pipelineRowMenuAnchorRef = useRef<HTMLElement | null>(null);
+  const viewsBarRef = useRef<HTMLDivElement>(null);
 
   const handleSort = (field: PipelineSortField) => {
     if (sortField === field) {
@@ -1082,16 +1084,23 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
             Opportunities visible read-only, it just disappears from creation menus.
           </p>
         </div>
-        <button type="button" className="btn-primary" onClick={openCreate}>
-          <span className="inline-flex items-center gap-1.5">
-            <PlusIcon className="h-4 w-4" />
-            New Pipeline
-          </span>
-        </button>
+        {/* Hidden below md: the mobile FAB (usePrimaryAction below) already exposes this same
+            "Add pipeline" action there — showing both would be two ways to do one thing.
+            `hidden` goes on this wrapper, not the button — .btn-primary is unlayered custom CSS
+            (App.css) that also sets `display`, which beats the `hidden` utility on the same
+            element (Tailwind's utilities layer loses to unlayered CSS either way). */}
+        <span className="hidden md:inline-block">
+          <button type="button" className="btn-primary" onClick={openCreate}>
+            <span className="inline-flex items-center gap-1.5">
+              <PlusIcon className="h-4 w-4" />
+              New Pipeline
+            </span>
+          </button>
+        </span>
       </div>
 
       {archivedPipelines.length > 0 && (
-        <div className="views-bar mb-3">
+        <div className="views-bar mb-3" ref={viewsBarRef}>
           <button
             type="button"
             className={`view-tab ${pipelineTab === 'active' ? 'active' : ''}`}
@@ -1108,6 +1117,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
           </button>
         </div>
       )}
+      <HorizontalScrollbar targetRef={viewsBarRef} />
 
       <div className="entity-card-list">
         {(pipelineTab === 'archived' ? archivedPipelines : activePipelines).map((pipeline) => (

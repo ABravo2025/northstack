@@ -20,7 +20,7 @@ export default function DashboardsHrPage() {
 
   return (
     <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatTile label="Headcount" value={String(hr.headcount.total)} />
         <StatTile
           label="Median tenure"

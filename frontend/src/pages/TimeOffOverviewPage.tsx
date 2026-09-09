@@ -10,6 +10,7 @@ import TableSkeleton from '../components/common/TableSkeleton';
 import RequiredMark from '../components/common/RequiredMark';
 import { CalendarIcon, ChevronDownIcon, DotsVerticalIcon, PlusIcon } from '../components/common/Icons';
 import EntityCardList from '../components/common/EntityCardList';
+import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
 import { getInitials } from '../components/common/Avatar';
 import { usePermissions } from '../contexts/PermissionsContext';
 
@@ -45,6 +46,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
   const [loading, setLoading] = useState(false);
   const [cancellingRequestId, setCancellingRequestId] = useState<string | null>(null);
   const [newRequest, setNewRequest] = useState({ timeOffPolicyId: '', startDate: '', endDate: '', note: '' });
+  const viewsBarRef = useRef<HTMLDivElement>(null);
 
   const [assignMenuFor, setAssignMenuFor] = useState<string | null>(null);
   const assignMenuAnchorRef = useRef<HTMLElement | null>(null);
@@ -535,7 +537,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
       <div className="page-toolbar no-border">
         <h2>Time Off</h2>
       </div>
-      <div className="views-bar">
+      <div className="views-bar" ref={viewsBarRef}>
         <button
           type="button"
           className={`view-tab ${tab === 'my-timeoff' ? 'active' : ''}`}
@@ -600,6 +602,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
           </button>
         )}
       </div>
+      <HorizontalScrollbar targetRef={viewsBarRef} />
 
       <div className="mt-4">
         {loading && <TableSkeleton />}

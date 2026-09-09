@@ -27,7 +27,7 @@ export default function OverviewMetricsStrip({ token }: OverviewMetricsStripProp
   const pipelineAmounts = [...pipelineTotals].map(([currency, amountCents]) => ({ currency, amountCents }));
 
   return (
-    <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
       <StatTile label="Headcount" value={String(metrics.hr.headcount.total)} />
       <StatTile label="Open pipeline" value={sumByCurrencyLabel(pipelineAmounts)} subtitle={`${metrics.sales.openPipeline.reduce((s, p) => s + p.count, 0)} deals`} />
       <StatTile

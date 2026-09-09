@@ -20,7 +20,7 @@ export default function DashboardsAdoptionPage() {
 
   return (
     <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
-      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
+      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3">
         <StatTile
           label="Seat utilization"
           value={adoption.seatUtilization.ratePct === null ? '—' : `${adoption.seatUtilization.ratePct}%`}

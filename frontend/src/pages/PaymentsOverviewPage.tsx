@@ -63,7 +63,7 @@ export default function PaymentsOverviewPage({ token }: PaymentsOverviewPageProp
         </p>
       ) : (
         <>
-          <div className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
             <div className="card">
               <p className="text-xs text-ink-muted dark:text-dark-ink-muted">Refunds</p>
               <p className="text-lg font-semibold">

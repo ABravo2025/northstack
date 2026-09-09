@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { api, type RestrictableField, type Role } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import TableSkeleton from '../components/common/TableSkeleton';
 import Modal from '../components/common/Modal';
 import RoleColumnMenu from '../components/settings/RoleColumnMenu';
+import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
 import { ChevronRightIcon, LockIcon, PlusIcon } from '../components/common/Icons';
 import { usePermissions } from '../contexts/PermissionsContext';
 
@@ -141,6 +142,167 @@ function labelFor(key: string): string {
     if (row) return row.label;
   }
   return key;
+}
+
+// .full-table-wrap only hides its native scrollbar assuming a <HorizontalScrollbar> replaces it
+// (see App.css) — this matrix has as many columns as roles, so on narrow screens it needs one.
+// Own component (rather than a ref created inline inside GROUPS.map) because a ref requires its
+// own hook, and hooks can't be called from a .map() callback.
+function PermissionGroupSection({
+  group,
+  gridTemplateColumns,
+  editableRoles,
+  hasPermission,
+  savingKey,
+  onTogglePermission,
+  onRenameRole,
+  onDeleteRole,
+}: {
+  group: PermissionGroup;
+  gridTemplateColumns: string;
+  editableRoles: Role[];
+  hasPermission: (role: Role, key: string) => boolean;
+  savingKey: string | null;
+  onTogglePermission: (role: Role, permissionKey: string, next: boolean) => void;
+  onRenameRole: (roleId: string, name: string) => Promise<void>;
+  onDeleteRole: (roleId: string) => Promise<void>;
+}) {
+  const wrapRef = useRef<HTMLElement>(null);
+  return (
+    <>
+      <section ref={wrapRef} className="card full-table-wrap mb-4 p-0">
+        <div
+          className="grid items-center gap-3 border-b border-line bg-surface-0 px-5 py-3 dark:border-dark-line dark:bg-dark-raised"
+          style={{ gridTemplateColumns }}
+        >
+          <span className="text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">{group.title}</span>
+          <span className="text-center text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">Owner</span>
+          {editableRoles.map((role) => (
+            <div key={role.id} className="flex items-center justify-center gap-0.5 overflow-hidden">
+              <span
+                className="truncate text-center text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint"
+                title={role.name}
+              >
+                {role.name}
+              </span>
+              <RoleColumnMenu role={role} onRename={onRenameRole} onDelete={onDeleteRole} />
+            </div>
+          ))}
+        </div>
+        {group.rows.map((row) => (
+          <div
+            key={row.key}
+            data-permission-row={row.key}
+            className="grid items-center gap-3 border-b border-line-soft px-5 py-3.5 last:border-b-0 dark:border-dark-line-soft"
+            style={{ gridTemplateColumns }}
+          >
+            <div>
+              <div className="text-sm font-medium text-ink dark:text-dark-ink">{row.label}</div>
+              <div className="mt-0.5 text-xs text-ink-muted dark:text-dark-ink-muted">{row.description}</div>
+              {row.hint && <div className="mt-1 text-xs font-medium text-ink-faint dark:text-dark-ink-faint">{row.hint}</div>}
+            </div>
+            <div className="flex justify-center">
+              <span
+                className="flex h-[19px] w-[34px] items-center justify-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                title="Owner always has this"
+              >
+                <LockIcon className="h-[11px] w-[11px]" />
+              </span>
+            </div>
+            {editableRoles.map((role) => (
+              <div key={role.id} className="flex justify-center">
+                <input
+                  type="checkbox"
+                  checked={hasPermission(role, row.key)}
+                  disabled={savingKey === role.id + row.key}
+                  onChange={(e) => onTogglePermission(role, row.key, e.target.checked)}
+                  aria-label={`${row.label} — ${role.name}`}
+                />
+              </div>
+            ))}
+          </div>
+        ))}
+      </section>
+      <HorizontalScrollbar targetRef={wrapRef} />
+    </>
+  );
+}
+
+function FieldVisibilitySection({
+  entityType,
+  fields,
+  gridTemplateColumns,
+  editableRoles,
+  savingFieldKey,
+  isFieldHidden,
+  onToggleFieldVisibility,
+}: {
+  entityType: string;
+  fields: RestrictableField[];
+  gridTemplateColumns: string;
+  editableRoles: Role[];
+  savingFieldKey: string | null;
+  isFieldHidden: (role: Role, entityType: string, fieldKey: string) => boolean;
+  onToggleFieldVisibility: (role: Role, entityType: string, fieldKey: string, nextVisible: boolean) => void;
+}) {
+  const wrapRef = useRef<HTMLDetailsElement>(null);
+  return (
+    <>
+      <details ref={wrapRef} className="card full-table-wrap mb-4 p-0">
+        <summary className="flex cursor-pointer list-none items-center gap-2 bg-surface-0 px-5 py-3 text-sm font-semibold text-ink select-none dark:bg-dark-raised dark:text-dark-ink">
+          <ChevronRightIcon className="h-3.5 w-3.5 text-ink-faint dark:text-dark-ink-faint" />
+          {ENTITY_LABELS[entityType] ?? entityType}
+          <span className="text-xs font-normal text-ink-faint dark:text-dark-ink-faint">({fields.length})</span>
+        </summary>
+        <div
+          className="grid items-center gap-3 border-b border-t border-line bg-surface-0 px-5 py-2 dark:border-dark-line dark:bg-dark-raised"
+          style={{ gridTemplateColumns }}
+        >
+          <span />
+          <span className="text-center text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">Owner</span>
+          {editableRoles.map((role) => (
+            <span
+              key={role.id}
+              className="truncate text-center text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint"
+              title={role.name}
+            >
+              {role.name}
+            </span>
+          ))}
+        </div>
+        {fields.map((field) => (
+          <div
+            key={field.key}
+            data-field-row={`${entityType}:${field.key}`}
+            className="grid items-center gap-3 border-b border-line-soft px-5 py-3 last:border-b-0 dark:border-dark-line-soft"
+            style={{ gridTemplateColumns }}
+          >
+            <div className="text-sm text-ink dark:text-dark-ink">{field.label}</div>
+            <div className="flex justify-center">
+              <span
+                className="flex h-[19px] w-[34px] items-center justify-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+                title="Owner always sees this"
+              >
+                <LockIcon className="h-[11px] w-[11px]" />
+              </span>
+            </div>
+            {editableRoles.map((role) => (
+              <div key={role.id} className="flex justify-center">
+                <input
+                  type="checkbox"
+                  checked={!isFieldHidden(role, entityType, field.key)}
+                  disabled={savingFieldKey === `${role.id}:${entityType}:${field.key}`}
+                  onChange={(e) => onToggleFieldVisibility(role, entityType, field.key, e.target.checked)}
+                  aria-label={`${field.label} visible to ${role.name}`}
+                />
+              </div>
+            ))}
+          </div>
+        ))}
+      </details>
+      <HorizontalScrollbar targetRef={wrapRef} />
+    </>
+  );
 }
 
 // Owner-only page (gated here and, for real, server-side by every /api/roles* route) — changing
@@ -303,59 +465,17 @@ export default function RolesPermissionsPage({ token }: RolesPermissionsPageProp
       </p>
 
       {GROUPS.map((group) => (
-        <section key={group.title} className="card full-table-wrap mb-4 p-0">
-          <div
-            className="grid items-center gap-3 border-b border-line bg-surface-0 px-5 py-3 dark:border-dark-line dark:bg-dark-raised"
-            style={{ gridTemplateColumns }}
-          >
-            <span className="text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">{group.title}</span>
-            <span className="text-center text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">Owner</span>
-            {editableRoles.map((role) => (
-              <div key={role.id} className="flex items-center justify-center gap-0.5 overflow-hidden">
-                <span
-                  className="truncate text-center text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint"
-                  title={role.name}
-                >
-                  {role.name}
-                </span>
-                <RoleColumnMenu role={role} onRename={handleRenameRole} onDelete={handleDeleteRole} />
-              </div>
-            ))}
-          </div>
-          {group.rows.map((row) => (
-            <div
-              key={row.key}
-              data-permission-row={row.key}
-              className="grid items-center gap-3 border-b border-line-soft px-5 py-3.5 last:border-b-0 dark:border-dark-line-soft"
-              style={{ gridTemplateColumns }}
-            >
-              <div>
-                <div className="text-sm font-medium text-ink dark:text-dark-ink">{row.label}</div>
-                <div className="mt-0.5 text-xs text-ink-muted dark:text-dark-ink-muted">{row.description}</div>
-                {row.hint && <div className="mt-1 text-xs font-medium text-ink-faint dark:text-dark-ink-faint">{row.hint}</div>}
-              </div>
-              <div className="flex justify-center">
-                <span
-                  className="flex h-[19px] w-[34px] items-center justify-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
-                  title="Owner always has this"
-                >
-                  <LockIcon className="h-[11px] w-[11px]" />
-                </span>
-              </div>
-              {editableRoles.map((role) => (
-                <div key={role.id} className="flex justify-center">
-                  <input
-                    type="checkbox"
-                    checked={hasPermission(role, row.key)}
-                    disabled={savingKey === role.id + row.key}
-                    onChange={(e) => togglePermission(role, row.key, e.target.checked)}
-                    aria-label={`${row.label} — ${role.name}`}
-                  />
-                </div>
-              ))}
-            </div>
-          ))}
-        </section>
+        <PermissionGroupSection
+          key={group.title}
+          group={group}
+          gridTemplateColumns={gridTemplateColumns}
+          editableRoles={editableRoles}
+          hasPermission={hasPermission}
+          savingKey={savingKey}
+          onTogglePermission={togglePermission}
+          onRenameRole={handleRenameRole}
+          onDeleteRole={handleDeleteRole}
+        />
       ))}
 
       <h3 className="mb-2 text-base font-bold text-ink dark:text-dark-ink">Field visibility</h3>
@@ -366,58 +486,16 @@ export default function RolesPermissionsPage({ token }: RolesPermissionsPageProp
       </p>
 
       {Object.entries(fieldCatalog).map(([entityType, fields]) => (
-        <details key={entityType} className="card full-table-wrap mb-4 p-0">
-          <summary className="flex cursor-pointer list-none items-center gap-2 bg-surface-0 px-5 py-3 text-sm font-semibold text-ink select-none dark:bg-dark-raised dark:text-dark-ink">
-            <ChevronRightIcon className="h-3.5 w-3.5 text-ink-faint dark:text-dark-ink-faint" />
-            {ENTITY_LABELS[entityType] ?? entityType}
-            <span className="text-xs font-normal text-ink-faint dark:text-dark-ink-faint">({fields.length})</span>
-          </summary>
-          <div
-            className="grid items-center gap-3 border-b border-t border-line bg-surface-0 px-5 py-2 dark:border-dark-line dark:bg-dark-raised"
-            style={{ gridTemplateColumns }}
-          >
-            <span />
-            <span className="text-center text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">Owner</span>
-            {editableRoles.map((role) => (
-              <span
-                key={role.id}
-                className="truncate text-center text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint"
-                title={role.name}
-              >
-                {role.name}
-              </span>
-            ))}
-          </div>
-          {fields.map((field) => (
-            <div
-              key={field.key}
-              data-field-row={`${entityType}:${field.key}`}
-              className="grid items-center gap-3 border-b border-line-soft px-5 py-3 last:border-b-0 dark:border-dark-line-soft"
-              style={{ gridTemplateColumns }}
-            >
-              <div className="text-sm text-ink dark:text-dark-ink">{field.label}</div>
-              <div className="flex justify-center">
-                <span
-                  className="flex h-[19px] w-[34px] items-center justify-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
-                  title="Owner always sees this"
-                >
-                  <LockIcon className="h-[11px] w-[11px]" />
-                </span>
-              </div>
-              {editableRoles.map((role) => (
-                <div key={role.id} className="flex justify-center">
-                  <input
-                    type="checkbox"
-                    checked={!isFieldHidden(role, entityType, field.key)}
-                    disabled={savingFieldKey === `${role.id}:${entityType}:${field.key}`}
-                    onChange={(e) => toggleFieldVisibility(role, entityType, field.key, e.target.checked)}
-                    aria-label={`${field.label} visible to ${role.name}`}
-                  />
-                </div>
-              ))}
-            </div>
-          ))}
-        </details>
+        <FieldVisibilitySection
+          key={entityType}
+          entityType={entityType}
+          fields={fields}
+          gridTemplateColumns={gridTemplateColumns}
+          editableRoles={editableRoles}
+          savingFieldKey={savingFieldKey}
+          isFieldHidden={isFieldHidden}
+          onToggleFieldVisibility={toggleFieldVisibility}
+        />
       ))}
 
       <p className="mt-2 max-w-2xl text-xs text-ink-faint dark:text-dark-ink-faint">

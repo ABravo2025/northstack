@@ -491,6 +491,11 @@ export default function GuidePage() {
                 stage change. Both surface in the bell icon at the top of the app — never for a move you made
                 yourself.
               </p>
+              <p>
+                The bell also has a "What's new" section for platform-wide updates — new features and changes to
+                our Terms of Service, Privacy Policy, or Refund Policy (which also arrive by email). You can review
+                the current Terms, Privacy, and Refund Policy anytime from Help &amp; FAQ.
+              </p>
             </div>
           </section>
 
@@ -627,6 +632,10 @@ export default function GuidePage() {
                 <li>If the policy requires approval, it routes to your direct manager automatically. If not, it's approved instantly.</li>
                 <li>Owner, Admin, or anyone with the time-off decision permission can approve or reject any request as an override, regardless of the reporting line.</li>
               </ol>
+              <p>
+                A pending request notifies your manager and the account owner in the bell icon (even if you don't
+                have a manager assigned); a decision — approved or rejected — notifies you back the same way.
+              </p>
               <p>
                 Balances (Allocated / Used / Pending / Remaining) are calculated live and reset every January 1st —
                 changing someone's policy never rewrites their past requests, and a deleted policy just deactivates

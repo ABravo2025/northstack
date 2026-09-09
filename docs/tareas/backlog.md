@@ -200,6 +200,11 @@ Catálogo completo (qué está construido, qué es solo posible hoy, qué está 
   cada productor llama a `createNotification` directo, no hay diseño unificado todavía; evaluar si
   vale la pena antes de sumar el próximo productor (ver también el backlog de preferencias de
   notificación por usuario, pendiente de construir).
+- [x] **Anuncios de plataforma** (feature updates + cambios de política legal, en la campana):
+  construido 2026-09-09, ver QA-84. Modelo separado (`PlatformAnnouncement`, no tenant-scoped, un
+  row por anuncio con cursor de lectura por usuario) — deliberadamente distinto del modelo de
+  `Notification` de arriba, no una unificación de los dos. `scripts/publish-announcement.ts` es el
+  mecanismo de publicación, documentado como paso obligatorio en cada push visible al usuario.
 - [ ] **Historial de valores previos de custom fields** (con retención por tiempo): evaluado y
   pospuesto a propósito.
 - [ ] **Hallazgos de seguridad sin resolver de la auditoría 2026-07-16** (`docs/informe-tecnico/

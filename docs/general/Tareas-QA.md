@@ -3972,3 +3972,69 @@ una entrada al changelog como parte de la misma tarea — no vuelva a quedar aba
    muestra las 13 entradas nuevas (más nuevas primero, desde "Time Off shows up in your
    notifications" hasta "Companies, Contacts, Opportunities, and Pipelines replace Clients"),
    sin romper el layout ni el estado de "visto" (`localStorage['northstack:changelogLastSeen']`).
+
+**Superado por QA-84 (mismo día, push posterior):** el ícono de changelog standalone de este punto
+6 ya no existe — se retiró y su contenido se migró a `PlatformAnnouncement`, ahora dentro de la
+campana. Verificar el punto 6 como se describe en QA-84 en su lugar.
+
+## QA-84 — Anuncios de plataforma: features + cambios de política legal (2026-09-09, en `main`/producción)
+
+**Por qué existe esta tarea:** Alejandro pidió que, de ahora en más, cada feature nueva o
+modificación se anuncie en el panel de notificaciones (no solo en un changelog que nadie
+revisaba), y que los cambios a Terms of Service/Privacy Policy/Refund Policy generen una
+notificación con todos los cambios, abrible, además del email que el propio ToS §14 ya promete.
+Esto reemplaza por completo el mecanismo de QA-83 (el ícono de changelog standalone, con array
+hardcodeado en `frontend/src/lib/changelog.ts`) — ambos quedaron retirados hoy mismo.
+
+### Qué cambió
+
+- **Modelo nuevo `PlatformAnnouncement`** (no tenant-scoped, a diferencia de `Notification`): un
+  row por anuncio, no uno por usuario. `User.lastAnnouncementSeenAt` es el cursor de lectura —
+  un solo timestamp por usuario, no una fila de "leído" por anuncio.
+- **La campana ahora tiene 2 secciones**: "Notifications" (igual que antes, personal) y "What's
+  new" (nueva, anuncios de plataforma). El badge numérico de la campana suma ambos contadores.
+- **Clickear un anuncio abre un modal de detalle** (`AnnouncementDetailModal`) — distinto del
+  comportamiento de una notificación personal (que solo se marca como leída). Para
+  `policy_change`, el modal tiene un botón "View the full [Terms/Privacy/Refund Policy]" que abre
+  el documento real y completo (reusa `LegalDocumentModal`, que ya trae la fecha "Effective Date"
+  del documento en vivo).
+- **`policy_change` también manda email** a todo usuario activo (`sendPolicyChangeEmail`,
+  best-effort por usuario) — `feature_update` no manda email, solo aparece en la campana.
+- **Help & FAQ suma una sección "Legal"** (debajo de "Contact us") con links a Terms/Privacy/Refund
+  que abren `LegalDocumentModal` — antes no había ningún lugar in-app para revisarlos fuera del
+  signup.
+- **`scripts/publish-announcement.ts`** es el mecanismo para publicar uno nuevo — documentado en
+  `docs/Skills/Skills-Development.md` como paso obligatorio en cada push con cambio visible, y
+  obligatorio (no opcional) para cualquier cambio a los documentos legales.
+- Migradas 20 entradas históricas del viejo changelog + 1 nueva anunciando esta misma feature (21
+  rows totales en producción al momento de este push, verificado con una query directa).
+
+### Qué probar
+
+1. **Bell combinado:** loguearse con cualquier usuario, abrir la campana — debería verse la
+   sección "What's new" con al menos 21 entradas, la más nueva ("Platform-wide updates in your
+   notifications") arriba. El badge de la campana debe reflejar el conteo real (probablemente
+   alto la primera vez, ya que `lastAnnouncementSeenAt` empieza en null para todo usuario
+   existente — esperado, no es un bug).
+2. **Marcar como visto:** abrir la campana una vez (sin cerrar el detalle de ningún anuncio) —
+   el badge de "What's new" debería bajar a 0 al cerrar y reabrir. Confirmar que el badge de
+   Notifications personales (Opportunity/Time Off/Stripe) sigue siendo independiente — "Mark all
+   read" no debería tocar el contador de anuncios, y viceversa.
+3. **Detalle de feature update:** clickear cualquier anuncio `feature_update` — debe abrir un
+   modal con título, fecha (formato "Month D, YYYY"), y el cuerpo completo. Sin botón de "View
+   full document" (eso es solo para `policy_change`).
+4. **Publicar un policy_change de prueba** (en un tenant/entorno de test, no producción real, o
+   avisar a Alejandro antes si se hace contra prod): `DATABASE_URL="..." npx tsx
+   scripts/publish-announcement.ts --type policy_change --policyType terms_of_service --title
+   "Test" --summary "Test summary" --body "Test body" --title "..."`. Confirmar (a) aparece en la
+   campana con el botón "View the full Terms of Service", que al clickear abre el documento real
+   fetcheado de `joinnorthstack.com/terms.html`; (b) revisar los logs del servidor — debería haber
+   un intento de `sendPolicyChangeEmail` por cada usuario activo del tenant.
+5. **Help & FAQ → Legal:** navegar a `/help`, confirmar que aparece la sección "Legal" (nav +
+   contenido) con los 3 links, cada uno abre el documento correcto con su fecha real.
+6. **Mobile:** repetir 1-3 en viewport angosto — la campana ya no comparte espacio con un ícono de
+   changelog separado (se retiró), así que el fix de header de QA-82/83 debería tener aún más
+   margen ahora, no menos.
+7. **Regresión:** confirmar que Notifications personales (Opportunity, Time Off, Stripe) siguen
+   funcionando exactamente igual que en QA-83 — este cambio no debería haber tocado esa mitad de
+   `NotificationBell.tsx`, solo agregado la sección nueva al lado.

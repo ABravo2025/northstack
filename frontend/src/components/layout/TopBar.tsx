@@ -93,8 +93,14 @@ export default function TopBar({ user, token, onLogout, onMenuClick }: TopBarPro
         <button type="button" className="menu-toggle" onClick={onMenuClick} aria-label="Open menu">
           <MenuIcon className="h-5 w-5" />
         </button>
-        <img src="/logo-horizontal-light.svg" alt="Northstack" className="dark:hidden" />
-        <img src="/logo-horizontal-dark.svg" alt="Northstack" className="hidden dark:block" />
+        {/* Below md the horizontal wordmark (~195px) overlaps the bell/changelog buttons that
+            follow it in this flex row (header is too narrow for both) — swap to the square
+            icon mark, which leaves room. */}
+        <img src="/icon-color.svg" alt="Northstack" className="h-8 w-8 md:hidden" />
+        <span className="hidden items-center md:flex">
+          <img src="/logo-horizontal-light.svg" alt="Northstack" className="dark:hidden" />
+          <img src="/logo-horizontal-dark.svg" alt="Northstack" className="hidden dark:block" />
+        </span>
       </div>
 
       <div className="flex items-center gap-2">

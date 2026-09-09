@@ -13,6 +13,7 @@ import EntityCardList from '../components/common/EntityCardList';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
 import { getInitials } from '../components/common/Avatar';
 import { usePermissions } from '../contexts/PermissionsContext';
+import { usePrimaryAction } from '../contexts/PrimaryActionContext';
 
 const ACCRUAL_LABELS: Record<string, string> = {
   fixed_annual: 'Fixed',
@@ -200,6 +201,11 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
     });
     setSlideOverMode('add');
   };
+
+  // Mobile FAB for the Policies tab — the header "Add Policy" button (previously always visible,
+  // on every tab, wedged into the .views-bar) had no mobile equivalent at all, unlike every other
+  // entity list in the app. Mirrors PayrollPage's per-tab usePrimaryAction.
+  usePrimaryAction(canManagePolicies && tab === 'policies' ? { label: 'Add Policy', onClick: handleOpenAddPolicy } : null);
 
   const handleStartEditPolicy = (policy: any) => {
     setPolicyForm({
@@ -593,12 +599,6 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
             onClick={() => setTab('assignments')}
           >
             Assignments
-          </button>
-        )}
-        {canManagePolicies && (
-          <button type="button" className="btn-outline gap-1.5 ml-auto" onClick={handleOpenAddPolicy}>
-            <PlusIcon className="h-3.5 w-3.5" />
-            Add Policy
           </button>
         )}
       </div>
@@ -1430,6 +1430,16 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                             </tr>
                           );
                         })}
+                        <tr className="ghost-row">
+                          <td colSpan={7} className="ghost-row-cell" onClick={handleOpenAddPolicy}>
+                            <span className="ghost-row-inner">
+                              <span className="ghost-plus-box">
+                                <PlusIcon className="h-3 w-3" />
+                              </span>
+                              Add
+                            </span>
+                          </td>
+                        </tr>
                       </tbody>
                     </table>
                   </div>

@@ -11,6 +11,7 @@ Rol: recomendar infraestructura pensando en sustentabilidad para un founder solo
 - **Dominio**: `joinnorthstack.com`, comprado en Cloudflare Registrar (~USD 10/año), subdominio `app.joinnorthstack.com` apuntando a Vercel con SSL automático (Let's Encrypt).
 - **Email transaccional**: Zoho Mail (plan gratis), DNS (MX/SPF/DKIM) en Cloudflare, enviado vía `nodemailer` desde el backend.
 - **Branches**: `main` (app) y `landing` (landing estática) están separadas con pipelines de deploy independientes — no requiere tocar la app para deployar la landing y viceversa.
+- **Android (Capacitor)**: `.github/workflows/android-build.yml` compila un APK debug descargable (`frontend/android/`) — se dispara solo en push a `main` que toque `frontend/**` o el propio workflow, además de `workflow_dispatch` manual. Regla del proyecto: todo push a producción debe ir acompañado de una corrida de este build (manual si el path filter no lo cubre), para que el APK nativo no quede desactualizado respecto a la web — ver `docs/Skills/Skills-Development.md`. Certificación en Play Store: pendiente (cuenta de Play Console, AAB firmado en vez de APK debug, closed testing de 12 testers/14 días para cuentas nuevas — no implementado todavía).
 
 ## Cobros/pagos (tema abierto, sin implementar)
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { api } from './api';
 import type { PermissionsPayload, Tenant } from './api';
+import { setUnauthorizedHandler } from './api/http';
 import { useToast } from './components/common/ToastProvider';
 import { PermissionsProvider } from './contexts/PermissionsContext';
 import TableSkeleton from './components/common/TableSkeleton';
@@ -161,6 +162,20 @@ export default function App() {
     navigate('/overview');
   };
 
+  // Shared by handleLogout and the unauthorizedHandler effect below — cleared together so a
+  // second person logging in on the same tab (or, if the tenant fetch below fails, the same
+  // person indefinitely) never sees the previous account's tenant: its past_due/suspended
+  // banner, its PlansModal dismissal state, etc. No explicit navigate('/login') needed —
+  // isAuthenticated below is derived from token/user, so clearing them falls back to the
+  // login screen on its own.
+  const clearSession = () => {
+    setToken(null);
+    setUser(null);
+    setPermissions(null);
+    setTenant(null);
+    localStorage.removeItem('token');
+  };
+
   const handleLogout = async () => {
     if (token) {
       try {
@@ -169,15 +184,18 @@ export default function App() {
         console.error('Logout error:', error);
       }
     }
-    setToken(null);
-    setUser(null);
-    setPermissions(null);
-    // Cleared alongside token/user — otherwise a second person logging in on the same tab
-    // briefly (or, if the tenant fetch below then fails, indefinitely) sees the previous
-    // account's tenant: its past_due/suspended banner, its PlansModal dismissal state, etc.
-    setTenant(null);
-    localStorage.removeItem('token');
+    clearSession();
   };
+
+  // Registered once so http.ts's apiFetch — a plain fetch wrapper with no access to React state —
+  // can force a logout the moment ANY authenticated request comes back 401, instead of leaving a
+  // dead session's UI silently showing misleading empty states on every page (found live,
+  // 2026-09-10). The token is already invalid server-side, so there's nothing to call
+  // DELETE /api/auth/logout for — this only ever needs to clear local state.
+  useEffect(() => {
+    setUnauthorizedHandler(clearSession);
+    return () => setUnauthorizedHandler(null);
+  }, []);
 
   if (checkingSession) {
     return (

@@ -63,8 +63,12 @@ publicRouter.get('/api/public/:tenantSlug/:formSlug', async (req, res) => {
 
   const fields = JSON.parse(form.fieldsConfig) as { key: string; required: boolean }[];
   const customFieldIds = fields.filter((f) => f.key.startsWith('cf:')).map((f) => f.key.slice(3));
+  // findCustomFieldDefinitionById has no tenant filter of its own (it's reused by authenticated,
+  // already-tenant-scoped callers elsewhere) — this is the one call site reachable with no auth at
+  // all, so re-verify tenantId here even though publicForms.ts now also blocks a cross-tenant `cf:`
+  // key from being saved in the first place (belt-and-suspenders against any pre-existing bad data).
   const customFieldDefs = (await Promise.all(customFieldIds.map((id) => findCustomFieldDefinitionById(id)))).filter(
-    (d): d is NonNullable<typeof d> => d !== null,
+    (d): d is NonNullable<typeof d> => d !== null && d.tenantId === form.tenantId,
   );
 
   // Department is a catalog dropdown now, not free text — only relevant/included

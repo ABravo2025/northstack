@@ -49,7 +49,7 @@ export async function sendInvitationEmail(input: SendInvitationEmailInput): Prom
       'This link expires in 7 days.',
     ].join('\n'),
     html: [
-      `<p>You've been invited to join <strong>${input.tenantName}</strong> on Northstack as <strong>${input.role}</strong>.</p>`,
+      `<p>You've been invited to join <strong>${escapeHtml(input.tenantName)}</strong> on Northstack as <strong>${escapeHtml(input.role)}</strong>.</p>`,
       `<p><a href="${input.acceptUrl}">Accept your invitation</a></p>`,
       hasContract ? '<p>Your contract is attached to this email for your records.</p>' : '',
       '<p>This link expires in 7 days.</p>',
@@ -85,7 +85,7 @@ export async function sendPublicFormSubmissionEmail(input: SendPublicFormSubmiss
       `${input.submitterName} (${input.submitterEmail}) just submitted "${input.formName}" for ${input.tenantName}.`,
     ].join('\n'),
     html: [
-      `<p><strong>${input.submitterName}</strong> (${input.submitterEmail}) just submitted <strong>${input.formName}</strong> for ${input.tenantName}.</p>`,
+      `<p><strong>${escapeHtml(input.submitterName)}</strong> (${escapeHtml(input.submitterEmail)}) just submitted <strong>${escapeHtml(input.formName)}</strong> for ${escapeHtml(input.tenantName)}.</p>`,
     ].join('\n'),
   });
 }
@@ -104,9 +104,9 @@ export async function sendPublicFormConfirmationEmail(input: SendPublicFormConfi
     to: input.to,
     subject: `We received your submission — ${input.formName}`,
     text: [`Thanks! ${input.tenantName} received your submission for "${input.formName}".`].join('\n'),
-    html: [`<p>Thanks! ${input.tenantName} received your submission for <strong>${input.formName}</strong>.</p>`].join(
-      '\n',
-    ),
+    html: [
+      `<p>Thanks! ${escapeHtml(input.tenantName)} received your submission for <strong>${escapeHtml(input.formName)}</strong>.</p>`,
+    ].join('\n'),
   });
 }
 
@@ -137,8 +137,8 @@ export async function sendTimeOffRequestPendingEmail(input: SendTimeOffRequestPe
       'Review it in Northstack under HR > Time Off.',
     ].join('\n'),
     html: [
-      `<p>Hi ${input.approverName},</p>`,
-      `<p><strong>${input.employeeName}</strong> requested ${input.daysRequested} day(s) of <strong>${input.policyName}</strong> (${range}) and it needs your approval.</p>`,
+      `<p>Hi ${escapeHtml(input.approverName)},</p>`,
+      `<p><strong>${escapeHtml(input.employeeName)}</strong> requested ${input.daysRequested} day(s) of <strong>${escapeHtml(input.policyName)}</strong> (${range}) and it needs your approval.</p>`,
       '<p>Review it in Northstack under HR &gt; Time Off.</p>',
     ].join('\n'),
   });
@@ -171,13 +171,20 @@ export async function sendTimeOffRequestDecidedEmail(input: SendTimeOffRequestDe
     : `${input.employeeName}'s request for ${input.daysRequested} day(s) of ${input.policyName} (${range}) was ${
         input.decision
       }${input.autoApproved ? ' automatically — this policy does not require approval' : ''}.`;
+  const introHtml = input.recipientIsEmployee
+    ? `Your request for ${input.daysRequested} day(s) of ${escapeHtml(input.policyName)} (${range}) was ${input.decision}${
+        input.autoApproved ? ' automatically — this policy does not require approval' : ''
+      }.`
+    : `${escapeHtml(input.employeeName)}'s request for ${input.daysRequested} day(s) of ${escapeHtml(input.policyName)} (${range}) was ${
+        input.decision
+      }${input.autoApproved ? ' automatically — this policy does not require approval' : ''}.`;
 
   await transporter.sendMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
     to: input.to,
     subject,
     text: [intro, input.decisionNote ? `\nNote: ${input.decisionNote}` : ''].join('\n'),
-    html: [`<p>${intro}</p>`, input.decisionNote ? `<p>Note: ${input.decisionNote}</p>` : ''].join('\n'),
+    html: [`<p>${introHtml}</p>`, input.decisionNote ? `<p>Note: ${escapeHtml(input.decisionNote)}</p>` : ''].join('\n'),
   });
 }
 
@@ -205,9 +212,9 @@ export async function sendFeedbackEmail(input: SendFeedbackEmailInput): Promise<
       input.message,
     ].join('\n'),
     html: [
-      `<p><strong>From:</strong> ${input.fromName} &lt;${input.fromEmail}&gt; (${input.tenantName})</p>`,
-      `<p><strong>Page:</strong> ${input.pageUrl}</p>`,
-      `<p>${input.message.replace(/\n/g, '<br />')}</p>`,
+      `<p><strong>From:</strong> ${escapeHtml(input.fromName)} &lt;${escapeHtml(input.fromEmail)}&gt; (${escapeHtml(input.tenantName)})</p>`,
+      `<p><strong>Page:</strong> ${escapeHtml(input.pageUrl)}</p>`,
+      `<p>${escapeHtml(input.message).replace(/\n/g, '<br />')}</p>`,
     ].join('\n'),
   });
 }
@@ -238,7 +245,7 @@ export async function sendContractSignedEmail(input: SendContractSignedEmailInpu
       'The signed contract is attached to this email.',
     ].join('\n'),
     html: [
-      `<p><strong>${input.employeeName}</strong>'s contract with <strong>${input.tenantName}</strong> was just confirmed and signed.</p>`,
+      `<p><strong>${escapeHtml(input.employeeName)}</strong>'s contract with <strong>${escapeHtml(input.tenantName)}</strong> was just confirmed and signed.</p>`,
       '<p>The signed contract is attached to this email.</p>',
     ].join('\n'),
     attachments: [{ filename: 'contract-signed.pdf', content: input.pdfBuffer, contentType: 'application/pdf' }],
@@ -394,8 +401,8 @@ export async function sendTicketNoteCreatedEmail(input: SendTicketNoteCreatedEma
     subject: `New reply on your ticket: "${input.ticketSubject}"`,
     text: [`${input.authorName} replied to your ticket "${input.ticketSubject}":`, '', input.noteBody].join('\n'),
     html: [
-      `<p><strong>${input.authorName}</strong> replied to your ticket <strong>${input.ticketSubject}</strong>:</p>`,
-      `<p>${input.noteBody}</p>`,
+      `<p><strong>${escapeHtml(input.authorName)}</strong> replied to your ticket <strong>${escapeHtml(input.ticketSubject)}</strong>:</p>`,
+      `<p>${escapeHtml(input.noteBody)}</p>`,
     ].join('\n'),
   });
 }

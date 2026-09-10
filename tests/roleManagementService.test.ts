@@ -212,7 +212,7 @@ describe('roleManagementService', () => {
   });
 
   it('creates a new role that persists with a blank permission set', async () => {
-    const result = await createRole('t1', 'Sales Manager');
+    const result = await createRole('t1', 'Sales Manager', undefined, null);
     expect(result.success).toBe(true);
     expect(result.role?.name).toBe('Sales Manager');
     expect(result.role?.permissions).toEqual([]);
@@ -220,25 +220,25 @@ describe('roleManagementService', () => {
   });
 
   it('duplicates permissions from an existing role when creating', async () => {
-    const result = await createRole('t1', 'Junior Admin', 'role-admin');
+    const result = await createRole('t1', 'Junior Admin', 'role-admin', null);
     expect(result.success).toBe(true);
     expect(result.role?.permissions).toEqual(['view_company']);
   });
 
   it('duplicating from Owner grants every toggleable permission (Owner itself has no rows)', async () => {
-    const result = await createRole('t1', 'Co-Owner-ish', 'role-owner');
+    const result = await createRole('t1', 'Co-Owner-ish', 'role-owner', null);
     expect(result.success).toBe(true);
     expect(result.role!.permissions.length).toBeGreaterThan(1);
     expect(result.role!.permissions).toContain('manage_payroll');
   });
 
   it('rejects creating a role named "owner" (case-insensitive)', async () => {
-    const result = await createRole('t1', 'OWNER');
+    const result = await createRole('t1', 'OWNER', undefined, null);
     expect(result.success).toBe(false);
   });
 
   it('rejects creating a role with a name that already exists', async () => {
-    const result = await createRole('t1', 'admin');
+    const result = await createRole('t1', 'admin', undefined, null);
     expect(result.success).toBe(false);
   });
 
@@ -298,7 +298,7 @@ describe('roleManagementService', () => {
 
   it('is idempotent when creating a role and duplicating includes field restrictions', async () => {
     fieldRestrictionRows.push({ roleId: 'role-admin', tenantId: 't1', entityType: 'employee', fieldKey: 'personalEmail' });
-    const result = await createRole('t1', 'Junior Admin', 'role-admin');
+    const result = await createRole('t1', 'Junior Admin', 'role-admin', null);
     expect(result.success).toBe(true);
     expect(result.role?.hiddenFields).toEqual({ employee: ['personalEmail'] });
   });

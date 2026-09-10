@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import { runPlanTransitions } from '../modules/tenant/planTransitionService.js';
 import { renewExpiringWatchChannels } from '../modules/integrations/googleCalendarWatchService.js';
 import { runStalledOpportunityReminders } from '../modules/crm/stalledOpportunityService.js';
@@ -9,6 +10,16 @@ import { createAsyncRouter } from '../lib/asyncRouter.js';
 import type express from 'express';
 
 export const internalRouter = createAsyncRouter();
+
+// Plain `!==` on a secret is a timing side-channel (security review, 2026-09-10) — every other
+// secret comparison in the codebase (password hashes, Paddle/Mercado Pago webhook signatures)
+// already goes through timingSafeEqual; this brings CRON_SECRET in line. timingSafeEqual throws on
+// mismatched buffer lengths rather than returning false, so that case is checked explicitly first.
+function timingSafeStringEqual(a: string, b: string): boolean {
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  return bufA.length === bufB.length && timingSafeEqual(bufA, bufB);
+}
 
 // Shared by every /api/internal/* cron route below.
 function checkCronSecret(req: express.Request, res: express.Response, routeName: string): boolean {
@@ -22,7 +33,8 @@ function checkCronSecret(req: express.Request, res: express.Response, routeName:
     console.warn(`CRON_SECRET is not configured — ${routeName} is running unauthenticated`);
     return true;
   }
-  if (req.headers.authorization !== `Bearer ${secret}`) {
+  const provided = req.headers.authorization;
+  if (typeof provided !== 'string' || !timingSafeStringEqual(provided, `Bearer ${secret}`)) {
     res.status(401).json({ error: 'Unauthorized' });
     return false;
   }

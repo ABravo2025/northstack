@@ -159,8 +159,11 @@ export interface CreateRoleResult {
 export async function createRole(
   tenantId: string,
   name: string,
-  duplicateFromRoleId?: string,
-  tenantForPlanCheck?: { plan: PlanTier | null } | null,
+  duplicateFromRoleId: string | undefined,
+  // Mandatory (security review, 2026-09-10) rather than defaulting via an optional param — the
+  // caller always has a real tenantId here, so there's no legitimate reason to silently skip the
+  // plan-tier cap by omission; a genuinely tenant-less context must now pass `null` explicitly.
+  tenantForPlanCheck: { plan: PlanTier | null } | null,
 ): Promise<CreateRoleResult> {
   const trimmed = name.trim();
   if (!trimmed) {
@@ -177,7 +180,7 @@ export async function createRole(
   // excluded by name — see the module doc comment on how "custom" is identified) are capped on
   // Starter. `tenantForPlanCheck` is optional so existing/internal callers that already know
   // there's no cap concern (none today, but keeps this additive) aren't forced to fetch a tenant.
-  const maxCustomRoles = getPlanLimits(tenantForPlanCheck ?? null).maxCustomRoles;
+  const maxCustomRoles = getPlanLimits(tenantForPlanCheck).maxCustomRoles;
   if (maxCustomRoles !== null) {
     const existingCustomRoles = await prisma.role.count({
       where: { tenantId, isOwner: false, name: { notIn: ['Admin', 'Member'] } },

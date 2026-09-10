@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import prisma from '../../lib/prisma.js';
-import type { PlanTier, TenantStatus, UserRole } from '@prisma/client';
+import type { PlanTier, TenantStatus } from '@prisma/client';
 import type { User, Session } from '@prisma/client';
 import { sendPasswordResetEmail } from '../../lib/mailer.js';
 import { getEmailDomain } from '../../lib/email.js';
@@ -12,7 +12,6 @@ export interface RegisterUserInput {
   email: string;
   password: string;
   phone: string;
-  role?: UserRole;
   acceptedTerms?: boolean;
 }
 
@@ -123,7 +122,10 @@ export async function registerUser(input: RegisterUserInput): Promise<AuthResult
       email: normalizedEmail,
       emailDomain: getEmailDomain(normalizedEmail),
       passwordHash: hashPassword(input.password),
-      role: input.role ?? 'member',
+      // Never taken from the client (security review, 2026-09-10) — a self-registering, tenant-less
+      // user has no legitimate reason to set their own role; every real tenant-attach path (signup,
+      // invitation acceptance) overwrites this with a server-controlled value anyway.
+      role: 'member',
       acceptedTermsAt: new Date(),
     },
   });

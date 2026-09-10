@@ -25,6 +25,9 @@
     "pdf-lib": "^1.17.1",
     "zod": "^3.21.0"
   },
+  "overrides": {
+    "qs": "^6.16.0"
+  },
   "devDependencies": {
     "@types/cors": "^2.8.2",
     "@types/express": "^5.0.1",

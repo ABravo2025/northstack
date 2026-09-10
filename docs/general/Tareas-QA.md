@@ -4038,3 +4038,61 @@ hardcodeado en `frontend/src/lib/changelog.ts`) — ambos quedaron retirados hoy
 7. **Regresión:** confirmar que Notifications personales (Opportunity, Time Off, Stripe) siguen
    funcionando exactamente igual que en QA-83 — este cambio no debería haber tocado esa mitad de
    `NotificationBell.tsx`, solo agregado la sección nueva al lado.
+
+## QA-85 — Sidebar hub (Dashboards/Time Off) + 2 fixes de seguridad, promovidos a producción sin QA ni anuncio (2026-09-10, en `main`/producción)
+
+**Por qué existe esta tarea:** ninguna de las dos tareas estándar de esta ronda de producción se
+cargó en su momento — ni esta (QA, regla vigente desde QA-83) ni el anuncio de plataforma (regla
+QA-84, vigente desde ayer). La causa concreta: el rediseño de sidebar (commit `2c1dee3`) se pusheó
+por error directo a `main` una vez, se detectó y revirtió al toque (`aac57f8`) antes de que
+Alejandro lo viera, y una sesión concurrente no relacionada lo re-revirtió sin querer en `staging`
+al hacer su propio push de seguridad (mecanismo en
+[[feedback_concurrent_session_git_safety]]) — el incidente de reaplicar (`e453693`) consumió la
+atención de esa sesión y ninguno de los dos pasos de proceso se hizo. El anuncio faltante para el
+sidebar hub ya se publicó (ver abajo); esta tarea cubre la verificación que falta.
+
+### Qué se promovió a producción (commit `e453693`, fast-forward desde `aac57f8`)
+
+1. **Sidebar hub — Dashboards y Time Off** (ver memoria `project_dashboards_timeoff_sidebar_2026-09-10`
+   para el detalle completo): `/dashboards` ahora abre en una grilla de tiles (`DashboardsHomePage`)
+   en vez de redirigir directo a HR; cada categoría lleva a un sidebar (`DashboardsSidebar`) igual
+   al patrón de Settings. Time Off: sus 7 tabs pasan de tab strip horizontal a `TimeOffSidebar`,
+   compartiendo estado vía `TimeOffTabContext` (montado en `AppLayout.tsx`). Confirmado con
+   Alejandro que el swap aplica en mobile y desktop por igual para Time Off (antes visible como
+   strip horizontal, ahora detrás del hamburger en mobile).
+2. **Fix: leak de metadata de CustomFieldDefinition cross-tenant** (`f24d0bb`) — un Public Form sin
+   autenticar podía filtrar nombre/tipo/opciones de un custom field de OTRO tenant si el campo
+   `cf:<id>` en su config apuntaba a un id ajeno; `findCustomFieldDefinitionById` no filtraba por
+   tenant. Fix en escritura (`routes/publicForms.ts`, nuevo helper `findInvalidCustomFieldKey`) y
+   en lectura (`routes/public.ts`, filtro tenant como cinturón y tirantes).
+3. **Fix: HTML injection en emails transaccionales** (`f24d0bb` + `2a6b69f`) — `escapeHtml()` ya
+   existía en `mailer.ts` pero solo 3 de ~13 funciones de envío la usaban; aplicada al resto
+   (invitaciones, Public Form submission/confirmation — la de mayor exposición, alcanzable por
+   cualquier visitante anónimo —, Time Off pending/decided, feedback, contrato firmado, nota de
+   ticket). Además: `role` sin filtrar en `POST /api/auth/register` (ahora hardcodeado a `member`),
+   `CRON_SECRET` con comparación timing-safe, `tenantForPlanCheck` ahora obligatorio en
+   `createRole`, y `npm audit fix` (nodemailer/react-router/qs vía override).
+4. **NO promovido** (explícitamente excluido por Alejandro, sigue solo en `staging`): mover rate
+   limiting de in-memory a Upstash Redis (`f7e0c60`) — dependencia externa nueva, env vars de
+   producción sin confirmar todavía.
+
+**Anuncio ya publicado** (2026-09-10, vía `scripts/publish-announcement.ts`) para el punto 1 — los
+puntos 2-3 son fixes de seguridad internos, correctamente sin anunciar a propósito (no se
+publicita que existió un leak). El punto 4 no aplica, no está en producción.
+
+### Qué probar
+
+1. **Dashboards:** navegar a `/dashboards` — debe mostrar la grilla de 6 tiles, no redirigir
+   directo a HR. Cada tile lleva a su categoría con el sidebar nuevo, "Back" fijo a `/overview`.
+2. **Time Off:** confirmar que las 7 tabs (My Timeoff/My Requests/Approvals/Balances/etc.) ahora
+   viven en un sidebar, no en un tab strip horizontal — en mobile, detrás del hamburger. Confirmar
+   que sigue aterrizando en "My Timeoff" al entrar (no en la última tab visitada).
+3. **Leak de custom field:** con dos tenants de prueba, intentar crear/actualizar un Public Form en
+   el Tenant A apuntando un campo `cf:<id>` al id de un custom field del Tenant B — debe rechazarse
+   en la escritura. Si ya existe un form con ese gap desde antes del fix, `GET
+   /api/public/:tenantSlug/:formSlug` no debe exponer metadata del campo ajeno.
+4. **HTML injection:** enviar una invitación / completar un Public Form / crear un Time Off request
+   con un nombre que incluya `<script>`/`<img onerror=...>` en algún campo interpolado al email —
+   confirmar que llega escapado (texto plano), no como markup ejecutable.
+5. **Regresión Anuncios (QA-84):** confirmar que el anuncio nuevo ("Dashboards and Time Off now
+   work like Settings") aparece en la campana, sección "What's new", con fecha de hoy.

@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../components/layout/Sidebar';
 import SettingsSidebar from '../components/layout/SettingsSidebar';
-import DashboardsSidebar from '../components/layout/DashboardsSidebar';
-import TimeOffSidebar from '../components/layout/TimeOffSidebar';
 import TopBar from '../components/layout/TopBar';
 import MobileTabbar from '../components/layout/MobileTabbar';
 import PrimaryActionFab from '../components/layout/PrimaryActionFab';
@@ -14,7 +12,6 @@ import type { PlanTier, Tenant } from '../api';
 import { daysRemainingUntil } from '../lib/trial';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { PrimaryActionProvider } from '../contexts/PrimaryActionContext';
-import { TimeOffTabProvider } from '../contexts/TimeOffTabContext';
 
 interface AppLayoutProps {
   user: any;
@@ -86,16 +83,11 @@ export default function AppLayout({ user, token, tenant, onTenantUpdated, onLogo
 
   return (
     <PrimaryActionProvider>
-    <TimeOffTabProvider>
     <div className="app">
       <TopBar user={user} token={token} onLogout={onLogout} onMenuClick={() => setMobileSidebarOpen(true)} />
       <div className="app-shell">
         {location.pathname.startsWith('/settings') ? (
           <SettingsSidebar mobileOpen={mobileSidebarOpen} onMobileClose={() => setMobileSidebarOpen(false)} />
-        ) : location.pathname.startsWith('/dashboards') ? (
-          <DashboardsSidebar mobileOpen={mobileSidebarOpen} onMobileClose={() => setMobileSidebarOpen(false)} />
-        ) : location.pathname.startsWith('/hr/time-off') ? (
-          <TimeOffSidebar mobileOpen={mobileSidebarOpen} onMobileClose={() => setMobileSidebarOpen(false)} />
         ) : (
           <Sidebar mobileOpen={mobileSidebarOpen} onMobileClose={() => setMobileSidebarOpen(false)} tenant={tenant} />
         )}
@@ -174,7 +166,6 @@ export default function AppLayout({ user, token, tenant, onTenantUpdated, onLogo
         onSelectPlan={handleSelectPlanAndCheckout}
       />
     </div>
-    </TimeOffTabProvider>
     </PrimaryActionProvider>
   );
 }

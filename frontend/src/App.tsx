@@ -16,7 +16,6 @@ import OverviewPage from './pages/OverviewPage';
 import HelpPage from './pages/HelpPage';
 import GuidePage from './pages/GuidePage';
 import DashboardsLayout from './layouts/DashboardsLayout';
-import DashboardsHomePage from './pages/DashboardsHomePage';
 import DashboardsHrPage from './pages/dashboards/DashboardsHrPage';
 import DashboardsTimeOffPage from './pages/dashboards/DashboardsTimeOffPage';
 import DashboardsPayrollPage from './pages/dashboards/DashboardsPayrollPage';
@@ -265,7 +264,7 @@ export default function App() {
         <Route path="/guide" element={<GuidePage />} />
         <Route path="/hr/dashboard" element={<Navigate to="/dashboards/hr" replace />} />
         <Route path="/dashboards" element={<DashboardsLayout token={token ?? ''} />}>
-          <Route index element={<DashboardsHomePage />} />
+          <Route index element={<Navigate to="/dashboards/hr" replace />} />
           <Route path="hr" element={<DashboardsHrPage />} />
           <Route path="time-off" element={<DashboardsTimeOffPage />} />
           <Route path="payroll" element={<DashboardsPayrollPage />} />

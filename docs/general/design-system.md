@@ -377,4 +377,26 @@ mobile de `App.css`) estira el último tile en vez de dejar el hueco. Arreglado 
   logo del header en `TopBar.tsx` y los botones "Add/New X" de Opportunities/Payroll/Pipelines/
   PublicForms, arreglados 2026-09-09). Mismo cuidado que la nota de §1 sobre tokens con dígito final +
   `dark:` — otra clase de bug de Tailwind v4 que compila sin error pero no hace lo que el código sugiere.
+- **Patrón "hub" tipo Settings, para secciones con muchas sub-vistas** (`SettingsSidebar.tsx` fue el
+  primero; `DashboardsSidebar.tsx`/`TimeOffSidebar.tsx` lo replican, 2026-09-09) — cuando una sección
+  tiene tantas sub-vistas que un `.views-bar` se vuelve incómodo (Dashboards: 6 categorías;
+  Time Off: 7 tabs), en vez de una tira horizontal el `Sidebar` principal se reemplaza por uno propio
+  de la sección mientras la ruta esté activa (switch en `AppLayout.tsx` por `location.pathname`), con
+  "Back" fijo a `/overview` arriba. Dos variantes según si las sub-vistas son rutas o no:
+  - **Dashboards** (rutas reales, `/dashboards/hr` etc.): `/dashboards` (índice) muestra
+    `DashboardsHomePage.tsx`, un grid de tiles igual al de Settings (reusa `.settings-grid`/
+    `.settings-tile`, no son clases exclusivas de Settings pese al nombre). La fuente única de
+    verdad (label/desc/ícono/permiso) vive en `lib/dashboardsSections.tsx`, consumida tanto por el
+    home como por el sidebar — mismo rol que `settingsSections.tsx`.
+  - **Time Off** (7 tabs son `useState` interno de `TimeOffOverviewPage.tsx`, no rutas): el sidebar es
+    un hermano de `<Outlet>`, no un descendiente de la página, así que no puede leer/escribir ese
+    estado directo — se comparte vía `TimeOffTabContext` (mismo problema que resuelve
+    `PrimaryActionContext` para el FAB, pero de ida y vuelta: el sidebar escribe `tab`, la página lo
+    lee). El provider vive montado siempre en `AppLayout.tsx`, no por-ruta, así que
+    `TimeOffOverviewPage` resetea el tab a `'my-timeoff'` en su propio `useEffect` de montaje — si no,
+    volver a la página después de haber estado en otra tab la dejaría abierta ahí en vez de arrancar
+    en "My Timeoff", cambiando el comportamiento de antes de este refactor.
+  - Alejandro pidió explícitamente que el swap de sidebar aplique igual en mobile que en desktop (no
+    solo desktop) para mantener consistencia con Settings, aun a costa de un tap extra (abrir el
+    drawer) para cambiar de tab en una sección de uso diario como Time Off.
 - **Verificación**: sin scroll horizontal a nivel `body` en 390×844 y 768×1024, medido con Playwright.

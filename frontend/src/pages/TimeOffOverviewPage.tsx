@@ -10,10 +10,10 @@ import TableSkeleton from '../components/common/TableSkeleton';
 import RequiredMark from '../components/common/RequiredMark';
 import { CalendarIcon, ChevronDownIcon, DotsVerticalIcon, PlusIcon } from '../components/common/Icons';
 import EntityCardList from '../components/common/EntityCardList';
-import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
 import { getInitials } from '../components/common/Avatar';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { usePrimaryAction } from '../contexts/PrimaryActionContext';
+import { useTimeOffTab } from '../contexts/TimeOffTabContext';
 
 const ACCRUAL_LABELS: Record<string, string> = {
   fixed_annual: 'Fixed',
@@ -25,7 +25,15 @@ interface TimeOffOverviewPageProps {
   token: string;
 }
 
-type Tab = 'my-timeoff' | 'my-requests' | 'approvals' | 'balances' | 'all-requests' | 'policies' | 'assignments';
+const TAB_LABELS: Record<string, string> = {
+  'my-timeoff': 'My Timeoff',
+  'my-requests': 'My Requests',
+  approvals: 'Approvals',
+  balances: 'Balances',
+  'all-requests': 'All Requests',
+  policies: 'Policies',
+  assignments: 'Assignments',
+};
 
 const STATUS_LABELS: Record<string, string> = {
   pending: 'Pending',
@@ -36,7 +44,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPageProps) {
   const toast = useToast();
-  const [tab, setTab] = useState<Tab>('my-timeoff');
+  const { tab, setTab, setPendingApprovalsCount } = useTimeOffTab();
   const [employees, setEmployees] = useState<any[]>([]);
   const [timeOffPolicies, setTimeOffPolicies] = useState<any[]>([]);
   const [myRequests, setMyRequests] = useState<any[]>([]);
@@ -47,7 +55,6 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
   const [loading, setLoading] = useState(false);
   const [cancellingRequestId, setCancellingRequestId] = useState<string | null>(null);
   const [newRequest, setNewRequest] = useState({ timeOffPolicyId: '', startDate: '', endDate: '', note: '' });
-  const viewsBarRef = useRef<HTMLDivElement>(null);
 
   const [assignMenuFor, setAssignMenuFor] = useState<string | null>(null);
   const assignMenuAnchorRef = useRef<HTMLElement | null>(null);
@@ -112,7 +119,16 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
 
   useEffect(() => {
     loadData();
+    // TimeOffTabContext is mounted once at AppLayout, not per-visit, so the tab this page last
+    // left on would otherwise still be selected next time you navigate here — reset it so
+    // arriving at Time Off behaves the same as before this used shared state (2026-09-09).
+    setTab('my-timeoff');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    setPendingApprovalsCount(pendingApprovals.length);
+  }, [pendingApprovals, setPendingApprovalsCount]);
 
   const loadData = async () => {
     setLoading(true);
@@ -541,68 +557,8 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
       </SlideOver>
 
       <div className="page-toolbar no-border">
-        <h2>Time Off</h2>
+        <h2>{TAB_LABELS[tab]}</h2>
       </div>
-      <div className="views-bar" ref={viewsBarRef}>
-        <button
-          type="button"
-          className={`view-tab ${tab === 'my-timeoff' ? 'active' : ''}`}
-          onClick={() => setTab('my-timeoff')}
-        >
-          My Timeoff
-        </button>
-        <button
-          type="button"
-          className={`view-tab ${tab === 'my-requests' ? 'active' : ''}`}
-          onClick={() => setTab('my-requests')}
-        >
-          My Requests
-        </button>
-        <button
-          type="button"
-          className={`view-tab ${tab === 'approvals' ? 'active' : ''}`}
-          onClick={() => setTab('approvals')}
-        >
-          Approvals{pendingApprovals.length > 0 ? ` (${pendingApprovals.length})` : ''}
-        </button>
-        {canManagePolicies && (
-          <button
-            type="button"
-            className={`view-tab ${tab === 'balances' ? 'active' : ''}`}
-            onClick={() => setTab('balances')}
-          >
-            Balances
-          </button>
-        )}
-        {canManagePolicies && (
-          <button
-            type="button"
-            className={`view-tab ${tab === 'all-requests' ? 'active' : ''}`}
-            onClick={() => setTab('all-requests')}
-          >
-            All Requests
-          </button>
-        )}
-        {canManagePolicies && (
-          <button
-            type="button"
-            className={`view-tab ${tab === 'policies' ? 'active' : ''}`}
-            onClick={() => setTab('policies')}
-          >
-            Policies
-          </button>
-        )}
-        {canManagePolicies && (
-          <button
-            type="button"
-            className={`view-tab ${tab === 'assignments' ? 'active' : ''}`}
-            onClick={() => setTab('assignments')}
-          >
-            Assignments
-          </button>
-        )}
-      </div>
-      <HorizontalScrollbar targetRef={viewsBarRef} />
 
       <div className="mt-4">
         {loading && <TableSkeleton />}

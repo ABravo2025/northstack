@@ -30,7 +30,7 @@ publicRouter.get('/api/public/contract-confirmation/:token', async (req, res) =>
 
 publicRouter.post('/api/public/contract-confirmation/:token', async (req, res) => {
   const clientIp = getClientIp(req);
-  if (isRateLimited(`contract-confirmation:${clientIp}`)) {
+  if (await isRateLimited(`contract-confirmation:${clientIp}`)) {
     return res.status(429).json({ error: 'Too many attempts. Please try again in a minute.' });
   }
 
@@ -94,7 +94,7 @@ publicRouter.get('/api/public/:tenantSlug/:formSlug', async (req, res) => {
 // are the only guards — no session, so anyone with the link can reach this.
 publicRouter.post('/api/public/:tenantSlug/:formSlug/submit', async (req, res) => {
   const clientIp = getClientIp(req);
-  if (isRateLimited(`public-form:${clientIp}`)) {
+  if (await isRateLimited(`public-form:${clientIp}`)) {
     return res.status(429).json({ error: 'Too many submissions. Please try again in a minute.' });
   }
 

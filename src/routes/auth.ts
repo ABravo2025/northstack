@@ -18,7 +18,7 @@ import { createAsyncRouter } from '../lib/asyncRouter.js';
 export const authRouter = createAsyncRouter();
 
 authRouter.post('/api/auth/register', async (req, res) => {
-  if (isRateLimited(`register:${getClientIp(req)}`, AUTH_RATE_LIMIT)) {
+  if (await isRateLimited(`register:${getClientIp(req)}`, AUTH_RATE_LIMIT)) {
     return res.status(429).json({ error: 'Too many attempts. Please try again later.' });
   }
 
@@ -32,7 +32,7 @@ authRouter.post('/api/auth/register', async (req, res) => {
 });
 
 authRouter.post('/api/auth/login', async (req, res) => {
-  if (isRateLimited(`login:${getClientIp(req)}`, AUTH_RATE_LIMIT)) {
+  if (await isRateLimited(`login:${getClientIp(req)}`, AUTH_RATE_LIMIT)) {
     return res.status(429).json({ error: 'Too many attempts. Please try again later.' });
   }
 
@@ -46,7 +46,7 @@ authRouter.post('/api/auth/login', async (req, res) => {
 });
 
 authRouter.post('/api/auth/forgot-password', async (req, res) => {
-  if (isRateLimited(`forgot-password:${getClientIp(req)}`, AUTH_RATE_LIMIT)) {
+  if (await isRateLimited(`forgot-password:${getClientIp(req)}`, AUTH_RATE_LIMIT)) {
     return res.status(429).json({ error: 'Too many attempts. Please try again later.' });
   }
 

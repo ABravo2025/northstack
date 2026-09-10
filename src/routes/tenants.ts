@@ -28,7 +28,7 @@ export const tenantsRouter = createAsyncRouter();
 // bucket, only so the frontend's cooldown timer and analytics can distinguish "first attempt"
 // from "resend". One handler, parameterized by bucket, instead of two copies that could diverge.
 const handleSignupEmailRequest = (bucketPrefix: string) => async (req: express.Request, res: express.Response) => {
-  if (isRateLimited(`${bucketPrefix}:${getClientIp(req)}`, AUTH_RATE_LIMIT)) {
+  if (await isRateLimited(`${bucketPrefix}:${getClientIp(req)}`, AUTH_RATE_LIMIT)) {
     return res.status(429).json({ error: 'Too many attempts. Please try again later.' });
   }
 
@@ -57,7 +57,7 @@ tenantsRouter.get('/api/tenants/signup/verify/:token', async (req, res) => {
 });
 
 tenantsRouter.post('/api/tenants/register', async (req, res) => {
-  if (isRateLimited(`tenant-register:${getClientIp(req)}`, AUTH_RATE_LIMIT)) {
+  if (await isRateLimited(`tenant-register:${getClientIp(req)}`, AUTH_RATE_LIMIT)) {
     return res.status(429).json({ error: 'Too many attempts. Please try again later.' });
   }
 

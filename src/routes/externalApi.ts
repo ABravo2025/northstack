@@ -92,7 +92,7 @@ externalApiRouter.use('/api/external/v1', async (req: express.Request, res: expr
     const apiKey = await authenticateApiKey(req, res);
     if (!apiKey) return; // authenticateApiKey already sent the 401 — never logged (spec §6: only authenticated calls are)
 
-    if (isRateLimited(`apikey:${apiKey.id}`, RATE_LIMIT)) {
+    if (await isRateLimited(`apikey:${apiKey.id}`, RATE_LIMIT)) {
       res.setHeader('Retry-After', String(Math.ceil(RATE_LIMIT.windowMs / 1000)));
       await respond(req, res, apiKey, 429, { error: 'Too many requests. Slow down and try again shortly.', code: 'rate_limited' });
       return;

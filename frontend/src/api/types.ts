@@ -1022,13 +1022,15 @@ export interface TenantAdoptionMetrics {
   loginFrequency: { usersWithSession: number; medianDistinctLoginDays: number | null; avgDistinctLoginDays: number | null };
 }
 
+// hr/timeOff/sales/tasks/adoption are null for any role without the `view_dashboards`
+// permission (default Member) — same treatment `payroll` already had for `manage_payroll`.
 export interface TenantMetricsOverview {
   generatedAt: string;
   range: { since: string; until: string };
-  hr: TenantHrMetrics;
-  timeOff: TenantTimeOffMetrics;
+  hr: TenantHrMetrics | null;
+  timeOff: TenantTimeOffMetrics | null;
   payroll: TenantPayrollMetrics | null;
-  sales: TenantSalesMetrics;
-  tasks: TenantTasksMetrics;
-  adoption: TenantAdoptionMetrics;
+  sales: TenantSalesMetrics | null;
+  tasks: TenantTasksMetrics | null;
+  adoption: TenantAdoptionMetrics | null;
 }

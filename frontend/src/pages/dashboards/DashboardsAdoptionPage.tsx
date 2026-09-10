@@ -15,6 +15,9 @@ export default function DashboardsAdoptionPage() {
   const { metrics, loading } = useTenantMetrics(token, range);
 
   if (!metrics) return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">Loading…</p>;
+  if (!metrics.adoption) {
+    return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">This dashboard isn't visible to your role.</p>;
+  }
 
   const { adoption } = metrics;
 

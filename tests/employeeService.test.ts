@@ -14,7 +14,7 @@ vi.mock('../src/lib/prisma.js', () => ({
   },
 }));
 
-import { getManagedEmployeeIds, resolveVisibleEmployeeIds } from '../src/modules/hr/employeeService.js';
+import { getManagedEmployeeIds, getReportingChainDescendantIds, resolveVisibleEmployeeIds } from '../src/modules/hr/employeeService.js';
 import type { RoleContext } from '../src/modules/auth/roleService.js';
 
 function roleContext(overrides: Partial<RoleContext>): RoleContext {
@@ -84,6 +84,37 @@ describe('employeeService — Custom Roles Fase E (HR scope)', () => {
     });
   });
 
+  describe('getReportingChainDescendantIds', () => {
+    it('includes the acting employee, plus direct and indirect reports, same as getManagedEmployeeIds', async () => {
+      employees = [
+        { id: 'manager', tenantId: 't1', managerId: null, departmentId: null },
+        { id: 'direct-report', tenantId: 't1', managerId: 'manager', departmentId: null },
+        { id: 'indirect-report', tenantId: 't1', managerId: 'direct-report', departmentId: null },
+      ];
+      const result = await getReportingChainDescendantIds('t1', 'manager');
+      expect(result).toEqual(new Set(['manager', 'direct-report', 'indirect-report']));
+    });
+
+    it('excludes department peers who are not in the reporting chain — the key difference from "department" scope', async () => {
+      employees = [
+        { id: 'manager', tenantId: 't1', managerId: null, departmentId: 'sales' },
+        { id: 'dept-peer', tenantId: 't1', managerId: null, departmentId: 'sales' },
+        { id: 'report-in-other-dept', tenantId: 't1', managerId: 'manager', departmentId: 'engineering' },
+      ];
+      const result = await getReportingChainDescendantIds('t1', 'manager');
+      expect(result).toEqual(new Set(['manager', 'report-in-other-dept']));
+    });
+
+    it('does not leak employees from another tenant', async () => {
+      employees = [
+        { id: 'e1', tenantId: 't1', managerId: null, departmentId: null },
+        { id: 'other-tenant-e1', tenantId: 't2', managerId: 'e1', departmentId: null },
+      ];
+      const result = await getReportingChainDescendantIds('t1', 'e1');
+      expect(result).toEqual(new Set(['e1']));
+    });
+  });
+
   describe('resolveVisibleEmployeeIds', () => {
     it('returns null (no filtering) for scope "all"', async () => {
       const role = roleContext({ permissions: new Set(['view_employee_scope:all']) });
@@ -118,6 +149,29 @@ describe('employeeService — Custom Roles Fase E (HR scope)', () => {
       const role = roleContext({ permissions: new Set(['view_employee_scope:department']) });
       const result = await resolveVisibleEmployeeIds('t1', role, 'user-1');
       expect(result).toEqual(new Set(['manager', 'report']));
+    });
+
+    // The default Member scope as of the "protect internal company data" rework — self + reports,
+    // deliberately narrower than "department" above (no department-peer inclusion). Same org chart
+    // used in manual verification: Manager -> RepA + RepB, plus a same-department Peer who does
+    // NOT report to Manager.
+    it('scope "reports" resolves to self + direct/indirect reports only, excluding department peers', async () => {
+      employees = [
+        { id: 'manager', tenantId: 't1', managerId: null, departmentId: 'sales', userId: 'user-1' },
+        { id: 'rep-a', tenantId: 't1', managerId: 'manager', departmentId: 'sales' },
+        { id: 'rep-b', tenantId: 't1', managerId: 'manager', departmentId: 'engineering' },
+        { id: 'peer', tenantId: 't1', managerId: null, departmentId: 'sales' },
+      ];
+      const role = roleContext({ permissions: new Set(['view_employee_scope:reports']) });
+      const result = await resolveVisibleEmployeeIds('t1', role, 'user-1');
+      expect(result).toEqual(new Set(['manager', 'rep-a', 'rep-b']));
+    });
+
+    it('scope "reports" for an individual contributor with no reports resolves to just themselves', async () => {
+      employees = [{ id: 'ic', tenantId: 't1', managerId: 'someone-else', departmentId: 'sales', userId: 'user-1' }];
+      const role = roleContext({ permissions: new Set(['view_employee_scope:reports']) });
+      const result = await resolveVisibleEmployeeIds('t1', role, 'user-1');
+      expect(result).toEqual(new Set(['ic']));
     });
 
     it('no scope permission at all ("none") resolves to an empty set', async () => {

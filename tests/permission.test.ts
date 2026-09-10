@@ -7,10 +7,14 @@ import {
   canManagePayments,
   canManagePayroll,
   canViewActivityLog,
+  canViewCompany,
+  canViewContact,
+  canViewDashboards,
   canViewEmployeeCustomFields,
   canViewHr,
+  canViewOpportunity,
 } from '../src/modules/auth/permissionService.js';
-import { ADMIN_SEED_PERMISSIONS, MEMBER_SEED_PERMISSIONS, type RoleContext } from '../src/modules/auth/roleService.js';
+import { ADMIN_SEED_PERMISSIONS, getEmployeeScope, MEMBER_SEED_PERMISSIONS, type RoleContext } from '../src/modules/auth/roleService.js';
 
 // Fase B (Custom Roles) — these functions now read a RoleContext instead of the legacy UserRole
 // enum string. Fixtures below reproduce owner/admin/member exactly as seedDefaultRolesForTenant
@@ -86,6 +90,32 @@ describe('permission service', () => {
     expect(canEditEmployeeCustomFields(owner)).toBe(true);
     expect(canEditEmployeeCustomFields(admin)).toBe(true);
     expect(canEditEmployeeCustomFields(member)).toBe(false);
+  });
+
+  it('protect-internal-company-data rework: Member no longer sees CRM (Company/Contact/Opportunity) by default', () => {
+    expect(canViewCompany(owner)).toBe(true);
+    expect(canViewCompany(admin)).toBe(true);
+    expect(canViewCompany(member)).toBe(false);
+
+    expect(canViewContact(admin)).toBe(true);
+    expect(canViewContact(member)).toBe(false);
+
+    // Derived from Company+Contact view — losing either one (as Member now does, both) means no
+    // Opportunity visibility either, with no separate stored permission to grant back accidentally.
+    expect(canViewOpportunity(admin)).toBe(true);
+    expect(canViewOpportunity(member)).toBe(false);
+  });
+
+  it('protect-internal-company-data rework: only Admin+ sees company-wide Dashboards by default, not Member', () => {
+    expect(canViewDashboards(owner)).toBe(true);
+    expect(canViewDashboards(admin)).toBe(true);
+    expect(canViewDashboards(member)).toBe(false);
+  });
+
+  it('protect-internal-company-data rework: Member\'s default HR scope is "reports" (self + subordinates), not "all"', () => {
+    expect(getEmployeeScope(owner)).toBe('all'); // isOwner bypass, independent of any stored scope key
+    expect(getEmployeeScope(admin)).toBe('all');
+    expect(getEmployeeScope(member)).toBe('reports');
   });
 
   it('Fase D: the Employee custom-fields bundle is layered on top of base Employee access, not a substitute for it', () => {

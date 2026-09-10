@@ -50,7 +50,16 @@ export default function DashboardsLayout({ token }: DashboardsLayoutProps) {
           </div>
         </div>
       )}
-      <Outlet context={{ token, range } satisfies DashboardsOutletContext} />
+      {!isIndex && !active ? (
+        // Route guard for direct URL navigation (e.g. a Member without view_dashboards typing
+        // /dashboards/hr in the address bar) — `sections` is already filtered by
+        // getDashboardSections/usePermissions, so a pathname that doesn't match anything in it is
+        // either an unknown route or one this role isn't allowed to see. Bails out here instead of
+        // rendering <Outlet>, so the page component's useTenantMetrics never even fires.
+        <p className="text-sm text-ink-muted dark:text-dark-ink-muted">This dashboard isn't visible to your role.</p>
+      ) : (
+        <Outlet context={{ token, range } satisfies DashboardsOutletContext} />
+      )}
     </div>
   );
 }

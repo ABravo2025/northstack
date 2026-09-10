@@ -39,6 +39,23 @@ export const rolesApi = {
     return res.json();
   },
 
+  setEmployeeScope: async (
+    token: string,
+    roleId: string,
+    scope: 'self' | 'reports' | 'department' | 'all' | 'none',
+  ): Promise<{ permissions: string[] }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/roles/${roleId}/employee-scope`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ scope }),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
   createRole: async (token: string, name: string, duplicateFromRoleId?: string): Promise<Role> => {
     const res = await apiFetch(`${API_BASE_URL}/api/roles`, {
       method: 'POST',

@@ -31,11 +31,13 @@ interface PermissionGroup {
   rows: PermissionRow[];
 }
 
-// Only the permissions Fase A-D actually enforce today (docs/tareas/backlog.md "Sistema de roles
-// custom") — deliberately excludes Employee scope (self/department/all), since Fase E hasn't
-// shipped row-level enforcement for it yet. A toggle that silently did nothing would be worse than
-// not showing it. Server-side, roleManagementService.ts's TOGGLEABLE_PERMISSION_KEYS is the
-// matching allowlist — keep both in sync if either changes.
+// The boolean-toggle permissions (docs/tareas/backlog.md "Sistema de roles custom") — deliberately
+// excludes Employee scope (self/reports/department/all): a role holds at most one of those 4
+// mutually-exclusive keys, so it doesn't fit a checkbox row and gets its own selector control
+// below (the "Employee visibility scope" section) plus a dedicated endpoint (setEmployeeScope,
+// PATCH /api/roles/:roleId/employee-scope) instead of living in this list. Server-side,
+// roleManagementService.ts's TOGGLEABLE_PERMISSION_KEYS is the matching allowlist for everything
+// that IS here — keep both in sync if either changes.
 const GROUPS: PermissionGroup[] = [
   {
     title: 'People',
@@ -102,6 +104,11 @@ const GROUPS: PermissionGroup[] = [
     rows: [
       { key: 'view_sales_leaderboard', label: 'View sales leaderboard', description: 'Per-person deal performance across the team.' },
       { key: 'view_activity_log', label: 'View activity log', description: 'The workspace-wide feed of who changed what.' },
+      {
+        key: 'view_dashboards',
+        label: 'View dashboards',
+        description: 'Company-wide KPI dashboards: HR, Time Off, Sales, Tasks, and Adoption.',
+      },
     ],
   },
   {
@@ -123,6 +130,28 @@ const GROUPS: PermissionGroup[] = [
     ],
   },
 ];
+
+// Mirrors roleService.ts's EmployeeScope/EMPLOYEE_SCOPE_* — duplicated here the same way every
+// other permission key string in this file already is (no shared BE/FE constants module exists
+// today). Order matters for both the <select> (broadest last, matching how someone would naturally
+// think "self, then wider, then wider") and deriveEmployeeScope's priority (broadest wins, mirrors
+// roleService.ts's getEmployeeScope exactly).
+type EmployeeScopeValue = 'none' | 'self' | 'reports' | 'department' | 'all';
+const EMPLOYEE_SCOPE_OPTIONS: { value: EmployeeScopeValue; label: string; hint: string }[] = [
+  { value: 'none', label: 'None', hint: 'Nothing beyond the directory' },
+  { value: 'self', label: 'Self', hint: 'Only their own record' },
+  { value: 'reports', label: '+ Reports', hint: 'Self, plus their own direct/indirect reports' },
+  { value: 'department', label: '+ Department', hint: 'Self, their reports, and everyone in their department' },
+  { value: 'all', label: 'Everyone', hint: 'Every employee in the workspace' },
+];
+
+function deriveEmployeeScope(permissions: string[]): EmployeeScopeValue {
+  if (permissions.includes('view_employee_scope:all')) return 'all';
+  if (permissions.includes('view_employee_scope:department')) return 'department';
+  if (permissions.includes('view_employee_scope:reports')) return 'reports';
+  if (permissions.includes('view_employee_scope:self')) return 'self';
+  return 'none';
+}
 
 // Mirrors roleService.ts's PERMISSION_PREREQUISITES: granting requires the listed prerequisites
 // already present on that same role. Server-side is the real enforcement (roleManagementService.ts
@@ -222,6 +251,83 @@ function PermissionGroupSection({
             ))}
           </div>
         ))}
+      </section>
+      <HorizontalScrollbar targetRef={wrapRef} />
+    </>
+  );
+}
+
+// The scope counterpart to PermissionGroupSection above — same layout, but a <select> per role
+// column instead of a checkbox, since HR scope is a mutually-exclusive 4-way choice, not a
+// boolean. See EMPLOYEE_SCOPE_OPTIONS/deriveEmployeeScope above and roleManagementService.ts's
+// setEmployeeScope for why this needed its own control and endpoint rather than joining GROUPS.
+function EmployeeScopeSection({
+  gridTemplateColumns,
+  editableRoles,
+  savingKey,
+  onChangeScope,
+}: {
+  gridTemplateColumns: string;
+  editableRoles: Role[];
+  savingKey: string | null;
+  onChangeScope: (role: Role, next: EmployeeScopeValue) => void;
+}) {
+  const wrapRef = useRef<HTMLElement>(null);
+  return (
+    <>
+      <section ref={wrapRef} className="card full-table-wrap mb-4 p-0">
+        <div
+          className="grid items-center gap-3 border-b border-line bg-surface-0 px-5 py-3 dark:border-dark-line dark:bg-dark-raised"
+          style={{ gridTemplateColumns }}
+        >
+          <span className="text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">Employee visibility scope</span>
+          <span className="text-center text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">Owner</span>
+          {editableRoles.map((role) => (
+            <span
+              key={role.id}
+              className="truncate text-center text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint"
+              title={role.name}
+            >
+              {role.name}
+            </span>
+          ))}
+        </div>
+        <div
+          className="grid items-center gap-3 border-b border-line-soft px-5 py-3.5 last:border-b-0 dark:border-dark-line-soft"
+          style={{ gridTemplateColumns }}
+        >
+          <div>
+            <div className="text-sm font-medium text-ink dark:text-dark-ink">Which employees they can see</div>
+            <div className="mt-0.5 text-xs text-ink-muted dark:text-dark-ink-muted">
+              How far "View employees" reaches beyond their own record — their reports, their department, or everyone.
+            </div>
+          </div>
+          <div className="flex justify-center">
+            <span
+              className="flex h-[19px] w-[34px] items-center justify-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
+              title="Owner always sees everyone"
+            >
+              <LockIcon className="h-[11px] w-[11px]" />
+            </span>
+          </div>
+          {editableRoles.map((role) => (
+            <div key={role.id} className="flex justify-center">
+              <select
+                value={deriveEmployeeScope(role.permissions)}
+                disabled={savingKey === role.id + 'employee-scope'}
+                onChange={(e) => onChangeScope(role, e.target.value as EmployeeScopeValue)}
+                aria-label={`Employee visibility scope — ${role.name}`}
+                className="w-full rounded border border-line bg-surface-0 px-1 py-1 text-xs dark:border-dark-line dark:bg-dark-raised"
+              >
+                {EMPLOYEE_SCOPE_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value} title={opt.hint}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ))}
+        </div>
       </section>
       <HorizontalScrollbar targetRef={wrapRef} />
     </>
@@ -383,6 +489,21 @@ export default function RolesPermissionsPage({ token }: RolesPermissionsPageProp
     }
   }
 
+  async function changeEmployeeScope(role: Role, next: EmployeeScopeValue) {
+    const savingId = role.id + 'employee-scope';
+    setSavingKey(savingId);
+    try {
+      const { permissions } = await api.setEmployeeScope(token, role.id, next);
+      setRoles((prev) => prev.map((r) => (r.id === role.id ? { ...r, permissions } : r)));
+      const hint = EMPLOYEE_SCOPE_OPTIONS.find((o) => o.value === next)?.hint ?? next;
+      toast.success(`${role.name}'s employee visibility is now: ${hint}`);
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setSavingKey(null);
+    }
+  }
+
   function isFieldHidden(role: Role, entityType: string, fieldKey: string): boolean {
     return role.hiddenFields[entityType]?.includes(fieldKey) ?? false;
   }
@@ -477,6 +598,13 @@ export default function RolesPermissionsPage({ token }: RolesPermissionsPageProp
           onDeleteRole={handleDeleteRole}
         />
       ))}
+
+      <EmployeeScopeSection
+        gridTemplateColumns={gridTemplateColumns}
+        editableRoles={editableRoles}
+        savingKey={savingKey}
+        onChangeScope={changeEmployeeScope}
+      />
 
       <h3 className="mb-2 text-base font-bold text-ink dark:text-dark-ink">Field visibility</h3>
       <p className="mb-4 max-w-2xl text-sm text-ink-muted dark:text-dark-ink-muted">

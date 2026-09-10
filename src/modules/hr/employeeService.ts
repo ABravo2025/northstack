@@ -112,31 +112,15 @@ export async function wouldCreateManagerCycle(
   });
 }
 
-// Custom Roles Fase E — the `department` HR scope is the union of two criteria (decision 5 in the
-// plan): everyone sharing the acting employee's own `departmentId` catalog value, PLUS everyone in
-// their reporting chain (direct + indirect reports), the inverse walk of `wouldCreateManagerCycle`
-// above (that one walks UP toward the root to detect a cycle; this one walks DOWN from a manager to
-// find every descendant). Resolved with one full-tenant `{id, managerId, departmentId}` fetch and an
-// in-memory BFS rather than N recursive queries — tenants are expected to have tens/hundreds of
-// employees, not thousands (same assumption the plan makes explicitly).
-export async function getManagedEmployeeIds(tenantId: string, employeeId: string): Promise<Set<string>> {
-  const all = await prisma.employee.findMany({
-    where: { tenantId },
-    select: { id: true, managerId: true, departmentId: true },
-  });
-
-  const visible = new Set<string>([employeeId]);
-  const self = all.find((e) => e.id === employeeId);
-  if (self?.departmentId) {
-    for (const e of all) {
-      if (e.departmentId === self.departmentId) {
-        visible.add(e.id);
-      }
-    }
-  }
-
+// Shared by the `department` and `reports` HR scopes below — self + every descendant in the
+// reporting chain (direct + indirect reports), the inverse walk of `wouldCreateManagerCycle` above
+// (that one walks UP toward the root to detect a cycle; this one walks DOWN from a manager to find
+// every descendant). Takes the rows already fetched by the caller rather than querying itself, so
+// `getManagedEmployeeIds` can reuse its single full-tenant fetch for both halves of `department`'s
+// union.
+function collectReportingChainDescendants(employeeId: string, rows: { id: string; managerId: string | null }[]): Set<string> {
   const directReportsByManagerId = new Map<string, string[]>();
-  for (const e of all) {
+  for (const e of rows) {
     if (e.managerId) {
       const siblings = directReportsByManagerId.get(e.managerId);
       if (siblings) siblings.push(e.id);
@@ -144,6 +128,7 @@ export async function getManagedEmployeeIds(tenantId: string, employeeId: string
     }
   }
 
+  const visible = new Set<string>([employeeId]);
   const queue = [employeeId];
   while (queue.length > 0) {
     const currentId = queue.shift()!;
@@ -158,13 +143,50 @@ export async function getManagedEmployeeIds(tenantId: string, employeeId: string
   return visible;
 }
 
+// Custom Roles Fase E — the `department` HR scope is the union of two criteria (decision 5 in the
+// plan): everyone sharing the acting employee's own `departmentId` catalog value, PLUS everyone in
+// their reporting chain (direct + indirect reports) via collectReportingChainDescendants above.
+// Resolved with one full-tenant `{id, managerId, departmentId}` fetch and an in-memory BFS rather
+// than N recursive queries — tenants are expected to have tens/hundreds of employees, not
+// thousands (same assumption the plan makes explicitly).
+export async function getManagedEmployeeIds(tenantId: string, employeeId: string): Promise<Set<string>> {
+  const all = await prisma.employee.findMany({
+    where: { tenantId },
+    select: { id: true, managerId: true, departmentId: true },
+  });
+
+  const visible = collectReportingChainDescendants(employeeId, all);
+  const self = all.find((e) => e.id === employeeId);
+  if (self?.departmentId) {
+    for (const e of all) {
+      if (e.departmentId === self.departmentId) {
+        visible.add(e.id);
+      }
+    }
+  }
+
+  return visible;
+}
+
+// The `reports` HR scope — self + reporting-chain descendants ONLY, deliberately without
+// `getManagedEmployeeIds`'s department-peer union. This is what makes a default Member who happens
+// to manage people see their subordinates without also seeing every unrelated peer who merely
+// shares their department catalog value.
+export async function getReportingChainDescendantIds(tenantId: string, employeeId: string): Promise<Set<string>> {
+  const rows = await prisma.employee.findMany({
+    where: { tenantId },
+    select: { id: true, managerId: true },
+  });
+  return collectReportingChainDescendants(employeeId, rows);
+}
+
 // Single entry point for "which Employee rows can this role's acting user see" — used by both
 // listEmployees (filters the list) and the detail/edit/delete routes (membership check, 404 if
 // not present). Returns `null` for scope `all` (the caller skips filtering entirely rather than
 // fetching every id just to filter nothing out). An acting user with no linked Employee record of
 // their own (a User with no `Employee.userId` back-reference) has no rows of their own to resolve
-// `self`/`department` against — per the plan, that's treated as "nothing beyond the directory
-// tier," not an error, so it resolves to an empty set rather than throwing.
+// `self`/`reports`/`department` against — per the plan, that's treated as "nothing beyond the
+// directory tier," not an error, so it resolves to an empty set rather than throwing.
 export async function resolveVisibleEmployeeIds(
   tenantId: string,
   role: RoleContext,
@@ -182,6 +204,9 @@ export async function resolveVisibleEmployeeIds(
 
   if (scope === 'self') {
     return new Set([actingEmployee.id]);
+  }
+  if (scope === 'reports') {
+    return getReportingChainDescendantIds(tenantId, actingEmployee.id);
   }
   if (scope === 'department') {
     return getManagedEmployeeIds(tenantId, actingEmployee.id);

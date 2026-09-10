@@ -13,8 +13,14 @@ export interface DashboardSectionItem {
 // grid (DashboardsHomePage) and the left-nav list (DashboardsSidebar) —
 // mirrors settingsSections.tsx's role as the one place this gating lives.
 export const DASHBOARD_SECTIONS: DashboardSectionItem[] = [
-  { to: '/dashboards/hr', label: 'HR', desc: 'Headcount, tenure and org composition.', icon: <PeopleIcon /> },
-  { to: '/dashboards/time-off', label: 'Time Off', desc: 'Balances, usage and policy trends.', icon: <CalendarIcon /> },
+  { to: '/dashboards/hr', label: 'HR', desc: 'Headcount, tenure and org composition.', icon: <PeopleIcon />, permission: 'view_dashboards' },
+  {
+    to: '/dashboards/time-off',
+    label: 'Time Off',
+    desc: 'Balances, usage and policy trends.',
+    icon: <CalendarIcon />,
+    permission: 'view_dashboards',
+  },
   {
     to: '/dashboards/payroll',
     label: 'Payroll',
@@ -22,9 +28,21 @@ export const DASHBOARD_SECTIONS: DashboardSectionItem[] = [
     icon: <BriefcaseIcon />,
     permission: 'manage_payroll',
   },
-  { to: '/dashboards/sales', label: 'Sales', desc: 'Pipeline health and opportunity trends.', icon: <TargetIcon /> },
-  { to: '/dashboards/tasks', label: 'Tasks', desc: 'Completion rates and workload.', icon: <ListIcon /> },
-  { to: '/dashboards/adoption', label: 'Adoption', desc: 'Feature usage across the workspace.', icon: <TrendingIcon /> },
+  {
+    to: '/dashboards/sales',
+    label: 'Sales',
+    desc: 'Pipeline health and opportunity trends.',
+    icon: <TargetIcon />,
+    permission: 'view_dashboards',
+  },
+  { to: '/dashboards/tasks', label: 'Tasks', desc: 'Completion rates and workload.', icon: <ListIcon />, permission: 'view_dashboards' },
+  {
+    to: '/dashboards/adoption',
+    label: 'Adoption',
+    desc: 'Feature usage across the workspace.',
+    icon: <TrendingIcon />,
+    permission: 'view_dashboards',
+  },
 ];
 
 export interface DashboardSectionsPermissions {

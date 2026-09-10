@@ -11,6 +11,9 @@ export default function DashboardsSalesPage() {
   const { metrics, loading } = useTenantMetrics(token, range);
 
   if (!metrics) return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">Loading…</p>;
+  if (!metrics.sales) {
+    return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">This dashboard isn't visible to your role.</p>;
+  }
 
   const { sales } = metrics;
   const pipelineByCurrency = pivotByCurrency(

@@ -15,10 +15,14 @@ function sumByCurrencyLabel(amounts: { currency: string; amountCents: number }[]
 // stage, by lead source...) live in /dashboards instead. No Payroll tile
 // here on purpose: that data is owner-only (see tenantMetrics.ts's payroll
 // gate), and this strip is meant to read the same for every role.
+//
+// hr/sales/tasks/timeOff all come back null together for a role without view_dashboards (same
+// gate as the /dashboards pages themselves, tenantMetrics.ts) — a default Member never gets this
+// company-wide strip on /overview, same "only my own info" policy as the rest of the app.
 export default function OverviewMetricsStrip({ token }: OverviewMetricsStripProps) {
   const { metrics } = useTenantMetrics(token);
 
-  if (!metrics) return null;
+  if (!metrics || !metrics.hr || !metrics.sales || !metrics.tasks || !metrics.timeOff) return null;
 
   const pipelineTotals = new Map<string, number>();
   for (const p of metrics.sales.openPipeline) {

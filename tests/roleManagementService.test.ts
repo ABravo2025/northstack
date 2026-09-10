@@ -83,6 +83,10 @@ vi.mock('../src/lib/prisma.js', () => ({
       createMany: vi.fn(async ({ data }: any) => {
         permissionRows.push(...data);
       }),
+      create: vi.fn(async ({ data }: any) => {
+        permissionRows.push({ ...data });
+        return { ...data };
+      }),
     },
     roleFieldRestriction: {
       upsert: vi.fn(async ({ where, create }: any) => {
@@ -113,7 +117,16 @@ vi.mock('../src/lib/prisma.js', () => ({
   },
 }));
 
-import { createRole, deleteRole, listAssignableRoles, listRolesForTenant, renameRole, setRoleFieldRestriction, setRolePermission } from '../src/modules/auth/roleManagementService.js';
+import {
+  createRole,
+  deleteRole,
+  listAssignableRoles,
+  listRolesForTenant,
+  renameRole,
+  setEmployeeScope,
+  setRoleFieldRestriction,
+  setRolePermission,
+} from '../src/modules/auth/roleManagementService.js';
 
 describe('roleManagementService', () => {
   beforeEach(() => {
@@ -211,6 +224,33 @@ describe('roleManagementService', () => {
     expect(result.permissions).toContain('manage_employee');
   });
 
+  it('setEmployeeScope: sets a scope from having none', async () => {
+    const result = await setEmployeeScope('t1', 'role-admin', 'reports');
+    expect(result.success).toBe(true);
+    expect(result.permissions).toContain('view_employee_scope:reports');
+  });
+
+  it('setEmployeeScope: switching scope removes the old key, not just adds the new one', async () => {
+    permissionRows.push({ roleId: 'role-admin', tenantId: 't1', permission: 'view_employee_scope:all' });
+    const result = await setEmployeeScope('t1', 'role-admin', 'self');
+    expect(result.success).toBe(true);
+    expect(result.permissions).toContain('view_employee_scope:self');
+    expect(result.permissions).not.toContain('view_employee_scope:all');
+  });
+
+  it('setEmployeeScope: "none" clears scope entirely, granting nothing back', async () => {
+    permissionRows.push({ roleId: 'role-admin', tenantId: 't1', permission: 'view_employee_scope:department' });
+    const result = await setEmployeeScope('t1', 'role-admin', 'none');
+    expect(result.success).toBe(true);
+    expect(result.permissions).not.toContain('view_employee_scope:department');
+    expect(result.permissions?.some((p) => p.startsWith('view_employee_scope:'))).toBe(false);
+  });
+
+  it('setEmployeeScope: rejects changing the Owner role', async () => {
+    const result = await setEmployeeScope('t1', 'role-owner', 'all');
+    expect(result.success).toBe(false);
+  });
+
   it('creates a new role that persists with a blank permission set', async () => {
     const result = await createRole('t1', 'Sales Manager', undefined, null);
     expect(result.success).toBe(true);
@@ -225,11 +265,16 @@ describe('roleManagementService', () => {
     expect(result.role?.permissions).toEqual(['view_company']);
   });
 
-  it('duplicating from Owner grants every toggleable permission (Owner itself has no rows)', async () => {
+  it('duplicating from Owner grants every toggleable permission (Owner itself has no rows), plus full HR scope', async () => {
     const result = await createRole('t1', 'Co-Owner-ish', 'role-owner', null);
     expect(result.success).toBe(true);
     expect(result.role!.permissions.length).toBeGreaterThan(1);
     expect(result.role!.permissions).toContain('manage_payroll');
+    // HR scope isn't in TOGGLEABLE_PERMISSION_KEYS (it's a 4-way choice, not a boolean toggle — see
+    // setEmployeeScope), so it needs its own explicit fill-in here, same reasoning as the toggleable
+    // permissions above: without it, "based on Owner" would silently land on scope 'none' instead of
+    // the "sees everyone" an owner actually has.
+    expect(result.role!.permissions).toContain('view_employee_scope:all');
   });
 
   it('rejects creating a role named "owner" (case-insensitive)', async () => {

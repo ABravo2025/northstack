@@ -10,6 +10,9 @@ export default function DashboardsTasksPage() {
   const { metrics, loading } = useTenantMetrics(token, range);
 
   if (!metrics) return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">Loading…</p>;
+  if (!metrics.tasks) {
+    return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">This dashboard isn't visible to your role.</p>;
+  }
 
   const { tasks } = metrics;
   const notesByMonth = tasks.notes.byMonth.map((m) => ({ name: m.month, count: m.count }));

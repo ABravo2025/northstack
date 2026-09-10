@@ -5,12 +5,23 @@ type PrismaTx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 // Special RoleModulePermission conventions used only for Employee (see fieldVisibilityService.ts,
 // built in a later unit, and docs/tareas/backlog.md "Sistema de roles custom" §5 for the reasoning).
-// The 3 scope keys are mutually exclusive — a role should have at most one of them.
+// The 4 scope keys are mutually exclusive — a role should have at most one of them.
 export const EMPLOYEE_SCOPE_SELF = 'view_employee_scope:self';
+// "reports" = self + the full downward reporting chain (direct + indirect reports), and NOTHING
+// else — deliberately narrower than "department" below, which also pulls in flat same-department
+// peers regardless of the reporting relationship. Added so the default Member role can express
+// "only my own info, plus my subordinates if I happen to manage anyone" without also exposing
+// unrelated department peers. See employeeService.ts's getReportingChainDescendantIds.
+export const EMPLOYEE_SCOPE_REPORTS = 'view_employee_scope:reports';
 export const EMPLOYEE_SCOPE_DEPARTMENT = 'view_employee_scope:department';
 export const EMPLOYEE_SCOPE_ALL = 'view_employee_scope:all';
-export const EMPLOYEE_SCOPE_PERMISSIONS = [EMPLOYEE_SCOPE_SELF, EMPLOYEE_SCOPE_DEPARTMENT, EMPLOYEE_SCOPE_ALL] as const;
-export type EmployeeScope = 'self' | 'department' | 'all' | 'none';
+export const EMPLOYEE_SCOPE_PERMISSIONS = [
+  EMPLOYEE_SCOPE_SELF,
+  EMPLOYEE_SCOPE_REPORTS,
+  EMPLOYEE_SCOPE_DEPARTMENT,
+  EMPLOYEE_SCOPE_ALL,
+] as const;
+export type EmployeeScope = 'self' | 'reports' | 'department' | 'all' | 'none';
 
 export const VIEW_EMPLOYEE_CUSTOM_FIELDS = 'view_employee_custom_fields';
 export const EDIT_EMPLOYEE_CUSTOM_FIELDS = 'edit_employee_custom_fields';
@@ -47,6 +58,15 @@ export const DECIDE_TIME_OFF = 'decide_time_off';
 // & Permissions since it IS in TOGGLEABLE_PERMISSION_KEYS.
 export const MANAGE_API_ACCESS = 'manage_api_access';
 
+// Gates the company-wide `/dashboards/*` section (HR/Time Off/Sales/Tasks/Adoption KPI pages) and
+// the equivalent aggregate sections of GET /api/tenant-metrics/overview — everything in that
+// combined endpoint except `payroll` (its own manage_payroll gate) and `sales.dealsByOwner` (its
+// own view_sales_leaderboard gate), which keep their existing, more specific checks on top of this
+// one. Not in ADMIN_SEED_PERMISSIONS/MEMBER_SEED_PERMISSIONS distinction like the money permissions
+// above — Admin gets it by default, Member does not (company-wide aggregates are exactly the kind
+// of "internal company data" a plain Member shouldn't see by default).
+export const VIEW_DASHBOARDS = 'view_dashboards';
+
 // The full permission allowlist — the source a future role-editing endpoint (Fase H) validates
 // incoming permission strings against. Kept here rather than in permissionService.ts since both
 // files need it and this one has no reverse dependency on that one.
@@ -69,6 +89,7 @@ export const PERMISSION_KEYS = [
   MANAGE_API_ACCESS,
   'view_sales_leaderboard',
   'view_activity_log',
+  VIEW_DASHBOARDS,
   MANAGE_TENANT_SETTINGS,
   MANAGE_SHARED_VIEWS,
   DECIDE_TIME_OFF,
@@ -81,12 +102,14 @@ export type PermissionKey = (typeof PERMISSION_KEYS)[number];
 // Fase B2 — the subset of PERMISSION_KEYS actually exposed on the Settings → Roles & Permissions
 // toggle UI. Deliberately narrower than PERMISSION_KEYS: excludes the legacy `view_hr`/`create_hr`
 // pair (Client-only, not a real lever for a tenant to reach for) and the Employee scope keys
-// (self/department/all — Fase E hasn't shipped row-level enforcement for them yet, exposing a
-// toggle that silently does nothing would be worse than not showing it). The Employee
-// custom-fields bundle joined this list in Fase D, once permissionService.ts's
-// canViewEmployeeCustomFields/canEditEmployeeCustomFields actually enforce it. Validated
-// server-side in roleManagementService.ts so a request can't grant something this UI was never
-// meant to expose.
+// (self/reports/department/all). Scope isn't a boolean toggle like everything else here — a role
+// holds at most one of the 4 mutually-exclusive keys — so it gets its own dedicated selector
+// control and endpoint (RolesPermissionsPage.tsx's scope <select>, roleManagementService.ts's
+// setEmployeeScope, PATCH /api/roles/:roleId/employee-scope) instead of living in this
+// boolean-row list. The Employee custom-fields bundle joined this list in Fase D, once
+// permissionService.ts's canViewEmployeeCustomFields/canEditEmployeeCustomFields actually enforce
+// it. Validated server-side in roleManagementService.ts so a request can't grant something this UI
+// was never meant to expose.
 export const TOGGLEABLE_PERMISSION_KEYS = [
   VIEW_EMPLOYEE,
   MANAGE_EMPLOYEE,
@@ -104,6 +127,7 @@ export const TOGGLEABLE_PERMISSION_KEYS = [
   MANAGE_API_ACCESS,
   'view_sales_leaderboard',
   'view_activity_log',
+  VIEW_DASHBOARDS,
   MANAGE_TENANT_SETTINGS,
   MANAGE_SHARED_VIEWS,
   DECIDE_TIME_OFF,
@@ -147,11 +171,15 @@ export const DEPENDENT_PERMISSIONS: Partial<Record<ToggleablePermissionKey, Togg
   return map;
 })();
 
-// Single source of truth for what Admin/Member get seeded with — reproduces TODAY's real
-// behavior (pre-Custom-Roles) exactly, so shipping this feature is a no-op for every existing
-// role until a tenant actively reconfigures one. Used both by seedDefaultRolesForTenant (new
-// tenants) and scripts/backfill-fase-b-permissions.ts (topping up the 184 tenants' roles already
-// seeded by Fase A, which predate the entity split and the 3 new named permissions above).
+// Single source of truth for what Admin/Member get seeded with. Historically this reproduced
+// pre-Custom-Roles behavior exactly (both roles saw everything); as of the "protect internal
+// company data" rework it instead encodes Alejandro's explicit policy: Admin gets full platform
+// access except the money/security permissions that stay owner-only (api access, billing, payroll,
+// payments — see permissionService.ts), and Member gets ONLY their own info by default (no CRM, no
+// company-wide dashboards, HR scope limited to self+their own reports) — anything broader is the
+// tenant's own choice via a custom role, same treatment as Payroll. Used both by
+// seedDefaultRolesForTenant (new tenants) and scripts/backfill-fase-b-permissions.ts /
+// scripts/backfill-member-scope-defaults.ts (topping up/migrating existing tenants' roles).
 export const ADMIN_SEED_PERMISSIONS: string[] = [
   'view_hr',
   'create_hr',
@@ -169,18 +197,22 @@ export const ADMIN_SEED_PERMISSIONS: string[] = [
   MANAGE_SHARED_VIEWS,
   DECIDE_TIME_OFF,
   'view_activity_log',
+  VIEW_DASHBOARDS,
   VIEW_EMPLOYEE_CUSTOM_FIELDS,
   EDIT_EMPLOYEE_CUSTOM_FIELDS,
   EMPLOYEE_SCOPE_ALL,
 ];
 
+// Deliberately NOT a superset of the old default — Member no longer gets CRM visibility
+// (view_company/view_contact) or company-wide dashboards, and HR scope is "reports" (self + my
+// own direct/indirect reports, if I manage anyone) rather than "all". A tenant that wants a
+// broader Member (or narrower) reconfigures it in Settings → Roles & Permissions, or creates a
+// custom role — that's the company's call to make, not this app's default.
 export const MEMBER_SEED_PERMISSIONS: string[] = [
   'view_hr',
   VIEW_EMPLOYEE,
-  VIEW_COMPANY,
-  VIEW_CONTACT,
   VIEW_EMPLOYEE_CUSTOM_FIELDS,
-  EMPLOYEE_SCOPE_ALL,
+  EMPLOYEE_SCOPE_REPORTS,
 ];
 
 export interface RoleContext {
@@ -227,13 +259,8 @@ interface SeedRoleResult {
 
 // Called once per tenant — at tenant creation (registerTenantWithOwner, tenantService.ts) for new
 // tenants, and once per pre-existing tenant by scripts/backfill-custom-roles.ts. Seeds the 3
-// fixed-name roles with the permission set that reproduces TODAY's owner/admin/member behavior
-// exactly: the current rolePermissions map (permissionService.ts) for Admin/Member, plus
-// EMPLOYEE_SCOPE_ALL (Fase E, no enforcement yet) and VIEW_EMPLOYEE_CUSTOM_FIELDS (both roles) /
-// EDIT_EMPLOYEE_CUSTOM_FIELDS (Admin only) — matches pre-Fase-D behavior where any tenant member
-// could read an Employee's custom field values but only owner/admin could write them (via
-// manage_custom_fields), now enforced for real by canViewEmployeeCustomFields/
-// canEditEmployeeCustomFields (permissionService.ts, Fase D). Owner gets isOwner=true and zero
+// fixed-name roles with ADMIN_SEED_PERMISSIONS/MEMBER_SEED_PERMISSIONS (see those constants'
+// comments for the current policy behind each). Owner gets isOwner=true and zero
 // RoleModulePermission rows — it bypasses every check structurally (see RoleContext.isOwner), by
 // design never has restrictable rows.
 // Idempotent: returns the existing rows untouched if this tenant already has roles.
@@ -355,9 +382,15 @@ export async function resolveRoleContextForUser(user: { roleId: string | null; r
   return legacyRoleContext(user.role);
 }
 
+// Priority order matters if a role somehow held more than one scope key (shouldn't happen via the
+// UI/API, which enforce mutual exclusivity, but this keeps resolution well-defined regardless):
+// broadest wins. `department` outranks `reports` because it's a strict superset for the same actor
+// (department peers ∪ reporting-chain descendants vs. just the descendants) — see
+// employeeService.ts's getManagedEmployeeIds/getReportingChainDescendantIds.
 export function getEmployeeScope(role: RoleContext): EmployeeScope {
   if (role.isOwner || role.permissions.has(EMPLOYEE_SCOPE_ALL)) return 'all';
   if (role.permissions.has(EMPLOYEE_SCOPE_DEPARTMENT)) return 'department';
+  if (role.permissions.has(EMPLOYEE_SCOPE_REPORTS)) return 'reports';
   if (role.permissions.has(EMPLOYEE_SCOPE_SELF)) return 'self';
   return 'none';
 }

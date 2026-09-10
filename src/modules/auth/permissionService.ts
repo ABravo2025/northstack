@@ -135,6 +135,16 @@ export function canViewActivityLog(role: RoleContext): boolean {
   return has(role, 'view_activity_log');
 }
 
+// Gates the company-wide `/dashboards/*` KPI pages and the equivalent aggregate sections of
+// GET /api/tenant-metrics/overview (headcount/tenure, time-off approval rates, pipeline value,
+// task completion, seat adoption) — company-wide aggregates a plain Member shouldn't see by
+// default, same tier as canViewActivityLog/canViewSalesLeaderboard. `payroll` and
+// `sales.dealsByOwner` inside that same endpoint keep their own, more specific gates
+// (canManagePayroll/canViewSalesLeaderboard) layered on top of this one.
+export function canViewDashboards(role: RoleContext): boolean {
+  return has(role, 'view_dashboards');
+}
+
 // Fase B — replaces the inline `role !== 'owner' && role !== 'admin'` check that used to gate
 // PATCH /api/tenants/current (currency).
 export function canManageTenantSettings(role: RoleContext): boolean {

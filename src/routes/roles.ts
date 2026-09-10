@@ -7,11 +7,15 @@ import {
   listAssignableRoles,
   listRolesForTenant,
   renameRole,
+  setEmployeeScope,
   setRoleFieldRestriction,
   setRolePermission,
 } from '../modules/auth/roleManagementService.js';
 import { RESTRICTABLE_FIELDS_BY_ENTITY_TYPE } from '../modules/auth/fieldVisibilityService.js';
 import { canInviteUsers, canManageUsers } from '../modules/auth/permissionService.js';
+import type { EmployeeScope } from '../modules/auth/roleService.js';
+
+const VALID_EMPLOYEE_SCOPES: EmployeeScope[] = ['self', 'reports', 'department', 'all', 'none'];
 
 export const rolesRouter = createAsyncRouter();
 
@@ -47,6 +51,31 @@ rolesRouter.patch('/api/roles/:roleId/permissions', async (req, res) => {
   }
 
   const result = await setRolePermission(user.tenantId!, req.params.roleId, permission, granted);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  return res.json({ permissions: result.permissions });
+});
+
+// The HR-scope counterpart to the /permissions route above — a mutually-exclusive 4-way choice
+// (self/reports/department/all, or 'none' to grant nothing) rather than a boolean toggle, so it
+// gets its own endpoint/body shape instead of overloading {permission, granted}.
+rolesRouter.patch('/api/roles/:roleId/employee-scope', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!user.roleContext.isOwner) {
+    return res.status(403).json({ error: 'Only the owner can change roles and permissions' });
+  }
+
+  const { scope } = req.body ?? {};
+  if (typeof scope !== 'string' || !VALID_EMPLOYEE_SCOPES.includes(scope as EmployeeScope)) {
+    return res.status(400).json({ error: `scope must be one of: ${VALID_EMPLOYEE_SCOPES.join(', ')}` });
+  }
+
+  const result = await setEmployeeScope(user.tenantId!, req.params.roleId, scope as EmployeeScope);
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }

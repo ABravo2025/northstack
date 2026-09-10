@@ -1,7 +1,18 @@
 import type { ActivityEntityType, PlanTier } from '@prisma/client';
 import prisma from '../../lib/prisma.js';
 import { RESTRICTABLE_FIELDS_BY_ENTITY_TYPE } from './fieldVisibilityService.js';
-import { DEPENDENT_PERMISSIONS, PERMISSION_PREREQUISITES, TOGGLEABLE_PERMISSION_KEYS, type ToggleablePermissionKey } from './roleService.js';
+import {
+  DEPENDENT_PERMISSIONS,
+  EMPLOYEE_SCOPE_ALL,
+  EMPLOYEE_SCOPE_DEPARTMENT,
+  EMPLOYEE_SCOPE_PERMISSIONS,
+  EMPLOYEE_SCOPE_REPORTS,
+  EMPLOYEE_SCOPE_SELF,
+  PERMISSION_PREREQUISITES,
+  TOGGLEABLE_PERMISSION_KEYS,
+  type EmployeeScope,
+  type ToggleablePermissionKey,
+} from './roleService.js';
 import { getPlanLimits } from '../tenant/planLimits.js';
 
 // Fase B2 (Custom Roles) — read/write for the Settings → Roles & Permissions page. Owner-only at
@@ -143,6 +154,48 @@ export async function setRolePermission(
   return { success: true, permissions: Array.from(current) };
 }
 
+const SCOPE_TO_PERMISSION: Partial<Record<EmployeeScope, string>> = {
+  self: EMPLOYEE_SCOPE_SELF,
+  reports: EMPLOYEE_SCOPE_REPORTS,
+  department: EMPLOYEE_SCOPE_DEPARTMENT,
+  all: EMPLOYEE_SCOPE_ALL,
+};
+
+export interface SetEmployeeScopeResult {
+  success: boolean;
+  permissions?: string[];
+  error?: string;
+}
+
+// The HR-scope counterpart to setRolePermission above, but for a mutually-exclusive 4-way choice
+// (self/reports/department/all/none) rather than a boolean — doesn't fit that function's
+// upsert-a-single-key model, so this deletes whichever EMPLOYEE_SCOPE_* key the role currently
+// holds (if any) and inserts the new one, rather than requiring the caller to revoke the old value
+// and grant the new one as two separate requests. Sequential deleteMany-then-create, same
+// no-explicit-$transaction style as setRolePermission's own revoke cascade above.
+export async function setEmployeeScope(tenantId: string, roleId: string, scope: EmployeeScope): Promise<SetEmployeeScopeResult> {
+  const role = await prisma.role.findUnique({ where: { id: roleId }, include: { modulePermissions: true } });
+  if (!role || role.tenantId !== tenantId) {
+    return { success: false, error: 'Role not found' };
+  }
+  if (role.isOwner) {
+    return { success: false, error: 'Owner always has full access and cannot be changed' };
+  }
+
+  const current = new Set(role.modulePermissions.map((p) => p.permission));
+  for (const key of EMPLOYEE_SCOPE_PERMISSIONS) current.delete(key);
+
+  await prisma.roleModulePermission.deleteMany({ where: { roleId, permission: { in: [...EMPLOYEE_SCOPE_PERMISSIONS] } } });
+
+  const nextPermission = SCOPE_TO_PERMISSION[scope];
+  if (nextPermission) {
+    await prisma.roleModulePermission.create({ data: { tenantId, roleId, permission: nextPermission } });
+    current.add(nextPermission);
+  }
+
+  return { success: true, permissions: Array.from(current) };
+}
+
 export interface CreateRoleResult {
   success: boolean;
   role?: RoleSummary;
@@ -205,9 +258,15 @@ export async function createRole(
     }
     // Owner has zero rows in either table (bypasses both via isOwner) — a literal copy would
     // produce an empty, misleadingly-named "based on Owner" role, so its module permissions are
-    // filled in explicitly. Field restrictions have no equivalent "everything" to fill in (Owner
-    // hides nothing, ever), so they're correctly left empty for that case.
-    sourcePermissions = source.isOwner ? [...TOGGLEABLE_PERMISSION_KEYS] : source.modulePermissions.map((p) => p.permission);
+    // filled in explicitly. EMPLOYEE_SCOPE_ALL is added on top of TOGGLEABLE_PERMISSION_KEYS here
+    // because HR scope isn't a toggleable permission (it's a mutually-exclusive 4-way choice with
+    // its own endpoint, see setEmployeeScope below) — without it, "based on Owner" would silently
+    // land on scope 'none' instead of the "sees everything" an owner actually has. Field
+    // restrictions have no equivalent "everything" to fill in (Owner hides nothing, ever), so
+    // they're correctly left empty for that case.
+    sourcePermissions = source.isOwner
+      ? [...TOGGLEABLE_PERMISSION_KEYS, EMPLOYEE_SCOPE_ALL]
+      : source.modulePermissions.map((p) => p.permission);
     sourceFieldRestrictions = source.fieldRestrictions.map((r) => ({ entityType: r.entityType, fieldKey: r.fieldKey }));
   }
 

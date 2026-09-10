@@ -33,6 +33,16 @@ export default function Sidebar({ mobileOpen, onMobileClose, tenant }: SidebarPr
   // Plan-tier enforcement (2026-09-07) — Payroll/Payments are Growth-only; a Starter tenant
   // simply doesn't see the nav item, rather than clicking through to a 403.
   const growthPlan = isGrowthFeatureEnabled(tenant);
+  // "Protect internal company data" rework — Companies/Contacts/Opportunities are no longer
+  // default Member access (see MEMBER_SEED_PERMISSIONS's comment in roleService.ts), so these
+  // links need the same has()-gating Payroll/Payments already got in Fase J, instead of always
+  // showing a link that now 403s for a plain Member. canSeeOpportunity mirrors the backend's
+  // derived canViewOpportunity (permissionService.ts): needs both Company AND Contact view.
+  const canSeeCompany = permissions.has('view_company');
+  const canSeeContact = permissions.has('view_contact');
+  const canSeeOpportunity = canSeeCompany && canSeeContact;
+  const canSeePayments = permissions.has('manage_payments') && growthPlan;
+  const showSalesGroup = canSeeCompany || canSeeContact || canSeeOpportunity || canSeePayments;
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `sidebar-link${isActive ? ' active' : ''}${collapsed ? ' justify-center' : ''}`;
@@ -83,27 +93,35 @@ export default function Sidebar({ mobileOpen, onMobileClose, tenant }: SidebarPr
           )}
         </div>
 
-        <div className="sidebar-divider">
-          {!collapsed && <p className="sidebar-group-label">Sales</p>}
-          <NavLink to="/companies" className={linkClass} title="Companies" onClick={onMobileClose}>
-            <BuildingIcon className="h-4 w-4 shrink-0" />
-            {label('Companies')}
-          </NavLink>
-          <NavLink to="/contacts" className={linkClass} title="Contacts" onClick={onMobileClose}>
-            <UserCircleIcon className="h-4 w-4 shrink-0" />
-            {label('Contacts')}
-          </NavLink>
-          <NavLink to="/opportunities" className={linkClass} title="Opportunities" onClick={onMobileClose}>
-            <TargetIcon className="h-4 w-4 shrink-0" />
-            {label('Opportunities')}
-          </NavLink>
-          {permissions.has('manage_payments') && growthPlan && (
-            <NavLink to="/payments" className={linkClass} title="Payments" onClick={onMobileClose}>
-              <CreditCardIcon className="h-4 w-4 shrink-0" />
-              {label('Payments')}
-            </NavLink>
-          )}
-        </div>
+        {showSalesGroup && (
+          <div className="sidebar-divider">
+            {!collapsed && <p className="sidebar-group-label">Sales</p>}
+            {canSeeCompany && (
+              <NavLink to="/companies" className={linkClass} title="Companies" onClick={onMobileClose}>
+                <BuildingIcon className="h-4 w-4 shrink-0" />
+                {label('Companies')}
+              </NavLink>
+            )}
+            {canSeeContact && (
+              <NavLink to="/contacts" className={linkClass} title="Contacts" onClick={onMobileClose}>
+                <UserCircleIcon className="h-4 w-4 shrink-0" />
+                {label('Contacts')}
+              </NavLink>
+            )}
+            {canSeeOpportunity && (
+              <NavLink to="/opportunities" className={linkClass} title="Opportunities" onClick={onMobileClose}>
+                <TargetIcon className="h-4 w-4 shrink-0" />
+                {label('Opportunities')}
+              </NavLink>
+            )}
+            {canSeePayments && (
+              <NavLink to="/payments" className={linkClass} title="Payments" onClick={onMobileClose}>
+                <CreditCardIcon className="h-4 w-4 shrink-0" />
+                {label('Payments')}
+              </NavLink>
+            )}
+          </div>
+        )}
 
         <div className="sidebar-footer">
           <NavLink to="/settings" className={linkClass} title="Settings" onClick={onMobileClose}>

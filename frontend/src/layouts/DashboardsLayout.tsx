@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import DateRangeFilter, { DEFAULT_PRESET, rangeForPreset } from '../components/metrics/DateRangeFilter';
 import type { DateRange, PresetKey } from '../lib/dateRangePresets';
+import { getDashboardSections } from '../lib/dashboardsSections';
 import { usePermissions } from '../contexts/PermissionsContext';
 
 interface DashboardsLayoutProps {
@@ -13,27 +14,21 @@ export interface DashboardsOutletContext {
   range: DateRange;
 }
 
-const CATEGORIES = [
-  { to: '/dashboards/hr', label: 'HR' },
-  { to: '/dashboards/time-off', label: 'Time Off' },
-  // Custom Roles Fase J — `permission` names the real backend gate for this dashboard's data
-  // (checked below via usePermissions()), replacing the old `ownerOnly` boolean.
-  { to: '/dashboards/payroll', label: 'Payroll', permission: 'manage_payroll' },
-  { to: '/dashboards/sales', label: 'Sales' },
-  { to: '/dashboards/tasks', label: 'Tasks' },
-  { to: '/dashboards/adoption', label: 'Adoption' },
-];
-
-// Mirrors WorkspaceSettingsLayout's parent-route-with-Outlet pattern, but with
-// route-driven tabs (.view-tab, same class Opportunities uses for its
-// per-Pipeline tabs) instead of a tile grid — each category is its own URL.
-// The date range lives here, not per-page: dataviz's filter-composition rule
-// is "one row above the content, scopes everything below it" — switching
-// tabs must not reset your selected range, so it's lifted to the layout and
-// handed down via Outlet context instead of each page owning its own copy.
+// Mirrors WorkspaceSettingsLayout's index-vs-subpage split: /dashboards
+// itself shows the tile grid (DashboardsHomePage), while a category route
+// shows that category's title plus the shared date range filter. Moving
+// between categories now happens via DashboardsSidebar (swapped in for the
+// main Sidebar, see AppLayout.tsx) instead of the in-page .view-tab strip
+// this used to render here — Alejandro found the tab strip cramped with 6
+// tabs on mobile and asked for the Settings-style pattern instead
+// (2026-09-09). The date range still lives here, not per-page, so switching
+// categories doesn't reset your selected range.
 export default function DashboardsLayout({ token }: DashboardsLayoutProps) {
+  const location = useLocation();
   const permissions = usePermissions();
-  const categories = CATEGORIES.filter((c) => !c.permission || permissions.has(c.permission));
+  const sections = getDashboardSections(permissions);
+  const isIndex = location.pathname === '/dashboards' || location.pathname === '/dashboards/';
+  const active = sections.find((s) => location.pathname.startsWith(s.to));
 
   const [presetKey, setPresetKey] = useState<PresetKey>(DEFAULT_PRESET);
   const [range, setRange] = useState<DateRange>(() => rangeForPreset(DEFAULT_PRESET));
@@ -45,19 +40,16 @@ export default function DashboardsLayout({ token }: DashboardsLayoutProps) {
 
   return (
     <div className="page-full">
-      <div className="page-toolbar">
-        <h2 className="text-xl font-semibold">Dashboards</h2>
-        <div className="ml-auto">
-          <DateRangeFilter presetKey={presetKey} range={range} onChange={handleRangeChange} />
+      {isIndex ? (
+        <h2 className="mb-5 text-xl font-semibold">Dashboards</h2>
+      ) : (
+        <div className="page-toolbar">
+          <h2 className="text-xl font-semibold">{active?.label ?? 'Dashboards'}</h2>
+          <div className="ml-auto">
+            <DateRangeFilter presetKey={presetKey} range={range} onChange={handleRangeChange} />
+          </div>
         </div>
-      </div>
-      <div className="mb-4 flex gap-1 border-b border-line dark:border-dark-line">
-        {categories.map((c) => (
-          <NavLink key={c.to} to={c.to} className={({ isActive }) => `view-tab${isActive ? ' active' : ''}`}>
-            {c.label}
-          </NavLink>
-        ))}
-      </div>
+      )}
       <Outlet context={{ token, range } satisfies DashboardsOutletContext} />
     </div>
   );

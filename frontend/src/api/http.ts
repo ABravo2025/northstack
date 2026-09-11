@@ -32,16 +32,38 @@ export function setUnauthorizedHandler(handler: UnauthorizedHandler | null): voi
   unauthorizedHandler = handler;
 }
 
-// Only a request that itself carried an Authorization header can mean "the session died" — an
+// The token backing the app's currently active session — kept in sync by App.tsx (a `[token]`
+// effect) so a 401 can be checked against it below, not just "was some Authorization header
+// present." Some pages (AcceptInvitePage, ResetPasswordPage, ContractConfirmationPage,
+// CompleteSignupPage) make authenticated calls with a freshly-minted token that never becomes
+// the app's active session — e.g. AcceptInvitePage's /accept-invite/:token route isn't gated by
+// isAuthenticated, so someone already logged in can open an invite link and log in/register a
+// second, unrelated account there. If that second account's token 401s for its own reasons (e.g.
+// an inactive account: authenticateToken rejects non-'active' users even though login doesn't
+// check status), it must not force-clear the first, still-valid session — found 2026-09-11.
+let activeSessionToken: string | null = null;
+
+export function setActiveSessionToken(token: string | null): void {
+  activeSessionToken = token;
+}
+
+// Extracts the bearer token value from this request's Authorization header, if any — an
 // anonymous request (login, register, forgot-password) legitimately returning 401 for wrong
 // credentials is a normal response its own caller already handles (e.g. LoginPage's error toast),
-// not a sign that the app's session just expired.
-function hadAuthHeader(init?: RequestInit): boolean {
+// not a sign that any session expired.
+function bearerToken(init?: RequestInit): string | null {
   const headers = init?.headers;
-  if (!headers) return false;
-  if (headers instanceof Headers) return headers.has('Authorization');
-  if (Array.isArray(headers)) return headers.some(([key]) => key.toLowerCase() === 'authorization');
-  return Object.keys(headers).some((key) => key.toLowerCase() === 'authorization');
+  if (!headers) return null;
+  let value: string | null | undefined;
+  if (headers instanceof Headers) {
+    value = headers.get('Authorization');
+  } else if (Array.isArray(headers)) {
+    value = headers.find(([key]) => key.toLowerCase() === 'authorization')?.[1];
+  } else {
+    const key = Object.keys(headers).find((k) => k.toLowerCase() === 'authorization');
+    value = key ? (headers as Record<string, string>)[key] : undefined;
+  }
+  return value ? value.replace(/^Bearer\s+/i, '') : null;
 }
 
 export async function apiFetch(url: string, init?: RequestInit): Promise<Response> {
@@ -55,8 +77,11 @@ export async function apiFetch(url: string, init?: RequestInit): Promise<Respons
     throw new ApiError("Can't reach the server. Check your connection and try again.");
   }
 
-  if (res.status === 401 && hadAuthHeader(init)) {
-    unauthorizedHandler?.();
+  if (res.status === 401) {
+    const token = bearerToken(init);
+    if (token && token === activeSessionToken) {
+      unauthorizedHandler?.();
+    }
   }
 
   return res;

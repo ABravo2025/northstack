@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { api } from './api';
 import type { PermissionsPayload, Tenant } from './api';
-import { setUnauthorizedHandler } from './api/http';
+import { setActiveSessionToken, setUnauthorizedHandler } from './api/http';
 import { useToast } from './components/common/ToastProvider';
 import { PermissionsProvider } from './contexts/PermissionsContext';
 import TableSkeleton from './components/common/TableSkeleton';
@@ -71,6 +71,16 @@ export default function App() {
       !isRegisterCompleteRoute &&
       Boolean(localStorage.getItem('token')),
   );
+
+  // Keeps http.ts's copy of "which token is the app's active session" current — apiFetch uses it
+  // to tell the active session's own request 401ing (real expiration) apart from an unrelated
+  // request 401ing with some other token (e.g. AcceptInvitePage logging in a second account in
+  // the same tab). Runs before the session-restore effect below on every render that changes
+  // `token`, so that effect's own api.getCurrentUser(token) call is always checked against the
+  // right value.
+  useEffect(() => {
+    setActiveSessionToken(token);
+  }, [token]);
 
   useEffect(() => {
     if (isAcceptInviteRoute || isConfirmContractRoute || isResetPasswordRoute || isRegisterCompleteRoute) {

@@ -51,8 +51,8 @@ enum PlanTier {
   scale
 }
 
-// Billing Integration (spec-billing-integration.md) — Paddle (international) vs Mercado Pago
-// (Argentina only), routed via resolveProvider() in subscriptionService.ts. Additive: the
+// Billing Integration (spec-billing-integration.md) — Dodo Payments (international) vs Mercado
+// Pago (Argentina only), routed via resolveProvider() in subscriptionService.ts. Additive: the
 // existing Tenant.status/plan/trialEndsAt/gracePeriodEndsAt/lockedPriceCents fields stay as the
 // mirror route guards/AppLayout's banner already read — syncSubscriptionAndTenant() becomes the
 // single writer for both Subscription and that mirror from here on (cron + the two webhook
@@ -67,7 +67,7 @@ enum SubscriptionStatus {
 }
 
 enum PaymentProvider {
-  paddle
+  dodopayments
   mercadopago
 }
 
@@ -385,9 +385,9 @@ model Subscription {
   plan                    PlanTier
   status                  SubscriptionStatus @default(trialing)
   provider                PaymentProvider? // null until a payment method is actually attached
-  externalSubscriptionId  String? // Paddle subscription id, or Mercado Pago preapproval_id
+  externalSubscriptionId  String? // Dodo Payments subscription id, or Mercado Pago preapproval_id
   lockedPriceCents        Int
-  currency                String // "USD" (Paddle) | "ARS" (Mercado Pago)
+  currency                String // "USD" (Dodo Payments) | "ARS" (Mercado Pago)
   trialEndsAt             DateTime?
   gracePeriodEndsAt       DateTime?
   currentPeriodStart      DateTime?
@@ -439,6 +439,11 @@ model PlanPrice {
   currency          String // "USD" | "ARS"
   launchPriceCents  Int
   regularPriceCents Int
+  // Dodo Payments catalog product id for launchPriceCents — Dodo requires a pre-created Product
+  // for any recurring subscription, unlike Paddle's inline non-catalog price. Only set for
+  // "international" market rows (Mercado Pago/"ar" rows never touch Dodo). Provisioned by
+  // scripts/setup-dodo-products.ts, not created at checkout time.
+  dodoProductId     String?
   effectiveFrom     DateTime @default(now())
   createdAt         DateTime @default(now())
 
@@ -1573,7 +1578,7 @@ model GoogleCalendarWatchChannel {
 // Payments v1 (spec-payments-v1.md) — per-tenant connection to the tenant's OWN Stripe account
 // (a Restricted Key pasted by hand, no OAuth/Connect — Northstack has no business entity to
 // register as a Stripe platform yet, same blocker already noted for Northstack's own
-// Paddle/Mercado Pago subscription). Read-only in v1: nothing here creates charges, invoices, or
+// Dodo Payments/Mercado Pago subscription). Read-only in v1: nothing here creates charges, invoices, or
 // subscriptions. needsAttention flips true when Stripe rejects the stored key (401/403) instead
 // of failing silently — same "reconnect" signal as GoogleCalendarConnection.needsReconnect above.
 model StripeConnection {

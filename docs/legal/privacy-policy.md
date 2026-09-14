@@ -10,6 +10,11 @@ the product actively markets to or signs EU-based tenants, this policy needs a G
 (legal basis articulation, EU representative, SCCs for transfers, etc.) before that happens,
 not after.
 
+2026-09-13 update — Section 4.1's subprocessor table now lists Dodo Payments instead of Paddle
+(replaced as the international payment processor; still sandbox, no real subscribers migrated).
+Same merchant-of-record role, so the data-flow description is unchanged — only the name. Pending
+legal review same as the rest of this document.
+
 2026-09-07 update — added Paddle and Mercado Pago as subprocessors (Section 4.1) and billing
 data to Sections 2 and 3, since real subscription billing went live 2026-08-23 (see
 terms-of-service.md's matching 2026-09-07 note on its Section 5 rewrite). Northstack does not
@@ -99,7 +104,7 @@ such requests if they reach us directly.
 - Content of support or contact communications you send us.
 - Billing and subscription information: the plan you select, trial and subscription status,
   and transaction metadata (such as amount, date, and currency) for payments processed
-  through Paddle or Mercado Pago (Section 4.1). **We do not directly collect or store your
+  through Dodo Payments or Mercado Pago (Section 4.1). **We do not directly collect or store your
   full payment card or bank account number** — our payment processors collect and hold that
   information directly.
 
@@ -163,7 +168,7 @@ obligations consistent with the purpose for which we share data with them:
 | Vercel | Application hosting (frontend and backend) | All data transmitted through the Service |
 | Neon | Database hosting (PostgreSQL) | All Account Data and Processed Data at rest |
 | Zoho Mail | Transactional email delivery (e.g., invitations) | Recipient email address, name, and email content |
-| Paddle | Payment processing for Tenants billed internationally in USD | Billing contact information, plan/subscription data, and transaction data. Paddle collects and stores full payment card details directly — we do not store your full card number. |
+| Dodo Payments | Payment processing for Tenants billed internationally in USD | Billing contact information, plan/subscription data, and transaction data. Dodo Payments collects and stores full payment card details directly — we do not store your full card number. |
 | Mercado Pago | Payment processing for Tenants billed in Argentina in ARS | Billing contact information, plan/subscription data, and transaction data. Mercado Pago collects and stores full payment/bank account details directly — we do not store your full account or card number. |
 
 These providers' infrastructure is located primarily in the United States, except Mercado

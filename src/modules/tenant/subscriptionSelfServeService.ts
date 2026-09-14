@@ -1,6 +1,6 @@
 import prisma from '../../lib/prisma.js';
 import { syncSubscriptionAndTenant } from './subscriptionService.js';
-import { cancelSubscription as cancelPaddleSubscription, removeScheduledChange, updateSubscriptionItems } from '../../lib/paddle.js';
+import { cancelSubscription as cancelDodoSubscription, removeScheduledCancellation, changeSubscriptionPlan } from '../../lib/dodopayments.js';
 import { updatePreapproval } from '../../lib/mercadopago.js';
 import type { PlanTier } from '@prisma/client';
 
@@ -32,12 +32,11 @@ export async function changePlan(tenantId: string, plan: PlanTier, userId: strin
     return { success: false, error: 'Pricing for this plan is not available yet.' };
   }
 
-  if (subscription.provider === 'paddle') {
-    await updateSubscriptionItems(subscription.externalSubscriptionId, {
-      description: `Northstack — ${plan}`,
-      amountCents: planPrice.launchPriceCents,
-      currencyCode: subscription.currency,
-    });
+  if (subscription.provider === 'dodopayments') {
+    if (!planPrice.dodoProductId) {
+      return { success: false, error: 'Pricing for this plan is not available yet.' };
+    }
+    await changeSubscriptionPlan(subscription.externalSubscriptionId, { productId: planPrice.dodoProductId });
   } else {
     await updatePreapproval(subscription.externalSubscriptionId, {
       transactionAmount: planPrice.launchPriceCents / 100,
@@ -54,7 +53,7 @@ export async function changePlan(tenantId: string, plan: PlanTier, userId: strin
 }
 
 // POST /api/subscriptions/me/cancel (Unidad 14). Tenant.status only flips to 'cancelled' once
-// cancellationEffectiveAt is actually reached — Paddle's own subscription.canceled webhook, or
+// cancellationEffectiveAt is actually reached — Dodo's own subscription.cancelled webhook, or
 // the Mercado Pago cron sweep (planTransitionService.ts) — never here, at request time.
 export async function requestCancellation(tenantId: string, reason: string | undefined, userId: string): Promise<SelfServeResult> {
   const subscription = await prisma.subscription.findUnique({ where: { tenantId } });
@@ -65,10 +64,10 @@ export async function requestCancellation(tenantId: string, reason: string | und
     return { success: false, error: 'Cancellation is already scheduled.' };
   }
 
-  if (subscription.provider === 'paddle') {
-    // Paddle supports native scheduled cancellation — one call, takes effect at
-    // next_billing_period on Paddle's own side too, not just locally.
-    await cancelPaddleSubscription(subscription.externalSubscriptionId, 'next_billing_period');
+  if (subscription.provider === 'dodopayments') {
+    // Dodo supports native scheduled cancellation — one call, takes effect at the subscription's
+    // own next_billing_date on Dodo's side too, not just locally.
+    await cancelDodoSubscription(subscription.externalSubscriptionId);
   }
   // Mercado Pago: no provider call here — no "cancel at period end" concept in its API. The cron
   // sweep (planTransitionService.ts) makes the real call once cancellationEffectiveAt arrives.
@@ -94,10 +93,10 @@ export async function resumeSubscription(tenantId: string, userId: string): Prom
     return { success: false, error: 'This cancellation has already taken effect.' };
   }
 
-  // See removeScheduledChange's comment in paddle.ts — Mercado Pago genuinely never got a
-  // provider call at cancel time, nothing to undo there, but Paddle did.
-  if (subscription.provider === 'paddle' && subscription.externalSubscriptionId) {
-    await removeScheduledChange(subscription.externalSubscriptionId);
+  // See removeScheduledCancellation's comment in dodopayments.ts — Mercado Pago genuinely never
+  // got a provider call at cancel time, nothing to undo there, but Dodo did.
+  if (subscription.provider === 'dodopayments' && subscription.externalSubscriptionId) {
+    await removeScheduledCancellation(subscription.externalSubscriptionId);
   }
 
   await syncSubscriptionAndTenant({

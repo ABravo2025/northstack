@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Modal from './Modal';
 import { useToast } from './ToastProvider';
 import { api } from '../../api';
-import { openAppPath, openExternalUrl } from '../../lib/nativeBrowser';
+import { openExternalUrl } from '../../lib/nativeBrowser';
 
 interface AddPaymentMethodModalProps {
   open: boolean;
@@ -28,16 +28,14 @@ interface AddPaymentMethodModalProps {
 // Signup+Plans), built from the spec's prose + existing Modal.tsx conventions per Alejandro's
 // explicit direction (2026-08-19) rather than blocking on a mockup that isn't there.
 //
-// Triggers POST /api/subscriptions/me/checkout and always hands off to the provider in a NEW
-// browser tab — Mercado Pago's hosted init_point via window.open (2026-08-21 correction:
-// previously window.location.href, navigating the current tab away from Northstack entirely,
-// which broke Alejandro's standing "if a modal can't do it, open a new tab" rule — it only applied
-// that to Paddle before), Paddle via its own PaddleCheckoutPage.tsx route (2026-08-20: should feel
-// like its own window, not an overlay stacked on the current one). Never a card form of our own,
-// per the spec's "nunca tocamos datos de tarjeta". This component no longer loads Paddle.js
-// itself; PaddleCheckoutPage.tsx does, in its own tab. BillingPage.tsx refetches on window focus
-// (both providers leave the original tab in place) rather than relying on a same-tab redirect
-// completing.
+// Triggers POST /api/subscriptions/me/checkout and always hands off to the provider's own hosted
+// page in a NEW browser tab via window.open (2026-08-21 correction: previously window.location.href,
+// navigating the current tab away from Northstack entirely, which broke Alejandro's standing "if a
+// modal can't do it, open a new tab" rule). Both Mercado Pago's init_point and Dodo Payments'
+// checkout_url/Customer Portal link are plain hosted redirect URLs — same openExternalUrl call for
+// either. Never a card form of our own, per the spec's "nunca tocamos datos de tarjeta".
+// BillingPage.tsx refetches on window focus (both providers leave the original tab in place)
+// rather than relying on a same-tab redirect completing.
 export default function AddPaymentMethodModal({
   open,
   token,
@@ -54,13 +52,8 @@ export default function AddPaymentMethodModal({
     setLoading(true);
     try {
       const result = await api.startCheckout(token);
-      if (result.provider === 'mercadopago' && result.initPoint) {
+      if (result.initPoint) {
         openExternalUrl(result.initPoint);
-        onClose();
-        return;
-      }
-      if (result.provider === 'paddle' && result.paddleTransactionId) {
-        openAppPath(`/billing/checkout?transactionId=${result.paddleTransactionId}`);
         onClose();
         return;
       }

@@ -76,7 +76,7 @@ vi.mock('../src/lib/prisma.js', () => {
     // (not a shared constant) — the exact reason that step is raw SQL instead of updateMany.
     // Positional args match the query's two interpolations, in order: gracePeriodDays, now.
     // 2026-08-20: also mirrors the NOT EXISTS guard — a tenant whose Subscription already has a
-    // provider (attached a card during a Paddle/Mercado Pago native trial) is left untouched.
+    // provider (attached a card during a Dodo/Mercado Pago native trial) is left untouched.
     $executeRaw: vi.fn(async (_strings: any, gracePeriodDays: number, now: Date) => {
       let count = 0;
       for (const t of tenants) {
@@ -230,7 +230,7 @@ describe('runPlanTransitions', () => {
 
   it('leaves a lapsed trial untouched if the tenant already attached a provider (Billing Integration, native trial in progress)', async () => {
     tenants.push({ id: 't1', status: 'trialing', trialEndsAt: new Date('2026-08-01'), gracePeriodEndsAt: null });
-    subscriptions.push({ tenantId: 't1', provider: 'paddle', status: 'trialing' });
+    subscriptions.push({ tenantId: 't1', provider: 'dodopayments', status: 'trialing' });
 
     const result = await runPlanTransitions(new Date('2026-08-02'));
 
@@ -274,13 +274,13 @@ describe('runPlanTransitions', () => {
       expect(subscriptions[0].status).toBe('active');
     });
 
-    it('never touches a Paddle subscription — Paddle schedules its own cancellation natively', async () => {
+    it('never touches a Dodo Payments subscription — Dodo schedules its own cancellation natively', async () => {
       tenants.push({ id: 't1', status: 'active' });
       subscriptions.push({
         tenantId: 't1',
-        provider: 'paddle',
+        provider: 'dodopayments',
         status: 'active',
-        externalSubscriptionId: 'sub_paddle_1',
+        externalSubscriptionId: 'sub_dodo_1',
         cancellationEffectiveAt: new Date('2026-08-01'),
       });
 

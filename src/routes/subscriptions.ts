@@ -25,16 +25,15 @@ subscriptionsRouter.get('/api/subscriptions/me', async (req, res) => {
   return res.json({ subscription });
 });
 
-// Read-only, same bar as GET /api/subscriptions/me above — the actual PDF document Paddle
-// generates for an Invoice row (per Alejandro's request, 2026-08-19). Paddle-only.
+// Read-only, same bar as GET /api/subscriptions/me above — the actual PDF document Dodo Payments
+// generates for an Invoice row (per Alejandro's request, 2026-08-19). Dodo Payments-only.
 subscriptionsRouter.get('/api/subscriptions/me/invoices/:invoiceId/document', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) {
     return;
   }
 
-  const disposition = req.query.disposition === 'attachment' ? 'attachment' : 'inline';
-  const result = await getInvoiceDocumentUrl(user.tenantId!, req.params.invoiceId, disposition);
+  const result = await getInvoiceDocumentUrl(user.tenantId!, req.params.invoiceId);
   if (!result.success) {
     return res.status(404).json({ error: result.error });
   }
@@ -70,7 +69,6 @@ subscriptionsRouter.post('/api/subscriptions/me/checkout', async (req, res) => {
   return res.json({
     provider: result.provider,
     initPoint: result.initPoint,
-    paddleTransactionId: result.paddleTransactionId,
   });
 });
 

@@ -30,11 +30,11 @@ export async function runPlanTransitions(now: Date = new Date()): Promise<PlanTr
   // which would have left this step silently incomplete while still reporting success.
   //
   // NOT EXISTS guard added 2026-08-20 (Billing Integration, "genuinely free for 15 days"): a
-  // tenant can now attach a real payment method (Paddle trial_period / Mercado Pago free_trial)
+  // tenant can now attach a real payment method (Dodo trial_period_days / Mercado Pago free_trial)
   // while still inside our own internal trialEndsAt window — that tenant's Subscription.provider
   // is already set, and the *provider* is what will transition them to active (or past_due, on a
   // failed first charge) via webhook. Without this guard, this cron would incorrectly bump them
-  // to past_due on our own trialEndsAt clock even though Paddle/Mercado Pago haven't actually
+  // to past_due on our own trialEndsAt clock even though Dodo/Mercado Pago haven't actually
   // failed to charge them yet — a false "your trial lapsed" banner for someone who already gave
   // us a card. A tenant that never attached a provider (still genuinely trialing with no card,
   // e.g. picked Free Trial) has no Subscription.provider set and is unaffected by this guard.
@@ -53,10 +53,10 @@ export async function runPlanTransitions(now: Date = new Date()): Promise<PlanTr
   });
 
   // Billing Integration (task-breakdown Unidad 9) — Mercado Pago has no native "cancel at period
-  // end" concept in its API (unlike Paddle's effective_from: next_billing_period), so the
-  // self-serve cancel endpoint (Etapa D) only sets cancellationEffectiveAt locally; this is what
-  // actually calls Mercado Pago once that date arrives. Paddle needs no equivalent step here —
-  // its own cancel call already schedules the cancellation on Paddle's side.
+  // end" concept in its API (unlike Dodo's cancel_at_next_billing_date), so the self-serve cancel
+  // endpoint (Etapa D) only sets cancellationEffectiveAt locally; this is what actually calls
+  // Mercado Pago once that date arrives. Dodo needs no equivalent step here — its own cancel call
+  // already schedules the cancellation on Dodo's side.
   const dueMercadoPagoCancellations = await prisma.subscription.findMany({
     where: { provider: 'mercadopago', status: { not: 'cancelled' }, cancellationEffectiveAt: { lte: now } },
   });

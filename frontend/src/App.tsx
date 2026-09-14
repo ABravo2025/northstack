@@ -41,7 +41,6 @@ import PublicFormPage from './pages/PublicFormPage';
 import ApiDocsPage from './pages/ApiDocsPage';
 import BillingPage from './pages/BillingPage';
 import PaymentsOverviewPage from './pages/PaymentsOverviewPage';
-import PaddleCheckoutPage from './pages/PaddleCheckoutPage';
 import PayrollPage from './pages/PayrollPage';
 import PayrollRunDetailPage from './pages/PayrollRunDetailPage';
 import AppLayout from './layouts/AppLayout';
@@ -266,7 +265,6 @@ export default function App() {
         element={<ContractConfirmationPage onConfirmed={handleContractConfirmed} />}
       />
       <Route path="/apply/:tenantSlug/:formSlug" element={<PublicFormPage />} />
-      <Route path="/billing/checkout" element={<PaddleCheckoutPage />} />
       {/* Private API reference (spec-private-api-webhooks.md §8) — authenticated-only (Alejandro,
           2026-09-08: not public, only reachable by someone already logged into the workspace),
           linked from Settings -> Integrations -> API & Webhooks. Deliberately NOT nested under

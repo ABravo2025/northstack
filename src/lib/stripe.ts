@@ -1,8 +1,8 @@
 
 // Payments v1 (spec-payments-v1.md) — hand-rolled wrapper (fetch + native crypto) instead of the
 // official `stripe` SDK, matching this codebase's existing bias against a dependency for a small
-// REST surface (see src/lib/paddle.ts / src/lib/mercadopago.ts — same reasoning, same category of
-// integration: a payment provider's API). Unlike Paddle/Mercado Pago, there is no single fixed
+// REST surface (see src/lib/mercadopago.ts — same reasoning, same category of integration: a
+// payment provider's API). Unlike Mercado Pago, there is no single fixed
 // API key for this file to read from an env var — each tenant supplies their OWN key (pasted by
 // hand, see StripeConnection), so every function here takes the key as a parameter instead.
 const STRIPE_API_BASE = 'https://api.stripe.com/v1';

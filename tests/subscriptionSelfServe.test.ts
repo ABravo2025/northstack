@@ -3,10 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const tenants: any[] = [];
 const subscriptions: any[] = [];
 const planPrices: any[] = [
-  { plan: 'starter', market: 'international', launchPriceCents: 2900 },
-  { plan: 'growth', market: 'international', launchPriceCents: 7900 },
-  { plan: 'starter', market: 'ar', launchPriceCents: 0 }, // placeholder, mirrors seed-plan-prices.ts
-  { plan: 'growth', market: 'ar', launchPriceCents: 0 },
+  { plan: 'starter', market: 'international', launchPriceCents: 2900, dodoProductId: 'pdt_starter' },
+  { plan: 'growth', market: 'international', launchPriceCents: 7900, dodoProductId: 'pdt_growth' },
+  { plan: 'starter', market: 'ar', launchPriceCents: 0, dodoProductId: null }, // placeholder, mirrors seed-plan-prices.ts
+  { plan: 'growth', market: 'ar', launchPriceCents: 0, dodoProductId: null },
 ];
 
 vi.mock('../src/lib/prisma.js', () => {
@@ -44,15 +44,15 @@ vi.mock('../src/lib/prisma.js', () => {
 
 // vi.mock factories are hoisted above every top-level const, so the mock functions they
 // reference must be created via vi.hoisted() rather than plain consts above these calls.
-const { updateSubscriptionItemsMock, cancelPaddleSubscriptionMock, removeScheduledChangeMock } = vi.hoisted(() => ({
-  updateSubscriptionItemsMock: vi.fn(async () => ({})),
-  cancelPaddleSubscriptionMock: vi.fn(async () => ({})),
-  removeScheduledChangeMock: vi.fn(async () => ({})),
+const { changeSubscriptionPlanMock, cancelDodoSubscriptionMock, removeScheduledCancellationMock } = vi.hoisted(() => ({
+  changeSubscriptionPlanMock: vi.fn(async () => ({})),
+  cancelDodoSubscriptionMock: vi.fn(async () => ({})),
+  removeScheduledCancellationMock: vi.fn(async () => ({})),
 }));
-vi.mock('../src/lib/paddle.js', () => ({
-  updateSubscriptionItems: updateSubscriptionItemsMock,
-  cancelSubscription: cancelPaddleSubscriptionMock,
-  removeScheduledChange: removeScheduledChangeMock,
+vi.mock('../src/lib/dodopayments.js', () => ({
+  changeSubscriptionPlan: changeSubscriptionPlanMock,
+  cancelSubscription: cancelDodoSubscriptionMock,
+  removeScheduledCancellation: removeScheduledCancellationMock,
 }));
 
 const { updatePreapprovalMock } = vi.hoisted(() => ({ updatePreapprovalMock: vi.fn(async () => ({})) }));
@@ -65,9 +65,9 @@ import { changePlan, requestCancellation, resumeSubscription } from '../src/modu
 function resetMocks() {
   tenants.length = 0;
   subscriptions.length = 0;
-  updateSubscriptionItemsMock.mockClear();
-  cancelPaddleSubscriptionMock.mockClear();
-  removeScheduledChangeMock.mockClear();
+  changeSubscriptionPlanMock.mockClear();
+  cancelDodoSubscriptionMock.mockClear();
+  removeScheduledCancellationMock.mockClear();
   updatePreapprovalMock.mockClear();
 }
 
@@ -85,14 +85,14 @@ describe('changePlan', () => {
 
     const result = await changePlan('t1', 'growth', 'u1');
     expect(result.success).toBe(false);
-    expect(updateSubscriptionItemsMock).not.toHaveBeenCalled();
+    expect(changeSubscriptionPlanMock).not.toHaveBeenCalled();
   });
 
-  it('calls the Paddle wrapper and updates plan/lockedPriceCents immediately on success', async () => {
+  it('calls the Dodo wrapper with the new plan\'s dodoProductId and updates plan/lockedPriceCents immediately on success', async () => {
     tenants.push({ id: 't1', plan: 'starter', lockedPriceCents: 2900 });
     subscriptions.push({
       tenantId: 't1',
-      provider: 'paddle',
+      provider: 'dodopayments',
       externalSubscriptionId: 'sub_1',
       plan: 'starter',
       currency: 'USD',
@@ -101,11 +101,7 @@ describe('changePlan', () => {
     const result = await changePlan('t1', 'growth', 'u1');
 
     expect(result.success).toBe(true);
-    expect(updateSubscriptionItemsMock).toHaveBeenCalledWith('sub_1', {
-      description: 'Northstack — growth',
-      amountCents: 7900,
-      currencyCode: 'USD',
-    });
+    expect(changeSubscriptionPlanMock).toHaveBeenCalledWith('sub_1', { productId: 'pdt_growth' });
     expect(updatePreapprovalMock).not.toHaveBeenCalled();
     expect(subscriptions[0].plan).toBe('growth');
     expect(subscriptions[0].lockedPriceCents).toBe(7900);
@@ -130,7 +126,7 @@ describe('changePlan', () => {
 
     expect(result.success).toBe(true);
     expect(updatePreapprovalMock).toHaveBeenCalledWith('preapproval_1', { transactionAmount: 50 });
-    expect(updateSubscriptionItemsMock).not.toHaveBeenCalled();
+    expect(changeSubscriptionPlanMock).not.toHaveBeenCalled();
   });
 
   it('rejects when the market price is the AR placeholder (0 cents)', async () => {
@@ -155,22 +151,22 @@ describe('requestCancellation', () => {
   it('rejects a second cancellation while one is already scheduled', async () => {
     subscriptions.push({
       tenantId: 't1',
-      provider: 'paddle',
+      provider: 'dodopayments',
       externalSubscriptionId: 'sub_1',
       currentPeriodEnd: new Date('2026-09-01'),
       cancelledAt: new Date('2026-08-01'),
     });
     const result = await requestCancellation('t1', undefined, 'u1');
     expect(result.success).toBe(false);
-    expect(cancelPaddleSubscriptionMock).not.toHaveBeenCalled();
+    expect(cancelDodoSubscriptionMock).not.toHaveBeenCalled();
   });
 
-  it('Paddle: calls the native scheduled cancellation and never touches Tenant.status', async () => {
+  it('Dodo: calls the native scheduled cancellation and never touches Tenant.status', async () => {
     tenants.push({ id: 't1', status: 'active' });
     const periodEnd = new Date('2026-09-01');
     subscriptions.push({
       tenantId: 't1',
-      provider: 'paddle',
+      provider: 'dodopayments',
       externalSubscriptionId: 'sub_1',
       currentPeriodEnd: periodEnd,
       cancelledAt: null,
@@ -179,7 +175,7 @@ describe('requestCancellation', () => {
     const result = await requestCancellation('t1', 'too expensive', 'u1');
 
     expect(result.success).toBe(true);
-    expect(cancelPaddleSubscriptionMock).toHaveBeenCalledWith('sub_1', 'next_billing_period');
+    expect(cancelDodoSubscriptionMock).toHaveBeenCalledWith('sub_1');
     expect(subscriptions[0].cancelledAt).toBeInstanceOf(Date);
     expect(subscriptions[0].cancellationEffectiveAt).toBe(periodEnd);
     expect(subscriptions[0].cancellationReason).toBe('too expensive');
@@ -200,7 +196,7 @@ describe('requestCancellation', () => {
     const result = await requestCancellation('t1', undefined, 'u1');
 
     expect(result.success).toBe(true);
-    expect(cancelPaddleSubscriptionMock).not.toHaveBeenCalled();
+    expect(cancelDodoSubscriptionMock).not.toHaveBeenCalled();
     expect(subscriptions[0].cancelledAt).toBeInstanceOf(Date);
   });
 });
@@ -224,10 +220,10 @@ describe('resumeSubscription', () => {
     expect(result.success).toBe(false);
   });
 
-  it('Paddle: clears the scheduled_change on Paddle too, not just locally', async () => {
+  it('Dodo: clears the scheduled cancellation on Dodo too, not just locally', async () => {
     subscriptions.push({
       tenantId: 't1',
-      provider: 'paddle',
+      provider: 'dodopayments',
       externalSubscriptionId: 'sub_1',
       cancelledAt: new Date(),
       cancellationEffectiveAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
@@ -236,7 +232,7 @@ describe('resumeSubscription', () => {
     const result = await resumeSubscription('t1', 'u1');
 
     expect(result.success).toBe(true);
-    expect(removeScheduledChangeMock).toHaveBeenCalledWith('sub_1');
+    expect(removeScheduledCancellationMock).toHaveBeenCalledWith('sub_1');
     expect(subscriptions[0].cancelledAt).toBeNull();
     expect(subscriptions[0].cancellationEffectiveAt).toBeNull();
   });
@@ -253,6 +249,6 @@ describe('resumeSubscription', () => {
     const result = await resumeSubscription('t1', 'u1');
 
     expect(result.success).toBe(true);
-    expect(removeScheduledChangeMock).not.toHaveBeenCalled();
+    expect(removeScheduledCancellationMock).not.toHaveBeenCalled();
   });
 });

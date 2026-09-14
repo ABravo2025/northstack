@@ -75,7 +75,7 @@ export default function AppLayout({ user, token, tenant, onTenantUpdated, onLogo
   // that card) now pays right away instead of just recording intent for later — Alejandro's
   // explicit correction (2026-08-20): no more "trial without a card" once a paid plan is
   // actually chosen, matching the same immediate-checkout behavior BillingPage's "Change plan"
-  // already has. Reuses AddPaymentMethodModal (already has all the Paddle.js/redirect handling)
+  // already has. Reuses AddPaymentMethodModal (already has all the hosted-redirect handling)
   // instead of duplicating it here.
   const handleSelectPlanAndCheckout = async (plan: PlanTier) => {
     const updated = await api.updateTenantPlan(token!, plan);

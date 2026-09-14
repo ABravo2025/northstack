@@ -84,12 +84,12 @@ const FAQ_CATEGORIES: FaqCategory[] = [
         a: "Growth removes the caps on pipelines, time off policies, and custom roles, raises admin seats from 2 to 5, keeps activity history for 30 days instead of 7, and is the only plan with Payroll and Payments (your own Stripe) included.",
       },
       {
-        q: 'Do I choose between Paddle and Mercado Pago myself?',
-        a: "No — it's automatic, based on your workspace's country. Argentina bills through Mercado Pago in ARS; every other country bills through Paddle in USD.",
+        q: 'Do I choose between Dodo Payments and Mercado Pago myself?',
+        a: "No — it's automatic, based on your workspace's country. Argentina bills through Mercado Pago in ARS; every other country bills through Dodo Payments in USD.",
       },
       {
         q: 'Does Northstack store my card number?',
-        a: "No. Checkout happens on Paddle's or Mercado Pago's own secure page — Northstack never receives or stores full card details.",
+        a: "No. Checkout happens on Dodo Payments' or Mercado Pago's own secure page — Northstack never receives or stores full card details.",
       },
       {
         q: 'If I cancel, do I lose access immediately?',
@@ -189,7 +189,7 @@ const FAQ_CATEGORIES: FaqCategory[] = [
     items: [
       {
         q: 'Is the Payments module the same as my Northstack subscription?',
-        a: 'No, they\'re unrelated. Your Northstack subscription is billed through Paddle or Mercado Pago (see Billing & plans). Payments is a Growth-plan add-on where you connect your own Stripe account to track your customers\' payments.',
+        a: 'No, they\'re unrelated. Your Northstack subscription is billed through Dodo Payments or Mercado Pago (see Billing & plans). Payments is a Growth-plan add-on where you connect your own Stripe account to track your customers\' payments.',
       },
       {
         q: 'Does Google Calendar sync go both ways?',

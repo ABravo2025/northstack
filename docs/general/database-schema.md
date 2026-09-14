@@ -24,7 +24,7 @@ Se dividen en grupos por área funcional, no uno solo gigante, para que sean leg
 9. **Google Calendar sync + cumpleaños** — GoogleCalendarConnection, GoogleOAuthState, y los campos nuevos de Employee/Task/TimeOffRequest.
 10. **Payments v1** — StripeConnection, y los campos nuevos de Company (`stripeCustomerId`/`stripeCustomerMatchedVia`).
 11. **Employee Termination** — EmployeeTermination, EmployeeTerminationReassignment.
-12. **Billing Integration** — Subscription, Invoice, PlanPrice, ProcessedWebhookEvent (Northstack's own subscription — Paddle intl/USD, Mercado Pago AR/ARS — distinto de Payments v1, que es la suscripción de Stripe de *cada tenant*, no la de Northstack).
+12. **Billing Integration** — Subscription, Invoice, PlanPrice, ProcessedWebhookEvent (Northstack's own subscription — Dodo Payments intl/USD, Mercado Pago AR/ARS — distinto de Payments v1, que es la suscripción de Stripe de *cada tenant*, no la de Northstack).
 
 ## 1. Identidad y acceso
 
@@ -974,10 +974,11 @@ Notas:
 ## 12. Billing Integration
 
 Suscripción propia de Northstack (no confundir con Payments v1, grupo 10, que es la conexión de
-Stripe de *cada tenant* con *sus propios* clientes) — Paddle para mercado internacional/USD,
-Mercado Pago para Argentina/ARS. Spec en `docs/general/spec-billing-integration.md`. **En
-producción (`main`)** desde 2026-08-23, después de una code review que encontró y corrigió 7 bugs
-antes de salir.
+Stripe de *cada tenant* con *sus propios* clientes) — Dodo Payments (reemplazó a Paddle,
+2026-09-13, todavía en sandbox) para mercado internacional/USD, Mercado Pago para Argentina/ARS.
+Spec en `docs/general/spec-billing-integration.md` (describe el diseño original con Paddle — ver
+nota al principio de ese doc). **En producción (`main`)** desde 2026-08-23, después de una code
+review que encontró y corrigió 7 bugs antes de salir.
 
 ```mermaid
 erDiagram
@@ -990,10 +991,10 @@ erDiagram
         string tenantId FK UK "one live subscription per tenant"
         enum plan "PlanTier — starter/growth/scale"
         enum status "trialing/active/past_due/suspended/cancelled"
-        enum provider "nullable - paddle/mercadopago, null until a payment method is attached"
-        string externalSubscriptionId "nullable - Paddle subscription id, or MP preapproval_id"
+        enum provider "nullable - dodopayments/mercadopago, null until a payment method is attached"
+        string externalSubscriptionId "nullable - Dodo Payments subscription id, or MP preapproval_id"
         int lockedPriceCents
-        string currency "USD (Paddle) | ARS (Mercado Pago)"
+        string currency "USD (Dodo Payments) | ARS (Mercado Pago)"
         datetime trialEndsAt "nullable"
         datetime gracePeriodEndsAt "nullable"
         datetime currentPeriodStart "nullable"

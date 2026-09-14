@@ -34,18 +34,19 @@ Facts this draft is grounded in (verified against the actual code, not assumed):
   period, then -> suspended (planTransitionService.ts, GRACE_PERIOD_DAYS = 14) — described in
   Section 6 below in plain language without overcommitting to internal state-machine names
   that could drift out of sync with the code.
-- Payment processors are Paddle (international/USD) and Mercado Pago (Argentina/ARS); neither
+- Payment processors are Dodo Payments (international/USD, replaced Paddle 2026-09-13 — still
+  sandbox, no real subscribers migrated) and Mercado Pago (Argentina/ARS); neither
   is described as holding refund discretion on Northstack's behalf — refund decisions here
   are Northstack's, chargebacks/disputes are the cardholder's bank or Mercado Pago's process.
 
 Known gaps / things to confirm before publishing:
 1. No refund mechanism exists anywhere in the current billing code (checked: no `refund`
    reference in checkoutService.ts, subscriptionSelfServeService.ts, planTransitionService.ts,
-   paddle.ts, or mercadopago.ts). That's consistent with a no-refunds default, but it also
+   dodopayments.ts, or mercadopago.ts). That's consistent with a no-refunds default, but it also
    means Section 5's "billing error" exception is a promise with no code path behind it yet —
-   if Alejandro ever needs to actually issue one, it goes through Paddle's/Mercado Pago's own
-   dashboard manually today. Flagging so support doesn't promise an in-app refund button that
-   doesn't exist.
+   if Alejandro ever needs to actually issue one, it goes through Dodo Payments'/Mercado Pago's
+   own dashboard manually today. Flagging so support doesn't promise an in-app refund button
+   that doesn't exist.
 2. This draft does not analyze whether Argentine consumer-protection law (Ley 24.240) or any
    U.S. state law creates a mandatory cooling-off/refund right that overrides a contractual
    no-refund clause for a service sold to a "business" customer that might, in substance, be a
@@ -180,8 +181,8 @@ info@joinnorthstack.com first so we can address a billing error or dispute direc
 
 ## 6. How Billing Works (for context)
 
-Subscriptions are billed on a recurring basis (e.g., monthly), in advance, through **Paddle**
-(for Tenants billed internationally in USD) or **Mercado Pago** (for Tenants billed in
+Subscriptions are billed on a recurring basis (e.g., monthly), in advance, through **Dodo
+Payments** (for Tenants billed internationally in USD) or **Mercado Pago** (for Tenants billed in
 Argentina in ARS) — see Section 5.4 of our Terms of Service. If a payment cannot be
 successfully collected (for example, an expired or declined card), your account may enter a
 grace period during which you retain access while you update your payment method; if payment

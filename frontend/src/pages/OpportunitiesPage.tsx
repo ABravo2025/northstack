@@ -7,12 +7,11 @@ import Modal from '../components/common/Modal';
 import KanbanBoard from '../components/entity-views/KanbanBoard';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
 import OpportunityDetailModal from '../components/crm/OpportunityDetailModal';
-import EmptyState from '../components/common/EmptyState';
 import TableSkeleton from '../components/common/TableSkeleton';
 import Field from '../components/common/Field';
 import { formatMoney } from '../lib/currencies';
 import { getInitials } from '../components/common/Avatar';
-import { PlusIcon, TargetIcon } from '../components/common/Icons';
+import { PlusIcon } from '../components/common/Icons';
 import { useAutoCreateGuard } from '../hooks/useAutoCreateGuard';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { usePrimaryAction } from '../contexts/PrimaryActionContext';
@@ -212,9 +211,12 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
     setLinkedContactId(null);
   };
 
-  const handleOpenAdd = () => {
+  // stageId lets a specific Kanban column's "+" footer (renderColumnFooter below) pre-fill that
+  // stage instead of always defaulting to the pipeline's first — the FAB "Add opportunity" caller
+  // omits it and gets the old first-stage default.
+  const handleOpenAdd = (stageId?: string) => {
     const firstStage = currentPipeline?.stages.filter((s) => s.isActive).sort((a, b) => a.order - b.order)[0];
-    setForm((f) => ({ ...emptyForm, currency: f.currency, pipelineId: currentPipeline?.id || '', stageId: firstStage?.id || '' }));
+    setForm((f) => ({ ...emptyForm, currency: f.currency, pipelineId: currentPipeline?.id || '', stageId: stageId || firstStage?.id || '' }));
     autoCreateGuard.reset();
     setCreatedOpportunityId(null);
     setLinkedContactId(null);
@@ -844,10 +846,9 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
           </span>
         )}
         {/* No header "Add" button, on any width: the FAB (usePrimaryAction above) covers mobile,
-            and desktop already has its own "Add opportunity" affordance either way — the
-            EmptyState button when the pipeline has no opportunities, or each Kanban column's own
-            ghost-add card (renderColumnFooter below) once it does. A persistent button here would
-            be a third way to do the same thing. */}
+            and desktop already has each Kanban column's own ghost-add card (renderColumnFooter
+            below), empty or not. A persistent button here would be a third way to do the same
+            thing. */}
       </div>
 
       <div className="views-bar" ref={viewsBarRef}>
@@ -882,19 +883,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
             </div>
           ))}
         </div>
-      ) : currentPipeline ? opportunities.filter((o) => o.pipelineId === currentPipeline.id).length === 0 ? (
-        canEdit ? (
-          <EmptyState
-            icon={<TargetIcon />}
-            title="No opportunities here"
-            body="Opportunities move deals through your pipeline stages."
-            primaryLabel="Add opportunity"
-            onPrimary={handleOpenAdd}
-          />
-        ) : (
-          <p className="mt-4">No opportunities here.</p>
-        )
-      ) : (
+      ) : currentPipeline ? (
         <KanbanBoard
           columns={currentPipeline.stages
             .filter((s) => s.isActive)
@@ -964,8 +953,8 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
           }}
           renderColumnFooter={
             canEdit
-              ? () => (
-                  <div className="kanban-ghost-card" onClick={handleOpenAdd}>
+              ? (columnKey) => (
+                  <div className="kanban-ghost-card" onClick={() => handleOpenAdd(columnKey)}>
                     <span className="ghost-plus-box">
                       <PlusIcon className="h-3 w-3" />
                     </span>

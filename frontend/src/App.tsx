@@ -46,6 +46,7 @@ import PayrollRunDetailPage from './pages/PayrollRunDetailPage';
 import AppLayout from './layouts/AppLayout';
 import WorkspaceSettingsLayout from './layouts/WorkspaceSettingsLayout';
 import SettingsHomePage from './pages/SettingsHomePage';
+import { isPublicFormsEnabled } from './lib/featureFlags';
 import './App.css';
 
 export default function App() {
@@ -264,7 +265,12 @@ export default function App() {
         path="/confirm-contract/:token"
         element={<ContractConfirmationPage onConfirmed={handleContractConfirmed} />}
       />
-      <Route path="/apply/:tenantSlug/:formSlug" element={<PublicFormPage />} />
+      <Route
+        path="/apply/:tenantSlug/:formSlug"
+        element={
+          isPublicFormsEnabled() ? <PublicFormPage /> : <Navigate to={isAuthenticated ? '/overview' : '/login'} replace />
+        }
+      />
       {/* Private API reference (spec-private-api-webhooks.md §8) — authenticated-only (Alejandro,
           2026-09-08: not public, only reachable by someone already logged into the workspace),
           linked from Settings -> Integrations -> API & Webhooks. Deliberately NOT nested under
@@ -325,7 +331,10 @@ export default function App() {
             path="users"
             element={<CompanyUsersPage user={user} token={token ?? ''} onUserUpdated={setUser} />}
           />
-          <Route path="public-forms" element={<PublicFormsSettingsPage token={token ?? ''} />} />
+          <Route
+            path="public-forms"
+            element={isPublicFormsEnabled() ? <PublicFormsSettingsPage token={token ?? ''} /> : <Navigate to="/settings" replace />}
+          />
           <Route path="pipelines" element={<PipelinesSettingsPage token={token ?? ''} />} />
           <Route path="activity" element={<ActivityLogSettingsPage token={token ?? ''} />} />
           <Route path="roles" element={<RolesPermissionsPage token={token ?? ''} />} />

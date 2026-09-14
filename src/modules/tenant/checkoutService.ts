@@ -3,6 +3,7 @@ import { resolveProvider, recordSubscriptionActionAttempt } from './subscription
 import { SIGNUP_TRIAL_DAYS } from './tenantService.js';
 import { createPreapproval, updatePreapproval } from '../../lib/mercadopago.js';
 import { createCheckoutSession, getCustomerPortalUrl } from '../../lib/dodopayments.js';
+import { countActiveSeats, extraSeatsFor, EXTRA_SEAT_PRICE_CENTS } from './seatService.js';
 
 export interface StartCheckoutResult {
   success: boolean;
@@ -75,6 +76,13 @@ export async function startCheckout(
     return { success: false, error: 'Pricing for your market is not available yet. Please contact support.' };
   }
 
+  // Starting extra-seat count (seatService.ts) — a tenant already over its included seats by the
+  // time it actually adds a card is billed correctly from the first invoice. subscription.plan is
+  // always 'starter'/'growth' here — Scale has no self-serve checkout (see this function's own
+  // comment set elsewhere), and the planPrice lookup above already scoped to it.
+  const activeSeats = await countActiveSeats(tenant.id);
+  const extraSeats = extraSeatsFor(subscription.plan as 'starter' | 'growth', activeSeats);
+
   // Genuinely free for SIGNUP_TRIAL_DAYS (Alejandro's 2026-08-20 correction) — but only for an
   // actual fresh subscription, never the Mercado Pago "update payment method" fallback above
   // (isUpdatingPaymentMethod true, cancelled the old preapproval, fell through to here): that
@@ -109,7 +117,7 @@ export async function startCheckout(
       subscriptionId: subscription.id,
       reason: `Northstack — ${subscription.plan} (AR)`,
       payerEmail: user.email,
-      transactionAmount: planPrice.launchPriceCents / 100,
+      transactionAmount: (planPrice.launchPriceCents + extraSeats * EXTRA_SEAT_PRICE_CENTS) / 100,
       backUrl: BILLING_CALLBACK_URL,
       trialDays,
     });
@@ -131,6 +139,7 @@ export async function startCheckout(
     productId: planPrice.dodoProductId,
     returnUrl: BILLING_CALLBACK_URL,
     trialDays,
+    extraSeats,
   });
 
   return { success: true, provider: 'dodopayments', initPoint: session.checkoutUrl };

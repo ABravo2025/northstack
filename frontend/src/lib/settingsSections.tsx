@@ -10,6 +10,7 @@ import {
   TrendingIcon,
   UserCircleIcon,
 } from '../components/common/Icons';
+import { isPublicFormsEnabled } from './featureFlags';
 
 export interface SettingsSectionItem {
   to: string;
@@ -57,7 +58,9 @@ export function getSettingsSections(permissions: SettingsSectionsPermissions): S
     companyItems.push({ to: 'users', label: 'Users', desc: 'Invite people and manage roles.', icon: <TeamIcon /> });
   }
   if (permissions.has('manage_custom_fields')) {
-    companyItems.push({ to: 'public-forms', label: 'Public Forms', desc: 'External intake forms per module.', icon: <ListIcon /> });
+    if (isPublicFormsEnabled()) {
+      companyItems.push({ to: 'public-forms', label: 'Public Forms', desc: 'External intake forms per module.', icon: <ListIcon /> });
+    }
     companyItems.push({ to: 'pipelines', label: 'Pipelines', desc: 'Sales stages and their outcomes.', icon: <TrendingIcon /> });
   }
   if (permissions.has('view_activity_log')) {

@@ -8,6 +8,7 @@ import { recordActivity } from '../activity/activityLogService.js';
 import { invitationActivityFieldConfig } from '../activity/fieldConfigs/invitationFieldConfig.js';
 import { findSeedRoleId } from '../auth/roleService.js';
 import { getPlanLimits, hasAdminSeatAvailable } from './planLimits.js';
+import { syncSeatBilling } from './seatService.js';
 
 const INVITATION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -265,6 +266,10 @@ export async function acceptInvitation(input: AcceptInvitationInput): Promise<Te
     after: { ...invitation, status: 'accepted' },
     fieldConfig: invitationActivityFieldConfig,
   });
+
+  // A newly-accepted invitation is a new active seat — real-time sync (seatService.ts), never
+  // allowed to block the invite acceptance itself if Dodo/Mercado Pago hiccups.
+  await bestEffort(syncSeatBilling(invitation.tenantId), `syncSeatBilling(${invitation.tenantId})`);
 
   return {
     success: true,

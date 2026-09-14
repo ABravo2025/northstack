@@ -5,6 +5,7 @@ import { findPipelineById } from '../modules/crm/pipelineService.js';
 import { findCustomFieldDefinitionById } from '../modules/hr/customFieldService.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
+import { isPublicFormsEnabled } from '../lib/featureFlags.js';
 
 export const publicFormsRouter = createAsyncRouter();
 
@@ -28,6 +29,9 @@ async function findInvalidCustomFieldKey(
 }
 
 publicFormsRouter.get('/api/public-forms', async (req, res) => {
+  if (!isPublicFormsEnabled()) {
+    return res.status(404).json({ error: 'Not found' });
+  }
   const user = await validateSession(req, res);
   if (!user) {
     return;
@@ -45,6 +49,9 @@ publicFormsRouter.get('/api/public-forms', async (req, res) => {
 });
 
 publicFormsRouter.post('/api/public-forms', async (req, res) => {
+  if (!isPublicFormsEnabled()) {
+    return res.status(404).json({ error: 'Not found' });
+  }
   const user = await validateSession(req, res);
   if (!user) {
     return;
@@ -100,6 +107,9 @@ publicFormsRouter.post('/api/public-forms', async (req, res) => {
 });
 
 publicFormsRouter.patch('/api/public-forms/:formId', async (req, res) => {
+  if (!isPublicFormsEnabled()) {
+    return res.status(404).json({ error: 'Not found' });
+  }
   const user = await validateSession(req, res);
   if (!user) {
     return;

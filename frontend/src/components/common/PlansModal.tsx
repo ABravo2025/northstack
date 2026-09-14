@@ -23,7 +23,6 @@ interface PlanCardConfig {
   tagline: string;
   price: string;
   priceSuffix?: string;
-  strikePrice?: string;
   cap: string;
   features: FeatureRow[];
   // Only meaningful for the 'trial' card, which never depends on trialDaysLeft — Starter/Growth's
@@ -43,14 +42,18 @@ function planCtaLabel(card: PlanCardConfig, trialDaysLeft: number): string {
   return trialDaysLeft > 0 ? `Start ${trialDaysLeft}-day free trial` : 'Subscribe now';
 }
 
-// Plan-tier enforcement (2026-09-07) — copy now mirrors the real enforced limits in
-// src/modules/tenant/planLimits.ts exactly, not aspirational marketing text (the previous version
+// Plan-tier enforcement (2026-09-07) — copy mirrors the real enforced limits in
+// src/modules/tenant/planLimits.ts, not aspirational marketing text (the previous version
 // predated any backend enforcement at all — see that file's own history). "Free Trial" gets the
 // full Growth-level feature set: a tenant with no plan chosen yet (`Tenant.plan === null`) gets
 // Growth-equivalent access so they experience the whole platform before committing — the instant
-// they pick Starter, Starter's real limits apply (getEffectivePlan). Team member accounts
-// themselves are unlimited on every plan (invite your whole company) — "admin users" is the only
-// people-count cap left, since that's what actually gates elevated/configuration access.
+// they pick Starter, Starter's real limits apply (getEffectivePlan).
+//
+// Seats pricing (2026-09-14, Alejandro's call): each `cap` line below now advertises a flat
+// per-seat model (5/10 seats included, $4/mo per extra seat, no admin-vs-member distinction) —
+// this is the pricing story, but see planLimits.ts's own comment: enforcement hasn't caught up
+// yet, it still only hard-caps the literal "Admin" role at maxAdminUsers with no paid overage.
+// Known, accepted gap until seat billing automation ships.
 const PLAN_CARDS: PlanCardConfig[] = [
   {
     key: 'trial',
@@ -65,11 +68,11 @@ const PLAN_CARDS: PlanCardConfig[] = [
       { label: 'HR core & Time Off', sub: 'unlimited policies', included: true },
       { label: 'Notes, Tasks, Tags & Custom Fields', included: true },
       { label: 'Activity Log', sub: '30 days of history', included: true },
-      { label: 'Unlimited team members', included: true },
       { label: 'Payroll', included: true },
       { label: 'Payments', sub: 'Stripe payment history, read-only', included: true },
       { label: 'Google Calendar integration', included: true },
       { label: 'Custom roles & permissions', sub: 'unlimited', included: true },
+      { label: 'API access', included: true },
       { label: 'Email support', included: true },
     ],
   },
@@ -77,20 +80,19 @@ const PLAN_CARDS: PlanCardConfig[] = [
     key: 'starter',
     name: 'Starter',
     tagline: 'For small teams just getting set up',
-    price: '$29',
+    price: '$19',
     priceSuffix: '/month',
-    strikePrice: '$39',
-    cap: '2 admin users',
+    cap: '5 seats included · $4/mo per extra seat',
     features: [
       { label: 'Sales / CRM', sub: 'up to 2 pipelines', included: true },
       { label: 'HR core & Time Off', sub: 'up to 3 policies', included: true },
       { label: 'Notes, Tasks, Tags & Custom Fields', included: true },
       { label: 'Activity Log', sub: '7 days of history', included: true },
-      { label: 'Unlimited team members', included: true },
       { label: 'Payroll', included: false },
       { label: 'Payments', included: false },
       { label: 'Google Calendar integration', included: true },
       { label: 'Custom roles & permissions', sub: 'up to 2 custom roles', included: true },
+      { label: 'API access', included: false },
       { label: 'Email support', included: true },
     ],
   },
@@ -98,20 +100,19 @@ const PLAN_CARDS: PlanCardConfig[] = [
     key: 'growth',
     name: 'Growth',
     tagline: 'For growing teams that need Payroll',
-    price: '$79',
+    price: '$39',
     priceSuffix: '/month',
-    strikePrice: '$99',
-    cap: '5 admin users',
+    cap: '10 seats included · $4/mo per extra seat',
     features: [
       { label: 'Sales / CRM', sub: 'unlimited pipelines', included: true },
       { label: 'HR core & Time Off', sub: 'unlimited policies', included: true },
       { label: 'Notes, Tasks, Tags & Custom Fields', included: true },
       { label: 'Activity Log', sub: '30 days of history', included: true },
-      { label: 'Unlimited team members', included: true },
       { label: 'Payroll', included: true },
       { label: 'Payments', sub: 'Stripe payment history, read-only', included: true },
       { label: 'Google Calendar integration', included: true },
       { label: 'Custom roles & permissions', sub: 'unlimited', included: true },
+      { label: 'API access', included: true },
       { label: 'Priority email support', included: true },
     ],
   },
@@ -214,8 +215,7 @@ export default function PlansModal({ open, tenant, token, onClose, onPlanChosen,
       </div>
 
       <div className="text-center text-sm font-medium rounded-lg border border-line bg-accent-tint px-4 py-2.5 my-4 mx-auto max-w-xl dark:border-dark-line">
-        🚀 Launch pricing for our first customers — the price you start at is the price you keep, for as long as you
-        stay subscribed.
+        The price you start at is the price you keep, for as long as you stay subscribed.
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -252,7 +252,6 @@ export default function PlansModal({ open, tenant, token, onClose, onPlanChosen,
               <p className="mb-0.5">
                 <span className="text-2xl font-bold">{displayPrice}</span>
                 {card.priceSuffix && <span className="text-sm font-normal text-ink-muted"> {card.priceSuffix}</span>}
-                {card.strikePrice && <span className="ml-1 text-sm text-ink-faint line-through">{card.strikePrice}</span>}
               </p>
               <p className="text-xs text-ink-faint mb-3">{card.cap}</p>
 
@@ -264,7 +263,7 @@ export default function PlansModal({ open, tenant, token, onClose, onPlanChosen,
                   card.key === 'trial' ? 'invisible' : ''
                 }`}
               >
-                🚀 Launch price, locked in — {hasTrialLeft ? `first charge in ${trialDaysLeft} days` : 'charged today'}
+                Price locked in — {hasTrialLeft ? `first charge in ${trialDaysLeft} days` : 'charged today'}
               </div>
 
               <ul className="flex-1 flex flex-col gap-2 text-sm mb-4">
@@ -301,7 +300,7 @@ export default function PlansModal({ open, tenant, token, onClose, onPlanChosen,
 
       <p className="text-center text-xs text-ink-faint mt-5">
         Team bigger than 50 people?{' '}
-        <a href="mailto:info@joinnorthstack.com?subject=Northstack%20Scale%20plan" className="underline text-accent">
+        <a href="mailto:info@joinnorthstack.com?subject=Northstack%20Enterprise%20plan" className="underline text-accent">
           Get in touch
         </a>{' '}
         for a custom plan.

@@ -30,17 +30,31 @@ export interface CreateCheckoutSessionInput {
   // Card collected now, first real charge delayed this many days — same semantics as
   // paddle.ts's createNonCatalogTransaction#trialDays. Omit (or 0) to charge immediately.
   trialDays?: number;
+  // Starting "extra seat" addon quantity (seatService.ts) — a tenant that already has more active
+  // users than the plan includes by the time they actually add a card starts correctly billed
+  // from the first invoice, instead of relying on the next syncSeatBilling call to catch up.
+  extraSeats?: number;
 }
 
 export interface CheckoutSession {
   checkoutUrl: string;
 }
 
-// product_cart quantity is always 1 — one plan per tenant, no per-seat billing (mirrors Paddle's
-// quantity: { minimum: 1, maximum: 1 } guard against an editable quantity stepper at checkout).
+// product_cart quantity is always 1 — one plan per tenant, no per-seat billing on the base
+// product itself (mirrors Paddle's quantity: { minimum: 1, maximum: 1 } guard against an editable
+// quantity stepper at checkout). Extra seats ride along as an addon with its own quantity instead
+// (seatService.ts).
 export async function createCheckoutSession(input: CreateCheckoutSessionInput): Promise<CheckoutSession> {
   const session = await getClient().checkoutSessions.create({
-    product_cart: [{ product_id: input.productId, quantity: 1 }],
+    product_cart: [
+      {
+        product_id: input.productId,
+        quantity: 1,
+        ...(input.extraSeats
+          ? { addons: [{ addon_id: requireExtraSeatAddonId(), quantity: input.extraSeats }] }
+          : {}),
+      },
+    ],
     customer: { email: input.email },
     return_url: input.returnUrl,
     metadata: { subscriptionId: input.subscriptionId },
@@ -71,12 +85,68 @@ export interface ChangeSubscriptionPlanInput {
 
 // Self-serve change-plan (Etapa D) — `proration_billing_mode: 'do_not_bill'` per the spec ("Sin
 // prorrateo"): the new price only applies starting the next billing date, nothing charged now.
+//
+// Re-sends the subscription's CURRENT addons (seatService.ts's "extra seat" addon) rather than
+// omitting the field — changePlan's request body is a full replace of the cart, and the SDK's own
+// doc on `addons` says "leaving this empty would remove any existing addons". Without this, a
+// Starter<->Growth tier change would silently wipe whatever extra-seat quantity was billed,
+// undercharging the tenant from that point on.
 export async function changeSubscriptionPlan(externalSubscriptionId: string, input: ChangeSubscriptionPlanInput): Promise<void> {
-  await getClient().subscriptions.changePlan(externalSubscriptionId, {
+  const client = getClient();
+  const current = await client.subscriptions.retrieve(externalSubscriptionId);
+  await client.subscriptions.changePlan(externalSubscriptionId, {
     product_id: input.productId,
     quantity: 1,
     proration_billing_mode: 'do_not_bill',
+    addons: current.addons.map((a) => ({ addon_id: a.addon_id, quantity: a.quantity })),
   });
+}
+
+export interface UpdateSubscriptionSeatsInput {
+  productId: string; // PlanPrice.dodoProductId of the subscription's CURRENT plan (required by changePlan even when only addons change)
+  extraSeats: number; // 0 clears the addon entirely (passing an empty addons array removes it)
+}
+
+// Real-time seat billing (2026-09-14, Alejandro's call) — "extra seat" is a Dodo Addon (its own
+// catalog object, provisioned once by scripts/setup-dodo-extra-seat-addon.ts), attached to the
+// subscription with its own quantity independent of the base plan. `prorated_immediately` bills
+// or credits for the exact number of days left in the CURRENT billing period — unlike
+// changeSubscriptionPlan's `do_not_bill` above, this is deliberately immediate (Alejandro: "que se
+// aplique un descuento proporcional a la cantidad de dias no utilizados"). Calling changePlan
+// (rather than some other endpoint) to update ONLY the addon quantity is intentional — Dodo has no
+// separate "update just the addon" call; changePlan's request body is the one place addons are
+// set, so `product_id`/`quantity` must still be re-sent as the subscription's unchanged current
+// plan. Because this never touches subscription_period fields, `next_billing_date` (the billing
+// cycle anchor) is untouched — the cycle always stays anchored to the original subscription date.
+export async function updateSubscriptionSeats(externalSubscriptionId: string, input: UpdateSubscriptionSeatsInput): Promise<void> {
+  await getClient().subscriptions.changePlan(externalSubscriptionId, {
+    product_id: input.productId,
+    quantity: 1,
+    proration_billing_mode: 'prorated_immediately',
+    addons: input.extraSeats > 0 ? [{ addon_id: requireExtraSeatAddonId(), quantity: input.extraSeats }] : [],
+  });
+}
+
+function requireExtraSeatAddonId(): string {
+  const id = process.env.DODO_EXTRA_SEAT_ADDON_ID;
+  if (!id) {
+    throw new Error('DODO_EXTRA_SEAT_ADDON_ID is not configured — run scripts/setup-dodo-extra-seat-addon.ts');
+  }
+  return id;
+}
+
+// Only used by scripts/setup-dodo-extra-seat-addon.ts — one addon, shared by every plan/market
+// (unlike Products, which are per-PlanPrice-row), since the $4/seat surcharge doesn't vary by
+// plan tier.
+export async function createExtraSeatAddon(priceCents: number): Promise<string> {
+  const addon = await getClient().addons.create({
+    name: 'Extra seat',
+    description: 'Additional active user beyond the plan\'s included seats',
+    currency: 'USD',
+    price: priceCents,
+    tax_category: 'saas',
+  });
+  return addon.id;
 }
 
 // Self-serve cancel (Etapa D) — Dodo supports scheduled cancellation natively (takes effect at

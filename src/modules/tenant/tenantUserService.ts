@@ -3,6 +3,8 @@ import { recordActivity } from '../activity/activityLogService.js';
 import { userActivityFieldConfig, userDisplayName } from '../activity/fieldConfigs/userFieldConfig.js';
 import { findSeedRoleId } from '../auth/roleService.js';
 import { getPlanLimits, hasAdminSeatAvailable } from './planLimits.js';
+import { syncSeatBilling } from './seatService.js';
+import { bestEffort } from '../../lib/bestEffort.js';
 import type { AuthenticatedUser } from '../auth/authService.js';
 import type { User, UserRole, UserStatus } from '@prisma/client';
 
@@ -97,6 +99,10 @@ export async function updateTenantUser(
       fieldConfig: userActivityFieldConfig,
     });
 
+    if (input.status && input.status !== target.status) {
+      await bestEffort(syncSeatBilling(tenantId), `syncSeatBilling(${tenantId})`);
+    }
+
     return { success: true, user: updatedTarget };
   }
 
@@ -152,6 +158,10 @@ export async function updateTenantUser(
     after: updated,
     fieldConfig: userActivityFieldConfig,
   });
+
+  if (input.status && input.status !== target.status) {
+    await bestEffort(syncSeatBilling(tenantId), `syncSeatBilling(${tenantId})`);
+  }
 
   return { success: true, user: updated };
 }

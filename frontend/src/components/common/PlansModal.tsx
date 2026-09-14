@@ -49,11 +49,10 @@ function planCtaLabel(card: PlanCardConfig, trialDaysLeft: number): string {
 // Growth-equivalent access so they experience the whole platform before committing — the instant
 // they pick Starter, Starter's real limits apply (getEffectivePlan).
 //
-// Seats pricing (2026-09-14, Alejandro's call): each `cap` line below now advertises a flat
-// per-seat model (5/10 seats included, $4/mo per extra seat, no admin-vs-member distinction) —
-// this is the pricing story, but see planLimits.ts's own comment: enforcement hasn't caught up
-// yet, it still only hard-caps the literal "Admin" role at maxAdminUsers with no paid overage.
-// Known, accepted gap until seat billing automation ships.
+// Seats pricing (2026-09-14, Alejandro's call): each `cap` line below advertises a flat per-seat
+// model (5/10 seats included, $4/mo per extra seat, no admin-vs-member distinction) — matches
+// enforcement exactly: no separate Admin-role cap exists (removed 2026-09-14, seatService.ts's
+// real-time billing is the only limit now, same as any other seat).
 const PLAN_CARDS: PlanCardConfig[] = [
   {
     key: 'trial',

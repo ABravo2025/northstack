@@ -103,7 +103,11 @@ describe('updateTenantUser — Custom Roles Fase I (roleId assignment)', () => {
   });
 });
 
-describe('updateTenantUser — plan-tier admin seat cap (2026-09-07)', () => {
+describe('updateTenantUser — no Admin-role seat cap (removed 2026-09-14)', () => {
+  // The hard "Starter allows up to 2 Admins" cap was removed once seatService.ts started billing
+  // every seat (any role) automatically at $4/mo past the plan's included count — a separate,
+  // unpayable role-specific cap on top of that contradicted the "no admin-vs-member distinction"
+  // pricing story (PlansModal.tsx). Promoting to Admin is now unrestricted at any count.
   beforeEach(() => {
     users = {
       target: { id: 'target', tenantId: 't1', role: 'member', roleId: 'role-member' },
@@ -119,33 +123,20 @@ describe('updateTenantUser — plan-tier admin seat cap (2026-09-07)', () => {
     ];
   });
 
-  it('blocks promoting a member to Admin (via roleId) once the Starter cap (2) is reached', async () => {
+  it('promotes a member to Admin (via roleId) past what used to be the Starter cap (2), no error', async () => {
     const result = await updateTenantUser('t1', 'target', actingUser(), { roleId: 'role-admin' });
-    expect(result.success).toBe(false);
-    expect(result.error).toMatch(/Starter plan allows up to 2/);
-    expect(users.target.roleId).toBe('role-member'); // unchanged
-  });
-
-  it('blocks promoting a member to Admin via the legacy `role: "admin"` path too', async () => {
-    const result = await updateTenantUser('t1', 'target', actingUser(), { role: 'admin' });
-    expect(result.success).toBe(false);
-    expect(result.error).toMatch(/Starter plan allows up to 2/);
-  });
-
-  it('never blocks assigning a custom (non-Admin) role, even at the cap', async () => {
-    const result = await updateTenantUser('t1', 'target', actingUser(), { roleId: 'role-custom' });
     expect(result.success).toBe(true);
+    expect(result.user!.roleId).toBe('role-admin');
   });
 
-  it('re-saving a user already on Admin (e.g. just a status change) is not blocked by their own seat', async () => {
-    users.target = { id: 'target', tenantId: 't1', role: 'admin', roleId: 'role-admin' };
-    // Exactly at the cap (2), and target IS one of the 2 — excluding target from the count is
-    // what makes this a no-op instead of a false block.
-    activeAdminUsers = [
-      { id: 'admin-1', tenantId: 't1', roleName: 'Admin' },
-      { id: 'target', tenantId: 't1', roleName: 'Admin' },
-    ];
-    const result = await updateTenantUser('t1', 'target', actingUser(), { roleId: 'role-admin', status: 'inactive' });
+  it('promotes a member to Admin via the legacy `role: "admin"` path too, no error', async () => {
+    const result = await updateTenantUser('t1', 'target', actingUser(), { role: 'admin' });
+    expect(result.success).toBe(true);
+    expect(result.user!.role).toBe('admin');
+  });
+
+  it('assigning a custom (non-Admin) role still works, same as before', async () => {
+    const result = await updateTenantUser('t1', 'target', actingUser(), { roleId: 'role-custom' });
     expect(result.success).toBe(true);
   });
 });

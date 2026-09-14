@@ -6,6 +6,7 @@ import { syncTimeOffCalendarEvent } from '../integrations/googleCalendarSyncServ
 import { findEmployeeById, wouldCreateManagerCycle } from './employeeService.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { employeeTerminationActivityFieldConfig } from '../activity/fieldConfigs/employeeTerminationFieldConfig.js';
+import { syncSeatBilling } from '../tenant/seatService.js';
 import type { EmployeeTermination, PayrollEntryType } from '@prisma/client';
 
 // Termination is a status change with several coordinated side effects, not a delete — matches
@@ -286,6 +287,11 @@ async function executeTermination(terminationId: string): Promise<void> {
 
   if (termination.revokeAccess && employee.userId) {
     await prisma.user.update({ where: { id: employee.userId }, data: { status: 'inactive' } });
+    // Frees up the seat this User was occupying — without this, the tenant keeps being billed
+    // for it on Dodo/Mercado Pago until some unrelated status change elsewhere happens to
+    // trigger a resync (seatService.ts's own doc comment: "whenever the active-seat count could
+    // have changed... a user's status flips active/suspended" — this is exactly that case).
+    await bestEffort(syncSeatBilling(tenantId), `syncSeatBilling(${tenantId})`);
   }
 
   const requestsToClear = await prisma.timeOffRequest.findMany({

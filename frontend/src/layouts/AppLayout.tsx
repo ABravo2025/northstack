@@ -8,10 +8,11 @@ import TopBar from '../components/layout/TopBar';
 import MobileTabbar from '../components/layout/MobileTabbar';
 import PrimaryActionFab from '../components/layout/PrimaryActionFab';
 import PlansModal from '../components/common/PlansModal';
-import AddPaymentMethodModal from '../components/common/AddPaymentMethodModal';
+import { useToast } from '../components/common/ToastProvider';
 import { api } from '../api';
 import type { PlanTier, Tenant } from '../api';
 import { daysRemainingUntil } from '../lib/trial';
+import { redirectToCheckout } from '../lib/checkout';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { PrimaryActionProvider } from '../contexts/PrimaryActionContext';
 import { TimeOffTabProvider } from '../contexts/TimeOffTabContext';
@@ -36,9 +37,10 @@ export default function AppLayout({ user, token, tenant, onTenantUpdated, onLogo
   // who already dismissed it.
   const [sessionDismissed, setSessionDismissed] = useState(false);
   const [plansModalForceOpen, setPlansModalForceOpen] = useState(false);
-  const [showAddPaymentMethod, setShowAddPaymentMethod] = useState(false);
+  const [startingCheckout, setStartingCheckout] = useState(false);
   const location = useLocation();
   const permissions = usePermissions();
+  const toast = useToast();
 
   useEffect(() => {
     setMobileSidebarOpen(false);
@@ -75,13 +77,27 @@ export default function AppLayout({ user, token, tenant, onTenantUpdated, onLogo
   // that card) now pays right away instead of just recording intent for later — Alejandro's
   // explicit correction (2026-08-20): no more "trial without a card" once a paid plan is
   // actually chosen, matching the same immediate-checkout behavior BillingPage's "Change plan"
-  // already has. Reuses AddPaymentMethodModal (already has all the hosted-redirect handling)
-  // instead of duplicating it here.
+  // already has. Straight to the provider's checkout, no confirmation modal in between
+  // (2026-09-14 — see lib/checkout.ts's redirectToCheckout comment).
   const handleSelectPlanAndCheckout = async (plan: PlanTier) => {
     const updated = await api.updateTenantPlan(token!, plan);
     onTenantUpdated(updated);
     dismissPlansModal();
-    setShowAddPaymentMethod(true);
+    await redirectToCheckout(token!);
+  };
+
+  // Shared by the past_due/suspended banners' "Add payment method" buttons below — same
+  // straight-to-checkout behavior as handleSelectPlanAndCheckout, just without a plan choice
+  // first (the tenant already has one; they're re-attaching a card to the same plan).
+  const handleAddPaymentMethod = async () => {
+    setStartingCheckout(true);
+    try {
+      await redirectToCheckout(token!);
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setStartingCheckout(false);
+    }
   };
 
   return (
@@ -109,9 +125,10 @@ export default function AppLayout({ user, token, tenant, onTenantUpdated, onLogo
               <button
                 type="button"
                 className="btn btn-outline btn-sm whitespace-nowrap"
-                onClick={() => setShowAddPaymentMethod(true)}
+                onClick={handleAddPaymentMethod}
+                disabled={startingCheckout}
               >
-                Add payment method
+                {startingCheckout ? 'Starting…' : 'Add payment method'}
               </button>
             </div>
           )}
@@ -125,9 +142,10 @@ export default function AppLayout({ user, token, tenant, onTenantUpdated, onLogo
                 <button
                   type="button"
                   className="btn btn-outline btn-sm whitespace-nowrap"
-                  onClick={() => setShowAddPaymentMethod(true)}
+                  onClick={handleAddPaymentMethod}
+                  disabled={startingCheckout}
                 >
-                  Add payment method
+                  {startingCheckout ? 'Starting…' : 'Add payment method'}
                 </button>
               )}
             </div>
@@ -149,19 +167,6 @@ export default function AppLayout({ user, token, tenant, onTenantUpdated, onLogo
       </div>
       <MobileTabbar />
       <PrimaryActionFab />
-      <AddPaymentMethodModal
-        open={showAddPaymentMethod}
-        token={token}
-        // Defaults to "subscribe" — the common case for this banner is a trial that lapsed
-        // without ever attaching a payment method. A past_due tenant whose *renewal* failed
-        // (already has a provider) would more accurately read "update", but AppLayout doesn't
-        // load the full Subscription just for this banner's copy — checkoutService.ts still
-        // routes correctly either way based on the tenant's real provider state, this only
-        // affects the modal's wording in that edge case.
-        mode="subscribe"
-        trialDaysRemaining={tenant ? daysRemainingUntil(tenant.trialEndsAt) : 0}
-        onClose={() => setShowAddPaymentMethod(false)}
-      />
       <PlansModal
         open={showPlansModal}
         tenant={tenant}

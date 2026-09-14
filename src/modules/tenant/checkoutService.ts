@@ -2,14 +2,13 @@ import prisma from '../../lib/prisma.js';
 import { resolveProvider, recordSubscriptionActionAttempt } from './subscriptionService.js';
 import { SIGNUP_TRIAL_DAYS } from './tenantService.js';
 import { createPreapproval, updatePreapproval } from '../../lib/mercadopago.js';
-import { createNonCatalogTransaction, getUpdatePaymentMethodTransaction } from '../../lib/paddle.js';
+import { createCheckoutSession, getCustomerPortalUrl } from '../../lib/dodopayments.js';
 
 export interface StartCheckoutResult {
   success: boolean;
   error?: string;
-  provider?: 'paddle' | 'mercadopago';
-  initPoint?: string; // Mercado Pago — redirect the browser here
-  paddleTransactionId?: string; // Paddle — Checkout.open({ transactionId })
+  provider?: 'dodopayments' | 'mercadopago';
+  initPoint?: string; // hosted redirect URL — Mercado Pago's init_point, or Dodo's checkout_url/Customer Portal link
 }
 
 const BILLING_CALLBACK_URL = 'https://app.joinnorthstack.com/billing/callback';
@@ -47,11 +46,11 @@ export async function startCheckout(
       return { success: false, error: 'No active subscription to update the payment method for.' };
     }
 
-    if (subscription.provider === 'paddle') {
-      // Dedicated Paddle mechanism — updates the card on the SAME subscription, never creates a
-      // new one. See getUpdatePaymentMethodTransaction's comment in paddle.ts.
-      const transaction = await getUpdatePaymentMethodTransaction(subscription.externalSubscriptionId);
-      return { success: true, provider: 'paddle', paddleTransactionId: transaction.id };
+    if (subscription.provider === 'dodopayments') {
+      // Dedicated Dodo mechanism — updates the card on the SAME subscription, never creates a
+      // new one. See getCustomerPortalUrl's comment in dodopayments.ts.
+      const portalUrl = await getCustomerPortalUrl(subscription.externalSubscriptionId, BILLING_CALLBACK_URL);
+      return { success: true, provider: 'dodopayments', initPoint: portalUrl };
     }
 
     // Mercado Pago has no equivalent "just swap the card" mechanism reachable via the same
@@ -81,13 +80,13 @@ export async function startCheckout(
   // (isUpdatingPaymentMethod true, cancelled the old preapproval, fell through to here): that
   // subscriber already had — or used up — their trial, granting another one would be a real bug.
   //
-  // Outside real production billing (staging, local dev — anywhere PADDLE_API_BASE already
-  // resolves to the sandbox host per paddle.ts), skip the trial and charge immediately instead:
-  // Alejandro's 2026-08-20 request so the whole card→webhook→active-subscription flow can be
-  // confirmed end-to-end against sandbox without waiting 15 real days. Reuses PADDLE_ENV rather
-  // than adding a second env var, since both providers' sandbox/live credentials are always
-  // flipped together in practice — there's no scenario with one in sandbox and the other live.
-  const isRealProductionBilling = process.env.PADDLE_ENV === 'production';
+  // Outside real production billing (staging, local dev), skip the trial and charge immediately
+  // instead: Alejandro's 2026-08-20 request so the whole card→webhook→active-subscription flow can
+  // be confirmed end-to-end against sandbox without waiting 15 real days. BILLING_ENV is shared
+  // across both providers rather than a separate env var per provider, since both providers'
+  // sandbox/live credentials are always flipped together in practice — there's no scenario with
+  // one in sandbox and the other live.
+  const isRealProductionBilling = process.env.BILLING_ENV === 'production';
 
   // Capped at whatever's actually left of the tenant's ORIGINAL trial window (set once at
   // signup, tenantService.ts), never a fresh SIGNUP_TRIAL_DAYS every time checkout runs —
@@ -118,13 +117,21 @@ export async function startCheckout(
     return { success: true, provider: 'mercadopago', initPoint: preapproval.init_point };
   }
 
-  const transaction = await createNonCatalogTransaction({
+  // dodoProductId is provisioned by scripts/setup-dodo-products.ts, not created here — Dodo
+  // requires a pre-created catalog Product for any recurring subscription (unlike Paddle's inline
+  // non-catalog price), so a missing id here means the provisioning script hasn't run yet for this
+  // PlanPrice row rather than something a customer-facing error should soften.
+  if (!planPrice.dodoProductId) {
+    throw new Error(`PlanPrice ${planPrice.id} (${planPrice.plan}/${planPrice.market}) has no dodoProductId — run scripts/setup-dodo-products.ts`);
+  }
+
+  const session = await createCheckoutSession({
     subscriptionId: subscription.id,
-    description: `Northstack — ${subscription.plan}`,
-    amountCents: planPrice.launchPriceCents,
-    currencyCode: 'USD',
+    email: user.email,
+    productId: planPrice.dodoProductId,
+    returnUrl: BILLING_CALLBACK_URL,
     trialDays,
   });
 
-  return { success: true, provider: 'paddle', paddleTransactionId: transaction.id };
+  return { success: true, provider: 'dodopayments', initPoint: session.checkoutUrl };
 }

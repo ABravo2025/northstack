@@ -1,7 +1,7 @@
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import prisma from '../lib/prisma.js';
 import { getAuthorizedPayment, getPreapproval, verifyMercadoPagoSignature } from '../lib/mercadopago.js';
-import { getTransaction, verifyPaddleSignature } from '../lib/paddle.js';
+import { getNextBillingDate, unwrapDodoWebhookEvent } from '../lib/dodopayments.js';
 import { GRACE_PERIOD_DAYS } from '../modules/tenant/planTransitionService.js';
 import { syncSubscriptionAndTenant } from '../modules/tenant/subscriptionService.js';
 import type { PaymentProvider } from '@prisma/client';
@@ -167,68 +167,65 @@ webhooksRouter.post('/api/webhooks/mercadopago', async (req, res) => {
   }
 });
 
-webhooksRouter.post('/api/webhooks/paddle', async (req, res) => {
-  const signatureHeader = req.headers['paddle-signature'];
-  if (typeof signatureHeader !== 'string') {
-    return res.status(400).json({ error: 'Missing Paddle-Signature header' });
-  }
-
+webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
   const rawBody = rawBodyText(req);
-  if (!verifyPaddleSignature({ signatureHeader, rawBody })) {
+  let event;
+  try {
+    event = unwrapDodoWebhookEvent(rawBody, req.headers as Record<string, string | string[] | undefined>);
+  } catch {
     return res.status(401).json({ error: 'Invalid signature' });
   }
 
-  const event = JSON.parse(rawBody || '{}');
-  const externalEventId = String(event.event_id ?? event.notification_id ?? '');
-  if (!externalEventId) {
-    return res.status(400).json({ error: 'Missing event id' });
+  // Standard Webhooks' own idempotency key (Dodo implements this spec) — one id per delivery
+  // attempt, distinct from any id inside the body. Same insert-then-process contract as Paddle/
+  // Mercado Pago above, just keyed off this header instead of a body field.
+  const externalEventId = req.headers['webhook-id'];
+  if (typeof externalEventId !== 'string') {
+    return res.status(400).json({ error: 'Missing webhook-id header' });
   }
 
-  const isNew = await recordProcessedEvent('paddle', externalEventId);
+  const isNew = await recordProcessedEvent('dodopayments', externalEventId);
   if (!isNew) {
     return res.status(200).json({ status: 'already processed' });
   }
 
   try {
-    const eventType = String(event.event_type ?? '');
-    const data = event.data ?? {};
-    // custom_data.subscriptionId set at creation (createNonCatalogTransaction, checkoutService.ts)
-    // — same join-key role as Mercado Pago's external_reference above.
-    const subscriptionId = data.custom_data?.subscriptionId;
-
-    if (!subscriptionId) {
-      // Not every Paddle event carries our custom_data (e.g. a catalog event unrelated to any
-      // subscription) — acknowledge without acting, same as the "no matching subscription"
-      // branches above.
-      return res.status(200).json({ status: 'no subscriptionId in custom_data' });
+    // Every other Dodo event type (disputes, payouts, license keys, credits, ...) is irrelevant to
+    // subscription billing — narrowing here (rather than after reading .data.metadata) is also
+    // what lets TypeScript know `event.data` has a `metadata` field at all, since the full
+    // UnwrapWebhookEvent union includes payloads that don't.
+    if (event.type !== 'payment.succeeded' && event.type !== 'payment.failed' && event.type !== 'subscription.active' && event.type !== 'subscription.cancelled') {
+      return res.status(200).json({ status: 'ignored event type' });
     }
 
-    const subscription = await prisma.subscription.findUnique({ where: { id: subscriptionId } });
+    // metadata.subscriptionId set at checkout (checkoutService.ts) — same join-key role as
+    // Mercado Pago's external_reference above. Dodo propagates checkout-session metadata onto
+    // both the resulting Subscription and Payment resources, so every event type handled here
+    // carries it.
+    const subscriptionId = event.data.metadata?.subscriptionId;
+    if (!subscriptionId) {
+      return res.status(200).json({ status: 'no subscriptionId in metadata' });
+    }
+
+    const subscription = await prisma.subscription.findUnique({ where: { id: String(subscriptionId) } });
     if (!subscription) {
       return res.status(200).json({ status: 'no matching subscription' });
     }
 
-    if (eventType === 'transaction.completed') {
-      // Security round-trip, same principle already applied to Mercado Pago ("never trust the
-      // webhook body directly") — and specifically needed here because a real test (2026-08-19)
-      // showed the webhook payload's own `payments` array can still be empty/incomplete at the
-      // exact moment transaction.completed fires, while GET /transactions/{id} already has the
-      // full card details by the time this handler runs.
-      const transaction = await getTransaction(String(data.id ?? ''));
-      const card = transaction.payments[0]?.method_details?.card;
-      const paymentMethodFields = card
-        ? { paymentMethodBrand: card.type, paymentMethodLast4: card.last4 }
-        : {};
+    if (event.type === 'payment.succeeded') {
+      const payment = event.data;
+      const paymentMethodFields =
+        payment.card_network || payment.card_last_four
+          ? { paymentMethodBrand: payment.card_network ?? undefined, paymentMethodLast4: payment.card_last_four ?? undefined }
+          : {};
 
-      // An "update payment method" transaction (checkoutService.ts's getUpdatePaymentMethodTransaction
-      // branch) completes as a $0/minimal validation charge, not a real period charge — Paddle's own
-      // docs: "may be a zero value transaction." Detected via details.totals.total rather than a
-      // dedicated `origin` value (exact field unconfirmed) — skip the period bump and Invoice for it,
-      // still record the new card.
-      const totalCents = Number(transaction.details.totals.total);
-      const isPaymentMethodUpdateOnly = totalCents === 0;
-
-      if (isPaymentMethodUpdateOnly) {
+      // getUpdatePaymentMethodTransaction's Paddle role, now Dodo's Customer Portal — that flow
+      // creates a Payment flagged is_update_payment_method, never a real period charge. A trial's
+      // own $0 mandate-authorization charge (total_amount === 0) gets the same treatment: skip the
+      // period bump and Invoice, still record the new card. UNVERIFIED against a real Dodo sandbox
+      // delivery yet (no live credentials at the time this was written) — confirm both branches
+      // before go-live, same caveat this codebase already carries for Mercado Pago's field names.
+      if (payment.is_update_payment_method || payment.total_amount === 0) {
         if (Object.keys(paymentMethodFields).length > 0) {
           await syncSubscriptionAndTenant({ tenantId: subscription.tenantId, ...paymentMethodFields });
         }
@@ -236,30 +233,25 @@ webhooksRouter.post('/api/webhooks/paddle', async (req, res) => {
       }
 
       const periodStart = new Date();
-      // Approximation — Paddle's Subscription entity has a real current_billing_period.ends_at
-      // field that would be more precise than a flat +30 days; not fetched here to keep this
-      // handler to the one extra API call it already makes (the transaction round-trip above).
-      // Revisit if a real deployment shows this drifting from what Paddle actually bills.
-      const periodEnd = new Date(periodStart.getTime() + ONE_MONTH_MS);
+      const periodEnd = payment.subscription_id ? await getNextBillingDate(payment.subscription_id) : new Date(periodStart.getTime() + ONE_MONTH_MS);
 
       await syncSubscriptionAndTenant({
         tenantId: subscription.tenantId,
         status: 'active',
-        provider: 'paddle',
-        externalSubscriptionId: transaction.subscription_id ?? subscription.externalSubscriptionId ?? '',
+        provider: 'dodopayments',
+        externalSubscriptionId: payment.subscription_id ?? subscription.externalSubscriptionId ?? '',
         currentPeriodStart: periodStart,
         currentPeriodEnd: periodEnd,
         ...paymentMethodFields,
       });
 
       // Trusts our own authoritative price (subscription.lockedPriceCents/currency) rather than
-      // parsing Paddle's transaction totals — we know exactly what we charged, and the exact shape
-      // of Paddle's `details.totals` breakdown is unverified (see paddle.ts's caveat comments).
+      // payment.total_amount, which includes tax — same reasoning paddle.ts's equivalent used.
       await prisma.invoice.create({
         data: {
           subscriptionId: subscription.id,
-          provider: 'paddle',
-          externalInvoiceId: String(data.id ?? ''),
+          provider: 'dodopayments',
+          externalInvoiceId: payment.payment_id,
           amountCents: subscription.lockedPriceCents,
           currency: subscription.currency,
           status: 'paid',
@@ -268,38 +260,33 @@ webhooksRouter.post('/api/webhooks/paddle', async (req, res) => {
           paidAt: new Date(),
         },
       });
-    } else if (eventType === 'transaction.payment_failed') {
+    } else if (event.type === 'payment.failed') {
       await syncSubscriptionAndTenant({
         tenantId: subscription.tenantId,
         status: 'past_due',
         gracePeriodEndsAt: new Date(Date.now() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000),
       });
-    } else if (eventType === 'subscription.canceled') {
+    } else if (event.type === 'subscription.cancelled') {
       await syncSubscriptionAndTenant({ tenantId: subscription.tenantId, status: 'cancelled' });
-    } else if (eventType === 'subscription.created') {
-      // Fires when checkout completes for a trial_period price (Alejandro's 2026-08-20 "genuinely
-      // free for 15 days" correction) — card is attached, but no real charge has happened yet, so
-      // deliberately does NOT touch `status` (stays 'trialing', our own internal trial clock is
-      // still authoritative) or currentPeriodStart/End (no billing period has started). The real
-      // `transaction.completed` handler above already fires separately for the trial's own $0
-      // transaction (skipped there via isPaymentMethodUpdateOnly) and again, for real, once the
-      // trial ends and Paddle actually charges — that's what flips status to 'active'.
-      //
-      // `data` here IS the subscription resource itself (not a transaction) — `data.id` is the
-      // subscription's own Paddle id. planTransitionService.ts's cron is taught to skip any tenant
-      // whose Subscription.provider is already set, so this trialing-with-a-provider tenant isn't
-      // incorrectly bumped to past_due by our own internal grace-period logic while Paddle handles
-      // the real transition natively.
+    } else if (event.type === 'subscription.active') {
+      // Fires once the checkout's mandate is authorized — for a trial_period_days checkout
+      // (Alejandro's 2026-08-20 "genuinely free for N days" correction, same rule as Paddle had),
+      // this can fire with no real charge yet. Deliberately does NOT touch `status` (stays
+      // 'trialing', our own internal trial clock is still authoritative) or currentPeriodStart/End
+      // — only `payment.succeeded` above does that, once a real (non-$0, non-update-payment-method)
+      // charge actually lands. planTransitionService.ts's cron already skips any tenant whose
+      // Subscription.provider is set, so this trialing-with-a-provider tenant isn't incorrectly
+      // bumped to past_due by our own grace-period logic while Dodo handles the real transition.
       await syncSubscriptionAndTenant({
         tenantId: subscription.tenantId,
-        provider: 'paddle',
-        externalSubscriptionId: String(data.id ?? subscription.externalSubscriptionId ?? ''),
+        provider: 'dodopayments',
+        externalSubscriptionId: event.data.subscription_id ?? subscription.externalSubscriptionId ?? '',
       });
     }
 
     return res.status(200).json({ status: 'ok' });
   } catch (error) {
-    await rollbackProcessedEvent('paddle', externalEventId);
+    await rollbackProcessedEvent('dodopayments', externalEventId);
     throw error;
   }
 });

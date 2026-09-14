@@ -1,5 +1,20 @@
 # Spec: Billing Integration — Paddle + Mercado Pago
 
+**(Nota 2026-09-13) Paddle fue reemplazado por Dodo Payments** — todavía en sandbox, sin
+suscriptores reales, así que fue un swap de código directo, sin migración de datos. Esta spec
+describe el diseño **original** con Paddle (API shapes, contrato de webhooks, `Checkout.open()`
+overlay) tal como se construyó — se deja sin reescribir línea por línea porque documenta bien las
+decisiones de esa ronda (por qué "sin prorrateo", por qué `Subscription`/`Invoice`/`PlanPrice` son
+aditivos, etc.), la mayoría de las cuales siguen aplicando igual con Dodo. Donde diga "Paddle",
+mentalmente traducir a "Dodo Payments" salvo por los detalles Paddle-específicos ya no vigentes:
+el Overlay embebido (`Paddle.js`/`PaddleCheckoutPage.tsx`, borrado — Dodo redirige a una URL
+hosteada, mismo patrón que ya usaba Mercado Pago), el precio inline sin catálogo
+(`createNonCatalogTransaction` — Dodo exige un Product de catálogo pre-creado, ver
+`scripts/setup-dodo-products.ts`), y el formato de firma de webhook (`Paddle-Signature`
+`ts=...;h1=...` → Dodo implementa el spec "Standard Webhooks", verificado vía el SDK oficial). El
+código real y sus comentarios (`src/lib/dodopayments.ts`, `src/routes/webhooks.ts`) son la fuente
+de verdad actual, no este documento.
+
 Mockups de referencia (aprobados): `billing-payment-mockup.html` (modal de "agregar método de
 pago", disparado desde el banner de `past_due`/`suspended`) y `settings-billing-flow-mockup.html`
 (grid de Settings con la tile de Billing + panel de autogestión completo). **Ninguno de los dos

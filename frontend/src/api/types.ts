@@ -44,7 +44,7 @@ export interface Tenant {
 
 // Billing Integration (docs/general/spec-billing-integration.md) — GET /api/subscriptions/me.
 export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'suspended' | 'cancelled';
-export type PaymentProvider = 'paddle' | 'mercadopago';
+export type PaymentProvider = 'dodopayments' | 'mercadopago';
 
 export interface Invoice {
   id: string;

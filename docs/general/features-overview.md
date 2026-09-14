@@ -19,7 +19,7 @@
 - **Trial + selección de plan**: cada tenant nuevo arranca en trial; un modal (no una página
   bloqueante) sobre `/overview` guía la elección de plan (Starter/Growth/Scale, más una tercera
   opción de extender el trial gratis) — se puede posponer, reaparece hasta que se decide.
-- **Suscripción y facturación**: Paddle para mercado internacional (USD), Mercado Pago para
+- **Suscripción y facturación**: Dodo Payments para mercado internacional (USD), Mercado Pago para
   Argentina (ARS) — checkout, método de pago guardado (marca/últimos 4 dígitos, nunca el número
   completo), período de gracia ante un pago fallido, cancelación con motivo, página de
   autogestión en `/settings`. Un tenant `suspended` (venció el período de gracia sin pagar) pierde

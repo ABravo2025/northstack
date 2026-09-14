@@ -1,49 +1,11 @@
 import { createHmac } from 'crypto';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { verifyPaddleSignature } from '../src/lib/paddle.js';
+import { describe, expect, it, afterEach, beforeEach } from 'vitest';
 import { verifyMercadoPagoSignature } from '../src/lib/mercadopago.js';
 
-describe('verifyPaddleSignature', () => {
-  const secret = 'test-paddle-secret';
-
-  beforeEach(() => {
-    process.env.PADDLE_WEBHOOK_SECRET = secret;
-  });
-
-  afterEach(() => {
-    delete process.env.PADDLE_WEBHOOK_SECRET;
-  });
-
-  it('accepts a correctly signed payload — signed_payload is "{ts}:{rawBody}", HMAC-SHA256 hex', () => {
-    const ts = '1700000000';
-    const rawBody = '{"event_type":"transaction.completed"}';
-    const h1 = createHmac('sha256', secret).update(`${ts}:${rawBody}`).digest('hex');
-
-    expect(verifyPaddleSignature({ signatureHeader: `ts=${ts};h1=${h1}`, rawBody })).toBe(true);
-  });
-
-  it('rejects when the raw body was tampered with after signing', () => {
-    const ts = '1700000000';
-    const rawBody = '{"event_type":"transaction.completed"}';
-    const h1 = createHmac('sha256', secret).update(`${ts}:${rawBody}`).digest('hex');
-
-    expect(verifyPaddleSignature({ signatureHeader: `ts=${ts};h1=${h1}`, rawBody: `${rawBody}tampered` })).toBe(false);
-  });
-
-  it('rejects a malformed or missing header', () => {
-    expect(verifyPaddleSignature({ signatureHeader: 'not-a-valid-header', rawBody: '{}' })).toBe(false);
-    expect(verifyPaddleSignature({ signatureHeader: 'ts=123', rawBody: '{}' })).toBe(false);
-  });
-
-  it('fails closed when PADDLE_WEBHOOK_SECRET is not configured', () => {
-    delete process.env.PADDLE_WEBHOOK_SECRET;
-    const ts = '1700000000';
-    const rawBody = '{}';
-    const h1 = createHmac('sha256', secret).update(`${ts}:${rawBody}`).digest('hex');
-
-    expect(verifyPaddleSignature({ signatureHeader: `ts=${ts};h1=${h1}`, rawBody })).toBe(false);
-  });
-});
+// No verifyDodoSignature here (unlike Paddle's/Mercado Pago's hand-rolled HMAC below) — Dodo
+// Payments' webhook signature verification is delegated to the official SDK's
+// client.webhooks.unwrap() (dodopayments.ts's unwrapDodoWebhookEvent), covered in
+// tests/dodoPaymentsClient.test.ts instead of reimplementing the Standard Webhooks HMAC math here.
 
 describe('verifyMercadoPagoSignature', () => {
   const secret = 'test-mp-secret';

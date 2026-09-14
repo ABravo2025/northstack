@@ -2,10 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const subscriptions: any[] = [];
 const planPrices: any[] = [
-  { plan: 'starter', market: 'international', launchPriceCents: 2900 },
-  { plan: 'growth', market: 'international', launchPriceCents: 7900 },
-  { plan: 'starter', market: 'ar', launchPriceCents: 0 },
-  { plan: 'growth', market: 'ar', launchPriceCents: 0 },
+  { plan: 'starter', market: 'international', launchPriceCents: 2900, dodoProductId: 'pdt_starter' },
+  { plan: 'growth', market: 'international', launchPriceCents: 7900, dodoProductId: 'pdt_growth' },
+  { plan: 'starter', market: 'ar', launchPriceCents: 0, dodoProductId: null },
+  { plan: 'growth', market: 'ar', launchPriceCents: 0, dodoProductId: null },
 ];
 
 vi.mock('../src/lib/prisma.js', () => ({
@@ -24,13 +24,13 @@ vi.mock('../src/lib/prisma.js', () => ({
   },
 }));
 
-const { createNonCatalogTransactionMock, getUpdatePaymentMethodTransactionMock } = vi.hoisted(() => ({
-  createNonCatalogTransactionMock: vi.fn(async () => ({ id: 'txn_new' })),
-  getUpdatePaymentMethodTransactionMock: vi.fn(async () => ({ id: 'txn_update' })),
+const { createCheckoutSessionMock, getCustomerPortalUrlMock } = vi.hoisted(() => ({
+  createCheckoutSessionMock: vi.fn(async () => ({ checkoutUrl: 'https://checkout.dodopayments.com/cks_new' })),
+  getCustomerPortalUrlMock: vi.fn(async () => 'https://checkout.dodopayments.com/portal_session'),
 }));
-vi.mock('../src/lib/paddle.js', () => ({
-  createNonCatalogTransaction: createNonCatalogTransactionMock,
-  getUpdatePaymentMethodTransaction: getUpdatePaymentMethodTransactionMock,
+vi.mock('../src/lib/dodopayments.js', () => ({
+  createCheckoutSession: createCheckoutSessionMock,
+  getCustomerPortalUrl: getCustomerPortalUrlMock,
 }));
 
 const { createPreapprovalMock, updatePreapprovalMock } = vi.hoisted(() => ({
@@ -54,15 +54,15 @@ function tenant(overrides: { id: string; country: string | null; trialEndsAt?: D
 
 function resetMocks() {
   subscriptions.length = 0;
-  createNonCatalogTransactionMock.mockClear();
-  getUpdatePaymentMethodTransactionMock.mockClear();
+  createCheckoutSessionMock.mockClear();
+  getCustomerPortalUrlMock.mockClear();
   createPreapprovalMock.mockClear();
   updatePreapprovalMock.mockClear();
   // Real trial behavior (the thing most of these tests assert) only applies to real production
   // billing — see checkoutService.ts's isRealProductionBilling comment. Default to 'production'
   // here so existing trialDays:15 assertions keep testing that path; the dedicated
   // staging/sandbox describe block below overrides this per-test.
-  process.env.PADDLE_ENV = 'production';
+  process.env.BILLING_ENV = 'production';
 }
 
 describe('startCheckout — subscribing for the first time (no provider yet)', () => {
@@ -73,19 +73,19 @@ describe('startCheckout — subscribing for the first time (no provider yet)', (
     expect(result.success).toBe(false);
   });
 
-  it('creates a new Paddle transaction for an international tenant', async () => {
+  it('creates a new Dodo Payments checkout session for an international tenant', async () => {
     subscriptions.push({ tenantId: 't1', id: 'sub1', plan: 'starter', provider: null, externalSubscriptionId: null });
 
     const result = await startCheckout(tenant({ id: 't1', country: 'United States' }), { id: 'u1', email: 'a@example.com' });
 
     expect(result.success).toBe(true);
-    expect(result.provider).toBe('paddle');
-    expect(result.paddleTransactionId).toBe('txn_new');
-    expect(createNonCatalogTransactionMock).toHaveBeenCalledTimes(1);
+    expect(result.provider).toBe('dodopayments');
+    expect(result.initPoint).toBe('https://checkout.dodopayments.com/cks_new');
+    expect(createCheckoutSessionMock).toHaveBeenCalledTimes(1);
     // Genuinely free for SIGNUP_TRIAL_DAYS (2026-08-20 correction) — a fresh subscribe always
     // gets a real trial, never charges immediately.
-    expect(createNonCatalogTransactionMock).toHaveBeenCalledWith(expect.objectContaining({ trialDays: 15 }));
-    expect(getUpdatePaymentMethodTransactionMock).not.toHaveBeenCalled();
+    expect(createCheckoutSessionMock).toHaveBeenCalledWith(expect.objectContaining({ trialDays: 15, productId: 'pdt_starter' }));
+    expect(getCustomerPortalUrlMock).not.toHaveBeenCalled();
   });
 
   it('creates a new Mercado Pago preapproval for an Argentina tenant', async () => {
@@ -109,20 +109,31 @@ describe('startCheckout — subscribing for the first time (no provider yet)', (
     expect(result.success).toBe(false);
     expect(createPreapprovalMock).not.toHaveBeenCalled();
   });
+
+  it('throws (not a soft error) when the international plan price has no dodoProductId — provisioning script never ran', async () => {
+    planPrices.find((p) => p.plan === 'starter' && p.market === 'international')!.dodoProductId = null;
+    subscriptions.push({ tenantId: 't1', id: 'sub1', plan: 'starter', provider: null, externalSubscriptionId: null });
+
+    await expect(startCheckout(tenant({ id: 't1', country: 'United States' }), { id: 'u1', email: 'a@example.com' })).rejects.toThrow(
+      'dodoProductId',
+    );
+
+    planPrices.find((p) => p.plan === 'starter' && p.market === 'international')!.dodoProductId = 'pdt_starter';
+  });
 });
 
 describe('startCheckout — updating payment method on an already-active subscription', () => {
   beforeEach(resetMocks);
 
-  it('Paddle: calls getUpdatePaymentMethodTransaction, never creates a second subscription', async () => {
-    subscriptions.push({ tenantId: 't1', id: 'sub1', plan: 'starter', provider: 'paddle', externalSubscriptionId: 'sub_paddle_1' });
+  it('Dodo: calls getCustomerPortalUrl, never creates a second subscription', async () => {
+    subscriptions.push({ tenantId: 't1', id: 'sub1', plan: 'starter', provider: 'dodopayments', externalSubscriptionId: 'sub_dodo_1' });
 
     const result = await startCheckout(tenant({ id: 't1', country: 'United States' }), { id: 'u1', email: 'a@example.com' });
 
     expect(result.success).toBe(true);
-    expect(result.paddleTransactionId).toBe('txn_update');
-    expect(getUpdatePaymentMethodTransactionMock).toHaveBeenCalledWith('sub_paddle_1');
-    expect(createNonCatalogTransactionMock).not.toHaveBeenCalled();
+    expect(result.initPoint).toBe('https://checkout.dodopayments.com/portal_session');
+    expect(getCustomerPortalUrlMock).toHaveBeenCalledWith('sub_dodo_1', expect.any(String));
+    expect(createCheckoutSessionMock).not.toHaveBeenCalled();
   });
 
   it('Mercado Pago: cancels the old preapproval, then creates a fresh one', async () => {
@@ -140,30 +151,30 @@ describe('startCheckout — updating payment method on an already-active subscri
   });
 
   it('rejects if the subscription has a provider but no externalSubscriptionId (inconsistent state)', async () => {
-    subscriptions.push({ tenantId: 't1', id: 'sub1', plan: 'starter', provider: 'paddle', externalSubscriptionId: null });
+    subscriptions.push({ tenantId: 't1', id: 'sub1', plan: 'starter', provider: 'dodopayments', externalSubscriptionId: null });
 
     const result = await startCheckout(tenant({ id: 't1', country: 'United States' }), { id: 'u1', email: 'a@example.com' });
 
     expect(result.success).toBe(false);
-    expect(getUpdatePaymentMethodTransactionMock).not.toHaveBeenCalled();
+    expect(getCustomerPortalUrlMock).not.toHaveBeenCalled();
   });
 });
 
 describe('startCheckout — outside real production billing (staging/local dev)', () => {
   beforeEach(resetMocks);
 
-  it('charges a fresh Paddle subscribe immediately instead of granting a trial when PADDLE_ENV is not production', async () => {
-    delete process.env.PADDLE_ENV;
+  it('charges a fresh Dodo subscribe immediately instead of granting a trial when BILLING_ENV is not production', async () => {
+    delete process.env.BILLING_ENV;
     subscriptions.push({ tenantId: 't1', id: 'sub1', plan: 'starter', provider: null, externalSubscriptionId: null });
 
     const result = await startCheckout(tenant({ id: 't1', country: 'United States' }), { id: 'u1', email: 'a@example.com' });
 
     expect(result.success).toBe(true);
-    expect(createNonCatalogTransactionMock).toHaveBeenCalledWith(expect.objectContaining({ trialDays: undefined }));
+    expect(createCheckoutSessionMock).toHaveBeenCalledWith(expect.objectContaining({ trialDays: undefined }));
   });
 
-  it('charges a fresh Mercado Pago subscribe immediately instead of granting a trial when PADDLE_ENV is not production', async () => {
-    process.env.PADDLE_ENV = 'sandbox';
+  it('charges a fresh Mercado Pago subscribe immediately instead of granting a trial when BILLING_ENV is not production', async () => {
+    process.env.BILLING_ENV = 'sandbox';
     subscriptions.push({ tenantId: 't1', id: 'sub1', plan: 'starter', provider: null, externalSubscriptionId: null });
     planPrices.find((p) => p.plan === 'starter' && p.market === 'ar')!.launchPriceCents = 5000;
 
@@ -186,7 +197,7 @@ describe('startCheckout — trial length caps at what remains of the ORIGINAL tr
     );
 
     expect(result.success).toBe(true);
-    expect(createNonCatalogTransactionMock).toHaveBeenCalledWith(expect.objectContaining({ trialDays: 3 }));
+    expect(createCheckoutSessionMock).toHaveBeenCalledWith(expect.objectContaining({ trialDays: 3 }));
   });
 
   it('charges immediately instead of granting a fresh trial if the original window already lapsed', async () => {
@@ -201,6 +212,6 @@ describe('startCheckout — trial length caps at what remains of the ORIGINAL tr
     );
 
     expect(result.success).toBe(true);
-    expect(createNonCatalogTransactionMock).toHaveBeenCalledWith(expect.objectContaining({ trialDays: undefined }));
+    expect(createCheckoutSessionMock).toHaveBeenCalledWith(expect.objectContaining({ trialDays: undefined }));
   });
 });

@@ -136,7 +136,7 @@ interface PlansModalProps {
   // updateTenantPlan flow (AppLayout's auto-open for a fresh trialing tenant). BillingPage.tsx
   // ("Change plan", 2026-08-19) passes its own handler instead, since a tenant that already has
   // a real payment provider attached needs the post-billing self-serve change-plan endpoint —
-  // calling updateTenantPlan there would silently skip telling Paddle/Mercado Pago about the
+  // calling updateTenantPlan there would silently skip telling Dodo Payments/Mercado Pago about the
   // change at all.
   onSelectPlan?: (plan: PlanTier) => Promise<void>;
   // Marks that card as the tenant's current plan (disabled, "Current plan" instead of a CTA) —

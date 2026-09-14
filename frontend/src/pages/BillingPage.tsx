@@ -44,7 +44,7 @@ function formatDate(value: string | null): string {
   return new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-// Paddle's card.type / Mercado Pago's payment_method_id are lowercase, underscore-separated
+// Dodo's card_network / Mercado Pago's payment_method_id are lowercase, underscore-separated
 // codes (e.g. "american_express", "union_pay") — never shown raw to the tenant.
 const CARD_BRAND_LABEL: Record<string, string> = {
   visa: 'Visa',
@@ -108,7 +108,7 @@ export default function BillingPage({ token, tenant, onTenantUpdated }: BillingP
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(load, [token]);
 
-  // Paddle checkout now opens in its own tab (PaddleCheckoutPage.tsx), so this tab has no direct
+  // Checkout opens in its own tab (the provider's own hosted page), so this tab has no direct
   // signal when it completes — refetch whenever the tenant comes back to this tab instead. Cheap
   // (one GET) and correct even if they never actually finish the checkout.
   useEffect(() => {
@@ -178,13 +178,10 @@ export default function BillingPage({ token, tenant, onTenantUpdated }: BillingP
     }
   };
 
-  const handleViewInvoice = async (invoiceId: string, disposition: 'inline' | 'attachment') => {
+  const handleViewInvoice = async (invoiceId: string) => {
     setViewingInvoiceId(invoiceId);
     try {
-      const url = await api.getInvoiceDocumentUrl(token, invoiceId, disposition);
-      // 'attachment' disposition already makes Paddle's own response carry a
-      // Content-Disposition header that tells the browser to save it — a plain navigation is
-      // enough to trigger that, same as 'inline' just opens it in a new tab either way.
+      const url = await api.getInvoiceDocumentUrl(token, invoiceId);
       openExternalUrl(url);
     } catch (error) {
       toast.error((error as Error).message);
@@ -295,26 +292,15 @@ export default function BillingPage({ token, tenant, onTenantUpdated }: BillingP
                     <StatusBadge status={invoice.status} />
                   </td>
                   <td className="py-1.5 text-right whitespace-nowrap">
-                    {invoice.provider === 'paddle' && (
-                      <>
-                        <button
-                          type="button"
-                          className="text-xs text-accent underline disabled:opacity-50"
-                          onClick={() => handleViewInvoice(invoice.id, 'inline')}
-                          disabled={viewingInvoiceId === invoice.id}
-                        >
-                          {viewingInvoiceId === invoice.id ? 'Opening…' : 'View invoice'}
-                        </button>
-                        <span className="text-ink-faint mx-1.5">·</span>
-                        <button
-                          type="button"
-                          className="text-xs text-accent underline disabled:opacity-50"
-                          onClick={() => handleViewInvoice(invoice.id, 'attachment')}
-                          disabled={viewingInvoiceId === invoice.id}
-                        >
-                          Download
-                        </button>
-                      </>
+                    {invoice.provider === 'dodopayments' && (
+                      <button
+                        type="button"
+                        className="text-xs text-accent underline disabled:opacity-50"
+                        onClick={() => handleViewInvoice(invoice.id)}
+                        disabled={viewingInvoiceId === invoice.id}
+                      >
+                        {viewingInvoiceId === invoice.id ? 'Opening…' : 'View invoice'}
+                      </button>
                     )}
                   </td>
                 </tr>

@@ -86,13 +86,13 @@ app.use(
 // X-Content-Type-Options, frame protections, etc.) stays at Helmet's default.
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
-// Billing Integration webhooks (Paddle, Mercado Pago) need the raw, unparsed request body for
-// HMAC signature verification — express.json() below would already have consumed/reparsed it by
-// the time a route handler runs, and a reserialized JSON.stringify(parsed) isn't guaranteed
+// Billing Integration webhooks (Dodo Payments, Mercado Pago) need the raw, unparsed request body
+// for HMAC signature verification — express.json() below would already have consumed/reparsed it
+// by the time a route handler runs, and a reserialized JSON.stringify(parsed) isn't guaranteed
 // byte-identical to what the provider actually signed. Mounted before the global json() parser
 // so it wins for these two paths only; req.body is a Buffer there instead of a parsed object
 // (see routes/webhooks.ts's rawBodyText helper). Every other route keeps the normal parsed body.
-app.use('/api/webhooks/paddle', express.raw({ type: '*/*', limit: '2mb' }));
+app.use('/api/webhooks/dodopayments', express.raw({ type: '*/*', limit: '2mb' }));
 app.use('/api/webhooks/mercadopago', express.raw({ type: '*/*', limit: '2mb' }));
 app.use(express.json({ limit: '2mb' })); // default 100kb is too small for a CSV import body
 

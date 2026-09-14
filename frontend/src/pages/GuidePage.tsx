@@ -958,7 +958,7 @@ export default function GuidePage() {
               <h3>Choosing how you pay</h3>
               <p>
                 This is automatic, based on your workspace's country — not something you pick yourself. Argentina
-                bills in ARS through Mercado Pago; every other country bills in USD through Paddle. Northstack
+                bills in ARS through Mercado Pago; every other country bills in USD through Dodo Payments. Northstack
                 never sees or stores your card details either way.
               </p>
             </div>

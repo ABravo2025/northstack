@@ -40,13 +40,13 @@ describe('resolveProvider', () => {
     expect(resolveProvider({ country: 'Argentina' })).toBe('mercadopago');
   });
 
-  it('routes every other country to paddle', () => {
-    expect(resolveProvider({ country: 'United States' })).toBe('paddle');
-    expect(resolveProvider({ country: 'Brazil' })).toBe('paddle');
+  it('routes every other country to dodopayments', () => {
+    expect(resolveProvider({ country: 'United States' })).toBe('dodopayments');
+    expect(resolveProvider({ country: 'Brazil' })).toBe('dodopayments');
   });
 
-  it('defaults legacy tenants with no country on file to paddle', () => {
-    expect(resolveProvider({ country: null })).toBe('paddle');
+  it('defaults legacy tenants with no country on file to dodopayments', () => {
+    expect(resolveProvider({ country: null })).toBe('dodopayments');
   });
 });
 
@@ -64,12 +64,12 @@ describe('syncSubscriptionAndTenant', () => {
     await syncSubscriptionAndTenant({
       tenantId: 't1',
       status: 'active',
-      provider: 'paddle',
+      provider: 'dodopayments',
       currentPeriodEnd,
     });
 
     expect(subscriptions[0].status).toBe('active');
-    expect(subscriptions[0].provider).toBe('paddle');
+    expect(subscriptions[0].provider).toBe('dodopayments');
     expect(subscriptions[0].currentPeriodEnd).toBe(currentPeriodEnd);
     // Tenant only has status/plan/trialEndsAt/gracePeriodEndsAt/lockedPriceCents — provider and
     // currentPeriodEnd have no mirror there.

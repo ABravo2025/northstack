@@ -13,9 +13,9 @@ Rol: recomendar infraestructura pensando en sustentabilidad para un founder solo
 - **Branches**: `main` (app) y `landing` (landing estática) están separadas con pipelines de deploy independientes — no requiere tocar la app para deployar la landing y viceversa.
 - **Android (Capacitor)**: `.github/workflows/android-build.yml` compila un APK debug descargable (`frontend/android/`) — se dispara solo en push a `main` que toque `frontend/**` o el propio workflow, además de `workflow_dispatch` manual. Regla del proyecto: todo push a producción debe ir acompañado de una corrida de este build (manual si el path filter no lo cubre), para que el APK nativo no quede desactualizado respecto a la web — ver `docs/Skills/Skills-Development.md`. Certificación en Play Store: pendiente (cuenta de Play Console, AAB firmado en vez de APK debug, closed testing de 12 testers/14 días para cuentas nuevas — no implementado todavía).
 
-## Cobros/pagos (tema abierto, sin implementar)
+## Cobros/pagos (implementado)
 
-Evaluado Stripe (requiere LLC en EE.UU., Argentina no tiene cuentas directas) vs. Paddle (merchant of record, sin necesidad de entidad en EE.UU., comisión más alta). Paddle es la opción de referencia por ahora. Si te preguntan por esto, no reabras la comparación desde cero — partí de que Paddle es el default salvo que cambien las condiciones (ej. constitución de una entidad en EE.UU.).
+Evaluado en su momento Stripe (requiere LLC en EE.UU., Argentina no tiene cuentas directas) vs. Paddle/Dodo Payments (merchant of record, sin necesidad de entidad en EE.UU.). Se implementó con Paddle, y el 2026-09-13 se reemplazó por Dodo Payments (mismo rol de merchant of record) para el mercado internacional/USD — Mercado Pago sigue cubriendo Argentina/ARS sin cambios. Si te preguntan por esto, no reabras la comparación desde cero — partí de que Dodo Payments + Mercado Pago es el default salvo que cambien las condiciones (ej. constitución de una entidad en EE.UU.).
 
 ## Al recomendar cambios de infraestructura
 

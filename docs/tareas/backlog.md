@@ -142,22 +142,33 @@ Catálogo completo (qué está construido, qué es solo posible hoy, qué está 
   proveedor y agenda el cambio para el próximo ciclo de facturación — no calcula ni cobra/acredita la
   diferencia del ciclo en curso. Sin definir si hace falta prorratear de verdad o si "aplica desde el
   próximo ciclo" es la política final.
-- [ ] **Webhook de Paddle todavía apunta al túnel de cloudflared (muerto), no a la URL estable de
-  staging**: a diferencia de Mercado Pago (ya migrado a
-  `https://staging.joinnorthstack.com/api/webhooks/paddle`, con el protection-bypass de Vercel), el
-  webhook de Paddle en su dashboard sandbox sigue registrado contra una URL de túnel efímera de una
-  sesión de testing anterior. Hay que repetir en Paddle el mismo cambio que ya se hizo en Mercado
-  Pago: URL estable + `?x-vercel-protection-bypass=<secret>` (Vercel Deployment Protection bloquea
-  cualquier POST externo a `staging.joinnorthstack.com` sin ese query param, confirmado en vivo).
+- [ ] **Webhook de Dodo Payments todavía sin configurar contra la URL estable de staging**
+  (2026-09-13, Paddle→Dodo): reemplazó a Paddle, sandbox, sin suscriptores reales — falta crear el
+  webhook endpoint real en el dashboard de Dodo apuntando a
+  `https://staging.joinnorthstack.com/api/webhooks/dodopayments` (mismo patrón que ya se usa para
+  Mercado Pago) con el protection-bypass de Vercel (`?x-vercel-protection-bypass=<secret>`, Vercel
+  Deployment Protection bloquea cualquier POST externo a `staging.joinnorthstack.com` sin ese query
+  param, confirmado en vivo), y cargar el `DODO_WEBHOOK_KEY` que ese webhook devuelve.
+- [ ] **`scripts/setup-dodo-products.ts` nunca se corrió** (2026-09-13, Paddle→Dodo): provisiona un
+  Product de catálogo en Dodo por cada fila de `PlanPrice` internacional (Dodo exige uno pre-creado
+  para cualquier suscripción recurrente, a diferencia del precio inline que aceptaba Paddle) — sin
+  correrlo, `startCheckout`/`changePlan` tiran un error explícito en vez de fallar en silencio.
+  Bloqueado en las credenciales sandbox reales de Dodo (`DODO_PAYMENTS_API_KEY`), ver el ítem de
+  credenciales más abajo.
+- [ ] **Endpoints de Dodo Payments sin confirmar contra un sandbox real** (2026-09-13): el mapeo de
+  eventos de webhook (`payment.succeeded`/`is_update_payment_method`/`total_amount === 0` para
+  distinguir cobro real vs. autorización de trial vs. actualización de tarjeta) y el campo exacto de
+  `subscription.active` se escribieron contra los tipos oficiales del SDK
+  (`node_modules/dodopayments`), no contra una entrega real de webhook — mismo tipo de caveat
+  "UNVERIFIED" que ya tenían los campos de Mercado Pago en su momento. Confirmar antes de go-live.
 - [ ] **Precios reales de Argentina (Mercado Pago) sin definir**: los `PlanPrice` de mercado `ar`
   siguen en placeholder (no en cero, pero no son precios reales todavía) — bloquea solo el pricing
   real, no la integración en sí (ya probada de punta a punta contra sandbox).
-- [ ] **Credenciales reales (producción) de Paddle/Mercado Pago sin cargar**: hoy Vercel Preview
-  (staging) tiene las credenciales *sandbox* de ambos proveedores (`PADDLE_API_KEY`,
-  `PADDLE_WEBHOOK_SECRET`, `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`, `VITE_PADDLE_CLIENT_TOKEN`) — nada
-  cargado todavía en el scope de Production. Bloquea salir a cobrar de verdad, no bloquea seguir
-  probando en staging.
-- [ ] **Billing Integration (Paddle + Mercado Pago) construido y probado en `staging`, pendiente de
+- [ ] **Credenciales reales (producción) de Dodo Payments/Mercado Pago sin cargar**: hoy Vercel
+  Preview (staging) tiene las credenciales *sandbox* de ambos proveedores (`DODO_PAYMENTS_API_KEY`,
+  `DODO_WEBHOOK_KEY`, `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`) — nada cargado todavía en el scope de
+  Production. Bloquea salir a cobrar de verdad, no bloquea seguir probando en staging.
+- [ ] **Billing Integration (Dodo Payments + Mercado Pago) construido y probado en `staging`, pendiente de
   code review antes de promover a `main`**: mismo gate que ya se usó para Tenant Signup + Subscription
   Plans (`docs/tareas/historial-2026-08.md` documenta el detalle) — no pushear a `main` sin esa
   revisión primero.

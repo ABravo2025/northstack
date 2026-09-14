@@ -51,6 +51,12 @@ as B2B SaaS and HR-SaaS comparables):
   litigating in Argentina against a U.S. business customer (or vice versa) is more
   cumbersome than either arbitration or home-court litigation.
 
+2026-09-13 update — Section 5.4 updated: Northstack replaced Paddle with Dodo Payments as the
+processor for internationally billed Tenants (still sandbox at time of writing, no real
+subscribers migrated). Both operate as merchant of record, so the substance of this section is
+unchanged — only the processor's name. Same review caveat as the rest of this document applies;
+flag to counsel before publishing.
+
 2026-09-07 update — Section 5 (Fees) rewritten from scratch. It previously described a free
 beta with fees "to be introduced in the future"; that's now stale, since real subscription
 billing (Paddle for international/USD Tenants, Mercado Pago for Argentina/ARS Tenants) has
@@ -335,8 +341,8 @@ Section 14 (Changes to these Terms) for how and when we notify you of a change.
 
 ### 5.4 Payment processors
 
-Payments are processed by third-party payment processors, not Northstack directly: **Paddle**
-for Tenants billed internationally in USD, and **Mercado Pago** for Tenants billed in
+Payments are processed by third-party payment processors, not Northstack directly: **Dodo
+Payments** for Tenants billed internationally in USD, and **Mercado Pago** for Tenants billed in
 Argentina in ARS. These processors collect and store your payment card or bank account
 details directly, under their own terms of service and privacy policies — Northstack does
 not receive or store your full card or bank account number. See our

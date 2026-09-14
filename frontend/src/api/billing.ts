@@ -2,9 +2,8 @@ import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
 import type { PlanTier, Subscription } from './types.js';
 
 export interface StartCheckoutResult {
-  provider: 'paddle' | 'mercadopago';
-  initPoint?: string;
-  paddleTransactionId?: string;
+  provider: 'dodopayments' | 'mercadopago';
+  initPoint?: string; // hosted redirect URL for either provider
 }
 
 export const billingApi = {
@@ -55,11 +54,10 @@ export const billingApi = {
     if (!res.ok) await throwApiError(res);
   },
 
-  // Paddle-only (2026-08-19) — the URL Paddle returns is temporary (~1h), fetched fresh on each
-  // click rather than cached anywhere. disposition 'inline' opens the PDF in a new tab,
-  // 'attachment' makes the browser save it directly — same param Paddle's own endpoint takes.
-  getInvoiceDocumentUrl: async (token: string, invoiceId: string, disposition: 'inline' | 'attachment' = 'inline'): Promise<string> => {
-    const res = await apiFetch(`${API_BASE_URL}/api/subscriptions/me/invoices/${invoiceId}/document?disposition=${disposition}`, {
+  // Dodo Payments-only (2026-08-19) — the invoice URL is fetched fresh on each click rather than
+  // cached anywhere.
+  getInvoiceDocumentUrl: async (token: string, invoiceId: string): Promise<string> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/subscriptions/me/invoices/${invoiceId}/document`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);

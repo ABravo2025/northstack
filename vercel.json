@@ -7,6 +7,20 @@
     { "source": "/health", "destination": "/api" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/((?!assets|api|health).*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, must-revalidate" }
+      ]
+    }
+  ],
   "crons": [
     { "path": "/api/internal/plan-transitions/run", "schedule": "0 6 * * *" },
     { "path": "/api/internal/google-calendar-channels/renew", "schedule": "0 7 * * *" },

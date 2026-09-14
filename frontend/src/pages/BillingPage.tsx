@@ -6,8 +6,8 @@ import ConfirmDialog from '../components/common/ConfirmDialog';
 import TableSkeleton from '../components/common/TableSkeleton';
 import { BriefcaseIcon } from '../components/common/Icons';
 import { formatMoney } from '../lib/currencies';
-import { daysRemainingUntil } from '../lib/trial';
 import { openExternalUrl } from '../lib/nativeBrowser';
+import { redirectToCheckout } from '../lib/checkout';
 import AddPaymentMethodModal from '../components/common/AddPaymentMethodModal';
 import PlansModal from '../components/common/PlansModal';
 
@@ -94,6 +94,7 @@ export default function BillingPage({ token, tenant, onTenantUpdated }: BillingP
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [resuming, setResuming] = useState(false);
+  const [subscribing, setSubscribing] = useState(false);
   const [viewingInvoiceId, setViewingInvoiceId] = useState<string | null>(null);
 
   const load = () => {
@@ -137,7 +138,8 @@ export default function BillingPage({ token, tenant, onTenantUpdated }: BillingP
   // 2026-08-20 correction — immediately continues into real checkout instead of leaving it as
   // just an intention, same as AppLayout's welcome modal now does. Already-paying tenants
   // (provider set) go through the post-billing self-serve change-plan endpoint instead, which
-  // schedules the change for next cycle without a new checkout.
+  // schedules the change for next cycle without a new checkout. 2026-09-14: no confirmation step
+  // in between anymore — straight to the provider's checkout (see redirectToCheckout's comment).
   const handleSelectPlan = async (plan: PlanTier) => {
     if (hasProvider) {
       await api.changeSubscriptionPlan(token, plan);
@@ -147,7 +149,18 @@ export default function BillingPage({ token, tenant, onTenantUpdated }: BillingP
       const updated = await api.updateTenantPlan(token, plan);
       onTenantUpdated(updated);
       load();
-      setShowAddPaymentMethod(true);
+      await redirectToCheckout(token);
+    }
+  };
+
+  const handleSubscribe = async () => {
+    setSubscribing(true);
+    try {
+      await redirectToCheckout(token);
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setSubscribing(false);
     }
   };
 
@@ -209,8 +222,8 @@ export default function BillingPage({ token, tenant, onTenantUpdated }: BillingP
               </button>
             )}
             {!hasProvider && (
-              <button type="button" className="btn btn-primary btn-sm" onClick={() => setShowAddPaymentMethod(true)}>
-                Subscribe
+              <button type="button" className="btn btn-primary btn-sm" onClick={handleSubscribe} disabled={subscribing}>
+                {subscribing ? 'Starting…' : 'Subscribe'}
               </button>
             )}
           </div>
@@ -311,14 +324,7 @@ export default function BillingPage({ token, tenant, onTenantUpdated }: BillingP
         )}
       </div>
 
-      <AddPaymentMethodModal
-        open={showAddPaymentMethod}
-        token={token}
-        mode={hasProvider ? 'update' : 'subscribe'}
-        planLabel={`${PLAN_LABEL[subscription.plan]} — ${formatMoney(subscription.lockedPriceCents, subscription.currency)}/mo`}
-        trialDaysRemaining={daysRemainingUntil(subscription.trialEndsAt)}
-        onClose={() => setShowAddPaymentMethod(false)}
-      />
+      <AddPaymentMethodModal open={showAddPaymentMethod} token={token} onClose={() => setShowAddPaymentMethod(false)} />
 
       <PlansModal
         open={showPlansModal}

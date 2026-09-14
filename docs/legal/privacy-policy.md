@@ -11,9 +11,15 @@ the product actively markets to or signs EU-based tenants, this policy needs a G
 not after.
 
 2026-09-13 update — Section 4.1's subprocessor table now lists Dodo Payments instead of Paddle
-(replaced as the international payment processor; still sandbox, no real subscribers migrated).
-Same merchant-of-record role, so the data-flow description is unchanged — only the name. Pending
-legal review same as the rest of this document.
+(replaced as the international payment processor). Same merchant-of-record role, so the
+data-flow description is unchanged — only the name. Pending legal review same as the rest of
+this document.
+
+2026-09-14 update — Dodo Payments went live in production the same day (real cardholder data
+now actually flows to them, not just sandbox test data) — raising the urgency of the "pending
+legal review" caveat above from theoretical to live. See terms-of-service.md's matching
+2026-09-14 note for an unresolved trial/seat-billing conflict this also surfaced (not a Privacy
+Policy issue itself, since it's about charge timing, not data handling — flagged there).
 
 2026-09-07 update — added Paddle and Mercado Pago as subprocessors (Section 4.1) and billing
 data to Sections 2 and 3, since real subscription billing went live 2026-08-23 (see

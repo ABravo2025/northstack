@@ -34,10 +34,10 @@ Facts this draft is grounded in (verified against the actual code, not assumed):
   period, then -> suspended (planTransitionService.ts, GRACE_PERIOD_DAYS = 14) — described in
   Section 6 below in plain language without overcommitting to internal state-machine names
   that could drift out of sync with the code.
-- Payment processors are Dodo Payments (international/USD, replaced Paddle 2026-09-13 — still
-  sandbox, no real subscribers migrated) and Mercado Pago (Argentina/ARS); neither
-  is described as holding refund discretion on Northstack's behalf — refund decisions here
-  are Northstack's, chargebacks/disputes are the cardholder's bank or Mercado Pago's process.
+- Payment processors are Dodo Payments (international/USD, replaced Paddle 2026-09-13, live in
+  production since 2026-09-14) and Mercado Pago (Argentina/ARS); neither is described as
+  holding refund discretion on Northstack's behalf — refund decisions here are Northstack's,
+  chargebacks/disputes are the cardholder's bank or Mercado Pago's process.
 
 Known gaps / things to confirm before publishing:
 1. No refund mechanism exists anywhere in the current billing code (checked: no `refund`
@@ -53,6 +53,13 @@ Known gaps / things to confirm before publishing:
    sole proprietor/consumer in some cases. This is the single biggest legal-review item on
    this document — flagged, not resolved.
 3. [Effective Date] set to match the same-day Terms of Service / Privacy Policy update.
+4. (2026-09-14, not yet resolved) Section 2 promises "you will not be charged until the trial
+   period ends" — but seatService.ts bills extra-seat overage ($4/mo/seat past the plan's 5/10
+   included) immediately, prorated, the moment a tenant exceeds it, including while still
+   `trialing` (a card gets attached, and billing-eligible, at trial start — see
+   terms-of-service.md's matching 2026-09-14 note for the mechanism). A trial tenant who invites
+   past their seat count today gets charged before their base plan itself ever does, contradicting
+   this section as worded. Flagged to Alejandro, not resolved either direction yet.
 
 2026-09-07 (later same day) — added a beta-status callout to Section 1 and rewrote Section 7
 (Changes to this Policy) from "advance notice for material changes" to "no prior notice

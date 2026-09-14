@@ -52,10 +52,24 @@ as B2B SaaS and HR-SaaS comparables):
   cumbersome than either arbitration or home-court litigation.
 
 2026-09-13 update — Section 5.4 updated: Northstack replaced Paddle with Dodo Payments as the
-processor for internationally billed Tenants (still sandbox at time of writing, no real
-subscribers migrated). Both operate as merchant of record, so the substance of this section is
-unchanged — only the processor's name. Same review caveat as the rest of this document applies;
-flag to counsel before publishing.
+processor for internationally billed Tenants. Both operate as merchant of record, so the
+substance of this section is unchanged — only the processor's name. Same review caveat as the
+rest of this document applies; flag to counsel before publishing.
+
+2026-09-14 update — Dodo Payments went live in production the same day (real card charges, not
+sandbox) — raising the urgency of the "pending legal review" caveat above from theoretical to
+live. Also surfaced a real conflict, NOT yet resolved, between this document's text and actual
+system behavior: Section 5.1 promises "you will not be charged until the trial ends," but
+seatService.ts's per-seat billing (5/10 seats included, $4/mo per extra active seat) bills a
+tenant's extra-seat overage immediately (`prorated_immediately`) the moment they exceed their
+plan's included seat count — including while `Subscription.status` is still `trialing`, since a
+card gets attached (and `provider`/`externalSubscriptionId` get set) at trial start, before the
+base plan's own first real charge. A Starter tenant who invites a 6th person during their free
+trial would be charged for that extra seat immediately, contradicting Section 5.1 as currently
+worded. Flagged to Alejandro rather than silently resolved either direction (suppress seat
+billing during trial to match the promise, vs. narrow the promise to "your base plan fee only"
+and disclose seat overage as a separate, immediately-billed charge) — a product call, not a
+wording call.
 
 2026-09-07 update — Section 5 (Fees) rewritten from scratch. It previously described a free
 beta with fees "to be introduced in the future"; that's now stale, since real subscription

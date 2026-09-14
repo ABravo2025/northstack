@@ -4,6 +4,8 @@ import { getAuthorizedPayment, getPreapproval, verifyMercadoPagoSignature } from
 import { getNextBillingDate, unwrapDodoWebhookEvent } from '../lib/dodopayments.js';
 import { GRACE_PERIOD_DAYS } from '../modules/tenant/planTransitionService.js';
 import { syncSubscriptionAndTenant } from '../modules/tenant/subscriptionService.js';
+import { syncSeatBilling } from '../modules/tenant/seatService.js';
+import { bestEffort } from '../lib/bestEffort.js';
 import type { PaymentProvider } from '@prisma/client';
 import type express from 'express';
 
@@ -96,6 +98,12 @@ webhooksRouter.post('/api/webhooks/mercadopago', async (req, res) => {
           ...(payment.payment_method_id ? { paymentMethodBrand: payment.payment_method_id } : {}),
           ...(payment.card?.last_four_digits ? { paymentMethodLast4: payment.card.last_four_digits } : {}),
         });
+        // Same "first point seat overage is allowed to bill" reconciliation as the Dodo branch
+        // below — MP's own seat surcharge only ever affects the NEXT recurring transaction_amount
+        // (no mid-cycle proration), so this mostly matters once real ARS pricing replaces today's
+        // $0 placeholder, but the trialing-guard in syncSeatBilling applies the same way regardless
+        // of provider.
+        await bestEffort(syncSeatBilling(subscription.tenantId), `syncSeatBilling(${subscription.tenantId})`);
         await prisma.invoice.create({
           data: {
             subscriptionId: subscription.id,
@@ -244,6 +252,12 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
         currentPeriodEnd: periodEnd,
         ...paymentMethodFields,
       });
+
+      // First point seat overage is actually allowed to bill anything (seatService.ts's own
+      // comment on syncSeatBilling explains why it no-ops while still 'trialing') — true it up to
+      // whatever the tenant's real seat count is now that the base plan itself just started
+      // billing for real.
+      await bestEffort(syncSeatBilling(subscription.tenantId), `syncSeatBilling(${subscription.tenantId})`);
 
       // Trusts our own authoritative price (subscription.lockedPriceCents/currency) rather than
       // payment.total_amount, which includes tax — same reasoning paddle.ts's equivalent used.

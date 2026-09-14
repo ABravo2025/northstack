@@ -28,6 +28,16 @@ export function extraSeatsFor(plan: 'starter' | 'growth', activeSeats: number): 
 // so there's no reason to batch this into a cron). No-ops for a tenant that hasn't got a real
 // paid subscription yet (still trialing with no provider attached) — startCheckout computes the
 // starting seat count itself once a card is actually added, see its own comment.
+//
+// Also no-ops while `status === 'trialing'`, even once a card IS attached (2026-09-14, Alejandro's
+// call): a card gets attached — and provider/externalSubscriptionId get set — at trial start via
+// the $0 mandate-authorization payment, well before the base plan's own first real charge. Billing
+// seat overage immediately at that point would charge a "still on the free trial" tenant real
+// money, contradicting the Terms of Service/Refund Policy's "not charged until the trial ends."
+// The overage isn't lost — it's just not billed yet: the webhook's real first-charge handler
+// (routes/webhooks.ts, payment.succeeded's non-trial branch) calls this same function right after
+// flipping status to 'active', which true-ups the addon quantity to whatever the tenant's actual
+// seat count is by then, for the very first time it's actually allowed to bill anything.
 export async function syncSeatBilling(tenantId: string): Promise<void> {
   const [tenant, subscription] = await Promise.all([
     prisma.tenant.findUnique({ where: { id: tenantId }, select: { plan: true } }),
@@ -36,6 +46,7 @@ export async function syncSeatBilling(tenantId: string): Promise<void> {
 
   if (!tenant || (tenant.plan !== 'starter' && tenant.plan !== 'growth')) return;
   if (!subscription?.provider || !subscription.externalSubscriptionId) return;
+  if (subscription.status === 'trialing') return;
 
   const activeSeats = await countActiveSeats(tenantId);
   const extraSeats = extraSeatsFor(tenant.plan, activeSeats);

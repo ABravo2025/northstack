@@ -2,6 +2,7 @@ import prisma from '../../lib/prisma.js';
 import { syncSubscriptionAndTenant } from './subscriptionService.js';
 import { cancelSubscription as cancelDodoSubscription, removeScheduledCancellation, changeSubscriptionPlan } from '../../lib/dodopayments.js';
 import { updatePreapproval } from '../../lib/mercadopago.js';
+import { countActiveSeats, extraSeatsFor, EXTRA_SEAT_PRICE_CENTS } from './seatService.js';
 import type { PlanTier } from '@prisma/client';
 
 export interface SelfServeResult {
@@ -36,10 +37,18 @@ export async function changePlan(tenantId: string, plan: PlanTier, userId: strin
     if (!planPrice.dodoProductId) {
       return { success: false, error: 'Pricing for this plan is not available yet.' };
     }
+    // Extra-seat addon quantity is preserved automatically — changeSubscriptionPlan re-sends
+    // whatever's currently on the subscription (see its own comment in dodopayments.ts).
     await changeSubscriptionPlan(subscription.externalSubscriptionId, { productId: planPrice.dodoProductId });
   } else {
+    // Mercado Pago folds the seat surcharge into the single transaction_amount (no addon
+    // primitive — seatService.ts) — a tier change must recompute it against the NEW plan's
+    // included-seats threshold, or the surcharge silently reverts to whatever the old plan's
+    // math produced.
+    const activeSeats = await countActiveSeats(tenantId);
+    const extraSeats = extraSeatsFor(plan, activeSeats);
     await updatePreapproval(subscription.externalSubscriptionId, {
-      transactionAmount: planPrice.launchPriceCents / 100,
+      transactionAmount: (planPrice.launchPriceCents + extraSeats * EXTRA_SEAT_PRICE_CENTS) / 100,
     });
   }
 

@@ -20,8 +20,8 @@ const TENANT_TO_SUBSCRIPTION_STATUS: Record<TenantStatus, SubscriptionStatus> = 
 // Tenant.lockedPriceCents at selection time — that's the whole point of freezing it, so a
 // price-list change never silently affects an existing subscriber.
 export const CURRENT_PLAN_PRICES_CENTS: Record<'starter' | 'growth', number> = {
-  starter: 2900,
-  growth: 7900,
+  starter: 1900,
+  growth: 3900,
 };
 
 export interface UpdateTenantPlanResult {

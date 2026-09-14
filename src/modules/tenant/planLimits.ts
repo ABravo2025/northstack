@@ -17,6 +17,14 @@ export interface PlanLimits {
 
 export type EffectivePlan = 'starter' | 'growth';
 
+// Known gap (2026-09-14, Alejandro's call): PlansModal.tsx now advertises a broader "seats"
+// model (5/10 seats included regardless of role, $4/mo per extra seat) as the pricing story, but
+// enforcement here hasn't caught up yet — maxAdminUsers below still only counts the literal
+// "Admin" role and still hard-blocks at the cap instead of allowing a paid overage. Charging for
+// extra seats automatically needs its own plan (a Dodo product line with quantity, or a Mercado
+// Pago updatePreapproval, recalculated per billing cycle) — deliberately not built yet. Until
+// then, the modal's seat copy is aspirational and this file is still the real, narrower limit.
+
 export const PLAN_LIMITS: Record<EffectivePlan, PlanLimits> = {
   starter: {
     maxPipelines: 2,

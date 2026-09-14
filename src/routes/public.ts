@@ -7,6 +7,7 @@ import { verifyTurnstileToken } from '../lib/turnstile.js';
 import { isRateLimited } from '../lib/rateLimit.js';
 import { getClientIp } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
+import { isPublicFormsEnabled } from '../lib/featureFlags.js';
 
 export const publicRouter = createAsyncRouter();
 
@@ -56,6 +57,9 @@ publicRouter.post('/api/public/contract-confirmation/:token', async (req, res) =
 
 // Public, unauthenticated: powers the standalone /apply/:tenantSlug/:formSlug page.
 publicRouter.get('/api/public/:tenantSlug/:formSlug', async (req, res) => {
+  if (!isPublicFormsEnabled()) {
+    return res.status(404).json({ error: 'Form not found' });
+  }
   const form = await findActivePublicForm(req.params.tenantSlug, req.params.formSlug);
   if (!form) {
     return res.status(404).json({ error: 'Form not found' });
@@ -93,6 +97,9 @@ publicRouter.get('/api/public/:tenantSlug/:formSlug', async (req, res) => {
 // Public, unauthenticated: submits the form. Turnstile + a per-IP rate limit
 // are the only guards — no session, so anyone with the link can reach this.
 publicRouter.post('/api/public/:tenantSlug/:formSlug/submit', async (req, res) => {
+  if (!isPublicFormsEnabled()) {
+    return res.status(404).json({ error: 'Form not found' });
+  }
   const clientIp = getClientIp(req);
   if (await isRateLimited(`public-form:${clientIp}`)) {
     return res.status(429).json({ error: 'Too many submissions. Please try again in a minute.' });

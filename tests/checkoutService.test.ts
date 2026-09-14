@@ -21,6 +21,11 @@ vi.mock('../src/lib/prisma.js', () => ({
     planPrice: {
       findFirst: vi.fn(async ({ where }: any) => planPrices.find((p) => p.plan === where.plan && p.market === where.market) ?? null),
     },
+    // seatService.ts's countActiveSeats — 0 active seats by default so existing assertions (built
+    // around launchPriceCents alone) don't need to account for an extra-seat surcharge.
+    user: {
+      count: vi.fn(async () => 0),
+    },
   },
 }));
 

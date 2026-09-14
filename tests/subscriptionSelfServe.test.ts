@@ -37,6 +37,11 @@ vi.mock('../src/lib/prisma.js', () => {
     activityLogEntry: {
       create: vi.fn(async ({ data }: any) => data),
     },
+    // seatService.ts's countActiveSeats — 0 active seats by default, see checkoutService.test.ts's
+    // matching comment.
+    user: {
+      count: vi.fn(async () => 0),
+    },
     $transaction: vi.fn(async (fn: any) => fn(mockPrisma)),
   };
   return { default: mockPrisma };

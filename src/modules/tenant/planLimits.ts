@@ -1,5 +1,4 @@
 import type { PlanTier } from '@prisma/client';
-import prisma from '../../lib/prisma.js';
 
 // Plan-tier enforcement (2026-09-07) — until now nothing in the backend gated any feature by
 // plan (see PlansModal.tsx's own comment on the frontend side). This is the single source of
@@ -8,7 +7,6 @@ import prisma from '../../lib/prisma.js';
 export interface PlanLimits {
   maxPipelines: number | null;
   maxTimeOffPolicies: number | null;
-  maxAdminUsers: number | null;
   maxCustomRoles: number | null;
   activityLogRetentionDays: number | null;
   payrollEnabled: boolean;
@@ -17,19 +15,10 @@ export interface PlanLimits {
 
 export type EffectivePlan = 'starter' | 'growth';
 
-// Known gap (2026-09-14, Alejandro's call): PlansModal.tsx now advertises a broader "seats"
-// model (5/10 seats included regardless of role, $4/mo per extra seat) as the pricing story, but
-// enforcement here hasn't caught up yet — maxAdminUsers below still only counts the literal
-// "Admin" role and still hard-blocks at the cap instead of allowing a paid overage. Charging for
-// extra seats automatically needs its own plan (a Dodo product line with quantity, or a Mercado
-// Pago updatePreapproval, recalculated per billing cycle) — deliberately not built yet. Until
-// then, the modal's seat copy is aspirational and this file is still the real, narrower limit.
-
 export const PLAN_LIMITS: Record<EffectivePlan, PlanLimits> = {
   starter: {
     maxPipelines: 2,
     maxTimeOffPolicies: 3,
-    maxAdminUsers: 2,
     maxCustomRoles: 2,
     activityLogRetentionDays: 7,
     payrollEnabled: false,
@@ -38,7 +27,6 @@ export const PLAN_LIMITS: Record<EffectivePlan, PlanLimits> = {
   growth: {
     maxPipelines: null,
     maxTimeOffPolicies: null,
-    maxAdminUsers: 5,
     maxCustomRoles: null,
     activityLogRetentionDays: 30,
     payrollEnabled: true,
@@ -68,33 +56,4 @@ export function isPayrollAllowed(tenant: { plan: PlanTier | null } | null): bool
 
 export function isPaymentsAllowed(tenant: { plan: PlanTier | null } | null): boolean {
   return getPlanLimits(tenant).paymentsEnabled;
-}
-
-// "Admin user" for the seat cap means literally the default "Admin" role only (2026-09-07
-// decision) — a tenant's custom roles never count against this, however privileged. Counts both
-// already-active Users and still-pending Invitations for the role, so sending N pending Admin
-// invites at once is blocked the same as N accepted ones — a tenant can't dodge the cap by
-// inviting past it and having them all land at once.
-// excludeUserId — for re-promoting/re-saving a user who's already on the Admin role (e.g. just
-// changing their status), so they don't get counted against their own seat and block a no-op.
-export async function hasAdminSeatAvailable(
-  tenant: { id: string; plan: PlanTier | null },
-  excludeUserId?: string,
-): Promise<boolean> {
-  const { maxAdminUsers } = getPlanLimits(tenant);
-  if (maxAdminUsers === null) return true;
-
-  const [activeAdmins, pendingAdminInvites] = await Promise.all([
-    prisma.user.count({
-      where: {
-        tenantId: tenant.id,
-        status: 'active',
-        roleRef: { name: 'Admin' },
-        ...(excludeUserId ? { id: { not: excludeUserId } } : {}),
-      },
-    }),
-    prisma.invitation.count({ where: { tenantId: tenant.id, status: 'pending', roleRef: { name: 'Admin' } } }),
-  ]);
-
-  return activeAdmins + pendingAdminInvites < maxAdminUsers;
 }

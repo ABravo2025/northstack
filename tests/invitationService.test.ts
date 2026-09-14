@@ -134,7 +134,10 @@ describe('createInvitation — Custom Roles Fase I (roleId assignment)', () => {
   });
 });
 
-describe('createInvitation — plan-tier admin seat cap (2026-09-07)', () => {
+describe('createInvitation — no Admin-role seat cap (removed 2026-09-14)', () => {
+  // See tenantUserService.test.ts's equivalent describe block for why: seatService.ts already
+  // bills every seat (any role) automatically past the plan's included count, so a separate,
+  // unpayable Admin-role cap was removed as redundant with (and contradictory to) that story.
   beforeEach(() => {
     tenants = { t1: { id: 't1', name: 'Acme', plan: 'starter' } };
     users = {};
@@ -147,50 +150,23 @@ describe('createInvitation — plan-tier admin seat cap (2026-09-07)', () => {
     pendingInvitations = [];
   });
 
-  it('blocks a roleId-based invite into the Admin role once the Starter cap (2) is reached', async () => {
+  it('invites a 3rd Admin on Starter fine — no cap', async () => {
     const result = await createInvitation({
       tenantId: 't1', invitedByUserId: 'owner-1', email: 'new@example.com', roleId: 'role-admin',
     });
-    expect(result.success).toBe(false);
-    expect(result.error).toMatch(/Starter plan allows up to 2/);
+    expect(result.success).toBe(true);
+    expect(result.invitation!.roleId).toBe('role-admin');
   });
 
-  it('blocks the legacy `role: "admin"` path too — regression test for the roleDisplayName case mismatch', async () => {
+  it('the legacy `role: "admin"` path is unrestricted too', async () => {
     const result = await createInvitation({
       tenantId: 't1', invitedByUserId: 'owner-1', email: 'new@example.com', role: 'admin',
     });
-    expect(result.success).toBe(false);
-    expect(result.error).toMatch(/Starter plan allows up to 2/);
-  });
-
-  it('never blocks inviting into a custom (non-Admin) role, even at the Admin cap', async () => {
-    const result = await createInvitation({
-      tenantId: 't1', invitedByUserId: 'owner-1', email: 'new@example.com', roleId: 'role-custom',
-    });
     expect(result.success).toBe(true);
-  });
-
-  it('never blocks the legacy `role: "member"` path', async () => {
-    const result = await createInvitation({
-      tenantId: 't1', invitedByUserId: 'owner-1', email: 'new@example.com', role: 'member',
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it('a pending Admin invite alone (no accepted ones yet) also counts toward the cap', async () => {
-    activeUsers = [];
-    pendingInvitations = [
-      { tenantId: 't1', status: 'pending', roleName: 'Admin' },
-      { tenantId: 't1', status: 'pending', roleName: 'Admin' },
-    ];
-    const result = await createInvitation({
-      tenantId: 't1', invitedByUserId: 'owner-1', email: 'new@example.com', roleId: 'role-admin',
-    });
-    expect(result.success).toBe(false);
   });
 });
 
-describe('acceptInvitation — plan-tier admin seat re-check (2026-09-07)', () => {
+describe('acceptInvitation — Admin invites always accept (no seat re-check)', () => {
   beforeEach(() => {
     tenants = { t1: { id: 't1', name: 'Acme', plan: 'starter' } };
     activeUsers = [{ tenantId: 't1', status: 'active', roleName: 'Admin' }, { tenantId: 't1', status: 'active', roleName: 'Admin' }];
@@ -198,39 +174,12 @@ describe('acceptInvitation — plan-tier admin seat re-check (2026-09-07)', () =
     acceptTestUser = { id: 'u-accepting', email: 'new@example.com', tenantId: null };
   });
 
-  // Seats can fill up between an invite going out and it being accepted (another Admin invite
-  // accepted first, or a promotion via updateTenantUser) — re-checked here, not just at invite
-  // time. Both seats are already taken (activeUsers above), so this must be rejected before ever
-  // reaching the $transaction that would otherwise attach the user to the tenant.
-  it('rejects accepting an Admin invite once the Starter admin-seat cap has since filled up', async () => {
+  it('accepts an Admin invite fine even with 2 Admins already active on Starter', async () => {
     acceptTestInvitation = {
       id: 'inv-1', token: 'tok-1', email: 'new@example.com', tenantId: 't1', status: 'pending',
       expiresAt: new Date(Date.now() + 60_000), roleId: 'role-admin', role: 'member',
-      roleRef: { name: 'Admin' },
     };
     const result = await acceptInvitation({ token: 'tok-1', userId: 'u-accepting' });
-    expect(result.success).toBe(false);
-    expect(result.error).toMatch(/Starter plan|admin users/i);
-  });
-
-  it('never re-checks (or blocks) accepting a non-Admin invite, even at the Admin cap', async () => {
-    acceptTestInvitation = {
-      id: 'inv-2', token: 'tok-2', email: 'new@example.com', tenantId: 't1', status: 'pending',
-      expiresAt: new Date(Date.now() + 60_000), roleId: 'role-member', role: 'member',
-      roleRef: { name: 'Member' },
-    };
-    const result = await acceptInvitation({ token: 'tok-2', userId: 'u-accepting' });
-    expect(result.success).toBe(true);
-  });
-
-  it('accepts an Admin invite fine when a seat is actually still open', async () => {
-    activeUsers = [{ tenantId: 't1', status: 'active', roleName: 'Admin' }]; // only 1/2 taken
-    acceptTestInvitation = {
-      id: 'inv-3', token: 'tok-3', email: 'new@example.com', tenantId: 't1', status: 'pending',
-      expiresAt: new Date(Date.now() + 60_000), roleId: 'role-admin', role: 'member',
-      roleRef: { name: 'Admin' },
-    };
-    const result = await acceptInvitation({ token: 'tok-3', userId: 'u-accepting' });
     expect(result.success).toBe(true);
   });
 });

@@ -652,8 +652,8 @@ están vinculadas; existe porque un scope `notes:read` de una ApiKey es tenant-w
 `lib/prismaExternal.ts`) en vez del `prisma` compartido — default al compartido si se omite.
 
 ### `src/modules/onboarding/onboardingService.ts`
-- **seedSampleData(tenantId)** — carga datos de ejemplo (empleados/clientes), no idempotente a propósito, safe de llamar más de una vez.
-- **getOnboardingStatus(tenantId)** — estado del checklist de onboarding (`/overview`).
+- **seedSampleData(tenantId, userId)** — carga datos de ejemplo (empleados + Companies/Contacts vía `createCompany`, no `Client` legado desde 2026-09-15), no idempotente a propósito, safe de llamar más de una vez. Devuelve `{ employees, companies }`.
+- **completeTour(userId)** (2026-09-15) — marca `User.productTourCompletedAt`, llamado al terminar o saltear el `ProductTour` guiado.
 
 ### `src/modules/tasks/taskService.ts`
 - CRUD cross-entidad: **createTask(input, client?)**, **findTaskById(id, client?)**, **listTasksForEntity(tenantId, entityType, entityId)**, **updateTask(id, input, changedByUserId, client?)**, **deleteTask(id, changedByUserId, client?)** — las tres primeras (create/update/delete) disparan `syncTaskCalendarEvent` (best-effort, 2026-08-22) tras la escritura. `client?` (Private API + Webhooks Unit 3) acepta `prismaExternal`.
@@ -823,7 +823,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 | `tenantUsers.ts` | listTenantUsers, updateTenantUser, listTenantInvitations, createTenantInvitation, cancelInvitation |
 | `publicFormsAdmin.ts` | listPublicForms, createPublicForm, updatePublicForm |
 | `publicFormsPublic.ts` | getPublicFormConfig, submitPublicForm |
-| `onboarding.ts` | getOnboardingStatus, seedSampleData |
+| `onboarding.ts` | seedSampleData(token) → `{employees, companies}`, completeTour(token) (2026-09-15 — `getOnboardingStatus` retirado junto con `OnboardingChecklist`) |
 | `feedback.ts` | sendFeedback |
 | `http.ts` | apiFetch(url, init?), throwApiError(res) — base compartida, no un dominio |
 | `integrations.ts` (2026-08-22, +Stripe 2026-08-26, +listGoogleCalendarEvents 2026-08-27, webhook→cron 2026-08-28) | getGoogleCalendarStatus, getGoogleCalendarConnectUrl (devuelve `{url}` para que el frontend haga `window.location.href` — no redirige el propio backend, porque este endpoint se llama con fetch autenticado, no con navegación directa), disconnectGoogleCalendar, listGoogleCalendarEvents(token, start, end) (overlay de solo lectura del Overview, eventos propios no linkeados a un Task), getStripeStatus, connectStripe(token, apiKey), disconnectStripe |
@@ -894,8 +894,10 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 - **ChangelogMenu** — popover de "What's new" (contenido estático en `lib/changelog.ts`).
 - **DetailSidebar** — columna derecha compartida (tabs Notes/Tasks/Activity) por los 4 paneles de detalle (Employee/Company/Contact/Opportunity) — **el componente a extender si se agrega una 5ta entidad con detalle**, no copiar los 4 paneles.
 - **MobileTabbar** — tabbar inferior fijo, solo `<768px` (Overview/Employees/Time Off/Sales).
-- **OnboardingChecklist** — card de `/overview` con los 4 pasos de onboarding.
-- **Sidebar** / **TopBar** — navegación principal.
+- **Sidebar** / **TopBar** — navegación principal; expone anclas `data-tour="nav-overview"/"nav-hr"/"nav-sales"/"nav-settings"/"topbar-bell"/"topbar-usermenu"` para `ProductTour`.
+
+### `frontend/src/components/tour/`
+- **ProductTour** (2026-09-15, reemplaza `OnboardingChecklist`) — tour guiado con spotlight sobre `Sidebar`/`TopBar` reales (anclado por `data-tour="..."`, sin librería nueva). Montado una vez en `AppLayout.tsx`; se auto-lanza si `!user.productTourCompletedAt`, filtra pasos por permiso (ej. salta Companies sin `view_company`+`view_contact`), y expone un `replaySignal` prop para el "Take the tour again" de `TopBar`.
 
 ### `frontend/src/components/payroll/`
 - **PayslipPreviewModal** — dado un `fetchPdf: () => Promise<Blob>`, resuelve el blob a un object URL y lo muestra en un `<iframe>` + botón de descarga (Payroll Unidad 20). Props `title`/`downloadFilename`/`helperText` opcionales (default = payslip) la generalizaron (2026-08-08) para reusarla tal cual en "View contract" del panel de People — el nombre quedó desactualizado (no es solo payslips), pero no se renombró el archivo para no ensuciar el diff.

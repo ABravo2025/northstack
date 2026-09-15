@@ -168,6 +168,13 @@ export default function PlansModal({ open, tenant, onClose, onSelectPlan, curren
   const recommended = recommendedTier(tenant?.companySize ?? null);
   const trialDaysLeft = daysRemainingUntil(tenant?.trialEndsAt ?? null);
   const hasTrialLeft = trialDaysLeft > 0;
+  // Free Trial isn't a real downgrade target from a chosen plan (2026-09-15, QA-89 — selecting it
+  // used to just close the modal with no actual effect once currentPlan was set) — hidden here
+  // rather than left selectable-but-inert. Going back to Free Trial from a real plan, when
+  // possible at all, lives in BillingPage's own "Cancel subscription"/"Back to Free Trial"
+  // buttons instead, which is the only place that can tell whether there's a real provider
+  // subscription to actually cancel first.
+  const visibleCards = currentPlan ? PLAN_CARDS.filter((card) => card.key !== 'trial') : PLAN_CARDS;
 
   const handleSelect = async (card: PlanCardConfig) => {
     if (card.key === 'trial') {
@@ -210,8 +217,8 @@ export default function PlansModal({ open, tenant, onClose, onSelectPlan, curren
         The price you start at is the price you keep, for as long as you stay subscribed.
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        {PLAN_CARDS.map((card) => {
+      <div className={`grid gap-4 ${visibleCards.length === 2 ? 'md:grid-cols-2 max-w-xl mx-auto' : 'md:grid-cols-3'}`}>
+        {visibleCards.map((card) => {
           const isCurrent = card.key === currentPlan;
           const isRecommended = !isCurrent && card.key === recommended;
           const displayPrice =

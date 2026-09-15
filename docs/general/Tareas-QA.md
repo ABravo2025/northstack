@@ -4335,3 +4335,49 @@ cobrado, tanto en Billing como en la propia invoice.
    rama.
 7. **Regresión — invitaciones/reactivación en un tenant CON plan:** confirmar que invitar o
    reactivar sigue funcionando normal (el cap solo aplica sin plan elegido).
+
+## QA-89 — Billing: sin forma de volver a Free Trial + "Cancel subscription" invisible en un plan sin confirmar (2026-09-15, en `main`/producción)
+
+**Por qué existe esta tarea:** Alejandro, probando QA-88, reportó "no puedo pasar de un plan al
+free tier" y que no veía "Cancel subscription" en ningún lado con un plan ya elegido. Dos causas
+distintas:
+
+1. La tarjeta "Free Trial" del modal de planes, al clickearse con un plan ya elegido, solo cerraba
+   el modal sin hacer nada — comportamiento heredado de antes de QA-88, nunca fue un downgrade real.
+   Confirmado con Alejandro: no debería ni aparecer como opción ahí.
+2. Gap real introducido por QA-88: el branch de Mercado Pago de `startCheckout` escribe
+   `Tenant.plan` de inmediato (asimetría aceptada en QA-88 — MP no tiene canal de metadata libre
+   para diferir la escritura al webhook como Dodo). Si ese webhook nunca confirma (documentado como
+   no verificado contra un sandbox real), el tenant queda con un plan "elegido" mostrado en
+   Billing pero sin `subscription.provider` seteado — ni `hasProvider` (que gatea "Cancel
+   subscription") ni la tarjeta de plan actual en el modal ofrecían ninguna salida. Estado sin
+   salida real hasta este fix.
+
+### Qué se cambió
+
+- `PlansModal.tsx`: la tarjeta "Free Trial" se oculta cuando `currentPlan` ya es un plan real (grid
+  pasa de 3 a 2 columnas en ese caso).
+- `subscriptionSelfServeService.ts`: nueva `clearUnconfirmedPlan(tenantId, userId)` — solo actúa
+  cuando `subscription.provider` es `null` (nada real que cancelar en el proveedor), limpia
+  `Tenant.plan`/`lockedPriceCents` de vuelta a `null` y `Subscription.plan` de vuelta al
+  placeholder `'starter'` del signup. Rechaza explícitamente si ya hay un `provider` real — ese
+  caso sigue yendo por `requestCancellation` (Cancel subscription existente), nunca se pisan.
+- `POST /api/subscriptions/me/clear-plan` (owner-only, mismo criterio que los otros 3 self-serve).
+- `BillingPage.tsx`: nuevo botón "Back to Free Trial" que aparece específicamente cuando
+  `!hasProvider && !isFreeTrial` (el estado sin salida de arriba) — a diferencia de "Cancel
+  subscription", no tiene `ConfirmDialog` (no hay nada real/facturación de por medio que cancelar,
+  es deshacer una elección local).
+
+### Qué probar
+
+1. **Modal sin Free Trial con plan elegido:** abrir "Change plan" con un plan ya elegido (con o sin
+   provider) — no debe aparecer la tarjeta Free Trial, solo Starter/Growth.
+2. **Reproducir el estado sin salida (antes del fix, si se puede probar contra una versión
+   anterior) y confirmar el fix:** elegir un plan vía Mercado Pago (tenant con `country: 'Argentina'`)
+   sin completar el pago real — Billing debe mostrar el plan elegido, sin "Cancel subscription",
+   pero SÍ con "Back to Free Trial". Clickearlo debe volver a mostrar "Free Trial" de inmediato.
+3. **No debe aparecer para un plan confirmado:** con `provider` real seteado (post-webhook), debe
+   verse "Cancel subscription" como siempre, nunca "Back to Free Trial" a la vez.
+4. **Rechazo server-side:** llamar `POST /api/subscriptions/me/clear-plan` a mano con un tenant que
+   SÍ tiene `provider` real debe devolver 400 con el mensaje de usar Cancel subscription en su
+   lugar — nunca debe poder borrar una suscripción real por este camino.

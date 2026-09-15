@@ -4,7 +4,7 @@ import { createAsyncRouter } from '../lib/asyncRouter.js';
 import { canManageBilling } from '../modules/auth/permissionService.js';
 import { startCheckout } from '../modules/tenant/checkoutService.js';
 import { getBillingSummary, getInvoiceDocumentUrl } from '../modules/tenant/subscriptionService.js';
-import { changePlan, requestCancellation, resumeSubscription } from '../modules/tenant/subscriptionSelfServeService.js';
+import { changePlan, requestCancellation, resumeSubscription, clearUnconfirmedPlan } from '../modules/tenant/subscriptionSelfServeService.js';
 import type { PlanTier } from '@prisma/client';
 
 export const subscriptionsRouter = createAsyncRouter();
@@ -129,6 +129,26 @@ subscriptionsRouter.post('/api/subscriptions/me/resume', async (req, res) => {
   }
 
   const result = await resumeSubscription(user.tenantId!, user.id);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+
+  return res.json({ success: true });
+});
+
+// 2026-09-15, QA-89 — see clearUnconfirmedPlan's own comment: only for a tenant whose plan choice
+// never actually got confirmed by a provider (no real subscription to cancel via
+// POST /api/subscriptions/me/cancel above).
+subscriptionsRouter.post('/api/subscriptions/me/clear-plan', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  if (!canManageBilling(user.roleContext)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const result = await clearUnconfirmedPlan(user.tenantId!, user.id);
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }

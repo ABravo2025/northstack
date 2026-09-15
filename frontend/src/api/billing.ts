@@ -59,6 +59,17 @@ export const billingApi = {
     if (!res.ok) await throwApiError(res);
   },
 
+  // 2026-09-15, QA-89 — for a tenant whose plan choice never actually got confirmed by a
+  // provider (no real subscription for cancelSubscription above to act on). Rejects server-side
+  // once a provider IS attached — use cancelSubscription for that instead.
+  clearUnconfirmedPlan: async (token: string): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/subscriptions/me/clear-plan`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+  },
+
   // Dodo Payments-only (2026-08-19) — the invoice URL is fetched fresh on each click rather than
   // cached anywhere.
   getInvoiceDocumentUrl: async (token: string, invoiceId: string): Promise<string> => {

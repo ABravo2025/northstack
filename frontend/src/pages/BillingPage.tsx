@@ -170,6 +170,26 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
     }
   };
 
+  // For the orphan case Alejandro hit (2026-09-15, QA-89): a plan chosen via Mercado Pago's
+  // checkout before its preapproval webhook ever confirmed — Tenant.plan shows a real plan, but
+  // subscription.provider is still null (checkoutService.ts's MP branch writes the plan
+  // immediately, no metadata channel to defer it like Dodo's checkout gets). No real subscription
+  // exists anywhere to cancel, so this just clears the local choice instead of calling
+  // handleCancel/api.cancelSubscription, which would reject with "No active paid subscription".
+  const handleClearPlan = async () => {
+    setCancelling(true);
+    try {
+      await api.clearUnconfirmedPlan(token);
+      toast.success('Back to Free Trial.');
+      setShowCancelConfirm(false);
+      load();
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   const handleResume = async () => {
     setResuming(true);
     try {
@@ -262,6 +282,13 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
           <div className="mt-3 pt-3 border-t border-line dark:border-dark-line">
             <button type="button" className="btn-ghost btn-sm text-danger" onClick={() => setShowCancelConfirm(true)}>
               Cancel subscription
+            </button>
+          </div>
+        )}
+        {!hasProvider && !isFreeTrial && (
+          <div className="mt-3 pt-3 border-t border-line dark:border-dark-line">
+            <button type="button" className="btn-ghost btn-sm text-danger" onClick={handleClearPlan} disabled={cancelling}>
+              {cancelling ? 'Clearing…' : 'Back to Free Trial'}
             </button>
           </div>
         )}

@@ -3,6 +3,9 @@ import { syncSubscriptionAndTenant } from './subscriptionService.js';
 import { cancelSubscription as cancelDodoSubscription, removeScheduledCancellation, changeSubscriptionPlan } from '../../lib/dodopayments.js';
 import { updatePreapproval } from '../../lib/mercadopago.js';
 import { countActiveSeats, extraSeatsFor, EXTRA_SEAT_PRICE_CENTS } from './seatService.js';
+import { CURRENT_PLAN_PRICES_CENTS } from './planService.js';
+import { recordActivity } from '../activity/activityLogService.js';
+import { tenantActivityFieldConfig } from '../activity/fieldConfigs/tenantFieldConfig.js';
 import type { PlanTier } from '@prisma/client';
 
 export interface SelfServeResult {
@@ -114,6 +117,57 @@ export async function resumeSubscription(tenantId: string, userId: string): Prom
     cancellationEffectiveAt: null,
     cancellationReason: null,
     changedByUserId: userId,
+  });
+
+  return { success: true };
+}
+
+// POST /api/subscriptions/me/clear-plan (2026-09-15, QA-89 — Alejandro found he had no way back
+// to Free Trial after picking a plan on Mercado Pago before its preapproval webhook ever
+// confirmed: checkoutService.ts's MP branch writes Tenant.plan/Subscription.plan immediately
+// (no metadata channel to defer it to a webhook the way Dodo's checkout does — see its own
+// comment), so a tenant can end up with a plan "chosen" but no real subscription.provider to
+// show a Cancel subscription button for, or to actually cancel). Deliberately NOT the same as
+// requestCancellation above: there's nothing real on a provider's side to cancel here — this
+// just undoes the local choice, same shape as never having picked a plan at all. Rejects outright
+// once `provider` is set — a real, confirmed subscription can only ever be ended via
+// requestCancellation, never silently wiped by this.
+export async function clearUnconfirmedPlan(tenantId: string, userId: string): Promise<SelfServeResult> {
+  const [subscription, tenant] = await Promise.all([
+    prisma.subscription.findUnique({ where: { tenantId } }),
+    prisma.tenant.findUnique({ where: { id: tenantId }, select: { plan: true } }),
+  ]);
+  if (!subscription || !tenant) {
+    return { success: false, error: 'No subscription found for this tenant' };
+  }
+  if (subscription.provider) {
+    return { success: false, error: 'You already have an active subscription — use Cancel subscription instead.' };
+  }
+  if (tenant.plan === null) {
+    return { success: false, error: 'No plan chosen yet.' };
+  }
+
+  const before = { plan: tenant.plan };
+  await prisma.$transaction([
+    prisma.tenant.update({ where: { id: tenantId }, data: { plan: null, lockedPriceCents: null, lockedPriceSetAt: null } }),
+    // Back to the same 'starter'/USD placeholder registerTenantWithOwner sets at signup — never
+    // null, Subscription.plan isn't nullable (see schema.prisma's comment on the model).
+    prisma.subscription.update({
+      where: { tenantId },
+      data: { plan: 'starter', lockedPriceCents: CURRENT_PLAN_PRICES_CENTS.starter, currency: 'USD' },
+    }),
+  ]);
+
+  await recordActivity({
+    tenantId,
+    entityType: 'tenant',
+    entityId: tenantId,
+    entityLabel: 'Plan selection',
+    action: 'update',
+    changedByUserId: userId,
+    before,
+    after: { plan: null },
+    fieldConfig: tenantActivityFieldConfig,
   });
 
   return { success: true };

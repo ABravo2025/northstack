@@ -4096,3 +4096,57 @@ publicita que existió un leak). El punto 4 no aplica, no está en producción.
    confirmar que llega escapado (texto plano), no como markup ejecutable.
 5. **Regresión Anuncios (QA-84):** confirmar que el anuncio nuevo ("Dashboards and Time Off now
    work like Settings") aparece en la campana, sección "What's new", con fecha de hoy.
+
+## QA-86 — Segundo intento: index.html sin Cache-Control endurecido a `no-store` (2026-09-15, en `main`/producción)
+
+**Por qué existe esta tarea:** Alejandro reportó que un cliente abrió la plataforma por primera vez
+y le apareció "el modelo viejo" — el fix del día anterior (`00a5348`, `Cache-Control: no-cache,
+must-revalidate` en `vercel.json`) no lo dejó resuelto del todo. Investigación con curl mostró
+`X-Vercel-Cache: HIT` con `Age` creciendo sin límite en `/` — inicialmente se interpretó como que el
+edge de Vercel ignoraba `no-cache`, pero la documentación oficial de Vercel (`/docs/caching/cdn-cache`
+y `/docs/caching/cdn-cache/purge`) aclara que **el cacheo de archivos estáticos en el edge de Vercel
+no se puede desactivar por header, por diseño** — y que la cache key ya incluye el deployment id, así
+que cada deploy nuevo invalida automáticamente lo anterior (confirmado: el contenido de `/` ya
+coincidía byte a byte con `/dashboard`, ambos con el bundle del último deploy — no había
+desincronización real de contenido en el momento del chequeo).
+
+**Diagnóstico corregido:** el bug real (antes del fix de ayer) era que `index.html` no tenía ningún
+`Cache-Control`, así que navegadores que ya habían visitado el sitio antes del fix cachearon esa
+respuesta con las reglas heurísticas del propio navegador (pueden durar días sin revalidar). El header
+`no-cache, must-revalidate` de ayer sí corrige esto para requests *nuevos* (fuerza una revalidación
+condicional en cada carga), pero **no puede alcanzar retroactivamente un navegador que ya tenía la
+página vieja guardada localmente antes de que el header existiera** — eso solo se resuelve con un
+hard refresh de ese usuario puntual, no hay nada del lado servidor que lo fuerce. Es la explicación
+más probable de por qué un cliente lo siguió viendo después del fix de ayer.
+
+**Qué se cambió hoy** (`3856af1`, `vercel.json`): `Cache-Control` de `no-cache, must-revalidate` a
+`no-store, must-revalidate` + `CDN-Cache-Control: no-store`. `no-store` es más estricto que
+`no-cache` — le prohíbe al navegador guardar la respuesta localmente (no solo "guardala pero
+revalidá"), así que este modo de falla puntual (cacheo heurístico de navegador de una respuesta sin
+headers) no puede repetirse para ninguna sesión nueva de acá en más. No cambia nada sobre el cacheo
+en el edge de Vercel (ver arriba, no es configurable para archivos estáticos, y tampoco hace falta —
+la cache key ya es por-deployment).
+
+**Pendiente/limitación conocida, no resuelta hoy:** si el cliente que reportó el bug todavía tiene la
+pestaña/perfil de navegador con la versión vieja cacheada, este fix no se la va a refrescar solo —
+necesita un hard refresh de su lado. Quedó pendiente de conversar con Alejandro si vale la pena un
+mecanismo del lado del cliente (detectar un chunk JS que devuelve 404 — señal fuerte de bundle
+desactualizado — y forzar un reload automático) para que esto se autorepare incluso en sesiones ya
+abiertas, en vez de depender solo de headers de cacheo.
+
+**Hallazgo aparte, no relacionado:** el último run de `Build Android APK` (commit `e63a454`,
+`34906477323`) falló — `setup-android` no encuentra el paquete `tools` del SDK (deprecado en la
+imagen del runner). No es la causa de este bug (la app nativa no se actualiza sola en el dispositivo
+del cliente por un build de CI roto), pero significa que el próximo APK que se genere va a quedar
+desactualizado hasta que se arregle. Sin tocar todavía, a definir con Alejandro si se prioriza.
+
+### Qué probar
+
+1. Confirmar en producción que `curl -I https://app.joinnorthstack.com/` devuelve
+   `Cache-Control: no-store, must-revalidate` y `Cdn-Cache-Control: no-store` (no `no-cache`).
+2. Confirmar que `/assets/*` sigue con `public, max-age=31536000, immutable` (no debe haber cambiado).
+3. En un navegador con DevTools → Network, cargar `/` con cache deshabilitado y habilitado — no debe
+   haber diferencia de contenido entre ambos casos, y no debe aparecer una entrada servida "from disk
+   cache"/"from memory cache" para el documento HTML en una segunda carga.
+4. No es necesario (ni posible) reproducir el bug original del cliente — requiere un navegador con
+   caché previo a 2026-09-14 11:15 UTC, que no existe en un entorno de test nuevo.

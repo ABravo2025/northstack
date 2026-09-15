@@ -1,0 +1,750 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>About Northstack — Mission, vision, and the story so far</title>
+    <meta
+      name="description"
+      content="Why Northstack exists, what we believe about software for growing teams, and the founder behind it."
+    />
+    <link rel="canonical" href="https://joinnorthstack.com/about.html" />
+
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
+    <meta name="theme-color" content="#0d2a48" />
+
+    <meta property="og:title" content="About Northstack — Mission, vision, and the story so far" />
+    <meta
+      property="og:description"
+      content="Why Northstack exists, what we believe about software for growing teams, and the founder behind it."
+    />
+    <meta property="og:image" content="https://joinnorthstack.com/og-image-1200x630.jpg" />
+    <meta property="og:url" content="https://joinnorthstack.com/about.html" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="About Northstack — Mission, vision, and the story so far" />
+    <meta
+      name="twitter:description"
+      content="Why Northstack exists, what we believe about software for growing teams, and the founder behind it."
+    />
+    <meta name="twitter:image" content="https://joinnorthstack.com/og-image-1200x630.jpg" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      /*
+        Brand palette — kept in sync by hand with frontend/src/index.css
+        (`@theme` block, --color-brand-*) on the main branch, and with
+        index.html on this same static site (no build step / shared module
+        system to import a single definition from). If you change a color
+        here, update the other two.
+      */
+      :root {
+        --ink: #0d2a48;
+        --ink-muted: #6f6a62;
+        --ink-faint: #a09a90;
+        --accent: #b8502f;
+        --accent-hover: #9c4227;
+        --surface-0: #f8f5f0;
+        --surface-1: #fffefb;
+        --surface-2: #f3efe8;
+        --line: #e6e0d6;
+        --line-strong: #d8d1c5;
+        --blue: #3c6da1;
+        --blue-light: #8dbada;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        background: var(--surface-0);
+        color: var(--ink);
+        line-height: 1.6;
+      }
+
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      a:hover {
+        color: var(--accent-hover);
+      }
+
+      h1,
+      h2,
+      h3 {
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        margin: 0;
+      }
+
+      .container {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      /* Buttons */
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 14px 26px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 15px;
+        cursor: pointer;
+        border: 1px solid transparent;
+        white-space: nowrap;
+      }
+      .btn-primary {
+        background: var(--accent);
+        color: #fff;
+      }
+      .btn-primary:hover {
+        background: var(--accent-hover);
+        color: #fff;
+      }
+      .btn-secondary {
+        background: transparent;
+        color: var(--ink);
+        border-color: var(--line-strong);
+      }
+      .btn-secondary:hover {
+        background: var(--surface-2);
+        color: var(--ink);
+      }
+      .btn-sm {
+        padding: 10px 18px;
+        font-size: 14px;
+      }
+
+      /* Nav */
+      .nav {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: var(--surface-1);
+        border-bottom: 1px solid var(--line);
+      }
+      .nav .container {
+        height: 76px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+      }
+      .nav-left {
+        display: flex;
+        align-items: center;
+        gap: 48px;
+      }
+      .nav-logo img {
+        height: 24px;
+        display: block;
+      }
+      .nav-links {
+        display: flex;
+        align-items: center;
+        gap: 28px;
+      }
+      .nav-links a {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--ink-muted);
+      }
+      .nav-links a:hover,
+      .nav-links a.active {
+        color: var(--ink);
+      }
+      .nav-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      /* Page intro (smaller hero, no floating cards) */
+      .intro {
+        position: relative;
+        overflow: hidden;
+        padding: 72px 0 64px;
+        text-align: center;
+      }
+      .intro-glow {
+        position: absolute;
+        top: -220px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 720px;
+        height: 560px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(184, 80, 47, 0.12) 0%, rgba(184, 80, 47, 0) 68%);
+        pointer-events: none;
+      }
+      .intro .container {
+        position: relative;
+        max-width: 720px;
+      }
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 16px;
+        border-radius: 999px;
+        background: var(--surface-2);
+        border: 1px solid var(--line);
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--ink-muted);
+        margin-bottom: 22px;
+      }
+      .intro h1 {
+        font-size: 48px;
+        line-height: 1.08;
+        margin-bottom: 20px;
+      }
+      .intro p.lead {
+        font-size: 18px;
+        line-height: 1.55;
+        color: var(--ink-muted);
+        margin: 0;
+      }
+
+      /* Section shell */
+      section {
+        padding: 68px 0;
+      }
+      .section-head {
+        text-align: center;
+        max-width: 620px;
+        margin: 0 auto 40px;
+      }
+      .section-head .eyebrow {
+        margin-bottom: 12px;
+      }
+      .section-head h2 {
+        font-size: 34px;
+        line-height: 1.2;
+      }
+      .section-head p {
+        font-size: 15px;
+        color: var(--ink-muted);
+        margin: 10px 0 0;
+      }
+
+      /* Story */
+      .story {
+        background: var(--surface-1);
+      }
+      .story .container {
+        max-width: 720px;
+      }
+      .story p {
+        font-size: 15.5px;
+        line-height: 1.75;
+        color: var(--ink-muted);
+        margin: 0 0 18px;
+      }
+      .story p:last-child {
+        margin-bottom: 0;
+      }
+
+      /* Mission / Vision */
+      .mv-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 24px;
+      }
+      .mv-card {
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        background: var(--surface-1);
+        padding: 32px;
+      }
+      .mv-card .icon-badge {
+        width: 46px;
+        height: 46px;
+        border-radius: 12px;
+        background: var(--surface-2);
+        color: var(--accent);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 18px;
+      }
+      .mv-card h3 {
+        font-size: 19px;
+        margin-bottom: 12px;
+      }
+      .mv-card p {
+        font-size: 15px;
+        line-height: 1.7;
+        color: var(--ink-muted);
+        margin: 0;
+      }
+
+      /* Values — dark band */
+      .values {
+        background: var(--ink);
+        color: #fff;
+      }
+      .values .section-head h2 {
+        color: #fff;
+      }
+      .values .eyebrow {
+        background: transparent;
+        border: none;
+        color: var(--accent);
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        font-size: 13px;
+        padding: 0;
+      }
+      .values-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 20px;
+      }
+      .value-card {
+        border-radius: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        background: rgba(255, 255, 255, 0.045);
+        padding: 26px;
+      }
+      .value-card .icon-badge {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        background: var(--accent);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        margin-bottom: 18px;
+      }
+      .value-card h3 {
+        font-size: 16px;
+        margin-bottom: 8px;
+      }
+      .value-card p {
+        font-size: 14px;
+        line-height: 1.6;
+        color: rgba(255, 255, 255, 0.62);
+        margin: 0;
+      }
+
+      /* Founder */
+      .founder-section .container {
+        max-width: 720px;
+      }
+      .founder-head {
+        display: flex;
+        gap: 18px;
+        align-items: flex-start;
+        margin-bottom: 20px;
+      }
+      .founder-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 999px;
+        background: var(--ink);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 19px;
+        font-weight: 700;
+        flex-shrink: 0;
+      }
+      .founder-name {
+        font-size: 16px;
+        font-weight: 700;
+      }
+      .founder-role {
+        font-size: 13.5px;
+        color: var(--ink-muted);
+        margin-top: 2px;
+      }
+      .founder-section p {
+        font-size: 15.5px;
+        line-height: 1.75;
+        color: var(--ink);
+        margin: 0 0 16px;
+      }
+      .founder-section p:last-child {
+        margin-bottom: 0;
+      }
+
+      /* Final CTA + footer */
+      .cta-band {
+        background: linear-gradient(135deg, var(--ink) 0%, #163a5f 100%);
+        padding: 72px 0;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+      .cta-glow {
+        position: absolute;
+        top: -160px;
+        right: -100px;
+        width: 420px;
+        height: 420px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(184, 80, 47, 0.22) 0%, rgba(184, 80, 47, 0) 70%);
+        pointer-events: none;
+      }
+      .cta-band .container {
+        position: relative;
+      }
+      .cta-band h2 {
+        font-size: 32px;
+        color: #fff;
+        max-width: 520px;
+        margin: 0 auto 16px;
+        line-height: 1.22;
+      }
+      .cta-band p {
+        font-size: 15px;
+        color: rgba(255, 255, 255, 0.65);
+        max-width: 440px;
+        margin: 0 auto 24px;
+      }
+
+      footer {
+        background: var(--surface-0);
+        border-top: 1px solid var(--line);
+        padding: 48px 0 32px;
+      }
+      .footer-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 48px;
+        flex-wrap: wrap;
+        margin-bottom: 32px;
+      }
+      .footer-brand {
+        max-width: 280px;
+      }
+      .footer-brand img {
+        height: 22px;
+        margin-bottom: 14px;
+      }
+      .footer-brand p {
+        font-size: 13.5px;
+        color: var(--ink-muted);
+        line-height: 1.6;
+        margin: 0;
+      }
+      .footer-cols {
+        display: flex;
+        gap: 56px;
+        flex-wrap: wrap;
+      }
+      .footer-col {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .footer-col .heading {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--ink-faint);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 2px;
+      }
+      .footer-col a {
+        font-size: 13.5px;
+        color: var(--ink-muted);
+      }
+      .footer-col a:hover {
+        color: var(--ink);
+      }
+      .footer-bottom {
+        border-top: 1px solid var(--line);
+        padding-top: 20px;
+        font-size: 12.5px;
+        color: var(--ink-faint);
+      }
+
+      @media (max-width: 900px) {
+        .nav-links {
+          display: none;
+        }
+        .intro h1 {
+          font-size: 38px;
+        }
+      }
+
+      @media (max-width: 640px) {
+        section {
+          padding: 48px 0;
+        }
+        .intro {
+          padding: 48px 0 40px;
+        }
+        .intro h1 {
+          font-size: 32px;
+        }
+        .section-head h2 {
+          font-size: 26px;
+        }
+        .cta-band h2 {
+          font-size: 26px;
+        }
+        .footer-top {
+          flex-direction: column;
+        }
+      }
+    </style>
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "AboutPage",
+        "name": "About Northstack",
+        "url": "https://joinnorthstack.com/about.html",
+        "isPartOf": {
+          "@type": "WebSite",
+          "name": "Northstack",
+          "url": "https://joinnorthstack.com/"
+        }
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+          { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://joinnorthstack.com/" },
+          { "@type": "ListItem", "position": 2, "name": "About", "item": "https://joinnorthstack.com/about.html" }
+        ]
+      }
+    </script>
+  </head>
+  <body>
+    <header class="nav">
+      <div class="container">
+        <div class="nav-left">
+          <a class="nav-logo" href="/"><img src="/logo-horizontal-light.svg" alt="Northstack" /></a>
+          <nav class="nav-links">
+            <a href="/#product">Product</a>
+            <a href="/#pricing">Pricing</a>
+            <a href="/about.html" class="active">About</a>
+            <a href="/#faq">FAQ</a>
+          </nav>
+        </div>
+        <div class="nav-right">
+          <a class="btn btn-secondary btn-sm" href="https://app.joinnorthstack.com/login">Sign in</a>
+          <a class="btn btn-primary btn-sm" href="https://app.joinnorthstack.com/register">Start free trial</a>
+        </div>
+      </div>
+    </header>
+
+    <section class="intro">
+      <div class="intro-glow"></div>
+      <div class="container">
+        <div class="eyebrow">About Northstack</div>
+        <h1>Built to fix what we lived ourselves.</h1>
+        <p class="lead">
+          Northstack started as a reaction to the same problem, seen at one startup after
+          another: HR, client management, and payroll tracking held together with
+          spreadsheets and tools that don't talk to each other.
+        </p>
+      </div>
+    </section>
+
+    <section class="story">
+      <div class="container">
+        <div class="section-head" style="margin-bottom: 28px">
+          <h2>Our story</h2>
+        </div>
+        <p>
+          Throughout my career, I kept seeing the same pattern repeat itself across different
+          startups: a growing team outgrows its spreadsheets, and the "solution" ends up being
+          three or four disconnected tools — one for people, one for the sales pipeline, one
+          for tracking payroll — none of which share a login, a permission model, or a source
+          of truth.
+        </p>
+        <p>
+          The tools built to fix that are almost always built for companies much bigger than
+          that. They come with enterprise pricing, months-long implementations, and features a
+          five-to-fifty-person team will never touch. Northstack is what I wished existed
+          instead: one modular platform, sized and priced for the team you actually have
+          today, that adds capability as you grow rather than demanding you grow into it
+          first.
+        </p>
+        <p>
+          It's still early — the product is in active development, and I'm building it in the
+          open, one module at a time, with real teams using it and shaping what comes next.
+        </p>
+      </div>
+    </section>
+
+    <section id="mission-vision">
+      <div class="container">
+        <div class="section-head">
+          <div class="eyebrow">What drives it</div>
+          <h2>Mission &amp; vision.</h2>
+        </div>
+        <div class="mv-grid">
+          <div class="mv-card">
+            <div class="icon-badge">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>
+            </div>
+            <h3>Mission</h3>
+            <p>
+              To give growing teams — five people or fifty — one place to run HR, sales, and
+              payroll tracking, without paying enterprise prices or stitching together tools
+              that don't talk to each other.
+            </p>
+          </div>
+          <div class="mv-card">
+            <div class="icon-badge">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+            </div>
+            <h3>Vision</h3>
+            <p>
+              A future where switching to "real" business software doesn't mean a six-month
+              implementation and enterprise pricing. We believe a five-person team deserves
+              tools as considered as a five-hundred-person team's — just sized, priced, and
+              built for where they actually are.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="values">
+      <div class="container">
+        <div class="section-head">
+          <div class="eyebrow">How we build</div>
+          <h2>What we optimize for.</h2>
+        </div>
+        <div class="values-grid">
+          <div class="value-card">
+            <div class="icon-badge">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m12 2 3 7h7l-5.5 4.5L18.5 21 12 16.5 5.5 21l2-7.5L2 9h7l3-7Z"/></svg>
+            </div>
+            <h3>Right-sized, on purpose</h3>
+            <p>Every feature earns its place because a real team of 5–50 needed it — not because it looks good on a comparison chart.</p>
+          </div>
+          <div class="value-card">
+            <div class="icon-badge">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>
+            </div>
+            <h3>Built in the open, close to users</h3>
+            <p>One founder building it hands-on means feedback turns into shipped changes in days, not quarters.</p>
+          </div>
+          <div class="value-card">
+            <div class="icon-badge">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 3 6v6c0 5 3.8 9.4 9 10 5.2-.6 9-5 9-10V6l-9-4z"/></svg>
+            </div>
+            <h3>Isolation and security first</h3>
+            <p>Multi-tenant from day one. Every company's data is isolated at the database level and never shares a row with anyone else's.</p>
+          </div>
+          <div class="value-card">
+            <div class="icon-badge">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </div>
+            <h3>Foundations before features</h3>
+            <p>We'd rather ship something solid a quarter late than something fragile on time.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="founder-section">
+      <div class="container">
+        <div class="section-head" style="margin-bottom: 28px">
+          <div class="eyebrow">From the founder</div>
+          <h2>Who's building this.</h2>
+        </div>
+        <div class="founder-head">
+          <div class="founder-avatar">AB</div>
+          <div>
+            <div class="founder-name">Alejandro Bravo</div>
+            <div class="founder-role">Founder, Northstack — Buenos Aires, Argentina</div>
+          </div>
+        </div>
+        <p>
+          Northstack was born from frustration — a platform built so every company can run
+          itself independently, without bending its operations to fit a rigid system. That's
+          the idea I keep testing every feature against.
+        </p>
+        <p>
+          Right now, I'm the person designing it, building it, and answering support email —
+          which is a trade-off. It means Northstack is still small and still adding modules,
+          but it also means there's a direct line between what you tell me and what I ship
+          next. I'm focused on solid foundations before rushed features, and I'd rather grow
+          slowly on a platform that holds up than rush something that doesn't.
+        </p>
+        <p>
+          Questions, feedback, or just want to talk about how you're using it? I read
+          everything sent to <a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a>.
+        </p>
+      </div>
+    </section>
+
+    <div class="cta-band">
+      <div class="cta-glow"></div>
+      <div class="container">
+        <h2>Ready to bring your team together?</h2>
+        <p>Start your 15-day free trial today. No credit card required.</p>
+        <a class="btn btn-primary" href="https://app.joinnorthstack.com/register">Start free trial</a>
+      </div>
+    </div>
+
+    <footer>
+      <div class="container">
+        <div class="footer-top">
+          <div class="footer-brand">
+            <img src="/logo-horizontal-light.svg" alt="Northstack" />
+            <p>HR, sales, and payroll tracking — one modular platform for growing teams.</p>
+          </div>
+          <div class="footer-cols">
+            <div class="footer-col">
+              <div class="heading">Product</div>
+              <a href="/#product">Product</a>
+              <a href="/#pricing">Pricing</a>
+              <a href="/#faq">FAQ</a>
+            </div>
+            <div class="footer-col">
+              <div class="heading">Company</div>
+              <a href="/about.html">About</a>
+            </div>
+            <div class="footer-col">
+              <div class="heading">Legal</div>
+              <a href="/terms.html">Terms of Service</a>
+              <a href="/privacy.html">Privacy Policy</a>
+              <a href="/refund.html">Refund Policy</a>
+            </div>
+            <div class="footer-col">
+              <div class="heading">Contact</div>
+              <a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a>
+            </div>
+          </div>
+        </div>
+        <div class="footer-bottom">© 2026 Northstack. All rights reserved.</div>
+      </div>
+    </footer>
+  </body>
+</html>

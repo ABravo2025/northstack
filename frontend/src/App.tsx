@@ -143,7 +143,14 @@ export default function App() {
       if (newToken) {
         setToken(newToken);
         localStorage.setItem('token', newToken);
-        setUser(response.user);
+        // Deliberately NOT setUser(response.user) here (found live, 2026-09-15 — a customer's
+        // first login showed a sidebar missing Payroll/the whole Sales group, permanently until
+        // a manual reload): setting `user` this early made isAuthenticated true — and AppLayout
+        // render for real — before the [token] effect below has fetched permissions/tenant, so
+        // Sidebar's usePermissions()/isGrowthFeatureEnabled(tenant) rendered fail-closed against
+        // null. Leaving `user` unset here means isAuthenticated stays false (LoginPage keeps
+        // showing) until that effect's Promise.all resolves and sets user+permissions+tenant
+        // together — AppLayout's first-ever render then already has everything it needs.
       }
     } catch (error) {
       // /api/auth/login never returns a `field` (unlike registration) — always a toast.

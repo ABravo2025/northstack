@@ -784,6 +784,9 @@ Solo datos (`COUNTRIES`, `CHANGELOG_ENTRIES`), sin funciones — no indexado má
 ### `frontend/src/hooks/useResizableColumns.ts`
 - **useResizableColumns(storageKey)** — mismo criterio que `useColumnVisibility` pero para anchos de columna.
 
+### `frontend/src/hooks/useNewVersionAvailable.ts`
+- **useNewVersionAvailable()** — devuelve `true` cuando el bundle JS que esta pestaña cargó ya no coincide con el que sirve `/` (deploy nuevo mientras la sesión estaba abierta). Compara el `src` del `<script>` de `/assets/` contra uno leído por polling (cada 15min + al volver a foco la pestaña) de un fetch fresco de `/` (`cache: 'no-store'`). No hace nada en dev server (sin bundle hasheado). Complementa el `Cache-Control: no-store` de `vercel.json` (2026-09-15, QA-86) — ese header solo previene que un navegador cachee `index.html` en una carga *nueva*; este hook cubre la sesión que ya estaba abierta cuando salió el deploy. Consumido por `AppLayout.tsx` (banner "A new version of Northstack is available" con botón Reload, mismo patrón visual que los banners de past_due/suspended).
+
 ### `frontend/src/api/*` — cliente HTTP, un archivo por dominio, todos re-exportados juntos en `api` (`frontend/src/api/index.ts`)
 Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, ver `frontend/src/api/http.ts` para `apiFetch`/`throwApiError` compartidos):
 

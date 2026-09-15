@@ -4150,3 +4150,61 @@ desactualizado hasta que se arregle. Sin tocar todavía, a definir con Alejandro
    cache"/"from memory cache" para el documento HTML en una segunda carga.
 4. No es necesario (ni posible) reproducir el bug original del cliente — requiere un navegador con
    caché previo a 2026-09-14 11:15 UTC, que no existe en un entorno de test nuevo.
+
+## QA-87 — Causa real del "modelo viejo": race condition en login, no caché (2026-09-15, en `main`/producción)
+
+**Por qué existe esta tarea:** QA-86 (arriba) resultó ser un diagnóstico incorrecto. Alejandro
+confirmó con una prueba de incógnito que el problema persistía incluso sin caché de navegador de por
+medio, y compartió DevTools → Network mostrando que el bundle cargado (`index-BjE0gxa0.js`) era el
+mismo que ya se había confirmado actualizado — descartando por completo cualquier teoría de
+deploy/CDN viejo. Comparando su captura "rota" (sin Payroll, sin el grupo Sales completo, sin
+Settings visible) contra una captura de la misma pantalla funcionando bien, la diferencia real eran
+exactamente los ítems de nav que dependen de `tenant`/`permissions` — datos que se cargan async.
+
+**Causa real, en `frontend/src/App.tsx`:** `handleLogin` seteaba `token` **y** `user` de forma
+síncrona a partir de la respuesta de `POST /api/auth/login`, lo que hace `isAuthenticated` verdadero
+y monta `AppLayout`/`Sidebar` de inmediato — pero `permissions` y `tenant` recién se cargan después,
+en el `useEffect` separado que dispara `Promise.all([getCurrentUser, getCurrentTenant])` cuando
+`token` cambia. Como ese efecto corre *después* de que React ya pintó el render con
+`isAuthenticated=true` y `permissions=null`/`tenant=null`, `Sidebar.tsx` renderizaba con
+`usePermissions()` en su default "fail closed" (`PermissionsContext.tsx`, por diseño: "a page can
+render for a moment before the session/permissions payload has loaded... fail closed in that
+window") y `isGrowthFeatureEnabled(null)` en `false` — ocultando el grupo Sales completo (Companies/
+Contacts/Opportunities/Payments) y Payroll. El comentario del propio código ya avisaba que esto era
+"por un momento" — pero en un login real (más lento que en desarrollo local) esa ventana alcanza para
+verse como una versión rota/vieja de la app, y no se auto-corrige de forma confiable en todos los
+casos, de ahí que un F5 manual (que sí espera correctamente vía `checkingSession`) lo arreglara.
+
+**Fix** (`frontend/src/App.tsx`, `handleLogin`): se dejó de llamar `setUser(response.user)` ahí —
+ahora `isAuthenticated` se queda en `false` (sigue mostrando `LoginPage`) hasta que el mismo efecto
+que ya existía haga el `Promise.all` y setee `user` + `permissions` + `tenant` juntos en el mismo
+`.then()`. El primer render de `AppLayout` después de un login ya tiene todo lo que necesita —no hay
+ventana intermedia. **Deliberadamente no tocado**: `handleContractConfirmed`,
+`handlePasswordReset`, `handleInvitationAccepted`, `handleSignupCompleted` tienen el mismo patrón
+(`setUser` + `navigate('/overview')` inmediato) y probablemente la misma clase de bug, pero a
+diferencia de login esos SÍ navegan de inmediato — sacarles el `setUser` ahí causaría un rebote
+visible a `/login` (por el guard `if (!token || !user)` de `AppLayout`) antes de que el efecto
+resuelva y los mande de vuelta a `/overview`. Necesitan una solución distinta (ej. esperar el
+`Promise.all` antes de navegar) — pendiente de decidir con Alejandro si se hace ahora o después.
+
+**No relacionado, dejado como está:** el `Cache-Control: no-store` de QA-86 y el hook
+`useNewVersionAvailable` (`frontend/src/hooks/useNewVersionAvailable.ts`, ver
+`function-index.md`) siguen siendo mejoras válidas por su cuenta (defensa real contra un bundle
+desactualizado en una sesión larga), pero no eran la causa de este bug puntual — no se revirtieron.
+
+### Qué probar
+
+1. **Reproducir el bug original (antes del fix, para confirmarlo primero si hay forma de probar
+   contra una versión anterior) y el fix:** login fresco (no sesión restaurada) en una cuenta con
+   plan Growth + permisos de Sales — confirmar que el sidebar muestra Payroll y el grupo Sales
+   completo (Companies/Contacts/Opportunities/Payments) **desde el primer render**, sin flash de una
+   versión reducida ni necesidad de recargar. Repetir varias veces (la ventana de carrera era más
+   fácil de ver con latencia real, no en localhost) — idealmente con throttling de red en DevTools
+   para agrandar la ventana y confirmar que ya no aparece en absoluto.
+2. **Regresión de login:** confirmar que el flujo normal de login (credenciales correctas,
+   incorrectas, loading state del botón) sigue funcionando igual que antes — el único cambio es que
+   `user` ya no se setea desde la respuesta de `/api/auth/login` directamente.
+3. **Otros flujos con el mismo patrón (fuera de scope de este fix, solo confirmar que no empeoraron):**
+   accept-invite, reset-password, confirm-contract, register/complete — deberían seguir funcionando
+   como antes (no se tocaron), pero vale la pena confirmar que ninguno quedó con el mismo bug visible
+   si el momento es propicio para reportarlo, ya que comparten el patrón.

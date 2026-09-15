@@ -16,6 +16,7 @@ import { redirectToCheckout } from '../lib/checkout';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { PrimaryActionProvider } from '../contexts/PrimaryActionContext';
 import { TimeOffTabProvider } from '../contexts/TimeOffTabContext';
+import { useNewVersionAvailable } from '../hooks/useNewVersionAvailable';
 
 interface AppLayoutProps {
   user: any;
@@ -41,6 +42,7 @@ export default function AppLayout({ user, token, tenant, onTenantUpdated, onLogo
   const location = useLocation();
   const permissions = usePermissions();
   const toast = useToast();
+  const newVersionAvailable = useNewVersionAvailable();
 
   useEffect(() => {
     setMobileSidebarOpen(false);
@@ -116,6 +118,18 @@ export default function AppLayout({ user, token, tenant, onTenantUpdated, onLogo
           <Sidebar mobileOpen={mobileSidebarOpen} onMobileClose={() => setMobileSidebarOpen(false)} tenant={tenant} />
         )}
         <main className="app-main">
+          {newVersionAvailable && (
+            <div className="alert alert-info mx-4 mt-4 sm:mx-6 flex items-center justify-between gap-3">
+              <span>A new version of Northstack is available.</span>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm whitespace-nowrap"
+                onClick={() => window.location.reload()}
+              >
+                Reload
+              </button>
+            </div>
+          )}
           {tenant?.status === 'suspended' && permissions.has('manage_billing') && (
             <div className="alert alert-error mx-4 mt-4 sm:mx-6 flex items-center justify-between gap-3">
               <span>

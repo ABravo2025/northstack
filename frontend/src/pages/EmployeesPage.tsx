@@ -424,7 +424,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     setSeedingSample(true);
     try {
       const result = await api.seedSampleData(token);
-      toast.success(`Added ${result.employees} sample employees and ${result.clients} sample clients.`);
+      toast.success(`Added ${result.employees} sample employees and ${result.companies} sample companies.`);
       await loadEmployees();
       await loadEmployeeDirectory();
     } catch (error) {

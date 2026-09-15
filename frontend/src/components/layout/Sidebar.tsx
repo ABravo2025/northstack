@@ -65,7 +65,7 @@ export default function Sidebar({ mobileOpen, onMobileClose, tenant }: SidebarPr
         </button>
 
         <div>
-          <NavLink to="/overview" className={linkClass} title="Overview" onClick={onMobileClose}>
+          <NavLink to="/overview" className={linkClass} title="Overview" onClick={onMobileClose} data-tour="nav-overview">
             <HomeIcon className="h-4 w-4 shrink-0" />
             {label('Overview')}
           </NavLink>
@@ -77,7 +77,7 @@ export default function Sidebar({ mobileOpen, onMobileClose, tenant }: SidebarPr
 
         <div className="sidebar-divider">
           {!collapsed && <p className="sidebar-group-label">Human Resources</p>}
-          <NavLink to="/hr/people" className={linkClass} title="People" onClick={onMobileClose}>
+          <NavLink to="/hr/people" className={linkClass} title="People" onClick={onMobileClose} data-tour="nav-hr">
             <PeopleIcon className="h-4 w-4 shrink-0" />
             {label('People')}
           </NavLink>
@@ -97,7 +97,7 @@ export default function Sidebar({ mobileOpen, onMobileClose, tenant }: SidebarPr
           <div className="sidebar-divider">
             {!collapsed && <p className="sidebar-group-label">Sales</p>}
             {canSeeCompany && (
-              <NavLink to="/companies" className={linkClass} title="Companies" onClick={onMobileClose}>
+              <NavLink to="/companies" className={linkClass} title="Companies" onClick={onMobileClose} data-tour="nav-sales">
                 <BuildingIcon className="h-4 w-4 shrink-0" />
                 {label('Companies')}
               </NavLink>
@@ -124,7 +124,7 @@ export default function Sidebar({ mobileOpen, onMobileClose, tenant }: SidebarPr
         )}
 
         <div className="sidebar-footer">
-          <NavLink to="/settings" className={linkClass} title="Settings" onClick={onMobileClose}>
+          <NavLink to="/settings" className={linkClass} title="Settings" onClick={onMobileClose} data-tour="nav-settings">
             <GearIcon className="h-4 w-4 shrink-0" />
             {label('Settings')}
           </NavLink>

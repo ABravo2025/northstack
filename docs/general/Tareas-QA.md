@@ -4251,3 +4251,60 @@ ruta.
    (el efecto compartido puede disparar su propio `Promise.all` en paralelo si llega a ver el
    pathname ya actualizado — es redundante pero inofensivo, ambos deberían converger al mismo
    resultado correcto, no debería producir ningún estado inconsistente ni error en consola).
+
+## QA-91 — Product tour: reemplaza el checklist de onboarding (2026-09-15, en `staging`)
+
+**Por qué existe esta tarea:** a pedido de Alejandro (`docs/tareas/Task-UxUI.md`), se retiró el
+widget `OnboardingChecklist.tsx` (dismiss permanente, solo 3 ítems de HR) y se reemplazó por un
+tour guiado con spotlight sobre el sidebar/topbar real, construido sin librería nueva. De paso se
+corrigió un bug real encontrado durante el análisis: `seedSampleData` creaba filas del modelo
+`Client` legado, que ninguna página del frontend renderea — el toast decía "Added N sample clients"
+y esos registros eran invisibles en la UI. Mockup de referencia (roles, layout, estados):
+[Product Tour Walkthrough](https://claude.ai/artifact/TZAhZkYANiz86avDaAkwZo).
+
+**Qué cambió:**
+- `prisma/schema.prisma`: `User.productTourCompletedAt DateTime?` (aditivo, ya pusheado a la base de
+  `staging`). Null = nunca vio ni saltó el tour.
+- `frontend/src/components/tour/ProductTour.tsx` (nuevo): motor del tour — spotlight vía
+  `box-shadow` sobre el elemento real (anclado por atributos `data-tour="..."` agregados a
+  `Sidebar.tsx`/`TopBar.tsx`), tooltip con Back/Next/Skip/cerrar (✕), 8 pasos (bienvenida → Overview
+  → People → Companies [se salta sin `view_company`+`view_contact`] → notificaciones → menú de
+  usuario → Settings → cierre con 2 CTA). Montado una vez en `AppLayout.tsx`, se auto-lanza si
+  `!user.productTourCompletedAt`, con un delay corto. "Take the tour again" en el dropdown del menú
+  de usuario (`TopBar.tsx`) lo relanza manualmente sin tocar el flag de completado.
+- `src/routes/onboarding.ts`: `POST /api/onboarding/tour-complete` nuevo (marca el flag al terminar
+  o saltear el tour); `seed-sample-data` ahora pasa el `userId` de la sesión.
+- `src/modules/onboarding/onboardingService.ts`: `seedSampleData` reemplazó el loop de
+  `createClient` (legado) por `createCompany` (crea Company + Contact primario en la misma
+  transacción) — devuelve `{ employees, companies }` en vez de `{ employees, clients }`. Se retiró
+  `getOnboardingStatus` (sin más consumidores tras sacar el checklist).
+- `frontend/src/pages/EmployeesPage.tsx`: su propio botón de "Load sample data" (independiente del
+  checklist, en el empty state de la tabla) actualizado al nuevo shape de la respuesta.
+- `frontend/src/components/layout/OnboardingChecklist.tsx`: borrado.
+
+### Qué probar
+
+1. **Auto-lanzado en primer login:** crear un tenant nuevo de prueba (o un usuario invitado nuevo) y
+   confirmar que el tour arranca solo en `/overview` ~600ms después de cargar, con el spotlight
+   siguiendo correctamente cada elemento real (Overview → People → Companies → campana → menú de
+   usuario → Settings) sin desalinearse al hacer scroll/resize/colapsar el sidebar.
+2. **Gating por rol:** repetir con un usuario/rol sin `view_company`/`view_contact` (ej. un Member
+   con los permisos default actuales) y confirmar que el paso de Companies se salta solo y el
+   contador de pasos se recalcula (7 en vez de 8).
+3. **Cierre:** en el modal final, probar los 2 CTA — "Add my first employee" navega a `/hr/people`;
+   "Load sample data instead" siembra datos y **confirmar que las Companies/Contacts de muestra
+   aparecen de verdad en `/companies` y `/contacts`** (el bug que esto corrige). Repetir el mismo
+   chequeo con el botón de "Load sample data" propio de `/hr/people` (EmployeesPage), que comparte
+   el mismo endpoint.
+4. **Cerrar con la X / Skip:** confirmar que cerrar el tour en cualquier paso (✕ del tooltip, ✕ del
+   modal de bienvenida/cierre, o "Skip tour") marca `productTourCompletedAt` (no vuelve a
+   auto-lanzarse en un login posterior del mismo usuario) sin bloquear el resto de la app — el
+   overlay debe desaparecer por completo y los clicks normales deben volver a funcionar de inmediato.
+5. **Replay manual:** desde el menú de usuario, "Take the tour again" en una cuenta que ya lo
+   completó — debe relanzarlo desde el paso 0 sin afectar el flag (un logout/login posterior no debe
+   volver a auto-lanzarlo).
+6. **Regresión:** confirmar que el widget viejo (`OnboardingChecklist`) ya no aparece en ningún lado
+   de `/overview` y que no quedó ninguna referencia rota a `getOnboardingStatus`/`hasClients` en el
+   frontend.
+7. **Pendiente de anuncio in-app:** no se publicó todavía (Alejandro pidió revisar primero en
+   `staging`) — publicar con `scripts/publish-announcement.ts` recién si esto se promueve a `main`.

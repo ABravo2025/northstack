@@ -109,9 +109,9 @@ process or execute those payments at all; see Section 1.3 of our Terms of Servic
 Please read this Policy, together with the free trial terms in Section 2, before adding a
 payment method or subscribing to a paid plan.
 
-**Beta status.** The Service is currently offered as a beta / early-access product (see
-Section 1.1 of our Terms of Service). Our plans, pricing, and this Policy itself may change
-as the product evolves — see Section 7 (Changes to this Policy).
+**Public beta status.** The Service is currently under active development and offered as a
+public beta (see Section 1.1 of our Terms of Service). Our plans, pricing, and this Policy
+itself may change as the product evolves — see Section 7 (Changes to this Policy).
 
 ---
 

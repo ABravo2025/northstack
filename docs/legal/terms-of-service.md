@@ -163,14 +163,16 @@ lets a company ("**Tenant**") register an independent account and manage human r
 records, client/contact records, and related custom data fields, together with user
 accounts, roles, and permissions for that Tenant (the "**Service**").
 
-### 1.1 Beta status
+### 1.1 Public beta status
 
-**The Service is currently offered as a beta / early-access product.** It may contain
-bugs, may change substantially (including removal or modification of features) without
-notice, and is not guaranteed to be available at all times. We do not offer a service
-level agreement (SLA) or uptime commitment during this stage. You should not rely on the
-Service as the sole system of record for information you cannot afford to lose, and you
-are responsible for maintaining your own backups of Customer Data where practicable.
+**The Service is currently under active development and offered as a public beta.** It is
+openly available for anyone to sign up and use — this is not a private or invite-only beta
+— but it remains a beta: it may contain bugs, may change substantially (including removal
+or modification of features) without notice, and is not guaranteed to be available at all
+times. We do not offer a service level agreement (SLA) or uptime commitment during this
+stage. You should not rely on the Service as the sole system of record for information you
+cannot afford to lose, and you are responsible for maintaining your own backups of Customer
+Data where practicable.
 
 ### 1.2 Eligibility
 
@@ -324,7 +326,7 @@ access, for any suspected violation of this Section.
 
 ## 5. Fees and Billing
 
-**The Service remains in beta (Section 1.1).** While that's the case, you should expect
+**The Service remains in public beta (Section 1.1).** While that's the case, you should expect
 fees, plans, and this Section to change more often, and with less advance warning, than a
 mature, generally-available product — see Section 14 (Changes to these Terms) for how we
 notify you.
@@ -431,7 +433,7 @@ to legal or regulatory liability.
 and a reasonable opportunity to cure before suspending or terminating your access, unless
 the circumstances described above apply.
 
-**Discontinuation.** We may also discontinue the Service or the beta program described in
+**Discontinuation.** We may also discontinue the Service or the public beta program described in
 Section 1.1, in which case we will provide reasonable advance notice where practicable.
 
 ### 9.3 Effect of termination
@@ -501,7 +503,7 @@ the Service in violation of these Terms.
 
 ## 14. Changes to these Terms
 
-**The Service remains in beta (Section 1.1).** While that's the case, you should expect
+**The Service remains in public beta (Section 1.1).** While that's the case, you should expect
 these Terms, our pricing and plans, and the Service itself to change more often, and with
 less advance warning, than a mature, generally-available product.
 

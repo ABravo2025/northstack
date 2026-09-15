@@ -69,10 +69,10 @@ collects, uses, shares, and protects information in connection with the Northsta
 (the "**Service**"). Capitalized terms not defined here have the meaning given in our
 [Terms of Service](./terms-of-service.md).
 
-**Beta status.** The Service is currently offered as a beta / early-access product (see
-Section 1.1 of our Terms of Service). Because of that, the Service — and this Policy — may
-change more often, and with less advance notice, than a mature, generally-available
-product; see Section 10 (Changes to this Policy).
+**Public beta status.** The Service is currently under active development and offered as a
+public beta (see Section 1.1 of our Terms of Service). Because of that, the Service — and
+this Policy — may change more often, and with less advance notice, than a mature,
+generally-available product; see Section 10 (Changes to this Policy).
 
 ---
 

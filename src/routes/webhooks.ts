@@ -234,9 +234,29 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
       // period bump and Invoice, still record the new card. UNVERIFIED against a real Dodo sandbox
       // delivery yet (no live credentials at the time this was written) — confirm both branches
       // before go-live, same caveat this codebase already carries for Mercado Pago's field names.
+      //
+      // Still confirms metadata.plan here too (2026-09-15, QA-90 — Alejandro paid with the 100%
+      // test discount code and Billing kept showing Free Trial): total_amount === 0 covers BOTH a
+      // genuine trial mandate-verification charge AND a real subscription that happens to net to
+      // $0 from a full discount — either way, checkout completing for a NEW subscription (Dodo
+      // authorized the card/mandate) is exactly the "confirmed" moment QA-88 meant to key off of,
+      // same as subscription.active below already does for provider/externalSubscriptionId.
+      // Deliberately still skips status/period/Invoice here (kept 'trialing', no period dates) —
+      // only a genuine non-zero charge should ever flip status to 'active'.
       if (payment.is_update_payment_method || payment.total_amount === 0) {
-        if (Object.keys(paymentMethodFields).length > 0) {
-          await syncSubscriptionAndTenant({ tenantId: subscription.tenantId, ...paymentMethodFields });
+        const metadataPlan0 = event.data.metadata?.plan;
+        const isNewPlanChoice0 = metadataPlan0 === 'starter' || metadataPlan0 === 'growth';
+        const planFields0 = isNewPlanChoice0
+          ? {
+              provider: 'dodopayments' as const,
+              externalSubscriptionId: payment.subscription_id ?? subscription.externalSubscriptionId ?? '',
+              plan: metadataPlan0 as 'starter' | 'growth',
+              lockedPriceCents: CURRENT_PLAN_PRICES_CENTS[metadataPlan0 as 'starter' | 'growth'],
+            }
+          : {};
+        const fields0 = { ...paymentMethodFields, ...planFields0 };
+        if (Object.keys(fields0).length > 0) {
+          await syncSubscriptionAndTenant({ tenantId: subscription.tenantId, ...fields0 });
         }
         return res.status(200).json({ status: 'ok' });
       }
@@ -317,10 +337,19 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
       // charge actually lands. planTransitionService.ts's cron already skips any tenant whose
       // Subscription.provider is set, so this trialing-with-a-provider tenant isn't incorrectly
       // bumped to past_due by our own grace-period logic while Dodo handles the real transition.
+      //
+      // Also confirms metadata.plan now (2026-09-15, QA-90 — same reasoning as the $0 branch
+      // above: this event, not just a real charge, is genuinely "checkout completed" for a
+      // first-time subscribe, and is very often the FIRST event to arrive for a trial checkout).
+      const metadataPlanActive = event.data.metadata?.plan;
+      const isNewPlanChoiceActive = metadataPlanActive === 'starter' || metadataPlanActive === 'growth';
       await syncSubscriptionAndTenant({
         tenantId: subscription.tenantId,
         provider: 'dodopayments',
         externalSubscriptionId: event.data.subscription_id ?? subscription.externalSubscriptionId ?? '',
+        ...(isNewPlanChoiceActive
+          ? { plan: metadataPlanActive, lockedPriceCents: CURRENT_PLAN_PRICES_CENTS[metadataPlanActive] }
+          : {}),
       });
     }
 

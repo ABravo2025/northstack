@@ -4381,3 +4381,44 @@ distintas:
 4. **Rechazo server-side:** llamar `POST /api/subscriptions/me/clear-plan` a mano con un tenant que
    SÍ tiene `provider` real debe devolver 400 con el mensaje de usar Cancel subscription en su
    lugar — nunca debe poder borrar una suscripción real por este camino.
+
+## QA-90 — Billing: pagar con el código de descuento de prueba seguía mostrando Free Trial (2026-09-15, en `main`/producción)
+
+**Por qué existe esta tarea:** Alejandro pagó con el código de descuento de prueba (100% off, uso
+exclusivo de Claude para probar el checkout real, nunca en el flujo de un cliente real) y Billing
+siguió mostrando "Free Trial" después de completar el pago.
+
+**Causa real:** `routes/webhooks.ts`'s handler de `payment.succeeded` tiene una rama que salta el
+período/Invoice cuando `total_amount === 0` — pensada originalmente solo para el cobro $0 de
+verificación de tarjeta al arrancar un trial. Un código de descuento del 100% también produce
+`total_amount === 0`, así que cualquier pago (real o de prueba) que caiga en esa rama nunca llegaba
+a la lógica de confirmación de plan de QA-88 (que solo vivía en la rama de cobro real, más abajo).
+Mismo problema en el handler de `subscription.active` (se dispara cuando Dodo autoriza el mandato de
+cobro, frecuentemente el primer evento en llegar para un checkout con trial) — tampoco leía
+`metadata.plan`.
+
+**Fix:** ambas ramas (`payment.succeeded`'s branch de `total_amount === 0`/`is_update_payment_method`,
+y `subscription.active`) ahora también leen `metadata.plan` y confirman
+`provider`/`externalSubscriptionId`/`plan`/`lockedPriceCents` cuando corresponde — sin tocar
+`status`/período/Invoice (eso sigue siendo exclusivo de un cobro real y no-cero). Ambas ramas son
+idempotentes entre sí y con la rama de cobro real — no importa cuál dispare primero.
+
+**Nota operativa de esta tarea:** durante la implementación se detectó que el directorio de trabajo
+local está compartido con otra sesión de Claude Code activa en simultáneo (trabajando en un
+"Product Tour" sobre `staging`) — un cambio de rama de esa sesión dejó varios archivos de QA-88/89
+mostrando contenido viejo sin que `git status` lo reflejara (la rama local había cambiado a
+`staging`). Se reconstruyeron todos los archivos afectados leyendo el blob correcto de
+`origin/main` (sin usar `git reset`/`checkout` destructivo) antes de aplicar este fix. Nada de QA-88/89
+se perdió, pero vale la pena que Alejandro sepa que hay otra sesión activa en el mismo working
+directory en este momento.
+
+### Qué probar
+
+1. **Repetir el pago con el código de descuento de prueba** (o cualquier pago que termine en
+   `total_amount: 0`, incluida la verificación de tarjeta al inicio de un trial real) — Billing debe
+   mostrar el plan elegido de inmediato, no Free Trial.
+2. **Regresión — pago real no-cero:** confirmar que el flujo ya probado en QA-88 (cobro real,
+   período, Invoice, desglose) sigue funcionando exactamente igual — esta tarea no tocó esa rama.
+3. **Regresión — update payment method:** confirmar que actualizar el método de pago de una
+   suscripción YA existente sigue sin tocar el plan (esa sesión nunca manda `metadata.plan`, por
+   diseño de `checkoutService.ts`).

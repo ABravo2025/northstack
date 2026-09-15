@@ -8,6 +8,7 @@ import TopBar from '../components/layout/TopBar';
 import MobileTabbar from '../components/layout/MobileTabbar';
 import PrimaryActionFab from '../components/layout/PrimaryActionFab';
 import PlansModal from '../components/common/PlansModal';
+import ProductTour from '../components/tour/ProductTour';
 import { useToast } from '../components/common/ToastProvider';
 import type { PlanTier, Tenant } from '../api';
 import { daysRemainingUntil } from '../lib/trial';
@@ -38,6 +39,7 @@ export default function AppLayout({ user, token, tenant, onLogout }: AppLayoutPr
   const [sessionDismissed, setSessionDismissed] = useState(false);
   const [plansModalForceOpen, setPlansModalForceOpen] = useState(false);
   const [startingCheckout, setStartingCheckout] = useState(false);
+  const [tourReplaySignal, setTourReplaySignal] = useState(0);
   const location = useLocation();
   const permissions = usePermissions();
   const toast = useToast();
@@ -109,7 +111,13 @@ export default function AppLayout({ user, token, tenant, onLogout }: AppLayoutPr
     <PrimaryActionProvider>
     <TimeOffTabProvider>
     <div className="app">
-      <TopBar user={user} token={token} onLogout={onLogout} onMenuClick={() => setMobileSidebarOpen(true)} />
+      <TopBar
+        user={user}
+        token={token}
+        onLogout={onLogout}
+        onMenuClick={() => setMobileSidebarOpen(true)}
+        onReplayTour={() => setTourReplaySignal((n) => n + 1)}
+      />
       <div className="app-shell">
         {location.pathname.startsWith('/settings') ? (
           <SettingsSidebar mobileOpen={mobileSidebarOpen} onMobileClose={() => setMobileSidebarOpen(false)} />
@@ -190,6 +198,7 @@ export default function AppLayout({ user, token, tenant, onLogout }: AppLayoutPr
         onClose={dismissPlansModal}
         onSelectPlan={handleSelectPlanAndCheckout}
       />
+      <ProductTour token={token ?? ''} user={user} replaySignal={tourReplaySignal} />
     </div>
     </TimeOffTabProvider>
     </PrimaryActionProvider>

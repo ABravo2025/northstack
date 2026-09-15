@@ -11,9 +11,10 @@ interface TopBarProps {
   token: string;
   onLogout: () => void;
   onMenuClick: () => void;
+  onReplayTour: () => void;
 }
 
-export default function TopBar({ user, token, onLogout, onMenuClick }: TopBarProps) {
+export default function TopBar({ user, token, onLogout, onMenuClick, onReplayTour }: TopBarProps) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -103,7 +104,9 @@ export default function TopBar({ user, token, onLogout, onMenuClick }: TopBarPro
       </div>
 
       <div className="flex items-center gap-2">
-      <NotificationBell token={token} />
+      <span data-tour="topbar-bell" className="inline-flex">
+        <NotificationBell token={token} />
+      </span>
       <div className="user-menu" ref={menuRef}>
         <button
           ref={triggerRef}
@@ -111,6 +114,7 @@ export default function TopBar({ user, token, onLogout, onMenuClick }: TopBarPro
           onClick={() => setOpen(!open)}
           aria-haspopup="menu"
           aria-expanded={open}
+          data-tour="topbar-usermenu"
         >
           <UserCircleIcon className="h-5 w-5" />
           <span className="hidden whitespace-nowrap sm:inline">
@@ -140,6 +144,16 @@ export default function TopBar({ user, token, onLogout, onMenuClick }: TopBarPro
               }}
             >
               Help &amp; FAQ
+            </button>
+            <button
+              className="user-menu-item"
+              role="menuitem"
+              onClick={() => {
+                setOpen(false);
+                onReplayTour();
+              }}
+            >
+              Take the tour again
             </button>
             <button
               className="user-menu-item"

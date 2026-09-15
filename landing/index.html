@@ -8,6 +8,7 @@
       name="description"
       content="Northstack brings HR, sales, and payroll tracking into a single modular platform for teams of 5 to 50. Start free for 15 days, no credit card required."
     />
+    <link rel="canonical" href="https://joinnorthstack.com/" />
 
     <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
@@ -21,7 +22,15 @@
       content="One modular platform for growing teams — HR, sales, and payroll tracking, without enterprise complexity."
     />
     <meta property="og:image" content="https://joinnorthstack.com/og-image-1200x630.jpg" />
+    <meta property="og:url" content="https://joinnorthstack.com/" />
+    <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Northstack — HR, sales, and payroll tracking in one platform" />
+    <meta
+      name="twitter:description"
+      content="One modular platform for growing teams — HR, sales, and payroll tracking, without enterprise complexity."
+    />
+    <meta name="twitter:image" content="https://joinnorthstack.com/og-image-1200x630.jpg" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -942,6 +951,48 @@
         }
       }
     </style>
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Northstack",
+        "url": "https://joinnorthstack.com/",
+        "logo": "https://joinnorthstack.com/logo-horizontal-light.svg",
+        "email": "info@joinnorthstack.com",
+        "founder": {
+          "@type": "Person",
+          "name": "Alejandro Bravo"
+        }
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Northstack",
+        "url": "https://joinnorthstack.com/",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Web",
+        "description": "Northstack brings HR, sales, and payroll tracking into a single modular platform for teams of 5 to 50.",
+        "offers": [
+          {
+            "@type": "Offer",
+            "name": "Starter",
+            "price": "19",
+            "priceCurrency": "USD",
+            "priceValidUntil": "2027-09-15"
+          },
+          {
+            "@type": "Offer",
+            "name": "Growth",
+            "price": "39",
+            "priceCurrency": "USD",
+            "priceValidUntil": "2027-09-15"
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <header class="nav">
@@ -1259,52 +1310,84 @@
           <div class="eyebrow">FAQ</div>
           <h2>Questions, answered.</h2>
         </div>
-        <div class="faq-list" id="faq-list"></div>
+        <!--
+          Static markup on purpose (was client-rendered from a JS array before) — search
+          crawlers need the Q&A text in the initial HTML, not injected after load. The
+          FAQPage JSON-LD right below repeats the same five questions/answers; if you
+          edit one, edit the other so they stay in sync.
+        -->
+        <div class="faq-list" id="faq-list">
+          <div class="faq-item">
+            <p class="faq-q">Is there a free trial?<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></p>
+            <p class="faq-a">Yes — every plan includes a 15-day free trial with full access. No credit card required to start.</p>
+          </div>
+          <div class="faq-item">
+            <p class="faq-q">Can I change plans later?<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></p>
+            <p class="faq-a">Anytime. Upgrade, downgrade, or cancel from your billing settings — changes take effect on your next billing cycle.</p>
+          </div>
+          <div class="faq-item">
+            <p class="faq-q">Is my data isolated from other companies?<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></p>
+            <p class="faq-a">Yes. Northstack is multi-tenant by design — every company's data is isolated at the database level and never shared with another tenant.</p>
+          </div>
+          <div class="faq-item">
+            <p class="faq-q">What happens when my trial ends?<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></p>
+            <p class="faq-a">You'll be prompted to choose a plan and add your billing details. If you don't, your account moves into a grace period before access is limited.</p>
+          </div>
+          <div class="faq-item">
+            <p class="faq-q">Does Northstack pay my employees for me?<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg></p>
+            <p class="faq-a">No. Payroll in Northstack is a record-keeping tool — it lets you track compensation, pay runs, and pay stubs for your own employees. Northstack does not process, transmit, or execute any payment to them; you remain responsible for actually paying your team through your own banking or payroll provider.</p>
+          </div>
+        </div>
       </div>
     </section>
 
-    <script>
-      // FAQ content — edit this list only to add, remove, or change a question.
-      // Nothing else on the page needs to change; #faq-list renders from it below.
-      var FAQ_ITEMS = [
-        {
-          q: "Is there a free trial?",
-          a: "Yes — every plan includes a 15-day free trial with full access. No credit card required to start."
-        },
-        {
-          q: "Can I change plans later?",
-          a: "Anytime. Upgrade, downgrade, or cancel from your billing settings — changes take effect on your next billing cycle."
-        },
-        {
-          q: "Is my data isolated from other companies?",
-          a: "Yes. Northstack is multi-tenant by design — every company's data is isolated at the database level and never shared with another tenant."
-        },
-        {
-          q: "What happens when my trial ends?",
-          a: "You'll be prompted to choose a plan and add your billing details. If you don't, your account moves into a grace period before access is limited."
-        },
-        {
-          q: "Does Northstack pay my employees for me?",
-          a: "No. Payroll in Northstack is a record-keeping tool — it lets you track compensation, pay runs, and pay stubs for your own employees. Northstack does not process, transmit, or execute any payment to them; you remain responsible for actually paying your team through your own banking or payroll provider."
-        }
-      ];
-
-      (function renderFaq() {
-        var list = document.getElementById("faq-list");
-        if (!list) return;
-        var chevron =
-          '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-faint)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
-        list.innerHTML = FAQ_ITEMS.map(function (item) {
-          return (
-            '<div class="faq-item"><p class="faq-q">' +
-            item.q +
-            chevron +
-            '</p><p class="faq-a">' +
-            item.a +
-            "</p></div>"
-          );
-        }).join("");
-      })();
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Is there a free trial?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes — every plan includes a 15-day free trial with full access. No credit card required to start."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Can I change plans later?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Anytime. Upgrade, downgrade, or cancel from your billing settings — changes take effect on your next billing cycle."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Is my data isolated from other companies?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Yes. Northstack is multi-tenant by design — every company's data is isolated at the database level and never shared with another tenant."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "What happens when my trial ends?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "You'll be prompted to choose a plan and add your billing details. If you don't, your account moves into a grace period before access is limited."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Does Northstack pay my employees for me?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "No. Payroll in Northstack is a record-keeping tool — it lets you track compensation, pay runs, and pay stubs for your own employees. Northstack does not process, transmit, or execute any payment to them; you remain responsible for actually paying your team through your own banking or payroll provider."
+            }
+          }
+        ]
+      }
     </script>
 
     <div class="cta-band">

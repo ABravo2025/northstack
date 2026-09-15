@@ -4251,3 +4251,87 @@ ruta.
    (el efecto compartido puede disparar su propio `Promise.all` en paralelo si llega a ver el
    pathname ya actualizado — es redundante pero inofensivo, ambos deberían converger al mismo
    resultado correcto, no debería producir ningún estado inconsistente ni error en consola).
+
+## QA-88 — Billing: Free Trial real, cap de 5 seats sin plan, checkout confirma el plan, seat counter + desglose de invoice (2026-09-15, en `main`/producción)
+
+**Por qué existe esta tarea:** con QA-87 resuelto (bug del sidebar), Alejandro reportó un problema
+distinto en `/settings/billing`: figuraba "Starter" como plan activo sin haber elegido nada nunca —
+causa raíz en `subscriptionService.ts`'s `getBillingSummary`/`registerTenantWithOwner`: TODO tenant
+recibe una fila real de `Subscription` con `plan: 'starter'` como placeholder interno desde el
+registro, y `BillingPage.tsx` mostraba ese placeholder directo como si fuera una elección real.
+Pidió, en el mismo hilo: (1) mostrar "Free Trial" (máx. 5 usuarios, sin poder pasarse) cuando no hay
+plan elegido; (2) sacar el botón "Subscribe", que "Change plan" sea el único trigger al checkout;
+(3) que el plan de la plataforma cambie recién cuando el pago se confirma, no antes; (4) contador de
+usuarios incluidos en el plan (x/5, x/10) + extra vinculados; (5) mostrar el $ extra de seats
+cobrado, tanto en Billing como en la propia invoice.
+
+### Decisiones confirmadas con Alejandro antes de implementar
+
+1. **Plan solo se fija al confirmar el pago** — antes se escribía `Tenant.plan` en el momento de
+   elegir (`updateTenantPlan`), previo al checkout; ahora el checkout recibe el plan elegido como
+   parámetro y el webhook de pago confirmado es el único que lo escribe de verdad. Un checkout
+   abandonado sin pagar queda en Free Trial, no en un plan fantasma.
+2. **Desglose de invoice con campos nuevos** — `Invoice.baseAmountCents`/`extraSeatsAmountCents`
+   (nullable, push aditivo), poblados desde el webhook de pago confirmado en adelante; facturas
+   viejas se siguen mostrando como un solo monto total (no hay forma confiable de reconstruir el
+   desglose histórico, el conteo de seats nunca se guardó por período).
+
+### Qué se cambió
+
+**Backend:**
+- `prisma/schema.prisma`: `Invoice.baseAmountCents`/`extraSeatsAmountCents` (push aditivo, ya
+  aplicado a producción con `db:push`).
+- `seatService.ts`: nuevo `FREE_TRIAL_SEAT_CAP = 5` + `seatCapError(tenant)` — bloquea (mensaje de
+  error, nunca throwea) crear/aceptar una invitación o reactivar un usuario suspendido cuando
+  `tenant.plan === null` y ya hay 5 seats activos. De paso se encontró y cerró un gap real:
+  `contractConfirmationService.ts` (confirmación de contrato de Payroll) creaba un seat activo
+  nuevo pero nunca llamaba `syncSeatBilling` — un tenant en plan real nunca se facturaba por ese
+  seat específico hasta el próximo evento que sí la disparara.
+- `checkoutService.ts`: `startCheckout` recibe `requestedPlan` — para una suscripción nueva ya no
+  lee `subscription.plan` (el placeholder), exige y usa este parámetro. Para Dodo viaja en
+  `metadata.plan` de la Checkout Session, leído por el webhook recién al confirmar el pago. Mercado
+  Pago no tiene canal de metadata libre en su preapproval — ahí el plan se sigue escribiendo de
+  inmediato (asimetría aceptada, AR no está en producción real todavía).
+- `webhooks.ts` (Dodo `payment.succeeded`, rama de cobro real): lee `metadata.plan`, escribe
+  `Tenant.plan`/`Subscription.plan`/`lockedPriceCents` recién ahí vía `syncSubscriptionAndTenant`,
+  y calcula `baseAmountCents`/`extraSeatsAmountCents` para la Invoice nueva.
+- `subscriptionService.ts`'s `getBillingSummary`: suma el contador de seats en vivo
+  (`tenantPlan`/`activeSeats`/`includedSeats`/`extraSeats`/`extraSeatsCostCents`) a la respuesta de
+  `GET /api/subscriptions/me`.
+
+**Frontend:**
+- `BillingPage.tsx`: muestra "Free Trial" cuando `subscription.tenantPlan === null` (no
+  `subscription.plan`); botón "Subscribe" eliminado — "Change plan" va directo a checkout con el
+  plan elegido cuando no hay provider todavía; nueva fila con el contador de seats (x/N + extra +
+  costo) y aviso cuando el Free Trial está en el tope; tabla de invoices muestra el desglose
+  plan+seats cuando existe.
+- `PlansModal.tsx`: `onSelectPlan` pasó de opcional a obligatorio (el fallback inline que llamaba
+  `updateTenantPlan` directo era código muerto — ningún caller real lo dejaba sin pasar — y
+  reintroducía el bug de plan-antes-de-pagar si alguna vez se hubiera activado); props `token`/
+  `onPlanChosen` eliminadas, tampoco se usaban de verdad.
+- `AppLayout.tsx`'s `handleSelectPlanAndCheckout`: ya no llama `updateTenantPlan` antes del
+  checkout, pasa el plan elegido directo a `redirectToCheckout`.
+
+### Qué probar
+
+1. **Free Trial real:** una cuenta nueva sin elegir plan debe mostrar "Free Trial" en Billing, no
+   "Starter" — sin precio/mo, sin badge de status de suscripción.
+2. **Cap de 5 en Free Trial:** con 5 usuarios activos y sin plan elegido, invitar a un 6to (o
+   reactivar un usuario suspendido que sería el 6to) debe rechazarse con un mensaje claro; elegir un
+   plan real debe levantar el cap de inmediato (el overage ya se factura en tiempo real en vez de
+   bloquear).
+3. **Checkout confirma el plan:** elegir un plan desde "Change plan" sin completar el pago (cerrar
+   la pestaña del checkout) — Billing debe seguir mostrando Free Trial. Completar el pago (con el
+   código de descuento de prueba, nunca en un flujo real de cliente) debe actualizar el plan
+   mostrado recién ahí, sin necesidad de recargar manualmente si la pestaña vuelve a foco (ya
+   refetchea sola).
+4. **Seat counter:** confirmar que el contador x/N y el costo extra reflejan la cantidad real de
+   usuarios activos, para un tenant en Starter (5), Growth (10), y Free Trial (5).
+5. **Desglose de invoice:** en una invoice nueva (post-deploy) con seats extra, confirmar que
+   aparece la línea "$X plan + $Y extra seats" debajo del monto; una invoice vieja (pre-deploy) debe
+   seguir mostrando solo el monto total, sin desglose ni error.
+6. **Regresión — Change plan de un tenant ya pagando:** confirmar que sigue funcionando igual que
+   antes (self-serve `changeSubscriptionPlan`, aplica el próximo ciclo) — esta tarea no tocó esa
+   rama.
+7. **Regresión — invitaciones/reactivación en un tenant CON plan:** confirmar que invitar o
+   reactivar sigue funcionando normal (el cap solo aplica sin plan elegido).

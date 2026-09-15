@@ -7,7 +7,7 @@ import type { TenantCreationResult } from './tenantService.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { invitationActivityFieldConfig } from '../activity/fieldConfigs/invitationFieldConfig.js';
 import { findSeedRoleId } from '../auth/roleService.js';
-import { syncSeatBilling } from './seatService.js';
+import { syncSeatBilling, seatCapError } from './seatService.js';
 
 const INVITATION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -73,6 +73,13 @@ export async function createInvitation(input: CreateInvitationInput): Promise<In
 
   if (!tenant) {
     return { success: false, error: 'Tenant not found' };
+  }
+
+  // Blocked here (invite creation) rather than only at accept time — the inviter finds out
+  // immediately instead of the invitee hitting a dead invite link.
+  const capError = await seatCapError(tenant);
+  if (capError) {
+    return { success: false, error: capError };
   }
 
   const normalizedEmail = input.email.toLowerCase().trim();
@@ -194,6 +201,17 @@ export async function acceptInvitation(input: AcceptInvitationInput): Promise<Te
 
   if (user.email.toLowerCase() !== invitation.email) {
     return { success: false, error: 'Invitation was issued for a different email' };
+  }
+
+  // Re-checked here too (not just at invite creation above) — seats could have filled up in the
+  // days between sending the invite and it being accepted (INVITATION_EXPIRY_MS is 7 days).
+  const tenantForCapCheck = await prisma.tenant.findUnique({
+    where: { id: invitation.tenantId },
+    select: { id: true, plan: true },
+  });
+  const capError = tenantForCapCheck ? await seatCapError(tenantForCapCheck) : null;
+  if (capError) {
+    return { success: false, error: capError };
   }
 
   const result = await prisma.$transaction(async (tx) => {

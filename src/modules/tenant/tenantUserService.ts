@@ -2,7 +2,7 @@ import prisma from '../../lib/prisma.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { userActivityFieldConfig, userDisplayName } from '../activity/fieldConfigs/userFieldConfig.js';
 import { findSeedRoleId } from '../auth/roleService.js';
-import { syncSeatBilling } from './seatService.js';
+import { syncSeatBilling, seatCapError } from './seatService.js';
 import { bestEffort } from '../../lib/bestEffort.js';
 import type { AuthenticatedUser } from '../auth/authService.js';
 import type { User, UserRole, UserStatus } from '@prisma/client';
@@ -53,6 +53,17 @@ export async function updateTenantUser(
 
   if (target.id === actingUser.id) {
     return { success: false, error: 'Use your profile page to change your own account' };
+  }
+
+  // Reactivating a suspended user is a new active seat, same as an accepted invitation
+  // (invitationService.ts) — checked before either branch below so it covers both the
+  // owner-transfer path and the plain role/status path.
+  if (input.status === 'active' && target.status !== 'active') {
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true, plan: true } });
+    const capError = tenant ? await seatCapError(tenant) : null;
+    if (capError) {
+      return { success: false, error: capError };
+    }
   }
 
   // Fase B (Custom Roles) — reads the resolved RoleContext instead of comparing the legacy

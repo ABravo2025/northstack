@@ -4,7 +4,8 @@ import { getAuthorizedPayment, getPreapproval, verifyMercadoPagoSignature } from
 import { getNextBillingDate, unwrapDodoWebhookEvent } from '../lib/dodopayments.js';
 import { GRACE_PERIOD_DAYS } from '../modules/tenant/planTransitionService.js';
 import { syncSubscriptionAndTenant } from '../modules/tenant/subscriptionService.js';
-import { syncSeatBilling } from '../modules/tenant/seatService.js';
+import { syncSeatBilling, countActiveSeats, extraSeatsFor, EXTRA_SEAT_PRICE_CENTS } from '../modules/tenant/seatService.js';
+import { CURRENT_PLAN_PRICES_CENTS } from '../modules/tenant/planService.js';
 import { bestEffort } from '../lib/bestEffort.js';
 import type { PaymentProvider } from '@prisma/client';
 import type express from 'express';
@@ -243,6 +244,17 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
       const periodStart = new Date();
       const periodEnd = payment.subscription_id ? await getNextBillingDate(payment.subscription_id) : new Date(periodStart.getTime() + ONE_MONTH_MS);
 
+      // checkoutService.ts's metadata.plan (2026-09-15, QA-88) — the plan a first-time
+      // subscribe was FOR, deliberately never written to Tenant.plan/Subscription.plan until
+      // this exact moment (real payment confirmed), rather than upfront when checkout started.
+      // Falls back to leaving plan/lockedPriceCents untouched (existing subscription.plan) for
+      // any checkout already in flight when this shipped, or an "update payment method" session
+      // (checkoutService.ts never sets metadata.plan for those — same plan as before).
+      const metadataPlan = event.data.metadata?.plan;
+      const isNewPlanChoice = metadataPlan === 'starter' || metadataPlan === 'growth';
+      const confirmedPlan = isNewPlanChoice ? metadataPlan : (subscription.plan as 'starter' | 'growth');
+      const lockedPriceCents = isNewPlanChoice ? CURRENT_PLAN_PRICES_CENTS[metadataPlan] : subscription.lockedPriceCents;
+
       await syncSubscriptionAndTenant({
         tenantId: subscription.tenantId,
         status: 'active',
@@ -250,6 +262,7 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
         externalSubscriptionId: payment.subscription_id ?? subscription.externalSubscriptionId ?? '',
         currentPeriodStart: periodStart,
         currentPeriodEnd: periodEnd,
+        ...(isNewPlanChoice ? { plan: confirmedPlan, lockedPriceCents } : {}),
         ...paymentMethodFields,
       });
 
@@ -259,6 +272,17 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
       // billing for real.
       await bestEffort(syncSeatBilling(subscription.tenantId), `syncSeatBilling(${subscription.tenantId})`);
 
+      // Breakdown (2026-09-15, QA-88) computed fresh rather than trusted from Dodo's payment
+      // payload — same "our own authoritative price" reasoning as amountCents below, extended to
+      // the seat surcharge: extraSeats is live-derived from actual active User rows, not
+      // whatever addon quantity Dodo billed (which syncSeatBilling above may not have finished
+      // reconciling to yet on a slow request — this stays internally consistent with itself
+      // either way, since amountCents = baseAmountCents + extraSeatsAmountCents always).
+      const activeSeats = await countActiveSeats(subscription.tenantId);
+      const extraSeats = extraSeatsFor(confirmedPlan, activeSeats);
+      const extraSeatsAmountCents = extraSeats * EXTRA_SEAT_PRICE_CENTS;
+      const baseAmountCents = lockedPriceCents;
+
       // Trusts our own authoritative price (subscription.lockedPriceCents/currency) rather than
       // payment.total_amount, which includes tax — same reasoning paddle.ts's equivalent used.
       await prisma.invoice.create({
@@ -266,7 +290,9 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
           subscriptionId: subscription.id,
           provider: 'dodopayments',
           externalInvoiceId: payment.payment_id,
-          amountCents: subscription.lockedPriceCents,
+          amountCents: baseAmountCents + extraSeatsAmountCents,
+          baseAmountCents,
+          extraSeatsAmountCents,
           currency: subscription.currency,
           status: 'paid',
           periodStart,

@@ -9,7 +9,6 @@ import MobileTabbar from '../components/layout/MobileTabbar';
 import PrimaryActionFab from '../components/layout/PrimaryActionFab';
 import PlansModal from '../components/common/PlansModal';
 import { useToast } from '../components/common/ToastProvider';
-import { api } from '../api';
 import type { PlanTier, Tenant } from '../api';
 import { daysRemainingUntil } from '../lib/trial';
 import { redirectToCheckout } from '../lib/checkout';
@@ -30,7 +29,7 @@ function plansModalDismissedKey(tenantId: string): string {
   return `northstack:dismissedPlansModal:${tenantId}`;
 }
 
-export default function AppLayout({ user, token, tenant, onTenantUpdated, onLogout }: AppLayoutProps) {
+export default function AppLayout({ user, token, tenant, onLogout }: AppLayoutProps) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   // Session-only "I closed it" flag — the actual dismissed/not-dismissed fact is derived from
   // localStorage during render below (dismissedInStorage), not mirrored into state, so there's
@@ -81,11 +80,15 @@ export default function AppLayout({ user, token, tenant, onTenantUpdated, onLogo
   // actually chosen, matching the same immediate-checkout behavior BillingPage's "Change plan"
   // already has. Straight to the provider's checkout, no confirmation modal in between
   // (2026-09-14 — see lib/checkout.ts's redirectToCheckout comment).
+  //
+  // No longer calls api.updateTenantPlan first (2026-09-15, QA-88 — that wrote Tenant.plan
+  // immediately, showing e.g. "Starter" as the tenant's plan before any payment was ever
+  // confirmed, including for someone who abandoned checkout without paying). `plan` goes
+  // straight into redirectToCheckout instead; the backend only sets it for real once the
+  // checkout's payment is confirmed by the provider's webhook.
   const handleSelectPlanAndCheckout = async (plan: PlanTier) => {
-    const updated = await api.updateTenantPlan(token!, plan);
-    onTenantUpdated(updated);
     dismissPlansModal();
-    await redirectToCheckout(token!);
+    await redirectToCheckout(token!, plan);
   };
 
   // Shared by the past_due/suspended banners' "Add payment method" buttons below — same
@@ -184,12 +187,7 @@ export default function AppLayout({ user, token, tenant, onTenantUpdated, onLogo
       <PlansModal
         open={showPlansModal}
         tenant={tenant}
-        token={token}
         onClose={dismissPlansModal}
-        onPlanChosen={(updated) => {
-          onTenantUpdated(updated);
-          dismissPlansModal();
-        }}
         onSelectPlan={handleSelectPlanAndCheckout}
       />
     </div>

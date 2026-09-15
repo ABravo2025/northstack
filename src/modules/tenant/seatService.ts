@@ -22,6 +22,22 @@ export function extraSeatsFor(plan: 'starter' | 'growth', activeSeats: number): 
   return Math.max(0, activeSeats - INCLUDED_SEATS[plan]);
 }
 
+// A tenant that hasn't picked a plan yet (Tenant.plan === null, still on the unpaid Free Trial —
+// see planService.ts/subscriptionService.ts's syncSubscriptionAndTenant for how `plan` only gets
+// set for real once a checkout is confirmed) has no provider/card on file and so no way to be
+// billed for extra seats — real-time overage billing (syncSeatBilling above) only applies once a
+// plan is actually chosen. This is the only lever available before that: a hard cap, checked
+// wherever a user could become the tenant's (FREE_TRIAL_SEAT_CAP + 1)th active seat. Returns an
+// error message (never throws) to match this module family's `{ success, error }` convention.
+export const FREE_TRIAL_SEAT_CAP = 5;
+
+export async function seatCapError(tenant: { id: string; plan: string | null }): Promise<string | null> {
+  if (tenant.plan !== null) return null;
+  const activeSeats = await countActiveSeats(tenant.id);
+  if (activeSeats < FREE_TRIAL_SEAT_CAP) return null;
+  return `Free Trial is limited to ${FREE_TRIAL_SEAT_CAP} users — choose a plan to add more.`;
+}
+
 // Called whenever the tenant's active-seat count could have changed (invite accepted, a user's
 // status flips active/suspended) — real-time, not a periodic recount (Alejandro's call:
 // prorated_immediately on Dodo bills/credits for the exact remaining days of the current cycle,

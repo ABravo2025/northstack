@@ -425,6 +425,13 @@ model Invoice {
   periodEnd         DateTime
   paidAt            DateTime?
   createdAt         DateTime        @default(now())
+  // Breakdown of amountCents (2026-09-15, QA-88) — null on every invoice created before this,
+  // populated going forward by routes/webhooks.ts's payment.succeeded handler. Nullable rather
+  // than backfilled: there's no reliable way to reconstruct how many extra seats were actually
+  // billed on a past invoice (seat count isn't tracked historically, only live). The frontend
+  // falls back to showing just amountCents when either field is null.
+  baseAmountCents       Int?
+  extraSeatsAmountCents Int?
 
   @@index([subscriptionId])
 }

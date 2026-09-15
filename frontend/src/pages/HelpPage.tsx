@@ -81,7 +81,11 @@ const FAQ_CATEGORIES: FaqCategory[] = [
     items: [
       {
         q: "What's different between Starter and Growth?",
-        a: "Growth removes the caps on pipelines, time off policies, and custom roles, raises admin seats from 2 to 5, keeps activity history for 30 days instead of 7, and is the only plan with Payroll and Payments (your own Stripe) included.",
+        a: "Growth removes the caps on pipelines, time off policies, and custom roles, raises included seats from 5 to 10, keeps activity history for 30 days instead of 7, and is the only plan with Payroll and Payments (your own Stripe) included.",
+      },
+      {
+        q: 'How do seats work?',
+        a: "Every active person in your workspace counts as a seat, regardless of role. Starter includes 5, Growth includes 10 — go over and each extra seat is billed automatically at $4/mo, no hard limit once you're on a real plan. Free Trial (before you've picked a plan) is capped at 5 people, since there's no billing set up yet to cover anyone past that.",
       },
       {
         q: 'Do I choose between Dodo Payments and Mercado Pago myself?',

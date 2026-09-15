@@ -1,6 +1,7 @@
 import prisma from '../../lib/prisma.js';
 import { getInvoiceUrl } from '../../lib/dodopayments.js';
 import { CURRENT_PLAN_PRICES_CENTS } from './planService.js';
+import { countActiveSeats, extraSeatsFor, INCLUDED_SEATS, EXTRA_SEAT_PRICE_CENTS, FREE_TRIAL_SEAT_CAP } from './seatService.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { subscriptionActivityFieldConfig } from '../activity/fieldConfigs/subscriptionFieldConfig.js';
 import { bestEffort } from '../../lib/bestEffort.js';
@@ -33,6 +34,8 @@ const BILLING_SUMMARY_SELECT = {
       id: true,
       provider: true,
       amountCents: true,
+      baseAmountCents: true,
+      extraSeatsAmountCents: true,
       currency: true,
       status: true,
       periodStart: true,
@@ -60,24 +63,39 @@ const TENANT_TO_SUBSCRIPTION_STATUS: Record<TenantStatus, SubscriptionStatus> = 
 // owner-only via canManageBilling, this just exposes plan/invoice state, no payment credentials
 // (paymentMethodBrand/Last4 are already display-only, never sensitive).
 export async function getBillingSummary(tenantId: string) {
-  const subscription = await prisma.subscription.findUnique({ where: { tenantId }, select: BILLING_SUMMARY_SELECT });
+  const [subscription, tenant] = await Promise.all([
+    prisma.subscription.findUnique({ where: { tenantId }, select: BILLING_SUMMARY_SELECT }),
+    prisma.tenant.findUnique({
+      where: { id: tenantId },
+      select: { status: true, plan: true, trialEndsAt: true, gracePeriodEndsAt: true, lockedPriceCents: true },
+    }),
+  ]);
+  if (!tenant) {
+    return null;
+  }
+
+  // Seat counter (2026-09-15, QA-88 — PlansModal.tsx already had "5/10 seats included" as static
+  // copy, nothing tenant-specific) — tenant.plan, not subscription.plan, is the real "what's
+  // actually chosen" source of truth as of the checkout rework (checkoutService.ts's top
+  // comment): subscription.plan can still be the 'starter' signup placeholder for a tenant on
+  // Free Trial (tenant.plan === null) whose checkout hasn't been confirmed by a webhook yet.
+  const activeSeats = await countActiveSeats(tenantId);
+  const includedSeats = tenant.plan === 'starter' || tenant.plan === 'growth' ? INCLUDED_SEATS[tenant.plan] : FREE_TRIAL_SEAT_CAP;
+  const extraSeats = tenant.plan === 'starter' || tenant.plan === 'growth' ? extraSeatsFor(tenant.plan, activeSeats) : 0;
+  const seatInfo = { tenantPlan: tenant.plan, activeSeats, includedSeats, extraSeats, extraSeatsCostCents: extraSeats * EXTRA_SEAT_PRICE_CENTS };
+
   if (subscription) {
-    return subscription;
+    return { ...subscription, ...seatInfo };
   }
 
   // Self-heal: a tenant created before Billing Integration shipped has no Subscription row
   // until scripts/backfill-billing-subscriptions.ts is run for its environment — without this,
   // the Billing page 404s forever for every pre-existing tenant. Mirrors that same script's
   // placeholder shape (same 'starter'/USD fallback registerTenantWithOwner now sets for brand
-  // new signups) rather than depending on that manual step ever running.
-  const tenant = await prisma.tenant.findUnique({
-    where: { id: tenantId },
-    select: { status: true, plan: true, trialEndsAt: true, gracePeriodEndsAt: true, lockedPriceCents: true },
-  });
-  if (!tenant) {
-    return null;
-  }
-
+  // new signups) rather than depending on that manual step ever running. Note this only ever
+  // fires for that pre-existing-tenant case: registerTenantWithOwner has created a real
+  // Subscription row for every tenant since Billing Integration shipped, so a brand-new tenant
+  // never reaches this branch.
   const created = await prisma.subscription.upsert({
     where: { tenantId },
     update: {},
@@ -92,7 +110,7 @@ export async function getBillingSummary(tenantId: string) {
     },
   });
 
-  return { ...created, invoices: [] };
+  return { ...created, invoices: [], ...seatInfo };
 }
 
 export interface GetInvoiceDocumentUrlResult {

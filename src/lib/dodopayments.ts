@@ -34,6 +34,11 @@ export interface CreateCheckoutSessionInput {
   // users than the plan includes by the time they actually add a card starts correctly billed
   // from the first invoice, instead of relying on the next syncSeatBilling call to catch up.
   extraSeats?: number;
+  // -> metadata.plan (2026-09-15, QA-88) — the plan this checkout is FOR, read back by the
+  // webhook's payment.succeeded handler to set Tenant.plan only once payment actually confirms,
+  // instead of checkoutService.ts writing it upfront. Omit only for the "update payment method"
+  // case, which never calls this (see checkoutService.ts's own comment).
+  plan?: string;
 }
 
 export interface CheckoutSession {
@@ -57,7 +62,7 @@ export async function createCheckoutSession(input: CreateCheckoutSessionInput): 
     ],
     customer: { email: input.email },
     return_url: input.returnUrl,
-    metadata: { subscriptionId: input.subscriptionId },
+    metadata: { subscriptionId: input.subscriptionId, ...(input.plan ? { plan: input.plan } : {}) },
     ...(input.trialDays ? { subscription_data: { trial_period_days: input.trialDays } } : {}),
   });
 

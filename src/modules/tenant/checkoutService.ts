@@ -1,6 +1,8 @@
 import prisma from '../../lib/prisma.js';
+import type { PlanTier } from '@prisma/client';
 import { resolveProvider, recordSubscriptionActionAttempt } from './subscriptionService.js';
 import { SIGNUP_TRIAL_DAYS } from './tenantService.js';
+import { updateTenantPlan } from './planService.js';
 import { createPreapproval, updatePreapproval } from '../../lib/mercadopago.js';
 import { createCheckoutSession, getCustomerPortalUrl } from '../../lib/dodopayments.js';
 import { countActiveSeats, extraSeatsFor, EXTRA_SEAT_PRICE_CENTS } from './seatService.js';
@@ -29,9 +31,22 @@ const BILLING_CALLBACK_URL = 'https://app.joinnorthstack.com/billing/callback';
 // exception is recordSubscriptionActionAttempt below — it writes actor-attribution metadata
 // only (who clicked this, when), not billing state, so the later webhook confirmation can
 // attribute the resulting Activity Log entry to this user (see subscriptionService.ts).
+//
+// `requestedPlan` (2026-09-15, QA-88 — "Starter" was showing as the tenant's plan before they'd
+// ever confirmed a payment, because the OLD flow called updateTenantPlan — writing Tenant.plan
+// for real — before checkout even started) extends that same "nothing real until confirmed"
+// philosophy to `plan` itself for the first-subscribe path: Tenant.plan/Subscription.plan now
+// stay null/the signup placeholder respectively until the webhook confirms, and this function
+// uses `requestedPlan` for all pricing/product lookups instead of trusting whatever's already on
+// the (still-placeholder) Subscription row. It's threaded into Dodo's checkout metadata so the
+// webhook can read it back (routes/webhooks.ts). Mercado Pago has no equivalent free-form
+// metadata field on a preapproval (see mercadopago.ts) — that branch below still writes the plan
+// immediately via updateTenantPlan, a deliberately accepted asymmetry since the AR market isn't
+// live yet anyway (PlanPrice's ar rows are still a $0 placeholder).
 export async function startCheckout(
   tenant: { id: string; country: string | null; trialEndsAt: Date | null },
   user: { id: string; email: string },
+  requestedPlan?: PlanTier,
 ): Promise<StartCheckoutResult> {
   const subscription = await prisma.subscription.findUnique({ where: { tenantId: tenant.id } });
   if (!subscription) {
@@ -41,6 +56,14 @@ export async function startCheckout(
   await recordSubscriptionActionAttempt(tenant.id, user.id);
 
   const isUpdatingPaymentMethod = subscription.provider !== null;
+
+  if (!isUpdatingPaymentMethod && requestedPlan !== 'starter' && requestedPlan !== 'growth') {
+    return { success: false, error: 'Choose a plan before starting checkout.' };
+  }
+  // Safe to assert non-null/narrow from here down in the !isUpdatingPaymentMethod branch —
+  // validated just above. The isUpdatingPaymentMethod branch never reads this at all (existing
+  // subscriber, not choosing a new plan here).
+  const plan = requestedPlan as 'starter' | 'growth';
 
   if (isUpdatingPaymentMethod) {
     if (!subscription.externalSubscriptionId) {
@@ -63,10 +86,15 @@ export async function startCheckout(
     await updatePreapproval(subscription.externalSubscriptionId, { status: 'cancelled' });
   }
 
+  // An existing subscriber updating their card keeps whatever plan they already confirmed
+  // (Subscription.plan is real for them); a first-time subscriber uses the plan just chosen,
+  // validated above — never the signup placeholder still sitting on `subscription.plan`.
+  const effectivePlan = isUpdatingPaymentMethod ? (subscription.plan as 'starter' | 'growth') : plan;
+
   const provider = subscription.provider ?? resolveProvider(tenant);
   const market = provider === 'mercadopago' ? 'ar' : 'international';
   const planPrice = await prisma.planPrice.findFirst({
-    where: { plan: subscription.plan, market },
+    where: { plan: effectivePlan, market },
     orderBy: { effectiveFrom: 'desc' },
   });
 
@@ -77,11 +105,11 @@ export async function startCheckout(
   }
 
   // Starting extra-seat count (seatService.ts) — a tenant already over its included seats by the
-  // time it actually adds a card is billed correctly from the first invoice. subscription.plan is
-  // always 'starter'/'growth' here — Scale has no self-serve checkout (see this function's own
-  // comment set elsewhere), and the planPrice lookup above already scoped to it.
+  // time it actually adds a card is billed correctly from the first invoice. Scale has no
+  // self-serve checkout (see this function's own comment set elsewhere), and the planPrice lookup
+  // above already scoped to Starter/Growth.
   const activeSeats = await countActiveSeats(tenant.id);
-  const extraSeats = extraSeatsFor(subscription.plan as 'starter' | 'growth', activeSeats);
+  const extraSeats = extraSeatsFor(effectivePlan, activeSeats);
 
   // Genuinely free for SIGNUP_TRIAL_DAYS (Alejandro's 2026-08-20 correction) — but only for an
   // actual fresh subscription, never the Mercado Pago "update payment method" fallback above
@@ -113,9 +141,18 @@ export async function startCheckout(
       : Math.min(SIGNUP_TRIAL_DAYS, daysRemaining);
 
   if (provider === 'mercadopago') {
+    // No free-form metadata field on a Mercado Pago preapproval (only external_reference, already
+    // the subscriptionId join key) to carry the chosen plan through to the webhook the way Dodo's
+    // metadata does below — so for a first-time subscribe, this writes Tenant.plan/
+    // Subscription.plan immediately instead of waiting for confirmation. See this function's
+    // top comment for why that's an accepted asymmetry (AR pricing isn't live yet regardless).
+    if (!isUpdatingPaymentMethod) {
+      await updateTenantPlan(tenant.id, effectivePlan, user.id);
+    }
+
     const preapproval = await createPreapproval({
       subscriptionId: subscription.id,
-      reason: `Northstack — ${subscription.plan} (AR)`,
+      reason: `Northstack — ${effectivePlan} (AR)`,
       payerEmail: user.email,
       transactionAmount: (planPrice.launchPriceCents + extraSeats * EXTRA_SEAT_PRICE_CENTS) / 100,
       backUrl: BILLING_CALLBACK_URL,
@@ -140,6 +177,11 @@ export async function startCheckout(
     returnUrl: BILLING_CALLBACK_URL,
     trialDays,
     extraSeats,
+    // Read back in routes/webhooks.ts's payment.succeeded handler to set Tenant.plan for real
+    // only once this checkout's payment is actually confirmed — see this function's top comment.
+    // Always the first-subscribe case here: Dodo's "update payment method" branch above
+    // (isUpdatingPaymentMethod) returns via the Customer Portal well before this point.
+    plan: effectivePlan,
   });
 
   return { success: true, provider: 'dodopayments', initPoint: session.checkoutUrl };

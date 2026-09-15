@@ -937,10 +937,10 @@ export default function GuidePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr><td>Price</td><td className="num">$29/mo</td><td className="num">$79/mo</td></tr>
+                  <tr><td>Price</td><td className="num">$19/mo</td><td className="num">$39/mo</td></tr>
                   <tr><td>Pipelines</td><td className="num">2</td><td className="num">Unlimited</td></tr>
                   <tr><td>Time off policies</td><td className="num">3</td><td className="num">Unlimited</td></tr>
-                  <tr><td>Admin seats</td><td className="num">2</td><td className="num">5</td></tr>
+                  <tr><td>Seats included</td><td className="num">5</td><td className="num">10</td></tr>
                   <tr><td>Custom roles</td><td className="num">2</td><td className="num">Unlimited</td></tr>
                   <tr><td>Activity log history</td><td className="num">7 days</td><td className="num">30 days</td></tr>
                   <tr><td>Payroll</td><td className="no">—</td><td className="yes">Included</td></tr>
@@ -950,8 +950,11 @@ export default function GuidePage() {
             </div>
             <p className="help-intro" style={{ marginTop: '-8px' }}>
               Prices shown in USD. A third tier, <strong>Scale</strong>, is available by talking to us directly
-              rather than self-serve checkout. "Admin seats" only counts people on the base Admin role — custom
-              roles, however privileged, don't count against it.
+              rather than self-serve checkout. "Seats included" counts every active person in your workspace
+              regardless of role — owner, admin, or member all count the same. Go over and each extra seat is
+              $4/mo, billed automatically; no hard cap once you're on a real plan. Free Trial (no plan chosen yet)
+              is capped at 5 people since there's no billing in place yet to cover anyone past that — pick a plan to
+              add more.
             </p>
 
             <div className="help-sub">
@@ -966,12 +969,15 @@ export default function GuidePage() {
             <div className="help-sub">
               <h3>Subscribing, changing, and cancelling</h3>
               <ul>
-                <li><strong>Subscribe</strong> from the Billing page (or the trial banner) — you'll be sent to your payment provider's own secure checkout in a new tab.</li>
-                <li><strong>Change plan</strong> reopens the plan picker. If you're already paying, the change takes effect at your next billing date; if you're still on the trial, it goes straight to checkout.</li>
-                <li><strong>Update payment method</strong> uses the same flow as subscribing.</li>
+                <li><strong>Change plan</strong> is the one entry point for everything: still on Free Trial? It goes straight to your payment provider's secure checkout in a new tab, and your plan only actually updates once that payment is confirmed. Already paying? The change takes effect at your next billing date instead.</li>
+                <li><strong>Update payment method</strong> uses the same checkout flow, to replace the card on your existing subscription.</li>
                 <li><strong>Cancel subscription</strong> keeps your access through the end of the period you already paid for — a <strong>Resume subscription</strong> button appears until then if you change your mind.</li>
               </ul>
-              <p>Invoices are listed on the Billing page with date, amount, and status.</p>
+              <p>
+                The Billing page shows your current seat count against your plan's included seats, plus any extra
+                seat cost. Invoices are listed below that with date, amount (broken down into plan + extra seats
+                when applicable), and status.
+              </p>
             </div>
 
             <div className="help-sub">

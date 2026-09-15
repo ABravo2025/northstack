@@ -129,16 +129,14 @@ function recommendedTier(companySize: string | null): PlanTier | null {
 interface PlansModalProps {
   open: boolean;
   tenant: Tenant | null;
-  token: string;
   onClose: () => void;
-  onPlanChosen: (tenant: Tenant) => void;
-  // Override for how a plan selection is actually submitted — defaults to the pre-billing
-  // updateTenantPlan flow (AppLayout's auto-open for a fresh trialing tenant). BillingPage.tsx
-  // ("Change plan", 2026-08-19) passes its own handler instead, since a tenant that already has
-  // a real payment provider attached needs the post-billing self-serve change-plan endpoint —
-  // calling updateTenantPlan there would silently skip telling Dodo Payments/Mercado Pago about the
-  // change at all.
-  onSelectPlan?: (plan: PlanTier) => Promise<void>;
+  // How a plan selection is actually submitted — required (2026-09-15, QA-88: this used to have
+  // a same-file fallback that called the pre-billing updateTenantPlan directly, writing
+  // Tenant.plan before any payment was confirmed; removed as a footgun once every real caller
+  // already passed its own handler anyway). AppLayout's auto-open goes straight to checkout with
+  // the chosen plan; BillingPage's "Change plan" uses the post-billing self-serve endpoint for an
+  // already-paying tenant, or also goes straight to checkout for one that isn't yet.
+  onSelectPlan: (plan: PlanTier) => Promise<void>;
   // Marks that card as the tenant's current plan (disabled, "Current plan" instead of a CTA) —
   // only meaningful for BillingPage's "Change plan" (a tenant there always already has a real
   // plan). AppLayout's auto-open only ever shows when plan === null, so nothing is ever "current"
@@ -150,7 +148,7 @@ interface PlansModalProps {
 // Alejandro's 2026-08-13 correction: a dismissible modal over the app, not a route that blocks
 // navigation until a plan is picked — the trial has already started at registration either
 // way, this is an upsell, not a gate).
-export default function PlansModal({ open, tenant, token, onClose, onPlanChosen, onSelectPlan, currentPlan }: PlansModalProps) {
+export default function PlansModal({ open, tenant, onClose, onSelectPlan, currentPlan }: PlansModalProps) {
   const toast = useToast();
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
   const [livePrices, setLivePrices] = useState<Record<'starter' | 'growth', number> | null>(null);
@@ -178,13 +176,8 @@ export default function PlansModal({ open, tenant, token, onClose, onPlanChosen,
     }
     setLoadingKey(card.key);
     try {
-      if (onSelectPlan) {
-        await onSelectPlan(card.key);
-        onClose();
-      } else {
-        const updated = await api.updateTenantPlan(token, card.key);
-        onPlanChosen(updated);
-      }
+      await onSelectPlan(card.key);
+      onClose();
     } catch (error) {
       toast.error((error as Error).message);
     } finally {

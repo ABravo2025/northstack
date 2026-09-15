@@ -61,7 +61,12 @@ subscriptionsRouter.post('/api/subscriptions/me/checkout', async (req, res) => {
     return res.status(404).json({ error: 'Tenant not found' });
   }
 
-  const result = await startCheckout(tenant, { id: user.id, email: user.email });
+  // Never trusts an arbitrary string — startCheckout itself re-validates against
+  // 'starter'/'growth' and rejects anything else, this just narrows the type before it gets there.
+  const requestedPlan: PlanTier | undefined =
+    req.body?.plan === 'starter' || req.body?.plan === 'growth' ? req.body.plan : undefined;
+
+  const result = await startCheckout(tenant, { id: user.id, email: user.email }, requestedPlan);
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }

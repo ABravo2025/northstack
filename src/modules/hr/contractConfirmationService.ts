@@ -14,6 +14,8 @@ import { encryptPaymentAccountData } from '../../lib/encryption.js';
 import { renderContractPdf } from './contractPdfService.js';
 import { sendContractSignedEmail } from '../../lib/mailer.js';
 import { getEmailDomain } from '../../lib/email.js';
+import { seatCapError, syncSeatBilling } from '../tenant/seatService.js';
+import { bestEffort } from '../../lib/bestEffort.js';
 
 // Public, token-gated read model for the contract-confirmation screen
 // (docs/spec-payroll.md Unidad 7) — split into a read-only block (what the
@@ -175,8 +177,16 @@ export async function confirmContract(input: ConfirmContractInput): Promise<Conf
     return { success: false, error: 'An account with this email already exists' };
   }
 
-  const encryptedAccountData = encryptPaymentAccountData(input.paymentAccountData.trim());
   const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: invitation.tenantId } });
+
+  // Same guard as invitationService.ts's acceptInvitation — confirming a contract creates a new
+  // active seat too. Checked before the (fairly expensive) PDF render below.
+  const capError = await seatCapError(tenant);
+  if (capError) {
+    return { success: false, error: capError };
+  }
+
+  const encryptedAccountData = encryptPaymentAccountData(input.paymentAccountData.trim());
   const confirmedAt = new Date();
   const signedPdfBytes = await renderContractPdf({
     tenantName: tenant.name,
@@ -244,6 +254,12 @@ export async function confirmContract(input: ConfirmContractInput): Promise<Conf
 
     return { user, session };
   }, { timeout: 15000 });
+
+  // A newly-confirmed contract is a new active seat, same as invitationService.ts's
+  // acceptInvitation — this path never called it before (gap found alongside the seat-cap check
+  // added above), so a Payroll contract confirmation was never actually billing for the seat it
+  // creates once a tenant is on a real (non-free-trial) plan.
+  await bestEffort(syncSeatBilling(invitation.tenantId), `syncSeatBilling(${invitation.tenantId})`);
 
   // Best-effort, fire-and-forget (same reasoning as the invitation email in
   // invitationService.ts) — the contract is already confirmed and stored

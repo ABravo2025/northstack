@@ -50,6 +50,11 @@ export interface Invoice {
   id: string;
   provider: PaymentProvider;
   amountCents: number;
+  // Breakdown of amountCents (2026-09-15, QA-88) — null on any invoice created before that date,
+  // not backfilled (see prisma/schema.prisma's comment on Invoice). Show amountCents alone when
+  // either is null.
+  baseAmountCents: number | null;
+  extraSeatsAmountCents: number | null;
   currency: string;
   status: string; // "paid" | "failed" | "refunded"
   periodStart: string;
@@ -59,6 +64,8 @@ export interface Invoice {
 }
 
 export interface Subscription {
+  // Internal — may still be the 'starter' signup placeholder even while `tenantPlan` is null
+  // (Free Trial, no plan actually confirmed yet). Prefer `tenantPlan` for anything user-facing.
   plan: PlanTier;
   status: SubscriptionStatus;
   provider: PaymentProvider | null;
@@ -73,6 +80,15 @@ export interface Subscription {
   paymentMethodBrand: string | null;
   paymentMethodLast4: string | null;
   invoices: Invoice[];
+  // Seat counter fields (2026-09-15, QA-88), all live-derived server-side
+  // (subscriptionService.ts's getBillingSummary) — never stored, always current as of the
+  // request. tenantPlan null means Free Trial (no plan chosen/confirmed yet) — the real
+  // "what's the tenant actually on" source of truth, unlike `plan` above.
+  tenantPlan: PlanTier | null;
+  activeSeats: number;
+  includedSeats: number;
+  extraSeats: number;
+  extraSeatsCostCents: number;
 }
 
 export interface Employee {

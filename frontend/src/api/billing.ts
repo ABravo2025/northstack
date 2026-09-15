@@ -16,10 +16,15 @@ export const billingApi = {
     return data.subscription;
   },
 
-  startCheckout: async (token: string): Promise<StartCheckoutResult> => {
+  // `plan` (2026-09-15, QA-88) — required for a first-time subscribe (no provider yet); the
+  // backend now defers writing Tenant.plan until the checkout's payment actually confirms,
+  // instead of BillingPage/PlansModal setting it upfront via updateTenantPlan. Omitted (and
+  // ignored server-side) when just updating the payment method on an already-active subscription.
+  startCheckout: async (token: string, plan?: PlanTier): Promise<StartCheckoutResult> => {
     const res = await apiFetch(`${API_BASE_URL}/api/subscriptions/me/checkout`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ plan }),
     });
     if (!res.ok) await throwApiError(res);
     return res.json();

@@ -14,6 +14,10 @@ import PlansModal from '../components/common/PlansModal';
 interface BillingPageProps {
   token: string;
   tenant: Tenant | null;
+  // Not used here as of the checkout rework (2026-09-15, QA-88) — a plan choice no longer
+  // resolves to an updated Tenant synchronously (see handleSelectPlan below), so there's nothing
+  // to hand back for a first-time subscribe; kept in the interface since the route that renders
+  // this page (App.tsx) already wires it through for its other siblings.
   onTenantUpdated: (tenant: Tenant) => void;
 }
 
@@ -85,7 +89,7 @@ function planDateInfo(sub: Subscription): { label: string; date: string | null; 
   }
 }
 
-export default function BillingPage({ token, tenant, onTenantUpdated }: BillingPageProps) {
+export default function BillingPage({ token, tenant }: BillingPageProps) {
   const toast = useToast();
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
@@ -94,7 +98,6 @@ export default function BillingPage({ token, tenant, onTenantUpdated }: BillingP
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [resuming, setResuming] = useState(false);
-  const [subscribing, setSubscribing] = useState(false);
   const [viewingInvoiceId, setViewingInvoiceId] = useState<string | null>(null);
 
   const load = () => {
@@ -130,37 +133,26 @@ export default function BillingPage({ token, tenant, onTenantUpdated }: BillingP
   const dateInfo = planDateInfo(subscription);
   const hasProvider = subscription.provider !== null;
   const hasPendingCancellation = Boolean(subscription.cancelledAt && subscription.cancellationEffectiveAt);
+  // subscription.tenantPlan (not subscription.plan) is the real "what's actually chosen" source
+  // of truth — subscription.plan can still be the 'starter' signup placeholder for a tenant on
+  // Free Trial whose checkout hasn't been confirmed by a webhook yet (checkoutService.ts).
+  const isFreeTrial = subscription.tenantPlan === null;
 
   // Passed to PlansModal as onSelectPlan (2026-08-19 — reusing the same full-featured modal
-  // shown at signup, per Alejandro's request, instead of a bare two-button expand). Trial (no
-  // provider attached yet) still records the choice via the pre-billing PATCH
-  // /api/tenants/me/plan first (same one AppLayout's auto-opened PlansModal calls), but then —
-  // 2026-08-20 correction — immediately continues into real checkout instead of leaving it as
-  // just an intention, same as AppLayout's welcome modal now does. Already-paying tenants
-  // (provider set) go through the post-billing self-serve change-plan endpoint instead, which
-  // schedules the change for next cycle without a new checkout. 2026-09-14: no confirmation step
-  // in between anymore — straight to the provider's checkout (see redirectToCheckout's comment).
+  // shown at signup, per Alejandro's request, instead of a bare two-button expand). Already-
+  // paying tenants (provider set) go through the post-billing self-serve change-plan endpoint,
+  // which schedules the change for next cycle without a new checkout. A tenant still on Free
+  // Trial (no provider yet) goes straight to checkout with the chosen plan (2026-09-15, QA-88 —
+  // this used to call updateTenantPlan first, writing Tenant.plan before any payment was
+  // confirmed, which is also why the standalone "Subscribe" button is gone: "Change plan" is now
+  // the only entry point into checkout, for both a first subscribe and swapping plans later).
   const handleSelectPlan = async (plan: PlanTier) => {
     if (hasProvider) {
       await api.changeSubscriptionPlan(token, plan);
       toast.success('Plan change scheduled — it applies starting your next billing cycle.');
       load();
     } else {
-      const updated = await api.updateTenantPlan(token, plan);
-      onTenantUpdated(updated);
-      load();
-      await redirectToCheckout(token);
-    }
-  };
-
-  const handleSubscribe = async () => {
-    setSubscribing(true);
-    try {
-      await redirectToCheckout(token);
-    } catch (error) {
-      toast.error((error as Error).message);
-    } finally {
-      setSubscribing(false);
+      await redirectToCheckout(token, plan);
     }
   };
 
@@ -209,38 +201,62 @@ export default function BillingPage({ token, tenant, onTenantUpdated }: BillingP
         <h3 className="card-title">Plan</h3>
         <div className="flex items-center justify-between flex-wrap gap-3 mb-1">
           <div className="flex items-center gap-3">
-            <span className="text-lg font-semibold">{PLAN_LABEL[subscription.plan]}</span>
-            <span className="text-sm text-ink-muted">
-              {formatMoney(subscription.lockedPriceCents, subscription.currency)}/mo
-            </span>
-            <StatusBadge status={hasPendingCancellation ? 'cancel_scheduled' : subscription.status} label={hasPendingCancellation ? 'ending' : undefined} />
-          </div>
-          <div className="flex items-center gap-2">
-            {!hasPendingCancellation && (
-              <button type="button" className="btn btn-outline btn-sm" onClick={() => setShowPlansModal(true)}>
-                Change plan
-              </button>
+            <span className="text-lg font-semibold">{isFreeTrial ? 'Free Trial' : PLAN_LABEL[subscription.tenantPlan!]}</span>
+            {!isFreeTrial && (
+              <span className="text-sm text-ink-muted">
+                {formatMoney(subscription.lockedPriceCents, subscription.currency)}/mo
+              </span>
             )}
-            {!hasProvider && (
-              <button type="button" className="btn btn-primary btn-sm" onClick={handleSubscribe} disabled={subscribing}>
-                {subscribing ? 'Starting…' : 'Subscribe'}
-              </button>
+            {!isFreeTrial && (
+              <StatusBadge status={hasPendingCancellation ? 'cancel_scheduled' : subscription.status} label={hasPendingCancellation ? 'ending' : undefined} />
             )}
           </div>
+          {!hasPendingCancellation && (
+            <button type="button" className="btn btn-outline btn-sm" onClick={() => setShowPlansModal(true)}>
+              Change plan
+            </button>
+          )}
         </div>
-        {dateInfo && (
+        {isFreeTrial ? (
           <p className="text-sm text-ink-faint mb-2">
-            {dateInfo.rangeStart ? (
-              <>
-                {dateInfo.label}: {formatDate(dateInfo.rangeStart)} – {formatDate(dateInfo.date)}
-              </>
-            ) : (
-              <>
-                {dateInfo.label}: {formatDate(dateInfo.date)}
-              </>
-            )}
+            Trial ends: {formatDate(subscription.trialEndsAt)} — pick a plan anytime before then to keep full access.
           </p>
+        ) : (
+          dateInfo && (
+            <p className="text-sm text-ink-faint mb-2">
+              {dateInfo.rangeStart ? (
+                <>
+                  {dateInfo.label}: {formatDate(dateInfo.rangeStart)} – {formatDate(dateInfo.date)}
+                </>
+              ) : (
+                <>
+                  {dateInfo.label}: {formatDate(dateInfo.date)}
+                </>
+              )}
+            </p>
+          )
         )}
+
+        <div className="mt-3 pt-3 border-t border-line dark:border-dark-line flex items-center justify-between flex-wrap gap-2">
+          <span className="text-sm">
+            <span className="font-medium">
+              {subscription.activeSeats}/{subscription.includedSeats}
+            </span>{' '}
+            <span className="text-ink-muted">seats included</span>
+            {subscription.extraSeats > 0 && (
+              <span className="text-ink-muted">
+                {' '}
+                — {subscription.extraSeats} extra seat{subscription.extraSeats === 1 ? '' : 's'} ·{' '}
+                {formatMoney(subscription.extraSeatsCostCents, subscription.currency)}/mo
+              </span>
+            )}
+          </span>
+          {isFreeTrial && subscription.activeSeats >= subscription.includedSeats && (
+            <span className="text-xs text-amber-700 dark:text-amber-400">
+              Free Trial is capped at {subscription.includedSeats} users — choose a plan to add more.
+            </span>
+          )}
+        </div>
 
         {hasProvider && !hasPendingCancellation && subscription.status !== 'cancelled' && (
           <div className="mt-3 pt-3 border-t border-line dark:border-dark-line">
@@ -276,7 +292,7 @@ export default function BillingPage({ token, tenant, onTenantUpdated }: BillingP
           </div>
         ) : (
           <p className="text-sm text-ink-muted">
-            No payment method on file yet — use the <strong>Subscribe</strong> button above to add one.
+            No payment method on file yet — use <strong>Change plan</strong> above to add one.
           </p>
         )}
       </div>
@@ -300,7 +316,15 @@ export default function BillingPage({ token, tenant, onTenantUpdated }: BillingP
               {subscription.invoices.map((invoice) => (
                 <tr key={invoice.id} className="border-t border-line dark:border-dark-line">
                   <td className="py-1.5">{formatDate(invoice.paidAt ?? invoice.createdAt)}</td>
-                  <td className="py-1.5">{formatMoney(invoice.amountCents, invoice.currency)}</td>
+                  <td className="py-1.5">
+                    {formatMoney(invoice.amountCents, invoice.currency)}
+                    {invoice.baseAmountCents != null && invoice.extraSeatsAmountCents != null && invoice.extraSeatsAmountCents > 0 && (
+                      <span className="block text-xs text-ink-faint">
+                        {formatMoney(invoice.baseAmountCents, invoice.currency)} plan + {formatMoney(invoice.extraSeatsAmountCents, invoice.currency)} extra
+                        seats
+                      </span>
+                    )}
+                  </td>
                   <td className="py-1.5">
                     <StatusBadge status={invoice.status} />
                   </td>
@@ -329,14 +353,9 @@ export default function BillingPage({ token, tenant, onTenantUpdated }: BillingP
       <PlansModal
         open={showPlansModal}
         tenant={tenant}
-        token={token}
         onClose={() => setShowPlansModal(false)}
-        onPlanChosen={(updated) => {
-          onTenantUpdated(updated);
-          setShowPlansModal(false);
-        }}
         onSelectPlan={handleSelectPlan}
-        currentPlan={subscription.plan}
+        currentPlan={subscription.tenantPlan}
       />
 
       {showCancelConfirm && (

@@ -47,6 +47,18 @@ vi.mock('../src/lib/mercadopago.js', () => ({
   updatePreapproval: updatePreapprovalMock,
 }));
 
+// checkoutService.ts's Mercado Pago branch calls this directly for a first-time subscribe (no
+// metadata channel to defer the plan write to a webhook like Dodo gets, see checkoutService.ts's
+// top comment) — mocked rather than exercised for real, its own behavior is covered by
+// planService.test.ts.
+const { updateTenantPlanMock } = vi.hoisted(() => ({
+  updateTenantPlanMock: vi.fn(async () => ({ success: true })),
+}));
+vi.mock('../src/modules/tenant/planService.js', () => ({
+  updateTenantPlan: updateTenantPlanMock,
+  CURRENT_PLAN_PRICES_CENTS: { starter: 1900, growth: 3900 },
+}));
+
 import { startCheckout } from '../src/modules/tenant/checkoutService.js';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -63,6 +75,7 @@ function resetMocks() {
   getCustomerPortalUrlMock.mockClear();
   createPreapprovalMock.mockClear();
   updatePreapprovalMock.mockClear();
+  updateTenantPlanMock.mockClear();
   // Real trial behavior (the thing most of these tests assert) only applies to real production
   // billing — see checkoutService.ts's isRealProductionBilling comment. Default to 'production'
   // here so existing trialDays:15 assertions keep testing that path; the dedicated
@@ -81,7 +94,7 @@ describe('startCheckout — subscribing for the first time (no provider yet)', (
   it('creates a new Dodo Payments checkout session for an international tenant', async () => {
     subscriptions.push({ tenantId: 't1', id: 'sub1', plan: 'starter', provider: null, externalSubscriptionId: null });
 
-    const result = await startCheckout(tenant({ id: 't1', country: 'United States' }), { id: 'u1', email: 'a@example.com' });
+    const result = await startCheckout(tenant({ id: 't1', country: 'United States' }), { id: 'u1', email: 'a@example.com' }, 'starter');
 
     expect(result.success).toBe(true);
     expect(result.provider).toBe('dodopayments');
@@ -97,31 +110,43 @@ describe('startCheckout — subscribing for the first time (no provider yet)', (
     subscriptions.push({ tenantId: 't1', id: 'sub1', plan: 'starter', provider: null, externalSubscriptionId: null });
     planPrices.find((p) => p.plan === 'starter' && p.market === 'ar')!.launchPriceCents = 5000; // real price, not the AR placeholder
 
-    const result = await startCheckout(tenant({ id: 't1', country: 'Argentina' }), { id: 'u1', email: 'a@example.com' });
+    const result = await startCheckout(tenant({ id: 't1', country: 'Argentina' }), { id: 'u1', email: 'a@example.com' }, 'starter');
 
     expect(result.success).toBe(true);
     expect(result.provider).toBe('mercadopago');
     expect(result.initPoint).toBe('https://mp.example/checkout');
     expect(createPreapprovalMock).toHaveBeenCalledTimes(1);
     expect(createPreapprovalMock).toHaveBeenCalledWith(expect.objectContaining({ trialDays: 15 }));
+    // No metadata channel on a Mercado Pago preapproval (unlike Dodo below) — the plan is
+    // written immediately instead of deferred to a webhook confirmation, see checkoutService.ts.
+    expect(updateTenantPlanMock).toHaveBeenCalledWith('t1', 'starter', 'u1');
   });
 
   it('rejects when the market price is the AR placeholder (0 cents)', async () => {
     subscriptions.push({ tenantId: 't1', id: 'sub1', plan: 'growth', provider: null, externalSubscriptionId: null });
 
-    const result = await startCheckout(tenant({ id: 't1', country: 'Argentina' }), { id: 'u1', email: 'a@example.com' });
+    const result = await startCheckout(tenant({ id: 't1', country: 'Argentina' }), { id: 'u1', email: 'a@example.com' }, 'growth');
 
     expect(result.success).toBe(false);
     expect(createPreapprovalMock).not.toHaveBeenCalled();
+  });
+
+  it('rejects when no plan is chosen yet', async () => {
+    subscriptions.push({ tenantId: 't1', id: 'sub1', plan: 'starter', provider: null, externalSubscriptionId: null });
+
+    const result = await startCheckout(tenant({ id: 't1', country: 'United States' }), { id: 'u1', email: 'a@example.com' });
+
+    expect(result.success).toBe(false);
+    expect(createCheckoutSessionMock).not.toHaveBeenCalled();
   });
 
   it('throws (not a soft error) when the international plan price has no dodoProductId — provisioning script never ran', async () => {
     planPrices.find((p) => p.plan === 'starter' && p.market === 'international')!.dodoProductId = null;
     subscriptions.push({ tenantId: 't1', id: 'sub1', plan: 'starter', provider: null, externalSubscriptionId: null });
 
-    await expect(startCheckout(tenant({ id: 't1', country: 'United States' }), { id: 'u1', email: 'a@example.com' })).rejects.toThrow(
-      'dodoProductId',
-    );
+    await expect(
+      startCheckout(tenant({ id: 't1', country: 'United States' }), { id: 'u1', email: 'a@example.com' }, 'starter'),
+    ).rejects.toThrow('dodoProductId');
 
     planPrices.find((p) => p.plan === 'starter' && p.market === 'international')!.dodoProductId = 'pdt_starter';
   });
@@ -172,7 +197,7 @@ describe('startCheckout — outside real production billing (staging/local dev)'
     delete process.env.BILLING_ENV;
     subscriptions.push({ tenantId: 't1', id: 'sub1', plan: 'starter', provider: null, externalSubscriptionId: null });
 
-    const result = await startCheckout(tenant({ id: 't1', country: 'United States' }), { id: 'u1', email: 'a@example.com' });
+    const result = await startCheckout(tenant({ id: 't1', country: 'United States' }), { id: 'u1', email: 'a@example.com' }, 'starter');
 
     expect(result.success).toBe(true);
     expect(createCheckoutSessionMock).toHaveBeenCalledWith(expect.objectContaining({ trialDays: undefined }));
@@ -183,7 +208,7 @@ describe('startCheckout — outside real production billing (staging/local dev)'
     subscriptions.push({ tenantId: 't1', id: 'sub1', plan: 'starter', provider: null, externalSubscriptionId: null });
     planPrices.find((p) => p.plan === 'starter' && p.market === 'ar')!.launchPriceCents = 5000;
 
-    const result = await startCheckout(tenant({ id: 't1', country: 'Argentina' }), { id: 'u1', email: 'a@example.com' });
+    const result = await startCheckout(tenant({ id: 't1', country: 'Argentina' }), { id: 'u1', email: 'a@example.com' }, 'starter');
 
     expect(result.success).toBe(true);
     expect(createPreapprovalMock).toHaveBeenCalledWith(expect.objectContaining({ trialDays: undefined }));
@@ -199,6 +224,7 @@ describe('startCheckout — trial length caps at what remains of the ORIGINAL tr
     const result = await startCheckout(
       tenant({ id: 't1', country: 'United States', trialEndsAt: new Date(Date.now() + 3 * DAY_MS) }),
       { id: 'u1', email: 'a@example.com' },
+      'starter',
     );
 
     expect(result.success).toBe(true);
@@ -214,6 +240,7 @@ describe('startCheckout — trial length caps at what remains of the ORIGINAL tr
     const result = await startCheckout(
       tenant({ id: 't1', country: 'United States', trialEndsAt: new Date(Date.now() - 5 * DAY_MS) }),
       { id: 'u1', email: 'a@example.com' },
+      'starter',
     );
 
     expect(result.success).toBe(true);

@@ -114,26 +114,45 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  const handleContractConfirmed = (newToken: string, newUser: any) => {
+  // Shared by handleContractConfirmed/handlePasswordReset/handleInvitationAccepted/
+  // handleSignupCompleted below (found live, 2026-09-15, QA-87 — a customer's first login and a
+  // brand-new signup both showed a sidebar missing Payroll/the whole Sales group, permanently
+  // until a manual reload). None of these actions' own responses carry `permissions` — only
+  // GET /api/auth/me does (see AuthResponse in api/types.ts) — so they all depended on the
+  // separate [token] effect above to fetch it after the fact, same as login did. But unlike
+  // login, they navigate to /overview immediately, from a route the effect explicitly bails out
+  // on (isAcceptInviteRoute/isConfirmContractRoute/isResetPasswordRoute/isRegisterCompleteRoute
+  // — "whoever clicked it may not be whoever last used this browser"). react-router's
+  // BrowserRouter wraps navigate()'s location update in startTransition, so that effect — fired
+  // by this same setToken call, same tick as navigate — can still see the OLD guarded pathname
+  // and skip the fetch entirely; since token only changes once, it would never retry, leaving
+  // checkingSession stuck true (a permanent spinner, worse than the original bug) if these just
+  // set it and waited on that effect. So this fetches user+permissions+tenant itself, gated
+  // behind checkingSession (checked at the very top of this component, before Routes even
+  // renders), instead of ever relying on that effect for a route it's designed to ignore.
+  const adoptConfirmedSession = async (newToken: string) => {
     setToken(newToken);
     localStorage.setItem('token', newToken);
-    setUser(newUser);
+    setCheckingSession(true);
     navigate('/overview');
+    try {
+      const [{ user: fullUser, permissions }, tenant] = await Promise.all([
+        api.getCurrentUser(newToken),
+        api.getCurrentTenant(newToken).catch(() => null),
+      ]);
+      setUser(fullUser);
+      setPermissions(permissions);
+      if (tenant) {
+        setTenant(tenant);
+      }
+    } finally {
+      setCheckingSession(false);
+    }
   };
 
-  const handlePasswordReset = (newToken: string, newUser: any) => {
-    setToken(newToken);
-    localStorage.setItem('token', newToken);
-    setUser(newUser);
-    navigate('/overview');
-  };
-
-  const handleInvitationAccepted = (newToken: string, newUser: any) => {
-    setToken(newToken);
-    localStorage.setItem('token', newToken);
-    setUser(newUser);
-    navigate('/overview');
-  };
+  const handleContractConfirmed = (newToken: string) => adoptConfirmedSession(newToken);
+  const handlePasswordReset = (newToken: string) => adoptConfirmedSession(newToken);
+  const handleInvitationAccepted = (newToken: string) => adoptConfirmedSession(newToken);
 
   const handleLogin = async (email: string, password: string) => {
     setLoading(true);
@@ -161,23 +180,14 @@ export default function App() {
   };
 
   // CompleteSignupPage already called POST /api/tenants/register itself (it owns the 3-step
-  // survey's own loading/error state) — this just adopts the resulting session, same shape as
-  // handleContractConfirmed/handlePasswordReset/handleInvitationAccepted above. Lands on
-  // /overview directly — PlansModal (AppLayout) shows itself automatically over that screen
-  // for a fresh trialing tenant, it isn't a route of its own (2026-08-13 correction).
-  //
-  // tenant is set directly from the register response rather than left to the [token] effect
-  // above: react-router's BrowserRouter wraps the location update from navigate() in
-  // startTransition, so that effect can fire (and hit its isRegisterCompleteRoute guard) before
-  // location.pathname has actually changed to /overview, and then never re-runs since token
-  // doesn't change again — PlansModal would never appear for a fresh signup otherwise.
-  const handleSignupCompleted = (newToken: string, newUser: any, newTenant: Tenant) => {
-    setToken(newToken);
-    localStorage.setItem('token', newToken);
-    setUser(newUser);
-    setTenant(newTenant);
-    navigate('/overview');
-  };
+  // survey's own loading/error state) — this just adopts the resulting session via the same
+  // adoptConfirmedSession helper above (same isRegisterCompleteRoute trap applies here as
+  // isConfirmContractRoute/isResetPasswordRoute/isAcceptInviteRoute do to those three). Lands on
+  // /overview directly — PlansModal (AppLayout) shows itself automatically over that screen for
+  // a fresh trialing tenant, it isn't a route of its own (2026-08-13 correction). Re-fetches
+  // tenant via adoptConfirmedSession rather than reusing the register response's own `tenant`
+  // (one extra request) — simpler than a one-off variant just for this call site.
+  const handleSignupCompleted = (newToken: string) => adoptConfirmedSession(newToken);
 
   // Shared by handleLogout and the unauthorizedHandler effect below — cleared together so a
   // second person logging in on the same tab (or, if the tenant fetch below fails, the same

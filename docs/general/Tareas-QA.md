@@ -4208,3 +4208,46 @@ desactualizado en una sesión larga), pero no eran la causa de este bug puntual 
    accept-invite, reset-password, confirm-contract, register/complete — deberían seguir funcionando
    como antes (no se tocaron), pero vale la pena confirmar que ninguno quedó con el mismo bug visible
    si el momento es propicio para reportarlo, ya que comparten el patrón.
+
+### Addendum (mismo día) — el fix de arriba estaba incompleto, ya corregido
+
+Alejandro probó el fix de login creando una cuenta nueva ("cree otra cuenta, abri desde 0") y el
+bug seguía — porque una cuenta nueva pasa por `handleSignupCompleted`, no por `handleLogin`, y ese
+handler **no se había tocado** (quedó explícitamente fuera de scope en la primera versión de esta
+tarea, ver arriba). Al revisar `handleSignupCompleted` para aplicarle el mismo fix, apareció un
+problema más serio ya anotado en un comentario preexistente del propio código: el `useEffect`
+compartido que hace `Promise.all([getCurrentUser, getCurrentTenant])` se auto-excluye en
+`isAcceptInviteRoute`/`isConfirmContractRoute`/`isResetPasswordRoute`/`isRegisterCompleteRoute`
+("whoever clicked it may not be whoever last used this browser"), y como `navigate()` de
+react-router envuelve el cambio de `location.pathname` en `startTransition`, ese efecto (disparado
+por el mismo `setToken` en el mismo tick que el `navigate('/overview')` de estos handlers) puede
+seguir viendo el pathname viejo (todavía dentro de la ruta con guardia) y saltearse el fetch por
+completo — y como `token` solo cambia una vez, nunca reintenta. Aplicarle a estos 4 handlers el
+mismo patrón que a login (esperar al efecto compartido) hubiera dejado `checkingSession` trabado en
+`true` para siempre — un spinner infinito, peor que el bug original.
+
+**Fix real:** `handleContractConfirmed`/`handlePasswordReset`/`handleInvitationAccepted`/
+`handleSignupCompleted` ahora comparten un helper nuevo (`adoptConfirmedSession`) que hace su propio
+`Promise.all([getCurrentUser, getCurrentTenant])` directamente, sin depender del efecto compartido
+para nada — consistente con por qué `handleSignupCompleted` ya seteaba `tenant` manualmente desde
+antes (el comentario original explicaba exactamente esta misma trampa, pero solo para ese caso; no
+se había notado que aplica igual a los otros 3). `checkingSession` sigue gateando el render igual
+que en session-restore, así que el usuario ve el `TableSkeleton` en vez de un sidebar incompleto O
+un rebote a `/login`, y esta vez sí se resuelve solo porque no depende del efecto con la guardia de
+ruta.
+
+### Qué probar (addendum)
+
+1. **Signup de cero:** completar el flujo de registro completo (survey de 3 pasos +
+   `/register/complete`) con una cuenta nueva real — confirmar que `/overview` carga con el sidebar
+   completo (incluido el grupo Sales, ya que un tenant nuevo en trial tiene acceso completo) desde
+   el primer render, sin necesidad de recargar. Repetir con throttling de red para agrandar la
+   ventana de la carrera.
+2. **Accept-invite / reset-password / confirm-contract:** repetir el mismo chequeo para cada uno de
+   estos 3 flujos (antes marcados como "no tocado" en QA-87 original, ahora sí tienen el fix) —
+   confirmar que no aparece ni el sidebar incompleto ni un rebote visible a `/login`, y que
+   `checkingSession` siempre se resuelve (no se queda trabado en el `TableSkeleton` para siempre).
+3. **Regresión:** confirmar que ninguno de estos 4 flujos quedó con doble fetch visible como error
+   (el efecto compartido puede disparar su propio `Promise.all` en paralelo si llega a ver el
+   pathname ya actualizado — es redundante pero inofensivo, ambos deberían converger al mismo
+   resultado correcto, no debería producir ningún estado inconsistente ni error en consola).

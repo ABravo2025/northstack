@@ -4588,3 +4588,36 @@ QA-93, un branch más en la misma función.
 conectada por OAuth interactivo) — confirmar en People igual que el punto 2 de QA-93: crear una
 tarea sobre un Employee con Meet tildado, con Calendar conectado, y verificar que el Employee recibe
 la invitación con el link.
+
+---
+
+## QA-95 — 2 bugs de QA-93/94 encontrados por Alejandro: doble-submit y attendee sin gatear por Meet (2026-09-16, en `staging`)
+
+**Por qué existe esta tarea:** Alejandro probó QA-93/94 y encontró dos problemas:
+
+1. **Doble/triple submit:** apretar "Add task" varias veces rápido creaba varias tareas duplicadas.
+   `TaskForm.tsx` no bloqueaba re-entradas mientras el `onSubmit` (create/update) todavía estaba en
+   vuelo — bug preexistente en el form, no algo que introdujo esta feature, pero bloqueaba probarla.
+   **Fix:** estado `submitting` — bloquea `handleSubmit` mientras hay uno en curso y deshabilita el
+   botón ("Saving…") hasta que termina.
+2. **El invitado no recibía nada de su lado:** el asistente (Contact/Employee/Primary Contact) se
+   invitaba en **cualquier** tarea que tuviera una entidad resoluble, tuviera o no Meet tildado —
+   Alejandro esperaba que la invitación (`attendees` + `sendUpdates`) solo pase cuando se pide
+   explícitamente el Google Meet, no en cualquier tarea con fecha. **Fix:** `resolveTaskAttendeeEmail`
+   ahora solo se llama si `current.hasVideoCall` es `true`; sin eso, `attendeeEmail` queda `undefined`
+   y el evento no invita a nadie.
+
+**Verificado en esta sesión:** doble-submit confirmado en vivo contra `staging` (5 clicks rápidos con
+force-click → 1 sola tarea creada cada corrida, botón queda en "Saving…" y deshabilitado durante la
+request, toast "Task created." al terminar). El gateo de `hasVideoCall` se verificó por código +
+tests, no en vivo (requiere Calendar conectado, mismo límite que QA-93/94).
+
+### Qué probar
+
+1. **Doble click real:** en cualquier Tasks tab, escribir un título y clickear "Add task" varias
+   veces seguidas lo más rápido posible — confirmar que se crea una sola tarea, no varias.
+2. **Meet destildado no invita a nadie:** crear una tarea sobre un Contact/Employee **sin** tildar
+   "Add Google Meet video call" — con Calendar conectado, confirmar que el evento se crea en tu
+   calendario pero **sin** invitado (nadie más lo ve ni recibe nada).
+3. **Meet tildado sí invita:** repetir QA-93/94 punto 2 con el fix — confirmar que ahora si llega la
+   invitación del lado del cliente/empleado (evento en su Google Calendar / email de invitación).

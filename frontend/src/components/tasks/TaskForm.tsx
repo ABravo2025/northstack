@@ -76,6 +76,7 @@ export default function TaskForm({
   const [dueDate, setDueDate] = useState('');
   const [dueTime, setDueTime] = useState('');
   const [hasVideoCall, setHasVideoCall] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     setTitle(task?.title ?? '');
@@ -104,28 +105,36 @@ export default function TaskForm({
     }
   };
 
+  // Guards against a fast double/triple click firing this before the first submit's request
+  // even lands — found live (2026-09-16): repeated clicks on "Add task" created several
+  // identical tasks, since nothing disabled the button or blocked re-entry while awaiting.
   const handleSubmit = async () => {
-    if (!title.trim()) return;
-    const wasNew = !task;
-    // No time set: keep the existing date-only/all-day semantics (UTC
-    // midnight of the chosen calendar day — synced to Google as an all-day
-    // event). A time turns it into a real instant, synced as a timed event
-    // instead — see googleCalendarSyncService.ts.
-    const dueDateIso = !dueDate ? null : dueTime ? new Date(`${dueDate}T${dueTime}`).toISOString() : new Date(dueDate).toISOString();
-    await onSubmit({
-      title: title.trim(),
-      description: description.trim() || null,
-      assigneeId,
-      dueDate: dueDateIso,
-      hasVideoCall,
-    });
-    if (wasNew) {
-      setTitle('');
-      setDescription('');
-      setDueDate('');
-      setDueTime('');
-      setHasVideoCall(false);
-      setAssigneeId(defaultAssigneeId);
+    if (!title.trim() || submitting) return;
+    setSubmitting(true);
+    try {
+      const wasNew = !task;
+      // No time set: keep the existing date-only/all-day semantics (UTC
+      // midnight of the chosen calendar day — synced to Google as an all-day
+      // event). A time turns it into a real instant, synced as a timed event
+      // instead — see googleCalendarSyncService.ts.
+      const dueDateIso = !dueDate ? null : dueTime ? new Date(`${dueDate}T${dueTime}`).toISOString() : new Date(dueDate).toISOString();
+      await onSubmit({
+        title: title.trim(),
+        description: description.trim() || null,
+        assigneeId,
+        dueDate: dueDateIso,
+        hasVideoCall,
+      });
+      if (wasNew) {
+        setTitle('');
+        setDescription('');
+        setDueDate('');
+        setDueTime('');
+        setHasVideoCall(false);
+        setAssigneeId(defaultAssigneeId);
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -205,8 +214,8 @@ export default function TaskForm({
         </div>
       )}
       <div className="nv-field flex items-center gap-2">
-        <button type="button" className="btn-primary flex-1 text-center" onClick={handleSubmit} disabled={!title.trim()}>
-          {task ? 'Save' : 'Add task'}
+        <button type="button" className="btn-primary flex-1 text-center" onClick={handleSubmit} disabled={!title.trim() || submitting}>
+          {submitting ? 'Saving…' : task ? 'Save' : 'Add task'}
         </button>
         {task && onCancelEdit && (
           <button type="button" className="icon-btn" onClick={onCancelEdit} aria-label="Cancel edit">

@@ -53,8 +53,10 @@ async function resolveTaskAttendeeEmail(entityType: EntityType, entityId: string
 // wantsNewConference is true only the first time a task with hasVideoCall requests a Meet link
 // (googleMeetUrl still null) — once Google generates one it's never regenerated on later syncs
 // (see the Task.googleMeetUrl schema comment on why removal/regeneration isn't handled).
-// attendeeEmail is added whenever resolveTaskAttendeeEmail finds one, independent of hasVideoCall
-// — inviting that person to the calendar block itself is useful even without Meet.
+// attendeeEmail is only ever passed in when the task has hasVideoCall checked (see the call site) —
+// found live (2026-09-16): a plain task with no Meet requested was still inviting whoever
+// resolveTaskAttendeeEmail found, which surprised Alejandro testing it. Only a Meet call is worth
+// notifying someone about; a plain reminder task about them isn't.
 function taskEventBody(task: Task, attendeeEmail: string | undefined, wantsNewConference: boolean): calendar_v3.Schema$Event {
   const due = task.dueDate!;
   const hasTime = due.getUTCHours() !== 0 || due.getUTCMinutes() !== 0 || due.getUTCSeconds() !== 0;
@@ -161,7 +163,7 @@ export async function syncTaskCalendarEvent(previous: Task | null, current: Task
       return;
     }
 
-    const attendeeEmail = await resolveTaskAttendeeEmail(current.entityType, current.entityId);
+    const attendeeEmail = current.hasVideoCall ? await resolveTaskAttendeeEmail(current.entityType, current.entityId) : undefined;
     const wantsNewConference = current.hasVideoCall && !current.googleMeetUrl;
     const eventBody = taskEventBody(current, attendeeEmail, wantsNewConference);
     // conferenceDataVersion opts into Google actually fulfilling conferenceData.createRequest

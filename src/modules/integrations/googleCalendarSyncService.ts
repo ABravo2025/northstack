@@ -12,25 +12,21 @@ import { getAuthorizedClientForUser, markNeedsReconnectIfRevoked } from './googl
 const ONE_HOUR_MS = 60 * 60 * 1000;
 const ONE_DAY_MS = 24 * ONE_HOUR_MS;
 
-// A Task's dueDate is either date-only (always exactly UTC midnight — no
-// time was ever set in TaskForm) or a real instant (a specific time was
-// picked, converted from local time to UTC on submit) — see TaskForm.tsx's
-// matching comment. All-day events use Google's `date` field; a real instant
-// uses `dateTime` instead, so the event shows at the actual hour in Google
-// Calendar rather than as a full-day block. Tasks have no explicit duration,
-// so a timed event gets a flat 1-hour block purely for visual sizing on the
-// calendar — it doesn't mean anything about how long the task takes.
-// Resolves the "client" email to invite on a task's Meet call (2026-09-16, Alejandro's explicit
-// call — the whole point is a call *with a client*, so the invite should go out automatically
-// rather than making the assignee copy/paste a link). Only 'contact' has a direct email; 'company'
-// and 'opportunity' have no email of their own, so it falls back to that company's Primary
-// Contact (Contact.isPrimary) — undefined (no attendee added) if there isn't one. Every other
-// entityType Task supports (employee/client/ticket/idea, see isSupportedCrossModuleEntityType)
-// isn't client-facing, so it's undefined there too.
-async function resolveTaskClientEmail(entityType: EntityType, entityId: string): Promise<string | undefined> {
+// Resolves the email to invite as an attendee on a task's synced calendar event (2026-09-16,
+// Alejandro's explicit call — the whole point of the Meet link is a call *with someone*, so the
+// invite should go out automatically rather than making the assignee copy/paste a link). 'contact'
+// and 'employee' have a direct email; 'company' and 'opportunity' have no email of their own, so it
+// falls back to that company's Primary Contact (Contact.isPrimary) — undefined (no attendee added)
+// if there isn't one. Every other entityType Task supports (client/ticket/idea, see
+// isSupportedCrossModuleEntityType) has no natural single person to invite, so undefined there too.
+async function resolveTaskAttendeeEmail(entityType: EntityType, entityId: string): Promise<string | undefined> {
   if (entityType === 'contact') {
     const contact = await prisma.contact.findUnique({ where: { id: entityId }, select: { email: true } });
     return contact?.email;
+  }
+  if (entityType === 'employee') {
+    const employee = await prisma.employee.findUnique({ where: { id: entityId }, select: { email: true } });
+    return employee?.email;
   }
 
   let companyId: string | undefined;
@@ -46,12 +42,20 @@ async function resolveTaskClientEmail(entityType: EntityType, entityId: string):
   return primaryContact?.email;
 }
 
+// A Task's dueDate is either date-only (always exactly UTC midnight — no
+// time was ever set in TaskForm) or a real instant (a specific time was
+// picked, converted from local time to UTC on submit) — see TaskForm.tsx's
+// matching comment. All-day events use Google's `date` field; a real instant
+// uses `dateTime` instead, so the event shows at the actual hour in Google
+// Calendar rather than as a full-day block. Tasks have no explicit duration,
+// so a timed event gets a flat 1-hour block purely for visual sizing on the
+// calendar — it doesn't mean anything about how long the task takes.
 // wantsNewConference is true only the first time a task with hasVideoCall requests a Meet link
 // (googleMeetUrl still null) — once Google generates one it's never regenerated on later syncs
 // (see the Task.googleMeetUrl schema comment on why removal/regeneration isn't handled).
-// clientEmail is added as an attendee whenever resolveTaskClientEmail finds one, independent of
-// hasVideoCall — inviting the client to the calendar block itself is useful even without Meet.
-function taskEventBody(task: Task, clientEmail: string | undefined, wantsNewConference: boolean): calendar_v3.Schema$Event {
+// attendeeEmail is added whenever resolveTaskAttendeeEmail finds one, independent of hasVideoCall
+// — inviting that person to the calendar block itself is useful even without Meet.
+function taskEventBody(task: Task, attendeeEmail: string | undefined, wantsNewConference: boolean): calendar_v3.Schema$Event {
   const due = task.dueDate!;
   const hasTime = due.getUTCHours() !== 0 || due.getUTCMinutes() !== 0 || due.getUTCSeconds() !== 0;
 
@@ -70,7 +74,7 @@ function taskEventBody(task: Task, clientEmail: string | undefined, wantsNewConf
           start: { date: due.toISOString().slice(0, 10) },
           end: { date: new Date(due.getTime() + ONE_DAY_MS).toISOString().slice(0, 10) },
         }),
-    ...(clientEmail ? { attendees: [{ email: clientEmail }] } : {}),
+    ...(attendeeEmail ? { attendees: [{ email: attendeeEmail }] } : {}),
     // A Meet link only makes sense for a call at a specific time, not an all-day block —
     // TaskForm.tsx already forces a time when the user checks "Add Google Meet", this is just
     // defense in depth against hasVideoCall somehow being set without one (e.g. a direct API call).
@@ -157,16 +161,16 @@ export async function syncTaskCalendarEvent(previous: Task | null, current: Task
       return;
     }
 
-    const clientEmail = await resolveTaskClientEmail(current.entityType, current.entityId);
+    const attendeeEmail = await resolveTaskAttendeeEmail(current.entityType, current.entityId);
     const wantsNewConference = current.hasVideoCall && !current.googleMeetUrl;
-    const eventBody = taskEventBody(current, clientEmail, wantsNewConference);
+    const eventBody = taskEventBody(current, attendeeEmail, wantsNewConference);
     // conferenceDataVersion opts into Google actually fulfilling conferenceData.createRequest
     // (omitted otherwise, it's silently ignored); sendUpdates delivers the calendar invite email
-    // to clientEmail immediately instead of leaving it queued for the next Calendar sync on their
-    // side. Both are no-ops (and harmless to always pass) when there's nothing for them to do.
+    // to attendeeEmail immediately instead of leaving it queued for the next Calendar sync on
+    // their side. Both are no-ops (and harmless to always pass) when there's nothing for them to do.
     const requestParams = {
       ...(wantsNewConference ? { conferenceDataVersion: 1 as const } : {}),
-      ...(clientEmail ? { sendUpdates: 'all' as const } : {}),
+      ...(attendeeEmail ? { sendUpdates: 'all' as const } : {}),
     };
 
     try {

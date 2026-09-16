@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Page not found — Northstack</title>
+    <meta name="robots" content="noindex" />
+
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
+    <meta name="theme-color" content="#0d2a48" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      /*
+        Brand palette — kept in sync by hand with frontend/src/index.css
+        (`@theme` block, --color-brand-*) on the main branch, and with
+        index.html/about.html on this same static site (no build step /
+        shared module system to import a single definition from). If you
+        change a color here, update the other files too.
+      */
+      :root {
+        --ink: #0d2a48;
+        --ink-muted: #6f6a62;
+        --ink-faint: #a09a90;
+        --accent: #b8502f;
+        --accent-hover: #9c4227;
+        --surface-0: #f8f5f0;
+        --surface-1: #fffefb;
+        --surface-2: #f3efe8;
+        --line: #e6e0d6;
+        --line-strong: #d8d1c5;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+        background: var(--surface-0);
+        color: var(--ink);
+        line-height: 1.6;
+      }
+
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      a:hover {
+        color: var(--accent-hover);
+      }
+
+      .container {
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 14px 26px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 15px;
+        cursor: pointer;
+        border: 1px solid transparent;
+        white-space: nowrap;
+      }
+      .btn-primary {
+        background: var(--accent);
+        color: #fff;
+      }
+      .btn-primary:hover {
+        background: var(--accent-hover);
+        color: #fff;
+      }
+      .btn-secondary {
+        background: transparent;
+        color: var(--ink);
+        border-color: var(--line-strong);
+      }
+      .btn-secondary:hover {
+        background: var(--surface-2);
+        color: var(--ink);
+      }
+
+      .nav {
+        background: var(--surface-1);
+        border-bottom: 1px solid var(--line);
+      }
+      .nav .container {
+        height: 76px;
+        display: flex;
+        align-items: center;
+      }
+      .nav-logo img {
+        height: 24px;
+        display: block;
+      }
+
+      main {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 64px 0;
+      }
+      .error-wrap {
+        max-width: 480px;
+        text-align: center;
+      }
+      .error-code {
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 16px;
+      }
+      h1 {
+        font-size: 32px;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        margin: 0 0 14px;
+      }
+      .error-wrap p.lead {
+        font-size: 15.5px;
+        line-height: 1.6;
+        color: var(--ink-muted);
+        margin: 0 0 32px;
+      }
+      .error-actions {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        flex-wrap: wrap;
+      }
+
+      footer {
+        border-top: 1px solid var(--line);
+        padding: 24px 0;
+        text-align: center;
+        font-size: 12.5px;
+        color: var(--ink-faint);
+      }
+
+      @media (max-width: 480px) {
+        h1 {
+          font-size: 26px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="nav">
+      <div class="container">
+        <a class="nav-logo" href="/"><img src="/logo-horizontal-light.svg" alt="Northstack" /></a>
+      </div>
+    </header>
+
+    <main>
+      <div class="container">
+        <div class="error-wrap">
+          <div class="error-code">404 error</div>
+          <h1>This page took a wrong turn.</h1>
+          <p class="lead">
+            The page you're looking for doesn't exist, moved, or the link was mistyped.
+            Let's get you back on track.
+          </p>
+          <div class="error-actions">
+            <a class="btn btn-primary" href="/">Back to home</a>
+            <a class="btn btn-secondary" href="/about.html">About Northstack</a>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer>© 2026 Northstack. All rights reserved.</footer>
+  </body>
+</html>

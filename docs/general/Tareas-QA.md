@@ -4572,3 +4572,19 @@ realmente conectada vía OAuth (login interactivo), que solo Alejandro puede hac
    Calendar después, `backfillCalendarSyncForUser` (ya existente, corre al conectar) debería recuperar
    esa tarea sola — filtra por `googleCalendarEventId: null`, así que una tarea nunca sincronizada
    antes entra en el backfill y genera el Meet ahí — confirmar que efectivamente pasa así.
+
+---
+
+## QA-94 — QA-93 no invitaba al Employee en tareas de People (2026-09-16, en `staging`)
+
+**Por qué existe esta tarea:** Alejandro probó QA-93 y encontró que en People (tareas sobre un
+Employee) el checkbox de Meet funcionaba pero no invitaba a nadie — `resolveTaskClientEmail` solo
+resolvía Contact/Company/Opportunity, Employee quedó afuera aunque tiene su propio campo `email` y
+el mismo caso de uso (una llamada) aplica igual. Se agregó la rama que faltaba (renombrada
+`resolveTaskAttendeeEmail`, ya no es solo "cliente") — mismo mecanismo ya verificado para Contact en
+QA-93, un branch más en la misma función.
+
+**No verificado en vivo esta vez** (mismo motivo que QA-93: requiere una cuenta de Google Calendar
+conectada por OAuth interactivo) — confirmar en People igual que el punto 2 de QA-93: crear una
+tarea sobre un Employee con Meet tildado, con Calendar conectado, y verificar que el Employee recibe
+la invitación con el link.

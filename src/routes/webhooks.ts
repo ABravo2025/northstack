@@ -1,9 +1,9 @@
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import prisma from '../lib/prisma.js';
 import { getAuthorizedPayment, getPreapproval, verifyMercadoPagoSignature } from '../lib/mercadopago.js';
-import { getNextBillingDate, unwrapDodoWebhookEvent } from '../lib/dodopayments.js';
+import { getNextBillingDate, getSubscriptionProductId, unwrapDodoWebhookEvent } from '../lib/dodopayments.js';
 import { GRACE_PERIOD_DAYS } from '../modules/tenant/planTransitionService.js';
-import { syncSubscriptionAndTenant } from '../modules/tenant/subscriptionService.js';
+import { syncSubscriptionAndTenant, resolvePlanFromDodoProductId } from '../modules/tenant/subscriptionService.js';
 import { syncSeatBilling, countActiveSeats, extraSeatsFor, EXTRA_SEAT_PRICE_CENTS } from '../modules/tenant/seatService.js';
 import { CURRENT_PLAN_PRICES_CENTS } from '../modules/tenant/planService.js';
 import { bestEffort } from '../lib/bestEffort.js';
@@ -176,6 +176,30 @@ webhooksRouter.post('/api/webhooks/mercadopago', async (req, res) => {
   }
 });
 
+// 2026-09-16, QA-91 — metadata.plan (checkoutService.ts, set at checkout creation) is the cheap
+// path when Dodo actually propagates it onto a later event's Payment/Subscription resource, but
+// that propagation turned out to be unreliable in a real test delivery (found live: a real
+// payment's metadata came back without it). `product_id` is structural data — always present on
+// a Subscription resource, reverse-lookupable via PlanPrice.dodoProductId — so it's the fallback
+// whenever metadata doesn't have it. `directProductId` lets subscription.active (whose event data
+// IS a Subscription resource, product_id already in hand) skip the extra API call entirely;
+// payment.succeeded has no product_id on the Payment resource itself, so its callers omit
+// directProductId and this fetches the subscription instead.
+async function resolveConfirmedPlan(
+  metadataPlan: unknown,
+  externalSubscriptionId: string | null,
+  directProductId?: string,
+): Promise<'starter' | 'growth' | null> {
+  if (metadataPlan === 'starter' || metadataPlan === 'growth') {
+    return metadataPlan;
+  }
+  const productId = directProductId ?? (externalSubscriptionId ? await getSubscriptionProductId(externalSubscriptionId) : null);
+  if (!productId) {
+    return null;
+  }
+  return resolvePlanFromDodoProductId(productId);
+}
+
 webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
   const rawBody = rawBodyText(req);
   let event;
@@ -235,7 +259,7 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
       // delivery yet (no live credentials at the time this was written) — confirm both branches
       // before go-live, same caveat this codebase already carries for Mercado Pago's field names.
       //
-      // Still confirms metadata.plan here too (2026-09-15, QA-90 — Alejandro paid with the 100%
+      // Still confirms the plan here too (2026-09-15/16, QA-90/91 — Alejandro paid with the 100%
       // test discount code and Billing kept showing Free Trial): total_amount === 0 covers BOTH a
       // genuine trial mandate-verification charge AND a real subscription that happens to net to
       // $0 from a full discount — either way, checkout completing for a NEW subscription (Dodo
@@ -244,14 +268,16 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
       // Deliberately still skips status/period/Invoice here (kept 'trialing', no period dates) —
       // only a genuine non-zero charge should ever flip status to 'active'.
       if (payment.is_update_payment_method || payment.total_amount === 0) {
-        const metadataPlan0 = event.data.metadata?.plan;
-        const isNewPlanChoice0 = metadataPlan0 === 'starter' || metadataPlan0 === 'growth';
-        const planFields0 = isNewPlanChoice0
+        const subscriptionId0 = payment.subscription_id ?? subscription.externalSubscriptionId ?? null;
+        const resolvedPlan0 = payment.is_update_payment_method
+          ? null
+          : await resolveConfirmedPlan(payment.metadata?.plan, subscriptionId0);
+        const planFields0 = resolvedPlan0
           ? {
               provider: 'dodopayments' as const,
-              externalSubscriptionId: payment.subscription_id ?? subscription.externalSubscriptionId ?? '',
-              plan: metadataPlan0 as 'starter' | 'growth',
-              lockedPriceCents: CURRENT_PLAN_PRICES_CENTS[metadataPlan0 as 'starter' | 'growth'],
+              externalSubscriptionId: subscriptionId0 ?? '',
+              plan: resolvedPlan0,
+              lockedPriceCents: CURRENT_PLAN_PRICES_CENTS[resolvedPlan0],
             }
           : {};
         const fields0 = { ...paymentMethodFields, ...planFields0 };
@@ -267,13 +293,14 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
       // checkoutService.ts's metadata.plan (2026-09-15, QA-88) — the plan a first-time
       // subscribe was FOR, deliberately never written to Tenant.plan/Subscription.plan until
       // this exact moment (real payment confirmed), rather than upfront when checkout started.
-      // Falls back to leaving plan/lockedPriceCents untouched (existing subscription.plan) for
-      // any checkout already in flight when this shipped, or an "update payment method" session
-      // (checkoutService.ts never sets metadata.plan for those — same plan as before).
-      const metadataPlan = event.data.metadata?.plan;
-      const isNewPlanChoice = metadataPlan === 'starter' || metadataPlan === 'growth';
-      const confirmedPlan = isNewPlanChoice ? metadataPlan : (subscription.plan as 'starter' | 'growth');
-      const lockedPriceCents = isNewPlanChoice ? CURRENT_PLAN_PRICES_CENTS[metadataPlan] : subscription.lockedPriceCents;
+      // Falls back to resolveConfirmedPlan's product_id lookup (2026-09-16, QA-91 — metadata
+      // propagation onto this resource turned out unreliable in practice), and finally to
+      // leaving plan/lockedPriceCents untouched (existing subscription.plan) for an "update
+      // payment method" session (checkoutService.ts never sets metadata.plan for those anyway).
+      const resolvedPlan = await resolveConfirmedPlan(payment.metadata?.plan, payment.subscription_id ?? subscription.externalSubscriptionId ?? null);
+      const isNewPlanChoice = resolvedPlan !== null;
+      const confirmedPlan = resolvedPlan ?? (subscription.plan as 'starter' | 'growth');
+      const lockedPriceCents = isNewPlanChoice ? CURRENT_PLAN_PRICES_CENTS[confirmedPlan] : subscription.lockedPriceCents;
 
       await syncSubscriptionAndTenant({
         tenantId: subscription.tenantId,
@@ -338,17 +365,22 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
       // Subscription.provider is set, so this trialing-with-a-provider tenant isn't incorrectly
       // bumped to past_due by our own grace-period logic while Dodo handles the real transition.
       //
-      // Also confirms metadata.plan now (2026-09-15, QA-90 — same reasoning as the $0 branch
+      // Also confirms the plan now (2026-09-15/16, QA-90/91 — same reasoning as the $0 branch
       // above: this event, not just a real charge, is genuinely "checkout completed" for a
       // first-time subscribe, and is very often the FIRST event to arrive for a trial checkout).
-      const metadataPlanActive = event.data.metadata?.plan;
-      const isNewPlanChoiceActive = metadataPlanActive === 'starter' || metadataPlanActive === 'growth';
+      // event.data here IS a Subscription resource, so product_id is already in hand — no extra
+      // API call needed for resolveConfirmedPlan's fallback, unlike the payment.succeeded branches.
+      const resolvedPlanActive = await resolveConfirmedPlan(
+        event.data.metadata?.plan,
+        event.data.subscription_id ?? subscription.externalSubscriptionId ?? null,
+        event.data.product_id,
+      );
       await syncSubscriptionAndTenant({
         tenantId: subscription.tenantId,
         provider: 'dodopayments',
         externalSubscriptionId: event.data.subscription_id ?? subscription.externalSubscriptionId ?? '',
-        ...(isNewPlanChoiceActive
-          ? { plan: metadataPlanActive, lockedPriceCents: CURRENT_PLAN_PRICES_CENTS[metadataPlanActive] }
+        ...(resolvedPlanActive
+          ? { plan: resolvedPlanActive, lockedPriceCents: CURRENT_PLAN_PRICES_CENTS[resolvedPlanActive] }
           : {}),
       });
     }

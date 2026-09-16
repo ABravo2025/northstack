@@ -4422,3 +4422,50 @@ directory en este momento.
 3. **Regresión — update payment method:** confirmar que actualizar el método de pago de una
    suscripción YA existente sigue sin tocar el plan (esa sesión nunca manda `metadata.plan`, por
    diseño de `checkoutService.ts`).
+
+## QA-91 — QA-90 no alcanzó: `metadata.plan` de Dodo no llega en la práctica, resuelve por `product_id` (2026-09-16, en `main`/producción)
+
+**Por qué existe esta tarea:** el fix de QA-90 salió a producción y Alejandro repitió la prueba con
+el código de descuento — Dodo mostraba la suscripción "Growth" como **Activa** en su dashboard, pero
+Billing seguía mostrando "Free Trial". Se verificó directo contra la base de datos (solo lectura):
+`Subscription.provider`/`externalSubscriptionId` SÍ estaban seteados (o sea, el webhook llegó y se
+procesó — 3 eventos en el mismo segundo), pero `Subscription.plan` quedó en `'starter'` (el
+placeholder del signup, nunca reescrito) y `Tenant.plan` en `null`. Conclusión: el webhook llegó,
+pero `event.data.metadata?.plan` vino vacío — la propagación de metadata de Dodo del checkout hacia
+los recursos Payment/Subscription en eventos posteriores, que el código venía asumiendo desde antes
+de esta sesión ("UNVERIFIED against a real Dodo sandbox delivery"), **no es confiable en la
+práctica** — al menos no en el/los eventos que dispararon primero.
+
+**Fix:** en vez de confiar solo en `metadata.plan`, los 3 puntos de confirmación de plan
+(`payment.succeeded`'s dos ramas + `subscription.active`) ahora tienen un fallback:
+`resolveConfirmedPlan()` (nuevo, en `webhooks.ts`) intenta `metadata.plan` primero (barato, sin
+request extra) y si no está, resuelve el plan a partir de `product_id` — dato estructural real del
+recurso `Subscription` de Dodo (`Subscription.product_id`, no metadata custom), reverse-lookeado
+contra `PlanPrice.dodoProductId` (nueva `resolvePlanFromDodoProductId` en `subscriptionService.ts`).
+`subscription.active` ya tiene `product_id` directo en el payload (su `event.data` ES un recurso
+Subscription) — no necesita request extra. Las dos ramas de `payment.succeeded` sí necesitan un
+request nuevo a la API de Dodo (`getSubscriptionProductId`, nuevo en `dodopayments.ts`) porque el
+recurso Payment no trae `product_id` propio.
+
+**Pendiente, no resuelto en esta tarea:** el tenant de prueba específico de Alejandro
+(`test123@gmail.com`, `sub_0NnfGNs9Qv55POnD9dmW8`) quedó con el dato viejo (`plan: 'starter'`,
+`Tenant.plan: null`) porque ese webhook ya se procesó una vez (protegido contra duplicados,
+`ProcessedWebhookEvent`) — el código nuevo no lo reprocesa solo. Se intentó un script de arreglo
+puntual localmente y falló con 404 contra la API de Dodo: el `.env` local tiene `BILLING_ENV=sandbox`
+(sin credenciales de producción), y esa suscripción es real/de producción. Falta decidir con
+Alejandro cómo cerrar ese registro puntual: (a) traer credenciales de producción localmente
+(`vercel env pull`) para correr el script de arreglo una vez, o (b) simplemente repetir el checkout
+de prueba una vez más ahora que el código está arreglado (cuidado: NO cancelar la suscripción vieja
+en Dodo sin revisar primero, para no perder el caso de prueba real que ya demostró el bug).
+
+### Qué probar
+
+1. **Repetir el pago real de prueba una vez más** (con el código de descuento) — esta vez Billing
+   debe reflejar el plan correcto de inmediato, y el desglose de invoice si el monto no fue $0 puro.
+2. **Confirmar `resolveConfirmedPlan` con metadata ausente:** si es posible simular/forzar un evento
+   de Dodo sin `metadata.plan` (o inspeccionar logs de un evento real), confirmar que el fallback por
+   `product_id` efectivamente resuelve al plan correcto y no al `null` que dejaba todo sin tocar
+   antes de este fix.
+3. **Regresión:** confirmar que un evento CON `metadata.plan` presente sigue tomando ese camino
+   (más barato, sin request extra) — `resolveConfirmedPlan` no debe llamar a la API de Dodo si la
+   metadata ya trae la respuesta.

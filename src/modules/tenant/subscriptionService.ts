@@ -15,6 +15,18 @@ export function resolveProvider(tenant: { country: string | null }): PaymentProv
   return tenant.country === 'Argentina' ? 'mercadopago' : 'dodopayments';
 }
 
+// 2026-09-16, QA-91 — routes/webhooks.ts's reliable fallback when metadata.plan isn't present on
+// a Dodo event (see getSubscriptionProductId's comment in dodopayments.ts). Reverse-looks-up
+// which plan a Dodo product id belongs to via the same PlanPrice rows checkoutService.ts already
+// uses to go the other direction (plan -> dodoProductId).
+export async function resolvePlanFromDodoProductId(productId: string): Promise<'starter' | 'growth' | null> {
+  const planPrice = await prisma.planPrice.findFirst({ where: { dodoProductId: productId } });
+  if (!planPrice || (planPrice.plan !== 'starter' && planPrice.plan !== 'growth')) {
+    return null;
+  }
+  return planPrice.plan;
+}
+
 const BILLING_SUMMARY_SELECT = {
   plan: true,
   status: true,

@@ -178,6 +178,18 @@ export async function getNextBillingDate(externalSubscriptionId: string): Promis
   return new Date(subscription.next_billing_date);
 }
 
+// Fallback plan signal for the webhook (2026-09-16, QA-91 — a real test payment's
+// metadata.plan came back empty on the Payment resource; checkoutService.ts's metadata IS sent
+// at checkout creation, but Dodo propagating arbitrary custom metadata onto every later
+// webhook/resource was only ever an assumption, never confirmed against a real delivery until
+// now). `product_id` is structural data on the Subscription resource itself, not custom
+// metadata, so routes/webhooks.ts resolves the plan from this (via PlanPrice.dodoProductId) when
+// metadata.plan isn't present, instead of trusting metadata alone.
+export async function getSubscriptionProductId(externalSubscriptionId: string): Promise<string> {
+  const subscription = await getClient().subscriptions.retrieve(externalSubscriptionId);
+  return subscription.product_id;
+}
+
 // Real invoice PDF, same "fetched fresh on each click, never cached" reasoning as
 // getInvoicePdfUrl did for Paddle (paddle.ts's now-deleted equivalent) — unlike Paddle, Dodo
 // returns this URL directly on the Payment resource, no separate signed-URL request needed.

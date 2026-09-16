@@ -3,6 +3,7 @@ import { api, type Task, type TaskEntityType } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import TaskForm, { type TaskFormPayload } from './TaskForm';
 import Avatar from '../common/Avatar';
+import { VideoIcon } from '../common/Icons';
 
 interface TenantUserLite {
   id: string;
@@ -130,6 +131,19 @@ export default function EntityTasksList({
               {task.title}
             </button>
             {task.dueDate && <span className="task-row-date">{new Date(task.dueDate).toLocaleDateString()}</span>}
+            {task.googleMeetUrl && (
+              <a
+                href={task.googleMeetUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="icon-btn"
+                title="Join Google Meet"
+                aria-label="Join Google Meet"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <VideoIcon className="h-3.5 w-3.5" />
+              </a>
+            )}
             {task.assignee && <Avatar firstName={task.assignee.firstName} lastName={task.assignee.lastName} />}
           </div>
         ))}

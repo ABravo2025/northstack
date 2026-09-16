@@ -371,6 +371,16 @@ export function ClockIcon({ className }: IconProps) {
   );
 }
 
+// Google Meet on a Task (2026-09-16) — the "Join call" link on a task row/form.
+export function VideoIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="2" y="6" width="14" height="12" rx="2" />
+      <path d="m16 10.5 6-3.5v10l-6-3.5" />
+    </svg>
+  );
+}
+
 // Help Center (GuidePage/HelpPage) — module map + doc nav icons not already covered above.
 export function RocketIcon({ className }: IconProps) {
   return (

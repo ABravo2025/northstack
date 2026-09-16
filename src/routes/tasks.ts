@@ -72,7 +72,7 @@ tasksRouter.post('/api/tasks', async (req, res) => {
     return;
   }
 
-  const { entityType, entityId, title, description, assigneeId, dueDate } = req.body;
+  const { entityType, entityId, title, description, assigneeId, dueDate, hasVideoCall } = req.body;
   if (!entityType || !entityId || !title || !assigneeId) {
     return res.status(400).json({ error: 'entityType, entityId, title, and assigneeId are required' });
   }
@@ -98,6 +98,7 @@ tasksRouter.post('/api/tasks', async (req, res) => {
     description: description ?? null,
     assigneeId,
     dueDate: dueDate ?? null,
+    hasVideoCall: hasVideoCall ?? false,
     createdById: user.id,
   });
   return res.status(201).json(task);
@@ -129,6 +130,7 @@ tasksRouter.patch('/api/tasks/:taskId', async (req, res) => {
       assigneeId: req.body.assigneeId,
       dueDate: req.body.dueDate,
       completedAt: req.body.completedAt,
+      hasVideoCall: req.body.hasVideoCall,
     },
     user.id,
   );

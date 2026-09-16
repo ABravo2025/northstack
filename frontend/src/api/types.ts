@@ -418,6 +418,11 @@ export interface Task {
   assignee?: { id: string; firstName: string; lastName: string };
   dueDate: string | null;
   completedAt: string | null;
+  // Google Meet on a client call (2026-09-16) — hasVideoCall is the request, googleMeetUrl is the
+  // link once Google generates one (still null right after creation/toggling until the next
+  // Calendar sync completes; see googleCalendarSyncService.ts).
+  hasVideoCall: boolean;
+  googleMeetUrl: string | null;
   createdById: string;
   createdBy?: { id: string; firstName: string; lastName: string };
   createdAt: string;

@@ -37,6 +37,7 @@ export const tasksApi = {
       description?: string | null;
       assigneeId: string;
       dueDate?: string | null;
+      hasVideoCall?: boolean;
     },
   ): Promise<Task> => {
     const res = await apiFetch(`${API_BASE_URL}/api/tasks`, {
@@ -57,6 +58,7 @@ export const tasksApi = {
       assigneeId: string;
       dueDate: string | null;
       completedAt: string | null;
+      hasVideoCall: boolean;
     }>,
   ): Promise<Task> => {
     const res = await apiFetch(`${API_BASE_URL}/api/tasks/${taskId}`, {

@@ -1,4 +1,5 @@
-import type { Task, TimeOffRequest } from '@prisma/client';
+import { randomUUID } from 'node:crypto';
+import type { EntityType, Task, TimeOffRequest } from '@prisma/client';
 import type { calendar_v3 } from 'googleapis';
 import prisma from '../../lib/prisma.js';
 import { getAuthorizedClientForUser, markNeedsReconnectIfRevoked } from './googleCalendarAuthService.js';
@@ -19,7 +20,38 @@ const ONE_DAY_MS = 24 * ONE_HOUR_MS;
 // Calendar rather than as a full-day block. Tasks have no explicit duration,
 // so a timed event gets a flat 1-hour block purely for visual sizing on the
 // calendar — it doesn't mean anything about how long the task takes.
-function taskEventBody(task: Task): calendar_v3.Schema$Event {
+// Resolves the "client" email to invite on a task's Meet call (2026-09-16, Alejandro's explicit
+// call — the whole point is a call *with a client*, so the invite should go out automatically
+// rather than making the assignee copy/paste a link). Only 'contact' has a direct email; 'company'
+// and 'opportunity' have no email of their own, so it falls back to that company's Primary
+// Contact (Contact.isPrimary) — undefined (no attendee added) if there isn't one. Every other
+// entityType Task supports (employee/client/ticket/idea, see isSupportedCrossModuleEntityType)
+// isn't client-facing, so it's undefined there too.
+async function resolveTaskClientEmail(entityType: EntityType, entityId: string): Promise<string | undefined> {
+  if (entityType === 'contact') {
+    const contact = await prisma.contact.findUnique({ where: { id: entityId }, select: { email: true } });
+    return contact?.email;
+  }
+
+  let companyId: string | undefined;
+  if (entityType === 'company') {
+    companyId = entityId;
+  } else if (entityType === 'opportunity') {
+    const opportunity = await prisma.opportunity.findUnique({ where: { id: entityId }, select: { companyId: true } });
+    companyId = opportunity?.companyId;
+  }
+  if (!companyId) return undefined;
+
+  const primaryContact = await prisma.contact.findFirst({ where: { companyId, isPrimary: true }, select: { email: true } });
+  return primaryContact?.email;
+}
+
+// wantsNewConference is true only the first time a task with hasVideoCall requests a Meet link
+// (googleMeetUrl still null) — once Google generates one it's never regenerated on later syncs
+// (see the Task.googleMeetUrl schema comment on why removal/regeneration isn't handled).
+// clientEmail is added as an attendee whenever resolveTaskClientEmail finds one, independent of
+// hasVideoCall — inviting the client to the calendar block itself is useful even without Meet.
+function taskEventBody(task: Task, clientEmail: string | undefined, wantsNewConference: boolean): calendar_v3.Schema$Event {
   const due = task.dueDate!;
   const hasTime = due.getUTCHours() !== 0 || due.getUTCMinutes() !== 0 || due.getUTCSeconds() !== 0;
 
@@ -38,6 +70,13 @@ function taskEventBody(task: Task): calendar_v3.Schema$Event {
           start: { date: due.toISOString().slice(0, 10) },
           end: { date: new Date(due.getTime() + ONE_DAY_MS).toISOString().slice(0, 10) },
         }),
+    ...(clientEmail ? { attendees: [{ email: clientEmail }] } : {}),
+    // A Meet link only makes sense for a call at a specific time, not an all-day block —
+    // TaskForm.tsx already forces a time when the user checks "Add Google Meet", this is just
+    // defense in depth against hasVideoCall somehow being set without one (e.g. a direct API call).
+    ...(wantsNewConference && hasTime
+      ? { conferenceData: { createRequest: { requestId: randomUUID(), conferenceSolutionKey: { type: 'hangoutsMeet' } } } }
+      : {}),
   };
 }
 
@@ -118,17 +157,41 @@ export async function syncTaskCalendarEvent(previous: Task | null, current: Task
       return;
     }
 
-    const eventBody = taskEventBody(current);
+    const clientEmail = await resolveTaskClientEmail(current.entityType, current.entityId);
+    const wantsNewConference = current.hasVideoCall && !current.googleMeetUrl;
+    const eventBody = taskEventBody(current, clientEmail, wantsNewConference);
+    // conferenceDataVersion opts into Google actually fulfilling conferenceData.createRequest
+    // (omitted otherwise, it's silently ignored); sendUpdates delivers the calendar invite email
+    // to clientEmail immediately instead of leaving it queued for the next Calendar sync on their
+    // side. Both are no-ops (and harmless to always pass) when there's nothing for them to do.
+    const requestParams = {
+      ...(wantsNewConference ? { conferenceDataVersion: 1 as const } : {}),
+      ...(clientEmail ? { sendUpdates: 'all' as const } : {}),
+    };
 
     try {
       // A pre-existing event only carries over if the assignee didn't
       // change — otherwise it belongs to someone else's calendar and a
       // fresh one must be created here instead.
       if (current.googleCalendarEventId && !assigneeChanged) {
-        await calendar.events.patch({ calendarId: 'primary', eventId: current.googleCalendarEventId, requestBody: eventBody });
+        const { data } = await calendar.events.patch({
+          calendarId: 'primary',
+          eventId: current.googleCalendarEventId,
+          requestBody: eventBody,
+          ...requestParams,
+        });
+        if (wantsNewConference && data.hangoutLink) {
+          await prisma.task.update({ where: { id: current.id }, data: { googleMeetUrl: data.hangoutLink } }).catch(() => {});
+        }
       } else {
-        const { data } = await calendar.events.insert({ calendarId: 'primary', requestBody: eventBody });
-        await prisma.task.update({ where: { id: current.id }, data: { googleCalendarEventId: data.id ?? null } });
+        const { data } = await calendar.events.insert({ calendarId: 'primary', requestBody: eventBody, ...requestParams });
+        await prisma.task.update({
+          where: { id: current.id },
+          data: {
+            googleCalendarEventId: data.id ?? null,
+            ...(wantsNewConference && data.hangoutLink ? { googleMeetUrl: data.hangoutLink } : {}),
+          },
+        });
       }
     } catch (err) {
       await markNeedsReconnectIfRevoked(current.assigneeId, err);

@@ -1362,6 +1362,14 @@ model Task {
   createdAt             DateTime   @default(now())
   updatedAt             DateTime   @updatedAt
   googleCalendarEventId String? // set once this task's dueDate has been pushed to the assignee's connected Google Calendar; see googleCalendarSyncService.ts
+  // Client-call Meet link (2026-09-16) — hasVideoCall is the user's request ("give this task a
+  // Google Meet"), googleMeetUrl is the actual link once Google generates one. Kept separate
+  // instead of inferring "wants a link" from googleMeetUrl being null, because a task can request
+  // one before it's ever synced (no Calendar connection yet, or dueDate not set yet) — the two
+  // fields track intent vs. outcome. Once set, googleMeetUrl is never cleared even if hasVideoCall
+  // is later unchecked (see googleCalendarSyncService.ts's comment on why removal isn't handled).
+  hasVideoCall          Boolean    @default(false)
+  googleMeetUrl         String?
 
   @@index([tenantId, entityType, entityId])
   @@index([tenantId, assigneeId])

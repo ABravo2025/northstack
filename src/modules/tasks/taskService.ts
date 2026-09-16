@@ -23,6 +23,10 @@ export interface CreateTaskInput {
   description?: string | null;
   assigneeId: string;
   dueDate?: Date | string | null;
+  // Requests a Google Meet link on the synced calendar event (2026-09-16) — only takes effect
+  // once dueDate has a specific time (see googleCalendarSyncService.ts's taskEventBody), same as
+  // the frontend's own gating (TaskForm.tsx forces a time when this is checked).
+  hasVideoCall?: boolean;
   createdById: string;
 }
 
@@ -32,6 +36,7 @@ export interface UpdateTaskInput {
   assigneeId?: string;
   dueDate?: Date | string | null;
   completedAt?: Date | string | null;
+  hasVideoCall?: boolean;
 }
 
 const taskInclude = {
@@ -49,6 +54,7 @@ export async function createTask(input: CreateTaskInput, client: ExtendedPrismaC
       description: input.description ?? null,
       assigneeId: input.assigneeId,
       dueDate: input.dueDate ?? null,
+      hasVideoCall: input.hasVideoCall ?? false,
       createdById: input.createdById,
     },
     include: taskInclude,
@@ -115,6 +121,7 @@ export async function updateTask(id: string, input: UpdateTaskInput, changedByUs
   if (input.assigneeId !== undefined) data.assigneeId = input.assigneeId;
   if (input.dueDate !== undefined) data.dueDate = input.dueDate;
   if (input.completedAt !== undefined) data.completedAt = input.completedAt;
+  if (input.hasVideoCall !== undefined) data.hasVideoCall = input.hasVideoCall;
 
   // Fetched before the write so the Google Calendar sync below can tell what
   // changed (e.g. reassignment, or dueDate/completedAt flipping) — see

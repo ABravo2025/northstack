@@ -4521,3 +4521,54 @@ bandeja. Caso reportado cerrado y confirmado end-to-end, no solo por tests.
    Time Off request, con Google Calendar conectado — confirmar que el evento se crea/actualiza/borra
    en el calendario como antes (el fix acá es solo agregar el `await` que faltaba, la lógica de sync
    en sí no cambió).
+
+---
+
+## QA-93 — Google Meet en Tasks: link de videollamada + invitación automática al cliente (2026-09-16, en `staging`)
+
+**Por qué existe esta tarea:** pedido de Alejandro — al crear una tarea, poder generarla directamente
+con un link de Google Meet, para armar llamadas con clientes desde ahí mismo sin salir de Northstack.
+
+**Qué se construyó:**
+- `Task` tiene 2 columnas nuevas: `hasVideoCall` (pedido del usuario) y `googleMeetUrl` (el link, una
+  vez que Google lo generó — nunca se regenera ni se borra si `hasVideoCall` se destilda después).
+- `TaskForm.tsx`: checkbox **"Add Google Meet video call"**. Si se tilda sin fecha/hora cargada,
+  autocompleta hoy + 10:00 (una llamada necesita hora, no solo día); si se borra la fecha o la hora
+  después, el checkbox se destilda solo.
+- Al sincronizar con Google Calendar (`googleCalendarSyncService.ts`), si `hasVideoCall` está tildado
+  y todavía no hay link, se le pide a Google un Meet (`conferenceData.createRequest`) y se guarda
+  `data.hangoutLink` en `googleMeetUrl`.
+- **Invitación automática al cliente**: si la tarea está sobre un Contact, se invita su email al
+  evento (`attendees` + `sendUpdates: 'all'`) — llega la invitación de Calendar con el Meet
+  incluido, sin que nadie tenga que copiar/pegar el link. Si es sobre una Company u Opportunity, se
+  invita al Contact marcado como **Primary** de esa Company (si no hay ninguno marcado, no se invita
+  a nadie pero el link se genera igual).
+- El link "Join Google Meet" aparece como ícono clickeable en la fila de la tarea (lista de tareas del
+  panel de detalle y el widget "My tasks" del Overview) y como link de texto dentro del form, en
+  cuanto Google lo genera.
+
+**Verificado en esta sesión** (tenant de prueba real en `staging`, creado y borrado): el checkbox
+autocompleta fecha/hora correctamente, la tarea persiste `hasVideoCall: true` (confirmado directo en
+la base), el assignee y los datos sobreviven a reabrir la tarea. **No verificado**: la generación real
+del link de Meet y el envío de la invitación al cliente — necesitan una cuenta de Google Calendar
+realmente conectada vía OAuth (login interactivo), que solo Alejandro puede hacer.
+
+### Qué probar
+
+1. **Conectar Google Calendar real** (Settings → Integrations) con una cuenta de prueba.
+2. **Crear una tarea sobre un Contact** con email real propio (o de otra cuenta que puedas chequear),
+   tildar "Add Google Meet video call", guardar. Confirmar: (a) el evento aparece en tu Google
+   Calendar con un link de Meet real adjunto, (b) el Contact recibe el email de invitación de
+   Calendar, (c) en Northstack aparece el ícono/link "Join Google Meet" en la fila de la tarea y en
+   el form, y que abre la llamada real al clickearlo.
+3. **Company/Opportunity sin Primary Contact:** crear una tarea con Meet sobre una Company que no
+   tenga ningún Contact marcado como Primary — confirmar que el link se genera igual pero sin
+   invitado.
+4. **Reasignación:** reasignar una tarea con Meet ya generado a otro usuario — confirmar que el
+   nuevo assignee recibe el evento en su propio calendario (comportamiento ya existente de
+   `syncTaskCalendarEvent`) y que el link de Meet no se pierde ni se duplica.
+5. **Sin Calendar conectado:** confirmar que tildar el checkbox sin tener Google Calendar conectado
+   no rompe nada — la tarea se crea normal, `hasVideoCall: true` queda guardado, sin link. Al conectar
+   Calendar después, `backfillCalendarSyncForUser` (ya existente, corre al conectar) debería recuperar
+   esa tarea sola — filtra por `googleCalendarEventId: null`, así que una tarea nunca sincronizada
+   antes entra en el backfill y genera el Meet ahí — confirmar que efectivamente pasa así.

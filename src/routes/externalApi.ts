@@ -261,6 +261,7 @@ const taskCreateSchema = z.object({
   description: z.string().nullable().optional(),
   assigneeId: z.string().min(1),
   dueDate: isoDateTime.nullable().optional(),
+  hasVideoCall: z.boolean().optional(),
 });
 
 const taskUpdateSchema = z.object({
@@ -269,6 +270,7 @@ const taskUpdateSchema = z.object({
   assigneeId: z.string().min(1).optional(),
   dueDate: isoDateTime.nullable().optional(),
   completedAt: isoDateTime.nullable().optional(),
+  hasVideoCall: z.boolean().optional(),
 });
 
 externalApiRouter.get('/api/external/v1/tasks', async (req, res) => {
@@ -308,6 +310,7 @@ externalApiRouter.post('/api/external/v1/tasks', async (req, res) => {
       description: body.description ?? null,
       assigneeId: body.assigneeId,
       dueDate: body.dueDate ?? null,
+      hasVideoCall: body.hasVideoCall ?? false,
       createdById: apiKey.createdByUserId,
     },
     prismaExternal,

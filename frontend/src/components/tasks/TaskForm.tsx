@@ -14,6 +14,7 @@ export interface TaskFormPayload {
   description: string | null;
   assigneeId: string;
   dueDate: string | null;
+  hasVideoCall: boolean;
 }
 
 interface TaskFormProps {
@@ -50,6 +51,16 @@ function pad(n: number): string {
   return String(n).padStart(2, '0');
 }
 
+function todayIso(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+// A Google Meet call needs a specific time to join at, not just a day — arbitrary business-hours
+// default, only ever used to fill in what "Add Google Meet" needs when the user hasn't already
+// picked a time (they can still change it afterward).
+const DEFAULT_CALL_TIME = '10:00';
+
 export default function TaskForm({
   task,
   tenantUsers,
@@ -64,11 +75,13 @@ export default function TaskForm({
   const [assigneeId, setAssigneeId] = useState(defaultAssigneeId);
   const [dueDate, setDueDate] = useState('');
   const [dueTime, setDueTime] = useState('');
+  const [hasVideoCall, setHasVideoCall] = useState(false);
 
   useEffect(() => {
     setTitle(task?.title ?? '');
     setDescription(task?.description ?? '');
     setAssigneeId(task?.assigneeId ?? defaultAssigneeId);
+    setHasVideoCall(task?.hasVideoCall ?? false);
     if (task?.dueDate && hasTimeComponent(task.dueDate)) {
       const d = new Date(task.dueDate);
       setDueDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
@@ -78,6 +91,18 @@ export default function TaskForm({
       setDueTime('');
     }
   }, [task, defaultAssigneeId, defaultDueDate]);
+
+  // A Meet call needs a specific date+time, not just a date (or nothing) — checking the box
+  // fills in whatever's missing with a default instead of blocking the user on filling those in
+  // by hand first. Unchecking date/time while Meet is on doesn't make sense either way, so it
+  // takes Meet down with it (mirrors dueTime already clearing itself when dueDate is cleared).
+  const handleVideoCallToggle = (checked: boolean) => {
+    setHasVideoCall(checked);
+    if (checked) {
+      if (!dueDate) setDueDate(todayIso());
+      if (!dueTime) setDueTime(DEFAULT_CALL_TIME);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!title.trim()) return;
@@ -92,12 +117,14 @@ export default function TaskForm({
       description: description.trim() || null,
       assigneeId,
       dueDate: dueDateIso,
+      hasVideoCall,
     });
     if (wasNew) {
       setTitle('');
       setDescription('');
       setDueDate('');
       setDueTime('');
+      setHasVideoCall(false);
       setAssigneeId(defaultAssigneeId);
     }
   };
@@ -145,7 +172,10 @@ export default function TaskForm({
             value={dueDate}
             onChange={(e) => {
               setDueDate(e.target.value);
-              if (!e.target.value) setDueTime('');
+              if (!e.target.value) {
+                setDueTime('');
+                setHasVideoCall(false);
+              }
             }}
           />
         </div>
@@ -156,10 +186,24 @@ export default function TaskForm({
             type="time"
             value={dueTime}
             disabled={!dueDate}
-            onChange={(e) => setDueTime(e.target.value)}
+            onChange={(e) => {
+              setDueTime(e.target.value);
+              if (!e.target.value) setHasVideoCall(false);
+            }}
           />
         </div>
       </div>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={hasVideoCall} onChange={(e) => handleVideoCallToggle(e.target.checked)} />
+        Add Google Meet video call
+      </label>
+      {task?.googleMeetUrl && (
+        <div className="nv-field">
+          <a href={task.googleMeetUrl} target="_blank" rel="noopener noreferrer" className="text-accent text-xs underline">
+            Join Google Meet
+          </a>
+        </div>
+      )}
       <div className="nv-field flex items-center gap-2">
         <button type="button" className="btn-primary flex-1 text-center" onClick={handleSubmit} disabled={!title.trim()}>
           {task ? 'Save' : 'Add task'}

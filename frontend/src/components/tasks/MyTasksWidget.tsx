@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { api, type Task } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import TaskFormPopover, { type TaskFormPayload } from './TaskFormPopover';
+import { VideoIcon } from '../common/Icons';
 
 interface TenantUserLite {
   id: string;
@@ -124,6 +125,19 @@ export default function MyTasksWidget({ token, tenantUsers, currentUserId }: MyT
               {task.entitySummary && <div className="text-xs text-ink-faint dark:text-dark-ink-faint truncate">{task.entitySummary}</div>}
             </div>
             {task.dueDate && <span className="task-row-date">{formatDueDate(task.dueDate)}</span>}
+            {task.googleMeetUrl && (
+              <a
+                href={task.googleMeetUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="icon-btn"
+                title="Join Google Meet"
+                aria-label="Join Google Meet"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <VideoIcon className="h-3.5 w-3.5" />
+              </a>
+            )}
           </div>
         ))}
       </div>

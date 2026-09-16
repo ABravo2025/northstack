@@ -133,16 +133,14 @@ export async function createTicketNote(ticketId: string, createdById: string, de
   if (author.platformRole && ticket.userId) {
     const reporter = await prisma.user.findUnique({ where: { id: ticket.userId } });
     if (reporter) {
-      sendTicketNoteCreatedEmail({
+      // The note itself already exists — sendTicketNoteCreatedEmail already swallows its own
+      // errors (see mailer.ts), but must still be awaited: an un-awaited promise can be killed
+      // mid-flight by Vercel once the HTTP response is sent (confirmed 2026-08-25).
+      await sendTicketNoteCreatedEmail({
         to: reporter.email,
         ticketSubject: ticket.subject,
         authorName: `${author.firstName} ${author.lastName}`,
         noteBody: description,
-      }).catch((error) => {
-        // Best-effort, same pattern as invitationService.ts's invitation
-        // email -- the note itself already exists, a failed send shouldn't
-        // fail the request.
-        console.error('Failed to send ticket note email:', error);
       });
     }
   }

@@ -64,13 +64,13 @@ Leaf module (sin imports) — extraído 2026-08-18 de `tenantService.ts` para qu
 - **requirePlatformRole(...allowed)** — devuelve un helper `(req, res) => Promise<User | null>` en el mismo estilo call-and-return de `validateSession` (no middleware `next()`). Usa `authenticateUser` (no `validateSession`, porque el staff de plataforma no tiene `tenantId`), y rechaza si `user.platformRole` es null o no está en `allowed`. `platform_admin` pasa siempre (bypass implícito, no hace falta listarlo). Usado por las rutas `/api/platform/*` (Admin Center).
 
 ### `src/lib/mailer.ts`
-Todas siguen el mismo patrón: `if (!mailerConfigured()) return;` (no rompen el request si Zoho no está configurado), best-effort.
+Todas siguen el mismo patrón: `if (!mailerConfigured()) return;` (no rompen el request si Zoho no está configurado). Desde 2026-09-16, todas (salvo `sendFeedbackEmail`, ver abajo) rutean internamente por `dispatchMail()` (privado, no exportado) — un único choke point que llama a `bestEffort()` alrededor de `transporter.sendMail`. Esto significa que el caller **debe seguir haciendo `await sendXEmail(...)`** (no fire-and-forget: en Vercel, una promesa sin `await` puede quedar matada a mitad de camino en cuanto sale la respuesta HTTP — confirmado dos veces en producción, 2026-08-25 y 2026-09-16, ver `docs/general/Tareas-QA.md` QA-92), pero ya no necesita envolver la llamada en su propio `bestEffort()`/`try-catch` — el propio `sendXEmail` nunca rechaza.
 - **sendInvitationEmail(input)** — invitación a un tenant; `input.attachments` opcional (Payroll usa esto para adjuntar el contrato borrador).
 - **sendPublicFormSubmissionEmail(input)** — aviso al owner de una submission nueva en un Public Form.
 - **sendPublicFormConfirmationEmail(input)** — confirmación al que llenó el form.
 - **sendTimeOffRequestPendingEmail(input)** — aviso al approver de una solicitud de Time Off pendiente.
 - **sendTimeOffRequestDecidedEmail(input)** — aviso de aprobación/rechazo (o auto-aprobación).
-- **sendFeedbackEmail(input)** — feedback de un tenant a `FEEDBACK_EMAIL`.
+- **sendFeedbackEmail(input)** — feedback de un tenant a `FEEDBACK_EMAIL`. **Excepción**: no pasa por `dispatchMail`, llama a `transporter.sendMail` directo — el propio route (`routes/feedback.ts`) documenta que este email NO es best-effort (el envío es el punto entero del request), así que una falla debe propagarse como rechazo para que el route devuelva 502, no un 204 silencioso.
 - **sendContractSignedEmail(input)** — (Payroll) contrato firmado adjunto, al firmante con copia al owner + a quien lo cargó.
 - **sendPasswordResetEmail(input)** — link de "¿olvidaste tu contraseña?" (2026-08-09), expira en 1 hora.
 - **sendTicketNoteCreatedEmail(input)** — Admin Center: aviso al reporter de un Ticket cuando staff de plataforma responde.

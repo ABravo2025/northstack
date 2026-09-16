@@ -1,5 +1,4 @@
 import prisma from '../../lib/prisma.js';
-import { bestEffort } from '../../lib/bestEffort.js';
 import { sendPolicyChangeEmail } from '../../lib/mailer.js';
 import type { LegalPolicyType, PlatformAnnouncement, PlatformAnnouncementType } from '@prisma/client';
 
@@ -37,11 +36,9 @@ export async function createAnnouncement(input: CreateAnnouncementInput): Promis
     });
     const appUrl = `${process.env.APP_BASE_URL ?? 'http://localhost:5173'}/help`;
     const policyTitle = input.policyType ? POLICY_TITLES[input.policyType] : 'our policies';
+    // sendPolicyChangeEmail already swallows its own errors (see mailer.ts).
     for (const user of users) {
-      await bestEffort(
-        sendPolicyChangeEmail({ to: user.email, firstName: user.firstName, policyTitle, summary: input.summary, appUrl }),
-        `Failed to send policy-change email to ${user.email}`,
-      );
+      await sendPolicyChangeEmail({ to: user.email, firstName: user.firstName, policyTitle, summary: input.summary, appUrl });
     }
   }
 

@@ -136,21 +136,19 @@ export async function createInvitation(input: CreateInvitationInput): Promise<In
 
   const appBaseUrl = process.env.APP_BASE_URL ?? 'http://localhost:5173';
   const acceptPath = input.acceptPath ?? '/accept-invite';
-  // Awaited (not fire-and-forget) — see bestEffort.ts: an un-awaited send is not guaranteed to
-  // survive past the HTTP response on Vercel serverless, which was silently dropping this exact
-  // email. The invitation record itself (and its copyable link in the UI) already exists, so a
-  // failed send still doesn't fail the request — bestEffort just makes sure the send is actually
-  // given the chance to complete first.
-  await bestEffort(
-    sendInvitationEmail({
-      to: invitation.email,
-      tenantName: tenant.name,
-      role: roleDisplayName,
-      acceptUrl: `${appBaseUrl}${acceptPath}/${invitation.token}`,
-      attachments: input.attachments,
-    }),
-    'Failed to send invitation email:',
-  );
+  // Awaited (not fire-and-forget) — an un-awaited send is not guaranteed to survive past the
+  // HTTP response on Vercel serverless, which was silently dropping this exact email. The
+  // invitation record itself (and its copyable link in the UI) already exists, so a failed send
+  // still doesn't fail the request — sendInvitationEmail already swallows its own errors (see
+  // mailer.ts's dispatchMail), this await just makes sure the send is given the chance to
+  // complete before the response goes out.
+  await sendInvitationEmail({
+    to: invitation.email,
+    tenantName: tenant.name,
+    role: roleDisplayName,
+    acceptUrl: `${appBaseUrl}${acceptPath}/${invitation.token}`,
+    attachments: input.attachments,
+  });
 
   await recordActivity({
     tenantId: input.tenantId,

@@ -1,7 +1,6 @@
 import prisma from '../../lib/prisma.js';
 import { createNotification, findLatestNotificationTimestamps } from '../notifications/notificationService.js';
 import { sendOpportunityStalledEmail } from '../../lib/mailer.js';
-import { bestEffort } from '../../lib/bestEffort.js';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -116,18 +115,16 @@ export async function runStalledOpportunityReminders(now: Date = new Date()): Pr
 
       if (opp.owner) {
         const appUrl = `${process.env.APP_BASE_URL ?? 'http://localhost:5173'}/opportunities`;
-        await bestEffort(
-          sendOpportunityStalledEmail({
-            to: opp.owner.email,
-            ownerFirstName: opp.owner.firstName,
-            opportunityName: opp.name,
-            companyName: opp.company?.name ?? '',
-            stageName: opp.stage.name,
-            daysInStage,
-            appUrl,
-          }),
-          'Failed to send opportunity stalled email:',
-        );
+        // sendOpportunityStalledEmail already swallows its own errors (see mailer.ts).
+        await sendOpportunityStalledEmail({
+          to: opp.owner.email,
+          ownerFirstName: opp.owner.firstName,
+          opportunityName: opp.name,
+          companyName: opp.company?.name ?? '',
+          stageName: opp.stage.name,
+          daysInStage,
+          appUrl,
+        });
       }
     }
   }

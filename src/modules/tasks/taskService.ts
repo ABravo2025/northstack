@@ -54,8 +54,11 @@ export async function createTask(input: CreateTaskInput, client: ExtendedPrismaC
     include: taskInclude,
   });
 
-  // Best-effort, never blocks the response — see googleCalendarSyncService.ts.
-  void syncTaskCalendarEvent(null, task).catch((err) => console.error('Google Calendar task sync failed:', err));
+  // Best-effort — syncTaskCalendarEvent already swallows its own errors internally (see
+  // googleCalendarSyncService.ts). Must still be awaited, not fired-and-forgotten: an
+  // un-awaited promise can be killed mid-flight by Vercel once the HTTP response is sent
+  // (confirmed 2026-08-25 with signup verification emails; the same gap applied here).
+  await syncTaskCalendarEvent(null, task);
 
   await recordActivity({
     tenantId: input.tenantId,
@@ -119,7 +122,8 @@ export async function updateTask(id: string, input: UpdateTaskInput, changedByUs
   const previous = await client.task.findUnique({ where: { id } });
   const updated = await client.task.update({ where: { id }, data, include: taskInclude });
 
-  void syncTaskCalendarEvent(previous, updated).catch((err) => console.error('Google Calendar task sync failed:', err));
+  // Must be awaited, not fired-and-forgotten — see the note above.
+  await syncTaskCalendarEvent(previous, updated);
 
   if (previous) {
     await recordActivity({
@@ -155,7 +159,8 @@ export async function deleteTask(id: string, changedByUserId: string, client: Ex
   await client.task.delete({ where: { id } });
 
   if (task) {
-    void syncTaskCalendarEvent(task, null).catch((err) => console.error('Google Calendar task sync failed:', err));
+    // Must be awaited, not fired-and-forgotten — see the note above.
+    await syncTaskCalendarEvent(task, null);
 
     await recordActivity({
       tenantId: task.tenantId,

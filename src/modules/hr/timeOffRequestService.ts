@@ -91,10 +91,13 @@ export async function createTimeOffRequest(
     },
   });
 
-  // Best-effort, never blocks the response — see googleCalendarSyncService.ts.
-  // Only an approved request produces an event, so a plain pending request
-  // correctly gets no Google Calendar entry until it's actually decided.
-  void syncTimeOffCalendarEvent(null, request).catch((err) => console.error('Google Calendar time off sync failed:', err));
+  // Best-effort — syncTimeOffCalendarEvent already swallows its own errors internally (see
+  // googleCalendarSyncService.ts). Only an approved request produces an event, so a plain
+  // pending request correctly gets no Google Calendar entry until it's actually decided. Must
+  // still be awaited, not fired-and-forgotten — an un-awaited promise can be killed mid-flight
+  // by Vercel once the HTTP response is sent (confirmed 2026-08-25 with signup verification
+  // emails; the same gap applied here).
+  await syncTimeOffCalendarEvent(null, request);
 
   const employeeName = `${employee.firstName} ${employee.lastName}`;
   const manager = employee.managerId ? await prisma.employee.findUnique({ where: { id: employee.managerId } }) : null;
@@ -119,8 +122,11 @@ export async function createTimeOffRequest(
       ...(manager ? [{ email: manager.email, isEmployee: false }] : []),
       ...(owner ? [{ email: owner.email, isEmployee: false }] : []),
     ];
+    // sendTimeOffRequestDecidedEmail already swallows its own errors (see mailer.ts), but must
+    // still be awaited — an un-awaited promise can be killed mid-flight by Vercel once the HTTP
+    // response is sent (confirmed 2026-08-25).
     for (const recipient of recipients) {
-      sendTimeOffRequestDecidedEmail({
+      await sendTimeOffRequestDecidedEmail({
         to: recipient.email,
         recipientIsEmployee: recipient.isEmployee,
         employeeName,
@@ -130,7 +136,7 @@ export async function createTimeOffRequest(
         daysRequested,
         decision: 'approved',
         autoApproved: true,
-      }).catch((err) => console.error('Failed to send time off decided email:', err));
+      });
     }
 
     if (employee.userId) {
@@ -150,7 +156,8 @@ export async function createTimeOffRequest(
     // lets a custom-role admin decide it, but they'd have no way to know it
     // exists). Unlike the email above, this doesn't require a manager.
     if (manager) {
-      sendTimeOffRequestPendingEmail({
+      // Must be awaited, not fired-and-forgotten — see the note above.
+      await sendTimeOffRequestPendingEmail({
         to: manager.email,
         approverName: manager.firstName,
         employeeName,
@@ -158,7 +165,7 @@ export async function createTimeOffRequest(
         startDate: formatDate(startDate),
         endDate: formatDate(endDate),
         daysRequested,
-      }).catch((err) => console.error('Failed to send time off pending email:', err));
+      });
     }
 
     const owner = await prisma.user.findFirst({ where: { tenantId: input.tenantId, role: 'owner' } });
@@ -292,14 +299,16 @@ export async function decideTimeOffRequest(
     },
   });
 
-  void syncTimeOffCalendarEvent(request, updated).catch((err) => console.error('Google Calendar time off sync failed:', err));
+  // Must be awaited, not fired-and-forgotten — see the note above.
+  await syncTimeOffCalendarEvent(request, updated);
 
   const [employee, policy] = await Promise.all([
     prisma.employee.findUnique({ where: { id: request.employeeId } }),
     prisma.timeOffPolicyDefinition.findUnique({ where: { id: request.timeOffPolicyId } }),
   ]);
   if (employee && policy) {
-    sendTimeOffRequestDecidedEmail({
+    // Must be awaited, not fired-and-forgotten — see the note above.
+    await sendTimeOffRequestDecidedEmail({
       to: employee.email,
       recipientIsEmployee: true,
       employeeName: `${employee.firstName} ${employee.lastName}`,
@@ -309,7 +318,7 @@ export async function decideTimeOffRequest(
       daysRequested: request.daysRequested,
       decision,
       decisionNote,
-    }).catch((err) => console.error('Failed to send time off decided email:', err));
+    });
 
     if (employee.userId) {
       await createNotification({
@@ -376,8 +385,8 @@ export async function cancelTimeOffRequest(
 
   // Only pending requests can be cancelled (checked above), and a pending
   // request never had a Google Calendar event yet — this call is a no-op in
-  // practice, kept only for symmetry/defensiveness.
-  void syncTimeOffCalendarEvent(request, updated).catch((err) => console.error('Google Calendar time off sync failed:', err));
+  // practice, kept only for symmetry/defensiveness. Awaited per the note above.
+  await syncTimeOffCalendarEvent(request, updated);
 
   const employee = await prisma.employee.findUnique({ where: { id: employeeId } });
   await recordActivity({

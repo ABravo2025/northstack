@@ -367,19 +367,17 @@ export async function updateOpportunity(
         if (recipient) {
           const company = await prisma.company.findUnique({ where: { id: updated.companyId }, select: { name: true } });
           const appUrl = `${process.env.APP_BASE_URL ?? 'http://localhost:5173'}/opportunities`;
-          await bestEffort(
-            sendOpportunityStageChangedEmail({
-              to: recipient.email,
-              ownerFirstName: recipient.firstName,
-              opportunityName: updated.name,
-              companyName: company?.name ?? '',
-              fromStage: oldStage?.name ?? 'a previous stage',
-              toStage: newStage?.name ?? 'a new stage',
-              changedByName: actorName,
-              appUrl,
-            }),
-            'Failed to send opportunity stage changed email:',
-          );
+          // sendOpportunityStageChangedEmail already swallows its own errors (see mailer.ts).
+          await sendOpportunityStageChangedEmail({
+            to: recipient.email,
+            ownerFirstName: recipient.firstName,
+            opportunityName: updated.name,
+            companyName: company?.name ?? '',
+            fromStage: oldStage?.name ?? 'a previous stage',
+            toStage: newStage?.name ?? 'a new stage',
+            changedByName: actorName,
+            appUrl,
+          });
         }
       } catch (error) {
         console.error('Failed to create opportunity stage changed notification:', error);

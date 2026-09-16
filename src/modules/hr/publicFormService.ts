@@ -358,18 +358,19 @@ export async function submitPublicForm(
     select: { email: true },
   });
 
+  // Both sends already swallow their own errors (see mailer.ts), but must still be awaited — an
+  // un-awaited promise can be killed mid-flight by Vercel once the HTTP response is sent
+  // (confirmed 2026-08-25).
   for (const admin of admins) {
-    sendPublicFormSubmissionEmail({
+    await sendPublicFormSubmissionEmail({
       to: admin.email,
       tenantName,
       formName: form.name,
       submitterName,
       submitterEmail: trimmedEmail,
-    }).catch((err) => console.error('Failed to send public form submission email:', err));
+    });
   }
-  sendPublicFormConfirmationEmail({ to: trimmedEmail, tenantName, formName: form.name }).catch((err) =>
-    console.error('Failed to send public form confirmation email:', err),
-  );
+  await sendPublicFormConfirmationEmail({ to: trimmedEmail, tenantName, formName: form.name });
 
   return { success: true };
 }

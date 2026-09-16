@@ -325,15 +325,15 @@ export async function requestPasswordReset(email: string): Promise<void> {
   });
 
   const appBaseUrl = process.env.APP_BASE_URL ?? 'http://localhost:5173';
-  // Best-effort, same reasoning as invitationService.ts's invitation email:
-  // the token already exists in the DB regardless of whether this send
-  // succeeds, so a flaky SMTP call shouldn't fail the (already
-  // information-free) response the caller is waiting on.
-  sendPasswordResetEmail({
+  // The token already exists in the DB regardless of whether this send succeeds, so a flaky
+  // SMTP call shouldn't fail the (already information-free) response the caller is waiting on
+  // — sendPasswordResetEmail already swallows its own errors (see mailer.ts's dispatchMail), so
+  // a plain `await` here is enough; it must still be awaited rather than fired-and-forgotten,
+  // since an un-awaited promise can be killed mid-flight by Vercel once the HTTP response is
+  // sent (confirmed 2026-08-25 with signup verification emails).
+  await sendPasswordResetEmail({
     to: user.email,
     resetUrl: `${appBaseUrl}/reset-password/${token}`,
-  }).catch((error) => {
-    console.error('Failed to send password reset email:', error);
   });
 }
 

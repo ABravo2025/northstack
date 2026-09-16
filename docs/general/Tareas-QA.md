@@ -4469,3 +4469,51 @@ en Dodo sin revisar primero, para no perder el caso de prueba real que ya demost
 3. **Regresión:** confirmar que un evento CON `metadata.plan` presente sigue tomando ese camino
    (más barato, sin request extra) — `resolveConfirmedPlan` no debe llamar a la API de Dodo si la
    metadata ya trae la respuesta.
+
+---
+
+## QA-92 — Reset de contraseña (y otros 5 emails transaccionales) se perdían en silencio por no estar `await`ados en Vercel (2026-09-16, en `main`/producción)
+
+**Por qué existe esta tarea:** un usuario reportó que "reestablecer contraseña" no funciona y no
+llega ningún email desde `no-reply@`. Investigando `requestPasswordReset` (`authService.ts`) se
+encontró que el envío se disparaba como `sendPasswordResetEmail(...).catch(err => console.error(...))`
+**sin `await`** — el mismo patrón que ya causó un incidente real y documentado el 2026-08-25 (emails
+de verificación de signup perdidos en producción): en Vercel serverless, una promesa sin `await`
+puede quedar matada a mitad de camino en cuanto se manda la respuesta HTTP, así que el SMTP nunca
+termina de mandar el correo — y como el error nunca llega a lanzarse, tampoco queda nada en los logs.
+Buscando el mismo patrón (`send*Email(...).catch(...)` sin `await`) aparecieron otros **5 lugares**
+con el bug exacto: respuesta a ticket, time-off pending/decided (x3), public form submission/
+confirmation (x2); y un sexto encontrado durante la revisión (no via grep, sino leyendo el código
+alrededor): el email de contrato firmado de Payroll (`contractConfirmationService.ts`), disparado con
+`Promise.all([...]).then(...).catch(...)` tampoco awaited. Se encontró además el mismo patrón, pero
+para sync de Google Calendar (no email), en `timeOffRequestService.ts` (x3) y `taskService.ts` (x3).
+
+**Fix:** se centralizó el envío dentro de `mailer.ts` en un único punto (`dispatchMail`, privado) que
+aplica `bestEffort()` (await real + swallow del error) — las 12 funciones `send*Email` que sí son
+best-effort ahora rutean por ahí, así que una función nueva no puede reintroducir el bug por
+olvidarse de envolverla en el call site. Excepción respetada a propósito: `sendFeedbackEmail` está
+documentado como "no best-effort" (el route necesita que el error se propague para devolver 502 al
+usuario) — sigue llamando a `transporter.sendMail` directo. Se corrigieron los 6 call sites de email
+rotos + los 6 de Google Calendar sync (mismo fix: agregar el `await` que faltaba). Se sacaron los
+wraps de `bestEffort()` redundantes en los call sites que ya llamaban a un `send*Email` (ahora
+protegido internamente), dejando solo `await sendXEmail(...)` en cada uno.
+
+### Qué probar
+
+1. **Caso reportado:** pedir "Forgot password" con un email real de un tenant de prueba en
+   producción → confirmar que el email de reset llega (asunto "Reset your Northstack password") y
+   que el link funciona.
+2. **Regresión de los otros 5 emails corregidos:** invitar a un usuario, crear/decidir un Time Off
+   request (pending y decided), enviar una nota de respuesta en un Ticket del Admin Center, y
+   completar un Public Form — confirmar que cada email sigue llegando (no deberían haberse roto por
+   este refactor, pero es la primera vez que corren contra el `dispatchMail` centralizado).
+3. **Contrato firmado (Payroll):** confirmar un contrato end-to-end y verificar que el signer (y el cc
+   a owner/creator) reciben el PDF firmado por email.
+4. **`sendFeedbackEmail` sigue fallando "ruidoso":** si es posible simular una falla de SMTP (o
+   revisar en `ZOHO_SMTP_PASSWORD` mal seteada en un entorno de prueba), confirmar que
+   `POST /api/feedback` sigue devolviendo 502 (no un 204 silencioso) — este es el único email que NO
+   debe volverse best-effort.
+5. **Google Calendar sync:** crear/editar/borrar un Task con `dueDate`, y crear/decidir/cancelar un
+   Time Off request, con Google Calendar conectado — confirmar que el evento se crea/actualiza/borra
+   en el calendario como antes (el fix acá es solo agregar el `await` que faltaba, la lógica de sync
+   en sí no cambió).

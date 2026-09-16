@@ -261,27 +261,24 @@ export async function confirmContract(input: ConfirmContractInput): Promise<Conf
   // creates once a tenant is on a real (non-free-trial) plan.
   await bestEffort(syncSeatBilling(invitation.tenantId), `syncSeatBilling(${invitation.tenantId})`);
 
-  // Best-effort, fire-and-forget (same reasoning as the invitation email in
-  // invitationService.ts) — the contract is already confirmed and stored
-  // either way; a failed email here shouldn't fail a request the user is
-  // waiting on to get logged in.
-  Promise.all([
+  // Best-effort (same reasoning as the invitation email in invitationService.ts) — the contract
+  // is already confirmed and stored either way, so a failed email here shouldn't fail a request
+  // the user is waiting on to get logged in. sendContractSignedEmail already swallows its own
+  // errors (see mailer.ts's dispatchMail), but this must still be awaited, not fired-and-forgotten
+  // — an un-awaited promise can be killed mid-flight by Vercel once the HTTP response is sent
+  // (confirmed 2026-08-25 with signup verification emails; this call site had the same gap).
+  const [owner, creator] = await Promise.all([
     prisma.user.findFirst({ where: { tenantId: invitation.tenantId, role: 'owner' } }),
     prisma.user.findUnique({ where: { id: compensation.createdByUserId } }),
-  ])
-    .then(([owner, creator]) => {
-      const cc = [...new Set([owner?.email, creator?.email].filter((e): e is string => Boolean(e) && e !== result.user.email))];
-      return sendContractSignedEmail({
-        to: result.user.email,
-        cc,
-        tenantName: tenant.name,
-        employeeName: `${employee.firstName} ${employee.lastName}`,
-        pdfBuffer: signedPdfBuffer,
-      });
-    })
-    .catch((error) => {
-      console.error('Failed to send signed contract email:', error);
-    });
+  ]);
+  const cc = [...new Set([owner?.email, creator?.email].filter((e): e is string => Boolean(e) && e !== result.user.email))];
+  await sendContractSignedEmail({
+    to: result.user.email,
+    cc,
+    tenantName: tenant.name,
+    employeeName: `${employee.firstName} ${employee.lastName}`,
+    pdfBuffer: signedPdfBuffer,
+  });
 
   return { success: true, user: result.user, session: result.session };
 }

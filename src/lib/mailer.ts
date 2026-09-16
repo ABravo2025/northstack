@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import { bestEffort } from './bestEffort.js';
 
 // Opportunity/company names, stage labels, and display names are all tenant-user-controlled free
 // text that gets interpolated into HTML email bodies below — escape before interpolating so a
@@ -36,7 +37,7 @@ export async function sendInvitationEmail(input: SendInvitationEmailInput): Prom
 
   const hasContract = Boolean(input.attachments?.length);
 
-  await transporter.sendMail({
+  await dispatchMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
     to: input.to,
     subject: `You're invited to join ${input.tenantName} on Northstack`,
@@ -55,7 +56,7 @@ export async function sendInvitationEmail(input: SendInvitationEmailInput): Prom
       '<p>This link expires in 7 days.</p>',
     ].join('\n'),
     attachments: input.attachments?.map((a) => ({ filename: a.filename, content: a.content, contentType: 'application/pdf' })),
-  });
+  }, 'Failed to send invitation email:');
 }
 
 function mailerConfigured(): boolean {
@@ -64,6 +65,17 @@ function mailerConfigured(): boolean {
     return false;
   }
   return true;
+}
+
+// Single choke point every send*Email function below routes through instead of calling
+// transporter.sendMail directly. On Vercel, an un-awaited promise can be killed mid-flight the
+// moment the HTTP response goes out — confirmed 2026-08-25, when that exact gap silently dropped
+// every production signup verification email even though the SMTP send itself worked fine when
+// awaited (see bestEffort.ts). Routing every send through this one function means a future email
+// type can't reintroduce that bug by skipping the wrapping some call site forgot to apply —
+// callers just `await sendXEmail(...)` and the safety is already built in.
+function dispatchMail(mailOptions: Parameters<typeof transporter.sendMail>[0], errorLabel: string): Promise<void> {
+  return bestEffort(transporter.sendMail(mailOptions), errorLabel);
 }
 
 export interface SendPublicFormSubmissionEmailInput {
@@ -77,7 +89,7 @@ export interface SendPublicFormSubmissionEmailInput {
 export async function sendPublicFormSubmissionEmail(input: SendPublicFormSubmissionEmailInput): Promise<void> {
   if (!mailerConfigured()) return;
 
-  await transporter.sendMail({
+  await dispatchMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
     to: input.to,
     subject: `New submission on "${input.formName}"`,
@@ -87,7 +99,7 @@ export async function sendPublicFormSubmissionEmail(input: SendPublicFormSubmiss
     html: [
       `<p><strong>${escapeHtml(input.submitterName)}</strong> (${escapeHtml(input.submitterEmail)}) just submitted <strong>${escapeHtml(input.formName)}</strong> for ${escapeHtml(input.tenantName)}.</p>`,
     ].join('\n'),
-  });
+  }, 'Failed to send public form submission email:');
 }
 
 export interface SendPublicFormConfirmationEmailInput {
@@ -99,7 +111,7 @@ export interface SendPublicFormConfirmationEmailInput {
 export async function sendPublicFormConfirmationEmail(input: SendPublicFormConfirmationEmailInput): Promise<void> {
   if (!mailerConfigured()) return;
 
-  await transporter.sendMail({
+  await dispatchMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
     to: input.to,
     subject: `We received your submission — ${input.formName}`,
@@ -107,7 +119,7 @@ export async function sendPublicFormConfirmationEmail(input: SendPublicFormConfi
     html: [
       `<p>Thanks! ${escapeHtml(input.tenantName)} received your submission for <strong>${escapeHtml(input.formName)}</strong>.</p>`,
     ].join('\n'),
-  });
+  }, 'Failed to send public form confirmation email:');
 }
 
 export interface SendTimeOffRequestPendingEmailInput {
@@ -125,7 +137,7 @@ export async function sendTimeOffRequestPendingEmail(input: SendTimeOffRequestPe
 
   const range = input.startDate === input.endDate ? input.startDate : `${input.startDate} – ${input.endDate}`;
 
-  await transporter.sendMail({
+  await dispatchMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
     to: input.to,
     subject: `Time off request awaiting your approval`,
@@ -141,7 +153,7 @@ export async function sendTimeOffRequestPendingEmail(input: SendTimeOffRequestPe
       `<p><strong>${escapeHtml(input.employeeName)}</strong> requested ${input.daysRequested} day(s) of <strong>${escapeHtml(input.policyName)}</strong> (${range}) and it needs your approval.</p>`,
       '<p>Review it in Northstack under HR &gt; Time Off.</p>',
     ].join('\n'),
-  });
+  }, 'Failed to send time off pending email:');
 }
 
 export interface SendTimeOffRequestDecidedEmailInput {
@@ -179,13 +191,13 @@ export async function sendTimeOffRequestDecidedEmail(input: SendTimeOffRequestDe
         input.decision
       }${input.autoApproved ? ' automatically — this policy does not require approval' : ''}.`;
 
-  await transporter.sendMail({
+  await dispatchMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
     to: input.to,
     subject,
     text: [intro, input.decisionNote ? `\nNote: ${input.decisionNote}` : ''].join('\n'),
     html: [`<p>${introHtml}</p>`, input.decisionNote ? `<p>Note: ${escapeHtml(input.decisionNote)}</p>` : ''].join('\n'),
-  });
+  }, 'Failed to send time off decided email:');
 }
 
 export interface SendFeedbackEmailInput {
@@ -197,6 +209,10 @@ export interface SendFeedbackEmailInput {
   message: string;
 }
 
+// Unlike every other function in this file, feedback is NOT best-effort (see feedback.ts's own
+// header comment) — the email IS the point of the request, so a delivery failure has to
+// propagate as a rejection the route can turn into a 502, not get swallowed like a
+// dispatchMail() failure would. Calls transporter.sendMail directly for that reason.
 export async function sendFeedbackEmail(input: SendFeedbackEmailInput): Promise<void> {
   if (!mailerConfigured()) return;
 
@@ -234,7 +250,7 @@ export interface SendContractSignedEmailInput {
 export async function sendContractSignedEmail(input: SendContractSignedEmailInput): Promise<void> {
   if (!mailerConfigured()) return;
 
-  await transporter.sendMail({
+  await dispatchMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
     to: input.to,
     cc: input.cc && input.cc.length > 0 ? input.cc : undefined,
@@ -249,7 +265,7 @@ export async function sendContractSignedEmail(input: SendContractSignedEmailInpu
       '<p>The signed contract is attached to this email.</p>',
     ].join('\n'),
     attachments: [{ filename: 'contract-signed.pdf', content: input.pdfBuffer, contentType: 'application/pdf' }],
-  });
+  }, 'Failed to send contract signed email:');
 }
 
 export interface SendPasswordResetEmailInput {
@@ -260,7 +276,7 @@ export interface SendPasswordResetEmailInput {
 export async function sendPasswordResetEmail(input: SendPasswordResetEmailInput): Promise<void> {
   if (!mailerConfigured()) return;
 
-  await transporter.sendMail({
+  await dispatchMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
     to: input.to,
     subject: 'Reset your Northstack password',
@@ -276,7 +292,7 @@ export async function sendPasswordResetEmail(input: SendPasswordResetEmailInput)
       `<p><a href="${input.resetUrl}">Reset your password</a></p>`,
       '<p>This link expires in 1 hour. If you did not request this, you can safely ignore this email.</p>',
     ].join('\n'),
-  });
+  }, 'Failed to send password reset email:');
 }
 
 export interface SendSignupVerificationEmailInput {
@@ -291,7 +307,7 @@ export interface SendSignupVerificationEmailInput {
 export async function sendSignupVerificationEmail(input: SendSignupVerificationEmailInput): Promise<void> {
   if (!mailerConfigured()) return;
 
-  await transporter.sendMail({
+  await dispatchMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
     to: input.to,
     subject: 'Verify your email to finish setting up Northstack',
@@ -307,7 +323,7 @@ export async function sendSignupVerificationEmail(input: SendSignupVerificationE
       `<p><a href="${input.verifyUrl}">Verify your email</a></p>`,
       '<p>This link expires in 24 hours. If you did not request this, you can safely ignore this email.</p>',
     ].join('\n'),
-  });
+  }, 'Failed to send signup verification email:');
 }
 
 export interface SendOpportunityStageChangedEmailInput {
@@ -331,7 +347,7 @@ export async function sendOpportunityStageChangedEmail(input: SendOpportunitySta
   const actor = input.changedByName ? ` by ${input.changedByName}` : '';
   const actorHtml = input.changedByName ? ` by ${escapeHtml(input.changedByName)}` : '';
 
-  await transporter.sendMail({
+  await dispatchMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
     to: input.to,
     subject: `${input.opportunityName} moved to ${input.toStage}`,
@@ -347,7 +363,7 @@ export async function sendOpportunityStageChangedEmail(input: SendOpportunitySta
       `<p><strong>${escapeHtml(input.opportunityName)}</strong> (${escapeHtml(input.companyName)}) moved from ${escapeHtml(input.fromStage)} to <strong>${escapeHtml(input.toStage)}</strong>${actorHtml}.</p>`,
       `<p><a href="${input.appUrl}">View your pipeline</a></p>`,
     ].join('\n'),
-  });
+  }, 'Failed to send opportunity stage changed email:');
 }
 
 export interface SendOpportunityStalledEmailInput {
@@ -366,7 +382,7 @@ export interface SendOpportunityStalledEmailInput {
 export async function sendOpportunityStalledEmail(input: SendOpportunityStalledEmailInput): Promise<void> {
   if (!mailerConfigured()) return;
 
-  await transporter.sendMail({
+  await dispatchMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
     to: input.to,
     subject: `${input.opportunityName} has been stalled for ${input.daysInStage} days`,
@@ -382,7 +398,7 @@ export async function sendOpportunityStalledEmail(input: SendOpportunityStalledE
       `<p><strong>${escapeHtml(input.opportunityName)}</strong> (${escapeHtml(input.companyName)}) has been sitting in <strong>${escapeHtml(input.stageName)}</strong> for ${input.daysInStage} days.</p>`,
       `<p><a href="${input.appUrl}">View your pipeline</a></p>`,
     ].join('\n'),
-  });
+  }, 'Failed to send opportunity stalled email:');
 }
 
 export interface SendTicketNoteCreatedEmailInput {
@@ -395,7 +411,7 @@ export interface SendTicketNoteCreatedEmailInput {
 export async function sendTicketNoteCreatedEmail(input: SendTicketNoteCreatedEmailInput): Promise<void> {
   if (!mailerConfigured()) return;
 
-  await transporter.sendMail({
+  await dispatchMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
     to: input.to,
     subject: `New reply on your ticket: "${input.ticketSubject}"`,
@@ -404,7 +420,7 @@ export async function sendTicketNoteCreatedEmail(input: SendTicketNoteCreatedEma
       `<p><strong>${escapeHtml(input.authorName)}</strong> replied to your ticket <strong>${escapeHtml(input.ticketSubject)}</strong>:</p>`,
       `<p>${escapeHtml(input.noteBody)}</p>`,
     ].join('\n'),
-  });
+  }, 'Failed to send ticket note email:');
 }
 
 export interface SendPolicyChangeEmailInput {
@@ -422,7 +438,7 @@ export interface SendPolicyChangeEmailInput {
 export async function sendPolicyChangeEmail(input: SendPolicyChangeEmailInput): Promise<void> {
   if (!mailerConfigured()) return;
 
-  await transporter.sendMail({
+  await dispatchMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
     to: input.to,
     subject: `Updated: ${input.policyTitle}`,
@@ -441,5 +457,5 @@ export async function sendPolicyChangeEmail(input: SendPolicyChangeEmailInput): 
       `<p>${escapeHtml(input.summary)}</p>`,
       `<p><a href="${input.appUrl}">Review the full document</a></p>`,
     ].join('\n'),
-  });
+  }, 'Failed to send policy change email:');
 }

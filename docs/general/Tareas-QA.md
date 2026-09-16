@@ -4498,11 +4498,15 @@ rotos + los 6 de Google Calendar sync (mismo fix: agregar el `await` que faltaba
 wraps de `bestEffort()` redundantes en los call sites que ya llamaban a un `send*Email` (ahora
 protegido internamente), dejando solo `await sendXEmail(...)` en cada uno.
 
-### Qué probar
+**Verificado en producción real (2026-09-16):** `POST /api/auth/forgot-password` contra
+`app.joinnorthstack.com` con la cuenta real de Alejandro — la respuesta tardó ~2.9s (antes del fix
+hubiera sido casi instantánea, porque no esperaba al SMTP), no aparece ningún `Failed to send
+password reset email` en los logs de Vercel, y **Alejandro confirmó que el email llegó** a su
+bandeja. Caso reportado cerrado y confirmado end-to-end, no solo por tests.
 
-1. **Caso reportado:** pedir "Forgot password" con un email real de un tenant de prueba en
-   producción → confirmar que el email de reset llega (asunto "Reset your Northstack password") y
-   que el link funciona.
+### Qué falta probar (regresión de los otros 5 + Google Calendar, no verificado todavía)
+
+1. ~~**Caso reportado:** pedir "Forgot password"~~ — verificado en producción, ver arriba.
 2. **Regresión de los otros 5 emails corregidos:** invitar a un usuario, crear/decidir un Time Off
    request (pending y decided), enviar una nota de respuesta en un Ticket del Admin Center, y
    completar un Public Form — confirmar que cada email sigue llegando (no deberían haberse roto por

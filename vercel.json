@@ -18,7 +18,8 @@
       "source": "/((?!assets|api|health).*)",
       "headers": [
         { "key": "Cache-Control", "value": "no-store, must-revalidate" },
-        { "key": "CDN-Cache-Control", "value": "no-store" }
+        { "key": "CDN-Cache-Control", "value": "no-store" },
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
       ]
     }
   ],

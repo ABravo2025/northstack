@@ -22,6 +22,12 @@
          tags below are the standard opt-out Chrome/Google Translate and well-behaved
          extensions respect; this can't stop a rogue extension that ignores the convention. -->
     <meta name="google" content="notranslate" />
+    <!-- This is the product app (app.joinnorthstack.com), not the marketing site — every
+         route here is post-login or a bare auth form, so there's nothing worth ranking and
+         indexing it would put login/register pages in search results instead of the real
+         landing page (joinnorthstack.com). Paired with the X-Robots-Tag header in the root
+         vercel.json for the same reason. -->
+    <meta name="robots" content="noindex, nofollow" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link

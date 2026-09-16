@@ -303,7 +303,15 @@ export interface GoogleCalendarViewEvent {
   id: string;
   title: string;
   start: string; // ISO date (all-day) or ISO datetime, mirrors Task.dueDate's own dual format
+  end: string | null;
   allDay: boolean;
+  // Added 2026-09-16 so the Overview calendar's small "view event" modal has something to show
+  // beyond a bare title — these are read straight off Google's own event resource, nothing new to
+  // fetch. All optional since a bare personal event may have none of them.
+  description: string | null;
+  location: string | null;
+  htmlLink: string | null; // opens the real event on calendar.google.com
+  hangoutLink: string | null; // present only if this Google-side event itself has a Meet attached
 }
 
 // Read-only overlay for the Overview calendar (backlog QA, 2026-08-27) — a
@@ -353,7 +361,12 @@ export async function listGoogleEventsForCalendarView(
         id: event.id!,
         title: event.summary ?? '(No title)',
         start: event.start?.date ?? event.start?.dateTime ?? '',
+        end: event.end?.date ?? event.end?.dateTime ?? null,
         allDay: !!event.start?.date,
+        description: event.description ?? null,
+        location: event.location ?? null,
+        htmlLink: event.htmlLink ?? null,
+        hangoutLink: event.hangoutLink ?? null,
       }))
       .filter((event) => event.start);
   } catch (err) {

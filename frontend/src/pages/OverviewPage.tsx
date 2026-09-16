@@ -7,6 +7,7 @@ import OnboardingChecklist from '../components/layout/OnboardingChecklist';
 import MyTasksWidget from '../components/tasks/MyTasksWidget';
 import TaskFormPopover, { type TaskFormPayload } from '../components/tasks/TaskFormPopover';
 import NewTaskFromCalendarPopover from '../components/tasks/NewTaskFromCalendarPopover';
+import GoogleEventViewModal from '../components/tasks/GoogleEventViewModal';
 import OverviewMetricsStrip from '../components/metrics/OverviewMetricsStrip';
 import { usePermissions } from '../contexts/PermissionsContext';
 
@@ -84,6 +85,7 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
   });
   const [formOpen, setFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [viewingGoogleEvent, setViewingGoogleEvent] = useState<GoogleCalendarViewEvent | null>(null);
   const taskAnchorRef = useRef<HTMLDivElement | null>(null);
   const newTaskAnchorRef = useRef<HTMLTableCellElement | null>(null);
   const [newTaskFormOpen, setNewTaskFormOpen] = useState(false);
@@ -384,7 +386,10 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
                                   key={event.id}
                                   className="calendar-entry-google"
                                   title={`${timeLabel ? `${timeLabel} — ` : ''}${event.title} (from your Google Calendar)`}
-                                  onClick={(e) => e.stopPropagation()}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setViewingGoogleEvent(event);
+                                  }}
                                 >
                                   {timeLabel && <span className="calendar-entry-task-time">{timeLabel} </span>}
                                   {event.title}
@@ -428,6 +433,8 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
         defaultDueDate={newTaskDate}
         onCreated={refreshCalendarSilently}
       />
+
+      <GoogleEventViewModal event={viewingGoogleEvent} onClose={() => setViewingGoogleEvent(null)} />
     </div>
   );
 }

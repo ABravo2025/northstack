@@ -182,7 +182,12 @@ export interface GoogleCalendarViewEvent {
   id: string;
   title: string;
   start: string;
+  end: string | null;
   allDay: boolean;
+  description: string | null;
+  location: string | null;
+  htmlLink: string | null;
+  hangoutLink: string | null;
 }
 
 export interface StripeConnectionStatus {

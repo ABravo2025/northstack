@@ -4621,3 +4621,40 @@ tests, no en vivo (requiere Calendar conectado, mismo límite que QA-93/94).
    calendario pero **sin** invitado (nadie más lo ve ni recibe nada).
 3. **Meet tildado sí invita:** repetir QA-93/94 punto 2 con el fix — confirmar que ahora si llega la
    invitación del lado del cliente/empleado (evento en su Google Calendar / email de invitación).
+
+---
+
+## QA-96 — Modal chico para ver eventos "crudos" de Google Calendar en el Overview (2026-09-16, en `staging`)
+
+**Por qué existe esta tarea:** pedido de Alejandro — en el calendario del Overview, los eventos que
+vienen directo de Google Calendar (`calendar-entry-google`, eventos personales del usuario que nunca
+fueron una Task de Northstack) no hacían nada al clickearlos. Pidió poder abrirlos y verlos en un
+modal chico.
+
+**Qué se construyó:**
+- `GoogleCalendarViewEvent` (backend y frontend) ahora trae `end`, `description`, `location`,
+  `htmlLink` (link al evento real en calendar.google.com) y `hangoutLink` (si el evento de Google
+  en sí tiene un Meet propio) — todo leído directo del recurso de Google que ya se pedía, sin
+  request nueva a la API.
+- `GoogleEventViewModal.tsx` (nuevo) — modal chico de solo lectura: fecha/hora formateada,
+  ubicación, descripción, y los links "Join Google Meet" (si aplica) / "Open in Google Calendar".
+  Nunca editable desde acá a propósito — la edición real vive en Google Calendar, Northstack no es
+  dueño de este dato (mismo criterio que ya documentaba `listGoogleEventsForCalendarView`).
+- El click en una entrada `.calendar-entry-google` del Overview ahora abre este modal en vez de no
+  hacer nada.
+
+**Verificado en esta sesión:** con la respuesta de la API mockeada (Playwright interceptando
+`GET /api/integrations/google-calendar/events`, ya que probar con un evento de Google real requiere
+una cuenta conectada) — el modal se ve y funciona correctamente: fecha/hora, ubicación, descripción
+multilínea, y ambos links, todo renderizado bien.
+
+### Qué probar
+
+1. **Con Google Calendar conectado**, crear un evento personal directo en Google Calendar (no desde
+   Northstack) con descripción, ubicación, y opcionalmente un Meet propio, para un día del mes
+   visible en el Overview. Confirmar que aparece como entrada `calendar-entry-google` y que
+   clickearla abre el modal con todos esos datos correctos.
+2. **Evento sin descripción/ubicación/Meet:** confirmar que el modal no rompe ni muestra secciones
+   vacías raras cuando esos campos no vienen.
+3. **"Open in Google Calendar"** debe abrir el evento real en una pestaña nueva de
+   calendar.google.com.

@@ -35,7 +35,7 @@ export const platformRouter = createAsyncRouter();
 // leave Admin Center unable to list tenants in that state — that's exactly what happened here
 // when trialing/past_due were added to the schema without this list being updated.
 const VALID_TENANT_STATUSES: TenantStatus[] = Object.values(TenantStatus);
-const VALID_TENANT_SORT: TenantSortField[] = ['name', 'country', 'createdAt', 'userCount'];
+const VALID_TENANT_SORT: TenantSortField[] = ['name', 'country', 'createdAt', 'userCount', 'employeeCount'];
 const VALID_TENANT_USER_SORT: TenantUserSortField[] = [
   'firstName',
   'lastName',

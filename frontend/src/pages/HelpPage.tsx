@@ -200,6 +200,10 @@ const FAQ_CATEGORIES: FaqCategory[] = [
         a: 'Yes — editing or deleting a synced task or time-off event on the Google side updates it back in Northstack too.',
       },
       {
+        q: 'How do I add a Google Meet link to a Task?',
+        a: 'Check "Add Google Meet video call" when creating or editing a Task — you need Google Calendar connected first. Northstack fills in a time if one isn\'t set yet, generates the Meet link on your calendar, and automatically invites the Contact, Company/Opportunity\'s primary Contact, or Employee the task is about.',
+      },
+      {
         q: 'Can I set up webhooks to push data out of Northstack?',
         a: "Not yet — there's no setup screen for outbound webhooks today. Use the API to poll for changes in the meantime.",
       },

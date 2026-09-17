@@ -748,6 +748,13 @@ export default function GuidePage() {
                 shows up in two other places — the <strong>My tasks</strong> widget and the calendar, both on your
                 Overview page — so nothing gets buried inside a record you don't visit often.
               </p>
+              <p>
+                Check <strong>Add Google Meet video call</strong> to turn a task into an actual call — Northstack
+                fills in a time if you haven't picked one yet, generates a real Meet link on your connected Google
+                Calendar (see Integrations &amp; API), and automatically invites the Contact, Company's primary
+                Contact, Opportunity's primary Contact, or Employee the task is about. The join link shows up on the
+                task itself once it's ready.
+              </p>
             </div>
 
             <div className="help-sub">
@@ -824,6 +831,8 @@ export default function GuidePage() {
                 <li>The sync is <strong>two-way</strong> — editing or deleting the synced event on the Google side reflects back in Northstack.</li>
                 <li>Approved time off syncs <strong>team-wide</strong>, so a teammate's approved leave can appear on your calendar too, not only your own.</li>
                 <li>Birthdays never sync to Google — they're opt-in and stay inside Northstack's own Overview calendar only.</li>
+                <li>A task with <strong>Add Google Meet video call</strong> checked gets a real Meet link, with the person it's about invited automatically (see Tasks &amp; notes).</li>
+                <li>Your own personal Google Calendar events (never created as a Northstack task) also show up on the Overview calendar — click one to see its details in a small preview.</li>
               </ul>
               <p>Disconnecting stops future syncing but doesn't remove events already created on Google.</p>
             </div>

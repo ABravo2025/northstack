@@ -4725,3 +4725,58 @@ multilínea, y ambos links, todo renderizado bien.
    vacías raras cuando esos campos no vienen.
 3. **"Open in Google Calendar"** debe abrir el evento real en una pestaña nueva de
    calendar.google.com.
+
+---
+
+## QA-98 — Admin Center Tenants: campos nuevos (empleados/pago/onboarding) + tabs faltantes (2026-09-16, promovido a `main` el 2026-09-16)
+
+**Por qué existe esta tarea:** pedido de Alejandro — quería un lugar para ver cantidad de clientes,
+estado de pago, fecha de alta/suscripción, estado de onboarding y cantidad de empleados por tenant.
+Al revisar lo que ya existía (Admin Center, repo hermano `northstack-devtasks`) se encontró un bug
+real independiente del pedido: el enum `TenantStatus` tiene 5 valores (`trialing`, `active`,
+`past_due`, `suspended`, `cancelled`) pero la pantalla de Tenants solo tenía 3 tabs (Activos/
+Suspendidos/Cancelados) — **8 de los 10 tenants reales en producción estaban en `trialing` y eran
+invisibles en cualquier tab**. El backend ya derivaba la lista de estados válidos del enum
+(`VALID_TENANT_STATUSES`); solo el frontend de Admin Center había quedado desactualizado.
+
+**Qué se construyó:**
+- Repo principal (`src/modules/platform/platformTenantService.ts`, `src/routes/platform.ts`):
+  `GET /api/platform/tenants` y `GET /api/platform/tenants/:id` ahora también devuelven
+  `employeeCount` (modelo `Employee`, distinto de `userCount` que son cuentas de login),
+  `subscriptionStatus`/`subscriptionCreatedAt` (de `Subscription`, 1:1 con Tenant), y `onboarding`
+  (resumen `{completedSteps, totalSteps: 4, hasEmployees, hasCompanies, hasInvitedTeammate,
+  hasTimeOffPolicy}` — mismos 4 criterios que usaba `onboardingService.ts`'s `getOnboardingStatus`
+  antes de que ese archivo lo reemplazara por el Product Tour el 2026-09-15; reimplementado acá
+  porque esa función ya no existe). `hasCompanies` chequea el modelo `Company` (CRM v2), no el
+  `Client` legado — los tenants nuevos ya no crean filas de `Client`.
+- Repo `northstack-devtasks` (Admin Center): `TenantsPage.tsx` ahora tiene 5 tabs (agregados
+  "En trial" y "Atrasados"), default cambiado de `active` a `trialing` (donde está la mayoría de
+  los tenants reales hoy), columnas nuevas "Empleados" y "Pago" (chip de color). El modal de
+  detalle (`TenantDetailModal.tsx`) suma Empleados, Pago, "Cliente desde" y el checklist de
+  onboarding con los 4 ítems. El badge de conteo en el sidebar (`ShellPage.tsx`) ahora suma
+  trialing+active+past_due+suspended en vez de solo `active` (mismo bug de invisibilidad, en el
+  conteo).
+
+**Verificado en esta sesión:** build (`tsc`) y los 403 tests del backend en verde en ambos repos;
+lógica de `listTenants`/`getTenantDetail` corrida en vivo (solo lectura) contra la base real —
+confirmado que devuelve `employeeCount`/`subscriptionStatus`/`subscriptionCreatedAt`/`onboarding`
+correctos, y que el conteo por status real es 2 `active` + 8 `trialing`. **No verificado en
+navegador** — Admin Center solo puede apuntar a producción (`NORTHSTACK_API_BASE_URL` hardcodeado),
+así que la revisión visual del frontend queda pendiente para Alejandro contra el deploy real.
+
+### Qué probar
+
+1. **Los 5 tabs muestran contadores correctos** y cada uno filtra bien — en particular confirmar que
+   "En trial" ahora muestra los tenants reales que antes eran invisibles.
+2. **Columnas Empleados/Pago** en la tabla: Empleados coincide con la cantidad real de personas en
+   People para ese tenant (no con Usuarios/logins); Pago muestra el chip correcto según el estado
+   real de la Subscription (trialing/active/past_due/suspended/cancelled).
+3. **Modal de detalle:** "Cliente desde" muestra la fecha de creación de la Subscription (no la del
+   Tenant), y el checklist de onboarding (4 ítems con ✓/—) refleja el estado real de ese tenant
+   (agregar una Company/invitar un teammate/crear una Time Off Policy y confirmar que el ítem
+   correspondiente pasa a ✓ sin refrescar manualmente el checklist de otro tenant).
+4. **Sort por Empleados** en la tabla funciona en ambas direcciones.
+5. **Badge del sidebar** ("Tenants") ahora muestra el total de tenants no cancelados, no solo los
+   `active`.
+6. **Permisos sin cambios:** un `platform_support` sigue viendo esta sección igual que antes; un rol
+   sin acceso sigue sin ver el ítem de nav ni poder pegarle a las rutas.

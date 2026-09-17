@@ -251,6 +251,16 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
         payment.card_network || payment.card_last_four
           ? { paymentMethodBrand: payment.card_network ?? undefined, paymentMethodLast4: payment.card_last_four ?? undefined }
           : {};
+      // payment.discounts (2026-09-17) -- present on both a genuine charge and the $0
+      // mandate-verification case (a 100%-off code nets total_amount to 0, same QA-90/91 case
+      // referenced below), so this is read once here and applied in both branches. Overwrites
+      // rather than accumulates: a later real charge reflects whatever discount(s) applied to
+      // *that* charge, not a running history — there's no Invoice-level discount column to pin
+      // each charge's own codes to instead.
+      const discountCodeFields =
+        payment.discounts && payment.discounts.length > 0
+          ? { discountCodes: payment.discounts.map((d) => d.code) }
+          : {};
 
       // getUpdatePaymentMethodTransaction's Paddle role, now Dodo's Customer Portal — that flow
       // creates a Payment flagged is_update_payment_method, never a real period charge. A trial's
@@ -280,7 +290,7 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
               lockedPriceCents: CURRENT_PLAN_PRICES_CENTS[resolvedPlan0],
             }
           : {};
-        const fields0 = { ...paymentMethodFields, ...planFields0 };
+        const fields0 = { ...paymentMethodFields, ...planFields0, ...discountCodeFields };
         if (Object.keys(fields0).length > 0) {
           await syncSubscriptionAndTenant({ tenantId: subscription.tenantId, ...fields0 });
         }
@@ -311,6 +321,7 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
         currentPeriodEnd: periodEnd,
         ...(isNewPlanChoice ? { plan: confirmedPlan, lockedPriceCents } : {}),
         ...paymentMethodFields,
+        ...discountCodeFields,
       });
 
       // First point seat overage is actually allowed to bill anything (seatService.ts's own

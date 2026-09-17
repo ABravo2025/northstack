@@ -111,6 +111,11 @@ enum EntityType {
   opportunity
   ticket
   idea
+  // Admin Center only (platformTenantNotesService.ts) -- a platform staff note/task about a
+  // Tenant itself, entityId === that Tenant's id. Never created via noteService.ts/taskService.ts
+  // (which would log it to the tenant's own ActivityLogEntry / fire their webhooks) -- written
+  // directly instead, deliberately invisible to the tenant it's about.
+  tenant
 }
 
 // Platform-wide (Alejandro/soporte), not per-tenant -- unlike StatusDefinition
@@ -397,6 +402,11 @@ model Subscription {
   cancellationReason      String?
   paymentMethodBrand      String? // "visa" | "mastercard" | etc — display only, never sensitive
   paymentMethodLast4      String?
+  // Discount code(s) applied on a real (non-$0-trial-mandate) charge, from Dodo's Payment.discounts
+  // (see routes/webhooks.ts's payment.succeeded handler). Captured going forward only — there's no
+  // way to reconstruct this for a charge that happened before this field existed. Mercado Pago has
+  // no discount-code concept wired up here, so this stays empty for MP subscriptions.
+  discountCodes           String[]           @default([])
   // Rolling "who last touched this" pointer, no history — written by startCheckout and the 3
   // self-serve actions (changePlan/requestCancellation/resumeSubscription), read by
   // syncSubscriptionAndTenant to best-effort attribute a webhook-confirmed change back to the

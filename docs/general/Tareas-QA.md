@@ -4780,3 +4780,75 @@ así que la revisión visual del frontend queda pendiente para Alejandro contra 
    `active`.
 6. **Permisos sin cambios:** un `platform_support` sigue viendo esta sección igual que antes; un rol
    sin acceso sigue sin ver el ítem de nav ni poder pegarle a las rutas.
+
+---
+
+## QA-99 — Admin Center: billing detallado, notas/tareas internas y "Signups incompletos" (2026-09-17, promovido a `main` el 2026-09-17)
+
+**Por qué existe esta tarea:** pedido de seguimiento de Alejandro sobre QA-98 — quería el plan
+seleccionado, cuánto está pagando cada tenant, fecha del próximo cobro, si usó descuentos, y poder
+dejar notas/tareas internas sobre un tenant desde el modal. También pidió saber si alguien se quedó
+en la verificación de email o nunca completó el formulario de alta.
+
+**Qué se construyó:**
+- Schema (aditivo): `enum EntityType` suma `tenant` (para notas/tareas de staff sobre un Tenant, sin
+  tabla nueva); `Subscription.discountCodes String[] @default([])`.
+- `src/routes/webhooks.ts` (Dodo `payment.succeeded`): cuando `payment.discounts` viene con al menos
+  un código, se guarda en `Subscription.discountCodes` — cubre tanto un cobro real como el caso $0 de
+  un código 100% off (mismo caso QA-90/91). **Solo hacia adelante** — no hay forma de reconstruir
+  descuentos usados en cobros anteriores a este cambio, y Mercado Pago no tiene concepto de
+  descuento acá, así que queda vacío para esas suscripciones.
+- `platformTenantService.ts`'s `getTenantDetail` suma `plan`, `lockedPriceCents`,
+  `subscriptionCurrency`, `nextBillingDate` (`currentPeriodEnd`), `paymentMethodBrand`/`Last4`,
+  `discountCodes` — todos ya existían en `Subscription`, solo faltaba exponerlos acá.
+- `platformTenantNotesService.ts` (nuevo) + rutas `GET/POST /api/platform/tenants/:id/notes` y
+  `/tasks`, `PATCH .../tasks/:taskId` (completar) — notas/tareas de staff sobre el tenant, **nunca
+  visibles para el tenant ni logueadas en su Activity Log**: se escriben directo con Prisma en vez
+  de pasar por `noteService.createNote`/`taskService.createTask` (esas disparan `recordActivity`
+  con `tenantId` del propio cliente, y `createTask` además `emitWebhookEvent`/
+  `syncTaskCalendarEvent` — las tres cosas hubieran expuesto la nota/tarea interna al cliente o a
+  sus webhooks configurados). Tareas: sin asignación a otro miembro del staff en esta v1, siempre
+  auto-asignadas al que la crea (recordatorio personal, no cola de equipo). Sin edición/borrado de
+  notas todavía — solo crear + listar + tildar tareas como completas.
+- `platformSignupService.ts` (nuevo) + `GET /api/platform/signups` — lee `EmailVerification`
+  completa. Esa tabla borra la fila apenas alguien termina el alta real (`registerTenantWithOwner`),
+  así que cualquier fila que sigue ahí es, por construcción, un alta abandonada:
+  `verifiedAt: null` = nunca verificó el email; seteado = verificó pero nunca completó el
+  formulario. **No existe ningún estado "a medias" de Tenant** — hasta que se manda el formulario
+  completo no se crea ninguna fila de `Tenant`, así que esto es intencionalmente una sección
+  separada de Tenants, no una columna más.
+- Admin Center (`northstack-devtasks`): `TenantDetailModal.tsx` suma un bloque "Facturación" (Pago,
+  Plan, Cuánto paga, Próximo cobro, Cliente desde, Método de pago, Descuentos usados) y dos
+  secciones nuevas ("Notas internas" con textarea + "Tareas" con checkbox para completar). Sección
+  nueva "Signups incompletos" en el nav (mismo rol que Tenants — `platform_support`+), tabla
+  sorteable con email/fecha de inicio/fecha de verificación.
+- `api/platform-proxy.ts` (admin-center): `/api/platform/signups` sumado al grupo que permite
+  `platform_support` (antes solo Tenants/Tickets).
+
+**Verificado en esta sesión:** build (`tsc`) y los 403 tests del backend en verde en ambos repos.
+**No verificado contra datos reales ni en navegador todavía** — el push de schema (aditivo) lo tuvo
+que correr Alejandro manualmente (el clasificador de seguridad de Claude Code bloquea un
+`prisma db push` a producción); confirmar después de eso.
+
+### Qué probar
+
+1. **Después del push de schema:** confirmar que `GET /api/platform/tenants/:id` ya no tira 500 y
+   devuelve los campos nuevos de billing (probar con un tenant que tenga plan/precio real, no solo
+   trial).
+2. **Plan/Cuánto paga/Próximo cobro/Método de pago** en el modal coinciden con lo que muestra
+   Billing dentro de la cuenta de ese mismo tenant (BillingPage.tsx).
+3. **Descuentos:** hacer un checkout de prueba con el código de descuento de test (memoria de la
+   sesión de Claude) contra un tenant nuevo y confirmar que "Descuentos usados" muestra el código
+   después del webhook — recordar que es de acá en adelante, tenants viejos van a mostrar "Ninguno"
+   aunque hayan usado un código antes de este cambio.
+4. **Notas internas:** agregar una nota desde el modal, confirmar que aparece en la lista con
+   autor/fecha, y **confirmar que NO aparece en ningún lado dentro de la cuenta del tenant**
+   (Activity Log, ni ninguna otra vista) — es el chequeo de privacidad más importante de esta tarea.
+5. **Tareas:** crear una tarea, tildarla como completa (tachado visual), destildarla — confirmar que
+   tampoco disparó ningún webhook del tenant ni evento de Google Calendar.
+6. **Signups incompletos:** provocar los dos casos a propósito — iniciar un alta y no verificar el
+   email (debe aparecer con "— no verificó"), e iniciar otra, verificar el email, y no completar el
+   formulario (debe aparecer con fecha de verificación). Completar un tercer alta entera y confirmar
+   que **desaparece de la lista** (la fila se borró).
+7. **Permisos:** un `platform_support` puede ver Signups y las notas/tareas de Tenants (mismo nivel
+   que ya tenía para Tenants); un rol sin acceso no ve el ítem de nav ni puede pegarle a las rutas.

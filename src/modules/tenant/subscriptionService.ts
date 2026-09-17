@@ -183,6 +183,7 @@ export interface SyncSubscriptionAndTenantInput {
   cancellationReason?: string | null;
   paymentMethodBrand?: string | null;
   paymentMethodLast4?: string | null;
+  discountCodes?: string[];
   // Present only for the 3 synchronous self-serve actions (changePlan/requestCancellation/
   // resumeSubscription), which have a real actor right there in the route handler. Every
   // webhook/cron call site omits this — see resolveRecentActorId below for how those instead

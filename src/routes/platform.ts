@@ -27,6 +27,14 @@ import {
   listPlatformStatuses,
   updatePlatformStatus,
 } from '../modules/platform/platformStatusService.js';
+import {
+  createTenantNote,
+  createTenantTask,
+  listTenantNotes,
+  listTenantTasks,
+  setTenantTaskCompleted,
+} from '../modules/platform/platformTenantNotesService.js';
+import { listIncompleteSignups } from '../modules/platform/platformSignupService.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 
 export const platformRouter = createAsyncRouter();
@@ -107,6 +115,78 @@ platformRouter.get('/api/platform/tenants/:id/users', async (req, res) => {
     sortOrder: parseSortOrder(req.query.sortOrder),
   });
   return res.json(users);
+});
+
+platformRouter.get('/api/platform/tenants/:id/notes', async (req, res) => {
+  const user = await requirePlatformRole('platform_support')(req, res);
+  if (!user) {
+    return;
+  }
+  const notes = await listTenantNotes(req.params.id);
+  return res.json(notes);
+});
+
+platformRouter.post('/api/platform/tenants/:id/notes', async (req, res) => {
+  const user = await requirePlatformRole('platform_support')(req, res);
+  if (!user) {
+    return;
+  }
+  const description = (req.body.description as string)?.trim();
+  if (!description) {
+    return res.status(400).json({ error: 'description is required' });
+  }
+  const note = await createTenantNote(req.params.id, user.id, (req.body.title as string) || 'Note', description);
+  return res.status(201).json(note);
+});
+
+platformRouter.get('/api/platform/tenants/:id/tasks', async (req, res) => {
+  const user = await requirePlatformRole('platform_support')(req, res);
+  if (!user) {
+    return;
+  }
+  const tasks = await listTenantTasks(req.params.id);
+  return res.json(tasks);
+});
+
+platformRouter.post('/api/platform/tenants/:id/tasks', async (req, res) => {
+  const user = await requirePlatformRole('platform_support')(req, res);
+  if (!user) {
+    return;
+  }
+  const title = (req.body.title as string)?.trim();
+  if (!title) {
+    return res.status(400).json({ error: 'title is required' });
+  }
+  const task = await createTenantTask(req.params.id, user.id, {
+    title,
+    description: (req.body.description as string) || null,
+    dueDate: req.body.dueDate ? new Date(req.body.dueDate as string) : null,
+  });
+  return res.status(201).json(task);
+});
+
+platformRouter.patch('/api/platform/tenants/:id/tasks/:taskId', async (req, res) => {
+  const user = await requirePlatformRole('platform_support')(req, res);
+  if (!user) {
+    return;
+  }
+  if (typeof req.body.completed !== 'boolean') {
+    return res.status(400).json({ error: 'completed (boolean) is required' });
+  }
+  const task = await setTenantTaskCompleted(req.params.taskId, req.params.id, req.body.completed);
+  if (!task) {
+    return res.status(404).json({ error: 'Task not found' });
+  }
+  return res.json(task);
+});
+
+platformRouter.get('/api/platform/signups', async (req, res) => {
+  const user = await requirePlatformRole('platform_support')(req, res);
+  if (!user) {
+    return;
+  }
+  const signups = await listIncompleteSignups();
+  return res.json(signups);
 });
 
 platformRouter.get('/api/platform/tickets', async (req, res) => {

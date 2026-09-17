@@ -148,7 +148,19 @@ export async function getTenantDetail(tenantId: string) {
       industry: true,
       acquisitionChannel: true,
       _count: { select: { users: true, employees: true } },
-      subscription: { select: { status: true, createdAt: true } },
+      subscription: {
+        select: {
+          status: true,
+          createdAt: true,
+          plan: true,
+          lockedPriceCents: true,
+          currency: true,
+          currentPeriodEnd: true,
+          paymentMethodBrand: true,
+          paymentMethodLast4: true,
+          discountCodes: true,
+        },
+      },
     },
   });
   if (!tenant) return null;
@@ -165,6 +177,13 @@ export async function getTenantDetail(tenantId: string) {
     employeeCount: _count.employees,
     subscriptionStatus: subscription?.status ?? null,
     subscriptionCreatedAt: subscription?.createdAt ?? null,
+    plan: subscription?.plan ?? null,
+    lockedPriceCents: subscription?.lockedPriceCents ?? null,
+    subscriptionCurrency: subscription?.currency ?? null,
+    nextBillingDate: subscription?.currentPeriodEnd ?? null,
+    paymentMethodBrand: subscription?.paymentMethodBrand ?? null,
+    paymentMethodLast4: subscription?.paymentMethodLast4 ?? null,
+    discountCodes: subscription?.discountCodes ?? [],
     onboarding: summarizeOnboarding({
       employeeCount: _count.employees,
       companyCount,

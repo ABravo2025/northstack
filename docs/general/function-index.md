@@ -713,9 +713,17 @@ están vinculadas; existe porque un scope `notes:read` de una ApiKey es tenant-w
 
 ### `src/modules/platform/platformTenantService.ts`
 Admin Center (`/api/platform/tenants*`, `requirePlatformRole('platform_support')`), no confundir con `tenantService.ts` (self-service tenant-scoped).
-- **listTenants(input)** — por `status` (requerido), sort/search en memoria (dataset chico, no vale la pena mezclar Prisma `orderBy` con un sort manual solo para `userCount`).
-- **getTenantDetail(tenantId)** — incluye `userCount` + los campos de perfil (currency/companySize/industry/acquisitionChannel).
+- **listTenants(input)** — por `status` (requerido, ahora los 5 valores reales de `TenantStatus` — `trialing`/`active`/`past_due`/`suspended`/`cancelled`), sort/search en memoria (dataset chico). Por tenant devuelve además `employeeCount` (`Employee`, no `userCount`/logins), `subscriptionStatus`/`subscriptionCreatedAt`, y `onboarding` (resumen `{completedSteps, totalSteps: 4, hasEmployees, hasCompanies, hasInvitedTeammate, hasTimeOffPolicy}` — reimplementado acá porque `onboardingService.ts`'s `getOnboardingStatus` se borró el 2026-09-15; `hasCompanies` usa el modelo `Company`, no el `Client` legado).
+- **getTenantDetail(tenantId)** — lo de arriba + campos de perfil (currency/companySize/industry/acquisitionChannel) + billing: `plan`, `lockedPriceCents`, `subscriptionCurrency`, `nextBillingDate` (`currentPeriodEnd`), `paymentMethodBrand`/`Last4`, `discountCodes` (ver `Subscription.discountCodes` — capturado por el webhook de Dodo, vacío para Mercado Pago).
 - **listTenantUsers(input)** — usuarios de un tenant, sort vía Prisma `orderBy`.
+
+### `src/modules/platform/platformTenantNotesService.ts`
+Notas/tareas de **staff sobre un Tenant** (`/api/platform/tenants/:id/notes|tasks*`, `requirePlatformRole('platform_support')`) — nunca visibles para el tenant. Reusa `Note`/`Task` con `entityType: 'tenant', entityId: <tenantId>`, pero **no** pasa por `noteService.createNote`/`taskService.createTask` (esas llaman `recordActivity` — quedaría logueado en el propio Activity Log del tenant — y `createTask` además dispara `emitWebhookEvent`/`syncTaskCalendarEvent`); escribe directo con Prisma.
+- **listTenantNotes(tenantId)** / **createTenantNote(tenantId, createdById, title, description)**.
+- **listTenantTasks(tenantId)** / **createTenantTask(tenantId, createdById, input)** — `assigneeId` default al creador (recordatorio personal, no asignación de equipo). **setTenantTaskCompleted(taskId, tenantId, completed)** — `tenantId` en el `where` como ownership check.
+
+### `src/modules/platform/platformSignupService.ts`
+- **listIncompleteSignups()** — lee `EmailVerification` completa (`/api/platform/signups`): esa fila se borra apenas el registro se completa (`registerTenantWithOwner`), así que cualquier fila que sigue ahí es por construcción un alta abandonada — `verifiedAt: null` = nunca verificó el email, seteado = verificó pero nunca completó el formulario.
 
 ### `src/modules/platform/platformTicketService.ts`
 - **listTickets(input)** / **getTicketWithNotes(id)** / **createTicket(input)** / **updateTicket(id, input)** — CRUD de Ticket, `requirePlatformRole('platform_support')` en las rutas.

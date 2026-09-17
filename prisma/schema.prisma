@@ -513,6 +513,11 @@ model User {
   // the bell after this ships (deliberate: it's the only way for existing users to see what
   // they missed while this system didn't exist yet).
   lastAnnouncementSeenAt      DateTime?
+  // Null = never completed or skipped the guided product tour (ProductTour.tsx) — every new
+  // user (tenant owner at signup or a teammate accepting an invite) gets it auto-launched once
+  // on their first authenticated screen. Set on finish AND on skip (both count as "seen"), never
+  // cleared back to null — replaying it manually from the user menu doesn't touch this field.
+  productTourCompletedAt      DateTime?
   pipelinesCreated            Pipeline[]                  @relation("PipelineCreatedBy")
   pipelinesUpdated            Pipeline[]                  @relation("PipelineUpdatedBy")
   pipelinesLastAssigned       Pipeline[]                  @relation("PipelineLastAssignedUser")

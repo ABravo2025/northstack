@@ -4524,7 +4524,74 @@ bandeja. Caso reportado cerrado y confirmado end-to-end, no solo por tests.
 
 ---
 
-## QA-93 — Google Meet en Tasks: link de videollamada + invitación automática al cliente (2026-09-16, en `staging`)
+## QA-93 — Product tour: reemplaza el checklist de onboarding (2026-09-15, promovido a `main` el 2026-09-16)
+
+**Nota de numeración:** esta tarea se desarrolló en `staging` en paralelo a QA-91 (fix de Dodo
+`product_id`, arriba) y quedó numerada ahí como "QA-91" — colisión de numeración entre dos
+sesiones trabajando en paralelo. Renumerada a QA-93 al promoverla a `main`, contenido sin tocar.
+
+**Por qué existe esta tarea:** a pedido de Alejandro (`docs/tareas/Task-UxUI.md`), se retiró el
+widget `OnboardingChecklist.tsx` (dismiss permanente, solo 3 ítems de HR) y se reemplazó por un
+tour guiado con spotlight sobre el sidebar/topbar real, construido sin librería nueva. De paso se
+corrigió un bug real encontrado durante el análisis: `seedSampleData` creaba filas del modelo
+`Client` legado, que ninguna página del frontend renderea — el toast decía "Added N sample clients"
+y esos registros eran invisibles en la UI. Mockup de referencia (roles, layout, estados):
+[Product Tour Walkthrough](https://claude.ai/artifact/TZAhZkYANiz86avDaAkwZo).
+
+**Qué cambió:**
+- `prisma/schema.prisma`: `User.productTourCompletedAt DateTime?` (aditivo, ya pusheado a la base de
+  `staging`). Null = nunca vio ni saltó el tour.
+- `frontend/src/components/tour/ProductTour.tsx` (nuevo): motor del tour — spotlight vía
+  `box-shadow` sobre el elemento real (anclado por atributos `data-tour="..."` agregados a
+  `Sidebar.tsx`/`TopBar.tsx`), tooltip con Back/Next/Skip/cerrar (✕), 8 pasos (bienvenida → Overview
+  → People → Companies [se salta sin `view_company`+`view_contact`] → notificaciones → menú de
+  usuario → Settings → cierre con 2 CTA). Montado una vez en `AppLayout.tsx`, se auto-lanza si
+  `!user.productTourCompletedAt`, con un delay corto. "Take the tour again" en el dropdown del menú
+  de usuario (`TopBar.tsx`) lo relanza manualmente sin tocar el flag de completado.
+- `src/routes/onboarding.ts`: `POST /api/onboarding/tour-complete` nuevo (marca el flag al terminar
+  o saltear el tour); `seed-sample-data` ahora pasa el `userId` de la sesión.
+- `src/modules/onboarding/onboardingService.ts`: `seedSampleData` reemplazó el loop de
+  `createClient` (legado) por `createCompany` (crea Company + Contact primario en la misma
+  transacción) — devuelve `{ employees, companies }` en vez de `{ employees, clients }`. Se retiró
+  `getOnboardingStatus` (sin más consumidores tras sacar el checklist).
+- `frontend/src/pages/EmployeesPage.tsx`: su propio botón de "Load sample data" (independiente del
+  checklist, en el empty state de la tabla) actualizado al nuevo shape de la respuesta.
+- `frontend/src/components/layout/OnboardingChecklist.tsx`: borrado.
+
+### Qué probar
+
+1. **Auto-lanzado en primer login:** crear un tenant nuevo de prueba (o un usuario invitado nuevo) y
+   confirmar que el tour arranca solo en `/overview` ~600ms después de cargar, con el spotlight
+   siguiendo correctamente cada elemento real (Overview → People → Companies → campana → menú de
+   usuario → Settings) sin desalinearse al hacer scroll/resize/colapsar el sidebar.
+2. **Gating por rol:** repetir con un usuario/rol sin `view_company`/`view_contact` (ej. un Member
+   con los permisos default actuales) y confirmar que el paso de Companies se salta solo y el
+   contador de pasos se recalcula (7 en vez de 8).
+3. **Cierre:** en el modal final, probar los 2 CTA — "Add my first employee" navega a `/hr/people`;
+   "Load sample data instead" siembra datos y **confirmar que las Companies/Contacts de muestra
+   aparecen de verdad en `/companies` y `/contacts`** (el bug que esto corrige). Repetir el mismo
+   chequeo con el botón de "Load sample data" propio de `/hr/people` (EmployeesPage), que comparte
+   el mismo endpoint.
+4. **Cerrar con la X / Skip:** confirmar que cerrar el tour en cualquier paso (✕ del tooltip, ✕ del
+   modal de bienvenida/cierre, o "Skip tour") marca `productTourCompletedAt` (no vuelve a
+   auto-lanzarse en un login posterior del mismo usuario) sin bloquear el resto de la app — el
+   overlay debe desaparecer por completo y los clicks normales deben volver a funcionar de inmediato.
+5. **Replay manual:** desde el menú de usuario, "Take the tour again" en una cuenta que ya lo
+   completó — debe relanzarlo desde el paso 0 sin afectar el flag (un logout/login posterior no debe
+   volver a auto-lanzarlo).
+6. **Regresión:** confirmar que el widget viejo (`OnboardingChecklist`) ya no aparece en ningún lado
+   de `/overview` y que no quedó ninguna referencia rota a `getOnboardingStatus`/`hasClients` en el
+   frontend.
+7. **Pendiente de anuncio in-app:** no se publicó todavía (Alejandro pidió revisar primero en
+   `staging`) — publicar con `scripts/publish-announcement.ts` recién si esto se promueve a `main`.
+
+---
+
+## QA-94 — Google Meet en Tasks: link de videollamada + invitación automática al cliente (2026-09-16, promovido a `main` el 2026-09-16)
+
+**Nota de numeración:** desarrollada en `staging` como "QA-93", colisionó con el Product Tour (arriba)
+que también reclamó ese número al promoverse en paralelo. Renumerada a QA-94 al promover esta a
+`main`, contenido sin tocar.
 
 **Por qué existe esta tarea:** pedido de Alejandro — al crear una tarea, poder generarla directamente
 con un link de Google Meet, para armar llamadas con clientes desde ahí mismo sin salir de Northstack.
@@ -4575,25 +4642,25 @@ realmente conectada vía OAuth (login interactivo), que solo Alejandro puede hac
 
 ---
 
-## QA-94 — QA-93 no invitaba al Employee en tareas de People (2026-09-16, en `staging`)
+## QA-95 — QA-94 no invitaba al Employee en tareas de People (2026-09-16, en `staging`, promovido a `main` el 2026-09-16)
 
-**Por qué existe esta tarea:** Alejandro probó QA-93 y encontró que en People (tareas sobre un
+**Por qué existe esta tarea:** Alejandro probó QA-94 y encontró que en People (tareas sobre un
 Employee) el checkbox de Meet funcionaba pero no invitaba a nadie — `resolveTaskClientEmail` solo
 resolvía Contact/Company/Opportunity, Employee quedó afuera aunque tiene su propio campo `email` y
 el mismo caso de uso (una llamada) aplica igual. Se agregó la rama que faltaba (renombrada
 `resolveTaskAttendeeEmail`, ya no es solo "cliente") — mismo mecanismo ya verificado para Contact en
-QA-93, un branch más en la misma función.
+QA-94, un branch más en la misma función.
 
-**No verificado en vivo esta vez** (mismo motivo que QA-93: requiere una cuenta de Google Calendar
-conectada por OAuth interactivo) — confirmar en People igual que el punto 2 de QA-93: crear una
+**No verificado en vivo esta vez** (mismo motivo que QA-94: requiere una cuenta de Google Calendar
+conectada por OAuth interactivo) — confirmar en People igual que el punto 2 de QA-94: crear una
 tarea sobre un Employee con Meet tildado, con Calendar conectado, y verificar que el Employee recibe
 la invitación con el link.
 
 ---
 
-## QA-95 — 2 bugs de QA-93/94 encontrados por Alejandro: doble-submit y attendee sin gatear por Meet (2026-09-16, en `staging`)
+## QA-96 — 2 bugs de QA-94/95 encontrados por Alejandro: doble-submit y attendee sin gatear por Meet (2026-09-16, en `staging`, promovido a `main` el 2026-09-16)
 
-**Por qué existe esta tarea:** Alejandro probó QA-93/94 y encontró dos problemas:
+**Por qué existe esta tarea:** Alejandro probó QA-94/95 y encontró dos problemas:
 
 1. **Doble/triple submit:** apretar "Add task" varias veces rápido creaba varias tareas duplicadas.
    `TaskForm.tsx` no bloqueaba re-entradas mientras el `onSubmit` (create/update) todavía estaba en
@@ -4610,7 +4677,7 @@ la invitación con el link.
 **Verificado en esta sesión:** doble-submit confirmado en vivo contra `staging` (5 clicks rápidos con
 force-click → 1 sola tarea creada cada corrida, botón queda en "Saving…" y deshabilitado durante la
 request, toast "Task created." al terminar). El gateo de `hasVideoCall` se verificó por código +
-tests, no en vivo (requiere Calendar conectado, mismo límite que QA-93/94).
+tests, no en vivo (requiere Calendar conectado, mismo límite que QA-94/95).
 
 ### Qué probar
 
@@ -4619,12 +4686,12 @@ tests, no en vivo (requiere Calendar conectado, mismo límite que QA-93/94).
 2. **Meet destildado no invita a nadie:** crear una tarea sobre un Contact/Employee **sin** tildar
    "Add Google Meet video call" — con Calendar conectado, confirmar que el evento se crea en tu
    calendario pero **sin** invitado (nadie más lo ve ni recibe nada).
-3. **Meet tildado sí invita:** repetir QA-93/94 punto 2 con el fix — confirmar que ahora si llega la
+3. **Meet tildado sí invita:** repetir QA-94/95 punto 2 con el fix — confirmar que ahora si llega la
    invitación del lado del cliente/empleado (evento en su Google Calendar / email de invitación).
 
 ---
 
-## QA-96 — Modal chico para ver eventos "crudos" de Google Calendar en el Overview (2026-09-16, en `staging`)
+## QA-97 — Modal chico para ver eventos "crudos" de Google Calendar en el Overview (2026-09-16, en `staging`, promovido a `main` el 2026-09-16)
 
 **Por qué existe esta tarea:** pedido de Alejandro — en el calendario del Overview, los eventos que
 vienen directo de Google Calendar (`calendar-entry-google`, eventos personales del usuario que nunca

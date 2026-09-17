@@ -222,44 +222,75 @@
   @apply m-0 text-[15px] font-bold text-brand-navy dark:text-dark-ink;
 }
 
-.onboarding-checklist {
-  @apply relative;
+/* ---------- Guided product tour (ProductTour.tsx) ----------
+   Replaces the old dismissible onboarding checklist (2026-09-15, docs/tareas/Task-UxUI.md) with a
+   spotlight walkthrough of the real sidebar/topbar. Built without a tour library — the app has none
+   installed, and this only needs to highlight a handful of already-rendered elements. */
+
+/* Full-viewport, invisible, catches every click so the tour can't be sidestepped mid-step by
+   clicking a real sidebar link underneath it — only the tooltip/card above it is interactive. */
+.tour-click-blocker {
+  @apply fixed inset-0 z-[70];
 }
 
-.onboarding-dismiss {
-  @apply absolute top-4 right-4 cursor-pointer border-none bg-transparent p-1 text-ink-faint hover:text-brand-navy dark:hover:text-gray-100;
+/* Positioned exactly over the spotlighted element; the huge box-shadow is what actually dims the
+   rest of the screen (a single box-shadow "spotlight cutout" instead of an SVG mask). */
+.tour-spotlight {
+  @apply pointer-events-none fixed z-[70] rounded-lg shadow-[0_0_0_9999px_rgba(13,42,72,0.55)] transition-none dark:shadow-[0_0_0_9999px_rgba(0,0,0,0.65)];
 }
 
-.onboarding-list {
-  @apply flex flex-col gap-2;
+.tour-tooltip {
+  @apply fixed z-[71] flex flex-col gap-2 rounded-lg border border-line-strong bg-surface-1 p-4 shadow-xl dark:border-dark-line dark:bg-dark-surface;
 }
 
-.onboarding-item {
-  @apply flex items-center gap-2.5 text-sm;
+.tour-step-label {
+  @apply text-[10px] font-bold tracking-wide text-accent uppercase;
 }
 
-.onboarding-item.done span {
-  @apply text-ink-faint line-through dark:text-dark-ink-faint;
+.tour-tooltip-title {
+  @apply m-0 text-sm font-bold text-brand-navy dark:text-dark-ink;
 }
 
-.onboarding-check {
-  @apply flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-line-strong text-emerald-600 dark:border-gray-600;
+.tour-body {
+  @apply m-0 text-xs leading-relaxed text-ink-muted dark:text-dark-ink-muted;
 }
 
-.onboarding-item.done .onboarding-check {
-  @apply border-emerald-600 bg-emerald-50 dark:bg-emerald-900/30;
+.tour-actions {
+  @apply mt-1 flex items-center justify-between gap-2;
 }
 
-.onboarding-link {
-  @apply cursor-pointer border-none bg-transparent p-0 text-sm font-medium text-accent hover:underline;
+.tour-skip {
+  @apply cursor-pointer border-none bg-transparent p-0 text-xs text-ink-faint hover:text-ink dark:text-dark-ink-faint dark:hover:text-dark-ink;
 }
 
-.onboarding-sample-row {
-  @apply mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4 dark:border-dark-line;
+.tour-nav {
+  @apply flex gap-1.5;
 }
 
-.onboarding-sample-hint {
-  @apply text-xs text-ink-muted dark:text-dark-ink-muted;
+.tour-close {
+  @apply absolute top-2.5 right-2.5;
+}
+
+/* Welcome/finish steps reuse .modal-overlay/.modal-panel (same overlay family as every other
+   centered modal) with a higher z-index so the tour always sits above anything else. */
+.tour-center-overlay {
+  @apply z-[70];
+}
+
+.tour-center-card {
+  @apply relative flex max-w-sm flex-col items-center gap-3 p-7 text-center;
+}
+
+.tour-emoji {
+  @apply text-3xl;
+}
+
+.tour-nav-center {
+  @apply mt-1 flex justify-center gap-2;
+}
+
+.tour-finish-actions {
+  @apply mt-1 flex w-full flex-col gap-2;
 }
 
 .faq-list {

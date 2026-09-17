@@ -3,7 +3,6 @@ import { api, type EmployeeBirthday, type GoogleCalendarViewEvent, type Task } f
 import { useToast } from '../components/common/ToastProvider';
 import TableSkeleton from '../components/common/TableSkeleton';
 import { ChevronLeftIcon, ChevronRightIcon } from '../components/common/Icons';
-import OnboardingChecklist from '../components/layout/OnboardingChecklist';
 import MyTasksWidget from '../components/tasks/MyTasksWidget';
 import TaskFormPopover, { type TaskFormPayload } from '../components/tasks/TaskFormPopover';
 import NewTaskFromCalendarPopover from '../components/tasks/NewTaskFromCalendarPopover';
@@ -66,11 +65,6 @@ function buildMonthGrid(year: number, month: number): (number | null)[][] {
 }
 
 export default function OverviewPage({ token, user }: OverviewPageProps) {
-  // Custom Roles Fase J — migrated off `user.role === 'owner'/'admin'`. No single backend
-  // permission maps cleanly to "should see the getting-started checklist" (its 3 items touch
-  // manage_employee/invite_users/manage_custom_fields individually) — manage_users is used as the
-  // closest single stand-in for "this looks like an administrator of the workspace," matching
-  // today's exact owner/admin split (both seed roles have it, Member doesn't).
   const permissions = usePermissions();
   const toast = useToast();
   const [requests, setRequests] = useState<any[]>([]);
@@ -272,7 +266,6 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
 
   return (
     <div className="container">
-      {permissions.has('manage_users') && <OnboardingChecklist token={token} />}
       <OverviewMetricsStrip token={token} />
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
         <div className="min-w-0 flex-1">

@@ -455,6 +455,16 @@ export function FolderIcon({ className }: IconProps) {
   );
 }
 
+// Checked square — the "My Tasks" nav icon (matches the approved mockup, not the plain list icon).
+export function TaskListIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="4" y="4" width="16" height="16" rx="2" />
+      <path d="M8 12l2.5 2.5L16 9" />
+    </svg>
+  );
+}
+
 // Distinct from CheckIcon (a plain checkmark used for validation/confirm messaging) — this one is
 // the "mark task complete" control on My Tasks rows/cards, always paired with a circular button
 // wrapper so only the stroke needs to render here.

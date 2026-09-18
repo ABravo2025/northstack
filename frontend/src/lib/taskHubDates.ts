@@ -14,7 +14,7 @@ function toLocalCalendarDate(iso: string): Date {
 // Board cards) — deliberately terser than MyTasksWidget.tsx's formatDueDate, which also shows a
 // time-of-day for timed tasks; the hub's columns are too narrow for that.
 export function formatHubDate(iso: string): string {
-  return toLocalCalendarDate(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  return toLocalCalendarDate(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 export function isOverdue(dueDateIso: string | null): boolean {

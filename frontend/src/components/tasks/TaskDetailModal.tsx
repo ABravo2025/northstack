@@ -97,6 +97,8 @@ export default function TaskDetailModal({
             defaultAssigneeId={currentUserId}
             folders={folders}
             googleCalendarConnected={googleCalendarConnected}
+            submitLabel="Save changes"
+            deleteLabel="Delete task"
             onSubmit={handleSubmit}
             onDelete={handleDelete}
           />

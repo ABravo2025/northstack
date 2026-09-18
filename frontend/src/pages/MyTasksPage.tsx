@@ -10,7 +10,7 @@ import NewTaskModal from '../components/tasks/NewTaskModal';
 import TaskDetailModal from '../components/tasks/TaskDetailModal';
 import { useToast } from '../components/common/ToastProvider';
 import { resolveBoardMove, type TaskBoardBucket } from '../lib/taskHubDates';
-import { SearchIcon, ListIcon, KanbanIcon } from '../components/common/Icons';
+import { SearchIcon } from '../components/common/Icons';
 
 interface MyTasksPageProps {
   token: string;
@@ -69,19 +69,8 @@ export default function MyTasksPage({ token, user }: MyTasksPageProps) {
 
   return (
     <div className="page-full flex flex-col">
-      <div className="page-toolbar no-border">
+      <div className="page-toolbar">
         <h2>My Tasks</h2>
-      </div>
-
-      <div className="views-bar">
-        <button type="button" className={`view-tab ${view === 'list' ? 'active' : ''}`} onClick={() => setView('list')}>
-          <ListIcon />
-          List
-        </button>
-        <button type="button" className={`view-tab ${view === 'board' ? 'active' : ''}`} onClick={() => setView('board')}>
-          <KanbanIcon />
-          Board
-        </button>
       </div>
 
       <div className="task-hub-layout">
@@ -109,6 +98,14 @@ export default function MyTasksPage({ token, user }: MyTasksPageProps) {
                 <input type="checkbox" checked={showCompleted} onChange={(e) => setShowCompleted(e.target.checked)} />
                 Show completed
               </label>
+            </div>
+            <div className="task-view-toggle" role="group" aria-label="View">
+              <button type="button" className={view === 'list' ? 'active' : ''} onClick={() => setView('list')}>
+                List
+              </button>
+              <button type="button" className={view === 'board' ? 'active' : ''} onClick={() => setView('board')}>
+                Board
+              </button>
             </div>
           </div>
 

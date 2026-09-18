@@ -102,6 +102,7 @@ export default function NewTaskModal({
           folders={folders}
           defaultFolderId={defaultFolderId}
           googleCalendarConnected={googleCalendarConnected}
+          submitLabel="Create task"
           onSubmit={handleSubmit}
         />
       )}

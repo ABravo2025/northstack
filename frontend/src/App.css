@@ -2363,7 +2363,19 @@ input[type='number'] {
 }
 
 .task-check-circle.done {
-  @apply border-emerald-500 text-emerald-500 shadow-[0_2px_5px_rgba(13,42,72,0.22)];
+  @apply border-green-500 text-green-500 shadow-[0_2px_5px_rgba(13,42,72,0.22)];
+}
+
+.task-view-toggle {
+  @apply flex shrink-0 gap-0.5 rounded-lg bg-surface-2 p-[3px] dark:bg-white/[0.06];
+}
+
+.task-view-toggle button {
+  @apply cursor-pointer rounded-md border-none bg-transparent px-3.5 py-1 text-[13px] font-medium text-ink-muted dark:text-dark-ink-muted;
+}
+
+.task-view-toggle button.active {
+  @apply bg-surface-1 font-semibold text-ink shadow-sm dark:bg-dark-surface dark:text-dark-ink;
 }
 
 .task-hub-layout {
@@ -2463,7 +2475,7 @@ input[type='number'] {
 }
 
 .task-hub-row-title {
-  @apply truncate text-sm text-ink dark:text-dark-ink;
+  @apply truncate text-[14px] font-medium text-ink dark:text-dark-ink;
 }
 
 .task-hub-row-title .entity {
@@ -2471,7 +2483,7 @@ input[type='number'] {
 }
 
 .task-hub-row-title.done {
-  @apply text-ink-faint line-through dark:text-dark-ink-faint;
+  @apply font-normal text-ink-faint line-through dark:text-dark-ink-faint;
 }
 
 .task-hub-date-col {

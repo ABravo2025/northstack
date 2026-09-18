@@ -41,6 +41,10 @@ interface TaskFormProps {
   // defaults to `true` (unchanged behavior at every existing call site); the My Tasks hub is the
   // first surface to pass the real status through and hide the checkbox when it's false.
   googleCalendarConnected?: boolean;
+  // Optional button wording (the My Tasks modals say "Create task"/"Save changes"/"Delete task");
+  // omitted keeps the icon-only delete and "Add task"/"Save" every other surface already has.
+  submitLabel?: string;
+  deleteLabel?: string;
   onSubmit: (payload: TaskFormPayload) => void | Promise<void>;
   onDelete?: () => void | Promise<void>;
   onCancelEdit?: () => void;
@@ -85,6 +89,8 @@ export default function TaskForm({
   folders,
   defaultFolderId,
   googleCalendarConnected = true,
+  submitLabel,
+  deleteLabel,
   onSubmit,
   onDelete,
   onCancelEdit,
@@ -257,14 +263,19 @@ export default function TaskForm({
       )}
       <div className="nv-field flex items-center gap-2">
         <button type="button" className="btn-primary flex-1 text-center" onClick={handleSubmit} disabled={!title.trim() || submitting}>
-          {submitting ? 'Saving…' : task ? 'Save' : 'Add task'}
+          {submitting ? 'Saving…' : submitLabel ?? (task ? 'Save' : 'Add task')}
         </button>
         {task && onCancelEdit && (
           <button type="button" className="icon-btn" onClick={onCancelEdit} aria-label="Cancel edit">
             <XIcon className="h-3.5 w-3.5" />
           </button>
         )}
-        {task && onDelete && (
+        {task && onDelete && deleteLabel && (
+          <button type="button" className="text-sm font-semibold text-red-600 hover:underline dark:text-red-400" onClick={onDelete}>
+            {deleteLabel}
+          </button>
+        )}
+        {task && onDelete && !deleteLabel && (
           <button type="button" className="icon-btn danger" onClick={onDelete} aria-label="Delete task">
             <TrashIcon className="h-3.5 w-3.5" />
           </button>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { api, type Task } from '../../api';
 import { useToast } from '../common/ToastProvider';
+import { useGoogleCalendarConnected } from '../../hooks/useGoogleCalendarConnected';
 import TaskFormPopover, { type TaskFormPayload } from './TaskFormPopover';
 import { VideoIcon } from '../common/Icons';
 
@@ -32,6 +33,7 @@ function formatDueDate(iso: string): string {
 // not a separate implementation.
 export default function MyTasksWidget({ token, tenantUsers, currentUserId }: MyTasksWidgetProps) {
   const toast = useToast();
+  const googleCalendarConnected = useGoogleCalendarConnected(token);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -149,6 +151,7 @@ export default function MyTasksWidget({ token, tenantUsers, currentUserId }: MyT
         tenantUsers={tenantUsers}
         task={editingTask}
         defaultAssigneeId={currentUserId}
+        googleCalendarConnected={googleCalendarConnected}
         onSubmit={handleSubmit}
         onDelete={handleDelete}
       />

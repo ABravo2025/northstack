@@ -1,10 +1,10 @@
-import { useState } from 'react';
 import { api, type TaskEntityType } from '../../api';
 import Popover from '../common/Popover';
 import SearchableSelect from '../common/SearchableSelect';
 import RequiredMark from '../common/RequiredMark';
-import { useToast } from '../common/ToastProvider';
 import TaskForm, { type TaskFormPayload } from './TaskForm';
+import { TASK_ENTITY_TYPE_LABELS, useEntityPicker } from '../../hooks/useEntityPicker';
+import { useGoogleCalendarConnected } from '../../hooks/useGoogleCalendarConnected';
 
 interface TenantUserLite {
   id: string;
@@ -23,13 +23,6 @@ interface NewTaskFromCalendarPopoverProps {
   onCreated: () => void | Promise<void>;
 }
 
-const ENTITY_TYPE_LABELS: Record<TaskEntityType, string> = {
-  contact: 'Contact',
-  company: 'Company',
-  employee: 'Employee',
-  opportunity: 'Opportunity',
-};
-
 // Calendar day cells have no fixed entity (unlike the detail-panel "Tasks"
 // tab, EntityTasksList.tsx) — clicking one to add a task needs to ask which
 // entity it's for first (backlog QA, 2026-08-27: "cliente, compañia o
@@ -45,44 +38,8 @@ export default function NewTaskFromCalendarPopover({
   defaultDueDate,
   onCreated,
 }: NewTaskFromCalendarPopoverProps) {
-  const toast = useToast();
-  const [entityType, setEntityType] = useState<TaskEntityType | ''>('');
-  const [entityId, setEntityId] = useState('');
-  const [entityOptions, setEntityOptions] = useState<{ value: string; label: string }[]>([]);
-  const [loadingOptions, setLoadingOptions] = useState(false);
-
-  const reset = () => {
-    setEntityType('');
-    setEntityId('');
-    setEntityOptions([]);
-  };
-
-  const handleEntityTypeChange = async (value: TaskEntityType) => {
-    setEntityType(value);
-    setEntityId('');
-    setLoadingOptions(true);
-    try {
-      if (value === 'contact') {
-        const contacts = await api.listContacts(token);
-        setEntityOptions(contacts.map((c: any) => ({ value: c.id, label: `${c.firstName} ${c.lastName} (${c.email})` })));
-      } else if (value === 'company') {
-        const companies = await api.listCompanies(token);
-        setEntityOptions(companies.map((c: any) => ({ value: c.id, label: c.name })));
-      } else if (value === 'employee') {
-        // Custom Roles Fase E — the unscoped directory, not the scoped listEmployees: this picker
-        // is "which coworker is this Task about," not an HR view, so it must show everyone
-        // company-wide regardless of the current user's own HR scope (or whether they have any HR
-        // permission at all).
-        const employees = await api.listEmployeeDirectory(token);
-        setEntityOptions(employees.map((e: any) => ({ value: e.id, label: `${e.firstName} ${e.lastName}` })));
-      }
-    } catch (error) {
-      setEntityOptions([]);
-      toast.error('Failed to load options: ' + (error as Error).message);
-    } finally {
-      setLoadingOptions(false);
-    }
-  };
+  const { entityType, entityId, setEntityId, entityOptions, loadingOptions, setEntityType, reset } = useEntityPicker();
+  const googleCalendarConnected = useGoogleCalendarConnected(token);
 
   const handleSubmit = async (payload: TaskFormPayload) => {
     if (!entityType || !entityId) return;
@@ -111,18 +68,19 @@ export default function NewTaskFromCalendarPopover({
           <select
             id="new-task-entity-type"
             value={entityType}
-            onChange={(e) => handleEntityTypeChange(e.target.value as TaskEntityType)}
+            onChange={(e) => setEntityType(e.target.value as TaskEntityType, token)}
           >
             <option value="">-- select --</option>
-            <option value="contact">{ENTITY_TYPE_LABELS.contact}</option>
-            <option value="company">{ENTITY_TYPE_LABELS.company}</option>
-            <option value="employee">{ENTITY_TYPE_LABELS.employee}</option>
+            <option value="contact">{TASK_ENTITY_TYPE_LABELS.contact}</option>
+            <option value="company">{TASK_ENTITY_TYPE_LABELS.company}</option>
+            <option value="employee">{TASK_ENTITY_TYPE_LABELS.employee}</option>
+            <option value="opportunity">{TASK_ENTITY_TYPE_LABELS.opportunity}</option>
           </select>
         </div>
         {entityType && (
           <div className="nv-field">
             <label htmlFor="new-task-entity-id">
-              {ENTITY_TYPE_LABELS[entityType]}
+              {TASK_ENTITY_TYPE_LABELS[entityType]}
               <RequiredMark />
             </label>
             <SearchableSelect
@@ -130,7 +88,7 @@ export default function NewTaskFromCalendarPopover({
               value={entityId}
               onChange={setEntityId}
               options={entityOptions}
-              placeholder={loadingOptions ? 'Loading…' : `Search ${ENTITY_TYPE_LABELS[entityType].toLowerCase()}s…`}
+              placeholder={loadingOptions ? 'Loading…' : `Search ${TASK_ENTITY_TYPE_LABELS[entityType].toLowerCase()}s…`}
             />
           </div>
         )}
@@ -142,6 +100,7 @@ export default function NewTaskFromCalendarPopover({
             tenantUsers={tenantUsers}
             defaultAssigneeId={defaultAssigneeId}
             defaultDueDate={defaultDueDate}
+            googleCalendarConnected={googleCalendarConnected}
             onSubmit={handleSubmit}
           />
         </div>

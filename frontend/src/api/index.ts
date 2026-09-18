@@ -20,6 +20,7 @@ import { feedbackApi } from './feedback.js';
 import { onboardingApi } from './onboarding.js';
 import { csvApi } from './csv.js';
 import { tasksApi } from './tasks.js';
+import { taskFoldersApi } from './taskFolders.js';
 import { notesApi } from './notes.js';
 import { tagsApi } from './tags.js';
 import { notificationsApi } from './notifications.js';
@@ -59,6 +60,7 @@ export const api = {
   ...onboardingApi,
   ...csvApi,
   ...tasksApi,
+  ...taskFoldersApi,
   ...notesApi,
   ...tagsApi,
   ...notificationsApi,

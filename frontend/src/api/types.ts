@@ -432,10 +432,25 @@ export interface Task {
   createdBy?: { id: string; firstName: string; lastName: string };
   createdAt: string;
   updatedAt: string;
-  // Only present on listMyTasks/listTasksForCalendar — a readable label for
+  // Only present on listMyTasks/listTasksForCalendar/the My Tasks hub — a readable label for
   // the entity the task is about, so the frontend doesn't have to resolve
   // Company/Contact/Employee/Opportunity separately just to display it.
   entitySummary?: string | null;
+  folderId: string | null;
+  folder?: { id: string; name: string } | null;
+  // Only present on the My Tasks hub (listTasksForUser) — whether the current user is this
+  // task's assignee, its creator, or both.
+  relationship?: 'assignee' | 'creator' | 'both' | null;
+}
+
+export interface TaskFolder {
+  id: string;
+  tenantId: string;
+  name: string;
+  createdById: string;
+  createdAt: string;
+  // Only present on listTaskFolders — pending (not completed) task count, for the folder rail.
+  pendingTaskCount?: number;
 }
 
 export interface Note {

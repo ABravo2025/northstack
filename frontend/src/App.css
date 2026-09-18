@@ -2350,6 +2350,174 @@ input[type='number'] {
   @apply shrink-0 text-xs text-ink-faint;
 }
 
+/* ---------- My Tasks hub (/tasks) ---------- */
+/* Deliberately its own control, not the global square input[type=checkbox] above — a circular
+   green check is the "mark this task done" convention users already asked for here specifically;
+   the square blue checkbox stays as-is everywhere else (agreement/selection checkboxes). */
+.task-check-circle {
+  @apply flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 border-gray-400 bg-surface-1 p-0 text-gray-400 transition-colors dark:border-gray-500 dark:bg-dark-surface dark:text-gray-500;
+}
+
+.task-check-circle svg {
+  @apply h-3 w-3;
+}
+
+.task-check-circle.done {
+  @apply border-emerald-500 text-emerald-500 shadow-[0_2px_5px_rgba(13,42,72,0.22)];
+}
+
+.task-hub-layout {
+  @apply flex min-h-0 flex-1;
+}
+
+.task-folders-rail {
+  @apply flex w-52 shrink-0 flex-col gap-0.5 overflow-hidden border-r border-line py-5 pr-3 pl-1 transition-[width,padding] dark:border-dark-line;
+}
+
+.task-folders-rail.collapsed {
+  @apply w-14 pr-1;
+}
+
+.task-folders-top {
+  @apply flex items-center justify-between px-2 pb-2;
+}
+
+.task-folders-label {
+  @apply text-[11px] font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint;
+}
+
+.task-folders-toggle {
+  @apply flex shrink-0 items-center justify-center rounded p-1 text-ink-faint hover:bg-surface-2 hover:text-brand-navy dark:text-dark-ink-faint dark:hover:bg-white/[0.06] dark:hover:text-dark-ink;
+}
+
+.task-folders-toggle svg {
+  @apply h-3.5 w-3.5 transition-transform;
+}
+
+.task-folders-rail.collapsed .task-folders-toggle svg {
+  @apply rotate-180;
+}
+
+.task-folder-row {
+  @apply flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-ink-muted hover:bg-surface-2 dark:text-dark-ink-muted dark:hover:bg-white/[0.06];
+}
+
+.task-folders-rail.collapsed .task-folder-row {
+  @apply justify-center px-0;
+}
+
+.task-folder-row svg {
+  @apply h-3.5 w-3.5 shrink-0 text-ink-faint dark:text-dark-ink-faint;
+}
+
+.task-folder-row.active {
+  @apply bg-surface-2 font-semibold text-brand-navy dark:bg-white/[0.08] dark:text-dark-ink;
+}
+
+.task-folder-row.active svg {
+  @apply text-accent;
+}
+
+.task-folder-name {
+  @apply flex-1 truncate;
+}
+
+.task-folder-count {
+  @apply text-xs text-ink-faint dark:text-dark-ink-faint;
+}
+
+.task-folder-add-row {
+  @apply mt-1 flex items-center gap-1.5 px-1;
+}
+
+.task-folder-add-row input {
+  @apply h-7 min-w-0 flex-1 rounded-md border border-line-strong bg-surface-1 px-2 text-xs dark:border-dark-line dark:bg-dark-page;
+}
+
+.task-hub-main {
+  @apply flex min-w-0 flex-1 flex-col gap-4 px-1;
+}
+
+.task-hub-filters {
+  @apply flex flex-wrap items-center justify-between gap-3;
+}
+
+.task-hub-filters-left {
+  @apply flex flex-wrap items-center gap-2;
+}
+
+.task-hub-list {
+  @apply flex flex-1 flex-col overflow-y-auto rounded-lg border border-line bg-surface-1 dark:border-dark-line dark:bg-dark-surface;
+}
+
+.task-hub-list-header {
+  @apply sticky top-0 z-10 flex items-center gap-3 border-b border-line bg-surface-0 px-4 py-2 text-[11px] font-semibold tracking-wide text-ink-faint uppercase dark:border-dark-line dark:bg-dark-page dark:text-dark-ink-faint;
+}
+
+.task-hub-row {
+  @apply flex cursor-pointer items-center gap-3 border-b border-line-soft px-4 py-2.5 last:border-b-0 hover:bg-surface-0 dark:border-dark-line-soft dark:hover:bg-white/[0.03];
+}
+
+.task-hub-row-main {
+  @apply min-w-0 flex-1;
+}
+
+.task-hub-row-title {
+  @apply truncate text-sm text-ink dark:text-dark-ink;
+}
+
+.task-hub-row-title .entity {
+  @apply font-bold;
+}
+
+.task-hub-row-title.done {
+  @apply text-ink-faint line-through dark:text-dark-ink-faint;
+}
+
+.task-hub-date-col {
+  @apply w-16 shrink-0 text-right text-xs text-ink-muted dark:text-dark-ink-muted;
+}
+
+.task-hub-date-col.overdue {
+  @apply font-semibold text-red-600 dark:text-red-400;
+}
+
+.task-hub-date-col.done-date {
+  @apply font-semibold text-emerald-600 dark:text-emerald-400;
+}
+
+.task-hub-card-dates {
+  @apply text-[10.5px] text-ink-faint dark:text-dark-ink-faint;
+}
+
+.task-hub-detail-meta {
+  @apply flex flex-col gap-2 rounded-lg bg-surface-0 p-3 text-sm dark:bg-dark-page;
+}
+
+.task-hub-detail-row {
+  @apply flex items-center gap-2;
+}
+
+.task-hub-detail-row-label {
+  @apply w-20 shrink-0 text-[11px] font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint;
+}
+
+.task-relationship-chip {
+  @apply inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium;
+}
+
+.task-relationship-chip.assignee {
+  @apply bg-brand-blue/10 text-brand-blue dark:bg-brand-blue-light/15 dark:text-brand-blue-light;
+}
+
+.task-relationship-chip.creator {
+  @apply bg-accent/10 text-accent;
+}
+
+.task-relationship-chip.both {
+  @apply bg-emerald-600/10 text-emerald-700 dark:text-emerald-400;
+}
+
 /* ---------- Notes (EntityNotesList) ---------- */
 
 .note-list {

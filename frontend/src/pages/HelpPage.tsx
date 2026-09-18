@@ -204,6 +204,10 @@ const FAQ_CATEGORIES: FaqCategory[] = [
         a: 'Check "Add Google Meet video call" when creating or editing a Task — you need Google Calendar connected first. Northstack fills in a time if one isn\'t set yet, generates the Meet link on your calendar, and automatically invites the Contact, Company/Opportunity\'s primary Contact, or Employee the task is about.',
       },
       {
+        q: 'Where can I see every task assigned to me, across all my records?',
+        a: 'My Tasks (in the sidebar, below Overview) — every task you\'re assigned to or created, in one place, with List and Board views, search, a completed filter, and folders you can create to group related tasks together.',
+      },
+      {
         q: 'Can I set up webhooks to push data out of Northstack?',
         a: "Not yet — there's no setup screen for outbound webhooks today. Use the API to poll for changes in the meantime.",
       },

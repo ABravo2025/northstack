@@ -17,6 +17,7 @@ interface TaskFormPopoverProps {
   tenantUsers: TenantUserLite[];
   task: Task | null; // null = creating a new task
   defaultAssigneeId: string;
+  googleCalendarConnected?: boolean;
   onSubmit: (payload: TaskFormPayload) => void | Promise<void>;
   onDelete?: () => void | Promise<void>;
 }
@@ -33,6 +34,7 @@ export default function TaskFormPopover({
   tenantUsers,
   task,
   defaultAssigneeId,
+  googleCalendarConnected,
   onSubmit,
   onDelete,
 }: TaskFormPopoverProps) {
@@ -42,6 +44,7 @@ export default function TaskFormPopover({
         task={task}
         tenantUsers={tenantUsers}
         defaultAssigneeId={defaultAssigneeId}
+        googleCalendarConnected={googleCalendarConnected}
         onSubmit={async (payload) => {
           await onSubmit(payload);
           onClose();

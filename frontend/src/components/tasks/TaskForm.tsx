@@ -15,6 +15,14 @@ export interface TaskFormPayload {
   assigneeId: string;
   dueDate: string | null;
   hasVideoCall: boolean;
+  // Only present when the `folders` prop was passed — omitted entirely otherwise, so existing
+  // callers that never offer folders keep sending exactly the payload shape they always have.
+  folderId?: string | null;
+}
+
+interface TaskFolderLite {
+  id: string;
+  name: string;
 }
 
 interface TaskFormProps {
@@ -25,6 +33,14 @@ interface TaskFormProps {
   // Overview calendar) — ignored once `task` is set, which already has its
   // own dueDate. YYYY-MM-DD, date-only (same convention as the field itself).
   defaultDueDate?: string;
+  // Passing this list renders a "Folder" select and includes folderId in the submitted payload —
+  // omitted (the default everywhere except the My Tasks hub) renders nothing folder-related.
+  folders?: TaskFolderLite[];
+  defaultFolderId?: string | null;
+  // Google Meet needs a real Calendar connection to actually produce a joinable link — omitted
+  // defaults to `true` (unchanged behavior at every existing call site); the My Tasks hub is the
+  // first surface to pass the real status through and hide the checkbox when it's false.
+  googleCalendarConnected?: boolean;
   onSubmit: (payload: TaskFormPayload) => void | Promise<void>;
   onDelete?: () => void | Promise<void>;
   onCancelEdit?: () => void;
@@ -66,6 +82,9 @@ export default function TaskForm({
   tenantUsers,
   defaultAssigneeId,
   defaultDueDate,
+  folders,
+  defaultFolderId,
+  googleCalendarConnected = true,
   onSubmit,
   onDelete,
   onCancelEdit,
@@ -76,6 +95,7 @@ export default function TaskForm({
   const [dueDate, setDueDate] = useState('');
   const [dueTime, setDueTime] = useState('');
   const [hasVideoCall, setHasVideoCall] = useState(false);
+  const [folderId, setFolderId] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -83,6 +103,7 @@ export default function TaskForm({
     setDescription(task?.description ?? '');
     setAssigneeId(task?.assigneeId ?? defaultAssigneeId);
     setHasVideoCall(task?.hasVideoCall ?? false);
+    setFolderId(task ? task.folderId ?? '' : defaultFolderId ?? '');
     if (task?.dueDate && hasTimeComponent(task.dueDate)) {
       const d = new Date(task.dueDate);
       setDueDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
@@ -91,7 +112,7 @@ export default function TaskForm({
       setDueDate(task?.dueDate ? task.dueDate.slice(0, 10) : defaultDueDate ?? '');
       setDueTime('');
     }
-  }, [task, defaultAssigneeId, defaultDueDate]);
+  }, [task, defaultAssigneeId, defaultDueDate, defaultFolderId]);
 
   // A Meet call needs a specific date+time, not just a date (or nothing) — checking the box
   // fills in whatever's missing with a default instead of blocking the user on filling those in
@@ -124,6 +145,7 @@ export default function TaskForm({
         assigneeId,
         dueDate: dueDateIso,
         hasVideoCall,
+        ...(folders ? { folderId: folderId || null } : {}),
       });
       if (wasNew) {
         setTitle('');
@@ -132,6 +154,7 @@ export default function TaskForm({
         setDueTime('');
         setHasVideoCall(false);
         setAssigneeId(defaultAssigneeId);
+        setFolderId(defaultFolderId ?? '');
       }
     } finally {
       setSubmitting(false);
@@ -202,10 +225,29 @@ export default function TaskForm({
           />
         </div>
       </div>
-      <label className="flex items-center gap-2 text-sm">
-        <input type="checkbox" checked={hasVideoCall} onChange={(e) => handleVideoCallToggle(e.target.checked)} />
-        Add Google Meet video call
-      </label>
+      {folders && (
+        <div className="nv-field">
+          <label htmlFor="task-form-folder">Folder</label>
+          <select id="task-form-folder" value={folderId} onChange={(e) => setFolderId(e.target.value)}>
+            <option value="">No folder</option>
+            {folders.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+      {googleCalendarConnected ? (
+        <label className="flex items-center gap-2 text-sm">
+          <input type="checkbox" checked={hasVideoCall} onChange={(e) => handleVideoCallToggle(e.target.checked)} />
+          Add Google Meet video call
+        </label>
+      ) : (
+        <p className="text-xs text-ink-faint dark:text-dark-ink-faint">
+          Connect Google Calendar in Settings to add a Meet link.
+        </p>
+      )}
       {task?.googleMeetUrl && (
         <div className="nv-field">
           <a href={task.googleMeetUrl} target="_blank" rel="noopener noreferrer" className="text-accent text-xs underline">

@@ -4852,3 +4852,30 @@ que correr Alejandro manualmente (el clasificador de seguridad de Claude Code bl
    que **desaparece de la lista** (la fila se borró).
 7. **Permisos:** un `platform_support` puede ver Signups y las notas/tareas de Tenants (mismo nivel
    que ya tenía para Tenants); un rol sin acceso no ve el ítem de nav ni puede pegarle a las rutas.
+
+## QA-100 — My Tasks (`/tasks`): hub de tareas con List/Board, carpetas, búsqueda y gate de Google Calendar para Meet (2026-09-18, en `staging`)
+
+### Qué cambió
+
+- **Schema (aditivo):** modelo `TaskFolder` (`tenantId`, `name`, `createdById`) + `Task.folderId` opcional (`onDelete: SetNull`). Ya aplicado a la base de `staging` real.
+- **Backend:** `taskFolderService.ts` + `routes/taskFolders.ts` (`GET/POST /api/task-folders`, `DELETE /api/task-folders/:id`); `listTasksForUser` (assignee **o** creador) detrás de `GET /api/tasks/mine?scope=hub` — sin `scope=hub` el endpoint es idéntico al de antes (el widget de Overview no cambia). `POST/PATCH /api/tasks` aceptan `folderId` con chequeo de tenant. El Activity Log registra el cambio de carpeta.
+- **Frontend:** página nueva `/tasks` ("My Tasks", debajo de Overview) — vista List (sin agrupar por día, ordenada por fecha, columnas Created/Due/Completed, título que arranca con el nombre de la entidad) y Board (reusa `KanbanBoard`, columnas por fecha), rail de carpetas colapsable, búsqueda, "Show completed", check circular, modales de alta y de detalle. Todo separado en hooks/componentes chicos (ver `function-index.md`).
+- **Gate de Meet:** el checkbox "Add Google Meet video call" solo aparece con Google Calendar conectado, en los 4 lugares que lo ofrecen (hub, tab Tasks de un registro, widget de Overview, popover del calendario); sin conexión muestra un aviso.
+- `NewTaskFromCalendarPopover` ahora también ofrece Opportunity (refactor a `useEntityPicker`).
+- **Fix:** una fecha date-only (medianoche UTC) se mostraba un día antes en timezones al oeste de UTC.
+- Guide/Help actualizados.
+
+**Verificado en esta sesión:** 810 tests del backend y build del frontend en verde; recorrido con Playwright en dev local (List, Board, detalle, alta, carpetas, completar, Show completed, gate de Meet sin Calendar conectado). **No se verificó todavía contra el deploy de `staging`** — repetirlo ahí.
+
+### Qué probar
+
+1. **Nav:** "My Tasks" aparece debajo de Overview y abre `/tasks`.
+2. **Alcance:** el hub muestra tareas donde soy assignee o creador y ninguna otra (tarea mía asignada a otro → "Created by you"; de otro asignada a mí → "Assigned to you"; ajena a ambos → no aparece). El widget "My tasks" de Overview sigue mostrando solo asignadas a mí y pendientes.
+3. **Fechas:** una tarea con fecha (sin hora) se ve el mismo día en el hub y en el form, probando desde un navegador en UTC-3.
+4. **Completar:** tildar el check hace que desaparezca de la lista; con "Show completed" reaparece con su fecha en Completed; destildar la limpia.
+5. **Carpetas:** crear una, asignar una tarea desde el modal, filtrar por ella, ver el contador de pendientes, colapsar/expandir el rail. **No hay UI para renombrar/borrar carpetas todavía** (el `DELETE` existe; probar por API que las tareas quedan sin carpeta).
+6. **Board:** arrastrar a Completed marca la tarea; a "No due date" borra la fecha; a Today/This week/Later fija hoy / hoy+3 / hoy+14; soltar en Overdue se rechaza.
+7. **Alta:** "Add task" pide primero tipo de entidad + registro (Company/Contact/Employee/Opportunity) y recién ahí el form.
+8. **Gate de Meet:** con Calendar conectado aparece el checkbox y sin conectar aparece el aviso, en los 4 lugares.
+9. **Multi-tenancy:** un `folderId` de otro tenant en `POST/PATCH /api/tasks` da 400 "Folder not found"; `DELETE /api/task-folders/:id` de otro tenant da 404.
+10. **Permisos:** un Member puede usar el hub y crear carpetas (mismo criterio abierto que el resto de Tasks).

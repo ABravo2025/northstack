@@ -446,3 +446,22 @@ export function AlertCircleIcon({ className }: IconProps) {
     </svg>
   );
 }
+
+export function FolderIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M4 7a2 2 0 0 1 2-2h4l2 2h6a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z" />
+    </svg>
+  );
+}
+
+// Distinct from CheckIcon (a plain checkmark used for validation/confirm messaging) — this one is
+// the "mark task complete" control on My Tasks rows/cards, always paired with a circular button
+// wrapper so only the stroke needs to render here.
+export function TaskCheckIcon({ className }: IconProps) {
+  return (
+    <svg {...base} strokeWidth={3.2} className={className}>
+      <path d="M4 12.5l4.5 4.5L20 6" />
+    </svg>
+  );
+}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { api, type Task, type TaskEntityType } from '../../api';
 import { useToast } from '../common/ToastProvider';
+import { useGoogleCalendarConnected } from '../../hooks/useGoogleCalendarConnected';
 import TaskForm, { type TaskFormPayload } from './TaskForm';
 import Avatar from '../common/Avatar';
 import { VideoIcon } from '../common/Icons';
@@ -36,6 +37,7 @@ export default function EntityTasksList({
   onCountChange,
 }: EntityTasksListProps) {
   const toast = useToast();
+  const googleCalendarConnected = useGoogleCalendarConnected(token);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingTask, setEditingTask] = useState<Task | null>(null); // null = composing new
@@ -106,6 +108,7 @@ export default function EntityTasksList({
         task={editingTask}
         tenantUsers={tenantUsers}
         defaultAssigneeId={currentUserId}
+        googleCalendarConnected={googleCalendarConnected}
         onSubmit={handleSubmit}
         onDelete={editingTask ? handleDelete : undefined}
         onCancelEdit={editingTask ? () => setEditingTask(null) : undefined}

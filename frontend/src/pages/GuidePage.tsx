@@ -753,7 +753,18 @@ export default function GuidePage() {
                 fills in a time if you haven't picked one yet, generates a real Meet link on your connected Google
                 Calendar (see Integrations &amp; API), and automatically invites the Contact, Company's primary
                 Contact, Opportunity's primary Contact, or Employee the task is about. The join link shows up on the
-                task itself once it's ready.
+                task itself once it's ready. This checkbox only appears once Google Calendar is connected.
+              </p>
+              <p>
+                <strong>My Tasks</strong> (in the sidebar, below Overview) is a dedicated page for every task you're
+                assigned to or created, across every record, instead of hunting through each one individually.
+                Switch between a <strong>List</strong> (sorted by due date, with Created/Due/Completed columns) and a
+                <strong> Board</strong> view (drag a card between Overdue/Today/This week/Later/No due date/Completed
+                to reschedule or mark it done). Search, filter by completed status, and organize tasks into
+                <strong> folders</strong> you create yourself from the left rail — a folder is just a label to group
+                related tasks under, shared across the tenant. Click a task anywhere to see its full detail and edit
+                it; the "+ Add task" row at the bottom of the list lets you create one from scratch, picking which
+                Company/Contact/Employee/Opportunity it's about.
               </p>
             </div>
 

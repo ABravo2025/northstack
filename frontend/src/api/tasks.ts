@@ -1,6 +1,13 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
 import type { TaskEntityType, Task } from './types.js';
 
+export interface ListTasksHubParams {
+  includeCompleted?: boolean;
+  // undefined = no folder filter, 'none' = only tasks with no folder, otherwise a folder id.
+  folderId?: string | 'none';
+  search?: string;
+}
+
 export const tasksApi = {
   // Tasks
   listTasks: async (token: string, entityType: TaskEntityType, entityId: string): Promise<Task[]> => {
@@ -14,6 +21,21 @@ export const tasksApi = {
 
   listMyTasks: async (token: string): Promise<Task[]> => {
     const res = await apiFetch(`${API_BASE_URL}/api/tasks/mine`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  // Backs the My Tasks hub page (`/tasks`) — every task the user is assignee OR creator of, with
+  // completed/folder/search filters. Same underlying endpoint as listMyTasks (`scope=hub` opts
+  // into the richer response) so the Overview widget's simpler call keeps working unchanged.
+  listTasksHub: async (token: string, params: ListTasksHubParams = {}): Promise<Task[]> => {
+    const qs = new URLSearchParams({ scope: 'hub' });
+    if (params.includeCompleted) qs.set('includeCompleted', 'true');
+    if (params.folderId !== undefined) qs.set('folderId', params.folderId);
+    if (params.search) qs.set('search', params.search);
+    const res = await apiFetch(`${API_BASE_URL}/api/tasks/mine?${qs.toString()}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);
@@ -38,6 +60,7 @@ export const tasksApi = {
       assigneeId: string;
       dueDate?: string | null;
       hasVideoCall?: boolean;
+      folderId?: string | null;
     },
   ): Promise<Task> => {
     const res = await apiFetch(`${API_BASE_URL}/api/tasks`, {
@@ -59,6 +82,7 @@ export const tasksApi = {
       dueDate: string | null;
       completedAt: string | null;
       hasVideoCall: boolean;
+      folderId: string | null;
     }>,
   ): Promise<Task> => {
     const res = await apiFetch(`${API_BASE_URL}/api/tasks/${taskId}`, {

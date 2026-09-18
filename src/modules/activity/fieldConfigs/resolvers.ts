@@ -76,3 +76,9 @@ export async function resolvePaymentMethodName(id: unknown): Promise<string | nu
   const method = await prisma.paymentMethodDefinition.findUnique({ where: { id }, select: { name: true } });
   return method?.name ?? null;
 }
+
+export async function resolveTaskFolderName(id: unknown): Promise<string | null> {
+  if (typeof id !== 'string') return null;
+  const folder = await prisma.taskFolder.findUnique({ where: { id }, select: { name: true } });
+  return folder?.name ?? null;
+}

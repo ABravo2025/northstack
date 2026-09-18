@@ -353,6 +353,7 @@ model Tenant {
   opportunityContacts       OpportunityContact[]
   opportunityStageHistory   OpportunityStageHistory[]
   tasks                     Task[]
+  taskFolders               TaskFolder[]
   notes                     Note[]
   notifications             Notification[]
   tickets                   Ticket[]
@@ -516,6 +517,7 @@ model User {
   ownedOpportunities          Opportunity[]
   tasksAssigned               Task[]                      @relation("TaskAssignee")
   tasksCreated                Task[]                      @relation("TaskCreatedBy")
+  taskFoldersCreated          TaskFolder[]
   notesCreated                Note[]
   notifications               Notification[]
   // Cursor, not a join table — see PlatformAnnouncement above. Null means "never seen
@@ -1385,9 +1387,31 @@ model Task {
   // is later unchecked (see googleCalendarSyncService.ts's comment on why removal isn't handled).
   hasVideoCall          Boolean    @default(false)
   googleMeetUrl         String?
+  // Optional user-defined grouping (2026-09-18, My Tasks hub) — orthogonal to entityType/entityId,
+  // which record a Task is *about*; a folder is purely an organizational bucket the assignee/creator
+  // chooses, with no bearing on the underlying Company/Contact/Employee/Opportunity relationship.
+  folderId              String?
+  folder                TaskFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, entityType, entityId])
   @@index([tenantId, assigneeId])
+  @@index([tenantId, folderId])
+}
+
+// A lightweight, per-tenant organizational bucket for Tasks in the "My Tasks" hub — deliberately
+// not a per-tenant catalog like StatusDefinition (no shared color/order any member can edit): any
+// member can create one, and it's just a label to group Tasks under, not a workflow stage.
+model TaskFolder {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  name        String
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  tasks       Task[]
+
+  @@index([tenantId])
 }
 
 // Same polymorphic tenantId+entityType+entityId pattern as Task — a short

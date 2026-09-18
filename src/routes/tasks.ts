@@ -7,8 +7,10 @@ import {
   listMyTasks,
   listTasksForCalendar,
   listTasksForEntity,
+  listTasksForUser,
   updateTask,
 } from '../modules/tasks/taskService.js';
+import { findTaskFolderById } from '../modules/tasks/taskFolderService.js';
 import { findUserById } from '../modules/tenant/tenantService.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
@@ -28,7 +30,20 @@ tasksRouter.get('/api/tasks/mine', async (req, res) => {
     return;
   }
 
-  const tasks = await listMyTasks(user.tenantId!, user.id);
+  // `scope=hub` is the My Tasks page (assignee OR creator, completed/folder/search filters) —
+  // omitted, this stays byte-for-byte the original assignee-only/pending-only response the
+  // Overview "My tasks" widget already depends on.
+  if (req.query.scope !== 'hub') {
+    const tasks = await listMyTasks(user.tenantId!, user.id);
+    return res.json(tasks);
+  }
+
+  const folderIdParam = req.query.folderId as string | undefined;
+  const tasks = await listTasksForUser(user.tenantId!, user.id, {
+    includeCompleted: req.query.includeCompleted === 'true',
+    folderId: folderIdParam === undefined ? undefined : folderIdParam === 'none' ? null : folderIdParam,
+    search: (req.query.search as string | undefined) || undefined,
+  });
   return res.json(tasks);
 });
 
@@ -72,7 +87,7 @@ tasksRouter.post('/api/tasks', async (req, res) => {
     return;
   }
 
-  const { entityType, entityId, title, description, assigneeId, dueDate, hasVideoCall } = req.body;
+  const { entityType, entityId, title, description, assigneeId, dueDate, hasVideoCall, folderId } = req.body;
   if (!entityType || !entityId || !title || !assigneeId) {
     return res.status(400).json({ error: 'entityType, entityId, title, and assigneeId are required' });
   }
@@ -90,6 +105,13 @@ tasksRouter.post('/api/tasks', async (req, res) => {
     return res.status(400).json({ error: 'Assignee not found' });
   }
 
+  if (folderId) {
+    const folder = await findTaskFolderById(folderId);
+    if (!folder || folder.tenantId !== user.tenantId) {
+      return res.status(400).json({ error: 'Folder not found' });
+    }
+  }
+
   const task = await createTask({
     tenantId: user.tenantId!,
     entityType,
@@ -100,6 +122,7 @@ tasksRouter.post('/api/tasks', async (req, res) => {
     dueDate: dueDate ?? null,
     hasVideoCall: hasVideoCall ?? false,
     createdById: user.id,
+    folderId: folderId ?? null,
   });
   return res.status(201).json(task);
 });
@@ -122,6 +145,13 @@ tasksRouter.patch('/api/tasks/:taskId', async (req, res) => {
     }
   }
 
+  if (req.body.folderId) {
+    const folder = await findTaskFolderById(req.body.folderId);
+    if (!folder || folder.tenantId !== user.tenantId) {
+      return res.status(400).json({ error: 'Folder not found' });
+    }
+  }
+
   const updated = await updateTask(
     req.params.taskId,
     {
@@ -131,6 +161,7 @@ tasksRouter.patch('/api/tasks/:taskId', async (req, res) => {
       dueDate: req.body.dueDate,
       completedAt: req.body.completedAt,
       hasVideoCall: req.body.hasVideoCall,
+      folderId: req.body.folderId,
     },
     user.id,
   );

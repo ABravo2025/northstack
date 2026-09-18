@@ -28,6 +28,7 @@ export interface CreateTaskInput {
   // the frontend's own gating (TaskForm.tsx forces a time when this is checked).
   hasVideoCall?: boolean;
   createdById: string;
+  folderId?: string | null;
 }
 
 export interface UpdateTaskInput {
@@ -37,11 +38,13 @@ export interface UpdateTaskInput {
   dueDate?: Date | string | null;
   completedAt?: Date | string | null;
   hasVideoCall?: boolean;
+  folderId?: string | null;
 }
 
 const taskInclude = {
   assignee: { select: { id: true, firstName: true, lastName: true } },
   createdBy: { select: { id: true, firstName: true, lastName: true } },
+  folder: { select: { id: true, name: true } },
 } satisfies Prisma.TaskInclude;
 
 export async function createTask(input: CreateTaskInput, client: ExtendedPrismaClient = prisma) {
@@ -56,6 +59,7 @@ export async function createTask(input: CreateTaskInput, client: ExtendedPrismaC
       dueDate: input.dueDate ?? null,
       hasVideoCall: input.hasVideoCall ?? false,
       createdById: input.createdById,
+      folderId: input.folderId ?? null,
     },
     include: taskInclude,
   });
@@ -122,6 +126,7 @@ export async function updateTask(id: string, input: UpdateTaskInput, changedByUs
   if (input.dueDate !== undefined) data.dueDate = input.dueDate;
   if (input.completedAt !== undefined) data.completedAt = input.completedAt;
   if (input.hasVideoCall !== undefined) data.hasVideoCall = input.hasVideoCall;
+  if (input.folderId !== undefined) data.folderId = input.folderId;
 
   // Fetched before the write so the Google Calendar sync below can tell what
   // changed (e.g. reassignment, or dueDate/completedAt flipping) — see
@@ -211,6 +216,47 @@ export async function listMyTasks(tenantId: string, assigneeId: string) {
     if (!b.dueDate) return -1;
     return a.dueDate.getTime() - b.dueDate.getTime();
   });
+}
+
+export interface ListTasksForUserOptions {
+  includeCompleted?: boolean;
+  folderId?: string | null; // null = only unfoldered, undefined = no folder filter
+  search?: string;
+}
+
+// Backs the "My Tasks" hub page: every Task the user is *involved in* — either as assignee or as
+// the one who created it — not every Task in the tenant (that's listAllTasksForTenant, used only
+// by the tasks:read API scope) and not just assignee-only (that's listMyTasks, kept separate and
+// unchanged so the Overview "My tasks" widget's pending-only/assignee-only behavior never shifts
+// under it). Sorting is left to the caller (frontend does date-ascending / grouping) since the hub
+// needs both a flat list and a Kanban-by-bucket view from the same data.
+export async function listTasksForUser(tenantId: string, userId: string, opts: ListTasksForUserOptions = {}) {
+  const tasks = await prisma.task.findMany({
+    where: {
+      tenantId,
+      OR: [{ assigneeId: userId }, { createdById: userId }],
+      ...(opts.includeCompleted ? {} : { completedAt: null }),
+      ...(opts.folderId !== undefined ? { folderId: opts.folderId } : {}),
+      ...(opts.search ? { title: { contains: opts.search, mode: 'insensitive' } } : {}),
+    },
+    include: taskInclude,
+    orderBy: { createdAt: 'desc' },
+  });
+
+  const entitySummaries = await summarizeTaskEntities(tenantId, tasks);
+
+  return tasks.map((task) => ({
+    ...task,
+    entitySummary: entitySummaries.get(`${task.entityType}:${task.entityId}`) ?? null,
+    relationship:
+      task.assigneeId === userId && task.createdById === userId
+        ? 'both'
+        : task.assigneeId === userId
+          ? 'assignee'
+          : task.createdById === userId
+            ? 'creator'
+            : null,
+  }));
 }
 
 // Every pending (not yet completed) Task with a dueDate for the tenant —

@@ -1,5 +1,5 @@
 import type { ActivityFieldConfigMap } from '../activityLogService.js';
-import { resolveUserName } from './resolvers.js';
+import { resolveTaskFolderName, resolveUserName } from './resolvers.js';
 
 export const taskActivityFieldConfig: ActivityFieldConfigMap = {
   title: { label: 'Title' },
@@ -7,4 +7,5 @@ export const taskActivityFieldConfig: ActivityFieldConfigMap = {
   assigneeId: { label: 'Assignee', resolve: resolveUserName },
   dueDate: { label: 'Due date' },
   completedAt: { label: 'Completed' },
+  folderId: { label: 'Folder', resolve: resolveTaskFolderName },
 };

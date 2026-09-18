@@ -455,12 +455,12 @@ export function FolderIcon({ className }: IconProps) {
   );
 }
 
-// Checked square — the "My Tasks" nav icon (matches the approved mockup, not the plain list icon).
-export function TaskListIcon({ className }: IconProps) {
+// Checked circle — the "My Tasks" nav icon; round on purpose to match the round task check control.
+export function TaskCircleIcon({ className }: IconProps) {
   return (
     <svg {...base} className={className}>
-      <rect x="4" y="4" width="16" height="16" rx="2" />
-      <path d="M8 12l2.5 2.5L16 9" />
+      <circle cx="12" cy="12" r="9" />
+      <path d="M8 12.5l3 3 5-6" />
     </svg>
   );
 }

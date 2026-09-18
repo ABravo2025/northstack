@@ -14,7 +14,7 @@ import {
   HomeIcon,
   PeopleIcon,
   TargetIcon,
-  TaskListIcon,
+  TaskCircleIcon,
   UserCircleIcon,
   XIcon,
 } from '../common/Icons';
@@ -71,7 +71,7 @@ export default function Sidebar({ mobileOpen, onMobileClose, tenant }: SidebarPr
             {label('Overview')}
           </NavLink>
           <NavLink to="/tasks" className={linkClass} title="My Tasks" onClick={onMobileClose} data-tour="nav-tasks">
-            <TaskListIcon className="h-4 w-4 shrink-0" />
+            <TaskCircleIcon className="h-4 w-4 shrink-0" />
             {label('My Tasks')}
           </NavLink>
           <NavLink to="/dashboards" className={linkClass} title="Dashboards" onClick={onMobileClose}>

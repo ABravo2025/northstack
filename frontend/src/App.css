@@ -2465,46 +2465,6 @@ input[type='number'] {
   @apply flex flex-wrap items-center gap-2;
 }
 
-.task-hub-list {
-  @apply flex flex-1 flex-col overflow-y-auto rounded-lg border border-line bg-surface-1 dark:border-dark-line dark:bg-dark-surface;
-}
-
-.task-hub-list-header {
-  @apply sticky top-0 z-10 flex items-center gap-3 border-b border-line bg-surface-0 px-4 py-2 text-[11px] font-semibold tracking-wide text-ink-faint uppercase dark:border-dark-line dark:bg-dark-page dark:text-dark-ink-faint;
-}
-
-.task-hub-row {
-  @apply flex cursor-pointer items-center gap-3 border-b border-line-soft px-4 py-2.5 last:border-b-0 hover:bg-surface-0 dark:border-dark-line-soft dark:hover:bg-white/[0.03];
-}
-
-.task-hub-row-main {
-  @apply min-w-0 flex-1;
-}
-
-.task-hub-row-title {
-  @apply truncate text-[14px] font-medium text-ink dark:text-dark-ink;
-}
-
-.task-hub-row-title .entity {
-  @apply font-bold;
-}
-
-.task-hub-row-title.done {
-  @apply font-normal text-ink-faint line-through dark:text-dark-ink-faint;
-}
-
-.task-hub-date-col {
-  @apply w-16 shrink-0 text-right text-xs text-ink-muted dark:text-dark-ink-muted;
-}
-
-.task-hub-date-col.overdue {
-  @apply font-semibold text-red-600 dark:text-red-400;
-}
-
-.task-hub-date-col.done-date {
-  @apply font-semibold text-emerald-600 dark:text-emerald-400;
-}
-
 .task-hub-card-dates {
   @apply text-[10.5px] text-ink-faint dark:text-dark-ink-faint;
 }

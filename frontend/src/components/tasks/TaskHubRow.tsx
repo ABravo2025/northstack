@@ -1,5 +1,4 @@
 import type { Task } from '../../api';
-import Avatar from '../common/Avatar';
 import { TaskCheckIcon } from '../common/Icons';
 import { formatHubDate, isOverdue } from '../../lib/taskHubDates';
 
@@ -9,47 +8,49 @@ interface TaskHubRowProps {
   onOpenDetail: (task: Task) => void;
 }
 
-// One row in the My Tasks hub's List view — reused by nothing else (the entity-scoped
-// EntityTasksList/MyTasksWidget rows stay on the plain square checkbox + .task-row-date they
-// already had; this hub is the one surface with the circular check + Created/Due/Completed
-// columns the design review asked for).
+// One <tr> of the My Tasks List view — built on the same shared `table full-table` styling as
+// People/Companies/Contacts (name cell, muted secondary cells, .avatar), so this page doesn't look
+// like a different product. The circular check stays its own control (see .task-check-circle).
 export default function TaskHubRow({ task, onToggleComplete, onOpenDetail }: TaskHubRowProps) {
   const completed = !!task.completedAt;
   const overdue = !completed && isOverdue(task.dueDate);
+  const initials = task.assignee ? `${task.assignee.firstName[0] ?? ''}${task.assignee.lastName[0] ?? ''}`.toUpperCase() : '';
 
   return (
-    <div className="task-hub-row" onClick={() => onOpenDetail(task)}>
-      <button
-        type="button"
-        className={`task-check-circle ${completed ? 'done' : ''}`}
-        onClick={(e) => {
-          e.stopPropagation();
-          onToggleComplete(task);
-        }}
-        aria-pressed={completed}
-        aria-label={completed ? 'Mark as pending' : 'Mark as complete'}
-      >
-        <TaskCheckIcon />
-      </button>
-
-      <div className="task-hub-row-main">
-        <div className={`task-hub-row-title ${completed ? 'done' : ''}`}>
-          {task.entitySummary && <span className="entity">{task.entitySummary} — </span>}
-          {task.title}
-        </div>
+    <tr className="cursor-pointer" onClick={() => onOpenDetail(task)}>
+      <td>
+        <button
+          type="button"
+          className={`task-check-circle ${completed ? 'done' : ''}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleComplete(task);
+          }}
+          aria-pressed={completed}
+          aria-label={completed ? 'Mark as pending' : 'Mark as complete'}
+        >
+          <TaskCheckIcon />
+        </button>
+      </td>
+      <td>
+        <span className={`name-cell ${completed ? 'line-through opacity-60' : ''}`}>
+          {task.entitySummary && <span>{task.entitySummary}</span>}
+          {task.entitySummary && <span className="font-normal">—</span>}
+          <span className="font-normal">{task.title}</span>
+        </span>
+      </td>
+      <td>
         {task.relationship && (
-          <div className="mt-0.5">
-            <span className={`task-relationship-chip ${task.relationship}`}>{relationshipLabel(task.relationship)}</span>
-          </div>
+          <span className={`task-relationship-chip ${task.relationship}`}>{relationshipLabel(task.relationship)}</span>
         )}
-      </div>
-
-      <div className="task-hub-date-col">{task.createdAt ? formatHubDate(task.createdAt) : '—'}</div>
-      <div className={`task-hub-date-col ${overdue ? 'overdue' : ''}`}>{task.dueDate ? formatHubDate(task.dueDate) : 'No due date'}</div>
-      <div className={`task-hub-date-col ${completed ? 'done-date' : ''}`}>{task.completedAt ? formatHubDate(task.completedAt) : '—'}</div>
-
-      {task.assignee && <Avatar firstName={task.assignee.firstName} lastName={task.assignee.lastName} />}
-    </div>
+      </td>
+      <td>{task.createdAt ? formatHubDate(task.createdAt) : '—'}</td>
+      <td className={overdue ? '!font-semibold !text-red-600 dark:!text-red-400' : ''}>
+        {task.dueDate ? formatHubDate(task.dueDate) : '—'}
+      </td>
+      <td>{task.completedAt ? formatHubDate(task.completedAt) : '—'}</td>
+      <td>{initials && <span className="avatar">{initials}</span>}</td>
+    </tr>
   );
 }
 

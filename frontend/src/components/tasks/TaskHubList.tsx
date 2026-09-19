@@ -12,15 +12,20 @@ interface TaskHubListProps {
   onAddTask: () => void;
 }
 
-// Flat list, soonest due date first (server-sorted isn't guaranteed for this endpoint since it
-// also feeds the Board view — sorted client-side here), completed tasks pushed to the bottom
-// rather than grouped under a header (the design review dropped day/week grouping entirely).
+// Soonest due date first, completed pushed to the bottom (no day/week grouping, by design).
+// Uses the shared `table full-table` + ghost "Add" row every other list page has.
 export default function TaskHubList({ tasks, loading, onToggleComplete, onOpenDetail, onAddTask }: TaskHubListProps) {
-  if (loading) {
+  if (loading) return <TableSkeleton rows={6} columns={4} />;
+
+  if (tasks.length === 0) {
     return (
-      <div className="task-hub-list">
-        <TableSkeleton rows={6} columns={4} />
-      </div>
+      <EmptyState
+        icon={<TaskCheckIcon />}
+        title="No tasks here yet"
+        body="Tasks assigned to you or created by you will show up here."
+        primaryLabel="Add task"
+        onPrimary={onAddTask}
+      />
     );
   }
 
@@ -34,37 +39,45 @@ export default function TaskHubList({ tasks, loading, onToggleComplete, onOpenDe
     return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
   });
 
-  if (sorted.length === 0) {
-    return (
-      <div className="task-hub-list">
-        <EmptyState
-          icon={<TaskCheckIcon />}
-          title="No tasks here yet"
-          body="Tasks assigned to you or created by you will show up here."
-          primaryLabel="Add task"
-          onPrimary={onAddTask}
-        />
-      </div>
-    );
-  }
-
   return (
-    <div className="task-hub-list">
-      <div className="task-hub-list-header">
-        <span className="w-5 shrink-0" />
-        <span className="flex-1">Task</span>
-        <span className="w-16 shrink-0 text-right">Created</span>
-        <span className="w-16 shrink-0 text-right">Due</span>
-        <span className="w-16 shrink-0 text-right">Completed</span>
-        <span className="w-7 shrink-0" />
-      </div>
-      {sorted.map((task) => (
-        <TaskHubRow key={task.id} task={task} onToggleComplete={onToggleComplete} onOpenDetail={onOpenDetail} />
-      ))}
-      <button type="button" className="task-hub-row text-ink-faint dark:text-dark-ink-faint" onClick={onAddTask}>
-        <PlusIcon className="h-3.5 w-3.5" />
-        Add task
-      </button>
+    <div className="full-table-wrap">
+      <table className="table full-table !mt-0">
+        <colgroup>
+          <col style={{ width: 44 }} />
+          <col />
+          <col style={{ width: 140 }} />
+          <col style={{ width: 90 }} />
+          <col style={{ width: 90 }} />
+          <col style={{ width: 100 }} />
+          <col style={{ width: 70 }} />
+        </colgroup>
+        <thead>
+          <tr>
+            <th />
+            <th>Task</th>
+            <th>Relationship</th>
+            <th>Created</th>
+            <th>Due</th>
+            <th>Completed</th>
+            <th>Assignee</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((task) => (
+            <TaskHubRow key={task.id} task={task} onToggleComplete={onToggleComplete} onOpenDetail={onOpenDetail} />
+          ))}
+          <tr className="ghost-row">
+            <td colSpan={7} className="ghost-row-cell" onClick={onAddTask}>
+              <span className="ghost-row-inner">
+                <span className="ghost-plus-box">
+                  <PlusIcon className="h-3 w-3" />
+                </span>
+                Add
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 }

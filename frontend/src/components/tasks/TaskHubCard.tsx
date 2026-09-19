@@ -32,9 +32,9 @@ export default function TaskHubCard({ task, onToggleComplete, onOpenDetail }: Ta
         >
           <TaskCheckIcon />
         </button>
-        <span className={`flex-1 text-sm ${completed ? 'font-normal text-ink-faint line-through dark:text-dark-ink-faint' : 'font-medium text-ink dark:text-dark-ink'}`}>
-          {task.entitySummary && <span className="font-bold">{task.entitySummary} — </span>}
-          {task.title}
+        <span className={`kc-name flex-1 ${completed ? 'line-through opacity-60' : ''}`}>
+          {task.entitySummary && <span>{task.entitySummary} — </span>}
+          <span className="font-normal">{task.title}</span>
         </span>
       </div>
       {task.relationship && (

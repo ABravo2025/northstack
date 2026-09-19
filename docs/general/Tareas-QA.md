@@ -4853,7 +4853,7 @@ que correr Alejandro manualmente (el clasificador de seguridad de Claude Code bl
 7. **Permisos:** un `platform_support` puede ver Signups y las notas/tareas de Tenants (mismo nivel
    que ya tenía para Tenants); un rol sin acceso no ve el ítem de nav ni puede pegarle a las rutas.
 
-## QA-100 — My Tasks (`/tasks`): hub de tareas con List/Board, carpetas, búsqueda y gate de Google Calendar para Meet (2026-09-18, en `staging`)
+## QA-100 — My Tasks (`/tasks`): hub de tareas con List/Board, carpetas, búsqueda y gate de Google Calendar para Meet (2026-09-18, en `staging`, promovido a `main` el 2026-09-18)
 
 ### Qué cambió
 

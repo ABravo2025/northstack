@@ -55,7 +55,7 @@ describe('syncSubscriptionAndTenant', () => {
     tenants.length = 0;
     subscriptions.length = 0;
     tenants.push({ id: 't1', name: 'Test Tenant', status: 'trialing', plan: null, trialEndsAt: new Date('2026-09-01'), gracePeriodEndsAt: null, lockedPriceCents: null });
-    subscriptions.push({ id: 's1', tenantId: 't1', status: 'trialing', plan: 'starter', lockedPriceCents: 2900, lastActionByUserId: null, lastActionAt: null });
+    subscriptions.push({ id: 's1', tenantId: 't1', status: 'trialing', plan: 'starter', lockedPriceCents: 1900, lastActionByUserId: null, lastActionAt: null });
     (prisma.activityLogEntry.create as any).mockClear();
   });
 

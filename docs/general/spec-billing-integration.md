@@ -175,6 +175,14 @@ para una ronda destructiva futura, cuando el resto del código ya lea de `Subscr
 
 ## Catálogo de precios — `PlanPrice`
 
+> **Actualizado 2026-09-21:** los precios vigentes son **Starter $19 / Growth $39** (USD, desde el
+> repricing del 2026-09-14), sin split lanzamiento/regular — la tabla de abajo es el histórico
+> original. Mantener el catálogo en línea con `CURRENT_PLAN_PRICES_CENTS` (`planService.ts`) es
+> trabajo de `scripts/seed-plan-prices.ts`: inserta una fila nueva (nunca edita) cuando la última
+> fila `international` ya no coincide con la constante; después hay que correr
+> `scripts/setup-dodo-products.ts` para que esa fila tenga su `dodoProductId` (sin él, el checkout
+> falla). Los suscriptores existentes conservan su `lockedPriceCents`.
+
 | Plan | Market | Moneda | Lanzamiento | Regular |
 |---|---|---|---|---|
 | Starter | international | USD | $29/mes | $39/mes |

@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const subscriptions: any[] = [];
 const planPrices: any[] = [
-  { plan: 'starter', market: 'international', launchPriceCents: 2900, dodoProductId: 'pdt_starter' },
-  { plan: 'growth', market: 'international', launchPriceCents: 7900, dodoProductId: 'pdt_growth' },
+  { plan: 'starter', market: 'international', launchPriceCents: 1900, dodoProductId: 'pdt_starter' },
+  { plan: 'growth', market: 'international', launchPriceCents: 3900, dodoProductId: 'pdt_growth' },
   { plan: 'starter', market: 'ar', launchPriceCents: 0, dodoProductId: null },
   { plan: 'growth', market: 'ar', launchPriceCents: 0, dodoProductId: null },
 ];

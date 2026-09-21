@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const tenants: any[] = [];
 const subscriptions: any[] = [];
 const planPrices: any[] = [
-  { plan: 'starter', market: 'international', launchPriceCents: 2900, dodoProductId: 'pdt_starter' },
-  { plan: 'growth', market: 'international', launchPriceCents: 7900, dodoProductId: 'pdt_growth' },
+  { plan: 'starter', market: 'international', launchPriceCents: 1900, dodoProductId: 'pdt_starter' },
+  { plan: 'growth', market: 'international', launchPriceCents: 3900, dodoProductId: 'pdt_growth' },
   { plan: 'starter', market: 'ar', launchPriceCents: 0, dodoProductId: null }, // placeholder, mirrors seed-plan-prices.ts
   { plan: 'growth', market: 'ar', launchPriceCents: 0, dodoProductId: null },
 ];
@@ -94,7 +94,7 @@ describe('changePlan', () => {
   });
 
   it('calls the Dodo wrapper with the new plan\'s dodoProductId and updates plan/lockedPriceCents immediately on success', async () => {
-    tenants.push({ id: 't1', plan: 'starter', lockedPriceCents: 2900 });
+    tenants.push({ id: 't1', plan: 'starter', lockedPriceCents: 1900 });
     subscriptions.push({
       tenantId: 't1',
       provider: 'dodopayments',
@@ -109,9 +109,9 @@ describe('changePlan', () => {
     expect(changeSubscriptionPlanMock).toHaveBeenCalledWith('sub_1', { productId: 'pdt_growth' });
     expect(updatePreapprovalMock).not.toHaveBeenCalled();
     expect(subscriptions[0].plan).toBe('growth');
-    expect(subscriptions[0].lockedPriceCents).toBe(7900);
+    expect(subscriptions[0].lockedPriceCents).toBe(3900);
     expect(tenants[0].plan).toBe('growth');
-    expect(tenants[0].lockedPriceCents).toBe(7900);
+    expect(tenants[0].lockedPriceCents).toBe(3900);
   });
 
   it('calls the Mercado Pago wrapper (transactionAmount in decimal ARS, not cents)', async () => {

@@ -98,10 +98,11 @@ tenantsRouter.post('/api/tenants/register', async (req, res) => {
     .json({ tenant: result.tenant, user: sanitizeUser(result.user!), session: result.session });
 });
 
-// Public — just the current launch prices, so PlansModal.tsx (frontend) doesn't hardcode a
-// second copy of the number planService.ts already calls authoritative ("when it's time to
-// raise to the regular price, edit the numbers here"). No auth needed: not tenant-specific,
-// and the modal renders before there's necessarily anything else useful to gate it behind.
+// Public — the current plan prices, so the frontend (PlansModal.tsx and GuidePage.tsx, via the
+// usePlanPrices hook) never hardcodes a second copy of the numbers planService.ts's
+// CURRENT_PLAN_PRICES_CENTS already defines as authoritative. No auth needed: not
+// tenant-specific, and the modal renders before there's necessarily anything else useful to
+// gate it behind.
 tenantsRouter.get('/api/plans/prices', async (_req, res) => {
   return res.json({ prices: CURRENT_PLAN_PRICES_CENTS });
 });

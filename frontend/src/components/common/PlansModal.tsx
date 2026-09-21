@@ -1,15 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Modal from './Modal';
 import { CheckIcon } from './Icons';
 import { useToast } from './ToastProvider';
-import { api } from '../../api';
 import type { PlanTier, Tenant } from '../../api/types';
 import { daysRemainingUntil } from '../../lib/trial';
 import { COMPANY_SIZE_1_10, COMPANY_SIZE_11_50 } from '../../lib/companySize';
-
-function formatPlanPrice(cents: number): string {
-  return `$${Math.round(cents / 100)}`;
-}
+import { formatPlanPrice, usePlanPrices } from '../../lib/planPrices';
 
 interface FeatureRow {
   label: string;
@@ -21,7 +17,9 @@ interface PlanCardConfig {
   key: 'trial' | PlanTier;
   name: string;
   tagline: string;
-  price: string;
+  // Only the trial card carries a static price ('Free'). Starter/Growth's price comes from
+  // usePlanPrices (the backend's single price definition) — never hardcode it here.
+  price?: string;
   priceSuffix?: string;
   cap: string;
   features: FeatureRow[];
@@ -79,7 +77,6 @@ const PLAN_CARDS: PlanCardConfig[] = [
     key: 'starter',
     name: 'Starter',
     tagline: 'For small teams just getting set up',
-    price: '$19',
     priceSuffix: '/month',
     cap: '5 seats included · $4/mo per extra seat',
     features: [
@@ -99,7 +96,6 @@ const PLAN_CARDS: PlanCardConfig[] = [
     key: 'growth',
     name: 'Growth',
     tagline: 'For growing teams that need Payroll tracking',
-    price: '$39',
     priceSuffix: '/month',
     cap: '10 seats included · $4/mo per extra seat',
     features: [
@@ -151,19 +147,12 @@ interface PlansModalProps {
 export default function PlansModal({ open, tenant, onClose, onSelectPlan, currentPlan }: PlansModalProps) {
   const toast = useToast();
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
-  const [livePrices, setLivePrices] = useState<Record<'starter' | 'growth', number> | null>(null);
 
   // Fetched lazily on first open rather than on mount — this component stays mounted
-  // (AppLayout toggles `open`, doesn't remount it) so this only ever runs once per session,
-  // and only for the sessions that actually open the modal. Falls back to the static
-  // PLAN_CARDS price strings below if the fetch hasn't landed yet or fails.
-  useEffect(() => {
-    if (!open || livePrices) return;
-    api
-      .getPlanPrices()
-      .then((res) => setLivePrices(res.prices))
-      .catch(() => {});
-  }, [open, livePrices]);
+  // (AppLayout toggles `open`, doesn't remount it), so this only ever runs for the sessions that
+  // actually open the modal. Shows "—" for Starter/Growth until it lands or if it fails, rather
+  // than a hardcoded number that could be wrong.
+  const livePrices = usePlanPrices(open);
 
   const recommended = recommendedTier(tenant?.companySize ?? null);
   const trialDaysLeft = daysRemainingUntil(tenant?.trialEndsAt ?? null);
@@ -222,8 +211,10 @@ export default function PlansModal({ open, tenant, onClose, onSelectPlan, curren
           const isCurrent = card.key === currentPlan;
           const isRecommended = !isCurrent && card.key === recommended;
           const displayPrice =
-            (card.key === 'starter' || card.key === 'growth') && livePrices
-              ? formatPlanPrice(livePrices[card.key])
+            card.key === 'starter' || card.key === 'growth'
+              ? livePrices
+                ? formatPlanPrice(livePrices[card.key])
+                : '—'
               : card.price;
           return (
             <div

@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { useScrollSpy } from '../hooks/useScrollSpy';
+import { formatPlanPrice, usePlanPrices } from '../lib/planPrices';
 import {
   AlertCircleIcon,
   AlertTriangleIcon,
@@ -97,6 +98,7 @@ const MODULE_MAP: { id: string; label: string; blurb: string; icon: JSX.Element 
 export default function GuidePage() {
   const navigate = useNavigate();
   const activeId = useScrollSpy(SECTION_IDS);
+  const planPrices = usePlanPrices();
 
   return (
     <div className="page-full">
@@ -957,7 +959,11 @@ export default function GuidePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr><td>Price</td><td className="num">$19/mo</td><td className="num">$39/mo</td></tr>
+                  <tr>
+                    <td>Price</td>
+                    <td className="num">{planPrices ? `${formatPlanPrice(planPrices.starter)}/mo` : '—'}</td>
+                    <td className="num">{planPrices ? `${formatPlanPrice(planPrices.growth)}/mo` : '—'}</td>
+                  </tr>
                   <tr><td>Pipelines</td><td className="num">2</td><td className="num">Unlimited</td></tr>
                   <tr><td>Time off policies</td><td className="num">3</td><td className="num">Unlimited</td></tr>
                   <tr><td>Seats included</td><td className="num">5</td><td className="num">10</td></tr>

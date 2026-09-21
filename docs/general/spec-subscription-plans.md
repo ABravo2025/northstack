@@ -48,7 +48,19 @@ elige un plan (es un upsell, no un gate).
   cual y sigue sin cobrar nada por sí mismo — el cobro real es responsabilidad de ese módulo
   aparte, no de este endpoint.
 
-## Precios (confirmados, oferta de lanzamiento)
+## Precios
+
+> **Vigente desde 2026-09-14 (repricing, decisión de negocio): Starter $19/mes, Growth $39/mes**,
+> un solo precio por plan (sin oferta de lanzamiento ni tachado), más $4/mes por asiento extra
+> (5 asientos incluidos en Starter, 10 en Growth). La tabla de abajo es el histórico de la oferta
+> original, ya retirada. Fuente única en código: `CURRENT_PLAN_PRICES_CENTS` en
+> `src/modules/tenant/planService.ts` — el `PlansModal` y la tabla de `/guide` la leen vía
+> `GET /api/plans/prices` (hook `usePlanPrices`), no llevan el número escrito. Para cambiar un
+> precio: editar esa constante y correr `scripts/seed-plan-prices.ts` +
+> `scripts/setup-dodo-products.ts` en cada entorno (ver spec-billing-integration.md); el cobro
+> real sale de la fila `PlanPrice` más reciente y su producto de Dodo.
+> Los precios de la landing (`landing/index.html`, rama `landing`) siguen escritos a mano, en las
+> tarjetas y en el JSON-LD.
 
 | Plan | Precio de lanzamiento | Precio regular (post-lanzamiento) | Tope |
 |---|---|---|---|
@@ -56,7 +68,7 @@ elige un plan (es un upsell, no un gate).
 | Growth | $79/mes | $99/mes | hasta 50 personas |
 | Scale | A medida | A medida | 50+ personas — **escondido**, solo alcanzable por el link "Get in touch" |
 
-**Regla del precio de lanzamiento:** el precio que un tenant congela al elegir su plan se
+**Regla del precio congelado (vigente):** el precio que un tenant congela al elegir su plan se
 mantiene mientras siga suscripto, incluso después de que el precio regular entre en vigencia
 para altas nuevas. Guardar el precio real en la fila del Tenant (no solo una referencia al plan),
 para que un cambio futuro de precio de lista nunca afecte silenciosamente a un cliente existente.

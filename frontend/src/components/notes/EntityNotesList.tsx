@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, type Note, type TaskEntityType } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import NoteForm, { type NoteFormPayload } from './NoteForm';
@@ -18,6 +19,7 @@ interface EntityNotesListProps {
 // detail modals' right-column "Notes" tab — same mechanism as
 // EntityTasksList. Compose form is always expanded (2026-07-30 redesign).
 export default function EntityNotesList({ token, entityType, entityId, onCountChange }: EntityNotesListProps) {
+  const { t } = useTranslation('notesActivity');
   const toast = useToast();
   const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +31,7 @@ export default function EntityNotesList({ token, entityType, entityId, onCountCh
       setNotes(result);
       onCountChange?.(result.length);
     } catch (error) {
-      toast.error('Failed to load notes: ' + (error as Error).message);
+      toast.error(t('notes.list.toastLoadFailed', { message: (error as Error).message }));
     } finally {
       setLoading(false);
     }
@@ -46,11 +48,11 @@ export default function EntityNotesList({ token, entityType, entityId, onCountCh
     if (!editingNote) return;
     try {
       await api.deleteNote(token, editingNote.id);
-      toast.success('Note deleted.');
+      toast.success(t('notes.list.toastDeleted'));
       setEditingNote(null);
       await load();
     } catch (error) {
-      toast.error('Failed to delete note: ' + (error as Error).message);
+      toast.error(t('notes.list.toastDeleteFailed', { message: (error as Error).message }));
     }
   };
 
@@ -58,15 +60,15 @@ export default function EntityNotesList({ token, entityType, entityId, onCountCh
     try {
       if (editingNote) {
         await api.updateNote(token, editingNote.id, payload);
-        toast.success('Note updated.');
+        toast.success(t('notes.list.toastUpdated'));
         setEditingNote(null);
       } else {
         await api.createNote(token, { entityType, entityId, ...payload });
-        toast.success('Note added.');
+        toast.success(t('notes.list.toastAdded'));
       }
       await load();
     } catch (error) {
-      toast.error('Failed to save note: ' + (error as Error).message);
+      toast.error(t('notes.list.toastSaveFailed', { message: (error as Error).message }));
     }
   };
 
@@ -80,8 +82,8 @@ export default function EntityNotesList({ token, entityType, entityId, onCountCh
       />
 
       <div className="note-list">
-        {loading && <p className="text-xs text-ink-faint dark:text-dark-ink-faint">Loading notes…</p>}
-        {!loading && notes.length === 0 && <p className="text-xs text-ink-faint dark:text-dark-ink-faint">No notes yet.</p>}
+        {loading && <p className="text-xs text-ink-faint dark:text-dark-ink-faint">{t('notes.list.loading')}</p>}
+        {!loading && notes.length === 0 && <p className="text-xs text-ink-faint dark:text-dark-ink-faint">{t('notes.list.empty')}</p>}
         {notes.map((note) => (
           <div
             key={note.id}

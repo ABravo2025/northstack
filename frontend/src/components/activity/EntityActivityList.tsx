@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, type ActivityLogEntry, type TaskEntityType } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import Avatar from '../common/Avatar';
@@ -18,6 +19,7 @@ function ActionIcon({ action }: { action: ActivityLogEntry['action'] }) {
 }
 
 function ActivityRow({ entry }: { entry: ActivityLogEntry }) {
+  const { t } = useTranslation('notesActivity');
   const [expanded, setExpanded] = useState(false);
   const hasDetail = entry.changes && entry.changes.length > 0;
 
@@ -38,7 +40,7 @@ function ActivityRow({ entry }: { entry: ActivityLogEntry }) {
         </div>
         {hasDetail && (
           <button type="button" className="activity-row-toggle" onClick={() => setExpanded((v) => !v)}>
-            {expanded ? 'Hide detail' : 'Show detail'}
+            {expanded ? t('activityLog.entity.hideDetail') : t('activityLog.entity.showDetail')}
           </button>
         )}
       </div>
@@ -48,7 +50,8 @@ function ActivityRow({ entry }: { entry: ActivityLogEntry }) {
             <li key={change.field}>
               <span className="activity-change-label">{change.label}</span>
               <span className="activity-change-values">
-                {change.oldValue ?? <em>empty</em>} → {change.newValue ?? <em>empty</em>}
+                {change.oldValue ?? <em>{t('activityLog.entity.emptyValue')}</em>} →{' '}
+                {change.newValue ?? <em>{t('activityLog.entity.emptyValue')}</em>}
               </span>
             </li>
           ))}
@@ -62,6 +65,7 @@ function ActivityRow({ entry }: { entry: ActivityLogEntry }) {
 // pattern with EntityNotesList/EntityTasksList, but no compose form and nothing is ever edited
 // here (spec-activity-log.md).
 export default function EntityActivityList({ token, entityType, entityId, onCountChange }: EntityActivityListProps) {
+  const { t } = useTranslation('notesActivity');
   const toast = useToast();
   const [entries, setEntries] = useState<ActivityLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,7 +82,7 @@ export default function EntityActivityList({ token, entityType, entityId, onCoun
       })
       .catch((error) => {
         if (cancelled) return;
-        toast.error('Failed to load activity: ' + (error as Error).message);
+        toast.error(t('activityLog.entity.toastLoadFailed', { message: (error as Error).message }));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -91,8 +95,8 @@ export default function EntityActivityList({ token, entityType, entityId, onCoun
 
   return (
     <div className="activity-list">
-      {loading && <p className="text-xs text-ink-faint">Loading activity…</p>}
-      {!loading && entries.length === 0 && <p className="text-xs text-ink-faint">No activity yet.</p>}
+      {loading && <p className="text-xs text-ink-faint">{t('activityLog.entity.loading')}</p>}
+      {!loading && entries.length === 0 && <p className="text-xs text-ink-faint">{t('activityLog.entity.empty')}</p>}
       {entries.map((entry) => (
         <ActivityRow key={entry.id} entry={entry} />
       ))}

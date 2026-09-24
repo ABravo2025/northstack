@@ -1,0 +1,34 @@
+{
+  "notes": {
+    "form": {
+      "titleLabel": "Title",
+      "titlePlaceholder": "Short title",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Supports **bold** and *italic*",
+      "save": "Save",
+      "addNote": "Add note",
+      "cancelEdit": "Cancel edit",
+      "deleteNote": "Delete note"
+    },
+    "list": {
+      "loading": "Loading notes…",
+      "empty": "No notes yet.",
+      "toastAdded": "Note added.",
+      "toastUpdated": "Note updated.",
+      "toastDeleted": "Note deleted.",
+      "toastLoadFailed": "Failed to load notes: {{message}}",
+      "toastSaveFailed": "Failed to save note: {{message}}",
+      "toastDeleteFailed": "Failed to delete note: {{message}}"
+    }
+  },
+  "activityLog": {
+    "entity": {
+      "loading": "Loading activity…",
+      "empty": "No activity yet.",
+      "showDetail": "Show detail",
+      "hideDetail": "Hide detail",
+      "emptyValue": "empty",
+      "toastLoadFailed": "Failed to load activity: {{message}}"
+    }
+  }
+}

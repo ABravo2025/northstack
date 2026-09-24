@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Note } from '../../api';
 import RequiredMark from '../common/RequiredMark';
 import { TrashIcon, XIcon } from '../common/Icons';
@@ -20,6 +21,7 @@ interface NoteFormProps {
 // Field names matched to TaskForm's title/description (2026-07-30) for
 // consistency between the two.
 export default function NoteForm({ note, onSubmit, onDelete, onCancelEdit }: NoteFormProps) {
+  const { t } = useTranslation('notesActivity');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
 
@@ -42,20 +44,20 @@ export default function NoteForm({ note, onSubmit, onDelete, onCancelEdit }: Not
     <div className="inline-compose-form">
       <div className="nv-field">
         <label htmlFor="note-form-title">
-          Title
+          {t('notes.form.titleLabel')}
           <RequiredMark />
         </label>
         <input
           id="note-form-title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Short title"
+          placeholder={t('notes.form.titlePlaceholder')}
           required
         />
       </div>
       <div className="nv-field">
         <label htmlFor="note-form-description">
-          Description
+          {t('notes.form.descriptionLabel')}
           <RequiredMark />
         </label>
         <textarea
@@ -63,7 +65,7 @@ export default function NoteForm({ note, onSubmit, onDelete, onCancelEdit }: Not
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={5}
-          placeholder="Supports **bold** and *italic*"
+          placeholder={t('notes.form.descriptionPlaceholder')}
           required
         />
       </div>
@@ -74,15 +76,15 @@ export default function NoteForm({ note, onSubmit, onDelete, onCancelEdit }: Not
           onClick={handleSubmit}
           disabled={!title.trim() || !description.trim()}
         >
-          {note ? 'Save' : 'Add note'}
+          {note ? t('notes.form.save') : t('notes.form.addNote')}
         </button>
         {note && onCancelEdit && (
-          <button type="button" className="icon-btn" onClick={onCancelEdit} aria-label="Cancel edit">
+          <button type="button" className="icon-btn" onClick={onCancelEdit} aria-label={t('notes.form.cancelEdit')}>
             <XIcon className="h-3.5 w-3.5" />
           </button>
         )}
         {note && onDelete && (
-          <button type="button" className="icon-btn danger" onClick={onDelete} aria-label="Delete note">
+          <button type="button" className="icon-btn danger" onClick={onDelete} aria-label={t('notes.form.deleteNote')}>
             <TrashIcon className="h-3.5 w-3.5" />
           </button>
         )}

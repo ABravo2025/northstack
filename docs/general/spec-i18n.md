@@ -86,10 +86,23 @@ pendiente de que se revise y promueva a `main`/producción.
 
 ## Unidad 2 — Shared / common
 
-- [ ] Layout general, sidebar, navbar, botones y modales genéricos, tablas compartidas (el patrón
-  reusable ya documentado en el contexto visual de UX/UI), paginación, estados vacíos/error,
-  toasts/notificaciones del sistema.
-- [ ] Mayor apalancamiento de todo el spec: todos los módulos heredan de acá.
+**Nota 2026-09-24**: completa, verificada end-to-end contra `staging` (Playwright). En `staging`,
+pendiente de que se revise y promueva a `main`/producción junto con la Unidad 1.
+
+- [x] Layout general: Sidebar, MobileTabbar, SettingsSidebar (+ `lib/settingsSections.tsx`, que
+  también alimenta el tile grid de `SettingsHomePage`), TopBar (menú de usuario + formulario de
+  feedback), NotificationBell, banners globales de `AppLayout` (nueva versión, suspendido,
+  past_due, sin plan elegido).
+- [x] Componentes genéricos: Pagination, ConfirmDialog, Modal/SlideOver (botón cerrar),
+  ToastProvider (botón descartar), PasswordChecklist, PasswordInput.
+- [x] De regalo: las cards de Profile/Change password en `ProfileSettingsPage` (la pantalla que
+  el usuario tenía abierta cuando se verificó la Unidad 1) — formalmente es scope de la Unidad 7,
+  pero se adelantó por ser la más visible en ese momento.
+- [x] Mayor apalancamiento de todo el spec: todos los módulos heredan de acá.
+- **Deliberadamente fuera de esta unidad** (confirmado al revisar cada componente): `EmptyState`
+  y los cientos de `toast.success()`/`toast.error()` esparcidos por el código no tienen texto
+  propio — reciben el suyo como prop desde cada página. Traducir esos mensajes es trabajo de cada
+  unidad de módulo (3-8), no de esta.
 
 ## Unidad 3 — Dashboards
 

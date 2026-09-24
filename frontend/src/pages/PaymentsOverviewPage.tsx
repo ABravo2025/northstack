@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, type PaymentsOverview } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import TableSkeleton from '../components/common/TableSkeleton';
@@ -16,6 +17,7 @@ interface PaymentsOverviewPageProps {
 // (src/modules/integrations/stripePaymentsService.ts's getPaymentsOverview), so the loading state
 // below matters more than it would for an ordinary list page.
 export default function PaymentsOverviewPage({ token }: PaymentsOverviewPageProps) {
+  const { t } = useTranslation('crm');
   const toast = useToast();
   const [overview, setOverview] = useState<PaymentsOverview | null>(null);
   const [loading, setLoading] = useState(true);
@@ -31,7 +33,7 @@ export default function PaymentsOverviewPage({ token }: PaymentsOverviewPageProp
     api
       .getPaymentsOverview(token)
       .then(setOverview)
-      .catch((error) => toast.error('Failed to load payments overview: ' + (error as Error).message))
+      .catch((error) => toast.error(t('payments.toastLoadFailed', { error: (error as Error).message })))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, canManagePayments]);
@@ -42,9 +44,9 @@ export default function PaymentsOverviewPage({ token }: PaymentsOverviewPageProp
     return (
       <div className="container">
         <div className="page-toolbar">
-          <h2 className="page-title">Payments</h2>
+          <h2 className="page-title">{t('payments.pageTitle')}</h2>
         </div>
-        <p className="text-sm text-ink-muted">You don't have permission to view Payments.</p>
+        <p className="text-sm text-ink-muted">{t('payments.noPermission')}</p>
       </div>
     );
   }
@@ -52,20 +54,18 @@ export default function PaymentsOverviewPage({ token }: PaymentsOverviewPageProp
   return (
     <div className="page-full">
       <div className="page-toolbar">
-        <h2>Payments</h2>
+        <h2>{t('payments.pageTitle')}</h2>
       </div>
 
       {loading ? (
         <TableSkeleton rows={5} />
       ) : !overview?.connected ? (
-        <p className="mt-4 text-sm text-ink-muted dark:text-dark-ink-muted">
-          Connect your Stripe account first — go to Settings → Integrations.
-        </p>
+        <p className="mt-4 text-sm text-ink-muted dark:text-dark-ink-muted">{t('payments.connectStripeFirst')}</p>
       ) : (
         <>
           <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
             <div className="card">
-              <p className="text-xs text-ink-muted dark:text-dark-ink-muted">Refunds</p>
+              <p className="text-xs text-ink-muted dark:text-dark-ink-muted">{t('payments.stats.refunds')}</p>
               <p className="text-lg font-semibold">
                 {overview.totals.refundsCount}
                 {overview.totals.refundsCount > 0 && overview.totals.currency && (
@@ -76,23 +76,21 @@ export default function PaymentsOverviewPage({ token }: PaymentsOverviewPageProp
               </p>
             </div>
             <div className="card">
-              <p className="text-xs text-ink-muted dark:text-dark-ink-muted">Failed payments</p>
+              <p className="text-xs text-ink-muted dark:text-dark-ink-muted">{t('payments.stats.failedPayments')}</p>
               <p className="text-lg font-semibold">{overview.totals.failedCount}</p>
             </div>
             <div className="card">
-              <p className="text-xs text-ink-muted dark:text-dark-ink-muted">Active subscriptions</p>
+              <p className="text-xs text-ink-muted dark:text-dark-ink-muted">{t('payments.stats.activeSubscriptions')}</p>
               <p className="text-lg font-semibold">{overview.totals.activeSubscriptions}</p>
             </div>
             <div className="card">
-              <p className="text-xs text-ink-muted dark:text-dark-ink-muted">Companies linked</p>
+              <p className="text-xs text-ink-muted dark:text-dark-ink-muted">{t('payments.stats.companiesLinked')}</p>
               <p className="text-lg font-semibold">{overview.companies.length}</p>
             </div>
           </div>
 
           {overview.companies.length === 0 ? (
-            <p className="text-sm text-ink-muted dark:text-dark-ink-muted">
-              No Companies linked to Stripe yet — open a Company and use "Search on Stripe" under Payments.
-            </p>
+            <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('payments.noCompaniesLinked')}</p>
           ) : (
             <>
             <EntityCardList
@@ -101,7 +99,7 @@ export default function PaymentsOverviewPage({ token }: PaymentsOverviewPageProp
               getInitials={(row) => row.companyName.slice(0, 2).toUpperCase()}
               getName={(row) => row.companyName}
               getMeta={(row) =>
-                `${row.summary.refundsCount} refund${row.summary.refundsCount === 1 ? '' : 's'} · ${row.summary.failedCount} failed · ${row.summary.subscriptionStatus ?? 'no subscription'}`
+                `${t('payments.refundsCount', { count: row.summary.refundsCount })} · ${t('payments.failedCountLabel', { count: row.summary.failedCount })} · ${row.summary.subscriptionStatus ?? t('payments.noSubscription')}`
               }
               onSelect={(row) => setSelectedCompany({ id: row.companyId, name: row.companyName })}
             />
@@ -109,10 +107,10 @@ export default function PaymentsOverviewPage({ token }: PaymentsOverviewPageProp
               <table className="table full-table">
                 <thead>
                   <tr>
-                    <th>Company</th>
-                    <th>Refunds</th>
-                    <th>Failed</th>
-                    <th>Subscription</th>
+                    <th>{t('payments.columns.company')}</th>
+                    <th>{t('payments.columns.refunds')}</th>
+                    <th>{t('payments.columns.failed')}</th>
+                    <th>{t('payments.columns.subscription')}</th>
                   </tr>
                 </thead>
                 <tbody>

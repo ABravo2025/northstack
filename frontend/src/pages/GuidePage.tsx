@@ -1063,6 +1063,95 @@ export default function GuidePage() {
           )}
 
           {/* ===== HR ===== */}
+          {isSpanish ? (
+          <section className="help-section" id="g-hr">
+            <div className="help-eyebrow">
+              <PeopleIcon />
+              Personas
+            </div>
+            <h2>Empleados y ausencias</h2>
+            <p className="help-intro">El roster de tu equipo, las líneas de reporte, y cómo se piden y aprueban las ausencias.</p>
+
+            <div className="help-sub">
+              <h3>El directorio de Personas</h3>
+              <p>Toda persona registrada en RRHH tiene un <strong>Person Type</strong> (Tipo de persona) que decide qué más aplica:</p>
+              <dl className="help-fieldgrid">
+                <div className="help-fielddef">
+                  <dt>Profile</dt>
+                  <dd>Alguien que estás registrando sin contrato de pago — nunca aparece en Nómina.</dd>
+                </div>
+                <div className="help-fielddef">
+                  <dt>Contractor / Employee</dt>
+                  <dd>Necesita un contrato de pago inicial (tarifa, moneda, frecuencia) completado en el mismo formulario "Add Person" (Agregar persona) antes de guardar.</dd>
+                </div>
+              </dl>
+              <p>
+                Otros campos incluyen departamento y puesto (de tus catálogos), manager directo, fechas de
+                inicio/fin, tipo de contrato, nacionalidad, país de residencia, un cumpleaños opcional, un link al
+                contrato, un email personal además del laboral, más cualquier campo personalizado y tag que tu
+                equipo haya agregado.
+              </p>
+              <div className="help-callout help-callout-note">
+                <InfoIcon />
+                <p>
+                  Asignar "Reports To" (Reporta a) se revisa para evitar loops — no podés poner a alguien como el
+                  manager de su propio manager. Y un Contractor o Employee recién creado queda afuera de las
+                  corridas de nómina y de los saldos de ausencias hasta que se confirme su primer contrato de pago
+                  (se muestra como un chip "Contrato: pendiente", que pasa a "Vencido" después de 3 días).
+                </p>
+              </div>
+            </div>
+
+            <div className="help-sub">
+              <h3>Darle un login a alguien</h3>
+              <p>
+                Desde el perfil de una persona, abrí el menú "…" y elegí <strong>Invite to app</strong> (Invitar a
+                la app) (solo aparece si todavía no tiene uno). Elegí un rol, y sale una invitación por email — el
+                link también se copia a tu portapapeles por si preferís mandarlo vos mismo.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Políticas de ausencias</h3>
+              <p>
+                Se arman en <strong>RRHH → Ausencias → Políticas</strong>: un nombre, días por año, si es paga, si
+                las solicitudes necesitan aprobación, y cómo se acumulan los días —
+              </p>
+              <ul>
+                <li><strong>Anual fija</strong> — todo el monto está disponible de entrada.</li>
+                <li><strong>Mensual</strong> — los días se acumulan progresivamente al empezar cada mes, con un tope de 12 meses.</li>
+              </ul>
+              <p>
+                Asigná una política a personas de a una o en bloque desde la pestaña <strong>Asignaciones</strong>,
+                o justo después de crear una política nueva.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Solicitar y aprobar ausencias</h3>
+              <ol className="help-steps">
+                <li>Desde <strong>Mis solicitudes</strong>, elegí una de tus políticas asignadas, un rango de fechas, y una nota opcional.</li>
+                <li>Si la política requiere aprobación, se dirige automáticamente a tu manager directo. Si no, se aprueba al instante.</li>
+                <li>Owner, Admin, o cualquiera con el permiso de decisión sobre ausencias puede aprobar o rechazar cualquier solicitud como excepción, sin importar la línea de reporte.</li>
+              </ol>
+              <p>
+                Una solicitud pendiente notifica a tu manager y al dueño de la cuenta en el ícono de la campana
+                (incluso si no tenés un manager asignado); una decisión — aprobada o rechazada — te notifica de
+                vuelta de la misma forma.
+              </p>
+              <p>
+                Los saldos (Asignados / Usados / Pendientes / Restantes) se calculan en el momento y se reinician
+                cada 1° de enero — cambiar la política de alguien nunca reescribe sus solicitudes pasadas, y una
+                política eliminada simplemente se desactiva en vez de borrar el historial.
+              </p>
+              <p>
+                El calendario de Resumen muestra las ausencias aprobadas de todo el equipo junto con tareas y
+                cumpleaños, y conectar Google Calendar (ver Integraciones y API) envía automáticamente tus propias
+                ausencias aprobadas a tu calendario personal.
+              </p>
+            </div>
+          </section>
+          ) : (
           <section className="help-section" id="g-hr">
             <div className="help-eyebrow">
               <PeopleIcon />
@@ -1148,8 +1237,94 @@ export default function GuidePage() {
               </p>
             </div>
           </section>
+          )}
 
           {/* ===== Payroll ===== */}
+          {isSpanish ? (
+          <section className="help-section" id="g-payroll">
+            <div className="help-eyebrow">
+              <BriefcaseIcon />
+              Personas
+            </div>
+            <h2>Nómina</h2>
+            <div className="help-tagrow">
+              <span className="help-pill help-pill-plan">Plan Growth</span>
+              <span className="help-pill help-pill-role">Owner, o un rol con Gestionar nómina</span>
+            </div>
+            <p className="help-intro">Un registro de lo que se le paga a cada persona, y una forma de correr ciclos de pago — no un servicio de transferencias bancarias, ni papeleo impositivo.</p>
+
+            <div className="help-callout help-callout-note">
+              <InfoIcon />
+              <p>
+                Nómina no mueve ningún dinero — es una fuente de verdad compartida sobre lo que se le debe a cada
+                uno y lo que ya se pagó, para que quede consistente en todo el equipo.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Compensación</h3>
+              <p>
+                Las condiciones de pago de cada persona — tarifa por hora o fija, moneda, frecuencia, y fecha de
+                vigencia — viven en un <strong>historial versionado</strong>. Darle un aumento a alguien crea un
+                registro nuevo y cierra el anterior el día previo, así el pago pasado nunca se sobrescribe.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Corriendo un ciclo de pago</h3>
+              <ol className="help-steps">
+                <li>Configurá tus <strong>Pay frequencies</strong> (Frecuencias de pago) (semanal, quincenal, mensual — con día de pago y desfase de vencimiento) y <strong>Payment methods</strong> (Métodos de pago) una sola vez, en la pestaña Payment Policies (Políticas de pago) de Nómina.</li>
+                <li>Hacé clic en <strong>New Run</strong> (Nueva corrida), elegí una frecuencia y una etiqueta de período — todos los que están en esa frecuencia se cargan automáticamente como Draft (Borrador).</li>
+                <li>Cargá las horas de quienes cobran por hora (la corrida no se puede confirmar hasta que lo hagas), y agregá las líneas de <strong>Bonus, Commission, Reimbursement,</strong> o <strong>Deduction</strong> (Bono, Comisión, Reembolso, o Deducción) que correspondan por persona.</li>
+                <li>Hacé clic en <strong>Confirm Run</strong> (Confirmar corrida) para bloquearla.</li>
+              </ol>
+              <div className="help-callout help-callout-danger">
+                <AlertCircleIcon />
+                <p>Una corrida confirmada no se puede editar ni reabrir desde la interfaz — revisá bien las horas y los ajustes antes de confirmar.</p>
+              </div>
+              <p>
+                ¿Necesitás pagarle a alguien fuera de un ciclo normal? Usá <strong>One-off Payment</strong> (Pago
+                puntual) — los mismos tipos de ajuste, mostrado junto a las corridas normales en una sola línea de
+                tiempo combinada.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Recibos de sueldo</h3>
+              <p>
+                Cada pago tiene un ícono de vista previa que abre un PDF descargable, claramente etiquetado{' '}
+                <strong>"Preview only — not sent"</strong> ("Solo vista previa — no enviado") — una referencia para
+                tus registros, no un recibo de sueldo oficial ni con validez legal.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Quién puede verlo</h3>
+              <p>
+                Nómina — incluyendo la compensación y el historial de pagos de cualquier persona — es invisible
+                para todos excepto el Owner, a menos que a un rol personalizado se le dé explícitamente el permiso
+                Gestionar nómina. Hoy no existe una vista de autoconsulta para que alguien vea su propio sueldo.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Terminar un contrato</h3>
+              <p>
+                Desde el perfil de una persona, "…" → <strong>Terminate</strong> (Dar de baja). Elegí un último
+                día — hoy o una fecha anterior tiene efecto inmediato, una fecha futura lo programa para correr
+                automáticamente ese día.
+              </p>
+              <p>
+                Una vez que toma efecto: el estado pasa a Terminated (Dado de baja), su compensación se cierra (así
+                que queda afuera de las corridas futuras automáticamente), el acceso a la app se revoca de forma
+                opcional, cualquier ausencia pendiente o futura se cancela, y las personas que le reportan
+                directamente se reasignan a un manager que elijas. Se puede registrar un pago final opcional con
+                las mismas líneas de ajuste que una corrida normal. Todo pago pasado — incluyendo el final — sigue
+                visible en la pestaña <strong>Payment History</strong> (Historial de pagos) del perfil.
+              </p>
+            </div>
+          </section>
+          ) : (
           <section className="help-section" id="g-payroll">
             <div className="help-eyebrow">
               <BriefcaseIcon />
@@ -1230,6 +1405,7 @@ export default function GuidePage() {
               </p>
             </div>
           </section>
+          )}
 
           {/* ===== Tasks & Notes ===== */}
           <section className="help-section" id="g-tasks">

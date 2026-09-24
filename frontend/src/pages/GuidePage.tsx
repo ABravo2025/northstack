@@ -1408,6 +1408,55 @@ export default function GuidePage() {
           )}
 
           {/* ===== Tasks & Notes ===== */}
+          {isSpanish ? (
+          <section className="help-section" id="g-tasks">
+            <div className="help-eyebrow">
+              <ListIcon />
+              Herramientas compartidas
+            </div>
+            <h2>Tareas y notas</h2>
+            <p className="help-intro">Dos herramientas livianas que viven en todo registro de Empresa, Contacto, Oportunidad y Empleado.</p>
+
+            <div className="help-sub">
+              <h3>Tareas</h3>
+              <p>
+                Un seguimiento simple: título, descripción, un asignado (vos, por defecto), y una fecha de
+                vencimiento con una hora opcional. Marcala como hecha directamente desde la lista, o hacé clic para
+                editarla o eliminarla. Toda tarea también aparece en otros dos lugares — el widget{' '}
+                <strong>My tasks</strong> (Mis tareas) y el calendario, ambos en tu página de Resumen — así nada
+                queda enterrado dentro de un registro que no visitás seguido.
+              </p>
+              <p>
+                Marcá <strong>Add Google Meet video call</strong> (Agregar videollamada de Google Meet) para
+                convertir una tarea en una llamada real — Northstack completa un horario si todavía no elegiste
+                uno, genera un link real de Meet en tu Google Calendar conectado (ver Integraciones y API), y
+                automáticamente invita al Contacto, al Contacto principal de la Empresa, al Contacto principal de la
+                Oportunidad, o al Empleado sobre quien trata la tarea. El link para unirse aparece en la tarea misma
+                una vez que está listo. Este checkbox solo aparece una vez que Google Calendar está conectado.
+              </p>
+              <p>
+                <strong>Mis tareas</strong> (en la barra lateral, debajo de Resumen) es una página dedicada a toda
+                tarea que tenés asignada o creaste, en todos los registros, en vez de tener que buscarlas una por
+                una. Cambiá entre una vista <strong>Lista</strong> (ordenada por fecha de vencimiento, con columnas
+                de Creada/Vencimiento/Completada) y una vista <strong>Tablero</strong> (arrastrá una tarjeta entre
+                Vencidas/Hoy/Esta semana/Más adelante/Sin fecha de vencimiento/Completadas para reprogramarla o
+                marcarla como hecha). Buscá, filtrá por estado de completada, y organizá las tareas en{' '}
+                <strong>carpetas</strong> que creás vos mismo desde el panel izquierdo — una carpeta es solo una
+                etiqueta para agrupar tareas relacionadas, compartida en todo el tenant. Hacé clic en una tarea
+                donde sea para ver su detalle completo y editarla; la fila "+ Agregar tarea" al final de la lista te
+                deja crear una desde cero, eligiendo a qué Empresa/Contacto/Empleado/Oportunidad corresponde.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Notas</h3>
+              <p>
+                Un título más una descripción más larga con formato liviano — para dejar contexto permanente en el
+                registro, no algo para marcar como hecho. Toda nota y tarea muestra quién la escribió y cuándo.
+              </p>
+            </div>
+          </section>
+          ) : (
           <section className="help-section" id="g-tasks">
             <div className="help-eyebrow">
               <ListIcon />
@@ -1452,8 +1501,54 @@ export default function GuidePage() {
               </p>
             </div>
           </section>
+          )}
 
           {/* ===== Public forms ===== */}
+          {isSpanish ? (
+          <section className="help-section" id="g-forms">
+            <div className="help-eyebrow">
+              <FormIcon />
+              Conectar
+            </div>
+            <h2>Formularios públicos</h2>
+            <p className="help-intro">Un link web para compartir — sin necesidad de iniciar sesión — para reclutamiento o leads entrantes de ventas.</p>
+
+            <div className="help-sub">
+              <h3>Construyendo uno</h3>
+              <ol className="help-steps">
+                <li>Andá a <strong>Configuración → Formularios públicos</strong> y elegí un tipo: Empleado, Cliente, o Contacto.</li>
+                <li>Ponele un nombre — esto genera un enlace que podés editar antes de crear el formulario (después queda fijo).</li>
+                <li>Arrastrá los campos que querés recolectar, desde tus campos incorporados y cualquier campo personalizado; marcá los que sean obligatorios. Nombre, apellido y correo electrónico siempre se recolectan.</li>
+                <li>Escribí un mensaje de "agradecimiento" que se muestra después de que alguien envía el formulario.</li>
+              </ol>
+              <p>
+                Un formulario de <strong>Contacto</strong> se puede vincular opcionalmente a un Pipeline — un envío
+                que coincida con una Empresa existente también crea automáticamente una Oportunidad en la primera
+                etapa de ese pipeline.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Compartirlo y protegerlo</h3>
+              <p>
+                Copiá el enlace desde la fila del formulario y compartilo donde quieras. Activá o desactivá un
+                formulario (<strong>Activo/Inactivo</strong>) en cualquier momento — un formulario inactivo les
+                muestra a los visitantes un simple mensaje de "ya no se aceptan envíos". Todo formulario tiene un
+                campo honeypot oculto y una verificación CAPTCHA incorporados contra spam.
+              </p>
+            </div>
+
+            <div className="help-callout help-callout-warn">
+              <AlertTriangleIcon />
+              <p>
+                Un envío se crea directamente en tu espacio de trabajo, sin ninguna cola de revisión en el medio —
+                el envío de un formulario de Empleado se convierte en un registro real de Empleado en el momento en
+                que se manda, igual que los formularios de Cliente o Contacto. Si querés evaluar a los postulantes
+                primero, usá el estado del registro resultante como tu propio paso de "en revisión".
+              </p>
+            </div>
+          </section>
+          ) : (
           <section className="help-section" id="g-forms">
             <div className="help-eyebrow">
               <FormIcon />
@@ -1495,6 +1590,7 @@ export default function GuidePage() {
               </p>
             </div>
           </section>
+          )}
 
           {/* ===== Integrations ===== */}
           <section className="help-section" id="g-integrations">

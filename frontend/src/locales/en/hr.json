@@ -1,0 +1,609 @@
+{
+  "common": {
+    "add": "Add",
+    "cancel": "Cancel",
+    "create": "Create",
+    "save": "Save",
+    "saving": "Saving…",
+    "delete": "Delete",
+    "close": "Close",
+    "edit": "Edit",
+    "selectPlaceholder": "-- select --",
+    "nonePlaceholder": "-- none --",
+    "noManagerPlaceholder": "-- no manager --",
+    "loading": "Loading…"
+  },
+  "employees": {
+    "toolbar": {
+      "heading": "People",
+      "allPeople": "All People",
+      "searchLabel": "Search employees",
+      "searchPlaceholder": "Search by name, email or department...",
+      "filterByTag": "Filter by tag",
+      "noTagsYet": "No tags yet."
+    },
+    "columns": {
+      "name": "Name",
+      "email": "Business Email",
+      "personalEmail": "Personal Email",
+      "department": "Department",
+      "jobTitle": "Job Title",
+      "status": "Status",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "contractUrl": "Contract URL",
+      "contractUrlView": "View",
+      "contractType": "Contract Type",
+      "personType": "Type",
+      "contractStatus": "Contract",
+      "payFrequency": "Pay Frequency",
+      "managerName": "Reports To",
+      "timeOffPolicies": "Time Off Policies",
+      "tags": "Tags"
+    },
+    "contractTypeLabels": {
+      "part_time": "Part Time",
+      "full_time": "Full Time"
+    },
+    "personTypeLabels": {
+      "profile": "Profile",
+      "contractor": "Contractor",
+      "employee": "Employee"
+    },
+    "contractStatusChips": {
+      "confirmed": "Confirmed",
+      "pending": "Pending",
+      "expired": "Expired"
+    },
+    "onTimeOffToday": "On {{policyName}} today",
+    "deleteTooltip": "Delete",
+    "inviteTooltip": "Invite",
+    "linkedChip": "Linked",
+    "toasts": {
+      "loadFailed": "Failed to load employees: {{error}}",
+      "directoryLoadFailed": "Failed to load the employee directory: {{error}}",
+      "departmentsLoadFailed": "Failed to load departments: {{error}}",
+      "jobTitlesLoadFailed": "Failed to load job titles: {{error}}",
+      "viewsLoadFailed": "Failed to load views: {{error}}",
+      "timeOffPoliciesLoadFailed": "Failed to load time off policies: {{error}}",
+      "payFrequenciesLoadFailed": "Failed to load pay frequencies: {{error}}",
+      "customFieldsLoadFailed": "Failed to load custom fields: {{error}}",
+      "statusesLoadFailed": "Failed to load statuses: {{error}}",
+      "fieldAdded": "Field \"{{name}}\" added.",
+      "fieldAddFailed": "Failed to add field: {{error}}",
+      "fieldUpdated": "Field updated.",
+      "fieldUpdateFailed": "Failed to update field: {{error}}",
+      "fieldDeleted": "Field deleted.",
+      "fieldDeleteFailed": "Failed to delete field: {{error}}",
+      "sampleDataAdded": "Added {{employees}} sample employees and {{companies}} sample companies.",
+      "sampleDataFailed": "Failed to load sample data: {{error}}",
+      "employeeCreateFailed": "Failed to create employee: {{error}}",
+      "employeeAdded": "Employee added.",
+      "invitationSent": "Invitation emailed. Link also copied to clipboard.",
+      "invitationFailed": "Failed to invite employee: {{error}}",
+      "employeeDeleted": "{{name}} deleted.",
+      "employeeDeleteFailed": "Failed to delete employee: {{error}}",
+      "moveFailed": "Failed to move: {{error}}",
+      "viewCreated": "View \"{{name}}\" created.",
+      "viewCreateFailed": "Failed to create view: {{error}}",
+      "viewRenameFailed": "Failed to rename view: {{error}}",
+      "viewDuplicated": "View duplicated as \"{{name}}\".",
+      "viewDuplicateFailed": "Failed to duplicate view: {{error}}",
+      "viewDeleted": "View deleted.",
+      "viewDeleteFailed": "Failed to delete view: {{error}}"
+    },
+    "primaryAction": "Add employee",
+    "confirmDelete": {
+      "title": "Delete employee",
+      "message": "Are you sure you want to delete {{name}}? This can't be undone."
+    },
+    "modal": {
+      "addTitle": "Add Person"
+    },
+    "groups": {
+      "type": "Type",
+      "identity": "Identity",
+      "role": "Role",
+      "contract": "Contract",
+      "initialCompensation": "Initial Compensation",
+      "timeOff": "Time Off",
+      "customFields": "Custom fields"
+    },
+    "fields": {
+      "type": "Type",
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "businessEmail": "Business Email",
+      "personalEmail": "Personal Email",
+      "nationality": "Nationality",
+      "department": "Department",
+      "jobTitle": "Job Title",
+      "reportsTo": "Reports To",
+      "startDate": "Start Date",
+      "contractUrl": "Contract URL",
+      "contractType": "Contract Type",
+      "compensationType": "Compensation Type",
+      "rate": "Rate ({{currency}})",
+      "currency": "Currency",
+      "payFrequency": "Pay Frequency",
+      "contractJobTitle": "Job Title (contract)",
+      "effectiveFrom": "Effective From",
+      "roleDescription": "Role Description",
+      "note": "Note"
+    },
+    "personTypeOptions": {
+      "profile": "Profile",
+      "contractor": "Contractor",
+      "employee": "Employee"
+    },
+    "noManagerOption": "No manager",
+    "compensationTypeOptions": {
+      "hourly": "Hourly",
+      "fixed": "Fixed"
+    },
+    "noTimeOffPolicies": "No time off policies set up yet.",
+    "emptyState": {
+      "title": "No employees yet",
+      "body": "Add your team one by one, import a CSV, or load sample data.",
+      "primaryLabel": "Add employee",
+      "importCsv": "Import CSV",
+      "loadSampleData": "Load sample data"
+    },
+    "groupByBroken": "This view's group-by field no longer exists.",
+    "noMatches": {
+      "title": "No matches for \"{{search}}\"",
+      "body": "Try a different term, or clear the filters.",
+      "clearFilters": "Clear filters"
+    },
+    "csvSingular": "Employee",
+    "csvPlural": "Employees",
+    "inviteModal": {
+      "title": "Invite to app",
+      "description": "Invite {{name}} ({{email}}) to create an account.",
+      "roleLabel": "Role",
+      "sending": "Sending…",
+      "sendInvitation": "Send invitation"
+    }
+  },
+  "employeeOverview": {
+    "sections": {
+      "paymentHistory": "Payment History",
+      "identity": "Identity",
+      "role": "Role",
+      "contract": "Contract",
+      "compensation": "Compensation",
+      "customFields": "Custom fields"
+    },
+    "noPayments": "No payments recorded yet.",
+    "paymentHistoryColumns": {
+      "date": "Date",
+      "reason": "Reason",
+      "description": "Description",
+      "amount": "Amount"
+    },
+    "payrollPrefix": "Payroll: {{label}}",
+    "payslipPreviewTooltip": "Payslip preview",
+    "fields": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "businessEmail": "Business Email",
+      "personalEmail": "Personal Email",
+      "status": "Status",
+      "department": "Department",
+      "jobTitle": "Job Title",
+      "reportsTo": "Reports To",
+      "contractType": "Contract Type",
+      "startDate": "Start Date",
+      "endDate": "End Date",
+      "contractUrl": "Contract URL"
+    },
+    "contractTypeOptions": {
+      "partTime": "Part Time",
+      "fullTime": "Full Time"
+    },
+    "timeOffPoliciesLabel": "Time Off Policies ({{count}})",
+    "noPoliciesAssigned": "No policies assigned.",
+    "unassign": "Unassign",
+    "assignPolicyPlaceholder": "+ Assign a policy…",
+    "assignPolicyAriaLabel": "Assign a time off policy",
+    "compensation": {
+      "typeLabel": "Type",
+      "rateLabel": "Rate",
+      "payFrequencyLabel": "Pay Frequency",
+      "effectiveFromLabel": "Effective From",
+      "jobTitleLabel": "Job Title",
+      "roleDescriptionLabel": "Role Description",
+      "noteLabel": "Note",
+      "contractStatusLabel": "Contract Status",
+      "confirmedOn": "Confirmed on {{date}}",
+      "pendingSignature": "Pending signature",
+      "noActiveCompensation": "No active compensation."
+    },
+    "viewContract": "View contract",
+    "resendContract": "Resend contract",
+    "resending": "Resending…",
+    "actionsMenu": {
+      "inviteToApp": "Invite to app",
+      "terminate": "Terminate",
+      "delete": "Delete"
+    },
+    "closeAriaLabel": "Close",
+    "scheduledTermination": "Scheduled termination: {{date}}",
+    "cancelTermination": "Cancel",
+    "tabs": {
+      "overview": "Overview",
+      "paymentHistory": "Payment History",
+      "payments": "Payments",
+      "notes": "Notes",
+      "tasks": "Tasks",
+      "activity": "Activity"
+    },
+    "contractStatusChips": {
+      "confirmed": "Contract confirmed",
+      "pending": "Contract pending",
+      "expired": "Contract expired"
+    },
+    "toasts": {
+      "cancelTerminationSuccess": "Scheduled termination cancelled.",
+      "cancelTerminationFailed": "Failed to cancel termination: {{error}}",
+      "resendContractSuccess": "Contract resent.",
+      "resendContractFailed": "Failed to resend contract: {{error}}",
+      "unassignPolicyFailed": "Failed to unassign policy: {{error}}",
+      "assignPolicyFailed": "Failed to assign policy: {{error}}"
+    },
+    "payslipModal": {
+      "contractTitle": "Contract",
+      "contractHelperText": "This is the exact document generated for this contract."
+    }
+  },
+  "terminateModal": {
+    "title": "Terminate {{name}}",
+    "alertInfo": "This will end {{name}}'s contract in Northstack. Once it takes effect, their status will change to Terminated.",
+    "fields": {
+      "lastDay": "Last day",
+      "amount": "Amount",
+      "currency": "Currency",
+      "paymentDate": "Payment date",
+      "label": "Label",
+      "type": "Type",
+      "note": "Note"
+    },
+    "effectImmediate": "This will take effect immediately once confirmed.",
+    "effectFuture": "This will take effect on {{date}}.",
+    "directReportsCount": "Direct reports ({{count}})",
+    "directReportsHelp": "These people report to {{name}}. Optionally reassign each one to a new manager — anyone left unassigned will have no manager after this takes effect.",
+    "revokeAccessLabel": "Also revoke their access to Northstack",
+    "includeFinalPaymentLabel": "Include a final payment",
+    "finalPaymentDefaultLabel": "Final payment",
+    "additionalPaymentsNote": "Additional payments — same options as a normal payroll run",
+    "addLine": "+ Add line",
+    "removeLineAriaLabel": "Remove line",
+    "scheduleTermination": "Schedule termination",
+    "terminateNow": "Terminate now",
+    "saving": "Saving…",
+    "toasts": {
+      "invalidFinalAmount": "Enter a valid final payment amount.",
+      "invalidLineAmount": "Enter a valid amount for every additional payment line.",
+      "terminatedSuccess": "Employee terminated.",
+      "terminationScheduled": "Termination scheduled for {{date}}.",
+      "terminateFailed": "Failed to terminate employee: {{error}}"
+    }
+  },
+  "payroll": {
+    "common": {
+      "entryTypeLabels": {
+        "base": "Payment",
+        "bonus": "Bonus",
+        "commission": "Commission",
+        "reimbursement": "Reimbursement",
+        "deduction": "Deduction"
+      },
+      "compensationTypeLabels": {
+        "hourly": "Hourly",
+        "fixed": "Fixed"
+      },
+      "statusLabels": {
+        "draft": "Draft",
+        "confirmed": "Confirmed"
+      }
+    },
+    "payslipPreview": {
+      "title": "Payslip preview",
+      "helperText": "Preview only — not sent.",
+      "loading": "Loading preview…",
+      "download": "Download"
+    },
+    "page": {
+      "title": "Payroll",
+      "ownerOnly": "Payroll is only visible to the tenant owner.",
+      "tabs": {
+        "timeline": "Timeline",
+        "assignments": "Assignments",
+        "policies": "Payment Policies"
+      },
+      "dayOfWeekLabels": {
+        "monday": "Monday",
+        "tuesday": "Tuesday",
+        "wednesday": "Wednesday",
+        "thursday": "Thursday",
+        "friday": "Friday",
+        "saturday": "Saturday",
+        "sunday": "Sunday"
+      },
+      "dueDateLabels": {
+        "same_day": "Same day",
+        "plus_2": "+2 days",
+        "plus_5": "+5 days",
+        "custom": "Custom",
+        "customDays": "+{{count}} days"
+      },
+      "anchorConfig": {
+        "firstAnd15th": "1st and 15th",
+        "fifteenAndLast": "15th and last day",
+        "customDays": "{{day1}} and {{day2}}",
+        "firstBusinessDay": "First business day",
+        "lastBusinessDay": "Last business day",
+        "customDay": "Day {{day}}",
+        "none": "—"
+      },
+      "timeline": {
+        "description": "Every payroll run and one-off payment in one place, newest first.",
+        "oneOffPayment": "One-off Payment",
+        "newRun": "New Run",
+        "emptyTitle": "No payroll activity yet",
+        "emptyBody": "Create a run for a pay frequency, or record a one-off payment.",
+        "runMeta": "{{date}} · Run",
+        "open": "Open",
+        "payslipPreview": "Payslip preview",
+        "payslipPreviewAriaLabel": "Payslip preview for {{name}}",
+        "runChip": "Run",
+        "oneOffChip": "One-off",
+        "columns": {
+          "date": "Date",
+          "type": "Type",
+          "detail": "Detail",
+          "status": "Status"
+        }
+      },
+      "assignments": {
+        "description": "Retrofit people with no pay policy yet, or migrate a group to a new one. New people get their first contract from their own alta, not here.",
+        "assignReassign": "Assign/Reassign Policy ({{count}})",
+        "emptyTitle": "No contractors or employees yet",
+        "emptyBody": "Add People with Type Contractor or Employee to assign a pay policy.",
+        "goToPeople": "Go to People",
+        "draftTab": "Draft ({{count}})",
+        "confirmedTab": "Confirmed ({{count}})",
+        "terminatedTab": "Terminated ({{count}})",
+        "noTerminated": "No terminated assignments.",
+        "noDraft": "No draft assignments.",
+        "noConfirmed": "No confirmed assignments.",
+        "selectAll": "Select all",
+        "noPolicyAssigned": "No policy assigned",
+        "terminatedStatus": "Terminated {{date}}",
+        "columns": {
+          "name": "Name",
+          "email": "Email",
+          "policy": "Policy",
+          "status": "Status",
+          "currentPolicy": "Current Policy"
+        }
+      },
+      "policies": {
+        "payFrequenciesTitle": "Pay frequencies",
+        "payFrequenciesDesc": "Assigning a policy and an amount to each person happens from their profile, not here.",
+        "emptyTitle": "No pay frequencies yet",
+        "emptyBody": "A pay frequency defines how often and on what schedule people get paid.",
+        "newPolicy": "New policy",
+        "activeTab": "Active ({{count}})",
+        "deactivatedTab": "Deactivated ({{count}})",
+        "noActive": "No active pay frequencies.",
+        "noDeactivated": "No deactivated pay frequencies.",
+        "assignedCount": "{{count}} assigned",
+        "editAriaLabel": "Edit {{name}}",
+        "edit": "Edit",
+        "columns": {
+          "name": "Name",
+          "cadence": "Cadence",
+          "payDays": "Pay day(s)",
+          "dueDate": "Due date",
+          "assigned": "Assigned",
+          "actions": "Actions"
+        },
+        "paymentMethodsTitle": "Payment methods",
+        "addMethod": "Add method",
+        "deactivate": "Deactivate",
+        "activate": "Activate"
+      },
+      "cadenceLabels": {
+        "weekly": "Weekly",
+        "semimonthly": "Semi-monthly",
+        "monthly": "Monthly"
+      },
+      "toasts": {
+        "loadFailed": "Failed to load payroll settings: {{error}}",
+        "frequencyUpdated": "Pay frequency updated.",
+        "frequencyCreated": "Pay frequency created.",
+        "frequencySaveFailed": "Failed to save pay frequency: {{error}}",
+        "methodAdded": "Payment method added.",
+        "methodAddFailed": "Failed to add payment method: {{error}}",
+        "methodDeactivated": "Payment method deactivated.",
+        "methodActivated": "Payment method activated.",
+        "methodUpdateFailed": "Failed to update payment method: {{error}}",
+        "assignmentFailedCount": "{{failed}} of {{total}} assignment(s) failed.",
+        "assignedSuccess_one": "Assigned pay policy to {{count}} person.",
+        "assignedSuccess_other": "Assigned pay policy to {{count}} people.",
+        "assignFailed": "Failed to assign pay policy: {{error}}",
+        "runCreated": "Payroll run created.",
+        "runCreateFailed": "Failed to create run: {{error}}",
+        "offPaymentCreated_one": "Created {{count}} one-off payment.",
+        "offPaymentCreated_other": "Created {{count}} one-off payment(s).",
+        "offPaymentFailed": "Failed to create one-off payment: {{error}}"
+      },
+      "newRunModal": {
+        "title": "New Run",
+        "fields": {
+          "payFrequency": "Pay Frequency",
+          "period": "Period",
+          "periodPlaceholder": "e.g. 2nd half · August 2026"
+        },
+        "create": "Create",
+        "creating": "Creating…"
+      },
+      "offPaymentModal": {
+        "title": "One-off Payment",
+        "createFor": "Create for {{count}}",
+        "fields": {
+          "type": "Type",
+          "amount": "Amount ({{currency}})",
+          "currency": "Currency",
+          "paymentDate": "Payment Date",
+          "note": "Note",
+          "peopleTitle": "People"
+        },
+        "typeOptions": {
+          "bonus": "Bonus",
+          "commission": "Commission",
+          "reimbursement": "Reimbursement",
+          "deduction": "Deduction"
+        },
+        "columns": {
+          "name": "Name"
+        }
+      },
+      "frequencyModal": {
+        "editTitle": "Edit pay frequency",
+        "newTitle": "New pay frequency",
+        "fields": {
+          "name": "Name",
+          "namePlaceholder": "e.g. Semanal",
+          "cadence": "Cadence",
+          "dayOfWeek": "Day of week",
+          "payDays": "Pay days",
+          "payDay": "Pay day",
+          "dueDate": "Due date",
+          "days": "Days",
+          "active": "Active"
+        },
+        "cadenceOptions": {
+          "weekly": "Weekly",
+          "semimonthly": "Semi-monthly",
+          "monthly": "Monthly"
+        },
+        "semimonthlyOptions": {
+          "first15": "1st and 15th",
+          "fifteenLast": "15th and last day",
+          "custom": "Custom",
+          "and": "and"
+        },
+        "monthlyOptions": {
+          "firstBusinessDay": "First business day",
+          "lastBusinessDay": "Last business day",
+          "custom": "Custom"
+        },
+        "dueDateOptions": {
+          "sameDay": "Same day",
+          "plus2": "+2 days",
+          "plus5": "+5 days",
+          "custom": "Custom"
+        },
+        "save": "Save",
+        "saving": "Saving…"
+      },
+      "methodModal": {
+        "title": "Add payment method",
+        "fields": {
+          "name": "Name"
+        }
+      },
+      "assignModal": {
+        "title": "Assign / Reassign Policy",
+        "newPolicySectionTitle": "New policy (applies to everyone selected)",
+        "fields": {
+          "payFrequency": "Pay Frequency",
+          "effectiveFrom": "Effective From",
+          "compensationType": "Compensation Type",
+          "currency": "Currency",
+          "jobTitle": "Job Title",
+          "roleDescription": "Role Description"
+        },
+        "compensationTypeOptions": {
+          "hourly": "Hourly",
+          "fixed": "Fixed"
+        },
+        "reviewSectionTitle": "Review — amount per person ({{currency}})",
+        "applyToAllPlaceholder": "Apply this amount to all",
+        "applyToAllSelected": "Apply to all selected",
+        "columns": {
+          "name": "Name",
+          "previous": "Previous",
+          "newAmount": "New amount"
+        },
+        "assignTo": "Assign to {{count}}"
+      }
+    },
+    "runDetail": {
+      "ownerOnly": "Payroll is only visible to the tenant owner.",
+      "runNotFound": "Run not found",
+      "backAriaLabel": "Back to Payroll",
+      "payFrequencyLabel": "Pay frequency: {{name}}",
+      "addPersonToRun": "Add person to this run",
+      "confirmRun": "Confirm Run",
+      "confirming": "Confirming…",
+      "confirmDisabledTooltip": "Load hours for every hourly person before confirming",
+      "excludedNotice_one": "{{count}} person excluded — contract not confirmed yet.",
+      "excludedNotice_other": "{{count}} people excluded — contract not confirmed yet.",
+      "noOneInRun": "No one is in this run yet.",
+      "columns": {
+        "name": "Name",
+        "type": "Type",
+        "base": "Base",
+        "adjustments": "Adjustments",
+        "total": "Total"
+      },
+      "hoursLabel": "Hours",
+      "rateBaseLine": "Rate {{rate}}/hr · Base {{base}}",
+      "hoursLine": "Hours {{hours}}",
+      "adjustmentsButton": "+ Adjustments",
+      "payslipPreviewAriaLabel": "Payslip preview for {{name}}",
+      "payslipPreviewTooltip": "Payslip preview",
+      "inactiveNotice": "{{name}} is not active ({{status}}).",
+      "adjustmentsTable": {
+        "type": "Type",
+        "amount": "Amount",
+        "note": "Note",
+        "removeAriaLabel": "Remove adjustment"
+      },
+      "adjustmentForm": {
+        "typeLabel": "Type",
+        "amountLabel": "Amount",
+        "noteLabel": "Note",
+        "addAdjustment": "Add adjustment",
+        "typeOptions": {
+          "bonus": "Bonus",
+          "commission": "Commission",
+          "reimbursement": "Reimbursement",
+          "deduction": "Deduction"
+        }
+      },
+      "addPersonModal": {
+        "title": "Add person to this run",
+        "emptyMessage": "No one left to add — either everyone on this pay frequency is already in this run, or no one else has an active compensation on {{payFrequency}}.",
+        "fallbackPayFrequency": "this run's pay frequency",
+        "noActiveCompensationNote": " — no active compensation",
+        "add": "Add"
+      },
+      "toasts": {
+        "runConfirmed": "Run confirmed.",
+        "confirmFailed": "Failed to confirm run: {{error}}",
+        "hoursUpdateFailed": "Failed to update hours: {{error}}",
+        "adjustmentAdded": "Adjustment added.",
+        "adjustmentAddFailed": "Failed to add adjustment: {{error}}",
+        "adjustmentRemoved": "Adjustment removed.",
+        "adjustmentRemoveFailed": "Failed to remove adjustment: {{error}}",
+        "peopleLoadFailed": "Failed to load people: {{error}}",
+        "personAdded": "Person added to this run.",
+        "personAddFailed": "Failed to add person: {{error}}"
+      }
+    }
+  }
+}

@@ -1,0 +1,609 @@
+{
+  "common": {
+    "add": "Agregar",
+    "cancel": "Cancelar",
+    "create": "Crear",
+    "save": "Guardar",
+    "saving": "Guardando…",
+    "delete": "Eliminar",
+    "close": "Cerrar",
+    "edit": "Editar",
+    "selectPlaceholder": "-- seleccioná --",
+    "nonePlaceholder": "-- ninguno --",
+    "noManagerPlaceholder": "-- sin responsable --",
+    "loading": "Cargando…"
+  },
+  "employees": {
+    "toolbar": {
+      "heading": "Personas",
+      "allPeople": "Todas las personas",
+      "searchLabel": "Buscar empleados",
+      "searchPlaceholder": "Buscar por nombre, email o departamento...",
+      "filterByTag": "Filtrar por etiqueta",
+      "noTagsYet": "Todavía no hay etiquetas."
+    },
+    "columns": {
+      "name": "Nombre",
+      "email": "Email laboral",
+      "personalEmail": "Email personal",
+      "department": "Departamento",
+      "jobTitle": "Puesto",
+      "status": "Estado",
+      "startDate": "Fecha de inicio",
+      "endDate": "Fecha de fin",
+      "contractUrl": "URL del contrato",
+      "contractUrlView": "Ver",
+      "contractType": "Tipo de contrato",
+      "personType": "Tipo",
+      "contractStatus": "Contrato",
+      "payFrequency": "Frecuencia de pago",
+      "managerName": "Reporta a",
+      "timeOffPolicies": "Políticas de ausencias",
+      "tags": "Etiquetas"
+    },
+    "contractTypeLabels": {
+      "part_time": "Medio tiempo",
+      "full_time": "Tiempo completo"
+    },
+    "personTypeLabels": {
+      "profile": "Perfil",
+      "contractor": "Contratista",
+      "employee": "Empleado"
+    },
+    "contractStatusChips": {
+      "confirmed": "Confirmado",
+      "pending": "Pendiente",
+      "expired": "Vencido"
+    },
+    "onTimeOffToday": "Hoy está en {{policyName}}",
+    "deleteTooltip": "Eliminar",
+    "inviteTooltip": "Invitar",
+    "linkedChip": "Vinculado",
+    "toasts": {
+      "loadFailed": "Error al cargar empleados: {{error}}",
+      "directoryLoadFailed": "Error al cargar el directorio de empleados: {{error}}",
+      "departmentsLoadFailed": "Error al cargar departamentos: {{error}}",
+      "jobTitlesLoadFailed": "Error al cargar puestos: {{error}}",
+      "viewsLoadFailed": "Error al cargar las vistas: {{error}}",
+      "timeOffPoliciesLoadFailed": "Error al cargar las políticas de ausencias: {{error}}",
+      "payFrequenciesLoadFailed": "Error al cargar las frecuencias de pago: {{error}}",
+      "customFieldsLoadFailed": "Error al cargar los campos personalizados: {{error}}",
+      "statusesLoadFailed": "Error al cargar los estados: {{error}}",
+      "fieldAdded": "Se agregó el campo \"{{name}}\".",
+      "fieldAddFailed": "Error al agregar el campo: {{error}}",
+      "fieldUpdated": "Campo actualizado.",
+      "fieldUpdateFailed": "Error al actualizar el campo: {{error}}",
+      "fieldDeleted": "Campo eliminado.",
+      "fieldDeleteFailed": "Error al eliminar el campo: {{error}}",
+      "sampleDataAdded": "Se agregaron {{employees}} empleados de ejemplo y {{companies}} empresas de ejemplo.",
+      "sampleDataFailed": "Error al cargar datos de ejemplo: {{error}}",
+      "employeeCreateFailed": "Error al crear el empleado: {{error}}",
+      "employeeAdded": "Empleado agregado.",
+      "invitationSent": "Invitación enviada por email. El link también se copió al portapapeles.",
+      "invitationFailed": "Error al invitar al empleado: {{error}}",
+      "employeeDeleted": "Se eliminó a {{name}}.",
+      "employeeDeleteFailed": "Error al eliminar el empleado: {{error}}",
+      "moveFailed": "Error al mover: {{error}}",
+      "viewCreated": "Se creó la vista \"{{name}}\".",
+      "viewCreateFailed": "Error al crear la vista: {{error}}",
+      "viewRenameFailed": "Error al renombrar la vista: {{error}}",
+      "viewDuplicated": "Vista duplicada como \"{{name}}\".",
+      "viewDuplicateFailed": "Error al duplicar la vista: {{error}}",
+      "viewDeleted": "Vista eliminada.",
+      "viewDeleteFailed": "Error al eliminar la vista: {{error}}"
+    },
+    "primaryAction": "Agregar empleado",
+    "confirmDelete": {
+      "title": "Eliminar empleado",
+      "message": "¿Estás seguro de que querés eliminar a {{name}}? Esta acción no se puede deshacer."
+    },
+    "modal": {
+      "addTitle": "Agregar persona"
+    },
+    "groups": {
+      "type": "Tipo",
+      "identity": "Identidad",
+      "role": "Rol",
+      "contract": "Contrato",
+      "initialCompensation": "Compensación inicial",
+      "timeOff": "Ausencias",
+      "customFields": "Campos personalizados"
+    },
+    "fields": {
+      "type": "Tipo",
+      "firstName": "Nombre",
+      "lastName": "Apellido",
+      "businessEmail": "Email laboral",
+      "personalEmail": "Email personal",
+      "nationality": "Nacionalidad",
+      "department": "Departamento",
+      "jobTitle": "Puesto",
+      "reportsTo": "Reporta a",
+      "startDate": "Fecha de inicio",
+      "contractUrl": "URL del contrato",
+      "contractType": "Tipo de contrato",
+      "compensationType": "Tipo de compensación",
+      "rate": "Monto ({{currency}})",
+      "currency": "Moneda",
+      "payFrequency": "Frecuencia de pago",
+      "contractJobTitle": "Puesto (contrato)",
+      "effectiveFrom": "Vigente desde",
+      "roleDescription": "Descripción del rol",
+      "note": "Nota"
+    },
+    "personTypeOptions": {
+      "profile": "Perfil",
+      "contractor": "Contratista",
+      "employee": "Empleado"
+    },
+    "noManagerOption": "Sin responsable",
+    "compensationTypeOptions": {
+      "hourly": "Por hora",
+      "fixed": "Fijo"
+    },
+    "noTimeOffPolicies": "Todavía no hay políticas de ausencias configuradas.",
+    "emptyState": {
+      "title": "Todavía no hay empleados",
+      "body": "Agregá a tu equipo de a uno, importá un CSV, o cargá datos de ejemplo.",
+      "primaryLabel": "Agregar empleado",
+      "importCsv": "Importar CSV",
+      "loadSampleData": "Cargar datos de ejemplo"
+    },
+    "groupByBroken": "El campo de agrupación de esta vista ya no existe.",
+    "noMatches": {
+      "title": "Sin resultados para \"{{search}}\"",
+      "body": "Probá con otro término, o quitá los filtros.",
+      "clearFilters": "Quitar filtros"
+    },
+    "csvSingular": "Empleado",
+    "csvPlural": "Empleados",
+    "inviteModal": {
+      "title": "Invitar a la app",
+      "description": "Invitá a {{name}} ({{email}}) a crear una cuenta.",
+      "roleLabel": "Rol",
+      "sending": "Enviando…",
+      "sendInvitation": "Enviar invitación"
+    }
+  },
+  "employeeOverview": {
+    "sections": {
+      "paymentHistory": "Historial de pagos",
+      "identity": "Identidad",
+      "role": "Rol",
+      "contract": "Contrato",
+      "compensation": "Compensación",
+      "customFields": "Campos personalizados"
+    },
+    "noPayments": "Todavía no hay pagos registrados.",
+    "paymentHistoryColumns": {
+      "date": "Fecha",
+      "reason": "Motivo",
+      "description": "Descripción",
+      "amount": "Monto"
+    },
+    "payrollPrefix": "Nómina: {{label}}",
+    "payslipPreviewTooltip": "Vista previa del recibo",
+    "fields": {
+      "firstName": "Nombre",
+      "lastName": "Apellido",
+      "businessEmail": "Email laboral",
+      "personalEmail": "Email personal",
+      "status": "Estado",
+      "department": "Departamento",
+      "jobTitle": "Puesto",
+      "reportsTo": "Reporta a",
+      "contractType": "Tipo de contrato",
+      "startDate": "Fecha de inicio",
+      "endDate": "Fecha de fin",
+      "contractUrl": "URL del contrato"
+    },
+    "contractTypeOptions": {
+      "partTime": "Medio tiempo",
+      "fullTime": "Tiempo completo"
+    },
+    "timeOffPoliciesLabel": "Políticas de ausencias ({{count}})",
+    "noPoliciesAssigned": "No hay políticas asignadas.",
+    "unassign": "Quitar",
+    "assignPolicyPlaceholder": "+ Asignar una política…",
+    "assignPolicyAriaLabel": "Asignar una política de ausencias",
+    "compensation": {
+      "typeLabel": "Tipo",
+      "rateLabel": "Monto",
+      "payFrequencyLabel": "Frecuencia de pago",
+      "effectiveFromLabel": "Vigente desde",
+      "jobTitleLabel": "Puesto",
+      "roleDescriptionLabel": "Descripción del rol",
+      "noteLabel": "Nota",
+      "contractStatusLabel": "Estado del contrato",
+      "confirmedOn": "Confirmado el {{date}}",
+      "pendingSignature": "Pendiente de firma",
+      "noActiveCompensation": "No hay compensación activa."
+    },
+    "viewContract": "Ver contrato",
+    "resendContract": "Reenviar contrato",
+    "resending": "Reenviando…",
+    "actionsMenu": {
+      "inviteToApp": "Invitar a la app",
+      "terminate": "Desvincular",
+      "delete": "Eliminar"
+    },
+    "closeAriaLabel": "Cerrar",
+    "scheduledTermination": "Desvinculación programada: {{date}}",
+    "cancelTermination": "Cancelar",
+    "tabs": {
+      "overview": "Resumen",
+      "paymentHistory": "Historial de pagos",
+      "payments": "Pagos",
+      "notes": "Notas",
+      "tasks": "Tareas",
+      "activity": "Actividad"
+    },
+    "contractStatusChips": {
+      "confirmed": "Contrato confirmado",
+      "pending": "Contrato pendiente",
+      "expired": "Contrato vencido"
+    },
+    "toasts": {
+      "cancelTerminationSuccess": "Se canceló la desvinculación programada.",
+      "cancelTerminationFailed": "Error al cancelar la desvinculación: {{error}}",
+      "resendContractSuccess": "Contrato reenviado.",
+      "resendContractFailed": "Error al reenviar el contrato: {{error}}",
+      "unassignPolicyFailed": "Error al quitar la política: {{error}}",
+      "assignPolicyFailed": "Error al asignar la política: {{error}}"
+    },
+    "payslipModal": {
+      "contractTitle": "Contrato",
+      "contractHelperText": "Este es el documento exacto generado para este contrato."
+    }
+  },
+  "terminateModal": {
+    "title": "Desvincular a {{name}}",
+    "alertInfo": "Esto va a finalizar el contrato de {{name}} en Northstack. Una vez que tome efecto, su estado va a cambiar a Desvinculado.",
+    "fields": {
+      "lastDay": "Último día",
+      "amount": "Monto",
+      "currency": "Moneda",
+      "paymentDate": "Fecha de pago",
+      "label": "Etiqueta",
+      "type": "Tipo",
+      "note": "Nota"
+    },
+    "effectImmediate": "Esto va a tomar efecto de inmediato una vez confirmado.",
+    "effectFuture": "Esto va a tomar efecto el {{date}}.",
+    "directReportsCount": "Reportes directos ({{count}})",
+    "directReportsHelp": "Estas personas le reportan a {{name}}. Opcionalmente, reasigná a cada una a un nuevo responsable — quien quede sin reasignar se va a quedar sin responsable una vez que esto tome efecto.",
+    "revokeAccessLabel": "También revocar su acceso a Northstack",
+    "includeFinalPaymentLabel": "Incluir un pago final",
+    "finalPaymentDefaultLabel": "Pago final",
+    "additionalPaymentsNote": "Pagos adicionales — las mismas opciones que en una corrida de nómina normal",
+    "addLine": "+ Agregar línea",
+    "removeLineAriaLabel": "Quitar línea",
+    "scheduleTermination": "Programar desvinculación",
+    "terminateNow": "Desvincular ahora",
+    "saving": "Guardando…",
+    "toasts": {
+      "invalidFinalAmount": "Ingresá un monto válido para el pago final.",
+      "invalidLineAmount": "Ingresá un monto válido para cada línea de pago adicional.",
+      "terminatedSuccess": "Empleado desvinculado.",
+      "terminationScheduled": "Desvinculación programada para el {{date}}.",
+      "terminateFailed": "Error al desvincular al empleado: {{error}}"
+    }
+  },
+  "payroll": {
+    "common": {
+      "entryTypeLabels": {
+        "base": "Pago",
+        "bonus": "Bono",
+        "commission": "Comisión",
+        "reimbursement": "Reembolso",
+        "deduction": "Deducción"
+      },
+      "compensationTypeLabels": {
+        "hourly": "Por hora",
+        "fixed": "Fijo"
+      },
+      "statusLabels": {
+        "draft": "Borrador",
+        "confirmed": "Confirmado"
+      }
+    },
+    "payslipPreview": {
+      "title": "Vista previa del recibo",
+      "helperText": "Solo vista previa — no se envió.",
+      "loading": "Cargando vista previa…",
+      "download": "Descargar"
+    },
+    "page": {
+      "title": "Nómina",
+      "ownerOnly": "Nómina solo es visible para el dueño del tenant.",
+      "tabs": {
+        "timeline": "Línea de tiempo",
+        "assignments": "Asignaciones",
+        "policies": "Políticas de pago"
+      },
+      "dayOfWeekLabels": {
+        "monday": "Lunes",
+        "tuesday": "Martes",
+        "wednesday": "Miércoles",
+        "thursday": "Jueves",
+        "friday": "Viernes",
+        "saturday": "Sábado",
+        "sunday": "Domingo"
+      },
+      "dueDateLabels": {
+        "same_day": "El mismo día",
+        "plus_2": "+2 días",
+        "plus_5": "+5 días",
+        "custom": "Personalizado",
+        "customDays": "+{{count}} días"
+      },
+      "anchorConfig": {
+        "firstAnd15th": "1 y 15",
+        "fifteenAndLast": "15 y último día",
+        "customDays": "{{day1}} y {{day2}}",
+        "firstBusinessDay": "Primer día hábil",
+        "lastBusinessDay": "Último día hábil",
+        "customDay": "Día {{day}}",
+        "none": "—"
+      },
+      "timeline": {
+        "description": "Cada corrida de nómina y pago único en un solo lugar, del más reciente al más antiguo.",
+        "oneOffPayment": "Pago único",
+        "newRun": "Nueva corrida",
+        "emptyTitle": "Todavía no hay actividad de nómina",
+        "emptyBody": "Creá una corrida para una frecuencia de pago, o registrá un pago único.",
+        "runMeta": "{{date}} · Corrida",
+        "open": "Abrir",
+        "payslipPreview": "Vista previa del recibo",
+        "payslipPreviewAriaLabel": "Vista previa del recibo de {{name}}",
+        "runChip": "Corrida",
+        "oneOffChip": "Único",
+        "columns": {
+          "date": "Fecha",
+          "type": "Tipo",
+          "detail": "Detalle",
+          "status": "Estado"
+        }
+      },
+      "assignments": {
+        "description": "Asigná una política a quienes todavía no tienen una, o migrá a un grupo a una nueva. Las personas nuevas reciben su primer contrato desde su propia alta, no acá.",
+        "assignReassign": "Asignar/Reasignar política ({{count}})",
+        "emptyTitle": "Todavía no hay contratistas ni empleados",
+        "emptyBody": "Agregá Personas con Tipo Contratista o Empleado para asignar una política de pago.",
+        "goToPeople": "Ir a Personas",
+        "draftTab": "Borrador ({{count}})",
+        "confirmedTab": "Confirmadas ({{count}})",
+        "terminatedTab": "Desvinculadas ({{count}})",
+        "noTerminated": "No hay asignaciones desvinculadas.",
+        "noDraft": "No hay asignaciones en borrador.",
+        "noConfirmed": "No hay asignaciones confirmadas.",
+        "selectAll": "Seleccionar todo",
+        "noPolicyAssigned": "Sin política asignada",
+        "terminatedStatus": "Desvinculado {{date}}",
+        "columns": {
+          "name": "Nombre",
+          "email": "Email",
+          "policy": "Política",
+          "status": "Estado",
+          "currentPolicy": "Política actual"
+        }
+      },
+      "policies": {
+        "payFrequenciesTitle": "Frecuencias de pago",
+        "payFrequenciesDesc": "Asignar una política y un monto a cada persona se hace desde su perfil, no acá.",
+        "emptyTitle": "Todavía no hay frecuencias de pago",
+        "emptyBody": "Una frecuencia de pago define cada cuánto y en qué fecha cobra cada persona.",
+        "newPolicy": "Nueva política",
+        "activeTab": "Activas ({{count}})",
+        "deactivatedTab": "Desactivadas ({{count}})",
+        "noActive": "No hay frecuencias de pago activas.",
+        "noDeactivated": "No hay frecuencias de pago desactivadas.",
+        "assignedCount": "{{count}} asignados",
+        "editAriaLabel": "Editar {{name}}",
+        "edit": "Editar",
+        "columns": {
+          "name": "Nombre",
+          "cadence": "Cadencia",
+          "payDays": "Día(s) de pago",
+          "dueDate": "Fecha límite",
+          "assigned": "Asignados",
+          "actions": "Acciones"
+        },
+        "paymentMethodsTitle": "Métodos de pago",
+        "addMethod": "Agregar método",
+        "deactivate": "Desactivar",
+        "activate": "Activar"
+      },
+      "cadenceLabels": {
+        "weekly": "Semanal",
+        "semimonthly": "Quincenal",
+        "monthly": "Mensual"
+      },
+      "toasts": {
+        "loadFailed": "Error al cargar la configuración de nómina: {{error}}",
+        "frequencyUpdated": "Frecuencia de pago actualizada.",
+        "frequencyCreated": "Frecuencia de pago creada.",
+        "frequencySaveFailed": "Error al guardar la frecuencia de pago: {{error}}",
+        "methodAdded": "Método de pago agregado.",
+        "methodAddFailed": "Error al agregar el método de pago: {{error}}",
+        "methodDeactivated": "Método de pago desactivado.",
+        "methodActivated": "Método de pago activado.",
+        "methodUpdateFailed": "Error al actualizar el método de pago: {{error}}",
+        "assignmentFailedCount": "{{failed}} de {{total}} asignación(es) fallaron.",
+        "assignedSuccess_one": "Se asignó la política de pago a {{count}} persona.",
+        "assignedSuccess_other": "Se asignó la política de pago a {{count}} personas.",
+        "assignFailed": "Error al asignar la política de pago: {{error}}",
+        "runCreated": "Corrida de nómina creada.",
+        "runCreateFailed": "Error al crear la corrida: {{error}}",
+        "offPaymentCreated_one": "Se creó {{count}} pago único.",
+        "offPaymentCreated_other": "Se crearon {{count}} pagos únicos.",
+        "offPaymentFailed": "Error al crear el pago único: {{error}}"
+      },
+      "newRunModal": {
+        "title": "Nueva corrida",
+        "fields": {
+          "payFrequency": "Frecuencia de pago",
+          "period": "Período",
+          "periodPlaceholder": "ej. 2da quincena · agosto 2026"
+        },
+        "create": "Crear",
+        "creating": "Creando…"
+      },
+      "offPaymentModal": {
+        "title": "Pago único",
+        "createFor": "Crear para {{count}}",
+        "fields": {
+          "type": "Tipo",
+          "amount": "Monto ({{currency}})",
+          "currency": "Moneda",
+          "paymentDate": "Fecha de pago",
+          "note": "Nota",
+          "peopleTitle": "Personas"
+        },
+        "typeOptions": {
+          "bonus": "Bono",
+          "commission": "Comisión",
+          "reimbursement": "Reembolso",
+          "deduction": "Deducción"
+        },
+        "columns": {
+          "name": "Nombre"
+        }
+      },
+      "frequencyModal": {
+        "editTitle": "Editar frecuencia de pago",
+        "newTitle": "Nueva frecuencia de pago",
+        "fields": {
+          "name": "Nombre",
+          "namePlaceholder": "ej. Semanal",
+          "cadence": "Cadencia",
+          "dayOfWeek": "Día de la semana",
+          "payDays": "Días de pago",
+          "payDay": "Día de pago",
+          "dueDate": "Fecha límite",
+          "days": "Días",
+          "active": "Activa"
+        },
+        "cadenceOptions": {
+          "weekly": "Semanal",
+          "semimonthly": "Quincenal",
+          "monthly": "Mensual"
+        },
+        "semimonthlyOptions": {
+          "first15": "1 y 15",
+          "fifteenLast": "15 y último día",
+          "custom": "Personalizado",
+          "and": "y"
+        },
+        "monthlyOptions": {
+          "firstBusinessDay": "Primer día hábil",
+          "lastBusinessDay": "Último día hábil",
+          "custom": "Personalizado"
+        },
+        "dueDateOptions": {
+          "sameDay": "El mismo día",
+          "plus2": "+2 días",
+          "plus5": "+5 días",
+          "custom": "Personalizado"
+        },
+        "save": "Guardar",
+        "saving": "Guardando…"
+      },
+      "methodModal": {
+        "title": "Agregar método de pago",
+        "fields": {
+          "name": "Nombre"
+        }
+      },
+      "assignModal": {
+        "title": "Asignar / Reasignar política",
+        "newPolicySectionTitle": "Política nueva (aplica a todos los seleccionados)",
+        "fields": {
+          "payFrequency": "Frecuencia de pago",
+          "effectiveFrom": "Vigente desde",
+          "compensationType": "Tipo de compensación",
+          "currency": "Moneda",
+          "jobTitle": "Puesto",
+          "roleDescription": "Descripción del rol"
+        },
+        "compensationTypeOptions": {
+          "hourly": "Por hora",
+          "fixed": "Fijo"
+        },
+        "reviewSectionTitle": "Revisión — monto por persona ({{currency}})",
+        "applyToAllPlaceholder": "Aplicar este monto a todos",
+        "applyToAllSelected": "Aplicar a todos los seleccionados",
+        "columns": {
+          "name": "Nombre",
+          "previous": "Anterior",
+          "newAmount": "Nuevo monto"
+        },
+        "assignTo": "Asignar a {{count}}"
+      }
+    },
+    "runDetail": {
+      "ownerOnly": "Nómina solo es visible para el dueño del tenant.",
+      "runNotFound": "No se encontró la corrida",
+      "backAriaLabel": "Volver a Nómina",
+      "payFrequencyLabel": "Frecuencia de pago: {{name}}",
+      "addPersonToRun": "Agregar persona a esta corrida",
+      "confirmRun": "Confirmar corrida",
+      "confirming": "Confirmando…",
+      "confirmDisabledTooltip": "Cargá las horas de cada persona por hora antes de confirmar",
+      "excludedNotice_one": "{{count}} persona excluida — el contrato todavía no está confirmado.",
+      "excludedNotice_other": "{{count}} personas excluidas — el contrato todavía no está confirmado.",
+      "noOneInRun": "Todavía no hay nadie en esta corrida.",
+      "columns": {
+        "name": "Nombre",
+        "type": "Tipo",
+        "base": "Base",
+        "adjustments": "Ajustes",
+        "total": "Total"
+      },
+      "hoursLabel": "Horas",
+      "rateBaseLine": "Tarifa {{rate}}/hora · Base {{base}}",
+      "hoursLine": "Horas {{hours}}",
+      "adjustmentsButton": "+ Ajustes",
+      "payslipPreviewAriaLabel": "Vista previa del recibo de {{name}}",
+      "payslipPreviewTooltip": "Vista previa del recibo",
+      "inactiveNotice": "{{name}} no está activo/a ({{status}}).",
+      "adjustmentsTable": {
+        "type": "Tipo",
+        "amount": "Monto",
+        "note": "Nota",
+        "removeAriaLabel": "Quitar ajuste"
+      },
+      "adjustmentForm": {
+        "typeLabel": "Tipo",
+        "amountLabel": "Monto",
+        "noteLabel": "Nota",
+        "addAdjustment": "Agregar ajuste",
+        "typeOptions": {
+          "bonus": "Bono",
+          "commission": "Comisión",
+          "reimbursement": "Reembolso",
+          "deduction": "Deducción"
+        }
+      },
+      "addPersonModal": {
+        "title": "Agregar persona a esta corrida",
+        "emptyMessage": "No queda nadie para agregar — o todos los que están en esta frecuencia de pago ya están en esta corrida, o nadie más tiene una compensación activa en {{payFrequency}}.",
+        "fallbackPayFrequency": "la frecuencia de pago de esta corrida",
+        "noActiveCompensationNote": " — sin compensación activa",
+        "add": "Agregar"
+      },
+      "toasts": {
+        "runConfirmed": "Corrida confirmada.",
+        "confirmFailed": "Error al confirmar la corrida: {{error}}",
+        "hoursUpdateFailed": "Error al actualizar las horas: {{error}}",
+        "adjustmentAdded": "Ajuste agregado.",
+        "adjustmentAddFailed": "Error al agregar el ajuste: {{error}}",
+        "adjustmentRemoved": "Ajuste eliminado.",
+        "adjustmentRemoveFailed": "Error al eliminar el ajuste: {{error}}",
+        "peopleLoadFailed": "Error al cargar las personas: {{error}}",
+        "personAdded": "Persona agregada a esta corrida.",
+        "personAddFailed": "Error al agregar a la persona: {{error}}"
+      }
+    }
+  }
+}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, type Company, type Contact, type Opportunity, type Pipeline } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import AutoSaveField from '../common/AutoSaveField';
@@ -51,6 +52,7 @@ export default function OpportunityDetailModal({
   onSaved,
   onRequestDelete,
 }: OpportunityDetailModalProps) {
+  const { t } = useTranslation('crm');
   const toast = useToast();
   const [newContactId, setNewContactId] = useState('');
   const [newContactRole, setNewContactRole] = useState('');
@@ -150,7 +152,7 @@ export default function OpportunityDetailModal({
     try {
       await save({ pipelineId });
     } catch (error) {
-      toast.error('Failed to change pipeline: ' + (error as Error).message);
+      toast.error(t('opportunityDetail.toasts.pipelineChangeFailed', { error: (error as Error).message }));
     }
   };
 
@@ -165,10 +167,10 @@ export default function OpportunityDetailModal({
         isPlaceholder: false,
       });
       await save({ pipelineId: pendingPipelineId });
-      toast.success('Company confirmed, opportunity moved.');
+      toast.success(t('opportunityDetail.toasts.companyConfirmed'));
       setPendingPipelineId(null);
     } catch (error) {
-      toast.error('Failed to confirm company: ' + (error as Error).message);
+      toast.error(t('opportunityDetail.toasts.companyConfirmFailed', { error: (error as Error).message }));
     } finally {
       setCompletingCompany(false);
     }
@@ -185,7 +187,7 @@ export default function OpportunityDetailModal({
       // Backend rejects a move into a `lost` stage with no lossReasonId yet —
       // the field appears right below (now that the stage is 'lost') for the
       // user to fill in as the very next step, no separate Save action needed.
-      toast.error((error as Error).message || 'Failed to update stage.');
+      toast.error((error as Error).message || t('opportunityDetail.toasts.stageUpdateFailed'));
     }
   };
 
@@ -204,7 +206,7 @@ export default function OpportunityDetailModal({
       setNewContactRole('');
       onChanged();
     } catch (error) {
-      toast.error('Failed to link contact: ' + (error as Error).message);
+      toast.error(t('opportunityDetail.toasts.contactLinkFailed', { error: (error as Error).message }));
     }
   };
 
@@ -213,28 +215,32 @@ export default function OpportunityDetailModal({
       await api.removeOpportunityContact(token, opportunity.id, contactId);
       onChanged();
     } catch (error) {
-      toast.error('Failed to unlink contact: ' + (error as Error).message);
+      toast.error(t('opportunityDetail.toasts.contactUnlinkFailed', { error: (error as Error).message }));
     }
   };
 
   const overviewContent = (
     <div className="overview-panel-left">
       <div className="field-group">
-        <h4 className="field-group-title">Deal</h4>
+        <h4 className="field-group-title">{t('opportunityDetail.groups.deal')}</h4>
         <div className="field-group-body">
-          <Field label="Deal Name">
-            <AutoSaveField label="Deal Name" value={opportunity.name} onSave={(v) => save({ name: v })} />
+          <Field label={t('opportunityDetail.fields.dealName')}>
+            <AutoSaveField
+              label={t('opportunityDetail.fields.dealName')}
+              value={opportunity.name}
+              onSave={(v) => save({ name: v })}
+            />
           </Field>
-          <Field label="Company">
+          <Field label={t('opportunityDetail.fields.company')}>
             <AutoSaveSelect
-              label="Company"
+              label={t('opportunityDetail.fields.company')}
               value={opportunity.companyId}
               onSave={(v) => save({ companyId: v })}
               options={companies.map((c) => ({ value: c.id, label: c.name }))}
-              emptyLabel="-- select --"
+              emptyLabel={t('common.selectPlaceholder')}
             />
           </Field>
-          <Field label="Pipeline">
+          <Field label={t('opportunityDetail.fields.pipeline')}>
             <div className="dropdown-trigger-wrap">
               <select
                 className="dropdown-trigger dt-status"
@@ -255,14 +261,16 @@ export default function OpportunityDetailModal({
             </div>
           </Field>
           {pendingPipelineId && (
-            <Field label="Confirm company details to move pipeline" full>
+            <Field label={t('opportunityDetail.pendingPipelineChange.fieldLabel')} full>
               <div className="mt-1 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-dark-line">
                 <p className="text-xs text-ink-muted">
-                  {opportunity.company?.name} is still a placeholder — add its real details to move this deal into{' '}
-                  {pipelines.find((p) => p.id === pendingPipelineId)?.name}.
+                  {t('opportunityDetail.pendingPipelineChange.note', {
+                    companyName: opportunity.company?.name,
+                    pipelineName: pipelines.find((p) => p.id === pendingPipelineId)?.name,
+                  })}
                 </p>
                 <label className="text-xs text-ink-muted" htmlFor="pending-company-industry">
-                  Industry
+                  {t('opportunityDetail.pendingPipelineChange.industry')}
                 </label>
                 <input
                   id="pending-company-industry"
@@ -270,7 +278,7 @@ export default function OpportunityDetailModal({
                   onChange={(e) => setCompanyDraft((d) => ({ ...d, industry: e.target.value }))}
                 />
                 <label className="text-xs text-ink-muted" htmlFor="pending-company-website">
-                  Website
+                  {t('opportunityDetail.pendingPipelineChange.website')}
                 </label>
                 <input
                   id="pending-company-website"
@@ -278,7 +286,7 @@ export default function OpportunityDetailModal({
                   onChange={(e) => setCompanyDraft((d) => ({ ...d, website: e.target.value }))}
                 />
                 <label className="text-xs text-ink-muted" htmlFor="pending-company-phone">
-                  Phone
+                  {t('opportunityDetail.pendingPipelineChange.phone')}
                 </label>
                 <input
                   id="pending-company-phone"
@@ -287,7 +295,7 @@ export default function OpportunityDetailModal({
                 />
                 <div className="flex justify-end gap-2">
                   <button type="button" className="btn-secondary btn-sm" onClick={handleCancelPipelineChange} disabled={completingCompany}>
-                    Cancel
+                    {t('common.cancel')}
                   </button>
                   <button
                     type="button"
@@ -295,43 +303,45 @@ export default function OpportunityDetailModal({
                     onClick={handleCompleteCompanyAndMove}
                     disabled={completingCompany}
                   >
-                    {completingCompany ? 'Saving...' : 'Confirm & Move'}
+                    {completingCompany
+                      ? t('opportunityDetail.pendingPipelineChange.saving')
+                      : t('opportunityDetail.pendingPipelineChange.confirmAndMove')}
                   </button>
                 </div>
               </div>
             </Field>
           )}
-          <Field label="Amount">
+          <Field label={t('opportunityDetail.fields.amount')}>
             <AutoSaveField
-              label="Amount"
+              label={t('opportunityDetail.fields.amount')}
               type="number"
               value={(opportunity.amountCents / 100).toString()}
               onSave={(v) => save({ amountCents: Math.round(Number.parseFloat(v || '0') * 100) })}
             />
           </Field>
-          <Field label="Currency">
+          <Field label={t('opportunityDetail.fields.currency')}>
             <AutoSaveField
-              label="Currency"
+              label={t('opportunityDetail.fields.currency')}
               value={opportunity.currency}
               onSave={(v) => save({ currency: v.toUpperCase() })}
             />
           </Field>
-          <Field label="Owner">
+          <Field label={t('opportunityDetail.fields.owner')}>
             <AutoSaveSelect
-              label="Owner"
+              label={t('opportunityDetail.fields.owner')}
               value={opportunity.ownerId ?? ''}
               onSave={(v) => save({ ownerId: v || null })}
               options={tenantUsers.map((u) => ({ value: u.id, label: `${u.firstName} ${u.lastName}` }))}
-              emptyLabel="-- unassigned --"
+              emptyLabel={t('opportunityDetail.fields.ownerUnassigned')}
             />
           </Field>
         </div>
       </div>
 
       <div className="field-group">
-        <h4 className="field-group-title">Stage</h4>
+        <h4 className="field-group-title">{t('opportunityDetail.groups.stage')}</h4>
         <div className="field-group-body">
-          <Field label="Stage">
+          <Field label={t('opportunityDetail.fields.stage')}>
             <div className="dropdown-trigger-wrap">
               <select
                 className="dropdown-trigger dt-status"
@@ -352,11 +362,17 @@ export default function OpportunityDetailModal({
           {currentStage?.outcome === 'lost' && (
             <div className="overview-field">
               <div className="flex items-center justify-between">
-                <span className="overview-field-label">Loss Reason</span>
-                <FieldCatalogMenu token={token} kind="lossReason" label="Loss Reason" entries={lossReasons} onChanged={onReasonsChanged} />
+                <span className="overview-field-label">{t('opportunityDetail.fields.lossReason')}</span>
+                <FieldCatalogMenu
+                  token={token}
+                  kind="lossReason"
+                  label={t('opportunityDetail.fields.lossReason')}
+                  entries={lossReasons}
+                  onChanged={onReasonsChanged}
+                />
               </div>
               <AutoSaveSelect
-                label="Loss Reason"
+                label={t('opportunityDetail.fields.lossReason')}
                 value={opportunity.lossReasonId || ''}
                 onSave={(v) => save({ lossReasonId: v || null })}
                 options={lossReasons.filter((lr) => lr.isActive).map((lr) => ({ value: lr.id, label: lr.name }))}
@@ -366,11 +382,17 @@ export default function OpportunityDetailModal({
           {currentStage?.outcome === 'won' && (
             <div className="overview-field">
               <div className="flex items-center justify-between">
-                <span className="overview-field-label">Win Reason</span>
-                <FieldCatalogMenu token={token} kind="winReason" label="Win Reason" entries={winReasons} onChanged={onReasonsChanged} />
+                <span className="overview-field-label">{t('opportunityDetail.fields.winReason')}</span>
+                <FieldCatalogMenu
+                  token={token}
+                  kind="winReason"
+                  label={t('opportunityDetail.fields.winReason')}
+                  entries={winReasons}
+                  onChanged={onReasonsChanged}
+                />
               </div>
               <AutoSaveSelect
-                label="Win Reason"
+                label={t('opportunityDetail.fields.winReason')}
                 value={opportunity.winReasonId || ''}
                 onSave={(v) => save({ winReasonId: v || null })}
                 options={winReasons.filter((wr) => wr.isActive).map((wr) => ({ value: wr.id, label: wr.name }))}
@@ -378,21 +400,19 @@ export default function OpportunityDetailModal({
             </div>
           )}
           {(currentStage?.outcome === 'won' || currentStage?.outcome === 'lost') && (
-            <Field label="Close Note" full>
+            <Field label={t('opportunityDetail.fields.closeNote')} full>
               <AutoSaveField
-                label="Close Note"
+                label={t('opportunityDetail.fields.closeNote')}
                 value={opportunity.closeNote || ''}
                 onSave={(v) => save({ closeNote: v || null })}
-                placeholder="Optional details about how this deal closed"
+                placeholder={t('opportunityDetail.fields.closeNotePlaceholder')}
               />
             </Field>
           )}
           {wonOfferPipelineId && (
-            <Field label="Move to account pipeline?" full>
+            <Field label={t('opportunityDetail.wonOffer.fieldLabel')} full>
               <div className="mt-1 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-dark-line">
-                <p className="text-xs text-ink-muted">
-                  Won! Move this deal into an account pipeline to keep tracking it there.
-                </p>
+                <p className="text-xs text-ink-muted">{t('opportunityDetail.wonOffer.note')}</p>
                 <select
                   value={wonOfferPipelineId}
                   onChange={(e) => setWonOfferPipelineId(e.target.value)}
@@ -407,10 +427,10 @@ export default function OpportunityDetailModal({
                 </select>
                 <div className="flex justify-end gap-2">
                   <button type="button" className="btn-secondary btn-sm" onClick={() => setWonOfferPipelineId(null)}>
-                    Not now
+                    {t('opportunityDetail.wonOffer.notNow')}
                   </button>
                   <button type="button" className="btn-primary btn-sm" onClick={handleAcceptWonOffer}>
-                    Move
+                    {t('opportunityDetail.wonOffer.move')}
                   </button>
                 </div>
               </div>
@@ -420,30 +440,30 @@ export default function OpportunityDetailModal({
       </div>
 
       <div className="field-group">
-        <h4 className="field-group-title">Next step</h4>
+        <h4 className="field-group-title">{t('opportunityDetail.groups.nextStep')}</h4>
         <div className="field-group-body">
-          <Field label="Estimated Close Date">
+          <Field label={t('opportunityDetail.fields.estimatedCloseDate')}>
             <AutoSaveField
-              label="Estimated Close Date"
+              label={t('opportunityDetail.fields.estimatedCloseDate')}
               type="date"
               value={opportunity.estimatedCloseDate ? opportunity.estimatedCloseDate.slice(0, 10) : ''}
               onSave={(v) => save({ estimatedCloseDate: v || null })}
             />
           </Field>
-          <Field label="Next Step Date">
+          <Field label={t('opportunityDetail.fields.nextStepDate')}>
             <AutoSaveField
-              label="Next Step Date"
+              label={t('opportunityDetail.fields.nextStepDate')}
               type="date"
               value={opportunity.nextStepDate ? opportunity.nextStepDate.slice(0, 10) : ''}
               onSave={(v) => save({ nextStepDate: v || null })}
             />
           </Field>
-          <Field label="Next Step" full>
+          <Field label={t('opportunityDetail.fields.nextStep')} full>
             <AutoSaveField
-              label="Next Step"
+              label={t('opportunityDetail.fields.nextStep')}
               value={opportunity.nextStepNote || ''}
               onSave={(v) => save({ nextStepNote: v || null })}
-              placeholder="What's the next action?"
+              placeholder={t('opportunityDetail.fields.nextStepPlaceholder')}
             />
           </Field>
         </div>
@@ -451,7 +471,9 @@ export default function OpportunityDetailModal({
 
       <div className="overview-field overview-field-full">
         <div className="min-w-0 flex-1">
-          <span className="overview-field-label">Contacts ({opportunity.contactLinks?.length ?? 0})</span>
+          <span className="overview-field-label">
+            {t('opportunityDetail.contactsSection.heading', { count: opportunity.contactLinks?.length ?? 0 })}
+          </span>
           {(opportunity.contactLinks ?? []).map((link) => (
             <div key={link.id} className="flex items-center justify-between gap-2 py-1 text-sm">
               <span>
@@ -459,14 +481,14 @@ export default function OpportunityDetailModal({
                 {link.role ? ` (${link.role})` : ''}
               </span>
               <button type="button" className="icon-btn danger" onClick={() => handleRemoveContact(link.contactId)}>
-                <span className="tip">Unlink</span>
+                <span className="tip">{t('opportunityDetail.contactsSection.unlinkTooltip')}</span>
                 <XIcon className="h-3.5 w-3.5" />
               </button>
             </div>
           ))}
           <div className="mt-2 flex items-center gap-1.5">
             <select className="select-compact flex-1" value={newContactId} onChange={(e) => setNewContactId(e.target.value)}>
-              <option value="">-- add contact --</option>
+              <option value="">{t('opportunityDetail.contactsSection.addContactPlaceholder')}</option>
               {linkableContacts.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.firstName} {c.lastName}
@@ -476,12 +498,12 @@ export default function OpportunityDetailModal({
             <input
               className="w-24"
               type="text"
-              placeholder="Role"
+              placeholder={t('opportunityDetail.contactsSection.rolePlaceholder')}
               value={newContactRole}
               onChange={(e) => setNewContactRole(e.target.value)}
             />
             <button type="button" className="icon-btn" onClick={handleAddContact} disabled={!newContactId}>
-              <span className="tip">Add</span>
+              <span className="tip">{t('opportunityDetail.contactsSection.addTooltip')}</span>
               <PlusIcon className="h-3.5 w-3.5" />
             </button>
           </div>
@@ -502,9 +524,9 @@ export default function OpportunityDetailModal({
         <div className="overview-panel-head">
           <OverviewActionsMenu
             className="overview-actions-trigger"
-            items={[{ label: 'Delete', onClick: onRequestDelete, danger: true }]}
+            items={[{ label: t('opportunityDetail.deleteMenuItem'), onClick: onRequestDelete, danger: true }]}
           />
-          <button type="button" className="slideover-close" onClick={onClose} aria-label="Close">
+          <button type="button" className="slideover-close" onClick={onClose} aria-label={t('detail.closeAria')}>
             <XIcon className="h-4 w-4" />
           </button>
           <div className="overview-panel-heading">
@@ -531,7 +553,9 @@ export default function OpportunityDetailModal({
             })}
             {timeInStage !== null && (
               <span className="ml-auto shrink-0 text-xs text-ink-faint">
-                {timeInStage === 0 ? 'Entered today' : `${timeInStage}d in stage`}
+                {timeInStage === 0
+                  ? t('opportunityDetail.stageStrip.enteredToday')
+                  : t('opportunityDetail.stageStrip.daysInStage', { count: timeInStage })}
               </span>
             )}
           </div>
@@ -545,28 +569,34 @@ export default function OpportunityDetailModal({
                 className={mobileSection === 'overview' ? 'active' : ''}
                 onClick={() => setMobileSection('overview')}
               >
-                Overview
+                {t('detail.mobileTabs.overview')}
               </button>
               <button
                 type="button"
                 className={mobileSection === 'notes' ? 'active' : ''}
                 onClick={() => setMobileSection('notes')}
               >
-                Notes{sidebarCounts.notes > 0 ? ` (${sidebarCounts.notes})` : ''}
+                {sidebarCounts.notes > 0
+                  ? t('detail.mobileTabs.notesWithCount', { count: sidebarCounts.notes })
+                  : t('detail.mobileTabs.notes')}
               </button>
               <button
                 type="button"
                 className={mobileSection === 'tasks' ? 'active' : ''}
                 onClick={() => setMobileSection('tasks')}
               >
-                Tasks{sidebarCounts.tasks > 0 ? ` (${sidebarCounts.tasks})` : ''}
+                {sidebarCounts.tasks > 0
+                  ? t('detail.mobileTabs.tasksWithCount', { count: sidebarCounts.tasks })
+                  : t('detail.mobileTabs.tasks')}
               </button>
               <button
                 type="button"
                 className={mobileSection === 'activity' ? 'active' : ''}
                 onClick={() => setMobileSection('activity')}
               >
-                Activity{sidebarCounts.activity > 0 ? ` (${sidebarCounts.activity})` : ''}
+                {sidebarCounts.activity > 0
+                  ? t('detail.mobileTabs.activityWithCount', { count: sidebarCounts.activity })
+                  : t('detail.mobileTabs.activity')}
               </button>
             </div>
             <div style={{ display: mobileSection === 'overview' ? 'contents' : 'none' }}>{overviewContent}</div>

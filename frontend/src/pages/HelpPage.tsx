@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useScrollSpy } from '../hooks/useScrollSpy';
 import LegalDocumentModal from '../components/common/LegalDocumentModal';
 import {
@@ -223,23 +224,234 @@ const FAQ_CATEGORIES: FaqCategory[] = [
   },
 ];
 
+const FAQ_CATEGORIES_ES: FaqCategory[] = [
+  {
+    id: 'f-account',
+    label: 'Cuenta y acceso',
+    icon: <UserCircleIcon />,
+    items: [
+      {
+        q: '¿Qué pasa cuando termina mi prueba de 15 días?',
+        a: 'No se rompe nada de entrada. Tenés un período de gracia de 14 días con un banner recordándote agregar un método de pago — todo sigue funcionando igual. Recién cuando ese plazo vence, el espacio de trabajo pasa a modo solo lectura, bloqueando creaciones, ediciones y eliminaciones nuevas hasta que te suscribas.',
+      },
+      {
+        q: 'Mi espacio de trabajo dice que está en modo "solo lectura" — ¿qué significa?',
+        a: 'Tu prueba y tu período de gracia vencieron sin que hubiera una suscripción activa. Vos y tu equipo pueden seguir viendo todo, pero no pueden crear, editar ni eliminar registros hasta que haya un plan activo. Agregar un método de pago levanta la restricción al instante.',
+      },
+      {
+        q: '¿Hay una app de Northstack para mi celular?',
+        a: 'Todavía no — no hay una app en el App Store ni en Play Store. El sitio funciona bien desde el navegador del celular, con menús y formularios adaptados a una pantalla chica.',
+      },
+      {
+        q: '¿Puedo cambiar mi dirección de email?',
+        a: 'En Configuración → Perfil podés actualizar tu nombre, teléfono y contraseña. El email todavía no se puede editar ahí mismo — escribinos a info@joinnorthstack.com si necesitás cambiarlo.',
+      },
+      {
+        q: 'Alguien dejó la empresa — ¿cómo elimino su acceso?',
+        a: 'Si la persona figura como Empleado, dá de baja su registro (ver la sección de Nómina de la Guía del usuario) y marcá la opción "También revocar su acceso". Si no, cambiá su estado desde Configuración → Usuarios.',
+      },
+    ],
+  },
+  {
+    id: 'f-roles',
+    label: 'Roles y permisos',
+    icon: <TeamIcon />,
+    items: [
+      {
+        q: '¿Cuál es la diferencia entre Owner, Admin y Member?',
+        a: 'Owner es un rol fijo que siempre tiene acceso total — hay exactamente uno por espacio de trabajo. Admin y Member son apenas roles de partida que podés renombrar, reconfigurar o eliminar libremente, igual que cualquier rol que crees vos desde cero.',
+      },
+      {
+        q: '¿Puedo limitar un rol para que solo vea sus propios registros, o los de su departamento?',
+        a: 'Todavía no. Hoy los roles controlan qué módulos y acciones puede usar alguien, y qué campos puede ver — no qué registros específicos. Cualquiera con acceso de vista a un módulo ve todos los registros que tiene.',
+      },
+      {
+        q: '¿Quién puede ver el sueldo de un empleado?',
+        a: 'Por default, solo el Owner — y, más allá de eso, solo un rol al que le hayas dado explícitamente el permiso Gestionar nómina, o acceso a nivel de campo a los campos de compensación. Todavía no existe una vista de autoconsulta para que alguien vea su propio sueldo.',
+      },
+      {
+        q: '¿Cómo transfiero la titularidad del espacio de trabajo?',
+        a: 'Solo el Owner actual puede hacerlo — desde Configuración → Usuarios, elegí "Owner (transfer ownership)" junto al nombre de la persona y confirmá. Esto degrada automáticamente al Owner saliente a Admin.',
+      },
+      {
+        q: 'No puedo eliminar un rol — ¿por qué?',
+        a: 'Un rol no se puede eliminar mientras alguien lo tenga asignado. Primero pasá a todas las personas de ese rol a otro distinto, desde Configuración → Usuarios.',
+      },
+    ],
+  },
+  {
+    id: 'f-billing',
+    label: 'Facturación y planes',
+    icon: <CreditCardIcon />,
+    items: [
+      {
+        q: '¿Qué diferencia hay entre Starter y Growth?',
+        a: 'Growth saca los topes de pipelines, políticas de ausencias y roles personalizados, sube los puestos incluidos de 5 a 10, guarda el historial de actividad 30 días en vez de 7, y es el único plan que incluye Nómina y Pagos (tu propia cuenta de Stripe).',
+      },
+      {
+        q: '¿Cómo funcionan los puestos (seats)?',
+        a: 'Cada persona activa en tu espacio de trabajo cuenta como un puesto, sin importar el rol. Starter incluye 5, Growth incluye 10 — si te pasás, cada puesto extra se factura automáticamente a $4/mes, sin límite duro una vez que estás en un plan real. La prueba gratuita (antes de elegir un plan) está limitada a 5 personas, porque todavía no hay facturación configurada para cubrir a nadie por encima de eso.',
+      },
+      {
+        q: '¿Elijo yo mismo entre Dodo Payments y Mercado Pago?',
+        a: 'No — es automático, según el país de tu espacio de trabajo. Argentina factura a través de Mercado Pago en ARS; el resto de los países factura a través de Dodo Payments en USD.',
+      },
+      {
+        q: '¿Northstack guarda el número de mi tarjeta?',
+        a: 'No. El checkout ocurre en la página segura propia de Dodo Payments o Mercado Pago — Northstack nunca recibe ni guarda los datos completos de la tarjeta.',
+      },
+      {
+        q: 'Si cancelo, ¿pierdo el acceso de inmediato?',
+        a: 'No — mantenés acceso total hasta el final del período que ya pagaste. Hasta entonces queda disponible un botón "Resume subscription" (Reanudar suscripción) por si cambiás de idea.',
+      },
+      {
+        q: '¿Puedo cambiar de plan a mitad de ciclo?',
+        a: 'Sí. Si ya estás en un plan pago, el cambio queda programado para tu próxima fecha de facturación. Si todavía estás en la prueba y no tenés una tarjeta cargada, elegir un plan nuevo te lleva directo al checkout.',
+      },
+    ],
+  },
+  {
+    id: 'f-sales',
+    label: 'Ventas y CRM',
+    icon: <TargetIcon />,
+    items: [
+      {
+        q: '¿Por qué no puedo poner el estado de una empresa a mano?',
+        a: 'Se calcula automáticamente según cómo cierran los negocios de esa empresa (ganados o perdidos), así que siempre refleja la realidad. Igual podés renombrar, recolorear y reordenar las opciones de estado.',
+      },
+      {
+        q: '¿Por qué crear una empresa me pide un contacto?',
+        a: 'Toda empresa necesita al menos una persona a la que contactar, así que el formulario "Add Company" siempre pide un contacto fundador en el mismo paso — después podés agregar más contactos.',
+      },
+      {
+        q: '¿Qué significa "valor ponderado" en un pipeline?',
+        a: 'Es el monto de cada negocio abierto multiplicado por la probabilidad de cierre de su etapa, y después sumado — un pronóstico realista en vez del total del pipeline sin ajustar.',
+      },
+      {
+        q: '¿Cómo decide la asignación round-robin quién recibe un negocio nuevo?',
+        a: 'Rota parejo entre la lista de personas (o el departamento) que configuraste en ese pipeline, eligiendo siempre a alguien que esté activo en ese momento. Se configura por pipeline desde Configuración → Pipelines.',
+      },
+      {
+        q: '¿Puedo usar Vistas guardadas en Oportunidades?',
+        a: 'No — las Oportunidades siempre se recorren a través de las pestañas de pipeline y el tablero Kanban. Las Vistas guardadas (Cuadrícula/Lista/Kanban) son una función de Empresas y Contactos.',
+      },
+    ],
+  },
+  {
+    id: 'f-hr',
+    label: 'RRHH y nómina',
+    icon: <BriefcaseIcon />,
+    items: [
+      {
+        q: '¿Puedo deshacer una corrida de nómina confirmada?',
+        a: 'No — confirmar una corrida la bloquea para siempre; después no se pueden agregar, editar ni eliminar líneas. Revisá bien las horas y los ajustes antes de confirmar.',
+      },
+      {
+        q: '¿El PDF del recibo de sueldo es un documento legal?',
+        a: 'No. Dice explícitamente "Preview only — not sent" ("Solo vista previa — no enviado"), pensado como documento de referencia, no como un recibo de sueldo oficial ni con validez legal.',
+      },
+      {
+        q: '¿Nómina realmente le paga a la gente, o mueve dinero?',
+        a: 'No — es una herramienta de registro, no un procesador de pagos. Desde Northstack no se hace ninguna transferencia; vos seguís pagándole a la gente a través de tu propio banco o proveedor de pagos, y acá solo lo registrás.',
+      },
+      {
+        q: '¿Qué pasa con el saldo de ausencias de alguien si le cambio la política?',
+        a: 'Sus solicitudes pasadas quedan intactas — los saldos se calculan en el momento a partir de las asignaciones actuales y las solicitudes aprobadas, así que un cambio de política solo afecta lo que pasa de ahí en adelante.',
+      },
+      {
+        q: '¿Qué pasa automáticamente cuando doy de baja a un empleado?',
+        a: 'Su estado pasa a Dado de baja, su compensación se cierra para que deje de aparecer en las próximas corridas de nómina, sus ausencias pendientes se cancelan, y las personas que le reportan directamente se reasignan a un manager que elegís vos. El acceso a la app solo se revoca si marcás esa opción.',
+      },
+      {
+        q: 'Una persona recién contratada no aparece en mi corrida de nómina — ¿por qué?',
+        a: 'Es probable que su primer contrato de pago todavía no esté confirmado — fijate si tiene un chip "Contrato: pendiente" en su perfil, que pasa a "Vencido" después de 3 días.',
+      },
+    ],
+  },
+  {
+    id: 'f-data',
+    label: 'Datos y seguridad',
+    icon: <LockIcon />,
+    items: [
+      {
+        q: '¿Mis datos son visibles para otras empresas que usan Northstack?',
+        a: 'No. Los datos de cada espacio de trabajo — registros, campos personalizados, configuración — están totalmente aislados y nunca se comparten entre espacios de trabajo.',
+      },
+      {
+        q: '¿Los envíos de un formulario público necesitan aprobación antes de aparecer?',
+        a: 'No — un envío crea un registro real de inmediato, sin ninguna cola de revisión en el medio. Si querés evaluar a las personas antes de tratarlas como activas, usá un campo de estado como tu propio paso de "en revisión".',
+      },
+      {
+        q: '¿Qué módulos permiten importar y exportar CSV?',
+        a: 'Por ahora, Personas (Empleados), Empresas y Contactos. Oportunidades todavía no tiene soporte de CSV.',
+      },
+      {
+        q: 'Todo lo que aparece en la pestaña de Actividad de un registro — ¿hasta cuándo llega hacia atrás?',
+        a: '7 días en Starter, 30 días en Growth — las entradas más viejas que esa ventana se eliminan automáticamente.',
+      },
+    ],
+  },
+  {
+    id: 'f-integrations',
+    label: 'Integraciones y API',
+    icon: <PlugIcon />,
+    items: [
+      {
+        q: '¿El módulo de Pagos es lo mismo que mi suscripción a Northstack?',
+        a: 'No, no tienen relación. Tu suscripción a Northstack se factura a través de Dodo Payments o Mercado Pago (ver Facturación y planes). Pagos es un complemento del plan Growth donde conectás tu propia cuenta de Stripe para seguir los pagos de tus clientes.',
+      },
+      {
+        q: '¿La sincronización con Google Calendar funciona en los dos sentidos?',
+        a: 'Sí — editar o eliminar una tarea o un evento de ausencia sincronizado desde el lado de Google también lo actualiza en Northstack.',
+      },
+      {
+        q: '¿Cómo agrego un link de Google Meet a una tarea?',
+        a: 'Marcá "Add Google Meet video call" al crear o editar una tarea — antes necesitás tener Google Calendar conectado. Northstack completa un horario si todavía no pusiste uno, genera el link de Meet en tu calendario, y automáticamente invita al Contacto, al Contacto principal de la Empresa/Oportunidad, o al Empleado sobre quien trata la tarea.',
+      },
+      {
+        q: '¿Dónde veo todas las tareas asignadas a mí, en todos mis registros?',
+        a: 'En Mis tareas (en la barra lateral, debajo de Resumen) — todas las tareas que tenés asignadas o creaste, en un solo lugar, con vistas de Lista y Tablero, búsqueda, un filtro de completadas, y carpetas que podés crear para agrupar tareas relacionadas.',
+      },
+      {
+        q: '¿Puedo configurar webhooks para sacar datos de Northstack?',
+        a: 'Todavía no — hoy no hay una pantalla para configurar webhooks salientes. Mientras tanto, usá la API para consultar cambios periódicamente.',
+      },
+      {
+        q: '¿La documentación de la API es pública?',
+        a: 'No — /developers requiere estar con la sesión iniciada en Northstack. No se puede acceder sin una cuenta.',
+      },
+      {
+        q: 'Perdí mi clave de API — ¿puedo volver a verla?',
+        a: 'No — la clave completa se muestra una sola vez, al crearla. Si la perdiste, revocala y creá una nueva.',
+      },
+    ],
+  },
+];
+
 const TOTAL_QUESTIONS = FAQ_CATEGORIES.reduce((sum, cat) => sum + cat.items.length, 0);
 const NAV_IDS = [...FAQ_CATEGORIES.map((c) => c.id), 'f-contact', 'f-legal'];
 
 export default function HelpPage() {
   const navigate = useNavigate();
+  const { i18n } = useTranslation();
   const [query, setQuery] = useState('');
   const [legalDoc, setLegalDoc] = useState<'terms' | 'privacy' | 'refund' | null>(null);
   const activeId = useScrollSpy(NAV_IDS);
 
+  // Same ids/order as the English array (see NAV_IDS/TOTAL_QUESTIONS above, which stay derived
+  // from FAQ_CATEGORIES directly since both language arrays share that shape) — only the display
+  // text differs.
+  const isSpanish = i18n.language.startsWith('es');
+  const categories = isSpanish ? FAQ_CATEGORIES_ES : FAQ_CATEGORIES;
+
   const filteredCategories = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return FAQ_CATEGORIES;
-    return FAQ_CATEGORIES.map((cat) => ({
+    if (!q) return categories;
+    return categories.map((cat) => ({
       ...cat,
       items: cat.items.filter((item) => `${item.q} ${item.a}`.toLowerCase().includes(q)),
     })).filter((cat) => cat.items.length > 0);
-  }, [query]);
+  }, [query, categories]);
 
   const scrollTo = (id: string) => {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -248,20 +460,24 @@ export default function HelpPage() {
   return (
     <div className="page-full">
       <div className="page-toolbar">
-        <h2>Help &amp; FAQ</h2>
+        <h2>{isSpanish ? 'Ayuda y preguntas frecuentes' : 'Help & FAQ'}</h2>
       </div>
-      <p className="help-lede">Quick answers to the questions that come up most, grouped by topic — search, or browse a category on the left.</p>
+      <p className="help-lede">
+        {isSpanish
+          ? 'Respuestas rápidas a las preguntas más frecuentes, agrupadas por tema — buscá, o navegá una categoría a la izquierda.'
+          : 'Quick answers to the questions that come up most, grouped by topic — search, or browse a category on the left.'}
+      </p>
       <p className="help-crosslink">
-        Looking for a full walkthrough instead?{' '}
+        {isSpanish ? '¿Buscás una guía completa en cambio?' : 'Looking for a full walkthrough instead?'}{' '}
         <a href="/guide" onClick={(e) => { e.preventDefault(); navigate('/guide'); }}>
-          Go to the User Guide →
+          {isSpanish ? 'Ir a la Guía del usuario →' : 'Go to the User Guide →'}
         </a>
       </p>
 
       <div className="help-shell">
         <nav className="help-nav">
           <div className="help-nav-group">
-            {FAQ_CATEGORIES.map((cat) => (
+            {categories.map((cat) => (
               <a
                 key={cat.id}
                 className={`help-nav-link${activeId === cat.id ? ' active' : ''}`}
@@ -280,7 +496,7 @@ export default function HelpPage() {
               onClick={(e) => { e.preventDefault(); scrollTo('f-contact'); }}
             >
               <MailIcon />
-              Contact us
+              {isSpanish ? 'Contactanos' : 'Contact us'}
             </a>
             <a
               className={`help-nav-link${activeId === 'f-legal' ? ' active' : ''}`}
@@ -300,12 +516,18 @@ export default function HelpPage() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search the FAQ… e.g. “trial”, “payslip”, “webhook”"
+              placeholder={
+                isSpanish
+                  ? 'Buscar en las preguntas frecuentes… ej. "prueba", "recibo de sueldo", "webhook"'
+                  : 'Search the FAQ… e.g. “trial”, “payslip”, “webhook”'
+              }
               autoComplete="off"
             />
           </div>
 
-          {filteredCategories.length === 0 && <p className="help-empty">No questions match that search.</p>}
+          {filteredCategories.length === 0 && (
+            <p className="help-empty">{isSpanish ? 'Ninguna pregunta coincide con esa búsqueda.' : 'No questions match that search.'}</p>
+          )}
 
           {filteredCategories.map((cat) => (
             <div className="help-faq-cat" id={cat.id} key={cat.id}>
@@ -328,37 +550,53 @@ export default function HelpPage() {
           ))}
 
           <div className="card help-contact-card" id="f-contact">
-            <h3 className="card-title">Still need help?</h3>
+            <h3 className="card-title">{isSpanish ? '¿Todavía necesitás ayuda?' : 'Still need help?'}</h3>
             <p className="text-sm text-brand-navy dark:text-dark-ink">
-              Can't find what you're looking for? Reach us directly at{' '}
-              <a className="table-link" href="mailto:info@joinnorthstack.com">
-                info@joinnorthstack.com
-              </a>
-              , or use "Send feedback" from your account menu to report a bug or share an idea.
+              {isSpanish ? (
+                <>
+                  ¿No encontrás lo que buscás? Escribinos directamente a{' '}
+                  <a className="table-link" href="mailto:info@joinnorthstack.com">
+                    info@joinnorthstack.com
+                  </a>
+                  , o usá "Enviar comentarios" desde el menú de tu cuenta para reportar un problema o compartir una idea.
+                </>
+              ) : (
+                <>
+                  Can't find what you're looking for? Reach us directly at{' '}
+                  <a className="table-link" href="mailto:info@joinnorthstack.com">
+                    info@joinnorthstack.com
+                  </a>
+                  , or use "Send feedback" from your account menu to report a bug or share an idea.
+                </>
+              )}
             </p>
           </div>
 
           <div className="card help-contact-card" id="f-legal">
             <h3 className="card-title">Legal</h3>
             <p className="text-sm text-brand-navy dark:text-dark-ink mb-2">
-              You'll be notified here and by email whenever one of these changes.
+              {isSpanish
+                ? 'Te vamos a avisar acá y por correo cada vez que alguno de estos documentos cambie.'
+                : "You'll be notified here and by email whenever one of these changes."}
             </p>
             <div className="flex flex-wrap gap-3">
               <button type="button" className="table-link text-sm" onClick={() => setLegalDoc('terms')}>
-                Terms of Service
+                {isSpanish ? 'Términos de Servicio' : 'Terms of Service'}
               </button>
               <button type="button" className="table-link text-sm" onClick={() => setLegalDoc('privacy')}>
-                Privacy Policy
+                {isSpanish ? 'Política de Privacidad' : 'Privacy Policy'}
               </button>
               <button type="button" className="table-link text-sm" onClick={() => setLegalDoc('refund')}>
-                Refund Policy
+                {isSpanish ? 'Política de Reembolsos' : 'Refund Policy'}
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <p className="mt-4 text-xs text-ink-faint dark:text-dark-ink-faint">{TOTAL_QUESTIONS} questions</p>
+      <p className="mt-4 text-xs text-ink-faint dark:text-dark-ink-faint">
+        {TOTAL_QUESTIONS} {isSpanish ? 'preguntas' : 'questions'}
+      </p>
       {legalDoc && <LegalDocumentModal initialDoc={legalDoc} onClose={() => setLegalDoc(null)} />}
     </div>
   );

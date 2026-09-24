@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, ApiError, type Company, type StripeCustomerMatch, type StripePaymentSummary } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import ConfirmDialog from '../common/ConfirmDialog';
@@ -18,6 +19,7 @@ function dashboardCustomerUrl(customerId: string, apiKeyMode: 'test' | 'live' | 
 }
 
 export default function CompanyStripeSection({ token, company, onLinked }: CompanyStripeSectionProps) {
+  const { t } = useTranslation('crm');
   const toast = useToast();
   const [apiKeyMode, setApiKeyMode] = useState<'test' | 'live' | null>(null);
   const [searching, setSearching] = useState(false);
@@ -44,7 +46,7 @@ export default function CompanyStripeSection({ token, company, onLinked }: Compa
     api
       .getCompanyPaymentSummary(token, company.id)
       .then(setSummary)
-      .catch((error) => toast.error('Failed to load payment summary: ' + (error as Error).message));
+      .catch((error) => toast.error(t('companyStripe.toastSummaryFailed', { error: (error as Error).message })));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [company.id, company.stripeCustomerId]);
 
@@ -71,13 +73,13 @@ export default function CompanyStripeSection({ token, company, onLinked }: Compa
       onLinked(updated);
       setMatches(null);
       setPendingOverwrite(null);
-      toast.success('Linked to Stripe.');
+      toast.success(t('companyStripe.toastLinked'));
     } catch (error) {
       if (error instanceof ApiError && error.status === 409) {
         setPendingOverwrite(match);
         return;
       }
-      toast.error('Failed to link: ' + (error as Error).message);
+      toast.error(t('companyStripe.toastLinkFailed', { error: (error as Error).message }));
     } finally {
       setLinkingId(null);
     }
@@ -95,15 +97,15 @@ export default function CompanyStripeSection({ token, company, onLinked }: Compa
               rel="noreferrer"
               className="table-link text-sm"
             >
-              Connected to Stripe →
+              {t('companyStripe.connectedLink')}
             </a>
           </div>
           <div className="flex items-center gap-3">
             <button type="button" className="table-link text-xs" onClick={() => setHistoryOpen(true)}>
-              View full payment history →
+              {t('companyStripe.viewFullHistory')}
             </button>
             <button type="button" className="table-link text-xs" onClick={handleSearch} disabled={searching}>
-              {searching ? 'Searching…' : 'Change link'}
+              {searching ? t('common.searching') : t('companyStripe.changeLink')}
             </button>
           </div>
         </div>
@@ -111,18 +113,22 @@ export default function CompanyStripeSection({ token, company, onLinked }: Compa
         {summary && (
           <div className="mt-2 flex flex-wrap gap-4 text-xs text-ink-muted dark:text-dark-ink-muted">
             <span>
-              Payments: {summary.paymentsCount}
+              {t('companyStripe.summary.payments', { count: summary.paymentsCount })}
               {summary.paymentsCount > 0 && summary.currency && ` (${formatMoney(summary.paymentsAmountCents, summary.currency.toUpperCase())})`}
             </span>
             <span>
-              Refunds: {summary.refundsCount}
+              {t('companyStripe.summary.refunds', { count: summary.refundsCount })}
               {summary.refundsCount > 0 && summary.currency && ` (${formatMoney(summary.refundsAmountCents, summary.currency.toUpperCase())})`}
             </span>
             <span>
-              Disputes: {summary.disputesCount}
+              {t('companyStripe.summary.disputes', { count: summary.disputesCount })}
               {summary.disputesCount > 0 && summary.currency && ` (${formatMoney(summary.disputesAmountCents, summary.currency.toUpperCase())})`}
             </span>
-            {summary.firstPaymentAt && <span>First payment: {new Date(summary.firstPaymentAt).toLocaleDateString()}</span>}
+            {summary.firstPaymentAt && (
+              <span>
+                {t('companyStripe.summary.firstPayment', { date: new Date(summary.firstPaymentAt).toLocaleDateString() })}
+              </span>
+            )}
           </div>
         )}
 
@@ -137,9 +143,9 @@ export default function CompanyStripeSection({ token, company, onLinked }: Compa
 
         {pendingOverwrite && (
           <ConfirmDialog
-            title="Replace the existing Stripe link?"
-            message="This Company is already linked to a different Stripe customer. Linking it to this one instead will replace the existing link."
-            confirmLabel="Replace"
+            title={t('companyStripe.confirmReplace.title')}
+            message={t('companyStripe.confirmReplace.message')}
+            confirmLabel={t('companyStripe.confirmReplace.confirmLabel')}
             onConfirm={() => link(pendingOverwrite, true)}
             onCancel={() => setPendingOverwrite(null)}
           />
@@ -161,7 +167,7 @@ export default function CompanyStripeSection({ token, company, onLinked }: Compa
   return (
     <div>
       <button type="button" className="btn-secondary btn-md" onClick={handleSearch} disabled={searching}>
-        {searching ? 'Searching…' : 'Search on Stripe'}
+        {searching ? t('common.searching') : t('companyStripe.searchButton')}
       </button>
       {matches !== null && (
         <StripeMatchList
@@ -186,13 +192,10 @@ function StripeMatchList({
   onPick: (match: StripeCustomerMatch) => void;
   onCancel: () => void;
 }) {
+  const { t } = useTranslation('crm');
+
   if (matches.length === 0) {
-    return (
-      <p className="mt-2 text-xs text-ink-faint">
-        No matching Stripe customers found for this Company's contacts. Create the customer in Stripe first, or
-        double-check the contact emails.
-      </p>
-    );
+    return <p className="mt-2 text-xs text-ink-faint">{t('companyStripe.noMatches')}</p>;
   }
 
   return (
@@ -201,15 +204,17 @@ function StripeMatchList({
         <div key={match.id} className="flex items-center justify-between gap-2 py-0.5 text-sm">
           <span>
             {match.name || match.email || match.id}
-            <span className="ml-1 text-xs text-ink-faint">(via {match.matchedViaEmail})</span>
+            <span className="ml-1 text-xs text-ink-faint">
+              {t('companyStripe.matchedVia', { email: match.matchedViaEmail })}
+            </span>
           </span>
           <button type="button" className="btn-secondary btn-sm" onClick={() => onPick(match)} disabled={linkingId === match.id}>
-            {linkingId === match.id ? 'Linking…' : 'Link'}
+            {linkingId === match.id ? t('common.linking') : t('common.link')}
           </button>
         </div>
       ))}
       <button type="button" className="table-link self-start text-xs" onClick={onCancel}>
-        Cancel
+        {t('common.cancel')}
       </button>
     </div>
   );

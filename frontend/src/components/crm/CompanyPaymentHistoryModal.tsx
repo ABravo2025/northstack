@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../api';
 import type { StripePaymentEvent } from '../../api';
 import { useToast } from '../common/ToastProvider';
@@ -15,11 +16,13 @@ interface CompanyPaymentHistoryModalProps {
   companyName: string;
 }
 
-const STATUS_LABEL: Record<StripePaymentEvent['type'], string> = {
-  charge_succeeded: 'Paid',
-  charge_failed: 'Failed',
-  charge_refunded: 'Refunded',
-  charge_pending: 'Pending',
+// Key names, not translated strings — resolved through t() at render time (below) so a live
+// language switch updates them, unlike a module-level object built once from i18n.t() at import.
+const STATUS_LABEL_KEYS: Record<StripePaymentEvent['type'], string> = {
+  charge_succeeded: 'companyPaymentHistory.statusLabels.charge_succeeded',
+  charge_failed: 'companyPaymentHistory.statusLabels.charge_failed',
+  charge_refunded: 'companyPaymentHistory.statusLabels.charge_refunded',
+  charge_pending: 'companyPaymentHistory.statusLabels.charge_pending',
 };
 
 // Reached from PaymentsOverviewPage's Company link and from CompanyStripeSection's "View full
@@ -33,6 +36,7 @@ export default function CompanyPaymentHistoryModal({
   companyId,
   companyName,
 }: CompanyPaymentHistoryModalProps) {
+  const { t } = useTranslation('crm');
   const toast = useToast();
   const [events, setEvents] = useState<StripePaymentEvent[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
@@ -48,7 +52,7 @@ export default function CompanyPaymentHistoryModal({
         setEvents(page.events);
         setCursor(page.nextCursor);
       })
-      .catch((error) => toast.error('Failed to load payment history: ' + (error as Error).message))
+      .catch((error) => toast.error(t('companyPaymentHistory.toastLoadFailed', { error: (error as Error).message })))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, companyId]);
@@ -61,23 +65,23 @@ export default function CompanyPaymentHistoryModal({
       setEvents((prev) => [...prev, ...page.events]);
       setCursor(page.nextCursor);
     } catch (error) {
-      toast.error('Failed to load more payments: ' + (error as Error).message);
+      toast.error(t('companyPaymentHistory.toastLoadMoreFailed', { error: (error as Error).message }));
     } finally {
       setLoadingMore(false);
     }
   };
 
   return (
-    <Modal open={open} title={`${companyName} — Payment history`} onClose={onClose} wide>
+    <Modal open={open} title={t('companyPaymentHistory.title', { companyName })} onClose={onClose} wide>
       <div className="flex flex-col gap-3">
         <Link to={`/companies?open=${companyId}`} onClick={onClose} className="table-link text-sm self-start">
-          View company profile →
+          {t('companyPaymentHistory.viewCompanyProfile')}
         </Link>
 
         {loading ? (
           <TableSkeleton rows={5} />
         ) : events.length === 0 ? (
-          <p className="text-sm text-ink-muted dark:text-dark-ink-muted">No payments recorded for this company yet.</p>
+          <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('companyPaymentHistory.noPayments')}</p>
         ) : (
           <>
           <div className="entity-card-list">
@@ -89,12 +93,12 @@ export default function CompanyPaymentHistoryModal({
                     <span className="entity-card-meta shrink-0">{new Date(event.createdAt).toLocaleDateString()}</span>
                   </span>
                   <span className="entity-card-meta">
-                    {STATUS_LABEL[event.type]}
+                    {t(STATUS_LABEL_KEYS[event.type])}
                     {event.receiptUrl && (
                       <>
                         {' · '}
                         <a href={event.receiptUrl} target="_blank" rel="noreferrer" className="table-link">
-                          View receipt →
+                          {t('companyPaymentHistory.viewReceipt')}
                         </a>
                       </>
                     )}
@@ -107,10 +111,10 @@ export default function CompanyPaymentHistoryModal({
             <table className="table full-table">
               <thead>
                 <tr>
-                  <th>Date</th>
-                  <th>Amount</th>
-                  <th>Status</th>
-                  <th>Receipt</th>
+                  <th>{t('companyPaymentHistory.columns.date')}</th>
+                  <th>{t('companyPaymentHistory.columns.amount')}</th>
+                  <th>{t('companyPaymentHistory.columns.status')}</th>
+                  <th>{t('companyPaymentHistory.columns.receipt')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -118,11 +122,11 @@ export default function CompanyPaymentHistoryModal({
                   <tr key={event.id}>
                     <td>{new Date(event.createdAt).toLocaleDateString()}</td>
                     <td>{formatMoney(event.amountCents, event.currency.toUpperCase())}</td>
-                    <td>{STATUS_LABEL[event.type]}</td>
+                    <td>{t(STATUS_LABEL_KEYS[event.type])}</td>
                     <td>
                       {event.receiptUrl ? (
                         <a href={event.receiptUrl} target="_blank" rel="noreferrer" className="table-link">
-                          View receipt →
+                          {t('companyPaymentHistory.viewReceipt')}
                         </a>
                       ) : (
                         <span className="text-ink-faint">—</span>
@@ -138,7 +142,7 @@ export default function CompanyPaymentHistoryModal({
 
         {cursor && (
           <button type="button" className="btn-secondary btn-sm self-start" onClick={loadMore} disabled={loadingMore}>
-            {loadingMore ? 'Loading…' : 'Load more'}
+            {loadingMore ? t('common.loading') : t('companyPaymentHistory.loadMore')}
           </button>
         )}
       </div>

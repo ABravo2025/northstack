@@ -57,18 +57,32 @@ completas y pueden reordenarse según prioridad.
 
 ## Unidad 1 — Infraestructura base
 
-- [ ] Prisma: `User.locale` (string, nullable — `'en' | 'es' | null`). Migración chica, sin
-  backfill necesario (null = auto-detección).
-- [ ] Instalar `react-i18next` + `i18next-browser-languagedetector` en frontend; `i18next` (sin
-  el plugin de browser) en backend.
-- [ ] Estructura de carpetas de namespaces (`frontend/src/locales/{en,es}/*.json`) y convención de
-  nombres de key (ej. `crm.company.createButton`, no keys planas sin jerarquía).
-- [ ] Provider (`I18nextProvider`) envolviendo la app, hook `useTranslation()` disponible.
-- [ ] Selector de idioma en Settings → Profile, persistido vía API a `User.locale`. Cambiar el
-  selector actualiza la UI sin reload.
-- [ ] Lógica de resolución de idioma activo al cargar la app (descrita arriba).
-- [ ] Ningún string de esta unidad es visible todavía como cambio funcional — es la base para las
-  unidades siguientes.
+**Nota 2026-09-24**: completa, verificada end-to-end contra `staging` (Playwright: login, switch
+en↔es en vivo, persistencia tras reload, tenant de prueba descartado después). En `staging`,
+pendiente de que se revise y promueva a `main`/producción.
+
+- [x] Prisma: `User.locale` (string, nullable — `'en' | 'es' | null`). Push directo a `staging`
+  (este proyecto no usa `prisma migrate`, solo `db push` por entorno — ver
+  `docs/general/reference-database-environments` en memoria); falta correrlo contra producción
+  cuando se promueva.
+- [x] Instalado `react-i18next` + `i18next-browser-languagedetector` en frontend; `i18next` (sin
+  el plugin de browser) en backend — instalado, sin uso todavía (arranca en la Unidad 9).
+- [x] Estructura de namespaces arrancada (`frontend/src/locales/{en,es}/common.json`); la
+  convención jerárquica de keys (ej. `crm.company.createButton`) se confirma recién en la Unidad 2
+  cuando haya más de un namespace poblado.
+- [x] En vez de `<I18nextProvider>`: `frontend/src/lib/i18n.ts` corre `i18n.use(initReactI18next).init(...)`
+  como side effect importado en `main.tsx` antes del render (mismo patrón que `initTheme()`) —
+  react-i18next usa esa instancia global automáticamente, `useTranslation()` funciona igual sin
+  envolver `<App />`.
+- [x] Selector de idioma en Settings → Profile (`ProfileSettingsPage.tsx`), persistido vía
+  `PATCH /api/users/me/locale`. Cambiar el selector actualiza la UI sin reload (un único effect en
+  `App.tsx`, disparado por cualquier `setUser`, sincroniza `i18n.changeLanguage` — no cada call
+  site por separado).
+- [x] Resolución de idioma activo: `i18next-browser-languagedetector` cubre el fallback de
+  navegador; el effect de arriba aplica `User.locale` por encima en cuanto el usuario autenticado
+  se carga.
+- [x] Ningún módulo de producto fue tocado — solo el copy del selector mismo (`language.label`,
+  `language.en`, `language.es`) usa `t()` por ahora.
 
 ## Unidad 2 — Shared / common
 

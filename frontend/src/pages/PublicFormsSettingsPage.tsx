@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, type Pipeline, type Form, type PublicFormFieldConfig } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import SlideOver from '../components/common/SlideOver';
@@ -27,6 +28,7 @@ function slugify(raw: string): string {
 
 export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPageProps) {
   const toast = useToast();
+  const { t } = useTranslation('settingsPages');
   const [tab, setTab] = useState<EntityTab>('employee');
   const [forms, setForms] = useState<Form[]>([]);
   const [tenantSlug, setTenantSlug] = useState<string | null>(null);
@@ -65,7 +67,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
       setTenantSlug(slug);
       setForms(data);
     } catch (error) {
-      toast.error('Failed to load public forms: ' + (error as Error).message);
+      toast.error(t('publicForms.loadError', { message: (error as Error).message }));
     } finally {
       setLoading(false);
     }
@@ -82,7 +84,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
       setClientCustomFields(clientFields.filter((f) => f.isActive));
       setContactCustomFields(contactFields.filter((f) => f.isActive));
     } catch (error) {
-      toast.error('Failed to load custom fields: ' + (error as Error).message);
+      toast.error(t('publicForms.loadCustomFieldsError', { message: (error as Error).message }));
     }
   };
 
@@ -91,7 +93,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
       const data = await api.listPipelines(token);
       setPipelines(data.filter((p) => p.isActive));
     } catch (error) {
-      toast.error('Failed to load pipelines: ' + (error as Error).message);
+      toast.error(t('publicForms.loadPipelinesError', { message: (error as Error).message }));
     }
   };
 
@@ -108,13 +110,13 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
     return [
       {
         key: tab === 'employee' ? 'department' : 'company',
-        label: tab === 'employee' ? 'Department' : 'Company',
+        label: tab === 'employee' ? t('publicForms.fields.department') : t('publicForms.fields.company'),
         fieldType: 'text',
         options: null as string | null,
       },
       ...customFields.map((f) => ({ key: `cf:${f.id}`, label: f.name, fieldType: f.fieldType, options: f.options })),
     ];
-  }, [tab, employeeCustomFields, clientCustomFields, contactCustomFields]);
+  }, [tab, employeeCustomFields, clientCustomFields, contactCustomFields, t]);
 
   // Custom field definitions load asynchronously and may still be in flight when the
   // SlideOver opens (e.g. clicking "New Form" right after the page loads). Keep fieldOrder
@@ -140,7 +142,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
     setSlideOverMode('add');
   };
 
-  usePrimaryAction({ label: 'New Form', onClick: handleOpenCreate });
+  usePrimaryAction({ label: t('publicForms.newForm'), onClick: handleOpenCreate });
 
   const handleOpenEdit = (form: Form) => {
     const fields: PublicFormFieldConfig[] = JSON.parse(form.fieldsConfig);
@@ -224,7 +226,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
           thankYouMessage,
           ...(tab === 'contact' ? { pipelineId: pipelineId || null } : {}),
         });
-        toast.success('Form updated.');
+        toast.success(t('publicForms.formUpdated'));
       } else {
         await api.createPublicForm(token, {
           name: formName.trim(),
@@ -234,12 +236,12 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
           thankYouMessage,
           ...(tab === 'contact' ? { pipelineId: pipelineId || null } : {}),
         });
-        toast.success('Form created.');
+        toast.success(t('publicForms.formCreated'));
       }
       setSlideOverMode(null);
       loadForms();
     } catch (error) {
-      toast.error('Failed to save form: ' + (error as Error).message);
+      toast.error(t('publicForms.saveError', { message: (error as Error).message }));
     } finally {
       setSaving(false);
     }
@@ -250,14 +252,14 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
       await api.updatePublicForm(token, form.id, { isActive: !form.isActive });
       loadForms();
     } catch (error) {
-      toast.error('Failed to update form: ' + (error as Error).message);
+      toast.error(t('publicForms.updateError', { message: (error as Error).message }));
     }
   };
 
   const handleCopyLink = (form: Form) => {
     const url = `${window.location.origin}/apply/${tenantSlug}/${form.slug}`;
     navigator.clipboard.writeText(url);
-    toast.success('Link copied to clipboard.');
+    toast.success(t('publicForms.linkCopied'));
   };
 
   const availableFields = allFields.filter((f) => !includedKeys[f.key]);
@@ -288,15 +290,15 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
         open={slideOverMode !== null}
         side="left"
         wide
-        title={slideOverMode === 'edit' ? 'Edit Public Form' : 'New Public Form'}
+        title={slideOverMode === 'edit' ? t('publicForms.editTitle') : t('publicForms.newTitle')}
         onClose={() => setSlideOverMode(null)}
         footer={
           <>
             <button type="button" className="btn-secondary" onClick={() => setSlideOverMode(null)}>
-              Cancel
+              {t('publicForms.cancel')}
             </button>
             <button type="submit" form="public-form-form" className="btn-primary" disabled={saving}>
-              {saving ? 'Saving…' : slideOverMode === 'edit' ? 'Save' : 'Create'}
+              {saving ? t('publicForms.saving') : slideOverMode === 'edit' ? t('publicForms.save') : t('publicForms.create')}
             </button>
           </>
         }
@@ -304,7 +306,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
         <form id="public-form-form" onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="pf-name">
-              Name
+              {t('publicForms.name')}
               <RequiredMark />
             </label>
             <input
@@ -312,13 +314,13 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
               type="text"
               value={formName}
               onChange={(e) => handleNameChange(e.target.value)}
-              placeholder="e.g. Job Application, Contact Us"
+              placeholder={t('publicForms.namePlaceholder')}
               required
             />
           </div>
           <div className="form-group">
             <label htmlFor="pf-slug">
-              Link slug
+              {t('publicForms.linkSlug')}
               <RequiredMark />
             </label>
             <input
@@ -333,7 +335,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
               required
             />
             {slideOverMode === 'edit' ? (
-              <p className="mt-1 text-xs text-ink-muted dark:text-dark-ink-muted">The link slug can't be changed once a form is created.</p>
+              <p className="mt-1 text-xs text-ink-muted dark:text-dark-ink-muted">{t('publicForms.slugImmutable')}</p>
             ) : (
               tenantSlug &&
               formSlug && (
@@ -346,9 +348,9 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
 
           {tab === 'contact' && (
             <div className="form-group">
-              <label htmlFor="pf-pipeline">Sales pipeline (optional)</label>
+              <label htmlFor="pf-pipeline">{t('publicForms.salesPipeline')}</label>
               <select id="pf-pipeline" value={pipelineId} onChange={(e) => setPipelineId(e.target.value)}>
-                <option value="">None — just create a Contact</option>
+                <option value="">{t('publicForms.noPipeline')}</option>
                 {pipelines.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
@@ -356,17 +358,15 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
                 ))}
               </select>
               <p className="mt-1 text-xs text-ink-muted dark:text-dark-ink-muted">
-                If set, a submission that matches an existing Company also creates an Opportunity in this pipeline's
-                first stage.
+                {t('publicForms.pipelineHelp')}
               </p>
             </div>
           )}
 
           <div className="form-group">
-            <span>Fields</span>
+            <span>{t('publicForms.fieldsLabel')}</span>
             <p className="mb-2 text-xs text-ink-muted dark:text-dark-ink-muted">
-              Drag a field from the left into the preview on the right, at the position you want it to appear.
-              Drag a field already in the preview to reorder it, or back to the left to remove it.
+              {t('publicForms.dragHelp')}
             </p>
             <div className="grid grid-cols-2 gap-4">
               <div
@@ -379,10 +379,10 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
                 }`}
               >
                 <p className="mb-2 text-xs font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">
-                  Available fields
+                  {t('publicForms.availableFields')}
                 </p>
                 {availableFields.length === 0 ? (
-                  <p className="text-xs text-ink-muted dark:text-dark-ink-muted">All fields have been added to the form.</p>
+                  <p className="text-xs text-ink-muted dark:text-dark-ink-muted">{t('publicForms.allFieldsAdded')}</p>
                 ) : (
                   availableFields.map((field) => (
                     <div
@@ -401,25 +401,25 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
 
               <div className="rounded border border-line p-3 dark:border-dark-line">
                 <p className="mb-2 text-xs font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">
-                  Form preview
+                  {t('publicForms.formPreview')}
                 </p>
                 <div className="mb-3">
                   <label className="mb-1 block text-sm font-medium">
-                    First Name
+                    {t('publicForms.firstName')}
                     <RequiredMark />
                   </label>
                   <input disabled className="bg-surface-2 dark:bg-dark-raised" />
                 </div>
                 <div className="mb-3">
                   <label className="mb-1 block text-sm font-medium">
-                    Last Name
+                    {t('publicForms.lastName')}
                     <RequiredMark />
                   </label>
                   <input disabled className="bg-surface-2 dark:bg-dark-raised" />
                 </div>
                 <div className="mb-3">
                   <label className="mb-1 block text-sm font-medium">
-                    Email
+                    {t('publicForms.email')}
                     <RequiredMark />
                   </label>
                   <input disabled className="bg-surface-2 dark:bg-dark-raised" />
@@ -454,14 +454,14 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
                             checked={Boolean(requiredFields[field.key])}
                             onChange={() => toggleFieldRequired(field.key)}
                           />
-                          Required
+                          {t('publicForms.required')}
                         </label>
                         <button
                           type="button"
                           className="icon-btn"
                           onClick={() => removeField(field.key)}
-                          aria-label={`Remove ${field.label}`}
-                          title="Remove"
+                          aria-label={t('publicForms.removeFieldAria', { field: field.label })}
+                          title={t('publicForms.remove')}
                         >
                           <XIcon className="h-3.5 w-3.5" />
                         </button>
@@ -481,28 +481,28 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
                       : 'border-line-strong text-ink-faint dark:border-dark-line dark:text-dark-ink-faint'
                   }`}
                 >
-                  Drop here to add to the end
+                  {t('publicForms.dropToEnd')}
                 </div>
               </div>
             </div>
           </div>
 
           <div className="form-group">
-            <label htmlFor="pf-thank-you">Thank you message</label>
+            <label htmlFor="pf-thank-you">{t('publicForms.thankYouMessage')}</label>
             <textarea
               id="pf-thank-you"
               rows={3}
               value={thankYouMessage}
               onChange={(e) => setThankYouMessage(e.target.value)}
-              placeholder="Thank you! Your submission has been received."
+              placeholder={t('publicForms.thankYouPlaceholder')}
             />
-            <p className="mt-1 text-xs text-ink-muted dark:text-dark-ink-muted">Shown after a successful submit. Leave blank to use the default above.</p>
+            <p className="mt-1 text-xs text-ink-muted dark:text-dark-ink-muted">{t('publicForms.thankYouHelp')}</p>
           </div>
         </form>
       </SlideOver>
 
       <div className="page-toolbar no-border">
-        <h2>Public Forms</h2>
+        <h2>{t('publicForms.title')}</h2>
         {/* Hidden below md: the mobile FAB (usePrimaryAction below) already exposes this same
             "New Form" action there. Hidden entirely once the current tab has no forms: the
             EmptyState below has its own "Build a form" button then. Either way it'd be two ways
@@ -514,32 +514,32 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
           <span className="hidden ml-auto md:inline-block">
             <button type="button" className="btn-outline gap-1.5" onClick={handleOpenCreate}>
               <PlusIcon className="h-3.5 w-3.5" />
-              New Form
+              {t('publicForms.newForm')}
             </button>
           </span>
         )}
       </div>
       <div className="views-bar" ref={viewsBarRef}>
         <button type="button" className={`view-tab ${tab === 'employee' ? 'active' : ''}`} onClick={() => setTab('employee')}>
-          Employees
+          {t('publicForms.tabs.employees')}
         </button>
         <button type="button" className={`view-tab ${tab === 'client' ? 'active' : ''}`} onClick={() => setTab('client')}>
-          Clients
+          {t('publicForms.tabs.clients')}
         </button>
         <button type="button" className={`view-tab ${tab === 'contact' ? 'active' : ''}`} onClick={() => setTab('contact')}>
-          Contacts
+          {t('publicForms.tabs.contacts')}
         </button>
       </div>
       <HorizontalScrollbar targetRef={viewsBarRef} />
 
       <div className="mt-4">
-        {loading && <p>Loading...</p>}
+        {loading && <p>{t('publicForms.loading')}</p>}
         {!loading && filteredForms.length === 0 && (
           <EmptyState
             icon={<ListIcon />}
-            title="No public forms yet"
-            body="A public form captures people from outside the app, with no login."
-            primaryLabel="Build a form"
+            title={t('publicForms.emptyTitle')}
+            body={t('publicForms.emptyBody')}
+            primaryLabel={t('publicForms.buildForm')}
             onPrimary={handleOpenCreate}
           />
         )}
@@ -554,20 +554,20 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
               >
                 <span className="entity-card-body">
                   <span className="entity-card-name">{form.name}</span>
-                  <span className="entity-card-meta">{form.isActive ? 'Active' : 'Inactive'}</span>
+                  <span className="entity-card-meta">{form.isActive ? t('publicForms.active') : t('publicForms.inactive')}</span>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     <button type="button" className="btn-secondary px-2 py-1 text-xs" onClick={() => handleCopyLink(form)}>
-                      Copy link
+                      {t('publicForms.copyLink')}
                     </button>
                     <button type="button" className="btn-secondary px-2 py-1 text-xs" onClick={() => handleOpenEdit(form)}>
-                      Edit
+                      {t('publicForms.edit')}
                     </button>
                     <button
                       type="button"
                       className="btn-secondary px-2 py-1 text-xs"
                       onClick={() => handleToggleActive(form)}
                     >
-                      {form.isActive ? 'Deactivate' : 'Activate'}
+                      {form.isActive ? t('publicForms.deactivate') : t('publicForms.activate')}
                     </button>
                   </div>
                 </span>
@@ -578,10 +578,10 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
             <table className="table full-table">
               <thead>
                 <tr>
-                  <th>Name</th>
-                  <th>Link</th>
-                  <th>Status</th>
-                  <th>Actions</th>
+                  <th>{t('publicForms.columns.name')}</th>
+                  <th>{t('publicForms.columns.link')}</th>
+                  <th>{t('publicForms.columns.status')}</th>
+                  <th>{t('publicForms.columns.actions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -590,20 +590,20 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
                     <td>{form.name}</td>
                     <td>
                       <button type="button" className="table-link" onClick={() => handleCopyLink(form)}>
-                        Copy link
+                        {t('publicForms.copyLink')}
                       </button>
                     </td>
-                    <td>{form.isActive ? 'Active' : 'Inactive'}</td>
+                    <td>{form.isActive ? t('publicForms.active') : t('publicForms.inactive')}</td>
                     <td className="flex gap-1.5">
                       <button type="button" className="btn-secondary px-2 py-1 text-xs" onClick={() => handleOpenEdit(form)}>
-                        Edit
+                        {t('publicForms.edit')}
                       </button>
                       <button
                         type="button"
                         className="btn-secondary px-2 py-1 text-xs"
                         onClick={() => handleToggleActive(form)}
                       >
-                        {form.isActive ? 'Deactivate' : 'Activate'}
+                        {form.isActive ? t('publicForms.deactivate') : t('publicForms.activate')}
                       </button>
                     </td>
                   </tr>

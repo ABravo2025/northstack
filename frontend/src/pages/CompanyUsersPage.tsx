@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import ConfirmDialog from '../components/common/ConfirmDialog';
@@ -31,13 +32,7 @@ interface CompanyUsersPageProps {
 
 type SortField = 'name' | 'email' | 'phone' | 'role' | 'status';
 
-const COLUMNS: { key: SortField; label: string }[] = [
-  { key: 'name', label: 'Name' },
-  { key: 'email', label: 'Email' },
-  { key: 'phone', label: 'Phone' },
-  { key: 'role', label: 'Role' },
-  { key: 'status', label: 'Status' },
-];
+const COLUMN_KEYS: SortField[] = ['name', 'email', 'phone', 'role', 'status'];
 
 // Custom Roles Fase I — a genuinely custom role assignment leaves the legacy `role` enum at a
 // 'member' placeholder (see tenantUserService.ts's roleId branch), so the real display name has
@@ -72,6 +67,11 @@ function getSortValue(u: any, field: SortField): string {
 
 export default function CompanyUsersPage({ user, token, onUserUpdated }: CompanyUsersPageProps) {
   const toast = useToast();
+  const { t } = useTranslation('settingsPages');
+  const COLUMNS = useMemo<{ key: SortField; label: string }[]>(
+    () => COLUMN_KEYS.map((key) => ({ key, label: t(`users.columns.${key}`) })),
+    [t],
+  );
   const [users, setUsers] = useState<any[]>([]);
   const [invitations, setInvitations] = useState<any[]>([]);
   // Custom Roles Fase I — every assignable role in the tenant (seed + custom, Owner excluded),
@@ -173,7 +173,7 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
         await api.updateTenantUser(token, userId, { roleId: value });
       }
       loadUsers();
-      toast.success('Role updated.');
+      toast.success(t('users.roleUpdated'));
     } catch (error) {
       toast.error((error as Error).message);
     }
@@ -191,7 +191,10 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
     const nextStatus = targetUser.status === 'active' ? 'inactive' : 'active';
     try {
       await api.updateTenantUser(token, targetUser.id, { status: nextStatus });
-      toast.success(`${targetUser.firstName} ${targetUser.lastName} ${nextStatus === 'active' ? 'activated' : 'deactivated'}.`);
+      const name = `${targetUser.firstName} ${targetUser.lastName}`;
+      toast.success(
+        nextStatus === 'active' ? t('users.activatedToast', { name }) : t('users.deactivatedToast', { name }),
+      );
       loadUsers();
     } catch (error) {
       toast.error((error as Error).message);
@@ -207,7 +210,7 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
       await navigator.clipboard.writeText(link);
       setInviteForm((prev) => ({ email: '', role: prev.role }));
       setInviteOpen(false);
-      toast.success('Invitation emailed. Link also copied to clipboard.');
+      toast.success(t('users.invitationEmailed'));
       loadInvitations();
     } catch (error) {
       toast.error((error as Error).message);
@@ -220,16 +223,16 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
     const link = `${window.location.origin}/accept-invite/${invitationToken}`;
     try {
       await navigator.clipboard.writeText(link);
-      toast.success('Invite link copied to clipboard.');
+      toast.success(t('users.inviteLinkCopied'));
     } catch (error) {
-      toast.error('Failed to copy link: ' + (error as Error).message);
+      toast.error(t('users.copyLinkError', { message: (error as Error).message }));
     }
   };
 
   const handleCancelInvitation = async (invitationId: string) => {
     try {
       await api.cancelInvitation(token, invitationId);
-      toast.success('Invitation cancelled.');
+      toast.success(t('users.invitationCancelled'));
       loadInvitations();
     } catch (error) {
       toast.error((error as Error).message);
@@ -274,9 +277,9 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
     <div>
       {pendingOwnerTransfer && (
         <ConfirmDialog
-          title="Transfer ownership"
-          message="This transfers ownership to this user — you will be moved to admin. Continue?"
-          confirmLabel="Transfer"
+          title={t('users.transferOwnership.title')}
+          message={t('users.transferOwnership.message')}
+          confirmLabel={t('users.transferOwnership.confirm')}
           onConfirm={() => {
             const userId = pendingOwnerTransfer;
             setPendingOwnerTransfer(null);
@@ -288,15 +291,15 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
 
       <SlideOver
         open={inviteOpen}
-        title="Invite Someone"
+        title={t('users.inviteSlideOver.title')}
         onClose={() => setInviteOpen(false)}
         footer={
           <>
             <button type="button" className="btn-secondary" onClick={() => setInviteOpen(false)}>
-              Cancel
+              {t('users.inviteSlideOver.cancel')}
             </button>
             <button type="submit" form="invite-form" className="btn-primary" disabled={inviting}>
-              {inviting ? 'Sending…' : 'Send invitation'}
+              {inviting ? t('users.inviteSlideOver.sending') : t('users.inviteSlideOver.sendInvitation')}
             </button>
           </>
         }
@@ -304,7 +307,7 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
         <form id="invite-form" onSubmit={handleInvite}>
           <div className="form-group">
             <label htmlFor="invite-email">
-              Email
+              {t('users.inviteSlideOver.emailLabel')}
               <RequiredMark />
             </label>
             <input
@@ -316,7 +319,7 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
             />
           </div>
           <div className="form-group">
-            <label htmlFor="invite-role">Role</label>
+            <label htmlFor="invite-role">{t('users.inviteSlideOver.roleLabel')}</label>
             <select
               id="invite-role"
               value={inviteForm.role}
@@ -333,19 +336,19 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
       </SlideOver>
 
       <div className="page-toolbar">
-        <h2>Users</h2>
+        <h2>{t('users.title')}</h2>
         {users.length > 0 && (
           <div className="toolbar-search">
             <SearchIcon />
             <label htmlFor="user-search" className="sr-only">
-              Search users
+              {t('users.searchLabel')}
             </label>
             <input
               id="user-search"
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name or email..."
+              placeholder={t('users.searchPlaceholder')}
             />
           </div>
         )}
@@ -353,13 +356,13 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
         <button className="btn-primary" onClick={() => setInviteOpen(true)}>
           <span className="inline-flex items-center gap-1.5">
             <PlusIcon className="h-4 w-4" />
-            Invite
+            {t('users.invite')}
           </span>
         </button>
       </div>
 
       {sortedUsers.length === 0 ? (
-        <p className="mt-4">No users match your search.</p>
+        <p className="mt-4">{t('users.noMatch')}</p>
       ) : (
         <>
           <EntityCardList
@@ -437,7 +440,7 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
                       <div className="name-cell">
                         <Avatar firstName={u.firstName} lastName={u.lastName} />
                         {u.firstName} {u.lastName}
-                        {isSelf && ' (you)'}
+                        {isSelf && ` ${t('users.youSuffix')}`}
                       </div>
                     ),
                     email: u.email,
@@ -445,7 +448,7 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
                     role: canEditRole ? (
                       <>
                         <label htmlFor={`role-${u.id}`} className="sr-only">
-                          Role for {u.firstName} {u.lastName}
+                          {t('users.roleForAria', { name: `${u.firstName} ${u.lastName}` })}
                         </label>
                         <select
                           id={`role-${u.id}`}
@@ -458,7 +461,7 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
                               {r.name}
                             </option>
                           ))}
-                          {isOwner && <option value="owner">Owner (transfer ownership)</option>}
+                          {isOwner && <option value="owner">{t('users.ownerTransferOption')}</option>}
                         </select>
                       </>
                     ) : (
@@ -467,7 +470,7 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
                     status: (
                       <StatusChip
                         color={u.status === 'active' ? '#047857' : '#6b7280'}
-                        label={u.status === 'active' ? 'Active' : 'Inactive'}
+                        label={u.status === 'active' ? t('users.active') : t('users.inactive')}
                       />
                     ),
                   };
@@ -490,7 +493,7 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
                         {canEditRole && (
                           <div className="icon-actions">
                             <button className="icon-btn" onClick={() => handleStatusToggle(u)}>
-                              <span className="tip">{u.status === 'active' ? 'Deactivate' : 'Activate'}</span>
+                              <span className="tip">{u.status === 'active' ? t('users.deactivate') : t('users.activate')}</span>
                               {u.status === 'active' ? <LockIcon /> : <CheckIcon />}
                             </button>
                           </div>
@@ -505,7 +508,7 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
                       <span className="ghost-plus-box">
                         <PlusIcon className="h-3 w-3" />
                       </span>
-                      Invite
+                      {t('users.invite')}
                     </span>
                   </td>
                 </tr>
@@ -519,7 +522,7 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
 
       {invitations.length > 0 && (
         <div className="mt-6">
-          <h3 className="page-title">Pending invitations</h3>
+          <h3 className="page-title">{t('users.pendingInvitations')}</h3>
           <div className="full-table-wrap mt-2">
             <table className="table full-table">
               <colgroup>
@@ -531,15 +534,15 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
               <thead>
                 <tr>
                   <th>
-                    Email
+                    {t('users.columns.email')}
                     <ColumnResizeHandle onMouseDown={(e) => startInviteResize('email', e)} />
                   </th>
                   <th>
-                    Role
+                    {t('users.columns.role')}
                     <ColumnResizeHandle onMouseDown={(e) => startInviteResize('role', e)} />
                   </th>
                   <th>
-                    Expires
+                    {t('users.invitationsColumns.expires')}
                     <ColumnResizeHandle onMouseDown={(e) => startInviteResize('expires', e)} />
                   </th>
                   <th></th>
@@ -554,11 +557,11 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
                     <td>
                       <div className="icon-actions">
                         <button className="icon-btn" onClick={() => handleCopyLink(inv.token)}>
-                          <span className="tip">Copy link</span>
+                          <span className="tip">{t('users.copyLink')}</span>
                           <CopyIcon />
                         </button>
                         <button className="icon-btn danger" onClick={() => handleCancelInvitation(inv.id)}>
-                          <span className="tip">Cancel</span>
+                          <span className="tip">{t('users.cancel')}</span>
                           <TrashIcon />
                         </button>
                       </div>

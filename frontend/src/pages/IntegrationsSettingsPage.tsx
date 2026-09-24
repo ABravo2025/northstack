@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
@@ -12,6 +13,7 @@ import Modal from '../components/common/Modal';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
 import { CopyIcon, LockIcon, TrashIcon } from '../components/common/Icons';
+import i18n from '../lib/i18n';
 
 interface IntegrationsSettingsPageProps {
   token: string;
@@ -59,6 +61,7 @@ function GoogleLogo({ className }: { className?: string }) {
 // permission, not structurally tied to being the fixed Owner.
 function StripeCard({ token, canManagePayments }: { token: string; canManagePayments: boolean }) {
   const toast = useToast();
+  const { t } = useTranslation('settingsPages');
   const [status, setStatus] = useState<StripeConnectionStatus | null>(null);
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [connecting, setConnecting] = useState(false);
@@ -69,7 +72,7 @@ function StripeCard({ token, canManagePayments }: { token: string; canManagePaym
     api
       .getStripeStatus(token)
       .then(setStatus)
-      .catch((error) => toast.error('Failed to load Stripe status: ' + (error as Error).message));
+      .catch((error) => toast.error(t('integrations.stripe.loadError', { message: (error as Error).message })));
   };
 
   useEffect(() => {
@@ -88,7 +91,7 @@ function StripeCard({ token, canManagePayments }: { token: string; canManagePaym
       const next = await api.connectStripe(token, apiKeyInput);
       setStatus(next);
       setApiKeyInput('');
-      toast.success('Stripe connected.');
+      toast.success(t('integrations.stripe.connected'));
     } catch (error) {
       toast.error((error as Error).message);
     } finally {
@@ -100,10 +103,10 @@ function StripeCard({ token, canManagePayments }: { token: string; canManagePaym
     setDisconnecting(true);
     try {
       await api.disconnectStripe(token);
-      toast.success('Stripe disconnected.');
+      toast.success(t('integrations.stripe.disconnected'));
       loadStatus();
     } catch (error) {
-      toast.error('Failed to disconnect Stripe: ' + (error as Error).message);
+      toast.error(t('integrations.stripe.disconnectError', { message: (error as Error).message }));
     } finally {
       setDisconnecting(false);
     }
@@ -117,15 +120,14 @@ function StripeCard({ token, canManagePayments }: { token: string; canManagePaym
             Stripe
           </h3>
           <p className="text-xs text-ink-muted dark:text-dark-ink-muted">
-            Connect your own Stripe account to see refunds, failed payments, and subscription
-            status for your Companies — read-only for now.
+            {t('integrations.stripe.description')}
           </p>
         </div>
       </div>
 
       {status?.needsAttention && (
         <div className="field-error" style={{ marginBottom: '0.75rem' }}>
-          Stripe rejected the stored key — it may have been revoked or edited. Reconnect below.
+          {t('integrations.stripe.needsAttention')}
         </div>
       )}
 
@@ -138,48 +140,48 @@ function StripeCard({ token, canManagePayments }: { token: string; canManagePaym
               />
               <div>
                 <div className="text-sm font-medium">
-                  Connected{' '}
+                  {t('integrations.stripe.connectedLabel')}{' '}
                   <span className={`role-chip ${status.apiKeyMode === 'live' ? 'chip-good' : 'chip-neutral'}`}>
                     {status.apiKeyMode}
                   </span>
                 </div>
                 <div className="text-xs text-ink-muted dark:text-dark-ink-muted">
-                  Since {status.connectedAt ? new Date(status.connectedAt).toLocaleDateString() : '—'}
+                  {t('integrations.stripe.since', {
+                    date: status.connectedAt ? new Date(status.connectedAt).toLocaleDateString() : '—',
+                  })}
                 </div>
               </div>
             </div>
             <button type="button" className="btn-danger btn-md" onClick={handleDisconnect} disabled={disconnecting}>
-              Disconnect
+              {t('integrations.disconnect')}
             </button>
           </div>
           <p className="text-xs text-ink-muted dark:text-dark-ink-muted">
-            Refunds, failed payments, and subscription changes are checked twice a day — no webhook
-            to set up.
+            {t('integrations.stripe.checkFrequency')}
           </p>
         </div>
       ) : (
         <form onSubmit={handleConnect} className="flex flex-col gap-3">
           <div className="text-xs text-ink-muted dark:text-dark-ink-muted">
             <p style={{ marginBottom: '0.5rem' }}>
-              Use a{' '}
+              {t('integrations.stripe.useRestrictedKeyPrefix')}{' '}
               <a href="https://docs.stripe.com/keys" target="_blank" rel="noreferrer">
-                Restricted Key
+                {t('integrations.stripe.restrictedKey')}
               </a>{' '}
-              rather than your Secret key — create one in Stripe under Developers → API keys with
-              read-only access to:
+              {t('integrations.stripe.useRestrictedKeySuffix')}
             </p>
             <ul style={{ listStyle: 'disc', paddingLeft: '1.25rem', marginBottom: '0.5rem' }}>
-              <li>Customers</li>
-              <li>Charges</li>
-              <li>Refunds</li>
-              <li>Invoices</li>
-              <li>Subscriptions</li>
-              <li>PaymentMethods</li>
-              <li>Events</li>
+              <li>{t('integrations.stripe.scopes.customers')}</li>
+              <li>{t('integrations.stripe.scopes.charges')}</li>
+              <li>{t('integrations.stripe.scopes.refunds')}</li>
+              <li>{t('integrations.stripe.scopes.invoices')}</li>
+              <li>{t('integrations.stripe.scopes.subscriptions')}</li>
+              <li>{t('integrations.stripe.scopes.paymentMethods')}</li>
+              <li>{t('integrations.stripe.scopes.events')}</li>
             </ul>
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label htmlFor="stripe-api-key">API key</label>
+            <label htmlFor="stripe-api-key">{t('integrations.stripe.apiKey')}</label>
             <input
               id="stripe-api-key"
               type="password"
@@ -190,7 +192,7 @@ function StripeCard({ token, canManagePayments }: { token: string; canManagePaym
             />
           </div>
           <button type="submit" className="btn-primary btn-md" disabled={connecting || !apiKeyInput.trim()} style={{ alignSelf: 'flex-start' }}>
-            {connecting ? 'Connecting…' : 'Test connection'}
+            {connecting ? t('integrations.stripe.connecting') : t('integrations.stripe.testConnection')}
           </button>
         </form>
       )}
@@ -203,35 +205,35 @@ function StripeCard({ token, canManagePayments }: { token: string; canManagePaym
 // on purpose — hr.payroll:write is excluded from v1 entirely (Alejandro, 2026-09-07, spec §10 risk
 // #1), so there's no checkbox for it to show in the first place. crm.pipelines is read-only by
 // design (spec §3: pipelines are configuration, not a "movimiento").
-const API_SCOPE_GROUPS: { label: string; resources: { key: string; label: string; write: boolean }[] }[] = [
+const API_SCOPE_GROUPS: { groupKey: string; resources: { key: string; labelKey: string; write: boolean }[] }[] = [
   {
-    label: 'Tasks & Notes',
+    groupKey: 'tasksNotes',
     resources: [
-      { key: 'tasks', label: 'Tasks', write: true },
-      { key: 'notes', label: 'Notes', write: true },
+      { key: 'tasks', labelKey: 'tasks', write: true },
+      { key: 'notes', labelKey: 'notes', write: true },
     ],
   },
   {
-    label: 'CRM',
+    groupKey: 'crm',
     resources: [
-      { key: 'crm.companies', label: 'Companies', write: true },
-      { key: 'crm.contacts', label: 'Contacts', write: true },
-      { key: 'crm.opportunities', label: 'Opportunities', write: true },
-      { key: 'crm.pipelines', label: 'Pipelines', write: false },
+      { key: 'crm.companies', labelKey: 'companies', write: true },
+      { key: 'crm.contacts', labelKey: 'contacts', write: true },
+      { key: 'crm.opportunities', labelKey: 'opportunities', write: true },
+      { key: 'crm.pipelines', labelKey: 'pipelines', write: false },
     ],
   },
   {
-    label: 'HR',
+    groupKey: 'hr',
     resources: [
-      { key: 'hr.employees', label: 'Employees', write: true },
-      { key: 'hr.timeoff', label: 'Time off', write: true },
-      { key: 'hr.payroll', label: 'Payroll', write: false },
+      { key: 'hr.employees', labelKey: 'employees', write: true },
+      { key: 'hr.timeoff', labelKey: 'timeOff', write: true },
+      { key: 'hr.payroll', labelKey: 'payroll', write: false },
     ],
   },
 ];
 
 function formatRelativeOrDate(iso: string | null): string {
-  if (!iso) return 'Never';
+  if (!iso) return i18n.t('integrations.apiKeys.never', { ns: 'settingsPages' });
   return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
@@ -241,6 +243,7 @@ function formatRelativeOrDate(iso: string | null): string {
 // docs/general/Tareas-QA.md QA-80), so no webhook UI exists yet.
 function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageApiAccess: boolean }) {
   const toast = useToast();
+  const { t } = useTranslation('settingsPages');
   const [keys, setKeys] = useState<ApiKeySummary[] | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newKeyName, setNewKeyName] = useState('');
@@ -256,7 +259,7 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
     api
       .listApiKeys(token)
       .then(setKeys)
-      .catch((error) => toast.error('Failed to load API keys: ' + (error as Error).message));
+      .catch((error) => toast.error(t('integrations.apiKeys.loadError', { message: (error as Error).message })));
   };
 
   useEffect(() => {
@@ -301,9 +304,9 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
     if (!revealedKey) return;
     try {
       await navigator.clipboard.writeText(revealedKey);
-      toast.success('Key copied to clipboard.');
+      toast.success(t('integrations.apiKeys.copied'));
     } catch (error) {
-      toast.error('Failed to copy key: ' + (error as Error).message);
+      toast.error(t('integrations.apiKeys.copyError', { message: (error as Error).message }));
     }
   };
 
@@ -312,11 +315,11 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
     setRevoking(true);
     try {
       await api.revokeApiKey(token, revokingKey.id);
-      toast.success(`"${revokingKey.name}" revoked.`);
+      toast.success(t('integrations.apiKeys.revokedToast', { name: revokingKey.name }));
       setRevokingKey(null);
       loadKeys();
     } catch (error) {
-      toast.error('Failed to revoke key: ' + (error as Error).message);
+      toast.error(t('integrations.apiKeys.revokeError', { message: (error as Error).message }));
     } finally {
       setRevoking(false);
     }
@@ -327,18 +330,17 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
       <div className="integration-header">
         <div>
           <h3 className="card-title" style={{ margin: 0 }}>
-            API Keys
+            {t('integrations.apiKeys.title')}
           </h3>
           <p className="text-xs text-ink-muted dark:text-dark-ink-muted">
-            Create keys for your own scripts, Zapier, Make, or any tool that talks to Northstack's
-            private API.{' '}
+            {t('integrations.apiKeys.description')}{' '}
             <a
               href="/developers"
               target="_blank"
               rel="noreferrer"
               className="font-bold text-brand-blue hover:underline dark:text-brand-blue-light"
             >
-              View API documentation
+              {t('integrations.apiKeys.viewDocs')}
             </a>
             .
           </p>
@@ -348,7 +350,7 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
       {keys && keys.length > 0 && (
         <div className="mb-3 flex justify-end">
           <button type="button" className="btn-primary btn-md" onClick={() => setShowCreateModal(true)}>
-            Create key
+            {t('integrations.apiKeys.createKey')}
           </button>
         </div>
       )}
@@ -358,9 +360,9 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
       ) : keys.length === 0 ? (
         <EmptyState
           icon={<LockIcon />}
-          title="No API keys yet"
-          body="Create a key to let an external tool read or write your workspace's data through the private API."
-          primaryLabel="Create key"
+          title={t('integrations.apiKeys.emptyTitle')}
+          body={t('integrations.apiKeys.emptyBody')}
+          primaryLabel={t('integrations.apiKeys.createKey')}
           onPrimary={() => setShowCreateModal(true)}
         />
       ) : (
@@ -369,11 +371,11 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
           <table className="table">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Key</th>
-                <th>Scopes</th>
-                <th>Status</th>
-                <th>Last used</th>
+                <th>{t('integrations.apiKeys.columns.name')}</th>
+                <th>{t('integrations.apiKeys.columns.key')}</th>
+                <th>{t('integrations.apiKeys.columns.scopes')}</th>
+                <th>{t('integrations.apiKeys.columns.status')}</th>
+                <th>{t('integrations.apiKeys.columns.lastUsed')}</th>
                 <th></th>
               </tr>
             </thead>
@@ -399,11 +401,14 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
                   </td>
                   <td>
                     {key.revokedAt ? (
-                      <span className="role-chip chip-neutral" title={`Revoked ${formatRelativeOrDate(key.revokedAt)}`}>
-                        Revoked
+                      <span
+                        className="role-chip chip-neutral"
+                        title={t('integrations.apiKeys.revokedTitle', { date: formatRelativeOrDate(key.revokedAt) })}
+                      >
+                        {t('integrations.apiKeys.revoked')}
                       </span>
                     ) : (
-                      <span className="role-chip chip-good">Active</span>
+                      <span className="role-chip chip-good">{t('integrations.apiKeys.active')}</span>
                     )}
                   </td>
                   <td>{formatRelativeOrDate(key.lastUsedAt)}</td>
@@ -411,7 +416,7 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
                     {!key.revokedAt && (
                       <div className="icon-actions">
                         <button className="icon-btn danger" onClick={() => setRevokingKey(key)}>
-                          <span className="tip">Revoke</span>
+                          <span className="tip">{t('integrations.apiKeys.revoke')}</span>
                           <TrashIcon />
                         </button>
                       </div>
@@ -428,7 +433,7 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
 
       <Modal
         open={showCreateModal}
-        title={revealedKey ? 'Key created' : 'Create API key'}
+        title={revealedKey ? t('integrations.apiKeys.keyCreatedTitle') : t('integrations.apiKeys.createKeyTitle')}
         wide
         onClose={() => {
           setShowCreateModal(false);
@@ -439,15 +444,14 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
         {revealedKey ? (
           <div className="flex flex-col gap-3">
             <p className="text-sm">
-              Copy this key now — it won't be shown again. If you lose it, revoke it and create a
-              new one.
+              {t('integrations.apiKeys.copyNowWarning')}
             </p>
             <div className="flex items-center gap-2">
               <code className="text-xs" style={{ wordBreak: 'break-all', flex: 1 }}>
                 {revealedKey}
               </code>
               <button type="button" className="icon-btn" onClick={handleCopyKey}>
-                <span className="tip">Copy</span>
+                <span className="tip">{t('integrations.apiKeys.copy')}</span>
                 <CopyIcon />
               </button>
             </div>
@@ -459,37 +463,39 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
                 setRevealedKey(null);
               }}
             >
-              Done — I've copied it
+              {t('integrations.apiKeys.doneCopiedIt')}
             </button>
           </div>
         ) : (
           <form onSubmit={handleCreate} className="flex flex-col gap-3">
             <div className="nv-field">
-              <label htmlFor="new-api-key-name">Name</label>
+              <label htmlFor="new-api-key-name">{t('integrations.apiKeys.name')}</label>
               <input
                 id="new-api-key-name"
                 type="text"
                 value={newKeyName}
                 onChange={(e) => setNewKeyName(e.target.value)}
-                placeholder="e.g. Zapier — new Tasks"
+                placeholder={t('integrations.apiKeys.namePlaceholder')}
                 autoFocus
                 required
               />
             </div>
             <div>
-              <label className="mb-1 block text-sm font-medium">Scopes</label>
+              <label className="mb-1 block text-sm font-medium">{t('integrations.apiKeys.columns.scopes')}</label>
               <p className="mb-2 text-xs text-ink-muted dark:text-dark-ink-muted">
-                A key starts with no access — tick exactly what it needs.
+                {t('integrations.apiKeys.scopesHelp')}
               </p>
               <div className="flex flex-col gap-3">
                 {API_SCOPE_GROUPS.map((group) => (
-                  <div key={group.label}>
-                    <div className="mb-1 text-xs font-medium text-ink-muted dark:text-dark-ink-muted">{group.label}</div>
+                  <div key={group.groupKey}>
+                    <div className="mb-1 text-xs font-medium text-ink-muted dark:text-dark-ink-muted">
+                      {t(`integrations.apiKeys.scopeGroups.${group.groupKey}`)}
+                    </div>
                     <div className="flex flex-col gap-1">
                       {group.resources.map((resource) => (
                         <div key={resource.key} className="flex items-center gap-4">
                           <span className="text-sm" style={{ minWidth: '9rem' }}>
-                            {resource.label}
+                            {t(`integrations.apiKeys.scopeResources.${resource.labelKey}`)}
                           </span>
                           <label className="flex items-center gap-1 text-xs">
                             <input
@@ -497,7 +503,7 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
                               checked={selectedScopes.has(`${resource.key}:read`)}
                               onChange={() => toggleScope(`${resource.key}:read`)}
                             />
-                            Read
+                            {t('integrations.apiKeys.read')}
                           </label>
                           {resource.write && (
                             <label className="flex items-center gap-1 text-xs">
@@ -506,7 +512,7 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
                                 checked={selectedScopes.has(`${resource.key}:write`)}
                                 onChange={() => toggleScope(`${resource.key}:write`)}
                               />
-                              Write
+                              {t('integrations.apiKeys.write')}
                             </label>
                           )}
                         </div>
@@ -517,7 +523,7 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
               </div>
             </div>
             <button type="submit" className="btn-primary w-full text-center" disabled={creating || !newKeyName.trim() || selectedScopes.size === 0}>
-              {creating ? 'Creating…' : 'Create key'}
+              {creating ? t('integrations.apiKeys.creating') : t('integrations.apiKeys.createKey')}
             </button>
           </form>
         )}
@@ -525,9 +531,9 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
 
       {revokingKey && (
         <ConfirmDialog
-          title={`Revoke "${revokingKey.name}"?`}
-          message="Any integration using this key will immediately stop working. This can't be undone — you'd need to create a new key."
-          confirmLabel={revoking ? 'Revoking…' : 'Revoke'}
+          title={t('integrations.apiKeys.revokeConfirmTitle', { name: revokingKey.name })}
+          message={t('integrations.apiKeys.revokeConfirmMessage')}
+          confirmLabel={revoking ? t('integrations.apiKeys.revoking') : t('integrations.apiKeys.revoke')}
           confirmDisabled={revoking}
           onConfirm={handleRevoke}
           onCancel={() => setRevokingKey(null)}
@@ -547,6 +553,7 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
 // (Payments v1, owner-only) is the first case of that carve-out.
 export default function IntegrationsSettingsPage({ token }: IntegrationsSettingsPageProps) {
   const toast = useToast();
+  const { t } = useTranslation('settingsPages');
   const permissions = usePermissions();
   const [searchParams, setSearchParams] = useSearchParams();
   const [googleStatus, setGoogleStatus] = useState<GoogleCalendarStatus | null>(null);
@@ -556,17 +563,17 @@ export default function IntegrationsSettingsPage({ token }: IntegrationsSettings
     api
       .getGoogleCalendarStatus(token)
       .then(setGoogleStatus)
-      .catch((error) => toast.error('Failed to load Google Calendar status: ' + (error as Error).message));
+      .catch((error) => toast.error(t('integrations.google.loadError', { message: (error as Error).message })));
   };
 
   useEffect(() => {
     loadGoogleStatus();
 
     if (searchParams.get('googleCalendarConnected')) {
-      toast.success('Google Calendar connected.');
+      toast.success(t('integrations.google.connected'));
       setSearchParams({}, { replace: true });
     } else if (searchParams.get('googleCalendarError')) {
-      toast.error('Could not connect Google Calendar. Please try again.');
+      toast.error(t('integrations.google.connectError'));
       setSearchParams({}, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -601,7 +608,7 @@ export default function IntegrationsSettingsPage({ token }: IntegrationsSettings
         window.location.href = url;
       }
     } catch (error) {
-      toast.error('Failed to start Google Calendar connection: ' + (error as Error).message);
+      toast.error(t('integrations.google.connectStartError', { message: (error as Error).message }));
       setGoogleBusy(false);
     }
   };
@@ -610,10 +617,10 @@ export default function IntegrationsSettingsPage({ token }: IntegrationsSettings
     setGoogleBusy(true);
     try {
       await api.disconnectGoogleCalendar(token);
-      toast.success('Google Calendar disconnected.');
+      toast.success(t('integrations.google.disconnected'));
       loadGoogleStatus();
     } catch (error) {
-      toast.error('Failed to disconnect Google Calendar: ' + (error as Error).message);
+      toast.error(t('integrations.google.disconnectError', { message: (error as Error).message }));
     } finally {
       setGoogleBusy(false);
     }
@@ -629,8 +636,7 @@ export default function IntegrationsSettingsPage({ token }: IntegrationsSettings
               Google Calendar
             </h3>
             <p className="text-xs text-ink-faint dark:text-dark-ink-faint">
-              Push your task due dates and approved time off to your personal Google Calendar, so
-              Google's own reminders notify you.
+              {t('integrations.google.description')}
             </p>
           </div>
         </div>
@@ -644,27 +650,27 @@ export default function IntegrationsSettingsPage({ token }: IntegrationsSettings
               <div>
                 <div className="text-sm font-medium">{googleStatus.googleAccountEmail}</div>
                 {googleStatus.needsReconnect ? (
-                  <div className="field-error">Access was revoked — reconnect to resume syncing.</div>
+                  <div className="field-error">{t('integrations.google.accessRevoked')}</div>
                 ) : (
-                  <div className="text-xs text-ink-faint dark:text-dark-ink-faint">Connected</div>
+                  <div className="text-xs text-ink-faint dark:text-dark-ink-faint">{t('integrations.stripe.connectedLabel')}</div>
                 )}
               </div>
             </div>
             <div className="flex items-center gap-2">
               {googleStatus.needsReconnect && (
                 <button type="button" className="btn-primary btn-md" onClick={handleGoogleConnect} disabled={googleBusy}>
-                  Reconnect
+                  {t('integrations.google.reconnect')}
                 </button>
               )}
               <button type="button" className="btn-danger btn-md" onClick={handleGoogleDisconnect} disabled={googleBusy}>
-                Disconnect
+                {t('integrations.disconnect')}
               </button>
             </div>
           </div>
         ) : (
           <button type="button" className="btn-google btn-md" onClick={handleGoogleConnect} disabled={googleBusy}>
             <GoogleLogo className="h-4 w-4" />
-            {googleBusy ? 'Connecting…' : 'Connect Google Calendar'}
+            {googleBusy ? t('integrations.google.connecting') : t('integrations.google.connectButton')}
           </button>
         )}
       </div>

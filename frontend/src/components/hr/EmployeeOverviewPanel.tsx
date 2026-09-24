@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../api';
 import type { EmployeeCompensationSummary, EmployeePaymentHistoryEntry } from '../../api';
 import { useToast } from '../common/ToastProvider';
@@ -45,25 +46,6 @@ interface EmployeeOverviewPanelProps {
 
 const HAS_CONTRACT_STATUSES = new Set(['confirmado', 'pendiente', 'vencido']);
 
-// Same 3-state chip config as EmployeesPage.tsx's list column — surfaced
-// here too so the contract status is visible from the profile itself, not
-// only the table (backlog QA, 2026-08-27).
-const CONTRACT_STATUS_CHIPS = {
-  confirmado: { color: '#059669', label: 'Contract confirmed' },
-  pendiente: { color: '#9ca3af', label: 'Contract pending' },
-  vencido: { color: '#dc2626', label: 'Contract expired' },
-};
-
-// Same labels as PayrollPage.tsx's timeline ("Reason" column here) — kept in sync manually,
-// same as ADJUSTMENT_TYPE_LABELS there (no shared constants file for payroll UI yet).
-const PAYMENT_TYPE_LABELS: Record<string, string> = {
-  base: 'Payment',
-  bonus: 'Bonus',
-  commission: 'Commission',
-  reimbursement: 'Reimbursement',
-  deduction: 'Deduction',
-};
-
 // Unified with the Company/Contact/Opportunity detail pattern (Checkpoint F,
 // docs/tareas-desarrollo.md): no tabs, no "Edit employee" button — every field
 // is editable in place via AutoSaveField/AutoSaveSelect. Name/business email
@@ -89,7 +71,26 @@ export default function EmployeeOverviewPanel({
   onRequestDelete,
   onInvite,
 }: EmployeeOverviewPanelProps) {
+  const { t } = useTranslation('hr');
   const toast = useToast();
+  // Same 3-state chip config as EmployeesPage.tsx's list column — surfaced here too so the
+  // contract status is visible from the profile itself, not only the table (backlog QA,
+  // 2026-08-27). Computed per-render (not a module-level const) so it stays translated after a
+  // language switch.
+  const CONTRACT_STATUS_CHIPS = {
+    confirmado: { color: '#059669', label: t('employeeOverview.contractStatusChips.confirmed') },
+    pendiente: { color: '#9ca3af', label: t('employeeOverview.contractStatusChips.pending') },
+    vencido: { color: '#dc2626', label: t('employeeOverview.contractStatusChips.expired') },
+  };
+  // Same labels as PayrollPage.tsx's timeline ("Reason" column here) — pulled from the shared
+  // payroll.common.entryTypeLabels set so every payment-type display across HR/Payroll agrees.
+  const PAYMENT_TYPE_LABELS: Record<string, string> = {
+    base: t('payroll.common.entryTypeLabels.base'),
+    bonus: t('payroll.common.entryTypeLabels.bonus'),
+    commission: t('payroll.common.entryTypeLabels.commission'),
+    reimbursement: t('payroll.common.entryTypeLabels.reimbursement'),
+    deduction: t('payroll.common.entryTypeLabels.deduction'),
+  };
   const [contractPreviewOpen, setContractPreviewOpen] = useState(false);
   const [paymentPayslipEntryId, setPaymentPayslipEntryId] = useState<string | null>(null);
   const [resendingContract, setResendingContract] = useState(false);
@@ -146,10 +147,10 @@ export default function EmployeeOverviewPanel({
     if (!terminationOptions?.pendingTermination) return;
     try {
       await api.cancelTermination(token, terminationOptions.pendingTermination.id);
-      toast.success('Scheduled termination cancelled.');
+      toast.success(t('employeeOverview.toasts.cancelTerminationSuccess'));
       loadTerminationOptions();
     } catch (error) {
-      toast.error('Failed to cancel termination: ' + (error as Error).message);
+      toast.error(t('employeeOverview.toasts.cancelTerminationFailed', { error: (error as Error).message }));
     }
   };
 
@@ -171,9 +172,9 @@ export default function EmployeeOverviewPanel({
     setResendingContract(true);
     try {
       await api.resendContract(token, employee.id);
-      toast.success('Contract resent.');
+      toast.success(t('employeeOverview.toasts.resendContractSuccess'));
     } catch (error) {
-      toast.error('Failed to resend contract: ' + (error as Error).message);
+      toast.error(t('employeeOverview.toasts.resendContractFailed', { error: (error as Error).message }));
     } finally {
       setResendingContract(false);
     }
@@ -222,7 +223,7 @@ export default function EmployeeOverviewPanel({
       await api.unassignTimeOffPolicyFromEmployee(token, employee.id, policyId);
       onChanged();
     } catch (error) {
-      toast.error('Failed to unassign policy: ' + (error as Error).message);
+      toast.error(t('employeeOverview.toasts.unassignPolicyFailed', { error: (error as Error).message }));
     }
   };
 
@@ -232,7 +233,7 @@ export default function EmployeeOverviewPanel({
       await api.assignTimeOffPolicyToEmployee(token, employee.id, policyId);
       onChanged();
     } catch (error) {
-      toast.error('Failed to assign policy: ' + (error as Error).message);
+      toast.error(t('employeeOverview.toasts.assignPolicyFailed', { error: (error as Error).message }));
     }
   };
 
@@ -243,7 +244,7 @@ export default function EmployeeOverviewPanel({
   const overviewContent = showingPayments ? (
     <div className="overview-panel-left">
       <div className="field-group">
-        <h4 className="field-group-title">Payment History</h4>
+        <h4 className="field-group-title">{t('employeeOverview.sections.paymentHistory')}</h4>
         <div className="field-group-body">
           {loadingPaymentHistory ? (
             <>
@@ -255,16 +256,16 @@ export default function EmployeeOverviewPanel({
               ))}
             </>
           ) : paymentHistory.length === 0 ? (
-            <p className="text-sm text-ink-faint">No payments recorded yet.</p>
+            <p className="text-sm text-ink-faint">{t('employeeOverview.noPayments')}</p>
           ) : (
             <div className="overview-field overview-field-full">
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Date</th>
-                    <th>Reason</th>
-                    <th>Description</th>
-                    <th>Amount</th>
+                    <th>{t('employeeOverview.paymentHistoryColumns.date')}</th>
+                    <th>{t('employeeOverview.paymentHistoryColumns.reason')}</th>
+                    <th>{t('employeeOverview.paymentHistoryColumns.description')}</th>
+                    <th>{t('employeeOverview.paymentHistoryColumns.amount')}</th>
                     <th></th>
                   </tr>
                 </thead>
@@ -273,16 +274,19 @@ export default function EmployeeOverviewPanel({
                     <tr key={entry.id}>
                       <td>{entry.paymentDate.slice(0, 10)}</td>
                       <td>{PAYMENT_TYPE_LABELS[entry.type] || entry.type}</td>
-                      <td>{entry.label || (entry.periodLabel ? `Payroll: ${entry.periodLabel}` : '—')}</td>
+                      <td>
+                        {entry.label ||
+                          (entry.periodLabel ? t('employeeOverview.payrollPrefix', { label: entry.periodLabel }) : '—')}
+                      </td>
                       <td>{formatMoney(entry.amountCents, entry.currency)}</td>
                       <td>
                         <button
                           type="button"
                           className="icon-btn"
                           onClick={() => setPaymentPayslipEntryId(entry.id)}
-                          aria-label="Payslip preview"
+                          aria-label={t('employeeOverview.payslipPreviewTooltip')}
                         >
-                          <span className="tip">Payslip preview</span>
+                          <span className="tip">{t('employeeOverview.payslipPreviewTooltip')}</span>
                           <EyeIcon className="h-4 w-4" />
                         </button>
                       </td>
@@ -298,20 +302,20 @@ export default function EmployeeOverviewPanel({
   ) : (
     <div className="overview-panel-left">
       <div className="field-group">
-        <h4 className="field-group-title">Identity</h4>
+        <h4 className="field-group-title">{t('employeeOverview.sections.identity')}</h4>
         <div className="field-group-body">
-          <Field label="First Name">
-            <AutoSaveField label="First Name" value={employee.firstName} onSave={(v) => save({ firstName: v })} />
+          <Field label={t('employeeOverview.fields.firstName')}>
+            <AutoSaveField label={t('employeeOverview.fields.firstName')} value={employee.firstName} onSave={(v) => save({ firstName: v })} />
           </Field>
-          <Field label="Last Name">
-            <AutoSaveField label="Last Name" value={employee.lastName} onSave={(v) => save({ lastName: v })} />
+          <Field label={t('employeeOverview.fields.lastName')}>
+            <AutoSaveField label={t('employeeOverview.fields.lastName')} value={employee.lastName} onSave={(v) => save({ lastName: v })} />
           </Field>
-          <Field label="Business Email">
-            <AutoSaveField label="Business Email" type="email" value={employee.email} onSave={(v) => save({ email: v })} />
+          <Field label={t('employeeOverview.fields.businessEmail')}>
+            <AutoSaveField label={t('employeeOverview.fields.businessEmail')} type="email" value={employee.email} onSave={(v) => save({ email: v })} />
           </Field>
-          <Field label="Personal Email">
+          <Field label={t('employeeOverview.fields.personalEmail')}>
             <AutoSaveField
-              label="Personal Email"
+              label={t('employeeOverview.fields.personalEmail')}
               type="email"
               value={employee.personalEmail || ''}
               onSave={(v) => save({ personalEmail: v || null })}
@@ -321,43 +325,43 @@ export default function EmployeeOverviewPanel({
       </div>
 
       <div className="field-group">
-        <h4 className="field-group-title">Role</h4>
+        <h4 className="field-group-title">{t('employeeOverview.sections.role')}</h4>
         <div className="field-group-body">
-          <Field label="Status">
+          <Field label={t('employeeOverview.fields.status')}>
             {employee.statusDefn?.isTerminatedStatus ? (
               <StatusChip color={employee.statusDefn.color || '#6b7280'} label={employee.statusDefn.name} />
             ) : (
               <AutoSaveSelect
-                label="Status"
+                label={t('employeeOverview.fields.status')}
                 value={employee.statusId}
                 onSave={(v) => save({ statusId: v })}
                 options={statuses.map((s) => ({ value: s.id, label: s.name }))}
-                emptyLabel="-- select --"
+                emptyLabel={t('common.selectPlaceholder')}
               />
             )}
           </Field>
-          <Field label="Department">
+          <Field label={t('employeeOverview.fields.department')}>
             <AutoSaveSelect
-              label="Department"
+              label={t('employeeOverview.fields.department')}
               value={employee.departmentId || ''}
               onSave={(v) => save({ departmentId: v || null })}
               options={departments.filter((d) => d.isActive).map((d) => ({ value: d.id, label: d.name }))}
             />
           </Field>
-          <Field label="Job Title">
+          <Field label={t('employeeOverview.fields.jobTitle')}>
             <AutoSaveSelect
-              label="Job Title"
+              label={t('employeeOverview.fields.jobTitle')}
               value={employee.jobTitleId || ''}
               onSave={(v) => save({ jobTitleId: v || null })}
               options={jobTitles.filter((j) => j.isActive).map((j) => ({ value: j.id, label: j.name }))}
             />
           </Field>
-          <Field label="Reports To">
+          <Field label={t('employeeOverview.fields.reportsTo')}>
             <AutoSaveSelect
-              label="Reports To"
+              label={t('employeeOverview.fields.reportsTo')}
               value={employee.managerId || ''}
               onSave={(v) => save({ managerId: v || null })}
-              emptyLabel="-- no manager --"
+              emptyLabel={t('common.noManagerPlaceholder')}
               options={employees
                 .filter((e) => e.id !== employee.id)
                 .map((e) => ({ value: e.id, label: `${e.firstName} ${e.lastName}` }))}
@@ -367,38 +371,38 @@ export default function EmployeeOverviewPanel({
       </div>
 
       <div className="field-group">
-        <h4 className="field-group-title">Contract</h4>
+        <h4 className="field-group-title">{t('employeeOverview.sections.contract')}</h4>
         <div className="field-group-body">
-          <Field label="Contract Type">
+          <Field label={t('employeeOverview.fields.contractType')}>
             <AutoSaveSelect
-              label="Contract Type"
+              label={t('employeeOverview.fields.contractType')}
               value={employee.contractType || ''}
               onSave={(v) => save({ contractType: v || null })}
               options={[
-                { value: 'part_time', label: 'Part Time' },
-                { value: 'full_time', label: 'Full Time' },
+                { value: 'part_time', label: t('employeeOverview.contractTypeOptions.partTime') },
+                { value: 'full_time', label: t('employeeOverview.contractTypeOptions.fullTime') },
               ]}
             />
           </Field>
-          <Field label="Start Date">
+          <Field label={t('employeeOverview.fields.startDate')}>
             <AutoSaveField
-              label="Start Date"
+              label={t('employeeOverview.fields.startDate')}
               type="date"
               value={employee.startDate ? employee.startDate.slice(0, 10) : ''}
               onSave={(v) => save({ startDate: v || null })}
             />
           </Field>
-          <Field label="End Date">
+          <Field label={t('employeeOverview.fields.endDate')}>
             <AutoSaveField
-              label="End Date"
+              label={t('employeeOverview.fields.endDate')}
               type="date"
               value={employee.endDate ? employee.endDate.slice(0, 10) : ''}
               onSave={(v) => save({ endDate: v || null })}
             />
           </Field>
-          <Field label="Contract URL">
+          <Field label={t('employeeOverview.fields.contractUrl')}>
             <AutoSaveField
-              label="Contract URL"
+              label={t('employeeOverview.fields.contractUrl')}
               type="url"
               value={employee.contractUrl || ''}
               onSave={(v) => save({ contractUrl: v || null })}
@@ -406,21 +410,29 @@ export default function EmployeeOverviewPanel({
           </Field>
 
           <div className="overview-field overview-field-full">
-            <span className="overview-field-label">Time Off Policies ({assignedPolicies.length})</span>
+            <span className="overview-field-label">
+              {t('employeeOverview.timeOffPoliciesLabel', { count: assignedPolicies.length })}
+            </span>
             <div className="min-w-0 flex-1">
-              {assignedPolicies.length === 0 && <p className="text-xs text-ink-faint">No policies assigned.</p>}
+              {assignedPolicies.length === 0 && (
+                <p className="text-xs text-ink-faint">{t('employeeOverview.noPoliciesAssigned')}</p>
+              )}
               {assignedPolicies.map((policy) => (
                 <div key={policy.id} className="flex items-center justify-between gap-2 py-1 text-sm">
                   <span>{policy.name}</span>
                   <button type="button" className="icon-btn" onClick={() => handleUnassignPolicy(policy.id)}>
-                    <span className="tip">Unassign</span>
+                    <span className="tip">{t('employeeOverview.unassign')}</span>
                     <XIcon className="h-3.5 w-3.5" />
                   </button>
                 </div>
               ))}
               {unassignedPolicies.length > 0 && (
-                <select value="" onChange={(e) => handleAssignPolicy(e.target.value)} aria-label="Assign a time off policy">
-                  <option value="">+ Assign a policy…</option>
+                <select
+                  value=""
+                  onChange={(e) => handleAssignPolicy(e.target.value)}
+                  aria-label={t('employeeOverview.assignPolicyAriaLabel')}
+                >
+                  <option value="">{t('employeeOverview.assignPolicyPlaceholder')}</option>
                   {unassignedPolicies.map((policy) => (
                     <option key={policy.id} value={policy.id}>
                       {policy.name}
@@ -435,7 +447,7 @@ export default function EmployeeOverviewPanel({
 
       {hasContract && (
         <div className="field-group">
-          <h4 className="field-group-title">Compensation</h4>
+          <h4 className="field-group-title">{t('employeeOverview.sections.compensation')}</h4>
           <div className="field-group-body">
             {loadingCompensation ? (
               <>
@@ -447,54 +459,56 @@ export default function EmployeeOverviewPanel({
                 ))}
               </>
             ) : !compensation ? (
-              <p className="text-sm text-ink-faint">No active compensation.</p>
+              <p className="text-sm text-ink-faint">{t('employeeOverview.compensation.noActiveCompensation')}</p>
             ) : (
               <>
                 <div className="overview-field">
-                  <span className="overview-field-label">Type</span>
+                  <span className="overview-field-label">{t('employeeOverview.compensation.typeLabel')}</span>
                   <span className="overview-field-value">
-                    {compensation.compensationType === 'hourly' ? 'Hourly' : 'Fixed'}
+                    {compensation.compensationType === 'hourly'
+                      ? t('payroll.common.compensationTypeLabels.hourly')
+                      : t('payroll.common.compensationTypeLabels.fixed')}
                   </span>
                 </div>
                 <div className="overview-field">
-                  <span className="overview-field-label">Rate</span>
+                  <span className="overview-field-label">{t('employeeOverview.compensation.rateLabel')}</span>
                   <span className="overview-field-value">{formatMoney(compensation.rateCents, compensation.currency)}</span>
                 </div>
                 <div className="overview-field">
-                  <span className="overview-field-label">Pay Frequency</span>
+                  <span className="overview-field-label">{t('employeeOverview.compensation.payFrequencyLabel')}</span>
                   <span className="overview-field-value">{compensation.payFrequencyName}</span>
                 </div>
                 <div className="overview-field">
-                  <span className="overview-field-label">Effective From</span>
+                  <span className="overview-field-label">{t('employeeOverview.compensation.effectiveFromLabel')}</span>
                   <span className="overview-field-value">{compensation.effectiveFrom.slice(0, 10)}</span>
                 </div>
                 <div className="overview-field">
-                  <span className="overview-field-label">Job Title</span>
+                  <span className="overview-field-label">{t('employeeOverview.compensation.jobTitleLabel')}</span>
                   <span className="overview-field-value">{compensation.jobTitle}</span>
                 </div>
                 <div className="overview-field overview-field-full">
-                  <span className="overview-field-label">Role Description</span>
+                  <span className="overview-field-label">{t('employeeOverview.compensation.roleDescriptionLabel')}</span>
                   <span className="overview-field-value">{compensation.description}</span>
                 </div>
                 {compensation.note && (
                   <div className="overview-field overview-field-full">
-                    <span className="overview-field-label">Note</span>
+                    <span className="overview-field-label">{t('employeeOverview.compensation.noteLabel')}</span>
                     <span className="overview-field-value">{compensation.note}</span>
                   </div>
                 )}
                 <div className="overview-field">
-                  <span className="overview-field-label">Contract Status</span>
+                  <span className="overview-field-label">{t('employeeOverview.compensation.contractStatusLabel')}</span>
                   <span className="overview-field-value">
                     {compensation.confirmedAt
-                      ? `Confirmed on ${compensation.confirmedAt.slice(0, 10)}`
-                      : 'Pending signature'}
+                      ? t('employeeOverview.compensation.confirmedOn', { date: compensation.confirmedAt.slice(0, 10) })
+                      : t('employeeOverview.compensation.pendingSignature')}
                   </span>
                 </div>
                 <div className="overview-field overview-field-full">
                   <span className="overview-field-label"></span>
                   <div className="flex gap-2">
                     <button type="button" className="btn-secondary btn-sm" onClick={() => setContractPreviewOpen(true)}>
-                      View contract
+                      {t('employeeOverview.viewContract')}
                     </button>
                     <button
                       type="button"
@@ -502,7 +516,7 @@ export default function EmployeeOverviewPanel({
                       onClick={handleResendContract}
                       disabled={resendingContract}
                     >
-                      {resendingContract ? 'Resending…' : 'Resend contract'}
+                      {resendingContract ? t('employeeOverview.resending') : t('employeeOverview.resendContract')}
                     </button>
                   </div>
                 </div>
@@ -514,7 +528,7 @@ export default function EmployeeOverviewPanel({
 
       {customFields.length > 0 && (
         <div className="field-group">
-          <h4 className="field-group-title">Custom fields</h4>
+          <h4 className="field-group-title">{t('employeeOverview.sections.customFields')}</h4>
           <div className="field-group-body">
             {customFields.map((field) => {
               const existing = employee.customFieldVals?.find((v: any) => v.customFieldDefinitionId === field.id);
@@ -565,16 +579,18 @@ export default function EmployeeOverviewPanel({
           <OverviewActionsMenu
             className="overview-actions-trigger"
             items={[
-              ...(canManageEmployees && !employee.userId ? [{ label: 'Invite to app', onClick: onInvite }] : []),
+              ...(canManageEmployees && !employee.userId
+                ? [{ label: t('employeeOverview.actionsMenu.inviteToApp'), onClick: onInvite }]
+                : []),
               ...(canManageEmployees &&
               !employee.statusDefn?.isTerminatedStatus &&
               !terminationOptions?.pendingTermination
-                ? [{ label: 'Terminate', onClick: () => setTerminateModalOpen(true), danger: true }]
+                ? [{ label: t('employeeOverview.actionsMenu.terminate'), onClick: () => setTerminateModalOpen(true), danger: true }]
                 : []),
-              { label: 'Delete', onClick: onRequestDelete, danger: true },
+              { label: t('employeeOverview.actionsMenu.delete'), onClick: onRequestDelete, danger: true },
             ]}
           />
-          <button type="button" className="slideover-close" onClick={onClose} aria-label="Close">
+          <button type="button" className="slideover-close" onClick={onClose} aria-label={t('employeeOverview.closeAriaLabel')}>
             <XIcon className="h-4 w-4" />
           </button>
           <Avatar firstName={employee.firstName} lastName={employee.lastName} />
@@ -594,10 +610,12 @@ export default function EmployeeOverviewPanel({
             {terminationOptions?.pendingTermination && (
               <div className="flex items-center gap-2">
                 <p className="text-xs text-ink-faint">
-                  Scheduled termination: {terminationOptions.pendingTermination.terminationDate.slice(0, 10)}
+                  {t('employeeOverview.scheduledTermination', {
+                    date: terminationOptions.pendingTermination.terminationDate.slice(0, 10),
+                  })}
                 </p>
                 <button type="button" className="btn-secondary btn-sm" onClick={handleCancelTermination}>
-                  Cancel
+                  {t('employeeOverview.cancelTermination')}
                 </button>
               </div>
             )}
@@ -612,14 +630,14 @@ export default function EmployeeOverviewPanel({
               className={`mini-toggle-opt ${activeTab === 'overview' ? 'active' : ''}`}
               onClick={() => setActiveTab('overview')}
             >
-              Overview
+              {t('employeeOverview.tabs.overview')}
             </button>
             <button
               type="button"
               className={`mini-toggle-opt ${activeTab === 'payments' ? 'active' : ''}`}
               onClick={() => setActiveTab('payments')}
             >
-              Payment History
+              {t('employeeOverview.tabs.paymentHistory')}
             </button>
           </div>
         )}
@@ -632,7 +650,7 @@ export default function EmployeeOverviewPanel({
                 className={mobileSection === 'overview' ? 'active' : ''}
                 onClick={() => setMobileSection('overview')}
               >
-                Overview
+                {t('employeeOverview.tabs.overview')}
               </button>
               {canManagePayroll && (
                 <button
@@ -640,7 +658,7 @@ export default function EmployeeOverviewPanel({
                   className={mobileSection === 'payments' ? 'active' : ''}
                   onClick={() => setMobileSection('payments')}
                 >
-                  Payments
+                  {t('employeeOverview.tabs.payments')}
                 </button>
               )}
               <button
@@ -648,21 +666,21 @@ export default function EmployeeOverviewPanel({
                 className={mobileSection === 'notes' ? 'active' : ''}
                 onClick={() => setMobileSection('notes')}
               >
-                Notes{sidebarCounts.notes > 0 ? ` (${sidebarCounts.notes})` : ''}
+                {t('employeeOverview.tabs.notes')}{sidebarCounts.notes > 0 ? ` (${sidebarCounts.notes})` : ''}
               </button>
               <button
                 type="button"
                 className={mobileSection === 'tasks' ? 'active' : ''}
                 onClick={() => setMobileSection('tasks')}
               >
-                Tasks{sidebarCounts.tasks > 0 ? ` (${sidebarCounts.tasks})` : ''}
+                {t('employeeOverview.tabs.tasks')}{sidebarCounts.tasks > 0 ? ` (${sidebarCounts.tasks})` : ''}
               </button>
               <button
                 type="button"
                 className={mobileSection === 'activity' ? 'active' : ''}
                 onClick={() => setMobileSection('activity')}
               >
-                Activity{sidebarCounts.activity > 0 ? ` (${sidebarCounts.activity})` : ''}
+                {t('employeeOverview.tabs.activity')}{sidebarCounts.activity > 0 ? ` (${sidebarCounts.activity})` : ''}
               </button>
             </div>
             {/* display:contents (not a plain block wrapper) so overviewContent's own root
@@ -703,9 +721,9 @@ export default function EmployeeOverviewPanel({
           open={contractPreviewOpen}
           onClose={() => setContractPreviewOpen(false)}
           fetchPdf={() => api.getEmployeeContractPdf(token, employee.id)}
-          title="Contract"
+          title={t('employeeOverview.payslipModal.contractTitle')}
           downloadFilename="contract.pdf"
-          helperText="This is the exact document generated for this contract."
+          helperText={t('employeeOverview.payslipModal.contractHelperText')}
         />
       )}
       {paymentPayslipEntryId && (

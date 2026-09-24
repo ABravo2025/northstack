@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../api';
 import type { PayrollEntryType } from '../../api';
 import { useToast } from '../common/ToastProvider';
@@ -9,13 +10,6 @@ import { TrashIcon } from '../common/Icons';
 import { CURRENCY_CODES } from '../../lib/currencies';
 
 type AdjustmentType = Exclude<PayrollEntryType, 'base'>;
-
-const ADJUSTMENT_TYPE_LABELS: Record<AdjustmentType, string> = {
-  bonus: 'Bonus',
-  commission: 'Commission',
-  reimbursement: 'Reimbursement',
-  deduction: 'Deduction',
-};
 
 interface AdditionalLine {
   type: AdjustmentType;
@@ -61,7 +55,18 @@ export default function TerminateEmployeeModal({
   defaultCurrency,
   onTerminated,
 }: TerminateEmployeeModalProps) {
+  const { t } = useTranslation('hr');
   const toast = useToast();
+  // Backend enum codes (bonus/commission/reimbursement/deduction) as keys, computed inside the
+  // component (not a module-level const) so it recomputes with the active language on every
+  // render — shares its copy with payroll.common.entryTypeLabels (payslip/run-detail/PayrollPage
+  // all draw from the same translated set).
+  const ADJUSTMENT_TYPE_LABELS: Record<AdjustmentType, string> = {
+    bonus: t('payroll.common.entryTypeLabels.bonus'),
+    commission: t('payroll.common.entryTypeLabels.commission'),
+    reimbursement: t('payroll.common.entryTypeLabels.reimbursement'),
+    deduction: t('payroll.common.entryTypeLabels.deduction'),
+  };
   const [lastDay, setLastDay] = useState(todayIso());
   const [directReports, setDirectReports] = useState<{ id: string; firstName: string; lastName: string }[]>([]);
   const [reassignments, setReassignments] = useState<Record<string, string>>({}); // reportId -> newManagerId ('' = none)
@@ -70,7 +75,7 @@ export default function TerminateEmployeeModal({
   const [finalAmount, setFinalAmount] = useState('');
   const [finalCurrency, setFinalCurrency] = useState(defaultCurrency || 'USD');
   const [finalPaymentDate, setFinalPaymentDate] = useState(todayIso());
-  const [finalLabel, setFinalLabel] = useState('Final payment');
+  const [finalLabel, setFinalLabel] = useState(t('terminateModal.finalPaymentDefaultLabel'));
   const [additionalLines, setAdditionalLines] = useState<AdditionalLine[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
@@ -83,7 +88,7 @@ export default function TerminateEmployeeModal({
     setFinalAmount('');
     setFinalCurrency(defaultCurrency || 'USD');
     setFinalPaymentDate(todayIso());
-    setFinalLabel('Final payment');
+    setFinalLabel(t('terminateModal.finalPaymentDefaultLabel'));
     setAdditionalLines([]);
     api
       .getTerminationOptions(token, employee.id)
@@ -99,7 +104,7 @@ export default function TerminateEmployeeModal({
 
   const isFuture = lastDay > todayIso();
   const managerOptions = [
-    { value: '', label: '-- no manager --' },
+    { value: '', label: t('common.noManagerPlaceholder') },
     ...employees.filter((e) => e.id !== employee.id).map((e) => ({ value: e.id, label: `${e.firstName} ${e.lastName}` })),
   ];
 
@@ -112,14 +117,14 @@ export default function TerminateEmployeeModal({
     if (includeFinalPayment) {
       const cents = Math.round(parseFloat(finalAmount) * 100);
       if (!finalAmount || Number.isNaN(cents) || cents <= 0) {
-        toast.error('Enter a valid final payment amount.');
+        toast.error(t('terminateModal.toasts.invalidFinalAmount'));
         return;
       }
       const lineCentsByIndex: number[] = [];
       for (const line of additionalLines) {
         const lineCents = Math.round(parseFloat(line.amount) * 100);
         if (!line.amount || Number.isNaN(lineCents) || lineCents <= 0) {
-          toast.error('Enter a valid amount for every additional payment line.');
+          toast.error(t('terminateModal.toasts.invalidLineAmount'));
           return;
         }
         lineCentsByIndex.push(lineCents);
@@ -148,11 +153,15 @@ export default function TerminateEmployeeModal({
         })),
         finalPayment,
       });
-      toast.success(result.executedNow ? 'Employee terminated.' : `Termination scheduled for ${lastDay}.`);
+      toast.success(
+        result.executedNow
+          ? t('terminateModal.toasts.terminatedSuccess')
+          : t('terminateModal.toasts.terminationScheduled', { date: lastDay }),
+      );
       onTerminated();
       onClose();
     } catch (error) {
-      toast.error('Failed to terminate employee: ' + (error as Error).message);
+      toast.error(t('terminateModal.toasts.terminateFailed', { error: (error as Error).message }));
     } finally {
       setSubmitting(false);
     }
@@ -161,38 +170,34 @@ export default function TerminateEmployeeModal({
   return (
     <Modal
       open={open}
-      title={`Terminate ${employee.firstName} ${employee.lastName}`}
+      title={t('terminateModal.title', { name: `${employee.firstName} ${employee.lastName}` })}
       onClose={onClose}
       wide
       footer={
         <button type="button" className="btn-danger btn-md" onClick={handleSubmit} disabled={submitting}>
-          {submitting ? 'Saving…' : isFuture ? 'Schedule termination' : 'Terminate now'}
+          {submitting ? t('terminateModal.saving') : isFuture ? t('terminateModal.scheduleTermination') : t('terminateModal.terminateNow')}
         </button>
       }
     >
       <div className="flex flex-col gap-4">
-        <div className="alert alert-info">
-          This will end {employee.firstName}'s contract in Northstack. Once it takes effect, their
-          status will change to Terminated.
-        </div>
+        <div className="alert alert-info">{t('terminateModal.alertInfo', { name: employee.firstName })}</div>
 
-        <Field label="Last day">
+        <Field label={t('terminateModal.fields.lastDay')}>
           <input type="date" value={lastDay} onChange={(e) => setLastDay(e.target.value)} />
         </Field>
         <p className="text-xs text-ink-faint">
           {isFuture
-            ? `This will take effect on ${lastDay}.`
-            : 'This will take effect immediately once confirmed.'}
+            ? t('terminateModal.effectFuture', { date: lastDay })
+            : t('terminateModal.effectImmediate')}
         </p>
 
         {directReports.length > 0 && (
           <div className="field-group-body" style={{ padding: 0 }}>
             <p className="text-sm font-medium mb-1">
-              Direct reports ({directReports.length})
+              {t('terminateModal.directReportsCount', { count: directReports.length })}
             </p>
             <p className="text-xs text-ink-faint mb-2">
-              These people report to {employee.firstName}. Optionally reassign each one to a new
-              manager — anyone left unassigned will have no manager after this takes effect.
+              {t('terminateModal.directReportsHelp', { name: employee.firstName })}
             </p>
             <div className="flex flex-col gap-2">
               {directReports.map((report) => (
@@ -205,7 +210,7 @@ export default function TerminateEmployeeModal({
                       options={managerOptions}
                       value={reassignments[report.id] || ''}
                       onChange={(v) => setReassignments((prev) => ({ ...prev, [report.id]: v }))}
-                      placeholder="-- no manager --"
+                      placeholder={t('common.noManagerPlaceholder')}
                     />
                   </div>
                 </div>
@@ -217,7 +222,7 @@ export default function TerminateEmployeeModal({
         {employee.userId && (
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={revokeAccess} onChange={(e) => setRevokeAccess(e.target.checked)} />
-            Also revoke their access to Northstack
+            {t('terminateModal.revokeAccessLabel')}
           </label>
         )}
 
@@ -229,12 +234,12 @@ export default function TerminateEmployeeModal({
                 checked={includeFinalPayment}
                 onChange={(e) => setIncludeFinalPayment(e.target.checked)}
               />
-              Include a final payment
+              {t('terminateModal.includeFinalPaymentLabel')}
             </label>
             {includeFinalPayment && (
               <div className="flex flex-col gap-3 pl-6">
                 <div className="flex gap-2">
-                  <Field label="Amount">
+                  <Field label={t('terminateModal.fields.amount')}>
                     <input
                       type="number"
                       min="0"
@@ -244,7 +249,7 @@ export default function TerminateEmployeeModal({
                       placeholder="0.00"
                     />
                   </Field>
-                  <Field label="Currency">
+                  <Field label={t('terminateModal.fields.currency')}>
                     <select value={finalCurrency} onChange={(e) => setFinalCurrency(e.target.value)}>
                       {CURRENCY_CODES.map((code) => (
                         <option key={code} value={code}>
@@ -254,26 +259,26 @@ export default function TerminateEmployeeModal({
                     </select>
                   </Field>
                 </div>
-                <Field label="Payment date">
+                <Field label={t('terminateModal.fields.paymentDate')}>
                   <input type="date" value={finalPaymentDate} onChange={(e) => setFinalPaymentDate(e.target.value)} />
                 </Field>
-                <Field label="Label">
+                <Field label={t('terminateModal.fields.label')}>
                   <input type="text" value={finalLabel} onChange={(e) => setFinalLabel(e.target.value)} />
                 </Field>
 
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-ink-muted">
-                      Additional payments — same options as a normal payroll run
+                      {t('terminateModal.additionalPaymentsNote')}
                     </span>
                     <button type="button" className="btn-secondary btn-sm" onClick={addLine}>
-                      + Add line
+                      {t('terminateModal.addLine')}
                     </button>
                   </div>
                   {additionalLines.map((line, index) => (
                     <div key={index} className="flex items-end gap-2">
                       <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label>Type</label>
+                        <label>{t('terminateModal.fields.type')}</label>
                         <select
                           value={line.type}
                           onChange={(e) => updateLine(index, { type: e.target.value as AdjustmentType })}
@@ -286,7 +291,7 @@ export default function TerminateEmployeeModal({
                         </select>
                       </div>
                       <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label>Amount</label>
+                        <label>{t('terminateModal.fields.amount')}</label>
                         <input
                           type="number"
                           min="0"
@@ -297,10 +302,15 @@ export default function TerminateEmployeeModal({
                         />
                       </div>
                       <div className="form-group" style={{ marginBottom: 0 }}>
-                        <label>Note</label>
+                        <label>{t('terminateModal.fields.note')}</label>
                         <input type="text" value={line.label} onChange={(e) => updateLine(index, { label: e.target.value })} />
                       </div>
-                      <button type="button" className="icon-btn" onClick={() => removeLine(index)} aria-label="Remove line">
+                      <button
+                        type="button"
+                        className="icon-btn"
+                        onClick={() => removeLine(index)}
+                        aria-label={t('terminateModal.removeLineAriaLabel')}
+                      >
                         <TrashIcon className="h-4 w-4" />
                       </button>
                     </div>

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api, type Opportunity, type Pipeline } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import ConfirmDialog from '../components/common/ConfirmDialog';
@@ -73,6 +74,7 @@ const emptyForm = {
 };
 
 export default function OpportunitiesPage({ user, token }: OpportunitiesPageProps) {
+  const { t } = useTranslation('crm');
   const toast = useToast();
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
@@ -149,7 +151,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
           hasSetInitialTab.current = true;
         }
       })
-      .catch((error) => toast.error('Failed to load: ' + (error as Error).message))
+      .catch((error) => toast.error(t('opportunities.toasts.loadFailed', { error: (error as Error).message })))
       .finally(() => setLoading(false));
     setLoading(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -223,7 +225,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
     setSlideOverMode('add');
   };
 
-  usePrimaryAction({ label: 'Add opportunity', onClick: handleOpenAdd });
+  usePrimaryAction({ label: t('opportunities.primaryAction'), onClick: handleOpenAdd });
 
   // Switching Pipeline resets the type-specific fields (Company vs.
   // Contact/placeholder-Company-name) — carrying over, say, a chosen Company
@@ -420,7 +422,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
       try {
         await createOpportunityRecord(candidate);
       } catch (error) {
-        toast.error('Failed to save opportunity: ' + (error as Error).message);
+        toast.error(t('opportunities.toasts.saveFailed', { error: (error as Error).message }));
         throw error;
       }
     });
@@ -440,7 +442,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
         const opportunity = await createOpportunityRecord(form);
         id = opportunity.id;
       }
-      toast.success('Opportunity created.');
+      toast.success(t('opportunities.toasts.created'));
       // Awaited deliberately — the detail view opened by setViewingId below
       // reads from this `opportunities` array (find-by-id), so it must
       // reflect the just-applied update before it opens, not whatever was
@@ -453,7 +455,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
       setForm((f) => ({ ...emptyForm, currency: f.currency }));
       setViewingId(id);
     } catch (error) {
-      toast.error('Failed to save opportunity: ' + (error as Error).message);
+      toast.error(t('opportunities.toasts.saveFailed', { error: (error as Error).message }));
     }
   };
 
@@ -466,11 +468,11 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
     if (!deleting) return;
     try {
       await api.deleteOpportunity(token, deleting.id);
-      toast.success(`${deleting.name} deleted.`);
+      toast.success(t('opportunities.toasts.deleted', { name: deleting.name }));
       setDeleting(null);
       reloadOpportunities();
     } catch (error) {
-      toast.error('Failed to delete: ' + (error as Error).message);
+      toast.error(t('opportunities.toasts.deleteFailed', { error: (error as Error).message }));
       setDeleting(null);
     }
   };
@@ -490,7 +492,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
         setViewingId(opp.id);
       }
     } catch (error) {
-      toast.error('Failed to move: ' + (error as Error).message);
+      toast.error(t('opportunities.toasts.moveFailed', { error: (error as Error).message }));
     }
   };
 
@@ -508,9 +510,9 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
     <div className="page-full">
       {deleting && (
         <ConfirmDialog
-          title="Delete opportunity"
-          message={`Are you sure you want to delete "${deleting.name}"? This can't be undone.`}
-          confirmLabel="Delete"
+          title={t('opportunities.confirmDelete.title')}
+          message={t('opportunities.confirmDelete.message', { name: deleting.name })}
+          confirmLabel={t('common.delete')}
           onConfirm={handleDelete}
           onCancel={() => setDeleting(null)}
         />
@@ -518,16 +520,16 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
 
       <Modal
         open={slideOverMode === 'add'}
-        title="Add Opportunity"
+        title={t('opportunities.modal.addTitle')}
         onClose={closeSlideOver}
         wide
         footer={
           <>
             <button type="button" className="btn-secondary" onClick={closeSlideOver}>
-              Cancel
+              {t('common.cancel')}
             </button>
             <button type="submit" form="opportunity-form" className="btn-primary" disabled={autoCreateGuard.isBusy}>
-              Create
+              {t('common.create')}
             </button>
           </>
         }
@@ -535,9 +537,9 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
         {slideOverMode === 'add' && (
           <form id="opportunity-form" onSubmit={handleSubmit}>
             <div className="field-group">
-              <h4 className="field-group-title">Deal</h4>
+              <h4 className="field-group-title">{t('opportunities.groups.deal')}</h4>
               <div className="field-group-body">
-                <Field label="Pipeline" required>
+                <Field label={t('opportunities.fields.pipeline')} required>
                   <select
                     id="opp-pipelineId"
                     className="overview-field-input"
@@ -545,7 +547,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                     onChange={(e) => handleFormPipelineChange(e.target.value)}
                     required
                   >
-                    <option value="">-- select --</option>
+                    <option value="">{t('common.selectPlaceholder')}</option>
                     {activePipelines.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.name}
@@ -553,7 +555,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                     ))}
                   </select>
                 </Field>
-                <Field label="Deal Name" required full>
+                <Field label={t('opportunities.fields.dealName')} required full>
                   <input
                     id="opp-name"
                     className="overview-field-input"
@@ -566,7 +568,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                 </Field>
                 {formPipeline?.type === 'lead' ? (
                   <>
-                    <Field label="Contact" required>
+                    <Field label={t('opportunities.fields.contact')} required>
                       <select
                         id="opp-contactId"
                         className="overview-field-input"
@@ -577,7 +579,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                           attemptAutoCreateOpportunity(next);
                         }}
                       >
-                        <option value="">-- select an existing contact --</option>
+                        <option value="">{t('opportunities.fields.selectExistingContact')}</option>
                         {contacts.map((c: any) => (
                           <option key={c.id} value={c.id}>
                             {c.firstName} {c.lastName}
@@ -587,7 +589,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                     </Field>
                     {!form.contactId && (
                       <>
-                        <Field label="New contact — first name" required>
+                        <Field label={t('opportunities.fields.newContactFirstName')} required>
                           <input
                             className="overview-field-input"
                             value={form.newContactFirstName}
@@ -596,7 +598,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                             required
                           />
                         </Field>
-                        <Field label="New contact — last name" required>
+                        <Field label={t('opportunities.fields.newContactLastName')} required>
                           <input
                             className="overview-field-input"
                             value={form.newContactLastName}
@@ -605,7 +607,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                             required
                           />
                         </Field>
-                        <Field label="New contact — email" required>
+                        <Field label={t('opportunities.fields.newContactEmail')} required>
                           <input
                             className="overview-field-input"
                             type="email"
@@ -618,21 +620,21 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                       </>
                     )}
                     {!contacts.find((c: any) => c.id === form.contactId)?.companyId && (
-                      <Field label="Company name" required>
+                      <Field label={t('opportunities.fields.companyName')} required>
                         <input
                           id="opp-leadCompanyName"
                           className="overview-field-input"
                           value={form.leadCompanyName}
                           onChange={(e) => setForm({ ...form, leadCompanyName: e.target.value })}
                           onBlur={() => attemptAutoCreateOpportunity()}
-                          placeholder="Company name (not yet a confirmed account)"
+                          placeholder={t('opportunities.fields.companyNamePlaceholder')}
                           required
                         />
                       </Field>
                     )}
                   </>
                 ) : (
-                  <Field label="Company" required>
+                  <Field label={t('opportunities.fields.company')} required>
                     <select
                       id="opp-companyId"
                       className="overview-field-input"
@@ -644,7 +646,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                       }}
                       required
                     >
-                      <option value="">-- select --</option>
+                      <option value="">{t('common.selectPlaceholder')}</option>
                       {companies
                         .filter((c: any) => !c.isPlaceholder)
                         .map((c: any) => (
@@ -655,7 +657,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                     </select>
                   </Field>
                 )}
-                <Field label="Owner" required={!formPipeline?.assignmentMode}>
+                <Field label={t('opportunities.fields.owner')} required={!formPipeline?.assignmentMode}>
                   <select
                     id="opp-ownerId"
                     className="overview-field-input"
@@ -667,7 +669,9 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                     }}
                     required={!formPipeline?.assignmentMode}
                   >
-                    <option value="">{formPipeline?.assignmentMode ? '-- auto-assign --' : '-- select --'}</option>
+                    <option value="">
+                      {formPipeline?.assignmentMode ? t('opportunities.fields.autoAssign') : t('common.selectPlaceholder')}
+                    </option>
                     {tenantUsers.map((u) => (
                       <option key={u.id} value={u.id}>
                         {u.firstName} {u.lastName}
@@ -676,11 +680,11 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                   </select>
                   {formPipeline?.assignmentMode && !form.ownerId && (
                     <p className="mt-1 text-xs text-ink-muted dark:text-dark-ink-muted">
-                      This pipeline will assign an owner automatically if left blank.
+                      {t('opportunities.fields.ownerAutoAssignNote')}
                     </p>
                   )}
                 </Field>
-                <Field label="Amount" required>
+                <Field label={t('opportunities.fields.amount')} required>
                   <input
                     id="opp-amount"
                     className="overview-field-input"
@@ -693,7 +697,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                     required
                   />
                 </Field>
-                <Field label="Currency" required>
+                <Field label={t('opportunities.fields.currency')} required>
                   <input
                     id="opp-currency"
                     className="overview-field-input"
@@ -710,10 +714,10 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
 
             {(selectedStage?.outcome === 'lost' || selectedStage?.outcome === 'won') && (
               <div className="field-group">
-                <h4 className="field-group-title">Stage</h4>
+                <h4 className="field-group-title">{t('opportunities.groups.stage')}</h4>
                 <div className="field-group-body">
                   {selectedStage?.outcome === 'lost' && (
-                    <Field label="Loss Reason" required>
+                    <Field label={t('opportunities.fields.lossReason')} required>
                       <select
                         id="opp-lossReasonId"
                         className="overview-field-input"
@@ -725,7 +729,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                         }}
                         required
                       >
-                        <option value="">-- select --</option>
+                        <option value="">{t('common.selectPlaceholder')}</option>
                         {lossReasons
                           .filter((lr: any) => lr.isActive)
                           .map((lr: any) => (
@@ -737,7 +741,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                     </Field>
                   )}
                   {selectedStage?.outcome === 'won' && (
-                    <Field label="Win Reason" required>
+                    <Field label={t('opportunities.fields.winReason')} required>
                       <select
                         id="opp-winReasonId"
                         className="overview-field-input"
@@ -749,7 +753,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                         }}
                         required
                       >
-                        <option value="">-- select --</option>
+                        <option value="">{t('common.selectPlaceholder')}</option>
                         {winReasons
                           .filter((wr: any) => wr.isActive)
                           .map((wr: any) => (
@@ -760,14 +764,14 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                       </select>
                     </Field>
                   )}
-                  <Field label="Close Note" full>
+                  <Field label={t('opportunities.fields.closeNote')} full>
                     <input
                       id="opp-closeNote"
                       className="overview-field-input"
                       type="text"
                       value={form.closeNote}
                       onChange={(e) => setForm({ ...form, closeNote: e.target.value })}
-                      placeholder="Optional details about how this deal closed"
+                      placeholder={t('opportunities.fields.closeNotePlaceholder')}
                     />
                   </Field>
                 </div>
@@ -775,9 +779,9 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
             )}
 
             <div className="field-group">
-              <h4 className="field-group-title">Next step</h4>
+              <h4 className="field-group-title">{t('opportunities.groups.nextStep')}</h4>
               <div className="field-group-body">
-                <Field label="Estimated Close Date">
+                <Field label={t('opportunities.fields.estimatedCloseDate')}>
                   <input
                     id="opp-estimatedCloseDate"
                     className="overview-field-input"
@@ -786,7 +790,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                     onChange={(e) => setForm({ ...form, estimatedCloseDate: e.target.value })}
                   />
                 </Field>
-                <Field label="Next Step Date">
+                <Field label={t('opportunities.fields.nextStepDate')}>
                   <input
                     id="opp-nextStepDate"
                     className="overview-field-input"
@@ -795,14 +799,14 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                     onChange={(e) => setForm({ ...form, nextStepDate: e.target.value })}
                   />
                 </Field>
-                <Field label="Next Step" full>
+                <Field label={t('opportunities.fields.nextStep')} full>
                   <input
                     id="opp-nextStepNote"
                     className="overview-field-input"
                     type="text"
                     value={form.nextStepNote}
                     onChange={(e) => setForm({ ...form, nextStepNote: e.target.value })}
-                    placeholder="What's the next action?"
+                    placeholder={t('opportunities.fields.nextStepPlaceholder')}
                   />
                 </Field>
               </div>
@@ -839,10 +843,12 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
         })()}
 
       <div className="page-toolbar">
-        <h2>Opportunities</h2>
+        <h2>{t('opportunities.toolbar.heading')}</h2>
         {currentPipeline && weightedPipelineCurrency && (
-          <span className="text-sm text-ink-muted" title="Σ (amount × stage probability) across open deals in this pipeline">
-            Weighted value: {formatMoney(Math.round(weightedPipelineTotalCents), weightedPipelineCurrency)}
+          <span className="text-sm text-ink-muted" title={t('opportunities.toolbar.weightedValueTitle')}>
+            {t('opportunities.toolbar.weightedValue', {
+              amount: formatMoney(Math.round(weightedPipelineTotalCents), weightedPipelineCurrency),
+            })}
           </span>
         )}
         {/* No header "Add" button, on any width: the FAB (usePrimaryAction above) covers mobile,
@@ -868,7 +874,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
             className={`view-tab ${activeTab === 'archived' ? 'active' : ''}`}
             onClick={() => setActiveTab('archived')}
           >
-            Archived
+            {t('opportunities.archivedTab')}
           </button>
         )}
       </div>
@@ -879,7 +885,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
           {archivedOpportunities.map((opp) => (
             <div key={opp.id} className="card">
               <strong>{opp.name}</strong> — {opp.company?.name} — {formatMoney(opp.amountCents, opp.currency)} —{' '}
-              {opp.stage?.name} (read-only, pipeline archived)
+              {opp.stage?.name} {t('opportunities.archivedReadOnlyNote')}
             </div>
           ))}
         </div>
@@ -917,21 +923,25 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                   <span className="kc-owner">{getInitials(opp.owner?.firstName, opp.owner?.lastName)}</span>
                   {stageDays !== null && (
                     <span className={`kc-age ${isLate ? 'late' : ''}`}>
-                      {stageDays === 0 ? 'Entered today' : `${stageDays}d in stage`}
+                      {stageDays === 0
+                        ? t('opportunities.kanban.enteredToday')
+                        : t('opportunities.kanban.daysInStage', { count: stageDays })}
                     </span>
                   )}
                   {singleContact ? (
                     <Link
                       to={`/contacts?open=${singleContact.id}`}
                       className="kc-single-thread hover:underline"
-                      title="Only one contact on this deal"
+                      title={t('opportunities.kanban.onlyContactTitle')}
                       onClick={(e) => e.stopPropagation()}
                     >
                       {singleContact.firstName} {singleContact.lastName}
                     </Link>
                   ) : (
                     (opp.contactLinks?.length ?? 0) > 1 && (
-                      <span className="kc-age">{opp.contactLinks!.length} contacts</span>
+                      <span className="kc-age">
+                        {t('opportunities.kanban.multipleContacts', { count: opp.contactLinks!.length })}
+                      </span>
                     )
                   )}
                 </div>
@@ -958,14 +968,14 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
                     <span className="ghost-plus-box">
                       <PlusIcon className="h-3 w-3" />
                     </span>
-                    Add
+                    {t('common.add')}
                   </div>
                 )
               : undefined
           }
         />
       ) : (
-        <p className="mt-4">No active pipelines. Create one in Settings → Pipelines.</p>
+        <p className="mt-4">{t('opportunities.noActivePipelines')}</p>
       )}
     </div>
   );

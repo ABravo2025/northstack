@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Modal from './Modal';
 import { useToast } from './ToastProvider';
 import { redirectToCheckout } from '../../lib/checkout';
@@ -30,6 +31,7 @@ interface AddPaymentMethodModalProps {
 // place) rather than relying on a same-tab redirect completing.
 export default function AddPaymentMethodModal({ open, token, onClose }: AddPaymentMethodModalProps) {
   const toast = useToast();
+  const { t } = useTranslation('settingsPages');
   const [loading, setLoading] = useState(false);
 
   const handleStart = async () => {
@@ -45,17 +47,16 @@ export default function AddPaymentMethodModal({ open, token, onClose }: AddPayme
   };
 
   return (
-    <Modal open={open} title="Update payment method" onClose={onClose}>
+    <Modal open={open} title={t('addPaymentMethod.title')} onClose={onClose}>
       <p className="text-sm text-ink-muted mb-4">
-        You'll be redirected to our payment provider (in a new tab) to securely replace your payment method.
-        Your new card takes over immediately — Northstack never sees or stores your card details.
+        {t('addPaymentMethod.description')}
       </p>
       <div className="flex justify-end gap-2">
         <button type="button" className="btn-ghost" onClick={onClose} disabled={loading}>
-          Cancel
+          {t('addPaymentMethod.cancel')}
         </button>
         <button type="button" className="btn btn-primary" onClick={handleStart} disabled={loading}>
-          {loading ? 'Starting…' : 'Continue'}
+          {loading ? t('addPaymentMethod.starting') : t('addPaymentMethod.continue')}
         </button>
       </div>
     </Modal>

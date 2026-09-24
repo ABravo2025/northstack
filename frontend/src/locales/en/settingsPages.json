@@ -208,6 +208,13 @@
       "actions": "Actions"
     }
   },
+  "addPaymentMethod": {
+    "title": "Update payment method",
+    "description": "You'll be redirected to our payment provider (in a new tab) to securely replace your payment method. Your new card takes over immediately — Northstack never sees or stores your card details.",
+    "cancel": "Cancel",
+    "starting": "Starting…",
+    "continue": "Continue"
+  },
   "appearance": {
     "companyCardTitle": "Company",
     "currencyHelp": "Applies to compensation amounts across the company (Hourly/Monthly Rate on Employee).",

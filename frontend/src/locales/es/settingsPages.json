@@ -208,6 +208,13 @@
       "actions": "Acciones"
     }
   },
+  "addPaymentMethod": {
+    "title": "Actualizar método de pago",
+    "description": "Vas a ser redirigido a nuestro proveedor de pagos (en una pestaña nueva) para reemplazar tu método de pago de forma segura. Tu nueva tarjeta queda activa de inmediato — Northstack nunca ve ni guarda los datos de tu tarjeta.",
+    "cancel": "Cancelar",
+    "starting": "Iniciando…",
+    "continue": "Continuar"
+  },
   "appearance": {
     "companyCardTitle": "Empresa",
     "currencyHelp": "Se aplica a los montos de compensación en toda la empresa (Tarifa por hora/mensual en Empleado).",

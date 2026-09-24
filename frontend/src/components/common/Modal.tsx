@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { XIcon } from './Icons';
 
 interface ModalProps {
@@ -21,6 +22,7 @@ interface ModalProps {
 // call sites read the same way; reach for this only when a design
 // explicitly calls for a centered dialog instead of a side panel.
 export default function Modal({ open, title, onClose, children, footer, wide = false, xwide = false }: ModalProps) {
+  const { t } = useTranslation();
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -60,7 +62,7 @@ export default function Modal({ open, title, onClose, children, footer, wide = f
       >
         <div className="modal-head">
           <h3 className="modal-title">{title}</h3>
-          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
+          <button type="button" className="modal-close" onClick={onClose} aria-label={t('modal.close')}>
             <XIcon className="h-4 w-4" />
           </button>
         </div>

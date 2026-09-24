@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { usePermissions } from '../../contexts/PermissionsContext';
 import { isGrowthFeatureEnabled } from '../../lib/planLimits';
 import type { Tenant } from '../../api';
@@ -26,6 +27,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ mobileOpen, onMobileClose, tenant }: SidebarProps) {
+  const { t } = useTranslation();
   const [collapsed, setCollapsed] = useState(false);
   // Custom Roles Fase J — migrated off `user.role === 'owner'` (Payroll/Payments were shown to
   // owner only, matching their real backend gates being owner-only by default, but never
@@ -57,81 +59,81 @@ export default function Sidebar({ mobileOpen, onMobileClose, tenant }: SidebarPr
         <button
           className="sidebar-toggle-desktop"
           onClick={() => setCollapsed(!collapsed)}
-          title={collapsed ? 'Expand' : 'Collapse'}
+          title={collapsed ? t('sidebar.expand') : t('sidebar.collapse')}
         >
           <ChevronLeftIcon className={`h-4 w-4 transition-transform ${collapsed ? 'rotate-180' : ''}`} />
         </button>
-        <button className="sidebar-toggle-mobile" onClick={onMobileClose} aria-label="Close menu">
+        <button className="sidebar-toggle-mobile" onClick={onMobileClose} aria-label={t('sidebar.closeMenu')}>
           <XIcon className="h-4 w-4" />
         </button>
 
         <div>
-          <NavLink to="/overview" className={linkClass} title="Overview" onClick={onMobileClose} data-tour="nav-overview">
+          <NavLink to="/overview" className={linkClass} title={t('sidebar.overview')} onClick={onMobileClose} data-tour="nav-overview">
             <HomeIcon className="h-4 w-4 shrink-0" />
-            {label('Overview')}
+            {label(t('sidebar.overview'))}
           </NavLink>
-          <NavLink to="/tasks" className={linkClass} title="My Tasks" onClick={onMobileClose} data-tour="nav-tasks">
+          <NavLink to="/tasks" className={linkClass} title={t('sidebar.myTasks')} onClick={onMobileClose} data-tour="nav-tasks">
             <TaskCircleIcon className="h-4 w-4 shrink-0" />
-            {label('My Tasks')}
+            {label(t('sidebar.myTasks'))}
           </NavLink>
-          <NavLink to="/dashboards" className={linkClass} title="Dashboards" onClick={onMobileClose}>
+          <NavLink to="/dashboards" className={linkClass} title={t('sidebar.dashboards')} onClick={onMobileClose}>
             <DashboardIcon className="h-4 w-4 shrink-0" />
-            {label('Dashboards')}
+            {label(t('sidebar.dashboards'))}
           </NavLink>
         </div>
 
         <div className="sidebar-divider">
-          {!collapsed && <p className="sidebar-group-label">Human Resources</p>}
-          <NavLink to="/hr/people" className={linkClass} title="People" onClick={onMobileClose} data-tour="nav-hr">
+          {!collapsed && <p className="sidebar-group-label">{t('sidebar.humanResources')}</p>}
+          <NavLink to="/hr/people" className={linkClass} title={t('sidebar.people')} onClick={onMobileClose} data-tour="nav-hr">
             <PeopleIcon className="h-4 w-4 shrink-0" />
-            {label('People')}
+            {label(t('sidebar.people'))}
           </NavLink>
-          <NavLink to="/hr/time-off" className={linkClass} title="Human Resources – Time Off" onClick={onMobileClose}>
+          <NavLink to="/hr/time-off" className={linkClass} title={`${t('sidebar.humanResources')} – ${t('sidebar.timeOff')}`} onClick={onMobileClose}>
             <CalendarIcon className="h-4 w-4 shrink-0" />
-            {label('Time Off')}
+            {label(t('sidebar.timeOff'))}
           </NavLink>
           {permissions.has('manage_payroll') && growthPlan && (
-            <NavLink to="/hr/payroll" className={linkClass} title="Human Resources – Payroll" onClick={onMobileClose}>
+            <NavLink to="/hr/payroll" className={linkClass} title={`${t('sidebar.humanResources')} – ${t('sidebar.payroll')}`} onClick={onMobileClose}>
               <BriefcaseIcon className="h-4 w-4 shrink-0" />
-              {label('Payroll')}
+              {label(t('sidebar.payroll'))}
             </NavLink>
           )}
         </div>
 
         {showSalesGroup && (
           <div className="sidebar-divider">
-            {!collapsed && <p className="sidebar-group-label">Sales</p>}
+            {!collapsed && <p className="sidebar-group-label">{t('sidebar.sales')}</p>}
             {canSeeCompany && (
-              <NavLink to="/companies" className={linkClass} title="Companies" onClick={onMobileClose} data-tour="nav-sales">
+              <NavLink to="/companies" className={linkClass} title={t('sidebar.companies')} onClick={onMobileClose} data-tour="nav-sales">
                 <BuildingIcon className="h-4 w-4 shrink-0" />
-                {label('Companies')}
+                {label(t('sidebar.companies'))}
               </NavLink>
             )}
             {canSeeContact && (
-              <NavLink to="/contacts" className={linkClass} title="Contacts" onClick={onMobileClose}>
+              <NavLink to="/contacts" className={linkClass} title={t('sidebar.contacts')} onClick={onMobileClose}>
                 <UserCircleIcon className="h-4 w-4 shrink-0" />
-                {label('Contacts')}
+                {label(t('sidebar.contacts'))}
               </NavLink>
             )}
             {canSeeOpportunity && (
-              <NavLink to="/opportunities" className={linkClass} title="Opportunities" onClick={onMobileClose}>
+              <NavLink to="/opportunities" className={linkClass} title={t('sidebar.opportunities')} onClick={onMobileClose}>
                 <TargetIcon className="h-4 w-4 shrink-0" />
-                {label('Opportunities')}
+                {label(t('sidebar.opportunities'))}
               </NavLink>
             )}
             {canSeePayments && (
-              <NavLink to="/payments" className={linkClass} title="Payments" onClick={onMobileClose}>
+              <NavLink to="/payments" className={linkClass} title={t('sidebar.payments')} onClick={onMobileClose}>
                 <CreditCardIcon className="h-4 w-4 shrink-0" />
-                {label('Payments')}
+                {label(t('sidebar.payments'))}
               </NavLink>
             )}
           </div>
         )}
 
         <div className="sidebar-footer">
-          <NavLink to="/settings" className={linkClass} title="Settings" onClick={onMobileClose} data-tour="nav-settings">
+          <NavLink to="/settings" className={linkClass} title={t('sidebar.settings')} onClick={onMobileClose} data-tour="nav-settings">
             <GearIcon className="h-4 w-4 shrink-0" />
-            {label('Settings')}
+            {label(t('sidebar.settings'))}
           </NavLink>
         </div>
       </aside>

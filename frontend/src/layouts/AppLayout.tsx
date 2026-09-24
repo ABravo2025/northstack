@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import Sidebar from '../components/layout/Sidebar';
 import SettingsSidebar from '../components/layout/SettingsSidebar';
 import DashboardsSidebar from '../components/layout/DashboardsSidebar';
@@ -31,6 +32,7 @@ function plansModalDismissedKey(tenantId: string): string {
 }
 
 export default function AppLayout({ user, token, tenant, onLogout }: AppLayoutProps) {
+  const { t } = useTranslation();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   // Session-only "I closed it" flag — the actual dismissed/not-dismissed fact is derived from
   // localStorage during render below (dismissedInStorage), not mirrored into state, so there's
@@ -131,38 +133,32 @@ export default function AppLayout({ user, token, tenant, onLogout }: AppLayoutPr
         <main className="app-main">
           {newVersionAvailable && (
             <div className="alert alert-info mx-4 mt-4 sm:mx-6 flex items-center justify-between gap-3">
-              <span>A new version of Northstack is available.</span>
+              <span>{t('banners.newVersion')}</span>
               <button
                 type="button"
                 className="btn btn-outline btn-sm whitespace-nowrap"
                 onClick={() => window.location.reload()}
               >
-                Reload
+                {t('banners.reload')}
               </button>
             </div>
           )}
           {tenant?.status === 'suspended' && permissions.has('manage_billing') && (
             <div className="alert alert-error mx-4 mt-4 sm:mx-6 flex items-center justify-between gap-3">
-              <span>
-                Your workspace is in view-only mode — your subscription lapsed and the grace period ended. Add a
-                payment method to restore full access.
-              </span>
+              <span>{t('banners.suspended')}</span>
               <button
                 type="button"
                 className="btn btn-outline btn-sm whitespace-nowrap"
                 onClick={handleAddPaymentMethod}
                 disabled={startingCheckout}
               >
-                {startingCheckout ? 'Starting…' : 'Add payment method'}
+                {startingCheckout ? t('banners.starting') : t('banners.addPaymentMethod')}
               </button>
             </div>
           )}
           {tenant?.status === 'past_due' && tenant.gracePeriodEndsAt && (
             <div className="alert alert-warning mx-4 mt-4 sm:mx-6 flex items-center justify-between gap-3">
-              <span>
-                Your free trial ended. You have {daysRemainingUntil(tenant.gracePeriodEndsAt)} day
-                {daysRemainingUntil(tenant.gracePeriodEndsAt) === 1 ? '' : 's'} left before your account is suspended.
-              </span>
+              <span>{t('banners.pastDue', { count: daysRemainingUntil(tenant.gracePeriodEndsAt) })}</span>
               {permissions.has('manage_billing') && (
                 <button
                   type="button"
@@ -170,20 +166,20 @@ export default function AppLayout({ user, token, tenant, onLogout }: AppLayoutPr
                   onClick={handleAddPaymentMethod}
                   disabled={startingCheckout}
                 >
-                  {startingCheckout ? 'Starting…' : 'Add payment method'}
+                  {startingCheckout ? t('banners.starting') : t('banners.addPaymentMethod')}
                 </button>
               )}
             </div>
           )}
           {needsPlanSelection && !showPlansModal && (
             <div className="alert alert-info mx-4 mt-4 sm:mx-6 flex items-center justify-between gap-3">
-              <span>You haven't picked a plan yet — your trial is still active.</span>
+              <span>{t('banners.noPlanYet')}</span>
               <button
                 type="button"
                 className="btn btn-outline btn-sm whitespace-nowrap"
                 onClick={() => setPlansModalForceOpen(true)}
               >
-                Choose a plan
+                {t('banners.choosePlan')}
               </button>
             </div>
           )}

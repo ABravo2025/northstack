@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { getSettingsSections } from '../../lib/settingsSections';
 import { ChevronLeftIcon, XIcon } from '../common/Icons';
 import { usePermissions } from '../../contexts/PermissionsContext';
@@ -13,6 +14,7 @@ interface SettingsSidebarProps {
 // instead of the app's global nav, so moving between them doesn't require
 // going back to the tile grid each time (backlog QA, 2026-08-27).
 export default function SettingsSidebar({ mobileOpen, onMobileClose }: SettingsSidebarProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const permissions = usePermissions();
   const sections = getSettingsSections(permissions);
@@ -23,7 +25,7 @@ export default function SettingsSidebar({ mobileOpen, onMobileClose }: SettingsS
     <>
       {mobileOpen && <div className="sidebar-backdrop" onClick={onMobileClose} />}
       <aside className={`sidebar ${mobileOpen ? 'mobile-open' : ''}`}>
-        <button className="sidebar-toggle-mobile" onClick={onMobileClose} aria-label="Close menu">
+        <button className="sidebar-toggle-mobile" onClick={onMobileClose} aria-label={t('sidebar.closeMenu')}>
           <XIcon className="h-4 w-4" />
         </button>
 
@@ -34,14 +36,14 @@ export default function SettingsSidebar({ mobileOpen, onMobileClose }: SettingsS
               back to the main app shell (backlog, 2026-08-28). */}
           <button type="button" className="sidebar-link w-full text-left" onClick={() => navigate('/overview')}>
             <ChevronLeftIcon className="h-4 w-4 shrink-0" />
-            Back
+            {t('sidebar.back')}
           </button>
         </div>
 
         <div className="sidebar-divider">
-          <p className="sidebar-group-label">Settings</p>
+          <p className="sidebar-group-label">{t('sidebar.settings')}</p>
           <NavLink to="/settings" end className={linkClass} onClick={onMobileClose}>
-            All settings
+            {t('sidebar.allSettings')}
           </NavLink>
         </div>
 

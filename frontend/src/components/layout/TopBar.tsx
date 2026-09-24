@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ChevronDownIcon, MenuIcon, UserCircleIcon } from '../common/Icons';
 import SlideOver from '../common/SlideOver';
 import NotificationBell from './NotificationBell';
@@ -15,6 +16,7 @@ interface TopBarProps {
 }
 
 export default function TopBar({ user, token, onLogout, onMenuClick, onReplayTour }: TopBarProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -33,7 +35,7 @@ export default function TopBar({ user, token, onLogout, onMenuClick, onReplayTou
     setSendingFeedback(true);
     try {
       await api.sendFeedback(token, { type: feedbackType, subject, message, pageUrl: window.location.href });
-      toast.success('Thanks! Your feedback was sent.');
+      toast.success(t('topbar.feedback.thanks'));
       setFeedbackSubject('');
       setFeedbackMessage('');
       setFeedbackOpen(false);
@@ -90,7 +92,7 @@ export default function TopBar({ user, token, onLogout, onMenuClick, onReplayTou
   return (
     <div className="header">
       <div className="flex items-center gap-3">
-        <button type="button" className="menu-toggle" onClick={onMenuClick} aria-label="Open menu">
+        <button type="button" className="menu-toggle" onClick={onMenuClick} aria-label={t('topbar.openMenu')}>
           <MenuIcon className="h-5 w-5" />
         </button>
         {/* Below md the horizontal wordmark (~195px) overlaps the bell button that follows it
@@ -133,7 +135,7 @@ export default function TopBar({ user, token, onLogout, onMenuClick, onReplayTou
                 navigate('/guide');
               }}
             >
-              User Guide
+              {t('topbar.userGuide')}
             </button>
             <button
               className="user-menu-item"
@@ -143,7 +145,7 @@ export default function TopBar({ user, token, onLogout, onMenuClick, onReplayTou
                 navigate('/help');
               }}
             >
-              Help &amp; FAQ
+              {t('topbar.helpFaq')}
             </button>
             <button
               className="user-menu-item"
@@ -153,7 +155,7 @@ export default function TopBar({ user, token, onLogout, onMenuClick, onReplayTou
                 onReplayTour();
               }}
             >
-              Take the tour again
+              {t('topbar.replayTour')}
             </button>
             <button
               className="user-menu-item"
@@ -163,7 +165,7 @@ export default function TopBar({ user, token, onLogout, onMenuClick, onReplayTou
                 setFeedbackOpen(true);
               }}
             >
-              Send feedback
+              {t('topbar.sendFeedback')}
             </button>
             <button
               className="user-menu-item"
@@ -173,7 +175,7 @@ export default function TopBar({ user, token, onLogout, onMenuClick, onReplayTou
                 onLogout();
               }}
             >
-              Logout
+              {t('topbar.logout')}
             </button>
           </div>
         )}
@@ -182,7 +184,7 @@ export default function TopBar({ user, token, onLogout, onMenuClick, onReplayTou
 
       <SlideOver
         open={feedbackOpen}
-        title="Send feedback"
+        title={t('topbar.feedback.title')}
         onClose={() => setFeedbackOpen(false)}
         footer={
           <button
@@ -191,12 +193,12 @@ export default function TopBar({ user, token, onLogout, onMenuClick, onReplayTou
             onClick={handleSendFeedback}
             disabled={sendingFeedback || !feedbackMessage.trim() || !feedbackSubject.trim()}
           >
-            {sendingFeedback ? 'Sending…' : 'Send'}
+            {sendingFeedback ? t('topbar.feedback.sending') : t('topbar.feedback.send')}
           </button>
         }
       >
         <div className="form-group">
-          <label>What's this about?</label>
+          <label>{t('topbar.feedback.aboutLabel')}</label>
           <div className="flex gap-2">
             <button
               type="button"
@@ -206,7 +208,7 @@ export default function TopBar({ user, token, onLogout, onMenuClick, onReplayTou
               onClick={() => setFeedbackType('ticket')}
               disabled={sendingFeedback}
             >
-              Report a problem
+              {t('topbar.feedback.reportProblem')}
             </button>
             <button
               type="button"
@@ -216,32 +218,38 @@ export default function TopBar({ user, token, onLogout, onMenuClick, onReplayTou
               onClick={() => setFeedbackType('idea')}
               disabled={sendingFeedback}
             >
-              Suggest an idea
+              {t('topbar.feedback.suggestIdea')}
             </button>
           </div>
         </div>
 
         <div className="form-group">
-          <label htmlFor="feedback-subject">Subject</label>
+          <label htmlFor="feedback-subject">{t('topbar.feedback.subjectLabel')}</label>
           <input
             id="feedback-subject"
             type="text"
             value={feedbackSubject}
             onChange={(e) => setFeedbackSubject(e.target.value)}
-            placeholder={feedbackType === 'ticket' ? "What's the problem, in a few words?" : "What's your idea, in a few words?"}
+            placeholder={
+              feedbackType === 'ticket'
+                ? t('topbar.feedback.subjectPlaceholderTicket')
+                : t('topbar.feedback.subjectPlaceholderIdea')
+            }
             disabled={sendingFeedback}
             autoFocus
           />
         </div>
 
         <div className="form-group">
-          <label htmlFor="feedback-message">{feedbackType === 'ticket' ? 'What happened?' : 'Tell us more'}</label>
+          <label htmlFor="feedback-message">
+            {feedbackType === 'ticket' ? t('topbar.feedback.messageLabelTicket') : t('topbar.feedback.messageLabelIdea')}
+          </label>
           <textarea
             id="feedback-message"
             rows={6}
             value={feedbackMessage}
             onChange={(e) => setFeedbackMessage(e.target.value)}
-            placeholder="Tell us what happened or what you'd like to see."
+            placeholder={t('topbar.feedback.messagePlaceholder')}
             disabled={sendingFeedback}
           />
         </div>

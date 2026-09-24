@@ -3,5 +3,126 @@
     "label": "Language",
     "en": "English",
     "es": "Español"
+  },
+  "sidebar": {
+    "overview": "Overview",
+    "myTasks": "My Tasks",
+    "dashboards": "Dashboards",
+    "humanResources": "Human Resources",
+    "people": "People",
+    "timeOff": "Time Off",
+    "payroll": "Payroll",
+    "sales": "Sales",
+    "companies": "Companies",
+    "contacts": "Contacts",
+    "opportunities": "Opportunities",
+    "payments": "Payments",
+    "settings": "Settings",
+    "expand": "Expand",
+    "collapse": "Collapse",
+    "closeMenu": "Close menu",
+    "back": "Back",
+    "allSettings": "All settings"
+  },
+  "topbar": {
+    "userGuide": "User Guide",
+    "helpFaq": "Help & FAQ",
+    "replayTour": "Take the tour again",
+    "sendFeedback": "Send feedback",
+    "logout": "Logout",
+    "openMenu": "Open menu",
+    "feedback": {
+      "title": "Send feedback",
+      "sending": "Sending…",
+      "send": "Send",
+      "aboutLabel": "What's this about?",
+      "reportProblem": "Report a problem",
+      "suggestIdea": "Suggest an idea",
+      "subjectLabel": "Subject",
+      "subjectPlaceholderTicket": "What's the problem, in a few words?",
+      "subjectPlaceholderIdea": "What's your idea, in a few words?",
+      "messageLabelTicket": "What happened?",
+      "messageLabelIdea": "Tell us more",
+      "messagePlaceholder": "Tell us what happened or what you'd like to see.",
+      "thanks": "Thanks! Your feedback was sent."
+    }
+  },
+  "notifications": {
+    "title": "Notifications",
+    "markAllRead": "Mark all read",
+    "empty": "No notifications yet.",
+    "whatsNew": "What's new",
+    "justNow": "Just now",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago",
+    "ariaUnread": "Notifications ({{count}} unread)"
+  },
+  "banners": {
+    "newVersion": "A new version of Northstack is available.",
+    "reload": "Reload",
+    "suspended": "Your workspace is in view-only mode — your subscription lapsed and the grace period ended. Add a payment method to restore full access.",
+    "pastDue_one": "Your free trial ended. You have {{count}} day left before your account is suspended.",
+    "pastDue_other": "Your free trial ended. You have {{count}} days left before your account is suspended.",
+    "addPaymentMethod": "Add payment method",
+    "starting": "Starting…",
+    "noPlanYet": "You haven't picked a plan yet — your trial is still active.",
+    "choosePlan": "Choose a plan"
+  },
+  "pagination": {
+    "previous": "Previous",
+    "next": "Next",
+    "pageStatus": "Page {{page}} of {{pageCount}}",
+    "ariaLabel": "Table pagination"
+  },
+  "confirmDialog": {
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "typeToConfirm": "Type {{text}} to confirm"
+  },
+  "modal": {
+    "close": "Close"
+  },
+  "toast": {
+    "dismiss": "Dismiss notification"
+  },
+  "passwordChecklist": {
+    "minLength": "At least 8 characters",
+    "uppercase": "1 uppercase letter",
+    "number": "1 number",
+    "special": "1 special character"
+  },
+  "passwordInput": {
+    "show": "Show password",
+    "hide": "Hide password"
+  },
+  "settings": {
+    "myAccount": "My account",
+    "company": "Company",
+    "profile": { "label": "Profile", "desc": "Name, phone and password." },
+    "integrations": { "label": "Integrations", "desc": "Connect Northstack to other tools." },
+    "billing": { "label": "Billing", "desc": "Plan, invoices and payment method." },
+    "appearance": { "label": "Appearance", "desc": "Currency and theme for the workspace." },
+    "users": { "label": "Users", "desc": "Invite people and manage roles." },
+    "publicForms": { "label": "Public Forms", "desc": "External intake forms per module." },
+    "pipelines": { "label": "Pipelines", "desc": "Sales stages and their outcomes." },
+    "activityLog": { "label": "Activity Log", "desc": "Who created, changed, or deleted what." },
+    "rolesPermissions": { "label": "Roles & Permissions", "desc": "Control what each role can see and do." }
+  },
+  "profile": {
+    "cardTitle": "Profile",
+    "firstName": "First name",
+    "lastName": "Last name",
+    "phone": "Phone",
+    "email": "Email",
+    "saving": "Saving…",
+    "saveChanges": "Save changes",
+    "changePassword": "Change password",
+    "currentPassword": "Current password",
+    "newPassword": "New password",
+    "updating": "Updating…",
+    "updatePassword": "Update password",
+    "toastProfileUpdated": "Profile updated.",
+    "toastPasswordUpdated": "Password updated."
   }
 }

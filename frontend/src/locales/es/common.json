@@ -3,5 +3,126 @@
     "label": "Idioma",
     "en": "English",
     "es": "Español"
+  },
+  "sidebar": {
+    "overview": "Resumen",
+    "myTasks": "Mis tareas",
+    "dashboards": "Paneles",
+    "humanResources": "Recursos Humanos",
+    "people": "Personas",
+    "timeOff": "Ausencias",
+    "payroll": "Nómina",
+    "sales": "Ventas",
+    "companies": "Empresas",
+    "contacts": "Contactos",
+    "opportunities": "Oportunidades",
+    "payments": "Pagos",
+    "settings": "Configuración",
+    "expand": "Expandir",
+    "collapse": "Contraer",
+    "closeMenu": "Cerrar menú",
+    "back": "Volver",
+    "allSettings": "Toda la configuración"
+  },
+  "topbar": {
+    "userGuide": "Guía del usuario",
+    "helpFaq": "Ayuda y preguntas frecuentes",
+    "replayTour": "Repetir el recorrido",
+    "sendFeedback": "Enviar comentarios",
+    "logout": "Cerrar sesión",
+    "openMenu": "Abrir menú",
+    "feedback": {
+      "title": "Enviar comentarios",
+      "sending": "Enviando…",
+      "send": "Enviar",
+      "aboutLabel": "¿De qué se trata?",
+      "reportProblem": "Reportar un problema",
+      "suggestIdea": "Sugerir una idea",
+      "subjectLabel": "Asunto",
+      "subjectPlaceholderTicket": "¿Cuál es el problema, en pocas palabras?",
+      "subjectPlaceholderIdea": "¿Cuál es tu idea, en pocas palabras?",
+      "messageLabelTicket": "¿Qué pasó?",
+      "messageLabelIdea": "Contanos más",
+      "messagePlaceholder": "Contanos qué pasó o qué te gustaría ver.",
+      "thanks": "¡Gracias! Enviamos tu comentario."
+    }
+  },
+  "notifications": {
+    "title": "Notificaciones",
+    "markAllRead": "Marcar todas como leídas",
+    "empty": "Todavía no hay notificaciones.",
+    "whatsNew": "Novedades",
+    "justNow": "Ahora mismo",
+    "minutesAgo": "Hace {{count}}m",
+    "hoursAgo": "Hace {{count}}h",
+    "daysAgo": "Hace {{count}}d",
+    "ariaUnread": "Notificaciones ({{count}} sin leer)"
+  },
+  "banners": {
+    "newVersion": "Hay una nueva versión de Northstack disponible.",
+    "reload": "Recargar",
+    "suspended": "Tu espacio de trabajo está en modo solo lectura — tu suscripción venció y terminó el período de gracia. Agregá un método de pago para recuperar el acceso completo.",
+    "pastDue_one": "Tu prueba gratuita terminó. Te queda {{count}} día antes de que se suspenda tu cuenta.",
+    "pastDue_other": "Tu prueba gratuita terminó. Te quedan {{count}} días antes de que se suspenda tu cuenta.",
+    "addPaymentMethod": "Agregar método de pago",
+    "starting": "Iniciando…",
+    "noPlanYet": "Todavía no elegiste un plan — tu prueba sigue activa.",
+    "choosePlan": "Elegir un plan"
+  },
+  "pagination": {
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "pageStatus": "Página {{page}} de {{pageCount}}",
+    "ariaLabel": "Paginación de la tabla"
+  },
+  "confirmDialog": {
+    "confirm": "Confirmar",
+    "cancel": "Cancelar",
+    "typeToConfirm": "Escribí {{text}} para confirmar"
+  },
+  "modal": {
+    "close": "Cerrar"
+  },
+  "toast": {
+    "dismiss": "Descartar notificación"
+  },
+  "passwordChecklist": {
+    "minLength": "Al menos 8 caracteres",
+    "uppercase": "1 letra mayúscula",
+    "number": "1 número",
+    "special": "1 carácter especial"
+  },
+  "passwordInput": {
+    "show": "Mostrar contraseña",
+    "hide": "Ocultar contraseña"
+  },
+  "settings": {
+    "myAccount": "Mi cuenta",
+    "company": "Empresa",
+    "profile": { "label": "Perfil", "desc": "Nombre, teléfono y contraseña." },
+    "integrations": { "label": "Integraciones", "desc": "Conectá Northstack con otras herramientas." },
+    "billing": { "label": "Facturación", "desc": "Plan, facturas y método de pago." },
+    "appearance": { "label": "Apariencia", "desc": "Moneda y tema del espacio de trabajo." },
+    "users": { "label": "Usuarios", "desc": "Invitá personas y gestioná roles." },
+    "publicForms": { "label": "Formularios públicos", "desc": "Formularios externos de carga por módulo." },
+    "pipelines": { "label": "Pipelines", "desc": "Etapas de venta y sus resultados." },
+    "activityLog": { "label": "Registro de actividad", "desc": "Quién creó, cambió o eliminó qué." },
+    "rolesPermissions": { "label": "Roles y permisos", "desc": "Controlá qué puede ver y hacer cada rol." }
+  },
+  "profile": {
+    "cardTitle": "Perfil",
+    "firstName": "Nombre",
+    "lastName": "Apellido",
+    "phone": "Teléfono",
+    "email": "Correo electrónico",
+    "saving": "Guardando…",
+    "saveChanges": "Guardar cambios",
+    "changePassword": "Cambiar contraseña",
+    "currentPassword": "Contraseña actual",
+    "newPassword": "Nueva contraseña",
+    "updating": "Actualizando…",
+    "updatePassword": "Actualizar contraseña",
+    "toastProfileUpdated": "Perfil actualizado.",
+    "toastPasswordUpdated": "Contraseña actualizada."
   }
 }

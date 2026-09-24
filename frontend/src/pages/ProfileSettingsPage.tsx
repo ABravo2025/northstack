@@ -47,7 +47,7 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
     try {
       const result = await api.updateProfile(token, profileForm);
       onUserUpdated(result.user);
-      toast.success('Profile updated.');
+      toast.success(t('profile.toastProfileUpdated'));
     } catch (error) {
       const field = (error as any).field;
       if (field) {
@@ -67,7 +67,7 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
     try {
       await api.changePassword(token, passwordForm);
       setPasswordForm({ currentPassword: '', newPassword: '' });
-      toast.success('Password updated.');
+      toast.success(t('profile.toastPasswordUpdated'));
     } catch (error) {
       const field = (error as any).field;
       if (field) {
@@ -83,10 +83,10 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
   return (
     <div className="max-w-6xl">
       <div className="card">
-        <h3 className="card-title">Profile</h3>
+        <h3 className="card-title">{t('profile.cardTitle')}</h3>
         <form onSubmit={handleProfileSubmit}>
           <div className="form-group">
-            <label htmlFor="profile-firstName">First name</label>
+            <label htmlFor="profile-firstName">{t('profile.firstName')}</label>
             <input
               id="profile-firstName"
               value={profileForm.firstName}
@@ -97,7 +97,7 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
             )}
           </div>
           <div className="form-group">
-            <label htmlFor="profile-lastName">Last name</label>
+            <label htmlFor="profile-lastName">{t('profile.lastName')}</label>
             <input
               id="profile-lastName"
               value={profileForm.lastName}
@@ -108,7 +108,7 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
             )}
           </div>
           <div className="form-group">
-            <label htmlFor="profile-phone">Phone</label>
+            <label htmlFor="profile-phone">{t('profile.phone')}</label>
             <input
               id="profile-phone"
               value={profileForm.phone}
@@ -117,12 +117,12 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
             {profileError?.field === 'phone' && <p className="field-error">{profileError.message}</p>}
           </div>
           <div className="form-group">
-            <label htmlFor="profile-email">Email</label>
+            <label htmlFor="profile-email">{t('profile.email')}</label>
             <input id="profile-email" value={user.email} disabled />
           </div>
           <div className="form-actions">
             <button type="submit" className="btn-primary" disabled={profileSaving}>
-              {profileSaving ? 'Saving…' : 'Save changes'}
+              {profileSaving ? t('profile.saving') : t('profile.saveChanges')}
             </button>
           </div>
         </form>
@@ -149,10 +149,10 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
       </div>
 
       <div className="card">
-        <h3 className="card-title">Change password</h3>
+        <h3 className="card-title">{t('profile.changePassword')}</h3>
         <form onSubmit={handlePasswordSubmit}>
           <div className="form-group">
-            <label htmlFor="profile-currentPassword">Current password</label>
+            <label htmlFor="profile-currentPassword">{t('profile.currentPassword')}</label>
             <PasswordInput
               id="profile-currentPassword"
               value={passwordForm.currentPassword}
@@ -164,7 +164,7 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
             )}
           </div>
           <div className="form-group">
-            <label htmlFor="profile-newPassword">New password</label>
+            <label htmlFor="profile-newPassword">{t('profile.newPassword')}</label>
             <PasswordInput
               id="profile-newPassword"
               value={passwordForm.newPassword}
@@ -178,7 +178,7 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
           </div>
           <div className="form-actions">
             <button type="submit" className="btn-primary" disabled={passwordSaving}>
-              {passwordSaving ? 'Saving…' : 'Update password'}
+              {passwordSaving ? t('profile.updating') : t('profile.updatePassword')}
             </button>
           </div>
         </form>

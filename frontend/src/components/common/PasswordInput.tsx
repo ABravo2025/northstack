@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { EyeIcon, EyeOffIcon } from './Icons';
 
 interface PasswordInputProps {
@@ -20,6 +21,7 @@ export default function PasswordInput({
   disabled,
   autoComplete,
 }: PasswordInputProps) {
+  const { t } = useTranslation();
   const [visible, setVisible] = useState(false);
 
   return (
@@ -38,7 +40,7 @@ export default function PasswordInput({
         type="button"
         className="password-toggle"
         onClick={() => setVisible((v) => !v)}
-        aria-label={visible ? 'Hide password' : 'Show password'}
+        aria-label={visible ? t('passwordInput.hide') : t('passwordInput.show')}
         tabIndex={-1}
       >
         {visible ? <EyeOffIcon className="h-4 w-4" /> : <EyeIcon className="h-4 w-4" />}

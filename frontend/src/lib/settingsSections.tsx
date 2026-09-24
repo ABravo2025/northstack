@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import i18n from './i18n';
 import {
   BriefcaseIcon,
   BuildingIcon,
@@ -40,44 +41,45 @@ export interface SettingsSectionsPermissions {
 // requires), not a single "isAdmin" approximation covering 5 differently-permissioned pages. The
 // "Company" group heading itself only appears once it actually has something to show.
 export function getSettingsSections(permissions: SettingsSectionsPermissions): SettingsSectionGroup[] {
+  const t = i18n.t;
   const accountItems: SettingsSectionItem[] = [
-    { to: 'profile', label: 'Profile', desc: 'Name, phone and password.', icon: <UserCircleIcon /> },
-    { to: 'integrations', label: 'Integrations', desc: 'Connect Northstack to other tools.', icon: <GridIcon /> },
+    { to: 'profile', label: t('settings.profile.label'), desc: t('settings.profile.desc'), icon: <UserCircleIcon /> },
+    { to: 'integrations', label: t('settings.integrations.label'), desc: t('settings.integrations.desc'), icon: <GridIcon /> },
   ];
   if (permissions.has('manage_billing')) {
-    accountItems.push({ to: 'billing', label: 'Billing', desc: 'Plan, invoices and payment method.', icon: <BriefcaseIcon /> });
+    accountItems.push({ to: 'billing', label: t('settings.billing.label'), desc: t('settings.billing.desc'), icon: <BriefcaseIcon /> });
   }
 
-  const groups: SettingsSectionGroup[] = [{ groupLabel: 'My account', items: accountItems }];
+  const groups: SettingsSectionGroup[] = [{ groupLabel: t('settings.myAccount'), items: accountItems }];
 
   const companyItems: SettingsSectionItem[] = [];
   if (permissions.has('manage_tenant_settings')) {
-    companyItems.push({ to: 'appearance', label: 'Appearance', desc: 'Currency and theme for the workspace.', icon: <BuildingIcon /> });
+    companyItems.push({ to: 'appearance', label: t('settings.appearance.label'), desc: t('settings.appearance.desc'), icon: <BuildingIcon /> });
   }
   if (permissions.has('manage_users')) {
-    companyItems.push({ to: 'users', label: 'Users', desc: 'Invite people and manage roles.', icon: <TeamIcon /> });
+    companyItems.push({ to: 'users', label: t('settings.users.label'), desc: t('settings.users.desc'), icon: <TeamIcon /> });
   }
   if (permissions.has('manage_custom_fields')) {
     if (isPublicFormsEnabled()) {
-      companyItems.push({ to: 'public-forms', label: 'Public Forms', desc: 'External intake forms per module.', icon: <ListIcon /> });
+      companyItems.push({ to: 'public-forms', label: t('settings.publicForms.label'), desc: t('settings.publicForms.desc'), icon: <ListIcon /> });
     }
-    companyItems.push({ to: 'pipelines', label: 'Pipelines', desc: 'Sales stages and their outcomes.', icon: <TrendingIcon /> });
+    companyItems.push({ to: 'pipelines', label: t('settings.pipelines.label'), desc: t('settings.pipelines.desc'), icon: <TrendingIcon /> });
   }
   if (permissions.has('view_activity_log')) {
-    companyItems.push({ to: 'activity', label: 'Activity Log', desc: 'Who created, changed, or deleted what.', icon: <ClockIcon /> });
+    companyItems.push({ to: 'activity', label: t('settings.activityLog.label'), desc: t('settings.activityLog.desc'), icon: <ClockIcon /> });
   }
   // Owner-only, unlike the rest of this group — deciding what Admin/Member can do is an
   // ownership-level call, same bar as Billing above.
   if (permissions.isOwner) {
     companyItems.push({
       to: 'roles',
-      label: 'Roles & Permissions',
-      desc: 'Control what each role can see and do.',
+      label: t('settings.rolesPermissions.label'),
+      desc: t('settings.rolesPermissions.desc'),
       icon: <LockIcon />,
     });
   }
   if (companyItems.length > 0) {
-    groups.push({ groupLabel: 'Company', items: companyItems });
+    groups.push({ groupLabel: t('settings.company'), items: companyItems });
   }
 
   return groups;

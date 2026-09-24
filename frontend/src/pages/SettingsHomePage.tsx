@@ -1,8 +1,13 @@
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { getSettingsSections } from '../lib/settingsSections';
 import { usePermissions } from '../contexts/PermissionsContext';
 
 export default function SettingsHomePage() {
+  // Not used directly — getSettingsSections resolves its own labels via the global i18n
+  // instance, but this subscribes the component to languageChanged so it re-renders when the
+  // user switches language instead of showing stale labels until the next navigation.
+  useTranslation();
   const permissions = usePermissions();
   const sections = getSettingsSections(permissions);
 

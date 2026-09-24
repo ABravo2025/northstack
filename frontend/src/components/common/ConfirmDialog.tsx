@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface ConfirmDialogProps {
   title: string;
@@ -28,7 +29,7 @@ interface ConfirmDialogProps {
 export default function ConfirmDialog({
   title,
   message,
-  confirmLabel = 'Confirm',
+  confirmLabel,
   danger = true,
   confirmText,
   confirmDisabled = false,
@@ -39,8 +40,10 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const { t } = useTranslation();
   const [typed, setTyped] = useState('');
   const canConfirm = (!confirmText || typed === confirmText) && !confirmDisabled;
+  const resolvedConfirmLabel = confirmLabel ?? t('confirmDialog.confirm');
 
   return (
     <div className="confirm-dialog-overlay" onClick={onCancel}>
@@ -69,7 +72,7 @@ export default function ConfirmDialog({
         {confirmText && (
           <div className="form-group">
             <label htmlFor="confirm-dialog-type-input" className="sr-only">
-              Type {confirmText} to confirm
+              {t('confirmDialog.typeToConfirm', { text: confirmText })}
             </label>
             <input
               id="confirm-dialog-type-input"
@@ -84,7 +87,7 @@ export default function ConfirmDialog({
         )}
         <div className="confirm-dialog-actions">
           <button type="button" className="btn-ghost" onClick={onCancel}>
-            Cancel
+            {t('confirmDialog.cancel')}
           </button>
           <button
             type="button"
@@ -93,7 +96,7 @@ export default function ConfirmDialog({
             disabled={!canConfirm}
             autoFocus={!confirmText}
           >
-            {confirmLabel}
+            {resolvedConfirmLabel}
           </button>
         </div>
       </div>

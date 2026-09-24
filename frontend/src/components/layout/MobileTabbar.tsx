@@ -1,4 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { CalendarIcon, HomeIcon, PeopleIcon, TargetIcon } from '../common/Icons';
 import { usePermissions } from '../../contexts/PermissionsContext';
 
@@ -9,6 +10,7 @@ import { usePermissions } from '../../contexts/PermissionsContext';
 const SALES_PATHS = ['/companies', '/contacts', '/opportunities'];
 
 export default function MobileTabbar() {
+  const { t } = useTranslation();
   const location = useLocation();
   const permissions = usePermissions();
   const salesActive = SALES_PATHS.some((path) => location.pathname.startsWith(path));
@@ -22,20 +24,20 @@ export default function MobileTabbar() {
     <nav className="mobile-tabbar">
       <NavLink to="/overview" className={({ isActive }) => (isActive ? 'active' : '')}>
         <HomeIcon className="h-5 w-5" />
-        Overview
+        {t('sidebar.overview')}
       </NavLink>
       <NavLink to="/hr/people" className={({ isActive }) => (isActive ? 'active' : '')}>
         <PeopleIcon className="h-5 w-5" />
-        People
+        {t('sidebar.people')}
       </NavLink>
       <NavLink to="/hr/time-off" className={({ isActive }) => (isActive ? 'active' : '')}>
         <CalendarIcon className="h-5 w-5" />
-        Time Off
+        {t('sidebar.timeOff')}
       </NavLink>
       {showSalesTab && (
         <NavLink to="/opportunities" className={salesActive ? 'active' : ''}>
           <TargetIcon className="h-5 w-5" />
-          Sales
+          {t('sidebar.sales')}
         </NavLink>
       )}
     </nav>

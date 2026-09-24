@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { XIcon } from './Icons';
 
 interface SlideOverProps {
@@ -12,6 +13,7 @@ interface SlideOverProps {
 }
 
 export default function SlideOver({ open, title, onClose, children, footer, side = 'right', wide = false }: SlideOverProps) {
+  const { t } = useTranslation();
   useEffect(() => {
     if (!open) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -36,7 +38,7 @@ export default function SlideOver({ open, title, onClose, children, footer, side
       <div className={panelClass} role="dialog" aria-modal="true" aria-label={title}>
         <div className="slideover-head">
           <h3 className="slideover-title">{title}</h3>
-          <button type="button" className="slideover-close" onClick={onClose} aria-label="Close">
+          <button type="button" className="slideover-close" onClick={onClose} aria-label={t('modal.close')}>
             <XIcon className="h-4 w-4" />
           </button>
         </div>

@@ -1,3 +1,5 @@
+import { useTranslation } from 'react-i18next';
+
 interface PaginationProps {
   page: number;
   pageCount: number;
@@ -5,21 +7,22 @@ interface PaginationProps {
 }
 
 export default function Pagination({ page, pageCount, onPageChange }: PaginationProps) {
+  const { t } = useTranslation();
   if (pageCount <= 1) {
     return null;
   }
 
   return (
-    <div className="pagination" role="navigation" aria-label="Table pagination">
+    <div className="pagination" role="navigation" aria-label={t('pagination.ariaLabel')}>
       <div className="seg-nav">
         <button type="button" disabled={page <= 1} onClick={() => onPageChange(page - 1)}>
-          Previous
+          {t('pagination.previous')}
         </button>
         <span className="seg-nav-status">
-          Page {page} of {pageCount}
+          {t('pagination.pageStatus', { page, pageCount })}
         </span>
         <button type="button" disabled={page >= pageCount} onClick={() => onPageChange(page + 1)}>
-          Next
+          {t('pagination.next')}
         </button>
       </div>
     </div>

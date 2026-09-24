@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 type ToastType = 'success' | 'error';
 
@@ -19,6 +20,7 @@ const SUCCESS_DURATION_MS = 5000;
 const ERROR_DURATION_MS = 8000;
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
+  const { t } = useTranslation();
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const nextId = useRef(0);
 
@@ -44,14 +46,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     <ToastContext.Provider value={value}>
       {children}
       <div className="toast-container">
-        {toasts.map((t) => (
-          <div key={t.id} className={`toast toast-${t.type}`}>
-            <span>{t.message}</span>
+        {toasts.map((toastItem) => (
+          <div key={toastItem.id} className={`toast toast-${toastItem.type}`}>
+            <span>{toastItem.message}</span>
             <button
               type="button"
               className="toast-close"
-              onClick={() => dismiss(t.id)}
-              aria-label="Dismiss notification"
+              onClick={() => dismiss(toastItem.id)}
+              aria-label={t('toast.dismiss')}
             >
               ×
             </button>

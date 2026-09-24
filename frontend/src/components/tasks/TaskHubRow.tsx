@@ -1,6 +1,8 @@
+import { useTranslation } from 'react-i18next';
 import type { Task } from '../../api';
 import { TaskCheckIcon } from '../common/Icons';
 import { formatHubDate, isOverdue } from '../../lib/taskHubDates';
+import i18n from '../../lib/i18n';
 
 interface TaskHubRowProps {
   task: Task;
@@ -12,6 +14,7 @@ interface TaskHubRowProps {
 // People/Companies/Contacts (name cell, muted secondary cells, .avatar), so this page doesn't look
 // like a different product. The circular check stays its own control (see .task-check-circle).
 export default function TaskHubRow({ task, onToggleComplete, onOpenDetail }: TaskHubRowProps) {
+  const { t } = useTranslation('tasks');
   const completed = !!task.completedAt;
   const overdue = !completed && isOverdue(task.dueDate);
   const initials = task.assignee ? `${task.assignee.firstName[0] ?? ''}${task.assignee.lastName[0] ?? ''}`.toUpperCase() : '';
@@ -27,7 +30,7 @@ export default function TaskHubRow({ task, onToggleComplete, onOpenDetail }: Tas
             onToggleComplete(task);
           }}
           aria-pressed={completed}
-          aria-label={completed ? 'Mark as pending' : 'Mark as complete'}
+          aria-label={completed ? t('myTasks.actions.markPending') : t('myTasks.actions.markComplete')}
         >
           <TaskCheckIcon />
         </button>
@@ -55,6 +58,8 @@ export default function TaskHubRow({ task, onToggleComplete, onOpenDetail }: Tas
 }
 
 export function relationshipLabel(relationship: 'assignee' | 'creator' | 'both'): string {
-  if (relationship === 'both') return 'Both';
-  return relationship === 'assignee' ? 'Assigned to you' : 'Created by you';
+  if (relationship === 'both') return i18n.t('myTasks.relationship.both', { ns: 'tasks' });
+  return relationship === 'assignee'
+    ? i18n.t('myTasks.relationship.assignedToYou', { ns: 'tasks' })
+    : i18n.t('myTasks.relationship.createdByYou', { ns: 'tasks' });
 }

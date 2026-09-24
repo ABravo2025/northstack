@@ -1,0 +1,330 @@
+{
+  "myTasks": {
+    "pageTitle": "My Tasks",
+    "searchPlaceholder": "Search tasks...",
+    "showCompleted": "Show completed",
+    "view": { "ariaLabel": "View", "list": "List", "board": "Board" },
+    "folders": {
+      "label": "Folders",
+      "allTasks": "All tasks",
+      "newFolder": "New folder",
+      "namePlaceholder": "Folder name",
+      "expandAria": "Expand folders panel",
+      "collapseAria": "Collapse folders panel",
+      "confirmNewAria": "Confirm new folder",
+      "cancelNewAria": "Cancel new folder"
+    },
+    "emptyState": {
+      "title": "No tasks here yet",
+      "body": "Tasks assigned to you or created by you will show up here.",
+      "addTask": "Add task"
+    },
+    "table": {
+      "task": "Task",
+      "relationship": "Relationship",
+      "created": "Created",
+      "due": "Due",
+      "completed": "Completed",
+      "assignee": "Assignee",
+      "add": "Add"
+    },
+    "board": {
+      "overdue": "Overdue",
+      "today": "Today",
+      "thisWeek": "This week",
+      "later": "Later",
+      "noDueDate": "No due date",
+      "completed": "Completed"
+    },
+    "relationship": {
+      "both": "Both",
+      "assignedToYou": "Assigned to you",
+      "createdByYou": "Created by you"
+    },
+    "cardDates": {
+      "created": "Created {{date}}",
+      "done": " · Done {{date}}"
+    },
+    "actions": {
+      "markPending": "Mark as pending",
+      "markComplete": "Mark as complete",
+      "joinGoogleMeet": "Join Google Meet"
+    },
+    "common": {
+      "noDueDate": "No due date",
+      "selectPlaceholder": "-- select --",
+      "loading": "Loading…"
+    },
+    "widget": {
+      "title": "My tasks",
+      "loading": "Loading…",
+      "empty": "Nothing assigned to you."
+    },
+    "detail": {
+      "defaultTitle": "Task",
+      "created": "Created",
+      "due": "Due",
+      "completed": "Completed",
+      "meet": "Meet",
+      "saveChanges": "Save changes",
+      "deleteTask": "Delete task"
+    },
+    "entityList": {
+      "loading": "Loading tasks…",
+      "empty": "No tasks yet."
+    },
+    "newTaskModal": {
+      "title": "New task",
+      "relatedTo": "Related to",
+      "searchPlaceholder": "Search {{entity}}s…",
+      "createTask": "Create task"
+    },
+    "calendarPopover": {
+      "whoFor": "Who is this for?",
+      "searchPlaceholder": "Search {{entity}}s…"
+    },
+    "form": {
+      "titleLabel": "Title",
+      "titlePlaceholder": "Task title",
+      "description": "Description",
+      "assignee": "Assignee",
+      "dueDate": "Due date",
+      "timeOptional": "Time (optional)",
+      "folder": "Folder",
+      "noFolder": "No folder",
+      "addGoogleMeet": "Add Google Meet video call",
+      "connectGoogleCalendar": "Connect Google Calendar in Settings to add a Meet link.",
+      "saving": "Saving…",
+      "save": "Save",
+      "addTask": "Add task",
+      "cancelEditAria": "Cancel edit",
+      "deleteTaskAria": "Delete task"
+    },
+    "googleEvent": {
+      "openInGoogleCalendar": "Open in Google Calendar"
+    },
+    "toasts": {
+      "taskDeleted": "Task deleted.",
+      "taskUpdated": "Task updated.",
+      "taskCreated": "Task created.",
+      "failedToLoadTasks": "Failed to load tasks: {{message}}",
+      "failedToLoadYourTasks": "Failed to load your tasks: {{message}}",
+      "failedToUpdateTask": "Failed to update task: {{message}}",
+      "failedToDeleteTask": "Failed to delete task: {{message}}",
+      "failedToSaveTask": "Failed to save task: {{message}}",
+      "failedToCreateTask": "Failed to create task: {{message}}",
+      "failedToMoveTask": "Failed to move task: {{message}}"
+    }
+  },
+  "timeOff": {
+    "tabs": {
+      "myTimeoff": "My Timeoff",
+      "myRequests": "My Requests",
+      "approvals": "Approvals",
+      "balances": "Balances",
+      "allRequests": "All Requests",
+      "policies": "Policies",
+      "assignments": "Assignments"
+    },
+    "sectionLabel": "Time Off",
+    "back": "Back",
+    "accrual": {
+      "fixed": "Fixed",
+      "monthly": "Monthly"
+    },
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected",
+      "cancelled": "Cancelled"
+    },
+    "common": {
+      "selectPlaceholder": "-- select --",
+      "yes": "Yes",
+      "no": "No"
+    },
+    "cancelRequestDialog": {
+      "title": "Cancel request",
+      "message": "Are you sure you want to cancel this time off request?",
+      "confirmLabel": "Cancel Request"
+    },
+    "confirmDeletePolicy": {
+      "title": "Delete \"{{name}}\"",
+      "message_one": "This will remove \"{{name}}\" from the {{count}} employee currently assigned to it, then deactivate the policy. Past time off requests made under it are not affected. Type DELETE to confirm.",
+      "message_other": "This will remove \"{{name}}\" from all {{count}} employees currently assigned to it, then deactivate the policy. Past time off requests made under it are not affected. Type DELETE to confirm.",
+      "deleting": "Deleting…"
+    },
+    "slideOver": {
+      "assignTitle": "Assign \"{{name}}\"",
+      "editTitle": "Edit Time Off Policy",
+      "addTitle": "Add Time Off Policy",
+      "skip": "Skip",
+      "assigning": "Assigning…",
+      "done": "Done",
+      "assignToCount_one": "Assign to {{count}} employee",
+      "assignToCount_other": "Assign to {{count}} employees",
+      "cancel": "Cancel",
+      "save": "Save",
+      "create": "Create",
+      "assignPrompt": "Who should have \"{{name}}\"? You can also do this later from the Assignments tab.",
+      "noEmployeesYet": "No employees yet.",
+      "everyoneHasPolicy": "Every employee already has this policy.",
+      "selectAll": "Select all",
+      "selectNone": "Select none"
+    },
+    "policyForm": {
+      "name": "Name",
+      "namePlaceholder": "e.g. PTO, Sick Leave, Leave Emergency",
+      "daysPerYear": "Days per year",
+      "accrualMethod": "Accrual method",
+      "accrualFixedOption": "Fixed annual — all days available at once",
+      "accrualMonthlyOption": "Monthly — days accrue progressively",
+      "color": "Color",
+      "paid": "Paid",
+      "requiresApproval": "Requires approval"
+    },
+    "myTimeoff": {
+      "notLinked": "Your account isn't linked to an employee record, so there's no personal balance to show.",
+      "noPoliciesAssigned": "You don't have any time off policies assigned yet — ask an admin to assign one.",
+      "remainingLeft": "{{count}} left",
+      "stats": {
+        "allocated": "Allocated",
+        "used": "Used",
+        "pending": "Pending",
+        "remaining": "Remaining"
+      },
+      "accrualLine": "Accrual: {{method}}",
+      "noRequestsUnderPolicy": "No requests made under this policy yet."
+    },
+    "assignments": {
+      "description": "Which time off policies apply to each employee. Manage the policies themselves (days per year, accrual, etc.) from the Policies tab.",
+      "noPoliciesDefined": "No time off policies defined yet. Add one from the Policies tab.",
+      "noEmployees": "No employees yet.",
+      "table": {
+        "employee": "Employee",
+        "department": "Department",
+        "assignedPolicies": "Assigned Policies"
+      },
+      "removePolicyAria": "Remove {{name}}",
+      "removeTitle": "Remove",
+      "addPolicyForAria": "Add policy for {{name}}",
+      "addPolicyTitle": "Add policy",
+      "noMorePolicies": "No more policies to assign."
+    },
+    "myRequests": {
+      "notLinked": "Your account isn't linked to an employee record, so you can't submit time off requests.",
+      "balanceChip": "{{remaining}} of {{allocated}} days left",
+      "balanceChipPending": " ({{count}} pending)",
+      "form": {
+        "policy": "Policy",
+        "startDate": "Start date",
+        "endDate": "End date",
+        "note": "Note (optional)",
+        "submit": "Submit Request"
+      },
+      "noneYet": "You haven't requested any time off yet.",
+      "table": {
+        "policy": "Policy",
+        "dates": "Dates",
+        "days": "Days",
+        "status": "Status",
+        "note": "Note",
+        "actions": "Actions"
+      },
+      "cancel": "Cancel"
+    },
+    "approvals": {
+      "empty": "No pending requests waiting on your approval.",
+      "table": {
+        "employee": "Employee",
+        "policy": "Policy",
+        "dates": "Dates",
+        "days": "Days",
+        "note": "Note",
+        "actions": "Actions"
+      },
+      "approve": "Approve",
+      "reject": "Reject"
+    },
+    "allRequests": {
+      "empty": "No time off requests yet.",
+      "table": {
+        "employee": "Employee",
+        "policy": "Policy",
+        "dates": "Dates",
+        "days": "Days",
+        "status": "Status",
+        "approver": "Approver",
+        "note": "Note",
+        "actions": "Actions"
+      }
+    },
+    "balances": {
+      "empty": "No time off policy assignments yet.",
+      "meta_one": "{{department}} · {{count}} policy · {{total}}d remaining",
+      "meta_other": "{{department}} · {{count}} policies · {{total}}d remaining",
+      "table": {
+        "employee": "Employee",
+        "department": "Department",
+        "policies": "Policies",
+        "totalRemaining": "Total remaining ({{year}})"
+      },
+      "slideOverDefaultTitle": "Balances"
+    },
+    "policies": {
+      "emptyState": {
+        "title": "No time off policies yet",
+        "body": "A policy defines how days are earned and whether requests need approval.",
+        "primaryLabel": "Create a policy"
+      },
+      "activeCount": "Active ({{count}})",
+      "deactivatedCount": "Deactivated ({{count}})",
+      "noActive": "No active policies.",
+      "noDeactivated": "No deactivated policies.",
+      "meta_one": "{{accrual}} · {{days}}d/yr · {{count}} employee",
+      "meta_other": "{{accrual}} · {{days}}d/yr · {{count}} employees",
+      "actionsForAria": "Actions for {{name}}",
+      "actionsTitle": "Actions",
+      "table": {
+        "name": "Name",
+        "accrual": "Accrual",
+        "daysPerYear": "Days/year",
+        "paid": "Paid",
+        "requiresApproval": "Requires approval",
+        "employees": "Employees",
+        "actions": "Actions"
+      },
+      "addRow": "Add",
+      "menu": {
+        "edit": "Edit",
+        "addInBulk": "Add in bulk",
+        "delete": "DELETE",
+        "activate": "Activate"
+      }
+    },
+    "toasts": {
+      "loadFailed": "Failed to load Time Off overview: {{message}}",
+      "policyAssigned": "Policy assigned.",
+      "assignFailed": "Failed to assign Time Off policy: {{message}}",
+      "policyRemoved": "Policy removed.",
+      "removeFailed": "Failed to remove Time Off policy: {{message}}",
+      "policyUpdated": "Time off policy updated.",
+      "policyAdded": "Time off policy added.",
+      "saveFailed": "Failed to save time off policy: {{message}}",
+      "assignedToCount_one": "Assigned to {{count}} employee.",
+      "assignedToCount_other": "Assigned to {{count}} employees.",
+      "assignedPartial": "Assigned to {{success}} of {{total}} employees — {{failed}} failed.",
+      "updateFailed": "Failed to update time off policy: {{message}}",
+      "deletedAndRemoved_one": "\"{{name}}\" deleted and removed from {{count}} employee.",
+      "deletedAndRemoved_other": "\"{{name}}\" deleted and removed from {{count}} employees.",
+      "deleteFailed": "Failed to delete time off policy: {{message}}",
+      "requestSubmitted": "Request submitted.",
+      "submitFailed": "Failed to submit time off request: {{message}}",
+      "requestCancelled": "Request cancelled.",
+      "cancelFailed": "Failed to cancel request: {{message}}",
+      "requestApproved": "Request approved.",
+      "requestRejected": "Request rejected.",
+      "decideFailed": "Failed to decide request: {{message}}"
+    }
+  }
+}

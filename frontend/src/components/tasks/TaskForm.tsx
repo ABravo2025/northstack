@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Task } from '../../api';
 import RequiredMark from '../common/RequiredMark';
 import { TrashIcon, XIcon } from '../common/Icons';
@@ -95,6 +96,7 @@ export default function TaskForm({
   onDelete,
   onCancelEdit,
 }: TaskFormProps) {
+  const { t } = useTranslation('tasks');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [assigneeId, setAssigneeId] = useState(defaultAssigneeId);
@@ -171,19 +173,19 @@ export default function TaskForm({
     <div className="inline-compose-form">
       <div className="nv-field">
         <label htmlFor="task-form-title">
-          Title
+          {t('myTasks.form.titleLabel')}
           <RequiredMark />
         </label>
         <input
           id="task-form-title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Task title"
+          placeholder={t('myTasks.form.titlePlaceholder')}
           required
         />
       </div>
       <div className="nv-field">
-        <label htmlFor="task-form-description">Description</label>
+        <label htmlFor="task-form-description">{t('myTasks.form.description')}</label>
         <textarea
           id="task-form-description"
           value={description}
@@ -192,7 +194,7 @@ export default function TaskForm({
         />
       </div>
       <div className="nv-field">
-        <label htmlFor="task-form-assignee">Assignee</label>
+        <label htmlFor="task-form-assignee">{t('myTasks.form.assignee')}</label>
         <select id="task-form-assignee" value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
           {tenantUsers.map((u) => (
             <option key={u.id} value={u.id}>
@@ -203,7 +205,7 @@ export default function TaskForm({
       </div>
       <div className="nv-field flex gap-2">
         <div className="flex-1">
-          <label htmlFor="task-form-due-date">Due date</label>
+          <label htmlFor="task-form-due-date">{t('myTasks.form.dueDate')}</label>
           <input
             id="task-form-due-date"
             type="date"
@@ -218,7 +220,7 @@ export default function TaskForm({
           />
         </div>
         <div className="flex-1">
-          <label htmlFor="task-form-due-time">Time (optional)</label>
+          <label htmlFor="task-form-due-time">{t('myTasks.form.timeOptional')}</label>
           <input
             id="task-form-due-time"
             type="time"
@@ -233,9 +235,9 @@ export default function TaskForm({
       </div>
       {folders && (
         <div className="nv-field">
-          <label htmlFor="task-form-folder">Folder</label>
+          <label htmlFor="task-form-folder">{t('myTasks.form.folder')}</label>
           <select id="task-form-folder" value={folderId} onChange={(e) => setFolderId(e.target.value)}>
-            <option value="">No folder</option>
+            <option value="">{t('myTasks.form.noFolder')}</option>
             {folders.map((f) => (
               <option key={f.id} value={f.id}>
                 {f.name}
@@ -247,26 +249,26 @@ export default function TaskForm({
       {googleCalendarConnected ? (
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={hasVideoCall} onChange={(e) => handleVideoCallToggle(e.target.checked)} />
-          Add Google Meet video call
+          {t('myTasks.form.addGoogleMeet')}
         </label>
       ) : (
         <p className="text-xs text-ink-faint dark:text-dark-ink-faint">
-          Connect Google Calendar in Settings to add a Meet link.
+          {t('myTasks.form.connectGoogleCalendar')}
         </p>
       )}
       {task?.googleMeetUrl && (
         <div className="nv-field">
           <a href={task.googleMeetUrl} target="_blank" rel="noopener noreferrer" className="text-accent text-xs underline">
-            Join Google Meet
+            {t('myTasks.actions.joinGoogleMeet')}
           </a>
         </div>
       )}
       <div className="nv-field flex items-center gap-2">
         <button type="button" className="btn-primary flex-1 text-center" onClick={handleSubmit} disabled={!title.trim() || submitting}>
-          {submitting ? 'Saving…' : submitLabel ?? (task ? 'Save' : 'Add task')}
+          {submitting ? t('myTasks.form.saving') : submitLabel ?? (task ? t('myTasks.form.save') : t('myTasks.form.addTask'))}
         </button>
         {task && onCancelEdit && (
-          <button type="button" className="icon-btn" onClick={onCancelEdit} aria-label="Cancel edit">
+          <button type="button" className="icon-btn" onClick={onCancelEdit} aria-label={t('myTasks.form.cancelEditAria')}>
             <XIcon className="h-3.5 w-3.5" />
           </button>
         )}
@@ -276,7 +278,7 @@ export default function TaskForm({
           </button>
         )}
         {task && onDelete && !deleteLabel && (
-          <button type="button" className="icon-btn danger" onClick={onDelete} aria-label="Delete task">
+          <button type="button" className="icon-btn danger" onClick={onDelete} aria-label={t('myTasks.form.deleteTaskAria')}>
             <TrashIcon className="h-3.5 w-3.5" />
           </button>
         )}

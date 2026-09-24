@@ -1,0 +1,330 @@
+{
+  "myTasks": {
+    "pageTitle": "Mis tareas",
+    "searchPlaceholder": "Buscar tareas...",
+    "showCompleted": "Mostrar completadas",
+    "view": { "ariaLabel": "Vista", "list": "Lista", "board": "Tablero" },
+    "folders": {
+      "label": "Carpetas",
+      "allTasks": "Todas las tareas",
+      "newFolder": "Nueva carpeta",
+      "namePlaceholder": "Nombre de la carpeta",
+      "expandAria": "Expandir panel de carpetas",
+      "collapseAria": "Contraer panel de carpetas",
+      "confirmNewAria": "Confirmar nueva carpeta",
+      "cancelNewAria": "Cancelar nueva carpeta"
+    },
+    "emptyState": {
+      "title": "Todavía no hay tareas acá",
+      "body": "Las tareas asignadas a vos o creadas por vos van a aparecer acá.",
+      "addTask": "Agregar tarea"
+    },
+    "table": {
+      "task": "Tarea",
+      "relationship": "Relación",
+      "created": "Creada",
+      "due": "Vencimiento",
+      "completed": "Completada",
+      "assignee": "Asignado a",
+      "add": "Agregar"
+    },
+    "board": {
+      "overdue": "Vencidas",
+      "today": "Hoy",
+      "thisWeek": "Esta semana",
+      "later": "Más adelante",
+      "noDueDate": "Sin fecha de vencimiento",
+      "completed": "Completadas"
+    },
+    "relationship": {
+      "both": "Ambos",
+      "assignedToYou": "Asignada a vos",
+      "createdByYou": "Creada por vos"
+    },
+    "cardDates": {
+      "created": "Creada {{date}}",
+      "done": " · Completada {{date}}"
+    },
+    "actions": {
+      "markPending": "Marcar como pendiente",
+      "markComplete": "Marcar como completada",
+      "joinGoogleMeet": "Unirse a Google Meet"
+    },
+    "common": {
+      "noDueDate": "Sin fecha de vencimiento",
+      "selectPlaceholder": "-- seleccioná --",
+      "loading": "Cargando…"
+    },
+    "widget": {
+      "title": "Mis tareas",
+      "loading": "Cargando…",
+      "empty": "No tenés tareas asignadas."
+    },
+    "detail": {
+      "defaultTitle": "Tarea",
+      "created": "Creada",
+      "due": "Vencimiento",
+      "completed": "Completada",
+      "meet": "Meet",
+      "saveChanges": "Guardar cambios",
+      "deleteTask": "Eliminar tarea"
+    },
+    "entityList": {
+      "loading": "Cargando tareas…",
+      "empty": "Todavía no hay tareas."
+    },
+    "newTaskModal": {
+      "title": "Nueva tarea",
+      "relatedTo": "Relacionada con",
+      "searchPlaceholder": "Buscar {{entity}}…",
+      "createTask": "Crear tarea"
+    },
+    "calendarPopover": {
+      "whoFor": "¿Para quién es esto?",
+      "searchPlaceholder": "Buscar {{entity}}…"
+    },
+    "form": {
+      "titleLabel": "Título",
+      "titlePlaceholder": "Título de la tarea",
+      "description": "Descripción",
+      "assignee": "Asignado a",
+      "dueDate": "Fecha de vencimiento",
+      "timeOptional": "Hora (opcional)",
+      "folder": "Carpeta",
+      "noFolder": "Sin carpeta",
+      "addGoogleMeet": "Agregar videollamada de Google Meet",
+      "connectGoogleCalendar": "Conectá Google Calendar en Configuración para agregar un enlace de Meet.",
+      "saving": "Guardando…",
+      "save": "Guardar",
+      "addTask": "Agregar tarea",
+      "cancelEditAria": "Cancelar edición",
+      "deleteTaskAria": "Eliminar tarea"
+    },
+    "googleEvent": {
+      "openInGoogleCalendar": "Abrir en Google Calendar"
+    },
+    "toasts": {
+      "taskDeleted": "Tarea eliminada.",
+      "taskUpdated": "Tarea actualizada.",
+      "taskCreated": "Tarea creada.",
+      "failedToLoadTasks": "No se pudieron cargar las tareas: {{message}}",
+      "failedToLoadYourTasks": "No se pudieron cargar tus tareas: {{message}}",
+      "failedToUpdateTask": "No se pudo actualizar la tarea: {{message}}",
+      "failedToDeleteTask": "No se pudo eliminar la tarea: {{message}}",
+      "failedToSaveTask": "No se pudo guardar la tarea: {{message}}",
+      "failedToCreateTask": "No se pudo crear la tarea: {{message}}",
+      "failedToMoveTask": "No se pudo mover la tarea: {{message}}"
+    }
+  },
+  "timeOff": {
+    "tabs": {
+      "myTimeoff": "Mis ausencias",
+      "myRequests": "Mis solicitudes",
+      "approvals": "Aprobaciones",
+      "balances": "Saldos",
+      "allRequests": "Todas las solicitudes",
+      "policies": "Políticas",
+      "assignments": "Asignaciones"
+    },
+    "sectionLabel": "Ausencias",
+    "back": "Volver",
+    "accrual": {
+      "fixed": "Fija",
+      "monthly": "Mensual"
+    },
+    "status": {
+      "pending": "Pendiente",
+      "approved": "Aprobada",
+      "rejected": "Rechazada",
+      "cancelled": "Cancelada"
+    },
+    "common": {
+      "selectPlaceholder": "-- seleccioná --",
+      "yes": "Sí",
+      "no": "No"
+    },
+    "cancelRequestDialog": {
+      "title": "Cancelar solicitud",
+      "message": "¿Estás seguro de que querés cancelar esta solicitud de ausencia?",
+      "confirmLabel": "Cancelar solicitud"
+    },
+    "confirmDeletePolicy": {
+      "title": "Eliminar \"{{name}}\"",
+      "message_one": "Esto va a eliminar \"{{name}}\" del {{count}} empleado que la tiene asignada actualmente, y va a desactivar la política. Las solicitudes de ausencia pasadas hechas bajo esta política no se ven afectadas. Escribí DELETE para confirmar.",
+      "message_other": "Esto va a eliminar \"{{name}}\" de los {{count}} empleados que la tienen asignada actualmente, y va a desactivar la política. Las solicitudes de ausencia pasadas hechas bajo esta política no se ven afectadas. Escribí DELETE para confirmar.",
+      "deleting": "Eliminando…"
+    },
+    "slideOver": {
+      "assignTitle": "Asignar \"{{name}}\"",
+      "editTitle": "Editar política de ausencias",
+      "addTitle": "Agregar política de ausencias",
+      "skip": "Omitir",
+      "assigning": "Asignando…",
+      "done": "Listo",
+      "assignToCount_one": "Asignar a {{count}} empleado",
+      "assignToCount_other": "Asignar a {{count}} empleados",
+      "cancel": "Cancelar",
+      "save": "Guardar",
+      "create": "Crear",
+      "assignPrompt": "¿Quién debería tener \"{{name}}\"? También podés hacer esto más tarde desde la pestaña Asignaciones.",
+      "noEmployeesYet": "Todavía no hay empleados.",
+      "everyoneHasPolicy": "Todos los empleados ya tienen esta política.",
+      "selectAll": "Seleccionar todos",
+      "selectNone": "No seleccionar ninguno"
+    },
+    "policyForm": {
+      "name": "Nombre",
+      "namePlaceholder": "ej. Vacaciones, Licencia por enfermedad, Licencia por emergencia",
+      "daysPerYear": "Días por año",
+      "accrualMethod": "Método de acumulación",
+      "accrualFixedOption": "Anual fija — todos los días disponibles de una vez",
+      "accrualMonthlyOption": "Mensual — los días se acumulan progresivamente",
+      "color": "Color",
+      "paid": "Paga",
+      "requiresApproval": "Requiere aprobación"
+    },
+    "myTimeoff": {
+      "notLinked": "Tu cuenta no está vinculada a un registro de empleado, así que no hay un saldo personal para mostrar.",
+      "noPoliciesAssigned": "Todavía no tenés políticas de ausencias asignadas — pedile a un admin que te asigne una.",
+      "remainingLeft": "{{count}} restantes",
+      "stats": {
+        "allocated": "Asignados",
+        "used": "Usados",
+        "pending": "Pendientes",
+        "remaining": "Restantes"
+      },
+      "accrualLine": "Acumulación: {{method}}",
+      "noRequestsUnderPolicy": "Todavía no hay solicitudes hechas bajo esta política."
+    },
+    "assignments": {
+      "description": "Qué políticas de ausencias aplican a cada empleado. Gestioná las políticas en sí (días por año, acumulación, etc.) desde la pestaña Políticas.",
+      "noPoliciesDefined": "Todavía no hay políticas de ausencias definidas. Agregá una desde la pestaña Políticas.",
+      "noEmployees": "Todavía no hay empleados.",
+      "table": {
+        "employee": "Empleado",
+        "department": "Departamento",
+        "assignedPolicies": "Políticas asignadas"
+      },
+      "removePolicyAria": "Quitar {{name}}",
+      "removeTitle": "Quitar",
+      "addPolicyForAria": "Agregar política para {{name}}",
+      "addPolicyTitle": "Agregar política",
+      "noMorePolicies": "No hay más políticas para asignar."
+    },
+    "myRequests": {
+      "notLinked": "Tu cuenta no está vinculada a un registro de empleado, así que no podés enviar solicitudes de ausencia.",
+      "balanceChip": "{{remaining}} de {{allocated}} días restantes",
+      "balanceChipPending": " ({{count}} pendientes)",
+      "form": {
+        "policy": "Política",
+        "startDate": "Fecha de inicio",
+        "endDate": "Fecha de fin",
+        "note": "Nota (opcional)",
+        "submit": "Enviar solicitud"
+      },
+      "noneYet": "Todavía no solicitaste ninguna ausencia.",
+      "table": {
+        "policy": "Política",
+        "dates": "Fechas",
+        "days": "Días",
+        "status": "Estado",
+        "note": "Nota",
+        "actions": "Acciones"
+      },
+      "cancel": "Cancelar"
+    },
+    "approvals": {
+      "empty": "No hay solicitudes pendientes esperando tu aprobación.",
+      "table": {
+        "employee": "Empleado",
+        "policy": "Política",
+        "dates": "Fechas",
+        "days": "Días",
+        "note": "Nota",
+        "actions": "Acciones"
+      },
+      "approve": "Aprobar",
+      "reject": "Rechazar"
+    },
+    "allRequests": {
+      "empty": "Todavía no hay solicitudes de ausencia.",
+      "table": {
+        "employee": "Empleado",
+        "policy": "Política",
+        "dates": "Fechas",
+        "days": "Días",
+        "status": "Estado",
+        "approver": "Aprobador",
+        "note": "Nota",
+        "actions": "Acciones"
+      }
+    },
+    "balances": {
+      "empty": "Todavía no hay asignaciones de políticas de ausencias.",
+      "meta_one": "{{department}} · {{count}} política · {{total}}d restantes",
+      "meta_other": "{{department}} · {{count}} políticas · {{total}}d restantes",
+      "table": {
+        "employee": "Empleado",
+        "department": "Departamento",
+        "policies": "Políticas",
+        "totalRemaining": "Total restante ({{year}})"
+      },
+      "slideOverDefaultTitle": "Saldos"
+    },
+    "policies": {
+      "emptyState": {
+        "title": "Todavía no hay políticas de ausencias",
+        "body": "Una política define cómo se ganan los días y si las solicitudes necesitan aprobación.",
+        "primaryLabel": "Crear una política"
+      },
+      "activeCount": "Activas ({{count}})",
+      "deactivatedCount": "Desactivadas ({{count}})",
+      "noActive": "No hay políticas activas.",
+      "noDeactivated": "No hay políticas desactivadas.",
+      "meta_one": "{{accrual}} · {{days}}d/año · {{count}} empleado",
+      "meta_other": "{{accrual}} · {{days}}d/año · {{count}} empleados",
+      "actionsForAria": "Acciones para {{name}}",
+      "actionsTitle": "Acciones",
+      "table": {
+        "name": "Nombre",
+        "accrual": "Acumulación",
+        "daysPerYear": "Días/año",
+        "paid": "Paga",
+        "requiresApproval": "Requiere aprobación",
+        "employees": "Empleados",
+        "actions": "Acciones"
+      },
+      "addRow": "Agregar",
+      "menu": {
+        "edit": "Editar",
+        "addInBulk": "Agregar en lote",
+        "delete": "ELIMINAR",
+        "activate": "Activar"
+      }
+    },
+    "toasts": {
+      "loadFailed": "No se pudo cargar el resumen de Ausencias: {{message}}",
+      "policyAssigned": "Política asignada.",
+      "assignFailed": "No se pudo asignar la política de ausencias: {{message}}",
+      "policyRemoved": "Política quitada.",
+      "removeFailed": "No se pudo quitar la política de ausencias: {{message}}",
+      "policyUpdated": "Política de ausencias actualizada.",
+      "policyAdded": "Política de ausencias agregada.",
+      "saveFailed": "No se pudo guardar la política de ausencias: {{message}}",
+      "assignedToCount_one": "Asignada a {{count}} empleado.",
+      "assignedToCount_other": "Asignada a {{count}} empleados.",
+      "assignedPartial": "Asignada a {{success}} de {{total}} empleados — {{failed}} fallaron.",
+      "updateFailed": "No se pudo actualizar la política de ausencias: {{message}}",
+      "deletedAndRemoved_one": "\"{{name}}\" eliminada y quitada de {{count}} empleado.",
+      "deletedAndRemoved_other": "\"{{name}}\" eliminada y quitada de {{count}} empleados.",
+      "deleteFailed": "No se pudo eliminar la política de ausencias: {{message}}",
+      "requestSubmitted": "Solicitud enviada.",
+      "submitFailed": "No se pudo enviar la solicitud de ausencia: {{message}}",
+      "requestCancelled": "Solicitud cancelada.",
+      "cancelFailed": "No se pudo cancelar la solicitud: {{message}}",
+      "requestApproved": "Solicitud aprobada.",
+      "requestRejected": "Solicitud rechazada.",
+      "decideFailed": "No se pudo decidir la solicitud: {{message}}"
+    }
+  }
+}

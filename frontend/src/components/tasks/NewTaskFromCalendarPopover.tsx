@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { api, type TaskEntityType } from '../../api';
 import Popover from '../common/Popover';
 import SearchableSelect from '../common/SearchableSelect';
@@ -38,6 +39,7 @@ export default function NewTaskFromCalendarPopover({
   defaultDueDate,
   onCreated,
 }: NewTaskFromCalendarPopoverProps) {
+  const { t } = useTranslation('tasks');
   const { entityType, entityId, setEntityId, entityOptions, loadingOptions, setEntityType, reset } = useEntityPicker();
   const googleCalendarConnected = useGoogleCalendarConnected(token);
 
@@ -62,7 +64,7 @@ export default function NewTaskFromCalendarPopover({
       <div className="inline-compose-form">
         <div className="nv-field">
           <label htmlFor="new-task-entity-type">
-            Who is this for?
+            {t('myTasks.calendarPopover.whoFor')}
             <RequiredMark />
           </label>
           <select
@@ -70,7 +72,7 @@ export default function NewTaskFromCalendarPopover({
             value={entityType}
             onChange={(e) => setEntityType(e.target.value as TaskEntityType, token)}
           >
-            <option value="">-- select --</option>
+            <option value="">{t('myTasks.common.selectPlaceholder')}</option>
             <option value="contact">{TASK_ENTITY_TYPE_LABELS.contact}</option>
             <option value="company">{TASK_ENTITY_TYPE_LABELS.company}</option>
             <option value="employee">{TASK_ENTITY_TYPE_LABELS.employee}</option>
@@ -88,7 +90,7 @@ export default function NewTaskFromCalendarPopover({
               value={entityId}
               onChange={setEntityId}
               options={entityOptions}
-              placeholder={loadingOptions ? 'Loading…' : `Search ${TASK_ENTITY_TYPE_LABELS[entityType].toLowerCase()}s…`}
+              placeholder={loadingOptions ? t('myTasks.common.loading') : t('myTasks.calendarPopover.searchPlaceholder', { entity: TASK_ENTITY_TYPE_LABELS[entityType].toLowerCase() })}
             />
           </div>
         )}

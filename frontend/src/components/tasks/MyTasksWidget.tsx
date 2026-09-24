@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, type Task } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import { useGoogleCalendarConnected } from '../../hooks/useGoogleCalendarConnected';
@@ -32,6 +33,7 @@ function formatDueDate(iso: string): string {
 // the same edit popover as EntityTasksList (via the shared TaskFormPopover),
 // not a separate implementation.
 export default function MyTasksWidget({ token, tenantUsers, currentUserId }: MyTasksWidgetProps) {
+  const { t } = useTranslation('tasks');
   const toast = useToast();
   const googleCalendarConnected = useGoogleCalendarConnected(token);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -45,7 +47,7 @@ export default function MyTasksWidget({ token, tenantUsers, currentUserId }: MyT
       const result = await api.listMyTasks(token);
       setTasks(result);
     } catch (error) {
-      toast.error('Failed to load your tasks: ' + (error as Error).message);
+      toast.error(t('myTasks.toasts.failedToLoadYourTasks', { message: (error as Error).message }));
     } finally {
       setLoading(false);
     }
@@ -70,7 +72,7 @@ export default function MyTasksWidget({ token, tenantUsers, currentUserId }: MyT
       await api.updateTask(token, task.id, { completedAt: task.completedAt ? null : new Date().toISOString() });
       await load();
     } catch (error) {
-      toast.error('Failed to update task: ' + (error as Error).message);
+      toast.error(t('myTasks.toasts.failedToUpdateTask', { message: (error as Error).message }));
     }
   };
 
@@ -84,11 +86,11 @@ export default function MyTasksWidget({ token, tenantUsers, currentUserId }: MyT
     if (!editingTask) return;
     try {
       await api.updateTask(token, editingTask.id, payload);
-      toast.success('Task updated.');
+      toast.success(t('myTasks.toasts.taskUpdated'));
       setFormOpen(false);
       await load();
     } catch (error) {
-      toast.error('Failed to save task: ' + (error as Error).message);
+      toast.error(t('myTasks.toasts.failedToSaveTask', { message: (error as Error).message }));
     }
   };
 
@@ -96,19 +98,19 @@ export default function MyTasksWidget({ token, tenantUsers, currentUserId }: MyT
     if (!editingTask) return;
     try {
       await api.deleteTask(token, editingTask.id);
-      toast.success('Task deleted.');
+      toast.success(t('myTasks.toasts.taskDeleted'));
       setFormOpen(false);
       await load();
     } catch (error) {
-      toast.error('Failed to delete task: ' + (error as Error).message);
+      toast.error(t('myTasks.toasts.failedToDeleteTask', { message: (error as Error).message }));
     }
   };
 
   return (
     <div className="card">
-      <h3 className="card-title">My tasks</h3>
-      {loading && <p className="text-xs text-ink-faint dark:text-dark-ink-faint">Loading…</p>}
-      {!loading && tasks.length === 0 && <p className="text-xs text-ink-faint dark:text-dark-ink-faint">Nothing assigned to you.</p>}
+      <h3 className="card-title">{t('myTasks.widget.title')}</h3>
+      {loading && <p className="text-xs text-ink-faint dark:text-dark-ink-faint">{t('myTasks.widget.loading')}</p>}
+      {!loading && tasks.length === 0 && <p className="text-xs text-ink-faint dark:text-dark-ink-faint">{t('myTasks.widget.empty')}</p>}
       <div className="task-list">
         {tasks.map((task) => (
           <div key={task.id} className="task-row task-row-clickable" onClick={(e) => openEditForm(e, task)}>
@@ -118,7 +120,7 @@ export default function MyTasksWidget({ token, tenantUsers, currentUserId }: MyT
               checked={!!task.completedAt}
               onClick={(e) => e.stopPropagation()}
               onChange={() => handleToggle(task)}
-              aria-label={task.completedAt ? 'Mark as pending' : 'Mark as complete'}
+              aria-label={task.completedAt ? t('myTasks.actions.markPending') : t('myTasks.actions.markComplete')}
             />
             <div className="min-w-0 flex-1">
               <div className="task-row-title" style={{ display: 'block' }}>
@@ -133,8 +135,8 @@ export default function MyTasksWidget({ token, tenantUsers, currentUserId }: MyT
                 target="_blank"
                 rel="noopener noreferrer"
                 className="icon-btn"
-                title="Join Google Meet"
-                aria-label="Join Google Meet"
+                title={t('myTasks.actions.joinGoogleMeet')}
+                aria-label={t('myTasks.actions.joinGoogleMeet')}
                 onClick={(e) => e.stopPropagation()}
               >
                 <VideoIcon className="h-3.5 w-3.5" />

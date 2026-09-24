@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ChevronLeftIcon, XIcon } from '../common/Icons';
 import { usePermissions } from '../../contexts/PermissionsContext';
 import { useTimeOffTab, type TimeOffTab } from '../../contexts/TimeOffTabContext';
@@ -10,18 +11,18 @@ interface TimeOffSidebarProps {
 
 interface TimeOffTabItem {
   key: TimeOffTab;
-  label: string;
+  labelKey: string;
   permission?: string;
 }
 
 const TIME_OFF_TABS: TimeOffTabItem[] = [
-  { key: 'my-timeoff', label: 'My Timeoff' },
-  { key: 'my-requests', label: 'My Requests' },
-  { key: 'approvals', label: 'Approvals' },
-  { key: 'balances', label: 'Balances', permission: 'manage_custom_fields' },
-  { key: 'all-requests', label: 'All Requests', permission: 'manage_custom_fields' },
-  { key: 'policies', label: 'Policies', permission: 'manage_custom_fields' },
-  { key: 'assignments', label: 'Assignments', permission: 'manage_custom_fields' },
+  { key: 'my-timeoff', labelKey: 'timeOff.tabs.myTimeoff' },
+  { key: 'my-requests', labelKey: 'timeOff.tabs.myRequests' },
+  { key: 'approvals', labelKey: 'timeOff.tabs.approvals' },
+  { key: 'balances', labelKey: 'timeOff.tabs.balances', permission: 'manage_custom_fields' },
+  { key: 'all-requests', labelKey: 'timeOff.tabs.allRequests', permission: 'manage_custom_fields' },
+  { key: 'policies', labelKey: 'timeOff.tabs.policies', permission: 'manage_custom_fields' },
+  { key: 'assignments', labelKey: 'timeOff.tabs.assignments', permission: 'manage_custom_fields' },
 ];
 
 // Swapped in for the main Sidebar while on /hr/time-off (see AppLayout.tsx),
@@ -30,6 +31,7 @@ const TIME_OFF_TABS: TimeOffTabItem[] = [
 // TimeOffTabContext. Replaces the old .views-bar tab strip, which got
 // cramped with 7 tabs on a phone screen (2026-09-09).
 export default function TimeOffSidebar({ mobileOpen, onMobileClose }: TimeOffSidebarProps) {
+  const { t } = useTranslation('tasks');
   const navigate = useNavigate();
   const permissions = usePermissions();
   const { tab, setTab, pendingApprovalsCount } = useTimeOffTab();
@@ -40,19 +42,19 @@ export default function TimeOffSidebar({ mobileOpen, onMobileClose }: TimeOffSid
     <>
       {mobileOpen && <div className="sidebar-backdrop" onClick={onMobileClose} />}
       <aside className={`sidebar ${mobileOpen ? 'mobile-open' : ''}`}>
-        <button className="sidebar-toggle-mobile" onClick={onMobileClose} aria-label="Close menu">
+        <button className="sidebar-toggle-mobile" onClick={onMobileClose} aria-label={t('timeOff.back')}>
           <XIcon className="h-4 w-4" />
         </button>
 
         <div>
           <button type="button" className="sidebar-link w-full text-left" onClick={() => navigate('/overview')}>
             <ChevronLeftIcon className="h-4 w-4 shrink-0" />
-            Back
+            {t('timeOff.back')}
           </button>
         </div>
 
         <div className="sidebar-divider">
-          <p className="sidebar-group-label">Time Off</p>
+          <p className="sidebar-group-label">{t('timeOff.sectionLabel')}</p>
           {items.map((item) => (
             <button
               key={item.key}
@@ -63,7 +65,7 @@ export default function TimeOffSidebar({ mobileOpen, onMobileClose }: TimeOffSid
                 onMobileClose();
               }}
             >
-              {item.label}
+              {t(item.labelKey)}
               {item.key === 'approvals' && pendingApprovalsCount > 0 ? ` (${pendingApprovalsCount})` : ''}
             </button>
           ))}

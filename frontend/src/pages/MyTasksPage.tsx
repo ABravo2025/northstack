@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, type Task } from '../api';
 import { useTaskFolders } from '../hooks/useTaskFolders';
 import { useMyTasksHub } from '../hooks/useMyTasksHub';
@@ -25,6 +26,7 @@ type ViewMode = 'list' | 'board';
 // rationale. Kept thin on purpose: data lives in useTaskFolders/useMyTasksHub, rows/cards/rail live
 // in components/tasks/, this file is just the page shell wiring them together.
 export default function MyTasksPage({ token, user }: MyTasksPageProps) {
+  const { t } = useTranslation('tasks');
   const toast = useToast();
   const [view, setView] = useState<ViewMode>('list');
   const [tenantUsers, setTenantUsers] = useState<{ id: string; firstName: string; lastName: string }[]>([]);
@@ -63,14 +65,14 @@ export default function MyTasksPage({ token, user }: MyTasksPageProps) {
       await api.updateTask(token, task.id, patch);
       await reloadTasks();
     } catch (error) {
-      toast.error('Failed to move task: ' + (error as Error).message);
+      toast.error(t('myTasks.toasts.failedToMoveTask', { message: (error as Error).message }));
     }
   };
 
   return (
     <div className="page-full flex flex-col">
       <div className="page-toolbar">
-        <h2>My Tasks</h2>
+        <h2>{t('myTasks.pageTitle')}</h2>
       </div>
 
       <div className="task-hub-layout">
@@ -91,20 +93,20 @@ export default function MyTasksPage({ token, user }: MyTasksPageProps) {
                   type="text"
                   value={searchInput}
                   onChange={(e) => setSearchInput(e.target.value)}
-                  placeholder="Search tasks..."
+                  placeholder={t('myTasks.searchPlaceholder')}
                 />
               </div>
               <label className="flex items-center gap-1.5 text-sm text-ink-muted dark:text-dark-ink-muted">
                 <input type="checkbox" checked={showCompleted} onChange={(e) => setShowCompleted(e.target.checked)} />
-                Show completed
+                {t('myTasks.showCompleted')}
               </label>
             </div>
-            <div className="task-view-toggle" role="group" aria-label="View">
+            <div className="task-view-toggle" role="group" aria-label={t('myTasks.view.ariaLabel')}>
               <button type="button" className={view === 'list' ? 'active' : ''} onClick={() => setView('list')}>
-                List
+                {t('myTasks.view.list')}
               </button>
               <button type="button" className={view === 'board' ? 'active' : ''} onClick={() => setView('board')}>
-                Board
+                {t('myTasks.view.board')}
               </button>
             </div>
           </div>

@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import type { Task } from '../../api';
 import Avatar from '../common/Avatar';
 import { TaskCheckIcon } from '../common/Icons';
@@ -14,6 +15,7 @@ interface TaskHubCardProps {
 // renderCard) — same circular check + entity-first title as TaskHubRow, plus a Created/Completed
 // footnote since the board has no column headers to put those dates in.
 export default function TaskHubCard({ task, onToggleComplete, onOpenDetail }: TaskHubCardProps) {
+  const { t } = useTranslation('tasks');
   const completed = !!task.completedAt;
   const overdue = !completed && isOverdue(task.dueDate);
 
@@ -28,7 +30,7 @@ export default function TaskHubCard({ task, onToggleComplete, onOpenDetail }: Ta
             onToggleComplete(task);
           }}
           aria-pressed={completed}
-          aria-label={completed ? 'Mark as pending' : 'Mark as complete'}
+          aria-label={completed ? t('myTasks.actions.markPending') : t('myTasks.actions.markComplete')}
         >
           <TaskCheckIcon />
         </button>
@@ -43,12 +45,12 @@ export default function TaskHubCard({ task, onToggleComplete, onOpenDetail }: Ta
         </div>
       )}
       <div className="task-hub-card-dates mt-1.5">
-        Created {formatHubDate(task.createdAt)}
-        {completed && task.completedAt ? ` · Done ${formatHubDate(task.completedAt)}` : ''}
+        {t('myTasks.cardDates.created', { date: formatHubDate(task.createdAt) })}
+        {completed && task.completedAt ? t('myTasks.cardDates.done', { date: formatHubDate(task.completedAt) }) : ''}
       </div>
       <div className="kcard-foot mt-1.5 justify-between">
         <span className={overdue ? 'text-[10.5px] font-semibold text-red-600 dark:text-red-400' : 'kc-age'}>
-          {task.dueDate ? formatHubDate(task.dueDate) : 'No due date'}
+          {task.dueDate ? formatHubDate(task.dueDate) : t('myTasks.common.noDueDate')}
         </span>
         {task.assignee && <Avatar firstName={task.assignee.firstName} lastName={task.assignee.lastName} />}
       </div>

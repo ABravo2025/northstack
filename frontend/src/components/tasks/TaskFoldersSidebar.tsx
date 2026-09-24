@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { TaskFolder } from '../../api';
 import type { FolderFilter } from '../../hooks/useMyTasksHub';
 import { ChevronLeftIcon, FolderIcon, PlusIcon, XIcon } from '../common/Icons';
@@ -15,6 +16,7 @@ interface TaskFoldersSidebarProps {
 // with a live pending-task count. Collapsing shrinks it to icon-only (more room for the list/board),
 // same collapse affordance as the app's own main Sidebar.
 export default function TaskFoldersSidebar({ folders, totalPendingCount, selected, onSelect, onCreate }: TaskFoldersSidebarProps) {
+  const { t } = useTranslation('tasks');
   const [collapsed, setCollapsed] = useState(false);
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
@@ -32,22 +34,22 @@ export default function TaskFoldersSidebar({ folders, totalPendingCount, selecte
   return (
     <div className={`task-folders-rail ${collapsed ? 'collapsed' : ''}`}>
       <div className="task-folders-top">
-        {!collapsed && <span className="task-folders-label">Folders</span>}
+        {!collapsed && <span className="task-folders-label">{t('myTasks.folders.label')}</span>}
         <button
           type="button"
           className="task-folders-toggle"
           onClick={() => setCollapsed((c) => !c)}
-          aria-label={collapsed ? 'Expand folders panel' : 'Collapse folders panel'}
+          aria-label={collapsed ? t('myTasks.folders.expandAria') : t('myTasks.folders.collapseAria')}
         >
           <ChevronLeftIcon />
         </button>
       </div>
 
-      <button type="button" className={`task-folder-row ${selected === 'all' ? 'active' : ''}`} onClick={() => onSelect('all')} title="All tasks">
+      <button type="button" className={`task-folder-row ${selected === 'all' ? 'active' : ''}`} onClick={() => onSelect('all')} title={t('myTasks.folders.allTasks')}>
         <FolderIcon />
         {!collapsed && (
           <>
-            <span className="task-folder-name">All tasks</span>
+            <span className="task-folder-name">{t('myTasks.folders.allTasks')}</span>
             <span className="task-folder-count">{totalPendingCount}</span>
           </>
         )}
@@ -86,9 +88,9 @@ export default function TaskFoldersSidebar({ folders, totalPendingCount, selecte
                   setNewName('');
                 }
               }}
-              placeholder="Folder name"
+              placeholder={t('myTasks.folders.namePlaceholder')}
             />
-            <button type="button" className="icon-btn" onClick={submitNewFolder} aria-label="Confirm new folder">
+            <button type="button" className="icon-btn" onClick={submitNewFolder} aria-label={t('myTasks.folders.confirmNewAria')}>
               <PlusIcon className="h-3.5 w-3.5" />
             </button>
             <button
@@ -98,7 +100,7 @@ export default function TaskFoldersSidebar({ folders, totalPendingCount, selecte
                 setAdding(false);
                 setNewName('');
               }}
-              aria-label="Cancel new folder"
+              aria-label={t('myTasks.folders.cancelNewAria')}
             >
               <XIcon className="h-3.5 w-3.5" />
             </button>
@@ -106,7 +108,7 @@ export default function TaskFoldersSidebar({ folders, totalPendingCount, selecte
         ) : (
           <button type="button" className="task-folder-row" onClick={() => setAdding(true)}>
             <PlusIcon />
-            <span className="task-folder-name">New folder</span>
+            <span className="task-folder-name">{t('myTasks.folders.newFolder')}</span>
           </button>
         ))}
     </div>

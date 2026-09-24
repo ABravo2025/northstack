@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import Modal from '../common/Modal';
 import type { GoogleCalendarViewEvent } from '../../api';
 
@@ -23,6 +24,7 @@ function formatRange(event: GoogleCalendarViewEvent): string {
 // nothing at all. This is deliberately just a viewer, not an editor: editing lives on
 // calendar.google.com (the "Open in Google Calendar" link), since Northstack never owns this data.
 export default function GoogleEventViewModal({ event, onClose }: GoogleEventViewModalProps) {
+  const { t } = useTranslation('tasks');
   if (!event) return null;
 
   return (
@@ -34,12 +36,12 @@ export default function GoogleEventViewModal({ event, onClose }: GoogleEventView
         <div className="flex flex-wrap gap-3 pt-1">
           {event.hangoutLink && (
             <a href={event.hangoutLink} target="_blank" rel="noopener noreferrer" className="btn-primary text-center">
-              Join Google Meet
+              {t('myTasks.actions.joinGoogleMeet')}
             </a>
           )}
           {event.htmlLink && (
             <a href={event.htmlLink} target="_blank" rel="noopener noreferrer" className="text-accent text-xs underline self-center">
-              Open in Google Calendar
+              {t('myTasks.googleEvent.openInGoogleCalendar')}
             </a>
           )}
         </div>

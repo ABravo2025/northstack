@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { api, type TaskEntityType, type TaskFolder } from '../../api';
 import Modal from '../common/Modal';
 import SearchableSelect from '../common/SearchableSelect';
@@ -39,6 +40,7 @@ export default function NewTaskModal({
   googleCalendarConnected,
   onCreated,
 }: NewTaskModalProps) {
+  const { t } = useTranslation('tasks');
   const toast = useToast();
   const { entityType, entityId, setEntityId, entityOptions, loadingOptions, setEntityType, reset } = useEntityPicker();
 
@@ -51,20 +53,20 @@ export default function NewTaskModal({
     if (!entityType || !entityId) return;
     try {
       await api.createTask(token, { entityType, entityId, ...payload });
-      toast.success('Task created.');
+      toast.success(t('myTasks.toasts.taskCreated'));
       reset();
       onClose();
       await onCreated();
     } catch (error) {
-      toast.error('Failed to create task: ' + (error as Error).message);
+      toast.error(t('myTasks.toasts.failedToCreateTask', { message: (error as Error).message }));
     }
   };
 
   return (
-    <Modal open={open} title="New task" onClose={handleClose}>
+    <Modal open={open} title={t('myTasks.newTaskModal.title')} onClose={handleClose}>
       <div className="nv-field">
         <label htmlFor="new-task-modal-entity-type">
-          Related to
+          {t('myTasks.newTaskModal.relatedTo')}
           <RequiredMark />
         </label>
         <select
@@ -72,7 +74,7 @@ export default function NewTaskModal({
           value={entityType}
           onChange={(e) => setEntityType(e.target.value as TaskEntityType, token)}
         >
-          <option value="">-- select --</option>
+          <option value="">{t('myTasks.common.selectPlaceholder')}</option>
           <option value="company">{TASK_ENTITY_TYPE_LABELS.company}</option>
           <option value="contact">{TASK_ENTITY_TYPE_LABELS.contact}</option>
           <option value="employee">{TASK_ENTITY_TYPE_LABELS.employee}</option>
@@ -90,7 +92,7 @@ export default function NewTaskModal({
             value={entityId}
             onChange={setEntityId}
             options={entityOptions}
-            placeholder={loadingOptions ? 'Loading…' : `Search ${TASK_ENTITY_TYPE_LABELS[entityType].toLowerCase()}s…`}
+            placeholder={loadingOptions ? t('myTasks.common.loading') : t('myTasks.newTaskModal.searchPlaceholder', { entity: TASK_ENTITY_TYPE_LABELS[entityType].toLowerCase() })}
           />
         </div>
       )}
@@ -102,7 +104,7 @@ export default function NewTaskModal({
           folders={folders}
           defaultFolderId={defaultFolderId}
           googleCalendarConnected={googleCalendarConnected}
-          submitLabel="Create task"
+          submitLabel={t('myTasks.newTaskModal.createTask')}
           onSubmit={handleSubmit}
         />
       )}

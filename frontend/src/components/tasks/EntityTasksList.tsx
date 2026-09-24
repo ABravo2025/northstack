@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, type Task, type TaskEntityType } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import { useGoogleCalendarConnected } from '../../hooks/useGoogleCalendarConnected';
@@ -36,6 +37,7 @@ export default function EntityTasksList({
   currentUserId,
   onCountChange,
 }: EntityTasksListProps) {
+  const { t } = useTranslation('tasks');
   const toast = useToast();
   const googleCalendarConnected = useGoogleCalendarConnected(token);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -48,7 +50,7 @@ export default function EntityTasksList({
       setTasks(result);
       onCountChange?.(result.filter((t) => !t.completedAt).length);
     } catch (error) {
-      toast.error('Failed to load tasks: ' + (error as Error).message);
+      toast.error(t('myTasks.toasts.failedToLoadTasks', { message: (error as Error).message }));
     } finally {
       setLoading(false);
     }
@@ -66,7 +68,7 @@ export default function EntityTasksList({
       await api.updateTask(token, task.id, { completedAt: task.completedAt ? null : new Date().toISOString() });
       await load();
     } catch (error) {
-      toast.error('Failed to update task: ' + (error as Error).message);
+      toast.error(t('myTasks.toasts.failedToUpdateTask', { message: (error as Error).message }));
     }
   };
 
@@ -74,11 +76,11 @@ export default function EntityTasksList({
     if (!editingTask) return;
     try {
       await api.deleteTask(token, editingTask.id);
-      toast.success('Task deleted.');
+      toast.success(t('myTasks.toasts.taskDeleted'));
       setEditingTask(null);
       await load();
     } catch (error) {
-      toast.error('Failed to delete task: ' + (error as Error).message);
+      toast.error(t('myTasks.toasts.failedToDeleteTask', { message: (error as Error).message }));
     }
   };
 
@@ -86,15 +88,15 @@ export default function EntityTasksList({
     try {
       if (editingTask) {
         await api.updateTask(token, editingTask.id, payload);
-        toast.success('Task updated.');
+        toast.success(t('myTasks.toasts.taskUpdated'));
         setEditingTask(null);
       } else {
         await api.createTask(token, { entityType, entityId, ...payload });
-        toast.success('Task created.');
+        toast.success(t('myTasks.toasts.taskCreated'));
       }
       await load();
     } catch (error) {
-      toast.error('Failed to save task: ' + (error as Error).message);
+      toast.error(t('myTasks.toasts.failedToSaveTask', { message: (error as Error).message }));
     }
   };
 
@@ -115,8 +117,8 @@ export default function EntityTasksList({
       />
 
       <div className="task-list">
-        {loading && <p className="text-xs text-ink-faint dark:text-dark-ink-faint">Loading tasks…</p>}
-        {!loading && ordered.length === 0 && <p className="text-xs text-ink-faint dark:text-dark-ink-faint">No tasks yet.</p>}
+        {loading && <p className="text-xs text-ink-faint dark:text-dark-ink-faint">{t('myTasks.entityList.loading')}</p>}
+        {!loading && ordered.length === 0 && <p className="text-xs text-ink-faint dark:text-dark-ink-faint">{t('myTasks.entityList.empty')}</p>}
         {ordered.map((task) => (
           <div key={task.id} className={`task-row ${editingTask?.id === task.id ? 'task-row-active' : ''}`}>
             <input
@@ -124,7 +126,7 @@ export default function EntityTasksList({
               className="task-checkbox"
               checked={!!task.completedAt}
               onChange={() => handleToggleComplete(task)}
-              aria-label={task.completedAt ? 'Mark as pending' : 'Mark as complete'}
+              aria-label={task.completedAt ? t('myTasks.actions.markPending') : t('myTasks.actions.markComplete')}
             />
             <button
               type="button"
@@ -140,8 +142,8 @@ export default function EntityTasksList({
                 target="_blank"
                 rel="noopener noreferrer"
                 className="icon-btn"
-                title="Join Google Meet"
-                aria-label="Join Google Meet"
+                title={t('myTasks.actions.joinGoogleMeet')}
+                aria-label={t('myTasks.actions.joinGoogleMeet')}
                 onClick={(e) => e.stopPropagation()}
               >
                 <VideoIcon className="h-3.5 w-3.5" />

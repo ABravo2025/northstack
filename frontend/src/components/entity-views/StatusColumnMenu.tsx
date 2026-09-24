@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import ColorPicker from '../common/ColorPicker';
@@ -24,6 +25,7 @@ interface StatusColumnMenuProps {
 }
 
 export default function StatusColumnMenu({ token, entityType, statuses, onChanged, onHide }: StatusColumnMenuProps) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [newName, setNewName] = useState('');
@@ -39,7 +41,7 @@ export default function StatusColumnMenu({ token, entityType, statuses, onChange
       await api.updateStatusDefinition(token, status.id, { isActive: !status.isActive });
       onChanged();
     } catch (error) {
-      toast.error('Failed to update status: ' + (error as Error).message);
+      toast.error(t('entityViews.status.updateFailed', { message: (error as Error).message }));
     }
   };
 
@@ -48,7 +50,7 @@ export default function StatusColumnMenu({ token, entityType, statuses, onChange
       await api.updateStatusDefinition(token, status.id, { isDefault: true });
       onChanged();
     } catch (error) {
-      toast.error('Failed to update status: ' + (error as Error).message);
+      toast.error(t('entityViews.status.updateFailed', { message: (error as Error).message }));
     }
   };
 
@@ -57,7 +59,7 @@ export default function StatusColumnMenu({ token, entityType, statuses, onChange
       await api.updateStatusDefinition(token, status.id, { color });
       onChanged();
     } catch (error) {
-      toast.error('Failed to update status color: ' + (error as Error).message);
+      toast.error(t('entityViews.status.updateColorFailed', { message: (error as Error).message }));
     }
   };
 
@@ -94,7 +96,7 @@ export default function StatusColumnMenu({ token, entityType, statuses, onChange
       }
       onChanged();
     } catch (error) {
-      toast.error('Failed to reorder statuses: ' + (error as Error).message);
+      toast.error(t('entityViews.status.reorderFailed', { message: (error as Error).message }));
     }
   };
 
@@ -109,10 +111,10 @@ export default function StatusColumnMenu({ token, entityType, statuses, onChange
       });
       setNewName('');
       setNewColor('#3c6da1');
-      toast.success('Status added.');
+      toast.success(t('entityViews.status.added'));
       onChanged();
     } catch (error) {
-      toast.error('Failed to create status: ' + (error as Error).message);
+      toast.error(t('entityViews.status.createFailed', { message: (error as Error).message }));
     }
   };
 
@@ -126,7 +128,7 @@ export default function StatusColumnMenu({ token, entityType, statuses, onChange
           e.stopPropagation();
           setOpen((v) => !v);
         }}
-        aria-label="Manage status options"
+        aria-label={t('entityViews.status.manageAriaLabel')}
       >
         <DotsVerticalIcon />
       </button>
@@ -140,7 +142,7 @@ export default function StatusColumnMenu({ token, entityType, statuses, onChange
                 onHide();
               }}
             >
-              Hide column
+              {t('entityViews.status.hideColumn')}
             </div>
           )}
           <div className="status-manage-list">
@@ -156,28 +158,28 @@ export default function StatusColumnMenu({ token, entityType, statuses, onChange
                   draggable
                   onDragStart={() => handleDragStart(status.id)}
                   onDragEnd={handleDragEnd}
-                  aria-label={`Drag to reorder ${status.name}`}
+                  aria-label={t('entityViews.status.dragToReorder', { name: status.name })}
                 >
                   <GripIcon className="h-3.5 w-3.5" />
                 </span>
                 <ColorPicker value={status.color || '#9ca3af'} onChange={(color) => handleColorChange(status, color)} />
                 <span className={`status-manage-name ${!status.isActive ? 'inactive' : ''}`}>{status.name}</span>
                 {status.isDefault ? (
-                  <span className="chip-linked">Default</span>
+                  <span className="chip-linked">{t('entityViews.status.default')}</span>
                 ) : (
                   <button type="button" className="status-manage-link" onClick={() => handleSetDefault(status)}>
-                    Set default
+                    {t('entityViews.status.setDefault')}
                   </button>
                 )}
                 <button type="button" className="status-manage-link" onClick={() => handleToggleActive(status)}>
-                  {status.isActive ? 'Deactivate' : 'Activate'}
+                  {status.isActive ? t('entityViews.status.deactivate') : t('entityViews.status.activate')}
                 </button>
               </div>
             ))}
           </div>
           <div className="nv-field mt-3">
             <label htmlFor="status-new-name">
-              Add status
+              {t('entityViews.status.addStatusLabel')}
               <RequiredMark />
             </label>
             <input
@@ -185,14 +187,14 @@ export default function StatusColumnMenu({ token, entityType, statuses, onChange
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              placeholder="e.g. On Leave"
+              placeholder={t('entityViews.status.addStatusPlaceholder')}
               required
             />
           </div>
           <div className="nv-field flex items-center gap-2">
             <ColorPicker value={newColor} onChange={setNewColor} />
             <button type="button" className="btn-primary flex-1 text-center" onClick={handleCreate}>
-              Add
+              {t('entityViews.status.add')}
             </button>
           </div>
         </div>

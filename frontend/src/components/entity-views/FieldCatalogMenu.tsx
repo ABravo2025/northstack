@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, type CatalogKind } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import Popover from '../common/Popover';
@@ -22,6 +23,7 @@ interface FieldCatalogMenuProps {
 }
 
 export default function FieldCatalogMenu({ token, kind, label, entries, onChanged, onHide }: FieldCatalogMenuProps) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const [newName, setNewName] = useState('');
@@ -36,7 +38,7 @@ export default function FieldCatalogMenu({ token, kind, label, entries, onChange
       await api.updateFieldCatalogDefinition(token, entry.id, { isActive: !entry.isActive });
       onChanged();
     } catch (error) {
-      toast.error(`Failed to update ${label.toLowerCase()}: ` + (error as Error).message);
+      toast.error(t('entityViews.catalog.updateFailed', { label: label.toLowerCase(), message: (error as Error).message }));
     }
   };
 
@@ -73,7 +75,7 @@ export default function FieldCatalogMenu({ token, kind, label, entries, onChange
       }
       onChanged();
     } catch (error) {
-      toast.error(`Failed to reorder ${label.toLowerCase()} options: ` + (error as Error).message);
+      toast.error(t('entityViews.catalog.reorderFailed', { label: label.toLowerCase(), message: (error as Error).message }));
     }
   };
 
@@ -82,10 +84,10 @@ export default function FieldCatalogMenu({ token, kind, label, entries, onChange
     try {
       await api.createFieldCatalogDefinition(token, { kind, name: newName.trim(), order: sorted.length });
       setNewName('');
-      toast.success(`${label} option added.`);
+      toast.success(t('entityViews.catalog.added', { label }));
       onChanged();
     } catch (error) {
-      toast.error(`Failed to add ${label.toLowerCase()} option: ` + (error as Error).message);
+      toast.error(t('entityViews.catalog.addFailed', { label: label.toLowerCase(), message: (error as Error).message }));
     }
   };
 
@@ -99,7 +101,7 @@ export default function FieldCatalogMenu({ token, kind, label, entries, onChange
           e.stopPropagation();
           setOpen((v) => !v);
         }}
-        aria-label={`Manage ${label.toLowerCase()} options`}
+        aria-label={t('entityViews.catalog.manageAriaLabel', { label: label.toLowerCase() })}
       >
         <DotsVerticalIcon />
       </button>
@@ -113,7 +115,7 @@ export default function FieldCatalogMenu({ token, kind, label, entries, onChange
                 onHide();
               }}
             >
-              Hide column
+              {t('entityViews.catalog.hideColumn')}
             </div>
           )}
           <div className="status-manage-list">
@@ -129,21 +131,21 @@ export default function FieldCatalogMenu({ token, kind, label, entries, onChange
                   draggable
                   onDragStart={() => handleDragStart(entry.id)}
                   onDragEnd={handleDragEnd}
-                  aria-label={`Drag to reorder ${entry.name}`}
+                  aria-label={t('entityViews.catalog.dragToReorder', { name: entry.name })}
                 >
                   <GripIcon className="h-3.5 w-3.5" />
                 </span>
                 <span className={`status-manage-name ${!entry.isActive ? 'inactive' : ''}`}>{entry.name}</span>
                 <button type="button" className="status-manage-link" onClick={() => handleToggleActive(entry)}>
-                  {entry.isActive ? 'Deactivate' : 'Activate'}
+                  {entry.isActive ? t('entityViews.catalog.deactivate') : t('entityViews.catalog.activate')}
                 </button>
               </div>
             ))}
-            {sorted.length === 0 && <p className="text-xs text-ink-muted dark:text-dark-ink-muted">No options yet.</p>}
+            {sorted.length === 0 && <p className="text-xs text-ink-muted dark:text-dark-ink-muted">{t('entityViews.catalog.noOptionsYet')}</p>}
           </div>
           <div className="nv-field mt-3">
             <label htmlFor={`catalog-new-${kind}`}>
-              Add {label.toLowerCase()}
+              {t('entityViews.catalog.addLabel', { label: label.toLowerCase() })}
               <RequiredMark />
             </label>
             <input
@@ -151,13 +153,19 @@ export default function FieldCatalogMenu({ token, kind, label, entries, onChange
               type="text"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              placeholder={kind === 'department' ? 'e.g. Engineering' : kind === 'companySize' ? 'e.g. 11-50 employees' : 'e.g. Account Executive'}
+              placeholder={
+                kind === 'department'
+                  ? t('entityViews.catalog.placeholderDepartment')
+                  : kind === 'companySize'
+                    ? t('entityViews.catalog.placeholderCompanySize')
+                    : t('entityViews.catalog.placeholderDefault')
+              }
               required
             />
           </div>
           <div className="nv-field">
             <button type="button" className="btn-primary w-full text-center" onClick={handleCreate}>
-              Add
+              {t('entityViews.catalog.add')}
             </button>
           </div>
         </div>

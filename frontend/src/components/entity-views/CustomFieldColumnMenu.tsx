@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import ConfirmDialog from '../common/ConfirmDialog';
 import Popover from '../common/Popover';
 import RequiredMark from '../common/RequiredMark';
@@ -20,6 +21,7 @@ interface CustomFieldColumnMenuProps {
 }
 
 export default function CustomFieldColumnMenu({ field, onUpdate, onDeactivate, onHide }: CustomFieldColumnMenuProps) {
+  const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -59,9 +61,9 @@ export default function CustomFieldColumnMenu({ field, onUpdate, onDeactivate, o
     <>
       {confirmingDelete && (
         <ConfirmDialog
-          title="Delete field"
-          message={`Delete "${field.name}"? Existing values stay in the database but the column disappears from the table. You can't undo this from here.`}
-          confirmLabel="Delete"
+          title={t('entityViews.customField.deleteFieldTitle')}
+          message={t('entityViews.customField.deleteFieldMessage', { name: field.name })}
+          confirmLabel={t('entityViews.views.delete')}
           onConfirm={async () => {
             await onDeactivate(field.id);
             setConfirmingDelete(false);
@@ -77,7 +79,7 @@ export default function CustomFieldColumnMenu({ field, onUpdate, onDeactivate, o
           e.stopPropagation();
           openMenu();
         }}
-        aria-label={`Manage ${field.name} field`}
+        aria-label={t('entityViews.customField.manageAriaLabel', { name: field.name })}
       >
         <DotsVerticalIcon />
       </button>
@@ -85,7 +87,7 @@ export default function CustomFieldColumnMenu({ field, onUpdate, onDeactivate, o
         {!editing ? (
           <>
             <div className="popover-menu-item" onClick={() => setEditing(true)}>
-              Edit field
+              {t('entityViews.customField.editField')}
             </div>
             {onHide && (
               <div
@@ -95,7 +97,7 @@ export default function CustomFieldColumnMenu({ field, onUpdate, onDeactivate, o
                   onHide();
                 }}
               >
-                Hide column
+                {t('entityViews.customField.hideColumn')}
               </div>
             )}
             <div
@@ -105,14 +107,14 @@ export default function CustomFieldColumnMenu({ field, onUpdate, onDeactivate, o
                 setConfirmingDelete(true);
               }}
             >
-              Delete field
+              {t('entityViews.customField.deleteField')}
             </div>
           </>
         ) : (
           <div onClick={(e) => e.stopPropagation()}>
             <div className="nv-field">
               <label htmlFor={`cf-edit-name-${field.id}`}>
-                Field name
+                {t('entityViews.customField.fieldNameLabel')}
                 <RequiredMark />
               </label>
               <input
@@ -125,7 +127,7 @@ export default function CustomFieldColumnMenu({ field, onUpdate, onDeactivate, o
             </div>
             {field.fieldType === 'select' && (
               <div className="nv-field">
-                <label htmlFor={`cf-edit-options-${field.id}`}>Options (comma-separated)</label>
+                <label htmlFor={`cf-edit-options-${field.id}`}>{t('entityViews.customField.optionsLabel')}</label>
                 <input
                   id={`cf-edit-options-${field.id}`}
                   type="text"
@@ -136,10 +138,10 @@ export default function CustomFieldColumnMenu({ field, onUpdate, onDeactivate, o
             )}
             <label className="mb-2.5 flex items-center gap-1.5 text-xs font-normal">
               <input type="checkbox" checked={required} onChange={(e) => setRequired(e.target.checked)} />
-              Required
+              {t('entityViews.customField.required')}
             </label>
             <button type="button" className="btn-primary w-full text-center" onClick={handleSave}>
-              Save
+              {t('entityViews.customField.save')}
             </button>
           </div>
         )}

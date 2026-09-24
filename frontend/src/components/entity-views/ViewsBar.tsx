@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { SavedView } from '../../api';
 import type { ViewField } from '../../lib/viewFields';
 import ConfirmDialog from '../common/ConfirmDialog';
@@ -41,6 +42,7 @@ export default function ViewsBar({
   onDuplicateView,
   onDeleteView,
 }: ViewsBarProps) {
+  const { t } = useTranslation();
   const [newViewOpen, setNewViewOpen] = useState(false);
   const [menuOpenFor, setMenuOpenFor] = useState<string | null>(null);
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -96,9 +98,9 @@ export default function ViewsBar({
     <div className="views-bar" ref={barRef}>
       {deletingView && (
         <ConfirmDialog
-          title="Delete view"
-          message={`Delete "${deletingView.name}"? This can't be undone.`}
-          confirmLabel="Delete"
+          title={t('entityViews.views.deleteViewTitle')}
+          message={t('entityViews.views.deleteViewMessage', { name: deletingView.name })}
+          confirmLabel={t('entityViews.views.delete')}
           onConfirm={async () => {
             await onDeleteView(deletingView.id);
             setDeletingView(null);
@@ -155,7 +157,7 @@ export default function ViewsBar({
         ref={newViewButtonRef}
         type="button"
         className="view-tab-add"
-        aria-label="New view"
+        aria-label={t('entityViews.views.newViewAriaLabel')}
         onClick={() => {
           setNewViewOpen((v) => !v);
           resetNewViewForm();
@@ -168,7 +170,7 @@ export default function ViewsBar({
         {activeMenuView && (
           <>
             <div className="popover-menu-item" onClick={() => startRename(activeMenuView)}>
-              Rename
+              {t('entityViews.views.rename')}
             </div>
             <div
               className="popover-menu-item"
@@ -177,18 +179,18 @@ export default function ViewsBar({
                 onDuplicateView(activeMenuView);
               }}
             >
-              Duplicate
+              {t('entityViews.views.duplicate')}
             </div>
             <div
               className={`popover-menu-item ${canDeleteShared(activeMenuView) ? 'danger' : 'disabled'}`}
-              title={canDeleteShared(activeMenuView) ? undefined : 'Only the creator or the tenant owner can delete this view'}
+              title={canDeleteShared(activeMenuView) ? undefined : t('entityViews.views.onlyCreatorOrOwnerCanDelete')}
               onClick={() => {
                 if (!canDeleteShared(activeMenuView)) return;
                 setMenuOpenFor(null);
                 setDeletingView(activeMenuView);
               }}
             >
-              Delete
+              {t('entityViews.views.delete')}
             </div>
           </>
         )}
@@ -197,7 +199,7 @@ export default function ViewsBar({
       <Popover open={newViewOpen} onClose={() => setNewViewOpen(false)} anchorRef={newViewButtonRef} width={260}>
         <div className="nv-field">
           <label htmlFor="nv-name">
-            View name
+            {t('entityViews.views.viewNameLabel')}
             <RequiredMark />
           </label>
           <input
@@ -205,31 +207,31 @@ export default function ViewsBar({
             type="text"
             value={nvName}
             onChange={(e) => setNvName(e.target.value)}
-            placeholder="e.g. Sales team only"
+            placeholder={t('entityViews.views.viewNamePlaceholder')}
             autoFocus
             required
           />
         </div>
         <div className="nv-field">
-          <label>Type</label>
+          <label>{t('entityViews.views.typeLabel')}</label>
           <div className="toggle-row">
             <div className={`toggle-opt ${nvType === 'grid' ? 'active' : ''}`} onClick={() => setNvType('grid')}>
               <GridIcon />
-              Grid
+              {t('entityViews.views.grid')}
             </div>
             <div className={`toggle-opt ${nvType === 'list' ? 'active' : ''}`} onClick={() => setNvType('list')}>
               <ListIcon />
-              List
+              {t('entityViews.views.list')}
             </div>
             <div className={`toggle-opt ${nvType === 'kanban' ? 'active' : ''}`} onClick={() => setNvType('kanban')}>
               <KanbanIcon />
-              Kanban
+              {t('entityViews.views.kanban')}
             </div>
           </div>
         </div>
         {(nvType === 'kanban' || nvType === 'list') && (
           <div className="nv-field">
-            <label htmlFor="nv-groupby">Group by (select fields only)</label>
+            <label htmlFor="nv-groupby">{t('entityViews.views.groupByLabel')}</label>
             <select id="nv-groupby" value={nvGroupBy} onChange={(e) => setNvGroupBy(e.target.value)}>
               {groupableFields.map((f) => (
                 <option key={f.key} value={f.key}>
@@ -240,14 +242,14 @@ export default function ViewsBar({
           </div>
         )}
         <div className="nv-field">
-          <label>Visibility</label>
+          <label>{t('entityViews.views.visibilityLabel')}</label>
           <div className="toggle-row">
             <div
               className={`toggle-opt ${nvVisibility === 'personal' ? 'active' : ''}`}
               onClick={() => setNvVisibility('personal')}
             >
               <LockIcon />
-              Only me
+              {t('entityViews.views.onlyMe')}
             </div>
             {canCreateShared && (
               <div
@@ -255,13 +257,13 @@ export default function ViewsBar({
                 onClick={() => setNvVisibility('shared')}
               >
                 <TeamIcon />
-                Whole team
+                {t('entityViews.views.wholeTeam')}
               </div>
             )}
           </div>
         </div>
         <button type="button" className="btn-primary w-full text-center" style={{ marginTop: 4 }} onClick={handleCreate}>
-          Create view
+          {t('entityViews.views.createView')}
         </button>
       </Popover>
     </div>

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ViewFilter } from '../../api';
 import { OPERATORS, type ViewField } from '../../lib/viewFields';
 import Popover from '../common/Popover';
@@ -11,6 +12,7 @@ interface FilterBarProps {
 }
 
 export default function FilterBar({ fields, filters, onChange }: FilterBarProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -36,8 +38,8 @@ export default function FilterBar({ fields, filters, onChange }: FilterBarProps)
         type="button"
         className="tb-btn"
         onClick={() => setOpen((v) => !v)}
-        aria-label={filters.length > 0 ? `Filter (${filters.length} active)` : 'Filter'}
-        title="Filter"
+        aria-label={filters.length > 0 ? t('entityViews.filter.ariaLabelActive', { count: filters.length }) : t('entityViews.filter.ariaLabel')}
+        title={t('entityViews.filter.title')}
       >
         <FilterIcon />
         {filters.length > 0 && <span className="filter-count">{filters.length}</span>}
@@ -79,7 +81,7 @@ export default function FilterBar({ fields, filters, onChange }: FilterBarProps)
                   value={filter.value}
                   onChange={(e) => updateFilter(index, { value: e.target.value })}
                 >
-                  <option value="">-- select --</option>
+                  <option value="">{t('entityViews.filter.selectPlaceholder')}</option>
                   {field.selectOptions?.map((opt) => (
                     <option key={opt.value} value={opt.value}>
                       {opt.value}
@@ -102,7 +104,7 @@ export default function FilterBar({ fields, filters, onChange }: FilterBarProps)
         })}
         <button type="button" className="add-filter-btn" onClick={addFilter} disabled={fields.length === 0}>
           <PlusIcon />
-          Add filter
+          {t('entityViews.filter.addFilter')}
         </button>
       </Popover>
     </>

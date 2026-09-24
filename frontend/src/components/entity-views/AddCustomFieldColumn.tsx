@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Popover from '../common/Popover';
 import RequiredMark from '../common/RequiredMark';
 import { PlusIcon } from '../common/Icons';
@@ -15,6 +16,7 @@ interface AddCustomFieldColumnProps {
 }
 
 export default function AddCustomFieldColumn({ onCreate }: AddCustomFieldColumnProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState('');
   const [fieldType, setFieldType] = useState('text');
@@ -59,14 +61,14 @@ export default function AddCustomFieldColumn({ onCreate }: AddCustomFieldColumnP
           reset();
           setOpen((v) => !v);
         }}
-        aria-label="Add field"
+        aria-label={t('entityViews.customField.addFieldAriaLabel')}
       >
         <PlusIcon />
       </button>
       <Popover open={open} onClose={() => setOpen(false)} anchorRef={triggerRef} width={240} align="right">
         <div className="nv-field">
           <label htmlFor="new-cf-name">
-            Field name
+            {t('entityViews.customField.fieldNameLabel')}
             <RequiredMark />
           </label>
           <input
@@ -74,39 +76,39 @@ export default function AddCustomFieldColumn({ onCreate }: AddCustomFieldColumnP
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Emergency Contact"
+            placeholder={t('entityViews.customField.addFieldNamePlaceholder')}
             autoFocus
             required
           />
         </div>
         <div className="nv-field">
-          <label htmlFor="new-cf-type">Type</label>
+          <label htmlFor="new-cf-type">{t('entityViews.customField.typeLabel')}</label>
           <select id="new-cf-type" value={fieldType} onChange={(e) => setFieldType(e.target.value)}>
-            <option value="text">Text</option>
-            <option value="number">Number</option>
-            <option value="date">Date</option>
-            <option value="email">Email</option>
-            <option value="select">Select (dropdown)</option>
+            <option value="text">{t('entityViews.customField.typeText')}</option>
+            <option value="number">{t('entityViews.customField.typeNumber')}</option>
+            <option value="date">{t('entityViews.customField.typeDate')}</option>
+            <option value="email">{t('entityViews.customField.typeEmail')}</option>
+            <option value="select">{t('entityViews.customField.typeSelect')}</option>
           </select>
         </div>
         {fieldType === 'select' && (
           <div className="nv-field">
-            <label htmlFor="new-cf-options">Options (comma-separated)</label>
+            <label htmlFor="new-cf-options">{t('entityViews.customField.optionsLabel')}</label>
             <input
               id="new-cf-options"
               type="text"
               value={optionsText}
               onChange={(e) => setOptionsText(e.target.value)}
-              placeholder="e.g. Small, Medium, Large"
+              placeholder={t('entityViews.customField.optionsPlaceholder')}
             />
           </div>
         )}
         <label className="mb-2.5 flex items-center gap-1.5 text-xs font-normal">
           <input type="checkbox" checked={required} onChange={(e) => setRequired(e.target.checked)} />
-          Required
+          {t('entityViews.customField.required')}
         </label>
         <button type="button" className="btn-primary w-full text-center" onClick={handleCreate}>
-          Add field
+          {t('entityViews.customField.addField')}
         </button>
       </Popover>
     </>

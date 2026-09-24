@@ -280,6 +280,66 @@
     "starting": "Iniciando…",
     "continue": "Continuar"
   },
+  "billing": {
+    "loadError": "No se pudieron cargar los datos de facturación: {{message}}",
+    "planCardTitle": "Plan",
+    "freeTrialLabel": "Prueba gratuita",
+    "perMonthSuffix": "/mes",
+    "changePlan": "Cambiar plan",
+    "dateLabel": {
+      "ends": "Termina",
+      "trialEnds": "La prueba termina",
+      "active": "Activo",
+      "paymentOverdueSince": "Pago vencido desde",
+      "suspendedSince": "Suspendido desde"
+    },
+    "status": {
+      "active": "Activo",
+      "paid": "Pagada",
+      "trialing": "En prueba",
+      "past_due": "Vencido",
+      "pending": "Pendiente",
+      "suspended": "Suspendido",
+      "failed": "Fallido",
+      "cancelled": "Cancelado",
+      "refunded": "Reembolsado",
+      "ending": "Terminando"
+    },
+    "trialEndsHint": "La prueba termina: {{date}} — elegí un plan antes de esa fecha para mantener acceso completo.",
+    "seatsIncluded": "puestos incluidos",
+    "extraSeats_one": "— {{count}} puesto extra · {{price}}/mes",
+    "extraSeats_other": "— {{count}} puestos extra · {{price}}/mes",
+    "freeTrialCapped": "Prueba gratuita tiene un límite de {{count}} usuarios — elegí un plan para agregar más.",
+    "cancelSubscription": "Cancelar suscripción",
+    "clearing": "Restableciendo…",
+    "backToFreeTrial": "Volver a Prueba gratuita",
+    "resuming": "Reanudando…",
+    "resumeSubscription": "Reanudar suscripción",
+    "paymentMethodCardTitle": "Método de pago",
+    "cardOnFile": "Tarjeta registrada",
+    "updatePaymentMethod": "Actualizar método de pago",
+    "noPaymentMethod": "Todavía no hay un método de pago registrado — usá Cambiar plan arriba para agregar uno.",
+    "invoicesCardTitle": "Facturas",
+    "noInvoices": "Todavía no hay facturas.",
+    "columns": {
+      "date": "Fecha",
+      "amount": "Monto",
+      "status": "Estado"
+    },
+    "invoiceSeatsBreakdown": "{{base}} plan + {{extra}} puestos extra",
+    "opening": "Abriendo…",
+    "viewInvoice": "Ver factura",
+    "planChangeScheduled": "Cambio de plan programado — se aplica a partir de tu próximo ciclo de facturación.",
+    "cancellationScheduled": "Cancelación programada para el final de tu período actual.",
+    "backToFreeTrialToast": "De vuelta en Prueba gratuita.",
+    "subscriptionResumed": "Suscripción reanudada.",
+    "cancelConfirm": {
+      "title": "Cancelar suscripción",
+      "messageWithDate": "Tu plan sigue activo hasta el final de tu período de facturación actual ({{date}}). Podés reanudarlo cuando quieras antes de esa fecha.",
+      "messageNoDate": "Tu plan sigue activo hasta el final de tu período de facturación actual. Podés reanudarlo cuando quieras antes de esa fecha.",
+      "cancelling": "Cancelando…"
+    }
+  },
   "appearance": {
     "companyCardTitle": "Empresa",
     "currencyHelp": "Se aplica a los montos de compensación en toda la empresa (Tarifa por hora/mensual en Empleado).",

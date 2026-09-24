@@ -280,6 +280,66 @@
     "starting": "Starting…",
     "continue": "Continue"
   },
+  "billing": {
+    "loadError": "Failed to load billing details: {{message}}",
+    "planCardTitle": "Plan",
+    "freeTrialLabel": "Free Trial",
+    "perMonthSuffix": "/mo",
+    "changePlan": "Change plan",
+    "dateLabel": {
+      "ends": "Ends",
+      "trialEnds": "Trial ends",
+      "active": "Active",
+      "paymentOverdueSince": "Payment overdue since",
+      "suspendedSince": "Suspended since"
+    },
+    "status": {
+      "active": "Active",
+      "paid": "Paid",
+      "trialing": "Trialing",
+      "past_due": "Past due",
+      "pending": "Pending",
+      "suspended": "Suspended",
+      "failed": "Failed",
+      "cancelled": "Cancelled",
+      "refunded": "Refunded",
+      "ending": "Ending"
+    },
+    "trialEndsHint": "Trial ends: {{date}} — pick a plan anytime before then to keep full access.",
+    "seatsIncluded": "seats included",
+    "extraSeats_one": "— {{count}} extra seat · {{price}}/mo",
+    "extraSeats_other": "— {{count}} extra seats · {{price}}/mo",
+    "freeTrialCapped": "Free Trial is capped at {{count}} users — choose a plan to add more.",
+    "cancelSubscription": "Cancel subscription",
+    "clearing": "Clearing…",
+    "backToFreeTrial": "Back to Free Trial",
+    "resuming": "Resuming…",
+    "resumeSubscription": "Resume subscription",
+    "paymentMethodCardTitle": "Payment method",
+    "cardOnFile": "Card on file",
+    "updatePaymentMethod": "Update payment method",
+    "noPaymentMethod": "No payment method on file yet — use Change plan above to add one.",
+    "invoicesCardTitle": "Invoices",
+    "noInvoices": "No invoices yet.",
+    "columns": {
+      "date": "Date",
+      "amount": "Amount",
+      "status": "Status"
+    },
+    "invoiceSeatsBreakdown": "{{base}} plan + {{extra}} extra seats",
+    "opening": "Opening…",
+    "viewInvoice": "View invoice",
+    "planChangeScheduled": "Plan change scheduled — it applies starting your next billing cycle.",
+    "cancellationScheduled": "Cancellation scheduled for the end of your current period.",
+    "backToFreeTrialToast": "Back to Free Trial.",
+    "subscriptionResumed": "Subscription resumed.",
+    "cancelConfirm": {
+      "title": "Cancel subscription",
+      "messageWithDate": "Your plan stays active until the end of your current billing period ({{date}}). You can resume anytime before then.",
+      "messageNoDate": "Your plan stays active until the end of your current billing period. You can resume anytime before then.",
+      "cancelling": "Cancelling…"
+    }
+  },
   "appearance": {
     "companyCardTitle": "Company",
     "currencyHelp": "Applies to compensation amounts across the company (Hourly/Monthly Rate on Employee).",

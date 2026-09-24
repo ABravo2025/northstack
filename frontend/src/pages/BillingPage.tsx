@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api';
 import type { PlanTier, Subscription, Tenant } from '../api';
 import { useToast } from '../components/common/ToastProvider';
@@ -39,13 +40,21 @@ const STATUS_BADGE_MODIFIER: Record<string, string> = {
 };
 
 function StatusBadge({ status, label }: { status: string; label?: string }) {
+  const { t } = useTranslation('settingsPages');
   const modifier = STATUS_BADGE_MODIFIER[status] ?? 'cancelled';
-  return <span className={`status-badge status-${modifier}`}>{label ?? status.replace('_', ' ')}</span>;
+  return (
+    <span className={`status-badge status-${modifier}`}>
+      {label ?? t(`billing.status.${status}`, { defaultValue: status.replace('_', ' ') })}
+    </span>
+  );
 }
 
 function formatDate(value: string | null): string {
   if (!value) return '—';
-  return new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  // `undefined` locale (not a hardcoded 'en-US') so the date format itself also follows the
+  // browser/user locale, same fix already applied to IntegrationsSettingsPage's own date helper
+  // during its i18n pass.
+  return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 // Dodo's card_network / Mercado Pago's payment_method_id are lowercase, underscore-separated
@@ -71,19 +80,22 @@ function formatCardBrand(brand: string): string {
 // field here already exists on the model, nothing new. `active` shows a from-to range
 // (currentPeriodStart -> currentPeriodEnd) per Alejandro's explicit request (2026-08-19) instead
 // of just the renewal date, so a paid plan visibly says when the current period started too.
-function planDateInfo(sub: Subscription): { label: string; date: string | null; rangeStart?: string | null } | null {
+function planDateInfo(
+  t: ReturnType<typeof useTranslation>['t'],
+  sub: Subscription,
+): { label: string; date: string | null; rangeStart?: string | null } | null {
   if (sub.cancelledAt && sub.cancellationEffectiveAt) {
-    return { label: 'Ends', date: sub.cancellationEffectiveAt };
+    return { label: t('billing.dateLabel.ends'), date: sub.cancellationEffectiveAt };
   }
   switch (sub.status) {
     case 'trialing':
-      return { label: 'Trial ends', date: sub.trialEndsAt };
+      return { label: t('billing.dateLabel.trialEnds'), date: sub.trialEndsAt };
     case 'active':
-      return { label: 'Active', date: sub.currentPeriodEnd, rangeStart: sub.currentPeriodStart };
+      return { label: t('billing.dateLabel.active'), date: sub.currentPeriodEnd, rangeStart: sub.currentPeriodStart };
     case 'past_due':
-      return { label: 'Payment overdue since', date: sub.currentPeriodEnd };
+      return { label: t('billing.dateLabel.paymentOverdueSince'), date: sub.currentPeriodEnd };
     case 'suspended':
-      return { label: 'Suspended since', date: sub.gracePeriodEndsAt };
+      return { label: t('billing.dateLabel.suspendedSince'), date: sub.gracePeriodEndsAt };
     default:
       return null;
   }
@@ -91,6 +103,7 @@ function planDateInfo(sub: Subscription): { label: string; date: string | null; 
 
 export default function BillingPage({ token, tenant }: BillingPageProps) {
   const toast = useToast();
+  const { t } = useTranslation('settingsPages');
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
   const [showPlansModal, setShowPlansModal] = useState(false);
@@ -105,7 +118,7 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
     api
       .getSubscription(token)
       .then(setSubscription)
-      .catch((error) => toast.error('Failed to load billing details: ' + (error as Error).message))
+      .catch((error) => toast.error(t('billing.loadError', { message: (error as Error).message })))
       .finally(() => setLoading(false));
   };
 
@@ -130,7 +143,7 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
     );
   }
 
-  const dateInfo = planDateInfo(subscription);
+  const dateInfo = planDateInfo(t, subscription);
   const hasProvider = subscription.provider !== null;
   const hasPendingCancellation = Boolean(subscription.cancelledAt && subscription.cancellationEffectiveAt);
   // subscription.tenantPlan (not subscription.plan) is the real "what's actually chosen" source
@@ -149,7 +162,7 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
   const handleSelectPlan = async (plan: PlanTier) => {
     if (hasProvider) {
       await api.changeSubscriptionPlan(token, plan);
-      toast.success('Plan change scheduled — it applies starting your next billing cycle.');
+      toast.success(t('billing.planChangeScheduled'));
       load();
     } else {
       await redirectToCheckout(token, plan);
@@ -160,7 +173,7 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
     setCancelling(true);
     try {
       await api.cancelSubscription(token);
-      toast.success('Cancellation scheduled for the end of your current period.');
+      toast.success(t('billing.cancellationScheduled'));
       setShowCancelConfirm(false);
       load();
     } catch (error) {
@@ -180,7 +193,7 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
     setCancelling(true);
     try {
       await api.clearUnconfirmedPlan(token);
-      toast.success('Back to Free Trial.');
+      toast.success(t('billing.backToFreeTrialToast'));
       setShowCancelConfirm(false);
       load();
     } catch (error) {
@@ -194,7 +207,7 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
     setResuming(true);
     try {
       await api.resumeSubscription(token);
-      toast.success('Subscription resumed.');
+      toast.success(t('billing.subscriptionResumed'));
       load();
     } catch (error) {
       toast.error((error as Error).message);
@@ -218,28 +231,34 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
   return (
     <div className="max-w-6xl flex flex-col gap-2.5">
       <div className="card">
-        <h3 className="card-title">Plan</h3>
+        <h3 className="card-title">{t('billing.planCardTitle')}</h3>
         <div className="flex items-center justify-between flex-wrap gap-3 mb-1">
           <div className="flex items-center gap-3">
-            <span className="text-lg font-semibold">{isFreeTrial ? 'Free Trial' : PLAN_LABEL[subscription.tenantPlan!]}</span>
+            <span className="text-lg font-semibold">
+              {isFreeTrial ? t('billing.freeTrialLabel') : PLAN_LABEL[subscription.tenantPlan!]}
+            </span>
             {!isFreeTrial && (
               <span className="text-sm text-ink-muted">
-                {formatMoney(subscription.lockedPriceCents, subscription.currency)}/mo
+                {formatMoney(subscription.lockedPriceCents, subscription.currency)}
+                {t('billing.perMonthSuffix')}
               </span>
             )}
             {!isFreeTrial && (
-              <StatusBadge status={hasPendingCancellation ? 'cancel_scheduled' : subscription.status} label={hasPendingCancellation ? 'ending' : undefined} />
+              <StatusBadge
+                status={hasPendingCancellation ? 'cancel_scheduled' : subscription.status}
+                label={hasPendingCancellation ? t('billing.status.ending') : undefined}
+              />
             )}
           </div>
           {!hasPendingCancellation && (
             <button type="button" className="btn btn-outline btn-sm" onClick={() => setShowPlansModal(true)}>
-              Change plan
+              {t('billing.changePlan')}
             </button>
           )}
         </div>
         {isFreeTrial ? (
           <p className="text-sm text-ink-faint mb-2">
-            Trial ends: {formatDate(subscription.trialEndsAt)} — pick a plan anytime before then to keep full access.
+            {t('billing.trialEndsHint', { date: formatDate(subscription.trialEndsAt) })}
           </p>
         ) : (
           dateInfo && (
@@ -262,18 +281,20 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
             <span className="font-medium">
               {subscription.activeSeats}/{subscription.includedSeats}
             </span>{' '}
-            <span className="text-ink-muted">seats included</span>
+            <span className="text-ink-muted">{t('billing.seatsIncluded')}</span>
             {subscription.extraSeats > 0 && (
               <span className="text-ink-muted">
                 {' '}
-                — {subscription.extraSeats} extra seat{subscription.extraSeats === 1 ? '' : 's'} ·{' '}
-                {formatMoney(subscription.extraSeatsCostCents, subscription.currency)}/mo
+                {t('billing.extraSeats', {
+                  count: subscription.extraSeats,
+                  price: formatMoney(subscription.extraSeatsCostCents, subscription.currency),
+                })}
               </span>
             )}
           </span>
           {isFreeTrial && subscription.activeSeats >= subscription.includedSeats && (
             <span className="text-xs text-amber-700 dark:text-amber-400">
-              Free Trial is capped at {subscription.includedSeats} users — choose a plan to add more.
+              {t('billing.freeTrialCapped', { count: subscription.includedSeats })}
             </span>
           )}
         </div>
@@ -281,28 +302,28 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
         {hasProvider && !hasPendingCancellation && subscription.status !== 'cancelled' && (
           <div className="mt-3 pt-3 border-t border-line dark:border-dark-line">
             <button type="button" className="btn-ghost btn-sm text-danger" onClick={() => setShowCancelConfirm(true)}>
-              Cancel subscription
+              {t('billing.cancelSubscription')}
             </button>
           </div>
         )}
         {!hasProvider && !isFreeTrial && (
           <div className="mt-3 pt-3 border-t border-line dark:border-dark-line">
             <button type="button" className="btn-ghost btn-sm text-danger" onClick={handleClearPlan} disabled={cancelling}>
-              {cancelling ? 'Clearing…' : 'Back to Free Trial'}
+              {cancelling ? t('billing.clearing') : t('billing.backToFreeTrial')}
             </button>
           </div>
         )}
         {hasPendingCancellation && (
           <div className="mt-3 pt-3 border-t border-line dark:border-dark-line">
             <button type="button" className="btn btn-outline btn-sm" onClick={handleResume} disabled={resuming}>
-              {resuming ? 'Resuming…' : 'Resume subscription'}
+              {resuming ? t('billing.resuming') : t('billing.resumeSubscription')}
             </button>
           </div>
         )}
       </div>
 
       <div className="card">
-        <h3 className="card-title">Payment method</h3>
+        <h3 className="card-title">{t('billing.paymentMethodCardTitle')}</h3>
         {hasProvider ? (
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-3">
@@ -310,32 +331,30 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
               <span className="text-sm">
                 {subscription.paymentMethodBrand && subscription.paymentMethodLast4
                   ? `${formatCardBrand(subscription.paymentMethodBrand)} •••• ${subscription.paymentMethodLast4}`
-                  : 'Card on file'}
+                  : t('billing.cardOnFile')}
               </span>
             </div>
             <button type="button" className="btn btn-outline btn-sm" onClick={() => setShowAddPaymentMethod(true)}>
-              Update payment method
+              {t('billing.updatePaymentMethod')}
             </button>
           </div>
         ) : (
-          <p className="text-sm text-ink-muted">
-            No payment method on file yet — use <strong>Change plan</strong> above to add one.
-          </p>
+          <p className="text-sm text-ink-muted">{t('billing.noPaymentMethod')}</p>
         )}
       </div>
 
       <div className="card">
-        <h3 className="card-title">Invoices</h3>
+        <h3 className="card-title">{t('billing.invoicesCardTitle')}</h3>
         {subscription.invoices.length === 0 ? (
-          <p className="text-sm text-ink-muted">No invoices yet.</p>
+          <p className="text-sm text-ink-muted">{t('billing.noInvoices')}</p>
         ) : (
           <div className="full-table-wrap">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-ink-faint">
-                <th className="font-normal py-1.5">Date</th>
-                <th className="font-normal py-1.5">Amount</th>
-                <th className="font-normal py-1.5">Status</th>
+                <th className="font-normal py-1.5">{t('billing.columns.date')}</th>
+                <th className="font-normal py-1.5">{t('billing.columns.amount')}</th>
+                <th className="font-normal py-1.5">{t('billing.columns.status')}</th>
                 <th className="font-normal py-1.5"></th>
               </tr>
             </thead>
@@ -347,8 +366,10 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
                     {formatMoney(invoice.amountCents, invoice.currency)}
                     {invoice.baseAmountCents != null && invoice.extraSeatsAmountCents != null && invoice.extraSeatsAmountCents > 0 && (
                       <span className="block text-xs text-ink-faint">
-                        {formatMoney(invoice.baseAmountCents, invoice.currency)} plan + {formatMoney(invoice.extraSeatsAmountCents, invoice.currency)} extra
-                        seats
+                        {t('billing.invoiceSeatsBreakdown', {
+                          base: formatMoney(invoice.baseAmountCents, invoice.currency),
+                          extra: formatMoney(invoice.extraSeatsAmountCents, invoice.currency),
+                        })}
                       </span>
                     )}
                   </td>
@@ -363,7 +384,7 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
                         onClick={() => handleViewInvoice(invoice.id)}
                         disabled={viewingInvoiceId === invoice.id}
                       >
-                        {viewingInvoiceId === invoice.id ? 'Opening…' : 'View invoice'}
+                        {viewingInvoiceId === invoice.id ? t('billing.opening') : t('billing.viewInvoice')}
                       </button>
                     )}
                   </td>
@@ -387,11 +408,13 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
 
       {showCancelConfirm && (
         <ConfirmDialog
-          title="Cancel subscription"
-          message={`Your plan stays active until the end of your current billing period${
-            dateInfo?.date ? ` (${formatDate(subscription.currentPeriodEnd)})` : ''
-          }. You can resume anytime before then.`}
-          confirmLabel={cancelling ? 'Cancelling…' : 'Cancel subscription'}
+          title={t('billing.cancelConfirm.title')}
+          message={
+            dateInfo?.date
+              ? t('billing.cancelConfirm.messageWithDate', { date: formatDate(subscription.currentPeriodEnd) })
+              : t('billing.cancelConfirm.messageNoDate')
+          }
+          confirmLabel={cancelling ? t('billing.cancelConfirm.cancelling') : t('billing.cancelSubscription')}
           confirmDisabled={cancelling}
           onConfirm={handleCancel}
           onCancel={() => setShowCancelConfirm(false)}

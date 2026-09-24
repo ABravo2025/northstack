@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, type Company, type Contact, type Opportunity, type Pipeline } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import Avatar from '../common/Avatar';
@@ -66,6 +67,7 @@ export default function CompanyDetailModal({
   onRequestDelete,
   onNavigate,
 }: CompanyDetailModalProps) {
+  const { t } = useTranslation('crm');
   const toast = useToast();
   const [addingContact, setAddingContact] = useState(false);
   const [linkContactId, setLinkContactId] = useState('');
@@ -133,7 +135,7 @@ export default function CompanyDetailModal({
   }, [companies, company.id]);
 
   const parentCompanyOptions = [
-    { value: '', label: '— No parent (top-level) —' },
+    { value: '', label: t('companyDetail.fields.noParentOption') },
     ...companies
       .filter((c) => c.id !== company.id && !descendantCompanyIds.has(c.id))
       .map((c) => ({ value: c.id, label: c.name })),
@@ -143,7 +145,7 @@ export default function CompanyDetailModal({
     try {
       await save({ parentCompanyId: value || null });
     } catch (error) {
-      toast.error('Failed to update parent company: ' + (error as Error).message);
+      toast.error(t('companyDetail.toasts.parentUpdateFailed', { error: (error as Error).message }));
     }
   };
 
@@ -175,12 +177,12 @@ export default function CompanyDetailModal({
     if (!linkContactId) return;
     try {
       await api.updateContact(token, linkContactId, { companyId: company.id });
-      toast.success('Contact linked.');
+      toast.success(t('companyDetail.toasts.contactLinked'));
       setLinkContactId('');
       setAddingContact(false);
       onChanged();
     } catch (error) {
-      toast.error('Failed to link contact: ' + (error as Error).message);
+      toast.error(t('companyDetail.toasts.contactLinkFailed', { error: (error as Error).message }));
     }
   };
 
@@ -193,22 +195,22 @@ export default function CompanyDetailModal({
         email: newContact.email.trim(),
         companyId: company.id,
       });
-      toast.success('Contact created.');
+      toast.success(t('companyDetail.toasts.contactCreated'));
       setNewContact({ firstName: '', lastName: '', email: '' });
       setAddingContact(false);
       onChanged();
     } catch (error) {
-      toast.error('Failed to create contact: ' + (error as Error).message);
+      toast.error(t('companyDetail.toasts.contactCreateFailed', { error: (error as Error).message }));
     }
   };
 
   const handleUnlinkContact = async (contact: Contact) => {
     try {
       await api.updateContact(token, contact.id, { companyId: null });
-      toast.success('Contact unlinked.');
+      toast.success(t('companyDetail.toasts.contactUnlinked'));
       onChanged();
     } catch (error) {
-      toast.error('Failed to unlink contact: ' + (error as Error).message);
+      toast.error(t('companyDetail.toasts.contactUnlinkFailed', { error: (error as Error).message }));
     }
   };
 
@@ -239,43 +241,51 @@ export default function CompanyDetailModal({
       if (newOppContactId) {
         await api.addOpportunityContact(token, created.id, { contactId: newOppContactId });
       }
-      toast.success('Opportunity created.');
+      toast.success(t('companyDetail.toasts.opportunityCreated'));
       setAddingOpportunity(false);
       onChanged();
     } catch (error) {
-      toast.error('Failed to create opportunity: ' + (error as Error).message);
+      toast.error(t('companyDetail.toasts.opportunityCreateFailed', { error: (error as Error).message }));
     }
   };
 
   const overviewContent = (
     <div className="overview-panel-left">
       <div className="field-group">
-        <h4 className="field-group-title">Identity</h4>
+        <h4 className="field-group-title">{t('companyDetail.groups.identity')}</h4>
         <div className="field-group-body">
-          <Field label="Industry">
-            <AutoSaveField label="Industry" value={company.industry || ''} onSave={(v) => save({ industry: v || null })} />
-          </Field>
-          <Field label="Website">
+          <Field label={t('companyDetail.fields.industry')}>
             <AutoSaveField
-              label="Website"
+              label={t('companyDetail.fields.industry')}
+              value={company.industry || ''}
+              onSave={(v) => save({ industry: v || null })}
+            />
+          </Field>
+          <Field label={t('companyDetail.fields.website')}>
+            <AutoSaveField
+              label={t('companyDetail.fields.website')}
               type="text"
               value={company.website || ''}
               onSave={(v) => save({ website: v || null })}
               placeholder="https://example.com"
             />
           </Field>
-          <Field label="Phone">
-            <AutoSaveField label="Phone" value={company.phone || ''} onSave={(v) => save({ phone: v || null })} />
+          <Field label={t('companyDetail.fields.phone')}>
+            <AutoSaveField
+              label={t('companyDetail.fields.phone')}
+              value={company.phone || ''}
+              onSave={(v) => save({ phone: v || null })}
+            />
           </Field>
         </div>
       </div>
 
       <div className="field-group">
-        <h4 className="field-group-title">Address</h4>
+        <h4 className="field-group-title">{t('companyDetail.groups.address')}</h4>
         <div className="field-group-body">
-          <Field label="Billing Address" full>
+          <Field label={t('companyDetail.fields.billingAddress')} full>
             <AutoSaveField
-              label="Billing Address"
+              label={t('companyDetail.fields.billingAddress')}
               value={company.billingAddress || ''}
               onSave={(v) => save({ billingAddress: v || null })}
             />
@@ -284,20 +294,20 @@ export default function CompanyDetailModal({
       </div>
 
       <div className="field-group">
-        <h4 className="field-group-title">Ownership</h4>
+        <h4 className="field-group-title">{t('companyDetail.groups.ownership')}</h4>
         <div className="field-group-body">
-          <Field label="Size">
+          <Field label={t('companyDetail.fields.size')}>
             <AutoSaveSelect
-              label="Size"
+              label={t('companyDetail.fields.size')}
               value={company.sizeId || ''}
               onSave={(v) => save({ sizeId: v || null })}
               options={companySizes.filter((s) => s.isActive).map((s) => ({ value: s.id, label: s.name }))}
-              emptyLabel="-- none --"
+              emptyLabel={t('common.nonePlaceholder')}
             />
           </Field>
-          <Field label="Account Owner">
+          <Field label={t('companyDetail.fields.accountOwner')}>
             <AutoSaveSelect
-              label="Account Owner"
+              label={t('companyDetail.fields.accountOwner')}
               value={company.accountOwnerId || ''}
               onSave={(v) => save({ accountOwnerId: v || null })}
               options={tenantUsers.map((u) => ({ value: u.id, label: `${u.firstName} ${u.lastName}` }))}
@@ -308,7 +318,7 @@ export default function CompanyDetailModal({
 
       {canManagePayments && (
         <div className="field-group">
-          <h4 className="field-group-title">Payments</h4>
+          <h4 className="field-group-title">{t('companyDetail.groups.payments')}</h4>
           <div className="field-group-body">
             <CompanyStripeSection
               token={token}
@@ -323,16 +333,16 @@ export default function CompanyDetailModal({
       )}
 
       <div className="field-group">
-        <h4 className="field-group-title">Hierarchy</h4>
+        <h4 className="field-group-title">{t('companyDetail.groups.hierarchy')}</h4>
         <div className="field-group-body">
-          <Field label="Parent company" full>
+          <Field label={t('companyDetail.fields.parentCompany')} full>
             <div className="flex items-center gap-1.5">
               <div className="min-w-0 flex-1">
                 <SearchableSelect
                   value={company.parentCompanyId || ''}
                   onChange={handleParentCompanyChange}
                   options={parentCompanyOptions}
-                  placeholder="No parent — top-level company"
+                  placeholder={t('companyDetail.fields.noParentPlaceholder')}
                 />
               </div>
               {company.parentCompanyId && (
@@ -341,7 +351,7 @@ export default function CompanyDetailModal({
                   className="table-link text-xs whitespace-nowrap"
                   onClick={() => onNavigate(company.parentCompanyId!)}
                 >
-                  Open →
+                  {t('common.openArrow')}
                 </button>
               )}
             </div>
@@ -350,7 +360,9 @@ export default function CompanyDetailModal({
         {directChildCompanies.length > 0 && (
           <div className="overview-field overview-field-full">
             <div className="min-w-0 flex-1">
-              <span className="overview-field-label">Associated companies ({directChildCompanies.length})</span>
+              <span className="overview-field-label">
+                {t('companyDetail.fields.associatedCompanies', { count: directChildCompanies.length })}
+              </span>
               {directChildCompanies.map((child) => (
                 <button
                   key={child.id}
@@ -368,7 +380,7 @@ export default function CompanyDetailModal({
 
       {customFields.length > 0 && (
         <div className="field-group">
-          <h4 className="field-group-title">Custom fields</h4>
+          <h4 className="field-group-title">{t('companyDetail.groups.customFields')}</h4>
           <div className="field-group-body">
             {customFields.map((field) => {
               const existing = company.customFieldVals?.find((v) => v.customFieldDefinitionId === field.id);
@@ -399,14 +411,16 @@ export default function CompanyDetailModal({
       <div className="overview-field overview-field-full">
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between">
-            <span className="overview-field-label">Contacts ({companyContacts.length})</span>
+            <span className="overview-field-label">
+              {t('companyDetail.contactsSection.heading', { count: companyContacts.length })}
+            </span>
             <button type="button" className="icon-btn" onClick={() => setAddingContact((v) => !v)}>
-              <span className="tip">Add contact</span>
+              <span className="tip">{t('companyDetail.contactsSection.addTooltip')}</span>
               <PlusIcon className="h-3.5 w-3.5" />
             </button>
           </div>
           {companyContacts.length === 0 && !addingContact && (
-            <p className="text-xs text-ink-faint">No contacts linked yet.</p>
+            <p className="text-xs text-ink-faint">{t('companyDetail.contactsSection.noneYet')}</p>
           )}
           {companyContacts.map((contact) => (
             <div key={contact.id} className="flex items-center justify-between gap-2 py-1 text-sm">
@@ -415,7 +429,7 @@ export default function CompanyDetailModal({
                 {contact.isPrimary ? ' ★' : ''}
               </span>
               <button type="button" className="icon-btn danger" onClick={() => handleUnlinkContact(contact)}>
-                <span className="tip">Unlink</span>
+                <span className="tip">{t('companyDetail.contactsSection.unlinkTooltip')}</span>
                 <TrashIcon className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -427,7 +441,7 @@ export default function CompanyDetailModal({
                   <SearchableSelect
                     value={linkContactId}
                     onChange={setLinkContactId}
-                    placeholder="Search by name or email…"
+                    placeholder={t('companyDetail.contactsSection.linkSearchPlaceholder')}
                     options={unlinkedContacts.map((c) => ({
                       value: c.id,
                       label: `${c.firstName} ${c.lastName} (${c.email})`,
@@ -435,20 +449,20 @@ export default function CompanyDetailModal({
                   />
                 </div>
                 <button type="button" className="btn-secondary" onClick={handleLinkContact} disabled={!linkContactId}>
-                  Link
+                  {t('common.link')}
                 </button>
               </div>
-              <p className="text-xs text-ink-faint">or create a new one:</p>
+              <p className="text-xs text-ink-faint">{t('companyDetail.contactsSection.orCreateNew')}</p>
               <div className="flex items-center gap-1.5">
                 <div className="min-w-0 flex-1">
                   <label htmlFor="company-new-contact-firstName" className="mb-0.5 block text-xs text-ink-faint">
-                    First name
+                    {t('companyDetail.contactsSection.firstName')}
                     <RequiredMark />
                   </label>
                   <input
                     id="company-new-contact-firstName"
                     className="w-full"
-                    placeholder="First name"
+                    placeholder={t('companyDetail.contactsSection.firstName')}
                     value={newContact.firstName}
                     onChange={(e) => setNewContact({ ...newContact, firstName: e.target.value })}
                     required
@@ -456,13 +470,13 @@ export default function CompanyDetailModal({
                 </div>
                 <div className="min-w-0 flex-1">
                   <label htmlFor="company-new-contact-lastName" className="mb-0.5 block text-xs text-ink-faint">
-                    Last name
+                    {t('companyDetail.contactsSection.lastName')}
                     <RequiredMark />
                   </label>
                   <input
                     id="company-new-contact-lastName"
                     className="w-full"
-                    placeholder="Last name"
+                    placeholder={t('companyDetail.contactsSection.lastName')}
                     value={newContact.lastName}
                     onChange={(e) => setNewContact({ ...newContact, lastName: e.target.value })}
                     required
@@ -471,14 +485,14 @@ export default function CompanyDetailModal({
               </div>
               <div>
                 <label htmlFor="company-new-contact-email" className="mb-0.5 block text-xs text-ink-faint">
-                  Email
+                  {t('companyDetail.contactsSection.email')}
                   <RequiredMark />
                 </label>
                 <input
                   id="company-new-contact-email"
                   className="w-full"
                   type="email"
-                  placeholder="Email"
+                  placeholder={t('companyDetail.contactsSection.email')}
                   value={newContact.email}
                   onChange={(e) => setNewContact({ ...newContact, email: e.target.value })}
                   required
@@ -486,10 +500,10 @@ export default function CompanyDetailModal({
               </div>
               <div className="flex justify-end gap-2">
                 <button type="button" className="btn-secondary" onClick={() => setAddingContact(false)}>
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button type="button" className="btn-primary" onClick={handleCreateContact}>
-                  Create contact
+                  {t('companyDetail.contactsSection.createContact')}
                 </button>
               </div>
             </div>
@@ -500,28 +514,30 @@ export default function CompanyDetailModal({
       <div className="overview-field overview-field-full">
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between">
-            <span className="overview-field-label">Opportunities ({companyOpportunities.length})</span>
+            <span className="overview-field-label">
+              {t('companyDetail.opportunitiesSection.heading', { count: companyOpportunities.length })}
+            </span>
             <button type="button" className="icon-btn" onClick={openAddOpportunity}>
-              <span className="tip">Add opportunity</span>
+              <span className="tip">{t('companyDetail.opportunitiesSection.addTooltip')}</span>
               <PlusIcon className="h-3.5 w-3.5" />
             </button>
           </div>
           {companyOpportunities.length === 0 && !addingOpportunity && (
-            <p className="text-xs text-ink-faint">No opportunities yet.</p>
+            <p className="text-xs text-ink-faint">{t('companyDetail.opportunitiesSection.noneYet')}</p>
           )}
           {companyOpportunities.map((opp) => (
             <div key={opp.id} className="flex items-center justify-between gap-2 py-1 text-sm">
               <span>{opp.name}</span>
               <span className="text-xs text-ink-faint">
                 {opp.stage?.name} · {formatMoney(opp.amountCents, opp.currency)}
-                {opp.pipeline?.isActive === false && ' · Archived'}
+                {opp.pipeline?.isActive === false && ` · ${t('common.archived')}`}
               </span>
             </div>
           ))}
           {addingOpportunity && (
             <div className="mt-2 flex flex-col gap-2 rounded-md border border-line p-2 dark:border-dark-line">
               <label className="text-xs text-ink-muted" htmlFor="new-opp-pipeline">
-                Pipeline
+                {t('companyDetail.opportunitiesSection.pipeline')}
                 <RequiredMark />
               </label>
               <select
@@ -530,7 +546,9 @@ export default function CompanyDetailModal({
                 onChange={(e) => setNewOppPipelineId(e.target.value)}
                 required
               >
-                {accountPipelines.length === 0 && <option value="">No active account pipelines</option>}
+                {accountPipelines.length === 0 && (
+                  <option value="">{t('companyDetail.opportunitiesSection.noActiveAccountPipelines')}</option>
+                )}
                 {accountPipelines.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}
@@ -538,14 +556,14 @@ export default function CompanyDetailModal({
                 ))}
               </select>
               <label className="text-xs text-ink-muted" htmlFor="new-opp-contact">
-                Contact (optional)
+                {t('companyDetail.opportunitiesSection.contactOptional')}
               </label>
               <select
                 id="new-opp-contact"
                 value={newOppContactId}
                 onChange={(e) => setNewOppContactId(e.target.value)}
               >
-                <option value="">-- none --</option>
+                <option value="">{t('common.nonePlaceholder')}</option>
                 {companyContacts.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.firstName} {c.lastName}
@@ -554,7 +572,7 @@ export default function CompanyDetailModal({
                 ))}
               </select>
               <label className="text-xs text-ink-muted" htmlFor="new-opp-name">
-                Deal name
+                {t('companyDetail.opportunitiesSection.dealName')}
                 <RequiredMark />
               </label>
               <input
@@ -565,7 +583,7 @@ export default function CompanyDetailModal({
               />
               <div className="flex justify-end gap-2">
                 <button type="button" className="btn-secondary" onClick={() => setAddingOpportunity(false)}>
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="button"
@@ -573,7 +591,7 @@ export default function CompanyDetailModal({
                   onClick={handleCreateOpportunity}
                   disabled={!newOppPipelineId}
                 >
-                  Create opportunity
+                  {t('companyDetail.opportunitiesSection.createOpportunity')}
                 </button>
               </div>
             </div>
@@ -595,15 +613,15 @@ export default function CompanyDetailModal({
         <div className="overview-panel-head">
           <OverviewActionsMenu
             className="overview-actions-trigger"
-            items={[{ label: 'Delete', onClick: onRequestDelete, danger: true }]}
+            items={[{ label: t('companyDetail.deleteMenuItem'), onClick: onRequestDelete, danger: true }]}
           />
-          <button type="button" className="slideover-close" onClick={onClose} aria-label="Close">
+          <button type="button" className="slideover-close" onClick={onClose} aria-label={t('detail.closeAria')}>
             <XIcon className="h-4 w-4" />
           </button>
           <Avatar firstName={company.name} lastName="" />
           <div className="overview-panel-heading">
             <h3 id="company-detail-name">{company.name}</h3>
-            <p>{company.industry || 'Company'}</p>
+            <p>{company.industry || t('companyDetail.companyFallback')}</p>
             {company.statusDefn && (
               <StatusChip color={company.statusDefn.color || '#6b7280'} label={company.statusDefn.name} />
             )}
@@ -619,28 +637,34 @@ export default function CompanyDetailModal({
                 className={mobileSection === 'overview' ? 'active' : ''}
                 onClick={() => setMobileSection('overview')}
               >
-                Overview
+                {t('detail.mobileTabs.overview')}
               </button>
               <button
                 type="button"
                 className={mobileSection === 'notes' ? 'active' : ''}
                 onClick={() => setMobileSection('notes')}
               >
-                Notes{sidebarCounts.notes > 0 ? ` (${sidebarCounts.notes})` : ''}
+                {sidebarCounts.notes > 0
+                  ? t('detail.mobileTabs.notesWithCount', { count: sidebarCounts.notes })
+                  : t('detail.mobileTabs.notes')}
               </button>
               <button
                 type="button"
                 className={mobileSection === 'tasks' ? 'active' : ''}
                 onClick={() => setMobileSection('tasks')}
               >
-                Tasks{sidebarCounts.tasks > 0 ? ` (${sidebarCounts.tasks})` : ''}
+                {sidebarCounts.tasks > 0
+                  ? t('detail.mobileTabs.tasksWithCount', { count: sidebarCounts.tasks })
+                  : t('detail.mobileTabs.tasks')}
               </button>
               <button
                 type="button"
                 className={mobileSection === 'activity' ? 'active' : ''}
                 onClick={() => setMobileSection('activity')}
               >
-                Activity{sidebarCounts.activity > 0 ? ` (${sidebarCounts.activity})` : ''}
+                {sidebarCounts.activity > 0
+                  ? t('detail.mobileTabs.activityWithCount', { count: sidebarCounts.activity })
+                  : t('detail.mobileTabs.activity')}
               </button>
             </div>
             <div style={{ display: mobileSection === 'overview' ? 'contents' : 'none' }}>{overviewContent}</div>

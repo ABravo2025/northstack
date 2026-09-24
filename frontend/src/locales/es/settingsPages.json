@@ -208,6 +208,71 @@
       "actions": "Acciones"
     }
   },
+  "plansModal": {
+    "title": "Elegí tu plan",
+    "lastStep": "Último paso",
+    "introTrial": "Todos los planes incluyen una prueba gratuita real de {{count}} días. Prueba gratuita no pide tarjeta; Starter y Growth sí piden una por adelantado, pero no se te cobra hasta que termine la prueba. Podés cambiar de plan cuando quieras desde Configuración.",
+    "introExpired": "Tu prueba gratuita terminó. Starter y Growth se cobran de inmediato apenas agregás una tarjeta — Prueba gratuita mantiene tu espacio de trabajo funcionando un poco más, pero no elimina la necesidad de elegir un plan pago eventualmente. Podés cambiar de plan cuando quieras desde Configuración.",
+    "priceLockedBanner": "El precio con el que arrancás es el precio que mantenés, mientras sigas suscripto.",
+    "currentPlanBadge": "Plan actual",
+    "recommendedBadge": "Recomendado para vos",
+    "priceLockedFirstCharge_one": "Precio congelado — primer cobro en {{count}} día",
+    "priceLockedFirstCharge_other": "Precio congelado — primer cobro en {{count}} días",
+    "priceLockedChargedToday": "Precio congelado — se cobra hoy",
+    "ctaStarting": "Iniciando…",
+    "ctaStartTrial_one": "Empezar prueba gratuita de {{count}} día",
+    "ctaStartTrial_other": "Empezar prueba gratuita de {{count}} días",
+    "ctaSubscribeNow": "Suscribirme ahora",
+    "enterprisePrefix": "¿Equipo de más de 50 personas?",
+    "enterpriseLink": "Contactanos",
+    "enterpriseSuffix": "para un plan a medida.",
+    "footerTrialActive_one": "Tu prueba termina en {{count}} día. ¿Agregaste una tarjeta para Starter o Growth? Se te cobra automáticamente en ese momento, sin ningún paso extra. ¿Elegiste Prueba gratuita en cambio? Tu espacio de trabajo sigue funcionando 14 días más antes de pausarse — tenés tiempo de sobra, sin bloqueos sorpresa.",
+    "footerTrialActive_other": "Tu prueba termina en {{count}} días. ¿Agregaste una tarjeta para Starter o Growth? Se te cobra automáticamente en ese momento, sin ningún paso extra. ¿Elegiste Prueba gratuita en cambio? Tu espacio de trabajo sigue funcionando 14 días más antes de pausarse — tenés tiempo de sobra, sin bloqueos sorpresa.",
+    "footerTrialExpired": "Tu prueba gratuita terminó. Agregá una tarjeta para Starter o Growth para que se te cobre de inmediato y mantener acceso completo.",
+    "footerPayrollDisclaimer": "* Nómina calcula y registra las corridas de pago hoy — todavía no mueve dinero. El procesamiento de pago con un clic llega a través de una futura alianza.",
+    "cards": {
+      "trial": {
+        "name": "Prueba gratuita",
+        "tagline": "Seguí explorando — decidí más adelante",
+        "price": "Gratis",
+        "priceSuffix": "por 15 días",
+        "cap": "Acceso completo, sin tarjeta",
+        "ctaLabel": "Continuar con la prueba gratuita"
+      },
+      "starter": {
+        "tagline": "Para equipos chicos que recién están empezando",
+        "priceSuffix": "/mes",
+        "cap": "5 puestos incluidos · $4/mes por puesto extra"
+      },
+      "growth": {
+        "tagline": "Para equipos en crecimiento que necesitan Nómina",
+        "priceSuffix": "/mes",
+        "cap": "10 puestos incluidos · $4/mes por puesto extra"
+      }
+    },
+    "features": {
+      "salesCrm": "Ventas / CRM",
+      "salesCrmSubUnlimited": "pipelines ilimitados",
+      "salesCrmSubStarter": "hasta 2 pipelines",
+      "hrTimeOff": "RR.HH. y Ausencias",
+      "hrTimeOffSubUnlimited": "políticas ilimitadas",
+      "hrTimeOffSubStarter": "hasta 3 políticas",
+      "notesTasksTags": "Notas, Tareas, Etiquetas y Campos personalizados",
+      "activityLog": "Registro de actividad",
+      "activityLogSub30": "30 días de historial",
+      "activityLogSub7": "7 días de historial",
+      "payrollTracking": "Seguimiento de Nómina",
+      "payments": "Pagos",
+      "paymentsSub": "historial de pagos de Stripe, solo lectura",
+      "googleCalendar": "Integración con Google Calendar",
+      "customRoles": "Roles y permisos personalizados",
+      "customRolesSubUnlimited": "ilimitados",
+      "customRolesSubStarter": "hasta 2 roles personalizados",
+      "apiAccess": "Acceso a la API",
+      "emailSupport": "Soporte por correo electrónico",
+      "emailSupportPriority": "Soporte prioritario por correo electrónico"
+    }
+  },
   "addPaymentMethod": {
     "title": "Actualizar método de pago",
     "description": "Vas a ser redirigido a nuestro proveedor de pagos (en una pestaña nueva) para reemplazar tu método de pago de forma segura. Tu nueva tarjeta queda activa de inmediato — Northstack nunca ve ni guarda los datos de tu tarjeta.",

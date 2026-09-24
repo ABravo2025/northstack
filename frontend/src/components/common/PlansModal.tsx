@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Modal from './Modal';
 import { CheckIcon } from './Icons';
 import { useToast } from './ToastProvider';
@@ -33,11 +34,13 @@ interface PlanCardConfig {
 // already charges immediately instead of granting a fresh trial (see its daysRemaining comment) —
 // this modal must stop promising "free trial" once that's no longer true, or the copy actively
 // lies about what's about to happen.
-function planCtaLabel(card: PlanCardConfig, trialDaysLeft: number): string {
+function planCtaLabel(t: ReturnType<typeof useTranslation>['t'], card: PlanCardConfig, trialDaysLeft: number): string {
   if (card.key === 'trial') {
     return card.ctaLabel!;
   }
-  return trialDaysLeft > 0 ? `Start ${trialDaysLeft}-day free trial` : 'Subscribe now';
+  return trialDaysLeft > 0
+    ? t('plansModal.ctaStartTrial', { count: trialDaysLeft })
+    : t('plansModal.ctaSubscribeNow');
 }
 
 // Plan-tier enforcement (2026-09-07) — copy mirrors the real enforced limits in
@@ -51,67 +54,74 @@ function planCtaLabel(card: PlanCardConfig, trialDaysLeft: number): string {
 // model (5/10 seats included, $4/mo per extra seat, no admin-vs-member distinction) — matches
 // enforcement exactly: no separate Admin-role cap exists (removed 2026-09-14, seatService.ts's
 // real-time billing is the only limit now, same as any other seat).
-const PLAN_CARDS: PlanCardConfig[] = [
-  {
-    key: 'trial',
-    name: 'Free Trial',
-    tagline: 'Keep exploring — decide later',
-    price: 'Free',
-    priceSuffix: 'for 15 days',
-    cap: 'Full access, no card required',
-    ctaLabel: 'Continue with free trial',
-    features: [
-      { label: 'Sales / CRM', sub: 'unlimited pipelines', included: true },
-      { label: 'HR core & Time Off', sub: 'unlimited policies', included: true },
-      { label: 'Notes, Tasks, Tags & Custom Fields', included: true },
-      { label: 'Activity Log', sub: '30 days of history', included: true },
-      { label: 'Payroll tracking', included: true },
-      { label: 'Payments', sub: 'Stripe payment history, read-only', included: true },
-      { label: 'Google Calendar integration', included: true },
-      { label: 'Custom roles & permissions', sub: 'unlimited', included: true },
-      { label: 'API access', included: true },
-      { label: 'Email support', included: true },
-    ],
-  },
-  {
-    key: 'starter',
-    name: 'Starter',
-    tagline: 'For small teams just getting set up',
-    priceSuffix: '/month',
-    cap: '5 seats included · $4/mo per extra seat',
-    features: [
-      { label: 'Sales / CRM', sub: 'up to 2 pipelines', included: true },
-      { label: 'HR core & Time Off', sub: 'up to 3 policies', included: true },
-      { label: 'Notes, Tasks, Tags & Custom Fields', included: true },
-      { label: 'Activity Log', sub: '7 days of history', included: true },
-      { label: 'Payroll tracking', included: false },
-      { label: 'Payments', included: false },
-      { label: 'Google Calendar integration', included: true },
-      { label: 'Custom roles & permissions', sub: 'up to 2 custom roles', included: true },
-      { label: 'API access', included: false },
-      { label: 'Email support', included: true },
-    ],
-  },
-  {
-    key: 'growth',
-    name: 'Growth',
-    tagline: 'For growing teams that need Payroll tracking',
-    priceSuffix: '/month',
-    cap: '10 seats included · $4/mo per extra seat',
-    features: [
-      { label: 'Sales / CRM', sub: 'unlimited pipelines', included: true },
-      { label: 'HR core & Time Off', sub: 'unlimited policies', included: true },
-      { label: 'Notes, Tasks, Tags & Custom Fields', included: true },
-      { label: 'Activity Log', sub: '30 days of history', included: true },
-      { label: 'Payroll tracking', included: true },
-      { label: 'Payments', sub: 'Stripe payment history, read-only', included: true },
-      { label: 'Google Calendar integration', included: true },
-      { label: 'Custom roles & permissions', sub: 'unlimited', included: true },
-      { label: 'API access', included: true },
-      { label: 'Priority email support', included: true },
-    ],
-  },
-];
+//
+// i18n (Unit 7): "Starter"/"Growth" are this product's own plan-tier names, kept identical in
+// both locales (same convention as "Stripe"/"Google Calendar" elsewhere in Settings — a
+// proprietary/brand-like name isn't run through t()). "Free Trial" is a generic concept already
+// translated elsewhere (common.json's trial banners), so it does go through t() here.
+function getPlanCards(t: ReturnType<typeof useTranslation>['t']): PlanCardConfig[] {
+  return [
+    {
+      key: 'trial',
+      name: t('plansModal.cards.trial.name'),
+      tagline: t('plansModal.cards.trial.tagline'),
+      price: t('plansModal.cards.trial.price'),
+      priceSuffix: t('plansModal.cards.trial.priceSuffix'),
+      cap: t('plansModal.cards.trial.cap'),
+      ctaLabel: t('plansModal.cards.trial.ctaLabel'),
+      features: [
+        { label: t('plansModal.features.salesCrm'), sub: t('plansModal.features.salesCrmSubUnlimited'), included: true },
+        { label: t('plansModal.features.hrTimeOff'), sub: t('plansModal.features.hrTimeOffSubUnlimited'), included: true },
+        { label: t('plansModal.features.notesTasksTags'), included: true },
+        { label: t('plansModal.features.activityLog'), sub: t('plansModal.features.activityLogSub30'), included: true },
+        { label: t('plansModal.features.payrollTracking'), included: true },
+        { label: t('plansModal.features.payments'), sub: t('plansModal.features.paymentsSub'), included: true },
+        { label: t('plansModal.features.googleCalendar'), included: true },
+        { label: t('plansModal.features.customRoles'), sub: t('plansModal.features.customRolesSubUnlimited'), included: true },
+        { label: t('plansModal.features.apiAccess'), included: true },
+        { label: t('plansModal.features.emailSupport'), included: true },
+      ],
+    },
+    {
+      key: 'starter',
+      name: 'Starter',
+      tagline: t('plansModal.cards.starter.tagline'),
+      priceSuffix: t('plansModal.cards.starter.priceSuffix'),
+      cap: t('plansModal.cards.starter.cap'),
+      features: [
+        { label: t('plansModal.features.salesCrm'), sub: t('plansModal.features.salesCrmSubStarter'), included: true },
+        { label: t('plansModal.features.hrTimeOff'), sub: t('plansModal.features.hrTimeOffSubStarter'), included: true },
+        { label: t('plansModal.features.notesTasksTags'), included: true },
+        { label: t('plansModal.features.activityLog'), sub: t('plansModal.features.activityLogSub7'), included: true },
+        { label: t('plansModal.features.payrollTracking'), included: false },
+        { label: t('plansModal.features.payments'), included: false },
+        { label: t('plansModal.features.googleCalendar'), included: true },
+        { label: t('plansModal.features.customRoles'), sub: t('plansModal.features.customRolesSubStarter'), included: true },
+        { label: t('plansModal.features.apiAccess'), included: false },
+        { label: t('plansModal.features.emailSupport'), included: true },
+      ],
+    },
+    {
+      key: 'growth',
+      name: 'Growth',
+      tagline: t('plansModal.cards.growth.tagline'),
+      priceSuffix: t('plansModal.cards.growth.priceSuffix'),
+      cap: t('plansModal.cards.growth.cap'),
+      features: [
+        { label: t('plansModal.features.salesCrm'), sub: t('plansModal.features.salesCrmSubUnlimited'), included: true },
+        { label: t('plansModal.features.hrTimeOff'), sub: t('plansModal.features.hrTimeOffSubUnlimited'), included: true },
+        { label: t('plansModal.features.notesTasksTags'), included: true },
+        { label: t('plansModal.features.activityLog'), sub: t('plansModal.features.activityLogSub30'), included: true },
+        { label: t('plansModal.features.payrollTracking'), included: true },
+        { label: t('plansModal.features.payments'), sub: t('plansModal.features.paymentsSub'), included: true },
+        { label: t('plansModal.features.googleCalendar'), included: true },
+        { label: t('plansModal.features.customRoles'), sub: t('plansModal.features.customRolesSubUnlimited'), included: true },
+        { label: t('plansModal.features.apiAccess'), included: true },
+        { label: t('plansModal.features.emailSupportPriority'), included: true },
+      ],
+    },
+  ];
+}
 
 // spec-subscription-plans.md: badge matches Company size from signup (1-10 -> Starter,
 // 11-50 -> Growth). Larger bands get the "Get in touch" link highlighted instead — no card is
@@ -146,6 +156,7 @@ interface PlansModalProps {
 // way, this is an upsell, not a gate).
 export default function PlansModal({ open, tenant, onClose, onSelectPlan, currentPlan }: PlansModalProps) {
   const toast = useToast();
+  const { t } = useTranslation('settingsPages');
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
 
   // Fetched lazily on first open rather than on mount — this component stays mounted
@@ -153,6 +164,10 @@ export default function PlansModal({ open, tenant, onClose, onSelectPlan, curren
   // actually open the modal. Shows "—" for Starter/Growth until it lands or if it fails, rather
   // than a hardcoded number that could be wrong.
   const livePrices = usePlanPrices(open);
+
+  // Rebuilt every render (not memoized) so a live language switch (Settings → Profile) updates
+  // this modal's copy immediately, same pattern as lib/settingsSections.tsx's getSettingsSections.
+  const planCards = getPlanCards(t);
 
   const recommended = recommendedTier(tenant?.companySize ?? null);
   const trialDaysLeft = daysRemainingUntil(tenant?.trialEndsAt ?? null);
@@ -163,7 +178,7 @@ export default function PlansModal({ open, tenant, onClose, onSelectPlan, curren
   // possible at all, lives in BillingPage's own "Cancel subscription"/"Back to Free Trial"
   // buttons instead, which is the only place that can tell whether there's a real provider
   // subscription to actually cancel first.
-  const visibleCards = currentPlan ? PLAN_CARDS.filter((card) => card.key !== 'trial') : PLAN_CARDS;
+  const visibleCards = currentPlan ? planCards.filter((card) => card.key !== 'trial') : planCards;
 
   const handleSelect = async (card: PlanCardConfig) => {
     if (card.key === 'trial') {
@@ -182,28 +197,16 @@ export default function PlansModal({ open, tenant, onClose, onSelectPlan, curren
   };
 
   return (
-    <Modal open={open} title="Choose your plan" onClose={onClose} xwide>
+    <Modal open={open} title={t('plansModal.title')} onClose={onClose} xwide>
       <div className="text-center mb-2">
-        <div className="text-xs font-semibold text-accent uppercase tracking-wide mb-1">Last step</div>
+        <div className="text-xs font-semibold text-accent uppercase tracking-wide mb-1">{t('plansModal.lastStep')}</div>
         <p className="text-sm text-ink-muted max-w-md mx-auto">
-          {hasTrialLeft ? (
-            <>
-              Every plan includes a real {trialDaysLeft}-day free trial. Free Trial needs no card at all — Starter
-              and Growth ask for one upfront, but you're never charged until the trial is up. You can change plans
-              anytime from Settings.
-            </>
-          ) : (
-            <>
-              Your free trial has ended. Starter and Growth are billed right away once you add a card — Free Trial
-              keeps your workspace running a little longer, but doesn't remove the need to eventually pick a paid
-              plan. You can change plans anytime from Settings.
-            </>
-          )}
+          {hasTrialLeft ? t('plansModal.introTrial', { count: trialDaysLeft }) : t('plansModal.introExpired')}
         </p>
       </div>
 
       <div className="text-center text-sm font-medium rounded-lg border border-line bg-accent-tint px-4 py-2.5 my-4 mx-auto max-w-xl dark:border-dark-line">
-        The price you start at is the price you keep, for as long as you stay subscribed.
+        {t('plansModal.priceLockedBanner')}
       </div>
 
       <div className={`grid gap-4 ${visibleCards.length === 2 ? 'md:grid-cols-2 max-w-xl mx-auto' : 'md:grid-cols-3'}`}>
@@ -227,12 +230,12 @@ export default function PlansModal({ open, tenant, onClose, onSelectPlan, curren
             >
               {isCurrent ? (
                 <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-accent px-3 py-1 text-xs font-semibold text-white">
-                  Current plan
+                  {t('plansModal.currentPlanBadge')}
                 </span>
               ) : (
                 isRecommended && (
                   <span className="absolute -top-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-accent px-3 py-1 text-xs font-semibold text-white">
-                    Recommended for you
+                    {t('plansModal.recommendedBadge')}
                   </span>
                 )
               )}
@@ -253,7 +256,9 @@ export default function PlansModal({ open, tenant, onClose, onSelectPlan, curren
                   card.key === 'trial' ? 'invisible' : ''
                 }`}
               >
-                Price locked in — {hasTrialLeft ? `first charge in ${trialDaysLeft} days` : 'charged today'}
+                {hasTrialLeft
+                  ? t('plansModal.priceLockedFirstCharge', { count: trialDaysLeft })
+                  : t('plansModal.priceLockedChargedToday')}
               </div>
 
               <ul className="flex-1 flex flex-col gap-2 text-sm mb-4">
@@ -281,7 +286,11 @@ export default function PlansModal({ open, tenant, onClose, onSelectPlan, curren
                 onClick={() => handleSelect(card)}
                 disabled={loadingKey !== null || isCurrent}
               >
-                {isCurrent ? 'Current plan' : loadingKey === card.key ? 'Starting…' : planCtaLabel(card, trialDaysLeft)}
+                {isCurrent
+                  ? t('plansModal.currentPlanBadge')
+                  : loadingKey === card.key
+                    ? t('plansModal.ctaStarting')
+                    : planCtaLabel(t, card, trialDaysLeft)}
               </button>
             </div>
           );
@@ -289,27 +298,19 @@ export default function PlansModal({ open, tenant, onClose, onSelectPlan, curren
       </div>
 
       <p className="text-center text-xs text-ink-faint mt-5">
-        Team bigger than 50 people?{' '}
+        {t('plansModal.enterprisePrefix')}{' '}
         <a href="mailto:info@joinnorthstack.com?subject=Northstack%20Enterprise%20plan" className="underline text-accent">
-          Get in touch
+          {t('plansModal.enterpriseLink')}
         </a>{' '}
-        for a custom plan.
+        {t('plansModal.enterpriseSuffix')}
       </p>
 
       <p className="text-center text-xs text-ink-faint mt-4 leading-relaxed">
-        {hasTrialLeft ? (
-          <>
-            Your trial ends in <strong className="text-ink-muted">{trialDaysLeft} day{trialDaysLeft === 1 ? '' : 's'}</strong>.
-            Added a card for Starter or Growth? You're billed automatically then, no extra step. Went with Free Trial
-            instead? Your workspace keeps working for <strong className="text-ink-muted">14 more days</strong> before
-            it's paused — plenty of time, no surprise lockout.
-          </>
-        ) : (
-          <>Your trial has ended. Add a card for Starter or Growth to be billed right away and keep full access.</>
-        )}
+        {hasTrialLeft
+          ? t('plansModal.footerTrialActive', { count: trialDaysLeft })
+          : t('plansModal.footerTrialExpired')}
         <br />
-        * Payroll calculates and tracks pay runs today — it doesn't move money yet. One-click payment processing is
-        coming through a future partnership.
+        {t('plansModal.footerPayrollDisclaimer')}
       </p>
     </Modal>
   );

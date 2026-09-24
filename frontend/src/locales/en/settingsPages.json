@@ -208,6 +208,71 @@
       "actions": "Actions"
     }
   },
+  "plansModal": {
+    "title": "Choose your plan",
+    "lastStep": "Last step",
+    "introTrial": "Every plan includes a real {{count}}-day free trial. Free Trial needs no card at all — Starter and Growth ask for one upfront, but you're never charged until the trial is up. You can change plans anytime from Settings.",
+    "introExpired": "Your free trial has ended. Starter and Growth are billed right away once you add a card — Free Trial keeps your workspace running a little longer, but doesn't remove the need to eventually pick a paid plan. You can change plans anytime from Settings.",
+    "priceLockedBanner": "The price you start at is the price you keep, for as long as you stay subscribed.",
+    "currentPlanBadge": "Current plan",
+    "recommendedBadge": "Recommended for you",
+    "priceLockedFirstCharge_one": "Price locked in — first charge in {{count}} day",
+    "priceLockedFirstCharge_other": "Price locked in — first charge in {{count}} days",
+    "priceLockedChargedToday": "Price locked in — charged today",
+    "ctaStarting": "Starting…",
+    "ctaStartTrial_one": "Start {{count}}-day free trial",
+    "ctaStartTrial_other": "Start {{count}}-day free trial",
+    "ctaSubscribeNow": "Subscribe now",
+    "enterprisePrefix": "Team bigger than 50 people?",
+    "enterpriseLink": "Get in touch",
+    "enterpriseSuffix": "for a custom plan.",
+    "footerTrialActive_one": "Your trial ends in {{count}} day. Added a card for Starter or Growth? You're billed automatically then, no extra step. Went with Free Trial instead? Your workspace keeps working for 14 more days before it's paused — plenty of time, no surprise lockout.",
+    "footerTrialActive_other": "Your trial ends in {{count}} days. Added a card for Starter or Growth? You're billed automatically then, no extra step. Went with Free Trial instead? Your workspace keeps working for 14 more days before it's paused — plenty of time, no surprise lockout.",
+    "footerTrialExpired": "Your trial has ended. Add a card for Starter or Growth to be billed right away and keep full access.",
+    "footerPayrollDisclaimer": "* Payroll calculates and tracks pay runs today — it doesn't move money yet. One-click payment processing is coming through a future partnership.",
+    "cards": {
+      "trial": {
+        "name": "Free Trial",
+        "tagline": "Keep exploring — decide later",
+        "price": "Free",
+        "priceSuffix": "for 15 days",
+        "cap": "Full access, no card required",
+        "ctaLabel": "Continue with free trial"
+      },
+      "starter": {
+        "tagline": "For small teams just getting set up",
+        "priceSuffix": "/month",
+        "cap": "5 seats included · $4/mo per extra seat"
+      },
+      "growth": {
+        "tagline": "For growing teams that need Payroll tracking",
+        "priceSuffix": "/month",
+        "cap": "10 seats included · $4/mo per extra seat"
+      }
+    },
+    "features": {
+      "salesCrm": "Sales / CRM",
+      "salesCrmSubUnlimited": "unlimited pipelines",
+      "salesCrmSubStarter": "up to 2 pipelines",
+      "hrTimeOff": "HR core & Time Off",
+      "hrTimeOffSubUnlimited": "unlimited policies",
+      "hrTimeOffSubStarter": "up to 3 policies",
+      "notesTasksTags": "Notes, Tasks, Tags & Custom Fields",
+      "activityLog": "Activity Log",
+      "activityLogSub30": "30 days of history",
+      "activityLogSub7": "7 days of history",
+      "payrollTracking": "Payroll tracking",
+      "payments": "Payments",
+      "paymentsSub": "Stripe payment history, read-only",
+      "googleCalendar": "Google Calendar integration",
+      "customRoles": "Custom roles & permissions",
+      "customRolesSubUnlimited": "unlimited",
+      "customRolesSubStarter": "up to 2 custom roles",
+      "apiAccess": "API access",
+      "emailSupport": "Email support",
+      "emailSupportPriority": "Priority email support"
+    }
+  },
   "addPaymentMethod": {
     "title": "Update payment method",
     "description": "You'll be redirected to our payment provider (in a new tab) to securely replace your payment method. Your new card takes over immediately — Northstack never sees or stores your card details.",

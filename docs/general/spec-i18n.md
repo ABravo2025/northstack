@@ -106,55 +106,93 @@ pendiente de que se revise y promueva a `main`/producción junto con la Unidad 1
 
 ## Unidad 3 — Dashboards
 
-- [ ] Los 5 sub-dashboards existentes (Overview, HR, etc.) y sus componentes de métricas
-  (`StatTile`, `BarChartCard`, etc. — solo los labels/títulos, nunca los valores/datos).
+**Nota 2026-09-24**: completa. Verificada por tsc/eslint (no Playwright — ver Unidad 12).
+
+- [x] Los 5 sub-dashboards, `DashboardsLayout`, `DashboardsSidebar`, componentes de métricas
+  (`StatTile`, `BarChartCard`, `DateRangeFilter`, `OverviewMetricsStrip`), y `dashboardsSections.tsx`/
+  `dateRangePresets.ts` (mismo rol que `settingsSections.tsx`, ver Unidad 1/2). Namespace `dashboards`
+  (123 keys, en/es).
 
 ## Unidad 4 — CRM
 
-- [ ] Companies, Contacts, Pipelines, Opportunities. Incluye vistas de detalle, formularios,
-  Kanban de pipeline.
+**Nota 2026-09-24**: **parcial**. Companies y Contacts completos (namespace `crm`, 388 keys,
+en/es), verificado por tsc/eslint. **Sin empezar**: Opportunities, Payments,
+`components/crm/*`. Se cortó por límite de uso de la sesión a mitad de trabajo — retomar desde
+acá, no repetir Companies/Contacts.
 
 ## Unidad 5 — HR / Employees + Payroll
+
+**Nota 2026-09-24**: **sin empezar, en la práctica**. Un intento paralelo llegó a editar 5
+archivos (`EmployeeOverviewPanel`, `TerminateEmployeeModal`, `PayslipPreviewModal`,
+`PayrollPage`, `PayrollRunDetailPage`) pero se cortó por límite de sesión antes de escribir el
+JSON de traducciones — los componentes quedaron referenciando keys que no existen en ningún
+archivo. Se descartó ese trabajo entero (no mergeable, habría mostrado keys crudas en pantalla)
+en vez de reconstruirlo a ciegas. Sigue 100% en inglés, sin ningún archivo roto.
 
 - [ ] People (alta, contrato, perfil), y todo el módulo Payroll (runs, pagos únicos, políticas,
   compensación).
 
 ## Unidad 6 — Tasks + Time Off
 
-- [ ] Cuidado particular: Tasks tuvo un restyle reciente (List/Board con estilos de tabla/card
-  compartidos) — no romper ese trabajo al extraer strings.
+**Nota 2026-09-24**: completa. `MyTasksPage`, todo `components/tasks/*`, `TimeOffSidebar`.
+Namespace `tasks` (242 keys, en/es, con un subárbol `timeOff.*`). Verificada por tsc/eslint.
 
 ## Unidad 7 — Settings (todas las subpáginas) + Billing/Plans
 
-- [ ] Profile, Pipelines, Integrations, Public Forms, Activity Log settings, Roles, y las páginas
-  de selección/gestión de plan (Starter/Growth) y billing.
+**Nota 2026-09-24**: **parcial**. `IntegrationsSettingsPage`, `CompanyAppearancePage`,
+`CompanyUsersPage`, `PublicFormsSettingsPage` completos (namespace `settingsPages`, 186 keys,
+en/es), verificado por tsc/eslint. **Sin empezar**: `PipelinesSettingsPage`,
+`RolesPermissionsPage`, `BillingPage`, `PlansModal`, `AddPaymentMethodModal`.
+`ActivityLogSettingsPage.tsx` quedó a medio editar (referenciaba keys nunca escritas en el JSON)
+y se revirtió entero — sigue 100% en inglés. **Dato importante para quien retome**: esa página
+resultó ser el visor real del feed de actividad completo (filtros, paginación, detalle
+expandible), no una página chica de configuración de retención como decía el scope original —
+presupuestar tiempo acorde, es tan grande como cualquier otra página de este spec.
 
 ## Unidad 8 — Notes + Activity Log
 
-- [ ] Feed de actividad y el módulo de notas. Recordatorio de la regla dura: el **contenido** de
-  una nota nunca se traduce, solo el chrome de la UI alrededor (botones, headers, filtros).
+**Nota 2026-09-24**: completa. `components/notes/*` y `components/activity/EntityActivityList.tsx`
+(el feed de actividad embebido en los paneles de detalle de Company/Contact/Opportunity/Employee —
+**distinto** de `ActivityLogSettingsPage.tsx`, que es la página completa en Settings, ver nota de
+la Unidad 7 arriba). Namespace `notesActivity` (22 keys, en/es). Verificada por tsc/eslint.
 
 ## Unidad 9 — Backend: emails transaccionales
 
-- [ ] Extraer los templates HTML hardcodeados de `mailer.ts` y `platformTicketService.ts` a
-  templates parametrizados por idioma.
-- [ ] Selección de idioma: `User.locale` del destinatario si existe; fallback a inglés para
-  destinatarios sin `User` todavía (ej. invitaciones a gente que aún no tiene cuenta).
+**Nota 2026-09-24**: completa. i18next server-side propio (`src/lib/i18n.ts`,
+`src/locales/{en,es}/emails.json`) — cada función de `mailer.ts` toma un `locale` explícito y
+resuelve `t(key, {lng, ...})` por llamada, ya que un mismo request puede mandar a destinatarios
+con idiomas distintos. `locale` agregado en cada call site con un `User` real disponible
+(password reset, contract signed, opportunity stage-changed/stalled, respuestas de ticket, cambio
+de política — resuelto por destinatario, no una vez por lote). Time Off usa un lookup chico
+(`localeForEmployee`) porque sus destinatarios son `Employee`, no `User`.
+**Deliberadamente en inglés**: invitaciones y el email de verificación de signup — ambos se
+mandan antes de que exista una cuenta de la que sacar el idioma. `sendFeedbackEmail` (cliente →
+equipo de Northstack) fuera de alcance, es 100% interno. Verificada por tsc, eslint, y toda la
+suite de vitest (4353 tests); confirmado en runtime tanto con `tsx` como con el build compilado
+(`tsc` + `node`, el path real de producción).
 
 ## Unidad 10 — Help Center (`/guide`, `/help`)
 
-- [ ] Traducir el contenido existente a español, con esquema de URL por idioma (ej. `/es/guide`)
-  y selector propio ahí.
-- [ ] **Costo permanente a partir de acá**: el Help Center ya tiene la regla de actualizarse cada
-  vez que cambia una feature — desde esta unidad en adelante, cada actualización futura implica
-  editar el contenido en los dos idiomas, no solo uno. No es un gap, es un costo de mantenimiento
-  que queda anotado.
+**Nota 2026-09-24**: **parcial**. `HelpPage.tsx` (FAQ) completo: `FAQ_CATEGORIES` duplicado como
+`FAQ_CATEGORIES_ES`, elegido por `i18n.language`, más todo el chrome de la página (título,
+búsqueda, nav, tarjetas de contacto/legal, contador final). Verificado por tsc/eslint.
+**Sin empezar**: `GuidePage.tsx` (la Guía del usuario, 1000+ líneas de prosa) — se cortó por
+límite de sesión antes de arrancarla. Sigue 100% en inglés, sin estado roto. El esquema de URL
+por idioma (`/es/guide`, `/es/help`) tampoco se implementó todavía — hoy el idioma de esta unidad
+sigue el mismo selector global que el resto de la app, no una URL separada.
 
 ## Unidad 11 — Landing
 
-- [ ] El landing ya está en español — acá se agrega inglés (dirección inversa a las unidades de
-  producto). Rama separada `landing`, deploy directo a prod sin staging — mismo cuidado que ya se
-  aplica ahí.
+**Corrección 2026-09-24**: el dato original de este spec ("el landing ya está en español") era
+**incorrecto** — se verificó directamente contra `origin/landing` (`<html lang="en">`, sin
+ningún rastro de español en ningún archivo) y estaba desactualizado respecto al dato real en
+`docs/tareas/backlog.md`. La dirección real es la **misma** que el resto de las unidades: agregar
+español, no inglés. Sin empezar — deliberadamente no delegado a un agente en paralelo dado que
+esta rama va directo a producción sin staging (ver `feedback_push_confirmation` en memoria); el
+contenido son 6 páginas HTML estáticas (index, about, 404, privacy, refund, terms — no es una SPA
+de React), lo que además cambia el mecanismo de implementación respecto a las demás unidades
+(probablemente duplicar cada `.html` bajo un prefijo `/es/` con `hreflang` correcto, dado que es
+un sitio de marketing con SEO ya cuidado — robots.txt/sitemap.xml/canonical tags existentes).
 
 ## Unidad 12 — QA de layout en ambos idiomas
 

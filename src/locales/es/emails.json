@@ -1,0 +1,84 @@
+{
+  "invitation": {
+    "subject": "Te invitaron a unirte a {{tenantName}} en Northstack",
+    "intro": "Te invitaron a unirte a {{tenantName}} en Northstack como {{role}}.",
+    "acceptLinkText": "Aceptar tu invitación",
+    "contractNote": "Tu contrato está adjunto a este correo para que lo guardes.",
+    "expiry": "Este enlace vence en 7 días."
+  },
+  "publicFormSubmission": {
+    "subject": "Nueva respuesta en \"{{formName}}\"",
+    "body": "{{submitterName}} ({{submitterEmail}}) acaba de enviar \"{{formName}}\" para {{tenantName}}."
+  },
+  "publicFormConfirmation": {
+    "subject": "Recibimos tu respuesta — {{formName}}",
+    "body": "¡Gracias! {{tenantName}} recibió tu respuesta a \"{{formName}}\"."
+  },
+  "timeOffPending": {
+    "subject": "Solicitud de ausencia esperando tu aprobación",
+    "greeting": "Hola {{approverName}},",
+    "body": "{{employeeName}} solicitó {{daysRequested}} día(s) de {{policyName}} ({{range}}) y necesita tu aprobación.",
+    "cta": "Revisalo en Northstack, en Recursos Humanos > Ausencias."
+  },
+  "timeOffDecided": {
+    "subjectEmployeeApproved": "Tu solicitud de ausencia fue aprobada",
+    "subjectEmployeeRejected": "Tu solicitud de ausencia fue rechazada",
+    "subjectOtherApproved": "La solicitud de ausencia de {{employeeName}} fue aprobada{{autoNote}}",
+    "subjectOtherRejected": "La solicitud de ausencia de {{employeeName}} fue rechazada{{autoNote}}",
+    "autoNote": " automáticamente",
+    "introEmployeeApproved": "Tu solicitud de {{daysRequested}} día(s) de {{policyName}} ({{range}}) fue aprobada{{autoSuffix}}.",
+    "introEmployeeRejected": "Tu solicitud de {{daysRequested}} día(s) de {{policyName}} ({{range}}) fue rechazada{{autoSuffix}}.",
+    "introOtherApproved": "La solicitud de {{employeeName}} de {{daysRequested}} día(s) de {{policyName}} ({{range}}) fue aprobada{{autoSuffix}}.",
+    "introOtherRejected": "La solicitud de {{employeeName}} de {{daysRequested}} día(s) de {{policyName}} ({{range}}) fue rechazada{{autoSuffix}}.",
+    "autoSuffix": " automáticamente — esta política no requiere aprobación",
+    "note": "Nota: {{note}}"
+  },
+  "contractSigned": {
+    "subject": "Contrato firmado — {{employeeName}} ({{tenantName}})",
+    "body": "El contrato de {{employeeName}} con {{tenantName}} acaba de confirmarse y firmarse.",
+    "attachmentNote": "El contrato firmado está adjunto a este correo."
+  },
+  "passwordReset": {
+    "subject": "Restablecé tu contraseña de Northstack",
+    "body": "Recibimos una solicitud para restablecer tu contraseña de Northstack.",
+    "linkText": "Restablecer tu contraseña",
+    "expiry": "Este enlace vence en 1 hora. Si no lo solicitaste, podés ignorar este correo con confianza."
+  },
+  "signupVerification": {
+    "subject": "Verificá tu correo para terminar de configurar Northstack",
+    "body": "Gracias por empezar tu registro en Northstack — confirmemos que este es tu correo.",
+    "linkText": "Verificar tu correo",
+    "expiry": "Este enlace vence en 24 horas. Si no lo solicitaste, podés ignorar este correo con confianza."
+  },
+  "opportunityStageChanged": {
+    "subject": "{{opportunityName}} pasó a {{toStage}}",
+    "greeting": "Hola {{ownerFirstName}},",
+    "body": "{{opportunityName}} ({{companyName}}) pasó de {{fromStage}} a {{toStage}}{{actor}}.",
+    "actorSuffix": " por {{changedByName}}",
+    "cta": "Ver tu pipeline",
+    "previousStageFallback": "una etapa anterior",
+    "newStageFallback": "una etapa nueva"
+  },
+  "opportunityStalled": {
+    "subject": "{{opportunityName}} lleva {{daysInStage}} días estancada",
+    "greeting": "Hola {{ownerFirstName}},",
+    "body": "{{opportunityName}} ({{companyName}}) lleva {{daysInStage}} días en {{stageName}}.",
+    "cta": "Ver tu pipeline"
+  },
+  "ticketNoteCreated": {
+    "subject": "Nueva respuesta en tu ticket: \"{{ticketSubject}}\"",
+    "body": "{{authorName}} respondió tu ticket \"{{ticketSubject}}\":"
+  },
+  "policyChange": {
+    "subject": "Actualizamos: {{policyTitle}}",
+    "greeting": "Hola {{firstName}},",
+    "intro": "Actualizamos {{policyTitle}}.",
+    "cta": "Revisar el documento completo",
+    "policyTitles": {
+      "terms_of_service": "los Términos de Servicio",
+      "privacy_policy": "la Política de Privacidad",
+      "refund_policy": "la Política de Reembolsos",
+      "default": "nuestras políticas"
+    }
+  }
+}

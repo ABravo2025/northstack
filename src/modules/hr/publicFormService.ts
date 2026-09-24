@@ -355,7 +355,7 @@ export async function submitPublicForm(
   const submitterName = `${input.firstName.trim()} ${input.lastName.trim()}`;
   const admins = await prisma.user.findMany({
     where: { tenantId: form.tenantId, role: { in: ['owner', 'admin'] } },
-    select: { email: true },
+    select: { email: true, locale: true },
   });
 
   // Both sends already swallow their own errors (see mailer.ts), but must still be awaited — an
@@ -368,6 +368,7 @@ export async function submitPublicForm(
       formName: form.name,
       submitterName,
       submitterEmail: trimmedEmail,
+      locale: admin.locale,
     });
   }
   await sendPublicFormConfirmationEmail({ to: trimmedEmail, tenantName, formName: form.name });

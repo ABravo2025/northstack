@@ -1,12 +1,15 @@
 import prisma from '../../lib/prisma.js';
 import { sendPolicyChangeEmail } from '../../lib/mailer.js';
+import i18n, { resolveEmailLocale } from '../../lib/i18n.js';
 import type { LegalPolicyType, PlatformAnnouncement, PlatformAnnouncementType } from '@prisma/client';
 
-const POLICY_TITLES: Record<LegalPolicyType, string> = {
-  terms_of_service: 'Terms of Service',
-  privacy_policy: 'Privacy Policy',
-  refund_policy: 'Refund Policy',
-};
+// Resolved per-recipient (not once for the whole batch) since each active user can have a
+// different locale — docs/general/spec-i18n.md Unidad 9.
+function policyTitleFor(policyType: LegalPolicyType | undefined, locale: string | null): string {
+  const lng = resolveEmailLocale(locale);
+  const key = policyType ? `policyChange.policyTitles.${policyType}` : 'policyChange.policyTitles.default';
+  return i18n.t(key, { lng, ns: 'emails' });
+}
 
 export interface CreateAnnouncementInput {
   type: PlatformAnnouncementType;
@@ -32,13 +35,19 @@ export async function createAnnouncement(input: CreateAnnouncementInput): Promis
   if (input.type === 'policy_change') {
     const users = await prisma.user.findMany({
       where: { status: 'active', tenantId: { not: null } },
-      select: { email: true, firstName: true },
+      select: { email: true, firstName: true, locale: true },
     });
     const appUrl = `${process.env.APP_BASE_URL ?? 'http://localhost:5173'}/help`;
-    const policyTitle = input.policyType ? POLICY_TITLES[input.policyType] : 'our policies';
     // sendPolicyChangeEmail already swallows its own errors (see mailer.ts).
     for (const user of users) {
-      await sendPolicyChangeEmail({ to: user.email, firstName: user.firstName, policyTitle, summary: input.summary, appUrl });
+      await sendPolicyChangeEmail({
+        to: user.email,
+        firstName: user.firstName,
+        policyTitle: policyTitleFor(input.policyType, user.locale),
+        summary: input.summary,
+        appUrl,
+        locale: user.locale,
+      });
     }
   }
 

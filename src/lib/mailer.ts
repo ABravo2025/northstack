@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { bestEffort } from './bestEffort.js';
+import i18n, { resolveEmailLocale } from './i18n.js';
 
 // Opportunity/company names, stage labels, and display names are all tenant-user-controlled free
 // text that gets interpolated into HTML email bodies below — escape before interpolating so a
@@ -12,6 +13,13 @@ function escapeHtml(value: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+// Wraps an already-escaped, tenant-controlled value in <strong> for the HTML body of an email —
+// paired with the plain value for the text body, both built from the same i18next template key
+// (docs/general/spec-i18n.md Unidad 9) so the sentence itself only needs to be translated once.
+function strong(value: string): string {
+  return `<strong>${escapeHtml(value)}</strong>`;
 }
 
 const transporter = nodemailer.createTransport({
@@ -30,30 +38,35 @@ export interface SendInvitationEmailInput {
   role: string;
   acceptUrl: string;
   attachments?: { filename: string; content: Buffer }[];
+  // Recipient has no account yet at invite time (see invitationService.ts) — most call sites
+  // pass nothing, which falls back to English (resolveEmailLocale(undefined) === 'en').
+  locale?: string | null;
 }
 
 export async function sendInvitationEmail(input: SendInvitationEmailInput): Promise<void> {
   if (!mailerConfigured()) return;
 
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(key, { lng, ns: 'emails', ...opts });
   const hasContract = Boolean(input.attachments?.length);
 
   await dispatchMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
     to: input.to,
-    subject: `You're invited to join ${input.tenantName} on Northstack`,
+    subject: t('invitation.subject', { tenantName: input.tenantName }),
     text: [
-      `You've been invited to join ${input.tenantName} on Northstack as ${input.role}.`,
+      t('invitation.intro', { tenantName: input.tenantName, role: input.role }),
       '',
-      `Accept your invitation: ${input.acceptUrl}`,
+      `${t('invitation.acceptLinkText')}: ${input.acceptUrl}`,
       '',
-      hasContract ? 'Your contract is attached to this email for your records.\n' : '',
-      'This link expires in 7 days.',
+      hasContract ? `${t('invitation.contractNote')}\n` : '',
+      t('invitation.expiry'),
     ].join('\n'),
     html: [
-      `<p>You've been invited to join <strong>${escapeHtml(input.tenantName)}</strong> on Northstack as <strong>${escapeHtml(input.role)}</strong>.</p>`,
-      `<p><a href="${input.acceptUrl}">Accept your invitation</a></p>`,
-      hasContract ? '<p>Your contract is attached to this email for your records.</p>' : '',
-      '<p>This link expires in 7 days.</p>',
+      `<p>${t('invitation.intro', { tenantName: strong(input.tenantName), role: strong(input.role) })}</p>`,
+      `<p><a href="${input.acceptUrl}">${t('invitation.acceptLinkText')}</a></p>`,
+      hasContract ? `<p>${t('invitation.contractNote')}</p>` : '',
+      `<p>${t('invitation.expiry')}</p>`,
     ].join('\n'),
     attachments: input.attachments?.map((a) => ({ filename: a.filename, content: a.content, contentType: 'application/pdf' })),
   }, 'Failed to send invitation email:');
@@ -84,20 +97,35 @@ export interface SendPublicFormSubmissionEmailInput {
   formName: string;
   submitterName: string;
   submitterEmail: string;
+  // Recipient is a tenant admin — a real User, so callers should pass their `.locale`.
+  locale?: string | null;
 }
 
 export async function sendPublicFormSubmissionEmail(input: SendPublicFormSubmissionEmailInput): Promise<void> {
   if (!mailerConfigured()) return;
 
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(key, { lng, ns: 'emails', ...opts });
+
   await dispatchMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
     to: input.to,
-    subject: `New submission on "${input.formName}"`,
+    subject: t('publicFormSubmission.subject', { formName: input.formName }),
     text: [
-      `${input.submitterName} (${input.submitterEmail}) just submitted "${input.formName}" for ${input.tenantName}.`,
+      t('publicFormSubmission.body', {
+        submitterName: input.submitterName,
+        submitterEmail: input.submitterEmail,
+        formName: input.formName,
+        tenantName: input.tenantName,
+      }),
     ].join('\n'),
     html: [
-      `<p><strong>${escapeHtml(input.submitterName)}</strong> (${escapeHtml(input.submitterEmail)}) just submitted <strong>${escapeHtml(input.formName)}</strong> for ${escapeHtml(input.tenantName)}.</p>`,
+      `<p>${t('publicFormSubmission.body', {
+        submitterName: strong(input.submitterName),
+        submitterEmail: escapeHtml(input.submitterEmail),
+        formName: strong(input.formName),
+        tenantName: escapeHtml(input.tenantName),
+      })}</p>`,
     ].join('\n'),
   }, 'Failed to send public form submission email:');
 }
@@ -106,18 +134,24 @@ export interface SendPublicFormConfirmationEmailInput {
   to: string;
   tenantName: string;
   formName: string;
+  // The external submitter has no Northstack account — no locale to resolve, always English
+  // unless a future signup flow captures a preference before this fires.
+  locale?: string | null;
 }
 
 export async function sendPublicFormConfirmationEmail(input: SendPublicFormConfirmationEmailInput): Promise<void> {
   if (!mailerConfigured()) return;
 
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(key, { lng, ns: 'emails', ...opts });
+
   await dispatchMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
     to: input.to,
-    subject: `We received your submission — ${input.formName}`,
-    text: [`Thanks! ${input.tenantName} received your submission for "${input.formName}".`].join('\n'),
+    subject: t('publicFormConfirmation.subject', { formName: input.formName }),
+    text: [t('publicFormConfirmation.body', { tenantName: input.tenantName, formName: input.formName })].join('\n'),
     html: [
-      `<p>Thanks! ${escapeHtml(input.tenantName)} received your submission for <strong>${escapeHtml(input.formName)}</strong>.</p>`,
+      `<p>${t('publicFormConfirmation.body', { tenantName: escapeHtml(input.tenantName), formName: strong(input.formName) })}</p>`,
     ].join('\n'),
   }, 'Failed to send public form confirmation email:');
 }
@@ -130,28 +164,41 @@ export interface SendTimeOffRequestPendingEmailInput {
   startDate: string;
   endDate: string;
   daysRequested: number;
+  locale?: string | null;
 }
 
 export async function sendTimeOffRequestPendingEmail(input: SendTimeOffRequestPendingEmailInput): Promise<void> {
   if (!mailerConfigured()) return;
 
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(key, { lng, ns: 'emails', ...opts });
   const range = input.startDate === input.endDate ? input.startDate : `${input.startDate} – ${input.endDate}`;
 
   await dispatchMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
     to: input.to,
-    subject: `Time off request awaiting your approval`,
+    subject: t('timeOffPending.subject'),
     text: [
-      `Hi ${input.approverName},`,
+      t('timeOffPending.greeting', { approverName: input.approverName }),
       '',
-      `${input.employeeName} requested ${input.daysRequested} day(s) of ${input.policyName} (${range}) and it needs your approval.`,
+      t('timeOffPending.body', {
+        employeeName: input.employeeName,
+        daysRequested: input.daysRequested,
+        policyName: input.policyName,
+        range,
+      }),
       '',
-      'Review it in Northstack under HR > Time Off.',
+      t('timeOffPending.cta'),
     ].join('\n'),
     html: [
-      `<p>Hi ${escapeHtml(input.approverName)},</p>`,
-      `<p><strong>${escapeHtml(input.employeeName)}</strong> requested ${input.daysRequested} day(s) of <strong>${escapeHtml(input.policyName)}</strong> (${range}) and it needs your approval.</p>`,
-      '<p>Review it in Northstack under HR &gt; Time Off.</p>',
+      `<p>${t('timeOffPending.greeting', { approverName: escapeHtml(input.approverName) })}</p>`,
+      `<p>${t('timeOffPending.body', {
+        employeeName: strong(input.employeeName),
+        daysRequested: input.daysRequested,
+        policyName: strong(input.policyName),
+        range,
+      })}</p>`,
+      `<p>${t('timeOffPending.cta')}</p>`,
     ].join('\n'),
   }, 'Failed to send time off pending email:');
 }
@@ -167,36 +214,50 @@ export interface SendTimeOffRequestDecidedEmailInput {
   decision: 'approved' | 'rejected';
   decisionNote?: string | null;
   autoApproved?: boolean;
+  locale?: string | null;
 }
 
 export async function sendTimeOffRequestDecidedEmail(input: SendTimeOffRequestDecidedEmailInput): Promise<void> {
   if (!mailerConfigured()) return;
 
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(key, { lng, ns: 'emails', ...opts });
   const range = input.startDate === input.endDate ? input.startDate : `${input.startDate} – ${input.endDate}`;
+  const decisionKey = input.decision === 'approved' ? 'Approved' : 'Rejected';
+
   const subject = input.recipientIsEmployee
-    ? `Your time off request was ${input.decision}`
-    : `${input.employeeName}'s time off request was ${input.decision}${input.autoApproved ? ' automatically' : ''}`;
-  const intro = input.recipientIsEmployee
-    ? `Your request for ${input.daysRequested} day(s) of ${input.policyName} (${range}) was ${input.decision}${
-        input.autoApproved ? ' automatically — this policy does not require approval' : ''
-      }.`
-    : `${input.employeeName}'s request for ${input.daysRequested} day(s) of ${input.policyName} (${range}) was ${
-        input.decision
-      }${input.autoApproved ? ' automatically — this policy does not require approval' : ''}.`;
-  const introHtml = input.recipientIsEmployee
-    ? `Your request for ${input.daysRequested} day(s) of ${escapeHtml(input.policyName)} (${range}) was ${input.decision}${
-        input.autoApproved ? ' automatically — this policy does not require approval' : ''
-      }.`
-    : `${escapeHtml(input.employeeName)}'s request for ${input.daysRequested} day(s) of ${escapeHtml(input.policyName)} (${range}) was ${
-        input.decision
-      }${input.autoApproved ? ' automatically — this policy does not require approval' : ''}.`;
+    ? t(`timeOffDecided.subjectEmployee${decisionKey}`)
+    : t(`timeOffDecided.subjectOther${decisionKey}`, {
+        employeeName: input.employeeName,
+        autoNote: input.autoApproved ? t('timeOffDecided.autoNote') : '',
+      });
+
+  const autoSuffix = input.autoApproved ? t('timeOffDecided.autoSuffix') : '';
+  const introKeyBase = input.recipientIsEmployee ? 'timeOffDecided.introEmployee' : 'timeOffDecided.introOther';
+  const intro = t(`${introKeyBase}${decisionKey}`, {
+    employeeName: input.employeeName,
+    daysRequested: input.daysRequested,
+    policyName: input.policyName,
+    range,
+    autoSuffix,
+  });
+  const introHtml = t(`${introKeyBase}${decisionKey}`, {
+    employeeName: strong(input.employeeName),
+    daysRequested: input.daysRequested,
+    policyName: strong(input.policyName),
+    range,
+    autoSuffix,
+  });
 
   await dispatchMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
     to: input.to,
     subject,
-    text: [intro, input.decisionNote ? `\nNote: ${input.decisionNote}` : ''].join('\n'),
-    html: [`<p>${introHtml}</p>`, input.decisionNote ? `<p>Note: ${escapeHtml(input.decisionNote)}</p>` : ''].join('\n'),
+    text: [intro, input.decisionNote ? `\n${t('timeOffDecided.note', { note: input.decisionNote })}` : ''].join('\n'),
+    html: [
+      `<p>${introHtml}</p>`,
+      input.decisionNote ? `<p>${t('timeOffDecided.note', { note: escapeHtml(input.decisionNote) })}</p>` : '',
+    ].join('\n'),
   }, 'Failed to send time off decided email:');
 }
 
@@ -209,6 +270,8 @@ export interface SendFeedbackEmailInput {
   message: string;
 }
 
+// Internal-only (from a customer, to Northstack's own team via the in-app feedback form) — not
+// part of the i18n rollout, this is never seen by a tenant user in either language.
 // Unlike every other function in this file, feedback is NOT best-effort (see feedback.ts's own
 // header comment) — the email IS the point of the request, so a delivery failure has to
 // propagate as a rejection the route can turn into a 502, not get swallowed like a
@@ -241,6 +304,7 @@ export interface SendContractSignedEmailInput {
   tenantName: string;
   employeeName: string;
   pdfBuffer: Buffer;
+  locale?: string | null;
 }
 
 // Fired once, right after contract confirmation (docs/spec-payroll.md Unidad
@@ -250,19 +314,22 @@ export interface SendContractSignedEmailInput {
 export async function sendContractSignedEmail(input: SendContractSignedEmailInput): Promise<void> {
   if (!mailerConfigured()) return;
 
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(key, { lng, ns: 'emails', ...opts });
+
   await dispatchMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
     to: input.to,
     cc: input.cc && input.cc.length > 0 ? input.cc : undefined,
-    subject: `Signed contract — ${input.employeeName} (${input.tenantName})`,
+    subject: t('contractSigned.subject', { employeeName: input.employeeName, tenantName: input.tenantName }),
     text: [
-      `${input.employeeName}'s contract with ${input.tenantName} was just confirmed and signed.`,
+      t('contractSigned.body', { employeeName: input.employeeName, tenantName: input.tenantName }),
       '',
-      'The signed contract is attached to this email.',
+      t('contractSigned.attachmentNote'),
     ].join('\n'),
     html: [
-      `<p><strong>${escapeHtml(input.employeeName)}</strong>'s contract with <strong>${escapeHtml(input.tenantName)}</strong> was just confirmed and signed.</p>`,
-      '<p>The signed contract is attached to this email.</p>',
+      `<p>${t('contractSigned.body', { employeeName: strong(input.employeeName), tenantName: strong(input.tenantName) })}</p>`,
+      `<p>${t('contractSigned.attachmentNote')}</p>`,
     ].join('\n'),
     attachments: [{ filename: 'contract-signed.pdf', content: input.pdfBuffer, contentType: 'application/pdf' }],
   }, 'Failed to send contract signed email:');
@@ -271,26 +338,30 @@ export async function sendContractSignedEmail(input: SendContractSignedEmailInpu
 export interface SendPasswordResetEmailInput {
   to: string;
   resetUrl: string;
+  locale?: string | null;
 }
 
 export async function sendPasswordResetEmail(input: SendPasswordResetEmailInput): Promise<void> {
   if (!mailerConfigured()) return;
 
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(key, { lng, ns: 'emails', ...opts });
+
   await dispatchMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
     to: input.to,
-    subject: 'Reset your Northstack password',
+    subject: t('passwordReset.subject'),
     text: [
-      'We received a request to reset your Northstack password.',
+      t('passwordReset.body'),
       '',
-      `Reset your password: ${input.resetUrl}`,
+      `${t('passwordReset.linkText')}: ${input.resetUrl}`,
       '',
-      'This link expires in 1 hour. If you did not request this, you can safely ignore this email.',
+      t('passwordReset.expiry'),
     ].join('\n'),
     html: [
-      '<p>We received a request to reset your Northstack password.</p>',
-      `<p><a href="${input.resetUrl}">Reset your password</a></p>`,
-      '<p>This link expires in 1 hour. If you did not request this, you can safely ignore this email.</p>',
+      `<p>${t('passwordReset.body')}</p>`,
+      `<p><a href="${input.resetUrl}">${t('passwordReset.linkText')}</a></p>`,
+      `<p>${t('passwordReset.expiry')}</p>`,
     ].join('\n'),
   }, 'Failed to send password reset email:');
 }
@@ -298,6 +369,11 @@ export async function sendPasswordResetEmail(input: SendPasswordResetEmailInput)
 export interface SendSignupVerificationEmailInput {
   to: string;
   verifyUrl: string;
+  // No User exists yet at this point in the signup flow (see emailVerificationService.ts) — no
+  // locale to resolve, always falls back to English. A future enhancement could thread the
+  // frontend's currently-active UI language through here instead; deliberately out of scope for
+  // this pass (docs/general/spec-i18n.md Unidad 9).
+  locale?: string | null;
 }
 
 // Tenant Signup (spec-tenant-signup.md) — sent from POST /api/tenants/signup/start and
@@ -307,21 +383,24 @@ export interface SendSignupVerificationEmailInput {
 export async function sendSignupVerificationEmail(input: SendSignupVerificationEmailInput): Promise<void> {
   if (!mailerConfigured()) return;
 
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(key, { lng, ns: 'emails', ...opts });
+
   await dispatchMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
     to: input.to,
-    subject: 'Verify your email to finish setting up Northstack',
+    subject: t('signupVerification.subject'),
     text: [
-      "Thanks for starting your Northstack signup — let's confirm this is your email.",
+      t('signupVerification.body'),
       '',
-      `Verify your email: ${input.verifyUrl}`,
+      `${t('signupVerification.linkText')}: ${input.verifyUrl}`,
       '',
-      'This link expires in 24 hours. If you did not request this, you can safely ignore this email.',
+      t('signupVerification.expiry'),
     ].join('\n'),
     html: [
-      "<p>Thanks for starting your Northstack signup — let's confirm this is your email.</p>",
-      `<p><a href="${input.verifyUrl}">Verify your email</a></p>`,
-      '<p>This link expires in 24 hours. If you did not request this, you can safely ignore this email.</p>',
+      `<p>${t('signupVerification.body')}</p>`,
+      `<p><a href="${input.verifyUrl}">${t('signupVerification.linkText')}</a></p>`,
+      `<p>${t('signupVerification.expiry')}</p>`,
     ].join('\n'),
   }, 'Failed to send signup verification email:');
 }
@@ -335,6 +414,7 @@ export interface SendOpportunityStageChangedEmailInput {
   toStage: string;
   changedByName?: string;
   appUrl: string;
+  locale?: string | null;
 }
 
 // docs/tareas/specredisenosalesv2.md §3.8 — fires alongside the in-app
@@ -344,24 +424,40 @@ export interface SendOpportunityStageChangedEmailInput {
 export async function sendOpportunityStageChangedEmail(input: SendOpportunityStageChangedEmailInput): Promise<void> {
   if (!mailerConfigured()) return;
 
-  const actor = input.changedByName ? ` by ${input.changedByName}` : '';
-  const actorHtml = input.changedByName ? ` by ${escapeHtml(input.changedByName)}` : '';
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(key, { lng, ns: 'emails', ...opts });
+  const actor = input.changedByName ? t('opportunityStageChanged.actorSuffix', { changedByName: input.changedByName }) : '';
+  const actorHtml = input.changedByName
+    ? t('opportunityStageChanged.actorSuffix', { changedByName: strong(input.changedByName) })
+    : '';
 
   await dispatchMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
     to: input.to,
-    subject: `${input.opportunityName} moved to ${input.toStage}`,
+    subject: t('opportunityStageChanged.subject', { opportunityName: input.opportunityName, toStage: input.toStage }),
     text: [
-      `Hi ${input.ownerFirstName},`,
+      t('opportunityStageChanged.greeting', { ownerFirstName: input.ownerFirstName }),
       '',
-      `"${input.opportunityName}" (${input.companyName}) moved from ${input.fromStage} to ${input.toStage}${actor}.`,
+      t('opportunityStageChanged.body', {
+        opportunityName: input.opportunityName,
+        companyName: input.companyName,
+        fromStage: input.fromStage,
+        toStage: input.toStage,
+        actor,
+      }),
       '',
-      `View your pipeline: ${input.appUrl}`,
+      `${t('opportunityStageChanged.cta')}: ${input.appUrl}`,
     ].join('\n'),
     html: [
-      `<p>Hi ${escapeHtml(input.ownerFirstName)},</p>`,
-      `<p><strong>${escapeHtml(input.opportunityName)}</strong> (${escapeHtml(input.companyName)}) moved from ${escapeHtml(input.fromStage)} to <strong>${escapeHtml(input.toStage)}</strong>${actorHtml}.</p>`,
-      `<p><a href="${input.appUrl}">View your pipeline</a></p>`,
+      `<p>${t('opportunityStageChanged.greeting', { ownerFirstName: escapeHtml(input.ownerFirstName) })}</p>`,
+      `<p>${t('opportunityStageChanged.body', {
+        opportunityName: strong(input.opportunityName),
+        companyName: escapeHtml(input.companyName),
+        fromStage: escapeHtml(input.fromStage),
+        toStage: strong(input.toStage),
+        actor: actorHtml,
+      })}</p>`,
+      `<p><a href="${input.appUrl}">${t('opportunityStageChanged.cta')}</a></p>`,
     ].join('\n'),
   }, 'Failed to send opportunity stage changed email:');
 }
@@ -374,6 +470,7 @@ export interface SendOpportunityStalledEmailInput {
   stageName: string;
   daysInStage: number;
   appUrl: string;
+  locale?: string | null;
 }
 
 // docs/tareas/specredisenosalesv2.md §3.8 — the stalled-deal reminder cron's
@@ -382,21 +479,34 @@ export interface SendOpportunityStalledEmailInput {
 export async function sendOpportunityStalledEmail(input: SendOpportunityStalledEmailInput): Promise<void> {
   if (!mailerConfigured()) return;
 
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(key, { lng, ns: 'emails', ...opts });
+
   await dispatchMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
     to: input.to,
-    subject: `${input.opportunityName} has been stalled for ${input.daysInStage} days`,
+    subject: t('opportunityStalled.subject', { opportunityName: input.opportunityName, daysInStage: input.daysInStage }),
     text: [
-      `Hi ${input.ownerFirstName},`,
+      t('opportunityStalled.greeting', { ownerFirstName: input.ownerFirstName }),
       '',
-      `"${input.opportunityName}" (${input.companyName}) has been sitting in ${input.stageName} for ${input.daysInStage} days.`,
+      t('opportunityStalled.body', {
+        opportunityName: input.opportunityName,
+        companyName: input.companyName,
+        stageName: input.stageName,
+        daysInStage: input.daysInStage,
+      }),
       '',
-      `View your pipeline: ${input.appUrl}`,
+      `${t('opportunityStalled.cta')}: ${input.appUrl}`,
     ].join('\n'),
     html: [
-      `<p>Hi ${escapeHtml(input.ownerFirstName)},</p>`,
-      `<p><strong>${escapeHtml(input.opportunityName)}</strong> (${escapeHtml(input.companyName)}) has been sitting in <strong>${escapeHtml(input.stageName)}</strong> for ${input.daysInStage} days.</p>`,
-      `<p><a href="${input.appUrl}">View your pipeline</a></p>`,
+      `<p>${t('opportunityStalled.greeting', { ownerFirstName: escapeHtml(input.ownerFirstName) })}</p>`,
+      `<p>${t('opportunityStalled.body', {
+        opportunityName: strong(input.opportunityName),
+        companyName: escapeHtml(input.companyName),
+        stageName: strong(input.stageName),
+        daysInStage: input.daysInStage,
+      })}</p>`,
+      `<p><a href="${input.appUrl}">${t('opportunityStalled.cta')}</a></p>`,
     ].join('\n'),
   }, 'Failed to send opportunity stalled email:');
 }
@@ -406,18 +516,24 @@ export interface SendTicketNoteCreatedEmailInput {
   ticketSubject: string;
   authorName: string;
   noteBody: string;
+  locale?: string | null;
 }
 
 export async function sendTicketNoteCreatedEmail(input: SendTicketNoteCreatedEmailInput): Promise<void> {
   if (!mailerConfigured()) return;
 
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(key, { lng, ns: 'emails', ...opts });
+
   await dispatchMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
     to: input.to,
-    subject: `New reply on your ticket: "${input.ticketSubject}"`,
-    text: [`${input.authorName} replied to your ticket "${input.ticketSubject}":`, '', input.noteBody].join('\n'),
+    subject: t('ticketNoteCreated.subject', { ticketSubject: input.ticketSubject }),
+    // noteBody is the ticket reply itself, written by a person — never translated, rendered as-is
+    // in whatever language they wrote it (docs/general/spec-i18n.md's hard rule on user content).
+    text: [t('ticketNoteCreated.body', { authorName: input.authorName, ticketSubject: input.ticketSubject }), '', input.noteBody].join('\n'),
     html: [
-      `<p><strong>${escapeHtml(input.authorName)}</strong> replied to your ticket <strong>${escapeHtml(input.ticketSubject)}</strong>:</p>`,
+      `<p>${t('ticketNoteCreated.body', { authorName: strong(input.authorName), ticketSubject: strong(input.ticketSubject) })}</p>`,
       `<p>${escapeHtml(input.noteBody)}</p>`,
     ].join('\n'),
   }, 'Failed to send ticket note email:');
@@ -429,6 +545,7 @@ export interface SendPolicyChangeEmailInput {
   policyTitle: string;
   summary: string;
   appUrl: string;
+  locale?: string | null;
 }
 
 // Terms of Service §14 (and the matching sections in Privacy/Refund) promise "notified via
@@ -438,24 +555,29 @@ export interface SendPolicyChangeEmailInput {
 export async function sendPolicyChangeEmail(input: SendPolicyChangeEmailInput): Promise<void> {
   if (!mailerConfigured()) return;
 
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(key, { lng, ns: 'emails', ...opts });
+
   await dispatchMail({
     from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
     to: input.to,
-    subject: `Updated: ${input.policyTitle}`,
+    subject: t('policyChange.subject', { policyTitle: input.policyTitle }),
     text: [
-      `Hi ${input.firstName},`,
+      t('policyChange.greeting', { firstName: input.firstName }),
       '',
-      `We've updated our ${input.policyTitle}.`,
+      t('policyChange.intro', { policyTitle: input.policyTitle }),
       '',
+      // summary is authored per-change by whoever publishes the announcement (not hardcoded UI
+      // copy) — left untranslated, same reasoning as noteBody above.
       input.summary,
       '',
-      `Review the full document: ${input.appUrl}`,
+      `${t('policyChange.cta')}: ${input.appUrl}`,
     ].join('\n'),
     html: [
-      `<p>Hi ${escapeHtml(input.firstName)},</p>`,
-      `<p>We've updated our <strong>${escapeHtml(input.policyTitle)}</strong>.</p>`,
+      `<p>${t('policyChange.greeting', { firstName: escapeHtml(input.firstName) })}</p>`,
+      `<p>${t('policyChange.intro', { policyTitle: strong(input.policyTitle) })}</p>`,
       `<p>${escapeHtml(input.summary)}</p>`,
-      `<p><a href="${input.appUrl}">Review the full document</a></p>`,
+      `<p><a href="${input.appUrl}">${t('policyChange.cta')}</a></p>`,
     ].join('\n'),
   }, 'Failed to send policy change email:');
 }

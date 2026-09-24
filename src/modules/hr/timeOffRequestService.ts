@@ -10,6 +10,16 @@ import { canDecideTimeOff } from '../auth/permissionService.js';
 import type { AuthenticatedUser } from '../auth/authService.js';
 import type { TimeOffRequest, TimeOffRequestStatus } from '@prisma/client';
 
+// Employee doesn't carry its own `.locale` (that lives on User) — only worth the extra lookup
+// here since Time Off emails are frequent; other call sites elsewhere default to English instead
+// of adding a join for this (docs/general/spec-i18n.md Unidad 9). Returns null (→ English) for an
+// Employee with no linked User yet.
+async function localeForEmployee(employee: { userId: string | null } | null): Promise<string | null> {
+  if (!employee?.userId) return null;
+  const user = await prisma.user.findUnique({ where: { id: employee.userId }, select: { locale: true } });
+  return user?.locale ?? null;
+}
+
 function timeOffRequestLabel(employeeName: string, startDate: Date, endDate: Date): string {
   const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   return `${employeeName} — ${fmt(startDate)} to ${fmt(endDate)}`;
@@ -118,9 +128,9 @@ export async function createTimeOffRequest(
     // otherwise want visibility gets notified: the employee, their manager, and the owner.
     const owner = await prisma.user.findFirst({ where: { tenantId: input.tenantId, role: 'owner' } });
     const recipients = [
-      { email: employee.email, isEmployee: true },
-      ...(manager ? [{ email: manager.email, isEmployee: false }] : []),
-      ...(owner ? [{ email: owner.email, isEmployee: false }] : []),
+      { email: employee.email, isEmployee: true, locale: await localeForEmployee(employee) },
+      ...(manager ? [{ email: manager.email, isEmployee: false, locale: await localeForEmployee(manager) }] : []),
+      ...(owner ? [{ email: owner.email, isEmployee: false, locale: owner.locale }] : []),
     ];
     // sendTimeOffRequestDecidedEmail already swallows its own errors (see mailer.ts), but must
     // still be awaited — an un-awaited promise can be killed mid-flight by Vercel once the HTTP
@@ -136,6 +146,7 @@ export async function createTimeOffRequest(
         daysRequested,
         decision: 'approved',
         autoApproved: true,
+        locale: recipient.locale,
       });
     }
 
@@ -165,6 +176,7 @@ export async function createTimeOffRequest(
         startDate: formatDate(startDate),
         endDate: formatDate(endDate),
         daysRequested,
+        locale: await localeForEmployee(manager),
       });
     }
 
@@ -318,6 +330,7 @@ export async function decideTimeOffRequest(
       daysRequested: request.daysRequested,
       decision,
       decisionNote,
+      locale: await localeForEmployee(employee),
     });
 
     if (employee.userId) {

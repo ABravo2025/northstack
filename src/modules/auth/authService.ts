@@ -349,6 +349,7 @@ export async function requestPasswordReset(email: string): Promise<void> {
   await sendPasswordResetEmail({
     to: user.email,
     resetUrl: `${appBaseUrl}/reset-password/${token}`,
+    locale: user.locale,
   });
 }
 

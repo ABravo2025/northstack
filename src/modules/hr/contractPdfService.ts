@@ -255,6 +255,7 @@ export async function resendEmployeeContract(tenantId: string, employeeId: strin
     tenantName: tenant.name,
     employeeName: `${employee.firstName} ${employee.lastName}`,
     pdfBuffer,
+    locale: signer.locale,
   });
   return { success: true };
 }

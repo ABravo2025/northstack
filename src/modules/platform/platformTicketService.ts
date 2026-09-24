@@ -141,6 +141,7 @@ export async function createTicketNote(ticketId: string, createdById: string, de
         ticketSubject: ticket.subject,
         authorName: `${author.firstName} ${author.lastName}`,
         noteBody: description,
+        locale: reporter.locale,
       });
     }
   }

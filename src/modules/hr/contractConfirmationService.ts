@@ -278,6 +278,7 @@ export async function confirmContract(input: ConfirmContractInput): Promise<Conf
     tenantName: tenant.name,
     employeeName: `${employee.firstName} ${employee.lastName}`,
     pdfBuffer: signedPdfBuffer,
+    locale: result.user.locale,
   });
 
   return { success: true, user: result.user, session: result.session };

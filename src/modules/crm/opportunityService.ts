@@ -4,6 +4,7 @@ import { emitWebhookEvent } from '../integrations/webhookDispatchService.js';
 import { advanceRoundRobinCursor, resolveNextRoundRobinUserId } from './pipelineAssignmentService.js';
 import { createNotification } from '../notifications/notificationService.js';
 import { sendOpportunityStageChangedEmail } from '../../lib/mailer.js';
+import i18n, { resolveEmailLocale } from '../../lib/i18n.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { opportunityActivityFieldConfig } from '../activity/fieldConfigs/opportunityFieldConfig.js';
 import type { Opportunity, Prisma } from '@prisma/client';
@@ -345,7 +346,7 @@ export async function updateOpportunity(
         const [oldStage, newStage, recipient, actor] = await Promise.all([
           prisma.pipelineStageDefinition.findUnique({ where: { id: existing.stageId }, select: { name: true } }),
           stage ?? prisma.pipelineStageDefinition.findUnique({ where: { id: resolvedStageId }, select: { name: true } }),
-          prisma.user.findUnique({ where: { id: recipientId }, select: { email: true, firstName: true } }),
+          prisma.user.findUnique({ where: { id: recipientId }, select: { email: true, firstName: true, locale: true } }),
           input.changedByUserId
             ? prisma.user.findUnique({ where: { id: input.changedByUserId }, select: { firstName: true, lastName: true } })
             : null,
@@ -367,16 +368,18 @@ export async function updateOpportunity(
         if (recipient) {
           const company = await prisma.company.findUnique({ where: { id: updated.companyId }, select: { name: true } });
           const appUrl = `${process.env.APP_BASE_URL ?? 'http://localhost:5173'}/opportunities`;
+          const lng = resolveEmailLocale(recipient.locale);
           // sendOpportunityStageChangedEmail already swallows its own errors (see mailer.ts).
           await sendOpportunityStageChangedEmail({
             to: recipient.email,
             ownerFirstName: recipient.firstName,
             opportunityName: updated.name,
             companyName: company?.name ?? '',
-            fromStage: oldStage?.name ?? 'a previous stage',
-            toStage: newStage?.name ?? 'a new stage',
+            fromStage: oldStage?.name ?? i18n.t('opportunityStageChanged.previousStageFallback', { lng, ns: 'emails' }),
+            toStage: newStage?.name ?? i18n.t('opportunityStageChanged.newStageFallback', { lng, ns: 'emails' }),
             changedByName: actorName,
             appUrl,
+            locale: recipient.locale,
           });
         }
       } catch (error) {

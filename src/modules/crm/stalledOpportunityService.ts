@@ -62,7 +62,7 @@ export async function runStalledOpportunityReminders(now: Date = new Date()): Pr
         createdAt: true,
         stage: { select: { name: true } },
         company: { select: { name: true } },
-        owner: { select: { email: true, firstName: true } },
+        owner: { select: { email: true, firstName: true, locale: true } },
         // take: 1 here (not a separate per-opportunity query) — avoids an N+1
         // across every open deal in the pipeline.
         stageHistory: { orderBy: { enteredAt: 'desc' }, take: 1, select: { enteredAt: true } },
@@ -124,6 +124,7 @@ export async function runStalledOpportunityReminders(now: Date = new Date()): Pr
           stageName: opp.stage.name,
           daysInStage,
           appUrl,
+          locale: opp.owner.locale,
         });
       }
     }

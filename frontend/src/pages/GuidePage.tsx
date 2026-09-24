@@ -1593,6 +1593,86 @@ export default function GuidePage() {
           )}
 
           {/* ===== Integrations ===== */}
+          {isSpanish ? (
+          <section className="help-section" id="g-integrations">
+            <div className="help-eyebrow">
+              <PlugIcon />
+              Conectar
+            </div>
+            <h2>Integraciones y API</h2>
+            <p className="help-intro">
+              Todas las conexiones viven en un solo lugar: <strong>Configuración → Integraciones.</strong>
+            </p>
+
+            <div className="help-sub">
+              <h3>Google Calendar</h3>
+              <p>
+                Una conexión personal — cada persona conecta su propia cuenta de Google, no una compartida para
+                toda la empresa. Una vez conectada:
+              </p>
+              <ul>
+                <li>Tus propias tareas con una hora de vencimiento y tus propias ausencias aprobadas se sincronizan automáticamente con tu Google Calendar.</li>
+                <li>La sincronización es <strong>en los dos sentidos</strong> — editar o eliminar el evento sincronizado del lado de Google se refleja de vuelta en Northstack.</li>
+                <li>Las ausencias aprobadas se sincronizan <strong>para todo el equipo</strong>, así que la ausencia aprobada de un compañero también puede aparecer en tu calendario, no solo la tuya.</li>
+                <li>Los cumpleaños nunca se sincronizan con Google — son opcionales y quedan solo dentro del calendario de Resumen propio de Northstack.</li>
+                <li>Una tarea con <strong>Add Google Meet video call</strong> (Agregar videollamada de Google Meet) marcado recibe un link real de Meet, con la persona sobre la que trata invitada automáticamente (ver Tareas y notas).</li>
+                <li>Tus propios eventos personales de Google Calendar (nunca creados como una tarea de Northstack) también aparecen en el calendario de Resumen — hacé clic en uno para ver sus detalles en una vista previa chica.</li>
+              </ul>
+              <p>Desconectar detiene la sincronización futura pero no elimina los eventos ya creados en Google.</p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Pagos — tu propia cuenta de Stripe</h3>
+              <div className="help-tagrow">
+                <span className="help-pill help-pill-plan">Plan Growth</span>
+              </div>
+              <p>
+                Esto es independiente de la facturación de tu propia suscripción a Northstack — te permite conectar{' '}
+                <strong>tu</strong> cuenta de Stripe para ver la actividad de pagos de <strong>tus clientes</strong>{' '}
+                dentro de Northstack.
+              </p>
+              <ol className="help-steps">
+                <li>En Stripe, creá una <strong>Restricted API key</strong> (clave de API restringida) con acceso de solo lectura.</li>
+                <li>Pegala en <strong>Configuración → Integraciones → Stripe</strong> (Owner, o un rol con el permiso de Pagos).</li>
+                <li>Las Empresas se emparejan automáticamente con clientes de Stripe por email cuando hay exactamente una coincidencia; si podría haber varias, se te va a pedir que elijas manualmente desde el perfil de una Empresa.</li>
+              </ol>
+              <p>
+                El perfil de cada Empresa emparejada muestra entonces un historial de pagos completo y paginado con
+                links de vuelta al recibo de Stripe, y vas a recibir una notificación dentro de la app por un
+                reembolso, un cobro fallido, o una suscripción que pasa a estar vencida o se cancela. Estas
+                verificaciones corren dos veces al día, no al instante.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Claves de API y documentación para desarrolladores</h3>
+              <div className="help-tagrow">
+                <span className="help-pill help-pill-role">Owner, o un rol con acceso de Gestionar API</span>
+              </div>
+              <p>
+                Para tus propios scripts, o herramientas como Zapier o Make: creá una clave desde{' '}
+                <strong>Configuración → Integraciones → Claves de API</strong>, eligiendo exactamente qué recursos
+                puede leer o escribir (Tareas, Notas, Empresas, Contactos, Oportunidades, Empleados, Ausencias —
+                Pipelines y Nómina son de solo lectura a través de la API). La clave completa se muestra una sola
+                vez, al crearla — copiala de inmediato, porque Northstack nunca la vuelve a mostrar. Revocar una
+                clave es inmediato y no se puede deshacer.
+              </p>
+              <p>
+                La documentación completa de requests y responses vive en <strong>/developers</strong> (enlazada
+                desde la página de Claves de API) — requiere estar con la sesión iniciada, así que no es accesible
+                para el público.
+              </p>
+              <div className="help-callout help-callout-note">
+                <InfoIcon />
+                <p>
+                  Los webhooks salientes (Northstack empujando actualizaciones a tu propia URL) todavía no están
+                  disponibles — hoy no hay una pantalla para configurarlos. Si necesitás reaccionar a cambios desde
+                  otro lado, por ahora consultá la API periódicamente.
+                </p>
+              </div>
+            </div>
+          </section>
+          ) : (
           <section className="help-section" id="g-integrations">
             <div className="help-eyebrow">
               <PlugIcon />
@@ -1668,8 +1748,51 @@ export default function GuidePage() {
               </div>
             </div>
           </section>
+          )}
 
           {/* ===== Settings ===== */}
+          {isSpanish ? (
+          <section className="help-section" id="g-settings">
+            <div className="help-eyebrow">
+              <GearIcon />
+              Espacio de trabajo
+            </div>
+            <h2>Configuración y apariencia</h2>
+            <p className="help-intro">Configuración está agrupada entre lo que es personal para vos, y lo que pertenece a toda la empresa.</p>
+
+            <dl className="help-fieldgrid">
+              <div className="help-fielddef">
+                <dt>Mi cuenta</dt>
+                <dd>Perfil (nombre, teléfono, contraseña), Integraciones, y Facturación (si la gestionás vos) — visible para todos.</dd>
+              </div>
+              <div className="help-fielddef">
+                <dt>Empresa</dt>
+                <dd>Apariencia, Usuarios, Formularios públicos, Pipelines, Registro de actividad, y Roles y permisos — cada tile solo aparece si tenés el permiso correspondiente.</dd>
+              </div>
+            </dl>
+
+            <div className="help-sub">
+              <h3>Apariencia</h3>
+              <p>
+                El tema — Claro, Oscuro, o Sistema — es una elección personal que se guarda por dispositivo, no se
+                comparte con tu equipo. La moneda es para todo el espacio de trabajo (una moneda ISO, ej. USD o EUR)
+                y controla cómo se etiquetan las cifras de compensación en toda la empresa; cambiarla solo
+                reetiqueta los montos de ahí en adelante, no convierte las cifras pasadas.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Registro de actividad</h3>
+              <p>
+                Toda creación, edición y eliminación en el espacio de trabajo queda registrada con el valor
+                anterior y el nuevo de cada campo que cambió. Lo encontrás de dos formas: una pestaña{' '}
+                <strong>Actividad</strong> en cualquier registro individual, o la página completa y filtrable{' '}
+                <strong>Configuración → Registro de actividad</strong> (Owner/Admin). Cuánto tiempo hacia atrás
+                llega depende de tu plan — 7 días en Starter, 30 en Growth.
+              </p>
+            </div>
+          </section>
+          ) : (
           <section className="help-section" id="g-settings">
             <div className="help-eyebrow">
               <GearIcon />
@@ -1709,6 +1832,7 @@ export default function GuidePage() {
               </p>
             </div>
           </section>
+          )}
 
           {/* ===== Billing ===== */}
           <section className="help-section" id="g-billing">

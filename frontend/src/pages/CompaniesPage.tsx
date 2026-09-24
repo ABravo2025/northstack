@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api, type Company, type Contact, type Opportunity, type Pipeline, type SavedView, type ViewFilter, type ViewSort } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import ConfirmDialog from '../components/common/ConfirmDialog';
@@ -63,6 +64,7 @@ const emptyCompanyForm = {
 };
 
 export default function CompaniesPage({ user, token }: CompaniesPageProps) {
+  const { t } = useTranslation('crm');
   const toast = useToast();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [tenantUsers, setTenantUsers] = useState<any[]>([]);
@@ -191,7 +193,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
       const data = await api.listCompanies(token);
       setCompanies(data);
     } catch (error) {
-      toast.error('Failed to load companies: ' + (error as Error).message);
+      toast.error(t('companies.toasts.loadFailed', { error: (error as Error).message }));
     } finally {
       setLoading(false);
     }
@@ -202,7 +204,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
       const statuses = await api.listStatusDefinitions(token, 'company');
       setCompanyStatuses(statuses);
     } catch (error) {
-      toast.error('Failed to load statuses: ' + (error as Error).message);
+      toast.error(t('companies.toasts.statusesLoadFailed', { error: (error as Error).message }));
     }
   };
 
@@ -211,7 +213,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
       const sizes = await api.listFieldCatalogDefinitions(token, 'companySize');
       setCompanySizes(sizes);
     } catch (error) {
-      toast.error('Failed to load company sizes: ' + (error as Error).message);
+      toast.error(t('companies.toasts.sizesLoadFailed', { error: (error as Error).message }));
     }
   };
 
@@ -220,7 +222,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
       const data = await api.listViews(token, 'company');
       setViews(data);
     } catch (error) {
-      toast.error('Failed to load views: ' + (error as Error).message);
+      toast.error(t('companies.toasts.viewsLoadFailed', { error: (error as Error).message }));
     }
   };
 
@@ -229,7 +231,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
       const defs = await api.listCustomFieldDefinitions(token, 'company');
       setCompanyCustomFields(defs);
     } catch (error) {
-      toast.error('Failed to load custom fields: ' + (error as Error).message);
+      toast.error(t('companies.toasts.customFieldsLoadFailed', { error: (error as Error).message }));
     }
   };
 
@@ -241,10 +243,10 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
   }) => {
     try {
       await api.createCustomFieldDefinition(token, { ...input, entityType: 'company' });
-      toast.success(`Field "${input.name}" added.`);
+      toast.success(t('companies.toasts.fieldAdded', { name: input.name }));
       loadCompanyCustomFields();
     } catch (error) {
-      toast.error('Failed to add field: ' + (error as Error).message);
+      toast.error(t('companies.toasts.fieldAddFailed', { error: (error as Error).message }));
     }
   };
 
@@ -254,20 +256,20 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
   ) => {
     try {
       await api.updateCustomFieldDefinition(token, id, data);
-      toast.success('Field updated.');
+      toast.success(t('companies.toasts.fieldUpdated'));
       loadCompanyCustomFields();
     } catch (error) {
-      toast.error('Failed to update field: ' + (error as Error).message);
+      toast.error(t('companies.toasts.fieldUpdateFailed', { error: (error as Error).message }));
     }
   };
 
   const handleDeactivateCustomFieldColumn = async (id: string) => {
     try {
       await api.updateCustomFieldDefinition(token, id, { isActive: false });
-      toast.success('Field deleted.');
+      toast.success(t('companies.toasts.fieldDeleted'));
       loadCompanyCustomFields();
     } catch (error) {
-      toast.error('Failed to delete field: ' + (error as Error).message);
+      toast.error(t('companies.toasts.fieldDeleteFailed', { error: (error as Error).message }));
     }
   };
 
@@ -288,7 +290,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
     setSlideOverMode('add');
   };
 
-  usePrimaryAction({ label: 'Add company', onClick: handleOpenAdd });
+  usePrimaryAction({ label: t('companies.primaryAction'), onClick: handleOpenAdd });
 
   // Ready once Name + the founding contact's 3 fields (a Company can't be
   // created without one — see emptyCompanyForm above) + any required custom
@@ -390,7 +392,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
       try {
         await createCompanyRecord(cfValues);
       } catch (error) {
-        toast.error('Failed to create company: ' + (error as Error).message);
+        toast.error(t('companies.toasts.companyCreateFailed', { error: (error as Error).message }));
         throw error;
       }
     });
@@ -406,7 +408,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
         const company = await createCompanyRecord(customFieldValues);
         id = company.id;
       }
-      toast.success('Company added.');
+      toast.success(t('companies.toasts.companyAdded'));
       const [freshList] = await Promise.all([
         api.listCompanies(token),
         api.listContacts(token).then(setContacts).catch(() => {}),
@@ -418,7 +420,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
       setCustomFieldValues({});
       setViewingCompanyId(id);
     } catch (error) {
-      toast.error('Failed to create company: ' + (error as Error).message);
+      toast.error(t('companies.toasts.companyCreateFailed', { error: (error as Error).message }));
     }
   };
 
@@ -426,13 +428,13 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
     if (!deletingCompany) return;
     try {
       await api.deleteCompany(token, deletingCompany.id, { deleteLinkedOpportunities, cascadeToChildCompanies });
-      toast.success(`${deletingCompany.name} deleted.`);
+      toast.success(t('companies.toasts.companyDeleted', { name: deletingCompany.name }));
       setDeletingCompany(null);
       setDeleteLinkedOpportunities(false);
       setCascadeToChildCompanies(false);
       refreshAssociatedData();
     } catch (error) {
-      toast.error('Failed to delete company: ' + (error as Error).message);
+      toast.error(t('companies.toasts.companyDeleteFailed', { error: (error as Error).message }));
       setDeletingCompany(null);
       setDeleteLinkedOpportunities(false);
       setCascadeToChildCompanies(false);
@@ -460,7 +462,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
           }}
           required={field.required}
         >
-          <option value="">-- select --</option>
+          <option value="">{t('common.selectPlaceholder')}</option>
           {(JSON.parse(field.options || '[]') as string[]).map((opt) => (
             <option key={opt} value={opt}>
               {opt}
@@ -538,7 +540,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
     const groupField = activeView?.groupByField;
     if (!groupField) return;
     if (groupField === 'status') {
-      toast.error("A Company's status is derived automatically from deal outcomes — it can't be set by hand.");
+      toast.error(t('companies.kanbanStatusError'));
       return;
     }
     if (!groupField.startsWith('cf:')) return;
@@ -552,7 +554,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
       }
       loadCompanies();
     } catch (error) {
-      toast.error('Failed to move: ' + (error as Error).message);
+      toast.error(t('companies.toasts.moveFailed', { error: (error as Error).message }));
     }
   };
 
@@ -566,9 +568,9 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
       const view = await api.createView(token, { entityType: 'company', ...input });
       setViews((current) => [...current, view]);
       setActiveViewId(view.id);
-      toast.success(`View "${view.name}" created.`);
+      toast.success(t('companies.toasts.viewCreated', { name: view.name }));
     } catch (error) {
-      toast.error('Failed to create view: ' + (error as Error).message);
+      toast.error(t('companies.toasts.viewCreateFailed', { error: (error as Error).message }));
     }
   };
 
@@ -577,7 +579,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
       const updated = await api.updateView(token, id, { name });
       setViews((current) => current.map((v) => (v.id === id ? updated : v)));
     } catch (error) {
-      toast.error('Failed to rename view: ' + (error as Error).message);
+      toast.error(t('companies.toasts.viewRenameFailed', { error: (error as Error).message }));
     }
   };
 
@@ -594,9 +596,9 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
       });
       setViews((current) => [...current, created]);
       setActiveViewId(created.id);
-      toast.success(`View duplicated as "${created.name}".`);
+      toast.success(t('companies.toasts.viewDuplicated', { name: created.name }));
     } catch (error) {
-      toast.error('Failed to duplicate view: ' + (error as Error).message);
+      toast.error(t('companies.toasts.viewDuplicateFailed', { error: (error as Error).message }));
     }
   };
 
@@ -605,16 +607,16 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
       await api.deleteView(token, id);
       setViews((current) => current.filter((v) => v.id !== id));
       if (activeViewId === id) setActiveViewId(null);
-      toast.success('View deleted.');
+      toast.success(t('companies.toasts.viewDeleted'));
     } catch (error) {
-      toast.error('Failed to delete view: ' + (error as Error).message);
+      toast.error(t('companies.toasts.viewDeleteFailed', { error: (error as Error).message }));
     }
   };
 
   const columns = [
     {
       key: 'name',
-      label: 'Name',
+      label: t('companies.columns.name'),
       render: (company: Company) => (
         <div className="name-cell">
           <Avatar firstName={company.name} lastName="" />
@@ -626,14 +628,14 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
     },
     {
       key: 'status',
-      label: 'Status',
+      label: t('companies.columns.status'),
       render: (company: Company) =>
         company.statusDefn && <StatusChip color={company.statusDefn.color || '#6b7280'} label={company.statusDefn.name} />,
     },
-    { key: 'industry', label: 'Industry', render: (company: Company) => company.industry || '—' },
+    { key: 'industry', label: t('companies.columns.industry'), render: (company: Company) => company.industry || '—' },
     {
       key: 'website',
-      label: 'Website',
+      label: t('companies.columns.website'),
       render: (company: Company) =>
         company.website ? (
           <a href={company.website} target="_blank" rel="noopener noreferrer" className="table-link">
@@ -643,17 +645,17 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
           '—'
         ),
     },
-    { key: 'phone', label: 'Phone', render: (company: Company) => company.phone || '—' },
-    { key: 'size', label: 'Size', render: (company: Company) => company.sizeDefn?.name || '—' },
+    { key: 'phone', label: t('companies.columns.phone'), render: (company: Company) => company.phone || '—' },
+    { key: 'size', label: t('companies.columns.size'), render: (company: Company) => company.sizeDefn?.name || '—' },
     {
       key: 'accountOwner',
-      label: 'Account Owner',
+      label: t('companies.columns.accountOwner'),
       render: (company: Company) =>
         company.accountOwner ? `${company.accountOwner.firstName} ${company.accountOwner.lastName}` : '—',
     },
     {
       key: 'tags',
-      label: 'Tags',
+      label: t('companies.columns.tags'),
       render: (company: any) =>
         company.tags && company.tags.length > 0 ? (
           <div className="flex flex-wrap items-center">
@@ -767,7 +769,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
               setDeleteLinkedOpportunities(false);
             }}
           >
-            <span className="tip">Delete</span>
+            <span className="tip">{t('companies.deleteTooltip')}</span>
             <TrashIcon />
           </button>
         </div>
@@ -782,7 +784,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
           <span className="ghost-plus-box">
             <PlusIcon className="h-3 w-3" />
           </span>
-          Add
+          {t('common.add')}
         </span>
       </td>
     </tr>
@@ -794,39 +796,48 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
         const linkedContacts = contacts.filter((c) => c.companyId === deletingCompany.id);
         const linkedOpportunities = opportunities.filter((o) => o.companyId === deletingCompany.id);
         const childCompanies = companies.filter((c) => c.parentCompanyId === deletingCompany.id);
-        const messageParts = [`Are you sure you want to delete ${deletingCompany.name}? This can't be undone.`];
+        const messageParts = [t('companies.confirmDelete.message', { name: deletingCompany.name })];
         if (linkedContacts.length > 0) {
           messageParts.push(
-            `${linkedContacts.length} contact(s) (${linkedContacts.map((c) => `${c.firstName} ${c.lastName}`).join(', ')}) will be unlinked — they stay, just without a company.`,
+            t('companies.confirmDelete.linkedContactsNote', {
+              count: linkedContacts.length,
+              names: linkedContacts.map((c) => `${c.firstName} ${c.lastName}`).join(', '),
+            }),
           );
         }
         if (linkedOpportunities.length > 0) {
           messageParts.push(
-            `${linkedOpportunities.length} opportunity(ies) (${linkedOpportunities.map((o) => o.name).join(', ')}) can't exist without a company and will be deleted too.`,
+            t('companies.confirmDelete.linkedOpportunitiesNote', {
+              count: linkedOpportunities.length,
+              names: linkedOpportunities.map((o) => o.name).join(', '),
+            }),
           );
         }
         if (childCompanies.length > 0) {
           messageParts.push(
-            `${childCompanies.length} associated compan${childCompanies.length === 1 ? 'y' : 'ies'} (${childCompanies.map((c) => c.name).join(', ')}) will just lose this parent by default — their own status/existence isn't affected.`,
+            t('companies.confirmDelete.childCompaniesNote', {
+              count: childCompanies.length,
+              names: childCompanies.map((c) => c.name).join(', '),
+            }),
           );
         }
         const checkboxes = [
           linkedOpportunities.length > 0 && {
-            label: `Also delete ${linkedOpportunities.length} linked opportunity(ies)`,
+            label: t('companies.confirmDelete.alsoDeleteOpportunities', { count: linkedOpportunities.length }),
             checked: deleteLinkedOpportunities,
             onChange: setDeleteLinkedOpportunities,
           },
           childCompanies.length > 0 && {
-            label: `Apply the same delete to ${childCompanies.length} associated compan${childCompanies.length === 1 ? 'y' : 'ies'}`,
+            label: t('companies.confirmDelete.applySameDeleteChildCompanies', { count: childCompanies.length }),
             checked: cascadeToChildCompanies,
             onChange: setCascadeToChildCompanies,
           },
         ].filter(Boolean) as { label: string; checked: boolean; onChange: (checked: boolean) => void }[];
         return (
           <ConfirmDialog
-            title="Delete company"
+            title={t('companies.confirmDelete.title')}
             message={messageParts.join(' ')}
-            confirmLabel="Delete"
+            confirmLabel={t('common.delete')}
             confirmDisabled={linkedOpportunities.length > 0 && !deleteLinkedOpportunities}
             checkboxes={checkboxes.length > 0 ? checkboxes : undefined}
             onConfirm={handleDeleteCompany}
@@ -841,16 +852,16 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
 
       <Modal
         open={slideOverMode === 'add'}
-        title="Add Company"
+        title={t('companies.modal.addTitle')}
         onClose={closeSlideOver}
         wide
         footer={
           <>
             <button type="button" className="btn-secondary" onClick={closeSlideOver}>
-              Cancel
+              {t('common.cancel')}
             </button>
             <button type="submit" form="company-form" className="btn-primary" disabled={autoCreateGuard.isBusy}>
-              Create
+              {t('common.create')}
             </button>
           </>
         }
@@ -858,9 +869,9 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
         {slideOverMode === 'add' && (
           <form id="company-form" onSubmit={handleCreateCompany}>
             <div className="field-group">
-              <h4 className="field-group-title">Identity</h4>
+              <h4 className="field-group-title">{t('companies.groups.identity')}</h4>
               <div className="field-group-body">
-                <Field label="Name" required full>
+                <Field label={t('companies.fields.name')} required full>
                   <input
                     id="company-name"
                     className="overview-field-input"
@@ -871,7 +882,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
                     required
                   />
                 </Field>
-                <Field label="Industry">
+                <Field label={t('companies.fields.industry')}>
                   <input
                     id="company-industry"
                     className="overview-field-input"
@@ -880,7 +891,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
                     onChange={(e) => setCompanyForm({ ...companyForm, industry: e.target.value })}
                   />
                 </Field>
-                <Field label="Website">
+                <Field label={t('companies.fields.website')}>
                   <input
                     id="company-website"
                     className="overview-field-input"
@@ -890,7 +901,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
                     placeholder="https://example.com"
                   />
                 </Field>
-                <Field label="Phone">
+                <Field label={t('companies.fields.phone')}>
                   <input
                     id="company-phone"
                     className="overview-field-input"
@@ -903,9 +914,9 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
             </div>
 
             <div className="field-group">
-              <h4 className="field-group-title">Founding contact</h4>
+              <h4 className="field-group-title">{t('companies.groups.foundingContact')}</h4>
               <div className="field-group-body">
-                <Field label="First Name" required>
+                <Field label={t('companies.fields.firstName')} required>
                   <input
                     id="company-contact-firstName"
                     className="overview-field-input"
@@ -916,7 +927,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
                     required
                   />
                 </Field>
-                <Field label="Last Name" required>
+                <Field label={t('companies.fields.lastName')} required>
                   <input
                     id="company-contact-lastName"
                     className="overview-field-input"
@@ -927,7 +938,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
                     required
                   />
                 </Field>
-                <Field label="Email" required full>
+                <Field label={t('companies.fields.email')} required full>
                   <input
                     id="company-contact-email"
                     className="overview-field-input"
@@ -942,9 +953,9 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
             </div>
 
             <div className="field-group">
-              <h4 className="field-group-title">Address</h4>
+              <h4 className="field-group-title">{t('companies.groups.address')}</h4>
               <div className="field-group-body">
-                <Field label="Billing Address" full>
+                <Field label={t('companies.fields.billingAddress')} full>
                   <input
                     id="company-billingAddress"
                     className="overview-field-input"
@@ -957,16 +968,16 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
             </div>
 
             <div className="field-group">
-              <h4 className="field-group-title">Ownership</h4>
+              <h4 className="field-group-title">{t('companies.groups.ownership')}</h4>
               <div className="field-group-body">
-                <Field label="Size">
+                <Field label={t('companies.fields.size')}>
                   <select
                     id="company-sizeId"
                     className="overview-field-input"
                     value={companyForm.sizeId}
                     onChange={(e) => setCompanyForm({ ...companyForm, sizeId: e.target.value })}
                   >
-                    <option value="">-- none --</option>
+                    <option value="">{t('common.nonePlaceholder')}</option>
                     {companySizes
                       .filter((s) => s.isActive)
                       .map((s) => (
@@ -976,14 +987,14 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
                       ))}
                   </select>
                 </Field>
-                <Field label="Account Owner">
+                <Field label={t('companies.fields.accountOwner')}>
                   <select
                     id="company-accountOwnerId"
                     className="overview-field-input"
                     value={companyForm.accountOwnerId}
                     onChange={(e) => setCompanyForm({ ...companyForm, accountOwnerId: e.target.value })}
                   >
-                    <option value="">-- none --</option>
+                    <option value="">{t('common.nonePlaceholder')}</option>
                     {tenantUsers.map((u) => (
                       <option key={u.id} value={u.id}>
                         {u.firstName} {u.lastName}
@@ -996,7 +1007,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
 
             {activeCompanyCustomFields.length > 0 && (
               <div className="field-group">
-                <h4 className="field-group-title">Custom fields</h4>
+                <h4 className="field-group-title">{t('companies.groups.customFields')}</h4>
                 <div className="field-group-body">
                   {activeCompanyCustomFields.map((field) => (
                     <Field key={field.id} label={field.name} required={field.required}>
@@ -1048,7 +1059,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
         })()}
 
       <ViewsBar
-        allLabel="All Companies"
+        allLabel={t('companies.toolbar.allCompanies')}
         views={views}
         activeViewId={activeViewId}
         onSelectView={setActiveViewId}
@@ -1062,19 +1073,19 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
       />
 
       <div className="page-toolbar">
-        <h2>Companies</h2>
+        <h2>{t('companies.toolbar.heading')}</h2>
         {companies.length > 0 && (
           <div className="toolbar-search">
             <SearchIcon />
             <label htmlFor="company-search" className="sr-only">
-              Search companies
+              {t('companies.toolbar.searchLabel')}
             </label>
             <input
               id="company-search"
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name, industry or website..."
+              placeholder={t('companies.toolbar.searchPlaceholder')}
             />
           </div>
         )}
@@ -1084,8 +1095,8 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
             options={allTagOptions}
             selected={selectedTagFilter}
             onChange={setSelectedTagFilter}
-            placeholder="Filter by tag"
-            emptyMessage="No tags yet."
+            placeholder={t('companies.toolbar.filterByTag')}
+            emptyMessage={t('companies.toolbar.noTagsYet')}
           />
         )}
         {viewType !== 'kanban' && <FilterBar fields={fields} filters={viewFilters} onChange={setViewFilters} />}
@@ -1096,8 +1107,8 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
           <CsvImportExportMenu
             token={token}
             onImported={loadCompanies}
-            entityLabelPlural="Companies"
-            entityLabelSingular="Company"
+            entityLabelPlural={t('companies.toolbar.csvPlural')}
+            entityLabelSingular={t('companies.toolbar.csvSingular')}
             exportCsv={api.exportCompaniesCsv}
             importCsv={api.importCompaniesCsv}
             csvTemplate={api.companiesCsvTemplate}
@@ -1111,7 +1122,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
           <button className="btn-primary" onClick={handleOpenAdd}>
             <span className="inline-flex items-center gap-1.5">
               <PlusIcon className="h-4 w-4" />
-              Add
+              {t('common.add')}
             </span>
           </button>
         )}
@@ -1123,17 +1134,17 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
         canEditCompanies ? (
           <EmptyState
             icon={<BuildingIcon />}
-            title="No companies yet"
-            body="Add the companies you work with to start tracking deals and contacts."
-            primaryLabel="Add company"
+            title={t('companies.emptyState.title')}
+            body={t('companies.emptyState.body')}
+            primaryLabel={t('companies.emptyState.primaryLabel')}
             onPrimary={handleOpenAdd}
           />
         ) : (
-          <p className="mt-4">No companies yet.</p>
+          <p className="mt-4">{t('companies.emptyState.plain')}</p>
         )
       ) : viewType === 'kanban' ? (
         !groupFieldForKanban ? (
-          <p className="mt-4">This view's group-by field no longer exists.</p>
+          <p className="mt-4">{t('companies.groupByBroken')}</p>
         ) : (
           <KanbanBoard
             columns={groupFieldForKanban.selectOptions?.map((opt) => ({ key: opt.value, label: opt.value, color: opt.color })) ?? []}
@@ -1154,7 +1165,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
                       <span className="ghost-plus-box">
                         <PlusIcon className="h-3 w-3" />
                       </span>
-                      Add
+                      {t('common.add')}
                     </div>
                   )
                 : undefined
@@ -1162,13 +1173,13 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
           />
         )
       ) : viewType === 'list' && !groupFieldForKanban ? (
-        <p className="mt-4">This view's group-by field no longer exists.</p>
+        <p className="mt-4">{t('companies.groupByBroken')}</p>
       ) : sortedCompanies.length === 0 ? (
         <EmptyState
           icon={<SearchIcon />}
-          title={`No matches for "${search}"`}
-          body="Try a different term, or clear the filters."
-          primaryLabel="Clear filters"
+          title={t('companies.noMatches.title', { search })}
+          body={t('companies.noMatches.body')}
+          primaryLabel={t('companies.noMatches.clearFilters')}
           primaryVariant="secondary"
           onPrimary={() => {
             setSearch('');
@@ -1252,7 +1263,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
                           <FieldCatalogMenu
                             token={token}
                             kind="companySize"
-                            label="Size"
+                            label={t('companies.fields.size')}
                             entries={companySizes}
                             onChanged={loadCompanySizes}
                             onHide={() => hideColumn('size')}

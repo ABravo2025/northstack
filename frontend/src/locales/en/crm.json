@@ -1,0 +1,510 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "create": "Create",
+    "delete": "Delete",
+    "add": "Add",
+    "link": "Link",
+    "linking": "Linking…",
+    "loading": "Loading…",
+    "searching": "Searching…",
+    "close": "Close",
+    "selectPlaceholder": "-- select --",
+    "nonePlaceholder": "-- none --",
+    "openArrow": "Open →",
+    "archived": "Archived"
+  },
+  "leadStatus": {
+    "new": "New",
+    "contacted": "Contacted",
+    "qualified": "Qualified",
+    "disqualified": "Disqualified"
+  },
+  "detail": {
+    "closeAria": "Close",
+    "mobileTabs": {
+      "overview": "Overview",
+      "notes": "Notes",
+      "notesWithCount": "Notes ({{count}})",
+      "tasks": "Tasks",
+      "tasksWithCount": "Tasks ({{count}})",
+      "activity": "Activity",
+      "activityWithCount": "Activity ({{count}})"
+    }
+  },
+  "companies": {
+    "toolbar": {
+      "heading": "Companies",
+      "searchLabel": "Search companies",
+      "searchPlaceholder": "Search by name, industry or website...",
+      "filterByTag": "Filter by tag",
+      "noTagsYet": "No tags yet.",
+      "allCompanies": "All Companies",
+      "csvPlural": "Companies",
+      "csvSingular": "Company"
+    },
+    "primaryAction": "Add company",
+    "modal": {
+      "addTitle": "Add Company"
+    },
+    "groups": {
+      "identity": "Identity",
+      "foundingContact": "Founding contact",
+      "address": "Address",
+      "ownership": "Ownership",
+      "customFields": "Custom fields"
+    },
+    "fields": {
+      "name": "Name",
+      "industry": "Industry",
+      "website": "Website",
+      "phone": "Phone",
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email",
+      "billingAddress": "Billing Address",
+      "size": "Size",
+      "accountOwner": "Account Owner"
+    },
+    "columns": {
+      "name": "Name",
+      "status": "Status",
+      "industry": "Industry",
+      "website": "Website",
+      "phone": "Phone",
+      "size": "Size",
+      "accountOwner": "Account Owner",
+      "tags": "Tags"
+    },
+    "emptyState": {
+      "title": "No companies yet",
+      "body": "Add the companies you work with to start tracking deals and contacts.",
+      "primaryLabel": "Add company",
+      "plain": "No companies yet."
+    },
+    "noMatches": {
+      "title": "No matches for \"{{search}}\"",
+      "body": "Try a different term, or clear the filters.",
+      "clearFilters": "Clear filters"
+    },
+    "groupByBroken": "This view's group-by field no longer exists.",
+    "deleteTooltip": "Delete",
+    "kanbanStatusError": "A Company's status is derived automatically from deal outcomes — it can't be set by hand.",
+    "confirmDelete": {
+      "title": "Delete company",
+      "message": "Are you sure you want to delete {{name}}? This can't be undone.",
+      "linkedContactsNote_one": "{{count}} contact ({{names}}) will be unlinked — it stays, just without a company.",
+      "linkedContactsNote_other": "{{count}} contacts ({{names}}) will be unlinked — they stay, just without a company.",
+      "linkedOpportunitiesNote_one": "{{count}} opportunity ({{names}}) can't exist without a company and will be deleted too.",
+      "linkedOpportunitiesNote_other": "{{count}} opportunities ({{names}}) can't exist without a company and will be deleted too.",
+      "childCompaniesNote_one": "{{count}} associated company ({{names}}) will just lose this parent by default — their own status/existence isn't affected.",
+      "childCompaniesNote_other": "{{count}} associated companies ({{names}}) will just lose this parent by default — their own status/existence isn't affected.",
+      "alsoDeleteOpportunities_one": "Also delete {{count}} linked opportunity",
+      "alsoDeleteOpportunities_other": "Also delete {{count}} linked opportunities",
+      "applySameDeleteChildCompanies_one": "Apply the same delete to {{count}} associated company",
+      "applySameDeleteChildCompanies_other": "Apply the same delete to {{count}} associated companies"
+    },
+    "toasts": {
+      "loadFailed": "Failed to load companies: {{error}}",
+      "statusesLoadFailed": "Failed to load statuses: {{error}}",
+      "sizesLoadFailed": "Failed to load company sizes: {{error}}",
+      "viewsLoadFailed": "Failed to load views: {{error}}",
+      "customFieldsLoadFailed": "Failed to load custom fields: {{error}}",
+      "fieldAdded": "Field \"{{name}}\" added.",
+      "fieldAddFailed": "Failed to add field: {{error}}",
+      "fieldUpdated": "Field updated.",
+      "fieldUpdateFailed": "Failed to update field: {{error}}",
+      "fieldDeleted": "Field deleted.",
+      "fieldDeleteFailed": "Failed to delete field: {{error}}",
+      "viewCreated": "View \"{{name}}\" created.",
+      "viewCreateFailed": "Failed to create view: {{error}}",
+      "viewRenameFailed": "Failed to rename view: {{error}}",
+      "viewDuplicated": "View duplicated as \"{{name}}\".",
+      "viewDuplicateFailed": "Failed to duplicate view: {{error}}",
+      "viewDeleted": "View deleted.",
+      "viewDeleteFailed": "Failed to delete view: {{error}}",
+      "moveFailed": "Failed to move: {{error}}",
+      "companyAdded": "Company added.",
+      "companyCreateFailed": "Failed to create company: {{error}}",
+      "companyDeleted": "{{name}} deleted.",
+      "companyDeleteFailed": "Failed to delete company: {{error}}"
+    }
+  },
+  "contacts": {
+    "toolbar": {
+      "heading": "Contacts",
+      "searchLabel": "Search contacts",
+      "searchPlaceholder": "Search by name, email or company...",
+      "filterByTag": "Filter by tag",
+      "noTagsYet": "No tags yet.",
+      "allContacts": "All Contacts",
+      "csvPlural": "Contacts",
+      "csvSingular": "Contact"
+    },
+    "primaryAction": "Add contact",
+    "primaryBadge": "Primary",
+    "modal": {
+      "addTitle": "Add Contact"
+    },
+    "groups": {
+      "identity": "Identity",
+      "role": "Role",
+      "source": "Source",
+      "customFields": "Custom fields"
+    },
+    "fields": {
+      "firstName": "First Name",
+      "lastName": "Last Name",
+      "email": "Email",
+      "phone": "Phone",
+      "title": "Title",
+      "titlePlaceholder": "Role within the company",
+      "leadStatus": "Lead Status",
+      "leadSource": "Lead Source",
+      "primaryContact": "Primary contact for this company",
+      "assignToCompanyQuestion": "Assign to an existing company?",
+      "assignNo": "No — lead without a confirmed company",
+      "assignYes": "Yes",
+      "company": "Company",
+      "companySearchPlaceholder": "Search companies…"
+    },
+    "columns": {
+      "name": "Name",
+      "email": "Email",
+      "phone": "Phone",
+      "company": "Company",
+      "title": "Title",
+      "leadStatus": "Lead Status",
+      "leadSource": "Lead Source",
+      "tags": "Tags"
+    },
+    "emptyState": {
+      "title": "No contacts yet",
+      "body": "Add the people you work with at your companies.",
+      "primaryLabel": "Add contact",
+      "plain": "No contacts yet."
+    },
+    "noMatches": {
+      "title": "No matches for \"{{search}}\"",
+      "body": "Try a different term, or clear the filters.",
+      "clearFilters": "Clear filters"
+    },
+    "groupByBroken": "This view's group-by field no longer exists.",
+    "deactivateTooltip": "Deactivate",
+    "confirmDeactivate": {
+      "title": "Deactivate contact",
+      "confirmLabel": "Deactivate",
+      "message": "Are you sure you want to deactivate {{name}}? They'll stop appearing in lists, but nothing is deleted.",
+      "willAlsoDeactivate_one": "{{count}} opportunity ({{names}}) will also be deactivated — this is their only active contact.",
+      "willAlsoDeactivate_other": "{{count}} opportunities ({{names}}) will also be deactivated — this is their only active contact.",
+      "restStayActive": "The rest of their linked opportunities just lose this contact, they stay active."
+    },
+    "toasts": {
+      "loadFailed": "Failed to load contacts: {{error}}",
+      "customFieldsLoadFailed": "Failed to load custom fields: {{error}}",
+      "viewsLoadFailed": "Failed to load views: {{error}}",
+      "fieldAdded": "Field \"{{name}}\" added.",
+      "fieldAddFailed": "Failed to add field: {{error}}",
+      "fieldUpdated": "Field updated.",
+      "fieldUpdateFailed": "Failed to update field: {{error}}",
+      "fieldDeleted": "Field deleted.",
+      "fieldDeleteFailed": "Failed to delete field: {{error}}",
+      "contactCreateFailed": "Failed to create contact: {{error}}",
+      "contactAdded": "Contact added.",
+      "moveFailed": "Failed to move: {{error}}",
+      "viewCreated": "View \"{{name}}\" created.",
+      "viewCreateFailed": "Failed to create view: {{error}}",
+      "viewRenameFailed": "Failed to rename view: {{error}}",
+      "viewDuplicated": "View duplicated as \"{{name}}\".",
+      "viewDuplicateFailed": "Failed to duplicate view: {{error}}",
+      "viewDeleted": "View deleted.",
+      "viewDeleteFailed": "Failed to delete view: {{error}}",
+      "contactDeactivated": "{{name}} deactivated.",
+      "contactDeactivateFailed": "Failed to deactivate contact: {{error}}"
+    }
+  },
+  "opportunities": {
+    "toolbar": {
+      "heading": "Opportunities",
+      "weightedValue": "Weighted value: {{amount}}",
+      "weightedValueTitle": "Σ (amount × stage probability) across open deals in this pipeline"
+    },
+    "primaryAction": "Add opportunity",
+    "modal": {
+      "addTitle": "Add Opportunity"
+    },
+    "groups": {
+      "deal": "Deal",
+      "stage": "Stage",
+      "nextStep": "Next step"
+    },
+    "fields": {
+      "pipeline": "Pipeline",
+      "dealName": "Deal Name",
+      "contact": "Contact",
+      "selectExistingContact": "-- select an existing contact --",
+      "newContactFirstName": "New contact — first name",
+      "newContactLastName": "New contact — last name",
+      "newContactEmail": "New contact — email",
+      "companyName": "Company name",
+      "companyNamePlaceholder": "Company name (not yet a confirmed account)",
+      "company": "Company",
+      "owner": "Owner",
+      "autoAssign": "-- auto-assign --",
+      "ownerAutoAssignNote": "This pipeline will assign an owner automatically if left blank.",
+      "amount": "Amount",
+      "currency": "Currency",
+      "lossReason": "Loss Reason",
+      "winReason": "Win Reason",
+      "closeNote": "Close Note",
+      "closeNotePlaceholder": "Optional details about how this deal closed",
+      "estimatedCloseDate": "Estimated Close Date",
+      "nextStepDate": "Next Step Date",
+      "nextStep": "Next Step",
+      "nextStepPlaceholder": "What's the next action?"
+    },
+    "archivedTab": "Archived",
+    "archivedReadOnlyNote": "(read-only, pipeline archived)",
+    "noActivePipelines": "No active pipelines. Create one in Settings → Pipelines.",
+    "kanban": {
+      "enteredToday": "Entered today",
+      "daysInStage": "{{count}}d in stage",
+      "onlyContactTitle": "Only one contact on this deal",
+      "multipleContacts": "{{count}} contacts"
+    },
+    "confirmDelete": {
+      "title": "Delete opportunity",
+      "message": "Are you sure you want to delete \"{{name}}\"? This can't be undone."
+    },
+    "toasts": {
+      "loadFailed": "Failed to load: {{error}}",
+      "saveFailed": "Failed to save opportunity: {{error}}",
+      "moveFailed": "Failed to move: {{error}}",
+      "deleteFailed": "Failed to delete: {{error}}",
+      "created": "Opportunity created.",
+      "deleted": "{{name}} deleted."
+    }
+  },
+  "payments": {
+    "pageTitle": "Payments",
+    "noPermission": "You don't have permission to view Payments.",
+    "toastLoadFailed": "Failed to load payments overview: {{error}}",
+    "connectStripeFirst": "Connect your Stripe account first — go to Settings → Integrations.",
+    "stats": {
+      "refunds": "Refunds",
+      "failedPayments": "Failed payments",
+      "activeSubscriptions": "Active subscriptions",
+      "companiesLinked": "Companies linked"
+    },
+    "noCompaniesLinked": "No Companies linked to Stripe yet — open a Company and use \"Search on Stripe\" under Payments.",
+    "columns": {
+      "company": "Company",
+      "refunds": "Refunds",
+      "failed": "Failed",
+      "subscription": "Subscription"
+    },
+    "refundsCount_one": "{{count}} refund",
+    "refundsCount_other": "{{count}} refunds",
+    "failedCountLabel": "{{count}} failed",
+    "noSubscription": "no subscription"
+  },
+  "companyDetail": {
+    "groups": {
+      "identity": "Identity",
+      "address": "Address",
+      "ownership": "Ownership",
+      "payments": "Payments",
+      "hierarchy": "Hierarchy",
+      "customFields": "Custom fields"
+    },
+    "fields": {
+      "industry": "Industry",
+      "website": "Website",
+      "phone": "Phone",
+      "billingAddress": "Billing Address",
+      "size": "Size",
+      "accountOwner": "Account Owner",
+      "parentCompany": "Parent company",
+      "noParentOption": "— No parent (top-level) —",
+      "noParentPlaceholder": "No parent — top-level company",
+      "associatedCompanies": "Associated companies ({{count}})"
+    },
+    "companyFallback": "Company",
+    "deleteMenuItem": "Delete",
+    "contactsSection": {
+      "heading": "Contacts ({{count}})",
+      "addTooltip": "Add contact",
+      "noneYet": "No contacts linked yet.",
+      "unlinkTooltip": "Unlink",
+      "linkSearchPlaceholder": "Search by name or email…",
+      "orCreateNew": "or create a new one:",
+      "firstName": "First name",
+      "lastName": "Last name",
+      "email": "Email",
+      "createContact": "Create contact"
+    },
+    "opportunitiesSection": {
+      "heading": "Opportunities ({{count}})",
+      "addTooltip": "Add opportunity",
+      "noneYet": "No opportunities yet.",
+      "pipeline": "Pipeline",
+      "noActiveAccountPipelines": "No active account pipelines",
+      "contactOptional": "Contact (optional)",
+      "dealName": "Deal name",
+      "createOpportunity": "Create opportunity"
+    },
+    "toasts": {
+      "parentUpdateFailed": "Failed to update parent company: {{error}}",
+      "contactLinked": "Contact linked.",
+      "contactLinkFailed": "Failed to link contact: {{error}}",
+      "contactCreated": "Contact created.",
+      "contactCreateFailed": "Failed to create contact: {{error}}",
+      "contactUnlinked": "Contact unlinked.",
+      "contactUnlinkFailed": "Failed to unlink contact: {{error}}",
+      "opportunityCreated": "Opportunity created.",
+      "opportunityCreateFailed": "Failed to create opportunity: {{error}}"
+    }
+  },
+  "companyPaymentHistory": {
+    "title": "{{companyName}} — Payment history",
+    "viewCompanyProfile": "View company profile →",
+    "toastLoadFailed": "Failed to load payment history: {{error}}",
+    "toastLoadMoreFailed": "Failed to load more payments: {{error}}",
+    "noPayments": "No payments recorded for this company yet.",
+    "statusLabels": {
+      "charge_succeeded": "Paid",
+      "charge_failed": "Failed",
+      "charge_refunded": "Refunded",
+      "charge_pending": "Pending"
+    },
+    "viewReceipt": "View receipt →",
+    "columns": {
+      "date": "Date",
+      "amount": "Amount",
+      "status": "Status",
+      "receipt": "Receipt"
+    },
+    "loadMore": "Load more"
+  },
+  "companyStripe": {
+    "toastSummaryFailed": "Failed to load payment summary: {{error}}",
+    "toastLinked": "Linked to Stripe.",
+    "toastLinkFailed": "Failed to link: {{error}}",
+    "connectedLink": "Connected to Stripe →",
+    "viewFullHistory": "View full payment history →",
+    "changeLink": "Change link",
+    "summary": {
+      "payments": "Payments: {{count}}",
+      "refunds": "Refunds: {{count}}",
+      "disputes": "Disputes: {{count}}",
+      "firstPayment": "First payment: {{date}}"
+    },
+    "confirmReplace": {
+      "title": "Replace the existing Stripe link?",
+      "message": "This Company is already linked to a different Stripe customer. Linking it to this one instead will replace the existing link.",
+      "confirmLabel": "Replace"
+    },
+    "searchButton": "Search on Stripe",
+    "noMatches": "No matching Stripe customers found for this Company's contacts. Create the customer in Stripe first, or double-check the contact emails.",
+    "matchedVia": "(via {{email}})"
+  },
+  "contactDetail": {
+    "groups": {
+      "identity": "Identity",
+      "role": "Role",
+      "source": "Source",
+      "customFields": "Custom fields"
+    },
+    "fields": {
+      "phone": "Phone",
+      "company": "Company",
+      "companyEmptyLabel": "-- none (lead without a confirmed company) --",
+      "title": "Title",
+      "leadStatus": "Lead Status",
+      "leadSource": "Lead Source"
+    },
+    "otherContactsAt": "Other contacts at {{company}}",
+    "deactivateMenuItem": "Deactivate",
+    "opportunitiesSection": {
+      "heading": "Opportunities ({{count}})",
+      "addTooltip": "Add opportunity",
+      "noneYet": "No opportunities linked yet.",
+      "linkExisting": "Link existing opportunity…",
+      "orCreateNew": "or create a new one:",
+      "pipeline": "Pipeline",
+      "accountPipelineNeedsCompany": "(needs a Company)",
+      "companyNameLabel": "Company name (this contact has none yet)",
+      "companyNamePlaceholder": "e.g. Acme Inc.",
+      "dealName": "Deal name",
+      "createOpportunity": "Create opportunity"
+    },
+    "toasts": {
+      "opportunityLinked": "Linked to opportunity.",
+      "opportunityLinkFailed": "Failed to link opportunity: {{error}}",
+      "accountOnlyError": "This pipeline is account-only — assign this contact to a Company first.",
+      "companyNameRequiredError": "Enter a company name to create this lead opportunity.",
+      "opportunityCreated": "Opportunity created.",
+      "opportunityCreateFailed": "Failed to create opportunity: {{error}}"
+    }
+  },
+  "opportunityDetail": {
+    "groups": {
+      "deal": "Deal",
+      "stage": "Stage",
+      "nextStep": "Next step"
+    },
+    "fields": {
+      "dealName": "Deal Name",
+      "company": "Company",
+      "pipeline": "Pipeline",
+      "amount": "Amount",
+      "currency": "Currency",
+      "owner": "Owner",
+      "ownerUnassigned": "-- unassigned --",
+      "stage": "Stage",
+      "lossReason": "Loss Reason",
+      "winReason": "Win Reason",
+      "closeNote": "Close Note",
+      "closeNotePlaceholder": "Optional details about how this deal closed",
+      "estimatedCloseDate": "Estimated Close Date",
+      "nextStepDate": "Next Step Date",
+      "nextStep": "Next Step",
+      "nextStepPlaceholder": "What's the next action?"
+    },
+    "pendingPipelineChange": {
+      "fieldLabel": "Confirm company details to move pipeline",
+      "note": "{{companyName}} is still a placeholder — add its real details to move this deal into {{pipelineName}}.",
+      "industry": "Industry",
+      "website": "Website",
+      "phone": "Phone",
+      "saving": "Saving...",
+      "confirmAndMove": "Confirm & Move"
+    },
+    "wonOffer": {
+      "fieldLabel": "Move to account pipeline?",
+      "note": "Won! Move this deal into an account pipeline to keep tracking it there.",
+      "notNow": "Not now",
+      "move": "Move"
+    },
+    "contactsSection": {
+      "heading": "Contacts ({{count}})",
+      "unlinkTooltip": "Unlink",
+      "addContactPlaceholder": "-- add contact --",
+      "rolePlaceholder": "Role",
+      "addTooltip": "Add"
+    },
+    "deleteMenuItem": "Delete",
+    "stageStrip": {
+      "enteredToday": "Entered today",
+      "daysInStage": "{{count}}d in stage"
+    },
+    "toasts": {
+      "pipelineChangeFailed": "Failed to change pipeline: {{error}}",
+      "companyConfirmed": "Company confirmed, opportunity moved.",
+      "companyConfirmFailed": "Failed to confirm company: {{error}}",
+      "stageUpdateFailed": "Failed to update stage.",
+      "contactLinkFailed": "Failed to link contact: {{error}}",
+      "contactUnlinkFailed": "Failed to unlink contact: {{error}}"
+    }
+  }
+}

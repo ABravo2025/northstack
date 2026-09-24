@@ -1,0 +1,510 @@
+{
+  "common": {
+    "cancel": "Cancelar",
+    "create": "Crear",
+    "delete": "Eliminar",
+    "add": "Agregar",
+    "link": "Vincular",
+    "linking": "Vinculando…",
+    "loading": "Cargando…",
+    "searching": "Buscando…",
+    "close": "Cerrar",
+    "selectPlaceholder": "-- seleccioná --",
+    "nonePlaceholder": "-- ninguno --",
+    "openArrow": "Abrir →",
+    "archived": "Archivado"
+  },
+  "leadStatus": {
+    "new": "Nuevo",
+    "contacted": "Contactado",
+    "qualified": "Calificado",
+    "disqualified": "Descalificado"
+  },
+  "detail": {
+    "closeAria": "Cerrar",
+    "mobileTabs": {
+      "overview": "Resumen",
+      "notes": "Notas",
+      "notesWithCount": "Notas ({{count}})",
+      "tasks": "Tareas",
+      "tasksWithCount": "Tareas ({{count}})",
+      "activity": "Actividad",
+      "activityWithCount": "Actividad ({{count}})"
+    }
+  },
+  "companies": {
+    "toolbar": {
+      "heading": "Empresas",
+      "searchLabel": "Buscar empresas",
+      "searchPlaceholder": "Buscá por nombre, industria o sitio web...",
+      "filterByTag": "Filtrar por etiqueta",
+      "noTagsYet": "Todavía no hay etiquetas.",
+      "allCompanies": "Todas las empresas",
+      "csvPlural": "Empresas",
+      "csvSingular": "Empresa"
+    },
+    "primaryAction": "Agregar empresa",
+    "modal": {
+      "addTitle": "Agregar empresa"
+    },
+    "groups": {
+      "identity": "Identidad",
+      "foundingContact": "Contacto fundador",
+      "address": "Dirección",
+      "ownership": "Propiedad",
+      "customFields": "Campos personalizados"
+    },
+    "fields": {
+      "name": "Nombre",
+      "industry": "Industria",
+      "website": "Sitio web",
+      "phone": "Teléfono",
+      "firstName": "Nombre",
+      "lastName": "Apellido",
+      "email": "Correo electrónico",
+      "billingAddress": "Dirección de facturación",
+      "size": "Tamaño",
+      "accountOwner": "Dueño de cuenta"
+    },
+    "columns": {
+      "name": "Nombre",
+      "status": "Estado",
+      "industry": "Industria",
+      "website": "Sitio web",
+      "phone": "Teléfono",
+      "size": "Tamaño",
+      "accountOwner": "Dueño de cuenta",
+      "tags": "Etiquetas"
+    },
+    "emptyState": {
+      "title": "Todavía no hay empresas",
+      "body": "Agregá las empresas con las que trabajás para empezar a seguir negocios y contactos.",
+      "primaryLabel": "Agregar empresa",
+      "plain": "Todavía no hay empresas."
+    },
+    "noMatches": {
+      "title": "Sin resultados para \"{{search}}\"",
+      "body": "Probá con otro término, o borrá los filtros.",
+      "clearFilters": "Borrar filtros"
+    },
+    "groupByBroken": "El campo de agrupación de esta vista ya no existe.",
+    "deleteTooltip": "Eliminar",
+    "kanbanStatusError": "El estado de una Empresa se calcula automáticamente a partir de los resultados de sus negocios — no se puede fijar a mano.",
+    "confirmDelete": {
+      "title": "Eliminar empresa",
+      "message": "¿Estás seguro de que querés eliminar {{name}}? Esto no se puede deshacer.",
+      "linkedContactsNote_one": "{{count}} contacto ({{names}}) quedará desvinculado — sigue existiendo, solo que sin empresa.",
+      "linkedContactsNote_other": "{{count}} contactos ({{names}}) quedarán desvinculados — siguen existiendo, solo que sin empresa.",
+      "linkedOpportunitiesNote_one": "{{count}} oportunidad ({{names}}) no puede existir sin una empresa y también se eliminará.",
+      "linkedOpportunitiesNote_other": "{{count}} oportunidades ({{names}}) no pueden existir sin una empresa y también se eliminarán.",
+      "childCompaniesNote_one": "{{count}} empresa asociada ({{names}}) simplemente perderá esta empresa madre por defecto — su propio estado/existencia no se ve afectado.",
+      "childCompaniesNote_other": "{{count}} empresas asociadas ({{names}}) simplemente perderán esta empresa madre por defecto — su propio estado/existencia no se ve afectado.",
+      "alsoDeleteOpportunities_one": "También eliminar {{count}} oportunidad vinculada",
+      "alsoDeleteOpportunities_other": "También eliminar {{count}} oportunidades vinculadas",
+      "applySameDeleteChildCompanies_one": "Aplicar la misma eliminación a {{count}} empresa asociada",
+      "applySameDeleteChildCompanies_other": "Aplicar la misma eliminación a {{count}} empresas asociadas"
+    },
+    "toasts": {
+      "loadFailed": "No se pudieron cargar las empresas: {{error}}",
+      "statusesLoadFailed": "No se pudieron cargar los estados: {{error}}",
+      "sizesLoadFailed": "No se pudieron cargar los tamaños de empresa: {{error}}",
+      "viewsLoadFailed": "No se pudieron cargar las vistas: {{error}}",
+      "customFieldsLoadFailed": "No se pudieron cargar los campos personalizados: {{error}}",
+      "fieldAdded": "Se agregó el campo \"{{name}}\".",
+      "fieldAddFailed": "No se pudo agregar el campo: {{error}}",
+      "fieldUpdated": "Campo actualizado.",
+      "fieldUpdateFailed": "No se pudo actualizar el campo: {{error}}",
+      "fieldDeleted": "Campo eliminado.",
+      "fieldDeleteFailed": "No se pudo eliminar el campo: {{error}}",
+      "viewCreated": "Se creó la vista \"{{name}}\".",
+      "viewCreateFailed": "No se pudo crear la vista: {{error}}",
+      "viewRenameFailed": "No se pudo renombrar la vista: {{error}}",
+      "viewDuplicated": "Vista duplicada como \"{{name}}\".",
+      "viewDuplicateFailed": "No se pudo duplicar la vista: {{error}}",
+      "viewDeleted": "Vista eliminada.",
+      "viewDeleteFailed": "No se pudo eliminar la vista: {{error}}",
+      "moveFailed": "No se pudo mover: {{error}}",
+      "companyAdded": "Empresa agregada.",
+      "companyCreateFailed": "No se pudo crear la empresa: {{error}}",
+      "companyDeleted": "{{name}} eliminada.",
+      "companyDeleteFailed": "No se pudo eliminar la empresa: {{error}}"
+    }
+  },
+  "contacts": {
+    "toolbar": {
+      "heading": "Contactos",
+      "searchLabel": "Buscar contactos",
+      "searchPlaceholder": "Buscá por nombre, correo o empresa...",
+      "filterByTag": "Filtrar por etiqueta",
+      "noTagsYet": "Todavía no hay etiquetas.",
+      "allContacts": "Todos los contactos",
+      "csvPlural": "Contactos",
+      "csvSingular": "Contacto"
+    },
+    "primaryAction": "Agregar contacto",
+    "primaryBadge": "Principal",
+    "modal": {
+      "addTitle": "Agregar contacto"
+    },
+    "groups": {
+      "identity": "Identidad",
+      "role": "Rol",
+      "source": "Origen",
+      "customFields": "Campos personalizados"
+    },
+    "fields": {
+      "firstName": "Nombre",
+      "lastName": "Apellido",
+      "email": "Correo electrónico",
+      "phone": "Teléfono",
+      "title": "Cargo",
+      "titlePlaceholder": "Rol dentro de la empresa",
+      "leadStatus": "Estado del lead",
+      "leadSource": "Origen del lead",
+      "primaryContact": "Contacto principal de esta empresa",
+      "assignToCompanyQuestion": "¿Asignar a una empresa existente?",
+      "assignNo": "No — lead sin una empresa confirmada",
+      "assignYes": "Sí",
+      "company": "Empresa",
+      "companySearchPlaceholder": "Buscar empresas…"
+    },
+    "columns": {
+      "name": "Nombre",
+      "email": "Correo electrónico",
+      "phone": "Teléfono",
+      "company": "Empresa",
+      "title": "Cargo",
+      "leadStatus": "Estado del lead",
+      "leadSource": "Origen del lead",
+      "tags": "Etiquetas"
+    },
+    "emptyState": {
+      "title": "Todavía no hay contactos",
+      "body": "Agregá a las personas con las que trabajás en tus empresas.",
+      "primaryLabel": "Agregar contacto",
+      "plain": "Todavía no hay contactos."
+    },
+    "noMatches": {
+      "title": "Sin resultados para \"{{search}}\"",
+      "body": "Probá con otro término, o borrá los filtros.",
+      "clearFilters": "Borrar filtros"
+    },
+    "groupByBroken": "El campo de agrupación de esta vista ya no existe.",
+    "deactivateTooltip": "Desactivar",
+    "confirmDeactivate": {
+      "title": "Desactivar contacto",
+      "confirmLabel": "Desactivar",
+      "message": "¿Estás seguro de que querés desactivar a {{name}}? Va a dejar de aparecer en las listas, pero no se elimina nada.",
+      "willAlsoDeactivate_one": "{{count}} oportunidad ({{names}}) también se desactivará — es su único contacto activo.",
+      "willAlsoDeactivate_other": "{{count}} oportunidades ({{names}}) también se desactivarán — es su único contacto activo.",
+      "restStayActive": "El resto de sus oportunidades vinculadas solo pierden este contacto, siguen activas."
+    },
+    "toasts": {
+      "loadFailed": "No se pudieron cargar los contactos: {{error}}",
+      "customFieldsLoadFailed": "No se pudieron cargar los campos personalizados: {{error}}",
+      "viewsLoadFailed": "No se pudieron cargar las vistas: {{error}}",
+      "fieldAdded": "Se agregó el campo \"{{name}}\".",
+      "fieldAddFailed": "No se pudo agregar el campo: {{error}}",
+      "fieldUpdated": "Campo actualizado.",
+      "fieldUpdateFailed": "No se pudo actualizar el campo: {{error}}",
+      "fieldDeleted": "Campo eliminado.",
+      "fieldDeleteFailed": "No se pudo eliminar el campo: {{error}}",
+      "contactCreateFailed": "No se pudo crear el contacto: {{error}}",
+      "contactAdded": "Contacto agregado.",
+      "moveFailed": "No se pudo mover: {{error}}",
+      "viewCreated": "Se creó la vista \"{{name}}\".",
+      "viewCreateFailed": "No se pudo crear la vista: {{error}}",
+      "viewRenameFailed": "No se pudo renombrar la vista: {{error}}",
+      "viewDuplicated": "Vista duplicada como \"{{name}}\".",
+      "viewDuplicateFailed": "No se pudo duplicar la vista: {{error}}",
+      "viewDeleted": "Vista eliminada.",
+      "viewDeleteFailed": "No se pudo eliminar la vista: {{error}}",
+      "contactDeactivated": "{{name}} desactivado.",
+      "contactDeactivateFailed": "No se pudo desactivar el contacto: {{error}}"
+    }
+  },
+  "opportunities": {
+    "toolbar": {
+      "heading": "Oportunidades",
+      "weightedValue": "Valor ponderado: {{amount}}",
+      "weightedValueTitle": "Σ (monto × probabilidad de la etapa) de los negocios abiertos en este pipeline"
+    },
+    "primaryAction": "Agregar oportunidad",
+    "modal": {
+      "addTitle": "Agregar oportunidad"
+    },
+    "groups": {
+      "deal": "Negocio",
+      "stage": "Etapa",
+      "nextStep": "Próximo paso"
+    },
+    "fields": {
+      "pipeline": "Pipeline",
+      "dealName": "Nombre del negocio",
+      "contact": "Contacto",
+      "selectExistingContact": "-- seleccioná un contacto existente --",
+      "newContactFirstName": "Contacto nuevo — nombre",
+      "newContactLastName": "Contacto nuevo — apellido",
+      "newContactEmail": "Contacto nuevo — correo",
+      "companyName": "Nombre de la empresa",
+      "companyNamePlaceholder": "Nombre de la empresa (todavía no es una cuenta confirmada)",
+      "company": "Empresa",
+      "owner": "Dueño",
+      "autoAssign": "-- asignación automática --",
+      "ownerAutoAssignNote": "Este pipeline asignará un dueño automáticamente si se deja en blanco.",
+      "amount": "Monto",
+      "currency": "Moneda",
+      "lossReason": "Motivo de pérdida",
+      "winReason": "Motivo de ganancia",
+      "closeNote": "Nota de cierre",
+      "closeNotePlaceholder": "Detalles opcionales sobre cómo cerró este negocio",
+      "estimatedCloseDate": "Fecha estimada de cierre",
+      "nextStepDate": "Fecha del próximo paso",
+      "nextStep": "Próximo paso",
+      "nextStepPlaceholder": "¿Cuál es la próxima acción?"
+    },
+    "archivedTab": "Archivados",
+    "archivedReadOnlyNote": "(solo lectura, pipeline archivado)",
+    "noActivePipelines": "No hay pipelines activos. Creá uno en Configuración → Pipelines.",
+    "kanban": {
+      "enteredToday": "Ingresó hoy",
+      "daysInStage": "{{count}}d en la etapa",
+      "onlyContactTitle": "Único contacto en este negocio",
+      "multipleContacts": "{{count}} contactos"
+    },
+    "confirmDelete": {
+      "title": "Eliminar oportunidad",
+      "message": "¿Estás seguro de que querés eliminar \"{{name}}\"? Esto no se puede deshacer."
+    },
+    "toasts": {
+      "loadFailed": "No se pudo cargar: {{error}}",
+      "saveFailed": "No se pudo guardar la oportunidad: {{error}}",
+      "moveFailed": "No se pudo mover: {{error}}",
+      "deleteFailed": "No se pudo eliminar: {{error}}",
+      "created": "Oportunidad creada.",
+      "deleted": "{{name}} eliminada."
+    }
+  },
+  "payments": {
+    "pageTitle": "Pagos",
+    "noPermission": "No tenés permiso para ver Pagos.",
+    "toastLoadFailed": "No se pudo cargar el resumen de pagos: {{error}}",
+    "connectStripeFirst": "Conectá tu cuenta de Stripe primero — andá a Configuración → Integraciones.",
+    "stats": {
+      "refunds": "Reembolsos",
+      "failedPayments": "Pagos fallidos",
+      "activeSubscriptions": "Suscripciones activas",
+      "companiesLinked": "Empresas vinculadas"
+    },
+    "noCompaniesLinked": "Todavía no hay Empresas vinculadas a Stripe — abrí una Empresa y usá \"Buscar en Stripe\" en Pagos.",
+    "columns": {
+      "company": "Empresa",
+      "refunds": "Reembolsos",
+      "failed": "Fallidos",
+      "subscription": "Suscripción"
+    },
+    "refundsCount_one": "{{count}} reembolso",
+    "refundsCount_other": "{{count}} reembolsos",
+    "failedCountLabel": "{{count}} fallidos",
+    "noSubscription": "sin suscripción"
+  },
+  "companyDetail": {
+    "groups": {
+      "identity": "Identidad",
+      "address": "Dirección",
+      "ownership": "Propiedad",
+      "payments": "Pagos",
+      "hierarchy": "Jerarquía",
+      "customFields": "Campos personalizados"
+    },
+    "fields": {
+      "industry": "Industria",
+      "website": "Sitio web",
+      "phone": "Teléfono",
+      "billingAddress": "Dirección de facturación",
+      "size": "Tamaño",
+      "accountOwner": "Dueño de cuenta",
+      "parentCompany": "Empresa madre",
+      "noParentOption": "— Sin empresa madre (nivel superior) —",
+      "noParentPlaceholder": "Sin empresa madre — empresa de nivel superior",
+      "associatedCompanies": "Empresas asociadas ({{count}})"
+    },
+    "companyFallback": "Empresa",
+    "deleteMenuItem": "Eliminar",
+    "contactsSection": {
+      "heading": "Contactos ({{count}})",
+      "addTooltip": "Agregar contacto",
+      "noneYet": "Todavía no hay contactos vinculados.",
+      "unlinkTooltip": "Desvincular",
+      "linkSearchPlaceholder": "Buscar por nombre o correo…",
+      "orCreateNew": "o creá uno nuevo:",
+      "firstName": "Nombre",
+      "lastName": "Apellido",
+      "email": "Correo electrónico",
+      "createContact": "Crear contacto"
+    },
+    "opportunitiesSection": {
+      "heading": "Oportunidades ({{count}})",
+      "addTooltip": "Agregar oportunidad",
+      "noneYet": "Todavía no hay oportunidades.",
+      "pipeline": "Pipeline",
+      "noActiveAccountPipelines": "No hay pipelines de cuenta activos",
+      "contactOptional": "Contacto (opcional)",
+      "dealName": "Nombre del negocio",
+      "createOpportunity": "Crear oportunidad"
+    },
+    "toasts": {
+      "parentUpdateFailed": "No se pudo actualizar la empresa madre: {{error}}",
+      "contactLinked": "Contacto vinculado.",
+      "contactLinkFailed": "No se pudo vincular el contacto: {{error}}",
+      "contactCreated": "Contacto creado.",
+      "contactCreateFailed": "No se pudo crear el contacto: {{error}}",
+      "contactUnlinked": "Contacto desvinculado.",
+      "contactUnlinkFailed": "No se pudo desvincular el contacto: {{error}}",
+      "opportunityCreated": "Oportunidad creada.",
+      "opportunityCreateFailed": "No se pudo crear la oportunidad: {{error}}"
+    }
+  },
+  "companyPaymentHistory": {
+    "title": "{{companyName}} — Historial de pagos",
+    "viewCompanyProfile": "Ver perfil de la empresa →",
+    "toastLoadFailed": "No se pudo cargar el historial de pagos: {{error}}",
+    "toastLoadMoreFailed": "No se pudieron cargar más pagos: {{error}}",
+    "noPayments": "Todavía no hay pagos registrados para esta empresa.",
+    "statusLabels": {
+      "charge_succeeded": "Pagado",
+      "charge_failed": "Fallido",
+      "charge_refunded": "Reembolsado",
+      "charge_pending": "Pendiente"
+    },
+    "viewReceipt": "Ver recibo →",
+    "columns": {
+      "date": "Fecha",
+      "amount": "Monto",
+      "status": "Estado",
+      "receipt": "Recibo"
+    },
+    "loadMore": "Cargar más"
+  },
+  "companyStripe": {
+    "toastSummaryFailed": "No se pudo cargar el resumen de pagos: {{error}}",
+    "toastLinked": "Vinculado a Stripe.",
+    "toastLinkFailed": "No se pudo vincular: {{error}}",
+    "connectedLink": "Conectado a Stripe →",
+    "viewFullHistory": "Ver historial de pagos completo →",
+    "changeLink": "Cambiar vínculo",
+    "summary": {
+      "payments": "Pagos: {{count}}",
+      "refunds": "Reembolsos: {{count}}",
+      "disputes": "Disputas: {{count}}",
+      "firstPayment": "Primer pago: {{date}}"
+    },
+    "confirmReplace": {
+      "title": "¿Reemplazar el vínculo existente con Stripe?",
+      "message": "Esta Empresa ya está vinculada a otro cliente de Stripe. Vincularla a este en su lugar va a reemplazar el vínculo existente.",
+      "confirmLabel": "Reemplazar"
+    },
+    "searchButton": "Buscar en Stripe",
+    "noMatches": "No se encontraron clientes de Stripe que coincidan con los contactos de esta Empresa. Creá el cliente en Stripe primero, o revisá los correos de los contactos.",
+    "matchedVia": "(vía {{email}})"
+  },
+  "contactDetail": {
+    "groups": {
+      "identity": "Identidad",
+      "role": "Rol",
+      "source": "Origen",
+      "customFields": "Campos personalizados"
+    },
+    "fields": {
+      "phone": "Teléfono",
+      "company": "Empresa",
+      "companyEmptyLabel": "-- ninguna (lead sin una empresa confirmada) --",
+      "title": "Cargo",
+      "leadStatus": "Estado del lead",
+      "leadSource": "Origen del lead"
+    },
+    "otherContactsAt": "Otros contactos en {{company}}",
+    "deactivateMenuItem": "Desactivar",
+    "opportunitiesSection": {
+      "heading": "Oportunidades ({{count}})",
+      "addTooltip": "Agregar oportunidad",
+      "noneYet": "Todavía no hay oportunidades vinculadas.",
+      "linkExisting": "Vincular oportunidad existente…",
+      "orCreateNew": "o creá una nueva:",
+      "pipeline": "Pipeline",
+      "accountPipelineNeedsCompany": "(necesita una Empresa)",
+      "companyNameLabel": "Nombre de la empresa (este contacto todavía no tiene una)",
+      "companyNamePlaceholder": "ej. Acme Inc.",
+      "dealName": "Nombre del negocio",
+      "createOpportunity": "Crear oportunidad"
+    },
+    "toasts": {
+      "opportunityLinked": "Vinculado a la oportunidad.",
+      "opportunityLinkFailed": "No se pudo vincular la oportunidad: {{error}}",
+      "accountOnlyError": "Este pipeline es solo de cuenta — asigná este contacto a una Empresa primero.",
+      "companyNameRequiredError": "Ingresá un nombre de empresa para crear esta oportunidad de lead.",
+      "opportunityCreated": "Oportunidad creada.",
+      "opportunityCreateFailed": "No se pudo crear la oportunidad: {{error}}"
+    }
+  },
+  "opportunityDetail": {
+    "groups": {
+      "deal": "Negocio",
+      "stage": "Etapa",
+      "nextStep": "Próximo paso"
+    },
+    "fields": {
+      "dealName": "Nombre del negocio",
+      "company": "Empresa",
+      "pipeline": "Pipeline",
+      "amount": "Monto",
+      "currency": "Moneda",
+      "owner": "Dueño",
+      "ownerUnassigned": "-- sin asignar --",
+      "stage": "Etapa",
+      "lossReason": "Motivo de pérdida",
+      "winReason": "Motivo de ganancia",
+      "closeNote": "Nota de cierre",
+      "closeNotePlaceholder": "Detalles opcionales sobre cómo cerró este negocio",
+      "estimatedCloseDate": "Fecha estimada de cierre",
+      "nextStepDate": "Fecha del próximo paso",
+      "nextStep": "Próximo paso",
+      "nextStepPlaceholder": "¿Cuál es la próxima acción?"
+    },
+    "pendingPipelineChange": {
+      "fieldLabel": "Confirmá los datos de la empresa para mover el pipeline",
+      "note": "{{companyName}} todavía es un marcador de posición — agregá sus datos reales para mover este negocio a {{pipelineName}}.",
+      "industry": "Industria",
+      "website": "Sitio web",
+      "phone": "Teléfono",
+      "saving": "Guardando...",
+      "confirmAndMove": "Confirmar y mover"
+    },
+    "wonOffer": {
+      "fieldLabel": "¿Mover a un pipeline de cuenta?",
+      "note": "¡Ganado! Moveé este negocio a un pipeline de cuenta para seguir siguiéndolo ahí.",
+      "notNow": "Ahora no",
+      "move": "Mover"
+    },
+    "contactsSection": {
+      "heading": "Contactos ({{count}})",
+      "unlinkTooltip": "Desvincular",
+      "addContactPlaceholder": "-- agregar contacto --",
+      "rolePlaceholder": "Rol",
+      "addTooltip": "Agregar"
+    },
+    "deleteMenuItem": "Eliminar",
+    "stageStrip": {
+      "enteredToday": "Ingresó hoy",
+      "daysInStage": "{{count}}d en la etapa"
+    },
+    "toasts": {
+      "pipelineChangeFailed": "No se pudo cambiar el pipeline: {{error}}",
+      "companyConfirmed": "Empresa confirmada, oportunidad movida.",
+      "companyConfirmFailed": "No se pudo confirmar la empresa: {{error}}",
+      "stageUpdateFailed": "No se pudo actualizar la etapa.",
+      "contactLinkFailed": "No se pudo vincular el contacto: {{error}}",
+      "contactUnlinkFailed": "No se pudo desvincular el contacto: {{error}}"
+    }
+  }
+}

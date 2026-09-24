@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import {
   api,
   type Company,
@@ -56,12 +57,7 @@ const PAGE_SIZE = 20;
 const ACTIVE_VIEW_STORAGE_KEY = 'northstack:activeView:contact';
 const FROZEN_COLUMN_KEYS = ['name'];
 
-const LEAD_STATUS_LABELS: Record<string, string> = {
-  new: 'New',
-  contacted: 'Contacted',
-  qualified: 'Qualified',
-  disqualified: 'Disqualified',
-};
+const LEAD_STATUS_VALUES = ['new', 'contacted', 'qualified', 'disqualified'] as const;
 
 interface ContactsPageProps {
   user: any;
@@ -85,6 +81,7 @@ const emptyContactForm = {
 };
 
 export default function ContactsPage({ user, token }: ContactsPageProps) {
+  const { t } = useTranslation('crm');
   const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -137,6 +134,9 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
     `northstack:hiddenColumns:contact:${columnStorageSuffix}`,
   );
   const activeContactCustomFields = contactCustomFields.filter((field) => field.isActive);
+  const leadStatusLabels: Record<string, string> = Object.fromEntries(
+    LEAD_STATUS_VALUES.map((value) => [value, t(`leadStatus.${value}`)]),
+  );
 
   const fields = useMemo(
     () => buildContactFields(contactCustomFields, leadSources),
@@ -215,7 +215,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
       const data = await api.listContacts(token);
       setContacts(data);
     } catch (error) {
-      toast.error('Failed to load contacts: ' + (error as Error).message);
+      toast.error(t('contacts.toasts.loadFailed', { error: (error as Error).message }));
     } finally {
       setLoading(false);
     }
@@ -226,7 +226,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
       const defs = await api.listCustomFieldDefinitions(token, 'contact');
       setContactCustomFields(defs);
     } catch (error) {
-      toast.error('Failed to load custom fields: ' + (error as Error).message);
+      toast.error(t('contacts.toasts.customFieldsLoadFailed', { error: (error as Error).message }));
     }
   };
 
@@ -235,7 +235,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
       const data = await api.listViews(token, 'contact');
       setViews(data);
     } catch (error) {
-      toast.error('Failed to load views: ' + (error as Error).message);
+      toast.error(t('contacts.toasts.viewsLoadFailed', { error: (error as Error).message }));
     }
   };
 
@@ -247,10 +247,10 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
   }) => {
     try {
       await api.createCustomFieldDefinition(token, { ...input, entityType: 'contact' });
-      toast.success(`Field "${input.name}" added.`);
+      toast.success(t('contacts.toasts.fieldAdded', { name: input.name }));
       loadContactCustomFields();
     } catch (error) {
-      toast.error('Failed to add field: ' + (error as Error).message);
+      toast.error(t('contacts.toasts.fieldAddFailed', { error: (error as Error).message }));
     }
   };
 
@@ -260,20 +260,20 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
   ) => {
     try {
       await api.updateCustomFieldDefinition(token, id, data);
-      toast.success('Field updated.');
+      toast.success(t('contacts.toasts.fieldUpdated'));
       loadContactCustomFields();
     } catch (error) {
-      toast.error('Failed to update field: ' + (error as Error).message);
+      toast.error(t('contacts.toasts.fieldUpdateFailed', { error: (error as Error).message }));
     }
   };
 
   const handleDeactivateCustomFieldColumn = async (id: string) => {
     try {
       await api.updateCustomFieldDefinition(token, id, { isActive: false });
-      toast.success('Field deleted.');
+      toast.success(t('contacts.toasts.fieldDeleted'));
       loadContactCustomFields();
     } catch (error) {
-      toast.error('Failed to delete field: ' + (error as Error).message);
+      toast.error(t('contacts.toasts.fieldDeleteFailed', { error: (error as Error).message }));
     }
   };
 
@@ -294,7 +294,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
     setSlideOverMode('add');
   };
 
-  usePrimaryAction({ label: 'Add contact', onClick: handleOpenAdd });
+  usePrimaryAction({ label: t('contacts.primaryAction'), onClick: handleOpenAdd });
 
   const isContactAddReady = (cfValues: Record<string, string> = customFieldValues) => {
     if (!contactForm.firstName.trim() || !contactForm.lastName.trim()) return false;
@@ -383,7 +383,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
       try {
         await createContactRecord(cfValues);
       } catch (error) {
-        toast.error('Failed to create contact: ' + (error as Error).message);
+        toast.error(t('contacts.toasts.contactCreateFailed', { error: (error as Error).message }));
         throw error;
       }
     });
@@ -399,7 +399,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
         const contact = await createContactRecord(customFieldValues);
         id = contact.id;
       }
-      toast.success('Contact added.');
+      toast.success(t('contacts.toasts.contactAdded'));
       const freshList = await api.listContacts(token);
       setContacts(freshList);
       jumpToContactPage(freshList, id);
@@ -408,7 +408,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
       setCustomFieldValues({});
       setViewingContactId(id);
     } catch (error) {
-      toast.error('Failed to create contact: ' + (error as Error).message);
+      toast.error(t('contacts.toasts.contactCreateFailed', { error: (error as Error).message }));
     }
   };
 
@@ -416,11 +416,11 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
     if (!deletingContact) return;
     try {
       await api.deactivateContact(token, deletingContact.id);
-      toast.success(`${deletingContact.firstName} ${deletingContact.lastName} deactivated.`);
+      toast.success(t('contacts.toasts.contactDeactivated', { name: `${deletingContact.firstName} ${deletingContact.lastName}` }));
       setDeletingContact(null);
       refreshAssociatedData();
     } catch (error) {
-      toast.error('Failed to deactivate contact: ' + (error as Error).message);
+      toast.error(t('contacts.toasts.contactDeactivateFailed', { error: (error as Error).message }));
       setDeletingContact(null);
     }
   };
@@ -446,7 +446,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
           }}
           required={field.required}
         >
-          <option value="">-- select --</option>
+          <option value="">{t('common.selectPlaceholder')}</option>
           {(JSON.parse(field.options || '[]') as string[]).map((opt) => (
             <option key={opt} value={opt}>
               {opt}
@@ -544,7 +544,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
       }
       loadContacts();
     } catch (error) {
-      toast.error('Failed to move: ' + (error as Error).message);
+      toast.error(t('contacts.toasts.moveFailed', { error: (error as Error).message }));
     }
   };
 
@@ -558,9 +558,9 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
       const view = await api.createView(token, { entityType: 'contact', ...input });
       setViews((current) => [...current, view]);
       setActiveViewId(view.id);
-      toast.success(`View "${view.name}" created.`);
+      toast.success(t('contacts.toasts.viewCreated', { name: view.name }));
     } catch (error) {
-      toast.error('Failed to create view: ' + (error as Error).message);
+      toast.error(t('contacts.toasts.viewCreateFailed', { error: (error as Error).message }));
     }
   };
 
@@ -569,7 +569,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
       const updated = await api.updateView(token, id, { name });
       setViews((current) => current.map((v) => (v.id === id ? updated : v)));
     } catch (error) {
-      toast.error('Failed to rename view: ' + (error as Error).message);
+      toast.error(t('contacts.toasts.viewRenameFailed', { error: (error as Error).message }));
     }
   };
 
@@ -586,9 +586,9 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
       });
       setViews((current) => [...current, created]);
       setActiveViewId(created.id);
-      toast.success(`View duplicated as "${created.name}".`);
+      toast.success(t('contacts.toasts.viewDuplicated', { name: created.name }));
     } catch (error) {
-      toast.error('Failed to duplicate view: ' + (error as Error).message);
+      toast.error(t('contacts.toasts.viewDuplicateFailed', { error: (error as Error).message }));
     }
   };
 
@@ -597,39 +597,39 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
       await api.deleteView(token, id);
       setViews((current) => current.filter((v) => v.id !== id));
       if (activeViewId === id) setActiveViewId(null);
-      toast.success('View deleted.');
+      toast.success(t('contacts.toasts.viewDeleted'));
     } catch (error) {
-      toast.error('Failed to delete view: ' + (error as Error).message);
+      toast.error(t('contacts.toasts.viewDeleteFailed', { error: (error as Error).message }));
     }
   };
 
   const columns = [
     {
       key: 'name',
-      label: 'Name',
+      label: t('contacts.columns.name'),
       render: (contact: Contact) => (
         <div className="name-cell">
           <Avatar firstName={contact.firstName} lastName={contact.lastName} />
           <button type="button" className="name-link" onClick={() => setViewingContactId(contact.id)}>
             {contact.firstName} {contact.lastName}
           </button>
-          {contact.isPrimary && <span className="chip-linked">Primary</span>}
+          {contact.isPrimary && <span className="chip-linked">{t('contacts.primaryBadge')}</span>}
         </div>
       ),
     },
-    { key: 'email', label: 'Email', render: (contact: Contact) => contact.email },
-    { key: 'phone', label: 'Phone', render: (contact: Contact) => contact.phone || '—' },
-    { key: 'company', label: 'Company', render: (contact: Contact) => contact.company?.name || '—' },
-    { key: 'title', label: 'Title', render: (contact: Contact) => contact.title || '—' },
+    { key: 'email', label: t('contacts.columns.email'), render: (contact: Contact) => contact.email },
+    { key: 'phone', label: t('contacts.columns.phone'), render: (contact: Contact) => contact.phone || '—' },
+    { key: 'company', label: t('contacts.columns.company'), render: (contact: Contact) => contact.company?.name || '—' },
+    { key: 'title', label: t('contacts.columns.title'), render: (contact: Contact) => contact.title || '—' },
     {
       key: 'leadStatus',
-      label: 'Lead Status',
-      render: (contact: Contact) => (contact.leadStatus ? LEAD_STATUS_LABELS[contact.leadStatus] : '—'),
+      label: t('contacts.columns.leadStatus'),
+      render: (contact: Contact) => (contact.leadStatus ? leadStatusLabels[contact.leadStatus] : '—'),
     },
-    { key: 'leadSource', label: 'Lead Source', render: (contact: Contact) => contact.leadSource?.name || '—' },
+    { key: 'leadSource', label: t('contacts.columns.leadSource'), render: (contact: Contact) => contact.leadSource?.name || '—' },
     {
       key: 'tags',
-      label: 'Tags',
+      label: t('contacts.columns.tags'),
       render: (contact: any) =>
         contact.tags && contact.tags.length > 0 ? (
           <div className="flex flex-wrap items-center">
@@ -740,7 +740,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
             className="icon-btn danger"
             onClick={() => setDeletingContact(contact)}
           >
-            <span className="tip">Deactivate</span>
+            <span className="tip">{t('contacts.deactivateTooltip')}</span>
             <TrashIcon />
           </button>
         </div>
@@ -755,7 +755,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
           <span className="ghost-plus-box">
             <PlusIcon className="h-3 w-3" />
           </span>
-          Add
+          {t('common.add')}
         </span>
       </td>
     </tr>
@@ -778,20 +778,25 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
           });
           return activeLinks.length <= 1;
         });
-        const messageParts = [`Are you sure you want to deactivate ${deletingContact.firstName} ${deletingContact.lastName}? They'll stop appearing in lists, but nothing is deleted.`];
+        const messageParts = [
+          t('contacts.confirmDeactivate.message', { name: `${deletingContact.firstName} ${deletingContact.lastName}` }),
+        ];
         if (willAlsoDeactivate.length > 0) {
           messageParts.push(
-            `${willAlsoDeactivate.length} opportunity(ies) (${willAlsoDeactivate.map((o) => o.name).join(', ')}) will also be deactivated — this is their only active contact.`,
+            t('contacts.confirmDeactivate.willAlsoDeactivate', {
+              count: willAlsoDeactivate.length,
+              names: willAlsoDeactivate.map((o) => o.name).join(', '),
+            }),
           );
         }
         if (linkedOpportunities.length > willAlsoDeactivate.length) {
-          messageParts.push(`The rest of their linked opportunities just lose this contact, they stay active.`);
+          messageParts.push(t('contacts.confirmDeactivate.restStayActive'));
         }
         return (
           <ConfirmDialog
-            title="Deactivate contact"
+            title={t('contacts.confirmDeactivate.title')}
             message={messageParts.join(' ')}
-            confirmLabel="Deactivate"
+            confirmLabel={t('contacts.confirmDeactivate.confirmLabel')}
             onConfirm={handleDeleteContact}
             onCancel={() => setDeletingContact(null)}
           />
@@ -800,16 +805,16 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
 
       <Modal
         open={slideOverMode === 'add'}
-        title="Add Contact"
+        title={t('contacts.modal.addTitle')}
         onClose={closeSlideOver}
         wide
         footer={
           <>
             <button type="button" className="btn-secondary" onClick={closeSlideOver}>
-              Cancel
+              {t('common.cancel')}
             </button>
             <button type="submit" form="contact-form" className="btn-primary" disabled={autoCreateGuard.isBusy}>
-              Create
+              {t('common.create')}
             </button>
           </>
         }
@@ -817,9 +822,9 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
         {slideOverMode === 'add' && (
           <form id="contact-form" onSubmit={handleCreateContact}>
             <div className="field-group">
-              <h4 className="field-group-title">Identity</h4>
+              <h4 className="field-group-title">{t('contacts.groups.identity')}</h4>
               <div className="field-group-body">
-                <Field label="First Name" required>
+                <Field label={t('contacts.fields.firstName')} required>
                   <input
                     id="contact-firstName"
                     className="overview-field-input"
@@ -841,7 +846,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
                     required
                   />
                 </Field>
-                <Field label="Email" required>
+                <Field label={t('contacts.fields.email')} required>
                   <input
                     id="contact-email"
                     className="overview-field-input"
@@ -852,7 +857,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
                     required
                   />
                 </Field>
-                <Field label="Phone">
+                <Field label={t('contacts.fields.phone')}>
                   <input
                     id="contact-phone"
                     className="overview-field-input"
@@ -862,7 +867,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
                   />
                 </Field>
                 <div className="form-group col-span-2">
-                  <label>Assign to an existing company?</label>
+                  <label>{t('contacts.fields.assignToCompanyQuestion')}</label>
                   <div className="flex items-center gap-4 text-sm">
                     <label className="inline-flex items-center gap-1.5 font-normal">
                       <input
@@ -871,7 +876,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
                         checked={!contactForm.assignToCompany}
                         onChange={() => setContactForm({ ...contactForm, assignToCompany: false, companyId: '' })}
                       />
-                      No — lead without a confirmed company
+                      {t('contacts.fields.assignNo')}
                     </label>
                     <label className="inline-flex items-center gap-1.5 font-normal">
                       <input
@@ -880,19 +885,19 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
                         checked={contactForm.assignToCompany}
                         onChange={() => setContactForm({ ...contactForm, assignToCompany: true })}
                       />
-                      Yes
+                      {t('contacts.fields.assignYes')}
                     </label>
                   </div>
                 </div>
                 {contactForm.assignToCompany && (
                   <div className="form-group col-span-2">
-                    <label htmlFor="contact-companyId">Company</label>
+                    <label htmlFor="contact-companyId">{t('contacts.fields.company')}</label>
                     <SearchableSelect
                       id="contact-companyId"
                       options={companies.map((c) => ({ value: c.id, label: c.name }))}
                       value={contactForm.companyId}
                       onChange={(v) => setContactForm({ ...contactForm, companyId: v })}
-                      placeholder="Search companies…"
+                      placeholder={t('contacts.fields.companySearchPlaceholder')}
                     />
                   </div>
                 )}
@@ -900,27 +905,27 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
             </div>
 
             <div className="field-group">
-              <h4 className="field-group-title">Role</h4>
+              <h4 className="field-group-title">{t('contacts.groups.role')}</h4>
               <div className="field-group-body">
-                <Field label="Title">
+                <Field label={t('contacts.fields.title')}>
                   <input
                     id="contact-title"
                     className="overview-field-input"
                     type="text"
                     value={contactForm.title}
                     onChange={(e) => setContactForm({ ...contactForm, title: e.target.value })}
-                    placeholder="Role within the company"
+                    placeholder={t('contacts.fields.titlePlaceholder')}
                   />
                 </Field>
-                <Field label="Lead Status">
+                <Field label={t('contacts.fields.leadStatus')}>
                   <select
                     id="contact-leadStatus"
                     className="overview-field-input"
                     value={contactForm.leadStatus}
                     onChange={(e) => setContactForm({ ...contactForm, leadStatus: e.target.value })}
                   >
-                    <option value="">-- none --</option>
-                    {Object.entries(LEAD_STATUS_LABELS).map(([value, label]) => (
+                    <option value="">{t('common.nonePlaceholder')}</option>
+                    {Object.entries(leadStatusLabels).map(([value, label]) => (
                       <option key={value} value={value}>
                         {label}
                       </option>
@@ -935,23 +940,23 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
                       checked={contactForm.isPrimary}
                       onChange={(e) => setContactForm({ ...contactForm, isPrimary: e.target.checked })}
                     />
-                    Primary contact for this company
+                    {t('contacts.fields.primaryContact')}
                   </label>
                 </div>
               </div>
             </div>
 
             <div className="field-group">
-              <h4 className="field-group-title">Source</h4>
+              <h4 className="field-group-title">{t('contacts.groups.source')}</h4>
               <div className="field-group-body">
-                <Field label="Lead Source">
+                <Field label={t('contacts.fields.leadSource')}>
                   <select
                     id="contact-leadSourceId"
                     className="overview-field-input"
                     value={contactForm.leadSourceId}
                     onChange={(e) => setContactForm({ ...contactForm, leadSourceId: e.target.value })}
                   >
-                    <option value="">-- none --</option>
+                    <option value="">{t('common.nonePlaceholder')}</option>
                     {leadSources.map((ls) => (
                       <option key={ls.id} value={ls.id}>
                         {ls.name}
@@ -964,7 +969,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
 
             {activeContactCustomFields.length > 0 && (
               <div className="field-group">
-                <h4 className="field-group-title">Custom fields</h4>
+                <h4 className="field-group-title">{t('contacts.groups.customFields')}</h4>
                 <div className="field-group-body">
                   {activeContactCustomFields.map((field) => (
                     <Field key={field.id} label={field.name} required={field.required}>

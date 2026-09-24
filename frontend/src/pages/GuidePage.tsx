@@ -1835,6 +1835,84 @@ export default function GuidePage() {
           )}
 
           {/* ===== Billing ===== */}
+          {isSpanish ? (
+          <section className="help-section" id="g-billing">
+            <div className="help-eyebrow">
+              <CreditCardIcon />
+              Espacio de trabajo
+            </div>
+            <h2>Facturación y planes</h2>
+            <p className="help-intro">Dos planes de autoservicio, más un nivel para hablar con nosotros directamente para equipos más grandes.</p>
+
+            <div className="help-table-wrap">
+              <table className="help-ref">
+                <thead>
+                  <tr>
+                    <th>&nbsp;</th>
+                    <th>Starter</th>
+                    <th>Growth</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Precio</td>
+                    <td className="num">{planPrices ? `${formatPlanPrice(planPrices.starter)}/mes` : '—'}</td>
+                    <td className="num">{planPrices ? `${formatPlanPrice(planPrices.growth)}/mes` : '—'}</td>
+                  </tr>
+                  <tr><td>Pipelines</td><td className="num">2</td><td className="num">Ilimitados</td></tr>
+                  <tr><td>Políticas de ausencias</td><td className="num">3</td><td className="num">Ilimitadas</td></tr>
+                  <tr><td>Puestos incluidos</td><td className="num">5</td><td className="num">10</td></tr>
+                  <tr><td>Roles personalizados</td><td className="num">2</td><td className="num">Ilimitados</td></tr>
+                  <tr><td>Historial del registro de actividad</td><td className="num">7 días</td><td className="num">30 días</td></tr>
+                  <tr><td>Nómina</td><td className="no">—</td><td className="yes">Incluido</td></tr>
+                  <tr><td>Pagos (tu Stripe)</td><td className="no">—</td><td className="yes">Incluido</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p className="help-intro" style={{ marginTop: '-8px' }}>
+              Precios mostrados en USD. Un tercer nivel, <strong>Scale</strong>, está disponible hablando con
+              nosotros directamente en vez de por checkout de autoservicio. "Puestos incluidos" cuenta a toda
+              persona activa en tu espacio de trabajo sin importar el rol — owner, admin, o member cuentan todos
+              igual. Si te pasás, cada puesto extra cuesta $4/mes, facturado automáticamente; no hay un tope duro
+              una vez que estás en un plan real. La prueba gratuita (sin plan elegido todavía) está limitada a 5
+              personas porque todavía no hay facturación configurada para cubrir a nadie más allá de eso — elegí un
+              plan para agregar más.
+            </p>
+
+            <div className="help-sub">
+              <h3>Eligiendo cómo pagás</h3>
+              <p>
+                Esto es automático, según el país de tu espacio de trabajo — no es algo que elijas vos. Argentina
+                factura en ARS a través de Mercado Pago; el resto de los países factura en USD a través de Dodo
+                Payments. Northstack nunca ve ni guarda los datos de tu tarjeta en ningún caso.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Suscribirse, cambiar, y cancelar</h3>
+              <ul>
+                <li><strong>Change plan</strong> (Cambiar plan) es el único punto de entrada para todo: ¿todavía estás en la prueba gratuita? Te lleva directo al checkout seguro de tu proveedor de pago en una pestaña nueva, y tu plan recién se actualiza de verdad cuando se confirma ese pago. ¿Ya estás pagando? El cambio toma efecto en tu próxima fecha de facturación en cambio.</li>
+                <li><strong>Update payment method</strong> (Actualizar método de pago) usa el mismo flujo de checkout, para reemplazar la tarjeta de tu suscripción existente.</li>
+                <li><strong>Cancel subscription</strong> (Cancelar suscripción) mantiene tu acceso hasta el final del período que ya pagaste — hasta entonces aparece un botón <strong>Resume subscription</strong> (Reanudar suscripción) por si cambiás de idea.</li>
+              </ul>
+              <p>
+                La página de Facturación muestra tu cantidad actual de puestos contra los puestos incluidos en tu
+                plan, más cualquier costo de puestos extra. Debajo se listan las facturas con fecha, monto
+                (desglosado en plan + puestos extra cuando corresponde), y estado.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Si un pago falla</h3>
+              <p>
+                Tenés un período de gracia de 14 días con acceso completo y un banner de advertencia. Si vence sin
+                un pago exitoso, tu espacio de trabajo pasa a <strong>modo solo lectura</strong> — ver sigue
+                funcionando en todos lados, pero nadie puede crear, editar, ni eliminar nada hasta que se resuelva
+                la facturación.
+              </p>
+            </div>
+          </section>
+          ) : (
           <section className="help-section" id="g-billing">
             <div className="help-eyebrow">
               <CreditCardIcon />
@@ -1909,8 +1987,34 @@ export default function GuidePage() {
               </p>
             </div>
           </section>
+          )}
 
           {/* ===== Data ===== */}
+          {isSpanish ? (
+          <section className="help-section" id="g-data">
+            <div className="help-eyebrow">
+              <DownloadIcon />
+              Espacio de trabajo
+            </div>
+            <h2>Importar y exportar</h2>
+            <p className="help-intro">Traé datos o sacalos con CSV — soportado hoy en Personas, Empresas, y Contactos.</p>
+
+            <ol className="help-steps">
+              <li>Desde la barra de herramientas del módulo, descargá la <strong>plantilla</strong> — incluye los encabezados de columna correctos más una fila de ejemplo completa.</li>
+              <li>Completala y subila de vuelta por el mismo menú.</li>
+              <li>Revisá el panel de resultados: cuántos registros se crearon, y una lista fila por fila de lo que falló y por qué.</li>
+            </ol>
+            <div className="help-callout help-callout-note">
+              <InfoIcon />
+              <p>
+                Una importación de Empresas necesita un "Primary Contact Email" (email del contacto principal) en
+                cada fila — se vincula automáticamente a un contacto existente que coincida, o crea uno nuevo junto
+                con la empresa si también incluís nombre y apellido.
+              </p>
+            </div>
+            <p>El acceso a importar/exportar está sujeto a permisos por módulo y puede diferir del acceso general de edición — consultá con tu Owner o Admin si parece faltar un botón.</p>
+          </section>
+          ) : (
           <section className="help-section" id="g-data">
             <div className="help-eyebrow">
               <DownloadIcon />
@@ -1934,8 +2038,24 @@ export default function GuidePage() {
             </div>
             <p>Access to import/export is permission-gated per module and can differ from general edit access — check with your Owner or Admin if a button seems to be missing.</p>
           </section>
+          )}
 
           {/* ===== Mobile ===== */}
+          {isSpanish ? (
+          <section className="help-section" id="g-mobile">
+            <div className="help-eyebrow">
+              <DeviceIcon />
+              Espacio de trabajo
+            </div>
+            <h2>Desde el celular</h2>
+            <p className="help-intro">Hoy Northstack funciona desde el navegador de tu celular.</p>
+            <p>
+              Abrí la misma dirección web desde tu celular y el diseño se adapta — menús, pestañas, y formularios
+              están todos rediseñados para una pantalla chica. Todavía no hay una app de Northstack en el App Store
+              ni en Play Store; por ahora, el navegador es la forma de usar Northstack desde el celular.
+            </p>
+          </section>
+          ) : (
           <section className="help-section" id="g-mobile">
             <div className="help-eyebrow">
               <DeviceIcon />
@@ -1949,6 +2069,7 @@ export default function GuidePage() {
               the browser is the way to use Northstack on mobile.
             </p>
           </section>
+          )}
         </div>
       </div>
     </div>

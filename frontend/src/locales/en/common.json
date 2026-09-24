@@ -4,6 +4,25 @@
     "en": "English",
     "es": "Español"
   },
+  "csvImport": {
+    "exportAriaLabel": "Export {{entity}} to CSV",
+    "exportTitle": "Export to CSV",
+    "importAriaLabel": "Import {{entity}} from CSV",
+    "importTitle": "Import from CSV",
+    "importSlideOverTitle": "Import {{entity}} from CSV",
+    "uploadInstructions": "Upload a CSV file with a header row. Not sure of the columns? Download a template below — it has the exact column names and one filled-in example row showing the expected format (e.g. dates as YYYY-MM-DD).",
+    "downloading": "Downloading…",
+    "downloadTemplate": "Download CSV template",
+    "csvFileLabel": "CSV file",
+    "importing": "Importing…",
+    "importFile": "Import {{fileName}}",
+    "importedCount": "{{count}} {{entity}} imported.",
+    "rowsHadErrors": "{{count}} row(s) had errors:",
+    "rowError": "Row {{row}}: {{message}}",
+    "exportFailed": "Failed to export CSV: {{message}}",
+    "templateDownloadFailed": "Failed to download template: {{message}}",
+    "importFailed": "Failed to import CSV: {{message}}"
+  },
   "sidebar": {
     "overview": "Overview",
     "myTasks": "My Tasks",

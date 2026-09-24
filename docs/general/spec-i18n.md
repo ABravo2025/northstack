@@ -103,6 +103,16 @@ pendiente de que se revise y promueva a `main`/producción junto con la Unidad 1
   y los cientos de `toast.success()`/`toast.error()` esparcidos por el código no tienen texto
   propio — reciben el suyo como prop desde cada página. Traducir esos mensajes es trabajo de cada
   unidad de módulo (3-8), no de esta.
+- **Gap descubierto 2026-09-24 durante el QA de la Unidad 4** (no cubierto por ninguna unidad):
+  `frontend/src/components/entity-views/*` — `FilterBar`, `ViewsBar`, `KanbanBoard`,
+  `ColumnVisibilityMenu`, `StatusColumnMenu`, `CustomFieldColumnMenu`, `AddCustomFieldColumn`,
+  `FieldCatalogMenu` (además de `CsvImportExportMenu`, que sí se arregló — ver nota de la Unidad 4).
+  Son genuinamente compartidos entre Companies/Contacts/Opportunities/Employees, en el mismo
+  espíritu que la Unidad 2 pero nunca asignados a ninguna unidad. `CsvImportExportMenu` mostraba
+  una mezcla real de inglés/español en pantalla (el label de la entidad ya traducido interpolado
+  dentro de una plantilla en inglés, ej. "Import Empresas from CSV") — corregido con un namespace
+  `csvImport` nuevo en `common.json`. Los otros 7 archivos siguen sin tocar, mismo riesgo
+  potencial de mezcla de idiomas si alguna unidad de módulo ya los interpola con texto traducido.
 
 ## Unidad 3 — Dashboards
 

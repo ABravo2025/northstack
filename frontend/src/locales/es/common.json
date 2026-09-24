@@ -4,6 +4,25 @@
     "en": "English",
     "es": "Español"
   },
+  "csvImport": {
+    "exportAriaLabel": "Exportar {{entity}} a CSV",
+    "exportTitle": "Exportar a CSV",
+    "importAriaLabel": "Importar {{entity}} desde CSV",
+    "importTitle": "Importar desde CSV",
+    "importSlideOverTitle": "Importar {{entity}} desde CSV",
+    "uploadInstructions": "Subí un archivo CSV con una fila de encabezado. ¿No estás seguro de las columnas? Descargá una plantilla abajo — tiene los nombres exactos de las columnas y una fila de ejemplo completa mostrando el formato esperado (ej. fechas como AAAA-MM-DD).",
+    "downloading": "Descargando…",
+    "downloadTemplate": "Descargar plantilla CSV",
+    "csvFileLabel": "Archivo CSV",
+    "importing": "Importando…",
+    "importFile": "Importar {{fileName}}",
+    "importedCount": "Se importaron {{count}} {{entity}}.",
+    "rowsHadErrors": "{{count}} fila(s) tuvieron errores:",
+    "rowError": "Fila {{row}}: {{message}}",
+    "exportFailed": "Error al exportar CSV: {{message}}",
+    "templateDownloadFailed": "Error al descargar la plantilla: {{message}}",
+    "importFailed": "Error al importar CSV: {{message}}"
+  },
   "sidebar": {
     "overview": "Resumen",
     "myTasks": "Mis tareas",

@@ -1,3 +1,5 @@
+import i18n from './i18n';
+
 export interface DateRange {
   since: Date;
   until: Date;
@@ -5,15 +7,19 @@ export interface DateRange {
 
 export type PresetKey = 'today' | 'last7' | 'last30' | 'last90' | 'mtd' | 'last6months' | 'thisYear' | 'allTime' | 'custom';
 
-export const PRESETS: { key: Exclude<PresetKey, 'custom'>; label: string }[] = [
-  { key: 'today', label: 'Today' },
-  { key: 'last7', label: 'Last 7 days' },
-  { key: 'last30', label: 'Last 30 days' },
-  { key: 'last90', label: 'Last 90 days' },
-  { key: 'mtd', label: 'Month to date' },
-  { key: 'last6months', label: 'Last 6 months' },
-  { key: 'thisYear', label: 'This year' },
-  { key: 'allTime', label: 'All time' },
+// Labels are resolved lazily (a getter, not a static value) so a language switch is reflected the
+// next time this list is read — same reasoning as getDashboardSections/getSettingsSections, but as
+// a plain array here since PRESETS (unlike those) has no permission-based filtering to justify a
+// function wrapper.
+export const PRESETS: { key: Exclude<PresetKey, 'custom'>; readonly label: string }[] = [
+  { key: 'today', get label() { return i18n.t('dateRange.presets.today', { ns: 'dashboards' }); } },
+  { key: 'last7', get label() { return i18n.t('dateRange.presets.last7', { ns: 'dashboards' }); } },
+  { key: 'last30', get label() { return i18n.t('dateRange.presets.last30', { ns: 'dashboards' }); } },
+  { key: 'last90', get label() { return i18n.t('dateRange.presets.last90', { ns: 'dashboards' }); } },
+  { key: 'mtd', get label() { return i18n.t('dateRange.presets.mtd', { ns: 'dashboards' }); } },
+  { key: 'last6months', get label() { return i18n.t('dateRange.presets.last6months', { ns: 'dashboards' }); } },
+  { key: 'thisYear', get label() { return i18n.t('dateRange.presets.thisYear', { ns: 'dashboards' }); } },
+  { key: 'allTime', get label() { return i18n.t('dateRange.presets.allTime', { ns: 'dashboards' }); } },
 ];
 
 export const DEFAULT_PRESET: Exclude<PresetKey, 'custom'> = 'last6months';
@@ -63,8 +69,8 @@ export function rangeForPreset(key: Exclude<PresetKey, 'custom'>, now: Date = ne
 }
 
 export function presetLabel(key: PresetKey): string {
-  if (key === 'custom') return 'Custom range';
-  return PRESETS.find((p) => p.key === key)?.label ?? 'Last 6 months';
+  if (key === 'custom') return i18n.t('dateRange.customRange', { ns: 'dashboards' });
+  return PRESETS.find((p) => p.key === key)?.label ?? i18n.t('dateRange.presets.last6months', { ns: 'dashboards' });
 }
 
 // Local date components, not `toISOString().slice(0, 10)` — the latter is the *UTC* calendar

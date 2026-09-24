@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Popover from '../common/Popover';
 import { CalendarIcon, CheckIcon } from '../common/Icons';
 import { DEFAULT_PRESET, PRESETS, presetLabel, rangeForPreset, toDateInputValue, type DateRange, type PresetKey } from '../../lib/dateRangePresets';
@@ -23,6 +24,7 @@ interface DateRangeFilterProps {
 // presets, no calendar grid for "last 30 days"), built on this project's
 // standard Popover mechanism instead of a new one.
 export default function DateRangeFilter({ presetKey, range, onChange }: DateRangeFilterProps) {
+  const { t } = useTranslation('dashboards');
   const [open, setOpen] = useState(false);
   const anchorRef = useRef<HTMLButtonElement>(null);
   const [customSince, setCustomSince] = useState(() => toDateInputValue(range.since));
@@ -71,7 +73,7 @@ export default function DateRangeFilter({ presetKey, range, onChange }: DateRang
             </button>
           ))}
           <div className="mt-2 border-t border-line pt-2 dark:border-dark-line">
-            <p className="mb-1.5 px-2 text-xs font-medium text-ink-faint dark:text-dark-ink-faint">Custom range</p>
+            <p className="mb-1.5 px-2 text-xs font-medium text-ink-faint dark:text-dark-ink-faint">{t('dateRange.customRange')}</p>
             <div className="flex flex-col gap-1.5 px-2">
               <input
                 type="date"
@@ -86,7 +88,7 @@ export default function DateRangeFilter({ presetKey, range, onChange }: DateRang
                 className="rounded-md border border-line-strong bg-surface-1 px-2 py-1 text-sm dark:border-dark-line dark:bg-dark-surface dark:text-dark-ink"
               />
               <button type="button" className="btn btn-primary mt-1" onClick={applyCustom}>
-                Apply
+                {t('dateRange.apply')}
               </button>
             </div>
           </div>

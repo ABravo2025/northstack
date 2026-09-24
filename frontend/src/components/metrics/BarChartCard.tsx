@@ -1,4 +1,5 @@
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { useTranslation } from 'react-i18next';
 
 export interface BarSeries {
   key: string;
@@ -25,6 +26,7 @@ const AXIS_TICK = { fill: 'var(--chart-muted)', fontSize: 12 };
 // (never stacked) bars — stacking currency series would visually blend them,
 // which docs/metrics/tenant-metrics-spec.md's currency rule forbids.
 export default function BarChartCard({ title, data, series, valueFormatter, height = 260 }: BarChartCardProps) {
+  const { t } = useTranslation('dashboards');
   const formatValue = valueFormatter ?? ((v: number) => String(v));
   // The Y-axis is one shared scale across every series — for a single-series chart that's
   // unambiguous (label it in that series' unit), but for a multi-currency chart no single
@@ -37,7 +39,7 @@ export default function BarChartCard({ title, data, series, valueFormatter, heig
     <div className="card">
       <h3 className="card-title">{title}</h3>
       {data.length === 0 ? (
-        <p className="text-xs text-ink-faint dark:text-dark-ink-faint">No data yet.</p>
+        <p className="text-xs text-ink-faint dark:text-dark-ink-faint">{t('common.noDataYet')}</p>
       ) : (
         <ResponsiveContainer width="100%" height={height}>
           <BarChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>

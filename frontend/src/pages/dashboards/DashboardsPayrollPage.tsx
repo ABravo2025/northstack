@@ -1,4 +1,5 @@
 import { useOutletContext } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import BarChartCard from '../../components/metrics/BarChartCard';
 import StatTile from '../../components/metrics/StatTile';
 import { useTenantMetrics } from '../../lib/useTenantMetrics';
@@ -7,12 +8,13 @@ import { formatMoney } from '../../lib/currencies';
 import type { DashboardsOutletContext } from '../../layouts/DashboardsLayout';
 
 export default function DashboardsPayrollPage() {
+  const { t } = useTranslation('dashboards');
   const { token, range } = useOutletContext<DashboardsOutletContext>();
   const { metrics, loading } = useTenantMetrics(token, range);
 
-  if (!metrics) return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">Loading…</p>;
+  if (!metrics) return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('common.loading')}</p>;
   if (!metrics.payroll) {
-    return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">Payroll data is only visible to the workspace owner.</p>;
+    return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('payroll.notVisibleOwnerOnly')}</p>;
   }
 
   const { payroll } = metrics;
@@ -28,21 +30,21 @@ export default function DashboardsPayrollPage() {
     <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatTile
-          label="Contract confirmation"
+          label={t('payroll.contractConfirmation')}
           value={payroll.contractConfirmation.ratePct === null ? '—' : `${payroll.contractConfirmation.ratePct}%`}
           subtitle={`${payroll.contractConfirmation.confirmed} / ${payroll.contractConfirmation.total}`}
         />
-        <StatTile label="Off-cycle payments" value={String(payroll.offCycle.count)} />
+        <StatTile label={t('payroll.offCyclePayments')} value={String(payroll.offCycle.count)} />
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <BarChartCard
-          title="Payroll cost by month"
+          title={t('payroll.chartCostByMonth')}
           data={costByPeriod.data}
           series={costByPeriod.series}
           valueFormatter={(v, currency) => formatMoney(v * 100, currency)}
         />
         <BarChartCard
-          title="Cost by type"
+          title={t('payroll.chartCostByType')}
           data={costByType.data}
           series={costByType.series}
           valueFormatter={(v, currency) => formatMoney(v * 100, currency)}
@@ -50,15 +52,15 @@ export default function DashboardsPayrollPage() {
       </div>
       {payroll.compensationByDepartment.length > 0 && (
         <div className="card mt-4">
-          <h3 className="card-title">Compensation by department</h3>
+          <h3 className="card-title">{t('payroll.compensationByDepartment')}</h3>
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-ink-faint dark:text-dark-ink-faint">
-                <th className="pb-2 font-medium">Department</th>
-                <th className="pb-2 font-medium">Type</th>
-                <th className="pb-2 font-medium">Median</th>
-                <th className="pb-2 font-medium">Avg</th>
-                <th className="pb-2 font-medium">Sample</th>
+                <th className="pb-2 font-medium">{t('payroll.colDepartment')}</th>
+                <th className="pb-2 font-medium">{t('payroll.colType')}</th>
+                <th className="pb-2 font-medium">{t('payroll.colMedian')}</th>
+                <th className="pb-2 font-medium">{t('payroll.colAvg')}</th>
+                <th className="pb-2 font-medium">{t('payroll.colSample')}</th>
               </tr>
             </thead>
             <tbody>

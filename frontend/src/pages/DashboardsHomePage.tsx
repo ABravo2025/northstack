@@ -2,6 +2,10 @@ import { Link } from 'react-router-dom';
 import { getDashboardSections } from '../lib/dashboardsSections';
 import { usePermissions } from '../contexts/PermissionsContext';
 
+// No component-level useTranslation() needed here — every string rendered
+// on this page (tile.label / tile.desc) already comes translated out of
+// getDashboardSections, same as SettingsHomePage/getSettingsSections.
+
 // Landing page for /dashboards — mirrors SettingsHomePage's tile grid.
 // Reuses the .settings-grid/.settings-tile classes: they're generic tile
 // styling, not Settings-specific (2026-09-09).

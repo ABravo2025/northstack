@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { getDashboardSections } from '../../lib/dashboardsSections';
 import { ChevronLeftIcon, XIcon } from '../common/Icons';
 import { usePermissions } from '../../contexts/PermissionsContext';
@@ -13,6 +14,7 @@ interface DashboardsSidebarProps {
 // dashboard categories doesn't require going back to the tile grid each
 // time (2026-09-09, mirrors the Settings pattern per Alejandro's request).
 export default function DashboardsSidebar({ mobileOpen, onMobileClose }: DashboardsSidebarProps) {
+  const { t } = useTranslation('dashboards');
   const navigate = useNavigate();
   const permissions = usePermissions();
   const sections = getDashboardSections(permissions);
@@ -23,7 +25,7 @@ export default function DashboardsSidebar({ mobileOpen, onMobileClose }: Dashboa
     <>
       {mobileOpen && <div className="sidebar-backdrop" onClick={onMobileClose} />}
       <aside className={`sidebar ${mobileOpen ? 'mobile-open' : ''}`}>
-        <button className="sidebar-toggle-mobile" onClick={onMobileClose} aria-label="Close menu">
+        <button className="sidebar-toggle-mobile" onClick={onMobileClose} aria-label={t('sidebar.closeMenu')}>
           <XIcon className="h-4 w-4" />
         </button>
 
@@ -32,14 +34,14 @@ export default function DashboardsSidebar({ mobileOpen, onMobileClose }: Dashboa
               here directly leaves no useful browser history to go back to. */}
           <button type="button" className="sidebar-link w-full text-left" onClick={() => navigate('/overview')}>
             <ChevronLeftIcon className="h-4 w-4 shrink-0" />
-            Back
+            {t('sidebar.back')}
           </button>
         </div>
 
         <div className="sidebar-divider">
-          <p className="sidebar-group-label">Dashboards</p>
+          <p className="sidebar-group-label">{t('common.dashboardsTitle')}</p>
           <NavLink to="/dashboards" end className={linkClass} onClick={onMobileClose}>
-            All dashboards
+            {t('sidebar.allDashboards')}
           </NavLink>
           {sections.map((item) => (
             <NavLink key={item.to} to={item.to} className={linkClass} title={item.label} onClick={onMobileClose}>

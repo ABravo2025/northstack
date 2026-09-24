@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { formatMoney } from '../../lib/currencies';
 import { useTenantMetrics } from '../../lib/useTenantMetrics';
 import StatTile from './StatTile';
@@ -20,6 +21,7 @@ function sumByCurrencyLabel(amounts: { currency: string; amountCents: number }[]
 // gate as the /dashboards pages themselves, tenantMetrics.ts) — a default Member never gets this
 // company-wide strip on /overview, same "only my own info" policy as the rest of the app.
 export default function OverviewMetricsStrip({ token }: OverviewMetricsStripProps) {
+  const { t } = useTranslation('dashboards');
   const { metrics } = useTenantMetrics(token);
 
   if (!metrics || !metrics.hr || !metrics.sales || !metrics.tasks || !metrics.timeOff) return null;
@@ -32,14 +34,18 @@ export default function OverviewMetricsStrip({ token }: OverviewMetricsStripProp
 
   return (
     <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
-      <StatTile label="Headcount" value={String(metrics.hr.headcount.total)} />
-      <StatTile label="Open pipeline" value={sumByCurrencyLabel(pipelineAmounts)} subtitle={`${metrics.sales.openPipeline.reduce((s, p) => s + p.count, 0)} deals`} />
+      <StatTile label={t('overviewStrip.headcount')} value={String(metrics.hr.headcount.total)} />
       <StatTile
-        label="Tasks completed"
+        label={t('overviewStrip.openPipeline')}
+        value={sumByCurrencyLabel(pipelineAmounts)}
+        subtitle={t('overviewStrip.deals', { count: metrics.sales.openPipeline.reduce((s, p) => s + p.count, 0) })}
+      />
+      <StatTile
+        label={t('overviewStrip.tasksCompleted')}
         value={metrics.tasks.completion.completionRatePct === null ? '—' : `${metrics.tasks.completion.completionRatePct}%`}
         subtitle={`${metrics.tasks.completion.completed} / ${metrics.tasks.completion.total}`}
       />
-      <StatTile label="Time off pending" value={String(metrics.timeOff.pending)} />
+      <StatTile label={t('overviewStrip.timeOffPending')} value={String(metrics.timeOff.pending)} />
     </div>
   );
 }

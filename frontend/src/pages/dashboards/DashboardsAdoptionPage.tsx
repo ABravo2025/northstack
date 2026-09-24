@@ -1,22 +1,27 @@
 import { useOutletContext } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import StatTile from '../../components/metrics/StatTile';
 import { useTenantMetrics } from '../../lib/useTenantMetrics';
 import type { DashboardsOutletContext } from '../../layouts/DashboardsLayout';
 
-const MODULE_LABELS: Record<string, string> = {
-  hr: 'HR',
-  sales: 'Sales',
-  time_off: 'Time Off',
-  payroll: 'Payroll',
-};
-
 export default function DashboardsAdoptionPage() {
+  const { t } = useTranslation('dashboards');
   const { token, range } = useOutletContext<DashboardsOutletContext>();
   const { metrics, loading } = useTenantMetrics(token, range);
 
-  if (!metrics) return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">Loading…</p>;
+  // Module keys ('hr', 'sales', 'time_off', 'payroll') come from the API — the snake_case
+  // 'time_off' is the one that doesn't match a JSON key directly, hence the lookup below instead
+  // of a plain `t(`adoption.moduleLabels.${m.module}`)` template.
+  const MODULE_LABEL_KEYS: Record<string, string> = {
+    hr: 'adoption.moduleLabels.hr',
+    sales: 'adoption.moduleLabels.sales',
+    time_off: 'adoption.moduleLabels.timeOff',
+    payroll: 'adoption.moduleLabels.payroll',
+  };
+
+  if (!metrics) return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('common.loading')}</p>;
   if (!metrics.adoption) {
-    return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">This dashboard isn't visible to your role.</p>;
+    return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('common.notVisibleToRole')}</p>;
   }
 
   const { adoption } = metrics;
@@ -25,18 +30,21 @@ export default function DashboardsAdoptionPage() {
     <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-3">
         <StatTile
-          label="Seat utilization"
+          label={t('adoption.seatUtilization')}
           value={adoption.seatUtilization.ratePct === null ? '—' : `${adoption.seatUtilization.ratePct}%`}
-          subtitle={`${adoption.seatUtilization.accepted} / ${adoption.seatUtilization.nonRevokedTotal} invitations accepted`}
+          subtitle={t('adoption.invitationsAcceptedSubtitle', {
+            accepted: adoption.seatUtilization.accepted,
+            total: adoption.seatUtilization.nonRevokedTotal,
+          })}
         />
         <StatTile
-          label="Login frequency (proxy)"
+          label={t('adoption.loginFrequency')}
           value={adoption.loginFrequency.medianDistinctLoginDays === null ? '—' : String(adoption.loginFrequency.medianDistinctLoginDays)}
-          subtitle={`median distinct login days · ${adoption.loginFrequency.usersWithSession} users`}
+          subtitle={t('adoption.loginFrequencySubtitle', { count: adoption.loginFrequency.usersWithSession })}
         />
       </div>
       <div className="card">
-        <h3 className="card-title">Module usage</h3>
+        <h3 className="card-title">{t('adoption.moduleUsage')}</h3>
         <div className="flex flex-wrap gap-2">
           {adoption.moduleUsage.map((m) => (
             <div
@@ -48,15 +56,12 @@ export default function DashboardsAdoptionPage() {
               }`}
               title={m.detail}
             >
-              {MODULE_LABELS[m.module] ?? m.module} — {m.used ? 'in use' : 'not used yet'}
+              {MODULE_LABEL_KEYS[m.module] ? t(MODULE_LABEL_KEYS[m.module]) : m.module} — {m.used ? t('adoption.inUse') : t('adoption.notUsedYet')}
             </div>
           ))}
         </div>
       </div>
-      <p className="mt-3 text-xs text-ink-faint dark:text-dark-ink-faint">
-        Login frequency is a weak proxy (counts distinct days a login happened, not ongoing activity) — sessions stay valid for 30 days, so
-        someone who logs in once and stays logged in won't show up again until their session slides.
-      </p>
+      <p className="mt-3 text-xs text-ink-faint dark:text-dark-ink-faint">{t('adoption.loginFrequencyDisclaimer')}</p>
     </div>
   );
 }

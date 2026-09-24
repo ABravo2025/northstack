@@ -1,0 +1,145 @@
+{
+  "common": {
+    "loading": "Cargando…",
+    "notVisibleToRole": "Este panel no está disponible para tu rol.",
+    "noDataYet": "Todavía no hay datos.",
+    "sampleSubtitle": "muestra: {{count}}",
+    "dashboardsTitle": "Paneles",
+    "daysValue_one": "{{count}} día",
+    "daysValue_other": "{{count}} días"
+  },
+  "sidebar": {
+    "back": "Volver",
+    "closeMenu": "Cerrar menú",
+    "allDashboards": "Todos los paneles"
+  },
+  "sections": {
+    "hr": { "label": "RRHH", "desc": "Dotación, antigüedad y composición organizacional." },
+    "timeOff": { "label": "Ausencias", "desc": "Saldos, uso y tendencias de las políticas." },
+    "payroll": { "label": "Nómina", "desc": "Corridas, costos y actividad de pagos." },
+    "sales": { "label": "Ventas", "desc": "Salud del pipeline y tendencias de oportunidades." },
+    "tasks": { "label": "Tareas", "desc": "Tasas de finalización y carga de trabajo." },
+    "adoption": { "label": "Adopción", "desc": "Uso de funciones en todo el espacio de trabajo." }
+  },
+  "dateRange": {
+    "customRange": "Rango personalizado",
+    "apply": "Aplicar",
+    "presets": {
+      "today": "Hoy",
+      "last7": "Últimos 7 días",
+      "last30": "Últimos 30 días",
+      "last90": "Últimos 90 días",
+      "mtd": "Mes en curso",
+      "last6months": "Últimos 6 meses",
+      "thisYear": "Este año",
+      "allTime": "Todo el tiempo"
+    }
+  },
+  "overviewStrip": {
+    "headcount": "Dotación",
+    "openPipeline": "Pipeline abierto",
+    "deals_one": "{{count}} negocio",
+    "deals_other": "{{count}} negocios",
+    "tasksCompleted": "Tareas completadas",
+    "timeOffPending": "Ausencias pendientes"
+  },
+  "hr": {
+    "headcount": "Dotación",
+    "medianTenure": "Antigüedad mediana",
+    "avgDirectReports": "Prom. de reportes directos",
+    "managers_one": "{{count}} gerente",
+    "managers_other": "{{count}} gerentes",
+    "customFields": "Campos personalizados",
+    "activeOnEmployees_one": "activo en {{count}} empleado",
+    "activeOnEmployees_other": "activo en {{count}} empleados",
+    "chartByDepartment": "Dotación por departamento",
+    "chartByJobTitle": "Dotación por puesto",
+    "chartNewHiresByMonth": "Nuevas contrataciones por mes",
+    "chartContractTypeMix": "Mezcla de tipos de contrato",
+    "chartPersonTypeMix": "Mezcla de tipos de persona",
+    "seriesEmployees": "Empleados",
+    "seriesHires": "Contrataciones",
+    "customFieldCompletion": "Completitud de campos personalizados",
+    "colField": "Campo",
+    "colFilled": "Completados",
+    "colCompletion": "Completitud"
+  },
+  "timeOff": {
+    "approvalRate": "Tasa de aprobación",
+    "medianTimeToDecide": "Tiempo mediano de decisión",
+    "pendingRequests": "Solicitudes pendientes",
+    "policyAdoption": "Adopción de políticas",
+    "employeesWithPolicy": "{{withPolicy}} / {{total}} empleados",
+    "chartDaysTakenByPolicy": "Días tomados por política",
+    "seriesDays": "Días",
+    "daysTakenSummary": "Total de \"Días tomados en este período\": {{days}} días en {{requests}} solicitudes."
+  },
+  "payroll": {
+    "contractConfirmation": "Confirmación de contrato",
+    "offCyclePayments": "Pagos fuera de ciclo",
+    "chartCostByMonth": "Costo de nómina por mes",
+    "chartCostByType": "Costo por tipo",
+    "compensationByDepartment": "Compensación por departamento",
+    "colDepartment": "Departamento",
+    "colType": "Tipo",
+    "colMedian": "Mediana",
+    "colAvg": "Prom.",
+    "colSample": "Muestra",
+    "notVisibleOwnerOnly": "Los datos de nómina solo son visibles para el propietario del espacio de trabajo."
+  },
+  "sales": {
+    "winRate": "Tasa de éxito",
+    "wonLostSubtitle": "{{won}} ganados / {{lost}} perdidos",
+    "medianSalesCycle": "Ciclo de venta mediano",
+    "multiThreadedDeals": "Negocios multi-contacto",
+    "ofOpenSubtitle": "de {{count}} abiertos",
+    "leadConversion": "Conversión de leads",
+    "leadsSubtitle": "{{withOpportunity}} / {{total}} leads",
+    "chartOpenPipelineValue": "Valor del pipeline abierto",
+    "chartCompaniesAddedByMonth": "Empresas agregadas por mes",
+    "seriesCompanies": "Empresas",
+    "chartWinRateByLeadSource": "Tasa de éxito por fuente de lead",
+    "seriesWinRatePct": "Tasa de éxito %",
+    "chartLossReasons": "Motivos de pérdida",
+    "seriesOpportunities": "Oportunidades",
+    "stageVelocity": "Velocidad por etapa",
+    "colPipeline": "Pipeline",
+    "colStage": "Etapa",
+    "colHistoricalMedian": "Mediana histórica",
+    "colSample": "Muestra",
+    "dealsAtRisk": "Negocios en riesgo (por encima de la mediana histórica de su etapa)",
+    "colOpportunity": "Oportunidad",
+    "colDaysInStage": "Días en la etapa",
+    "colStageMedian": "Mediana de la etapa",
+    "dealsByOwner": "Negocios por responsable",
+    "colOwner": "Responsable",
+    "colOpen": "Abiertos",
+    "colWon": "Ganados",
+    "colWonAmount": "Monto ganado"
+  },
+  "tasks": {
+    "completionRate": "Tasa de finalización",
+    "overdue": "Vencidas",
+    "medianTimeToComplete": "Tiempo mediano de finalización",
+    "notesCreated": "Notas creadas",
+    "chartNotesByMonth": "Notas por mes",
+    "seriesNotes": "Notas"
+  },
+  "adoption": {
+    "seatUtilization": "Uso de licencias",
+    "invitationsAcceptedSubtitle": "{{accepted}} / {{total}} invitaciones aceptadas",
+    "loginFrequency": "Frecuencia de inicio de sesión (proxy)",
+    "loginFrequencySubtitle_one": "mediana de días distintos con inicio de sesión · {{count}} usuario",
+    "loginFrequencySubtitle_other": "mediana de días distintos con inicio de sesión · {{count}} usuarios",
+    "moduleUsage": "Uso de módulos",
+    "inUse": "en uso",
+    "notUsedYet": "todavía no se usó",
+    "moduleLabels": {
+      "hr": "RRHH",
+      "sales": "Ventas",
+      "timeOff": "Ausencias",
+      "payroll": "Nómina"
+    },
+    "loginFrequencyDisclaimer": "La frecuencia de inicio de sesión es un proxy débil (cuenta días distintos en que hubo un inicio de sesión, no actividad continua) — las sesiones se mantienen válidas por 30 días, así que alguien que inicia sesión una vez y se queda conectado no volverá a aparecer hasta que su sesión venza."
+  }
+}

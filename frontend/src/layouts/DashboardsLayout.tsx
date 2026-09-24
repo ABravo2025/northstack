@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import DateRangeFilter, { DEFAULT_PRESET, rangeForPreset } from '../components/metrics/DateRangeFilter';
 import type { DateRange, PresetKey } from '../lib/dateRangePresets';
 import { getDashboardSections } from '../lib/dashboardsSections';
@@ -24,6 +25,7 @@ export interface DashboardsOutletContext {
 // (2026-09-09). The date range still lives here, not per-page, so switching
 // categories doesn't reset your selected range.
 export default function DashboardsLayout({ token }: DashboardsLayoutProps) {
+  const { t } = useTranslation('dashboards');
   const location = useLocation();
   const permissions = usePermissions();
   const sections = getDashboardSections(permissions);
@@ -41,10 +43,10 @@ export default function DashboardsLayout({ token }: DashboardsLayoutProps) {
   return (
     <div className="page-full">
       {isIndex ? (
-        <h2 className="mb-5 text-xl font-semibold">Dashboards</h2>
+        <h2 className="mb-5 text-xl font-semibold">{t('common.dashboardsTitle')}</h2>
       ) : (
         <div className="page-toolbar">
-          <h2 className="text-xl font-semibold">{active?.label ?? 'Dashboards'}</h2>
+          <h2 className="text-xl font-semibold">{active?.label ?? t('common.dashboardsTitle')}</h2>
           <div className="ml-auto">
             <DateRangeFilter presetKey={presetKey} range={range} onChange={handleRangeChange} />
           </div>
@@ -56,7 +58,7 @@ export default function DashboardsLayout({ token }: DashboardsLayoutProps) {
         // getDashboardSections/usePermissions, so a pathname that doesn't match anything in it is
         // either an unknown route or one this role isn't allowed to see. Bails out here instead of
         // rendering <Outlet>, so the page component's useTenantMetrics never even fires.
-        <p className="text-sm text-ink-muted dark:text-dark-ink-muted">This dashboard isn't visible to your role.</p>
+        <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('common.notVisibleToRole')}</p>
       ) : (
         <Outlet context={{ token, range } satisfies DashboardsOutletContext} />
       )}

@@ -1,4 +1,5 @@
 import { useOutletContext } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import BarChartCard from '../../components/metrics/BarChartCard';
 import StatTile from '../../components/metrics/StatTile';
 import { useTenantMetrics } from '../../lib/useTenantMetrics';
@@ -6,12 +7,13 @@ import { seriesColor } from '../../lib/metricsFormat';
 import type { DashboardsOutletContext } from '../../layouts/DashboardsLayout';
 
 export default function DashboardsTimeOffPage() {
+  const { t } = useTranslation('dashboards');
   const { token, range } = useOutletContext<DashboardsOutletContext>();
   const { metrics, loading } = useTenantMetrics(token, range);
 
-  if (!metrics) return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">Loading…</p>;
+  if (!metrics) return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('common.loading')}</p>;
   if (!metrics.timeOff) {
-    return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">This dashboard isn't visible to your role.</p>;
+    return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('common.notVisibleToRole')}</p>;
   }
 
   const { timeOff } = metrics;
@@ -21,31 +23,34 @@ export default function DashboardsTimeOffPage() {
     <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatTile
-          label="Approval rate"
+          label={t('timeOff.approvalRate')}
           value={timeOff.approval.approvalRatePct === null ? '—' : `${timeOff.approval.approvalRatePct}%`}
-          subtitle={`sample: ${timeOff.approval.sampleSize}`}
+          subtitle={t('common.sampleSubtitle', { count: timeOff.approval.sampleSize })}
         />
         <StatTile
-          label="Median time to decide"
+          label={t('timeOff.medianTimeToDecide')}
           value={timeOff.approval.medianApprovalHours === null ? '—' : `${timeOff.approval.medianApprovalHours}h`}
         />
-        <StatTile label="Pending requests" value={String(timeOff.pending)} />
+        <StatTile label={t('timeOff.pendingRequests')} value={String(timeOff.pending)} />
         <StatTile
-          label="Policy adoption"
+          label={t('timeOff.policyAdoption')}
           value={timeOff.policyAdoption.adoptionPct === null ? '—' : `${timeOff.policyAdoption.adoptionPct}%`}
-          subtitle={`${timeOff.policyAdoption.employeesWithPolicy} / ${timeOff.policyAdoption.totalEmployees} employees`}
+          subtitle={t('timeOff.employeesWithPolicy', {
+            withPolicy: timeOff.policyAdoption.employeesWithPolicy,
+            total: timeOff.policyAdoption.totalEmployees,
+          })}
         />
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <BarChartCard
-          title="Days taken by policy"
+          title={t('timeOff.chartDaysTakenByPolicy')}
           data={byPolicy}
-          series={[{ key: 'days', label: 'Days', color: seriesColor(0) }]}
+          series={[{ key: 'days', label: t('timeOff.seriesDays'), color: seriesColor(0) }]}
           valueFormatter={(v) => `${v}d`}
         />
       </div>
       <p className="mt-3 text-xs text-ink-faint dark:text-dark-ink-faint">
-        "Days taken this period" total: {timeOff.daysTaken.totalDays} days across {timeOff.daysTaken.requestCount} requests.
+        {t('timeOff.daysTakenSummary', { days: timeOff.daysTaken.totalDays, requests: timeOff.daysTaken.requestCount })}
       </p>
     </div>
   );

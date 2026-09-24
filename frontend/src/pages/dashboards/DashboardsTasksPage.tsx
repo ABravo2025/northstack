@@ -1,4 +1,5 @@
 import { useOutletContext } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import BarChartCard from '../../components/metrics/BarChartCard';
 import StatTile from '../../components/metrics/StatTile';
 import { useTenantMetrics } from '../../lib/useTenantMetrics';
@@ -6,12 +7,13 @@ import { seriesColor } from '../../lib/metricsFormat';
 import type { DashboardsOutletContext } from '../../layouts/DashboardsLayout';
 
 export default function DashboardsTasksPage() {
+  const { t } = useTranslation('dashboards');
   const { token, range } = useOutletContext<DashboardsOutletContext>();
   const { metrics, loading } = useTenantMetrics(token, range);
 
-  if (!metrics) return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">Loading…</p>;
+  if (!metrics) return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('common.loading')}</p>;
   if (!metrics.tasks) {
-    return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">This dashboard isn't visible to your role.</p>;
+    return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('common.notVisibleToRole')}</p>;
   }
 
   const { tasks } = metrics;
@@ -21,20 +23,20 @@ export default function DashboardsTasksPage() {
     <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
         <StatTile
-          label="Completion rate"
+          label={t('tasks.completionRate')}
           value={tasks.completion.completionRatePct === null ? '—' : `${tasks.completion.completionRatePct}%`}
           subtitle={`${tasks.completion.completed} / ${tasks.completion.total}`}
         />
-        <StatTile label="Overdue" value={String(tasks.overdueCount)} />
+        <StatTile label={t('tasks.overdue')} value={String(tasks.overdueCount)} />
         <StatTile
-          label="Median time to complete"
+          label={t('tasks.medianTimeToComplete')}
           value={tasks.timeToComplete.medianHours === null ? '—' : `${tasks.timeToComplete.medianHours}h`}
-          subtitle={`sample: ${tasks.timeToComplete.sampleSize}`}
+          subtitle={t('common.sampleSubtitle', { count: tasks.timeToComplete.sampleSize })}
         />
-        <StatTile label="Notes created" value={String(tasks.notes.total)} />
+        <StatTile label={t('tasks.notesCreated')} value={String(tasks.notes.total)} />
       </div>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <BarChartCard title="Notes by month" data={notesByMonth} series={[{ key: 'count', label: 'Notes', color: seriesColor(4) }]} />
+        <BarChartCard title={t('tasks.chartNotesByMonth')} data={notesByMonth} series={[{ key: 'count', label: t('tasks.seriesNotes'), color: seriesColor(4) }]} />
       </div>
     </div>
   );

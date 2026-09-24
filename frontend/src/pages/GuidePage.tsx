@@ -630,6 +630,65 @@ export default function GuidePage() {
           )}
 
           {/* ===== CRM ===== */}
+          {isSpanish ? (
+          <section className="help-section" id="g-crm">
+            <div className="help-eyebrow">
+              <BuildingIcon />
+              Ventas
+            </div>
+            <h2>Empresas y contactos</h2>
+            <p className="help-intro">Los dos registros centrales de tu CRM — las organizaciones a las que les vendés, y las personas que están dentro de ellas.</p>
+
+            <div className="help-sub">
+              <h3>Empresas</h3>
+              <p>
+                Una Empresa registra nombre, industria, sitio web, teléfono, dirección de facturación, tamaño (de
+                una lista que gestiona tu equipo), un dueño de cuenta, y un estado de ciclo de vida.
+              </p>
+              <div className="help-callout help-callout-note">
+                <InfoIcon />
+                <p>
+                  No podés crear una Empresa sola — el formulario "Add Company" (Agregar empresa) siempre pide un
+                  contacto fundador (nombre y email) al mismo tiempo, así que ninguna empresa existe nunca sin al
+                  menos una persona a la que contactar.
+                </p>
+              </div>
+              <p>
+                El <strong>estado de una Empresa es automático</strong>, y depende de cómo cierran sus negocios
+                (ganados o perdidos) — nadie lo fija arrastrando ni eligiéndolo de un menú desplegable. Los Admins
+                igual pueden renombrar, recolorear y reordenar la lista de estados posibles.
+              </p>
+              <p>
+                <strong>Jerarquía de empresas:</strong> vinculá una empresa como padre de otra desde su panel de
+                detalle; el perfil de la empresa hija lista a sus hermanas, y el selector no te deja crear un loop.
+                Eliminar una empresa con hijas solo las desvincula, a menos que elijas eliminar toda la rama.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Contactos</h3>
+              <p>
+                Un Contacto es una persona — nombre, email, teléfono, puesto, un vínculo opcional a una Empresa (un
+                contacto puede existir como lead sin vincular), un Estado del lead (Nuevo, Contactado, Calificado,
+                Descalificado), y un Origen del lead de la lista propia de tu equipo.
+              </p>
+              <p>
+                Una vez vinculado a una Empresa, un contacto puede marcarse como el contacto{' '}
+                <strong>principal</strong> de esa empresa, y su perfil lista a todas las demás personas de la misma
+                empresa para navegar rápido entre ellas.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Eliminar una Empresa o un Contacto</h3>
+              <p>
+                Como los negocios no pueden existir sin una empresa, eliminar una te pide que confirmes qué pasa con
+                las Oportunidades vinculadas. Eliminar un Contacto simplemente lo desvincula de todos los lugares
+                donde estaba referenciado.
+              </p>
+            </div>
+          </section>
+          ) : (
           <section className="help-section" id="g-crm">
             <div className="help-eyebrow">
               <BuildingIcon />
@@ -684,8 +743,104 @@ export default function GuidePage() {
               </p>
             </div>
           </section>
+          )}
 
           {/* ===== Pipelines ===== */}
+          {isSpanish ? (
+          <section className="help-section" id="g-pipeline">
+            <div className="help-eyebrow">
+              <KanbanIcon />
+              Ventas
+            </div>
+            <h2>Pipelines y negocios</h2>
+            <p className="help-intro">Las Oportunidades avanzan a través de pipelines que vos diseñás — con pronóstico y asignación automática incluidos.</p>
+
+            <div className="help-sub">
+              <h3>Configurando un pipeline</h3>
+              <p>
+                Creá pipelines desde <strong>Configuración → Pipelines</strong>. Cada uno es de uno de estos dos tipos:
+              </p>
+              <ul>
+                <li><strong>Pipeline de leads</strong> — empresa opcional, para prospectos sin calificar.</li>
+                <li><strong>Pipeline de cuenta</strong> — para negocios contra una empresa que ya identificaste.</li>
+              </ul>
+              <p>
+                Este tipo no se puede cambiar después de crearlo. Cada pipeline tiene sus propias{' '}
+                <strong>etapas</strong> ordenadas, y cada etapa tiene un nombre, un color, un resultado (Abierta /
+                Ganada / Perdida), y — para las etapas Abiertas — una probabilidad de cierre que se usa para el
+                pronóstico. Arrastrá las etapas para reordenarlas, o archivá un pipeline que ya no uses (su
+                historial queda intacto y en solo lectura).
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Trabajando un negocio</h3>
+              <p>
+                Arrastrá una tarjeta entre las columnas de etapas en el tablero Kanban, o cambiá la{' '}
+                <strong>Etapa</strong> desde el menú desplegable en el panel propio del negocio. Cada Oportunidad
+                registra monto, moneda, fecha estimada de cierre, una nota de "próximo paso" con su propia fecha, y
+                puede vincular varios Contactos, cada uno con un rol de texto libre como "Decision maker" (quien
+                decide).
+              </p>
+              <p>
+                La barra de herramientas arriba de cada pipeline muestra un <strong>valor ponderado</strong> — la
+                suma del monto de cada negocio abierto × la probabilidad de cierre de su etapa — una lectura rápida
+                de cuánto de tu pipeline es realista que cierre.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Cerrando un negocio</h3>
+              <p>
+                Mover una tarjeta a una etapa <strong>Ganada</strong> pide un motivo de ganancia; moverla a{' '}
+                <strong>Perdida</strong> pide un motivo de pérdida de la lista de tu equipo — ambos aceptan una nota
+                opcional. Ganar un negocio en un pipeline de leads ofrece llevarlo a un pipeline de cuenta para que
+                puedas seguir siguiendo la relación.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Asignación automática de dueños</h3>
+              <p>Cada pipeline puede asignar automáticamente el dueño de un negocio nuevo, configurado desde la configuración del pipeline:</p>
+              <div className="help-table-wrap">
+                <table className="help-ref">
+                  <thead>
+                    <tr>
+                      <th>Modo</th>
+                      <th>Qué pasa</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td>Apagado</td><td>Elegís un dueño a mano cada vez.</td></tr>
+                    <tr><td>Round robin — por usuario</td><td>Rota parejo entre una lista de personas que elegís.</td></tr>
+                    <tr><td>Round robin — por departamento</td><td>La misma rotación, armada con todos los que están actualmente en un departamento — una carga única, no una sincronización en vivo, así que agregá a las nuevas contrataciones de nuevo más adelante.</td></tr>
+                    <tr><td>Dueño de cuenta</td><td>Solo en pipelines de cuenta — usa el Dueño de cuenta de la empresa, y si no hay ninguno configurado, recurre al round robin.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <p>
+                Solo se eligen personas activas del equipo. Un negocio que te asignan así no manda su propia
+                notificación — te vas a enterar la próxima vez que cambie de etapa o se quede estancado.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Notificaciones y negocios estancados</h3>
+              <p>
+                Cada etapa tiene su propio interruptor para notificar al dueño cuando un negocio entra en ella (útil
+                para silenciar una primera etapa ruidosa), y cada pipeline puede marcar un negocio como "estancado"
+                después de una cantidad de días sin cambiar de etapa. Ambas cosas aparecen en el ícono de la
+                campana arriba de la app — nunca por un movimiento que hiciste vos mismo.
+              </p>
+              <p>
+                La campana también tiene una sección de "Novedades" para actualizaciones de toda la plataforma —
+                funciones nuevas y cambios a nuestros Términos de Servicio, Política de Privacidad, o Política de
+                Reembolsos (que también llegan por email). Podés revisar los Términos, la Privacidad, y la Política
+                de Reembolsos vigentes en cualquier momento desde Ayuda y preguntas frecuentes.
+              </p>
+            </div>
+          </section>
+          ) : (
           <section className="help-section" id="g-pipeline">
             <div className="help-eyebrow">
               <KanbanIcon />
@@ -776,8 +931,74 @@ export default function GuidePage() {
               </p>
             </div>
           </section>
+          )}
 
           {/* ===== Organize ===== */}
+          {isSpanish ? (
+          <section className="help-section" id="g-organize">
+            <div className="help-eyebrow">
+              <GridIcon />
+              Herramientas compartidas
+            </div>
+            <h2>Vistas, tags y campos personalizados</h2>
+            <p className="help-intro">Las mismas herramientas de organización funcionan igual en Empresas, Contactos y Empleados.</p>
+
+            <div className="help-sub">
+              <h3>Vistas</h3>
+              <p>
+                Una Vista agrupa un formato (Cuadrícula, Lista, o Kanban), un filtro, un orden, y — para
+                Kanban/Lista — un campo de "agrupar por" en una pestaña guardada arriba de la tabla. Dejá una vista{' '}
+                <strong>personal</strong>, o hacela <strong>compartida</strong> para todo el equipo (crear una vista
+                compartida necesita un permiso de nivel admin). Oportunidades es el único módulo que se salta este
+                sistema — siempre se recorre por las pestañas de pipeline y su tablero Kanban en cambio.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Filtros y columnas</h3>
+              <p>
+                El botón de Filtro apila cualquier cantidad de reglas de campo + condición + valor. Las columnas se
+                pueden mostrar u ocultar, redimensionar, reordenar arrastrándolas, y ordenar haciendo clic en su
+                encabezado — cada tabla recuerda su propio formato por vista guardada.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Tags</h3>
+              <p>
+                Etiquetas de texto libre compartidas entre Empresas, Contactos y Empleados — empezá a escribir para
+                reusar un tag existente o crear uno nuevo al toque. Cada lista tiene una opción de "filtrar por tag"
+                en su barra de herramientas.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Campos personalizados</h3>
+              <ol className="help-steps">
+                <li>En cualquier tabla (Empleados, Empresas, Contactos, u Oportunidades), hacé clic en el <strong>+</strong> al final de los encabezados de columna.</li>
+                <li>Nombrá el campo y elegí un tipo: Texto, Número, Fecha, Email, o un desplegable de Selección con tus propias opciones.</li>
+                <li>Decidí si es obligatorio, y guardá — ahora es una columna real, y aparece automáticamente en la plantilla CSV de ese módulo.</li>
+              </ol>
+              <p>
+                Usá el menú "…" en el encabezado de columna de cualquier campo personalizado para renombrarlo,
+                editar sus opciones, desactivarlo (lo oculta sin perder las respuestas anteriores), o simplemente
+                ocultarlo solo para vos.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Estados y catálogos</h3>
+              <p>
+                El menú "…" en una columna de Estado abre un administrador para las opciones de estado de ese
+                módulo — agregar, recolorear, reordenar, y definir un valor por defecto. El mismo patrón administra
+                tus catálogos compartidos: <strong>Departamento</strong>, <strong>Puesto</strong>,{' '}
+                <strong>Origen del lead</strong>, <strong>Motivo de pérdida</strong>,{' '}
+                <strong>Motivo de ganancia</strong>, y <strong>Tamaño de empresa</strong> — donde sea que ese campo
+                aparezca en la app.
+              </p>
+            </div>
+          </section>
+          ) : (
           <section className="help-section" id="g-organize">
             <div className="help-eyebrow">
               <GridIcon />
@@ -839,6 +1060,7 @@ export default function GuidePage() {
               </p>
             </div>
           </section>
+          )}
 
           {/* ===== HR ===== */}
           <section className="help-section" id="g-hr">

@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import PasswordInput from '../components/common/PasswordInput';
 import PasswordChecklist from '../components/common/PasswordChecklist';
+import { SUPPORTED_LOCALES, type SupportedLocale } from '../lib/i18n';
 
 interface ProfileSettingsPageProps {
   user: any;
@@ -12,6 +14,7 @@ interface ProfileSettingsPageProps {
 
 export default function ProfileSettingsPage({ user, token, onUserUpdated }: ProfileSettingsPageProps) {
   const toast = useToast();
+  const { t } = useTranslation();
   const [profileForm, setProfileForm] = useState({
     firstName: user.firstName,
     lastName: user.lastName,
@@ -19,6 +22,19 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
   });
   const [profileError, setProfileError] = useState<{ message: string; field?: string } | null>(null);
   const [profileSaving, setProfileSaving] = useState(false);
+  const [localeSaving, setLocaleSaving] = useState(false);
+
+  const handleLocaleChange = async (locale: SupportedLocale) => {
+    setLocaleSaving(true);
+    try {
+      const result = await api.updateLocale(token, locale);
+      onUserUpdated(result.user);
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setLocaleSaving(false);
+    }
+  };
 
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '' });
   const [passwordError, setPasswordError] = useState<{ message: string; field?: string } | null>(null);
@@ -110,6 +126,26 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
             </button>
           </div>
         </form>
+      </div>
+
+      <div className="card">
+        <h3 className="card-title">{t('language.label')}</h3>
+        <div className="form-group">
+          <label htmlFor="profile-locale">{t('language.label')}</label>
+          <select
+            id="profile-locale"
+            value={user.locale ?? ''}
+            disabled={localeSaving}
+            onChange={(e) => handleLocaleChange(e.target.value as SupportedLocale)}
+          >
+            {!user.locale && <option value="" disabled>—</option>}
+            {SUPPORTED_LOCALES.map((locale) => (
+              <option key={locale} value={locale}>
+                {t(`language.${locale}`)}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="card">

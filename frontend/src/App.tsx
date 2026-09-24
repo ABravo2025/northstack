@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-
 import { api } from './api';
 import type { PermissionsPayload, Tenant } from './api';
 import { setActiveSessionToken, setUnauthorizedHandler } from './api/http';
+import i18n from './lib/i18n';
 import { useToast } from './components/common/ToastProvider';
 import { PermissionsProvider } from './contexts/PermissionsContext';
 import TableSkeleton from './components/common/TableSkeleton';
@@ -82,6 +83,16 @@ export default function App() {
   useEffect(() => {
     setActiveSessionToken(token);
   }, [token]);
+
+  // Single place that applies the signed-in user's language preference — every setUser call site
+  // (session restore, login, ProfileSettingsPage's selector, etc.) flows through here instead of
+  // each one calling i18n.changeLanguage itself. Null locale (never chosen) leaves i18next on
+  // whatever the browser-language detector already picked.
+  useEffect(() => {
+    if (user?.locale && i18n.language !== user.locale) {
+      i18n.changeLanguage(user.locale);
+    }
+  }, [user?.locale]);
 
   useEffect(() => {
     if (isAcceptInviteRoute || isConfirmContractRoute || isResetPasswordRoute || isRegisterCompleteRoute) {

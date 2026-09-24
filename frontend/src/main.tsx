@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App.tsx'
 import { ToastProvider } from './components/common/ToastProvider'
 import { initTheme } from './theme'
+import './lib/i18n'
 import './index.css'
 
 initTheme();

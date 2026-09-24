@@ -154,6 +154,19 @@ export const authApi = {
     return res.json();
   },
 
+  updateLocale: async (token: string, locale: 'en' | 'es'): Promise<{ user: TenantUser }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/users/me/locale`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ locale }),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
   changePassword: async (
     token: string,
     data: { currentPassword: string; newPassword: string },

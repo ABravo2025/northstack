@@ -259,6 +259,21 @@ export async function updateOwnProfile(userId: string, input: UpdateProfileInput
   return { success: true, user };
 }
 
+const SUPPORTED_LOCALES = new Set(['en', 'es']);
+
+export async function updateOwnLocale(userId: string, locale: unknown): Promise<AuthResult> {
+  if (typeof locale !== 'string' || !SUPPORTED_LOCALES.has(locale)) {
+    return { success: false, error: 'Unsupported locale', field: 'locale' };
+  }
+
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { locale },
+  });
+
+  return { success: true, user };
+}
+
 export interface ChangePasswordInput {
   currentPassword: string;
   newPassword: string;

@@ -7,6 +7,7 @@ import {
   requestPasswordReset,
   resetPassword,
   sanitizeUser,
+  updateOwnLocale,
   updateOwnProfile,
   validatePasswordResetToken,
 } from '../modules/auth/authService.js';
@@ -125,6 +126,20 @@ authRouter.patch('/api/users/me', async (req, res) => {
   }
 
   const result = await updateOwnProfile(user.id, req.body);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error, field: result.field });
+  }
+
+  return res.json({ user: sanitizeUser(result.user!) });
+});
+
+authRouter.patch('/api/users/me/locale', async (req, res) => {
+  const user = await authenticateUser(req, res);
+  if (!user) {
+    return;
+  }
+
+  const result = await updateOwnLocale(user.id, req.body.locale);
   if (!result.success) {
     return res.status(400).json({ error: result.error, field: result.field });
   }

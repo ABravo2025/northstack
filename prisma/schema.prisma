@@ -530,6 +530,11 @@ model User {
   // on their first authenticated screen. Set on finish AND on skip (both count as "seen"), never
   // cleared back to null — replaying it manually from the user menu doesn't touch this field.
   productTourCompletedAt      DateTime?
+  // i18n (docs/general/spec-i18n.md Unidad 1). Null = never chosen — the frontend falls back to
+  // the browser's language on first load instead of defaulting here, so this only gets a value
+  // once the user (or an admin acting for them) actually picks one via the Settings > Profile
+  // selector. 'en' | 'es' for now; the architecture doesn't block adding more later.
+  locale                      String?
   pipelinesCreated            Pipeline[]                  @relation("PipelineCreatedBy")
   pipelinesUpdated            Pipeline[]                  @relation("PipelineUpdatedBy")
   pipelinesLastAssigned       Pipeline[]                  @relation("PipelineLastAssignedUser")

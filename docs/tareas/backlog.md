@@ -199,9 +199,9 @@ Catálogo completo (qué está construido, qué es solo posible hoy, qué está 
   ya incorpora verificación de email (por link/token, `EmailVerification`, en producción desde
   2026-08-18), pero un código OTP de un solo uso para el registro directo (`POST /api/auth/register`) y
   2FA por email en cada login siguen sin diseñar ni construir.
-- [ ] **i18n**: alcance sin definir (¿selector de usuario o fijo por tenant/región?, qué idiomas además
-  del actual). Relacionado con un hallazgo de UX ya anotado: la landing está en español y la app en
-  inglés.
+- [ ] **i18n**: spec completo en `docs/general/spec-i18n.md` (12 unidades, decisiones 2026-09-24:
+  bilingüe inglés+español, selector por usuario, `react-i18next`, nunca traduce datos de usuario).
+  Sin empezar a construir.
 - [ ] **Sistema de logs de auditoría por usuario**: cuándo loguea y qué movimientos/modificaciones
   realiza dentro del sistema. Sin empezar, sin detalle.
 - [x] **Notificaciones in-app** (ícono de campana con contador, dropdown de recientes): construido

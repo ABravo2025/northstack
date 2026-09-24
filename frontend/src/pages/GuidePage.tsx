@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useScrollSpy } from '../hooks/useScrollSpy';
 import { formatPlanPrice, usePlanPrices } from '../lib/planPrices';
 import {
@@ -95,32 +96,107 @@ const MODULE_MAP: { id: string; label: string; blurb: string; icon: JSX.Element 
   { id: 'g-data', label: 'Import & export', blurb: 'Bulk CSV for People, Companies, Contacts.', icon: <DownloadIcon /> },
 ];
 
+// Spanish counterparts for the two nav data arrays above — same ids/order/icons, only the
+// display text differs (same pattern as HelpPage.tsx's FAQ_CATEGORIES/FAQ_CATEGORIES_ES).
+const NAV_GROUPS_ES: { label: string; items: { id: string; label: string; icon: JSX.Element }[] }[] = [
+  {
+    label: 'Empezá acá',
+    items: [
+      { id: 'g-start', label: 'Primeros pasos', icon: <RocketIcon /> },
+      { id: 'g-roles', label: 'Roles y equipo', icon: <TeamIcon /> },
+    ],
+  },
+  {
+    label: 'Ventas',
+    items: [
+      { id: 'g-crm', label: 'Empresas y contactos', icon: <BuildingIcon /> },
+      { id: 'g-pipeline', label: 'Pipelines y negocios', icon: <KanbanIcon /> },
+      { id: 'g-organize', label: 'Vistas, tags y campos', icon: <GridIcon /> },
+    ],
+  },
+  {
+    label: 'Personas',
+    items: [
+      { id: 'g-hr', label: 'Empleados y ausencias', icon: <PeopleIcon /> },
+      { id: 'g-payroll', label: 'Nómina', icon: <BriefcaseIcon /> },
+      { id: 'g-tasks', label: 'Tareas y notas', icon: <ListIcon /> },
+    ],
+  },
+  {
+    label: 'Conectar',
+    items: [
+      { id: 'g-forms', label: 'Formularios públicos', icon: <FormIcon /> },
+      { id: 'g-integrations', label: 'Integraciones y API', icon: <PlugIcon /> },
+    ],
+  },
+  {
+    label: 'Espacio de trabajo',
+    items: [
+      { id: 'g-settings', label: 'Configuración y apariencia', icon: <GearIcon /> },
+      { id: 'g-billing', label: 'Facturación y planes', icon: <CreditCardIcon /> },
+      { id: 'g-data', label: 'Importar y exportar', icon: <DownloadIcon /> },
+      { id: 'g-mobile', label: 'Desde el celular', icon: <DeviceIcon /> },
+    ],
+  },
+];
+
+const MODULE_MAP_ES: { id: string; label: string; blurb: string; icon: JSX.Element }[] = [
+  { id: 'g-start', label: 'Primeros pasos', blurb: 'El alta, tu prueba de 15 días, y el onboarding.', icon: <RocketIcon /> },
+  { id: 'g-roles', label: 'Roles y equipo', blurb: 'Invitá personas y armá roles personalizados.', icon: <TeamIcon /> },
+  { id: 'g-crm', label: 'Empresas y contactos', blurb: 'Los registros de tu CRM y cómo se relacionan.', icon: <BuildingIcon /> },
+  { id: 'g-pipeline', label: 'Pipelines y negocios', blurb: 'Etapas, pronóstico, y asignación automática.', icon: <KanbanIcon /> },
+  { id: 'g-hr', label: 'Empleados y ausencias', blurb: 'Directorio, líneas de reporte, políticas de ausencias.', icon: <PeopleIcon /> },
+  { id: 'g-payroll', label: 'Nómina', blurb: 'Compensación, corridas de pago, recibos de sueldo.', icon: <BriefcaseIcon /> },
+  { id: 'g-tasks', label: 'Tareas y notas', blurb: 'Seguimientos sobre cualquier registro.', icon: <ListIcon /> },
+  { id: 'g-forms', label: 'Formularios públicos', blurb: 'Carga sin login para reclutamiento y leads.', icon: <FormIcon /> },
+  { id: 'g-integrations', label: 'Integraciones y API', blurb: 'Google Calendar, Stripe, claves de API.', icon: <PlugIcon /> },
+  { id: 'g-settings', label: 'Configuración', blurb: 'Apariencia, moneda, preferencias.', icon: <GearIcon /> },
+  { id: 'g-billing', label: 'Facturación y planes', blurb: 'Starter vs. Growth, checkout, fallas de pago.', icon: <CreditCardIcon /> },
+  { id: 'g-data', label: 'Importar y exportar', blurb: 'CSV masivo para Personas, Empresas, Contactos.', icon: <DownloadIcon /> },
+];
+
 export default function GuidePage() {
   const navigate = useNavigate();
   const activeId = useScrollSpy(SECTION_IDS);
   const planPrices = usePlanPrices();
+  const { i18n } = useTranslation();
+  const isSpanish = i18n.language.startsWith('es');
+
+  // Same ids/order as the English arrays (see NAV_GROUPS_ES/MODULE_MAP_ES above, which share
+  // shape with NAV_GROUPS/MODULE_MAP) — only the display text differs.
+  const navGroups = isSpanish ? NAV_GROUPS_ES : NAV_GROUPS;
+  const moduleMap = isSpanish ? MODULE_MAP_ES : MODULE_MAP;
 
   return (
     <div className="page-full">
       <div className="page-toolbar">
-        <h2>User Guide</h2>
+        <h2>{isSpanish ? 'Guía del usuario' : 'User Guide'}</h2>
       </div>
-      <p className="help-lede">
-        Northstack is organized around your <strong>People</strong> (HR, time off, payroll) and your{' '}
-        <strong>Sales</strong> data (companies, contacts, deals) — plus shared tools like tasks, tags, and custom
-        fields that work the same way everywhere. This guide walks through each area in the order most teams set
-        them up.
-      </p>
+      {isSpanish ? (
+        <p className="help-lede">
+          Northstack está organizado alrededor de tus <strong>Personas</strong> (RRHH, ausencias, nómina) y tus
+          datos de <strong>Ventas</strong> (empresas, contactos, negocios) — más herramientas compartidas como
+          tareas, tags y campos personalizados que funcionan igual en todos lados. Esta guía recorre cada área en
+          el orden en que la mayoría de los equipos la va configurando.
+        </p>
+      ) : (
+        <p className="help-lede">
+          Northstack is organized around your <strong>People</strong> (HR, time off, payroll) and your{' '}
+          <strong>Sales</strong> data (companies, contacts, deals) — plus shared tools like tasks, tags, and custom
+          fields that work the same way everywhere. This guide walks through each area in the order most teams set
+          them up.
+        </p>
+      )}
       <p className="help-crosslink">
-        Looking for a quick answer instead?{' '}
+        {isSpanish ? '¿Buscás una respuesta rápida en cambio?' : 'Looking for a quick answer instead?'}{' '}
         <a href="/help" onClick={(e) => { e.preventDefault(); navigate('/help'); }}>
-          Go to Help &amp; FAQ →
+          {isSpanish ? 'Ir a Ayuda y preguntas frecuentes →' : 'Go to Help & FAQ →'}
         </a>
       </p>
 
       <div className="help-shell">
         <nav className="help-nav">
-          {NAV_GROUPS.map((group) => (
+          {navGroups.map((group) => (
             <div className="help-nav-group" key={group.label}>
               <p className="help-nav-label">{group.label}</p>
               {group.items.map((item) => (
@@ -143,7 +219,7 @@ export default function GuidePage() {
 
         <div className="help-content">
           <div className="help-module-map">
-            {MODULE_MAP.map((m) => (
+            {moduleMap.map((m) => (
               <a
                 key={m.id}
                 className="help-module-card"
@@ -163,6 +239,99 @@ export default function GuidePage() {
           </div>
 
           {/* ===== Getting started ===== */}
+          {isSpanish ? (
+          <section className="help-section" id="g-start">
+            <div className="help-eyebrow">
+              <RocketIcon />
+              Empezá acá
+            </div>
+            <h2>Primeros pasos</h2>
+            <p className="help-intro">Cómo nace un espacio de trabajo nuevo, y cómo son los primeros 15 días.</p>
+
+            <div className="help-sub">
+              <h3>Creando tu espacio de trabajo</h3>
+              <p>El alta es un flujo corto y verificado — nadie puede crear un espacio de trabajo con un email que no controla:</p>
+              <ol className="help-steps">
+                <li>
+                  <strong>Ingresá tu email laboral</strong> en la página de alta. Si el dominio de email de tu
+                  empresa ya tiene un espacio de trabajo activo en Northstack, te vamos a pedir que consigas una
+                  invitación de ese equipo en vez de dejarte crear uno nuevo.
+                </li>
+                <li>
+                  <strong>Revisá tu bandeja de entrada</strong> para encontrar un link de verificación — es válido
+                  por 24 horas. ¿No te llegó? Usá "Resend" (Reenviar) (disponible cada 30 segundos) o empezá de
+                  nuevo con otra dirección.
+                </li>
+                <li>
+                  <strong>Contanos sobre tu empresa</strong> — nombre, industria, tamaño y país. El país importa: es
+                  lo que decide si vas a pagar en USD o en pesos argentinos más adelante.
+                </li>
+                <li>
+                  <strong>Contanos sobre vos</strong> — nombre y teléfono, más un "¿cómo te enteraste de nosotros?"
+                  opcional.
+                </li>
+                <li>
+                  <strong>Elegí una contraseña</strong> y aceptá los Términos de Servicio y la Política de
+                  Privacidad. No se guarda nada hasta este último paso.
+                </li>
+              </ol>
+              <p>
+                Desde ahí caés directo en tu página de <strong>Resumen</strong> — sin una página aparte de "primeros
+                pasos" para recorrer antes.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Tu prueba gratuita de 15 días</h3>
+              <p>
+                Todo espacio de trabajo nuevo arranca con una prueba de 15 días con acceso completo — no hace falta
+                elegir un plan ni cargar una tarjeta para explorar el producto. Un selector de planes que podés
+                cerrar aparece una vez sobre Resumen por si querés suscribirte antes, pero nunca te bloquea el
+                trabajo.
+              </p>
+              <div className="help-table-wrap">
+                <table className="help-ref">
+                  <thead>
+                    <tr>
+                      <th>Día</th>
+                      <th>Estado</th>
+                      <th>Qué significa</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>1 – 15</td>
+                      <td>En prueba</td>
+                      <td>Acceso completo, a nivel Growth, hayas elegido un plan o no.</td>
+                    </tr>
+                    <tr>
+                      <td>16 – 29</td>
+                      <td>Pago pendiente</td>
+                      <td>Un banner te pide que agregues un método de pago. Todavía no hay ninguna restricción.</td>
+                    </tr>
+                    <tr>
+                      <td>30+</td>
+                      <td>Solo lectura</td>
+                      <td>Ver sigue funcionando en todos lados; crear, editar y eliminar queda bloqueado hasta que haya un plan activo.</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p>Agregar un método de pago en cualquier momento — incluso en medio de la prueba — arranca tu suscripción de inmediato y cancela la cuenta regresiva.</p>
+            </div>
+
+            <div className="help-sub">
+              <h3>La checklist de onboarding</h3>
+              <p>
+                Los espacios de trabajo nuevos ven una checklist corta arriba de Resumen: agregar tu primer
+                empleado, invitar a alguien del equipo, y configurar una política de ausencias — cada ítem te lleva
+                directo a la página correspondiente. ¿Todavía no querés cargar datos reales? <strong>Load sample
+                data</strong> (Cargar datos de ejemplo) completa tu espacio de trabajo con empleados y empresas de
+                ejemplo para que puedas explorar sin riesgo primero.
+              </p>
+            </div>
+          </section>
+          ) : (
           <section className="help-section" id="g-start">
             <div className="help-eyebrow">
               <RocketIcon />
@@ -251,8 +420,114 @@ export default function GuidePage() {
               </p>
             </div>
           </section>
+          )}
 
           {/* ===== Roles & team ===== */}
+          {isSpanish ? (
+          <section className="help-section" id="g-roles">
+            <div className="help-eyebrow">
+              <TeamIcon />
+              Personas
+            </div>
+            <h2>Roles y equipo</h2>
+            <p className="help-intro">Todo espacio de trabajo tiene exactamente un Owner, y la cantidad de otros roles que vos mismo diseñes.</p>
+
+            <div className="help-sub">
+              <h3>Invitando a alguien del equipo</h3>
+              <ol className="help-steps">
+                <li>
+                  Andá a <strong>Configuración → Usuarios</strong> y hacé clic en <strong>Invite</strong> (Invitar).
+                </li>
+                <li>Ingresá su email y elegí un rol de la lista de roles asignables de tu espacio de trabajo.</li>
+                <li>
+                  Recibe una invitación por email; al abrirla puede elegir una contraseña y entrar directo — sin un
+                  paso aparte de verificación de email, porque alguien que vos invitaste ya es de confianza.
+                </li>
+              </ol>
+              <p>
+                También podés invitar a alguien directamente desde un registro de <strong>Empleado</strong> ya
+                existente — abrí su perfil, usá el menú "…" y elegí <strong>Invite to app</strong> (Invitar a la
+                app). Esto vincula su login nuevo a su registro de RRHH existente en vez de crear una persona
+                duplicada.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Entendiendo los roles</h3>
+              <p>Todo espacio de trabajo arranca con tres roles, pero solo uno de ellos es fijo:</p>
+              <dl className="help-fieldgrid">
+                <div className="help-fielddef">
+                  <dt>Owner</dt>
+                  <dd>
+                    Uno por espacio de trabajo. Siempre tiene acceso total a todo; no se puede limitar, renombrar ni
+                    eliminar. Solo el Owner puede transferir la titularidad o acceder a facturación y a Roles y
+                    permisos.
+                  </dd>
+                </div>
+                <div className="help-fielddef">
+                  <dt>Admin</dt>
+                  <dd>Un rol de partida con acceso amplio. Totalmente editable — renombralo, cambiá lo que puede hacer, o eliminalo como a cualquier otro rol.</dd>
+                </div>
+                <div className="help-fielddef">
+                  <dt>Member</dt>
+                  <dd>Un rol de partida con acceso liviano. Igual que Admin — es una sugerencia, no un nivel fijo.</dd>
+                </div>
+              </dl>
+              <p>
+                Más allá de esos dos puntos de partida, el Owner puede crear tantos <strong>roles
+                personalizados</strong> como permita el plan (ver la tabla de límites por plan en Facturación y
+                planes) — un "Field Sales Rep" que solo ve su propio pipeline, un "Payroll Clerk" que puede correr
+                la nómina pero no tocar Roles y permisos, y así.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Armando un rol personalizado</h3>
+              <ol className="help-steps">
+                <li>
+                  Abrí <strong>Configuración → Roles y permisos</strong> (solo Owner) y hacé clic en{' '}
+                  <strong>New role</strong> (Nuevo rol).
+                </li>
+                <li>Opcionalmente, partí de una copia de un rol existente en vez de uno en blanco.</li>
+                <li>
+                  Activá o desactivá permisos en la grilla — agrupados en People, Sales, Configuration, Team, Money,
+                  Reporting, Workspace y Time off. Algunos permisos dependen de otros (por ejemplo, gestionar
+                  oportunidades requiere primero poder ver empresas y contactos) — la pantalla te avisa qué te falta
+                  si tratás de saltear un paso.
+                </li>
+                <li>Guardá. Cualquiera con ese rol ve el cambio la próxima vez que cargue la app.</li>
+              </ol>
+              <div className="help-callout help-callout-note">
+                <InfoIcon />
+                <p>
+                  Las <strong>restricciones a nivel de campo</strong> van más allá del acceso a módulos: en los
+                  registros de Empleado, Empresa, Contacto y Oportunidad, se pueden ocultar campos específicos por
+                  rol — el ejemplo típico es ocultar el sueldo a un rol que no debería ver la compensación. El
+                  nombre de un registro siempre queda visible.
+                </p>
+              </div>
+              <div className="help-callout help-callout-warn">
+                <AlertTriangleIcon />
+                <p>
+                  Hoy los roles controlan <em>qué módulos y acciones</em> puede usar alguien — todavía no{' '}
+                  <em>qué registros</em>. No hay una forma integrada de limitar un rol a "solo sus propios negocios"
+                  o "solo los empleados de su departamento". Cualquiera con acceso de vista a un módulo ve todos los
+                  registros que tiene.
+                </p>
+              </div>
+            </div>
+
+            <div className="help-sub">
+              <h3>Eliminar un rol y transferir la titularidad</h3>
+              <p>
+                Un rol no se puede eliminar mientras alguien lo tenga asignado — primero pasalos a otro rol, desde{' '}
+                <strong>Configuración → Usuarios</strong>. Para entregar el espacio de trabajo en sí, el Owner
+                actual elige <strong>Owner (transfer ownership)</strong> junto al nombre de la persona; es una
+                acción deliberada y confirmada que además degrada al Owner saliente a Admin.
+              </p>
+            </div>
+          </section>
+          ) : (
           <section className="help-section" id="g-roles">
             <div className="help-eyebrow">
               <TeamIcon />
@@ -352,6 +627,7 @@ export default function GuidePage() {
               </p>
             </div>
           </section>
+          )}
 
           {/* ===== CRM ===== */}
           <section className="help-section" id="g-crm">

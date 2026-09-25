@@ -5,6 +5,12 @@ import { useToast } from '../components/common/ToastProvider';
 import PasswordInput from '../components/common/PasswordInput';
 import PasswordChecklist from '../components/common/PasswordChecklist';
 import { SUPPORTED_LOCALES, type SupportedLocale } from '../lib/i18n';
+import { getStoredThemePreference, setThemePreference, type ThemePreference } from '../theme';
+
+// Moved here from the old Settings → Appearance page (2026-09-25): the theme is stored per
+// device, not per tenant, so it belongs with the user's own preferences — and every user can
+// reach Profile, whereas Appearance sat behind manage_tenant_settings.
+const THEME_OPTIONS: ThemePreference[] = ['system', 'light', 'dark'];
 
 interface ProfileSettingsPageProps {
   user: any;
@@ -15,6 +21,8 @@ interface ProfileSettingsPageProps {
 export default function ProfileSettingsPage({ user, token, onUserUpdated }: ProfileSettingsPageProps) {
   const toast = useToast();
   const { t } = useTranslation();
+  const { t: tSettings } = useTranslation('settingsPages');
+  const [theme, setTheme] = useState<ThemePreference>(getStoredThemePreference());
   const [profileForm, setProfileForm] = useState({
     firstName: user.firstName,
     lastName: user.lastName,
@@ -145,6 +153,26 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
               </option>
             ))}
           </select>
+        </div>
+      </div>
+
+      <div className="card">
+        <h3 className="card-title">{tSettings('appearance.appearanceCardTitle')}</h3>
+        <p className="mb-3 text-sm text-ink-muted dark:text-dark-ink-muted">{tSettings('appearance.appearanceHelp')}</p>
+        <div className="nav">
+          {THEME_OPTIONS.map((option) => (
+            <button
+              key={option}
+              type="button"
+              className={theme === option ? 'active' : ''}
+              onClick={() => {
+                setTheme(option);
+                setThemePreference(option);
+              }}
+            >
+              {tSettings(`appearance.theme.${option}`)}
+            </button>
+          ))}
         </div>
       </div>
 

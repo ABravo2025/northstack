@@ -1,5 +1,7 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import prisma from '../../lib/prisma.js';
+import { drawCompanyHeader } from '../../lib/pdfCompanyHeader.js';
+import { buildTenantLogoUrl, type TenantBranding } from '../tenant/tenantProfileService.js';
 import type { EmployeeCompensation } from '@prisma/client';
 import { createInvitation } from '../tenant/invitationService.js';
 import { sendInvitationEmail, sendContractSignedEmail } from '../../lib/mailer.js';
@@ -9,7 +11,7 @@ function formatMoney(amountCents: number, currency: string): string {
 }
 
 export interface RenderContractPdfInput {
-  tenantName: string;
+  company: TenantBranding;
   employeeName: string;
   nationality: string | null;
   jobTitle: string;
@@ -49,7 +51,7 @@ export async function renderContractPdf(input: RenderContractPdfInput): Promise<
     drawText('DRAFT — PENDING SIGNATURE', 10, true, rgb(0.7, 0.15, 0.15));
   }
   y -= 8;
-  drawText(input.tenantName, 18, true);
+  y = await drawCompanyHeader({ doc, page, font, boldFont, branding: input.company, y });
   drawText(`Contract — ${input.employeeName}`, 12);
   y -= 16;
 
@@ -226,6 +228,7 @@ export async function resendEmployeeContract(tenantId: string, employeeId: strin
     await sendInvitationEmail({
       to: employee.email,
       tenantName: tenant.name,
+    logoUrl: buildTenantLogoUrl(tenant.id, tenant.logoUpdatedAt),
       role: 'member',
       acceptUrl: `${appBaseUrl}/confirm-contract/${token}`,
       attachments: [{ filename: 'contract-draft.pdf', content: pdfBuffer }],

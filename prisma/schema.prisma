@@ -320,6 +320,17 @@ model Tenant {
   country                   String?
   acquisitionChannel        AcquisitionChannel?
   currency                  String                     @default("USD") // ISO-4217, tenant-wide default (Opportunity/EmployeeCompensation can override per record)
+  // Company profile (Settings → Company, 2026-09-25) — shown only on Payroll payslips, employee
+  // contracts, invitation emails and the app sidebar. Deliberately no tax ID: collecting it is
+  // ruled out by the privacy policy. Logo is stored inline (PNG/JPEG, resized client-side to
+  // ≤512px, capped server-side) rather than in a file store — see tenantProfileService.ts.
+  legalName                 String?
+  address                   String?
+  phone                     String?
+  website                   String?
+  logoData                  Bytes?
+  logoMimeType              String?
+  logoUpdatedAt             DateTime?
   // Subscription Plans (spec-subscription-plans.md) — all nullable/additive, no billing
   // provider integrated yet (Paddle is a separate, later round). trialEndsAt is set once at
   // registration; plan/lockedPriceCents/lockedPriceSetAt are set by PATCH /api/tenants/me/plan;

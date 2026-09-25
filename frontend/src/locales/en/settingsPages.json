@@ -482,18 +482,52 @@
     }
   },
   "appearance": {
-    "companyCardTitle": "Company",
-    "currencyHelp": "Applies to compensation amounts across the company (Hourly/Monthly Rate on Employee).",
-    "currency": "Currency",
-    "loadError": "Failed to load company settings: {{message}}",
-    "currencyUpdated": "Currency updated.",
-    "currencyUpdateError": "Failed to update currency: {{message}}",
     "appearanceCardTitle": "Appearance",
     "appearanceHelp": "Choose how Northstack looks on this device.",
     "theme": {
       "system": "System",
       "light": "Light",
       "dark": "Dark"
+    }
+  },
+  "company": {
+    "detailsTitle": "Company details",
+    "detailsHelp": "Shown on payslips, employee contracts, invitation emails and the sidebar. We don't collect tax IDs.",
+    "name": "Company name",
+    "legalName": "Legal name",
+    "industry": "Industry",
+    "industryPlaceholder": "e.g. Software, Retail, Healthcare",
+    "size": "Company size",
+    "sizeOption": "{{band}} employees",
+    "country": "Country",
+    "phone": "Phone",
+    "address": "Address",
+    "website": "Website",
+    "save": "Save changes",
+    "saving": "Saving…",
+    "saved": "Company details updated.",
+    "saveError": "Failed to update company details: {{message}}",
+    "loadError": "Failed to load company settings: {{message}}",
+    "currencyTitle": "Currency",
+    "currencyHelp": "Applies to compensation amounts across the company (Hourly/Monthly Rate on Employee).",
+    "currency": "Currency",
+    "currencyUpdated": "Currency updated.",
+    "currencyUpdateError": "Failed to update currency: {{message}}",
+    "logo": {
+      "title": "Logo",
+      "help": "PNG or JPG, up to 2 MB — we resize it automatically. A horizontal or square logo on a transparent background works best.",
+      "alt": "Company logo",
+      "none": "No logo",
+      "upload": "Upload logo",
+      "replace": "Replace",
+      "remove": "Remove",
+      "uploaded": "Logo updated.",
+      "removed": "Logo removed.",
+      "error": {
+        "type": "Please choose a PNG or JPG image.",
+        "size": "The image is larger than 2 MB.",
+        "decode": "We couldn't read that image. Try another file."
+      }
     }
   },
   "activityLogSettings": {

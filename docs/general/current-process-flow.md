@@ -1,5 +1,9 @@
 # Current Process Flow
 
+- **2026-09-25**: Settings → "Appearance" was replaced by **"Company profile"** (`/settings/company`,
+  `CompanyPage.tsx`: company details + logo + currency, gated by `manage_tenant_settings`); the
+  theme picker moved to **Profile** (every role). `/settings/appearance` and `/company` redirect to
+  `/settings/company`. References to Appearance/`CompanyAppearancePage` below are historical.
 - **2026-08-29: this file is significantly behind and was not fully rewritten in this pass** —
   everything below the "Última actualización" lines is frozen at 2026-08-13. Since then: Tenant
   Signup + Subscription Plans, Billing Integration (Paddle/Mercado Pago), Payroll, Sales v2, the

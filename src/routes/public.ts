@@ -8,6 +8,7 @@ import { isRateLimited } from '../lib/rateLimit.js';
 import { getClientIp } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import { isPublicFormsEnabled } from '../lib/featureFlags.js';
+import { getTenantLogo } from '../modules/tenant/tenantProfileService.js';
 
 export const publicRouter = createAsyncRouter();
 
@@ -53,6 +54,22 @@ publicRouter.post('/api/public/contract-confirmation/:token', async (req, res) =
   }
 
   return res.status(200).json({ user: sanitizeUser(result.user!), session: result.session });
+});
+
+// Public, unauthenticated: the company logo (Settings → Company), served as an image so it can
+// be shown in the app sidebar and embedded in invitation emails (mail clients fetch it with no
+// session). Registered before the :tenantSlug/:formSlug catch-all below for the same reason as
+// contract-confirmation above. Only the logo bytes are exposed — keyed by the tenant's UUID, not
+// its slug. The `?v=<logoUpdatedAt>` query the frontend/emails append changes on every upload,
+// so the response can be cached as immutable.
+publicRouter.get('/api/public/tenant-logo/:tenantId', async (req, res) => {
+  const logo = await getTenantLogo(req.params.tenantId);
+  if (!logo) {
+    return res.status(404).json({ error: 'Logo not found' });
+  }
+  res.setHeader('Content-Type', logo.mimeType);
+  res.setHeader('Cache-Control', req.query.v ? 'public, max-age=31536000, immutable' : 'public, max-age=300');
+  return res.send(logo.bytes);
 });
 
 // Public, unauthenticated: powers the standalone /apply/:tenantSlug/:formSlug page.

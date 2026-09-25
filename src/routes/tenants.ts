@@ -1,6 +1,7 @@
 import { sanitizeUser } from '../modules/auth/authService.js';
 import { canInviteUsers, canManageBilling, canManageTenantSettings, canManageUsers } from '../modules/auth/permissionService.js';
-import { getTenantById, registerTenantWithOwner, updateTenantCurrency } from '../modules/tenant/tenantService.js';
+import { getTenantById, registerTenantWithOwner } from '../modules/tenant/tenantService.js';
+import { removeTenantLogo, setTenantLogo, updateTenantProfile } from '../modules/tenant/tenantProfileService.js';
 import { startSignupVerification, verifySignupToken } from '../modules/tenant/emailVerificationService.js';
 import { CURRENT_PLAN_PRICES_CENTS, updateTenantPlan } from '../modules/tenant/planService.js';
 import {
@@ -156,15 +157,45 @@ tenantsRouter.patch('/api/tenants/current', async (req, res) => {
     return res.status(403).json({ error: 'Insufficient permissions' });
   }
 
-  if (typeof req.body.currency !== 'string') {
-    return res.status(400).json({ error: 'currency is required' });
-  }
-
-  const result = await updateTenantCurrency(user.tenantId!, req.body.currency, user.id);
+  // Settings → Company: any subset of the company profile fields (and currency, which this
+  // endpoint originally only accepted) — see tenantProfileService.ts for per-field validation.
+  const result = await updateTenantProfile(user.tenantId!, req.body ?? {}, user.id);
   if (!result.success) {
-    return res.status(400).json({ error: result.error });
+    return res.status(400).json({ error: result.error, field: result.field });
   }
 
+  return res.json({ tenant: result.tenant });
+});
+
+tenantsRouter.put('/api/tenants/current/logo', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageTenantSettings(user.roleContext)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const result = await setTenantLogo(user.tenantId!, req.body?.image, user.id);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error, field: result.field });
+  }
+
+  return res.json({ tenant: result.tenant });
+});
+
+tenantsRouter.delete('/api/tenants/current/logo', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+
+  if (!canManageTenantSettings(user.roleContext)) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+
+  const result = await removeTenantLogo(user.tenantId!, user.id);
   return res.json({ tenant: result.tenant });
 });
 

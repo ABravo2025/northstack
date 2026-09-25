@@ -54,7 +54,7 @@ export function getSettingsSections(permissions: SettingsSectionsPermissions): S
 
   const companyItems: SettingsSectionItem[] = [];
   if (permissions.has('manage_tenant_settings')) {
-    companyItems.push({ to: 'appearance', label: t('settings.appearance.label'), desc: t('settings.appearance.desc'), icon: <BuildingIcon /> });
+    companyItems.push({ to: 'company', label: t('settings.companyProfile.label'), desc: t('settings.companyProfile.desc'), icon: <BuildingIcon /> });
   }
   if (permissions.has('manage_users')) {
     companyItems.push({ to: 'users', label: t('settings.users.label'), desc: t('settings.users.desc'), icon: <TeamIcon /> });

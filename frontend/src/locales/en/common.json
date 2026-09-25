@@ -212,7 +212,7 @@
     "profile": { "label": "Profile", "desc": "Name, phone and password." },
     "integrations": { "label": "Integrations", "desc": "Connect Northstack to other tools." },
     "billing": { "label": "Billing", "desc": "Plan, invoices and payment method." },
-    "appearance": { "label": "Appearance", "desc": "Currency and theme for the workspace." },
+    "companyProfile": { "label": "Company profile", "desc": "Name, logo, contact details and currency." },
     "users": { "label": "Users", "desc": "Invite people and manage roles." },
     "publicForms": { "label": "Public Forms", "desc": "External intake forms per module." },
     "pipelines": { "label": "Pipelines", "desc": "Sales stages and their outcomes." },

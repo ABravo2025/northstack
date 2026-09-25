@@ -4879,3 +4879,33 @@ que correr Alejandro manualmente (el clasificador de seguridad de Claude Code bl
 8. **Gate de Meet:** con Calendar conectado aparece el checkbox y sin conectar aparece el aviso, en los 4 lugares.
 9. **Multi-tenancy:** un `folderId` de otro tenant en `POST/PATCH /api/tasks` da 400 "Folder not found"; `DELETE /api/task-folders/:id` de otro tenant da 404.
 10. **Permisos:** un Member puede usar el hub y crear carpetas (mismo criterio abierto que el resto de Tasks).
+
+---
+
+## QA-101 — Settings → Company profile: datos de la empresa + logo; tema movido a Profile (2026-09-25, en `staging`)
+
+### Qué cambió
+
+- **Schema (aditivo, ya aplicado a la base de `staging`, todavía NO a producción):** `Tenant.legalName`/`address`/`phone`/`website` + `logoData` (Bytes)/`logoMimeType`/`logoUpdatedAt`. Sin ID fiscal a propósito (privacy policy).
+- **Backend:** `PATCH /api/tenants/current` ahora acepta cualquier subconjunto de nombre, razón social, dirección, teléfono, web, tamaño, industria, país y moneda (antes solo moneda), con validación por campo. `PUT/DELETE /api/tenants/current/logo` (permiso `manage_tenant_settings`). Ruta pública nueva `GET /api/public/tenant-logo/:tenantId?v=…` que sirve solo la imagen. Todo queda en el Activity Log.
+- **Frontend:** Settings → **Company profile** (`/settings/company`) reemplaza a Appearance: datos de la empresa, logo (PNG/JPG ≤2 MB, se achica a ≤512 px en el navegador) y moneda. `/settings/appearance` y `/company` redirigen ahí. El selector de **tema** pasó a **Settings → Profile** (visible para todos los roles). El logo (o el nombre si no hay logo) aparece arriba del menú lateral.
+- **Documentos:** el recibo de Payroll y el PDF del contrato llevan logo + razón social/dirección/teléfono/web. El email de invitación muestra el logo arriba.
+
+**Verificado en esta sesión:** 424 tests del backend (17 nuevos en `tenantProfileService.test.ts`) y build del frontend en verde; PDF de contrato de muestra renderizado y revisado a ojo. **No se probó en navegador contra `staging`** — hacerlo ahí.
+
+### Qué probar
+
+1. **Nav:** con un Owner/Admin, Settings muestra "Company profile" (no "Appearance"); `/settings/appearance` y `/company` redirigen a `/settings/company`.
+2. **Datos:** editar y guardar cada campo; recargar y verificar que persisten. Vaciar un campo opcional lo borra. Nombre vacío → error en el campo. Teléfono "abc" → error. Web `acme.com` se guarda como `https://acme.com`; `javascript:alert(1)` → error.
+3. **Logo:** subir un PNG con transparencia y un JPG grande (~1.5 MB) → se ven en la vista previa y arriba del menú lateral sin recargar. Un archivo >2 MB o un `.gif`/`.svg` → toast de error, nada se sube. "Quitar" lo borra y el menú vuelve a mostrar el nombre.
+4. **Menú lateral colapsado:** con logo se ve chico y centrado; sin logo no se muestra nada (no el nombre cortado). Revisar también en mobile (drawer).
+5. **Moneda:** cambiarla sigue funcionando y queda en el Activity Log como antes.
+6. **Tema:** un **Member** ve el selector Claro/Oscuro/Sistema en Settings → Profile y funciona; ya no ve ningún ítem de "Company".
+7. **Permisos:** un Member que llame `PATCH /api/tenants/current` o `PUT /api/tenants/current/logo` → 403.
+8. **Recibo de Payroll:** descargar un recibo → logo arriba a la derecha + datos de la empresa debajo del nombre. Sin logo ni datos → se ve como antes.
+9. **Contrato:** crear un contrato nuevo → el PDF borrador lleva el encabezado nuevo. Los contratos ya generados antes quedan como estaban (el PDF está guardado).
+10. **Email de invitación:** invitar a alguien con logo cargado → el HTML trae el logo. En `staging` probablemente NO cargue (Vercel Deployment Protection bloquea el acceso externo); verificar la URL de la imagen en el HTML en vez de la imagen en sí. En producción debe verse.
+11. **Ruta pública:** `GET /api/public/tenant-logo/<uuid de otro tenant>` solo devuelve la imagen (nada más del tenant); un id inexistente o no-UUID → 404.
+12. **Activity Log:** los cambios de datos y de logo aparecen con etiquetas legibles ("Legal name", "Logo: Uploaded …").
+13. **Guide/Help:** la sección de Settings y la de recibos de sueldo (EN y ES) describen Company profile y el tema en Profile; FAQ nueva sobre logo en recibos.
+

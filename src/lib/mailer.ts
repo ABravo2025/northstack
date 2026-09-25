@@ -37,6 +37,9 @@ export interface SendInvitationEmailInput {
   tenantName: string;
   role: string;
   acceptUrl: string;
+  // Absolute URL of the tenant's logo (tenantProfileService.ts's buildTenantLogoUrl) — rendered
+  // above the message when set. Omitted/null → no image, the text body is unchanged either way.
+  logoUrl?: string | null;
   attachments?: { filename: string; content: Buffer }[];
   // Recipient has no account yet at invite time (see invitationService.ts) — most call sites
   // pass nothing, which falls back to English (resolveEmailLocale(undefined) === 'en').
@@ -63,6 +66,9 @@ export async function sendInvitationEmail(input: SendInvitationEmailInput): Prom
       t('invitation.expiry'),
     ].join('\n'),
     html: [
+      input.logoUrl
+        ? `<p><img src="${escapeHtml(input.logoUrl)}" alt="${escapeHtml(input.tenantName)}" style="max-height:48px;max-width:160px" /></p>`
+        : '',
       `<p>${t('invitation.intro', { tenantName: strong(input.tenantName), role: strong(input.role) })}</p>`,
       `<p><a href="${input.acceptUrl}">${t('invitation.acceptLinkText')}</a></p>`,
       hasContract ? `<p>${t('invitation.contractNote')}</p>` : '',

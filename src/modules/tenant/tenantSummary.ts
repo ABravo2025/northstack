@@ -2,7 +2,7 @@ import { Prisma } from '@prisma/client';
 
 // Leaf module (no imports besides @prisma/client) — the fields the frontend's `Tenant` type
 // (api/types.ts) actually reads. Shared by every endpoint that returns a tenant to the client
-// (tenantService.ts's getTenantById/updateTenantCurrency, planService.ts's updateTenantPlan) so
+// (tenantService.ts's getTenantById, tenantProfileService.ts, planService.ts's updateTenantPlan) so
 // none of them accidentally ships a wider or narrower row than the others. Lives here rather
 // than in tenantService.ts to avoid a circular import — tenantService.ts already imports
 // CURRENT_PLAN_PRICES_CENTS from planService.ts, so planService.ts can't import back from it.
@@ -13,6 +13,16 @@ export const TENANT_SUMMARY_SELECT = {
   status: true,
   plan: true,
   companySize: true,
+  industry: true,
+  country: true,
+  legalName: true,
+  address: true,
+  phone: true,
+  website: true,
+  // Only the timestamp, never logoData itself — the frontend builds the public logo URL
+  // (/api/public/tenant-logo/:id?v=<logoUpdatedAt>) from this, so the bytes stay out of every
+  // tenant payload.
+  logoUpdatedAt: true,
   trialEndsAt: true,
   gracePeriodEndsAt: true,
 } as const;

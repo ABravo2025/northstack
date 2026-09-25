@@ -482,18 +482,52 @@
     }
   },
   "appearance": {
-    "companyCardTitle": "Empresa",
-    "currencyHelp": "Se aplica a los montos de compensación en toda la empresa (Tarifa por hora/mensual en Empleado).",
-    "currency": "Moneda",
-    "loadError": "No se pudo cargar la configuración de la empresa: {{message}}",
-    "currencyUpdated": "Moneda actualizada.",
-    "currencyUpdateError": "No se pudo actualizar la moneda: {{message}}",
     "appearanceCardTitle": "Apariencia",
     "appearanceHelp": "Elegí cómo se ve Northstack en este dispositivo.",
     "theme": {
       "system": "Sistema",
       "light": "Claro",
       "dark": "Oscuro"
+    }
+  },
+  "company": {
+    "detailsTitle": "Datos de la empresa",
+    "detailsHelp": "Se muestran en los recibos de sueldo, los contratos de los empleados, los emails de invitación y el menú lateral. No pedimos ID fiscal.",
+    "name": "Nombre de la empresa",
+    "legalName": "Razón social",
+    "industry": "Industria",
+    "industryPlaceholder": "ej. Software, Retail, Salud",
+    "size": "Tamaño de la empresa",
+    "sizeOption": "{{band}} empleados",
+    "country": "País",
+    "phone": "Teléfono",
+    "address": "Dirección",
+    "website": "Sitio web",
+    "save": "Guardar cambios",
+    "saving": "Guardando…",
+    "saved": "Datos de la empresa actualizados.",
+    "saveError": "No se pudieron actualizar los datos de la empresa: {{message}}",
+    "loadError": "No se pudo cargar la configuración de la empresa: {{message}}",
+    "currencyTitle": "Moneda",
+    "currencyHelp": "Se aplica a los montos de compensación en toda la empresa (tarifa por hora/mensual del empleado).",
+    "currency": "Moneda",
+    "currencyUpdated": "Moneda actualizada.",
+    "currencyUpdateError": "No se pudo actualizar la moneda: {{message}}",
+    "logo": {
+      "title": "Logo",
+      "help": "PNG o JPG, hasta 2 MB — lo achicamos automáticamente. Funciona mejor un logo horizontal o cuadrado con fondo transparente.",
+      "alt": "Logo de la empresa",
+      "none": "Sin logo",
+      "upload": "Subir logo",
+      "replace": "Reemplazar",
+      "remove": "Quitar",
+      "uploaded": "Logo actualizado.",
+      "removed": "Logo eliminado.",
+      "error": {
+        "type": "Elegí una imagen PNG o JPG.",
+        "size": "La imagen pesa más de 2 MB.",
+        "decode": "No pudimos leer esa imagen. Probá con otro archivo."
+      }
     }
   },
   "activityLogSettings": {

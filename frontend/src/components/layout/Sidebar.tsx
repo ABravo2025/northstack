@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { usePermissions } from '../../contexts/PermissionsContext';
 import { isGrowthFeatureEnabled } from '../../lib/planLimits';
+import { tenantLogoUrl } from '../../lib/tenantLogo';
 import type { Tenant } from '../../api';
 import {
   BriefcaseIcon,
@@ -51,6 +52,7 @@ export default function Sidebar({ mobileOpen, onMobileClose, tenant }: SidebarPr
     `sidebar-link${isActive ? ' active' : ''}${collapsed ? ' justify-center' : ''}`;
 
   const label = (text: string) => (collapsed ? undefined : text);
+  const logoUrl = tenantLogoUrl(tenant);
 
   return (
     <>
@@ -66,6 +68,14 @@ export default function Sidebar({ mobileOpen, onMobileClose, tenant }: SidebarPr
         <button className="sidebar-toggle-mobile" onClick={onMobileClose} aria-label={t('sidebar.closeMenu')}>
           <XIcon className="h-4 w-4" />
         </button>
+
+        {/* Company identity (Settings → Company): the tenant's logo, or its name when there's no
+            logo yet. Hidden when collapsed without a logo — a truncated name in 56px says nothing. */}
+        {tenant && (logoUrl || !collapsed) && (
+          <div className={`sidebar-company${collapsed ? ' sidebar-company-collapsed' : ''}`} title={tenant.name}>
+            {logoUrl ? <img src={logoUrl} alt={tenant.name} /> : <span>{tenant.name}</span>}
+          </div>
+        )}
 
         <div>
           <NavLink to="/overview" className={linkClass} title={t('sidebar.overview')} onClick={onMobileClose} data-tour="nav-overview">

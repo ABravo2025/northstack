@@ -167,7 +167,12 @@ modelo `Notification` (ver Payments arriba, todavía en staging).
 - **Integrations**: una sola página para todas las integraciones — Google Calendar (por usuario) y
   la conexión de Stripe de Payments (por tenant, owner-only, todavía en `staging`).
 - **Billing**: autogestión de la propia suscripción de Northstack (ver arriba).
-- **Appearance**: tema claro/oscuro y otras preferencias de apariencia del tenant.
+- **Company profile** (2026-09-25, reemplaza a "Appearance"): nombre, razón social, industria,
+  tamaño, país, dirección, teléfono, sitio web y **logo** de la empresa (sin ID fiscal, por la
+  privacy policy), más la moneda del tenant. Logo y datos aparecen en recibos de sueldo, contratos,
+  emails de invitación y arriba del menú lateral.
+- **Tema claro/oscuro**: vive en **Profile** desde 2026-09-25 (antes en Appearance, que solo veía
+  quien tenía `manage_tenant_settings` — ahora lo usa cualquier usuario). Preferencia por dispositivo.
 
 ## Onboarding y soporte — en producción
 

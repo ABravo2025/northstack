@@ -147,6 +147,10 @@ const FAQ_CATEGORIES: FaqCategory[] = [
         a: 'No. It\'s explicitly labeled "Preview only — not sent," meant as a reference document, not an official or legally binding payslip.',
       },
       {
+        q: 'How do I put our logo and company details on payslips?',
+        a: 'Go to Settings → Company profile, fill in your legal name, address, phone and website, and upload a PNG or JPG logo (up to 2 MB). New payslips, contracts and invitation emails pick them up automatically. Contracts generated earlier keep the header they were created with.',
+      },
+      {
         q: 'Does Payroll actually pay people, or move any money?',
         a: "No — it's a record-keeping tool, not a payment processor. No transfers happen from inside Northstack; you still pay people through your own bank or payment provider and log it here.",
       },
@@ -349,6 +353,10 @@ const FAQ_CATEGORIES_ES: FaqCategory[] = [
       {
         q: '¿El PDF del recibo de sueldo es un documento legal?',
         a: 'No. Dice explícitamente "Preview only — not sent" ("Solo vista previa — no enviado"), pensado como documento de referencia, no como un recibo de sueldo oficial ni con validez legal.',
+      },
+      {
+        q: '¿Cómo pongo el logo y los datos de la empresa en los recibos?',
+        a: 'Andá a Configuración → Datos de la empresa, completá razón social, dirección, teléfono y sitio web, y subí un logo PNG o JPG (hasta 2 MB). Los recibos, contratos y emails de invitación nuevos los toman solos. Los contratos generados antes mantienen el encabezado con el que se crearon.',
       },
       {
         q: '¿Nómina realmente le paga a la gente, o mueve dinero?',

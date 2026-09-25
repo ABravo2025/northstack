@@ -2,6 +2,7 @@ import prisma from '../../lib/prisma.js';
 import type { EmployeeCompensation, PayrollCompensationType, PersonType } from '@prisma/client';
 import { createInvitation } from '../tenant/invitationService.js';
 import { renderContractPdf } from './contractPdfService.js';
+import { toTenantBranding } from '../tenant/tenantProfileService.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { employeeCompensationActivityFieldConfig } from '../activity/fieldConfigs/employeeCompensationFieldConfig.js';
 
@@ -65,7 +66,7 @@ export async function createCompensation(input: CreateCompensationInput): Promis
     prisma.payFrequencyDefinition.findUniqueOrThrow({ where: { id: input.payFrequencyId } }),
   ]);
   const draftPdfBytes = await renderContractPdf({
-    tenantName: tenant.name,
+    company: toTenantBranding(tenant),
     employeeName: `${employee.firstName} ${employee.lastName}`,
     nationality: employee.nationality,
     jobTitle: input.jobTitle,

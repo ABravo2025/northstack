@@ -8,6 +8,7 @@ import { recordActivity } from '../activity/activityLogService.js';
 import { invitationActivityFieldConfig } from '../activity/fieldConfigs/invitationFieldConfig.js';
 import { findSeedRoleId } from '../auth/roleService.js';
 import { syncSeatBilling, seatCapError } from './seatService.js';
+import { buildTenantLogoUrl } from './tenantProfileService.js';
 
 const INVITATION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -145,6 +146,7 @@ export async function createInvitation(input: CreateInvitationInput): Promise<In
   await sendInvitationEmail({
     to: invitation.email,
     tenantName: tenant.name,
+    logoUrl: buildTenantLogoUrl(tenant.id, tenant.logoUpdatedAt),
     role: roleDisplayName,
     acceptUrl: `${appBaseUrl}${acceptPath}/${invitation.token}`,
     attachments: input.attachments,

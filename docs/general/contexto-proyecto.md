@@ -1,6 +1,9 @@
 # Contexto de desarrollo del proyecto
 
 - Fecha de creación: 2026-07-02
+- **2026-09-25**: Settings → Company profile (datos de la empresa + logo; tema movido a Profile) en
+  `staging` — ver `tareas-desarrollo.md` y QA-101. La descripción de Settings más abajo ("Appearance")
+  queda histórica.
 - **Nota 2026-08-29**: este archivo volvió a quedarse atrás, mismo patrón que ya le pasó una vez
   (ver la nota de la entrada 2026-08-11 más abajo) — no se reescribió por completo en esta ronda.
   Desde la última actualización real (2026-08-13) shippearon o avanzaron: Billing Integration,

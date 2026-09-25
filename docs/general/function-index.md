@@ -63,9 +63,12 @@ Leaf module (sin imports) — extraído 2026-08-18 de `tenantService.ts` para qu
 ### `src/lib/platformAuth.ts`
 - **requirePlatformRole(...allowed)** — devuelve un helper `(req, res) => Promise<User | null>` en el mismo estilo call-and-return de `validateSession` (no middleware `next()`). Usa `authenticateUser` (no `validateSession`, porque el staff de plataforma no tiene `tenantId`), y rechaza si `user.platformRole` es null o no está en `allowed`. `platform_admin` pasa siempre (bypass implícito, no hace falta listarlo). Usado por las rutas `/api/platform/*` (Admin Center).
 
+### `src/lib/pdfCompanyHeader.ts` (2026-09-25)
+- **drawCompanyHeader({doc, page, font, boldFont, branding, y})** — logo arriba a la derecha (escalado a ≤140×50) + nombre + razón social/dirección/teléfono·web en gris; devuelve el `y` siguiente. Reemplaza caracteres que Helvetica/WinAnsi no puede codificar por `?`, y si el logo no se puede embeber lo omite en vez de romper el PDF. Usado por `payslipService.ts` y `contractPdfService.ts`.
+
 ### `src/lib/mailer.ts`
 Todas siguen el mismo patrón: `if (!mailerConfigured()) return;` (no rompen el request si Zoho no está configurado). Desde 2026-09-16, todas (salvo `sendFeedbackEmail`, ver abajo) rutean internamente por `dispatchMail()` (privado, no exportado) — un único choke point que llama a `bestEffort()` alrededor de `transporter.sendMail`. Esto significa que el caller **debe seguir haciendo `await sendXEmail(...)`** (no fire-and-forget: en Vercel, una promesa sin `await` puede quedar matada a mitad de camino en cuanto sale la respuesta HTTP — confirmado dos veces en producción, 2026-08-25 y 2026-09-16, ver `docs/general/Tareas-QA.md` QA-92), pero ya no necesita envolver la llamada en su propio `bestEffort()`/`try-catch` — el propio `sendXEmail` nunca rechaza.
-- **sendInvitationEmail(input)** — invitación a un tenant; `input.attachments` opcional (Payroll usa esto para adjuntar el contrato borrador).
+- **sendInvitationEmail(input)** — invitación a un tenant; `input.attachments` opcional (Payroll usa esto para adjuntar el contrato borrador); `input.logoUrl` opcional (2026-09-25, `buildTenantLogoUrl`) agrega el logo de la empresa arriba del HTML.
 - **sendPublicFormSubmissionEmail(input)** — aviso al owner de una submission nueva en un Public Form.
 - **sendPublicFormConfirmationEmail(input)** — confirmación al que llenó el form.
 - **sendTimeOffRequestPendingEmail(input)** — aviso al approver de una solicitud de Time Off pendiente.
@@ -447,7 +450,7 @@ Export/template always include every active custom field of the tenant for that 
 - **confirmContract(input)** — valida, cifra los datos de cuenta (`encryptPaymentAccountData`), genera el PDF firmado (`contractPdfService.renderContractPdf`), y en una transacción: crea el `User` (nombre copiado del `Employee`, nunca re-pedido), vincula `Employee.userId`, guarda `countryOfResidence`, completa la `EmployeeCompensation` (método de pago + `confirmedAt`/`confirmedIp`/`contractPdf`), marca la `Invitation` `accepted`, crea la `Session` — la persona queda logueada de una. Después del commit, dispara (best-effort) `sendContractSignedEmail` al firmante con copia al owner y a `createdByUserId`.
 
 ### `src/modules/hr/contractPdfService.ts` (Payroll, 2026-08-08 — feedback del usuario)
-- **renderContractPdf(input)** — arma el PDF (`pdf-lib`, mismo estilo que `payslipService.ts`) con los términos del contrato; `signed: false` lo marca "DRAFT — PENDING SIGNATURE", `signed: true` agrega el bloque de confirmación (fecha/hora/IP) y lo marca "SIGNED". Se llama dos veces por contrato: al crearlo (borrador) y al confirmarlo (firmado, sobrescribe la misma columna).
+- **renderContractPdf(input)** — `input.company` es un `TenantBranding` (`tenantProfileService.toTenantBranding`, 2026-09-25; antes `tenantName`), dibujado con `drawCompanyHeader`. Arma el PDF (`pdf-lib`, mismo estilo que `payslipService.ts`) con los términos del contrato; `signed: false` lo marca "DRAFT — PENDING SIGNATURE", `signed: true` agrega el bloque de confirmación (fecha/hora/IP) y lo marca "SIGNED". Se llama dos veces por contrato: al crearlo (borrador) y al confirmarlo (firmado, sobrescribe la misma columna).
 - **getEmployeeContractPdf(tenantId, employeeId)** — el PDF *guardado* (no lo regenera) de la compensación más relevante de la persona (la vigente, o la más reciente si no hay ninguna abierta).
 - **resendEmployeeContract(tenantId, employeeId, actingUserId)** — reenvía lo que esté guardado ahora mismo: si no está firmado, reusa la invitación pendiente (o crea una nueva si venció) + el borrador adjunto; si ya está firmado, reenvía el firmado al usuario vinculado con copia al owner y a quien lo cargó.
 - **getEmployeeCompensationSummary(tenantId, employeeId)** — read model de la compensación *vigente* (`effectiveTo: null`) de la persona, sin datos sensibles (nunca `paymentAccountDataEncrypted` ni los bytes del PDF) — feedback del usuario 2026-08-08: el contrato cargado en el alta no se veía en ningún lado del panel de detalle, solo dentro del PDF generado. Alimenta la sección "Compensation" de `EmployeeOverviewPanel.tsx`.
@@ -484,6 +487,7 @@ Export/template always include every active custom field of the tenant for that 
 - **listOffPayments(tenantId)** — para la línea de tiempo unificada.
 
 ### `src/modules/hr/payslipService.ts` (Payroll, Unidad 20)
+- Encabezado (logo + datos de la empresa) vía `src/lib/pdfCompanyHeader.ts`'s `drawCompanyHeader` desde 2026-09-25, igual que `contractPdfService.ts`.
 - **buildPayslipForRunEmployee(tenantId, runId, employeeId)** / **buildPayslipForEntry(tenantId, entryId)** — arman el PDF de preview (`pdf-lib`) a partir de las entries de una persona en un run, o de una entry suelta. Marcado "PREVIEW — NOT ISSUED" en el PDF mismo, no solo en la UI.
 
 ### `src/modules/hr/employeeTimeOffPolicyService.ts`
@@ -714,8 +718,16 @@ están vinculadas; existe porque un scope `notes:read` de una ApiKey es tenant-w
 - **normalizeSlug(value)** — helper de string. (`getEmailDomain`/`isEmailFormatValid` viven en `src/lib/email.ts` desde 2026-08-18.)
 - **checkEmailDomainNotAlreadyRegistered(email)** — validador de dominio duplicado, compartido por `emailVerificationService.ts` (el gate real, en `signup/start`) y `registerTenantWithOwner` (defensa en profundidad); excluye tenants `cancelled` y `suspended` del match, no solo `active` (un trial abandonado no debe bloquear el dominio para siempre, ya que todavía no hay billing real que permita reactivarse self-serve). Desde 2026-08-18 filtra por `User.emailDomain` (igualdad, indexado) en vez de `email: {endsWith}` (scan completo de la tabla).
 - **registerTenantWithOwner(input)** — flujo completo de "Sign Up" (tenant + owner + seeds); requiere `verificationToken` (Tenant Signup, `docs/spec-tenant-signup.md`) validado y consumido al final, justo antes de la transacción — nunca antes, para no quemar el token si otra validación falla. Setea `Tenant.status: 'trialing'` + `trialEndsAt` (Subscription Plans). Desde Billing Integration (2026-08-18) también crea el `Subscription` del tenant en la misma transacción (placeholder `plan: 'starter'` hasta que elija uno real vía `updateTenantPlan`).
-- **findTenantNameById(tenantId)**, **getTenantById(tenantId)** (incluye `status`/`plan`/`companySize`/`trialEndsAt`/`gracePeriodEndsAt`), **updateTenantCurrency(tenantId, currency)**.
+- **findTenantNameById(tenantId)**, **getTenantById(tenantId)** (devuelve `TENANT_SUMMARY_SELECT` de `tenantSummary.ts`: `status`/`plan`/`companySize`/`industry`/`country`/`legalName`/`address`/`phone`/`website`/`logoUpdatedAt`/`trialEndsAt`/`gracePeriodEndsAt` — nunca `logoData`). `updateTenantCurrency` se borró el 2026-09-25: la moneda ahora se edita vía `tenantProfileService.updateTenantProfile`.
 - **findUserById(id, client?)** — sin scope de tenant a propósito (mismo patrón que `findClientById`/`findEmployeeById`) — el caller valida `tenantId` antes de confiar en el resultado. `client?` (Private API + Webhooks Unit 3, 2026-09-07) acepta `prismaExternal`.
+
+### `src/modules/tenant/tenantProfileService.ts` (Settings → Company, 2026-09-25)
+Datos de la empresa + logo. Sin ID fiscal a propósito (lo prohíbe la privacy policy).
+- **updateTenantProfile(tenantId, input, changedByUserId)** — cualquier subconjunto de `name`/`legalName`/`address`/`phone`/`website`/`companySize`/`industry`/`country`/`currency`; valida cada campo (largo máx., teléfono con `isPhoneValid`, web normalizada a `https://`, `companySize` contra `COMPANY_SIZE_OPTIONS`, moneda ISO), `''` limpia un opcional; registra Activity Log. Backs `PATCH /api/tenants/current`.
+- **setTenantLogo(tenantId, rawImage, userId)** / **removeTenantLogo(tenantId, userId)** — guarda/borra `logoData`/`logoMimeType`/`logoUpdatedAt`. **decodeLogoPayload(raw)** acepta base64 o data URL, tope `MAX_LOGO_BYTES` (512 KB), tipo detectado por magic bytes (solo PNG/JPEG — nunca confía en el tipo del cliente).
+- **getTenantLogo(tenantId)** — para la ruta pública `GET /api/public/tenant-logo/:tenantId` (valida formato UUID antes de consultar).
+- **toTenantBranding(tenant)** → `TenantBranding` (nombre, razón social, dirección, teléfono, web, logo) para encabezados de documentos — recibe la fila `Tenant` que el caller ya cargó, sin query extra.
+- **buildTenantLogoUrl(tenantId, logoUpdatedAt)** — URL absoluta (`APP_BASE_URL`) con `?v=` para emails; `null` si no hay logo.
 
 ### `src/modules/platform/platformTenantService.ts`
 Admin Center (`/api/platform/tenants*`, `requirePlatformRole('platform_support')`), no confundir con `tenantService.ts` (self-service tenant-scoped).
@@ -757,6 +769,10 @@ Catálogo de `PlatformStatusDefinition` (plataforma, no por tenant) — `require
 ### `frontend/src/lib/currencies.ts`
 - **currencyLabel(code)** — nombre legible de un código ISO-4217.
 - **formatMoney(cents, currency)** — `Intl.NumberFormat` currency, la función de formato de plata que usa toda la app (no reinventar con `toFixed(2)`).
+
+### `frontend/src/lib/tenantLogo.ts` (2026-09-25)
+- **tenantLogoUrl(tenant)** — URL de la ruta pública del logo con `?v=<logoUpdatedAt>`, o `null`. Usado por `Sidebar.tsx` y `CompanyPage.tsx`.
+- **resizeLogoFile(file)** — valida PNG/JPG ≤2 MB y lo achica en el navegador (canvas) a ≤512 px, devolviendo un data URL listo para `api.uploadTenantLogo`; PNG queda PNG (conserva transparencia), JPG a calidad 0.9.
 
 ### `frontend/src/lib/lightMarkdown.tsx`
 - **renderNoteDescription(description)** — subset mínimo de Markdown (bold/italic/links/saltos de línea) para el texto de Notes, sin librería externa.
@@ -816,7 +832,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 
 | Archivo | Métodos |
 |---|---|
-| `auth.ts` | startSignup, resendSignup (ambas vía el helper interno `postSignupEmail`, no exportado), verifySignup, registerTenant, login, register, forgotPassword, validateResetToken, resetPassword, getInvitation, acceptInvitation, logout, getCurrentUser, updateProfile, changePassword, getCurrentTenant, updateTenantCurrency, getPlanPrices (2026-08-18, público, sin token), updateTenantPlan |
+| `auth.ts` | startSignup, resendSignup (ambas vía el helper interno `postSignupEmail`, no exportado), verifySignup, registerTenant, login, register, forgotPassword, validateResetToken, resetPassword, getInvitation, acceptInvitation, logout, getCurrentUser, updateProfile, changePassword, getCurrentTenant, updateTenantProfile (reemplazó a updateTenantCurrency 2026-09-25), uploadTenantLogo, removeTenantLogo, getPlanPrices (2026-08-18, público, sin token), updateTenantPlan |
 | `employees.ts` | listEmployees, listEmployeeDirectory (Custom Roles Fase E, 2026-09 — unscoped roster for pickers), createEmployee, updateEmployee, deleteEmployee, inviteEmployee, getEmployeeCompensation, getEmployeeContractPdf, resendContract, listEmployeeBirthdays (2026-08-22) |
 | `companies.ts` | listCompanies, createCompany, updateCompany, deleteCompany, +custom field values |
 | `contacts.ts` | listContacts, createContact, updateContact, deleteContact, +custom field values |
@@ -952,10 +968,10 @@ inline (`createPipeline`/`updatePipeline`/`createTask`/`createNote`/`createSaved
 falta cambios de firma ahí).
 
 ### Activity Log — Unidad 6, completa (2026-08-30/31, cuenta/plataforma)
-3 field configs (2026-08-30): **tenantFieldConfig.ts** (solo `currency`/`plan`, los únicos campos
-que `updateTenantCurrency`/`updateTenantPlan` tocan), **userFieldConfig.ts** (solo `role`/`status`
+3 field configs (2026-08-30): **tenantFieldConfig.ts** (`currency`/`plan`, y desde 2026-09-25 también
+los campos de `tenantProfileService.ts` — nombre, razón social, dirección, teléfono, web, tamaño, industria, país, `logoUpdatedAt` como "Logo"), **userFieldConfig.ts** (solo `role`/`status`
 — nunca `passwordHash`; exporta también `userDisplayName`), **invitationFieldConfig.ts**.
-Servicios: `tenantService.updateTenantCurrency`, `planService.updateTenantPlan`,
+Servicios: `tenantProfileService.updateTenantProfile`/`setTenantLogo`/`removeTenantLogo` (antes `tenantService.updateTenantCurrency`), `planService.updateTenantPlan`,
 `tenantUserService.updateTenantUser` (ya tenía `actingUser`, sin cambio de firma),
 `invitationService.createInvitation`/`cancelInvitation`/`acceptInvitation`.
 

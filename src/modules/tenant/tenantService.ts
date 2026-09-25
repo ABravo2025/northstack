@@ -9,7 +9,7 @@ import {
 } from '../auth/authService.js';
 import { randomUUID } from 'crypto';
 import type { AcquisitionChannel, JobFunction, Session, Tenant, User } from '@prisma/client';
-import { TENANT_SUMMARY_SELECT, type TenantSummary } from './tenantSummary.js';
+import { TENANT_SUMMARY_SELECT } from './tenantSummary.js';
 import { seedDefaultStatusDefinitions } from '../hr/statusService.js';
 import { seedDefaultPipelines } from '../crm/pipelineService.js';
 import { seedDefaultPayFrequencies } from '../hr/payFrequencyService.js';
@@ -17,8 +17,6 @@ import { seedDefaultPaymentMethods } from '../hr/paymentMethodService.js';
 import { seedDefaultRolesForTenant } from '../auth/roleService.js';
 import { getEmailDomain } from '../../lib/email.js';
 import { CURRENT_PLAN_PRICES_CENTS } from './planService.js';
-import { recordActivity } from '../activity/activityLogService.js';
-import { tenantActivityFieldConfig } from '../activity/fieldConfigs/tenantFieldConfig.js';
 
 // Personal/free email providers are excluded from the duplicate-domain check below —
 // otherwise the first person to register with @gmail.com would block every other
@@ -299,43 +297,6 @@ export async function getTenantById(tenantId: string) {
 // accountOwnerId/ownerId referenced in a request body belongs to the same tenant.
 export async function findUserById(id: string, client: ExtendedPrismaClient = prisma): Promise<User | null> {
   return client.user.findUnique({ where: { id } });
-}
-
-export interface UpdateTenantCurrencyResult {
-  success: boolean;
-  tenant?: TenantSummary;
-  error?: string;
-}
-
-export async function updateTenantCurrency(
-  tenantId: string,
-  currency: string,
-  changedByUserId: string,
-): Promise<UpdateTenantCurrencyResult> {
-  if (!Intl.supportedValuesOf('currency').includes(currency)) {
-    return { success: false, error: 'Invalid currency code' };
-  }
-
-  const existing = await prisma.tenant.findUnique({ where: { id: tenantId }, select: TENANT_SUMMARY_SELECT });
-  const tenant = await prisma.tenant.update({
-    where: { id: tenantId },
-    data: { currency },
-    select: TENANT_SUMMARY_SELECT,
-  });
-
-  await recordActivity({
-    tenantId,
-    entityType: 'tenant',
-    entityId: tenantId,
-    entityLabel: tenant.name,
-    action: 'update',
-    changedByUserId,
-    before: existing,
-    after: tenant,
-    fieldConfig: tenantActivityFieldConfig,
-  });
-
-  return { success: true, tenant };
 }
 
 interface EmailVerificationCheckResult {

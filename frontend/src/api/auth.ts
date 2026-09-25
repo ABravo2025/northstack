@@ -1,5 +1,5 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
-import type { AuthResponse, PermissionsPayload, PlanTier, Tenant, TenantUser } from './types.js';
+import type { AuthResponse, PermissionsPayload, PlanTier, Tenant, TenantProfileUpdate, TenantUser } from './types.js';
 
 // Tenant Signup — email verification (spec-tenant-signup.md). /start and /resend hit distinct
 // backend routes (own rate-limit buckets for the cooldown timer/analytics) but are otherwise
@@ -190,11 +190,32 @@ export const authApi = {
     const data = await res.json();
     return data.tenant;
   },
-  updateTenantCurrency: async (token: string, currency: string): Promise<Tenant> => {
+  // Settings → Company — any subset of the profile fields (and/or currency).
+  updateTenantProfile: async (token: string, profile: TenantProfileUpdate): Promise<Tenant> => {
     const res = await apiFetch(`${API_BASE_URL}/api/tenants/current`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ currency }),
+      body: JSON.stringify(profile),
+    });
+    if (!res.ok) await throwApiError(res);
+    const data = await res.json();
+    return data.tenant;
+  },
+  // `image` is a data: URL (already resized by lib/tenantLogo.ts's resizeLogoFile).
+  uploadTenantLogo: async (token: string, image: string): Promise<Tenant> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/tenants/current/logo`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ image }),
+    });
+    if (!res.ok) await throwApiError(res);
+    const data = await res.json();
+    return data.tenant;
+  },
+  removeTenantLogo: async (token: string): Promise<Tenant> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/tenants/current/logo`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);
     const data = await res.json();

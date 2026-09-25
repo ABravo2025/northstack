@@ -996,6 +996,23 @@ table.help-ref td.no {
   @apply mt-4 mb-1 truncate px-3 text-xs font-semibold tracking-wide text-ink-faint uppercase first:mt-0 dark:text-dark-ink-faint;
 }
 
+/* Tenant logo/name block at the top of the main Sidebar (Settings → Company). */
+.sidebar-company {
+  @apply mb-3 flex h-10 items-center overflow-hidden px-3 text-sm font-semibold text-brand-navy dark:text-dark-ink;
+}
+
+.sidebar-company img {
+  @apply max-h-full max-w-full object-contain;
+}
+
+.sidebar-company span {
+  @apply truncate;
+}
+
+.sidebar-company-collapsed {
+  @apply h-8 justify-center px-0;
+}
+
 .sidebar-divider {
   @apply mt-3 border-t border-line pt-3 dark:border-dark-line;
 }

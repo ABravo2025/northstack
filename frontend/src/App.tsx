@@ -34,7 +34,7 @@ import PipelinesSettingsPage from './pages/PipelinesSettingsPage';
 import OpportunitiesPage from './pages/OpportunitiesPage';
 import ProfileSettingsPage from './pages/ProfileSettingsPage';
 import IntegrationsSettingsPage from './pages/IntegrationsSettingsPage';
-import CompanyAppearancePage from './pages/CompanyAppearancePage';
+import CompanyPage from './pages/CompanyPage';
 import CompanyUsersPage from './pages/CompanyUsersPage';
 import PublicFormsSettingsPage from './pages/PublicFormsSettingsPage';
 import ActivityLogSettingsPage from './pages/ActivityLogSettingsPage';
@@ -345,7 +345,7 @@ export default function App() {
         <Route path="/opportunities" element={<OpportunitiesPage user={user} token={token ?? ''} />} />
         <Route path="/payments" element={<PaymentsOverviewPage token={token ?? ''} />} />
         <Route path="/profile" element={<Navigate to="/settings/profile" replace />} />
-        <Route path="/company" element={<Navigate to="/settings/appearance" replace />} />
+        <Route path="/company" element={<Navigate to="/settings/company" replace />} />
         <Route path="/settings" element={<WorkspaceSettingsLayout />}>
           <Route index element={<SettingsHomePage />} />
           <Route
@@ -356,7 +356,9 @@ export default function App() {
             path="integrations"
             element={<IntegrationsSettingsPage token={token ?? ''} tenant={tenant} />}
           />
-          <Route path="appearance" element={<CompanyAppearancePage token={token ?? ''} />} />
+          <Route path="company" element={<CompanyPage token={token ?? ''} onTenantUpdated={setTenant} />} />
+          {/* Old Settings → Appearance URL — currency now lives in Company, theme in Profile. */}
+          <Route path="appearance" element={<Navigate to="/settings/company" replace />} />
           <Route
             path="users"
             element={<CompanyUsersPage user={user} token={token ?? ''} onUserUpdated={setUser} />}

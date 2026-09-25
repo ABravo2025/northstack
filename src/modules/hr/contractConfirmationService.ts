@@ -12,6 +12,7 @@ import {
 } from '../auth/authService.js';
 import { encryptPaymentAccountData } from '../../lib/encryption.js';
 import { renderContractPdf } from './contractPdfService.js';
+import { toTenantBranding } from '../tenant/tenantProfileService.js';
 import { sendContractSignedEmail } from '../../lib/mailer.js';
 import { getEmailDomain } from '../../lib/email.js';
 import { seatCapError, syncSeatBilling } from '../tenant/seatService.js';
@@ -189,7 +190,7 @@ export async function confirmContract(input: ConfirmContractInput): Promise<Conf
   const encryptedAccountData = encryptPaymentAccountData(input.paymentAccountData.trim());
   const confirmedAt = new Date();
   const signedPdfBytes = await renderContractPdf({
-    tenantName: tenant.name,
+    company: toTenantBranding(tenant),
     employeeName: `${employee.firstName} ${employee.lastName}`,
     nationality: employee.nationality,
     jobTitle: compensation.jobTitle,

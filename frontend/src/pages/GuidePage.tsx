@@ -91,7 +91,7 @@ const MODULE_MAP: { id: string; label: string; blurb: string; icon: JSX.Element 
   { id: 'g-tasks', label: 'Tasks & notes', blurb: 'Follow-ups on any record.', icon: <ListIcon /> },
   { id: 'g-forms', label: 'Public forms', blurb: 'No-login intake for hiring and leads.', icon: <FormIcon /> },
   { id: 'g-integrations', label: 'Integrations & API', blurb: 'Google Calendar, Stripe, API keys.', icon: <PlugIcon /> },
-  { id: 'g-settings', label: 'Settings', blurb: 'Appearance, currency, preferences.', icon: <GearIcon /> },
+  { id: 'g-settings', label: 'Settings', blurb: 'Company profile, logo, currency, theme.', icon: <GearIcon /> },
   { id: 'g-billing', label: 'Billing & plans', blurb: 'Starter vs. Growth, checkout, failures.', icon: <CreditCardIcon /> },
   { id: 'g-data', label: 'Import & export', blurb: 'Bulk CSV for People, Companies, Contacts.', icon: <DownloadIcon /> },
 ];
@@ -150,7 +150,7 @@ const MODULE_MAP_ES: { id: string; label: string; blurb: string; icon: JSX.Eleme
   { id: 'g-tasks', label: 'Tareas y notas', blurb: 'Seguimientos sobre cualquier registro.', icon: <ListIcon /> },
   { id: 'g-forms', label: 'Formularios públicos', blurb: 'Carga sin login para reclutamiento y leads.', icon: <FormIcon /> },
   { id: 'g-integrations', label: 'Integraciones y API', blurb: 'Google Calendar, Stripe, claves de API.', icon: <PlugIcon /> },
-  { id: 'g-settings', label: 'Configuración', blurb: 'Apariencia, moneda, preferencias.', icon: <GearIcon /> },
+  { id: 'g-settings', label: 'Configuración', blurb: 'Datos de la empresa, logo, moneda, tema.', icon: <GearIcon /> },
   { id: 'g-billing', label: 'Facturación y planes', blurb: 'Starter vs. Growth, checkout, fallas de pago.', icon: <CreditCardIcon /> },
   { id: 'g-data', label: 'Importar y exportar', blurb: 'CSV masivo para Personas, Empresas, Contactos.', icon: <DownloadIcon /> },
 ];
@@ -1294,7 +1294,9 @@ export default function GuidePage() {
               <p>
                 Cada pago tiene un ícono de vista previa que abre un PDF descargable, claramente etiquetado{' '}
                 <strong>"Preview only — not sent"</strong> ("Solo vista previa — no enviado") — una referencia para
-                tus registros, no un recibo de sueldo oficial ni con validez legal.
+                tus registros, no un recibo de sueldo oficial ni con validez legal. El encabezado lleva el logo y los
+                datos de tu empresa (razón social, dirección, teléfono, web) cargados en{' '}
+                <strong>Configuración → Datos de la empresa</strong>.
               </p>
             </div>
 
@@ -1377,7 +1379,8 @@ export default function GuidePage() {
               <p>
                 Every payment has a preview icon that opens a downloadable PDF, clearly labeled{' '}
                 <strong>"Preview only — not sent"</strong> — a reference for your records, not an official or legal
-                payslip.
+                payslip. Its header carries your company logo and details (legal name, address, phone, website) from{' '}
+                <strong>Settings → Company profile</strong>.
               </p>
             </div>
 
@@ -1763,21 +1766,31 @@ export default function GuidePage() {
             <dl className="help-fieldgrid">
               <div className="help-fielddef">
                 <dt>Mi cuenta</dt>
-                <dd>Perfil (nombre, teléfono, contraseña), Integraciones, y Facturación (si la gestionás vos) — visible para todos.</dd>
+                <dd>Perfil (nombre, teléfono, contraseña, idioma y tema), Integraciones, y Facturación (si la gestionás vos) — visible para todos.</dd>
               </div>
               <div className="help-fielddef">
                 <dt>Empresa</dt>
-                <dd>Apariencia, Usuarios, Formularios públicos, Pipelines, Registro de actividad, y Roles y permisos — cada tile solo aparece si tenés el permiso correspondiente.</dd>
+                <dd>Datos de la empresa, Usuarios, Formularios públicos, Pipelines, Registro de actividad, y Roles y permisos — cada tile solo aparece si tenés el permiso correspondiente.</dd>
               </div>
             </dl>
 
             <div className="help-sub">
-              <h3>Apariencia</h3>
+              <h3>Datos de la empresa</h3>
               <p>
-                El tema — Claro, Oscuro, o Sistema — es una elección personal que se guarda por dispositivo, no se
-                comparte con tu equipo. La moneda es para todo el espacio de trabajo (una moneda ISO, ej. USD o EUR)
-                y controla cómo se etiquetan las cifras de compensación en toda la empresa; cambiarla solo
-                reetiqueta los montos de ahí en adelante, no convierte las cifras pasadas.
+                Nombre, razón social, industria, tamaño, país, dirección, teléfono y sitio web de tu empresa, más su{' '}
+                <strong>logo</strong> (PNG o JPG, hasta 2 MB — se achica automáticamente). Se usan en los recibos de
+                sueldo, los contratos de los empleados, los emails de invitación y arriba del menú lateral. No pedimos
+                ID fiscal. La moneda también vive acá: es para todo el espacio de trabajo (una moneda ISO, ej. USD o
+                EUR) y controla cómo se etiquetan las cifras de compensación; cambiarla solo reetiqueta los montos de
+                ahí en adelante, no convierte las cifras pasadas.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Tema</h3>
+              <p>
+                El tema — Claro, Oscuro, o Sistema — está en <strong>Configuración → Perfil</strong>, disponible para
+                todos. Es una elección personal que se guarda por dispositivo, no se comparte con tu equipo.
               </p>
             </div>
 
@@ -1804,21 +1817,31 @@ export default function GuidePage() {
             <dl className="help-fieldgrid">
               <div className="help-fielddef">
                 <dt>My account</dt>
-                <dd>Profile (name, phone, password), Integrations, and Billing (if you manage it) — visible to everyone.</dd>
+                <dd>Profile (name, phone, password, language and theme), Integrations, and Billing (if you manage it) — visible to everyone.</dd>
               </div>
               <div className="help-fielddef">
                 <dt>Company</dt>
-                <dd>Appearance, Users, Public Forms, Pipelines, Activity Log, and Roles &amp; Permissions — each tile only appears if you have the matching permission.</dd>
+                <dd>Company profile, Users, Public Forms, Pipelines, Activity Log, and Roles &amp; Permissions — each tile only appears if you have the matching permission.</dd>
               </div>
             </dl>
 
             <div className="help-sub">
-              <h3>Appearance</h3>
+              <h3>Company profile</h3>
               <p>
-                Theme — Light, Dark, or System — is a personal choice saved per device, not shared with your team.
-                Currency is workspace-wide (one ISO currency, e.g. USD or EUR) and controls how compensation
-                figures are labeled across the company; changing it relabels amounts going forward, it doesn't
-                convert past figures.
+                Your company's name, legal name, industry, size, country, address, phone and website, plus its{' '}
+                <strong>logo</strong> (PNG or JPG, up to 2 MB — resized automatically). They appear on payslips,
+                employee contracts, invitation emails and at the top of the sidebar. We don't collect tax IDs.
+                Currency lives here too: it's workspace-wide (one ISO currency, e.g. USD or EUR) and controls how
+                compensation figures are labeled; changing it relabels amounts going forward, it doesn't convert past
+                figures.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Theme</h3>
+              <p>
+                Theme — Light, Dark, or System — is under <strong>Settings → Profile</strong>, available to everyone.
+                It's a personal choice saved per device, not shared with your team.
               </p>
             </div>
 

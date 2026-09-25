@@ -38,9 +38,32 @@ export interface Tenant {
   status: TenantStatus;
   plan: PlanTier | null;
   companySize: string | null;
+  industry: string | null;
+  country: string | null;
+  // Company profile (Settings → Company). No tax ID by design — ruled out by the privacy policy.
+  legalName: string | null;
+  address: string | null;
+  phone: string | null;
+  website: string | null;
+  // Only the timestamp comes down; the image itself is served by the public logo route (see
+  // lib/tenantLogo.ts's tenantLogoUrl).
+  logoUpdatedAt: string | null;
   trialEndsAt: string | null;
   gracePeriodEndsAt: string | null;
 }
+
+// PATCH /api/tenants/current body — send only what changed; '' clears an optional field.
+export type TenantProfileUpdate = Partial<
+  Pick<Tenant, 'name' | 'currency'> & {
+    legalName: string;
+    address: string;
+    phone: string;
+    website: string;
+    companySize: string;
+    industry: string;
+    country: string;
+  }
+>;
 
 // Billing Integration (docs/general/spec-billing-integration.md) — GET /api/subscriptions/me.
 export type SubscriptionStatus = 'trialing' | 'active' | 'past_due' | 'suspended' | 'cancelled';

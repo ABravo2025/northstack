@@ -1,5 +1,7 @@
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import prisma from '../../lib/prisma.js';
+import { drawCompanyHeader } from '../../lib/pdfCompanyHeader.js';
+import { toTenantBranding, type TenantBranding } from '../tenant/tenantProfileService.js';
 
 const ENTRY_TYPE_LABELS: Record<string, string> = {
   base: 'Base pay',
@@ -24,7 +26,7 @@ export interface PayslipResult {
 // no signature, no country-specific compliance — marked as a preview on the
 // PDF itself, not just in the UI around it.
 async function renderPayslipPdf(input: {
-  tenantName: string;
+  company: TenantBranding;
   employeeName: string;
   periodLabel: string;
   currency: string;
@@ -44,7 +46,7 @@ async function renderPayslipPdf(input: {
 
   drawText('PREVIEW — NOT ISSUED', 10, true, rgb(0.7, 0.15, 0.15));
   y -= 8;
-  drawText(input.tenantName, 18, true);
+  y = await drawCompanyHeader({ doc, page, font, boldFont, branding: input.company, y });
   drawText(`Payslip preview — ${input.employeeName}`, 12);
   drawText(`Period: ${input.periodLabel}`, 11, false, rgb(0.35, 0.35, 0.35));
   y -= 16;
@@ -91,7 +93,7 @@ export async function buildPayslipForRunEmployee(
   const totalCents = entries.reduce((sum, e) => sum + e.amountCents, 0);
 
   const pdfBytes = await renderPayslipPdf({
-    tenantName: tenant.name,
+    company: toTenantBranding(tenant),
     employeeName: `${employee.firstName} ${employee.lastName}`,
     periodLabel: run.periodLabel,
     currency: entries[0].currency,
@@ -114,7 +116,7 @@ export async function buildPayslipForEntry(tenantId: string, entryId: string): P
   const tenant = await prisma.tenant.findUniqueOrThrow({ where: { id: tenantId } });
 
   const pdfBytes = await renderPayslipPdf({
-    tenantName: tenant.name,
+    company: toTenantBranding(tenant),
     employeeName: `${entry.employee.firstName} ${entry.employee.lastName}`,
     periodLabel: entry.paymentDate.toISOString().slice(0, 10),
     currency: entry.currency,

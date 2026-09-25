@@ -25,6 +25,27 @@ render de datos que vienen de la DB.
 - Cualquier idioma más allá de inglés/español (la arquitectura no lo impide a futuro, pero el
   contenido de este spec cubre solo estos dos).
 
+## Regla permanente para desarrollo futuro (2026-09-25)
+
+A partir de ahora, **toda funcionalidad nueva se construye bilingüe desde el primer commit**, no
+como una unidad de traducción separada para "después". Cualquier página, componente o email nuevo
+que agregue copy estático de UI debe: usar `useTranslation()`/`t()` (o el singleton `i18n.t()`
+para helpers fuera de un componente, ver el patrón reactivo de Unidad 1/2/3/5) desde el momento en
+que se escribe, con sus keys agregadas en `en/es` en el mismo commit — nunca hardcodear texto en
+inglés con la traducción quedando pendiente.
+
+**Regla dura, sin excepciones** (ya establecida arriba en "Qué es y qué no es", repetida acá por
+peso): nada que sea input del usuario se traduce — nombres, notas, valores de custom fields,
+contenido de CSV, comentarios, cualquier texto que el usuario haya escrito vive en la DB en el
+idioma en que se escribió, siempre. `t()` es exclusivamente para el copy estático de la UI que
+escribe el equipo de desarrollo, nunca para renderizar datos.
+
+Dos bugs reales de esta sesión (2026-09-25) muestran por qué esto importa incluso cuando el JSON
+ya existe: el namespace `hr` nunca se registró en `frontend/src/lib/i18n.ts` (Unidad 5) y
+`TimeOffOverviewPage.tsx` nunca se conectó a su JSON ya pre-armado (Unidad 6) — ambos casos
+"pasaban" cualquier chequeo de paridad de keys porque las keys existían, simplemente nadie las
+estaba usando en runtime. Documentado en las notas de esas unidades más abajo.
+
 ## Decisiones de arquitectura
 
 - **Selector de idioma por usuario** (no por tenant): cada persona ve la app en su propio idioma

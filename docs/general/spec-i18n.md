@@ -144,10 +144,28 @@ de depender de `useTranslation()` — mismo patrón reactivo que `settingsSectio
 - [x] People (alta, contrato, perfil), y todo el módulo Payroll (runs, pagos únicos, políticas,
   compensación).
 
+**Bug encontrado en testing 2026-09-25**: el namespace `hr` nunca se registró en
+`frontend/src/lib/i18n.ts` — el archivo `hr.json` (en/es) existía y cada página llamaba
+correctamente `useTranslation('hr')`, pero el objeto `resources` de la config nunca lo incluía, así
+que **todo** el módulo HR/Payroll (Employees, Payroll, Payroll Run Detail, Terminate Employee,
+Employee Overview, Payslip Preview) mostraba keys crudas en pantalla (ej. `employees.toolbar.
+allPeople` en vez de "All People"). Ningún chequeo automatizado de esta sesión lo detectaba —
+paridad de keys y cross-reference de llamadas `t()` contra el JSON pasan igual aunque el namespace
+nunca se cargue en runtime. Encontrado por testing manual del usuario en staging, arreglado
+agregando `hr` al `resources` de ambos idiomas.
+
 ## Unidad 6 — Tasks + Time Off
 
-**Nota 2026-09-24**: completa. `MyTasksPage`, todo `components/tasks/*`, `TimeOffSidebar`.
-Namespace `tasks` (242 keys, en/es, con un subárbol `timeOff.*`). Verificada por tsc/eslint.
+**Nota 2026-09-24**: `MyTasksPage`, todo `components/tasks/*`, `TimeOffSidebar` completos.
+Namespace `tasks` (242 keys, en/es, con un subárbol `timeOff.*`).
+
+**Corrección 2026-09-25**: la nota anterior decía "completa" pero era falsa — `TimeOffSidebar.tsx`
+(el shell de navegación) estaba traducido, pero `TimeOffOverviewPage.tsx` (1441 líneas: tabs My
+Timeoff/My Requests/Approvals/Balances/All Requests/Policies/Assignments, el slide-over de
+políticas, los dos confirm dialogs) seguía 100% en inglés — nadie lo notó porque `timeOff.*` ya
+estaba pre-armado en el JSON (por eso el chequeo de paridad de keys no lo detectó: las keys
+existían, simplemente nadie las estaba llamando). Encontrado por testing manual del usuario en
+staging. Ahora sí completo, verificado por tsc/eslint + sweep de keys.
 
 ## Unidad 7 — Settings (todas las subpáginas) + Billing/Plans
 

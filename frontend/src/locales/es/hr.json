@@ -574,6 +574,10 @@
         "adjustments": "Ajustes",
         "total": "Total"
       },
+      "compensationTypeLabels": {
+        "hourly": "Por hora",
+        "fixed": "Fijo"
+      },
       "hoursLabel": "Horas",
       "rateBaseLine": "Tarifa {{rate}}/hora · Base {{base}}",
       "hoursLine": "Horas {{hours}}",

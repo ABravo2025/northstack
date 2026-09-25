@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api';
 import type { CompensationStatusEntry, PayrollEntryType, RunDetail } from '../api';
 import { useToast } from '../components/common/ToastProvider';
@@ -16,14 +17,8 @@ interface PayrollRunDetailPageProps {
   token: string;
 }
 
-const ADJUSTMENT_TYPE_LABELS: Record<string, string> = {
-  bonus: 'Bonus',
-  commission: 'Commission',
-  reimbursement: 'Reimbursement',
-  deduction: 'Deduction',
-};
-
 export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProps) {
+  const { t } = useTranslation('hr');
   // Custom Roles Fase J — migrated off `user?.role === 'owner'` to the real backend gate,
   // canManagePayroll, same as PayrollPage.tsx.
   const permissions = usePermissions();
@@ -79,10 +74,10 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
     setConfirming(true);
     try {
       await api.confirmPayrollRun(token, runId);
-      toast.success('Run confirmed.');
+      toast.success(t('payroll.runDetail.toasts.runConfirmed'));
       load();
     } catch (error) {
-      toast.error('Failed to confirm run: ' + (error as Error).message);
+      toast.error(t('payroll.runDetail.toasts.confirmFailed', { error: (error as Error).message }));
     } finally {
       setConfirming(false);
     }
@@ -98,7 +93,7 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
       await api.updatePayrollEntryHours(token, baseEntry.id, hoursValue);
       load();
     } catch (error) {
-      toast.error('Failed to update hours: ' + (error as Error).message);
+      toast.error(t('payroll.runDetail.toasts.hoursUpdateFailed', { error: (error as Error).message }));
     }
   };
 
@@ -126,10 +121,10 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
         paymentDate: new Date().toISOString().slice(0, 10),
       });
       setAdjustmentForm({ type: 'bonus', amount: '', label: '' });
-      toast.success('Adjustment added.');
+      toast.success(t('payroll.runDetail.toasts.adjustmentAdded'));
       load();
     } catch (error) {
-      toast.error('Failed to add adjustment: ' + (error as Error).message);
+      toast.error(t('payroll.runDetail.toasts.adjustmentAddFailed', { error: (error as Error).message }));
     } finally {
       setSavingAdjustment(false);
     }
@@ -138,10 +133,10 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
   const handleDeleteAdjustment = async (entryId: string) => {
     try {
       await api.deletePayrollEntry(token, entryId);
-      toast.success('Adjustment removed.');
+      toast.success(t('payroll.runDetail.toasts.adjustmentRemoved'));
       load();
     } catch (error) {
-      toast.error('Failed to remove adjustment: ' + (error as Error).message);
+      toast.error(t('payroll.runDetail.toasts.adjustmentRemoveFailed', { error: (error as Error).message }));
     }
   };
 
@@ -163,7 +158,7 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
       );
       setAddPersonModalOpen(true);
     } catch (error) {
-      toast.error('Failed to load people: ' + (error as Error).message);
+      toast.error(t('payroll.runDetail.toasts.peopleLoadFailed', { error: (error as Error).message }));
     }
   };
 
@@ -172,11 +167,11 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
     setAddingEmployeeId(employeeId);
     try {
       await api.addEmployeeToPayrollRun(token, runId, employeeId);
-      toast.success('Person added to this run.');
+      toast.success(t('payroll.runDetail.toasts.personAdded'));
       setAddPersonModalOpen(false);
       load();
     } catch (error) {
-      toast.error('Failed to add person: ' + (error as Error).message);
+      toast.error(t('payroll.runDetail.toasts.personAddFailed', { error: (error as Error).message }));
     } finally {
       setAddingEmployeeId(null);
     }
@@ -185,7 +180,7 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
   if (!canManagePayroll) {
     return (
       <div className="container">
-        <p className="text-sm text-ink-muted">Payroll is only visible to the tenant owner.</p>
+        <p className="text-sm text-ink-muted">{t('payroll.runDetail.ownerOnly')}</p>
       </div>
     );
   }
@@ -201,7 +196,7 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
   if (loadError || !detail) {
     return (
       <div className="container">
-        <div className="alert alert-error">{loadError || 'Run not found'}</div>
+        <div className="alert alert-error">{loadError || t('payroll.runDetail.runNotFound')}</div>
       </div>
     );
   }
@@ -212,53 +207,58 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
     <div className="container">
       <div className="page-toolbar">
         <div className="flex items-center gap-2">
-          <button type="button" className="icon-btn" onClick={() => navigate('/hr/payroll')} aria-label="Back to Payroll">
+          <button type="button" className="icon-btn" onClick={() => navigate('/hr/payroll')} aria-label={t('payroll.runDetail.backAriaLabel')}>
             <ChevronLeftIcon className="h-4 w-4" />
           </button>
           <h2 className="page-title">{detail.run.periodLabel}</h2>
-          <StatusChip color={isDraft ? '#9ca3af' : '#059669'} label={isDraft ? 'Draft' : 'Confirmed'} />
+          <StatusChip
+            color={isDraft ? '#9ca3af' : '#059669'}
+            label={isDraft ? t('payroll.page.statusLabels.draft') : t('payroll.page.statusLabels.confirmed')}
+          />
         </div>
         {isDraft && (
           <div className="flex items-center gap-2">
             <button type="button" className="btn-secondary gap-1.5" onClick={openAddPersonModal}>
               <PlusIcon className="h-3.5 w-3.5" />
-              Add person to this run
+              {t('payroll.runDetail.addPersonToRun')}
             </button>
-            <span title={detail.hasUnloadedHours ? 'Load hours for every hourly person before confirming' : undefined}>
+            <span title={detail.hasUnloadedHours ? t('payroll.runDetail.confirmDisabledTooltip') : undefined}>
               <button
                 type="button"
                 className="btn-primary"
                 onClick={handleConfirmRun}
                 disabled={confirming || detail.hasUnloadedHours}
               >
-                {confirming ? 'Confirming…' : 'Confirm Run'}
+                {confirming ? t('payroll.runDetail.confirming') : t('payroll.runDetail.confirmRun')}
               </button>
             </span>
           </div>
         )}
       </div>
 
-      <p className="text-sm text-ink-muted mb-3">Pay frequency: {detail.run.payFrequency?.name || '—'}</p>
+      <p className="text-sm text-ink-muted mb-3">
+        {t('payroll.runDetail.payFrequencyLabel', { name: detail.run.payFrequency?.name || '—' })}
+      </p>
 
       {detail.excludedCount > 0 && (
         <div className="alert alert-error mb-3">
-          {detail.excludedCount} {detail.excludedCount === 1 ? 'person' : 'people'} excluded — contract not confirmed yet.
+          {t('payroll.runDetail.excludedNotice', { count: detail.excludedCount })}
         </div>
       )}
 
       {detail.employeeRows.length === 0 ? (
-        <p className="text-sm text-ink-muted">No one is in this run yet.</p>
+        <p className="text-sm text-ink-muted">{t('payroll.runDetail.noOneInRun')}</p>
       ) : (
         <div className="full-table-wrap" ref={tableWrapRef}>
           <table className="table full-table">
             <thead>
               <tr>
                 <th style={{ width: 16 }}></th>
-                <th>Name</th>
-                <th>Type</th>
-                <th>Base</th>
-                <th>Adjustments</th>
-                <th>Total</th>
+                <th>{t('payroll.runDetail.columns.name')}</th>
+                <th>{t('payroll.runDetail.columns.type')}</th>
+                <th>{t('payroll.runDetail.columns.base')}</th>
+                <th>{t('payroll.runDetail.columns.adjustments')}</th>
+                <th>{t('payroll.runDetail.columns.total')}</th>
                 <th></th>
               </tr>
             </thead>
@@ -280,7 +280,11 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
                         {row.employeeFirstName} {row.employeeLastName}
                       </td>
                       <td>
-                        <span className="category-chip">{row.compensationType === 'hourly' ? 'Hourly' : 'Fixed'}</span>
+                        <span className="category-chip">
+                          {row.compensationType === 'hourly'
+                            ? t('payroll.runDetail.compensationTypeLabels.hourly')
+                            : t('payroll.runDetail.compensationTypeLabels.fixed')}
+                        </span>
                       </td>
                       <td>
                         {row.compensationType === 'fixed' ? (
@@ -289,7 +293,7 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
                           <div className="flex flex-col gap-1">
                             <div className="flex items-center gap-1.5">
                               <label className="text-xs text-ink-muted" htmlFor={`hours-${row.employeeId}`}>
-                                Hours
+                                {t('payroll.runDetail.hoursLabel')}
                               </label>
                               <input
                                 id={`hours-${row.employeeId}`}
@@ -304,14 +308,20 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
                               />
                             </div>
                             <span className="text-xs text-ink-muted">
-                              Rate {formatMoney(row.rateCents, row.currency)}/hr · Base {formatMoney(row.baseAmountCents, row.currency)}
+                              {t('payroll.runDetail.rateBaseLine', {
+                                rate: formatMoney(row.rateCents, row.currency),
+                                base: formatMoney(row.baseAmountCents, row.currency),
+                              })}
                             </span>
                           </div>
                         ) : (
                           <div className="flex flex-col gap-0.5 text-xs text-ink-muted">
-                            <span>Hours {baseEntry?.hoursQty ?? 0}</span>
+                            <span>{t('payroll.runDetail.hoursLine', { hours: baseEntry?.hoursQty ?? 0 })}</span>
                             <span>
-                              Rate {formatMoney(row.rateCents, row.currency)}/hr · Base {formatMoney(row.baseAmountCents, row.currency)}
+                              {t('payroll.runDetail.rateBaseLine', {
+                                rate: formatMoney(row.rateCents, row.currency),
+                                base: formatMoney(row.baseAmountCents, row.currency),
+                              })}
                             </span>
                           </div>
                         )}
@@ -319,7 +329,7 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
                       <td>
                         <button type="button" className="btn-secondary btn-sm" onClick={() => toggleExpanded(row.employeeId)}>
                           {row.adjustmentsTotalCents === 0
-                            ? '+ Adjustments'
+                            ? t('payroll.runDetail.adjustmentsButton')
                             : `${row.adjustmentsTotalCents > 0 ? '+' : ''}${formatMoney(row.adjustmentsTotalCents, row.currency)}`}
                           <ChevronDownIcon className={`h-3 w-3 ml-1 inline-block transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                         </button>
@@ -332,9 +342,11 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
                           type="button"
                           className="icon-btn"
                           onClick={() => setPayslipEmployeeId(row.employeeId)}
-                          aria-label={`Payslip preview for ${row.employeeFirstName} ${row.employeeLastName}`}
+                          aria-label={t('payroll.runDetail.payslipPreviewAriaLabel', {
+                            name: `${row.employeeFirstName} ${row.employeeLastName}`,
+                          })}
                         >
-                          <span className="tip">Payslip preview</span>
+                          <span className="tip">{t('payroll.runDetail.payslipPreviewTooltip')}</span>
                           <EyeIcon className="h-4 w-4" />
                         </button>
                       </td>
@@ -343,7 +355,10 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
                       <tr>
                         <td colSpan={7} style={{ padding: 0 }}>
                           <div className="alert alert-error" style={{ margin: '0 0 0.5rem 0' }}>
-                            {row.employeeFirstName} {row.employeeLastName} is not active ({row.statusName}).
+                            {t('payroll.runDetail.inactiveNotice', {
+                              name: `${row.employeeFirstName} ${row.employeeLastName}`,
+                              status: row.statusName,
+                            })}
                           </div>
                         </td>
                       </tr>
@@ -356,16 +371,16 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
                               <table className="table" style={{ marginBottom: '0.75rem' }}>
                                 <thead>
                                   <tr>
-                                    <th>Type</th>
-                                    <th>Amount</th>
-                                    <th>Note</th>
+                                    <th>{t('payroll.runDetail.adjustmentsTable.type')}</th>
+                                    <th>{t('payroll.runDetail.adjustmentsTable.amount')}</th>
+                                    <th>{t('payroll.runDetail.adjustmentsTable.note')}</th>
                                     {isDraft && <th></th>}
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {adjustments.map((adj) => (
                                     <tr key={adj.id}>
-                                      <td>{ADJUSTMENT_TYPE_LABELS[adj.type] || adj.type}</td>
+                                      <td>{t(`payroll.runDetail.adjustmentForm.typeOptions.${adj.type}`, { defaultValue: adj.type })}</td>
                                       <td>{formatMoney(adj.amountCents, adj.currency)}</td>
                                       <td>{adj.label || '—'}</td>
                                       {isDraft && (
@@ -374,7 +389,7 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
                                             type="button"
                                             className="icon-btn"
                                             onClick={() => handleDeleteAdjustment(adj.id)}
-                                            aria-label="Remove adjustment"
+                                            aria-label={t('payroll.runDetail.adjustmentsTable.removeAriaLabel')}
                                           >
                                             <TrashIcon className="h-4 w-4" />
                                           </button>
@@ -391,19 +406,19 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
                                 onSubmit={(e) => handleAddAdjustment(e, row.employeeId, row.currency)}
                               >
                                 <div className="form-group" style={{ marginBottom: 0 }}>
-                                  <label>Type</label>
+                                  <label>{t('payroll.runDetail.adjustmentForm.typeLabel')}</label>
                                   <select
                                     value={adjustmentForm.type}
                                     onChange={(e) => setAdjustmentForm({ ...adjustmentForm, type: e.target.value as PayrollEntryType })}
                                   >
-                                    <option value="bonus">Bonus</option>
-                                    <option value="commission">Commission</option>
-                                    <option value="reimbursement">Reimbursement</option>
-                                    <option value="deduction">Deduction</option>
+                                    <option value="bonus">{t('payroll.runDetail.adjustmentForm.typeOptions.bonus')}</option>
+                                    <option value="commission">{t('payroll.runDetail.adjustmentForm.typeOptions.commission')}</option>
+                                    <option value="reimbursement">{t('payroll.runDetail.adjustmentForm.typeOptions.reimbursement')}</option>
+                                    <option value="deduction">{t('payroll.runDetail.adjustmentForm.typeOptions.deduction')}</option>
                                   </select>
                                 </div>
                                 <div className="form-group" style={{ marginBottom: 0 }}>
-                                  <label>Amount</label>
+                                  <label>{t('payroll.runDetail.adjustmentForm.amountLabel')}</label>
                                   <input
                                     type="number"
                                     step="0.01"
@@ -415,7 +430,7 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
                                   />
                                 </div>
                                 <div className="form-group" style={{ marginBottom: 0 }}>
-                                  <label>Note</label>
+                                  <label>{t('payroll.runDetail.adjustmentForm.noteLabel')}</label>
                                   <input
                                     type="text"
                                     value={adjustmentForm.label}
@@ -423,7 +438,7 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
                                   />
                                 </div>
                                 <button type="submit" className="btn-secondary btn-sm" disabled={savingAdjustment}>
-                                  Add adjustment
+                                  {t('payroll.runDetail.adjustmentForm.addAdjustment')}
                                 </button>
                               </form>
                             )}
@@ -440,11 +455,16 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
       )}
       <HorizontalScrollbar targetRef={tableWrapRef} />
 
-      <Modal open={addPersonModalOpen} title="Add person to this run" onClose={() => setAddPersonModalOpen(false)}>
+      <Modal
+        open={addPersonModalOpen}
+        title={t('payroll.runDetail.addPersonModal.title')}
+        onClose={() => setAddPersonModalOpen(false)}
+      >
         {addPersonCandidates.length === 0 ? (
           <p className="text-sm text-ink-muted">
-            No one left to add — either everyone on this pay frequency is already in this run, or no one else has an
-            active compensation on {detail.run.payFrequency?.name ?? 'this run’s pay frequency'}.
+            {t('payroll.runDetail.addPersonModal.emptyMessage', {
+              payFrequency: detail.run.payFrequency?.name ?? t('payroll.runDetail.addPersonModal.fallbackPayFrequency'),
+            })}
           </p>
         ) : (
           <div className="flex flex-col gap-2">
@@ -452,7 +472,9 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
               <div key={entry.employeeId} className="flex items-center justify-between gap-3 card" style={{ padding: '0.5rem 0.75rem' }}>
                 <span>
                   {entry.employeeFirstName} {entry.employeeLastName}
-                  {!entry.currentCompensation && <span className="text-ink-muted"> — no active compensation</span>}
+                  {!entry.currentCompensation && (
+                    <span className="text-ink-muted">{t('payroll.runDetail.addPersonModal.noActiveCompensationNote')}</span>
+                  )}
                 </span>
                 <button
                   type="button"
@@ -460,7 +482,7 @@ export default function PayrollRunDetailPage({ token }: PayrollRunDetailPageProp
                   disabled={!entry.currentCompensation || addingEmployeeId === entry.employeeId}
                   onClick={() => handleAddPerson(entry.employeeId)}
                 >
-                  Add
+                  {t('payroll.runDetail.addPersonModal.add')}
                 </button>
               </div>
             ))}

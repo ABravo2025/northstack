@@ -125,21 +125,23 @@ pendiente de que se revise y promueva a `main`/producción junto con la Unidad 1
 
 ## Unidad 4 — CRM
 
-**Nota 2026-09-24**: **parcial**. Companies y Contacts completos (namespace `crm`, 388 keys,
-en/es), verificado por tsc/eslint. **Sin empezar**: Opportunities, Payments,
-`components/crm/*`. Se cortó por límite de uso de la sesión a mitad de trabajo — retomar desde
-acá, no repetir Companies/Contacts.
+**Nota 2026-09-25**: completa. Companies, Contacts, Opportunities, Payments, y
+`components/crm/*` (`CompanyDetailModal`, `CompanyPaymentHistoryModal`, `CompanyStripeSection`,
+`ContactDetailModal`, `OpportunityDetailModal`). Namespace `crm` (verificado por tsc/eslint, 0
+errores).
 
 ## Unidad 5 — HR / Employees + Payroll
 
-**Nota 2026-09-24**: **sin empezar, en la práctica**. Un intento paralelo llegó a editar 5
-archivos (`EmployeeOverviewPanel`, `TerminateEmployeeModal`, `PayslipPreviewModal`,
-`PayrollPage`, `PayrollRunDetailPage`) pero se cortó por límite de sesión antes de escribir el
-JSON de traducciones — los componentes quedaron referenciando keys que no existen en ningún
-archivo. Se descartó ese trabajo entero (no mergeable, habría mostrado keys crudas en pantalla)
-en vez de reconstruirlo a ciegas. Sigue 100% en inglés, sin ningún archivo roto.
+**Nota 2026-09-25**: completa. `EmployeesPage`, `EmployeeOverviewPanel`, `TerminateEmployeeModal`,
+`PayslipPreviewModal`, `PayrollPage` (1718 líneas — toasts, tabs, timeline/assignments/policies,
+los 5 modales), `PayrollRunDetailPage`. Namespace `hr` (467 keys, en/es, paridad verificada).
+Los label-lookup helpers de `PayrollPage.tsx` (`adjustmentTypeLabel`, `cadenceLabel`,
+`dueDateOffsetLabel`, `dayOfWeekLabel`, `describeAnchorConfig`, `describeDueDate`) se llaman tanto
+dentro como fuera del componente, así que resuelven contra el singleton global `i18n.t()` en vez
+de depender de `useTranslation()` — mismo patrón reactivo que `settingsSections.tsx`/
+`dashboardsSections.tsx` (ver Unidad 1/2/3).
 
-- [ ] People (alta, contrato, perfil), y todo el módulo Payroll (runs, pagos únicos, políticas,
+- [x] People (alta, contrato, perfil), y todo el módulo Payroll (runs, pagos únicos, políticas,
   compensación).
 
 ## Unidad 6 — Tasks + Time Off
@@ -149,15 +151,14 @@ Namespace `tasks` (242 keys, en/es, con un subárbol `timeOff.*`). Verificada po
 
 ## Unidad 7 — Settings (todas las subpáginas) + Billing/Plans
 
-**Nota 2026-09-24**: **parcial**. `IntegrationsSettingsPage`, `CompanyAppearancePage`,
-`CompanyUsersPage`, `PublicFormsSettingsPage` completos (namespace `settingsPages`, 186 keys,
-en/es), verificado por tsc/eslint. **Sin empezar**: `PipelinesSettingsPage`,
-`RolesPermissionsPage`, `BillingPage`, `PlansModal`, `AddPaymentMethodModal`.
-`ActivityLogSettingsPage.tsx` quedó a medio editar (referenciaba keys nunca escritas en el JSON)
-y se revirtió entero — sigue 100% en inglés. **Dato importante para quien retome**: esa página
+**Nota 2026-09-25**: completa. `IntegrationsSettingsPage`, `CompanyAppearancePage`,
+`CompanyUsersPage`, `PublicFormsSettingsPage`, `PipelinesSettingsPage`, `RolesPermissionsPage`,
+`BillingPage`, `PlansModal`, `AddPaymentMethodModal`, `ActivityLogSettingsPage`. Namespace
+`settingsPages` (552 keys, en/es), verificado por tsc/eslint. `RolesPermissionsPage.tsx` reescrito
+con `GROUPS`/`EMPLOYEE_SCOPE_OPTIONS`/`ENTITY_LABELS` convertidos de const a funciones
+(`getGroups(t)`, etc.) por el mismo motivo reactivo de siempre. `ActivityLogSettingsPage.tsx`
 resultó ser el visor real del feed de actividad completo (filtros, paginación, detalle
-expandible), no una página chica de configuración de retención como decía el scope original —
-presupuestar tiempo acorde, es tan grande como cualquier otra página de este spec.
+expandible), no una página chica de configuración de retención como decía el scope original.
 
 ## Unidad 8 — Notes + Activity Log
 
@@ -183,13 +184,12 @@ suite de vitest (4353 tests); confirmado en runtime tanto con `tsx` como con el 
 
 ## Unidad 10 — Help Center (`/guide`, `/help`)
 
-**Nota 2026-09-24**: **parcial**. `HelpPage.tsx` (FAQ) completo: `FAQ_CATEGORIES` duplicado como
+**Nota 2026-09-25**: completa. `HelpPage.tsx` (FAQ): `FAQ_CATEGORIES` duplicado como
 `FAQ_CATEGORIES_ES`, elegido por `i18n.language`, más todo el chrome de la página (título,
-búsqueda, nav, tarjetas de contacto/legal, contador final). Verificado por tsc/eslint.
-**Sin empezar**: `GuidePage.tsx` (la Guía del usuario, 1000+ líneas de prosa) — se cortó por
-límite de sesión antes de arrancarla. Sigue 100% en inglés, sin estado roto. El esquema de URL
-por idioma (`/es/guide`, `/es/help`) tampoco se implementó todavía — hoy el idioma de esta unidad
-sigue el mismo selector global que el resto de la app, no una URL separada.
+búsqueda, nav, tarjetas de contacto/legal, contador final). `GuidePage.tsx` (la Guía del usuario,
+1000+ líneas de prosa) también completo. Verificado por tsc/eslint. El esquema de URL por idioma
+(`/es/guide`, `/es/help`) no se implementó — el idioma de esta unidad sigue el mismo selector
+global que el resto de la app, no una URL separada.
 
 ## Unidad 11 — Landing
 
@@ -197,12 +197,18 @@ sigue el mismo selector global que el resto de la app, no una URL separada.
 **incorrecto** — se verificó directamente contra `origin/landing` (`<html lang="en">`, sin
 ningún rastro de español en ningún archivo) y estaba desactualizado respecto al dato real en
 `docs/tareas/backlog.md`. La dirección real es la **misma** que el resto de las unidades: agregar
-español, no inglés. Sin empezar — deliberadamente no delegado a un agente en paralelo dado que
-esta rama va directo a producción sin staging (ver `feedback_push_confirmation` en memoria); el
-contenido son 6 páginas HTML estáticas (index, about, 404, privacy, refund, terms — no es una SPA
-de React), lo que además cambia el mecanismo de implementación respecto a las demás unidades
-(probablemente duplicar cada `.html` bajo un prefijo `/es/` con `hreflang` correcto, dado que es
-un sitio de marketing con SEO ya cuidado — robots.txt/sitemap.xml/canonical tags existentes).
+español, no inglés.
+
+**Nota 2026-09-25**: **parcial, sin pushear**. `index.html`, `about.html`, `404.html` duplicados
+bajo `/es/` con `hreflang` recíproco y switcher EN/ES en el nav; `sitemap.xml` con anotaciones
+`xhtml:link`. Todo commiteado en la rama local `landing-i18n` (branch base = `origin/landing`
+actual, sin necesidad de rebase). **Deliberadamente no pusheado** — esa rama va directo a
+producción sin staging (ver `feedback_push_confirmation` en memoria), así que requiere
+autorización explícita aparte. **Sin traducir, decisión pendiente del usuario**: `terms.html`,
+`privacy.html`, `refund.html` — son páginas legales, y traducir contenido legal sin que sea
+revisado por alguien con criterio legal es un riesgo que no se decidió unilateralmente (opciones:
+traducir como autoritativo, traducir como informativo con disclaimer de que el inglés prevalece,
+o dejarlas en inglés con nota).
 
 ## Unidad 12 — QA de layout en ambos idiomas
 

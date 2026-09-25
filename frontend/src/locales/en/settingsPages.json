@@ -495,5 +495,54 @@
       "light": "Light",
       "dark": "Dark"
     }
+  },
+  "activityLogSettings": {
+    "title": "Activity Log",
+    "ownerAdminOnly": "Activity Log is only visible to workspace owners and admins.",
+    "allTypes": "All types",
+    "allActions": "All actions",
+    "anyone": "Anyone",
+    "noActivity": "No activity in this range.",
+    "loading": "Loading…",
+    "loadMore": "Load more",
+    "showDetail": "Show detail",
+    "hideDetail": "Hide detail",
+    "emptyValue": "empty",
+    "loadFailed": "Failed to load activity: {{message}}",
+    "loadMoreFailed": "Failed to load more activity: {{message}}",
+    "actions": {
+      "create": "Created",
+      "update": "Updated",
+      "delete": "Deleted"
+    },
+    "entityTypes": {
+      "employee": "Employee",
+      "company": "Company",
+      "contact": "Contact",
+      "opportunity": "Opportunity",
+      "timeOffPolicy": "Time Off Policy",
+      "timeOffRequest": "Time Off Request",
+      "employeeCompensation": "Compensation",
+      "employeeTermination": "Termination",
+      "payrollRun": "Payroll Run",
+      "payFrequency": "Pay Frequency",
+      "paymentMethod": "Payment Method",
+      "statusDefinition": "Status",
+      "customFieldDefinition": "Custom Field",
+      "fieldCatalogDefinition": "Field Catalog",
+      "pipeline": "Pipeline",
+      "pipelineStage": "Pipeline Stage",
+      "task": "Task",
+      "note": "Note",
+      "tag": "Tag",
+      "savedView": "Saved View",
+      "publicForm": "Public Form",
+      "tenant": "Workspace",
+      "user": "User",
+      "invitation": "Invitation",
+      "subscription": "Subscription",
+      "googleCalendarConnection": "Google Calendar Connection",
+      "stripeConnection": "Stripe Connection"
+    }
   }
 }

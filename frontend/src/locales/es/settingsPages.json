@@ -495,5 +495,54 @@
       "light": "Claro",
       "dark": "Oscuro"
     }
+  },
+  "activityLogSettings": {
+    "title": "Registro de actividad",
+    "ownerAdminOnly": "El Registro de actividad solo es visible para dueños y administradores del espacio de trabajo.",
+    "allTypes": "Todos los tipos",
+    "allActions": "Todas las acciones",
+    "anyone": "Cualquiera",
+    "noActivity": "No hay actividad en este rango.",
+    "loading": "Cargando…",
+    "loadMore": "Cargar más",
+    "showDetail": "Mostrar detalle",
+    "hideDetail": "Ocultar detalle",
+    "emptyValue": "vacío",
+    "loadFailed": "Error al cargar la actividad: {{message}}",
+    "loadMoreFailed": "Error al cargar más actividad: {{message}}",
+    "actions": {
+      "create": "Creado",
+      "update": "Actualizado",
+      "delete": "Eliminado"
+    },
+    "entityTypes": {
+      "employee": "Empleado",
+      "company": "Empresa",
+      "contact": "Contacto",
+      "opportunity": "Oportunidad",
+      "timeOffPolicy": "Política de ausencias",
+      "timeOffRequest": "Solicitud de ausencia",
+      "employeeCompensation": "Compensación",
+      "employeeTermination": "Baja",
+      "payrollRun": "Corrida de nómina",
+      "payFrequency": "Frecuencia de pago",
+      "paymentMethod": "Método de pago",
+      "statusDefinition": "Estado",
+      "customFieldDefinition": "Campo personalizado",
+      "fieldCatalogDefinition": "Catálogo de campo",
+      "pipeline": "Pipeline",
+      "pipelineStage": "Etapa de pipeline",
+      "task": "Tarea",
+      "note": "Nota",
+      "tag": "Etiqueta",
+      "savedView": "Vista guardada",
+      "publicForm": "Formulario público",
+      "tenant": "Espacio de trabajo",
+      "user": "Usuario",
+      "invitation": "Invitación",
+      "subscription": "Suscripción",
+      "googleCalendarConnection": "Conexión de Google Calendar",
+      "stripeConnection": "Conexión de Stripe"
+    }
   }
 }

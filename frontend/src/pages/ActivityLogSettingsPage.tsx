@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, type ActivityEntityType, type ActivityLogEntry, type TenantUser } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import TableSkeleton from '../components/common/TableSkeleton';
@@ -12,41 +13,37 @@ interface ActivityLogSettingsPageProps {
   token: string;
 }
 
-const ENTITY_TYPE_OPTIONS: { value: ActivityEntityType; label: string }[] = [
-  { value: 'employee', label: 'Employee' },
-  { value: 'company', label: 'Company' },
-  { value: 'contact', label: 'Contact' },
-  { value: 'opportunity', label: 'Opportunity' },
-  { value: 'timeOffPolicy', label: 'Time Off Policy' },
-  { value: 'timeOffRequest', label: 'Time Off Request' },
-  { value: 'employeeCompensation', label: 'Compensation' },
-  { value: 'employeeTermination', label: 'Termination' },
-  { value: 'payrollRun', label: 'Payroll Run' },
-  { value: 'payFrequency', label: 'Pay Frequency' },
-  { value: 'paymentMethod', label: 'Payment Method' },
-  { value: 'statusDefinition', label: 'Status' },
-  { value: 'customFieldDefinition', label: 'Custom Field' },
-  { value: 'fieldCatalogDefinition', label: 'Field Catalog' },
-  { value: 'pipeline', label: 'Pipeline' },
-  { value: 'pipelineStage', label: 'Pipeline Stage' },
-  { value: 'task', label: 'Task' },
-  { value: 'note', label: 'Note' },
-  { value: 'tag', label: 'Tag' },
-  { value: 'savedView', label: 'Saved View' },
-  { value: 'publicForm', label: 'Public Form' },
-  { value: 'tenant', label: 'Workspace' },
-  { value: 'user', label: 'User' },
-  { value: 'invitation', label: 'Invitation' },
-  { value: 'subscription', label: 'Subscription' },
-  { value: 'googleCalendarConnection', label: 'Google Calendar Connection' },
-  { value: 'stripeConnection', label: 'Stripe Connection' },
+const ENTITY_TYPE_VALUES: ActivityEntityType[] = [
+  'employee',
+  'company',
+  'contact',
+  'opportunity',
+  'timeOffPolicy',
+  'timeOffRequest',
+  'employeeCompensation',
+  'employeeTermination',
+  'payrollRun',
+  'payFrequency',
+  'paymentMethod',
+  'statusDefinition',
+  'customFieldDefinition',
+  'fieldCatalogDefinition',
+  'pipeline',
+  'pipelineStage',
+  'task',
+  'note',
+  'tag',
+  'savedView',
+  'publicForm',
+  'tenant',
+  'user',
+  'invitation',
+  'subscription',
+  'googleCalendarConnection',
+  'stripeConnection',
 ];
 
-const ACTION_OPTIONS: { value: 'create' | 'update' | 'delete'; label: string }[] = [
-  { value: 'create', label: 'Created' },
-  { value: 'update', label: 'Updated' },
-  { value: 'delete', label: 'Deleted' },
-];
+const ACTION_VALUES: ('create' | 'update' | 'delete')[] = ['create', 'update', 'delete'];
 
 function ActionIcon({ action }: { action: ActivityLogEntry['action'] }) {
   if (action === 'create') return <PlusIcon className="h-3.5 w-3.5" />;
@@ -54,37 +51,8 @@ function ActionIcon({ action }: { action: ActivityLogEntry['action'] }) {
   return <PencilIcon className="h-3.5 w-3.5" />;
 }
 
-const ENTITY_TYPE_LABEL: Record<ActivityEntityType, string> = {
-  employee: 'Employee',
-  company: 'Company',
-  contact: 'Contact',
-  opportunity: 'Opportunity',
-  timeOffPolicy: 'Time Off Policy',
-  timeOffRequest: 'Time Off Request',
-  employeeCompensation: 'Compensation',
-  employeeTermination: 'Termination',
-  payrollRun: 'Payroll Run',
-  payFrequency: 'Pay Frequency',
-  paymentMethod: 'Payment Method',
-  statusDefinition: 'Status',
-  customFieldDefinition: 'Custom Field',
-  fieldCatalogDefinition: 'Field Catalog',
-  pipeline: 'Pipeline',
-  pipelineStage: 'Pipeline Stage',
-  task: 'Task',
-  note: 'Note',
-  tag: 'Tag',
-  savedView: 'Saved View',
-  publicForm: 'Public Form',
-  tenant: 'Workspace',
-  user: 'User',
-  invitation: 'Invitation',
-  subscription: 'Subscription',
-  googleCalendarConnection: 'Google Calendar Connection',
-  stripeConnection: 'Stripe Connection',
-};
-
 function FeedRow({ entry }: { entry: ActivityLogEntry }) {
+  const { t } = useTranslation('settingsPages');
   const [expanded, setExpanded] = useState(false);
   const hasDetail = entry.changes && entry.changes.length > 0;
 
@@ -97,7 +65,7 @@ function FeedRow({ entry }: { entry: ActivityLogEntry }) {
             <ActionIcon action={entry.action} />
           </span>
           <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[11px] font-medium text-ink-muted dark:bg-white/[0.06] dark:text-dark-ink-muted">
-            {ENTITY_TYPE_LABEL[entry.entityType]}
+            {t(`activityLogSettings.entityTypes.${entry.entityType}`)}
           </span>
           {entry.summary}
         </p>
@@ -110,7 +78,7 @@ function FeedRow({ entry }: { entry: ActivityLogEntry }) {
               <li key={change.field}>
                 <span className="activity-change-label">{change.label}</span>
                 <span className="activity-change-values">
-                  {change.oldValue ?? <em>empty</em>} → {change.newValue ?? <em>empty</em>}
+                  {change.oldValue ?? <em>{t('activityLogSettings.emptyValue')}</em>} → {change.newValue ?? <em>{t('activityLogSettings.emptyValue')}</em>}
                 </span>
               </li>
             ))}
@@ -119,7 +87,7 @@ function FeedRow({ entry }: { entry: ActivityLogEntry }) {
       </div>
       {hasDetail && (
         <button type="button" className="activity-row-toggle shrink-0" onClick={() => setExpanded((v) => !v)}>
-          {expanded ? 'Hide detail' : 'Show detail'}
+          {expanded ? t('activityLogSettings.hideDetail') : t('activityLogSettings.showDetail')}
         </button>
       )}
     </div>
@@ -132,6 +100,7 @@ function FeedRow({ entry }: { entry: ActivityLogEntry }) {
 // this one isn't scoped to a single Employee/Company/Contact/Opportunity, so every row carries its
 // own entity-type badge.
 export default function ActivityLogSettingsPage({ token }: ActivityLogSettingsPageProps) {
+  const { t } = useTranslation('settingsPages');
   // Custom Roles Fase J — migrated off `user.role === 'owner'/'admin'` to the real backend gate,
   // canViewActivityLog (permissionService.ts).
   const permissions = usePermissions();
@@ -175,7 +144,7 @@ export default function ActivityLogSettingsPage({ token }: ActivityLogSettingsPa
         setEntries(page.items);
         setCursor(page.nextCursor);
       })
-      .catch((error) => toast.error('Failed to load activity: ' + (error as Error).message))
+      .catch((error) => toast.error(t('activityLogSettings.loadFailed', { message: (error as Error).message })))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, isAdmin, entityType, action, userId, range.since, range.until]);
@@ -195,7 +164,7 @@ export default function ActivityLogSettingsPage({ token }: ActivityLogSettingsPa
       setEntries((prev) => [...prev, ...page.items]);
       setCursor(page.nextCursor);
     } catch (error) {
-      toast.error('Failed to load more activity: ' + (error as Error).message);
+      toast.error(t('activityLogSettings.loadMoreFailed', { message: (error as Error).message }));
     } finally {
       setLoadingMore(false);
     }
@@ -205,9 +174,9 @@ export default function ActivityLogSettingsPage({ token }: ActivityLogSettingsPa
     return (
       <div>
         <div className="page-toolbar no-border">
-          <h2>Activity Log</h2>
+          <h2>{t('activityLogSettings.title')}</h2>
         </div>
-        <p className="text-sm text-ink-muted">Activity Log is only visible to workspace owners and admins.</p>
+        <p className="text-sm text-ink-muted">{t('activityLogSettings.ownerAdminOnly')}</p>
       </div>
     );
   }
@@ -215,28 +184,28 @@ export default function ActivityLogSettingsPage({ token }: ActivityLogSettingsPa
   return (
     <div>
       <div className="page-toolbar no-border">
-        <h2>Activity Log</h2>
+        <h2>{t('activityLogSettings.title')}</h2>
       </div>
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <select className="select-compact" value={entityType} onChange={(e) => setEntityType(e.target.value as ActivityEntityType | '')}>
-          <option value="">All types</option>
-          {ENTITY_TYPE_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
+          <option value="">{t('activityLogSettings.allTypes')}</option>
+          {ENTITY_TYPE_VALUES.map((value) => (
+            <option key={value} value={value}>
+              {t(`activityLogSettings.entityTypes.${value}`)}
             </option>
           ))}
         </select>
         <select className="select-compact" value={action} onChange={(e) => setAction(e.target.value as typeof action)}>
-          <option value="">All actions</option>
-          {ACTION_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
+          <option value="">{t('activityLogSettings.allActions')}</option>
+          {ACTION_VALUES.map((value) => (
+            <option key={value} value={value}>
+              {t(`activityLogSettings.actions.${value}`)}
             </option>
           ))}
         </select>
         <select className="select-compact" value={userId} onChange={(e) => setUserId(e.target.value)}>
-          <option value="">Anyone</option>
+          <option value="">{t('activityLogSettings.anyone')}</option>
           {users.map((u) => (
             <option key={u.id} value={u.id}>
               {u.firstName} {u.lastName}
@@ -247,7 +216,7 @@ export default function ActivityLogSettingsPage({ token }: ActivityLogSettingsPa
       </div>
 
       {loading && <TableSkeleton rows={6} columns={1} />}
-      {!loading && entries.length === 0 && <p className="text-sm text-ink-muted">No activity in this range.</p>}
+      {!loading && entries.length === 0 && <p className="text-sm text-ink-muted">{t('activityLogSettings.noActivity')}</p>}
       {!loading && entries.length > 0 && (
         <div className="rounded-md border border-line bg-surface-1 dark:border-dark-line dark:bg-dark-surface">
           {entries.map((entry) => (
@@ -258,7 +227,7 @@ export default function ActivityLogSettingsPage({ token }: ActivityLogSettingsPa
 
       {cursor && !loading && (
         <button type="button" className="btn btn-secondary mt-3" onClick={loadMore} disabled={loadingMore}>
-          {loadingMore ? 'Loading…' : 'Load more'}
+          {loadingMore ? t('activityLogSettings.loading') : t('activityLogSettings.loadMore')}
         </button>
       )}
     </div>

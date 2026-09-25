@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, type PayFrequency, type SavedView, type ViewFilter, type ViewSort } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import ConfirmDialog from '../components/common/ConfirmDialog';
@@ -44,17 +45,14 @@ import { useAutoCreateGuard } from '../hooks/useAutoCreateGuard';
 import { COUNTRIES } from '../lib/countries';
 import { CURRENCY_CODES, currencyLabel } from '../lib/currencies';
 
-const CONTRACT_TYPE_LABELS: Record<string, string> = { part_time: 'Part Time', full_time: 'Full Time' };
+// Still keyed by the literal English label text on purpose — Kanban's grouped columns for
+// "Contract Type" get their key/label straight from viewFields.ts's buildEmployeeFields (out of
+// this unit's scope, still hardcoded English), so this reverse-lookup must keep matching those
+// same literal strings regardless of the active UI language. Not translated.
 const CONTRACT_TYPE_VALUE_BY_LABEL: Record<string, string> = { 'Part Time': 'part_time', 'Full Time': 'full_time' };
-const PERSON_TYPE_LABELS: Record<string, string> = { profile: 'Profile', contractor: 'Contractor', employee: 'Employee' };
 // Payroll Unidad 11 — 'sin_compensacion' deliberately has no entry (renders
 // '—', same as Profile) since it isn't one of the 3 chip states the spec
 // calls out.
-const CONTRACT_STATUS_CHIPS = {
-  confirmado: { color: '#059669', label: 'Confirmed' },
-  pendiente: { color: '#9ca3af', label: 'Pending' },
-  vencido: { color: '#dc2626', label: 'Expired' },
-};
 
 const PAGE_SIZE = 20;
 const ACTIVE_VIEW_STORAGE_KEY = 'northstack:activeView:employee';
@@ -68,8 +66,26 @@ interface EmployeesPageProps {
 }
 
 export default function EmployeesPage({ user, token }: EmployeesPageProps) {
+  const { t } = useTranslation('hr');
   const toast = useToast();
   const permissions = usePermissions();
+  // Rebuilt every render (not module-level consts) so these stay translated after a language
+  // switch — see CONTRACT_TYPE_VALUE_BY_LABEL above for why its own reverse-lookup twin stays
+  // untouched at module scope instead.
+  const CONTRACT_TYPE_LABELS: Record<string, string> = {
+    part_time: t('employees.contractTypeLabels.part_time'),
+    full_time: t('employees.contractTypeLabels.full_time'),
+  };
+  const PERSON_TYPE_LABELS: Record<string, string> = {
+    profile: t('employees.personTypeLabels.profile'),
+    contractor: t('employees.personTypeLabels.contractor'),
+    employee: t('employees.personTypeLabels.employee'),
+  };
+  const CONTRACT_STATUS_CHIPS = {
+    confirmado: { color: '#059669', label: t('employees.contractStatusChips.confirmed') },
+    pendiente: { color: '#9ca3af', label: t('employees.contractStatusChips.pending') },
+    vencido: { color: '#dc2626', label: t('employees.contractStatusChips.expired') },
+  };
   const [employees, setEmployees] = useState<any[]>([]);
   // Custom Roles Fase E — unscoped roster (name/department/jobTitle/manager only, no PII) for
   // pickers that must point at anyone in the company regardless of the viewer's own HR scope:
@@ -263,7 +279,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       const defs = await api.listFieldCatalogDefinitions(token, 'department');
       setEmployeeDepartments(defs);
     } catch (error) {
-      toast.error('Failed to load departments: ' + (error as Error).message);
+      toast.error(t('employees.toasts.departmentsLoadFailed', { error: (error as Error).message }));
     }
   };
 
@@ -272,7 +288,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       const defs = await api.listFieldCatalogDefinitions(token, 'jobTitle');
       setEmployeeJobTitles(defs);
     } catch (error) {
-      toast.error('Failed to load job titles: ' + (error as Error).message);
+      toast.error(t('employees.toasts.jobTitlesLoadFailed', { error: (error as Error).message }));
     }
   };
 
@@ -281,7 +297,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       const data = await api.listViews(token, 'employee');
       setViews(data);
     } catch (error) {
-      toast.error('Failed to load views: ' + (error as Error).message);
+      toast.error(t('employees.toasts.viewsLoadFailed', { error: (error as Error).message }));
     }
   };
 
@@ -290,7 +306,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       const policies = await api.listTimeOffPolicies(token);
       setTimeOffPolicies(policies.filter((p) => p.isActive));
     } catch (error) {
-      toast.error('Failed to load time off policies: ' + (error as Error).message);
+      toast.error(t('employees.toasts.timeOffPoliciesLoadFailed', { error: (error as Error).message }));
     }
   };
 
@@ -299,7 +315,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       const frequencies = await api.listPayFrequencies(token);
       setPayFrequencies(frequencies.filter((f) => f.isActive));
     } catch (error) {
-      toast.error('Failed to load pay frequencies: ' + (error as Error).message);
+      toast.error(t('employees.toasts.payFrequenciesLoadFailed', { error: (error as Error).message }));
     }
   };
 
@@ -308,7 +324,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       const defs = await api.listCustomFieldDefinitions(token, 'employee');
       setEmployeeCustomFields(defs);
     } catch (error) {
-      toast.error('Failed to load custom fields: ' + (error as Error).message);
+      toast.error(t('employees.toasts.customFieldsLoadFailed', { error: (error as Error).message }));
     }
   };
 
@@ -320,10 +336,10 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   }) => {
     try {
       await api.createCustomFieldDefinition(token, { ...input, entityType: 'employee' });
-      toast.success(`Field "${input.name}" added.`);
+      toast.success(t('employees.toasts.fieldAdded', { name: input.name }));
       loadEmployeeCustomFields();
     } catch (error) {
-      toast.error('Failed to add field: ' + (error as Error).message);
+      toast.error(t('employees.toasts.fieldAddFailed', { error: (error as Error).message }));
     }
   };
 
@@ -333,20 +349,20 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   ) => {
     try {
       await api.updateCustomFieldDefinition(token, id, data);
-      toast.success('Field updated.');
+      toast.success(t('employees.toasts.fieldUpdated'));
       loadEmployeeCustomFields();
     } catch (error) {
-      toast.error('Failed to update field: ' + (error as Error).message);
+      toast.error(t('employees.toasts.fieldUpdateFailed', { error: (error as Error).message }));
     }
   };
 
   const handleDeactivateCustomFieldColumn = async (id: string) => {
     try {
       await api.updateCustomFieldDefinition(token, id, { isActive: false });
-      toast.success('Field deleted.');
+      toast.success(t('employees.toasts.fieldDeleted'));
       loadEmployeeCustomFields();
     } catch (error) {
-      toast.error('Failed to delete field: ' + (error as Error).message);
+      toast.error(t('employees.toasts.fieldDeleteFailed', { error: (error as Error).message }));
     }
   };
 
@@ -355,7 +371,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       const statuses = await api.listStatusDefinitions(token, 'employee');
       setEmployeeStatuses(statuses);
     } catch (error) {
-      toast.error('Failed to load statuses: ' + (error as Error).message);
+      toast.error(t('employees.toasts.statusesLoadFailed', { error: (error as Error).message }));
     }
   };
 
@@ -365,7 +381,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       const data = await api.listEmployees(token);
       setEmployees(data);
     } catch (error) {
-      toast.error('Failed to load employees: ' + (error as Error).message);
+      toast.error(t('employees.toasts.loadFailed', { error: (error as Error).message }));
     } finally {
       setLoading(false);
     }
@@ -376,7 +392,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       const data = await api.listEmployeeDirectory(token);
       setEmployeeDirectory(data);
     } catch (error) {
-      toast.error('Failed to load the employee directory: ' + (error as Error).message);
+      toast.error(t('employees.toasts.directoryLoadFailed', { error: (error as Error).message }));
     }
   };
 
@@ -418,17 +434,17 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     setSlideOverMode('add');
   };
 
-  usePrimaryAction({ label: 'Add employee', onClick: handleOpenAdd });
+  usePrimaryAction({ label: t('employees.primaryAction'), onClick: handleOpenAdd });
 
   const handleLoadSampleData = async () => {
     setSeedingSample(true);
     try {
       const result = await api.seedSampleData(token);
-      toast.success(`Added ${result.employees} sample employees and ${result.companies} sample companies.`);
+      toast.success(t('employees.toasts.sampleDataAdded', { employees: result.employees, companies: result.companies }));
       await loadEmployees();
       await loadEmployeeDirectory();
     } catch (error) {
-      toast.error('Failed to load sample data: ' + (error as Error).message);
+      toast.error(t('employees.toasts.sampleDataFailed', { error: (error as Error).message }));
     } finally {
       setSeedingSample(false);
     }
@@ -596,7 +612,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       try {
         await createEmployeeRecord(cfValues);
       } catch (error) {
-        toast.error('Failed to create employee: ' + (error as Error).message);
+        toast.error(t('employees.toasts.employeeCreateFailed', { error: (error as Error).message }));
         throw error;
       }
     });
@@ -612,7 +628,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         const employee = await createEmployeeRecord(customFieldValues);
         id = employee.id;
       }
-      toast.success('Employee added.');
+      toast.success(t('employees.toasts.employeeAdded'));
       const freshList = await api.listEmployees(token);
       setEmployees(freshList);
       loadEmployeeDirectory();
@@ -622,7 +638,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       setCustomFieldValues({});
       setOverviewEmployeeId(id);
     } catch (error) {
-      toast.error('Failed to create employee: ' + (error as Error).message);
+      toast.error(t('employees.toasts.employeeCreateFailed', { error: (error as Error).message }));
     }
   };
 
@@ -638,11 +654,11 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       const { invitation } = await api.inviteEmployee(token, invitingEmployee.id, inviteRoleId || undefined);
       const link = `${window.location.origin}/accept-invite/${invitation.token}`;
       await navigator.clipboard.writeText(link);
-      toast.success('Invitation emailed. Link also copied to clipboard.');
+      toast.success(t('employees.toasts.invitationSent'));
       setInvitingEmployee(null);
       loadEmployees();
     } catch (error) {
-      toast.error('Failed to invite employee: ' + (error as Error).message);
+      toast.error(t('employees.toasts.invitationFailed', { error: (error as Error).message }));
     } finally {
       setInviting(false);
     }
@@ -652,12 +668,12 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     if (!deletingEmployee) return;
     try {
       await api.deleteEmployee(token, deletingEmployee.id);
-      toast.success(`${deletingEmployee.firstName} ${deletingEmployee.lastName} deleted.`);
+      toast.success(t('employees.toasts.employeeDeleted', { name: `${deletingEmployee.firstName} ${deletingEmployee.lastName}` }));
       setDeletingEmployee(null);
       loadEmployees();
       loadEmployeeDirectory();
     } catch (error) {
-      toast.error('Failed to delete employee: ' + (error as Error).message);
+      toast.error(t('employees.toasts.employeeDeleteFailed', { error: (error as Error).message }));
       setDeletingEmployee(null);
     }
   };
@@ -697,7 +713,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       }
       loadEmployees();
     } catch (error) {
-      toast.error('Failed to move: ' + (error as Error).message);
+      toast.error(t('employees.toasts.moveFailed', { error: (error as Error).message }));
     }
   };
 
@@ -717,9 +733,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       });
       setViews((current) => [...current, view]);
       setActiveViewId(view.id);
-      toast.success(`View "${view.name}" created.`);
+      toast.success(t('employees.toasts.viewCreated', { name: view.name }));
     } catch (error) {
-      toast.error('Failed to create view: ' + (error as Error).message);
+      toast.error(t('employees.toasts.viewCreateFailed', { error: (error as Error).message }));
     }
   };
 
@@ -728,7 +744,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       const updated = await api.updateView(token, id, { name });
       setViews((current) => current.map((v) => (v.id === id ? updated : v)));
     } catch (error) {
-      toast.error('Failed to rename view: ' + (error as Error).message);
+      toast.error(t('employees.toasts.viewRenameFailed', { error: (error as Error).message }));
     }
   };
 
@@ -745,9 +761,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       });
       setViews((current) => [...current, created]);
       setActiveViewId(created.id);
-      toast.success(`View duplicated as "${created.name}".`);
+      toast.success(t('employees.toasts.viewDuplicated', { name: created.name }));
     } catch (error) {
-      toast.error('Failed to duplicate view: ' + (error as Error).message);
+      toast.error(t('employees.toasts.viewDuplicateFailed', { error: (error as Error).message }));
     }
   };
 
@@ -756,9 +772,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       await api.deleteView(token, id);
       setViews((current) => current.filter((v) => v.id !== id));
       if (activeViewId === id) setActiveViewId(null);
-      toast.success('View deleted.');
+      toast.success(t('employees.toasts.viewDeleted'));
     } catch (error) {
-      toast.error('Failed to delete view: ' + (error as Error).message);
+      toast.error(t('employees.toasts.viewDeleteFailed', { error: (error as Error).message }));
     }
   };
 
@@ -787,7 +803,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
           }}
           required={field.required}
         >
-          <option value="">-- select --</option>
+          <option value="">{t('common.selectPlaceholder')}</option>
           {(JSON.parse(field.options || '[]') as string[]).map((opt) => (
             <option key={opt} value={opt}>
               {opt}
@@ -822,7 +838,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   const columns = [
     {
       key: 'name',
-      label: 'Name',
+      label: t('employees.columns.name'),
       render: (emp: any) => (
         <div className="name-cell">
           <Avatar firstName={emp.firstName} lastName={emp.lastName} />
@@ -833,7 +849,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
             <span
               className="time-off-active-tag"
               style={{ background: emp.activeTimeOffTag.color || '#9ca3af' }}
-              title={`On ${emp.activeTimeOffTag.policyName} today`}
+              title={t('employees.onTimeOffToday', { policyName: emp.activeTimeOffTag.policyName })}
             >
               {emp.activeTimeOffTag.policyName}
             </span>
@@ -841,11 +857,11 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         </div>
       ),
     },
-    { key: 'email', label: 'Business Email', render: (emp: any) => emp.email },
-    { key: 'personalEmail', label: 'Personal Email', render: (emp: any) => emp.personalEmail || '—' },
+    { key: 'email', label: t('employees.columns.email'), render: (emp: any) => emp.email },
+    { key: 'personalEmail', label: t('employees.columns.personalEmail'), render: (emp: any) => emp.personalEmail || '—' },
     {
       key: 'department',
-      label: 'Department',
+      label: t('employees.columns.department'),
       render: (emp: any) =>
         emp.departmentDefn ? (
           <CategoryChip label={emp.departmentDefn.name} seed={emp.departmentDefn.id} />
@@ -855,33 +871,33 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     },
     {
       key: 'jobTitle',
-      label: 'Job Title',
+      label: t('employees.columns.jobTitle'),
       render: (emp: any) =>
         emp.jobTitleDefn ? <CategoryChip label={emp.jobTitleDefn.name} seed={emp.jobTitleDefn.id} /> : '—',
     },
     {
       key: 'status',
-      label: 'Status',
+      label: t('employees.columns.status'),
       render: (emp: any) =>
         emp.statusDefn && <StatusChip color={emp.statusDefn.color || '#6b7280'} label={emp.statusDefn.name} />,
     },
     {
       key: 'startDate',
-      label: 'Start Date',
+      label: t('employees.columns.startDate'),
       render: (emp: any) => (emp.startDate ? new Date(emp.startDate).toLocaleDateString() : '—'),
     },
     {
       key: 'endDate',
-      label: 'End Date',
+      label: t('employees.columns.endDate'),
       render: (emp: any) => (emp.endDate ? new Date(emp.endDate).toLocaleDateString() : '—'),
     },
     {
       key: 'contractUrl',
-      label: 'Contract URL',
+      label: t('employees.columns.contractUrl'),
       render: (emp: any) =>
         emp.contractUrl ? (
           <a href={emp.contractUrl} target="_blank" rel="noopener noreferrer" className="table-link">
-            View
+            {t('employees.columns.contractUrlView')}
           </a>
         ) : (
           '—'
@@ -889,17 +905,17 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     },
     {
       key: 'contractType',
-      label: 'Contract Type',
+      label: t('employees.columns.contractType'),
       render: (emp: any) => (emp.contractType ? CONTRACT_TYPE_LABELS[emp.contractType] : '—'),
     },
     {
       key: 'personType',
-      label: 'Type',
+      label: t('employees.columns.personType'),
       render: (emp: any) => (emp.personType ? PERSON_TYPE_LABELS[emp.personType] : '—'),
     },
     {
       key: 'contractStatus',
-      label: 'Contract',
+      label: t('employees.columns.contractStatus'),
       // No chip at all for Profile or "never had a compensation" — Payroll
       // Unidad 11 treats those as not applicable, not as a 4th chip state.
       render: (emp: any) =>
@@ -911,16 +927,16 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     },
     {
       key: 'payFrequencyName',
-      label: 'Pay Frequency',
+      label: t('employees.columns.payFrequency'),
       render: (emp: any) => emp.payFrequencyName || '—',
     },
   ];
 
   const toggleableColumns = [
     ...columns,
-    { key: 'managerName', label: 'Reports To' },
-    { key: 'timeOffPolicies', label: 'Time Off Policies' },
-    { key: 'tags', label: 'Tags' },
+    { key: 'managerName', label: t('employees.columns.managerName') },
+    { key: 'timeOffPolicies', label: t('employees.columns.timeOffPolicies') },
+    { key: 'tags', label: t('employees.columns.tags') },
     ...activeEmployeeCustomFields.map((field) => ({ key: `cf:${field.id}`, label: field.name })),
   ];
   const movableColumnKeys = columns.map((col) => col.key).filter((key) => !FROZEN_COLUMN_KEYS.includes(key));
@@ -1045,15 +1061,15 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       <td>
         <div className="icon-actions">
           <button className="icon-btn danger" onClick={() => setDeletingEmployee(emp)}>
-            <span className="tip">Delete</span>
+            <span className="tip">{t('employees.deleteTooltip')}</span>
             <TrashIcon />
           </button>
           {canManageCustomFields &&
             (emp.userId ? (
-              <span className="chip-linked">Linked</span>
+              <span className="chip-linked">{t('employees.linkedChip')}</span>
             ) : (
               <button className="icon-btn" onClick={() => openInviteEmployee(emp)}>
-                <span className="tip">Invite</span>
+                <span className="tip">{t('employees.inviteTooltip')}</span>
                 <MailIcon />
               </button>
             ))}
@@ -1069,7 +1085,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
           <span className="ghost-plus-box">
             <PlusIcon className="h-3 w-3" />
           </span>
-          Add
+          {t('common.add')}
         </span>
       </td>
     </tr>
@@ -1079,9 +1095,11 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     <div className="page-full">
       {deletingEmployee && (
         <ConfirmDialog
-          title="Delete employee"
-          message={`Are you sure you want to delete ${deletingEmployee.firstName} ${deletingEmployee.lastName}? This can't be undone.`}
-          confirmLabel="Delete"
+          title={t('employees.confirmDelete.title')}
+          message={t('employees.confirmDelete.message', {
+            name: `${deletingEmployee.firstName} ${deletingEmployee.lastName}`,
+          })}
+          confirmLabel={t('common.delete')}
           onConfirm={handleDeleteEmployee}
           onCancel={() => setDeletingEmployee(null)}
         />
@@ -1089,16 +1107,16 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
 
       <Modal
         open={slideOverMode !== null}
-        title="Add Person"
+        title={t('employees.modal.addTitle')}
         onClose={closeSlideOver}
         wide
         footer={
           <>
             <button type="button" className="btn-secondary" onClick={closeSlideOver}>
-              Cancel
+              {t('common.cancel')}
             </button>
             <button type="submit" form="employee-form" className="btn-primary" disabled={autoCreateGuard.isBusy}>
-              Create
+              {t('common.create')}
             </button>
           </>
         }
@@ -1106,9 +1124,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         {slideOverMode === 'add' && (
           <form id="employee-form" onSubmit={handleCreateEmployee}>
             <div className="field-group">
-              <h4 className="field-group-title">Type</h4>
+              <h4 className="field-group-title">{t('employees.groups.type')}</h4>
               <div className="field-group-body">
-                <Field label="Type" required>
+                <Field label={t('employees.fields.type')} required>
                   <select
                     id="emp-personType"
                     className="overview-field-input"
@@ -1116,19 +1134,19 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                     onChange={(e) => setEmployeeForm({ ...employeeForm, personType: e.target.value })}
                     required
                   >
-                    <option value="">-- select --</option>
-                    <option value="profile">Profile</option>
-                    <option value="contractor">Contractor</option>
-                    <option value="employee">Employee</option>
+                    <option value="">{t('common.selectPlaceholder')}</option>
+                    <option value="profile">{t('employees.personTypeOptions.profile')}</option>
+                    <option value="contractor">{t('employees.personTypeOptions.contractor')}</option>
+                    <option value="employee">{t('employees.personTypeOptions.employee')}</option>
                   </select>
                 </Field>
               </div>
             </div>
 
             <div className="field-group">
-              <h4 className="field-group-title">Identity</h4>
+              <h4 className="field-group-title">{t('employees.groups.identity')}</h4>
               <div className="field-group-body">
-                <Field label="First Name" required>
+                <Field label={t('employees.fields.firstName')} required>
                   <input
                     id="emp-firstName"
                     className="overview-field-input"
@@ -1139,7 +1157,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                     required
                   />
                 </Field>
-                <Field label="Last Name" required>
+                <Field label={t('employees.fields.lastName')} required>
                   <input
                     id="emp-lastName"
                     className="overview-field-input"
@@ -1150,7 +1168,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                     required
                   />
                 </Field>
-                <Field label="Business Email" required>
+                <Field label={t('employees.fields.businessEmail')} required>
                   <input
                     id="emp-email"
                     className="overview-field-input"
@@ -1161,7 +1179,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                     required
                   />
                 </Field>
-                <Field label="Personal Email">
+                <Field label={t('employees.fields.personalEmail')}>
                   <input
                     id="emp-personalEmail"
                     className="overview-field-input"
@@ -1170,14 +1188,14 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                     onChange={(e) => setEmployeeForm({ ...employeeForm, personalEmail: e.target.value })}
                   />
                 </Field>
-                <Field label="Nationality">
+                <Field label={t('employees.fields.nationality')}>
                   <select
                     id="emp-nationality"
                     className="overview-field-input"
                     value={employeeForm.nationality}
                     onChange={(e) => setEmployeeForm({ ...employeeForm, nationality: e.target.value })}
                   >
-                    <option value="">-- select --</option>
+                    <option value="">{t('common.selectPlaceholder')}</option>
                     {COUNTRIES.map((country) => (
                       <option key={country} value={country}>
                         {country}
@@ -1189,9 +1207,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
             </div>
 
             <div className="field-group">
-              <h4 className="field-group-title">Role</h4>
+              <h4 className="field-group-title">{t('employees.groups.role')}</h4>
               <div className="field-group-body">
-                <Field label="Department" required>
+                <Field label={t('employees.fields.department')} required>
                   <div className="flex min-w-0 flex-1 items-center gap-1">
                     <select
                       id="emp-departmentId"
@@ -1200,7 +1218,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                       onChange={(e) => setEmployeeForm({ ...employeeForm, departmentId: e.target.value })}
                       required
                     >
-                      <option value="">-- select --</option>
+                      <option value="">{t('common.selectPlaceholder')}</option>
                       {employeeDepartments
                         .filter((d) => d.isActive)
                         .map((d) => (
@@ -1212,13 +1230,13 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                     <FieldCatalogMenu
                       token={token}
                       kind="department"
-                      label="Department"
+                      label={t('employees.fields.department')}
                       entries={employeeDepartments}
                       onChanged={loadEmployeeDepartments}
                     />
                   </div>
                 </Field>
-                <Field label="Job Title">
+                <Field label={t('employees.fields.jobTitle')}>
                   <select
                     id="emp-jobTitleId"
                     className="overview-field-input"
@@ -1234,7 +1252,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                       setEmployeeForm({ ...employeeForm, jobTitleId, contractJobTitle: jobTitleName });
                     }}
                   >
-                    <option value="">-- none --</option>
+                    <option value="">{t('common.nonePlaceholder')}</option>
                     {employeeJobTitles
                       .filter((j) => j.isActive)
                       .map((j) => (
@@ -1244,7 +1262,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                       ))}
                   </select>
                 </Field>
-                <Field label="Reports To" required>
+                <Field label={t('employees.fields.reportsTo')} required>
                   <select
                     id="emp-managerId"
                     className="overview-field-input"
@@ -1252,8 +1270,8 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                     onChange={(e) => setEmployeeForm({ ...employeeForm, managerId: e.target.value })}
                     required
                   >
-                    <option value="">-- select --</option>
-                    <option value="none">No manager</option>
+                    <option value="">{t('common.selectPlaceholder')}</option>
+                    <option value="none">{t('employees.noManagerOption')}</option>
                     {employeeDirectory.map((emp) => (
                       <option key={emp.id} value={emp.id}>
                         {emp.firstName} {emp.lastName}
@@ -1265,9 +1283,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
             </div>
 
             <div className="field-group">
-              <h4 className="field-group-title">Contract</h4>
+              <h4 className="field-group-title">{t('employees.groups.contract')}</h4>
               <div className="field-group-body">
-                <Field label="Start Date" required>
+                <Field label={t('employees.fields.startDate')} required>
                   <input
                     id="emp-startDate"
                     className="overview-field-input"
@@ -1277,7 +1295,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                     required
                   />
                 </Field>
-                <Field label="Contract URL">
+                <Field label={t('employees.fields.contractUrl')}>
                   <input
                     id="emp-contractUrl"
                     className="overview-field-input"
@@ -1287,7 +1305,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                     placeholder="https://drive.google.com/..."
                   />
                 </Field>
-                <Field label="Contract Type" required>
+                <Field label={t('employees.fields.contractType')} required>
                   <select
                     id="emp-contractType"
                     className="overview-field-input"
@@ -1295,9 +1313,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                     onChange={(e) => setEmployeeForm({ ...employeeForm, contractType: e.target.value })}
                     required
                   >
-                    <option value="">-- select --</option>
-                    <option value="part_time">Part Time</option>
-                    <option value="full_time">Full Time</option>
+                    <option value="">{t('common.selectPlaceholder')}</option>
+                    <option value="part_time">{t('employees.contractTypeLabels.part_time')}</option>
+                    <option value="full_time">{t('employees.contractTypeLabels.full_time')}</option>
                   </select>
                 </Field>
               </div>
@@ -1305,9 +1323,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
 
             {(employeeForm.personType === 'contractor' || employeeForm.personType === 'employee') && (
               <div className="field-group">
-                <h4 className="field-group-title">Initial Compensation</h4>
+                <h4 className="field-group-title">{t('employees.groups.initialCompensation')}</h4>
                 <div className="field-group-body">
-                  <Field label="Compensation Type" required>
+                  <Field label={t('employees.fields.compensationType')} required>
                     <select
                       id="emp-comp-type"
                       className="overview-field-input"
@@ -1315,12 +1333,12 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                       onChange={(e) => setEmployeeForm({ ...employeeForm, compensationType: e.target.value })}
                       required
                     >
-                      <option value="">-- select --</option>
-                      <option value="hourly">Hourly</option>
-                      <option value="fixed">Fixed</option>
+                      <option value="">{t('common.selectPlaceholder')}</option>
+                      <option value="hourly">{t('employees.compensationTypeOptions.hourly')}</option>
+                      <option value="fixed">{t('employees.compensationTypeOptions.fixed')}</option>
                     </select>
                   </Field>
-                  <Field label={`Rate (${employeeForm.currency || 'USD'})`} required>
+                  <Field label={t('employees.fields.rate', { currency: employeeForm.currency || 'USD' })} required>
                     <input
                       id="emp-comp-rate"
                       className="overview-field-input"
@@ -1332,7 +1350,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                       required
                     />
                   </Field>
-                  <Field label="Currency" required>
+                  <Field label={t('employees.fields.currency')} required>
                     <select
                       id="emp-comp-currency"
                       className="overview-field-input"
@@ -1340,7 +1358,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                       onChange={(e) => setEmployeeForm({ ...employeeForm, currency: e.target.value })}
                       required
                     >
-                      <option value="">-- select --</option>
+                      <option value="">{t('common.selectPlaceholder')}</option>
                       {CURRENCY_CODES.map((code) => (
                         <option key={code} value={code}>
                           {currencyLabel(code)}
@@ -1348,7 +1366,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                       ))}
                     </select>
                   </Field>
-                  <Field label="Pay Frequency" required>
+                  <Field label={t('employees.fields.payFrequency')} required>
                     <select
                       id="emp-comp-payFrequencyId"
                       className="overview-field-input"
@@ -1356,7 +1374,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                       onChange={(e) => setEmployeeForm({ ...employeeForm, payFrequencyId: e.target.value })}
                       required
                     >
-                      <option value="">-- select --</option>
+                      <option value="">{t('common.selectPlaceholder')}</option>
                       {payFrequencies.map((f) => (
                         <option key={f.id} value={f.id}>
                           {f.name}
@@ -1364,7 +1382,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                       ))}
                     </select>
                   </Field>
-                  <Field label="Job Title (contract)" required>
+                  <Field label={t('employees.fields.contractJobTitle')} required>
                     <input
                       id="emp-comp-jobTitle"
                       className="overview-field-input"
@@ -1374,7 +1392,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                       required
                     />
                   </Field>
-                  <Field label="Effective From" required>
+                  <Field label={t('employees.fields.effectiveFrom')} required>
                     <input
                       id="emp-comp-effectiveFrom"
                       className="overview-field-input"
@@ -1384,7 +1402,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                       required
                     />
                   </Field>
-                  <Field label="Role Description" required full>
+                  <Field label={t('employees.fields.roleDescription')} required full>
                     <textarea
                       id="emp-comp-description"
                       className="overview-field-input"
@@ -1393,7 +1411,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                       required
                     />
                   </Field>
-                  <Field label="Note" full>
+                  <Field label={t('employees.fields.note')} full>
                     <input
                       id="emp-comp-note"
                       className="overview-field-input"
@@ -1408,10 +1426,10 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
 
             {(employeeForm.personType === 'contractor' || employeeForm.personType === 'employee') && (
               <div className="field-group">
-                <h4 className="field-group-title">Time Off</h4>
+                <h4 className="field-group-title">{t('employees.groups.timeOff')}</h4>
                 <div className="field-group-body">
                   {timeOffPolicies.length === 0 ? (
-                    <p className="text-sm text-ink-faint">No time off policies set up yet.</p>
+                    <p className="text-sm text-ink-faint">{t('employees.noTimeOffPolicies')}</p>
                   ) : (
                     <div className="flex flex-col gap-1.5">
                       {timeOffPolicies.map((policy) => (
@@ -1439,7 +1457,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
 
             {activeEmployeeCustomFields.length > 0 && (
               <div className="field-group">
-                <h4 className="field-group-title">Custom fields</h4>
+                <h4 className="field-group-title">{t('employees.groups.customFields')}</h4>
                 <div className="field-group-body">
                   {activeEmployeeCustomFields.map((field) => (
                     <Field key={field.id} label={field.name} required={field.required}>
@@ -1461,7 +1479,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       </Modal>
 
       <ViewsBar
-        allLabel="All People"
+        allLabel={t('employees.toolbar.allPeople')}
         views={views}
         activeViewId={activeViewId}
         onSelectView={setActiveViewId}
@@ -1475,19 +1493,19 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       />
 
       <div className="page-toolbar">
-        <h2>People</h2>
+        <h2>{t('employees.toolbar.heading')}</h2>
         {employees.length > 0 && (
           <div className="toolbar-search">
             <SearchIcon />
             <label htmlFor="employee-search" className="sr-only">
-              Search employees
+              {t('employees.toolbar.searchLabel')}
             </label>
             <input
               id="employee-search"
               type="text"
               value={employeeSearch}
               onChange={(e) => setEmployeeSearch(e.target.value)}
-              placeholder="Search by name, email or department..."
+              placeholder={t('employees.toolbar.searchPlaceholder')}
             />
           </div>
         )}
@@ -1497,8 +1515,8 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
             options={allTagOptions}
             selected={selectedTagFilter}
             onChange={setSelectedTagFilter}
-            placeholder="Filter by tag"
-            emptyMessage="No tags yet."
+            placeholder={t('employees.toolbar.filterByTag')}
+            emptyMessage={t('employees.toolbar.noTagsYet')}
           />
         )}
         {viewType !== 'kanban' && <FilterBar fields={fields} filters={viewFilters} onChange={setViewFilters} />}
@@ -1510,8 +1528,8 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
             ref={csvMenuRef}
             token={token}
             onImported={loadEmployees}
-            entityLabelPlural="Employees"
-            entityLabelSingular="Employee"
+            entityLabelPlural={t('employees.csvPlural')}
+            entityLabelSingular={t('employees.csvSingular')}
             exportCsv={api.exportEmployeesCsv}
             importCsv={api.importEmployeesCsv}
             csvTemplate={api.employeesCsvTemplate}
@@ -1521,7 +1539,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
           <button className="btn-primary" onClick={handleOpenAdd}>
             <span className="inline-flex items-center gap-1.5">
               <PlusIcon className="h-4 w-4" />
-              Add
+              {t('common.add')}
             </span>
           </button>
         )}
@@ -1532,20 +1550,20 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       ) : employees.length === 0 ? (
         <EmptyState
           icon={<PeopleIcon />}
-          title="No employees yet"
-          body="Add your team one by one, import a CSV, or load sample data."
-          primaryLabel="Add employee"
+          title={t('employees.emptyState.title')}
+          body={t('employees.emptyState.body')}
+          primaryLabel={t('employees.emptyState.primaryLabel')}
           onPrimary={handleOpenAdd}
-          secondaryLabel={canManagePayroll ? 'Import CSV' : undefined}
+          secondaryLabel={canManagePayroll ? t('employees.emptyState.importCsv') : undefined}
           onSecondary={canManagePayroll ? () => csvMenuRef.current?.openImport() : undefined}
         >
           <button type="button" className="btn-ghost btn-md" onClick={handleLoadSampleData} disabled={seedingSample}>
-            {seedingSample ? 'Loading…' : 'Load sample data'}
+            {seedingSample ? t('common.loading') : t('employees.emptyState.loadSampleData')}
           </button>
         </EmptyState>
       ) : viewType === 'kanban' ? (
         !groupFieldForKanban ? (
-          <p className="mt-4">This view's group-by field no longer exists.</p>
+          <p className="mt-4">{t('employees.groupByBroken')}</p>
         ) : (
           <KanbanBoard
             columns={
@@ -1579,7 +1597,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                       <span className="ghost-plus-box">
                         <PlusIcon className="h-3 w-3" />
                       </span>
-                      Add
+                      {t('common.add')}
                     </div>
                   )
                 : undefined
@@ -1587,13 +1605,13 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
           />
         )
       ) : viewType === 'list' && !groupFieldForKanban ? (
-        <p className="mt-4">This view's group-by field no longer exists.</p>
+        <p className="mt-4">{t('employees.groupByBroken')}</p>
       ) : sortedEmployees.length === 0 ? (
         <EmptyState
           icon={<SearchIcon />}
-          title={`No matches for "${employeeSearch}"`}
-          body="Try a different term, or clear the filters."
-          primaryLabel="Clear filters"
+          title={t('employees.noMatches.title', { search: employeeSearch })}
+          body={t('employees.noMatches.body')}
+          primaryLabel={t('employees.noMatches.clearFilters')}
           primaryVariant="secondary"
           onPrimary={() => {
             setEmployeeSearch('');
@@ -1680,7 +1698,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                         <FieldCatalogMenu
                           token={token}
                           kind="department"
-                          label="Department"
+                          label={t('employees.fields.department')}
                           entries={employeeDepartments}
                           onChanged={loadEmployeeDepartments}
                           onHide={() => hideColumn('department')}
@@ -1690,7 +1708,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                         <FieldCatalogMenu
                           token={token}
                           kind="jobTitle"
-                          label="Job Title"
+                          label={t('employees.fields.jobTitle')}
                           entries={employeeJobTitles}
                           onChanged={loadEmployeeJobTitles}
                           onHide={() => hideColumn('jobTitle')}
@@ -1702,19 +1720,19 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                   })}
                   {showManagerColumn && (
                     <th>
-                      Reports To
+                      {t('employees.columns.managerName')}
                       <ColumnResizeHandle onMouseDown={(e) => startResize('managerName', e)} />
                     </th>
                   )}
                   {showTimeOffPoliciesColumn && (
                     <th>
-                      Time Off Policies
+                      {t('employees.columns.timeOffPolicies')}
                       <ColumnResizeHandle onMouseDown={(e) => startResize('timeOffPolicies', e)} />
                     </th>
                   )}
                   {showTagsColumn && (
                     <th>
-                      Tags
+                      {t('employees.columns.tags')}
                       <ColumnResizeHandle onMouseDown={(e) => startResize('tags', e)} />
                     </th>
                   )}
@@ -1816,15 +1834,15 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
           opened from the panel's own Actions menu (found 2026-09-02, Alejandro's review). */}
       <Modal
         open={invitingEmployee !== null}
-        title="Invite to app"
+        title={t('employees.inviteModal.title')}
         onClose={() => setInvitingEmployee(null)}
         footer={
           <>
             <button type="button" className="btn-secondary" onClick={() => setInvitingEmployee(null)}>
-              Cancel
+              {t('common.cancel')}
             </button>
             <button type="button" className="btn-primary" onClick={handleInviteEmployee} disabled={inviting}>
-              {inviting ? 'Sending…' : 'Send invitation'}
+              {inviting ? t('employees.inviteModal.sending') : t('employees.inviteModal.sendInvitation')}
             </button>
           </>
         }
@@ -1832,10 +1850,12 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         {invitingEmployee && (
           <div className="form-group">
             <p className="mb-3">
-              Invite <strong>{invitingEmployee.firstName} {invitingEmployee.lastName}</strong> ({invitingEmployee.email}) to
-              create an account.
+              {t('employees.inviteModal.description', {
+                name: `${invitingEmployee.firstName} ${invitingEmployee.lastName}`,
+                email: invitingEmployee.email,
+              })}
             </p>
-            <label htmlFor="invite-employee-role">Role</label>
+            <label htmlFor="invite-employee-role">{t('employees.inviteModal.roleLabel')}</label>
             <select id="invite-employee-role" value={inviteRoleId} onChange={(e) => setInviteRoleId(e.target.value)}>
               {assignableRoles.map((r) => (
                 <option key={r.id} value={r.id}>

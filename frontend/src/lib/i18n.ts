@@ -7,6 +7,8 @@ import dashboardsEn from '../locales/en/dashboards.json';
 import dashboardsEs from '../locales/es/dashboards.json';
 import crmEn from '../locales/en/crm.json';
 import crmEs from '../locales/es/crm.json';
+import hrEn from '../locales/en/hr.json';
+import hrEs from '../locales/es/hr.json';
 import tasksEn from '../locales/en/tasks.json';
 import tasksEs from '../locales/es/tasks.json';
 import settingsPagesEn from '../locales/en/settingsPages.json';
@@ -28,6 +30,7 @@ i18n
         common: commonEn,
         dashboards: dashboardsEn,
         crm: crmEn,
+        hr: hrEn,
         tasks: tasksEn,
         settingsPages: settingsPagesEn,
         notesActivity: notesActivityEn,
@@ -36,6 +39,7 @@ i18n
         common: commonEs,
         dashboards: dashboardsEs,
         crm: crmEs,
+        hr: hrEs,
         tasks: tasksEs,
         settingsPages: settingsPagesEs,
         notesActivity: notesActivityEs,

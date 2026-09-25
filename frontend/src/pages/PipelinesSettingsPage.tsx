@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   api,
   type FieldCatalogDefinition,
@@ -32,8 +33,9 @@ interface PipelinesSettingsPageProps {
   token: string;
 }
 
-const OUTCOME_LABELS: Record<string, string> = { open: 'Open', won: 'Won', lost: 'Lost' };
-const PIPELINE_TYPE_LABELS: Record<'lead' | 'account', string> = { lead: 'Leads', account: 'Account' };
+// Order only — the actual label text is translated at each call site via
+// t(`pipelines.outcome.${value}`) (i18n Unit 7).
+const OUTCOME_VALUES: Array<'open' | 'won' | 'lost'> = ['open', 'won', 'lost'];
 // Fixed (not hashed) so Type reads at a glance — found by the user 2026-08-25:
 // the plain-text type label off to the side was too easy to miss.
 const PIPELINE_TYPE_CHIP_COLOR: Record<'lead' | 'account', 'purple' | 'teal'> = { lead: 'purple', account: 'teal' };
@@ -56,7 +58,9 @@ function getPipelineSortValue(p: Pipeline, field: PipelineSortField): string | n
 }
 
 function formatPipelineDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  // `undefined` locale (not hardcoded 'en-US') so the date format itself also follows the
+  // browser/user locale — same fix applied to IntegrationsSettingsPage/BillingPage's date helpers.
+  return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 interface DraftStage {
@@ -87,14 +91,6 @@ function defaultDraftStages(): DraftStage[] {
   return [draftStage('Lead', 'open', '50'), draftStage('Won', 'won', '100'), draftStage('Lost', 'lost', '0')];
 }
 
-// Shown once, right above the Stages list — explains what each Outcome
-// option actually does rather than leaving Won/Open/Lost unexplained
-// (found while reviewing this screen 2026-08-24: the dropdown alone gives no
-// hint that Won/Lost are terminal and force the probability, or that Open is
-// the default and drives the weighted forecast).
-const OUTCOME_HELP =
-  'Open: still active, counts toward the weighted forecast at its probability. Won/Lost: terminal — probability is forced to 100%/0% and can’t be edited.';
-
 interface StageEditorProps {
   pipeline: Pipeline;
   token: string;
@@ -110,6 +106,7 @@ interface StageEditorProps {
 // component's own state here means a drag only re-renders this subtree.
 function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
   const toast = useToast();
+  const { t } = useTranslation('settingsPages');
   const [newStageName, setNewStageName] = useState('');
   // Local draft while editing a stage's win probability — committed onBlur
   // (docs/tareas/specredisenosalesv2.md §3.5), keyed by stage.id so multiple
@@ -133,7 +130,7 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
       setNewStageName('');
       onChanged();
     } catch (error) {
-      toast.error('Failed to add stage: ' + (error as Error).message);
+      toast.error(t('pipelines.errors.addStage', { message: (error as Error).message }));
     }
   };
 
@@ -142,7 +139,7 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
       await api.updatePipelineStage(token, pipeline.id, stage.id, { color });
       onChanged();
     } catch (error) {
-      toast.error('Failed to update stage color: ' + (error as Error).message);
+      toast.error(t('pipelines.errors.updateStageColor', { message: (error as Error).message }));
     }
   };
 
@@ -151,7 +148,7 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
       await api.updatePipelineStage(token, pipeline.id, stage.id, { outcome: outcome as 'open' | 'won' | 'lost' });
       onChanged();
     } catch (error) {
-      toast.error('Failed to update stage outcome: ' + (error as Error).message);
+      toast.error(t('pipelines.errors.updateStageOutcome', { message: (error as Error).message }));
     }
   };
 
@@ -172,7 +169,7 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
       await api.updatePipelineStage(token, pipeline.id, stage.id, { probability: parsed });
       onChanged();
     } catch (error) {
-      toast.error('Failed to update probability: ' + (error as Error).message);
+      toast.error(t('pipelines.errors.updateProbability', { message: (error as Error).message }));
     }
   };
 
@@ -181,7 +178,7 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
       await api.updatePipelineStage(token, pipeline.id, stage.id, { isActive: !stage.isActive });
       onChanged();
     } catch (error) {
-      toast.error('Failed to update stage: ' + (error as Error).message);
+      toast.error(t('pipelines.errors.updateStage', { message: (error as Error).message }));
     }
   };
 
@@ -190,7 +187,7 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
       await api.updatePipelineStage(token, pipeline.id, stage.id, { notifyOwnerOnEnter: !stage.notifyOwnerOnEnter });
       onChanged();
     } catch (error) {
-      toast.error('Failed to update stage notification setting: ' + (error as Error).message);
+      toast.error(t('pipelines.errors.updateStageNotification', { message: (error as Error).message }));
     }
   };
 
@@ -228,23 +225,27 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
       }
       onChanged();
     } catch (error) {
-      toast.error('Failed to reorder stage: ' + (error as Error).message);
+      toast.error(t('pipelines.errors.reorderStage', { message: (error as Error).message }));
     }
   };
 
   return (
     <>
-      {sortedStages.length > 0 && <p className="mb-2 text-xs text-ink-muted dark:text-dark-ink-muted">{OUTCOME_HELP}</p>}
+      {/* Explains what each Outcome option actually does rather than leaving Won/Open/Lost
+          unexplained (found while reviewing this screen 2026-08-24: the dropdown alone gives no
+          hint that Won/Lost are terminal and force the probability, or that Open is the default
+          and drives the weighted forecast). */}
+      {sortedStages.length > 0 && <p className="mb-2 text-xs text-ink-muted dark:text-dark-ink-muted">{t('pipelines.outcomeHelp')}</p>}
       <CompactRowGroup minWidth={520}>
         {sortedStages.length > 0 && (
           <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
             <span style={{ width: STAGE_GRIP_COLUMN_WIDTH }} />
             <span style={{ width: 28 }} />
-            <span className="flex-1">Stage name</span>
-            <span style={{ width: 110 }}>Outcome</span>
-            <span style={{ width: 56, textAlign: 'center' }}>Win %</span>
-            <span style={{ width: 56, textAlign: 'center' }} title="Notify the owner (in-app + email) when a deal enters this stage">
-              Notify
+            <span className="flex-1">{t('pipelines.stageEditor.columnStageName')}</span>
+            <span style={{ width: 110 }}>{t('pipelines.stageEditor.columnOutcome')}</span>
+            <span style={{ width: 56, textAlign: 'center' }}>{t('pipelines.stageEditor.columnWinPercent')}</span>
+            <span style={{ width: 56, textAlign: 'center' }} title={t('pipelines.stageEditor.notifyTooltip')}>
+              {t('pipelines.stageEditor.columnNotify')}
             </span>
           </div>
         )}
@@ -264,7 +265,7 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
                 draggable
                 onDragStart={() => handleDragStart(stage.id)}
                 onDragEnd={handleDragEnd}
-                aria-label={`Drag to reorder ${stage.name}`}
+                aria-label={t('pipelines.stageEditor.dragAria', { name: stage.name })}
               >
                 <GripIcon className="h-3.5 w-3.5" />
               </span>
@@ -276,9 +277,9 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
                 value={stage.outcome}
                 onChange={(e) => handleOutcomeChange(stage, e.target.value)}
               >
-                {Object.entries(OUTCOME_LABELS).map(([value, label]) => (
+                {OUTCOME_VALUES.map((value) => (
                   <option key={value} value={value}>
-                    {label}
+                    {t(`pipelines.outcome.${value}`)}
                   </option>
                 ))}
               </select>
@@ -292,13 +293,13 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
                   value={getProbabilityDraft(stage)}
                   onChange={(e) => setProbabilityDrafts({ ...probabilityDrafts, [stage.id]: e.target.value })}
                   onBlur={() => handleProbabilityBlur(stage)}
-                  title="Win probability (%) — used for the weighted pipeline forecast"
+                  title={t('pipelines.stageEditor.winProbabilityTooltip')}
                 />
               ) : (
                 <span
                   className="text-xs text-ink-faint"
                   style={{ width: 56, textAlign: 'center' }}
-                  title="Forced — Won is always 100%, Lost is always 0%"
+                  title={t('pipelines.stageEditor.forcedProbabilityTooltip')}
                 >
                   {stage.probability}%
                 </span>
@@ -308,16 +309,16 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
                   type="checkbox"
                   checked={stage.notifyOwnerOnEnter}
                   onChange={() => toggleNotifyOwnerOnEnter(stage)}
-                  title="Notify the owner (in-app + email) when a deal enters this stage"
+                  title={t('pipelines.stageEditor.notifyTooltip')}
                 />
               </span>
               <button
                 type="button"
                 className="icon-btn"
                 onClick={() => toggleArchive(stage)}
-                aria-label={stage.isActive ? 'Archive stage' : 'Reactivate stage'}
+                aria-label={stage.isActive ? t('pipelines.stageEditor.archiveStageAria') : t('pipelines.stageEditor.reactivateStageAria')}
               >
-                <span className="tip">{stage.isActive ? 'Archive' : 'Reactivate'}</span>
+                <span className="tip">{stage.isActive ? t('pipelines.rowMenu.archive') : t('pipelines.rowMenu.reactivate')}</span>
                 {stage.isActive ? (
                   <EyeIcon className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                 ) : (
@@ -332,7 +333,7 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
       <form className="flex items-center gap-2 mt-3" onSubmit={handleAddStage}>
         <input
           type="text"
-          placeholder="New stage name"
+          placeholder={t('pipelines.stageEditor.newStageNamePlaceholder')}
           value={newStageName}
           onChange={(e) => setNewStageName(e.target.value)}
           style={{ maxWidth: 220 }}
@@ -340,7 +341,7 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
         <button type="submit" className="btn-secondary">
           <span className="inline-flex items-center gap-1.5">
             <PlusIcon className="h-3.5 w-3.5" />
-            Add Stage
+            {t('pipelines.stageEditor.addStage')}
           </span>
         </button>
       </form>
@@ -366,6 +367,7 @@ interface PipelineAutomationEditorProps {
 // table underneath the modal on every click.
 function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: PipelineAutomationEditorProps) {
   const toast = useToast();
+  const { t } = useTranslation('settingsPages');
   const permissions = usePermissions();
   const [participants, setParticipants] = useState<PipelineAssignmentUser[]>([]);
   const [participantsLoading, setParticipantsLoading] = useState(true);
@@ -401,7 +403,7 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
         setTenantUsers(users);
         setDepartments(depts);
       })
-      .catch((error) => toast.error('Failed to load automation settings: ' + (error as Error).message))
+      .catch((error) => toast.error(t('pipelines.errors.loadAutomationSettings', { message: (error as Error).message })))
       .finally(() => {
         if (!cancelled) setParticipantsLoading(false);
       });
@@ -420,7 +422,7 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
       const data = await api.listPipelineAssignmentUsers(token, pipeline.id);
       setParticipants(data);
     } catch (error) {
-      toast.error('Failed to refresh participants: ' + (error as Error).message);
+      toast.error(t('pipelines.errors.refreshParticipants', { message: (error as Error).message }));
     }
   };
 
@@ -429,7 +431,7 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
       await api.updatePipeline(token, pipeline.id, { assignmentMode: value });
       onPipelineChanged();
     } catch (error) {
-      toast.error('Failed to update assignment mode: ' + (error as Error).message);
+      toast.error(t('pipelines.errors.updateAssignmentMode', { message: (error as Error).message }));
     }
   };
 
@@ -456,7 +458,7 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
     const trimmed = stalledDraft.trim();
     const parsed = trimmed === '' ? null : Number.parseInt(trimmed, 10);
     if (parsed !== null && (!Number.isFinite(parsed) || parsed < 1)) {
-      toast.error('Stalled reminder days must be a positive number');
+      toast.error(t('pipelines.errors.stalledDaysPositive'));
       setStalledDraft(pipeline.stalledThresholdDays !== null ? String(pipeline.stalledThresholdDays) : '');
       return;
     }
@@ -465,7 +467,7 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
       await api.updatePipeline(token, pipeline.id, { stalledThresholdDays: parsed });
       onPipelineChanged();
     } catch (error) {
-      toast.error('Failed to update stalled reminder threshold: ' + (error as Error).message);
+      toast.error(t('pipelines.errors.updateStalledThreshold', { message: (error as Error).message }));
     }
   };
 
@@ -483,7 +485,7 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
       ]);
       refreshParticipants();
     } catch (error) {
-      toast.error('Failed to update participants: ' + (error as Error).message);
+      toast.error(t('pipelines.errors.updateParticipants', { message: (error as Error).message }));
     }
   };
 
@@ -493,7 +495,12 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
     try {
       const result = await api.assignPipelineUsersByDepartments(token, pipeline.id, selectedDepartmentIds);
       toast.success(
-        `Added ${result.addedCount} of ${result.resolvedUserCount} user(s) as participants (${result.alreadyAssignedCount} were already in the list).`,
+        t('pipelines.toasts.addedFromDepartments', {
+          count: result.resolvedUserCount,
+          addedCount: result.addedCount,
+          resolvedUserCount: result.resolvedUserCount,
+          alreadyAssignedCount: result.alreadyAssignedCount,
+        }),
       );
       setSelectedDepartmentIds([]);
       refreshParticipants();
@@ -501,7 +508,7 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
       // what's on screen after a bulk-add, not the now-empty department picker.
       setParticipantMode('user');
     } catch (error) {
-      toast.error('Failed to add from departments: ' + (error as Error).message);
+      toast.error(t('pipelines.errors.addFromDepartments', { message: (error as Error).message }));
     } finally {
       setAddingFromDepartments(false);
     }
@@ -511,36 +518,36 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
   const userOptions: MultiSelectOption[] = tenantUsers.map((u) => ({
     value: u.id,
     label: `${u.firstName} ${u.lastName}`,
-    note: u.status !== 'active' ? '(inactive)' : undefined,
+    note: u.status !== 'active' ? t('pipelines.automation.inactiveNote') : undefined,
   }));
   const departmentOptions: MultiSelectOption[] = departments.map((d) => ({ value: d.id, label: d.name }));
 
   return (
     <>
       <div className="form-group">
-        <label htmlFor="pipeline-assignment-mode">Owner auto-assignment</label>
+        <label htmlFor="pipeline-assignment-mode">{t('pipelines.automation.ownerAutoAssignLabel')}</label>
         <select id="pipeline-assignment-mode" value={unifiedModeValue} onChange={(e) => handleUnifiedModeChange(e.target.value)}>
-          <option value="">Off — owner must always be chosen manually</option>
-          <option value="round_robin_user">Round robin — by user</option>
-          <option value="round_robin_department">Round robin — by department</option>
+          <option value="">{t('pipelines.automation.off')}</option>
+          <option value="round_robin_user">{t('pipelines.automation.roundRobinByUser')}</option>
+          <option value="round_robin_department">{t('pipelines.automation.roundRobinByDepartment')}</option>
           {pipeline.type === 'account' && (
-            <option value="account_owner">Account owner — use the Company's Account Owner</option>
+            <option value="account_owner">{t('pipelines.automation.accountOwnerOption')}</option>
           )}
         </select>
         {pipeline.assignmentMode === 'account_owner' && (
           <p className="mt-1 text-xs text-ink-muted dark:text-dark-ink-muted">
-            Used when the Company has an Account Owner set. Falls back to round robin over the participants below
-            when it doesn't.
+            {t('pipelines.automation.accountOwnerHint')}
           </p>
         )}
       </div>
 
       {pipeline.assignmentMode && (
         <div className="form-group">
-          <label htmlFor={participantMode === 'user' ? 'pipeline-participants' : 'pipeline-departments'}>Round-robin participants</label>
+          <label htmlFor={participantMode === 'user' ? 'pipeline-participants' : 'pipeline-departments'}>
+            {t('pipelines.automation.participantsLabel')}
+          </label>
           <p className="mb-1 text-xs text-ink-muted dark:text-dark-ink-muted">
-            Only currently-active employees are ever picked when it's their turn. A user with no linked Employee
-            record can be added here but will always be skipped.
+            {t('pipelines.automation.participantsHintEdit')}
           </p>
 
           {participantMode === 'user' ? (
@@ -549,15 +556,14 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
               options={userOptions}
               selected={participantUserIds}
               onChange={handleParticipantsChange}
-              placeholder={participantsLoading ? 'Loading…' : 'Select participants…'}
-              emptyMessage="No users in this tenant yet."
+              placeholder={participantsLoading ? t('pipelines.automation.loadingPlaceholder') : t('pipelines.automation.selectParticipantsPlaceholder')}
+              emptyMessage={t('pipelines.automation.noUsersEmpty')}
               loading={participantsLoading}
             />
           ) : (
             <>
               <p className="mb-1 text-xs text-ink-muted dark:text-dark-ink-muted">
-                One-time add — adds whoever currently has an Employee in the selected department(s). Not a live
-                link: later department changes won't update this list automatically.
+                {t('pipelines.automation.departmentBulkAddHintEdit')}
               </p>
               <div className="flex items-center gap-2">
                 <div className="flex-1">
@@ -566,8 +572,8 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
                     options={departmentOptions}
                     selected={selectedDepartmentIds}
                     onChange={setSelectedDepartmentIds}
-                    placeholder={participantsLoading ? 'Loading…' : 'Select departments…'}
-                    emptyMessage="No departments configured yet."
+                    placeholder={participantsLoading ? t('pipelines.automation.loadingPlaceholder') : t('pipelines.automation.selectDepartmentsPlaceholder')}
+                    emptyMessage={t('pipelines.automation.noDepartmentsEmpty')}
                     loading={participantsLoading}
                   />
                 </div>
@@ -577,7 +583,7 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
                   disabled={selectedDepartmentIds.length === 0 || addingFromDepartments}
                   onClick={handleAddFromDepartments}
                 >
-                  {addingFromDepartments ? 'Adding…' : 'Add selected'}
+                  {addingFromDepartments ? t('pipelines.automation.adding') : t('pipelines.automation.addSelected')}
                 </button>
               </div>
             </>
@@ -586,7 +592,7 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
       )}
 
       <div className="form-group">
-        <label htmlFor="pipeline-stalled-threshold">Stalled-deal reminders</label>
+        <label htmlFor="pipeline-stalled-threshold">{t('pipelines.automation.stalledLabel')}</label>
         <div className="flex items-center gap-2">
           <input
             id="pipeline-stalled-threshold"
@@ -594,12 +600,12 @@ function PipelineAutomationEditor({ pipeline, token, onPipelineChanged }: Pipeli
             min={1}
             className="select-compact"
             style={{ width: 80 }}
-            placeholder="Off"
+            placeholder={t('pipelines.automation.stalledOffPlaceholder')}
             value={stalledDraft}
             onChange={(e) => setStalledDraft(e.target.value)}
             onBlur={handleStalledBlur}
           />
-          <span className="text-sm text-ink-muted dark:text-dark-ink-muted">days in the same stage before notifying the owner</span>
+          <span className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('pipelines.automation.stalledSuffix')}</span>
         </div>
       </div>
     </>
@@ -639,6 +645,7 @@ function PipelineAutomationCreateFields({
   onStalledThresholdDraftChange,
 }: PipelineAutomationCreateFieldsProps) {
   const toast = useToast();
+  const { t } = useTranslation('settingsPages');
   const permissions = usePermissions();
   const [tenantUsers, setTenantUsers] = useState<TenantUser[]>([]);
   const [departments, setDepartments] = useState<FieldCatalogDefinition[]>([]);
@@ -680,7 +687,7 @@ function PipelineAutomationCreateFields({
         setTenantUsers(users);
         setDepartments(depts);
       })
-      .catch((error) => toast.error('Failed to load users/departments: ' + (error as Error).message))
+      .catch((error) => toast.error(t('pipelines.errors.loadUsersDepartments', { message: (error as Error).message })))
       .finally(() => {
         if (!cancelled) setLoadingOptions(false);
       });
@@ -693,24 +700,23 @@ function PipelineAutomationCreateFields({
   const userOptions: MultiSelectOption[] = tenantUsers.map((u) => ({
     value: u.id,
     label: `${u.firstName} ${u.lastName}`,
-    note: u.status !== 'active' ? '(inactive)' : undefined,
+    note: u.status !== 'active' ? t('pipelines.automation.inactiveNote') : undefined,
   }));
   const departmentOptions: MultiSelectOption[] = departments.map((d) => ({ value: d.id, label: d.name }));
 
   return (
     <>
       <div className="form-group">
-        <label htmlFor="new-pipeline-assignment-mode">Owner auto-assignment</label>
+        <label htmlFor="new-pipeline-assignment-mode">{t('pipelines.automation.ownerAutoAssignLabel')}</label>
         <select id="new-pipeline-assignment-mode" value={unifiedModeValue} onChange={(e) => handleUnifiedModeChange(e.target.value)}>
-          <option value="">Off — owner must always be chosen manually</option>
-          <option value="round_robin_user">Round robin — by user</option>
-          <option value="round_robin_department">Round robin — by department</option>
-          {type === 'account' && <option value="account_owner">Account owner — use the Company's Account Owner</option>}
+          <option value="">{t('pipelines.automation.off')}</option>
+          <option value="round_robin_user">{t('pipelines.automation.roundRobinByUser')}</option>
+          <option value="round_robin_department">{t('pipelines.automation.roundRobinByDepartment')}</option>
+          {type === 'account' && <option value="account_owner">{t('pipelines.automation.accountOwnerOption')}</option>}
         </select>
         {assignmentMode === 'account_owner' && (
           <p className="mt-1 text-xs text-ink-muted dark:text-dark-ink-muted">
-            Used when the Company has an Account Owner set. Falls back to round robin over the participants below
-            when it doesn't.
+            {t('pipelines.automation.accountOwnerHint')}
           </p>
         )}
       </div>
@@ -718,13 +724,13 @@ function PipelineAutomationCreateFields({
       {assignmentMode && (
         <div className="form-group">
           <label htmlFor={participantMode === 'user' ? 'new-pipeline-participants' : 'new-pipeline-departments'}>
-            Round-robin participants
+            {t('pipelines.automation.participantsLabel')}
             {assignmentMode === 'round_robin' && <RequiredMark />}
           </label>
           <p className="mb-1 text-xs text-ink-muted dark:text-dark-ink-muted">
             {assignmentMode === 'account_owner'
-              ? "Used only as a fallback, when the Company has no Account Owner set. Only currently-active employees are ever picked."
-              : "Only currently-active employees are ever picked when it's their turn. Can be changed later too."}
+              ? t('pipelines.automation.participantsHintAccountOwnerFallback')
+              : t('pipelines.automation.participantsHintCreate')}
           </p>
 
           {participantMode === 'user' ? (
@@ -733,23 +739,22 @@ function PipelineAutomationCreateFields({
               options={userOptions}
               selected={participantUserIds}
               onChange={onParticipantUserIdsChange}
-              placeholder={loadingOptions ? 'Loading…' : 'Select participants…'}
-              emptyMessage="No users in this tenant yet."
+              placeholder={loadingOptions ? t('pipelines.automation.loadingPlaceholder') : t('pipelines.automation.selectParticipantsPlaceholder')}
+              emptyMessage={t('pipelines.automation.noUsersEmpty')}
               loading={loadingOptions}
             />
           ) : (
             <>
               <p className="mb-1 text-xs text-ink-muted dark:text-dark-ink-muted">
-                One-time add — adds whoever currently has an Employee in the selected department(s) as participants,
-                once this pipeline is created.
+                {t('pipelines.automation.departmentBulkAddHintCreate')}
               </p>
               <MultiSelectDropdown
                 id="new-pipeline-departments"
                 options={departmentOptions}
                 selected={departmentIds}
                 onChange={onDepartmentIdsChange}
-                placeholder={loadingOptions ? 'Loading…' : 'Select departments…'}
-                emptyMessage="No departments configured yet."
+                placeholder={loadingOptions ? t('pipelines.automation.loadingPlaceholder') : t('pipelines.automation.selectDepartmentsPlaceholder')}
+                emptyMessage={t('pipelines.automation.noDepartmentsEmpty')}
                 loading={loadingOptions}
               />
             </>
@@ -758,7 +763,7 @@ function PipelineAutomationCreateFields({
       )}
 
       <div className="form-group">
-        <label htmlFor="new-pipeline-stalled-threshold">Stalled-deal reminders</label>
+        <label htmlFor="new-pipeline-stalled-threshold">{t('pipelines.automation.stalledLabel')}</label>
         <div className="flex items-center gap-2">
           <input
             id="new-pipeline-stalled-threshold"
@@ -766,11 +771,11 @@ function PipelineAutomationCreateFields({
             min={1}
             className="select-compact"
             style={{ width: 80 }}
-            placeholder="Off"
+            placeholder={t('pipelines.automation.stalledOffPlaceholder')}
             value={stalledThresholdDraft}
             onChange={(e) => onStalledThresholdDraftChange(e.target.value)}
           />
-          <span className="text-sm text-ink-muted dark:text-dark-ink-muted">days in the same stage before notifying the owner</span>
+          <span className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('pipelines.automation.stalledSuffix')}</span>
         </div>
       </div>
     </>
@@ -779,6 +784,7 @@ function PipelineAutomationCreateFields({
 
 export default function PipelinesSettingsPage({ token }: PipelinesSettingsPageProps) {
   const toast = useToast();
+  const { t } = useTranslation('settingsPages');
   const [pipelines, setPipelines] = useState<Pipeline[]>([]);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [loading, setLoading] = useState(false);
@@ -861,7 +867,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
       const data = await api.listPipelines(token);
       setPipelines(data);
     } catch (error) {
-      toast.error('Failed to load pipelines: ' + (error as Error).message);
+      toast.error(t('pipelines.errors.loadPipelines', { message: (error as Error).message }));
     }
   };
 
@@ -877,7 +883,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
     setCreateOpen(true);
   };
 
-  usePrimaryAction({ label: 'Add pipeline', onClick: openCreate });
+  usePrimaryAction({ label: t('pipelines.addPipelineAction'), onClick: openCreate });
 
   const handleStartEdit = (pipeline: Pipeline) => {
     setRenameValue(pipeline.name);
@@ -911,7 +917,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
     // 2026-08-26). account_owner is exempt: it degrades gracefully to the
     // Company's Account Owner even with zero fallback participants.
     if (createAssignmentMode === 'round_robin' && createParticipantUserIds.length === 0 && createDepartmentIds.length === 0) {
-      toast.error('Round robin requires at least one participant, by user or by department.');
+      toast.error(t('pipelines.errors.roundRobinRequiresParticipant'));
       return;
     }
     setCreating(true);
@@ -946,10 +952,10 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
         await api.assignPipelineUsersByDepartments(token, pipeline.id, createDepartmentIds);
       }
       setCreateOpen(false);
-      toast.success('Pipeline created.');
+      toast.success(t('pipelines.toasts.pipelineCreated'));
       loadPipelines();
     } catch (error) {
-      toast.error('Failed to create pipeline: ' + (error as Error).message);
+      toast.error(t('pipelines.errors.createPipeline', { message: (error as Error).message }));
     } finally {
       setCreating(false);
     }
@@ -963,7 +969,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
       await api.updatePipeline(token, pipelineId, { name: renameValue.trim() });
       loadPipelines();
     } catch (error) {
-      toast.error('Failed to rename pipeline: ' + (error as Error).message);
+      toast.error(t('pipelines.errors.renamePipeline', { message: (error as Error).message }));
     }
   };
 
@@ -987,11 +993,11 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
     setReactivatingSaving(true);
     try {
       await api.updatePipeline(token, reactivatingPipeline.id, { isActive: true });
-      toast.success('Pipeline reactivated.');
+      toast.success(t('pipelines.toasts.pipelineReactivated'));
       setReactivatingPipeline(null);
       loadPipelines();
     } catch (error) {
-      toast.error('Failed to update pipeline: ' + (error as Error).message);
+      toast.error(t('pipelines.errors.updatePipeline', { message: (error as Error).message }));
     } finally {
       setReactivatingSaving(false);
     }
@@ -1002,18 +1008,18 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
     setArchivingSaving(true);
     try {
       await api.updatePipeline(token, archivingPipeline.id, { isActive: false });
-      toast.success('Pipeline archived.');
+      toast.success(t('pipelines.toasts.pipelineArchived'));
       setArchivingPipeline(null);
       loadPipelines();
     } catch (error) {
-      toast.error('Failed to update pipeline: ' + (error as Error).message);
+      toast.error(t('pipelines.errors.updatePipeline', { message: (error as Error).message }));
     } finally {
       setArchivingSaving(false);
     }
   };
 
   if (loading) {
-    return <p>Loading...</p>;
+    return <p>{t('pipelines.loading')}</p>;
   }
 
   const editingPipeline = editingPipelineId ? pipelines.find((p) => p.id === editingPipelineId) ?? null : null;
@@ -1035,9 +1041,9 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
               silently change which Company-gate rule applies to them. */}
           <span
             className={`category-chip chip-${PIPELINE_TYPE_CHIP_COLOR[pipeline.type]}`}
-            title="Pipeline type can't be changed after creation"
+            title={t('pipelines.typeTitle')}
           >
-            {PIPELINE_TYPE_LABELS[pipeline.type]}
+            {t(`pipelines.typeLabel.${pipeline.type}`)}
           </span>
         </td>
         <td>
@@ -1064,8 +1070,8 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
               pipelineRowMenuAnchorRef.current = e.currentTarget;
               setPipelineRowMenuFor(pipelineRowMenuFor === pipeline.id ? null : pipeline.id);
             }}
-            aria-label={`Actions for ${pipeline.name}`}
-            title="Actions"
+            aria-label={t('pipelines.actionsForAria', { name: pipeline.name })}
+            title={t('pipelines.actionsTitle')}
           >
             <DotsVerticalIcon />
           </button>
@@ -1078,10 +1084,9 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
     <div>
       <div className="flex items-start justify-between gap-4 mb-3">
         <div>
-          <h3 className="card-title mb-1">Pipelines</h3>
+          <h3 className="card-title mb-1">{t('pipelines.title')}</h3>
           <p className="text-sm text-ink-muted dark:text-dark-ink-muted">
-            Sales pipelines for Opportunities. Each pipeline has its own stages — archiving a pipeline keeps its
-            Opportunities visible read-only, it just disappears from creation menus.
+            {t('pipelines.description')}
           </p>
         </div>
         {/* Hidden below md: the mobile FAB (usePrimaryAction below) already exposes this same
@@ -1093,7 +1098,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
           <button type="button" className="btn-primary" onClick={openCreate}>
             <span className="inline-flex items-center gap-1.5">
               <PlusIcon className="h-4 w-4" />
-              New Pipeline
+              {t('pipelines.newPipelineButton')}
             </span>
           </button>
         </span>
@@ -1106,14 +1111,14 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
             className={`view-tab ${pipelineTab === 'active' ? 'active' : ''}`}
             onClick={() => setPipelineTab('active')}
           >
-            Active ({activePipelines.length})
+            {t('pipelines.tabs.active')} ({activePipelines.length})
           </button>
           <button
             type="button"
             className={`view-tab ${pipelineTab === 'archived' ? 'active' : ''}`}
             onClick={() => setPipelineTab('archived')}
           >
-            Archived ({archivedPipelines.length})
+            {t('pipelines.tabs.archived')} ({archivedPipelines.length})
           </button>
         </div>
       )}
@@ -1126,15 +1131,14 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
               <span className="flex items-center gap-2">
                 <span
                   className={`category-chip chip-${PIPELINE_TYPE_CHIP_COLOR[pipeline.type]}`}
-                  title="Pipeline type can't be changed after creation"
+                  title={t('pipelines.typeTitle')}
                 >
-                  {PIPELINE_TYPE_LABELS[pipeline.type]}
+                  {t(`pipelines.typeLabel.${pipeline.type}`)}
                 </span>
                 <span className="entity-card-name">{pipeline.name}</span>
               </span>
               <span className="entity-card-meta">
-                {pipeline.stages.length} stage{pipeline.stages.length === 1 ? '' : 's'} · Updated{' '}
-                {formatPipelineDate(pipeline.updatedAt)}
+                {t('pipelines.cardMeta', { count: pipeline.stages.length, date: formatPipelineDate(pipeline.updatedAt) })}
               </span>
             </span>
             <button
@@ -1144,8 +1148,8 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
                 pipelineRowMenuAnchorRef.current = e.currentTarget;
                 setPipelineRowMenuFor(pipelineRowMenuFor === pipeline.id ? null : pipeline.id);
               }}
-              aria-label={`Actions for ${pipeline.name}`}
-              title="Actions"
+              aria-label={t('pipelines.actionsForAria', { name: pipeline.name })}
+              title={t('pipelines.actionsTitle')}
             >
               <DotsVerticalIcon />
             </button>
@@ -1157,19 +1161,19 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
           <thead>
             <tr>
               <th className={`sortable ${sortField === 'type' ? 'sorted' : ''}`} onClick={() => handleSort('type')}>
-                Type {sortArrow('type')}
+                {t('pipelines.columns.type')} {sortArrow('type')}
               </th>
               <th className={`sortable ${sortField === 'name' ? 'sorted' : ''}`} onClick={() => handleSort('name')}>
-                Name {sortArrow('name')}
+                {t('pipelines.columns.name')} {sortArrow('name')}
               </th>
               <th className={`sortable ${sortField === 'stages' ? 'sorted' : ''}`} onClick={() => handleSort('stages')}>
-                Stages {sortArrow('stages')}
+                {t('pipelines.columns.stages')} {sortArrow('stages')}
               </th>
               <th className={`sortable ${sortField === 'createdAt' ? 'sorted' : ''}`} onClick={() => handleSort('createdAt')}>
-                Created {sortArrow('createdAt')}
+                {t('pipelines.columns.created')} {sortArrow('createdAt')}
               </th>
               <th className={`sortable ${sortField === 'updatedAt' ? 'sorted' : ''}`} onClick={() => handleSort('updatedAt')}>
-                Updated {sortArrow('updatedAt')}
+                {t('pipelines.columns.updated')} {sortArrow('updatedAt')}
               </th>
               <th></th>
             </tr>
@@ -1188,10 +1192,10 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
         {menuPipeline && (
           <>
             <div className="popover-menu-item" onClick={() => handleStartEdit(menuPipeline)}>
-              Edit
+              {t('pipelines.rowMenu.edit')}
             </div>
             <div className="popover-menu-item" onClick={() => handleArchiveToggleClick(menuPipeline)}>
-              {menuPipeline.isActive ? 'Archive' : 'Reactivate'}
+              {menuPipeline.isActive ? t('pipelines.rowMenu.archive') : t('pipelines.rowMenu.reactivate')}
             </div>
           </>
         )}
@@ -1199,11 +1203,11 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
 
       {archivingPipeline && (
         <ConfirmDialog
-          title={`Archive "${archivingPipeline.name}"`}
-          message={`This pipeline has ${
-            opportunities.filter((o) => o.pipelineId === archivingPipeline.id).length
-          } Opportunity(ies). They'll stay visible but become read-only until this pipeline is reactivated, and the pipeline will disappear from creation menus. Type ARCHIVE to confirm.`}
-          confirmLabel={archivingSaving ? 'Archiving…' : 'ARCHIVE'}
+          title={t('pipelines.archiveConfirm.title', { name: archivingPipeline.name })}
+          message={t('pipelines.archiveConfirm.message', {
+            count: opportunities.filter((o) => o.pipelineId === archivingPipeline.id).length,
+          })}
+          confirmLabel={archivingSaving ? t('pipelines.archiveConfirm.confirmLabel') : 'ARCHIVE'}
           confirmText="ARCHIVE"
           confirmDisabled={archivingSaving}
           onConfirm={handleConfirmArchivePipeline}
@@ -1213,9 +1217,9 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
 
       {reactivatingPipeline && (
         <ConfirmDialog
-          title={`Reactivate "${reactivatingPipeline.name}"`}
-          message="This pipeline will reappear in creation menus and its Opportunities become editable again."
-          confirmLabel={reactivatingSaving ? 'Reactivating…' : 'Reactivate'}
+          title={t('pipelines.reactivateConfirm.title', { name: reactivatingPipeline.name })}
+          message={t('pipelines.reactivateConfirm.message')}
+          confirmLabel={reactivatingSaving ? t('pipelines.reactivateConfirm.confirmLabel') : t('pipelines.rowMenu.reactivate')}
           danger={false}
           confirmDisabled={reactivatingSaving}
           onConfirm={handleConfirmReactivatePipeline}
@@ -1225,21 +1229,21 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
 
       <Modal
         open={createOpen || editingPipelineId !== null}
-        title={editingPipeline ? 'Edit Pipeline' : 'New Pipeline'}
+        title={editingPipeline ? t('pipelines.modal.editTitle') : t('pipelines.modal.newTitle')}
         onClose={closePipelineModal}
         wide
         footer={
           editingPipeline ? (
             <button type="button" className="btn-primary" onClick={closePipelineModal}>
-              Done
+              {t('pipelines.modal.done')}
             </button>
           ) : (
             <>
               <button type="button" className="btn-secondary" onClick={closePipelineModal}>
-                Cancel
+                {t('pipelines.modal.cancel')}
               </button>
               <button type="submit" form="create-pipeline-form" className="btn-primary" disabled={creating}>
-                {creating ? 'Saving…' : 'Save'}
+                {creating ? t('pipelines.modal.saving') : t('pipelines.modal.save')}
               </button>
             </>
           )
@@ -1248,7 +1252,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
         {editingPipeline ? (
           <div>
             <div className="form-group">
-              <label htmlFor="edit-pipeline-name">Pipeline name</label>
+              <label htmlFor="edit-pipeline-name">{t('pipelines.fields.pipelineName')}</label>
               <input
                 id="edit-pipeline-name"
                 type="text"
@@ -1262,17 +1266,17 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
               />
             </div>
             <div className="form-group">
-              <label>Type</label>
-              <p className="text-sm text-ink-faint" title="Pipeline type can't be changed after creation">
-                {PIPELINE_TYPE_LABELS[editingPipeline.type]}
+              <label>{t('pipelines.fields.type')}</label>
+              <p className="text-sm text-ink-faint" title={t('pipelines.typeTitle')}>
+                {t(`pipelines.typeLabel.${editingPipeline.type}`)}
               </p>
             </div>
             <div className="form-group">
-              <span>Automations</span>
+              <span>{t('pipelines.sections.automations')}</span>
               <PipelineAutomationEditor pipeline={editingPipeline} token={token} onPipelineChanged={loadPipelines} />
             </div>
             <div className="form-group">
-              <span>Stages</span>
+              <span>{t('pipelines.sections.stages')}</span>
               <StageEditor pipeline={editingPipeline} token={token} onChanged={loadPipelines} />
             </div>
           </div>
@@ -1280,7 +1284,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
           <form id="create-pipeline-form" onSubmit={handleCreatePipeline}>
             <div className="form-group">
               <label htmlFor="new-pipeline-name">
-                Pipeline name
+                {t('pipelines.fields.pipelineName')}
                 <RequiredMark />
               </label>
               <input
@@ -1290,12 +1294,12 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
                 required
                 value={createName}
                 onChange={(e) => setCreateName(e.target.value)}
-                placeholder="e.g. Leads, Renewals"
+                placeholder={t('pipelines.fields.namePlaceholder')}
               />
             </div>
 
             <div className="form-group">
-              <label htmlFor="new-pipeline-type">Type</label>
+              <label htmlFor="new-pipeline-type">{t('pipelines.fields.type')}</label>
               <select
                 id="new-pipeline-type"
                 value={createType}
@@ -1310,13 +1314,13 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
                   }
                 }}
               >
-                <option value="lead">Leads — unqualified prospects, company optional</option>
-                <option value="account">Account — an already-identified company</option>
+                <option value="lead">{t('pipelines.typeOption.lead')}</option>
+                <option value="account">{t('pipelines.typeOption.account')}</option>
               </select>
             </div>
 
             <div className="form-group">
-              <span>Automations</span>
+              <span>{t('pipelines.sections.automations')}</span>
               <PipelineAutomationCreateFields
                 token={token}
                 type={createType}
@@ -1332,20 +1336,19 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
             </div>
 
             <div className="form-group">
-              <span>Stages</span>
+              <span>{t('pipelines.sections.stages')}</span>
               <p className="mb-1 text-xs text-ink-muted dark:text-dark-ink-muted">
-                Add the stages a deal moves through in this pipeline. You can leave this empty and add stages
-                later, or reorder/color them once the pipeline is created.
+                {t('pipelines.stagesHelp')}
               </p>
-              <p className="mb-2 text-xs text-ink-muted dark:text-dark-ink-muted">{OUTCOME_HELP}</p>
+              <p className="mb-2 text-xs text-ink-muted dark:text-dark-ink-muted">{t('pipelines.outcomeHelp')}</p>
               <CompactRowGroup minWidth={460}>
                 {createStages.length > 0 && (
                   <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
-                    <span className="flex-1">Stage name</span>
-                    <span style={{ width: 110 }}>Outcome</span>
-                    <span style={{ width: 56, textAlign: 'center' }}>Win %</span>
-                    <span style={{ width: 56, textAlign: 'center' }} title="Notify the owner (in-app + email) when a deal enters this stage">
-                      Notify
+                    <span className="flex-1">{t('pipelines.stageEditor.columnStageName')}</span>
+                    <span style={{ width: 110 }}>{t('pipelines.stageEditor.columnOutcome')}</span>
+                    <span style={{ width: 56, textAlign: 'center' }}>{t('pipelines.stageEditor.columnWinPercent')}</span>
+                    <span style={{ width: 56, textAlign: 'center' }} title={t('pipelines.stageEditor.notifyTooltip')}>
+                      {t('pipelines.stageEditor.columnNotify')}
                     </span>
                     <span style={{ width: 32 }} />
                   </div>
@@ -1356,7 +1359,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
                       <input
                         type="text"
                         className="flex-1"
-                        placeholder={`Stage ${i + 1} name`}
+                        placeholder={t('pipelines.stageEditor.stageNPlaceholder', { n: i + 1 })}
                         value={stage.name}
                         onChange={(e) => updateDraftStage(stage.key, { name: e.target.value })}
                       />
@@ -1366,9 +1369,9 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
                         value={stage.outcome}
                         onChange={(e) => updateDraftStage(stage.key, { outcome: e.target.value as DraftStage['outcome'] })}
                       >
-                        {Object.entries(OUTCOME_LABELS).map(([value, label]) => (
+                        {OUTCOME_VALUES.map((value) => (
                           <option key={value} value={value}>
-                            {label}
+                            {t(`pipelines.outcome.${value}`)}
                           </option>
                         ))}
                       </select>
@@ -1381,13 +1384,13 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
                           style={{ width: 56 }}
                           value={stage.probability}
                           onChange={(e) => updateDraftStage(stage.key, { probability: e.target.value })}
-                          title="Win probability (%) — used for the weighted pipeline forecast"
+                          title={t('pipelines.stageEditor.winProbabilityTooltip')}
                         />
                       ) : (
                         <span
                           className="text-xs text-ink-faint"
                           style={{ width: 56, textAlign: 'center' }}
-                          title="Forced — Won is always 100%, Lost is always 0%"
+                          title={t('pipelines.stageEditor.forcedProbabilityTooltip')}
                         >
                           {stage.outcome === 'won' ? 100 : 0}%
                         </span>
@@ -1397,14 +1400,14 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
                           type="checkbox"
                           checked={stage.notifyOwnerOnEnter}
                           onChange={(e) => updateDraftStage(stage.key, { notifyOwnerOnEnter: e.target.checked })}
-                          title="Notify the owner (in-app + email) when a deal enters this stage"
+                          title={t('pipelines.stageEditor.notifyTooltip')}
                         />
                       </span>
                       <button
                         type="button"
                         className="icon-btn"
                         onClick={() => removeDraftStage(stage.key)}
-                        aria-label="Remove stage"
+                        aria-label={t('pipelines.stageEditor.removeStageAria')}
                       >
                         <TrashIcon className="h-4 w-4" />
                       </button>
@@ -1415,7 +1418,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
               <button type="button" className="btn-secondary mt-2" onClick={addDraftStage}>
                 <span className="inline-flex items-center gap-1.5">
                   <PlusIcon className="h-3.5 w-3.5" />
-                  Add Stage
+                  {t('pipelines.stageEditor.addStage')}
                 </span>
               </button>
             </div>

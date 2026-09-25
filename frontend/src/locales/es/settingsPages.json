@@ -340,6 +340,147 @@
       "cancelling": "Cancelando…"
     }
   },
+  "pipelines": {
+    "title": "Pipelines",
+    "description": "Pipelines de ventas para Oportunidades. Cada pipeline tiene sus propias etapas — archivar un pipeline mantiene sus Oportunidades visibles en modo lectura, solo desaparece de los menús de creación.",
+    "newPipelineButton": "Nuevo Pipeline",
+    "addPipelineAction": "Agregar pipeline",
+    "loading": "Cargando...",
+    "tabs": {
+      "active": "Activos",
+      "archived": "Archivados"
+    },
+    "columns": {
+      "type": "Tipo",
+      "name": "Nombre",
+      "stages": "Etapas",
+      "created": "Creado",
+      "updated": "Actualizado"
+    },
+    "typeLabel": {
+      "lead": "Leads",
+      "account": "Cuenta"
+    },
+    "typeTitle": "El tipo de pipeline no se puede cambiar después de creado",
+    "cardMeta_one": "{{count}} etapa · Actualizado {{date}}",
+    "cardMeta_other": "{{count}} etapas · Actualizado {{date}}",
+    "actionsForAria": "Acciones para {{name}}",
+    "actionsTitle": "Acciones",
+    "rowMenu": {
+      "edit": "Editar",
+      "archive": "Archivar",
+      "reactivate": "Reactivar"
+    },
+    "archiveConfirm": {
+      "title": "Archivar \"{{name}}\"",
+      "message_one": "Este pipeline tiene {{count}} Oportunidad. Va a seguir siendo visible pero en modo lectura hasta que se reactive este pipeline, y el pipeline va a desaparecer de los menús de creación. Escribí ARCHIVE para confirmar.",
+      "message_other": "Este pipeline tiene {{count}} Oportunidades. Van a seguir siendo visibles pero en modo lectura hasta que se reactive este pipeline, y el pipeline va a desaparecer de los menús de creación. Escribí ARCHIVE para confirmar.",
+      "confirmLabel": "Archivando…"
+    },
+    "reactivateConfirm": {
+      "title": "Reactivar \"{{name}}\"",
+      "message": "Este pipeline va a reaparecer en los menús de creación y sus Oportunidades vuelven a ser editables.",
+      "confirmLabel": "Reactivando…"
+    },
+    "modal": {
+      "editTitle": "Editar Pipeline",
+      "newTitle": "Nuevo Pipeline",
+      "done": "Listo",
+      "cancel": "Cancelar",
+      "saving": "Guardando…",
+      "save": "Guardar"
+    },
+    "fields": {
+      "pipelineName": "Nombre del pipeline",
+      "namePlaceholder": "ej. Leads, Renovaciones",
+      "type": "Tipo"
+    },
+    "typeOption": {
+      "lead": "Leads — prospectos sin calificar, empresa opcional",
+      "account": "Cuenta — una empresa ya identificada"
+    },
+    "sections": {
+      "automations": "Automatizaciones",
+      "stages": "Etapas"
+    },
+    "stagesHelp": "Agregá las etapas por las que pasa un negocio en este pipeline. Podés dejarlo vacío y agregar etapas más adelante, o reordenarlas/colorearlas una vez creado el pipeline.",
+    "outcomeHelp": "Abierta: todavía activa, cuenta para el pronóstico ponderado según su probabilidad. Ganada/Perdida: terminales — la probabilidad se fija en 100%/0% y no se puede editar.",
+    "outcome": {
+      "open": "Abierta",
+      "won": "Ganada",
+      "lost": "Perdida"
+    },
+    "stageEditor": {
+      "columnStageName": "Nombre de la etapa",
+      "columnOutcome": "Resultado",
+      "columnWinPercent": "% de éxito",
+      "columnNotify": "Notificar",
+      "notifyTooltip": "Notificar al dueño (en la app + correo) cuando un negocio entra en esta etapa",
+      "dragAria": "Arrastrar para reordenar {{name}}",
+      "winProbabilityTooltip": "Probabilidad de éxito (%) — usada para el pronóstico ponderado del pipeline",
+      "forcedProbabilityTooltip": "Forzado — Ganada siempre es 100%, Perdida siempre es 0%",
+      "archiveStageAria": "Archivar etapa",
+      "reactivateStageAria": "Reactivar etapa",
+      "removeStageAria": "Quitar etapa",
+      "newStageNamePlaceholder": "Nombre de la nueva etapa",
+      "addStage": "Agregar etapa",
+      "stageNPlaceholder": "Nombre de la etapa {{n}}"
+    },
+    "automation": {
+      "ownerAutoAssignLabel": "Asignación automática de dueño",
+      "off": "Apagado — el dueño siempre se elige manualmente",
+      "roundRobinByUser": "Round robin — por usuario",
+      "roundRobinByDepartment": "Round robin — por departamento",
+      "accountOwnerOption": "Dueño de cuenta — usar el Account Owner de la Empresa",
+      "accountOwnerHint": "Se usa cuando la Empresa tiene un Account Owner configurado. Si no lo tiene, recurre al round robin entre los participantes de abajo.",
+      "participantsLabel": "Participantes del round-robin",
+      "participantsHintEdit": "Solo se elige entre empleados actualmente activos cuando les toca el turno. Un usuario sin un Empleado vinculado se puede agregar acá, pero siempre se va a saltear.",
+      "participantsHintCreate": "Solo se elige entre empleados actualmente activos cuando les toca el turno. Se puede cambiar más adelante también.",
+      "participantsHintAccountOwnerFallback": "Se usa solo como respaldo, cuando la Empresa no tiene un Account Owner configurado. Solo se elige entre empleados actualmente activos.",
+      "departmentBulkAddHintEdit": "Agregado único — suma a quien tenga actualmente un Empleado en los departamentos seleccionados. No es un vínculo en vivo: los cambios de departamento posteriores no actualizan esta lista automáticamente.",
+      "departmentBulkAddHintCreate": "Agregado único — suma a quien tenga actualmente un Empleado en los departamentos seleccionados como participantes, una vez creado este pipeline.",
+      "loadingPlaceholder": "Cargando…",
+      "selectParticipantsPlaceholder": "Seleccionar participantes…",
+      "selectDepartmentsPlaceholder": "Seleccionar departamentos…",
+      "noUsersEmpty": "Todavía no hay usuarios en este tenant.",
+      "noDepartmentsEmpty": "Todavía no hay departamentos configurados.",
+      "addSelected": "Agregar seleccionados",
+      "adding": "Agregando…",
+      "stalledLabel": "Recordatorios de negocios estancados",
+      "stalledOffPlaceholder": "Apagado",
+      "stalledSuffix": "días en la misma etapa antes de notificar al dueño",
+      "inactiveNote": "(inactivo)"
+    },
+    "errors": {
+      "addStage": "No se pudo agregar la etapa: {{message}}",
+      "updateStageColor": "No se pudo actualizar el color de la etapa: {{message}}",
+      "updateStageOutcome": "No se pudo actualizar el resultado de la etapa: {{message}}",
+      "updateProbability": "No se pudo actualizar la probabilidad: {{message}}",
+      "updateStage": "No se pudo actualizar la etapa: {{message}}",
+      "updateStageNotification": "No se pudo actualizar la configuración de notificación de la etapa: {{message}}",
+      "reorderStage": "No se pudo reordenar la etapa: {{message}}",
+      "loadAutomationSettings": "No se pudo cargar la configuración de automatizaciones: {{message}}",
+      "refreshParticipants": "No se pudieron actualizar los participantes: {{message}}",
+      "updateAssignmentMode": "No se pudo actualizar el modo de asignación: {{message}}",
+      "stalledDaysPositive": "Los días del recordatorio de estancamiento deben ser un número positivo",
+      "updateStalledThreshold": "No se pudo actualizar el umbral de recordatorio de estancamiento: {{message}}",
+      "updateParticipants": "No se pudieron actualizar los participantes: {{message}}",
+      "addFromDepartments": "No se pudo agregar desde departamentos: {{message}}",
+      "loadUsersDepartments": "No se pudieron cargar usuarios/departamentos: {{message}}",
+      "loadPipelines": "No se pudieron cargar los pipelines: {{message}}",
+      "roundRobinRequiresParticipant": "El round robin necesita al menos un participante, por usuario o por departamento.",
+      "createPipeline": "No se pudo crear el pipeline: {{message}}",
+      "renamePipeline": "No se pudo renombrar el pipeline: {{message}}",
+      "updatePipeline": "No se pudo actualizar el pipeline: {{message}}"
+    },
+    "toasts": {
+      "pipelineCreated": "Pipeline creado.",
+      "pipelineReactivated": "Pipeline reactivado.",
+      "pipelineArchived": "Pipeline archivado.",
+      "addedFromDepartments_one": "Se agregó {{addedCount}} de {{resolvedUserCount}} usuario como participante ({{alreadyAssignedCount}} ya estaban en la lista).",
+      "addedFromDepartments_other": "Se agregaron {{addedCount}} de {{resolvedUserCount}} usuarios como participantes ({{alreadyAssignedCount}} ya estaban en la lista)."
+    }
+  },
   "appearance": {
     "companyCardTitle": "Empresa",
     "currencyHelp": "Se aplica a los montos de compensación en toda la empresa (Tarifa por hora/mensual en Empleado).",

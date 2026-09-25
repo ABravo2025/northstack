@@ -340,6 +340,147 @@
       "cancelling": "Cancelling…"
     }
   },
+  "pipelines": {
+    "title": "Pipelines",
+    "description": "Sales pipelines for Opportunities. Each pipeline has its own stages — archiving a pipeline keeps its Opportunities visible read-only, it just disappears from creation menus.",
+    "newPipelineButton": "New Pipeline",
+    "addPipelineAction": "Add pipeline",
+    "loading": "Loading...",
+    "tabs": {
+      "active": "Active",
+      "archived": "Archived"
+    },
+    "columns": {
+      "type": "Type",
+      "name": "Name",
+      "stages": "Stages",
+      "created": "Created",
+      "updated": "Updated"
+    },
+    "typeLabel": {
+      "lead": "Leads",
+      "account": "Account"
+    },
+    "typeTitle": "Pipeline type can't be changed after creation",
+    "cardMeta_one": "{{count}} stage · Updated {{date}}",
+    "cardMeta_other": "{{count}} stages · Updated {{date}}",
+    "actionsForAria": "Actions for {{name}}",
+    "actionsTitle": "Actions",
+    "rowMenu": {
+      "edit": "Edit",
+      "archive": "Archive",
+      "reactivate": "Reactivate"
+    },
+    "archiveConfirm": {
+      "title": "Archive \"{{name}}\"",
+      "message_one": "This pipeline has {{count}} Opportunity. They'll stay visible but become read-only until this pipeline is reactivated, and the pipeline will disappear from creation menus. Type ARCHIVE to confirm.",
+      "message_other": "This pipeline has {{count}} Opportunities. They'll stay visible but become read-only until this pipeline is reactivated, and the pipeline will disappear from creation menus. Type ARCHIVE to confirm.",
+      "confirmLabel": "Archiving…"
+    },
+    "reactivateConfirm": {
+      "title": "Reactivate \"{{name}}\"",
+      "message": "This pipeline will reappear in creation menus and its Opportunities become editable again.",
+      "confirmLabel": "Reactivating…"
+    },
+    "modal": {
+      "editTitle": "Edit Pipeline",
+      "newTitle": "New Pipeline",
+      "done": "Done",
+      "cancel": "Cancel",
+      "saving": "Saving…",
+      "save": "Save"
+    },
+    "fields": {
+      "pipelineName": "Pipeline name",
+      "namePlaceholder": "e.g. Leads, Renewals",
+      "type": "Type"
+    },
+    "typeOption": {
+      "lead": "Leads — unqualified prospects, company optional",
+      "account": "Account — an already-identified company"
+    },
+    "sections": {
+      "automations": "Automations",
+      "stages": "Stages"
+    },
+    "stagesHelp": "Add the stages a deal moves through in this pipeline. You can leave this empty and add stages later, or reorder/color them once the pipeline is created.",
+    "outcomeHelp": "Open: still active, counts toward the weighted forecast at its probability. Won/Lost: terminal — probability is forced to 100%/0% and can't be edited.",
+    "outcome": {
+      "open": "Open",
+      "won": "Won",
+      "lost": "Lost"
+    },
+    "stageEditor": {
+      "columnStageName": "Stage name",
+      "columnOutcome": "Outcome",
+      "columnWinPercent": "Win %",
+      "columnNotify": "Notify",
+      "notifyTooltip": "Notify the owner (in-app + email) when a deal enters this stage",
+      "dragAria": "Drag to reorder {{name}}",
+      "winProbabilityTooltip": "Win probability (%) — used for the weighted pipeline forecast",
+      "forcedProbabilityTooltip": "Forced — Won is always 100%, Lost is always 0%",
+      "archiveStageAria": "Archive stage",
+      "reactivateStageAria": "Reactivate stage",
+      "removeStageAria": "Remove stage",
+      "newStageNamePlaceholder": "New stage name",
+      "addStage": "Add Stage",
+      "stageNPlaceholder": "Stage {{n}} name"
+    },
+    "automation": {
+      "ownerAutoAssignLabel": "Owner auto-assignment",
+      "off": "Off — owner must always be chosen manually",
+      "roundRobinByUser": "Round robin — by user",
+      "roundRobinByDepartment": "Round robin — by department",
+      "accountOwnerOption": "Account owner — use the Company's Account Owner",
+      "accountOwnerHint": "Used when the Company has an Account Owner set. Falls back to round robin over the participants below when it doesn't.",
+      "participantsLabel": "Round-robin participants",
+      "participantsHintEdit": "Only currently-active employees are ever picked when it's their turn. A user with no linked Employee record can be added here but will always be skipped.",
+      "participantsHintCreate": "Only currently-active employees are ever picked when it's their turn. Can be changed later too.",
+      "participantsHintAccountOwnerFallback": "Used only as a fallback, when the Company has no Account Owner set. Only currently-active employees are ever picked.",
+      "departmentBulkAddHintEdit": "One-time add — adds whoever currently has an Employee in the selected department(s). Not a live link: later department changes won't update this list automatically.",
+      "departmentBulkAddHintCreate": "One-time add — adds whoever currently has an Employee in the selected department(s) as participants, once this pipeline is created.",
+      "loadingPlaceholder": "Loading…",
+      "selectParticipantsPlaceholder": "Select participants…",
+      "selectDepartmentsPlaceholder": "Select departments…",
+      "noUsersEmpty": "No users in this tenant yet.",
+      "noDepartmentsEmpty": "No departments configured yet.",
+      "addSelected": "Add selected",
+      "adding": "Adding…",
+      "stalledLabel": "Stalled-deal reminders",
+      "stalledOffPlaceholder": "Off",
+      "stalledSuffix": "days in the same stage before notifying the owner",
+      "inactiveNote": "(inactive)"
+    },
+    "errors": {
+      "addStage": "Failed to add stage: {{message}}",
+      "updateStageColor": "Failed to update stage color: {{message}}",
+      "updateStageOutcome": "Failed to update stage outcome: {{message}}",
+      "updateProbability": "Failed to update probability: {{message}}",
+      "updateStage": "Failed to update stage: {{message}}",
+      "updateStageNotification": "Failed to update stage notification setting: {{message}}",
+      "reorderStage": "Failed to reorder stage: {{message}}",
+      "loadAutomationSettings": "Failed to load automation settings: {{message}}",
+      "refreshParticipants": "Failed to refresh participants: {{message}}",
+      "updateAssignmentMode": "Failed to update assignment mode: {{message}}",
+      "stalledDaysPositive": "Stalled reminder days must be a positive number",
+      "updateStalledThreshold": "Failed to update stalled reminder threshold: {{message}}",
+      "updateParticipants": "Failed to update participants: {{message}}",
+      "addFromDepartments": "Failed to add from departments: {{message}}",
+      "loadUsersDepartments": "Failed to load users/departments: {{message}}",
+      "loadPipelines": "Failed to load pipelines: {{message}}",
+      "roundRobinRequiresParticipant": "Round robin requires at least one participant, by user or by department.",
+      "createPipeline": "Failed to create pipeline: {{message}}",
+      "renamePipeline": "Failed to rename pipeline: {{message}}",
+      "updatePipeline": "Failed to update pipeline: {{message}}"
+    },
+    "toasts": {
+      "pipelineCreated": "Pipeline created.",
+      "pipelineReactivated": "Pipeline reactivated.",
+      "pipelineArchived": "Pipeline archived.",
+      "addedFromDepartments_one": "Added {{addedCount}} of {{resolvedUserCount}} user as participants ({{alreadyAssignedCount}} were already in the list).",
+      "addedFromDepartments_other": "Added {{addedCount}} of {{resolvedUserCount}} users as participants ({{alreadyAssignedCount}} were already in the list)."
+    }
+  },
   "appearance": {
     "companyCardTitle": "Company",
     "currencyHelp": "Applies to compensation amounts across the company (Hourly/Monthly Rate on Employee).",

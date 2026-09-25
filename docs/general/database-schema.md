@@ -1,6 +1,6 @@
 # Database Schema
 
-- Última actualización: 2026-09-25 (Tenant: datos de la empresa + logo para Settings → Company — ver nota en grupo 1; en `staging`)
+- Última actualización: 2026-09-25 (Tenant: datos de la empresa + logo para Settings → Company — ver nota en grupo 1; en producción)
 - Actualización anterior: 2026-09-01 (Custom Roles — Fase B2 extendida: crear/renombrar/borrar roles custom reales desde la UI, no solo reconfigurar Admin/Member — `POST/PATCH/DELETE /api/roles*` — ver grupo 14; en `staging`, sin pushear a `main`)
 - Actualización anterior: 2026-09-01 (Custom Roles — Fase B2: primera UI real, `Settings → Roles & Permissions` — owner reconfigura los permisos de Admin/Member con toggles, endpoints `GET/PATCH /api/roles*` — ver grupo 14; en `staging`, sin pushear a `main`)
 - Actualización anterior: 2026-09-01 (Custom Roles — Fase B completa: `permissionService.ts` migrado a `RoleContext`, entity-split de Employee/Company/Contact/Opportunity, 3 permisos nuevos reemplazan los últimos chequeos inline, gap de invitación con rol owner cerrado, CSV atado a Payroll — ver grupo 14; en `staging`, sin pushear a `main`)

@@ -1,14 +1,14 @@
 # Tareas de desarrollo
 
 - Fecha de creación: 2026-07-02
-- **2026-09-25 — Settings → Company profile (en `staging`, esperando revisión de Alejandro)**: datos de
+- **2026-09-25 — Settings → Company profile (EN PRODUCCIÓN desde 2026-09-25; `db push` a prod hecho)**: datos de
   la empresa editables (nombre, razón social, industria, tamaño, país, dirección, teléfono, web) +
   logo guardado en la DB (PNG/JPG, achicado en el navegador a ≤512 px) + moneda, en una página que
   reemplaza a Appearance; el tema claro/oscuro pasó a Profile (para todos los roles). Logo y datos
   van en recibos de Payroll, PDF de contrato, email de invitación y arriba del sidebar. **Sin ID
   fiscal** (lo prohíbe la privacy policy). Decisiones tomadas con Alejandro: logo en DB (no Vercel
-  Blob), achicado automático, esos 4 usos. Pendiente para promover a `main`: `prisma db push` contra
-  producción (columnas aditivas). QA en `Tareas-QA.md` QA-101.
+  Blob), achicado automático, esos 4 usos. Anuncio "What's new" publicado en staging; en producción lo corre
+  Alejandro (bloqueado por el clasificador de auto mode). QA en `Tareas-QA.md` QA-101.
 - Última actualización: 2026-08-29 — **Payments v1 (Units 5-7) y Employee Termination completos, en
   `staging`** — ver Tier 3.7/3.8 más abajo. Tenant Signup + Subscription Plans (entrada original de
   abajo, 2026-08-13) ya está en producción desde entonces, igual que Payroll (Tier 3.5), Sales v2

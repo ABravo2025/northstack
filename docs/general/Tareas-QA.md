@@ -4882,11 +4882,11 @@ que correr Alejandro manualmente (el clasificador de seguridad de Claude Code bl
 
 ---
 
-## QA-101 — Settings → Company profile: datos de la empresa + logo; tema movido a Profile (2026-09-25, en `staging`)
+## QA-101 — Settings → Company profile: datos de la empresa + logo; tema movido a Profile (2026-09-25, en `staging`, promovido a `main` el 2026-09-25)
 
 ### Qué cambió
 
-- **Schema (aditivo, ya aplicado a la base de `staging`, todavía NO a producción):** `Tenant.legalName`/`address`/`phone`/`website` + `logoData` (Bytes)/`logoMimeType`/`logoUpdatedAt`. Sin ID fiscal a propósito (privacy policy).
+- **Schema (aditivo, aplicado a las bases de `staging` y producción):** `Tenant.legalName`/`address`/`phone`/`website` + `logoData` (Bytes)/`logoMimeType`/`logoUpdatedAt`. Sin ID fiscal a propósito (privacy policy).
 - **Backend:** `PATCH /api/tenants/current` ahora acepta cualquier subconjunto de nombre, razón social, dirección, teléfono, web, tamaño, industria, país y moneda (antes solo moneda), con validación por campo. `PUT/DELETE /api/tenants/current/logo` (permiso `manage_tenant_settings`). Ruta pública nueva `GET /api/public/tenant-logo/:tenantId?v=…` que sirve solo la imagen. Todo queda en el Activity Log.
 - **Frontend:** Settings → **Company profile** (`/settings/company`) reemplaza a Appearance: datos de la empresa, logo (PNG/JPG ≤2 MB, se achica a ≤512 px en el navegador) y moneda. `/settings/appearance` y `/company` redirigen ahí. El selector de **tema** pasó a **Settings → Profile** (visible para todos los roles). El logo (o el nombre si no hay logo) aparece arriba del menú lateral.
 - **Documentos:** el recibo de Payroll y el PDF del contrato llevan logo + razón social/dirección/teléfono/web. El email de invitación muestra el logo arriba.

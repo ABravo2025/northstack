@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { api, type RestrictableField, type Role } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import TableSkeleton from '../components/common/TableSkeleton';
@@ -8,12 +10,14 @@ import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar'
 import { ChevronRightIcon, LockIcon, PlusIcon } from '../components/common/Icons';
 import { usePermissions } from '../contexts/PermissionsContext';
 
-const ENTITY_LABELS: Record<string, string> = {
-  employee: 'Employee fields',
-  company: 'Company fields',
-  contact: 'Contact fields',
-  opportunity: 'Opportunity fields',
-};
+function getEntityLabels(t: TFunction): Record<string, string> {
+  return {
+    employee: t('roles.entityLabels.employee'),
+    company: t('roles.entityLabels.company'),
+    contact: t('roles.entityLabels.contact'),
+    opportunity: t('roles.entityLabels.opportunity'),
+  };
+}
 
 interface RolesPermissionsPageProps {
   token: string;
@@ -38,98 +42,120 @@ interface PermissionGroup {
 // PATCH /api/roles/:roleId/employee-scope) instead of living in this list. Server-side,
 // roleManagementService.ts's TOGGLEABLE_PERMISSION_KEYS is the matching allowlist for everything
 // that IS here — keep both in sync if either changes.
-const GROUPS: PermissionGroup[] = [
-  {
-    title: 'People',
-    rows: [
-      { key: 'view_employee', label: 'View employees', description: "See the employee directory and each person's profile." },
-      { key: 'manage_employee', label: 'Manage employees', description: 'Add, edit, and remove employee records.' },
-      {
-        key: 'view_employee_custom_fields',
-        label: 'View employee custom fields',
-        description: 'See the custom fields on an employee profile, separate from the profile itself.',
-        hint: 'Needs View employees',
-      },
-      {
-        key: 'edit_employee_custom_fields',
-        label: 'Edit employee custom fields',
-        description: 'Add, edit, and remove values in the custom fields on an employee profile.',
-        hint: 'Needs Manage employees + View employee custom fields',
-      },
-    ],
-  },
-  {
-    title: 'Sales',
-    rows: [
-      { key: 'view_company', label: 'View companies', description: 'See company accounts and their details.' },
-      { key: 'manage_company', label: 'Manage companies', description: 'Add, edit, and remove companies.' },
-      { key: 'view_contact', label: 'View contacts', description: 'See contacts and their details.' },
-      { key: 'manage_contact', label: 'Manage contacts', description: 'Add, edit, and remove contacts.' },
-      {
-        key: 'manage_opportunity',
-        label: 'Manage opportunities',
-        description: 'Create and move deals through the pipeline.',
-        hint: 'Needs View companies + View contacts',
-      },
-    ],
-  },
-  {
-    title: 'Configuration',
-    rows: [
-      {
-        key: 'manage_custom_fields',
-        label: 'Manage custom fields & catalogs',
-        description: 'Custom fields, statuses, pipelines, and shared catalogs.',
-      },
-    ],
-  },
-  {
-    title: 'Team',
-    rows: [
-      { key: 'invite_users', label: 'Invite people', description: 'Send invitations to join the workspace.' },
-      { key: 'manage_users', label: 'Manage members', description: 'Change roles and status for people already in the workspace.' },
-    ],
-  },
-  {
-    title: 'Money',
-    rows: [
-      { key: 'manage_payroll', label: 'Manage payroll', description: 'Compensation, payroll runs, and the CSV export of employee data.' },
-      { key: 'manage_billing', label: 'Manage billing', description: 'Change plan, payment method, and cancel the subscription.' },
-      { key: 'manage_payments', label: 'Manage payments', description: 'Connect Stripe and view customer payment history.' },
-      { key: 'manage_api_access', label: 'Manage API & webhooks', description: 'Create and revoke private API keys and outbound webhooks.' },
-    ],
-  },
-  {
-    title: 'Reporting',
-    rows: [
-      { key: 'view_sales_leaderboard', label: 'View sales leaderboard', description: 'Per-person deal performance across the team.' },
-      { key: 'view_activity_log', label: 'View activity log', description: 'The workspace-wide feed of who changed what.' },
-      {
-        key: 'view_dashboards',
-        label: 'View dashboards',
-        description: 'Company-wide KPI dashboards: HR, Time Off, Sales, Tasks, and Adoption.',
-      },
-    ],
-  },
-  {
-    title: 'Workspace',
-    rows: [
-      { key: 'manage_tenant_settings', label: 'Manage workspace settings', description: 'Currency and other workspace-wide preferences.' },
-      { key: 'manage_shared_views', label: 'Manage shared views', description: 'Create views that everyone in the workspace sees.' },
-    ],
-  },
-  {
-    title: 'Time off',
-    rows: [
-      {
-        key: 'decide_time_off',
-        label: 'Decide time off requests',
-        description: 'Approve or reject any request in the workspace.',
-        hint: "A person's assigned manager can always decide their requests",
-      },
-    ],
-  },
-];
+//
+// A function (not a module-level const) so the labels/descriptions/hints re-resolve on every
+// render against the active language — same reason settingsSections.tsx/dashboardsSections.tsx
+// are functions, not static arrays (docs/general/spec-i18n.md).
+function getGroups(t: TFunction): PermissionGroup[] {
+  return [
+    {
+      title: t('roles.groups.people.title'),
+      rows: [
+        { key: 'view_employee', label: t('roles.groups.people.view_employee.label'), description: t('roles.groups.people.view_employee.description') },
+        { key: 'manage_employee', label: t('roles.groups.people.manage_employee.label'), description: t('roles.groups.people.manage_employee.description') },
+        {
+          key: 'view_employee_custom_fields',
+          label: t('roles.groups.people.view_employee_custom_fields.label'),
+          description: t('roles.groups.people.view_employee_custom_fields.description'),
+          hint: t('roles.groups.people.view_employee_custom_fields.hint'),
+        },
+        {
+          key: 'edit_employee_custom_fields',
+          label: t('roles.groups.people.edit_employee_custom_fields.label'),
+          description: t('roles.groups.people.edit_employee_custom_fields.description'),
+          hint: t('roles.groups.people.edit_employee_custom_fields.hint'),
+        },
+      ],
+    },
+    {
+      title: t('roles.groups.sales.title'),
+      rows: [
+        { key: 'view_company', label: t('roles.groups.sales.view_company.label'), description: t('roles.groups.sales.view_company.description') },
+        { key: 'manage_company', label: t('roles.groups.sales.manage_company.label'), description: t('roles.groups.sales.manage_company.description') },
+        { key: 'view_contact', label: t('roles.groups.sales.view_contact.label'), description: t('roles.groups.sales.view_contact.description') },
+        { key: 'manage_contact', label: t('roles.groups.sales.manage_contact.label'), description: t('roles.groups.sales.manage_contact.description') },
+        {
+          key: 'manage_opportunity',
+          label: t('roles.groups.sales.manage_opportunity.label'),
+          description: t('roles.groups.sales.manage_opportunity.description'),
+          hint: t('roles.groups.sales.manage_opportunity.hint'),
+        },
+      ],
+    },
+    {
+      title: t('roles.groups.configuration.title'),
+      rows: [
+        {
+          key: 'manage_custom_fields',
+          label: t('roles.groups.configuration.manage_custom_fields.label'),
+          description: t('roles.groups.configuration.manage_custom_fields.description'),
+        },
+      ],
+    },
+    {
+      title: t('roles.groups.team.title'),
+      rows: [
+        { key: 'invite_users', label: t('roles.groups.team.invite_users.label'), description: t('roles.groups.team.invite_users.description') },
+        { key: 'manage_users', label: t('roles.groups.team.manage_users.label'), description: t('roles.groups.team.manage_users.description') },
+      ],
+    },
+    {
+      title: t('roles.groups.money.title'),
+      rows: [
+        { key: 'manage_payroll', label: t('roles.groups.money.manage_payroll.label'), description: t('roles.groups.money.manage_payroll.description') },
+        { key: 'manage_billing', label: t('roles.groups.money.manage_billing.label'), description: t('roles.groups.money.manage_billing.description') },
+        { key: 'manage_payments', label: t('roles.groups.money.manage_payments.label'), description: t('roles.groups.money.manage_payments.description') },
+        { key: 'manage_api_access', label: t('roles.groups.money.manage_api_access.label'), description: t('roles.groups.money.manage_api_access.description') },
+      ],
+    },
+    {
+      title: t('roles.groups.reporting.title'),
+      rows: [
+        {
+          key: 'view_sales_leaderboard',
+          label: t('roles.groups.reporting.view_sales_leaderboard.label'),
+          description: t('roles.groups.reporting.view_sales_leaderboard.description'),
+        },
+        {
+          key: 'view_activity_log',
+          label: t('roles.groups.reporting.view_activity_log.label'),
+          description: t('roles.groups.reporting.view_activity_log.description'),
+        },
+        {
+          key: 'view_dashboards',
+          label: t('roles.groups.reporting.view_dashboards.label'),
+          description: t('roles.groups.reporting.view_dashboards.description'),
+        },
+      ],
+    },
+    {
+      title: t('roles.groups.workspace.title'),
+      rows: [
+        {
+          key: 'manage_tenant_settings',
+          label: t('roles.groups.workspace.manage_tenant_settings.label'),
+          description: t('roles.groups.workspace.manage_tenant_settings.description'),
+        },
+        {
+          key: 'manage_shared_views',
+          label: t('roles.groups.workspace.manage_shared_views.label'),
+          description: t('roles.groups.workspace.manage_shared_views.description'),
+        },
+      ],
+    },
+    {
+      title: t('roles.groups.timeOff.title'),
+      rows: [
+        {
+          key: 'decide_time_off',
+          label: t('roles.groups.timeOff.decide_time_off.label'),
+          description: t('roles.groups.timeOff.decide_time_off.description'),
+          hint: t('roles.groups.timeOff.decide_time_off.hint'),
+        },
+      ],
+    },
+  ];
+}
 
 // Mirrors roleService.ts's EmployeeScope/EMPLOYEE_SCOPE_* — duplicated here the same way every
 // other permission key string in this file already is (no shared BE/FE constants module exists
@@ -137,13 +163,16 @@ const GROUPS: PermissionGroup[] = [
 // think "self, then wider, then wider") and deriveEmployeeScope's priority (broadest wins, mirrors
 // roleService.ts's getEmployeeScope exactly).
 type EmployeeScopeValue = 'none' | 'self' | 'reports' | 'department' | 'all';
-const EMPLOYEE_SCOPE_OPTIONS: { value: EmployeeScopeValue; label: string; hint: string }[] = [
-  { value: 'none', label: 'None', hint: 'Nothing beyond the directory' },
-  { value: 'self', label: 'Self', hint: 'Only their own record' },
-  { value: 'reports', label: '+ Reports', hint: 'Self, plus their own direct/indirect reports' },
-  { value: 'department', label: '+ Department', hint: 'Self, their reports, and everyone in their department' },
-  { value: 'all', label: 'Everyone', hint: 'Every employee in the workspace' },
-];
+
+function getEmployeeScopeOptions(t: TFunction): { value: EmployeeScopeValue; label: string; hint: string }[] {
+  return [
+    { value: 'none', label: t('roles.employeeScopeOptions.none.label'), hint: t('roles.employeeScopeOptions.none.hint') },
+    { value: 'self', label: t('roles.employeeScopeOptions.self.label'), hint: t('roles.employeeScopeOptions.self.hint') },
+    { value: 'reports', label: t('roles.employeeScopeOptions.reports.label'), hint: t('roles.employeeScopeOptions.reports.hint') },
+    { value: 'department', label: t('roles.employeeScopeOptions.department.label'), hint: t('roles.employeeScopeOptions.department.hint') },
+    { value: 'all', label: t('roles.employeeScopeOptions.all.label'), hint: t('roles.employeeScopeOptions.all.hint') },
+  ];
+}
 
 function deriveEmployeeScope(permissions: string[]): EmployeeScopeValue {
   if (permissions.includes('view_employee_scope:all')) return 'all';
@@ -165,8 +194,8 @@ const DEPENDENCIES: Record<string, string[]> = {
 
 const COLUMN_WIDTH = 88;
 
-function labelFor(key: string): string {
-  for (const group of GROUPS) {
+function labelFor(groups: PermissionGroup[], key: string): string {
+  for (const group of groups) {
     const row = group.rows.find((r) => r.key === key);
     if (row) return row.label;
   }
@@ -179,19 +208,25 @@ function labelFor(key: string): string {
 // own hook, and hooks can't be called from a .map() callback.
 function PermissionGroupSection({
   group,
+  ownerColumnLabel,
+  ownerAlwaysHasThis,
   gridTemplateColumns,
   editableRoles,
   hasPermission,
   savingKey,
+  permissionAriaLabel,
   onTogglePermission,
   onRenameRole,
   onDeleteRole,
 }: {
   group: PermissionGroup;
+  ownerColumnLabel: string;
+  ownerAlwaysHasThis: string;
   gridTemplateColumns: string;
   editableRoles: Role[];
   hasPermission: (role: Role, key: string) => boolean;
   savingKey: string | null;
+  permissionAriaLabel: (label: string, roleName: string) => string;
   onTogglePermission: (role: Role, permissionKey: string, next: boolean) => void;
   onRenameRole: (roleId: string, name: string) => Promise<void>;
   onDeleteRole: (roleId: string) => Promise<void>;
@@ -205,7 +240,7 @@ function PermissionGroupSection({
           style={{ gridTemplateColumns }}
         >
           <span className="text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">{group.title}</span>
-          <span className="text-center text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">Owner</span>
+          <span className="text-center text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">{ownerColumnLabel}</span>
           {editableRoles.map((role) => (
             <div key={role.id} className="flex items-center justify-center gap-0.5 overflow-hidden">
               <span
@@ -233,7 +268,7 @@ function PermissionGroupSection({
             <div className="flex justify-center">
               <span
                 className="flex h-[19px] w-[34px] items-center justify-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
-                title="Owner always has this"
+                title={ownerAlwaysHasThis}
               >
                 <LockIcon className="h-[11px] w-[11px]" />
               </span>
@@ -245,7 +280,7 @@ function PermissionGroupSection({
                   checked={hasPermission(role, row.key)}
                   disabled={savingKey === role.id + row.key}
                   onChange={(e) => onTogglePermission(role, row.key, e.target.checked)}
-                  aria-label={`${row.label} — ${role.name}`}
+                  aria-label={permissionAriaLabel(row.label, role.name)}
                 />
               </div>
             ))}
@@ -266,13 +301,16 @@ function EmployeeScopeSection({
   editableRoles,
   savingKey,
   onChangeScope,
+  t,
 }: {
   gridTemplateColumns: string;
   editableRoles: Role[];
   savingKey: string | null;
   onChangeScope: (role: Role, next: EmployeeScopeValue) => void;
+  t: TFunction;
 }) {
   const wrapRef = useRef<HTMLElement>(null);
+  const employeeScopeOptions = getEmployeeScopeOptions(t);
   return (
     <>
       <section ref={wrapRef} className="card full-table-wrap mb-4 p-0">
@@ -280,8 +318,8 @@ function EmployeeScopeSection({
           className="grid items-center gap-3 border-b border-line bg-surface-0 px-5 py-3 dark:border-dark-line dark:bg-dark-raised"
           style={{ gridTemplateColumns }}
         >
-          <span className="text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">Employee visibility scope</span>
-          <span className="text-center text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">Owner</span>
+          <span className="text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">{t('roles.employeeScopeTitle')}</span>
+          <span className="text-center text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">{t('roles.ownerColumn')}</span>
           {editableRoles.map((role) => (
             <span
               key={role.id}
@@ -297,15 +335,13 @@ function EmployeeScopeSection({
           style={{ gridTemplateColumns }}
         >
           <div>
-            <div className="text-sm font-medium text-ink dark:text-dark-ink">Which employees they can see</div>
-            <div className="mt-0.5 text-xs text-ink-muted dark:text-dark-ink-muted">
-              How far "View employees" reaches beyond their own record — their reports, their department, or everyone.
-            </div>
+            <div className="text-sm font-medium text-ink dark:text-dark-ink">{t('roles.whichEmployeesTitle')}</div>
+            <div className="mt-0.5 text-xs text-ink-muted dark:text-dark-ink-muted">{t('roles.whichEmployeesDesc')}</div>
           </div>
           <div className="flex justify-center">
             <span
               className="flex h-[19px] w-[34px] items-center justify-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
-              title="Owner always sees everyone"
+              title={t('roles.ownerAlwaysSeesEveryone')}
             >
               <LockIcon className="h-[11px] w-[11px]" />
             </span>
@@ -316,10 +352,10 @@ function EmployeeScopeSection({
                 value={deriveEmployeeScope(role.permissions)}
                 disabled={savingKey === role.id + 'employee-scope'}
                 onChange={(e) => onChangeScope(role, e.target.value as EmployeeScopeValue)}
-                aria-label={`Employee visibility scope — ${role.name}`}
+                aria-label={t('roles.employeeScopeAriaLabel', { roleName: role.name })}
                 className="w-full rounded border border-line bg-surface-0 px-1 py-1 text-xs dark:border-dark-line dark:bg-dark-raised"
               >
-                {EMPLOYEE_SCOPE_OPTIONS.map((opt) => (
+                {employeeScopeOptions.map((opt) => (
                   <option key={opt.value} value={opt.value} title={opt.hint}>
                     {opt.label}
                   </option>
@@ -336,20 +372,28 @@ function EmployeeScopeSection({
 
 function FieldVisibilitySection({
   entityType,
+  entityLabel,
   fields,
   gridTemplateColumns,
   editableRoles,
   savingFieldKey,
   isFieldHidden,
   onToggleFieldVisibility,
+  ownerColumnLabel,
+  ownerAlwaysSeesThis,
+  fieldVisibleAriaLabel,
 }: {
   entityType: string;
+  entityLabel: string;
   fields: RestrictableField[];
   gridTemplateColumns: string;
   editableRoles: Role[];
   savingFieldKey: string | null;
   isFieldHidden: (role: Role, entityType: string, fieldKey: string) => boolean;
   onToggleFieldVisibility: (role: Role, entityType: string, fieldKey: string, nextVisible: boolean) => void;
+  ownerColumnLabel: string;
+  ownerAlwaysSeesThis: string;
+  fieldVisibleAriaLabel: (fieldLabel: string, roleName: string) => string;
 }) {
   const wrapRef = useRef<HTMLDetailsElement>(null);
   return (
@@ -357,7 +401,7 @@ function FieldVisibilitySection({
       <details ref={wrapRef} className="card full-table-wrap mb-4 p-0">
         <summary className="flex cursor-pointer list-none items-center gap-2 bg-surface-0 px-5 py-3 text-sm font-semibold text-ink select-none dark:bg-dark-raised dark:text-dark-ink">
           <ChevronRightIcon className="h-3.5 w-3.5 text-ink-faint dark:text-dark-ink-faint" />
-          {ENTITY_LABELS[entityType] ?? entityType}
+          {entityLabel}
           <span className="text-xs font-normal text-ink-faint dark:text-dark-ink-faint">({fields.length})</span>
         </summary>
         <div
@@ -365,7 +409,7 @@ function FieldVisibilitySection({
           style={{ gridTemplateColumns }}
         >
           <span />
-          <span className="text-center text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">Owner</span>
+          <span className="text-center text-xs font-bold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">{ownerColumnLabel}</span>
           {editableRoles.map((role) => (
             <span
               key={role.id}
@@ -387,7 +431,7 @@ function FieldVisibilitySection({
             <div className="flex justify-center">
               <span
                 className="flex h-[19px] w-[34px] items-center justify-center rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
-                title="Owner always sees this"
+                title={ownerAlwaysSeesThis}
               >
                 <LockIcon className="h-[11px] w-[11px]" />
               </span>
@@ -399,7 +443,7 @@ function FieldVisibilitySection({
                   checked={!isFieldHidden(role, entityType, field.key)}
                   disabled={savingFieldKey === `${role.id}:${entityType}:${field.key}`}
                   onChange={(e) => onToggleFieldVisibility(role, entityType, field.key, e.target.checked)}
-                  aria-label={`${field.label} visible to ${role.name}`}
+                  aria-label={fieldVisibleAriaLabel(field.label, role.name)}
                 />
               </div>
             ))}
@@ -416,6 +460,7 @@ function FieldVisibilitySection({
 // decision, same bar as transferring ownership itself (see settingsSections.tsx for the nav entry,
 // also owner-only).
 export default function RolesPermissionsPage({ token }: RolesPermissionsPageProps) {
+  const { t } = useTranslation('settingsPages');
   // Custom Roles Fase J — migrated off `user.role === 'owner'` to PermissionsContext's isOwner
   // (same underlying fact, read from the resolved RoleContext instead of the legacy enum).
   const isOwner = usePermissions().isOwner;
@@ -441,7 +486,7 @@ export default function RolesPermissionsPage({ token }: RolesPermissionsPageProp
         setRoles(rolesResult);
         setFieldCatalog(catalogResult);
       })
-      .catch((error) => toast.error('Failed to load roles: ' + (error as Error).message))
+      .catch((error) => toast.error(t('roles.loadFailed', { message: (error as Error).message })))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, isOwner]);
@@ -450,9 +495,9 @@ export default function RolesPermissionsPage({ token }: RolesPermissionsPageProp
     return (
       <div>
         <div className="page-toolbar no-border">
-          <h2>Roles &amp; Permissions</h2>
+          <h2>{t('roles.title')}</h2>
         </div>
-        <p className="text-sm text-ink-muted dark:text-dark-ink-muted">Only the workspace owner can view and change roles and permissions.</p>
+        <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('roles.ownerOnly')}</p>
       </div>
     );
   }
@@ -460,6 +505,9 @@ export default function RolesPermissionsPage({ token }: RolesPermissionsPageProp
   if (loading) {
     return <TableSkeleton rows={8} columns={4} />;
   }
+
+  const groups = getGroups(t);
+  const entityLabels = getEntityLabels(t);
 
   // Owner is always first (listRolesForTenant sorts isOwner first) — everything after it is a
   // real column in the matrix, however many a tenant has created.
@@ -473,7 +521,7 @@ export default function RolesPermissionsPage({ token }: RolesPermissionsPageProp
   async function togglePermission(role: Role, permissionKey: string, next: boolean) {
     const prerequisites = DEPENDENCIES[permissionKey];
     if (next && prerequisites && !prerequisites.every((p) => hasPermission(role, p))) {
-      toast.error(`Grant ${prerequisites.map(labelFor).join(' and ')} first`);
+      toast.error(t('roles.grantFirst', { items: prerequisites.map((p) => labelFor(groups, p)).join(t('roles.and')) }));
       return;
     }
 
@@ -481,7 +529,9 @@ export default function RolesPermissionsPage({ token }: RolesPermissionsPageProp
     try {
       const { permissions } = await api.setRolePermission(token, role.id, permissionKey, next);
       setRoles((prev) => prev.map((r) => (r.id === role.id ? { ...r, permissions } : r)));
-      toast.success(`${next ? 'Granted' : 'Revoked'} "${labelFor(permissionKey)}" for ${role.name}`);
+      toast.success(
+        t(next ? 'roles.granted' : 'roles.revoked', { permission: labelFor(groups, permissionKey), roleName: role.name }),
+      );
     } catch (error) {
       toast.error((error as Error).message);
     } finally {
@@ -495,8 +545,8 @@ export default function RolesPermissionsPage({ token }: RolesPermissionsPageProp
     try {
       const { permissions } = await api.setEmployeeScope(token, role.id, next);
       setRoles((prev) => prev.map((r) => (r.id === role.id ? { ...r, permissions } : r)));
-      const hint = EMPLOYEE_SCOPE_OPTIONS.find((o) => o.value === next)?.hint ?? next;
-      toast.success(`${role.name}'s employee visibility is now: ${hint}`);
+      const hint = getEmployeeScopeOptions(t).find((o) => o.value === next)?.hint ?? next;
+      toast.success(t('roles.scopeUpdated', { roleName: role.name, hint }));
     } catch (error) {
       toast.error((error as Error).message);
     } finally {
@@ -523,7 +573,7 @@ export default function RolesPermissionsPage({ token }: RolesPermissionsPageProp
         }),
       );
       const fieldLabel = fieldCatalog[entityType]?.find((f) => f.key === fieldKey)?.label ?? fieldKey;
-      toast.success(`${nextVisible ? 'Showing' : 'Hiding'} "${fieldLabel}" for ${role.name}`);
+      toast.success(t(nextVisible ? 'roles.showing' : 'roles.hiding', { fieldLabel, roleName: role.name }));
     } catch (error) {
       toast.error((error as Error).message);
     } finally {
@@ -538,7 +588,7 @@ export default function RolesPermissionsPage({ token }: RolesPermissionsPageProp
     try {
       const role = await api.createRole(token, newRoleName.trim(), duplicateFrom || undefined);
       setRoles((prev) => [...prev, role]);
-      toast.success(`Created role "${role.name}"`);
+      toast.success(t('roles.createdRole', { roleName: role.name }));
       setShowCreateModal(false);
       setNewRoleName('');
       setDuplicateFrom('');
@@ -553,7 +603,7 @@ export default function RolesPermissionsPage({ token }: RolesPermissionsPageProp
     try {
       await api.renameRole(token, roleId, name);
       setRoles((prev) => prev.map((r) => (r.id === roleId ? { ...r, name } : r)));
-      toast.success(`Renamed to "${name}"`);
+      toast.success(t('roles.renamedTo', { name }));
     } catch (error) {
       toast.error((error as Error).message);
     }
@@ -564,7 +614,7 @@ export default function RolesPermissionsPage({ token }: RolesPermissionsPageProp
     try {
       await api.deleteRole(token, roleId);
       setRoles((prev) => prev.filter((r) => r.id !== roleId));
-      toast.success(`Deleted role "${role?.name ?? ''}"`);
+      toast.success(t('roles.deletedRole', { roleName: role?.name ?? '' }));
     } catch (error) {
       toast.error((error as Error).message);
     }
@@ -573,26 +623,25 @@ export default function RolesPermissionsPage({ token }: RolesPermissionsPageProp
   return (
     <div>
       <div className="page-toolbar">
-        <h2>Roles &amp; Permissions</h2>
+        <h2>{t('roles.title')}</h2>
         <button type="button" className="btn-primary" onClick={() => setShowCreateModal(true)}>
           <PlusIcon className="h-4 w-4" />
-          New role
+          {t('roles.newRole')}
         </button>
       </div>
-      <p className="mb-6 max-w-2xl text-sm text-ink-muted dark:text-dark-ink-muted">
-        Control what each role can see and do. Owner always has full access and can&apos;t be limited — this keeps someone
-        able to fix things, transfer ownership, or manage billing no matter how the other roles are set up. Create as many
-        roles as your workspace needs — they&apos;re saved for good, not just a preview.
-      </p>
+      <p className="mb-6 max-w-2xl text-sm text-ink-muted dark:text-dark-ink-muted">{t('roles.intro')}</p>
 
-      {GROUPS.map((group) => (
+      {groups.map((group) => (
         <PermissionGroupSection
           key={group.title}
           group={group}
+          ownerColumnLabel={t('roles.ownerColumn')}
+          ownerAlwaysHasThis={t('roles.ownerAlwaysHasThis')}
           gridTemplateColumns={gridTemplateColumns}
           editableRoles={editableRoles}
           hasPermission={hasPermission}
           savingKey={savingKey}
+          permissionAriaLabel={(label, roleName) => t('roles.permissionAriaLabel', { permissionLabel: label, roleName })}
           onTogglePermission={togglePermission}
           onRenameRole={handleRenameRole}
           onDeleteRole={handleDeleteRole}
@@ -604,59 +653,58 @@ export default function RolesPermissionsPage({ token }: RolesPermissionsPageProp
         editableRoles={editableRoles}
         savingKey={savingKey}
         onChangeScope={changeEmployeeScope}
+        t={t}
       />
 
-      <h3 className="mb-2 text-base font-bold text-ink dark:text-dark-ink">Field visibility</h3>
-      <p className="mb-4 max-w-2xl text-sm text-ink-muted dark:text-dark-ink-muted">
-        Hide specific fields from a role — the name of each record always stays visible (otherwise a list or
-        search would have nothing to show), everything else is fair game. A role also needs the module
-        permission above before any of this applies.
-      </p>
+      <h3 className="mb-2 text-base font-bold text-ink dark:text-dark-ink">{t('roles.fieldVisibilityTitle')}</h3>
+      <p className="mb-4 max-w-2xl text-sm text-ink-muted dark:text-dark-ink-muted">{t('roles.fieldVisibilityIntro')}</p>
 
       {Object.entries(fieldCatalog).map(([entityType, fields]) => (
         <FieldVisibilitySection
           key={entityType}
           entityType={entityType}
+          entityLabel={entityLabels[entityType] ?? entityType}
           fields={fields}
           gridTemplateColumns={gridTemplateColumns}
           editableRoles={editableRoles}
           savingFieldKey={savingFieldKey}
           isFieldHidden={isFieldHidden}
           onToggleFieldVisibility={toggleFieldVisibility}
+          ownerColumnLabel={t('roles.ownerColumn')}
+          ownerAlwaysSeesThis={t('roles.ownerAlwaysSeesThis')}
+          fieldVisibleAriaLabel={(fieldLabel, roleName) => t('roles.fieldVisibleAriaLabel', { fieldLabel, roleName })}
         />
       ))}
 
-      <p className="mt-2 max-w-2xl text-xs text-ink-faint dark:text-dark-ink-faint">
-        Changes save immediately and take effect the next time someone with that role loads the app.
-      </p>
+      <p className="mt-2 max-w-2xl text-xs text-ink-faint dark:text-dark-ink-faint">{t('roles.savesImmediately')}</p>
 
-      <Modal open={showCreateModal} title="New role" onClose={() => setShowCreateModal(false)}>
+      <Modal open={showCreateModal} title={t('roles.newRoleModalTitle')} onClose={() => setShowCreateModal(false)}>
         <form onSubmit={handleCreateRole}>
           <div className="nv-field">
-            <label htmlFor="new-role-name">Role name</label>
+            <label htmlFor="new-role-name">{t('roles.roleNameLabel')}</label>
             <input
               id="new-role-name"
               type="text"
               value={newRoleName}
               onChange={(e) => setNewRoleName(e.target.value)}
-              placeholder="e.g. Sales Manager"
+              placeholder={t('roles.roleNamePlaceholder')}
               autoFocus
               required
             />
           </div>
           <div className="nv-field">
-            <label htmlFor="new-role-duplicate-from">Start from</label>
+            <label htmlFor="new-role-duplicate-from">{t('roles.startFromLabel')}</label>
             <select id="new-role-duplicate-from" value={duplicateFrom} onChange={(e) => setDuplicateFrom(e.target.value)}>
-              <option value="">Blank (nothing granted yet)</option>
+              <option value="">{t('roles.blankOption')}</option>
               {roles.map((role) => (
                 <option key={role.id} value={role.id}>
-                  Same as {role.name}
+                  {t('roles.sameAs', { roleName: role.name })}
                 </option>
               ))}
             </select>
           </div>
           <button type="submit" className="btn-primary w-full text-center" disabled={creating || !newRoleName.trim()}>
-            {creating ? 'Creating…' : 'Create role'}
+            {creating ? t('roles.creating') : t('roles.createRole')}
           </button>
         </form>
       </Modal>

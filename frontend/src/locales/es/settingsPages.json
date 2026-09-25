@@ -544,5 +544,126 @@
       "googleCalendarConnection": "Conexión de Google Calendar",
       "stripeConnection": "Conexión de Stripe"
     }
+  },
+  "roles": {
+    "title": "Roles y permisos",
+    "ownerOnly": "Solo el dueño del espacio de trabajo puede ver y cambiar roles y permisos.",
+    "newRole": "Nuevo rol",
+    "intro": "Controlá qué puede ver y hacer cada rol. El dueño siempre tiene acceso completo y no se le puede limitar — así siempre hay alguien que puede arreglar las cosas, transferir la titularidad o gestionar la facturación sin importar cómo estén configurados los demás roles. Creá tantos roles como necesite tu espacio de trabajo — quedan guardados para siempre, no son solo una vista previa.",
+    "ownerColumn": "Dueño",
+    "ownerAlwaysHasThis": "El dueño siempre lo tiene",
+    "ownerAlwaysSeesEveryone": "El dueño siempre ve a todos",
+    "ownerAlwaysSeesThis": "El dueño siempre ve esto",
+    "fieldVisibilityTitle": "Visibilidad de campos",
+    "fieldVisibilityIntro": "Ocultá campos específicos de un rol — el nombre de cada registro siempre queda visible (si no, una lista o búsqueda no tendría nada que mostrar), todo lo demás es libre. Un rol también necesita el permiso del módulo de arriba antes de que esto aplique.",
+    "savesImmediately": "Los cambios se guardan al instante y se aplican la próxima vez que alguien con ese rol cargue la app.",
+    "employeeScopeTitle": "Alcance de visibilidad de empleados",
+    "employeeScopeAriaLabel": "Alcance de visibilidad de empleados — {{roleName}}",
+    "whichEmployeesTitle": "Qué empleados pueden ver",
+    "whichEmployeesDesc": "Hasta dónde llega \"Ver empleados\" más allá de su propio registro — sus reportes, su departamento, o todos.",
+    "fieldVisibleAriaLabel": "{{fieldLabel}} visible para {{roleName}}",
+    "permissionAriaLabel": "{{permissionLabel}} — {{roleName}}",
+    "newRoleModalTitle": "Nuevo rol",
+    "roleNameLabel": "Nombre del rol",
+    "roleNamePlaceholder": "ej. Gerente de Ventas",
+    "startFromLabel": "Empezar desde",
+    "blankOption": "En blanco (nada otorgado todavía)",
+    "sameAs": "Igual que {{roleName}}",
+    "creating": "Creando…",
+    "createRole": "Crear rol",
+    "and": " y ",
+    "grantFirst": "Primero otorgá {{items}}",
+    "granted": "Se otorgó \"{{permission}}\" a {{roleName}}",
+    "revoked": "Se revocó \"{{permission}}\" a {{roleName}}",
+    "scopeUpdated": "La visibilidad de empleados de {{roleName}} ahora es: {{hint}}",
+    "showing": "Mostrando \"{{fieldLabel}}\" a {{roleName}}",
+    "hiding": "Ocultando \"{{fieldLabel}}\" a {{roleName}}",
+    "createdRole": "Se creó el rol \"{{roleName}}\"",
+    "renamedTo": "Renombrado a \"{{name}}\"",
+    "deletedRole": "Se eliminó el rol \"{{roleName}}\"",
+    "loadFailed": "Error al cargar los roles: {{message}}",
+    "entityLabels": {
+      "employee": "Campos de empleado",
+      "company": "Campos de empresa",
+      "contact": "Campos de contacto",
+      "opportunity": "Campos de oportunidad"
+    },
+    "employeeScopeOptions": {
+      "none": { "label": "Ninguno", "hint": "Nada más allá del directorio" },
+      "self": { "label": "Uno mismo", "hint": "Solo su propio registro" },
+      "reports": { "label": "+ Reportes", "hint": "Uno mismo, más sus reportes directos e indirectos" },
+      "department": { "label": "+ Departamento", "hint": "Uno mismo, sus reportes, y todos en su departamento" },
+      "all": { "label": "Todos", "hint": "Todos los empleados del espacio de trabajo" }
+    },
+    "groups": {
+      "people": {
+        "title": "Personas",
+        "view_employee": { "label": "Ver empleados", "description": "Ver el directorio de empleados y el perfil de cada persona." },
+        "manage_employee": { "label": "Gestionar empleados", "description": "Agregar, editar y eliminar legajos de empleados." },
+        "view_employee_custom_fields": {
+          "label": "Ver campos personalizados de empleado",
+          "description": "Ver los campos personalizados en el perfil de un empleado, aparte del perfil en sí.",
+          "hint": "Necesita Ver empleados"
+        },
+        "edit_employee_custom_fields": {
+          "label": "Editar campos personalizados de empleado",
+          "description": "Agregar, editar y eliminar valores en los campos personalizados del perfil de un empleado.",
+          "hint": "Necesita Gestionar empleados + Ver campos personalizados de empleado"
+        }
+      },
+      "sales": {
+        "title": "Ventas",
+        "view_company": { "label": "Ver empresas", "description": "Ver las cuentas de empresas y sus detalles." },
+        "manage_company": { "label": "Gestionar empresas", "description": "Agregar, editar y eliminar empresas." },
+        "view_contact": { "label": "Ver contactos", "description": "Ver contactos y sus detalles." },
+        "manage_contact": { "label": "Gestionar contactos", "description": "Agregar, editar y eliminar contactos." },
+        "manage_opportunity": {
+          "label": "Gestionar oportunidades",
+          "description": "Crear y mover negocios a través del pipeline.",
+          "hint": "Necesita Ver empresas + Ver contactos"
+        }
+      },
+      "configuration": {
+        "title": "Configuración",
+        "manage_custom_fields": {
+          "label": "Gestionar campos personalizados y catálogos",
+          "description": "Campos personalizados, estados, pipelines, y catálogos compartidos."
+        }
+      },
+      "team": {
+        "title": "Equipo",
+        "invite_users": { "label": "Invitar personas", "description": "Enviar invitaciones para unirse al espacio de trabajo." },
+        "manage_users": { "label": "Gestionar miembros", "description": "Cambiar roles y estado de las personas que ya están en el espacio de trabajo." }
+      },
+      "money": {
+        "title": "Dinero",
+        "manage_payroll": { "label": "Gestionar nómina", "description": "Compensación, corridas de nómina, y la exportación CSV de datos de empleados." },
+        "manage_billing": { "label": "Gestionar facturación", "description": "Cambiar de plan, método de pago, y cancelar la suscripción." },
+        "manage_payments": { "label": "Gestionar pagos", "description": "Conectar Stripe y ver el historial de pagos de clientes." },
+        "manage_api_access": { "label": "Gestionar API y webhooks", "description": "Crear y revocar claves de API privadas y webhooks salientes." }
+      },
+      "reporting": {
+        "title": "Reportes",
+        "view_sales_leaderboard": { "label": "Ver tabla de posiciones de ventas", "description": "Desempeño de negocios por persona en todo el equipo." },
+        "view_activity_log": { "label": "Ver registro de actividad", "description": "El feed de todo el espacio de trabajo de quién cambió qué." },
+        "view_dashboards": {
+          "label": "Ver paneles",
+          "description": "Paneles de KPI de toda la empresa: RR.HH., Ausencias, Ventas, Tareas y Adopción."
+        }
+      },
+      "workspace": {
+        "title": "Espacio de trabajo",
+        "manage_tenant_settings": { "label": "Gestionar configuración del espacio de trabajo", "description": "Moneda y otras preferencias de todo el espacio de trabajo." },
+        "manage_shared_views": { "label": "Gestionar vistas compartidas", "description": "Crear vistas que todos en el espacio de trabajo pueden ver." }
+      },
+      "timeOff": {
+        "title": "Ausencias",
+        "decide_time_off": {
+          "label": "Decidir solicitudes de ausencia",
+          "description": "Aprobar o rechazar cualquier solicitud en el espacio de trabajo.",
+          "hint": "El manager asignado de una persona siempre puede decidir sus solicitudes"
+        }
+      }
+    }
   }
 }

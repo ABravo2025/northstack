@@ -544,5 +544,126 @@
       "googleCalendarConnection": "Google Calendar Connection",
       "stripeConnection": "Stripe Connection"
     }
+  },
+  "roles": {
+    "title": "Roles & Permissions",
+    "ownerOnly": "Only the workspace owner can view and change roles and permissions.",
+    "newRole": "New role",
+    "intro": "Control what each role can see and do. Owner always has full access and can't be limited — this keeps someone able to fix things, transfer ownership, or manage billing no matter how the other roles are set up. Create as many roles as your workspace needs — they're saved for good, not just a preview.",
+    "ownerColumn": "Owner",
+    "ownerAlwaysHasThis": "Owner always has this",
+    "ownerAlwaysSeesEveryone": "Owner always sees everyone",
+    "ownerAlwaysSeesThis": "Owner always sees this",
+    "fieldVisibilityTitle": "Field visibility",
+    "fieldVisibilityIntro": "Hide specific fields from a role — the name of each record always stays visible (otherwise a list or search would have nothing to show), everything else is fair game. A role also needs the module permission above before any of this applies.",
+    "savesImmediately": "Changes save immediately and take effect the next time someone with that role loads the app.",
+    "employeeScopeTitle": "Employee visibility scope",
+    "employeeScopeAriaLabel": "Employee visibility scope — {{roleName}}",
+    "whichEmployeesTitle": "Which employees they can see",
+    "whichEmployeesDesc": "How far \"View employees\" reaches beyond their own record — their reports, their department, or everyone.",
+    "fieldVisibleAriaLabel": "{{fieldLabel}} visible to {{roleName}}",
+    "permissionAriaLabel": "{{permissionLabel}} — {{roleName}}",
+    "newRoleModalTitle": "New role",
+    "roleNameLabel": "Role name",
+    "roleNamePlaceholder": "e.g. Sales Manager",
+    "startFromLabel": "Start from",
+    "blankOption": "Blank (nothing granted yet)",
+    "sameAs": "Same as {{roleName}}",
+    "creating": "Creating…",
+    "createRole": "Create role",
+    "and": " and ",
+    "grantFirst": "Grant {{items}} first",
+    "granted": "Granted \"{{permission}}\" for {{roleName}}",
+    "revoked": "Revoked \"{{permission}}\" for {{roleName}}",
+    "scopeUpdated": "{{roleName}}'s employee visibility is now: {{hint}}",
+    "showing": "Showing \"{{fieldLabel}}\" for {{roleName}}",
+    "hiding": "Hiding \"{{fieldLabel}}\" for {{roleName}}",
+    "createdRole": "Created role \"{{roleName}}\"",
+    "renamedTo": "Renamed to \"{{name}}\"",
+    "deletedRole": "Deleted role \"{{roleName}}\"",
+    "loadFailed": "Failed to load roles: {{message}}",
+    "entityLabels": {
+      "employee": "Employee fields",
+      "company": "Company fields",
+      "contact": "Contact fields",
+      "opportunity": "Opportunity fields"
+    },
+    "employeeScopeOptions": {
+      "none": { "label": "None", "hint": "Nothing beyond the directory" },
+      "self": { "label": "Self", "hint": "Only their own record" },
+      "reports": { "label": "+ Reports", "hint": "Self, plus their own direct/indirect reports" },
+      "department": { "label": "+ Department", "hint": "Self, their reports, and everyone in their department" },
+      "all": { "label": "Everyone", "hint": "Every employee in the workspace" }
+    },
+    "groups": {
+      "people": {
+        "title": "People",
+        "view_employee": { "label": "View employees", "description": "See the employee directory and each person's profile." },
+        "manage_employee": { "label": "Manage employees", "description": "Add, edit, and remove employee records." },
+        "view_employee_custom_fields": {
+          "label": "View employee custom fields",
+          "description": "See the custom fields on an employee profile, separate from the profile itself.",
+          "hint": "Needs View employees"
+        },
+        "edit_employee_custom_fields": {
+          "label": "Edit employee custom fields",
+          "description": "Add, edit, and remove values in the custom fields on an employee profile.",
+          "hint": "Needs Manage employees + View employee custom fields"
+        }
+      },
+      "sales": {
+        "title": "Sales",
+        "view_company": { "label": "View companies", "description": "See company accounts and their details." },
+        "manage_company": { "label": "Manage companies", "description": "Add, edit, and remove companies." },
+        "view_contact": { "label": "View contacts", "description": "See contacts and their details." },
+        "manage_contact": { "label": "Manage contacts", "description": "Add, edit, and remove contacts." },
+        "manage_opportunity": {
+          "label": "Manage opportunities",
+          "description": "Create and move deals through the pipeline.",
+          "hint": "Needs View companies + View contacts"
+        }
+      },
+      "configuration": {
+        "title": "Configuration",
+        "manage_custom_fields": {
+          "label": "Manage custom fields & catalogs",
+          "description": "Custom fields, statuses, pipelines, and shared catalogs."
+        }
+      },
+      "team": {
+        "title": "Team",
+        "invite_users": { "label": "Invite people", "description": "Send invitations to join the workspace." },
+        "manage_users": { "label": "Manage members", "description": "Change roles and status for people already in the workspace." }
+      },
+      "money": {
+        "title": "Money",
+        "manage_payroll": { "label": "Manage payroll", "description": "Compensation, payroll runs, and the CSV export of employee data." },
+        "manage_billing": { "label": "Manage billing", "description": "Change plan, payment method, and cancel the subscription." },
+        "manage_payments": { "label": "Manage payments", "description": "Connect Stripe and view customer payment history." },
+        "manage_api_access": { "label": "Manage API & webhooks", "description": "Create and revoke private API keys and outbound webhooks." }
+      },
+      "reporting": {
+        "title": "Reporting",
+        "view_sales_leaderboard": { "label": "View sales leaderboard", "description": "Per-person deal performance across the team." },
+        "view_activity_log": { "label": "View activity log", "description": "The workspace-wide feed of who changed what." },
+        "view_dashboards": {
+          "label": "View dashboards",
+          "description": "Company-wide KPI dashboards: HR, Time Off, Sales, Tasks, and Adoption."
+        }
+      },
+      "workspace": {
+        "title": "Workspace",
+        "manage_tenant_settings": { "label": "Manage workspace settings", "description": "Currency and other workspace-wide preferences." },
+        "manage_shared_views": { "label": "Manage shared views", "description": "Create views that everyone in the workspace sees." }
+      },
+      "timeOff": {
+        "title": "Time off",
+        "decide_time_off": {
+          "label": "Decide time off requests",
+          "description": "Approve or reject any request in the workspace.",
+          "hint": "A person's assigned manager can always decide their requests"
+        }
+      }
+    }
   }
 }

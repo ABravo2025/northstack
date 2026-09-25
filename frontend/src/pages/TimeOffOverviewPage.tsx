@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import ConfirmDialog from '../components/common/ConfirmDialog';
@@ -15,34 +16,29 @@ import { usePermissions } from '../contexts/PermissionsContext';
 import { usePrimaryAction } from '../contexts/PrimaryActionContext';
 import { useTimeOffTab } from '../contexts/TimeOffTabContext';
 
-const ACCRUAL_LABELS: Record<string, string> = {
-  fixed_annual: 'Fixed',
-  monthly: 'Monthly',
-};
-
 interface TimeOffOverviewPageProps {
   user: any;
   token: string;
 }
 
-const TAB_LABELS: Record<string, string> = {
-  'my-timeoff': 'My Timeoff',
-  'my-requests': 'My Requests',
-  approvals: 'Approvals',
-  balances: 'Balances',
-  'all-requests': 'All Requests',
-  policies: 'Policies',
-  assignments: 'Assignments',
+// Tab values are kebab-case (routing/context concerns); JSON keys are camelCase.
+const TAB_KEY_MAP: Record<string, string> = {
+  'my-timeoff': 'myTimeoff',
+  'my-requests': 'myRequests',
+  approvals: 'approvals',
+  balances: 'balances',
+  'all-requests': 'allRequests',
+  policies: 'policies',
+  assignments: 'assignments',
 };
 
-const STATUS_LABELS: Record<string, string> = {
-  pending: 'Pending',
-  approved: 'Approved',
-  rejected: 'Rejected',
-  cancelled: 'Cancelled',
+const ACCRUAL_KEY_MAP: Record<string, string> = {
+  fixed_annual: 'fixed',
+  monthly: 'monthly',
 };
 
 export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPageProps) {
+  const { t } = useTranslation('tasks');
   const toast = useToast();
   const { tab, setTab, setPendingApprovalsCount } = useTimeOffTab();
   const [employees, setEmployees] = useState<any[]>([]);
@@ -152,7 +148,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
       const myEmployeeRecord = employeeData.find((emp: any) => emp.userId === user.id);
       setMyBalances(myEmployeeRecord ? await api.getEmployeeTimeOffBalance(token, myEmployeeRecord.id) : []);
     } catch (error) {
-      toast.error('Failed to load Time Off overview: ' + (error as Error).message);
+      toast.error(t('timeOff.toasts.loadFailed', { message: (error as Error).message }));
     } finally {
       setLoading(false);
     }
@@ -182,20 +178,20 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
     try {
       await api.assignTimeOffPolicyToEmployee(token, employeeId, policyId);
       setAssignMenuFor(null);
-      toast.success('Policy assigned.');
+      toast.success(t('timeOff.toasts.policyAssigned'));
       refreshAfterAssignmentChange();
     } catch (error) {
-      toast.error('Failed to assign Time Off policy: ' + (error as Error).message);
+      toast.error(t('timeOff.toasts.assignFailed', { message: (error as Error).message }));
     }
   };
 
   const handleUnassign = async (employeeId: string, policyId: string) => {
     try {
       await api.unassignTimeOffPolicyFromEmployee(token, employeeId, policyId);
-      toast.success('Policy removed.');
+      toast.success(t('timeOff.toasts.policyRemoved'));
       refreshAfterAssignmentChange();
     } catch (error) {
-      toast.error('Failed to remove Time Off policy: ' + (error as Error).message);
+      toast.error(t('timeOff.toasts.removeFailed', { message: (error as Error).message }));
     }
   };
 
@@ -221,7 +217,9 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
   // Mobile FAB for the Policies tab — the header "Add Policy" button (previously always visible,
   // on every tab, wedged into the .views-bar) had no mobile equivalent at all, unlike every other
   // entity list in the app. Mirrors PayrollPage's per-tab usePrimaryAction.
-  usePrimaryAction(canManagePolicies && tab === 'policies' ? { label: 'Add Policy', onClick: handleOpenAddPolicy } : null);
+  usePrimaryAction(
+    canManagePolicies && tab === 'policies' ? { label: t('timeOff.policies.emptyState.primaryLabel'), onClick: handleOpenAddPolicy } : null,
+  );
 
   const handleStartEditPolicy = (policy: any) => {
     setPolicyForm({
@@ -250,16 +248,16 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
     try {
       if (slideOverMode === 'edit' && editingPolicyId) {
         await api.updateTimeOffPolicy(token, editingPolicyId, data);
-        toast.success('Time off policy updated.');
+        toast.success(t('timeOff.toasts.policyUpdated'));
         closeSlideOver();
       } else {
         const created = await api.createTimeOffPolicy(token, data);
-        toast.success('Time off policy added.');
+        toast.success(t('timeOff.toasts.policyAdded'));
         setAssignStepPolicy(created);
       }
       loadData();
     } catch (error) {
-      toast.error('Failed to save time off policy: ' + (error as Error).message);
+      toast.error(t('timeOff.toasts.saveFailed', { message: (error as Error).message }));
     }
   };
 
@@ -286,9 +284,11 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
       );
       const failures = results.filter((r) => r.status === 'rejected').length;
       if (failures > 0) {
-        toast.error(`Assigned to ${results.length - failures} of ${results.length} employees — ${failures} failed.`);
+        toast.error(
+          t('timeOff.toasts.assignedPartial', { success: results.length - failures, total: results.length, failed: failures }),
+        );
       } else {
-        toast.success(`Assigned to ${results.length} employee${results.length === 1 ? '' : 's'}.`);
+        toast.success(t('timeOff.toasts.assignedToCount', { count: results.length }));
       }
       loadData();
       closeSlideOver();
@@ -303,7 +303,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
       setPolicyRowMenuFor(null);
       loadData();
     } catch (error) {
-      toast.error('Failed to update time off policy: ' + (error as Error).message);
+      toast.error(t('timeOff.toasts.updateFailed', { message: (error as Error).message }));
     }
   };
 
@@ -331,11 +331,11 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
         ),
       );
       await api.updateTimeOffPolicy(token, deletingPolicy.id, { isActive: false });
-      toast.success(`"${deletingPolicy.name}" deleted and removed from ${assignedEmployeeIds.length} employee${assignedEmployeeIds.length === 1 ? '' : 's'}.`);
+      toast.success(t('timeOff.toasts.deletedAndRemoved', { name: deletingPolicy.name, count: assignedEmployeeIds.length }));
       setDeletingPolicy(null);
       loadData();
     } catch (error) {
-      toast.error('Failed to delete time off policy: ' + (error as Error).message);
+      toast.error(t('timeOff.toasts.deleteFailed', { message: (error as Error).message }));
     } finally {
       setDeletingPolicySaving(false);
     }
@@ -351,10 +351,10 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
         note: newRequest.note || undefined,
       });
       setNewRequest({ timeOffPolicyId: '', startDate: '', endDate: '', note: '' });
-      toast.success('Request submitted.');
+      toast.success(t('timeOff.toasts.requestSubmitted'));
       loadData();
     } catch (error) {
-      toast.error('Failed to submit time off request: ' + (error as Error).message);
+      toast.error(t('timeOff.toasts.submitFailed', { message: (error as Error).message }));
     }
   };
 
@@ -363,10 +363,10 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
     try {
       await api.cancelTimeOffRequest(token, cancellingRequestId);
       setCancellingRequestId(null);
-      toast.success('Request cancelled.');
+      toast.success(t('timeOff.toasts.requestCancelled'));
       loadData();
     } catch (error) {
-      toast.error('Failed to cancel request: ' + (error as Error).message);
+      toast.error(t('timeOff.toasts.cancelFailed', { message: (error as Error).message }));
       setCancellingRequestId(null);
     }
   };
@@ -374,32 +374,33 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
   const handleDecideRequest = async (requestId: string, status: 'approved' | 'rejected') => {
     try {
       await api.decideTimeOffRequest(token, requestId, status);
-      toast.success(status === 'approved' ? 'Request approved.' : 'Request rejected.');
+      toast.success(status === 'approved' ? t('timeOff.toasts.requestApproved') : t('timeOff.toasts.requestRejected'));
       loadData();
     } catch (error) {
-      toast.error('Failed to decide request: ' + (error as Error).message);
+      toast.error(t('timeOff.toasts.decideFailed', { message: (error as Error).message }));
     }
   };
+
+  const deletingPolicyAssignedCount = deletingPolicy
+    ? employees.filter((emp) => (emp.timeOffPolicies || []).some((a: any) => a.timeOffPolicyId === deletingPolicy.id)).length
+    : 0;
 
   return (
     <div className="container">
       {cancellingRequestId && (
         <ConfirmDialog
-          title="Cancel request"
-          message="Are you sure you want to cancel this time off request?"
-          confirmLabel="Cancel Request"
+          title={t('timeOff.cancelRequestDialog.title')}
+          message={t('timeOff.cancelRequestDialog.message')}
+          confirmLabel={t('timeOff.cancelRequestDialog.confirmLabel')}
           onConfirm={handleCancelRequest}
           onCancel={() => setCancellingRequestId(null)}
         />
       )}
       {deletingPolicy && (
         <ConfirmDialog
-          title={`Delete "${deletingPolicy.name}"`}
-          message={`This will remove "${deletingPolicy.name}" from all ${
-            employees.filter((emp) => (emp.timeOffPolicies || []).some((a: any) => a.timeOffPolicyId === deletingPolicy.id))
-              .length
-          } employee(s) currently assigned to it, then deactivate the policy. Past time off requests made under it are not affected. Type DELETE to confirm.`}
-          confirmLabel={deletingPolicySaving ? 'Deleting…' : 'DELETE'}
+          title={t('timeOff.confirmDeletePolicy.title', { name: deletingPolicy.name })}
+          message={t('timeOff.confirmDeletePolicy.message', { name: deletingPolicy.name, count: deletingPolicyAssignedCount })}
+          confirmLabel={deletingPolicySaving ? t('timeOff.confirmDeletePolicy.deleting') : 'DELETE'}
           confirmText="DELETE"
           confirmDisabled={deletingPolicySaving}
           onConfirm={handleConfirmDeletePolicy}
@@ -410,33 +411,33 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
         open={slideOverMode !== null || assignStepPolicy !== null}
         title={
           assignStepPolicy
-            ? `Assign "${assignStepPolicy.name}"`
+            ? t('timeOff.slideOver.assignTitle', { name: assignStepPolicy.name })
             : slideOverMode === 'edit'
-              ? 'Edit Time Off Policy'
-              : 'Add Time Off Policy'
+              ? t('timeOff.slideOver.editTitle')
+              : t('timeOff.slideOver.addTitle')
         }
         onClose={closeSlideOver}
         footer={
           assignStepPolicy ? (
             <>
               <button type="button" className="btn-secondary" onClick={closeSlideOver} disabled={assignStepSaving}>
-                Skip
+                {t('timeOff.slideOver.skip')}
               </button>
               <button type="button" className="btn-primary" onClick={handleBulkAssign} disabled={assignStepSaving}>
                 {assignStepSaving
-                  ? 'Assigning…'
+                  ? t('timeOff.slideOver.assigning')
                   : assignStepSelected.size === 0
-                    ? 'Done'
-                    : `Assign to ${assignStepSelected.size} employee${assignStepSelected.size === 1 ? '' : 's'}`}
+                    ? t('timeOff.slideOver.done')
+                    : t('timeOff.slideOver.assignToCount', { count: assignStepSelected.size })}
               </button>
             </>
           ) : (
             <>
               <button type="button" className="btn-secondary" onClick={closeSlideOver}>
-                Cancel
+                {t('timeOff.slideOver.cancel')}
               </button>
               <button type="submit" form="time-off-policy-form" className="btn-primary">
-                {slideOverMode === 'edit' ? 'Save' : 'Create'}
+                {slideOverMode === 'edit' ? t('timeOff.slideOver.save') : t('timeOff.slideOver.create')}
               </button>
             </>
           )
@@ -445,11 +446,11 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
         {assignStepPolicy ? (
           <div>
             <p className="mb-3 text-sm text-ink-muted dark:text-dark-ink-muted">
-              Who should have "{assignStepPolicy.name}"? You can also do this later from the Assignments tab.
+              {t('timeOff.slideOver.assignPrompt', { name: assignStepPolicy.name })}
             </p>
             {assignStepAvailableEmployees.length === 0 ? (
               <p className="text-sm text-ink-muted dark:text-dark-ink-muted">
-                {employees.length === 0 ? 'No employees yet.' : 'Every employee already has this policy.'}
+                {employees.length === 0 ? t('timeOff.slideOver.noEmployeesYet') : t('timeOff.slideOver.everyoneHasPolicy')}
               </p>
             ) : (
               <>
@@ -459,10 +460,10 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                     className="status-manage-link"
                     onClick={() => setAssignStepSelected(new Set(assignStepAvailableEmployees.map((e) => e.id)))}
                   >
-                    Select all
+                    {t('timeOff.slideOver.selectAll')}
                   </button>
                   <button type="button" className="status-manage-link" onClick={() => setAssignStepSelected(new Set())}>
-                    Select none
+                    {t('timeOff.slideOver.selectNone')}
                   </button>
                 </div>
                 <div className="policy-manage-list" style={{ maxHeight: 'none' }}>
@@ -488,7 +489,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
           <form id="time-off-policy-form" onSubmit={handleSubmitPolicy}>
             <div className="form-group">
               <label htmlFor="policy-name">
-                Name
+                {t('timeOff.policyForm.name')}
                 <RequiredMark />
               </label>
               <input
@@ -496,13 +497,13 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                 type="text"
                 value={policyForm.name}
                 onChange={(e) => setPolicyForm({ ...policyForm, name: e.target.value })}
-                placeholder="e.g. PTO, Sick Leave, Leave Emergency"
+                placeholder={t('timeOff.policyForm.namePlaceholder')}
                 required
               />
             </div>
             <div className="form-group">
               <label htmlFor="policy-days">
-                Days per year
+                {t('timeOff.policyForm.daysPerYear')}
                 <RequiredMark />
               </label>
               <input
@@ -516,18 +517,18 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
               />
             </div>
             <div className="form-group">
-              <label htmlFor="policy-accrual">Accrual method</label>
+              <label htmlFor="policy-accrual">{t('timeOff.policyForm.accrualMethod')}</label>
               <select
                 id="policy-accrual"
                 value={policyForm.accrualMethod}
                 onChange={(e) => setPolicyForm({ ...policyForm, accrualMethod: e.target.value })}
               >
-                <option value="fixed_annual">Fixed annual — all days available at once</option>
-                <option value="monthly">Monthly — days accrue progressively</option>
+                <option value="fixed_annual">{t('timeOff.policyForm.accrualFixedOption')}</option>
+                <option value="monthly">{t('timeOff.policyForm.accrualMonthlyOption')}</option>
               </select>
             </div>
             <div className="form-group">
-              <label>Color</label>
+              <label>{t('timeOff.policyForm.color')}</label>
               <ColorPicker value={policyForm.color} onChange={(color) => setPolicyForm({ ...policyForm, color })} />
             </div>
             <div className="form-group">
@@ -538,7 +539,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                   onChange={(e) => setPolicyForm({ ...policyForm, isPaid: e.target.checked })}
                   className="w-auto"
                 />
-                Paid
+                {t('timeOff.policyForm.paid')}
               </label>
             </div>
             <div className="form-group">
@@ -549,7 +550,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                   onChange={(e) => setPolicyForm({ ...policyForm, requiresApproval: e.target.checked })}
                   className="w-auto"
                 />
-                Requires approval
+                {t('timeOff.policyForm.requiresApproval')}
               </label>
             </div>
           </form>
@@ -557,7 +558,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
       </SlideOver>
 
       <div className="page-toolbar no-border">
-        <h2>{TAB_LABELS[tab]}</h2>
+        <h2>{t(`timeOff.tabs.${TAB_KEY_MAP[tab]}`)}</h2>
       </div>
 
       <div className="mt-4">
@@ -566,9 +567,9 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
         {!loading && tab === 'my-timeoff' && (
           <>
             {!myEmployee ? (
-              <p>Your account isn't linked to an employee record, so there's no personal balance to show.</p>
+              <p>{t('timeOff.myTimeoff.notLinked')}</p>
             ) : myBalances.length === 0 ? (
-              <p>You don't have any time off policies assigned yet — ask an admin to assign one.</p>
+              <p>{t('timeOff.myTimeoff.noPoliciesAssigned')}</p>
             ) : (
               myBalances.map((bal: any) => {
                 const isExpanded = expandedMyBalancePolicyIds.has(bal.timeOffPolicyId);
@@ -592,7 +593,9 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                     >
                       <span className="color-dot" style={{ background: bal.color || '#9ca3af' }} />
                       <span className="font-semibold text-brand-navy dark:text-dark-ink">{bal.policyName}</span>
-                      <span className="ml-auto text-xs text-ink-faint dark:text-dark-ink-faint">{bal.remaining} left</span>
+                      <span className="ml-auto text-xs text-ink-faint dark:text-dark-ink-faint">
+                        {t('timeOff.myTimeoff.remainingLeft', { count: bal.remaining })}
+                      </span>
                       <ChevronDownIcon className={`h-3.5 w-3.5 shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                     </button>
                     {isExpanded && (
@@ -600,23 +603,25 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                         <div className="balance-detail-stats">
                           <div>
                             <div className="balance-detail-stat-value">{bal.allocated}</div>
-                            <div className="balance-detail-stat-label">Allocated</div>
+                            <div className="balance-detail-stat-label">{t('timeOff.myTimeoff.stats.allocated')}</div>
                           </div>
                           <div>
                             <div className="balance-detail-stat-value">{bal.used}</div>
-                            <div className="balance-detail-stat-label">Used</div>
+                            <div className="balance-detail-stat-label">{t('timeOff.myTimeoff.stats.used')}</div>
                           </div>
                           <div>
                             <div className="balance-detail-stat-value">{bal.pending}</div>
-                            <div className="balance-detail-stat-label">Pending</div>
+                            <div className="balance-detail-stat-label">{t('timeOff.myTimeoff.stats.pending')}</div>
                           </div>
                           <div>
                             <div className="balance-detail-stat-value highlight">{bal.remaining}</div>
-                            <div className="balance-detail-stat-label">Remaining</div>
+                            <div className="balance-detail-stat-label">{t('timeOff.myTimeoff.stats.remaining')}</div>
                           </div>
                         </div>
                         <p className="mb-1.5 text-xs font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">
-                          Accrual: {bal.accrualMethod === 'monthly' ? 'Monthly' : 'Fixed annual'}
+                          {t('timeOff.myTimeoff.accrualLine', {
+                            method: t(`timeOff.accrual.${ACCRUAL_KEY_MAP[bal.accrualMethod] || 'fixed'}`),
+                          })}
                         </p>
                         {policyRequests.length > 0 ? (
                           <div className="balance-detail-requests">
@@ -627,13 +632,13 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                                 </span>
                                 <span className="balance-detail-request-days">{req.daysRequested}d</span>
                                 <span className={`status-badge status-${req.status}`}>
-                                  {STATUS_LABELS[req.status] || req.status}
+                                  {t(`timeOff.status.${req.status}`, { defaultValue: req.status })}
                                 </span>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <p className="text-xs text-ink-faint dark:text-dark-ink-faint">No requests made under this policy yet.</p>
+                          <p className="text-xs text-ink-faint dark:text-dark-ink-faint">{t('timeOff.myTimeoff.noRequestsUnderPolicy')}</p>
                         )}
                       </div>
                     )}
@@ -646,14 +651,11 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
 
         {!loading && tab === 'assignments' && canManagePolicies && (
           <>
-            <p className="text-sm text-ink-muted dark:text-dark-ink-muted mb-3">
-              Which time off policies apply to each employee. Manage the policies themselves (days per year, accrual,
-              etc.) from the Policies tab.
-            </p>
+            <p className="text-sm text-ink-muted dark:text-dark-ink-muted mb-3">{t('timeOff.assignments.description')}</p>
             {activeTimeOffPolicies.length === 0 ? (
-              <p>No time off policies defined yet. Add one from the Policies tab.</p>
+              <p>{t('timeOff.assignments.noPoliciesDefined')}</p>
             ) : employees.length === 0 ? (
-              <p>No employees yet.</p>
+              <p>{t('timeOff.assignments.noEmployees')}</p>
             ) : (
               <>
                 <div className="entity-card-list">
@@ -681,8 +683,8 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                                     type="button"
                                     className="time-off-policy-chip-remove"
                                     onClick={() => handleUnassign(emp.id, a.timeOffPolicyId)}
-                                    aria-label={`Remove ${a.timeOffPolicy.name}`}
-                                    title="Remove"
+                                    aria-label={t('timeOff.assignments.removePolicyAria', { name: a.timeOffPolicy.name })}
+                                    title={t('timeOff.assignments.removeTitle')}
                                   >
                                     ×
                                   </button>
@@ -697,8 +699,8 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                                   assignMenuAnchorRef.current = e.currentTarget;
                                   setAssignMenuFor(emp.id);
                                 }}
-                                aria-label={`Add policy for ${emp.firstName} ${emp.lastName}`}
-                                title="Add policy"
+                                aria-label={t('timeOff.assignments.addPolicyForAria', { name: `${emp.firstName} ${emp.lastName}` })}
+                                title={t('timeOff.assignments.addPolicyTitle')}
                               >
                                 <PlusIcon />
                               </button>
@@ -713,9 +715,9 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                 <table className="table full-table">
                   <thead>
                     <tr>
-                      <th>Employee</th>
-                      <th>Department</th>
-                      <th>Assigned Policies</th>
+                      <th>{t('timeOff.assignments.table.employee')}</th>
+                      <th>{t('timeOff.assignments.table.department')}</th>
+                      <th>{t('timeOff.assignments.table.assignedPolicies')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -742,8 +744,8 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                                       type="button"
                                       className="time-off-policy-chip-remove"
                                       onClick={() => handleUnassign(emp.id, a.timeOffPolicyId)}
-                                      aria-label={`Remove ${a.timeOffPolicy.name}`}
-                                      title="Remove"
+                                      aria-label={t('timeOff.assignments.removePolicyAria', { name: a.timeOffPolicy.name })}
+                                      title={t('timeOff.assignments.removeTitle')}
                                     >
                                       ×
                                     </button>
@@ -758,8 +760,8 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                                     assignMenuAnchorRef.current = e.currentTarget;
                                     setAssignMenuFor(emp.id);
                                   }}
-                                  aria-label={`Add policy for ${emp.firstName} ${emp.lastName}`}
-                                  title="Add policy"
+                                  aria-label={t('timeOff.assignments.addPolicyForAria', { name: `${emp.firstName} ${emp.lastName}` })}
+                                  title={t('timeOff.assignments.addPolicyTitle')}
                                 >
                                   <PlusIcon />
                                 </button>
@@ -785,7 +787,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
               const assignedIds = (menuEmployee.timeOffPolicies || []).map((a: any) => a.timeOffPolicyId);
               const menuAvailable = activeTimeOffPolicies.filter((p) => !assignedIds.includes(p.id));
               if (menuAvailable.length === 0) {
-                return <p className="text-xs text-ink-muted dark:text-dark-ink-muted">No more policies to assign.</p>;
+                return <p className="text-xs text-ink-muted dark:text-dark-ink-muted">{t('timeOff.assignments.noMorePolicies')}</p>;
               }
               return menuAvailable.map((p) => (
                 <button
@@ -805,11 +807,11 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
         {!loading && tab === 'my-requests' && (
           <>
             {!myEmployee ? (
-              <p>Your account isn't linked to an employee record, so you can't submit time off requests.</p>
+              <p>{t('timeOff.myRequests.notLinked')}</p>
             ) : (
               <>
                 {myAssignedPolicies.length === 0 ? (
-                  <p>You don't have any time off policies assigned yet — ask an admin to assign one.</p>
+                  <p>{t('timeOff.myTimeoff.noPoliciesAssigned')}</p>
                 ) : (
                   <>
                     {myBalances.length > 0 && (
@@ -817,8 +819,8 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                         {myBalances.map((bal) => (
                           <span key={bal.timeOffPolicyId} className="time-off-policy-chip">
                             <span className="color-dot" style={{ background: bal.color || '#9ca3af' }} />
-                            {bal.policyName}: {bal.remaining} of {bal.allocated} days left
-                            {bal.pending > 0 ? ` (${bal.pending} pending)` : ''}
+                            {bal.policyName}: {t('timeOff.myRequests.balanceChip', { remaining: bal.remaining, allocated: bal.allocated })}
+                            {bal.pending > 0 ? t('timeOff.myRequests.balanceChipPending', { count: bal.pending }) : ''}
                           </span>
                         ))}
                       </div>
@@ -826,7 +828,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                     <form onSubmit={handleCreateRequest} className="mb-5">
                       <div className="form-group">
                         <label htmlFor="time-off-request-policy">
-                          Policy
+                          {t('timeOff.myRequests.form.policy')}
                           <RequiredMark />
                         </label>
                         <select
@@ -835,7 +837,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                           onChange={(e) => setNewRequest({ ...newRequest, timeOffPolicyId: e.target.value })}
                           required
                         >
-                          <option value="">-- select --</option>
+                          <option value="">{t('timeOff.common.selectPlaceholder')}</option>
                           {myAssignedPolicies.map((p: any) => (
                             <option key={p.id} value={p.id}>
                               {p.name}
@@ -845,7 +847,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                       </div>
                       <div className="form-group">
                         <label htmlFor="time-off-request-start">
-                          Start date
+                          {t('timeOff.myRequests.form.startDate')}
                           <RequiredMark />
                         </label>
                         <input
@@ -858,7 +860,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                       </div>
                       <div className="form-group">
                         <label htmlFor="time-off-request-end">
-                          End date
+                          {t('timeOff.myRequests.form.endDate')}
                           <RequiredMark />
                         </label>
                         <input
@@ -870,7 +872,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                         />
                       </div>
                       <div className="form-group">
-                        <label htmlFor="time-off-request-note">Note (optional)</label>
+                        <label htmlFor="time-off-request-note">{t('timeOff.myRequests.form.note')}</label>
                         <input
                           id="time-off-request-note"
                           type="text"
@@ -879,14 +881,14 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                         />
                       </div>
                       <button type="submit" className="btn-primary">
-                        Submit Request
+                        {t('timeOff.myRequests.form.submit')}
                       </button>
                     </form>
                   </>
                 )}
 
                 {myRequests.length === 0 ? (
-                  <p>You haven't requested any time off yet.</p>
+                  <p>{t('timeOff.myRequests.noneYet')}</p>
                 ) : (
                   <>
                   <div className="entity-card-list">
@@ -896,7 +898,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                           <span className="flex items-center justify-between gap-2">
                             <span className="entity-card-name">{req.timeOffPolicy.name}</span>
                             <span className={`status-badge status-${req.status} shrink-0`}>
-                              {STATUS_LABELS[req.status] || req.status}
+                              {t(`timeOff.status.${req.status}`, { defaultValue: req.status })}
                             </span>
                           </span>
                           <span className="entity-card-meta">
@@ -907,7 +909,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                               className="btn-danger mt-2 px-2 py-1 text-xs"
                               onClick={() => setCancellingRequestId(req.id)}
                             >
-                              Cancel
+                              {t('timeOff.myRequests.cancel')}
                             </button>
                           )}
                         </span>
@@ -918,12 +920,12 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                   <table className="table full-table">
                     <thead>
                       <tr>
-                        <th>Policy</th>
-                        <th>Dates</th>
-                        <th>Days</th>
-                        <th>Status</th>
-                        <th>Note</th>
-                        <th>Actions</th>
+                        <th>{t('timeOff.myRequests.table.policy')}</th>
+                        <th>{t('timeOff.myRequests.table.dates')}</th>
+                        <th>{t('timeOff.myRequests.table.days')}</th>
+                        <th>{t('timeOff.myRequests.table.status')}</th>
+                        <th>{t('timeOff.myRequests.table.note')}</th>
+                        <th>{t('timeOff.myRequests.table.actions')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -934,7 +936,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                             {req.startDate.slice(0, 10)} → {req.endDate.slice(0, 10)}
                           </td>
                           <td>{req.daysRequested}</td>
-                          <td>{STATUS_LABELS[req.status] || req.status}</td>
+                          <td>{t(`timeOff.status.${req.status}`, { defaultValue: req.status })}</td>
                           <td>{req.decisionNote || req.note || '—'}</td>
                           <td>
                             {req.status === 'pending' && (
@@ -942,7 +944,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                                 className="btn-danger px-2 py-1 text-xs"
                                 onClick={() => setCancellingRequestId(req.id)}
                               >
-                                Cancel
+                                {t('timeOff.myRequests.cancel')}
                               </button>
                             )}
                           </td>
@@ -961,7 +963,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
         {!loading && tab === 'approvals' && (
           <>
             {pendingApprovals.length === 0 ? (
-              <p>No pending requests waiting on your approval.</p>
+              <p>{t('timeOff.approvals.empty')}</p>
             ) : (
               <>
               <div className="entity-card-list">
@@ -981,13 +983,13 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                           className="btn-success px-2 py-1 text-xs"
                           onClick={() => handleDecideRequest(req.id, 'approved')}
                         >
-                          Approve
+                          {t('timeOff.approvals.approve')}
                         </button>
                         <button
                           className="btn-danger px-2 py-1 text-xs"
                           onClick={() => handleDecideRequest(req.id, 'rejected')}
                         >
-                          Reject
+                          {t('timeOff.approvals.reject')}
                         </button>
                       </div>
                     </span>
@@ -998,12 +1000,12 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
               <table className="table full-table">
                 <thead>
                   <tr>
-                    <th>Employee</th>
-                    <th>Policy</th>
-                    <th>Dates</th>
-                    <th>Days</th>
-                    <th>Note</th>
-                    <th>Actions</th>
+                    <th>{t('timeOff.approvals.table.employee')}</th>
+                    <th>{t('timeOff.approvals.table.policy')}</th>
+                    <th>{t('timeOff.approvals.table.dates')}</th>
+                    <th>{t('timeOff.approvals.table.days')}</th>
+                    <th>{t('timeOff.approvals.table.note')}</th>
+                    <th>{t('timeOff.approvals.table.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1023,13 +1025,13 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                           className="btn-success px-2 py-1 text-xs mr-1.5"
                           onClick={() => handleDecideRequest(req.id, 'approved')}
                         >
-                          Approve
+                          {t('timeOff.approvals.approve')}
                         </button>
                         <button
                           className="btn-danger px-2 py-1 text-xs"
                           onClick={() => handleDecideRequest(req.id, 'rejected')}
                         >
-                          Reject
+                          {t('timeOff.approvals.reject')}
                         </button>
                       </td>
                     </tr>
@@ -1045,7 +1047,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
         {!loading && tab === 'all-requests' && canManagePolicies && (
           <>
             {allRequests.length === 0 ? (
-              <p>No time off requests yet.</p>
+              <p>{t('timeOff.allRequests.empty')}</p>
             ) : (
               <>
               <div className="entity-card-list">
@@ -1058,7 +1060,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                           {req.employee.firstName} {req.employee.lastName}
                         </span>
                         <span className={`status-badge status-${req.status} shrink-0`}>
-                          {STATUS_LABELS[req.status] || req.status}
+                          {t(`timeOff.status.${req.status}`, { defaultValue: req.status })}
                         </span>
                       </span>
                       <span className="entity-card-meta">
@@ -1071,13 +1073,13 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                             className="btn-success px-2 py-1 text-xs"
                             onClick={() => handleDecideRequest(req.id, 'approved')}
                           >
-                            Approve
+                            {t('timeOff.approvals.approve')}
                           </button>
                           <button
                             className="btn-danger px-2 py-1 text-xs"
                             onClick={() => handleDecideRequest(req.id, 'rejected')}
                           >
-                            Reject
+                            {t('timeOff.approvals.reject')}
                           </button>
                         </div>
                       )}
@@ -1089,14 +1091,14 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
               <table className="table full-table">
                 <thead>
                   <tr>
-                    <th>Employee</th>
-                    <th>Policy</th>
-                    <th>Dates</th>
-                    <th>Days</th>
-                    <th>Status</th>
-                    <th>Approver</th>
-                    <th>Note</th>
-                    <th>Actions</th>
+                    <th>{t('timeOff.allRequests.table.employee')}</th>
+                    <th>{t('timeOff.allRequests.table.policy')}</th>
+                    <th>{t('timeOff.allRequests.table.dates')}</th>
+                    <th>{t('timeOff.allRequests.table.days')}</th>
+                    <th>{t('timeOff.allRequests.table.status')}</th>
+                    <th>{t('timeOff.allRequests.table.approver')}</th>
+                    <th>{t('timeOff.allRequests.table.note')}</th>
+                    <th>{t('timeOff.allRequests.table.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1110,7 +1112,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                         {req.startDate.slice(0, 10)} → {req.endDate.slice(0, 10)}
                       </td>
                       <td>{req.daysRequested}</td>
-                      <td>{STATUS_LABELS[req.status] || req.status}</td>
+                      <td>{t(`timeOff.status.${req.status}`, { defaultValue: req.status })}</td>
                       <td>{req.approver ? `${req.approver.firstName} ${req.approver.lastName}` : '—'}</td>
                       <td>{req.decisionNote || req.note || '—'}</td>
                       <td>
@@ -1120,13 +1122,13 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                               className="btn-success px-2 py-1 text-xs mr-1.5"
                               onClick={() => handleDecideRequest(req.id, 'approved')}
                             >
-                              Approve
+                              {t('timeOff.approvals.approve')}
                             </button>
                             <button
                               className="btn-danger px-2 py-1 text-xs"
                               onClick={() => handleDecideRequest(req.id, 'rejected')}
                             >
-                              Reject
+                              {t('timeOff.approvals.reject')}
                             </button>
                           </>
                         )}
@@ -1144,7 +1146,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
         {!loading && tab === 'balances' && canManagePolicies && (
           <>
             {balancesByEmployee.length === 0 ? (
-              <p>No time off policy assignments yet.</p>
+              <p>{t('timeOff.balances.empty')}</p>
             ) : (
               <>
                 <EntityCardList
@@ -1152,17 +1154,19 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                   getKey={(row) => row.employeeId}
                   getInitials={(row) => getInitials(row.employeeFirstName, row.employeeLastName)}
                   getName={(row) => `${row.employeeFirstName} ${row.employeeLastName}`}
-                  getMeta={(row) => `${row.department || '—'} · ${row.policies.length} polic${row.policies.length === 1 ? 'y' : 'ies'} · ${row.totalRemaining}d remaining`}
+                  getMeta={(row) =>
+                    t('timeOff.balances.meta', { department: row.department || '—', count: row.policies.length, total: row.totalRemaining })
+                  }
                   onSelect={(row) => setBalancesDetailEmployeeId(row.employeeId)}
                 />
                 <div className="full-table-wrap has-mobile-cards">
                 <table className="table full-table">
                   <thead>
                     <tr>
-                      <th>Employee</th>
-                      <th>Department</th>
-                      <th>Policies</th>
-                      <th>Total remaining ({new Date().getFullYear()})</th>
+                      <th>{t('timeOff.balances.table.employee')}</th>
+                      <th>{t('timeOff.balances.table.department')}</th>
+                      <th>{t('timeOff.balances.table.policies')}</th>
+                      <th>{t('timeOff.balances.table.totalRemaining', { year: new Date().getFullYear() })}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1195,7 +1199,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
           title={
             selectedBalanceEmployee
               ? `${selectedBalanceEmployee.employeeFirstName} ${selectedBalanceEmployee.employeeLastName}`
-              : 'Balances'
+              : t('timeOff.balances.slideOverDefaultTitle')
           }
           onClose={() => {
             setBalancesDetailEmployeeId(null);
@@ -1225,7 +1229,9 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                   >
                     <span className="color-dot" style={{ background: bal.color || '#9ca3af' }} />
                     <span className="font-semibold text-brand-navy dark:text-dark-ink">{bal.policyName}</span>
-                    <span className="ml-auto text-xs text-ink-faint dark:text-dark-ink-faint">{bal.remaining} left</span>
+                    <span className="ml-auto text-xs text-ink-faint dark:text-dark-ink-faint">
+                      {t('timeOff.myTimeoff.remainingLeft', { count: bal.remaining })}
+                    </span>
                     <ChevronDownIcon className={`h-3.5 w-3.5 shrink-0 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                   </button>
                   {isExpanded && (
@@ -1233,23 +1239,25 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                       <div className="balance-detail-stats">
                         <div>
                           <div className="balance-detail-stat-value">{bal.allocated}</div>
-                          <div className="balance-detail-stat-label">Allocated</div>
+                          <div className="balance-detail-stat-label">{t('timeOff.myTimeoff.stats.allocated')}</div>
                         </div>
                         <div>
                           <div className="balance-detail-stat-value">{bal.used}</div>
-                          <div className="balance-detail-stat-label">Used</div>
+                          <div className="balance-detail-stat-label">{t('timeOff.myTimeoff.stats.used')}</div>
                         </div>
                         <div>
                           <div className="balance-detail-stat-value">{bal.pending}</div>
-                          <div className="balance-detail-stat-label">Pending</div>
+                          <div className="balance-detail-stat-label">{t('timeOff.myTimeoff.stats.pending')}</div>
                         </div>
                         <div>
                           <div className="balance-detail-stat-value highlight">{bal.remaining}</div>
-                          <div className="balance-detail-stat-label">Remaining</div>
+                          <div className="balance-detail-stat-label">{t('timeOff.myTimeoff.stats.remaining')}</div>
                         </div>
                       </div>
                       <p className="mb-1.5 text-xs font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint">
-                        Accrual: {bal.accrualMethod === 'monthly' ? 'Monthly' : 'Fixed annual'}
+                        {t('timeOff.myTimeoff.accrualLine', {
+                          method: t(`timeOff.accrual.${ACCRUAL_KEY_MAP[bal.accrualMethod] || 'fixed'}`),
+                        })}
                       </p>
                       {policyRequests.length > 0 ? (
                         <div className="balance-detail-requests">
@@ -1260,13 +1268,13 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                               </span>
                               <span className="balance-detail-request-days">{req.daysRequested}d</span>
                               <span className={`status-badge status-${req.status}`}>
-                                {STATUS_LABELS[req.status] || req.status}
+                                {t(`timeOff.status.${req.status}`, { defaultValue: req.status })}
                               </span>
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <p className="text-xs text-ink-faint dark:text-dark-ink-faint">No requests made under this policy yet.</p>
+                        <p className="text-xs text-ink-faint dark:text-dark-ink-faint">{t('timeOff.myTimeoff.noRequestsUnderPolicy')}</p>
                       )}
                     </div>
                   )}
@@ -1280,9 +1288,9 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
             {timeOffPolicies.length === 0 ? (
               <EmptyState
                 icon={<CalendarIcon />}
-                title="No time off policies yet"
-                body="A policy defines how days are earned and whether requests need approval."
-                primaryLabel="Create a policy"
+                title={t('timeOff.policies.emptyState.title')}
+                body={t('timeOff.policies.emptyState.body')}
+                primaryLabel={t('timeOff.policies.emptyState.primaryLabel')}
                 onPrimary={handleOpenAddPolicy}
               />
             ) : (
@@ -1293,19 +1301,19 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                     className={`mini-toggle-opt ${policiesFilter === 'active' ? 'active' : ''}`}
                     onClick={() => setPoliciesFilter('active')}
                   >
-                    Active ({timeOffPolicies.filter((p) => p.isActive).length})
+                    {t('timeOff.policies.activeCount', { count: timeOffPolicies.filter((p) => p.isActive).length })}
                   </button>
                   <button
                     type="button"
                     className={`mini-toggle-opt ${policiesFilter === 'inactive' ? 'active' : ''}`}
                     onClick={() => setPoliciesFilter('inactive')}
                   >
-                    Deactivated ({timeOffPolicies.filter((p) => !p.isActive).length})
+                    {t('timeOff.policies.deactivatedCount', { count: timeOffPolicies.filter((p) => !p.isActive).length })}
                   </button>
                 </div>
                 {filteredTimeOffPolicies.length === 0 ? (
                   <p className="text-sm text-ink-muted dark:text-dark-ink-muted">
-                    {policiesFilter === 'active' ? 'No active policies.' : 'No deactivated policies.'}
+                    {policiesFilter === 'active' ? t('timeOff.policies.noActive') : t('timeOff.policies.noDeactivated')}
                   </p>
                 ) : (
                   <>
@@ -1320,8 +1328,11 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                           <span className="entity-card-body">
                             <span className={`entity-card-name ${!policy.isActive ? 'line-through' : ''}`}>{policy.name}</span>
                             <span className="entity-card-meta">
-                              {ACCRUAL_LABELS[policy.accrualMethod] || policy.accrualMethod} · {policy.daysPerYear}d/yr ·{' '}
-                              {employeeCount} employee{employeeCount === 1 ? '' : 's'}
+                              {t('timeOff.policies.meta', {
+                                accrual: t(`timeOff.accrual.${ACCRUAL_KEY_MAP[policy.accrualMethod] || 'fixed'}`),
+                                days: policy.daysPerYear,
+                                count: employeeCount,
+                              })}
                             </span>
                           </span>
                           <button
@@ -1331,8 +1342,8 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                               policyRowMenuAnchorRef.current = e.currentTarget;
                               setPolicyRowMenuFor(policyRowMenuFor === policy.id ? null : policy.id);
                             }}
-                            aria-label={`Actions for ${policy.name}`}
-                            title="Actions"
+                            aria-label={t('timeOff.policies.actionsForAria', { name: policy.name })}
+                            title={t('timeOff.policies.actionsTitle')}
                           >
                             <DotsVerticalIcon />
                           </button>
@@ -1344,13 +1355,13 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                     <table className="table full-table">
                       <thead>
                         <tr>
-                          <th>Name</th>
-                          <th>Accrual</th>
-                          <th>Days/year</th>
-                          <th>Paid</th>
-                          <th>Requires approval</th>
-                          <th>Employees</th>
-                          <th>Actions</th>
+                          <th>{t('timeOff.policies.table.name')}</th>
+                          <th>{t('timeOff.policies.table.accrual')}</th>
+                          <th>{t('timeOff.policies.table.daysPerYear')}</th>
+                          <th>{t('timeOff.policies.table.paid')}</th>
+                          <th>{t('timeOff.policies.table.requiresApproval')}</th>
+                          <th>{t('timeOff.policies.table.employees')}</th>
+                          <th>{t('timeOff.policies.table.actions')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1364,10 +1375,10 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                                 <span className="color-dot mr-2 inline-block" style={{ background: policy.color || '#9ca3af' }} />
                                 <span className={!policy.isActive ? 'line-through' : ''}>{policy.name}</span>
                               </td>
-                              <td>{ACCRUAL_LABELS[policy.accrualMethod] || policy.accrualMethod}</td>
+                              <td>{t(`timeOff.accrual.${ACCRUAL_KEY_MAP[policy.accrualMethod] || 'fixed'}`)}</td>
                               <td>{policy.daysPerYear}</td>
-                              <td>{policy.isPaid ? 'Yes' : 'No'}</td>
-                              <td>{policy.requiresApproval ? 'Yes' : 'No'}</td>
+                              <td>{policy.isPaid ? t('timeOff.common.yes') : t('timeOff.common.no')}</td>
+                              <td>{policy.requiresApproval ? t('timeOff.common.yes') : t('timeOff.common.no')}</td>
                               <td>{employeeCount}</td>
                               <td>
                                 <button
@@ -1377,8 +1388,8 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                                     policyRowMenuAnchorRef.current = e.currentTarget;
                                     setPolicyRowMenuFor(policyRowMenuFor === policy.id ? null : policy.id);
                                   }}
-                                  aria-label={`Actions for ${policy.name}`}
-                                  title="Actions"
+                                  aria-label={t('timeOff.policies.actionsForAria', { name: policy.name })}
+                                  title={t('timeOff.policies.actionsTitle')}
                                 >
                                   <DotsVerticalIcon />
                                 </button>
@@ -1392,7 +1403,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                               <span className="ghost-plus-box">
                                 <PlusIcon className="h-3 w-3" />
                               </span>
-                              Add
+                              {t('timeOff.policies.addRow')}
                             </span>
                           </td>
                         </tr>
@@ -1416,10 +1427,10 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                 return (
                   <>
                     <div className="popover-menu-item" onClick={() => handleStartEditPolicy(menuPolicy)}>
-                      Edit
+                      {t('timeOff.policies.menu.edit')}
                     </div>
                     <div className="popover-menu-item" onClick={() => handleOpenBulkAssign(menuPolicy)}>
-                      Add in bulk
+                      {t('timeOff.policies.menu.addInBulk')}
                     </div>
                     <div
                       className={`popover-menu-item ${menuPolicy.isActive ? 'danger' : 'success'}`}
@@ -1427,7 +1438,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                         menuPolicy.isActive ? handleOpenDeletePolicy(menuPolicy) : handleTogglePolicyActive(menuPolicy)
                       }
                     >
-                      {menuPolicy.isActive ? 'DELETE' : 'Activate'}
+                      {menuPolicy.isActive ? t('timeOff.policies.menu.delete') : t('timeOff.policies.menu.activate')}
                     </div>
                   </>
                 );

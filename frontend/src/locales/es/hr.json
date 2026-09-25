@@ -419,6 +419,20 @@
         "semimonthly": "Quincenal",
         "monthly": "Mensual"
       },
+      "cancel": "Cancelar",
+      "selectPlaceholder": "-- seleccionar --",
+      "add": "Agregar",
+      "statusLabels": {
+        "confirmed": "Confirmada",
+        "draft": "Borrador"
+      },
+      "entryTypeLabels": {
+        "base": "Pago",
+        "bonus": "Bono",
+        "commission": "Comisión",
+        "reimbursement": "Reembolso",
+        "deduction": "Deducción"
+      },
       "toasts": {
         "loadFailed": "Error al cargar la configuración de nómina: {{error}}",
         "frequencyUpdated": "Frecuencia de pago actualizada.",

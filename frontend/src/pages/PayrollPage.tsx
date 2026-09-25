@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import i18n from '../lib/i18n';
 import { api } from '../api';
 import type {
   CompensationStatusEntry,
@@ -37,37 +39,25 @@ interface PayrollPageProps {
 // siblings here, not a rebuild of this page's shell.
 type Tab = 'timeline' | 'assignments' | 'policies';
 
-const ADJUSTMENT_TYPE_LABELS: Record<string, string> = {
-  base: 'Payment',
-  bonus: 'Bonus',
-  commission: 'Commission',
-  reimbursement: 'Reimbursement',
-  deduction: 'Deduction',
-};
+// Plain module-level helpers (not components) resolve via the global i18n instance directly
+// instead of a hook — same pattern as lib/settingsSections.tsx and NotificationBell.tsx's
+// formatRelativeTime (docs/general/spec-i18n.md).
+function adjustmentTypeLabel(type: string): string {
+  return i18n.t(`payroll.page.entryTypeLabels.${type}`, { ns: 'hr', defaultValue: type });
+}
 
-const CADENCE_LABELS: Record<PayFrequencyCadence, string> = {
-  weekly: 'Weekly',
-  semimonthly: 'Semi-monthly',
-  monthly: 'Monthly',
-};
+function cadenceLabel(cadence: PayFrequencyCadence): string {
+  return i18n.t(`payroll.page.cadenceLabels.${cadence}`, { ns: 'hr' });
+}
 
-const DUE_DATE_LABELS: Record<DueDateOffset, string> = {
-  same_day: 'Same day',
-  plus_2: '+2 days',
-  plus_5: '+5 days',
-  custom: 'Custom',
-};
+function dueDateOffsetLabel(offset: DueDateOffset): string {
+  return i18n.t(`payroll.page.dueDateLabels.${offset === 'same_day' ? 'same_day' : offset}`, { ns: 'hr' });
+}
 
 const WEEKDAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
-const DAY_OF_WEEK_LABELS: Record<string, string> = {
-  monday: 'Monday',
-  tuesday: 'Tuesday',
-  wednesday: 'Wednesday',
-  thursday: 'Thursday',
-  friday: 'Friday',
-  saturday: 'Saturday',
-  sunday: 'Sunday',
-};
+function dayOfWeekLabel(day: string): string {
+  return i18n.t(`payroll.page.dayOfWeekLabels.${day}`, { ns: 'hr', defaultValue: day });
+}
 
 function parseAnchorConfig(raw: string): any {
   try {
@@ -81,26 +71,29 @@ function parseAnchorConfig(raw: string): any {
 // Unidad 1) as the single readable "pay day(s)" column value.
 function describeAnchorConfig(freq: PayFrequency): string {
   const config = parseAnchorConfig(freq.anchorConfig);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(`payroll.page.anchorConfig.${key}`, { ns: 'hr', ...opts });
   if (freq.cadence === 'weekly') {
-    return DAY_OF_WEEK_LABELS[config.dayOfWeek] || '—';
+    return config.dayOfWeek ? dayOfWeekLabel(config.dayOfWeek) : t('none');
   }
   if (freq.cadence === 'semimonthly') {
-    if (config.preset === 'first_15') return '1st and 15th';
-    if (config.preset === 'fifteen_last') return '15th and last day';
-    if (config.preset === 'custom' && Array.isArray(config.days)) return `${config.days[0]} and ${config.days[1]}`;
-    return '—';
+    if (config.preset === 'first_15') return t('firstAnd15th');
+    if (config.preset === 'fifteen_last') return t('fifteenAndLast');
+    if (config.preset === 'custom' && Array.isArray(config.days)) return t('customDays', { day1: config.days[0], day2: config.days[1] });
+    return t('none');
   }
-  if (config.preset === 'first_business_day') return 'First business day';
-  if (config.preset === 'last_business_day') return 'Last business day';
-  if (config.preset === 'custom' && config.day) return `Day ${config.day}`;
-  return '—';
+  if (config.preset === 'first_business_day') return t('firstBusinessDay');
+  if (config.preset === 'last_business_day') return t('lastBusinessDay');
+  if (config.preset === 'custom' && config.day) return t('customDay', { day: config.day });
+  return t('none');
 }
 
 function describeDueDate(freq: PayFrequency): string {
   if (freq.dueDateOffset === 'custom') {
-    return freq.dueDateCustomDays != null ? `+${freq.dueDateCustomDays} days` : 'Custom';
+    return freq.dueDateCustomDays != null
+      ? i18n.t('payroll.page.dueDateLabels.customDays', { ns: 'hr', count: freq.dueDateCustomDays })
+      : i18n.t('payroll.page.dueDateLabels.custom', { ns: 'hr' });
   }
-  return DUE_DATE_LABELS[freq.dueDateOffset];
+  return dueDateOffsetLabel(freq.dueDateOffset);
 }
 
 interface FrequencyFormState {
@@ -198,6 +191,7 @@ function buildAnchorConfig(form: FrequencyFormState): Record<string, unknown> {
 }
 
 export default function PayrollPage({ token }: PayrollPageProps) {
+  const { t } = useTranslation('hr');
   const toast = useToast();
   const navigate = useNavigate();
   const viewsBarRef = useRef<HTMLDivElement>(null);
@@ -283,7 +277,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
       setPayrollRuns(runsData);
       setOffCyclePayments(offPaymentsData);
     } catch (error) {
-      toast.error('Failed to load payroll settings: ' + (error as Error).message);
+      toast.error(t('payroll.page.toasts.loadFailed', { error: (error as Error).message }));
     } finally {
       setLoading(false);
     }
@@ -316,15 +310,15 @@ export default function PayrollPage({ token }: PayrollPageProps) {
       };
       if (editingFrequencyId) {
         await api.updatePayFrequency(token, editingFrequencyId, { ...payload, isActive: frequencyForm.isActive });
-        toast.success('Pay frequency updated.');
+        toast.success(t('payroll.page.toasts.frequencyUpdated'));
       } else {
         await api.createPayFrequency(token, payload);
-        toast.success('Pay frequency created.');
+        toast.success(t('payroll.page.toasts.frequencyCreated'));
       }
       setFrequencyModalOpen(false);
       load();
     } catch (error) {
-      toast.error('Failed to save pay frequency: ' + (error as Error).message);
+      toast.error(t('payroll.page.toasts.frequencySaveFailed', { error: (error as Error).message }));
     } finally {
       setSavingFrequency(false);
     }
@@ -342,11 +336,11 @@ export default function PayrollPage({ token }: PayrollPageProps) {
     setSavingMethod(true);
     try {
       await api.createPaymentMethod(token, { name });
-      toast.success('Payment method added.');
+      toast.success(t('payroll.page.toasts.methodAdded'));
       setMethodModalOpen(false);
       load();
     } catch (error) {
-      toast.error('Failed to add payment method: ' + (error as Error).message);
+      toast.error(t('payroll.page.toasts.methodAddFailed', { error: (error as Error).message }));
     } finally {
       setSavingMethod(false);
     }
@@ -355,10 +349,10 @@ export default function PayrollPage({ token }: PayrollPageProps) {
   const handleToggleMethodActive = async (method: PaymentMethod) => {
     try {
       await api.updatePaymentMethod(token, method.id, { isActive: !method.isActive });
-      toast.success(method.isActive ? 'Payment method deactivated.' : 'Payment method activated.');
+      toast.success(method.isActive ? t('payroll.page.toasts.methodDeactivated') : t('payroll.page.toasts.methodActivated'));
       load();
     } catch (error) {
-      toast.error('Failed to update payment method: ' + (error as Error).message);
+      toast.error(t('payroll.page.toasts.methodUpdateFailed', { error: (error as Error).message }));
     }
   };
 
@@ -430,15 +424,15 @@ export default function PayrollPage({ token }: PayrollPageProps) {
       });
       const failures = results.filter((r) => !r.success);
       if (failures.length > 0) {
-        toast.error(`${failures.length} of ${results.length} assignment(s) failed.`);
+        toast.error(t('payroll.page.toasts.assignmentFailedCount', { failed: failures.length, total: results.length }));
       } else {
-        toast.success(`Assigned pay policy to ${results.length} ${results.length === 1 ? 'person' : 'people'}.`);
+        toast.success(t('payroll.page.toasts.assignedSuccess', { count: results.length }));
       }
       setAssignModalOpen(false);
       setSelectedEmployeeIds(new Set());
       load();
     } catch (error) {
-      toast.error('Failed to assign pay policy: ' + (error as Error).message);
+      toast.error(t('payroll.page.toasts.assignFailed', { error: (error as Error).message }));
     } finally {
       setSavingAssignment(false);
     }
@@ -468,9 +462,9 @@ export default function PayrollPage({ token }: PayrollPageProps) {
     !canManagePayroll
       ? null
       : tab === 'timeline'
-        ? { label: 'New Run', onClick: openNewRunModal }
+        ? { label: t('payroll.page.timeline.newRun'), onClick: openNewRunModal }
         : tab === 'policies'
-          ? { label: 'New policy', onClick: openAddFrequency }
+          ? { label: t('payroll.page.policies.newPolicy'), onClick: openAddFrequency }
           : null,
   );
 
@@ -484,10 +478,10 @@ export default function PayrollPage({ token }: PayrollPageProps) {
         periodLabel: newRunPeriodLabel.trim(),
       });
       setNewRunModalOpen(false);
-      toast.success('Payroll run created.');
+      toast.success(t('payroll.page.toasts.runCreated'));
       navigate(`/hr/payroll/runs/${run.id}`);
     } catch (error) {
-      toast.error('Failed to create run: ' + (error as Error).message);
+      toast.error(t('payroll.page.toasts.runCreateFailed', { error: (error as Error).message }));
     } finally {
       setSavingRun(false);
     }
@@ -527,11 +521,11 @@ export default function PayrollPage({ token }: PayrollPageProps) {
           label: offPaymentLabel || undefined,
         })),
       });
-      toast.success(`Created ${offPaymentSelectedIds.size} one-off payment(s).`);
+      toast.success(t('payroll.page.toasts.offPaymentCreated', { count: offPaymentSelectedIds.size }));
       setOffPaymentModalOpen(false);
       load();
     } catch (error) {
-      toast.error('Failed to create one-off payment: ' + (error as Error).message);
+      toast.error(t('payroll.page.toasts.offPaymentFailed', { error: (error as Error).message }));
     } finally {
       setSavingOffPayment(false);
     }
@@ -550,9 +544,9 @@ export default function PayrollPage({ token }: PayrollPageProps) {
     return (
       <div className="container">
         <div className="page-toolbar">
-          <h2 className="page-title">Payroll</h2>
+          <h2 className="page-title">{t('payroll.page.title')}</h2>
         </div>
-        <p className="text-sm text-ink-muted">Payroll is only visible to the tenant owner.</p>
+        <p className="text-sm text-ink-muted">{t('payroll.page.ownerOnly')}</p>
       </div>
     );
   }
@@ -560,22 +554,22 @@ export default function PayrollPage({ token }: PayrollPageProps) {
   return (
     <div className="container">
       <div className="page-toolbar">
-        <h2 className="page-title">Payroll</h2>
+        <h2 className="page-title">{t('payroll.page.title')}</h2>
       </div>
 
       <div className="views-bar" ref={viewsBarRef}>
         <button type="button" className={`view-tab ${tab === 'timeline' ? 'active' : ''}`} onClick={() => setTab('timeline')}>
-          Timeline
+          {t('payroll.page.tabs.timeline')}
         </button>
         <button
           type="button"
           className={`view-tab ${tab === 'assignments' ? 'active' : ''}`}
           onClick={() => setTab('assignments')}
         >
-          Assignments
+          {t('payroll.page.tabs.assignments')}
         </button>
         <button type="button" className={`view-tab ${tab === 'policies' ? 'active' : ''}`} onClick={() => setTab('policies')}>
-          Payment Policies
+          {t('payroll.page.tabs.policies')}
         </button>
       </div>
       <HorizontalScrollbar targetRef={viewsBarRef} />
@@ -589,13 +583,13 @@ export default function PayrollPage({ token }: PayrollPageProps) {
             <>
               <div className="flex items-start justify-between gap-4 mb-3">
                 <p className="text-sm text-ink-muted">
-                  Every payroll run and one-off payment in one place, newest first.
+                  {t('payroll.page.timeline.description')}
                 </p>
                 {canManagePayroll && (
                   <div className="flex items-center gap-2">
                     <button type="button" className="btn-secondary gap-1.5" onClick={openOffPaymentModal}>
                       <PlusIcon className="h-3.5 w-3.5" />
-                      One-off Payment
+                      {t('payroll.page.timeline.oneOffPayment')}
                     </button>
                     {/* Hidden below md: the mobile FAB (usePrimaryAction below) already exposes
                         this same "New Run" action there. Hidden entirely once the list is empty:
@@ -609,7 +603,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                       <span className="hidden md:inline-block">
                         <button type="button" className="btn-primary gap-1.5" onClick={openNewRunModal}>
                           <PlusIcon className="h-3.5 w-3.5" />
-                          New Run
+                          {t('payroll.page.timeline.newRun')}
                         </button>
                       </span>
                     )}
@@ -620,9 +614,9 @@ export default function PayrollPage({ token }: PayrollPageProps) {
               {timelineItems.length === 0 ? (
                 <EmptyState
                   icon={<CalendarIcon />}
-                  title="No payroll activity yet"
-                  body="Create a run for a pay frequency, or record a one-off payment."
-                  primaryLabel="New Run"
+                  title={t('payroll.page.timeline.emptyTitle')}
+                  body={t('payroll.page.timeline.emptyBody')}
+                  primaryLabel={t('payroll.page.timeline.newRun')}
                   onPrimary={openNewRunModal}
                 />
               ) : (
@@ -636,16 +630,16 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                             <span className="entity-card-name">{item.run.periodLabel}</span>
                             <StatusChip
                               color={item.run.status === 'confirmed' ? '#059669' : '#9ca3af'}
-                              label={item.run.status === 'confirmed' ? 'Confirmed' : 'Draft'}
+                              label={item.run.status === 'confirmed' ? t('payroll.page.statusLabels.confirmed') : t('payroll.page.statusLabels.draft')}
                             />
                           </span>
-                          <span className="entity-card-meta">{item.date.slice(0, 10)} · Run</span>
+                          <span className="entity-card-meta">{t('payroll.page.timeline.runMeta', { date: item.date.slice(0, 10) })}</span>
                           <button
                             type="button"
                             className="btn-secondary btn-sm mt-2"
                             onClick={() => navigate(`/hr/payroll/runs/${item.run.id}`)}
                           >
-                            Open
+                            {t('payroll.page.timeline.open')}
                           </button>
                         </span>
                       </div>
@@ -656,7 +650,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                             {item.entry.employeeFirstName} {item.entry.employeeLastName}
                           </span>
                           <span className="entity-card-meta">
-                            {item.date.slice(0, 10)} · One-off · {ADJUSTMENT_TYPE_LABELS[item.entry.type] || item.entry.type} ·{' '}
+                            {item.date.slice(0, 10)} · {t('payroll.page.timeline.oneOffChip')} · {adjustmentTypeLabel(item.entry.type)} ·{' '}
                             {formatMoney(item.entry.amountCents, item.entry.currency)}
                             {item.entry.label ? ` · ${item.entry.label}` : ''}
                           </span>
@@ -665,7 +659,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                             className="btn-secondary btn-sm mt-2"
                             onClick={() => setPayslipEntryId(item.entry.id)}
                           >
-                            Payslip preview
+                            {t('payroll.page.timeline.payslipPreview')}
                           </button>
                         </span>
                       </div>
@@ -676,10 +670,10 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                   <table className="table full-table">
                     <thead>
                       <tr>
-                        <th>Date</th>
-                        <th>Type</th>
-                        <th>Detail</th>
-                        <th>Status</th>
+                        <th>{t('payroll.page.timeline.columns.date')}</th>
+                        <th>{t('payroll.page.timeline.columns.type')}</th>
+                        <th>{t('payroll.page.timeline.columns.detail')}</th>
+                        <th>{t('payroll.page.timeline.columns.status')}</th>
                         <th></th>
                       </tr>
                     </thead>
@@ -689,13 +683,13 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                           <tr key={`run-${item.run.id}`}>
                             <td>{item.date.slice(0, 10)}</td>
                             <td>
-                              <span className="category-chip">Run</span>
+                              <span className="category-chip">{t('payroll.page.timeline.runChip')}</span>
                             </td>
                             <td>{item.run.periodLabel}</td>
                             <td>
                               <StatusChip
                                 color={item.run.status === 'confirmed' ? '#059669' : '#9ca3af'}
-                                label={item.run.status === 'confirmed' ? 'Confirmed' : 'Draft'}
+                                label={item.run.status === 'confirmed' ? t('payroll.page.statusLabels.confirmed') : t('payroll.page.statusLabels.draft')}
                               />
                             </td>
                             <td>
@@ -704,7 +698,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                                 className="btn-secondary btn-sm"
                                 onClick={() => navigate(`/hr/payroll/runs/${item.run.id}`)}
                               >
-                                Open
+                                {t('payroll.page.timeline.open')}
                               </button>
                             </td>
                           </tr>
@@ -712,11 +706,11 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                           <tr key={`entry-${item.entry.id}`}>
                             <td>{item.date.slice(0, 10)}</td>
                             <td>
-                              <span className="category-chip">One-off</span>
+                              <span className="category-chip">{t('payroll.page.timeline.oneOffChip')}</span>
                             </td>
                             <td>
                               {item.entry.employeeFirstName} {item.entry.employeeLastName} ·{' '}
-                              {ADJUSTMENT_TYPE_LABELS[item.entry.type] || item.entry.type} ·{' '}
+                              {adjustmentTypeLabel(item.entry.type)} ·{' '}
                               {formatMoney(item.entry.amountCents, item.entry.currency)}
                               {item.entry.label ? ` · ${item.entry.label}` : ''}
                             </td>
@@ -726,9 +720,9 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                                 type="button"
                                 className="icon-btn"
                                 onClick={() => setPayslipEntryId(item.entry.id)}
-                                aria-label={`Payslip preview for ${item.entry.employeeFirstName} ${item.entry.employeeLastName}`}
+                                aria-label={t('payroll.page.timeline.payslipPreviewAriaLabel', { name: `${item.entry.employeeFirstName} ${item.entry.employeeLastName}` })}
                               >
-                                <span className="tip">Payslip preview</span>
+                                <span className="tip">{t('payroll.page.timeline.payslipPreview')}</span>
                                 <EyeIcon className="h-4 w-4" />
                               </button>
                             </td>
@@ -747,8 +741,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
             <>
               <div className="flex items-start justify-between gap-4 mb-3">
                 <p className="text-sm text-ink-muted">
-                  Retrofit people with no pay policy yet, or migrate a group to a new one. New people get their
-                  first contract from their own alta, not here.
+                  {t('payroll.page.assignments.description')}
                 </p>
                 {canManagePayroll && assignmentSubTab !== 'terminated' && (
                   <button
@@ -757,7 +750,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                     onClick={openAssignModal}
                     disabled={selectedEmployeeIds.size === 0}
                   >
-                    Assign/Reassign Policy ({selectedEmployeeIds.size})
+                    {t('payroll.page.assignments.assignReassign', { count: selectedEmployeeIds.size })}
                   </button>
                 )}
               </div>
@@ -765,9 +758,9 @@ export default function PayrollPage({ token }: PayrollPageProps) {
               {compensationStatus.length === 0 && terminatedCompensations.length === 0 ? (
                 <EmptyState
                   icon={<TeamIcon />}
-                  title="No contractors or employees yet"
-                  body="Add People with Type Contractor or Employee to assign a pay policy."
-                  primaryLabel="Go to People"
+                  title={t('payroll.page.assignments.emptyTitle')}
+                  body={t('payroll.page.assignments.emptyBody')}
+                  primaryLabel={t('payroll.page.assignments.goToPeople')}
                   onPrimary={() => {
                     window.location.href = '/hr/people';
                   }}
@@ -783,7 +776,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                         setSelectedEmployeeIds(new Set());
                       }}
                     >
-                      Draft ({draftAssignments.length})
+                      {t('payroll.page.assignments.draftTab', { count: draftAssignments.length })}
                     </button>
                     <button
                       type="button"
@@ -793,7 +786,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                         setSelectedEmployeeIds(new Set());
                       }}
                     >
-                      Confirmed ({confirmedAssignments.length})
+                      {t('payroll.page.assignments.confirmedTab', { count: confirmedAssignments.length })}
                     </button>
                     <button
                       type="button"
@@ -803,13 +796,13 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                         setSelectedEmployeeIds(new Set());
                       }}
                     >
-                      Terminated ({terminatedCompensations.length})
+                      {t('payroll.page.assignments.terminatedTab', { count: terminatedCompensations.length })}
                     </button>
                   </div>
 
                   {assignmentSubTab === 'terminated' ? (
                     terminatedCompensations.length === 0 ? (
-                      <p className="text-sm text-ink-muted">No terminated assignments.</p>
+                      <p className="text-sm text-ink-muted">{t('payroll.page.assignments.noTerminated')}</p>
                     ) : (
                       <>
                       <div className="entity-card-list">
@@ -834,10 +827,10 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                         <table className="table full-table">
                           <thead>
                             <tr>
-                              <th>Name</th>
-                              <th>Email</th>
-                              <th>Policy</th>
-                              <th>Status</th>
+                              <th>{t('payroll.page.assignments.columns.name')}</th>
+                              <th>{t('payroll.page.assignments.columns.email')}</th>
+                              <th>{t('payroll.page.assignments.columns.policy')}</th>
+                              <th>{t('payroll.page.assignments.columns.status')}</th>
                             </tr>
                           </thead>
                           <tbody>
@@ -853,7 +846,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                                   </span>
                                 </td>
                                 <td>
-                                  <StatusChip color="#6b7280" label={`Terminated ${entry.effectiveTo.slice(0, 10)}`} />
+                                  <StatusChip color="#6b7280" label={t('payroll.page.assignments.terminatedStatus', { date: entry.effectiveTo.slice(0, 10) })} />
                                 </td>
                               </tr>
                             ))}
@@ -864,7 +857,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                     )
                   ) : visibleAssignments.length === 0 ? (
                     <p className="text-sm text-ink-muted">
-                      No {assignmentSubTab === 'draft' ? 'draft' : 'confirmed'} assignments.
+                      {assignmentSubTab === 'draft' ? t('payroll.page.assignments.noDraft') : t('payroll.page.assignments.noConfirmed')}
                     </p>
                   ) : (
                     <>
@@ -876,7 +869,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                             checked={selectedEmployeeIds.size > 0 && selectedEmployeeIds.size === visibleAssignments.length}
                             onChange={toggleSelectAll}
                           />
-                          Select all
+                          {t('payroll.page.assignments.selectAll')}
                         </label>
                       )}
                       {visibleAssignments.map((entry) => (
@@ -897,13 +890,13 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                               {entry.employeeEmail}
                               {entry.currentCompensation
                                 ? ` · ${formatMoney(entry.currentCompensation.rateCents, entry.currentCompensation.currency)} · ${entry.currentCompensation.payFrequencyName}`
-                                : ' · No policy assigned'}
+                                : ` · ${t('payroll.page.assignments.noPolicyAssigned')}`}
                             </span>
                           </span>
                           {entry.isConfirmed ? (
-                            <StatusChip color="#059669" label="Confirmed" />
+                            <StatusChip color="#059669" label={t('payroll.page.statusLabels.confirmed')} />
                           ) : (
-                            <StatusChip color="#9ca3af" label="Draft" />
+                            <StatusChip color="#9ca3af" label={t('payroll.page.statusLabels.draft')} />
                           )}
                         </div>
                       ))}
@@ -921,10 +914,10 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                                 />
                               </th>
                             )}
-                            <th>Name</th>
-                            <th>Email</th>
-                            <th>Current Policy</th>
-                            <th>Status</th>
+                            <th>{t('payroll.page.assignments.columns.name')}</th>
+                            <th>{t('payroll.page.assignments.columns.email')}</th>
+                            <th>{t('payroll.page.assignments.columns.currentPolicy')}</th>
+                            <th>{t('payroll.page.assignments.columns.status')}</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -950,14 +943,14 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                                     {entry.currentCompensation.payFrequencyName}
                                   </span>
                                 ) : (
-                                  <span className="text-ink-muted">No policy assigned</span>
+                                  <span className="text-ink-muted">{t('payroll.page.assignments.noPolicyAssigned')}</span>
                                 )}
                               </td>
                               <td>
                                 {entry.isConfirmed ? (
-                                  <StatusChip color="#059669" label="Confirmed" />
+                                  <StatusChip color="#059669" label={t('payroll.page.statusLabels.confirmed')} />
                                 ) : (
-                                  <StatusChip color="#9ca3af" label="Draft" />
+                                  <StatusChip color="#9ca3af" label={t('payroll.page.statusLabels.draft')} />
                                 )}
                               </td>
                             </tr>
@@ -976,9 +969,9 @@ export default function PayrollPage({ token }: PayrollPageProps) {
             <>
               <div className="flex items-start justify-between gap-4 mb-1">
                 <div>
-                  <h3 className="card-title mb-1">Pay frequencies</h3>
+                  <h3 className="card-title mb-1">{t('payroll.page.policies.payFrequenciesTitle')}</h3>
                   <p className="text-sm text-ink-muted">
-                    Assigning a policy and an amount to each person happens from their profile, not here.
+                    {t('payroll.page.policies.payFrequenciesDesc')}
                   </p>
                 </div>
               </div>
@@ -986,9 +979,9 @@ export default function PayrollPage({ token }: PayrollPageProps) {
               {frequencies.length === 0 ? (
                 <EmptyState
                   icon={<CalendarIcon />}
-                  title="No pay frequencies yet"
-                  body="A pay frequency defines how often and on what schedule people get paid."
-                  primaryLabel="New policy"
+                  title={t('payroll.page.policies.emptyTitle')}
+                  body={t('payroll.page.policies.emptyBody')}
+                  primaryLabel={t('payroll.page.policies.newPolicy')}
                   onPrimary={openAddFrequency}
                 />
               ) : (
@@ -999,20 +992,20 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                       className={`mini-toggle-opt ${frequencyFilter === 'active' ? 'active' : ''}`}
                       onClick={() => setFrequencyFilter('active')}
                     >
-                      Active ({activeFrequencies.length})
+                      {t('payroll.page.policies.activeTab', { count: activeFrequencies.length })}
                     </button>
                     <button
                       type="button"
                       className={`mini-toggle-opt ${frequencyFilter === 'inactive' ? 'active' : ''}`}
                       onClick={() => setFrequencyFilter('inactive')}
                     >
-                      Deactivated ({inactiveFrequencies.length})
+                      {t('payroll.page.policies.deactivatedTab', { count: inactiveFrequencies.length })}
                     </button>
                   </div>
 
                   {filteredFrequencies.length === 0 ? (
                     <p className="text-sm text-ink-muted">
-                      {frequencyFilter === 'active' ? 'No active pay frequencies.' : 'No deactivated pay frequencies.'}
+                      {frequencyFilter === 'active' ? t('payroll.page.policies.noActive') : t('payroll.page.policies.noDeactivated')}
                     </p>
                   ) : (
                     <>
@@ -1022,7 +1015,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                           <span className="entity-card-body">
                             <span className={`entity-card-name ${!freq.isActive ? 'line-through' : ''}`}>{freq.name}</span>
                             <span className="entity-card-meta">
-                              {CADENCE_LABELS[freq.cadence]} · {describeAnchorConfig(freq)} · {freq.assignedCount ?? 0} assigned
+                              {cadenceLabel(freq.cadence)} · {describeAnchorConfig(freq)} · {t('payroll.page.policies.assignedCount', { count: freq.assignedCount ?? 0 })}
                             </span>
                           </span>
                           {canManagePayroll && (
@@ -1030,7 +1023,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                               type="button"
                               className="icon-btn shrink-0"
                               onClick={() => openEditFrequency(freq)}
-                              aria-label={`Edit ${freq.name}`}
+                              aria-label={t('payroll.page.policies.editAriaLabel', { name: freq.name })}
                             >
                               <PencilIcon className="h-4 w-4" />
                             </button>
@@ -1042,12 +1035,12 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                       <table className="table full-table">
                         <thead>
                           <tr>
-                            <th>Name</th>
-                            <th>Cadence</th>
-                            <th>Pay day(s)</th>
-                            <th>Due date</th>
-                            <th>Assigned</th>
-                            {canManagePayroll && <th>Actions</th>}
+                            <th>{t('payroll.page.policies.columns.name')}</th>
+                            <th>{t('payroll.page.policies.columns.cadence')}</th>
+                            <th>{t('payroll.page.policies.columns.payDays')}</th>
+                            <th>{t('payroll.page.policies.columns.dueDate')}</th>
+                            <th>{t('payroll.page.policies.columns.assigned')}</th>
+                            {canManagePayroll && <th>{t('payroll.page.policies.columns.actions')}</th>}
                           </tr>
                         </thead>
                         <tbody>
@@ -1056,7 +1049,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                               <td>
                                 <span className={!freq.isActive ? 'line-through' : ''}>{freq.name}</span>
                               </td>
-                              <td>{CADENCE_LABELS[freq.cadence]}</td>
+                              <td>{cadenceLabel(freq.cadence)}</td>
                               <td>{describeAnchorConfig(freq)}</td>
                               <td>{describeDueDate(freq)}</td>
                               <td>{freq.assignedCount ?? 0}</td>
@@ -1066,9 +1059,9 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                                     type="button"
                                     className="icon-btn"
                                     onClick={() => openEditFrequency(freq)}
-                                    aria-label={`Edit ${freq.name}`}
+                                    aria-label={t('payroll.page.policies.editAriaLabel', { name: freq.name })}
                                   >
-                                    <span className="tip">Edit</span>
+                                    <span className="tip">{t('payroll.page.policies.edit')}</span>
                                     <PencilIcon className="h-4 w-4" />
                                   </button>
                                 </td>
@@ -1082,7 +1075,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                                   <span className="ghost-plus-box">
                                     <PlusIcon className="h-3 w-3" />
                                   </span>
-                                  Add
+                                  {t('payroll.page.add')}
                                 </span>
                               </td>
                             </tr>
@@ -1097,11 +1090,11 @@ export default function PayrollPage({ token }: PayrollPageProps) {
               )}
 
               <div className="flex items-start justify-between gap-4 mt-6 mb-3">
-                <h3 className="card-title">Payment methods</h3>
+                <h3 className="card-title">{t('payroll.page.policies.paymentMethodsTitle')}</h3>
                 {canManagePayroll && (
                   <button type="button" className="btn-outline gap-1.5" onClick={openAddMethod}>
                     <PlusIcon className="h-3.5 w-3.5" />
-                    Add method
+                    {t('payroll.page.policies.addMethod')}
                   </button>
                 )}
               </div>
@@ -1115,7 +1108,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                     <span className={!method.isActive ? 'line-through text-ink-muted' : ''}>{method.name}</span>
                     {canManagePayroll && (
                       <button type="button" className="btn-secondary btn-sm" onClick={() => handleToggleMethodActive(method)}>
-                        {method.isActive ? 'Deactivate' : 'Activate'}
+                        {method.isActive ? t('payroll.page.policies.deactivate') : t('payroll.page.policies.activate')}
                       </button>
                     )}
                   </div>
@@ -1129,15 +1122,15 @@ export default function PayrollPage({ token }: PayrollPageProps) {
 
       <Modal
         open={frequencyModalOpen}
-        title={editingFrequencyId ? 'Edit pay frequency' : 'New pay frequency'}
+        title={editingFrequencyId ? t('payroll.page.frequencyModal.editTitle') : t('payroll.page.frequencyModal.newTitle')}
         onClose={() => setFrequencyModalOpen(false)}
         footer={
           <>
             <button type="button" className="btn-secondary" onClick={() => setFrequencyModalOpen(false)}>
-              Cancel
+              {t('payroll.page.cancel')}
             </button>
             <button type="submit" form="frequency-form" className="btn-primary" disabled={savingFrequency}>
-              {savingFrequency ? 'Saving…' : 'Save'}
+              {savingFrequency ? t('payroll.page.frequencyModal.saving') : t('payroll.page.frequencyModal.save')}
             </button>
           </>
         }
@@ -1145,7 +1138,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
         <form id="frequency-form" onSubmit={handleSaveFrequency}>
           <div className="form-group">
             <label htmlFor="freq-name">
-              Name
+              {t('payroll.page.frequencyModal.fields.name')}
               <RequiredMark />
             </label>
             <input
@@ -1155,13 +1148,13 @@ export default function PayrollPage({ token }: PayrollPageProps) {
               autoFocus
               value={frequencyForm.name}
               onChange={(e) => setFrequencyForm({ ...frequencyForm, name: e.target.value })}
-              placeholder="e.g. Semanal"
+              placeholder={t('payroll.page.frequencyModal.fields.namePlaceholder')}
             />
           </div>
 
           <div className="form-group">
             <label htmlFor="freq-cadence">
-              Cadence
+              {t('payroll.page.frequencyModal.fields.cadence')}
               <RequiredMark />
             </label>
             <select
@@ -1169,16 +1162,16 @@ export default function PayrollPage({ token }: PayrollPageProps) {
               value={frequencyForm.cadence}
               onChange={(e) => setFrequencyForm({ ...frequencyForm, cadence: e.target.value as PayFrequencyCadence })}
             >
-              <option value="weekly">Weekly</option>
-              <option value="semimonthly">Semi-monthly</option>
-              <option value="monthly">Monthly</option>
+              <option value="weekly">{t('payroll.page.frequencyModal.cadenceOptions.weekly')}</option>
+              <option value="semimonthly">{t('payroll.page.frequencyModal.cadenceOptions.semimonthly')}</option>
+              <option value="monthly">{t('payroll.page.frequencyModal.cadenceOptions.monthly')}</option>
             </select>
           </div>
 
           {frequencyForm.cadence === 'weekly' && (
             <div className="form-group">
               <label htmlFor="freq-dow">
-                Day of week
+                {t('payroll.page.frequencyModal.fields.dayOfWeek')}
                 <RequiredMark />
               </label>
               <select
@@ -1188,7 +1181,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
               >
                 {WEEKDAYS.map((day) => (
                   <option key={day} value={day}>
-                    {DAY_OF_WEEK_LABELS[day]}
+                    {dayOfWeekLabel(day)}
                   </option>
                 ))}
               </select>
@@ -1198,7 +1191,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
           {frequencyForm.cadence === 'semimonthly' && (
             <div className="form-group">
               <span>
-                Pay days
+                {t('payroll.page.frequencyModal.fields.payDays')}
                 <RequiredMark />
               </span>
               <div className="flex flex-col gap-1.5 mt-1.5">
@@ -1209,7 +1202,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                     checked={frequencyForm.semimonthlyPreset === 'first_15'}
                     onChange={() => setFrequencyForm({ ...frequencyForm, semimonthlyPreset: 'first_15' })}
                   />
-                  1st and 15th
+                  {t('payroll.page.frequencyModal.semimonthlyOptions.first15')}
                 </label>
                 <label className="inline-flex items-center gap-2">
                   <input
@@ -1218,7 +1211,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                     checked={frequencyForm.semimonthlyPreset === 'fifteen_last'}
                     onChange={() => setFrequencyForm({ ...frequencyForm, semimonthlyPreset: 'fifteen_last' })}
                   />
-                  15th and last day
+                  {t('payroll.page.frequencyModal.semimonthlyOptions.fifteenLast')}
                 </label>
                 <label className="inline-flex items-center gap-2">
                   <input
@@ -1227,7 +1220,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                     checked={frequencyForm.semimonthlyPreset === 'custom'}
                     onChange={() => setFrequencyForm({ ...frequencyForm, semimonthlyPreset: 'custom' })}
                   />
-                  Custom
+                  {t('payroll.page.frequencyModal.semimonthlyOptions.custom')}
                 </label>
                 {frequencyForm.semimonthlyPreset === 'custom' && (
                   <div className="flex items-center gap-2 ml-6">
@@ -1239,7 +1232,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                       value={frequencyForm.semimonthlyCustomDay1}
                       onChange={(e) => setFrequencyForm({ ...frequencyForm, semimonthlyCustomDay1: e.target.value })}
                     />
-                    <span>and</span>
+                    <span>{t('payroll.page.frequencyModal.semimonthlyOptions.and')}</span>
                     <input
                       type="number"
                       min={1}
@@ -1257,7 +1250,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
           {frequencyForm.cadence === 'monthly' && (
             <div className="form-group">
               <span>
-                Pay day
+                {t('payroll.page.frequencyModal.fields.payDay')}
                 <RequiredMark />
               </span>
               <div className="flex flex-col gap-1.5 mt-1.5">
@@ -1268,7 +1261,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                     checked={frequencyForm.monthlyPreset === 'first_business_day'}
                     onChange={() => setFrequencyForm({ ...frequencyForm, monthlyPreset: 'first_business_day' })}
                   />
-                  First business day
+                  {t('payroll.page.frequencyModal.monthlyOptions.firstBusinessDay')}
                 </label>
                 <label className="inline-flex items-center gap-2">
                   <input
@@ -1277,7 +1270,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                     checked={frequencyForm.monthlyPreset === 'last_business_day'}
                     onChange={() => setFrequencyForm({ ...frequencyForm, monthlyPreset: 'last_business_day' })}
                   />
-                  Last business day
+                  {t('payroll.page.frequencyModal.monthlyOptions.lastBusinessDay')}
                 </label>
                 <label className="inline-flex items-center gap-2">
                   <input
@@ -1286,7 +1279,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                     checked={frequencyForm.monthlyPreset === 'custom'}
                     onChange={() => setFrequencyForm({ ...frequencyForm, monthlyPreset: 'custom' })}
                   />
-                  Custom
+                  {t('payroll.page.frequencyModal.monthlyOptions.custom')}
                 </label>
                 {frequencyForm.monthlyPreset === 'custom' && (
                   <div className="ml-6">
@@ -1305,21 +1298,21 @@ export default function PayrollPage({ token }: PayrollPageProps) {
           )}
 
           <div className="form-group">
-            <label htmlFor="freq-due">Due date</label>
+            <label htmlFor="freq-due">{t('payroll.page.frequencyModal.fields.dueDate')}</label>
             <select
               id="freq-due"
               value={frequencyForm.dueDateOffset}
               onChange={(e) => setFrequencyForm({ ...frequencyForm, dueDateOffset: e.target.value as DueDateOffset })}
             >
-              <option value="same_day">Same day</option>
-              <option value="plus_2">+2 days</option>
-              <option value="plus_5">+5 days</option>
-              <option value="custom">Custom</option>
+              <option value="same_day">{t('payroll.page.frequencyModal.dueDateOptions.sameDay')}</option>
+              <option value="plus_2">{t('payroll.page.frequencyModal.dueDateOptions.plus2')}</option>
+              <option value="plus_5">{t('payroll.page.frequencyModal.dueDateOptions.plus5')}</option>
+              <option value="custom">{t('payroll.page.frequencyModal.dueDateOptions.custom')}</option>
             </select>
           </div>
           {frequencyForm.dueDateOffset === 'custom' && (
             <div className="form-group">
-              <label htmlFor="freq-due-custom">Days</label>
+              <label htmlFor="freq-due-custom">{t('payroll.page.frequencyModal.fields.days')}</label>
               <input
                 id="freq-due-custom"
                 type="number"
@@ -1338,7 +1331,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                   checked={frequencyForm.isActive}
                   onChange={(e) => setFrequencyForm({ ...frequencyForm, isActive: e.target.checked })}
                 />
-                Active
+                {t('payroll.page.frequencyModal.fields.active')}
               </label>
             </div>
           )}
@@ -1347,15 +1340,15 @@ export default function PayrollPage({ token }: PayrollPageProps) {
 
       <Modal
         open={methodModalOpen}
-        title="Add payment method"
+        title={t('payroll.page.methodModal.title')}
         onClose={() => setMethodModalOpen(false)}
         footer={
           <>
             <button type="button" className="btn-secondary" onClick={() => setMethodModalOpen(false)}>
-              Cancel
+              {t('payroll.page.cancel')}
             </button>
             <button type="submit" form="method-form" className="btn-primary" disabled={savingMethod}>
-              {savingMethod ? 'Saving…' : 'Save'}
+              {savingMethod ? t('payroll.page.frequencyModal.saving') : t('payroll.page.frequencyModal.save')}
             </button>
           </>
         }
@@ -1363,7 +1356,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
         <form id="method-form" onSubmit={handleSaveMethod}>
           <div className="form-group">
             <label htmlFor="method-name">
-              Name
+              {t('payroll.page.methodModal.fields.name')}
               <RequiredMark />
             </label>
             <input id="method-name" type="text" required autoFocus value={methodName} onChange={(e) => setMethodName(e.target.value)} />
@@ -1373,25 +1366,25 @@ export default function PayrollPage({ token }: PayrollPageProps) {
 
       <Modal
         open={assignModalOpen}
-        title="Assign / Reassign Policy"
+        title={t('payroll.page.assignModal.title')}
         onClose={() => setAssignModalOpen(false)}
         wide
         footer={
           <>
             <button type="button" className="btn-secondary" onClick={() => setAssignModalOpen(false)}>
-              Cancel
+              {t('payroll.page.cancel')}
             </button>
             <button type="submit" form="assign-form" className="btn-primary" disabled={savingAssignment || !isAssignFormReady}>
-              {savingAssignment ? 'Saving…' : `Assign to ${selectedEmployeeIds.size}`}
+              {savingAssignment ? t('payroll.page.frequencyModal.saving') : t('payroll.page.assignModal.assignTo', { count: selectedEmployeeIds.size })}
             </button>
           </>
         }
       >
         <form id="assign-form" onSubmit={handleSubmitAssignment}>
           <div className="field-group">
-            <h4 className="field-group-title">New policy (applies to everyone selected)</h4>
+            <h4 className="field-group-title">{t('payroll.page.assignModal.newPolicySectionTitle')}</h4>
             <div className="field-group-body">
-              <Field label="Pay Frequency" required>
+              <Field label={t('payroll.page.assignModal.fields.payFrequency')} required>
                 <select
                   id="assign-payFrequencyId"
                   className="overview-field-input"
@@ -1399,7 +1392,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                   onChange={(e) => setAssignForm({ ...assignForm, payFrequencyId: e.target.value })}
                   required
                 >
-                  <option value="">-- select --</option>
+                  <option value="">{t('payroll.page.selectPlaceholder')}</option>
                   {activeFrequencies.map((f) => (
                     <option key={f.id} value={f.id}>
                       {f.name}
@@ -1407,7 +1400,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                   ))}
                 </select>
               </Field>
-              <Field label="Effective From" required>
+              <Field label={t('payroll.page.assignModal.fields.effectiveFrom')} required>
                 <input
                   id="assign-effectiveFrom"
                   className="overview-field-input"
@@ -1417,7 +1410,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                   required
                 />
               </Field>
-              <Field label="Compensation Type" required>
+              <Field label={t('payroll.page.assignModal.fields.compensationType')} required>
                 <select
                   id="assign-compensationType"
                   className="overview-field-input"
@@ -1425,12 +1418,12 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                   onChange={(e) => setAssignForm({ ...assignForm, compensationType: e.target.value as PayrollCompensationType })}
                   required
                 >
-                  <option value="">-- select --</option>
-                  <option value="hourly">Hourly</option>
-                  <option value="fixed">Fixed</option>
+                  <option value="">{t('payroll.page.selectPlaceholder')}</option>
+                  <option value="hourly">{t('payroll.page.assignModal.compensationTypeOptions.hourly')}</option>
+                  <option value="fixed">{t('payroll.page.assignModal.compensationTypeOptions.fixed')}</option>
                 </select>
               </Field>
-              <Field label="Currency" required>
+              <Field label={t('payroll.page.assignModal.fields.currency')} required>
                 <select
                   id="assign-currency"
                   className="overview-field-input"
@@ -1438,7 +1431,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                   onChange={(e) => setAssignForm({ ...assignForm, currency: e.target.value })}
                   required
                 >
-                  <option value="">-- select --</option>
+                  <option value="">{t('payroll.page.selectPlaceholder')}</option>
                   {CURRENCY_CODES.map((code) => (
                     <option key={code} value={code}>
                       {currencyLabel(code)}
@@ -1446,7 +1439,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                   ))}
                 </select>
               </Field>
-              <Field label="Job Title" required>
+              <Field label={t('payroll.page.assignModal.fields.jobTitle')} required>
                 <input
                   id="assign-jobTitle"
                   className="overview-field-input"
@@ -1456,7 +1449,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                   required
                 />
               </Field>
-              <Field label="Role Description" required full>
+              <Field label={t('payroll.page.assignModal.fields.roleDescription')} required full>
                 <textarea
                   id="assign-description"
                   className="overview-field-input"
@@ -1469,28 +1462,28 @@ export default function PayrollPage({ token }: PayrollPageProps) {
           </div>
 
           <div className="field-group">
-            <h4 className="field-group-title">Review — amount per person ({assignForm.currency || 'USD'})</h4>
+            <h4 className="field-group-title">{t('payroll.page.assignModal.reviewSectionTitle', { currency: assignForm.currency || 'USD' })}</h4>
             <div className="flex items-center gap-2 mb-3">
               <input
                 type="number"
                 step="0.01"
                 min="0"
-                placeholder="Apply this amount to all"
+                placeholder={t('payroll.page.assignModal.applyToAllPlaceholder')}
                 value={bulkApplyAmount}
                 onChange={(e) => setBulkApplyAmount(e.target.value)}
                 style={{ maxWidth: 220 }}
               />
               <button type="button" className="btn-secondary btn-sm" onClick={applyAmountToAllSelected}>
-                Apply to all selected
+                {t('payroll.page.assignModal.applyToAllSelected')}
               </button>
             </div>
             <div className="full-table-wrap" ref={bulkAssignTableRef}>
               <table className="table full-table">
                 <thead>
                   <tr>
-                    <th>Name</th>
-                    <th>Previous</th>
-                    <th>New amount</th>
+                    <th>{t('payroll.page.assignModal.columns.name')}</th>
+                    <th>{t('payroll.page.assignModal.columns.previous')}</th>
+                    <th>{t('payroll.page.assignModal.columns.newAmount')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1529,12 +1522,12 @@ export default function PayrollPage({ token }: PayrollPageProps) {
 
       <Modal
         open={newRunModalOpen}
-        title="New Run"
+        title={t('payroll.page.newRunModal.title')}
         onClose={() => setNewRunModalOpen(false)}
         footer={
           <>
             <button type="button" className="btn-secondary" onClick={() => setNewRunModalOpen(false)}>
-              Cancel
+              {t('payroll.page.cancel')}
             </button>
             <button
               type="submit"
@@ -1542,7 +1535,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
               className="btn-primary"
               disabled={savingRun || !newRunPayFrequencyId || !newRunPeriodLabel.trim()}
             >
-              {savingRun ? 'Creating…' : 'Create'}
+              {savingRun ? t('payroll.page.newRunModal.creating') : t('payroll.page.newRunModal.create')}
             </button>
           </>
         }
@@ -1550,7 +1543,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
         <form id="new-run-form" onSubmit={handleCreateRun}>
           <div className="form-group">
             <label htmlFor="new-run-frequency">
-              Pay Frequency
+              {t('payroll.page.newRunModal.fields.payFrequency')}
               <RequiredMark />
             </label>
             <select
@@ -1559,7 +1552,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
               onChange={(e) => setNewRunPayFrequencyId(e.target.value)}
               required
             >
-              <option value="">-- select --</option>
+              <option value="">{t('payroll.page.selectPlaceholder')}</option>
               {activeFrequencies.map((f) => (
                 <option key={f.id} value={f.id}>
                   {f.name}
@@ -1569,7 +1562,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
           </div>
           <div className="form-group">
             <label htmlFor="new-run-period">
-              Period
+              {t('payroll.page.newRunModal.fields.period')}
               <RequiredMark />
             </label>
             <input
@@ -1577,7 +1570,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
               type="text"
               value={newRunPeriodLabel}
               onChange={(e) => setNewRunPeriodLabel(e.target.value)}
-              placeholder="e.g. 2nd half · August 2026"
+              placeholder={t('payroll.page.newRunModal.fields.periodPlaceholder')}
               required
             />
           </div>
@@ -1586,13 +1579,13 @@ export default function PayrollPage({ token }: PayrollPageProps) {
 
       <Modal
         open={offPaymentModalOpen}
-        title="One-off Payment"
+        title={t('payroll.page.offPaymentModal.title')}
         onClose={() => setOffPaymentModalOpen(false)}
         wide
         footer={
           <>
             <button type="button" className="btn-secondary" onClick={() => setOffPaymentModalOpen(false)}>
-              Cancel
+              {t('payroll.page.cancel')}
             </button>
             <button
               type="submit"
@@ -1600,7 +1593,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
               className="btn-primary"
               disabled={savingOffPayment || offPaymentSelectedIds.size === 0 || !offPaymentAmount.trim()}
             >
-              {savingOffPayment ? 'Saving…' : `Create for ${offPaymentSelectedIds.size}`}
+              {savingOffPayment ? t('payroll.page.frequencyModal.saving') : t('payroll.page.offPaymentModal.createFor', { count: offPaymentSelectedIds.size })}
             </button>
           </>
         }
@@ -1608,7 +1601,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
         <form id="off-payment-form" onSubmit={handleCreateOffPayment}>
           <div className="field-group">
             <div className="field-group-body">
-              <Field label="Type" required>
+              <Field label={t('payroll.page.offPaymentModal.fields.type')} required>
                 <select
                   id="off-payment-type"
                   className="overview-field-input"
@@ -1616,13 +1609,13 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                   onChange={(e) => setOffPaymentType(e.target.value as PayrollEntryType)}
                   required
                 >
-                  <option value="bonus">Bonus</option>
-                  <option value="commission">Commission</option>
-                  <option value="reimbursement">Reimbursement</option>
-                  <option value="deduction">Deduction</option>
+                  <option value="bonus">{t('payroll.page.offPaymentModal.typeOptions.bonus')}</option>
+                  <option value="commission">{t('payroll.page.offPaymentModal.typeOptions.commission')}</option>
+                  <option value="reimbursement">{t('payroll.page.offPaymentModal.typeOptions.reimbursement')}</option>
+                  <option value="deduction">{t('payroll.page.offPaymentModal.typeOptions.deduction')}</option>
                 </select>
               </Field>
-              <Field label={`Amount (${offPaymentCurrency || 'USD'})`} required>
+              <Field label={t('payroll.page.offPaymentModal.fields.amount', { currency: offPaymentCurrency || 'USD' })} required>
                 <input
                   id="off-payment-amount"
                   className="overview-field-input"
@@ -1633,7 +1626,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                   required
                 />
               </Field>
-              <Field label="Currency" required>
+              <Field label={t('payroll.page.offPaymentModal.fields.currency')} required>
                 <select
                   id="off-payment-currency"
                   className="overview-field-input"
@@ -1641,7 +1634,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                   onChange={(e) => setOffPaymentCurrency(e.target.value)}
                   required
                 >
-                  <option value="">-- select --</option>
+                  <option value="">{t('payroll.page.selectPlaceholder')}</option>
                   {CURRENCY_CODES.map((code) => (
                     <option key={code} value={code}>
                       {currencyLabel(code)}
@@ -1649,7 +1642,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                   ))}
                 </select>
               </Field>
-              <Field label="Payment Date" required>
+              <Field label={t('payroll.page.offPaymentModal.fields.paymentDate')} required>
                 <input
                   id="off-payment-date"
                   className="overview-field-input"
@@ -1659,7 +1652,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                   required
                 />
               </Field>
-              <Field label="Note" full>
+              <Field label={t('payroll.page.offPaymentModal.fields.note')} full>
                 <input
                   id="off-payment-label"
                   className="overview-field-input"
@@ -1673,7 +1666,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
 
           <div className="field-group">
             <h4 className="field-group-title">
-              People
+              {t('payroll.page.offPaymentModal.fields.peopleTitle')}
               <RequiredMark />
             </h4>
             <div className="full-table-wrap" ref={offPaymentPeopleTableRef}>
@@ -1681,7 +1674,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                 <thead>
                   <tr>
                     <th style={{ width: 32 }}></th>
-                    <th>Name</th>
+                    <th>{t('payroll.page.offPaymentModal.columns.name')}</th>
                   </tr>
                 </thead>
                 <tbody>

@@ -419,6 +419,20 @@
         "semimonthly": "Semi-monthly",
         "monthly": "Monthly"
       },
+      "cancel": "Cancel",
+      "selectPlaceholder": "-- select --",
+      "add": "Add",
+      "statusLabels": {
+        "confirmed": "Confirmed",
+        "draft": "Draft"
+      },
+      "entryTypeLabels": {
+        "base": "Payment",
+        "bonus": "Bonus",
+        "commission": "Commission",
+        "reimbursement": "Reimbursement",
+        "deduction": "Deduction"
+      },
       "toasts": {
         "loadFailed": "Failed to load payroll settings: {{error}}",
         "frequencyUpdated": "Pay frequency updated.",

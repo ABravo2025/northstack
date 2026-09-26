@@ -11,8 +11,9 @@ import EmptyState from '../components/common/EmptyState';
 import TableSkeleton from '../components/common/TableSkeleton';
 import Modal from '../components/common/Modal';
 import ConfirmDialog from '../components/common/ConfirmDialog';
+import Popover from '../components/common/Popover';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
-import { CopyIcon, LockIcon, TrashIcon } from '../components/common/Icons';
+import { CopyIcon, InfoIcon, LockIcon, TrashIcon } from '../components/common/Icons';
 import i18n from '../lib/i18n';
 
 interface IntegrationsSettingsPageProps {
@@ -66,6 +67,8 @@ function StripeCard({ token, canManagePayments }: { token: string; canManagePaym
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [connecting, setConnecting] = useState(false);
   const [disconnecting, setDisconnecting] = useState(false);
+  const [howToOpen, setHowToOpen] = useState(false);
+  const howToAnchorRef = useRef<HTMLButtonElement>(null);
 
   const loadStatus = () => {
     if (!canManagePayments) return;
@@ -181,7 +184,33 @@ function StripeCard({ token, canManagePayments }: { token: string; canManagePaym
             </ul>
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label htmlFor="stripe-api-key">{t('integrations.stripe.apiKey')}</label>
+            <div className="flex items-center gap-1">
+              <label htmlFor="stripe-api-key">{t('integrations.stripe.apiKey')}</label>
+              <button
+                ref={howToAnchorRef}
+                type="button"
+                className="icon-btn"
+                onClick={() => setHowToOpen((open) => !open)}
+                aria-label={t('integrations.stripe.howToGetKey.trigger')}
+                aria-expanded={howToOpen}
+              >
+                <span className="tip">{t('integrations.stripe.howToGetKey.trigger')}</span>
+                <InfoIcon className="h-3.5 w-3.5" />
+              </button>
+            </div>
+            <Popover open={howToOpen} onClose={() => setHowToOpen(false)} anchorRef={howToAnchorRef} width={300}>
+              <div className="flex flex-col gap-1.5 p-3 text-xs">
+                <p className="font-medium">{t('integrations.stripe.howToGetKey.title')}</p>
+                <ol style={{ listStyle: 'decimal', paddingLeft: '1.1rem' }} className="flex flex-col gap-1">
+                  <li>{t('integrations.stripe.howToGetKey.step1')}</li>
+                  <li>{t('integrations.stripe.howToGetKey.step2')}</li>
+                  <li>{t('integrations.stripe.howToGetKey.step3')}</li>
+                  <li>{t('integrations.stripe.howToGetKey.step4')}</li>
+                  <li>{t('integrations.stripe.howToGetKey.step5')}</li>
+                  <li>{t('integrations.stripe.howToGetKey.step6')}</li>
+                </ol>
+              </div>
+            </Popover>
             <input
               id="stripe-api-key"
               type="password"

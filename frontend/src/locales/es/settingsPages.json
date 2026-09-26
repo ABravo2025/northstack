@@ -23,7 +23,7 @@
       "needsAttention": "Stripe rechazó la clave guardada — puede haber sido revocada o editada. Reconectá abajo.",
       "connectedLabel": "Conectado",
       "since": "Desde {{date}}",
-      "checkFrequency": "Los reembolsos, pagos fallidos y cambios de suscripción se revisan dos veces al día — no hace falta configurar ningún webhook.",
+      "checkFrequency": "Los reembolsos, pagos fallidos y cambios de suscripción se revisan una vez al día — no hace falta configurar ningún webhook.",
       "useRestrictedKeyPrefix": "Usá una",
       "restrictedKey": "Restricted Key",
       "useRestrictedKeySuffix": "en lugar de tu Secret key — creá una en Stripe, en Developers → API keys, con acceso de solo lectura a:",
@@ -37,6 +37,16 @@
         "events": "Events"
       },
       "apiKey": "Clave de API",
+      "howToGetKey": {
+        "trigger": "¿Cómo consigo una clave?",
+        "title": "Cómo obtener una Restricted Key en Stripe",
+        "step1": "Ingresá a tu Dashboard de Stripe (dashboard.stripe.com).",
+        "step2": "Andá a Developers → API keys.",
+        "step3": "Hacé clic en \"Create restricted key\" y ponele un nombre, por ejemplo \"Northstack\".",
+        "step4": "Poné cada recurso de la lista de arriba en Read. Dejá todo lo demás en None.",
+        "step5": "Hacé clic en \"Create key\" y copiala enseguida — Stripe muestra la clave completa una sola vez.",
+        "step6": "Pegala en el campo de abajo y hacé clic en Probar conexión."
+      },
       "connecting": "Conectando…",
       "testConnection": "Probar conexión"
     },

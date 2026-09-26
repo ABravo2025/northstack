@@ -23,7 +23,7 @@
       "needsAttention": "Stripe rejected the stored key — it may have been revoked or edited. Reconnect below.",
       "connectedLabel": "Connected",
       "since": "Since {{date}}",
-      "checkFrequency": "Refunds, failed payments, and subscription changes are checked twice a day — no webhook to set up.",
+      "checkFrequency": "Refunds, failed payments, and subscription changes are checked once a day — no webhook to set up.",
       "useRestrictedKeyPrefix": "Use a",
       "restrictedKey": "Restricted Key",
       "useRestrictedKeySuffix": "rather than your Secret key — create one in Stripe under Developers → API keys with read-only access to:",
@@ -37,6 +37,16 @@
         "events": "Events"
       },
       "apiKey": "API key",
+      "howToGetKey": {
+        "trigger": "How do I get a key?",
+        "title": "Getting a Restricted Key from Stripe",
+        "step1": "Log in to your Stripe Dashboard (dashboard.stripe.com).",
+        "step2": "Go to Developers → API keys.",
+        "step3": "Click \"Create restricted key\" and name it, e.g. \"Northstack\".",
+        "step4": "Set each resource listed above to Read. Leave everything else as None.",
+        "step5": "Click \"Create key\" and copy it right away — Stripe only shows the full key once.",
+        "step6": "Paste it in the field below and click Test connection."
+      },
       "connecting": "Connecting…",
       "testConnection": "Test connection"
     },

@@ -417,8 +417,11 @@ tocar código: **corte del `Client` legado** (migración de Custom Fields campo 
 de rutas/UI) y **dashboard de métrica de ciclo lead→cliente** (necesita definir ruta/nav y un mockup
 visual con el usuario primero).
 
-**Tier 3.7 — Payments v1 (conexión Stripe por tenant) — COMPLETO (Units 1-7) y en `staging`,
-última ronda 2026-08-29, spec en `docs/tareas/specpaymentsv1.md`.** No confundir con las
+**Tier 3.7 — Payments v1 (conexión Stripe por tenant) — COMPLETO (Units 1-7) y LIVE en producción**
+(última ronda de build 2026-08-29; **corrección 2026-09-26** — esto decía "y en `staging`" hasta
+hoy, pero `main`/`staging` están en el mismo commit y el código ya está en `main` desde la propia
+ronda de build, ver la nota de estado al tope de `docs/tareas/specpaymentsv1.md`), spec en
+`docs/tareas/specpaymentsv1.md`. No confundir con las
 suscripciones propias del SaaS (Tier 4, ya resuelto vía Billing Integration) — esto es que cada
 tenant conecte **su propia** cuenta de Stripe para ver los pagos de **sus propios** clientes.
 

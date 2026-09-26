@@ -20,11 +20,12 @@ export const PRICING = {
       plans: { starter: 1900, growth: 3900 },
       extraSeat: 400,
     },
-    // Mercado Pago — tenants whose country is Argentina. Pending real ARS pricing.
+    // Mercado Pago — tenants whose country is Argentina (set 2026-09-26: ARS 30.000 / 60.000,
+    // ARS 6.000 per extra seat).
     ar: {
       currency: 'ARS',
-      plans: { starter: 0, growth: 0 },
-      extraSeat: 0,
+      plans: { starter: 3_000_000, growth: 6_000_000 },
+      extraSeat: 600_000,
     },
   },
   // Active users included in each plan before the extra-seat price applies (same in every market).

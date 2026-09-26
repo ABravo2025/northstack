@@ -155,13 +155,10 @@ Catálogo completo (qué está construido, qué es solo posible hoy, qué está 
   `subscription.active` se escribieron contra los tipos oficiales del SDK
   (`node_modules/dodopayments`), no contra una entrega real de webhook — mismo tipo de caveat
   "UNVERIFIED" que ya tenían los campos de Mercado Pago en su momento. Confirmar antes de go-live.
-- [ ] **Precios reales de Argentina (Mercado Pago) sin definir**: `PRICING.markets.ar` en
-  `src/config/pricing.ts` sigue en 0 (el checkout los rechaza a propósito) — faltan Starter, Growth y
-  asiento extra en ARS; se cargan editando solo ese archivo (2026-09-26, fuente única de precios). Único bloqueante para cobrar en
-  Argentina junto con las credenciales de producción. (2026-09-26: la afirmación anterior de "ya
-  probada de punta a punta contra sandbox" no cuadra con el código — los `type` del webhook y los
-  campos de tarjeta de `authorized_payment` siguen marcados UNVERIFIED; confirmarlos con una
-  entrega real en staging es el paso E del cierre de MP, ver `spec-billing-integration.md`.)
+- [x] **Precios reales de Argentina (Mercado Pago)** (2026-09-26): Starter ARS 30.000, Growth ARS
+  60.000, asiento extra ARS 6.000/mes — en `PRICING.markets.ar` (`src/config/pricing.ts`). Pendiente
+  de este cierre: confirmar contra una entrega real de webhook en staging los `type` y campos de
+  tarjeta de `authorized_payment` (marcados UNVERIFIED), ver `spec-billing-integration.md`.
 - [ ] **Credenciales reales (producción) de Dodo Payments/Mercado Pago sin cargar**: hoy Vercel
   Preview (staging) tiene las credenciales *sandbox* de ambos proveedores (`DODO_PAYMENTS_API_KEY`,
   `DODO_WEBHOOK_KEY`, `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`) — nada cargado todavía en el scope de

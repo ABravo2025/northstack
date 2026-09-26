@@ -175,13 +175,23 @@ para una ronda destructiva futura, cuando el resto del código ya lea de `Subscr
 
 ## Catálogo de precios — `PlanPrice`
 
-> **Actualizado 2026-09-21:** los precios vigentes son **Starter $19 / Growth $39** (USD, desde el
-> repricing del 2026-09-14), sin split lanzamiento/regular — la tabla de abajo es el histórico
-> original. Mantener el catálogo en línea con `CURRENT_PLAN_PRICES_CENTS` (`planService.ts`) es
-> trabajo de `scripts/seed-plan-prices.ts`: inserta una fila nueva (nunca edita) cuando la última
-> fila `international` ya no coincide con la constante; después hay que correr
-> `scripts/setup-dodo-products.ts` para que esa fila tenga su `dodoProductId` (sin él, el checkout
-> falla). Los suscriptores existentes conservan su `lockedPriceCents`.
+> **Actualizado 2026-09-26 — fuente única de precios:** todo precio y número de puestos vive en
+> **`src/config/pricing.ts`** (`PRICING`: precio por plan, asiento extra y moneda por mercado
+> `international`/`ar`, puestos incluidos, tope del trial). Nada más en el repo tiene un precio
+> escrito a mano: backend (checkout, cambio de plan, asientos, webhooks), UI (PlansModal, Billing,
+> /guide, /help vía `GET /api/plans/prices`) y la landing leen de ahí.
+>
+> Cambiar un precio = editar ese archivo y pushear (staging → main). `planPriceService.ts` lo
+> convierte en una fila nueva de `PlanPrice` (nunca edita una existente) la primera vez que se
+> necesita un precio después del deploy, y para `international` crea el Product y el Addon de
+> asiento de Dodo que haga falta — ya no hay scripts manuales (`seed-plan-prices.ts`,
+> `setup-dodo-products.ts`, `setup-dodo-extra-seat-addon.ts` y los one-off de 2026-09-14 se
+> borraron). Los suscriptores existentes **mantienen su precio** (decisión de Alejandro,
+> 2026-09-26): `Subscription.planPriceId` los ancla a la fila con la que se confirmaron (base +
+> asiento); un cambio de plan sí los pasa al precio vigente. `PlanPrice.extraSeatPriceCents` y
+> `dodoExtraSeatAddonId` son nuevos; las filas viejas sin addon caen a `DODO_EXTRA_SEAT_ADDON_ID`.
+>
+> La tabla de abajo es el histórico original.
 
 | Plan | Market | Moneda | Lanzamiento | Regular |
 |---|---|---|---|---|

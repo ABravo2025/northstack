@@ -32,15 +32,27 @@ vi.mock('../src/lib/mercadopago.js', () => ({
   updatePreapproval: updatePreapprovalMock,
 }));
 
-import { countActiveSeats, extraSeatsFor, syncSeatBilling, INCLUDED_SEATS, EXTRA_SEAT_PRICE_CENTS, EXTRA_SEAT_PRICE_CENTS_BY_MARKET } from '../src/modules/tenant/seatService.js';
+// The subscription's locked row (planPriceService.ts, covered in planPriceService.test.ts) —
+// stubbed over the planPrices fixture.
+const { lockedPlanPriceMock } = vi.hoisted(() => ({ lockedPlanPriceMock: vi.fn() }));
+vi.mock('../src/modules/tenant/planPriceService.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../src/modules/tenant/planPriceService.js')>()),
+  lockedPlanPrice: lockedPlanPriceMock,
+}));
+lockedPlanPriceMock.mockImplementation(async (sub: { plan: string }, market: string) =>
+  planPrices.find((p) => p.plan === sub.plan && p.market === market) ?? null,
+);
+
+import { countActiveSeats, extraSeatsFor, syncSeatBilling, INCLUDED_SEATS, FREE_TRIAL_SEAT_CAP } from '../src/modules/tenant/seatService.js';
+import { PRICING } from '../src/config/pricing.js';
 
 function reset() {
   tenants = {};
   subscriptions = {};
   users = [];
   planPrices = [
-    { plan: 'starter', market: 'international', launchPriceCents: 1900, dodoProductId: 'pdt_starter' },
-    { plan: 'growth', market: 'international', launchPriceCents: 3900, dodoProductId: 'pdt_growth' },
+    { plan: 'starter', market: 'international', launchPriceCents: 1900, extraSeatPriceCents: 400, dodoProductId: 'pdt_starter', dodoExtraSeatAddonId: 'adn_seat' },
+    { plan: 'growth', market: 'international', launchPriceCents: 3900, extraSeatPriceCents: 400, dodoProductId: 'pdt_growth', dodoExtraSeatAddonId: 'adn_seat' },
   ];
   updateSubscriptionSeatsMock.mockClear();
   updatePreapprovalMock.mockClear();
@@ -57,9 +69,9 @@ describe('extraSeatsFor', () => {
     expect(extraSeatsFor('growth', 12)).toBe(2);
   });
 
-  it('INCLUDED_SEATS/EXTRA_SEAT_PRICE_CENTS match the confirmed 2026-09-14 numbers', () => {
-    expect(INCLUDED_SEATS).toEqual({ starter: 5, growth: 10 });
-    expect(EXTRA_SEAT_PRICE_CENTS).toBe(400);
+  it('reads its seat numbers from src/config/pricing.ts, not a copy of its own', () => {
+    expect(INCLUDED_SEATS).toBe(PRICING.includedSeats);
+    expect(FREE_TRIAL_SEAT_CAP).toBe(PRICING.freeTrialSeatCap);
   });
 });
 
@@ -97,7 +109,7 @@ describe('syncSeatBilling', () => {
     subscriptions.t1 = { provider: 'dodopayments', externalSubscriptionId: 'sub_1', status: 'active' };
     users = Array.from({ length: 7 }, () => ({ tenantId: 't1', status: 'active' })); // 2 over the 5 included
     await syncSeatBilling('t1');
-    expect(updateSubscriptionSeatsMock).toHaveBeenCalledWith('sub_1', { productId: 'pdt_starter', extraSeats: 2 });
+    expect(updateSubscriptionSeatsMock).toHaveBeenCalledWith('sub_1', { productId: 'pdt_starter', extraSeats: 2, extraSeatAddonId: 'adn_seat' });
   });
 
   it('clears the Dodo addon (extraSeats: 0) once back at or under the included count', async () => {
@@ -105,20 +117,18 @@ describe('syncSeatBilling', () => {
     subscriptions.t1 = { provider: 'dodopayments', externalSubscriptionId: 'sub_1', status: 'active' };
     users = Array.from({ length: 4 }, () => ({ tenantId: 't1', status: 'active' }));
     await syncSeatBilling('t1');
-    expect(updateSubscriptionSeatsMock).toHaveBeenCalledWith('sub_1', { productId: 'pdt_starter', extraSeats: 0 });
+    expect(updateSubscriptionSeatsMock).toHaveBeenCalledWith('sub_1', { productId: 'pdt_starter', extraSeats: 0, extraSeatAddonId: 'adn_seat' });
   });
 
   it('folds the surcharge into Mercado Pago\'s recurring transactionAmount instead (no addon primitive)', async () => {
     tenants.t1 = { plan: 'growth' };
     subscriptions.t1 = { provider: 'mercadopago', externalSubscriptionId: 'preapproval_1', status: 'active' };
-    planPrices.push({ plan: 'growth', market: 'ar', launchPriceCents: 5000, dodoProductId: null });
+    planPrices.push({ plan: 'growth', market: 'ar', launchPriceCents: 5_000_000, extraSeatPriceCents: 500_000, dodoProductId: null });
     users = Array.from({ length: 12 }, () => ({ tenantId: 't1', status: 'active' })); // 2 over the 10 included
     await syncSeatBilling('t1');
-    // The ARS per-seat price, never the USD EXTRA_SEAT_PRICE_CENTS (400) — adding that to an ARS
-    // amount billed ARS 4 per seat until 2026-09-26.
-    expect(updatePreapprovalMock).toHaveBeenCalledWith('preapproval_1', {
-      transactionAmount: (5000 + 2 * EXTRA_SEAT_PRICE_CENTS_BY_MARKET.ar) / 100,
-    });
+    // The locked row's own ARS seat price — never the USD 400, which billed ARS 4 per seat until
+    // 2026-09-26.
+    expect(updatePreapprovalMock).toHaveBeenCalledWith('preapproval_1', { transactionAmount: (5_000_000 + 2 * 500_000) / 100 });
     expect(updateSubscriptionSeatsMock).not.toHaveBeenCalled();
   });
 });

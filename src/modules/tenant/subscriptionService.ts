@@ -1,7 +1,9 @@
 import prisma from '../../lib/prisma.js';
 import { getInvoiceUrl } from '../../lib/dodopayments.js';
 import { CURRENT_PLAN_PRICES_CENTS } from './planService.js';
-import { countActiveSeats, extraSeatsFor, INCLUDED_SEATS, EXTRA_SEAT_PRICE_CENTS, FREE_TRIAL_SEAT_CAP } from './seatService.js';
+import { countActiveSeats, extraSeatsFor, INCLUDED_SEATS, FREE_TRIAL_SEAT_CAP } from './seatService.js';
+import { marketForProvider } from './planPriceService.js';
+import { PRICING } from '../../config/pricing.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { subscriptionActivityFieldConfig } from '../activity/fieldConfigs/subscriptionFieldConfig.js';
 import { bestEffort } from '../../lib/bestEffort.js';
@@ -15,20 +17,21 @@ export function resolveProvider(tenant: { country: string | null }): PaymentProv
   return tenant.country === 'Argentina' ? 'mercadopago' : 'dodopayments';
 }
 
-// 2026-09-16, QA-91 — routes/webhooks.ts's reliable fallback when metadata.plan isn't present on
-// a Dodo event (see getSubscriptionProductId's comment in dodopayments.ts). Reverse-looks-up
-// which plan a Dodo product id belongs to via the same PlanPrice rows checkoutService.ts already
-// uses to go the other direction (plan -> dodoProductId).
-export async function resolvePlanFromDodoProductId(productId: string): Promise<'starter' | 'growth' | null> {
-  const planPrice = await prisma.planPrice.findFirst({ where: { dodoProductId: productId } });
+// 2026-09-16, QA-91 — routes/webhooks.ts's reliable fallback when metadata isn't present on a Dodo
+// event (see getSubscriptionProductId's comment in dodopayments.ts). Reverse-looks-up the PlanPrice
+// row a Dodo product id belongs to — the latest one, since a row whose plan price didn't change
+// reuses the previous row's product (planPriceService.ts).
+export async function resolvePlanPriceFromDodoProductId(productId: string) {
+  const planPrice = await prisma.planPrice.findFirst({ where: { dodoProductId: productId }, orderBy: { effectiveFrom: 'desc' } });
   if (!planPrice || (planPrice.plan !== 'starter' && planPrice.plan !== 'growth')) {
     return null;
   }
-  return planPrice.plan;
+  return planPrice;
 }
 
 const BILLING_SUMMARY_SELECT = {
   plan: true,
+  planPrice: { select: { extraSeatPriceCents: true } },
   status: true,
   provider: true,
   currency: true,
@@ -79,7 +82,7 @@ export async function getBillingSummary(tenantId: string) {
     prisma.subscription.findUnique({ where: { tenantId }, select: BILLING_SUMMARY_SELECT }),
     prisma.tenant.findUnique({
       where: { id: tenantId },
-      select: { status: true, plan: true, trialEndsAt: true, gracePeriodEndsAt: true, lockedPriceCents: true },
+      select: { status: true, plan: true, trialEndsAt: true, gracePeriodEndsAt: true, lockedPriceCents: true, country: true },
     }),
   ]);
   if (!tenant) {
@@ -94,10 +97,23 @@ export async function getBillingSummary(tenantId: string) {
   const activeSeats = await countActiveSeats(tenantId);
   const includedSeats = tenant.plan === 'starter' || tenant.plan === 'growth' ? INCLUDED_SEATS[tenant.plan] : FREE_TRIAL_SEAT_CAP;
   const extraSeats = tenant.plan === 'starter' || tenant.plan === 'growth' ? extraSeatsFor(tenant.plan, activeSeats) : 0;
-  const seatInfo = { tenantPlan: tenant.plan, activeSeats, includedSeats, extraSeats, extraSeatsCostCents: extraSeats * EXTRA_SEAT_PRICE_CENTS };
+  // The subscription's own pinned seat price when it has one; otherwise what its market charges
+  // today (src/config/pricing.ts) — display only, no provider call from this read path.
+  const extraSeatPriceCents =
+    subscription?.planPrice?.extraSeatPriceCents ??
+    PRICING.markets[marketForProvider(subscription?.provider ?? null, tenant.country)].extraSeat;
+  const seatInfo = {
+    tenantPlan: tenant.plan,
+    activeSeats,
+    includedSeats,
+    extraSeats,
+    extraSeatPriceCents,
+    extraSeatsCostCents: extraSeats * extraSeatPriceCents,
+  };
 
   if (subscription) {
-    return { ...subscription, ...seatInfo };
+    const { planPrice: _planPrice, ...rest } = subscription;
+    return { ...rest, ...seatInfo };
   }
 
   // Self-heal: a tenant created before Billing Integration shipped has no Subscription row
@@ -173,6 +189,7 @@ export interface SyncSubscriptionAndTenantInput {
   provider?: PaymentProvider | null;
   externalSubscriptionId?: string | null;
   lockedPriceCents?: number;
+  planPriceId?: string | null; // the PlanPrice row the subscription is pinned to (planPriceService.ts)
   currency?: string;
   trialEndsAt?: Date | null;
   gracePeriodEndsAt?: Date | null;

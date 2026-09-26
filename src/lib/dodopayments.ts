@@ -34,6 +34,10 @@ export interface CreateCheckoutSessionInput {
   // users than the plan includes by the time they actually add a card starts correctly billed
   // from the first invoice, instead of relying on the next syncSeatBilling call to catch up.
   extraSeats?: number;
+  extraSeatAddonId?: string | null; // PlanPrice.dodoExtraSeatAddonId of the row being checked out (null → legacy env addon)
+  // -> metadata.planPriceId (2026-09-26) — the exact PlanPrice row this checkout was priced from,
+  // so the webhook pins the subscription to it (grandfathering, Subscription.planPriceId).
+  planPriceId?: string;
   // -> metadata.plan (2026-09-15, QA-88) — the plan this checkout is FOR, read back by the
   // webhook's payment.succeeded handler to set Tenant.plan only once payment actually confirms,
   // instead of checkoutService.ts writing it upfront. Omit only for the "update payment method"
@@ -56,13 +60,17 @@ export async function createCheckoutSession(input: CreateCheckoutSessionInput): 
         product_id: input.productId,
         quantity: 1,
         ...(input.extraSeats
-          ? { addons: [{ addon_id: requireExtraSeatAddonId(), quantity: input.extraSeats }] }
+          ? { addons: [{ addon_id: extraSeatAddonId(input.extraSeatAddonId), quantity: input.extraSeats }] }
           : {}),
       },
     ],
     customer: { email: input.email },
     return_url: input.returnUrl,
-    metadata: { subscriptionId: input.subscriptionId, ...(input.plan ? { plan: input.plan } : {}) },
+    metadata: {
+      subscriptionId: input.subscriptionId,
+      ...(input.plan ? { plan: input.plan } : {}),
+      ...(input.planPriceId ? { planPriceId: input.planPriceId } : {}),
+    },
     ...(input.trialDays ? { subscription_data: { trial_period_days: input.trialDays } } : {}),
   });
 
@@ -86,6 +94,9 @@ export async function getCustomerPortalUrl(externalSubscriptionId: string, retur
 
 export interface ChangeSubscriptionPlanInput {
   productId: string; // PlanPrice.dodoProductId of the new plan
+  // The new plan's PlanPrice row seat price (2026-09-26): a plan change moves the subscriber onto
+  // current pricing for seats too, so any extra-seat quantity is carried over onto this addon.
+  extraSeatAddonId?: string | null;
 }
 
 // Self-serve change-plan (Etapa D) — `proration_billing_mode: 'do_not_bill'` per the spec ("Sin
@@ -103,17 +114,18 @@ export async function changeSubscriptionPlan(externalSubscriptionId: string, inp
     product_id: input.productId,
     quantity: 1,
     proration_billing_mode: 'do_not_bill',
-    addons: current.addons.map((a) => ({ addon_id: a.addon_id, quantity: a.quantity })),
+    addons: current.addons.map((a) => ({ addon_id: extraSeatAddonId(input.extraSeatAddonId), quantity: a.quantity })),
   });
 }
 
 export interface UpdateSubscriptionSeatsInput {
   productId: string; // PlanPrice.dodoProductId of the subscription's CURRENT plan (required by changePlan even when only addons change)
   extraSeats: number; // 0 clears the addon entirely (passing an empty addons array removes it)
+  extraSeatAddonId?: string | null; // PlanPrice.dodoExtraSeatAddonId of the subscription's locked row
 }
 
 // Real-time seat billing (2026-09-14, Alejandro's call) — "extra seat" is a Dodo Addon (its own
-// catalog object, provisioned once by scripts/setup-dodo-extra-seat-addon.ts), attached to the
+// catalog object, one per seat price, provisioned by planPriceService.ts), attached to the
 // subscription with its own quantity independent of the base plan. `prorated_immediately` bills
 // or credits for the exact number of days left in the CURRENT billing period — unlike
 // changeSubscriptionPlan's `do_not_bill` above, this is deliberately immediate (Alejandro: "que se
@@ -128,21 +140,31 @@ export async function updateSubscriptionSeats(externalSubscriptionId: string, in
     product_id: input.productId,
     quantity: 1,
     proration_billing_mode: 'prorated_immediately',
-    addons: input.extraSeats > 0 ? [{ addon_id: requireExtraSeatAddonId(), quantity: input.extraSeats }] : [],
+    addons: input.extraSeats > 0 ? [{ addon_id: extraSeatAddonId(input.extraSeatAddonId), quantity: input.extraSeats }] : [],
   });
 }
 
-function requireExtraSeatAddonId(): string {
-  const id = process.env.DODO_EXTRA_SEAT_ADDON_ID;
+// The addon comes from the PlanPrice row (planPriceService.ts provisions one per seat price). The
+// env var is only the fallback for rows created before 2026-09-26, which never stored one.
+function extraSeatAddonId(fromPlanPrice?: string | null): string {
+  const id = fromPlanPrice ?? process.env.DODO_EXTRA_SEAT_ADDON_ID;
   if (!id) {
-    throw new Error('DODO_EXTRA_SEAT_ADDON_ID is not configured — run scripts/setup-dodo-extra-seat-addon.ts');
+    throw new Error('No Dodo extra-seat addon for this PlanPrice row and DODO_EXTRA_SEAT_ADDON_ID is not set');
   }
   return id;
 }
 
-// Only used by scripts/setup-dodo-extra-seat-addon.ts — one addon, shared by every plan/market
-// (unlike Products, which are per-PlanPrice-row), since the $4/seat surcharge doesn't vary by
-// plan tier.
+// The pre-2026-09-26 shared addon, if configured and still priced at `priceCents` — lets
+// planPriceService.ts reuse it for a new PlanPrice row instead of provisioning a duplicate.
+export async function legacyExtraSeatAddonMatching(priceCents: number): Promise<string | null> {
+  const id = process.env.DODO_EXTRA_SEAT_ADDON_ID;
+  if (!id) return null;
+  const addon = await getClient().addons.retrieve(id);
+  return addon.price === priceCents ? id : null;
+}
+
+// One addon per extra-seat price (planPriceService.ts) — a price change creates a new addon rather
+// than editing this one, which would silently reprice every existing subscriber using it.
 export async function createExtraSeatAddon(priceCents: number): Promise<string> {
   const addon = await getClient().addons.create({
     name: 'Extra seat',
@@ -203,9 +225,9 @@ export interface CreateRecurringProductInput {
   priceCents: number;
 }
 
-// Only used by scripts/setup-dodo-products.ts — Dodo requires a pre-created catalog Product for
-// any recurring subscription (unlike Paddle's inline non-catalog price), so this provisions one
-// Product per PlanPrice row rather than at checkout time. `payment_frequency_interval`/
+// Called by planPriceService.ts — Dodo requires a pre-created catalog Product for any recurring
+// subscription (unlike Paddle's inline non-catalog price), so this provisions one Product per
+// plan price (the first time a new PlanPrice row is needed) rather than per checkout. `payment_frequency_interval`/
 // `subscription_period_interval` both 'Month'/1 — every plan today is a flat monthly charge, no
 // annual tier yet.
 export async function createRecurringProduct(input: CreateRecurringProductInput): Promise<string> {

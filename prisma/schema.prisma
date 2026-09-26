@@ -404,6 +404,12 @@ model Subscription {
   provider                PaymentProvider? // null until a payment method is actually attached
   externalSubscriptionId  String? // Dodo Payments subscription id, or Mercado Pago preapproval_id
   lockedPriceCents        Int
+  // The PlanPrice row this subscription was confirmed on (2026-09-26) — what keeps an existing
+  // subscriber's base + extra-seat price fixed when src/config/pricing.ts changes. Null for
+  // subscriptions confirmed before this existed, and for any not confirmed yet: those read the
+  // market's latest row instead (planPriceService.ts's lockedPlanPrice).
+  planPriceId             String?
+  planPrice               PlanPrice?         @relation(fields: [planPriceId], references: [id])
   currency                String // "USD" (Dodo Payments) | "ARS" (Mercado Pago)
   trialEndsAt             DateTime?
   gracePeriodEndsAt       DateTime?
@@ -435,18 +441,18 @@ model Subscription {
 }
 
 model Invoice {
-  id                String          @id @default(uuid())
-  subscriptionId    String
-  subscription      Subscription    @relation(fields: [subscriptionId], references: [id])
-  provider          PaymentProvider
-  externalInvoiceId String?
-  amountCents       Int
-  currency          String
-  status            String // paid | failed | refunded
-  periodStart       DateTime
-  periodEnd         DateTime
-  paidAt            DateTime?
-  createdAt         DateTime        @default(now())
+  id                    String          @id @default(uuid())
+  subscriptionId        String
+  subscription          Subscription    @relation(fields: [subscriptionId], references: [id])
+  provider              PaymentProvider
+  externalInvoiceId     String?
+  amountCents           Int
+  currency              String
+  status                String // paid | failed | refunded
+  periodStart           DateTime
+  periodEnd             DateTime
+  paidAt                DateTime?
+  createdAt             DateTime        @default(now())
   // Breakdown of amountCents (2026-09-15, QA-88) — null on every invoice created before this,
   // populated going forward by routes/webhooks.ts's payment.succeeded handler. Nullable rather
   // than backfilled: there's no reliable way to reconstruct how many extra seats were actually
@@ -462,19 +468,27 @@ model Invoice {
 // existing row — lockedPriceCents on Subscription already freezes what a tenant is actually
 // charged — it inserts a new row with a later effectiveFrom instead.
 model PlanPrice {
-  id                String   @id @default(uuid())
-  plan              PlanTier
-  market            String // "international" | "ar"
-  currency          String // "USD" | "ARS"
-  launchPriceCents  Int
-  regularPriceCents Int
+  id                   String         @id @default(uuid())
+  plan                 PlanTier
+  market               String // "international" | "ar"
+  currency             String // "USD" | "ARS"
+  launchPriceCents     Int
+  regularPriceCents    Int
   // Dodo Payments catalog product id for launchPriceCents — Dodo requires a pre-created Product
   // for any recurring subscription, unlike Paddle's inline non-catalog price. Only set for
   // "international" market rows (Mercado Pago/"ar" rows never touch Dodo). Provisioned by
   // scripts/setup-dodo-products.ts, not created at checkout time.
-  dodoProductId     String?
-  effectiveFrom     DateTime @default(now())
-  createdAt         DateTime @default(now())
+  dodoProductId        String?
+  // Per-extra-seat price in this row's currency (2026-09-26) — a row is a full pricing snapshot
+  // (base + seat), so a subscriber pinned to it (Subscription.planPriceId) keeps both. Filled from
+  // src/config/pricing.ts by planPriceService.ts.
+  extraSeatPriceCents  Int            @default(0)
+  // Dodo Addon billing extraSeatPriceCents ("international" rows only). Null on rows created before
+  // 2026-09-26 — those fall back to the DODO_EXTRA_SEAT_ADDON_ID env var.
+  dodoExtraSeatAddonId String?
+  effectiveFrom        DateTime       @default(now())
+  createdAt            DateTime       @default(now())
+  subscriptions        Subscription[]
 
   @@index([plan, market])
 }
@@ -1379,21 +1393,21 @@ model TagAssignment {
 // tenantId + entityType + entityId pattern already used by CustomFieldValue —
 // no per-module FK. See docs/tareas-desarrollo.md, "Módulo de Tasks", item 1.
 model Task {
-  id                    String     @id @default(uuid())
+  id                    String      @id @default(uuid())
   tenantId              String
-  tenant                Tenant     @relation(fields: [tenantId], references: [id])
+  tenant                Tenant      @relation(fields: [tenantId], references: [id])
   entityType            EntityType
   entityId              String
   title                 String
   description           String?
   assigneeId            String
-  assignee              User       @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  assignee              User        @relation("TaskAssignee", fields: [assigneeId], references: [id])
   dueDate               DateTime?
   completedAt           DateTime? // presence/absence is the done/pending state, not a separate enum
   createdById           String
-  createdBy             User       @relation("TaskCreatedBy", fields: [createdById], references: [id])
-  createdAt             DateTime   @default(now())
-  updatedAt             DateTime   @updatedAt
+  createdBy             User        @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
   googleCalendarEventId String? // set once this task's dueDate has been pushed to the assignee's connected Google Calendar; see googleCalendarSyncService.ts
   // Client-call Meet link (2026-09-16) — hasVideoCall is the user's request ("give this task a
   // Google Meet"), googleMeetUrl is the actual link once Google generates one. Kept separate
@@ -1401,7 +1415,7 @@ model Task {
   // one before it's ever synced (no Calendar connection yet, or dueDate not set yet) — the two
   // fields track intent vs. outcome. Once set, googleMeetUrl is never cleared even if hasVideoCall
   // is later unchecked (see googleCalendarSyncService.ts's comment on why removal isn't handled).
-  hasVideoCall          Boolean    @default(false)
+  hasVideoCall          Boolean     @default(false)
   googleMeetUrl         String?
   // Optional user-defined grouping (2026-09-18, My Tasks hub) — orthogonal to entityType/entityId,
   // which record a Task is *about*; a folder is purely an organizational bucket the assignee/creator

@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useScrollSpy } from '../hooks/useScrollSpy';
-import { formatPlanPrice, usePlanPrices } from '../lib/planPrices';
+import { extraSeatPriceLabel, planPriceLabel, usePlanPricing } from '../lib/planPrices';
 import {
   AlertCircleIcon,
   AlertTriangleIcon,
@@ -158,7 +158,12 @@ const MODULE_MAP_ES: { id: string; label: string; blurb: string; icon: JSX.Eleme
 export default function GuidePage() {
   const navigate = useNavigate();
   const activeId = useScrollSpy(SECTION_IDS);
-  const planPrices = usePlanPrices();
+  // Every price/seat number below comes from the backend's src/config/pricing.ts — never type one here.
+  const pricing = usePlanPricing();
+  const usd = (plan: 'starter' | 'growth') => planPriceLabel(pricing, 'international', plan);
+  const seatPrice = extraSeatPriceLabel(pricing, 'international');
+  const included = (plan: 'starter' | 'growth') => pricing?.includedSeats[plan] ?? '—';
+  const trialCap = pricing?.freeTrialSeatCap ?? '—';
   const { i18n } = useTranslation();
   const isSpanish = i18n.language.startsWith('es');
 
@@ -1879,12 +1884,12 @@ export default function GuidePage() {
                 <tbody>
                   <tr>
                     <td>Precio</td>
-                    <td className="num">{planPrices ? `${formatPlanPrice(planPrices.starter)}/mes` : '—'}</td>
-                    <td className="num">{planPrices ? `${formatPlanPrice(planPrices.growth)}/mes` : '—'}</td>
+                    <td className="num">{usd('starter')}/mes</td>
+                    <td className="num">{usd('growth')}/mes</td>
                   </tr>
                   <tr><td>Pipelines</td><td className="num">2</td><td className="num">Ilimitados</td></tr>
                   <tr><td>Políticas de ausencias</td><td className="num">3</td><td className="num">Ilimitadas</td></tr>
-                  <tr><td>Puestos incluidos</td><td className="num">5</td><td className="num">10</td></tr>
+                  <tr><td>Puestos incluidos</td><td className="num">{included('starter')}</td><td className="num">{included('growth')}</td></tr>
                   <tr><td>Roles personalizados</td><td className="num">2</td><td className="num">Ilimitados</td></tr>
                   <tr><td>Historial del registro de actividad</td><td className="num">7 días</td><td className="num">30 días</td></tr>
                   <tr><td>Nómina</td><td className="no">—</td><td className="yes">Incluido</td></tr>
@@ -1893,11 +1898,11 @@ export default function GuidePage() {
               </table>
             </div>
             <p className="help-intro" style={{ marginTop: '-8px' }}>
-              Precios mostrados en USD. Un tercer nivel, <strong>Scale</strong>, está disponible hablando con
+              Precios mostrados en USD (en Argentina se cobra en pesos vía Mercado Pago). Un tercer nivel, <strong>Scale</strong>, está disponible hablando con
               nosotros directamente en vez de por checkout de autoservicio. "Puestos incluidos" cuenta a toda
               persona activa en tu espacio de trabajo sin importar el rol — owner, admin, o member cuentan todos
-              igual. Si te pasás, cada puesto extra cuesta $4/mes, facturado automáticamente; no hay un tope duro
-              una vez que estás en un plan real. La prueba gratuita (sin plan elegido todavía) está limitada a 5
+              igual. Si te pasás, cada puesto extra cuesta {seatPrice}/mes, facturado automáticamente; no hay un tope duro
+              una vez que estás en un plan real. La prueba gratuita (sin plan elegido todavía) está limitada a {trialCap}{' '}
               personas porque todavía no hay facturación configurada para cubrir a nadie más allá de eso — elegí un
               plan para agregar más.
             </p>
@@ -1956,12 +1961,12 @@ export default function GuidePage() {
                 <tbody>
                   <tr>
                     <td>Price</td>
-                    <td className="num">{planPrices ? `${formatPlanPrice(planPrices.starter)}/mo` : '—'}</td>
-                    <td className="num">{planPrices ? `${formatPlanPrice(planPrices.growth)}/mo` : '—'}</td>
+                    <td className="num">{usd('starter')}/mo</td>
+                    <td className="num">{usd('growth')}/mo</td>
                   </tr>
                   <tr><td>Pipelines</td><td className="num">2</td><td className="num">Unlimited</td></tr>
                   <tr><td>Time off policies</td><td className="num">3</td><td className="num">Unlimited</td></tr>
-                  <tr><td>Seats included</td><td className="num">5</td><td className="num">10</td></tr>
+                  <tr><td>Seats included</td><td className="num">{included('starter')}</td><td className="num">{included('growth')}</td></tr>
                   <tr><td>Custom roles</td><td className="num">2</td><td className="num">Unlimited</td></tr>
                   <tr><td>Activity log history</td><td className="num">7 days</td><td className="num">30 days</td></tr>
                   <tr><td>Payroll</td><td className="no">—</td><td className="yes">Included</td></tr>
@@ -1970,11 +1975,11 @@ export default function GuidePage() {
               </table>
             </div>
             <p className="help-intro" style={{ marginTop: '-8px' }}>
-              Prices shown in USD. A third tier, <strong>Scale</strong>, is available by talking to us directly
+              Prices shown in USD (Argentina is billed in pesos via Mercado Pago). A third tier, <strong>Scale</strong>, is available by talking to us directly
               rather than self-serve checkout. "Seats included" counts every active person in your workspace
               regardless of role — owner, admin, or member all count the same. Go over and each extra seat is
-              $4/mo, billed automatically; no hard cap once you're on a real plan. Free Trial (no plan chosen yet)
-              is capped at 5 people since there's no billing in place yet to cover anyone past that — pick a plan to
+              {seatPrice}/mo, billed automatically; no hard cap once you're on a real plan. Free Trial (no plan chosen yet)
+              is capped at {trialCap} people since there's no billing in place yet to cover anyone past that — pick a plan to
               add more.
             </p>
 

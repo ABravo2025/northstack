@@ -6,7 +6,7 @@ import { useToast } from './ToastProvider';
 import type { PlanTier, Tenant } from '../../api/types';
 import { daysRemainingUntil } from '../../lib/trial';
 import { COMPANY_SIZE_1_10, COMPANY_SIZE_11_50 } from '../../lib/companySize';
-import { formatPlanPrice, usePlanPrices } from '../../lib/planPrices';
+import { extraSeatPriceLabel, marketForCountry, planPriceLabel, usePlanPricing, type Market, type PlanPricing } from '../../lib/planPrices';
 
 interface FeatureRow {
   label: string;
@@ -19,7 +19,7 @@ interface PlanCardConfig {
   name: string;
   tagline: string;
   // Only the trial card carries a static price ('Free'). Starter/Growth's price comes from
-  // usePlanPrices (the backend's single price definition) — never hardcode it here.
+  // usePlanPricing (the backend's single price definition) — never hardcode it here.
   price?: string;
   priceSuffix?: string;
   cap: string;
@@ -51,7 +51,8 @@ function planCtaLabel(t: ReturnType<typeof useTranslation>['t'], card: PlanCardC
 // they pick Starter, Starter's real limits apply (getEffectivePlan).
 //
 // Seats pricing (2026-09-14, Alejandro's call): each `cap` line below advertises a flat per-seat
-// model (5/10 seats included, $4/mo per extra seat, no admin-vs-member distinction) — matches
+// model (included seats + per-extra-seat price, both from usePlanPricing, no admin-vs-member
+// distinction) — matches
 // enforcement exactly: no separate Admin-role cap exists (removed 2026-09-14, seatService.ts's
 // real-time billing is the only limit now, same as any other seat).
 //
@@ -59,7 +60,12 @@ function planCtaLabel(t: ReturnType<typeof useTranslation>['t'], card: PlanCardC
 // both locales (same convention as "Stripe"/"Google Calendar" elsewhere in Settings — a
 // proprietary/brand-like name isn't run through t()). "Free Trial" is a generic concept already
 // translated elsewhere (common.json's trial banners), so it does go through t() here.
-function getPlanCards(t: ReturnType<typeof useTranslation>['t']): PlanCardConfig[] {
+function getPlanCards(t: ReturnType<typeof useTranslation>['t'], pricing: PlanPricing | null, market: Market): PlanCardConfig[] {
+  const seatCap = (plan: 'starter' | 'growth') =>
+    t(`plansModal.cards.${plan}.cap`, {
+      included: pricing ? pricing.includedSeats[plan] : '—',
+      seatPrice: extraSeatPriceLabel(pricing, market),
+    });
   return [
     {
       key: 'trial',
@@ -87,7 +93,7 @@ function getPlanCards(t: ReturnType<typeof useTranslation>['t']): PlanCardConfig
       name: 'Starter',
       tagline: t('plansModal.cards.starter.tagline'),
       priceSuffix: t('plansModal.cards.starter.priceSuffix'),
-      cap: t('plansModal.cards.starter.cap'),
+      cap: seatCap('starter'),
       features: [
         { label: t('plansModal.features.salesCrm'), sub: t('plansModal.features.salesCrmSubStarter'), included: true },
         { label: t('plansModal.features.hrTimeOff'), sub: t('plansModal.features.hrTimeOffSubStarter'), included: true },
@@ -106,7 +112,7 @@ function getPlanCards(t: ReturnType<typeof useTranslation>['t']): PlanCardConfig
       name: 'Growth',
       tagline: t('plansModal.cards.growth.tagline'),
       priceSuffix: t('plansModal.cards.growth.priceSuffix'),
-      cap: t('plansModal.cards.growth.cap'),
+      cap: seatCap('growth'),
       features: [
         { label: t('plansModal.features.salesCrm'), sub: t('plansModal.features.salesCrmSubUnlimited'), included: true },
         { label: t('plansModal.features.hrTimeOff'), sub: t('plansModal.features.hrTimeOffSubUnlimited'), included: true },
@@ -163,11 +169,13 @@ export default function PlansModal({ open, tenant, onClose, onSelectPlan, curren
   // (AppLayout toggles `open`, doesn't remount it), so this only ever runs for the sessions that
   // actually open the modal. Shows "—" for Starter/Growth until it lands or if it fails, rather
   // than a hardcoded number that could be wrong.
-  const livePrices = usePlanPrices(open);
+  const pricing = usePlanPricing(open);
+  // Argentina sees its ARS prices (Mercado Pago), everyone else USD — same routing as checkout.
+  const market = marketForCountry(tenant?.country);
 
   // Rebuilt every render (not memoized) so a live language switch (Settings → Profile) updates
   // this modal's copy immediately, same pattern as lib/settingsSections.tsx's getSettingsSections.
-  const planCards = getPlanCards(t);
+  const planCards = getPlanCards(t, pricing, market);
 
   const recommended = recommendedTier(tenant?.companySize ?? null);
   const trialDaysLeft = daysRemainingUntil(tenant?.trialEndsAt ?? null);
@@ -214,11 +222,7 @@ export default function PlansModal({ open, tenant, onClose, onSelectPlan, curren
           const isCurrent = card.key === currentPlan;
           const isRecommended = !isCurrent && card.key === recommended;
           const displayPrice =
-            card.key === 'starter' || card.key === 'growth'
-              ? livePrices
-                ? formatPlanPrice(livePrices[card.key])
-                : '—'
-              : card.price;
+            card.key === 'starter' || card.key === 'growth' ? planPriceLabel(pricing, market, card.key) : card.price;
           return (
             <div
               key={card.key}

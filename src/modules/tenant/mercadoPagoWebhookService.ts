@@ -22,7 +22,7 @@ export async function handleMercadoPagoPreapproval(preapproval: MercadoPagoPreap
     return 'no external_reference on preapproval';
   }
 
-  const { subscriptionId, plan: checkoutPlan } = parseExternalReference(preapproval.external_reference);
+  const { subscriptionId, planPriceId } = parseExternalReference(preapproval.external_reference);
   const subscription = await prisma.subscription.findUnique({ where: { id: subscriptionId } });
   if (!subscription) {
     return 'no matching subscription';
@@ -42,17 +42,14 @@ export async function handleMercadoPagoPreapproval(preapproval: MercadoPagoPreap
     const isFirstSubscribe = subscription.provider === null;
     const hasTrial = Boolean(preapproval.auto_recurring?.free_trial);
 
-    // Plan is only confirmed here, on a first subscribe (checkoutService.ts no longer writes it at
-    // checkout). Priced from the same latest PlanPrice row the checkout used — lockedPriceCents is
-    // the base plan price, seat surcharge excluded, same as changePlan and the Dodo webhook.
-    let planFields: { plan: 'starter' | 'growth'; lockedPriceCents: number } | null = null;
-    if (isFirstSubscribe && checkoutPlan) {
-      const planPrice = await prisma.planPrice.findFirst({
-        where: { plan: checkoutPlan, market: 'ar' },
-        orderBy: { effectiveFrom: 'desc' },
-      });
-      planFields = { plan: checkoutPlan, lockedPriceCents: planPrice?.launchPriceCents ?? 0 };
-    }
+    // Plan and price are only confirmed here, on a first subscribe (checkoutService.ts writes
+    // neither at checkout): the exact PlanPrice row the checkout was priced from, which also pins
+    // the subscription to it (grandfathered). lockedPriceCents is the base plan price, seat
+    // surcharge excluded, same as changePlan and the Dodo webhook.
+    const planPrice = isFirstSubscribe && planPriceId ? await prisma.planPrice.findUnique({ where: { id: planPriceId } }) : null;
+    const planFields = planPrice
+      ? { plan: planPrice.plan, lockedPriceCents: planPrice.launchPriceCents, planPriceId: planPrice.id }
+      : null;
 
     await syncSubscriptionAndTenant({
       tenantId: subscription.tenantId,

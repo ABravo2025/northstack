@@ -1,4 +1,5 @@
 import prisma from '../../lib/prisma.js';
+import { PRICING } from '../../config/pricing.js';
 import type { PlanTier, SubscriptionStatus, TenantStatus } from '@prisma/client';
 import { TENANT_SUMMARY_SELECT, type TenantSummary } from './tenantSummary.js';
 import { recordActivity } from '../activity/activityLogService.js';
@@ -15,14 +16,10 @@ const TENANT_TO_SUBSCRIPTION_STATUS: Record<TenantStatus, SubscriptionStatus> = 
 };
 
 // Server-side price list — never trust a price sent by the client (spec-subscription-plans.md).
-// These are the "launch price" values; when it's time to raise to the regular price, edit the
-// numbers here. Tenants who already picked a plan keep whatever they had locked into
-// Tenant.lockedPriceCents at selection time — that's the whole point of freezing it, so a
-// price-list change never silently affects an existing subscriber.
-export const CURRENT_PLAN_PRICES_CENTS: Record<'starter' | 'growth', number> = {
-  starter: 1900,
-  growth: 3900,
-};
+// Defined in src/config/pricing.ts; this is just the USD plan prices, used as the pre-billing
+// placeholder on Tenant/Subscription.lockedPriceCents until a checkout confirms the real row
+// (planPriceService.ts).
+export const CURRENT_PLAN_PRICES_CENTS = PRICING.markets.international.plans;
 
 export interface UpdateTenantPlanResult {
   success: boolean;

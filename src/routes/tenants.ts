@@ -3,7 +3,8 @@ import { canInviteUsers, canManageBilling, canManageTenantSettings, canManageUse
 import { getTenantById, registerTenantWithOwner } from '../modules/tenant/tenantService.js';
 import { removeTenantLogo, setTenantLogo, updateTenantProfile } from '../modules/tenant/tenantProfileService.js';
 import { startSignupVerification, verifySignupToken } from '../modules/tenant/emailVerificationService.js';
-import { CURRENT_PLAN_PRICES_CENTS, updateTenantPlan } from '../modules/tenant/planService.js';
+import { updateTenantPlan } from '../modules/tenant/planService.js';
+import { publicPricing } from '../modules/tenant/planPriceService.js';
 import {
   acceptInvitation,
   cancelInvitation,
@@ -99,13 +100,13 @@ tenantsRouter.post('/api/tenants/register', async (req, res) => {
     .json({ tenant: result.tenant, user: sanitizeUser(result.user!), session: result.session });
 });
 
-// Public — the current plan prices, so the frontend (PlansModal.tsx and GuidePage.tsx, via the
-// usePlanPrices hook) never hardcodes a second copy of the numbers planService.ts's
-// CURRENT_PLAN_PRICES_CENTS already defines as authoritative. No auth needed: not
-// tenant-specific, and the modal renders before there's necessarily anything else useful to
-// gate it behind.
+// Public — every price and seat number (src/config/pricing.ts), so the app UI (usePlanPrices
+// hook: PlansModal, BillingPage, /guide, /help) and the landing never hardcode a second copy. No
+// auth needed: not tenant-specific. CORS is open for this path (app.ts) so the landing, on its own
+// origin, can read it too.
 tenantsRouter.get('/api/plans/prices', async (_req, res) => {
-  return res.json({ prices: CURRENT_PLAN_PRICES_CENTS });
+  res.set('Cache-Control', 'public, max-age=300');
+  return res.json(publicPricing());
 });
 
 // Subscription Plans (spec-subscription-plans.md) — owner-only, same bar as Payroll's

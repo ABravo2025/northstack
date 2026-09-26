@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const subscriptions: any[] = [];
 const planPrices: any[] = [
-  { plan: 'starter', market: 'ar', launchPriceCents: 1_500_000 },
-  { plan: 'growth', market: 'ar', launchPriceCents: 3_000_000 },
+  { id: 'pp_ar_starter', plan: 'starter', market: 'ar', launchPriceCents: 1_500_000 },
+  { id: 'pp_ar_growth', plan: 'growth', market: 'ar', launchPriceCents: 3_000_000 },
 ];
 
 vi.mock('../src/lib/prisma.js', () => ({
@@ -12,7 +12,7 @@ vi.mock('../src/lib/prisma.js', () => ({
       findUnique: vi.fn(async ({ where }: any) => subscriptions.find((s) => s.id === where.id) ?? null),
     },
     planPrice: {
-      findFirst: vi.fn(async ({ where }: any) => planPrices.find((p) => p.plan === where.plan && p.market === where.market) ?? null),
+      findUnique: vi.fn(async ({ where }: any) => planPrices.find((p) => p.id === where.id) ?? null),
     },
   },
 }));
@@ -37,7 +37,7 @@ function preapproval(overrides: Record<string, unknown>) {
   return {
     id: 'pre_new',
     status: 'authorized',
-    external_reference: 'sub1:growth',
+    external_reference: 'sub1:pp_ar_growth',
     auto_recurring: { transaction_amount: 30000, currency_id: 'ARS' },
     ...overrides,
   } as any;
@@ -65,6 +65,7 @@ describe('handleMercadoPagoPreapproval — first subscribe', () => {
       currency: 'ARS',
       plan: 'growth',
       lockedPriceCents: 3_000_000,
+      planPriceId: 'pp_ar_growth',
     });
     expect(updatePreapprovalMock).not.toHaveBeenCalled();
   });
@@ -77,7 +78,7 @@ describe('handleMercadoPagoPreapproval — first subscribe', () => {
     expect(syncMock).toHaveBeenCalledWith(expect.objectContaining({ status: 'active', currentPeriodStart: expect.any(Date), plan: 'growth' }));
   });
 
-  it('still resolves a pre-2026-09-26 external_reference with no plan suffix, leaving the plan alone', async () => {
+  it('still resolves a pre-2026-09-26 external_reference with no price suffix, leaving the plan alone', async () => {
     subscriptions.push({ id: 'sub1', tenantId: 't1', provider: null, externalSubscriptionId: null, plan: 'starter', status: 'trialing' });
 
     await handleMercadoPagoPreapproval(preapproval({ external_reference: 'sub1' }));
@@ -87,7 +88,7 @@ describe('handleMercadoPagoPreapproval — first subscribe', () => {
   });
 
   it('ignores a preapproval whose Subscription does not exist', async () => {
-    expect(await handleMercadoPagoPreapproval(preapproval({ external_reference: 'missing:growth' }))).toBe('no matching subscription');
+    expect(await handleMercadoPagoPreapproval(preapproval({ external_reference: 'missing:pp_ar_growth' }))).toBe('no matching subscription');
     expect(syncMock).not.toHaveBeenCalled();
   });
 });
@@ -97,7 +98,7 @@ describe('handleMercadoPagoPreapproval — replacement preapproval (update payme
     subscriptions.push({ id: 'sub1', tenantId: 't1', provider: 'mercadopago', externalSubscriptionId: 'pre_old', plan: 'starter', status: 'active' });
 
     await handleMercadoPagoPreapproval(
-      preapproval({ external_reference: 'sub1:starter', auto_recurring: { transaction_amount: 15000, currency_id: 'ARS', free_trial: FREE_TRIAL } }),
+      preapproval({ external_reference: 'sub1:pp_ar_starter', auto_recurring: { transaction_amount: 15000, currency_id: 'ARS', free_trial: FREE_TRIAL } }),
     );
 
     expect(syncMock).toHaveBeenCalledWith({ tenantId: 't1', provider: 'mercadopago', externalSubscriptionId: 'pre_new', currency: 'ARS' });
@@ -110,7 +111,7 @@ describe('handleMercadoPagoPreapproval — replacement preapproval (update payme
     updatePreapprovalMock.mockRejectedValueOnce(new Error('Mercado Pago API error (503)'));
     const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    expect(await handleMercadoPagoPreapproval(preapproval({ external_reference: 'sub1:starter' }))).toBe('ok');
+    expect(await handleMercadoPagoPreapproval(preapproval({ external_reference: 'sub1:pp_ar_starter' }))).toBe('ok');
     expect(consoleError).toHaveBeenCalledWith(expect.stringContaining('pre_old'), expect.any(Error));
     consoleError.mockRestore();
   });
@@ -118,7 +119,7 @@ describe('handleMercadoPagoPreapproval — replacement preapproval (update payme
   it("ignores the superseded preapproval's own cancelled webhook instead of cancelling the subscription", async () => {
     subscriptions.push({ id: 'sub1', tenantId: 't1', provider: 'mercadopago', externalSubscriptionId: 'pre_new', plan: 'starter', status: 'active' });
 
-    const status = await handleMercadoPagoPreapproval(preapproval({ id: 'pre_old', status: 'cancelled', external_reference: 'sub1:starter' }));
+    const status = await handleMercadoPagoPreapproval(preapproval({ id: 'pre_old', status: 'cancelled', external_reference: 'sub1:pp_ar_starter' }));
 
     expect(status).toBe('superseded preapproval, ignored');
     expect(syncMock).not.toHaveBeenCalled();

@@ -2,7 +2,8 @@ import prisma from '../../lib/prisma.js';
 import { syncSubscriptionAndTenant } from './subscriptionService.js';
 import { cancelSubscription as cancelDodoSubscription, removeScheduledCancellation, changeSubscriptionPlan } from '../../lib/dodopayments.js';
 import { updatePreapproval } from '../../lib/mercadopago.js';
-import { countActiveSeats, extraSeatsFor, mercadoPagoAmount } from './seatService.js';
+import { countActiveSeats, extraSeatsFor } from './seatService.js';
+import { currentPlanPrice, marketForProvider, mercadoPagoAmount } from './planPriceService.js';
 import { CURRENT_PLAN_PRICES_CENTS } from './planService.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { tenantActivityFieldConfig } from '../activity/fieldConfigs/tenantFieldConfig.js';
@@ -27,12 +28,10 @@ export async function changePlan(tenantId: string, plan: PlanTier, userId: strin
     return { success: false, error: 'No active paid subscription to change. Add a payment method first.' };
   }
 
-  const market = subscription.provider === 'mercadopago' ? 'ar' : 'international';
-  const planPrice = await prisma.planPrice.findFirst({
-    where: { plan, market },
-    orderBy: { effectiveFrom: 'desc' },
-  });
-  if (!planPrice || planPrice.launchPriceCents <= 0) {
+  // A plan change moves the subscriber onto current pricing (src/config/pricing.ts) for both the
+  // new plan and its seat price — they're choosing a new product, so grandfathering ends here.
+  const planPrice = await currentPlanPrice(plan, marketForProvider(subscription.provider, null));
+  if (!planPrice) {
     return { success: false, error: 'Pricing for this plan is not available yet.' };
   }
 
@@ -40,9 +39,12 @@ export async function changePlan(tenantId: string, plan: PlanTier, userId: strin
     if (!planPrice.dodoProductId) {
       return { success: false, error: 'Pricing for this plan is not available yet.' };
     }
-    // Extra-seat addon quantity is preserved automatically — changeSubscriptionPlan re-sends
-    // whatever's currently on the subscription (see its own comment in dodopayments.ts).
-    await changeSubscriptionPlan(subscription.externalSubscriptionId, { productId: planPrice.dodoProductId });
+    // Extra-seat quantity is carried over onto the new row's addon — see changeSubscriptionPlan's
+    // own comment in dodopayments.ts.
+    await changeSubscriptionPlan(subscription.externalSubscriptionId, {
+      productId: planPrice.dodoProductId,
+      extraSeatAddonId: planPrice.dodoExtraSeatAddonId,
+    });
   } else {
     // Mercado Pago folds the seat surcharge into the single transaction_amount (no addon
     // primitive — seatService.ts) — a tier change must recompute it against the NEW plan's
@@ -51,7 +53,7 @@ export async function changePlan(tenantId: string, plan: PlanTier, userId: strin
     const activeSeats = await countActiveSeats(tenantId);
     const extraSeats = extraSeatsFor(plan, activeSeats);
     await updatePreapproval(subscription.externalSubscriptionId, {
-      transactionAmount: mercadoPagoAmount(planPrice.launchPriceCents, extraSeats),
+      transactionAmount: mercadoPagoAmount(planPrice, extraSeats),
     });
   }
 
@@ -59,7 +61,13 @@ export async function changePlan(tenantId: string, plan: PlanTier, userId: strin
   // to reflect locally now (confirmed with Alejandro rather than assumed). Still takes effect at
   // currentPeriodEnd on the provider's side (no proration), so the UI reads that existing field
   // as "applies from", not "now" — no new schema field needed for a "scheduled" plan.
-  await syncSubscriptionAndTenant({ tenantId, plan, lockedPriceCents: planPrice.launchPriceCents, changedByUserId: userId });
+  await syncSubscriptionAndTenant({
+    tenantId,
+    plan,
+    lockedPriceCents: planPrice.launchPriceCents,
+    planPriceId: planPrice.id,
+    changedByUserId: userId,
+  });
 
   return { success: true };
 }

@@ -1098,3 +1098,19 @@ export interface TenantMetricsOverview {
   tasks: TenantTasksMetrics | null;
   adoption: TenantAdoptionMetrics | null;
 }
+
+// GET /api/plans/prices — mirrors the backend's src/config/pricing.ts (see lib/planPrices.ts).
+export type PricedPlan = 'starter' | 'growth';
+export type Market = 'international' | 'ar';
+
+export interface MarketPricing {
+  currency: string;
+  plans: Record<PricedPlan, number>; // minor units; 0 = not sold in this market yet
+  extraSeat: number; // minor units, per extra seat per month
+}
+
+export interface PlanPricing {
+  markets: Record<Market, MarketPricing>;
+  includedSeats: Record<PricedPlan, number>;
+  freeTrialSeatCap: number;
+}

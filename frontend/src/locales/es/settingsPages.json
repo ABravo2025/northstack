@@ -242,12 +242,12 @@
       "starter": {
         "tagline": "Para equipos chicos que recién están empezando",
         "priceSuffix": "/mes",
-        "cap": "5 puestos incluidos · $4/mes por puesto extra"
+        "cap": "{{included}} puestos incluidos · {{seatPrice}}/mes por puesto extra"
       },
       "growth": {
         "tagline": "Para equipos en crecimiento que necesitan Nómina",
         "priceSuffix": "/mes",
-        "cap": "10 puestos incluidos · $4/mes por puesto extra"
+        "cap": "{{included}} puestos incluidos · {{seatPrice}}/mes por puesto extra"
       }
     },
     "features": {

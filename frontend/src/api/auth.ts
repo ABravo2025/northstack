@@ -1,5 +1,5 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
-import type { AuthResponse, PermissionsPayload, PlanTier, Tenant, TenantProfileUpdate, TenantUser } from './types.js';
+import type { AuthResponse, PermissionsPayload, PlanPricing, PlanTier, Tenant, TenantProfileUpdate, TenantUser } from './types.js';
 
 // Tenant Signup — email verification (spec-tenant-signup.md). /start and /resend hit distinct
 // backend routes (own rate-limit buckets for the cooldown timer/analytics) but are otherwise
@@ -222,9 +222,9 @@ export const authApi = {
     return data.tenant;
   },
 
-  // Subscription Plans (spec-subscription-plans.md). Public — mirrors planService.ts's
-  // CURRENT_PLAN_PRICES_CENTS so PlansModal doesn't carry a second, driftable copy of the price.
-  getPlanPrices: async (): Promise<{ prices: Record<'starter' | 'growth', number> }> => {
+  // Public — every price and seat number from the backend's src/config/pricing.ts, so the UI
+  // never carries a second, driftable copy (see lib/planPrices.ts).
+  getPlanPrices: async (): Promise<PlanPricing> => {
     const res = await apiFetch(`${API_BASE_URL}/api/plans/prices`);
     if (!res.ok) await throwApiError(res);
     return res.json();

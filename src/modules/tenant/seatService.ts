@@ -1,32 +1,16 @@
 import prisma from '../../lib/prisma.js';
 import { updateSubscriptionSeats } from '../../lib/dodopayments.js';
 import { updatePreapproval } from '../../lib/mercadopago.js';
+import { PRICING } from '../../config/pricing.js';
+import { lockedPlanPrice, marketForProvider, mercadoPagoAmount } from './planPriceService.js';
 
 // Seats pricing (2026-09-14, Alejandro's call) — flat per-seat overage on top of the base plan
 // price, same number regardless of role (owner/admin/member) or plan tier. A "seat" is simply an
 // active User account in the tenant — an Employee that was never invited to log in (no linked
 // User row) never counts, matching the business rule "an Employee that only exists so Payroll can
-// track them stays free/unlimited."
-export const INCLUDED_SEATS: Record<'starter' | 'growth', number> = {
-  starter: 5,
-  growth: 10,
-};
-
-export const EXTRA_SEAT_PRICE_CENTS = 400; // $4/mo
-
-// Same surcharge in each PlanPrice market's own currency — Dodo bills the USD one as an addon,
-// Mercado Pago folds the `ar` one into its single recurring amount (mercadoPagoAmount below).
-// Adding the USD 400 to an ARS amount would have billed ARS 4 per extra seat. `ar` stays 0 (no
-// surcharge) until real ARS pricing is set, same placeholder convention as PlanPrice's ar rows.
-export const EXTRA_SEAT_PRICE_CENTS_BY_MARKET = {
-  international: EXTRA_SEAT_PRICE_CENTS,
-  ar: 0,
-} as const;
-
-// Decimal ARS (Mercado Pago's API takes major units, not cents) for base plan + extra seats.
-export function mercadoPagoAmount(basePriceCents: number, extraSeats: number): number {
-  return (basePriceCents + extraSeats * EXTRA_SEAT_PRICE_CENTS_BY_MARKET.ar) / 100;
-}
+// track them stays free/unlimited." Numbers live in src/config/pricing.ts; the per-seat PRICE is
+// read from the subscription's PlanPrice row (planPriceService.ts), never from a constant here.
+export const INCLUDED_SEATS = PRICING.includedSeats;
 
 export async function countActiveSeats(tenantId: string): Promise<number> {
   return prisma.user.count({ where: { tenantId, status: 'active' } });
@@ -43,7 +27,7 @@ export function extraSeatsFor(plan: 'starter' | 'growth', activeSeats: number): 
 // plan is actually chosen. This is the only lever available before that: a hard cap, checked
 // wherever a user could become the tenant's (FREE_TRIAL_SEAT_CAP + 1)th active seat. Returns an
 // error message (never throws) to match this module family's `{ success, error }` convention.
-export const FREE_TRIAL_SEAT_CAP = 5;
+export const FREE_TRIAL_SEAT_CAP = PRICING.freeTrialSeatCap;
 
 export async function seatCapError(tenant: { id: string; plan: string | null }): Promise<string | null> {
   if (tenant.plan !== null) return null;
@@ -81,18 +65,18 @@ export async function syncSeatBilling(tenantId: string): Promise<void> {
   const activeSeats = await countActiveSeats(tenantId);
   const extraSeats = extraSeatsFor(tenant.plan, activeSeats);
 
-  const market = subscription.provider === 'mercadopago' ? 'ar' : 'international';
-  const planPrice = await prisma.planPrice.findFirst({
-    where: { plan: tenant.plan, market },
-    orderBy: { effectiveFrom: 'desc' },
-  });
-  if (!planPrice || planPrice.launchPriceCents <= 0) return;
+  // The subscription's own locked row, not the latest price — seat changes must never reprice an
+  // existing subscriber (until 2026-09-26 Mercado Pago recomputed from the latest row here).
+  const market = marketForProvider(subscription.provider, null);
+  const planPrice = await lockedPlanPrice({ ...subscription, plan: tenant.plan }, market);
+  if (!planPrice) return;
 
   if (subscription.provider === 'dodopayments') {
     if (!planPrice.dodoProductId) return;
     await updateSubscriptionSeats(subscription.externalSubscriptionId, {
       productId: planPrice.dodoProductId,
       extraSeats,
+      extraSeatAddonId: planPrice.dodoExtraSeatAddonId,
     });
     return;
   }
@@ -102,8 +86,8 @@ export async function syncSeatBilling(tenantId: string): Promise<void> {
   // prorated_immediately, this only changes the amount charged on the NEXT recurring payment —
   // Mercado Pago's API has no mechanism to credit/charge for the remainder of the current cycle,
   // so "proportional discount for unused days" genuinely doesn't apply on this provider. Accepted
-  // limitation (AR market pricing is still a $0 placeholder anyway, see PlanPrice's ar rows).
+  // limitation.
   await updatePreapproval(subscription.externalSubscriptionId, {
-    transactionAmount: mercadoPagoAmount(planPrice.launchPriceCents, extraSeats),
+    transactionAmount: mercadoPagoAmount(planPrice, extraSeats),
   });
 }

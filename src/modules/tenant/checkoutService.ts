@@ -1,10 +1,11 @@
 import prisma from '../../lib/prisma.js';
+import { currentPlanPrice, lockedPlanPrice, marketForProvider, mercadoPagoAmount } from './planPriceService.js';
 import type { PlanTier } from '@prisma/client';
 import { resolveProvider, recordSubscriptionActionAttempt } from './subscriptionService.js';
 import { SIGNUP_TRIAL_DAYS } from './tenantService.js';
 import { buildExternalReference, createPreapproval } from '../../lib/mercadopago.js';
 import { createCheckoutSession, getCustomerPortalUrl } from '../../lib/dodopayments.js';
-import { countActiveSeats, extraSeatsFor, mercadoPagoAmount } from './seatService.js';
+import { countActiveSeats, extraSeatsFor } from './seatService.js';
 
 export interface StartCheckoutResult {
   success: boolean;
@@ -95,15 +96,16 @@ export async function startCheckout(
   const effectivePlan = isUpdatingPaymentMethod ? (subscription.plan as 'starter' | 'growth') : plan;
 
   const provider = subscription.provider ?? resolveProvider(tenant);
-  const market = provider === 'mercadopago' ? 'ar' : 'international';
-  const planPrice = await prisma.planPrice.findFirst({
-    where: { plan: effectivePlan, market },
-    orderBy: { effectiveFrom: 'desc' },
-  });
+  const market = marketForProvider(provider, tenant.country);
+  // A new subscriber is priced from the current config (src/config/pricing.ts); a Mercado Pago
+  // subscriber swapping cards keeps the row they're already locked on (grandfathered).
+  const planPrice = isUpdatingPaymentMethod
+    ? await lockedPlanPrice({ ...subscription, plan: effectivePlan }, market)
+    : await currentPlanPrice(effectivePlan, market);
 
-  // Covers both "no row at all" and the AR placeholder rows (0 cents) — spec: real ARS pricing
-  // "no bloquea construir la estructura, sí bloquea probar el flujo completo en Argentina".
-  if (!planPrice || planPrice.launchPriceCents <= 0) {
+  // Null = no price for this plan in this market (0 in the config) — spec: real ARS pricing "no
+  // bloquea construir la estructura, sí bloquea probar el flujo completo en Argentina".
+  if (!planPrice) {
     return { success: false, error: 'Pricing for your market is not available yet. Please contact support.' };
   }
 
@@ -146,10 +148,10 @@ export async function startCheckout(
 
   if (provider === 'mercadopago') {
     const preapproval = await createPreapproval({
-      externalReference: buildExternalReference(subscription.id, effectivePlan),
+      externalReference: buildExternalReference(subscription.id, planPrice.id),
       reason: `Northstack — ${effectivePlan} (AR)`,
       payerEmail: user.email,
-      transactionAmount: mercadoPagoAmount(planPrice.launchPriceCents, extraSeats),
+      transactionAmount: mercadoPagoAmount(planPrice, extraSeats),
       backUrl: billingReturnUrl(),
       trialDays: isUpdatingPaymentMethod ? daysAlreadyCovered(subscription, tenant.trialEndsAt) : trialDays,
     });
@@ -157,12 +159,10 @@ export async function startCheckout(
     return { success: true, provider: 'mercadopago', initPoint: preapproval.init_point };
   }
 
-  // dodoProductId is provisioned by scripts/setup-dodo-products.ts, not created here — Dodo
-  // requires a pre-created catalog Product for any recurring subscription (unlike Paddle's inline
-  // non-catalog price), so a missing id here means the provisioning script hasn't run yet for this
-  // PlanPrice row rather than something a customer-facing error should soften.
+  // currentPlanPrice provisions the Dodo Product for an international row; still missing here means
+  // that provisioning failed — a server problem, not something to soften into a customer error.
   if (!planPrice.dodoProductId) {
-    throw new Error(`PlanPrice ${planPrice.id} (${planPrice.plan}/${planPrice.market}) has no dodoProductId — run scripts/setup-dodo-products.ts`);
+    throw new Error(`PlanPrice ${planPrice.id} (${planPrice.plan}/${planPrice.market}) has no dodoProductId`);
   }
 
   const session = await createCheckoutSession({
@@ -172,6 +172,8 @@ export async function startCheckout(
     returnUrl: billingReturnUrl(),
     trialDays,
     extraSeats,
+    extraSeatAddonId: planPrice.dodoExtraSeatAddonId,
+    planPriceId: planPrice.id,
     // Read back in routes/webhooks.ts's payment.succeeded handler to set Tenant.plan for real
     // only once this checkout's payment is actually confirmed — see this function's top comment.
     // Always the first-subscribe case here: Dodo's "update payment method" branch above

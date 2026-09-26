@@ -71,7 +71,9 @@ function isAllowedOrigin(origin: string): boolean {
 // into the origin allowlist above (kept permissive on purpose, not an oversight).
 app.use(
   cors((req, callback) => {
-    if (req.path.startsWith('/api/public/')) {
+    // GET /api/plans/prices (2026-09-26) — public price list, read by the landing from its own
+    // origin. Not session-bearing, same reasoning as the forms carve-out.
+    if (req.path.startsWith('/api/public/') || req.path === '/api/plans/prices') {
       return callback(null, { origin: true });
     }
     const requestOrigin = req.headers.origin;

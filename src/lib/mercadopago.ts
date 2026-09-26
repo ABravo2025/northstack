@@ -41,17 +41,17 @@ async function mpRequest<T>(method: string, path: string, body?: unknown): Promi
 
 // external_reference is the only free-form field a preapproval carries back to us, so it holds
 // both the join key (our Subscription.id — spec: "no confiar solo en externalSubscriptionId") and
-// the plan the checkout was for, so the webhook can set Tenant.plan only once MP confirms (same
-// "nothing real until confirmed" rule Dodo's metadata.plan follows, checkoutService.ts). Format
-// "<subscriptionId>:<plan>"; a bare "<subscriptionId>" (every preapproval created before
-// 2026-09-26) still parses, with plan null. cuid ids never contain ':'.
-export function buildExternalReference(subscriptionId: string, plan: 'starter' | 'growth'): string {
-  return `${subscriptionId}:${plan}`;
+// the PlanPrice row the checkout was priced from, so the webhook confirms plan + price only once MP
+// authorizes (same "nothing real until confirmed" rule as Dodo's metadata). Format
+// "<subscriptionId>:<planPriceId>"; a bare "<subscriptionId>" (preapprovals created before
+// 2026-09-26) still parses, with planPriceId null. uuids never contain ':'.
+export function buildExternalReference(subscriptionId: string, planPriceId: string): string {
+  return `${subscriptionId}:${planPriceId}`;
 }
 
-export function parseExternalReference(ref: string): { subscriptionId: string; plan: 'starter' | 'growth' | null } {
-  const [subscriptionId, plan] = ref.split(':');
-  return { subscriptionId, plan: plan === 'starter' || plan === 'growth' ? plan : null };
+export function parseExternalReference(ref: string): { subscriptionId: string; planPriceId: string | null } {
+  const [subscriptionId, planPriceId] = ref.split(':');
+  return { subscriptionId, planPriceId: planPriceId || null };
 }
 
 export interface CreatePreapprovalInput {

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useScrollSpy } from '../hooks/useScrollSpy';
+import { extraSeatPriceLabel, usePlanPricing, type PlanPricing } from '../lib/planPrices';
 import LegalDocumentModal from '../components/common/LegalDocumentModal';
 import {
   BriefcaseIcon,
@@ -82,11 +83,11 @@ const FAQ_CATEGORIES: FaqCategory[] = [
     items: [
       {
         q: "What's different between Starter and Growth?",
-        a: "Growth removes the caps on pipelines, time off policies, and custom roles, raises included seats from 5 to 10, keeps activity history for 30 days instead of 7, and is the only plan with Payroll and Payments (your own Stripe) included.",
+        a: "Growth removes the caps on pipelines, time off policies, and custom roles, raises included seats from {starterSeats} to {growthSeats}, keeps activity history for 30 days instead of 7, and is the only plan with Payroll and Payments (your own Stripe) included.",
       },
       {
         q: 'How do seats work?',
-        a: "Every active person in your workspace counts as a seat, regardless of role. Starter includes 5, Growth includes 10 — go over and each extra seat is billed automatically at $4/mo, no hard limit once you're on a real plan. Free Trial (before you've picked a plan) is capped at 5 people, since there's no billing set up yet to cover anyone past that.",
+        a: "Every active person in your workspace counts as a seat, regardless of role. Starter includes {starterSeats}, Growth includes {growthSeats} — go over and each extra seat is billed automatically at {seatPrice}/mo, no hard limit once you're on a real plan. Free Trial (before you've picked a plan) is capped at {trialCap} people, since there's no billing set up yet to cover anyone past that.",
       },
       {
         q: 'Do I choose between Dodo Payments and Mercado Pago myself?',
@@ -290,11 +291,11 @@ const FAQ_CATEGORIES_ES: FaqCategory[] = [
     items: [
       {
         q: '¿Qué diferencia hay entre Starter y Growth?',
-        a: 'Growth saca los topes de pipelines, políticas de ausencias y roles personalizados, sube los puestos incluidos de 5 a 10, guarda el historial de actividad 30 días en vez de 7, y es el único plan que incluye Nómina y Pagos (tu propia cuenta de Stripe).',
+        a: 'Growth saca los topes de pipelines, políticas de ausencias y roles personalizados, sube los puestos incluidos de {starterSeats} a {growthSeats}, guarda el historial de actividad 30 días en vez de 7, y es el único plan que incluye Nómina y Pagos (tu propia cuenta de Stripe).',
       },
       {
         q: '¿Cómo funcionan los puestos (seats)?',
-        a: 'Cada persona activa en tu espacio de trabajo cuenta como un puesto, sin importar el rol. Starter incluye 5, Growth incluye 10 — si te pasás, cada puesto extra se factura automáticamente a $4/mes, sin límite duro una vez que estás en un plan real. La prueba gratuita (antes de elegir un plan) está limitada a 5 personas, porque todavía no hay facturación configurada para cubrir a nadie por encima de eso.',
+        a: 'Cada persona activa en tu espacio de trabajo cuenta como un puesto, sin importar el rol. Starter incluye {starterSeats}, Growth incluye {growthSeats} — si te pasás, cada puesto extra se factura automáticamente a {seatPrice}/mes, sin límite duro una vez que estás en un plan real. La prueba gratuita (antes de elegir un plan) está limitada a {trialCap} personas, porque todavía no hay facturación configurada para cubrir a nadie por encima de eso.',
       },
       {
         q: '¿Elijo yo mismo entre Dodo Payments y Mercado Pago?',
@@ -439,6 +440,17 @@ const FAQ_CATEGORIES_ES: FaqCategory[] = [
 const TOTAL_QUESTIONS = FAQ_CATEGORIES.reduce((sum, cat) => sum + cat.items.length, 0);
 const NAV_IDS = [...FAQ_CATEGORIES.map((c) => c.id), 'f-contact', 'f-legal'];
 
+function fillPricingTokens(categories: typeof FAQ_CATEGORIES, pricing: PlanPricing | null): typeof FAQ_CATEGORIES {
+  const values: Record<string, string> = {
+    starterSeats: String(pricing?.includedSeats.starter ?? '—'),
+    growthSeats: String(pricing?.includedSeats.growth ?? '—'),
+    trialCap: String(pricing?.freeTrialSeatCap ?? '—'),
+    seatPrice: extraSeatPriceLabel(pricing, 'international'),
+  };
+  const fill = (text: string) => text.replace(/\{(\w+)\}/g, (token, key: string) => values[key] ?? token);
+  return categories.map((cat) => ({ ...cat, items: cat.items.map((item) => ({ ...item, a: fill(item.a) })) }));
+}
+
 export default function HelpPage() {
   const navigate = useNavigate();
   const { i18n } = useTranslation();
@@ -450,7 +462,13 @@ export default function HelpPage() {
   // from FAQ_CATEGORIES directly since both language arrays share that shape) — only the display
   // text differs.
   const isSpanish = i18n.language.startsWith('es');
-  const categories = isSpanish ? FAQ_CATEGORIES_ES : FAQ_CATEGORIES;
+  // Price/seat tokens in the answers ({seatPrice}, {starterSeats}, ...) are filled from the
+  // backend's src/config/pricing.ts — no number is typed into the copy itself.
+  const pricing = usePlanPricing();
+  const categories = useMemo(
+    () => fillPricingTokens(isSpanish ? FAQ_CATEGORIES_ES : FAQ_CATEGORIES, pricing),
+    [isSpanish, pricing],
+  );
 
   const filteredCategories = useMemo(() => {
     const q = query.trim().toLowerCase();

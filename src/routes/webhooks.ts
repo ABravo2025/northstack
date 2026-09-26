@@ -4,9 +4,9 @@ import { getAuthorizedPayment, verifyMercadoPagoSignature } from '../lib/mercado
 import { handleMercadoPagoPreapprovalEvent } from '../modules/tenant/mercadoPagoWebhookService.js';
 import { getNextBillingDate, getSubscriptionProductId, unwrapDodoWebhookEvent } from '../lib/dodopayments.js';
 import { GRACE_PERIOD_DAYS } from '../modules/tenant/planTransitionService.js';
-import { syncSubscriptionAndTenant, resolvePlanFromDodoProductId } from '../modules/tenant/subscriptionService.js';
-import { syncSeatBilling, countActiveSeats, extraSeatsFor, EXTRA_SEAT_PRICE_CENTS } from '../modules/tenant/seatService.js';
-import { CURRENT_PLAN_PRICES_CENTS } from '../modules/tenant/planService.js';
+import { syncSubscriptionAndTenant, resolvePlanPriceFromDodoProductId } from '../modules/tenant/subscriptionService.js';
+import { syncSeatBilling, countActiveSeats, extraSeatsFor } from '../modules/tenant/seatService.js';
+import { lockedPlanPrice } from '../modules/tenant/planPriceService.js';
 import { bestEffort } from '../lib/bestEffort.js';
 import type { PaymentProvider } from '@prisma/client';
 import type express from 'express';
@@ -148,19 +148,48 @@ webhooksRouter.post('/api/webhooks/mercadopago', async (req, res) => {
 // IS a Subscription resource, product_id already in hand) skip the extra API call entirely;
 // payment.succeeded has no product_id on the Payment resource itself, so its callers omit
 // directProductId and this fetches the subscription instead.
-async function resolveConfirmedPlan(
-  metadataPlan: unknown,
+//
+// 2026-09-26: resolves the PlanPrice ROW, not just the plan — metadata.planPriceId (the exact row the
+// checkout was priced from) first, so the subscription is pinned to the price it signed up at
+// (Subscription.planPriceId) even if src/config/pricing.ts changed since. metadata.plan (checkouts
+// started before planPriceId existed) resolves to that plan's latest international row.
+async function resolveConfirmedPlanPrice(
+  metadata: Record<string, unknown> | null | undefined,
   externalSubscriptionId: string | null,
   directProductId?: string,
-): Promise<'starter' | 'growth' | null> {
+) {
+  const planPriceId = metadata?.planPriceId;
+  if (typeof planPriceId === 'string') {
+    const row = await prisma.planPrice.findUnique({ where: { id: planPriceId } });
+    if (row) return row;
+  }
+  const metadataPlan = metadata?.plan;
   if (metadataPlan === 'starter' || metadataPlan === 'growth') {
-    return metadataPlan;
+    return prisma.planPrice.findFirst({ where: { plan: metadataPlan, market: 'international' }, orderBy: { effectiveFrom: 'desc' } });
   }
   const productId = directProductId ?? (externalSubscriptionId ? await getSubscriptionProductId(externalSubscriptionId) : null);
   if (!productId) {
     return null;
   }
-  return resolvePlanFromDodoProductId(productId);
+  return resolvePlanPriceFromDodoProductId(productId);
+}
+
+function confirmedPlanFields(row: { id: string; plan: string; launchPriceCents: number }) {
+  return { plan: row.plan as 'starter' | 'growth', lockedPriceCents: row.launchPriceCents, planPriceId: row.id };
+}
+
+// Dodo copies checkout metadata onto EVERY later payment, renewals included — so the checkout's
+// plan/price is only applied while the subscription isn't pinned to a PlanPrice row yet (its first
+// confirmation). Before 2026-09-26 each renewal re-applied metadata.plan, reverting any self-serve
+// plan change (changePlan pins planPriceId, so it's never overwritten now).
+async function resolveFirstConfirmation(
+  subscription: { planPriceId: string | null },
+  metadata: Record<string, unknown> | null | undefined,
+  externalSubscriptionId: string | null,
+  directProductId?: string,
+) {
+  if (subscription.planPriceId) return null;
+  return resolveConfirmedPlanPrice(metadata, externalSubscriptionId, directProductId);
 }
 
 webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
@@ -242,15 +271,14 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
       // only a genuine non-zero charge should ever flip status to 'active'.
       if (payment.is_update_payment_method || payment.total_amount === 0) {
         const subscriptionId0 = payment.subscription_id ?? subscription.externalSubscriptionId ?? null;
-        const resolvedPlan0 = payment.is_update_payment_method
+        const resolvedPrice0 = payment.is_update_payment_method
           ? null
-          : await resolveConfirmedPlan(payment.metadata?.plan, subscriptionId0);
-        const planFields0 = resolvedPlan0
+          : await resolveFirstConfirmation(subscription, payment.metadata, subscriptionId0);
+        const planFields0 = resolvedPrice0
           ? {
               provider: 'dodopayments' as const,
               externalSubscriptionId: subscriptionId0 ?? '',
-              plan: resolvedPlan0,
-              lockedPriceCents: CURRENT_PLAN_PRICES_CENTS[resolvedPlan0],
+              ...confirmedPlanFields(resolvedPrice0),
             }
           : {};
         const fields0 = { ...paymentMethodFields, ...planFields0, ...discountCodeFields };
@@ -266,14 +294,13 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
       // checkoutService.ts's metadata.plan (2026-09-15, QA-88) — the plan a first-time
       // subscribe was FOR, deliberately never written to Tenant.plan/Subscription.plan until
       // this exact moment (real payment confirmed), rather than upfront when checkout started.
-      // Falls back to resolveConfirmedPlan's product_id lookup (2026-09-16, QA-91 — metadata
+      // Falls back to resolveConfirmedPlanPrice's product_id lookup (2026-09-16, QA-91 — metadata
       // propagation onto this resource turned out unreliable in practice), and finally to
       // leaving plan/lockedPriceCents untouched (existing subscription.plan) for an "update
       // payment method" session (checkoutService.ts never sets metadata.plan for those anyway).
-      const resolvedPlan = await resolveConfirmedPlan(payment.metadata?.plan, payment.subscription_id ?? subscription.externalSubscriptionId ?? null);
-      const isNewPlanChoice = resolvedPlan !== null;
-      const confirmedPlan = resolvedPlan ?? (subscription.plan as 'starter' | 'growth');
-      const lockedPriceCents = isNewPlanChoice ? CURRENT_PLAN_PRICES_CENTS[confirmedPlan] : subscription.lockedPriceCents;
+      const resolvedPrice = await resolveFirstConfirmation(subscription, payment.metadata, payment.subscription_id ?? subscription.externalSubscriptionId ?? null);
+      const confirmedPlan = resolvedPrice ? (resolvedPrice.plan as 'starter' | 'growth') : (subscription.plan as 'starter' | 'growth');
+      const lockedPriceCents = resolvedPrice ? resolvedPrice.launchPriceCents : subscription.lockedPriceCents;
 
       await syncSubscriptionAndTenant({
         tenantId: subscription.tenantId,
@@ -282,7 +309,7 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
         externalSubscriptionId: payment.subscription_id ?? subscription.externalSubscriptionId ?? '',
         currentPeriodStart: periodStart,
         currentPeriodEnd: periodEnd,
-        ...(isNewPlanChoice ? { plan: confirmedPlan, lockedPriceCents } : {}),
+        ...(resolvedPrice ? confirmedPlanFields(resolvedPrice) : {}),
         ...paymentMethodFields,
         ...discountCodeFields,
       });
@@ -301,7 +328,9 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
       // either way, since amountCents = baseAmountCents + extraSeatsAmountCents always).
       const activeSeats = await countActiveSeats(subscription.tenantId);
       const extraSeats = extraSeatsFor(confirmedPlan, activeSeats);
-      const extraSeatsAmountCents = extraSeats * EXTRA_SEAT_PRICE_CENTS;
+      // At the subscription's own pinned seat price (planPriceService.ts), in its own currency.
+      const seatPriceRow = resolvedPrice ?? (await lockedPlanPrice({ ...subscription, plan: confirmedPlan }, 'international'));
+      const extraSeatsAmountCents = extraSeats * (seatPriceRow?.extraSeatPriceCents ?? 0);
       const baseAmountCents = lockedPriceCents;
 
       // Trusts our own authoritative price (subscription.lockedPriceCents/currency) rather than
@@ -343,9 +372,10 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
       // above: this event, not just a real charge, is genuinely "checkout completed" for a
       // first-time subscribe, and is very often the FIRST event to arrive for a trial checkout).
       // event.data here IS a Subscription resource, so product_id is already in hand — no extra
-      // API call needed for resolveConfirmedPlan's fallback, unlike the payment.succeeded branches.
-      const resolvedPlanActive = await resolveConfirmedPlan(
-        event.data.metadata?.plan,
+      // API call needed for resolveConfirmedPlanPrice's fallback, unlike the payment.succeeded branches.
+      const resolvedPriceActive = await resolveFirstConfirmation(
+        subscription,
+        event.data.metadata,
         event.data.subscription_id ?? subscription.externalSubscriptionId ?? null,
         event.data.product_id,
       );
@@ -353,9 +383,7 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
         tenantId: subscription.tenantId,
         provider: 'dodopayments',
         externalSubscriptionId: event.data.subscription_id ?? subscription.externalSubscriptionId ?? '',
-        ...(resolvedPlanActive
-          ? { plan: resolvedPlanActive, lockedPriceCents: CURRENT_PLAN_PRICES_CENTS[resolvedPlanActive] }
-          : {}),
+        ...(resolvedPriceActive ? confirmedPlanFields(resolvedPriceActive) : {}),
       });
     }
 

@@ -149,21 +149,15 @@ Catálogo completo (qué está construido, qué es solo posible hoy, qué está 
   Mercado Pago) con el protection-bypass de Vercel (`?x-vercel-protection-bypass=<secret>`, Vercel
   Deployment Protection bloquea cualquier POST externo a `staging.joinnorthstack.com` sin ese query
   param, confirmado en vivo), y cargar el `DODO_WEBHOOK_KEY` que ese webhook devuelve.
-- [ ] **`scripts/setup-dodo-products.ts` nunca se corrió** (2026-09-13, Paddle→Dodo): provisiona un
-  Product de catálogo en Dodo por cada fila de `PlanPrice` internacional (Dodo exige uno pre-creado
-  para cualquier suscripción recurrente, a diferencia del precio inline que aceptaba Paddle) — sin
-  correrlo, `startCheckout`/`changePlan` tiran un error explícito en vez de fallar en silencio.
-  Bloqueado en las credenciales sandbox reales de Dodo (`DODO_PAYMENTS_API_KEY`), ver el ítem de
-  credenciales más abajo.
 - [ ] **Endpoints de Dodo Payments sin confirmar contra un sandbox real** (2026-09-13): el mapeo de
   eventos de webhook (`payment.succeeded`/`is_update_payment_method`/`total_amount === 0` para
   distinguir cobro real vs. autorización de trial vs. actualización de tarjeta) y el campo exacto de
   `subscription.active` se escribieron contra los tipos oficiales del SDK
   (`node_modules/dodopayments`), no contra una entrega real de webhook — mismo tipo de caveat
   "UNVERIFIED" que ya tenían los campos de Mercado Pago en su momento. Confirmar antes de go-live.
-- [ ] **Precios reales de Argentina (Mercado Pago) sin definir**: los `PlanPrice` de mercado `ar`
-  siguen en 0 (el checkout los rechaza a propósito) y `EXTRA_SEAT_PRICE_CENTS_BY_MARKET.ar` también
-  (`seatService.ts`) — faltan Starter, Growth y asiento extra en ARS. Único bloqueante para cobrar en
+- [ ] **Precios reales de Argentina (Mercado Pago) sin definir**: `PRICING.markets.ar` en
+  `src/config/pricing.ts` sigue en 0 (el checkout los rechaza a propósito) — faltan Starter, Growth y
+  asiento extra en ARS; se cargan editando solo ese archivo (2026-09-26, fuente única de precios). Único bloqueante para cobrar en
   Argentina junto con las credenciales de producción. (2026-09-26: la afirmación anterior de "ya
   probada de punta a punta contra sandbox" no cuadra con el código — los `type` del webhook y los
   campos de tarjeta de `authorized_payment` siguen marcados UNVERIFIED; confirmarlos con una

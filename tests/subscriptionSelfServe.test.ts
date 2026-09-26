@@ -3,10 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const tenants: any[] = [];
 const subscriptions: any[] = [];
 const planPrices: any[] = [
-  { plan: 'starter', market: 'international', launchPriceCents: 1900, dodoProductId: 'pdt_starter' },
-  { plan: 'growth', market: 'international', launchPriceCents: 3900, dodoProductId: 'pdt_growth' },
-  { plan: 'starter', market: 'ar', launchPriceCents: 0, dodoProductId: null }, // placeholder, mirrors seed-plan-prices.ts
-  { plan: 'growth', market: 'ar', launchPriceCents: 0, dodoProductId: null },
+  { id: 'pp_intl_starter', plan: 'starter', market: 'international', launchPriceCents: 1900, extraSeatPriceCents: 400, dodoProductId: 'pdt_starter', dodoExtraSeatAddonId: 'adn_seat' },
+  { id: 'pp_intl_growth', plan: 'growth', market: 'international', launchPriceCents: 3900, extraSeatPriceCents: 400, dodoProductId: 'pdt_growth', dodoExtraSeatAddonId: 'adn_seat' },
+  { id: 'pp_ar_starter', plan: 'starter', market: 'ar', launchPriceCents: 0, extraSeatPriceCents: 0, dodoProductId: null }, // not sold yet (0 in src/config/pricing.ts)
+  { id: 'pp_ar_growth', plan: 'growth', market: 'ar', launchPriceCents: 0, extraSeatPriceCents: 0, dodoProductId: null },
 ];
 
 vi.mock('../src/lib/prisma.js', () => {
@@ -65,6 +65,16 @@ vi.mock('../src/lib/mercadopago.js', () => ({
   updatePreapproval: updatePreapprovalMock,
 }));
 
+// Current-price lookup (planPriceService.ts, covered in planPriceService.test.ts) stubbed over the
+// planPrices fixture; 0 = not sold in that market, same as the real one.
+vi.mock('../src/modules/tenant/planPriceService.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../src/modules/tenant/planPriceService.js')>()),
+  currentPlanPrice: vi.fn(async (plan: string, market: string) => {
+    const row = planPrices.find((p) => p.plan === plan && p.market === market);
+    return row && row.launchPriceCents > 0 ? row : null;
+  }),
+}));
+
 import { changePlan, requestCancellation, resumeSubscription } from '../src/modules/tenant/subscriptionSelfServeService.js';
 
 function resetMocks() {
@@ -106,10 +116,12 @@ describe('changePlan', () => {
     const result = await changePlan('t1', 'growth', 'u1');
 
     expect(result.success).toBe(true);
-    expect(changeSubscriptionPlanMock).toHaveBeenCalledWith('sub_1', { productId: 'pdt_growth' });
+    expect(changeSubscriptionPlanMock).toHaveBeenCalledWith('sub_1', { productId: 'pdt_growth', extraSeatAddonId: 'adn_seat' });
     expect(updatePreapprovalMock).not.toHaveBeenCalled();
     expect(subscriptions[0].plan).toBe('growth');
     expect(subscriptions[0].lockedPriceCents).toBe(3900);
+    // A plan change re-pins the subscription onto current pricing.
+    expect(subscriptions[0].planPriceId).toBe('pp_intl_growth');
     expect(tenants[0].plan).toBe('growth');
     expect(tenants[0].lockedPriceCents).toBe(3900);
   });
@@ -123,7 +135,7 @@ describe('changePlan', () => {
       plan: 'starter',
       currency: 'ARS',
     });
-    // AR pricing is placeholder (0 cents) per seed-plan-prices.ts — bump it here so this test
+    // AR pricing is 0 (not sold yet) in src/config/pricing.ts — bump it here so this test
     // exercises the success path, not the "pricing not available" guard.
     planPrices.find((p) => p.plan === 'growth' && p.market === 'ar')!.launchPriceCents = 5000;
 

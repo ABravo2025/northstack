@@ -1042,7 +1042,10 @@ Notas:
 - **`PlanPrice` — catálogo de precios versionado, nunca se edita una fila existente**: un cambio de
   precio inserta una fila nueva con un `effectiveFrom` posterior en vez de sobreescribir —
   `Subscription.lockedPriceCents` ya congela lo que cada tenant paga de verdad, así que este
-  catálogo solo importa para nuevas suscripciones.
+  catálogo solo importa para nuevas suscripciones. **2026-09-26:** las filas las genera
+  `planPriceService.ts` a partir de `src/config/pricing.ts` (fuente única de precios); cada fila es
+  un snapshot completo (`launchPriceCents` + `extraSeatPriceCents` nuevo + ids de Product/Addon de
+  Dodo) y `Subscription.planPriceId` (nuevo, nullable) ancla cada suscripción a la suya.
 - **`ProcessedWebhookEvent` — idempotencia de webhooks vía `@@unique([provider, externalEventId])`**:
   contrato "insert-then-process" — una entrega duplicada del mismo evento falla el insert (constraint
   de unicidad) en vez de procesarse dos veces, incluso ante una carrera concurrente. Deliberadamente

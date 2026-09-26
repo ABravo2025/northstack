@@ -242,12 +242,12 @@
       "starter": {
         "tagline": "For small teams just getting set up",
         "priceSuffix": "/month",
-        "cap": "5 seats included · $4/mo per extra seat"
+        "cap": "{{included}} seats included · {{seatPrice}}/mo per extra seat"
       },
       "growth": {
         "tagline": "For growing teams that need Payroll tracking",
         "priceSuffix": "/month",
-        "cap": "10 seats included · $4/mo per extra seat"
+        "cap": "{{included}} seats included · {{seatPrice}}/mo per extra seat"
       }
     },
     "features": {

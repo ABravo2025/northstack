@@ -11,6 +11,7 @@ export interface PlanTransitionResult {
   movedToPastDue: number;
   movedToSuspended: number;
   cancelledMercadoPagoSubscriptions: number;
+  failedMercadoPagoCancellations: number;
 }
 
 // Driven by a Vercel Cron hitting /api/internal/plan-transitions/run once a day (see
@@ -61,16 +62,28 @@ export async function runPlanTransitions(now: Date = new Date()): Promise<PlanTr
     where: { provider: 'mercadopago', status: { not: 'cancelled' }, cancellationEffectiveAt: { lte: now } },
   });
 
+  // Per-item try/catch (2026-09-26): one tenant's failing MP call used to throw out of the loop and
+  // skip every remaining due cancellation until the next day's run. A failed one keeps its
+  // non-'cancelled' status, so tomorrow's run picks it up again.
+  let cancelled = 0;
+  let failed = 0;
   for (const subscription of dueMercadoPagoCancellations) {
-    if (subscription.externalSubscriptionId) {
-      await updatePreapproval(subscription.externalSubscriptionId, { status: 'cancelled' });
+    try {
+      if (subscription.externalSubscriptionId) {
+        await updatePreapproval(subscription.externalSubscriptionId, { status: 'cancelled' });
+      }
+      await syncSubscriptionAndTenant({ tenantId: subscription.tenantId, status: 'cancelled' });
+      cancelled++;
+    } catch (err) {
+      failed++;
+      console.error(`runPlanTransitions: Mercado Pago cancellation failed for tenant ${subscription.tenantId}`, err);
     }
-    await syncSubscriptionAndTenant({ tenantId: subscription.tenantId, status: 'cancelled' });
   }
 
   return {
     movedToPastDue,
     movedToSuspended: suspended.count,
-    cancelledMercadoPagoSubscriptions: dueMercadoPagoCancellations.length,
+    cancelledMercadoPagoSubscriptions: cancelled,
+    failedMercadoPagoCancellations: failed,
   };
 }

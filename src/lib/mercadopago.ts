@@ -39,17 +39,33 @@ async function mpRequest<T>(method: string, path: string, body?: unknown): Promi
   return response.json() as Promise<T>;
 }
 
+// external_reference is the only free-form field a preapproval carries back to us, so it holds
+// both the join key (our Subscription.id — spec: "no confiar solo en externalSubscriptionId") and
+// the plan the checkout was for, so the webhook can set Tenant.plan only once MP confirms (same
+// "nothing real until confirmed" rule Dodo's metadata.plan follows, checkoutService.ts). Format
+// "<subscriptionId>:<plan>"; a bare "<subscriptionId>" (every preapproval created before
+// 2026-09-26) still parses, with plan null. cuid ids never contain ':'.
+export function buildExternalReference(subscriptionId: string, plan: 'starter' | 'growth'): string {
+  return `${subscriptionId}:${plan}`;
+}
+
+export function parseExternalReference(ref: string): { subscriptionId: string; plan: 'starter' | 'growth' | null } {
+  const [subscriptionId, plan] = ref.split(':');
+  return { subscriptionId, plan: plan === 'starter' || plan === 'growth' ? plan : null };
+}
+
 export interface CreatePreapprovalInput {
-  subscriptionId: string; // becomes external_reference — the join key back to our Subscription row (spec: "no confiar solo en externalSubscriptionId")
+  externalReference: string; // buildExternalReference() above
   reason: string;
   payerEmail: string;
   transactionAmount: number; // major currency units (ARS) — MP's API takes a decimal amount, not cents
   backUrl: string;
   // Card collected now, first real charge delayed this many days (Alejandro's 2026-08-20
   // correction — genuinely "free for 15 days"). Caller passes tenantService.ts's
-  // SIGNUP_TRIAL_DAYS rather than this file importing it directly. Omit (or 0) for the
-  // "update payment method" fallback (cancel + recreate a preapproval for an already-active
-  // subscriber) — that must never grant a second free trial.
+  // SIGNUP_TRIAL_DAYS rather than this file importing it directly. On the "update payment method"
+  // path it's instead the days left in the period already paid for (or the trial already
+  // running), so the replacement preapproval's first charge lands where the old one's next charge
+  // would have — never a second free trial. See checkoutService.ts. Omit to charge immediately.
   trialDays?: number;
 }
 
@@ -58,7 +74,14 @@ export interface MercadoPagoPreapproval {
   status: string;
   init_point?: string;
   external_reference?: string;
-  auto_recurring?: { transaction_amount: number; currency_id: string };
+  auto_recurring?: {
+    transaction_amount: number;
+    currency_id: string;
+    // Echoed back when the preapproval was created with one (verified 2026-08-20, see
+    // createPreapproval's comment) — how the webhook tells "card attached, trial running" apart
+    // from "no trial, first charge is happening now".
+    free_trial?: { frequency: number; frequency_type: string };
+  };
 }
 
 // spec's "Mercado Pago — Suscripciones, sin plan asociado": `status: 'pending'` (no
@@ -73,7 +96,7 @@ export interface MercadoPagoPreapproval {
 export async function createPreapproval(input: CreatePreapprovalInput): Promise<MercadoPagoPreapproval> {
   return mpRequest<MercadoPagoPreapproval>('POST', '/preapproval', {
     reason: input.reason,
-    external_reference: input.subscriptionId,
+    external_reference: input.externalReference,
     payer_email: input.payerEmail,
     back_url: input.backUrl,
     status: 'pending',

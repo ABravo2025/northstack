@@ -318,8 +318,8 @@ POST /preapproval
     "currency_id": "ARS"
   },
   "payer_email": "...",
-  "back_url": "https://app.joinnorthstack.com/billing/callback",
-  "external_reference": "{subscriptionId}",
+  "back_url": "{APP_BASE_URL}/settings/billing",
+  "external_reference": "{subscriptionId}:{plan}",
   "status": "pending"
 }
 ```
@@ -397,14 +397,30 @@ spec fija el contrato de negocio, no un snapshot literal de cada campo de la API
 
 ## Riesgos técnicos conocidos (diferidos, code review previo a producción — 2026-08-23)
 
+> **Actualizado 2026-09-26 — cierre de Mercado Pago, etapa A–C:** los tres ítems de Mercado Pago
+> de esta lista (update de tarjeta, batch del cron, trial→active) están **arreglados** — ver
+> `mercadoPagoWebhookService.ts`, `checkoutService.ts` y `planTransitionService.ts`. En el mismo
+> pase se arreglaron tres bugs que no estaban anotados: (1) el recargo por asiento sumaba los
+> `EXTRA_SEAT_PRICE_CENTS` en USD (400) a un monto en ARS — ahora `EXTRA_SEAT_PRICE_CENTS_BY_MARKET`
+> (`ar` en 0 hasta definir el precio ARS); (2) `back_url`/`returnUrl` apuntaban a
+> `https://app.joinnorthstack.com/billing/callback`, ruta que el frontend nunca tuvo y siempre a
+> producción — ahora `${APP_BASE_URL}/settings/billing` (también afecta a Dodo); (3) el
+> `cancelled` del preapproval viejo, disparado al reemplazarlo, cancelaba la suscripción entera —
+> ahora solo el preapproval vigente (`externalSubscriptionId`) mueve el status. Además el plan de
+> un primer subscribe ya no se escribe al iniciar el checkout: viaja en `external_reference`
+> (`<subscriptionId>:<plan>`) y se confirma en el webhook, igual que `metadata.plan` en Dodo.
+> Sigue pendiente confirmar contra una entrega real los `type` del webhook y los campos de tarjeta
+> de `authorized_payment` (marcados UNVERIFIED en el código).
+
 A diferencia de "Fuera de alcance" (abajo, decisiones de producto tomadas antes de construir),
 esto es lo que un code review de 16 hallazgos encontró **después** de construir — 7 se arreglaron
 antes de salir a producción (ver `project_billing_integration_2026-08.md`), estos quedaron
 deliberadamente sin arreglar por baja confianza / necesitan prueba contra sandbox real, no por
 decisión de producto. Si aparece un bug de billing/currency/invoice, revisar esta lista primero:
 
-- **Mercado Pago "update payment method" cancela el preapproval viejo antes de confirmar el
-  nuevo.** `checkoutService.ts`: `updatePreapproval(..., { status: 'cancelled' })` corre
+- ~~**Mercado Pago "update payment method" cancela el preapproval viejo antes de confirmar el
+  nuevo.**~~ *Arreglado 2026-09-26: el viejo se cancela recién cuando el nuevo llega `authorized`,
+  y el nuevo difiere su primer cobro (`free_trial`) hasta el fin del período ya pagado.* `checkoutService.ts`: `updatePreapproval(..., { status: 'cancelled' })` corre
   inmediatamente, después crea uno nuevo. Si el tenant abandona el checkout nuevo (cierra la
   pestaña, back del navegador), queda **sin preapproval activo** — un downgrade silencioso de
   "pagando" a "sin método de pago", sin que nadie lo haya pedido.
@@ -415,13 +431,16 @@ decisión de producto. Si aparece un bug de billing/currency/invoice, revisar es
   subscriptionId in custom_data" y hace *no-op* silencioso — la tarjeta se actualiza del lado de
   Paddle pero `paymentMethodBrand`/`Last4` nunca se actualizan acá. Es el único endpoint de
   `paddle.ts` sin comentario "verificado contra sandbox real".
-- **Una cancelación de Mercado Pago que falla en el cron aborta el resto del batch del día.**
+- ~~**Una cancelación de Mercado Pago que falla en el cron aborta el resto del batch del día.**~~
+  *Arreglado 2026-09-26: try/catch por ítem, `failedMercadoPagoCancellations` en la respuesta.*
   `planTransitionService.ts`'s loop sobre `dueMercadoPagoCancellations` no tiene try/catch
   por-item — si `updatePreapproval` tira para un tenant, el resto de las cancelaciones vencidas ese
   día no se procesan hasta el próximo run.
 - **Nuevo, encontrado en este refresh de docs (2026-08-29), no estaba en la lista del code
   review original — confirmar con Alejandro si es un bug real o comportamiento aceptado:**
   Mercado Pago y Paddle manejan el "trial con tarjeta ya cargada" de forma inconsistente.
+  *Arreglado 2026-09-26 (Alejandro confirmó que sí era bug): con `free_trial`, el `authorized`
+  deja `status` en `trialing`; el primer `authorized_payment` aprobado lo pasa a `active`.*
   Paddle (`subscription.created`) deja `Subscription.status` en `trialing` hasta el cobro real.
   Mercado Pago (`preapproval` status `authorized`) pasa `status` a `active` **apenas se carga la
   tarjeta** — que con `free_trial` configurado es el arranque del trial, no el primer cobro real

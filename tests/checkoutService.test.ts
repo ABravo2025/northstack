@@ -45,12 +45,11 @@ const { createPreapprovalMock, updatePreapprovalMock } = vi.hoisted(() => ({
 vi.mock('../src/lib/mercadopago.js', () => ({
   createPreapproval: createPreapprovalMock,
   updatePreapproval: updatePreapprovalMock,
+  buildExternalReference: (subscriptionId: string, plan: string) => `${subscriptionId}:${plan}`,
 }));
 
-// checkoutService.ts's Mercado Pago branch calls this directly for a first-time subscribe (no
-// metadata channel to defer the plan write to a webhook like Dodo gets, see checkoutService.ts's
-// top comment) — mocked rather than exercised for real, its own behavior is covered by
-// planService.test.ts.
+// Neither provider's checkout writes the plan any more (Mercado Pago stopped 2026-09-26, the plan
+// now rides in external_reference) — kept mocked only to assert it stays uncalled.
 const { updateTenantPlanMock } = vi.hoisted(() => ({
   updateTenantPlanMock: vi.fn(async () => ({ success: true })),
 }));
@@ -116,10 +115,24 @@ describe('startCheckout — subscribing for the first time (no provider yet)', (
     expect(result.provider).toBe('mercadopago');
     expect(result.initPoint).toBe('https://mp.example/checkout');
     expect(createPreapprovalMock).toHaveBeenCalledTimes(1);
-    expect(createPreapprovalMock).toHaveBeenCalledWith(expect.objectContaining({ trialDays: 15 }));
-    // No metadata channel on a Mercado Pago preapproval (unlike Dodo below) — the plan is
-    // written immediately instead of deferred to a webhook confirmation, see checkoutService.ts.
-    expect(updateTenantPlanMock).toHaveBeenCalledWith('t1', 'starter', 'u1');
+    expect(createPreapprovalMock).toHaveBeenCalledWith(
+      expect.objectContaining({ trialDays: 15, externalReference: 'sub1:starter', transactionAmount: 50 }),
+    );
+    // The plan is only written once the webhook confirms (mercadoPagoWebhookService.ts).
+    expect(updateTenantPlanMock).not.toHaveBeenCalled();
+  });
+
+  it('returns the payer to /settings/billing on APP_BASE_URL, not a hardcoded production URL', async () => {
+    process.env.APP_BASE_URL = 'https://staging.example.com';
+    subscriptions.push({ tenantId: 't1', id: 'sub1', plan: 'starter', provider: null, externalSubscriptionId: null });
+    planPrices.find((p) => p.plan === 'starter' && p.market === 'ar')!.launchPriceCents = 5000;
+
+    await startCheckout(tenant({ id: 't1', country: 'Argentina' }), { id: 'u1', email: 'a@example.com' }, 'starter');
+    await startCheckout(tenant({ id: 't1', country: 'United States' }), { id: 'u1', email: 'a@example.com' }, 'starter');
+
+    expect(createPreapprovalMock).toHaveBeenCalledWith(expect.objectContaining({ backUrl: 'https://staging.example.com/settings/billing' }));
+    expect(createCheckoutSessionMock).toHaveBeenCalledWith(expect.objectContaining({ returnUrl: 'https://staging.example.com/settings/billing' }));
+    delete process.env.APP_BASE_URL;
   });
 
   it('rejects when the market price is the AR placeholder (0 cents)', async () => {
@@ -166,17 +179,34 @@ describe('startCheckout — updating payment method on an already-active subscri
     expect(createCheckoutSessionMock).not.toHaveBeenCalled();
   });
 
-  it('Mercado Pago: cancels the old preapproval, then creates a fresh one', async () => {
-    subscriptions.push({ tenantId: 't1', id: 'sub1', plan: 'starter', provider: 'mercadopago', externalSubscriptionId: 'preapproval_old' });
+  it('Mercado Pago: creates a fresh preapproval and leaves the old one running until the new one is authorized', async () => {
+    subscriptions.push({
+      tenantId: 't1', id: 'sub1', plan: 'starter', provider: 'mercadopago', externalSubscriptionId: 'preapproval_old',
+      status: 'active', currentPeriodEnd: new Date(Date.now() + 10 * DAY_MS - 60_000),
+    });
     planPrices.find((p) => p.plan === 'starter' && p.market === 'ar')!.launchPriceCents = 5000;
 
     const result = await startCheckout(tenant({ id: 't1', country: 'Argentina' }), { id: 'u1', email: 'a@example.com' });
 
     expect(result.success).toBe(true);
     expect(result.initPoint).toBe('https://mp.example/checkout');
-    expect(updatePreapprovalMock).toHaveBeenCalledWith('preapproval_old', { status: 'cancelled' });
+    // Cancelling here left the tenant with no active preapproval if they abandoned the checkout.
+    expect(updatePreapprovalMock).not.toHaveBeenCalled();
     expect(createPreapprovalMock).toHaveBeenCalledTimes(1);
-    // Never a second free trial for someone just swapping their card on an existing subscription.
+    // First charge deferred to where the old preapproval's next one would have landed — not a new
+    // SIGNUP_TRIAL_DAYS, and not an immediate second charge for a period already paid.
+    expect(createPreapprovalMock).toHaveBeenCalledWith(expect.objectContaining({ trialDays: 10, externalReference: 'sub1:starter' }));
+  });
+
+  it('Mercado Pago: a past_due subscriber swapping cards is charged right away', async () => {
+    subscriptions.push({
+      tenantId: 't1', id: 'sub1', plan: 'starter', provider: 'mercadopago', externalSubscriptionId: 'preapproval_old',
+      status: 'past_due', currentPeriodEnd: new Date(Date.now() - 3 * DAY_MS),
+    });
+    planPrices.find((p) => p.plan === 'starter' && p.market === 'ar')!.launchPriceCents = 5000;
+
+    await startCheckout(tenant({ id: 't1', country: 'Argentina' }), { id: 'u1', email: 'a@example.com' });
+
     expect(createPreapprovalMock).toHaveBeenCalledWith(expect.objectContaining({ trialDays: undefined }));
   });
 

@@ -274,6 +274,24 @@ describe('runPlanTransitions', () => {
       expect(subscriptions[0].status).toBe('active');
     });
 
+    it('keeps going when one tenant\'s Mercado Pago call fails, leaving that one for the next run', async () => {
+      tenants.push({ id: 't1', status: 'active' }, { id: 't2', status: 'active' });
+      subscriptions.push(
+        { tenantId: 't1', provider: 'mercadopago', status: 'active', externalSubscriptionId: 'preapproval-bad', cancellationEffectiveAt: new Date('2026-08-01') },
+        { tenantId: 't2', provider: 'mercadopago', status: 'active', externalSubscriptionId: 'preapproval-ok', cancellationEffectiveAt: new Date('2026-08-01') },
+      );
+      updatePreapprovalMock.mockRejectedValueOnce(new Error('Mercado Pago API error (503)'));
+      const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      const result = await runPlanTransitions(new Date('2026-08-02'));
+
+      expect(result.cancelledMercadoPagoSubscriptions).toBe(1);
+      expect(result.failedMercadoPagoCancellations).toBe(1);
+      expect(subscriptions[0].status).toBe('active');
+      expect(subscriptions[1].status).toBe('cancelled');
+      consoleError.mockRestore();
+    });
+
     it('never touches a Dodo Payments subscription — Dodo schedules its own cancellation natively', async () => {
       tenants.push({ id: 't1', status: 'active' });
       subscriptions.push({

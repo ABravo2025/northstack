@@ -2,10 +2,9 @@ import prisma from '../../lib/prisma.js';
 import type { PlanTier } from '@prisma/client';
 import { resolveProvider, recordSubscriptionActionAttempt } from './subscriptionService.js';
 import { SIGNUP_TRIAL_DAYS } from './tenantService.js';
-import { updateTenantPlan } from './planService.js';
-import { createPreapproval, updatePreapproval } from '../../lib/mercadopago.js';
+import { buildExternalReference, createPreapproval } from '../../lib/mercadopago.js';
 import { createCheckoutSession, getCustomerPortalUrl } from '../../lib/dodopayments.js';
-import { countActiveSeats, extraSeatsFor, EXTRA_SEAT_PRICE_CENTS } from './seatService.js';
+import { countActiveSeats, extraSeatsFor, mercadoPagoAmount } from './seatService.js';
 
 export interface StartCheckoutResult {
   success: boolean;
@@ -14,7 +13,12 @@ export interface StartCheckoutResult {
   initPoint?: string; // hosted redirect URL — Mercado Pago's init_point, or Dodo's checkout_url/Customer Portal link
 }
 
-const BILLING_CALLBACK_URL = 'https://app.joinnorthstack.com/billing/callback';
+// Where both providers' hosted checkouts send the payer back. Was a hardcoded
+// 'https://app.joinnorthstack.com/billing/callback' until 2026-09-26 — a route the frontend never
+// had (Billing lives at /settings/billing), and always production, even from staging.
+function billingReturnUrl(): string {
+  return `${process.env.APP_BASE_URL ?? 'http://localhost:5173'}/settings/billing`;
+}
 
 // POST /api/subscriptions/me/checkout (task-breakdown units 7 + 12, extended 2026-08-19 per
 // Alejandro's correction: this single endpoint now covers two distinct intents depending on
@@ -39,10 +43,9 @@ const BILLING_CALLBACK_URL = 'https://app.joinnorthstack.com/billing/callback';
 // stay null/the signup placeholder respectively until the webhook confirms, and this function
 // uses `requestedPlan` for all pricing/product lookups instead of trusting whatever's already on
 // the (still-placeholder) Subscription row. It's threaded into Dodo's checkout metadata so the
-// webhook can read it back (routes/webhooks.ts). Mercado Pago has no equivalent free-form
-// metadata field on a preapproval (see mercadopago.ts) — that branch below still writes the plan
-// immediately via updateTenantPlan, a deliberately accepted asymmetry since the AR market isn't
-// live yet anyway (PlanPrice's ar rows are still a $0 placeholder).
+// webhook can read it back (routes/webhooks.ts). Mercado Pago carries it in the preapproval's
+// external_reference instead (buildExternalReference, 2026-09-26 — until then that branch wrote
+// Tenant.plan immediately, before any confirmation).
 export async function startCheckout(
   tenant: { id: string; country: string | null; trialEndsAt: Date | null },
   user: { id: string; email: string },
@@ -73,17 +76,17 @@ export async function startCheckout(
     if (subscription.provider === 'dodopayments') {
       // Dedicated Dodo mechanism — updates the card on the SAME subscription, never creates a
       // new one. See getCustomerPortalUrl's comment in dodopayments.ts.
-      const portalUrl = await getCustomerPortalUrl(subscription.externalSubscriptionId, BILLING_CALLBACK_URL);
+      const portalUrl = await getCustomerPortalUrl(subscription.externalSubscriptionId, billingReturnUrl());
       return { success: true, provider: 'dodopayments', initPoint: portalUrl };
     }
 
     // Mercado Pago has no equivalent "just swap the card" mechanism reachable via the same
     // hosted-redirect flow we already built (it would need its own card-tokenization form via
-    // MP.js Secure Fields — real added scope, deferred). Pragmatic substitute that still lands
-    // on "one active card, overwritten": cancel the old preapproval, then fall through to create
-    // a fresh one below — same redirect flow as subscribing for the first time. The webhook's
-    // existing `externalSubscriptionId: preapproval.id` write naturally replaces the old id.
-    await updatePreapproval(subscription.externalSubscriptionId, { status: 'cancelled' });
+    // MP.js Secure Fields — real added scope, deferred). Substitute: fall through and create a
+    // fresh preapproval below, same redirect flow as subscribing for the first time. The OLD one
+    // is deliberately left running here — it's only cancelled once the new one is actually
+    // authorized (mercadoPagoWebhookService.ts). Until 2026-09-26 it was cancelled right here, so
+    // abandoning the new checkout left the tenant with no active preapproval at all.
   }
 
   // An existing subscriber updating their card keeps whatever plan they already confirmed
@@ -113,8 +116,9 @@ export async function startCheckout(
 
   // Genuinely free for SIGNUP_TRIAL_DAYS (Alejandro's 2026-08-20 correction) — but only for an
   // actual fresh subscription, never the Mercado Pago "update payment method" fallback above
-  // (isUpdatingPaymentMethod true, cancelled the old preapproval, fell through to here): that
-  // subscriber already had — or used up — their trial, granting another one would be a real bug.
+  // (isUpdatingPaymentMethod true, fell through to here): that subscriber already had — or used
+  // up — their trial, granting another one would be a real bug (daysAlreadyCovered below handles
+  // that path instead).
   //
   // Outside real production billing (staging, local dev), skip the trial and charge immediately
   // instead: Alejandro's 2026-08-20 request so the whole card→webhook→active-subscription flow can
@@ -141,22 +145,13 @@ export async function startCheckout(
       : Math.min(SIGNUP_TRIAL_DAYS, daysRemaining);
 
   if (provider === 'mercadopago') {
-    // No free-form metadata field on a Mercado Pago preapproval (only external_reference, already
-    // the subscriptionId join key) to carry the chosen plan through to the webhook the way Dodo's
-    // metadata does below — so for a first-time subscribe, this writes Tenant.plan/
-    // Subscription.plan immediately instead of waiting for confirmation. See this function's
-    // top comment for why that's an accepted asymmetry (AR pricing isn't live yet regardless).
-    if (!isUpdatingPaymentMethod) {
-      await updateTenantPlan(tenant.id, effectivePlan, user.id);
-    }
-
     const preapproval = await createPreapproval({
-      subscriptionId: subscription.id,
+      externalReference: buildExternalReference(subscription.id, effectivePlan),
       reason: `Northstack — ${effectivePlan} (AR)`,
       payerEmail: user.email,
-      transactionAmount: (planPrice.launchPriceCents + extraSeats * EXTRA_SEAT_PRICE_CENTS) / 100,
-      backUrl: BILLING_CALLBACK_URL,
-      trialDays,
+      transactionAmount: mercadoPagoAmount(planPrice.launchPriceCents, extraSeats),
+      backUrl: billingReturnUrl(),
+      trialDays: isUpdatingPaymentMethod ? daysAlreadyCovered(subscription, tenant.trialEndsAt) : trialDays,
     });
 
     return { success: true, provider: 'mercadopago', initPoint: preapproval.init_point };
@@ -174,7 +169,7 @@ export async function startCheckout(
     subscriptionId: subscription.id,
     email: user.email,
     productId: planPrice.dodoProductId,
-    returnUrl: BILLING_CALLBACK_URL,
+    returnUrl: billingReturnUrl(),
     trialDays,
     extraSeats,
     // Read back in routes/webhooks.ts's payment.succeeded handler to set Tenant.plan for real
@@ -185,4 +180,19 @@ export async function startCheckout(
   });
 
   return { success: true, provider: 'dodopayments', initPoint: session.checkoutUrl };
+}
+
+// Mercado Pago "update payment method" (a replacement preapproval, see startCheckout): the days
+// the tenant already has covered — what's left of a trial still running, or of the period already
+// paid for — become the new preapproval's free_trial, so its first charge lands where the old
+// one's next charge would have. Without it the replacement charges on the spot: a second charge
+// for a period already paid. Nothing covered (past_due, suspended) → undefined, charge now.
+function daysAlreadyCovered(
+  subscription: { status: string; currentPeriodEnd: Date | null },
+  trialEndsAt: Date | null,
+): number | undefined {
+  const coveredUntil = subscription.status === 'trialing' ? trialEndsAt : subscription.status === 'active' ? subscription.currentPeriodEnd : null;
+  if (!coveredUntil) return undefined;
+  const days = Math.ceil((coveredUntil.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
+  return days > 0 ? days : undefined;
 }

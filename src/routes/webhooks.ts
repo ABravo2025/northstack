@@ -1,6 +1,7 @@
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import prisma from '../lib/prisma.js';
-import { getAuthorizedPayment, getPreapproval, verifyMercadoPagoSignature } from '../lib/mercadopago.js';
+import { getAuthorizedPayment, verifyMercadoPagoSignature } from '../lib/mercadopago.js';
+import { handleMercadoPagoPreapprovalEvent } from '../modules/tenant/mercadoPagoWebhookService.js';
 import { getNextBillingDate, getSubscriptionProductId, unwrapDodoWebhookEvent } from '../lib/dodopayments.js';
 import { GRACE_PERIOD_DAYS } from '../modules/tenant/planTransitionService.js';
 import { syncSubscriptionAndTenant, resolvePlanFromDodoProductId } from '../modules/tenant/subscriptionService.js';
@@ -129,47 +130,9 @@ webhooksRouter.post('/api/webhooks/mercadopago', async (req, res) => {
       return res.status(200).json({ status: 'ok' });
     }
 
-    // preapproval-type event — external_reference is our own Subscription.id (set at creation in
-    // checkoutService.ts), the reliable join key per the spec ("no confiar solo en
-    // externalSubscriptionId", which isn't even set yet on the very first confirmation webhook).
-    const preapproval = await getPreapproval(dataId);
-    if (!preapproval.external_reference) {
-      return res.status(200).json({ status: 'no external_reference on preapproval' });
-    }
-
-    const subscription = await prisma.subscription.findUnique({ where: { id: preapproval.external_reference } });
-    if (!subscription) {
-      return res.status(200).json({ status: 'no matching subscription' });
-    }
-
-    if (preapproval.status === 'authorized') {
-      await syncSubscriptionAndTenant({
-        tenantId: subscription.tenantId,
-        status: 'active',
-        provider: 'mercadopago',
-        externalSubscriptionId: preapproval.id,
-        currentPeriodStart: new Date(),
-        // Without this, Subscription.currency/lockedPriceCents stay at their USD placeholder
-        // (set at signup) forever for an AR tenant actually billed in ARS — every invoice this
-        // subscription generates afterward inherits that wrong currency label.
-        ...(preapproval.auto_recurring
-          ? {
-              currency: preapproval.auto_recurring.currency_id,
-              lockedPriceCents: Math.round(preapproval.auto_recurring.transaction_amount * 100),
-            }
-          : {}),
-      });
-    } else if (preapproval.status === 'cancelled') {
-      await syncSubscriptionAndTenant({ tenantId: subscription.tenantId, status: 'cancelled' });
-    } else if (preapproval.status === 'paused') {
-      await syncSubscriptionAndTenant({
-        tenantId: subscription.tenantId,
-        status: 'past_due',
-        gracePeriodEndsAt: new Date(Date.now() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000),
-      });
-    }
-
-    return res.status(200).json({ status: 'ok' });
+    // preapproval-type event — see mercadoPagoWebhookService.ts for the transitions.
+    const status = await handleMercadoPagoPreapprovalEvent(dataId);
+    return res.status(200).json({ status });
   } catch (error) {
     await rollbackProcessedEvent('mercadopago', externalEventId);
     throw error;

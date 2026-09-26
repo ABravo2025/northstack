@@ -14,6 +14,20 @@ export const INCLUDED_SEATS: Record<'starter' | 'growth', number> = {
 
 export const EXTRA_SEAT_PRICE_CENTS = 400; // $4/mo
 
+// Same surcharge in each PlanPrice market's own currency — Dodo bills the USD one as an addon,
+// Mercado Pago folds the `ar` one into its single recurring amount (mercadoPagoAmount below).
+// Adding the USD 400 to an ARS amount would have billed ARS 4 per extra seat. `ar` stays 0 (no
+// surcharge) until real ARS pricing is set, same placeholder convention as PlanPrice's ar rows.
+export const EXTRA_SEAT_PRICE_CENTS_BY_MARKET = {
+  international: EXTRA_SEAT_PRICE_CENTS,
+  ar: 0,
+} as const;
+
+// Decimal ARS (Mercado Pago's API takes major units, not cents) for base plan + extra seats.
+export function mercadoPagoAmount(basePriceCents: number, extraSeats: number): number {
+  return (basePriceCents + extraSeats * EXTRA_SEAT_PRICE_CENTS_BY_MARKET.ar) / 100;
+}
+
 export async function countActiveSeats(tenantId: string): Promise<number> {
   return prisma.user.count({ where: { tenantId, status: 'active' } });
 }
@@ -90,6 +104,6 @@ export async function syncSeatBilling(tenantId: string): Promise<void> {
   // so "proportional discount for unused days" genuinely doesn't apply on this provider. Accepted
   // limitation (AR market pricing is still a $0 placeholder anyway, see PlanPrice's ar rows).
   await updatePreapproval(subscription.externalSubscriptionId, {
-    transactionAmount: (planPrice.launchPriceCents + extraSeats * EXTRA_SEAT_PRICE_CENTS) / 100,
+    transactionAmount: mercadoPagoAmount(planPrice.launchPriceCents, extraSeats),
   });
 }

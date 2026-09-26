@@ -32,7 +32,7 @@ vi.mock('../src/lib/mercadopago.js', () => ({
   updatePreapproval: updatePreapprovalMock,
 }));
 
-import { countActiveSeats, extraSeatsFor, syncSeatBilling, INCLUDED_SEATS, EXTRA_SEAT_PRICE_CENTS } from '../src/modules/tenant/seatService.js';
+import { countActiveSeats, extraSeatsFor, syncSeatBilling, INCLUDED_SEATS, EXTRA_SEAT_PRICE_CENTS, EXTRA_SEAT_PRICE_CENTS_BY_MARKET } from '../src/modules/tenant/seatService.js';
 
 function reset() {
   tenants = {};
@@ -114,7 +114,11 @@ describe('syncSeatBilling', () => {
     planPrices.push({ plan: 'growth', market: 'ar', launchPriceCents: 5000, dodoProductId: null });
     users = Array.from({ length: 12 }, () => ({ tenantId: 't1', status: 'active' })); // 2 over the 10 included
     await syncSeatBilling('t1');
-    expect(updatePreapprovalMock).toHaveBeenCalledWith('preapproval_1', { transactionAmount: (5000 + 2 * 400) / 100 });
+    // The ARS per-seat price, never the USD EXTRA_SEAT_PRICE_CENTS (400) — adding that to an ARS
+    // amount billed ARS 4 per seat until 2026-09-26.
+    expect(updatePreapprovalMock).toHaveBeenCalledWith('preapproval_1', {
+      transactionAmount: (5000 + 2 * EXTRA_SEAT_PRICE_CENTS_BY_MARKET.ar) / 100,
+    });
     expect(updateSubscriptionSeatsMock).not.toHaveBeenCalled();
   });
 });

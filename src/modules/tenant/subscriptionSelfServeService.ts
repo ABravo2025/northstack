@@ -2,7 +2,7 @@ import prisma from '../../lib/prisma.js';
 import { syncSubscriptionAndTenant } from './subscriptionService.js';
 import { cancelSubscription as cancelDodoSubscription, removeScheduledCancellation, changeSubscriptionPlan } from '../../lib/dodopayments.js';
 import { updatePreapproval } from '../../lib/mercadopago.js';
-import { countActiveSeats, extraSeatsFor, EXTRA_SEAT_PRICE_CENTS } from './seatService.js';
+import { countActiveSeats, extraSeatsFor, mercadoPagoAmount } from './seatService.js';
 import { CURRENT_PLAN_PRICES_CENTS } from './planService.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { tenantActivityFieldConfig } from '../activity/fieldConfigs/tenantFieldConfig.js';
@@ -51,7 +51,7 @@ export async function changePlan(tenantId: string, plan: PlanTier, userId: strin
     const activeSeats = await countActiveSeats(tenantId);
     const extraSeats = extraSeatsFor(plan, activeSeats);
     await updatePreapproval(subscription.externalSubscriptionId, {
-      transactionAmount: (planPrice.launchPriceCents + extraSeats * EXTRA_SEAT_PRICE_CENTS) / 100,
+      transactionAmount: mercadoPagoAmount(planPrice.launchPriceCents, extraSeats),
     });
   }
 

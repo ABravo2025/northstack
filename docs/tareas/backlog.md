@@ -162,8 +162,12 @@ Catálogo completo (qué está construido, qué es solo posible hoy, qué está 
   (`node_modules/dodopayments`), no contra una entrega real de webhook — mismo tipo de caveat
   "UNVERIFIED" que ya tenían los campos de Mercado Pago en su momento. Confirmar antes de go-live.
 - [ ] **Precios reales de Argentina (Mercado Pago) sin definir**: los `PlanPrice` de mercado `ar`
-  siguen en placeholder (no en cero, pero no son precios reales todavía) — bloquea solo el pricing
-  real, no la integración en sí (ya probada de punta a punta contra sandbox).
+  siguen en 0 (el checkout los rechaza a propósito) y `EXTRA_SEAT_PRICE_CENTS_BY_MARKET.ar` también
+  (`seatService.ts`) — faltan Starter, Growth y asiento extra en ARS. Único bloqueante para cobrar en
+  Argentina junto con las credenciales de producción. (2026-09-26: la afirmación anterior de "ya
+  probada de punta a punta contra sandbox" no cuadra con el código — los `type` del webhook y los
+  campos de tarjeta de `authorized_payment` siguen marcados UNVERIFIED; confirmarlos con una
+  entrega real en staging es el paso E del cierre de MP, ver `spec-billing-integration.md`.)
 - [ ] **Credenciales reales (producción) de Dodo Payments/Mercado Pago sin cargar**: hoy Vercel
   Preview (staging) tiene las credenciales *sandbox* de ambos proveedores (`DODO_PAYMENTS_API_KEY`,
   `DODO_WEBHOOK_KEY`, `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`) — nada cargado todavía en el scope de

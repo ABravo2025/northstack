@@ -984,7 +984,7 @@
         }
       }
     </script>
-    <script type="application/ld+json">
+    <script type="application/ld+json" id="ld-app">
       {
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
@@ -992,23 +992,7 @@
         "url": "https://joinnorthstack.com/es/",
         "applicationCategory": "BusinessApplication",
         "operatingSystem": "Web",
-        "description": "Northstack junta RR.HH., ventas y seguimiento de nómina en una sola plataforma modular para equipos de 5 a 50 personas.",
-        "offers": [
-          {
-            "@type": "Offer",
-            "name": "Starter",
-            "price": "19",
-            "priceCurrency": "USD",
-            "priceValidUntil": "2027-09-15"
-          },
-          {
-            "@type": "Offer",
-            "name": "Growth",
-            "price": "39",
-            "priceCurrency": "USD",
-            "priceValidUntil": "2027-09-15"
-          }
-        ]
+        "description": "Northstack junta RR.HH., ventas y seguimiento de nómina en una sola plataforma modular para equipos de 5 a 50 personas."
       }
     </script>
   </head>
@@ -1250,11 +1234,11 @@
             <div class="plan-name">Starter</div>
             <div class="plan-tagline">Para equipos chicos que se están organizando</div>
             <div class="plan-price-row">
-              <div class="plan-price">$19</div>
+              <div class="plan-price" data-pricing="price-starter">—</div>
               <div class="plan-price-suffix">/mes</div>
             </div>
             <div class="plan-sub-row">
-              <div class="plan-regular">5 puestos incluidos · $4/mes por puesto extra</div>
+              <div class="plan-regular"><span data-pricing="seats-starter">—</span> puestos incluidos · <span data-pricing="seat-price">—</span>/mes por puesto extra</div>
             </div>
             <ul class="plan-features">
               <li><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>CRM de ventas — hasta 2 pipelines</li>
@@ -1273,11 +1257,11 @@
             <div class="plan-name">Growth</div>
             <div class="plan-tagline">Para equipos listos para escalar</div>
             <div class="plan-price-row">
-              <div class="plan-price">$39</div>
+              <div class="plan-price" data-pricing="price-growth">—</div>
               <div class="plan-price-suffix">/mes</div>
             </div>
             <div class="plan-sub-row">
-              <div class="plan-regular">10 puestos incluidos · $4/mes por puesto extra</div>
+              <div class="plan-regular"><span data-pricing="seats-growth">—</span> puestos incluidos · <span data-pricing="seat-price">—</span>/mes por puesto extra</div>
             </div>
             <ul class="plan-features">
               <li class="strong"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Todo lo de Starter, más:</li>
@@ -1453,5 +1437,6 @@
         <div class="footer-bottom">© 2026 Northstack. Todos los derechos reservados.</div>
       </div>
     </footer>
+    <script src="/pricing.js" defer></script>
   </body>
 </html>

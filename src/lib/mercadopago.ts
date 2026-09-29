@@ -195,3 +195,37 @@ export function verifyMercadoPagoSignature(input: VerifyMercadoPagoSignatureInpu
   const actualBuffer = Buffer.from(v1, 'utf8');
   return expectedBuffer.length === actualBuffer.length && timingSafeEqual(expectedBuffer, actualBuffer);
 }
+
+// TEMPORARY (2026-09-29, staging webhook setup): explains a failed verifyMercadoPagoSignature in the
+// logs without printing the secret or the signature. Remove once the MP webhook is confirmed.
+export function diagnoseMercadoPagoSignature(input: VerifyMercadoPagoSignatureInput, bodyDataId: unknown): Record<string, unknown> {
+  const secret = process.env.MP_WEBHOOK_SECRET;
+  const parts = new Map<string, string>();
+  for (const part of input.xSignature.split(',')) {
+    const [key, value] = part.split('=');
+    if (key && value) parts.set(key.trim(), value.trim());
+  }
+  const ts = parts.get('ts');
+  const v1 = parts.get('v1');
+  const matches = (dataId: string, withRequestId: boolean) => {
+    if (!secret || !ts || !v1) return false;
+    const manifest = `id:${dataId};${withRequestId ? `request-id:${input.xRequestId};` : ''}ts:${ts};`;
+    return createHmac('sha256', secret).update(manifest).digest('hex') === v1;
+  };
+  const candidates = [...new Set([input.dataId, input.dataId.toLowerCase(), String(bodyDataId ?? ''), String(bodyDataId ?? '').toLowerCase()].filter(Boolean))];
+  return {
+    secretConfigured: Boolean(secret),
+    secretLength: secret?.length ?? 0,
+    secretHasSurroundingWhitespace: secret ? secret !== secret.trim() : false,
+    signatureKeys: [...parts.keys()],
+    ts,
+    xRequestId: input.xRequestId,
+    queryDataId: input.dataId,
+    bodyDataId,
+    matchingVariant:
+      candidates.flatMap((id) => [
+        matches(id, true) ? `id=${id} with request-id` : null,
+        matches(id, false) ? `id=${id} without request-id` : null,
+      ]).filter(Boolean)[0] ?? 'none',
+  };
+}

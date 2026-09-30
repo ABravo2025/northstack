@@ -1,6 +1,6 @@
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import prisma from '../lib/prisma.js';
-import { diagnoseMercadoPagoSignature, verifyMercadoPagoSignature } from '../lib/mercadopago.js';
+import { verifyMercadoPagoSignature } from '../lib/mercadopago.js';
 import { handleMercadoPagoAuthorizedPaymentEvent, handleMercadoPagoPreapprovalEvent } from '../modules/tenant/mercadoPagoWebhookService.js';
 import { getNextBillingDate, getSubscriptionProductId, unwrapDodoWebhookEvent } from '../lib/dodopayments.js';
 import { GRACE_PERIOD_DAYS } from '../modules/tenant/planTransitionService.js';
@@ -61,17 +61,6 @@ webhooksRouter.post('/api/webhooks/mercadopago', async (req, res) => {
   }
 
   if (!verifyMercadoPagoSignature({ xSignature, xRequestId, dataId })) {
-    // TEMPORARY diagnostic — see diagnoseMercadoPagoSignature in mercadopago.ts.
-    let bodyDataId: unknown = null;
-    try {
-      bodyDataId = JSON.parse(rawBodyText(req) || '{}')?.data?.id ?? null;
-    } catch {
-      bodyDataId = 'unparseable body';
-    }
-    console.error('MP webhook signature mismatch', JSON.stringify({
-      query: Object.keys(req.query),
-      ...diagnoseMercadoPagoSignature({ xSignature, xRequestId, dataId }, bodyDataId),
-    }));
     return res.status(401).json({ error: 'Invalid signature' });
   }
 

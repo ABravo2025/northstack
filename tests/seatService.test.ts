@@ -18,13 +18,18 @@ vi.mock('../src/lib/prisma.js', () => ({
     },
     planPrice: {
       findFirst: vi.fn(async ({ where }: any) => planPrices.find((p) => p.plan === where.plan && p.market === where.market) ?? null),
+      findUnique: vi.fn(async ({ where }: any) => planPrices.find((p) => p.id === where.id) ?? null),
     },
   },
 }));
 
-const { updateSubscriptionSeatsMock } = vi.hoisted(() => ({ updateSubscriptionSeatsMock: vi.fn(async () => {}) }));
+const { updateSubscriptionSeatsMock, changeSubscriptionPlanMock } = vi.hoisted(() => ({
+  updateSubscriptionSeatsMock: vi.fn(async () => {}),
+  changeSubscriptionPlanMock: vi.fn(async () => {}),
+}));
 vi.mock('../src/lib/dodopayments.js', () => ({
   updateSubscriptionSeats: updateSubscriptionSeatsMock,
+  changeSubscriptionPlan: changeSubscriptionPlanMock,
 }));
 
 const { updatePreapprovalMock } = vi.hoisted(() => ({ updatePreapprovalMock: vi.fn(async () => ({})) }));
@@ -55,6 +60,7 @@ function reset() {
     { plan: 'growth', market: 'international', launchPriceCents: 3900, extraSeatPriceCents: 400, dodoProductId: 'pdt_growth', dodoExtraSeatAddonId: 'adn_seat' },
   ];
   updateSubscriptionSeatsMock.mockClear();
+  changeSubscriptionPlanMock.mockClear();
   updatePreapprovalMock.mockClear();
 }
 
@@ -130,6 +136,35 @@ describe('syncSeatBilling', () => {
     // 2026-09-26.
     expect(updatePreapprovalMock).toHaveBeenCalledWith('preapproval_1', { transactionAmount: (5_000_000 + 2 * 500_000) / 100 });
     expect(updateSubscriptionSeatsMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('syncSeatBilling with a scheduled downgrade', () => {
+  beforeEach(reset);
+
+  it("Dodo: re-schedules the downgrade with the new plan's seat count instead of prorating now", async () => {
+    tenants.t1 = { plan: 'growth' };
+    planPrices.push({ id: 'pp_starter_row', plan: 'starter', market: 'international', launchPriceCents: 1900, extraSeatPriceCents: 400, dodoProductId: 'pdt_starter', dodoExtraSeatAddonId: 'adn_seat' });
+    subscriptions.t1 = { provider: 'dodopayments', externalSubscriptionId: 'sub_1', status: 'active', pendingPlanPriceId: 'pp_starter_row' };
+    users = Array.from({ length: 8 }, () => ({ tenantId: 't1', status: 'active' })); // 3 over Starter's 5
+
+    await syncSeatBilling('t1');
+
+    expect(changeSubscriptionPlanMock).toHaveBeenCalledWith('sub_1', {
+      productId: 'pdt_starter', extraSeatAddonId: 'adn_seat', extraSeats: 3, mode: 'at_next_billing',
+    });
+    expect(updateSubscriptionSeatsMock).not.toHaveBeenCalled();
+  });
+
+  it("Mercado Pago: the next charge uses the new plan's price and included seats", async () => {
+    tenants.t1 = { plan: 'growth' };
+    planPrices.push({ id: 'pp_ar_starter_row', plan: 'starter', market: 'ar', launchPriceCents: 3_000_000, extraSeatPriceCents: 600_000 });
+    subscriptions.t1 = { provider: 'mercadopago', externalSubscriptionId: 'pre_1', status: 'active', pendingPlanPriceId: 'pp_ar_starter_row' };
+    users = Array.from({ length: 7 }, () => ({ tenantId: 't1', status: 'active' })); // 2 over Starter's 5
+
+    await syncSeatBilling('t1');
+
+    expect(updatePreapprovalMock).toHaveBeenCalledWith('pre_1', { transactionAmount: 42_000 });
   });
 });
 

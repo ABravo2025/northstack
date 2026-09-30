@@ -21,7 +21,7 @@ export interface StartCheckoutResult {
 // from their MP account (MP publishes no per-subscription deep link for the payer).
 export const MERCADO_PAGO_MANAGE_SUBSCRIPTION_URL = 'https://www.mercadopago.com.ar/ayuda/18157';
 
-function billingReturnUrl(): string {
+export function billingReturnUrl(): string {
   return `${process.env.APP_BASE_URL ?? 'http://localhost:5173'}/settings/billing`;
 }
 

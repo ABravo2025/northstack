@@ -332,7 +332,24 @@
     "invoiceSeatsBreakdown": "{{base}} plan + {{extra}} puestos extra",
     "opening": "Abriendo…",
     "viewInvoice": "Ver factura",
-    "planChangeScheduled": "Cambio de plan programado — se aplica a partir de tu próximo ciclo de facturación.",
+    "pendingPlanChange": "Pasás a {{plan}} el {{date}}.",
+    "cancelPendingPlanChange": "Cancelar cambio",
+    "planChangeConfirm": {
+      "title": "Pasar a {{plan}}",
+      "trial": "Pasás a {{plan}} ahora. No se cobra nada hasta que termine tu prueba; después son {{price}} por mes.",
+      "upgradeCard": "Hoy se cobran {{price}} a tu tarjeta registrada y tu ciclo mensual empieza de nuevo hoy. Lo que quedaba de tu período actual no se reintegra.",
+      "upgradeMercadoPago": "Te abrimos Mercado Pago para que confirmes el pago de {{price}}. Tu ciclo mensual empieza de nuevo hoy y tu suscripción actual se cancela sola cuando se confirme. Lo que quedaba de tu período actual no se reintegra.",
+      "downgrade": "Seguís en {{current}} hasta el {{date}}. Desde ese cobro pagás {{plan}}: {{price}} por mes.",
+      "confirm": "Confirmar",
+      "confirming": "Procesando…"
+    },
+    "planChangeToast": {
+      "changed": "Tu plan ahora es {{plan}}.",
+      "charging": "Estamos procesando el cobro — tu plan pasa a {{plan}} apenas se confirme.",
+      "upgradeInMercadoPago": "Confirmá el pago en Mercado Pago (se abrió en otra pestaña). Tu plan pasa a {{plan}} cuando se confirme.",
+      "scheduled": "Listo — pasás a {{plan}} el {{date}}.",
+      "schedule_cancelled": "Cambio programado cancelado. Seguís en {{plan}}."
+    },
     "cancellationScheduled": "Cancelación programada para el final de tu período actual.",
     "backToFreeTrialToast": "De vuelta en Prueba gratuita.",
     "subscriptionResumed": "Suscripción reanudada.",

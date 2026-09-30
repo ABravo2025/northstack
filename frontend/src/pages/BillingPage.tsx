@@ -9,6 +9,7 @@ import { BriefcaseIcon } from '../components/common/Icons';
 import { formatMoney } from '../lib/currencies';
 import { openExternalUrl } from '../lib/nativeBrowser';
 import { redirectToCheckout } from '../lib/checkout';
+import { formatPlanPrice, marketForCountry, usePlanPricing } from '../lib/planPrices';
 import AddPaymentMethodModal from '../components/common/AddPaymentMethodModal';
 import PlansModal from '../components/common/PlansModal';
 
@@ -23,6 +24,7 @@ interface BillingPageProps {
 }
 
 const PLAN_LABEL: Record<PlanTier, string> = { starter: 'Starter', growth: 'Growth', scale: 'Scale' };
+const PLAN_RANK: Record<PlanTier, number> = { starter: 1, growth: 2, scale: 3 };
 
 // Domain statuses (Subscription.status / Invoice.status) don't map 1:1 to the existing
 // status-badge CSS modifiers (pending/approved/rejected/cancelled, from TimeOffRequest) — this
@@ -114,6 +116,11 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
   const [cancelling, setCancelling] = useState(false);
   const [resuming, setResuming] = useState(false);
   const [viewingInvoiceId, setViewingInvoiceId] = useState<string | null>(null);
+  // Plan chosen in PlansModal by a tenant already paying — confirmed here first, since it can
+  // charge right away (upgrade) or only apply later (downgrade).
+  const [planToConfirm, setPlanToConfirm] = useState<PlanTier | null>(null);
+  const [changingPlan, setChangingPlan] = useState(false);
+  const pricing = usePlanPricing();
 
   const load = () => {
     setLoading(true);
@@ -163,11 +170,52 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
   // the only entry point into checkout, for both a first subscribe and swapping plans later).
   const handleSelectPlan = async (plan: PlanTier) => {
     if (hasProvider) {
-      await api.changeSubscriptionPlan(token, plan);
-      toast.success(t('billing.planChangeScheduled'));
-      load();
+      setPlanToConfirm(plan);
     } else {
       await redirectToCheckout(token, plan);
+    }
+  };
+
+  // What a paid plan change does (backend changePlan, 2026-09-30): during the trial it switches now
+  // with nothing charged; an upgrade charges the new plan's full price today and restarts the
+  // billing cycle (Mercado Pago: the payer confirms it in MP first); a downgrade keeps the current
+  // plan until currentPeriodEnd.
+  const market = subscription.provider === 'mercadopago' ? 'ar' : marketForCountry(tenant?.country);
+  const currentPlan = subscription.tenantPlan;
+  const monthlyPriceFor = (plan: PlanTier): string => {
+    const m = pricing?.markets[market];
+    if (!pricing || !m || (plan !== 'starter' && plan !== 'growth')) return '—';
+    const extraSeats = Math.max(0, subscription.activeSeats - pricing.includedSeats[plan]);
+    return formatPlanPrice(m.plans[plan] + extraSeats * m.extraSeat, m.currency);
+  };
+  const planChangeMessage = (plan: PlanTier): string => {
+    const values = { plan: PLAN_LABEL[plan], current: currentPlan ? PLAN_LABEL[currentPlan] : '', price: monthlyPriceFor(plan) };
+    if (subscription.status === 'trialing') return t('billing.planChangeConfirm.trial', values);
+    if (currentPlan && PLAN_RANK[plan] > PLAN_RANK[currentPlan]) {
+      return subscription.provider === 'mercadopago'
+        ? t('billing.planChangeConfirm.upgradeMercadoPago', values)
+        : t('billing.planChangeConfirm.upgradeCard', values);
+    }
+    return t('billing.planChangeConfirm.downgrade', { ...values, date: formatDate(subscription.currentPeriodEnd) });
+  };
+
+  const runPlanChange = async (plan: PlanTier) => {
+    setChangingPlan(true);
+    try {
+      const result = await api.changeSubscriptionPlan(token, plan);
+      const values = { plan: PLAN_LABEL[plan], date: formatDate(result.effectiveAt) };
+      if (result.initPoint) {
+        openExternalUrl(result.initPoint);
+        toast.success(t('billing.planChangeToast.upgradeInMercadoPago', values));
+      } else {
+        toast.success(t(`billing.planChangeToast.${result.outcome}`, values));
+      }
+      setPlanToConfirm(null);
+      load();
+    } catch (error) {
+      toast.error((error as Error).message);
+    } finally {
+      setChangingPlan(false);
     }
   };
 
@@ -276,6 +324,25 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
               )}
             </p>
           )
+        )}
+
+        {subscription.pendingPlan && (
+          <div className="flex items-center justify-between flex-wrap gap-2 mb-2 text-sm">
+            <span className="text-amber-700 dark:text-amber-400">
+              {t('billing.pendingPlanChange', {
+                plan: PLAN_LABEL[subscription.pendingPlan],
+                date: formatDate(subscription.currentPeriodEnd),
+              })}
+            </span>
+            <button
+              type="button"
+              className="btn-ghost btn-sm"
+              onClick={() => currentPlan && runPlanChange(currentPlan)}
+              disabled={changingPlan}
+            >
+              {t('billing.cancelPendingPlanChange')}
+            </button>
+          </div>
         )}
 
         <div className="mt-3 pt-3 border-t border-line dark:border-dark-line flex items-center justify-between flex-wrap gap-2">
@@ -411,6 +478,17 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
         onSelectPlan={handleSelectPlan}
         currentPlan={subscription.tenantPlan}
       />
+
+      {planToConfirm && (
+        <ConfirmDialog
+          title={t('billing.planChangeConfirm.title', { plan: PLAN_LABEL[planToConfirm] })}
+          message={planChangeMessage(planToConfirm)}
+          confirmLabel={changingPlan ? t('billing.planChangeConfirm.confirming') : t('billing.planChangeConfirm.confirm')}
+          confirmDisabled={changingPlan}
+          onConfirm={() => runPlanChange(planToConfirm)}
+          onCancel={() => setPlanToConfirm(null)}
+        />
+      )}
 
       {showCancelConfirm && (
         <ConfirmDialog

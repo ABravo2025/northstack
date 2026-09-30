@@ -138,10 +138,10 @@ Catálogo completo (qué está construido, qué es solo posible hoy, qué está 
 
 ## Infra/Otros
 
-- [ ] **Prorrateo al cambiar de plan**: `changePlan` (self-serve, Billing Integration) llama al
-  proveedor y agenda el cambio para el próximo ciclo de facturación — no calcula ni cobra/acredita la
-  diferencia del ciclo en curso. Sin definir si hace falta prorratear de verdad o si "aplica desde el
-  próximo ciclo" es la política final.
+- [x] **Cobro al cambiar de plan** (2026-09-30): upgrade cobra el precio completo hoy y reinicia el
+  ciclo; downgrade se aplica en el próximo cobro; en trial es libre. Ver "Cambio de plan — política
+  vigente" en `spec-billing-integration.md`. Pendiente: verificar el upgrade de Dodo contra el sandbox
+  (el modo `full_immediately` + `prevent_change` y la metadata del pago no se probaron en vivo).
 - [ ] **Webhook de Dodo Payments todavía sin configurar contra la URL estable de staging**
   (2026-09-13, Paddle→Dodo): reemplazó a Paddle, sandbox, sin suscriptores reales — falta crear el
   webhook endpoint real en el dashboard de Dodo apuntando a

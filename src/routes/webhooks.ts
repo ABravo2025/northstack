@@ -249,7 +249,20 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
       // propagation onto this resource turned out unreliable in practice), and finally to
       // leaving plan/lockedPriceCents untouched (existing subscription.plan) for an "update
       // payment method" session (checkoutService.ts never sets metadata.plan for those anyway).
-      const resolvedPrice = await resolveFirstConfirmation(subscription, payment.metadata, payment.subscription_id ?? subscription.externalSubscriptionId ?? null);
+      // Besides a first confirmation, two plan changes land on a real charge (changePlan,
+      // 2026-09-30): an upgrade's own full-price charge (payment metadata planChange=upgrade), and
+      // the renewal that applies a scheduled downgrade (Subscription.pendingPlanPriceId).
+      const planChangePriceId = payment.metadata?.planChange === 'upgrade' ? payment.metadata?.planPriceId : null;
+      const planChangePrice =
+        typeof planChangePriceId === 'string' ? await prisma.planPrice.findUnique({ where: { id: planChangePriceId } }) : null;
+      const pendingPrice =
+        !planChangePrice && subscription.pendingPlanPriceId
+          ? await prisma.planPrice.findUnique({ where: { id: subscription.pendingPlanPriceId } })
+          : null;
+      const resolvedPrice =
+        (await resolveFirstConfirmation(subscription, payment.metadata, payment.subscription_id ?? subscription.externalSubscriptionId ?? null)) ??
+        planChangePrice ??
+        pendingPrice;
       const confirmedPlan = resolvedPrice ? (resolvedPrice.plan as 'starter' | 'growth') : (subscription.plan as 'starter' | 'growth');
       const lockedPriceCents = resolvedPrice ? resolvedPrice.launchPriceCents : subscription.lockedPriceCents;
 
@@ -260,7 +273,7 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
         externalSubscriptionId: payment.subscription_id ?? subscription.externalSubscriptionId ?? '',
         currentPeriodStart: periodStart,
         currentPeriodEnd: periodEnd,
-        ...(resolvedPrice ? confirmedPlanFields(resolvedPrice) : {}),
+        ...(resolvedPrice ? { ...confirmedPlanFields(resolvedPrice), pendingPlanPriceId: null } : {}),
         ...paymentMethodFields,
         ...discountCodeFields,
       });
@@ -302,6 +315,11 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
         },
       });
     } else if (event.type === 'payment.failed') {
+      // An upgrade's own charge failing (changePlan uses prevent_change): Dodo keeps the old plan,
+      // which is still paid for — nothing is overdue.
+      if (event.data.metadata?.planChange === 'upgrade') {
+        return res.status(200).json({ status: 'upgrade payment failed, plan unchanged' });
+      }
       await syncSubscriptionAndTenant({
         tenantId: subscription.tenantId,
         status: 'past_due',

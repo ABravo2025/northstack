@@ -1,6 +1,13 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
 import type { PlanTier, Subscription } from './types.js';
 
+// POST /api/subscriptions/me/change-plan — see the backend's changePlan for each outcome.
+export interface ChangePlanResult {
+  outcome: 'changed' | 'charging' | 'scheduled' | 'schedule_cancelled';
+  initPoint?: string; // Mercado Pago upgrade: where the payer confirms the new subscription
+  effectiveAt: string | null;
+}
+
 export interface StartCheckoutResult {
   provider: 'dodopayments' | 'mercadopago';
   initPoint?: string; // hosted redirect URL for either provider
@@ -33,13 +40,14 @@ export const billingApi = {
   // Named distinctly from auth.ts's updateTenantPlan (the pre-billing "which plan do you want"
   // choice, still used while trialing with no provider attached) — this one is the post-billing
   // self-serve change, only valid once a real provider is attached.
-  changeSubscriptionPlan: async (token: string, plan: PlanTier): Promise<void> => {
+  changeSubscriptionPlan: async (token: string, plan: PlanTier): Promise<ChangePlanResult> => {
     const res = await apiFetch(`${API_BASE_URL}/api/subscriptions/me/change-plan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify({ plan }),
     });
     if (!res.ok) await throwApiError(res);
+    return res.json();
   },
 
   cancelSubscription: async (token: string, reason?: string): Promise<void> => {

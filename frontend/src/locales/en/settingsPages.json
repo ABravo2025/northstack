@@ -332,7 +332,24 @@
     "invoiceSeatsBreakdown": "{{base}} plan + {{extra}} extra seats",
     "opening": "Opening…",
     "viewInvoice": "View invoice",
-    "planChangeScheduled": "Plan change scheduled — it applies starting your next billing cycle.",
+    "pendingPlanChange": "Switching to {{plan}} on {{date}}.",
+    "cancelPendingPlanChange": "Cancel change",
+    "planChangeConfirm": {
+      "title": "Switch to {{plan}}",
+      "trial": "You'll switch to {{plan}} now. Nothing is charged until your trial ends; after that it's {{price}} per month.",
+      "upgradeCard": "{{price}} will be charged today to your card on file, and your monthly billing cycle restarts today. The unused part of your current period isn't refunded.",
+      "upgradeMercadoPago": "We'll open Mercado Pago so you can confirm the {{price}} payment. Your monthly cycle restarts today and your current subscription is cancelled automatically once it's confirmed. The unused part of your current period isn't refunded.",
+      "downgrade": "You stay on {{current}} until {{date}}. From that charge on you'll pay {{plan}}: {{price}} per month.",
+      "confirm": "Confirm",
+      "confirming": "Processing…"
+    },
+    "planChangeToast": {
+      "changed": "Your plan is now {{plan}}.",
+      "charging": "Processing the charge — your plan switches to {{plan}} as soon as it's confirmed.",
+      "upgradeInMercadoPago": "Confirm the payment in Mercado Pago (opened in a new tab). Your plan switches to {{plan}} once it's confirmed.",
+      "scheduled": "Done — you'll switch to {{plan}} on {{date}}.",
+      "schedule_cancelled": "Scheduled change cancelled. You're staying on {{plan}}."
+    },
     "cancellationScheduled": "Cancellation scheduled for the end of your current period.",
     "backToFreeTrialToast": "Back to Free Trial.",
     "subscriptionResumed": "Subscription resumed.",

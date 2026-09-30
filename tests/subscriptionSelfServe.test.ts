@@ -49,20 +49,27 @@ vi.mock('../src/lib/prisma.js', () => {
 
 // vi.mock factories are hoisted above every top-level const, so the mock functions they
 // reference must be created via vi.hoisted() rather than plain consts above these calls.
-const { changeSubscriptionPlanMock, cancelDodoSubscriptionMock, removeScheduledCancellationMock } = vi.hoisted(() => ({
+const { changeSubscriptionPlanMock, cancelDodoSubscriptionMock, removeScheduledCancellationMock, cancelScheduledPlanChangeMock } = vi.hoisted(() => ({
   changeSubscriptionPlanMock: vi.fn(async () => ({})),
+  cancelScheduledPlanChangeMock: vi.fn(async () => {}),
   cancelDodoSubscriptionMock: vi.fn(async () => ({})),
   removeScheduledCancellationMock: vi.fn(async () => ({})),
 }));
 vi.mock('../src/lib/dodopayments.js', () => ({
   changeSubscriptionPlan: changeSubscriptionPlanMock,
+  cancelScheduledPlanChange: cancelScheduledPlanChangeMock,
   cancelSubscription: cancelDodoSubscriptionMock,
   removeScheduledCancellation: removeScheduledCancellationMock,
 }));
 
-const { updatePreapprovalMock } = vi.hoisted(() => ({ updatePreapprovalMock: vi.fn(async () => ({})) }));
-vi.mock('../src/lib/mercadopago.js', () => ({
+const { updatePreapprovalMock, createPreapprovalMock } = vi.hoisted(() => ({
+  updatePreapprovalMock: vi.fn(async () => ({})),
+  createPreapprovalMock: vi.fn(async (_input: any) => ({ id: 'pre_upgrade', init_point: 'https://mp.example/upgrade' })),
+}));
+vi.mock('../src/lib/mercadopago.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../src/lib/mercadopago.js')>()),
   updatePreapproval: updatePreapprovalMock,
+  createPreapproval: createPreapprovalMock,
 }));
 
 // Current-price lookup (planPriceService.ts, covered in planPriceService.test.ts) stubbed over the
@@ -73,6 +80,7 @@ vi.mock('../src/modules/tenant/planPriceService.js', async (importOriginal) => (
     const row = planPrices.find((p) => p.plan === plan && p.market === market);
     return row && row.launchPriceCents > 0 ? row : null;
   }),
+  lockedPlanPrice: vi.fn(async (sub: { planPriceId: string }) => planPrices.find((p) => p.id === sub.planPriceId) ?? null),
 }));
 
 import { changePlan, requestCancellation, resumeSubscription } from '../src/modules/tenant/subscriptionSelfServeService.js';
@@ -84,13 +92,40 @@ function resetMocks() {
   cancelDodoSubscriptionMock.mockClear();
   removeScheduledCancellationMock.mockClear();
   updatePreapprovalMock.mockClear();
+  createPreapprovalMock.mockClear();
+  cancelScheduledPlanChangeMock.mockClear();
+  planPrices.find((p) => p.id === 'pp_ar_starter')!.launchPriceCents = 0;
+  planPrices.find((p) => p.id === 'pp_ar_growth')!.launchPriceCents = 0;
 }
 
 describe('changePlan', () => {
   beforeEach(resetMocks);
 
+  const owner = { id: 'u1', email: 'owner@example.com' };
+  const DAY = 24 * 60 * 60 * 1000;
+
+  function dodoSub(overrides: Record<string, unknown> = {}) {
+    tenants.push({ id: 't1', plan: 'starter', lockedPriceCents: 1900 });
+    subscriptions.push({
+      id: 'sub1', tenantId: 't1', provider: 'dodopayments', externalSubscriptionId: 'sub_1', plan: 'starter',
+      status: 'active', currency: 'USD', lockedPriceCents: 1900, planPriceId: 'pp_intl_starter', pendingPlanPriceId: null,
+      currentPeriodEnd: new Date(Date.now() + 20 * DAY), ...overrides,
+    });
+  }
+
+  function mpSub(overrides: Record<string, unknown> = {}) {
+    planPrices.find((p) => p.id === 'pp_ar_starter')!.launchPriceCents = 3_000_000;
+    planPrices.find((p) => p.id === 'pp_ar_growth')!.launchPriceCents = 6_000_000;
+    tenants.push({ id: 't1', plan: 'starter', lockedPriceCents: 3_000_000 });
+    subscriptions.push({
+      id: 'sub1', tenantId: 't1', provider: 'mercadopago', externalSubscriptionId: 'pre_1', plan: 'starter',
+      status: 'active', currency: 'ARS', lockedPriceCents: 3_000_000, planPriceId: 'pp_ar_starter', pendingPlanPriceId: null,
+      currentPeriodEnd: new Date(Date.now() + 20 * DAY), ...overrides,
+    });
+  }
+
   it('rejects scale — no self-serve checkout for it', async () => {
-    const result = await changePlan('t1', 'scale' as any, 'u1');
+    const result = await changePlan('t1', 'scale' as any, owner);
     expect(result.success).toBe(false);
   });
 
@@ -98,61 +133,130 @@ describe('changePlan', () => {
     tenants.push({ id: 't1', plan: 'starter' });
     subscriptions.push({ tenantId: 't1', provider: null, externalSubscriptionId: null, plan: 'starter' });
 
-    const result = await changePlan('t1', 'growth', 'u1');
+    const result = await changePlan('t1', 'growth', owner);
     expect(result.success).toBe(false);
     expect(changeSubscriptionPlanMock).not.toHaveBeenCalled();
   });
 
-  it('calls the Dodo wrapper with the new plan\'s dodoProductId and updates plan/lockedPriceCents immediately on success', async () => {
-    tenants.push({ id: 't1', plan: 'starter', lockedPriceCents: 1900 });
-    subscriptions.push({
-      tenantId: 't1',
-      provider: 'dodopayments',
-      externalSubscriptionId: 'sub_1',
-      plan: 'starter',
-      currency: 'USD',
-    });
-
-    const result = await changePlan('t1', 'growth', 'u1');
-
-    expect(result.success).toBe(true);
-    expect(changeSubscriptionPlanMock).toHaveBeenCalledWith('sub_1', { productId: 'pdt_growth', extraSeatAddonId: 'adn_seat' });
+  it('rejects when the market price is not set (0 in the config)', async () => {
+    tenants.push({ id: 't1', plan: 'starter' });
+    subscriptions.push({ tenantId: 't1', provider: 'mercadopago', externalSubscriptionId: 'pre_2', plan: 'starter', status: 'active' });
+    expect((await changePlan('t1', 'growth', owner)).success).toBe(false);
     expect(updatePreapprovalMock).not.toHaveBeenCalled();
-    expect(subscriptions[0].plan).toBe('growth');
-    expect(subscriptions[0].lockedPriceCents).toBe(3900);
-    // A plan change re-pins the subscription onto current pricing.
-    expect(subscriptions[0].planPriceId).toBe('pp_intl_growth');
-    expect(tenants[0].plan).toBe('growth');
-    expect(tenants[0].lockedPriceCents).toBe(3900);
   });
 
-  it('calls the Mercado Pago wrapper (transactionAmount in decimal ARS, not cents)', async () => {
-    tenants.push({ id: 't1', plan: 'starter' });
-    subscriptions.push({
-      tenantId: 't1',
-      provider: 'mercadopago',
-      externalSubscriptionId: 'preapproval_1',
-      plan: 'starter',
-      currency: 'ARS',
+  describe('during the trial', () => {
+    it('Dodo: switches now, nothing charged', async () => {
+      dodoSub({ status: 'trialing' });
+
+      const result = await changePlan('t1', 'growth', owner);
+
+      expect(result).toEqual({ success: true, outcome: 'changed' });
+      expect(changeSubscriptionPlanMock).toHaveBeenCalledWith('sub_1', expect.objectContaining({ productId: 'pdt_growth', mode: 'now_no_charge' }));
+      expect(subscriptions[0]).toMatchObject({ plan: 'growth', lockedPriceCents: 3900, planPriceId: 'pp_intl_growth' });
+      expect(tenants[0].plan).toBe('growth');
     });
-    // AR pricing is 0 (not sold yet) in src/config/pricing.ts — bump it here so this test
-    // exercises the success path, not the "pricing not available" guard.
-    planPrices.find((p) => p.plan === 'growth' && p.market === 'ar')!.launchPriceCents = 5000;
 
-    const result = await changePlan('t1', 'growth', 'u1');
+    it('Mercado Pago: updates the recurring amount, switches now', async () => {
+      mpSub({ status: 'trialing' });
 
-    expect(result.success).toBe(true);
-    expect(updatePreapprovalMock).toHaveBeenCalledWith('preapproval_1', { transactionAmount: 50 });
-    expect(changeSubscriptionPlanMock).not.toHaveBeenCalled();
+      await changePlan('t1', 'growth', owner);
+
+      expect(updatePreapprovalMock).toHaveBeenCalledWith('pre_1', { transactionAmount: 60_000 });
+      expect(createPreapprovalMock).not.toHaveBeenCalled();
+      expect(subscriptions[0].plan).toBe('growth');
+    });
   });
 
-  it('rejects when the market price is the AR placeholder (0 cents)', async () => {
-    tenants.push({ id: 't1', plan: 'starter' });
-    subscriptions.push({ tenantId: 't1', provider: 'mercadopago', externalSubscriptionId: 'preapproval_2', plan: 'starter' });
+  describe('upgrade (active)', () => {
+    it('Dodo: charges the full Growth price now, restarting the cycle; the plan only switches once the charge is confirmed', async () => {
+      dodoSub();
 
-    const result = await changePlan('t1', 'starter', 'u1');
-    expect(result.success).toBe(false);
-    expect(updatePreapprovalMock).not.toHaveBeenCalled();
+      const result = await changePlan('t1', 'growth', owner);
+
+      expect(result).toEqual({ success: true, outcome: 'charging' });
+      expect(changeSubscriptionPlanMock).toHaveBeenCalledWith('sub_1', {
+        productId: 'pdt_growth',
+        extraSeatAddonId: 'adn_seat',
+        extraSeats: 0,
+        mode: 'upgrade_now',
+        metadata: { subscriptionId: 'sub1', planPriceId: 'pp_intl_growth', planChange: 'upgrade' },
+      });
+      expect(subscriptions[0].plan).toBe('starter');
+      expect(tenants[0].plan).toBe('starter');
+    });
+
+    it('Mercado Pago: creates a Growth preapproval charged now for the payer to confirm; nothing switches yet', async () => {
+      mpSub();
+
+      const result = await changePlan('t1', 'growth', owner);
+
+      expect(result).toEqual({ success: true, outcome: 'charging', initPoint: 'https://mp.example/upgrade' });
+      expect(createPreapprovalMock).toHaveBeenCalledWith(expect.objectContaining({
+        externalReference: 'sub1:pp_ar_growth',
+        payerEmail: 'owner@example.com',
+        transactionAmount: 60_000,
+      }));
+      // No free trial — MP charges it on authorization.
+      expect(createPreapprovalMock.mock.calls[0][0]).not.toHaveProperty('trialDays', expect.anything());
+      expect(updatePreapprovalMock).not.toHaveBeenCalled();
+      expect(subscriptions[0].plan).toBe('starter');
+    });
+
+    it('is refused while payment is overdue', async () => {
+      dodoSub({ status: 'past_due' });
+      expect((await changePlan('t1', 'growth', owner)).success).toBe(false);
+      expect(changeSubscriptionPlanMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('downgrade (active)', () => {
+    it('Dodo: schedules the change for the next billing date, keeps Growth until then', async () => {
+      dodoSub({ plan: 'growth', lockedPriceCents: 3900, planPriceId: 'pp_intl_growth' });
+      tenants[0].plan = 'growth';
+
+      const result = await changePlan('t1', 'starter', owner);
+
+      expect(result).toEqual({ success: true, outcome: 'scheduled', effectiveAt: subscriptions[0].currentPeriodEnd });
+      expect(changeSubscriptionPlanMock).toHaveBeenCalledWith('sub_1', expect.objectContaining({ productId: 'pdt_starter', mode: 'at_next_billing' }));
+      expect(subscriptions[0]).toMatchObject({ plan: 'growth', pendingPlanPriceId: 'pp_intl_starter' });
+      expect(tenants[0].plan).toBe('growth');
+    });
+
+    it('Mercado Pago: lowers the next charge, keeps Growth until then', async () => {
+      mpSub({ plan: 'growth', lockedPriceCents: 6_000_000, planPriceId: 'pp_ar_growth' });
+
+      await changePlan('t1', 'starter', owner);
+
+      expect(updatePreapprovalMock).toHaveBeenCalledWith('pre_1', { transactionAmount: 30_000 });
+      expect(subscriptions[0]).toMatchObject({ plan: 'growth', pendingPlanPriceId: 'pp_ar_starter' });
+    });
+  });
+
+  describe('choosing the current plan again', () => {
+    it('cancels a scheduled Dodo downgrade', async () => {
+      dodoSub({ plan: 'growth', planPriceId: 'pp_intl_growth', pendingPlanPriceId: 'pp_intl_starter' });
+
+      const result = await changePlan('t1', 'growth', owner);
+
+      expect(result).toEqual({ success: true, outcome: 'schedule_cancelled' });
+      expect(cancelScheduledPlanChangeMock).toHaveBeenCalledWith('sub_1');
+      expect(subscriptions[0].pendingPlanPriceId).toBeNull();
+    });
+
+    it('cancels a scheduled Mercado Pago downgrade by restoring the current amount', async () => {
+      mpSub({ plan: 'growth', lockedPriceCents: 6_000_000, planPriceId: 'pp_ar_growth', pendingPlanPriceId: 'pp_ar_starter' });
+
+      await changePlan('t1', 'growth', owner);
+
+      expect(updatePreapprovalMock).toHaveBeenCalledWith('pre_1', { transactionAmount: 60_000 });
+      expect(subscriptions[0].pendingPlanPriceId).toBeNull();
+    });
+
+    it('is refused when nothing is scheduled', async () => {
+      dodoSub();
+      expect((await changePlan('t1', 'starter', owner)).success).toBe(false);
+    });
   });
 });
 

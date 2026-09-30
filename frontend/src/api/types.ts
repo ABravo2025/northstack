@@ -112,6 +112,9 @@ export interface Subscription {
   includedSeats: number;
   extraSeats: number;
   extraSeatsCostCents: number;
+  // A downgrade scheduled for currentPeriodEnd (backend changePlan) — null when none.
+  pendingPlan: PlanTier | null;
+  pendingPlanPriceCents: number | null;
 }
 
 export interface Employee {

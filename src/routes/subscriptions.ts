@@ -93,12 +93,12 @@ subscriptionsRouter.post('/api/subscriptions/me/change-plan', async (req, res) =
     return res.status(400).json({ error: 'plan is required', field: 'plan' });
   }
 
-  const result = await changePlan(user.tenantId!, plan, user.id);
+  const result = await changePlan(user.tenantId!, plan, { id: user.id, email: user.email });
   if (!result.success) {
     return res.status(400).json({ error: result.error });
   }
 
-  return res.json({ success: true });
+  return res.json({ success: true, outcome: result.outcome, initPoint: result.initPoint, effectiveAt: result.effectiveAt ?? null });
 });
 
 subscriptionsRouter.post('/api/subscriptions/me/cancel', async (req, res) => {

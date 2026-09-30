@@ -1,5 +1,5 @@
 import prisma from '../../lib/prisma.js';
-import { updateSubscriptionSeats } from '../../lib/dodopayments.js';
+import { changeSubscriptionPlan, updateSubscriptionSeats } from '../../lib/dodopayments.js';
 import { updatePreapproval } from '../../lib/mercadopago.js';
 import { PRICING } from '../../config/pricing.js';
 import { lockedPlanPrice, marketForProvider, mercadoPagoAmount } from './planPriceService.js';
@@ -63,6 +63,30 @@ export async function syncSeatBilling(tenantId: string): Promise<void> {
   if (subscription.status === 'trialing') return;
 
   const activeSeats = await countActiveSeats(tenantId);
+
+  // A downgrade is scheduled (changePlan): the next charge must reflect the NEW plan's included
+  // seats and price, so the scheduled amount is recomputed instead of the current plan's. On Dodo
+  // that re-schedules the change with the new addon quantity; seats added during the rest of the
+  // current (higher) plan's period aren't prorated — they're billed from the next charge on.
+  if (subscription.pendingPlanPriceId) {
+    const pending = await prisma.planPrice.findUnique({ where: { id: subscription.pendingPlanPriceId } });
+    if (pending && (pending.plan === 'starter' || pending.plan === 'growth')) {
+      const pendingExtraSeats = extraSeatsFor(pending.plan, activeSeats);
+      if (subscription.provider === 'dodopayments') {
+        if (!pending.dodoProductId) return;
+        await changeSubscriptionPlan(subscription.externalSubscriptionId, {
+          productId: pending.dodoProductId,
+          extraSeatAddonId: pending.dodoExtraSeatAddonId,
+          extraSeats: pendingExtraSeats,
+          mode: 'at_next_billing',
+        });
+      } else {
+        await updatePreapproval(subscription.externalSubscriptionId, { transactionAmount: mercadoPagoAmount(pending, pendingExtraSeats) });
+      }
+      return;
+    }
+  }
+
   const extraSeats = extraSeatsFor(tenant.plan, activeSeats);
 
   // The subscription's own locked row, not the latest price — seat changes must never reprice an

@@ -300,6 +300,28 @@ días después).
   (`removeScheduledChange` en `paddle.ts`), o Paddle cancela la suscripción en la fecha programada
   igual, sin importar lo que diga nuestra base.
 
+### Cambio de plan — política vigente (2026-09-30, reemplaza "sin prorrateo" de arriba)
+
+Decisión de Alejandro. `changePlan` (`subscriptionSelfServeService.ts`):
+
+- **Durante el trial** (`status: trialing`, tarjeta ya cargada): el cambio es inmediato y no cobra
+  nada; el primer cobro al terminar el trial ya es al precio nuevo.
+- **Upgrade (Starter → Growth), suscripción activa:** se cobra **hoy el precio completo** del plan
+  nuevo y **el ciclo mensual arranca de nuevo hoy**, sin crédito por lo no usado. El plan cambia
+  recién cuando se confirma el cobro.
+  - Dodo: `changePlan` con `full_immediately` + `prevent_change` (si el cobro falla, sigue en el plan
+    anterior y el webhook `payment.failed` con `metadata.planChange=upgrade` no lo pasa a `past_due`).
+    El `payment.succeeded` con esa metadata aplica el plan.
+  - Mercado Pago: un preapproval autorizado no puede cobrar fuera de fecha ni mover su fecha de cobro
+    (probado 2026-09-30: `start_date` en el PUT se ignora), así que se crea un **preapproval nuevo de
+    Growth sin trial** que el pagador confirma en MP; al quedar `authorized` aplica plan + período y
+    cancela el viejo.
+- **Downgrade (Growth → Starter):** sigue en Growth hasta `currentPeriodEnd`; el monto nuevo aplica
+  en el próximo cobro (Dodo `effective_at: next_billing_date`, MP actualiza el monto) y
+  `Subscription.pendingPlanPriceId` guarda el cambio hasta que el cobro de renovación lo aplica.
+  Elegir de nuevo el plan actual lo cancela (Dodo `cancelChangePlan`, MP restaura el monto).
+- Con `past_due`/`suspended` no se puede cambiar de plan (primero regularizar el pago).
+
 ## Mapeo de fechas mostradas en UI
 
 El mockup de `/settings/billing` (`settings-billing-flow-mockup.html`) muestra una fecha distinta

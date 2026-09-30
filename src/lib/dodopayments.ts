@@ -94,28 +94,47 @@ export async function getCustomerPortalUrl(externalSubscriptionId: string, retur
 
 export interface ChangeSubscriptionPlanInput {
   productId: string; // PlanPrice.dodoProductId of the new plan
-  // The new plan's PlanPrice row seat price (2026-09-26): a plan change moves the subscriber onto
-  // current pricing for seats too, so any extra-seat quantity is carried over onto this addon.
-  extraSeatAddonId?: string | null;
+  extraSeatAddonId?: string | null; // the new plan's PlanPrice row seat addon
+  extraSeats: number; // extra-seat quantity under the NEW plan's included seats
+  // 2026-09-30 (Alejandro's plan-change policy):
+  //   - 'upgrade_now': full new price charged today, billing cycle restarts today, no credit for the
+  //     unused old period (`full_immediately`). `prevent_change`: if that charge fails the
+  //     subscription stays on the old plan.
+  //   - 'at_next_billing': a downgrade — nothing charged, Dodo switches the product on the next
+  //     billing date (native scheduled change).
+  //   - 'now_no_charge': during the trial — switch right away, nothing charged (the first real
+  //     charge at trial end is simply at the new price).
+  mode: 'upgrade_now' | 'at_next_billing' | 'now_no_charge';
+  // Payment metadata for 'upgrade_now' — replaces the subscription's own metadata on that payment,
+  // so it must carry subscriptionId too (the webhook's join key).
+  metadata?: Record<string, string>;
 }
 
-// Self-serve change-plan (Etapa D) — `proration_billing_mode: 'do_not_bill'` per the spec ("Sin
-// prorrateo"): the new price only applies starting the next billing date, nothing charged now.
-//
-// Re-sends the subscription's CURRENT addons (seatService.ts's "extra seat" addon) rather than
-// omitting the field — changePlan's request body is a full replace of the cart, and the SDK's own
-// doc on `addons` says "leaving this empty would remove any existing addons". Without this, a
-// Starter<->Growth tier change would silently wipe whatever extra-seat quantity was billed,
-// undercharging the tenant from that point on.
+// Any mode replaces a still-scheduled change (cancel_scheduled_change_plan), so a later choice
+// always wins over an earlier scheduled downgrade.
 export async function changeSubscriptionPlan(externalSubscriptionId: string, input: ChangeSubscriptionPlanInput): Promise<void> {
+  const addons = input.extraSeats > 0 ? [{ addon_id: extraSeatAddonId(input.extraSeatAddonId), quantity: input.extraSeats }] : [];
+  const base = { product_id: input.productId, quantity: 1, addons, cancel_scheduled_change_plan: true };
   const client = getClient();
-  const current = await client.subscriptions.retrieve(externalSubscriptionId);
-  await client.subscriptions.changePlan(externalSubscriptionId, {
-    product_id: input.productId,
-    quantity: 1,
-    proration_billing_mode: 'do_not_bill',
-    addons: current.addons.map((a) => ({ addon_id: extraSeatAddonId(input.extraSeatAddonId), quantity: a.quantity })),
-  });
+  if (input.mode === 'upgrade_now') {
+    await client.subscriptions.changePlan(externalSubscriptionId, {
+      ...base,
+      proration_billing_mode: 'full_immediately',
+      effective_at: 'immediately',
+      on_payment_failure: 'prevent_change',
+      ...(input.metadata ? { metadata: input.metadata } : {}),
+    });
+  } else if (input.mode === 'at_next_billing') {
+    await client.subscriptions.changePlan(externalSubscriptionId, { ...base, proration_billing_mode: 'do_not_bill', effective_at: 'next_billing_date' });
+  } else {
+    await client.subscriptions.changePlan(externalSubscriptionId, { ...base, proration_billing_mode: 'do_not_bill', effective_at: 'immediately' });
+  }
+}
+
+// Drops a scheduled (next_billing_date) plan change — the tenant changed their mind about a
+// downgrade before it applied.
+export async function cancelScheduledPlanChange(externalSubscriptionId: string): Promise<void> {
+  await getClient().subscriptions.cancelChangePlan(externalSubscriptionId);
 }
 
 export interface UpdateSubscriptionSeatsInput {

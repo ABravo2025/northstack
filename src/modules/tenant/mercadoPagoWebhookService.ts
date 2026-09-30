@@ -48,16 +48,16 @@ export async function handleMercadoPagoPreapproval(preapproval: MercadoPagoPreap
     }
 
     const supersededId = subscription.provider === 'mercadopago' ? subscription.externalSubscriptionId : null;
-    const isFirstSubscribe = subscription.provider === null;
     const hasTrial = Boolean(preapproval.auto_recurring?.free_trial);
 
-    // Plan and price are only confirmed here, on a first subscribe (checkoutService.ts writes
-    // neither at checkout): the exact PlanPrice row the checkout was priced from, which also pins
-    // the subscription to it (grandfathered). lockedPriceCents is the base plan price, seat
-    // surcharge excluded, same as changePlan and the Dodo webhook.
-    const planPrice = isFirstSubscribe && planPriceId ? await prisma.planPrice.findUnique({ where: { id: planPriceId } }) : null;
+    // Plan and price are only confirmed here — on a first subscribe (checkoutService.ts writes
+    // neither at checkout) and on an upgrade (changePlan creates a new preapproval priced from the
+    // new plan's row): the exact PlanPrice row it was priced from, which also pins the subscription
+    // to it. lockedPriceCents is the base plan price, seat surcharge excluded, same as changePlan
+    // and the Dodo webhook. Any scheduled downgrade is superseded by this choice.
+    const planPrice = planPriceId ? await prisma.planPrice.findUnique({ where: { id: planPriceId } }) : null;
     const planFields = planPrice
-      ? { plan: planPrice.plan, lockedPriceCents: planPrice.launchPriceCents, planPriceId: planPrice.id }
+      ? { plan: planPrice.plan, lockedPriceCents: planPrice.launchPriceCents, planPriceId: planPrice.id, pendingPlanPriceId: null }
       : null;
 
     await syncSubscriptionAndTenant({
@@ -68,7 +68,16 @@ export async function handleMercadoPagoPreapproval(preapproval: MercadoPagoPreap
       // tenant actually billed in ARS — every invoice would inherit the wrong currency label.
       ...(preapproval.auto_recurring ? { currency: preapproval.auto_recurring.currency_id } : {}),
       ...(planFields ?? {}),
-      ...(hasTrial ? {} : { status: 'active' as const, currentPeriodStart: new Date() }),
+      // No trial: MP charges this preapproval right away, so the paid period starts now and runs to
+      // its next charge (the authorized_payment webhook sets the same dates; this covers it arriving
+      // first, when that charge can't yet tell the new preapproval is the current one).
+      ...(hasTrial
+        ? {}
+        : {
+            status: 'active' as const,
+            currentPeriodStart: new Date(),
+            ...(preapproval.next_payment_date ? { currentPeriodEnd: new Date(preapproval.next_payment_date) } : {}),
+          }),
     });
 
     if (supersededId) {
@@ -150,6 +159,14 @@ export async function handleMercadoPagoAuthorizedPayment(payment: MercadoPagoAut
       ? new Date(preapproval.next_payment_date)
       : new Date(periodStart.getTime() + ONE_MONTH_MS);
 
+    // A downgrade scheduled by changePlan applies with this charge — the first one billed at the
+    // new amount.
+    const pending =
+      isCurrent && subscription.pendingPlanPriceId
+        ? await prisma.planPrice.findUnique({ where: { id: subscription.pendingPlanPriceId } })
+        : null;
+    const lockedPriceCents = pending ? pending.launchPriceCents : subscription.lockedPriceCents;
+
     if (isCurrent) {
       await syncSubscriptionAndTenant({
         tenantId: subscription.tenantId,
@@ -158,6 +175,9 @@ export async function handleMercadoPagoAuthorizedPayment(payment: MercadoPagoAut
         currentPeriodEnd: periodEnd,
         gracePeriodEndsAt: null,
         ...(payment.payment_method_id ? { paymentMethodBrand: payment.payment_method_id } : {}),
+        ...(pending
+          ? { plan: pending.plan, lockedPriceCents: pending.launchPriceCents, planPriceId: pending.id, pendingPlanPriceId: null }
+          : {}),
       });
       await bestEffort(syncSeatBilling(subscription.tenantId), `syncSeatBilling(${subscription.tenantId})`);
     }
@@ -165,7 +185,7 @@ export async function handleMercadoPagoAuthorizedPayment(payment: MercadoPagoAut
     // What MP actually charged, split into the locked base price and the rest (extra seats, the
     // only other thing folded into transaction_amount, see seatService.ts).
     const amountCents = Math.round(payment.transaction_amount * 100);
-    const baseAmountCents = Math.min(subscription.lockedPriceCents, amountCents);
+    const baseAmountCents = Math.min(lockedPriceCents, amountCents);
     await prisma.invoice.create({
       data: {
         subscriptionId: subscription.id,

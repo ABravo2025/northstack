@@ -1,9 +1,10 @@
 import prisma from '../../lib/prisma.js';
-import { syncSubscriptionAndTenant } from './subscriptionService.js';
-import { cancelSubscription as cancelDodoSubscription, removeScheduledCancellation, changeSubscriptionPlan } from '../../lib/dodopayments.js';
-import { updatePreapproval } from '../../lib/mercadopago.js';
+import { recordSubscriptionActionAttempt, syncSubscriptionAndTenant } from './subscriptionService.js';
+import { cancelSubscription as cancelDodoSubscription, cancelScheduledPlanChange, removeScheduledCancellation, changeSubscriptionPlan } from '../../lib/dodopayments.js';
+import { buildExternalReference, createPreapproval, updatePreapproval } from '../../lib/mercadopago.js';
+import { billingReturnUrl } from './checkoutService.js';
 import { countActiveSeats, extraSeatsFor } from './seatService.js';
-import { currentPlanPrice, marketForProvider, mercadoPagoAmount } from './planPriceService.js';
+import { currentPlanPrice, lockedPlanPrice, marketForProvider, mercadoPagoAmount } from './planPriceService.js';
 import { CURRENT_PLAN_PRICES_CENTS } from './planService.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { tenantActivityFieldConfig } from '../activity/fieldConfigs/tenantFieldConfig.js';
@@ -14,11 +15,33 @@ export interface SelfServeResult {
   error?: string;
 }
 
-// POST /api/subscriptions/me/change-plan (task-breakdown Unidad 13) — only for a subscription
-// that already has a real provider attached; a trialing tenant without one should keep using
-// PATCH /api/tenants/me/plan (the pre-billing plan-selection flow). No proration in either
-// provider (spec: "Sin prorrateo").
-export async function changePlan(tenantId: string, plan: PlanTier, userId: string): Promise<SelfServeResult> {
+export interface ChangePlanResult extends SelfServeResult {
+  // 'changed' — applied now (trial); 'charging' — upgrade charge started, the plan switches when
+  // the provider confirms it (Mercado Pago: the payer confirms at `initPoint` first); 'scheduled' —
+  // downgrade applies on `effectiveAt`; 'schedule_cancelled' — a scheduled downgrade was dropped.
+  outcome?: 'changed' | 'charging' | 'scheduled' | 'schedule_cancelled';
+  initPoint?: string;
+  effectiveAt?: Date | null;
+}
+
+const PLAN_RANK: Record<'starter' | 'growth', number> = { starter: 1, growth: 2 };
+
+// POST /api/subscriptions/me/change-plan — only for a subscription with a real provider attached;
+// a Free Trial tenant without one goes through checkout instead. Policy (Alejandro, 2026-09-30):
+//   - during the trial: switch now, nothing charged;
+//   - upgrade: charge the new plan's full price today and restart the billing cycle today, no credit
+//     for the unused old period; the plan only switches once that charge is confirmed. Dodo charges
+//     the card on file; Mercado Pago can't charge off-schedule or move a preapproval's billing date,
+//     so it's a new Growth preapproval the payer confirms (the old one is cancelled once it's
+//     authorized — mercadoPagoWebhookService.ts);
+//   - downgrade: keep the current plan until the end of the period already paid, the new plan and
+//     price apply from the next charge (Subscription.pendingPlanPriceId until then);
+//   - choosing the current plan again while a downgrade is scheduled cancels it.
+export async function changePlan(
+  tenantId: string,
+  plan: PlanTier,
+  user: { id: string; email: string },
+): Promise<ChangePlanResult> {
   if (plan !== 'starter' && plan !== 'growth') {
     return { success: false, error: 'This plan is not available for self-service selection yet.' };
   }
@@ -27,49 +50,100 @@ export async function changePlan(tenantId: string, plan: PlanTier, userId: strin
   if (!subscription || !subscription.provider || !subscription.externalSubscriptionId) {
     return { success: false, error: 'No active paid subscription to change. Add a payment method first.' };
   }
+  const externalId = subscription.externalSubscriptionId;
+  const market = marketForProvider(subscription.provider, null);
+  const currentPlan = subscription.plan as 'starter' | 'growth';
+  const activeSeats = await countActiveSeats(tenantId);
+
+  if (plan === currentPlan) {
+    if (!subscription.pendingPlanPriceId) {
+      return { success: false, error: 'You are already on this plan.' };
+    }
+    if (subscription.provider === 'dodopayments') {
+      await cancelScheduledPlanChange(externalId);
+    } else {
+      // The amount was already lowered for the next charge — put the current plan's back.
+      const locked = await lockedPlanPrice({ ...subscription, plan: currentPlan }, market);
+      if (!locked) {
+        return { success: false, error: 'Pricing for this plan is not available yet.' };
+      }
+      await updatePreapproval(externalId, { transactionAmount: mercadoPagoAmount(locked, extraSeatsFor(currentPlan, activeSeats)) });
+    }
+    await syncSubscriptionAndTenant({ tenantId, pendingPlanPriceId: null, changedByUserId: user.id });
+    return { success: true, outcome: 'schedule_cancelled' };
+  }
 
   // A plan change moves the subscriber onto current pricing (src/config/pricing.ts) for both the
   // new plan and its seat price — they're choosing a new product, so grandfathering ends here.
-  const planPrice = await currentPlanPrice(plan, marketForProvider(subscription.provider, null));
-  if (!planPrice) {
+  const planPrice = await currentPlanPrice(plan, market);
+  if (!planPrice || (subscription.provider === 'dodopayments' && !planPrice.dodoProductId)) {
     return { success: false, error: 'Pricing for this plan is not available yet.' };
   }
+  const extraSeats = extraSeatsFor(plan, activeSeats);
 
-  if (subscription.provider === 'dodopayments') {
-    if (!planPrice.dodoProductId) {
-      return { success: false, error: 'Pricing for this plan is not available yet.' };
+  if (subscription.status === 'trialing') {
+    if (subscription.provider === 'dodopayments') {
+      await changeSubscriptionPlan(externalId, {
+        productId: planPrice.dodoProductId!,
+        extraSeatAddonId: planPrice.dodoExtraSeatAddonId,
+        extraSeats,
+        mode: 'now_no_charge',
+      });
+    } else {
+      await updatePreapproval(externalId, { transactionAmount: mercadoPagoAmount(planPrice, extraSeats) });
     }
-    // Extra-seat quantity is carried over onto the new row's addon — see changeSubscriptionPlan's
-    // own comment in dodopayments.ts.
-    await changeSubscriptionPlan(subscription.externalSubscriptionId, {
-      productId: planPrice.dodoProductId,
-      extraSeatAddonId: planPrice.dodoExtraSeatAddonId,
+    await syncSubscriptionAndTenant({
+      tenantId,
+      plan,
+      lockedPriceCents: planPrice.launchPriceCents,
+      planPriceId: planPrice.id,
+      pendingPlanPriceId: null,
+      changedByUserId: user.id,
     });
-  } else {
-    // Mercado Pago folds the seat surcharge into the single transaction_amount (no addon
-    // primitive — seatService.ts) — a tier change must recompute it against the NEW plan's
-    // included-seats threshold, or the surcharge silently reverts to whatever the old plan's
-    // math produced.
-    const activeSeats = await countActiveSeats(tenantId);
-    const extraSeats = extraSeatsFor(plan, activeSeats);
-    await updatePreapproval(subscription.externalSubscriptionId, {
-      transactionAmount: mercadoPagoAmount(planPrice, extraSeats),
-    });
+    return { success: true, outcome: 'changed' };
   }
 
-  // The provider's API response is itself the confirmation that the change was accepted — safe
-  // to reflect locally now (confirmed with Alejandro rather than assumed). Still takes effect at
-  // currentPeriodEnd on the provider's side (no proration), so the UI reads that existing field
-  // as "applies from", not "now" — no new schema field needed for a "scheduled" plan.
-  await syncSubscriptionAndTenant({
-    tenantId,
-    plan,
-    lockedPriceCents: planPrice.launchPriceCents,
-    planPriceId: planPrice.id,
-    changedByUserId: userId,
-  });
+  if (subscription.status !== 'active') {
+    return { success: false, error: 'Plan changes are available once your subscription is up to date. Update your payment method first.' };
+  }
 
-  return { success: true };
+  if (PLAN_RANK[plan] > PLAN_RANK[currentPlan]) {
+    // Attribution for the webhook that applies it (see subscriptionService.ts).
+    await recordSubscriptionActionAttempt(tenantId, user.id);
+    if (subscription.provider === 'dodopayments') {
+      await changeSubscriptionPlan(externalId, {
+        productId: planPrice.dodoProductId!,
+        extraSeatAddonId: planPrice.dodoExtraSeatAddonId,
+        extraSeats,
+        mode: 'upgrade_now',
+        // Read back by routes/webhooks.ts's payment.succeeded / payment.failed.
+        metadata: { subscriptionId: subscription.id, planPriceId: planPrice.id, planChange: 'upgrade' },
+      });
+      return { success: true, outcome: 'charging' };
+    }
+    const preapproval = await createPreapproval({
+      externalReference: buildExternalReference(subscription.id, planPrice.id),
+      reason: `Northstack — ${plan} (AR)`,
+      payerEmail: user.email,
+      transactionAmount: mercadoPagoAmount(planPrice, extraSeats),
+      backUrl: billingReturnUrl(),
+    });
+    return { success: true, outcome: 'charging', initPoint: preapproval.init_point };
+  }
+
+  // Downgrade — scheduled for the next charge.
+  if (subscription.provider === 'dodopayments') {
+    await changeSubscriptionPlan(externalId, {
+      productId: planPrice.dodoProductId!,
+      extraSeatAddonId: planPrice.dodoExtraSeatAddonId,
+      extraSeats,
+      mode: 'at_next_billing',
+    });
+  } else {
+    await updatePreapproval(externalId, { transactionAmount: mercadoPagoAmount(planPrice, extraSeats) });
+  }
+  await syncSubscriptionAndTenant({ tenantId, pendingPlanPriceId: planPrice.id, changedByUserId: user.id });
+  return { success: true, outcome: 'scheduled', effectiveAt: subscription.currentPeriodEnd };
 }
 
 // POST /api/subscriptions/me/cancel (Unidad 14). Tenant.status only flips to 'cancelled' once

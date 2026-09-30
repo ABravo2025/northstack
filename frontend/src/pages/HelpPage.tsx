@@ -103,7 +103,7 @@ const FAQ_CATEGORIES: FaqCategory[] = [
       },
       {
         q: 'Can I switch plans mid-cycle?',
-        a: "Yes. If you're already on a paid plan, the change is scheduled for your next billing date. If you're still in your trial with no card on file, choosing a new plan goes straight to checkout.",
+        a: "Yes. Upgrading charges the new plan's full price right away and restarts your monthly billing cycle from that day (the unused part of your old plan isn't refunded). Downgrading keeps your current plan until your next charge date and applies from then. During your trial, switching is immediate and free; with no card on file yet, choosing a plan goes straight to checkout.",
       },
     ],
   },
@@ -311,7 +311,7 @@ const FAQ_CATEGORIES_ES: FaqCategory[] = [
       },
       {
         q: '¿Puedo cambiar de plan a mitad de ciclo?',
-        a: 'Sí. Si ya estás en un plan pago, el cambio queda programado para tu próxima fecha de facturación. Si todavía estás en la prueba y no tenés una tarjeta cargada, elegir un plan nuevo te lleva directo al checkout.',
+        a: 'Sí. Subir de plan cobra en el momento el precio completo del plan nuevo y tu ciclo mensual arranca de nuevo ese día (lo que quedaba de tu plan anterior no se reintegra). Bajar de plan mantiene tu plan actual hasta tu próxima fecha de cobro y se aplica desde ahí. Durante la prueba, cambiar es inmediato y sin costo; si todavía no cargaste una tarjeta, elegir un plan te lleva directo al checkout.',
       },
     ],
   },

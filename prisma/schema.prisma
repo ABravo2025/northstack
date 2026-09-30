@@ -409,7 +409,12 @@ model Subscription {
   // subscriptions confirmed before this existed, and for any not confirmed yet: those read the
   // market's latest row instead (planPriceService.ts's lockedPlanPrice).
   planPriceId             String?
-  planPrice               PlanPrice?         @relation(fields: [planPriceId], references: [id])
+  planPrice               PlanPrice?         @relation("SubscriptionPlanPrice", fields: [planPriceId], references: [id])
+  // A downgrade scheduled for the next billing date (2026-09-30): the tenant keeps its current plan
+  // until the next successful renewal charge, which applies this row (plan + price) and clears it.
+  // Null when nothing is scheduled. See subscriptionSelfServeService.ts's changePlan.
+  pendingPlanPriceId      String?
+  pendingPlanPrice        PlanPrice?         @relation("SubscriptionPendingPlanPrice", fields: [pendingPlanPriceId], references: [id])
   currency                String // "USD" (Dodo Payments) | "ARS" (Mercado Pago)
   trialEndsAt             DateTime?
   gracePeriodEndsAt       DateTime?
@@ -488,7 +493,8 @@ model PlanPrice {
   dodoExtraSeatAddonId String?
   effectiveFrom        DateTime       @default(now())
   createdAt            DateTime       @default(now())
-  subscriptions        Subscription[]
+  subscriptions        Subscription[] @relation("SubscriptionPlanPrice")
+  pendingSubscriptions Subscription[] @relation("SubscriptionPendingPlanPrice")
 
   @@index([plan, market])
 }

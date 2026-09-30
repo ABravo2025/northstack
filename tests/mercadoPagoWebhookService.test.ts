@@ -84,6 +84,7 @@ describe('handleMercadoPagoPreapproval — first subscribe', () => {
       plan: 'growth',
       lockedPriceCents: 3_000_000,
       planPriceId: 'pp_ar_growth',
+      pendingPlanPriceId: null,
     });
     expect(updatePreapprovalMock).not.toHaveBeenCalled();
   });
@@ -119,7 +120,10 @@ describe('handleMercadoPagoPreapproval — replacement preapproval (update payme
       preapproval({ external_reference: 'sub1:pp_ar_starter', auto_recurring: { transaction_amount: 15000, currency_id: 'ARS', free_trial: FREE_TRIAL } }),
     );
 
-    expect(syncMock).toHaveBeenCalledWith({ tenantId: 't1', provider: 'mercadopago', externalSubscriptionId: 'pre_new', currency: 'ARS' });
+    expect(syncMock).toHaveBeenCalledWith({
+      tenantId: 't1', provider: 'mercadopago', externalSubscriptionId: 'pre_new', currency: 'ARS',
+      plan: 'starter', lockedPriceCents: 1_500_000, planPriceId: 'pp_ar_starter', pendingPlanPriceId: null,
+    });
     expect(updatePreapprovalMock).toHaveBeenCalledWith('pre_old', { status: 'cancelled' });
     expect(syncMock.mock.invocationCallOrder[0]).toBeLessThan(updatePreapprovalMock.mock.invocationCallOrder[0]);
   });
@@ -248,5 +252,37 @@ describe('handleMercadoPagoAuthorizedPayment', () => {
     await handleMercadoPagoAuthorizedPayment(authorizedPayment());
     expect(syncMock).not.toHaveBeenCalled();
     expect(invoices).toHaveLength(1);
+  });
+});
+
+describe('plan changes (2026-09-30)', () => {
+  it('an upgrade preapproval (no trial) switches plan, restarts the period and cancels the old preapproval', async () => {
+    subscriptions.push({ id: 'sub1', tenantId: 't1', provider: 'mercadopago', externalSubscriptionId: 'pre_old', plan: 'starter', status: 'active', pendingPlanPriceId: null });
+
+    await handleMercadoPagoPreapproval(preapproval({ next_payment_date: '2026-10-30T10:00:00.000-04:00' }));
+
+    expect(syncMock).toHaveBeenCalledWith(expect.objectContaining({
+      plan: 'growth',
+      planPriceId: 'pp_ar_growth',
+      status: 'active',
+      currentPeriodStart: expect.any(Date),
+      currentPeriodEnd: new Date('2026-10-30T10:00:00.000-04:00'),
+      externalSubscriptionId: 'pre_new',
+    }));
+    expect(updatePreapprovalMock).toHaveBeenCalledWith('pre_old', { status: 'cancelled' });
+  });
+
+  it('a scheduled downgrade applies with the renewal charge, and the invoice base is the new price', async () => {
+    subscriptions.push({
+      id: 'sub1', tenantId: 't1', provider: 'mercadopago', externalSubscriptionId: 'pre_new', plan: 'growth',
+      status: 'active', lockedPriceCents: 3_000_000, currency: 'ARS', pendingPlanPriceId: 'pp_ar_starter',
+    });
+
+    await handleMercadoPagoAuthorizedPayment(authorizedPayment({ preapproval_id: 'pre_new', transaction_amount: 15000 }));
+
+    expect(syncMock).toHaveBeenCalledWith(expect.objectContaining({
+      plan: 'starter', lockedPriceCents: 1_500_000, planPriceId: 'pp_ar_starter', pendingPlanPriceId: null,
+    }));
+    expect(invoices[0]).toMatchObject({ amountCents: 1_500_000, baseAmountCents: 1_500_000, extraSeatsAmountCents: 0 });
   });
 });

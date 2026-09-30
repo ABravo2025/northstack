@@ -32,6 +32,7 @@ export async function resolvePlanPriceFromDodoProductId(productId: string) {
 const BILLING_SUMMARY_SELECT = {
   plan: true,
   planPrice: { select: { extraSeatPriceCents: true } },
+  pendingPlanPrice: { select: { plan: true, launchPriceCents: true, currency: true } },
   status: true,
   provider: true,
   currency: true,
@@ -112,8 +113,14 @@ export async function getBillingSummary(tenantId: string) {
   };
 
   if (subscription) {
-    const { planPrice: _planPrice, ...rest } = subscription;
-    return { ...rest, ...seatInfo };
+    const { planPrice: _planPrice, pendingPlanPrice, ...rest } = subscription;
+    return {
+      ...rest,
+      ...seatInfo,
+      // A downgrade scheduled for currentPeriodEnd (changePlan) — null when none.
+      pendingPlan: pendingPlanPrice?.plan ?? null,
+      pendingPlanPriceCents: pendingPlanPrice?.launchPriceCents ?? null,
+    };
   }
 
   // Self-heal: a tenant created before Billing Integration shipped has no Subscription row
@@ -190,6 +197,7 @@ export interface SyncSubscriptionAndTenantInput {
   externalSubscriptionId?: string | null;
   lockedPriceCents?: number;
   planPriceId?: string | null; // the PlanPrice row the subscription is pinned to (planPriceService.ts)
+  pendingPlanPriceId?: string | null; // a downgrade scheduled for the next charge (changePlan)
   currency?: string;
   trialEndsAt?: Date | null;
   gracePeriodEndsAt?: Date | null;

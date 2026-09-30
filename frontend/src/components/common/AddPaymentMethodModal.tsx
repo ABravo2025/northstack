@@ -7,6 +7,9 @@ import { redirectToCheckout } from '../../lib/checkout';
 interface AddPaymentMethodModalProps {
   open: boolean;
   token: string;
+  // Mercado Pago's card change happens in the payer's own MP account (checkoutService.ts), so the
+  // copy says so instead of promising a checkout.
+  provider: 'dodopayments' | 'mercadopago' | null;
   onClose: () => void;
 }
 
@@ -29,7 +32,7 @@ interface AddPaymentMethodModalProps {
 // modal can't do it, open a new tab" rule). Never a card form of our own, per the spec's "nunca
 // tocamos datos de tarjeta". BillingPage.tsx refetches on window focus (the original tab stays in
 // place) rather than relying on a same-tab redirect completing.
-export default function AddPaymentMethodModal({ open, token, onClose }: AddPaymentMethodModalProps) {
+export default function AddPaymentMethodModal({ open, token, provider, onClose }: AddPaymentMethodModalProps) {
   const toast = useToast();
   const { t } = useTranslation('settingsPages');
   const [loading, setLoading] = useState(false);
@@ -49,14 +52,18 @@ export default function AddPaymentMethodModal({ open, token, onClose }: AddPayme
   return (
     <Modal open={open} title={t('addPaymentMethod.title')} onClose={onClose}>
       <p className="text-sm text-ink-muted mb-4">
-        {t('addPaymentMethod.description')}
+        {provider === 'mercadopago' ? t('addPaymentMethod.descriptionMercadoPago') : t('addPaymentMethod.description')}
       </p>
       <div className="flex justify-end gap-2">
         <button type="button" className="btn-ghost" onClick={onClose} disabled={loading}>
           {t('addPaymentMethod.cancel')}
         </button>
         <button type="button" className="btn btn-primary" onClick={handleStart} disabled={loading}>
-          {loading ? t('addPaymentMethod.starting') : t('addPaymentMethod.continue')}
+          {loading
+            ? t('addPaymentMethod.starting')
+            : provider === 'mercadopago'
+              ? t('addPaymentMethod.openMercadoPago')
+              : t('addPaymentMethod.continue')}
         </button>
       </div>
     </Modal>

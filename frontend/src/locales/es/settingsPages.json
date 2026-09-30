@@ -278,7 +278,9 @@
     "description": "Vas a ser redirigido a nuestro proveedor de pagos (en una pestaña nueva) para reemplazar tu método de pago de forma segura. Tu nueva tarjeta queda activa de inmediato — Northstack nunca ve ni guarda los datos de tu tarjeta.",
     "cancel": "Cancelar",
     "starting": "Iniciando…",
-    "continue": "Continuar"
+    "continue": "Continuar",
+    "descriptionMercadoPago": "Con Mercado Pago cambiás la tarjeta desde tu propia cuenta de Mercado Pago, sobre la misma suscripción — sin autorizar nada nuevo y sin cobros extra. Te abrimos la guía de Mercado Pago en una pestaña nueva.",
+    "openMercadoPago": "Abrir Mercado Pago"
   },
   "billing": {
     "loadError": "No se pudieron cargar los datos de facturación: {{message}}",
@@ -317,6 +319,7 @@
     "resumeSubscription": "Reanudar suscripción",
     "paymentMethodCardTitle": "Método de pago",
     "cardOnFile": "Tarjeta registrada",
+    "mercadoPagoBalance": "Saldo de Mercado Pago",
     "updatePaymentMethod": "Actualizar método de pago",
     "noPaymentMethod": "Todavía no hay un método de pago registrado — usá Cambiar plan arriba para agregar uno.",
     "invoicesCardTitle": "Facturas",

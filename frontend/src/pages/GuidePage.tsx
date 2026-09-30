@@ -1920,7 +1920,7 @@ export default function GuidePage() {
               <h3>Suscribirse, cambiar, y cancelar</h3>
               <ul>
                 <li><strong>Change plan</strong> (Cambiar plan) es el único punto de entrada para todo: ¿todavía estás en la prueba gratuita? Te lleva directo al checkout seguro de tu proveedor de pago en una pestaña nueva, y tu plan recién se actualiza de verdad cuando se confirma ese pago. ¿Ya estás pagando? El cambio toma efecto en tu próxima fecha de facturación en cambio.</li>
-                <li><strong>Update payment method</strong> (Actualizar método de pago) usa el mismo flujo de checkout, para reemplazar la tarjeta de tu suscripción existente.</li>
+                <li><strong>Update payment method</strong> (Actualizar método de pago) reemplaza la tarjeta de tu suscripción existente: con Dodo Payments en su portal de pagos; con Mercado Pago desde tu propia cuenta de Mercado Pago, sobre la misma suscripción, sin autorizar nada nuevo ni cobros extra.</li>
                 <li><strong>Cancel subscription</strong> (Cancelar suscripción) mantiene tu acceso hasta el final del período que ya pagaste — hasta entonces aparece un botón <strong>Resume subscription</strong> (Reanudar suscripción) por si cambiás de idea.</li>
               </ul>
               <p>
@@ -1996,7 +1996,7 @@ export default function GuidePage() {
               <h3>Subscribing, changing, and cancelling</h3>
               <ul>
                 <li><strong>Change plan</strong> is the one entry point for everything: still on Free Trial? It goes straight to your payment provider's secure checkout in a new tab, and your plan only actually updates once that payment is confirmed. Already paying? The change takes effect at your next billing date instead.</li>
-                <li><strong>Update payment method</strong> uses the same checkout flow, to replace the card on your existing subscription.</li>
+                <li><strong>Update payment method</strong> replaces the card on your existing subscription: with Dodo Payments in its payment portal; with Mercado Pago from your own Mercado Pago account, on the same subscription, with no new authorization or extra charge.</li>
                 <li><strong>Cancel subscription</strong> keeps your access through the end of the period you already paid for — a <strong>Resume subscription</strong> button appears until then if you change your mind.</li>
               </ul>
               <p>

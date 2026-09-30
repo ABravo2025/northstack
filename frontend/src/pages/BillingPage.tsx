@@ -70,6 +70,8 @@ const CARD_BRAND_LABEL: Record<string, string> = {
   maestro: 'Maestro',
   union_pay: 'UnionPay',
   unknown: 'Card',
+  master: 'Mastercard',
+  amex: 'American Express',
 };
 
 function formatCardBrand(brand: string): string {
@@ -329,9 +331,13 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
             <div className="flex items-center gap-3">
               <BriefcaseIcon className="h-4 w-4 text-ink-faint" />
               <span className="text-sm">
-                {subscription.paymentMethodBrand && subscription.paymentMethodLast4
-                  ? `${formatCardBrand(subscription.paymentMethodBrand)} •••• ${subscription.paymentMethodLast4}`
-                  : t('billing.cardOnFile')}
+                {subscription.paymentMethodBrand === 'account_money'
+                  ? t('billing.mercadoPagoBalance')
+                  : subscription.paymentMethodBrand && subscription.paymentMethodLast4
+                    ? `${formatCardBrand(subscription.paymentMethodBrand)} •••• ${subscription.paymentMethodLast4}`
+                    : subscription.paymentMethodBrand
+                      ? formatCardBrand(subscription.paymentMethodBrand)
+                      : t('billing.cardOnFile')}
               </span>
             </div>
             <button type="button" className="btn btn-outline btn-sm" onClick={() => setShowAddPaymentMethod(true)}>
@@ -396,7 +402,7 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
         )}
       </div>
 
-      <AddPaymentMethodModal open={showAddPaymentMethod} token={token} onClose={() => setShowAddPaymentMethod(false)} />
+      <AddPaymentMethodModal open={showAddPaymentMethod} token={token} provider={subscription.provider} onClose={() => setShowAddPaymentMethod(false)} />
 
       <PlansModal
         open={showPlansModal}

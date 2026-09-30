@@ -1,5 +1,5 @@
 import prisma from '../../lib/prisma.js';
-import { currentPlanPrice, lockedPlanPrice, marketForProvider, mercadoPagoAmount } from './planPriceService.js';
+import { currentPlanPrice, marketForProvider, mercadoPagoAmount } from './planPriceService.js';
 import type { PlanTier } from '@prisma/client';
 import { resolveProvider, recordSubscriptionActionAttempt } from './subscriptionService.js';
 import { SIGNUP_TRIAL_DAYS } from './tenantService.js';
@@ -17,6 +17,10 @@ export interface StartCheckoutResult {
 // Where both providers' hosted checkouts send the payer back. Was a hardcoded
 // 'https://app.joinnorthstack.com/billing/callback' until 2026-09-26 — a route the frontend never
 // had (Billing lives at /settings/billing), and always production, even from staging.
+// Mercado Pago's own help page for changing a subscription's payment method — the payer does it
+// from their MP account (MP publishes no per-subscription deep link for the payer).
+export const MERCADO_PAGO_MANAGE_SUBSCRIPTION_URL = 'https://www.mercadopago.com.ar/ayuda/18157';
+
 function billingReturnUrl(): string {
   return `${process.env.APP_BASE_URL ?? 'http://localhost:5173'}/settings/billing`;
 }
@@ -81,27 +85,22 @@ export async function startCheckout(
       return { success: true, provider: 'dodopayments', initPoint: portalUrl };
     }
 
-    // Mercado Pago has no equivalent "just swap the card" mechanism reachable via the same
-    // hosted-redirect flow we already built (it would need its own card-tokenization form via
-    // MP.js Secure Fields — real added scope, deferred). Substitute: fall through and create a
-    // fresh preapproval below, same redirect flow as subscribing for the first time. The OLD one
-    // is deliberately left running here — it's only cancelled once the new one is actually
-    // authorized (mercadoPagoWebhookService.ts). Until 2026-09-26 it was cancelled right here, so
-    // abandoning the new checkout left the tenant with no active preapproval at all.
+    // Mercado Pago (2026-09-30, Alejandro's call): the payer changes the card on the SAME
+    // preapproval from their own Mercado Pago account — MP's own flow, no new authorization, no
+    // second subscription, no double-charge window. We just send them there. Until now this
+    // created a replacement preapproval and cancelled the old one once the new one was authorized
+    // (mercadoPagoWebhookService.ts still handles a superseded one safely, for any created before).
+    return { success: true, provider: 'mercadopago', initPoint: MERCADO_PAGO_MANAGE_SUBSCRIPTION_URL };
   }
 
-  // An existing subscriber updating their card keeps whatever plan they already confirmed
-  // (Subscription.plan is real for them); a first-time subscriber uses the plan just chosen,
-  // validated above — never the signup placeholder still sitting on `subscription.plan`.
-  const effectivePlan = isUpdatingPaymentMethod ? (subscription.plan as 'starter' | 'growth') : plan;
+  // From here on it's always a first-time subscribe (both update paths returned above): the plan
+  // just chosen, validated above — never the signup placeholder still sitting on `subscription.plan`.
+  const effectivePlan = plan;
 
   const provider = subscription.provider ?? resolveProvider(tenant);
   const market = marketForProvider(provider, tenant.country);
-  // A new subscriber is priced from the current config (src/config/pricing.ts); a Mercado Pago
-  // subscriber swapping cards keeps the row they're already locked on (grandfathered).
-  const planPrice = isUpdatingPaymentMethod
-    ? await lockedPlanPrice({ ...subscription, plan: effectivePlan }, market)
-    : await currentPlanPrice(effectivePlan, market);
+  // Priced from the current config (src/config/pricing.ts).
+  const planPrice = await currentPlanPrice(effectivePlan, market);
 
   // Null = no price for this plan in this market (0 in the config) — spec: real ARS pricing "no
   // bloquea construir la estructura, sí bloquea probar el flujo completo en Argentina".
@@ -116,11 +115,8 @@ export async function startCheckout(
   const activeSeats = await countActiveSeats(tenant.id);
   const extraSeats = extraSeatsFor(effectivePlan, activeSeats);
 
-  // Genuinely free for SIGNUP_TRIAL_DAYS (Alejandro's 2026-08-20 correction) — but only for an
-  // actual fresh subscription, never the Mercado Pago "update payment method" fallback above
-  // (isUpdatingPaymentMethod true, fell through to here): that subscriber already had — or used
-  // up — their trial, granting another one would be a real bug (daysAlreadyCovered below handles
-  // that path instead).
+  // Genuinely free for SIGNUP_TRIAL_DAYS (Alejandro's 2026-08-20 correction), for a fresh
+  // subscription.
   //
   // Outside real production billing (staging, local dev), skip the trial and charge immediately
   // instead: Alejandro's 2026-08-20 request so the whole card→webhook→active-subscription flow can
@@ -142,7 +138,7 @@ export async function startCheckout(
     ? Math.ceil((tenant.trialEndsAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000))
     : 0;
   const trialDays =
-    isUpdatingPaymentMethod || !isRealProductionBilling || daysRemaining <= 0
+    !isRealProductionBilling || daysRemaining <= 0
       ? undefined
       : Math.min(SIGNUP_TRIAL_DAYS, daysRemaining);
 
@@ -153,7 +149,7 @@ export async function startCheckout(
       payerEmail: user.email,
       transactionAmount: mercadoPagoAmount(planPrice, extraSeats),
       backUrl: billingReturnUrl(),
-      trialDays: isUpdatingPaymentMethod ? daysAlreadyCovered(subscription, tenant.trialEndsAt) : trialDays,
+      trialDays,
     });
 
     return { success: true, provider: 'mercadopago', initPoint: preapproval.init_point };
@@ -182,19 +178,4 @@ export async function startCheckout(
   });
 
   return { success: true, provider: 'dodopayments', initPoint: session.checkoutUrl };
-}
-
-// Mercado Pago "update payment method" (a replacement preapproval, see startCheckout): the days
-// the tenant already has covered — what's left of a trial still running, or of the period already
-// paid for — become the new preapproval's free_trial, so its first charge lands where the old
-// one's next charge would have. Without it the replacement charges on the spot: a second charge
-// for a period already paid. Nothing covered (past_due, suspended) → undefined, charge now.
-function daysAlreadyCovered(
-  subscription: { status: string; currentPeriodEnd: Date | null },
-  trialEndsAt: Date | null,
-): number | undefined {
-  const coveredUntil = subscription.status === 'trialing' ? trialEndsAt : subscription.status === 'active' ? subscription.currentPeriodEnd : null;
-  if (!coveredUntil) return undefined;
-  const days = Math.ceil((coveredUntil.getTime() - Date.now()) / (24 * 60 * 60 * 1000));
-  return days > 0 ? days : undefined;
 }

@@ -434,7 +434,10 @@ deliberadamente sin arreglar por baja confianza / necesitan prueba contra sandbo
 decisión de producto. Si aparece un bug de billing/currency/invoice, revisar esta lista primero:
 
 - ~~**Mercado Pago "update payment method" cancela el preapproval viejo antes de confirmar el
-  nuevo.**~~ *Arreglado 2026-09-26: el viejo se cancela recién cuando el nuevo llega `authorized`,
+  nuevo.**~~ *Reemplazado 2026-09-30 (decisión de Alejandro): para MP el botón ya no crea un
+  preapproval nuevo — manda al pagador a cambiar la tarjeta desde su propia cuenta de MP, sobre la
+  misma suscripción (guía oficial `mercadopago.com.ar/ayuda/18157`). El manejo de preapprovals
+  "superseded" en el webhook se deja para los que se hayan creado antes.* *Arreglado 2026-09-26: el viejo se cancela recién cuando el nuevo llega `authorized`,
   y el nuevo difiere su primer cobro (`free_trial`) hasta el fin del período ya pagado.* `checkoutService.ts`: `updatePreapproval(..., { status: 'cancelled' })` corre
   inmediatamente, después crea uno nuevo. Si el tenant abandona el checkout nuevo (cierra la
   pestaña, back del navegador), queda **sin preapproval activo** — un downgrade silencioso de

@@ -200,38 +200,16 @@ describe('startCheckout — updating payment method on an already-active subscri
     expect(createCheckoutSessionMock).not.toHaveBeenCalled();
   });
 
-  it('Mercado Pago: creates a fresh preapproval and leaves the old one running until the new one is authorized', async () => {
+  it('Mercado Pago: sends the payer to change the card in their own MP account — no new preapproval, nothing cancelled', async () => {
     subscriptions.push({
-      tenantId: 't1', id: 'sub1', plan: 'starter', provider: 'mercadopago', externalSubscriptionId: 'preapproval_old',
-      status: 'active', currentPeriodEnd: new Date(Date.now() + 10 * DAY_MS - 60_000),
+      tenantId: 't1', id: 'sub1', plan: 'starter', provider: 'mercadopago', externalSubscriptionId: 'preapproval_1', status: 'active',
     });
-    planPrices.find((p) => p.plan === 'starter' && p.market === 'ar')!.launchPriceCents = 5000;
 
     const result = await startCheckout(tenant({ id: 't1', country: 'Argentina' }), { id: 'u1', email: 'a@example.com' });
 
-    expect(result.success).toBe(true);
-    expect(result.initPoint).toBe('https://mp.example/checkout');
-    // Cancelling here left the tenant with no active preapproval if they abandoned the checkout.
+    expect(result).toEqual({ success: true, provider: 'mercadopago', initPoint: 'https://www.mercadopago.com.ar/ayuda/18157' });
+    expect(createPreapprovalMock).not.toHaveBeenCalled();
     expect(updatePreapprovalMock).not.toHaveBeenCalled();
-    expect(createPreapprovalMock).toHaveBeenCalledTimes(1);
-    // First charge deferred to where the old preapproval's next one would have landed — not a new
-    // SIGNUP_TRIAL_DAYS, and not an immediate second charge for a period already paid.
-    expect(createPreapprovalMock).toHaveBeenCalledWith(expect.objectContaining({ trialDays: 10, externalReference: 'sub1:pp_ar_starter' }));
-    // Priced from the row the subscriber is locked on, not whatever the config says today.
-    expect(lockedPlanPriceMock).toHaveBeenCalled();
-    expect(currentPlanPriceMock).not.toHaveBeenCalled();
-  });
-
-  it('Mercado Pago: a past_due subscriber swapping cards is charged right away', async () => {
-    subscriptions.push({
-      tenantId: 't1', id: 'sub1', plan: 'starter', provider: 'mercadopago', externalSubscriptionId: 'preapproval_old',
-      status: 'past_due', currentPeriodEnd: new Date(Date.now() - 3 * DAY_MS),
-    });
-    planPrices.find((p) => p.plan === 'starter' && p.market === 'ar')!.launchPriceCents = 5000;
-
-    await startCheckout(tenant({ id: 't1', country: 'Argentina' }), { id: 'u1', email: 'a@example.com' });
-
-    expect(createPreapprovalMock).toHaveBeenCalledWith(expect.objectContaining({ trialDays: undefined }));
   });
 
   it('rejects if the subscription has a provider but no externalSubscriptionId (inconsistent state)', async () => {

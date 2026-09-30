@@ -384,7 +384,8 @@
       "status": "Estado",
       "receipt": "Recibo"
     },
-    "loadMore": "Cargar más"
+    "loadMore": "Cargar más",
+    "paymentsHeading": "Pagos"
   },
   "companyStripe": {
     "toastSummaryFailed": "No se pudo cargar el resumen de pagos: {{error}}",
@@ -406,7 +407,8 @@
     },
     "searchButton": "Buscar en Stripe",
     "noMatches": "No se encontraron clientes de Stripe que coincidan con los contactos de esta Empresa. Creá el cliente en Stripe primero, o revisá los correos de los contactos.",
-    "matchedVia": "(vía {{email}})"
+    "matchedVia": "(vía {{email}})",
+    "sendInvoice": "Enviar factura"
   },
   "contactDetail": {
     "groups": {
@@ -505,6 +507,49 @@
       "stageUpdateFailed": "No se pudo actualizar la etapa.",
       "contactLinkFailed": "No se pudo vincular el contacto: {{error}}",
       "contactUnlinkFailed": "No se pudo desvincular el contacto: {{error}}"
+    }
+  },
+  "sendInvoice": {
+    "title": "Enviar una factura a {{companyName}}",
+    "intro": "Stripe le envía esta factura por email al cliente, con un link para pagar online. Se crea y se envía en el momento — para cambiarla después, usá Stripe.",
+    "fields": {
+      "description": "Descripción",
+      "amount": "Monto",
+      "currency": "Moneda",
+      "daysUntilDue": "Días hasta el vencimiento",
+      "memo": "Nota (opcional)"
+    },
+    "descriptionPlaceholder": "ej. Consultoría — septiembre",
+    "memoPlaceholder": "Se muestra en la factura",
+    "addLine": "+ Agregar línea",
+    "removeLine": "Quitar",
+    "send": "Enviar factura",
+    "sendWithTotal": "Enviar factura · {{total}}",
+    "sending": "Enviando…",
+    "openIntegrations": "Abrir Configuración → Integraciones →",
+    "sentTitle": "Factura enviada",
+    "sentBody": "La factura {{number}} por {{amount}} se le envió por email a {{companyName}}. Vas a recibir una notificación cuando se pague.",
+    "sentNoEmailBody": "La factura {{number}} por {{amount}} se creó, pero Stripe no pudo enviarla por email — normalmente porque este cliente no tiene email en Stripe. Compartí el link de la página de pago de abajo, o enviala desde Stripe.",
+    "viewPaymentPage": "Abrir página de pago →",
+    "viewInStripe": "Ver en Stripe →",
+    "done": "Listo"
+  },
+  "companyInvoices": {
+    "heading": "Facturas",
+    "empty": "Todavía no hay facturas para esta empresa.",
+    "noAccess": "Tu clave de Stripe no puede leer facturas. En Stripe, poné \"Invoices\" en Read (o en Write, para enviarlas) en esa clave.",
+    "toastLoadFailed": "No se pudieron cargar las facturas: {{error}}",
+    "due": "Vence el {{date}}",
+    "sentFromNorthstack": "Enviada desde Northstack",
+    "paymentPage": "Página de pago",
+    "viewInStripe": "Ver en Stripe",
+    "loadMore": "Cargar más facturas",
+    "status": {
+      "paid": "Pagada",
+      "open": "Abierta",
+      "overdue": "Vencida",
+      "uncollectible": "Incobrable",
+      "void": "Anulada"
     }
   }
 }

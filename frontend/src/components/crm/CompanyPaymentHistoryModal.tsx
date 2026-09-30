@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { api } from '../../api';
-import type { StripePaymentEvent } from '../../api';
+import { api, ApiError } from '../../api';
+import type { CompanyStripeInvoice, StripePaymentEvent } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import Modal from '../common/Modal';
 import TableSkeleton from '../common/TableSkeleton';
@@ -78,6 +78,9 @@ export default function CompanyPaymentHistoryModal({
           {t('companyPaymentHistory.viewCompanyProfile')}
         </Link>
 
+        <CompanyInvoicesSection token={token} companyId={companyId} />
+
+        <h4 className="text-sm font-medium">{t('companyPaymentHistory.paymentsHeading')}</h4>
         {loading ? (
           <TableSkeleton rows={5} />
         ) : events.length === 0 ? (
@@ -147,5 +150,117 @@ export default function CompanyPaymentHistoryModal({
         )}
       </div>
     </Modal>
+  );
+}
+
+function invoiceStatusChip(invoice: CompanyStripeInvoice): { labelKey: string; className: string } {
+  if (invoice.status === 'paid') return { labelKey: 'companyInvoices.status.paid', className: 'role-chip chip-good' };
+  if (invoice.status === 'open') {
+    const overdue = invoice.dueDate !== null && new Date(invoice.dueDate).getTime() < Date.now();
+    return overdue
+      ? { labelKey: 'companyInvoices.status.overdue', className: 'category-chip chip-coral' }
+      : { labelKey: 'companyInvoices.status.open', className: 'role-chip chip-blue' };
+  }
+  if (invoice.status === 'uncollectible') return { labelKey: 'companyInvoices.status.uncollectible', className: 'role-chip chip-neutral' };
+  return { labelKey: 'companyInvoices.status.void', className: 'role-chip chip-neutral' };
+}
+
+// Payments v1 Unidad 8 — an unpaid invoice has no Charge yet, so it never appears in the payments
+// list below; this is where it becomes visible. Loads independently of the payments list, and a
+// key without Invoices access degrades to a one-line note instead of an error toast.
+function CompanyInvoicesSection({ token, companyId }: { token: string; companyId: string }) {
+  const { t } = useTranslation('crm');
+  const toast = useToast();
+  const [invoices, setInvoices] = useState<CompanyStripeInvoice[]>([]);
+  const [cursor, setCursor] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [noAccess, setNoAccess] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    api
+      .getCompanyInvoices(token, companyId)
+      .then((page) => {
+        setInvoices(page.invoices);
+        setCursor(page.nextCursor);
+      })
+      .catch((error) => {
+        if (error instanceof ApiError && error.field === 'stripe_key_permission') {
+          setNoAccess(true);
+          return;
+        }
+        toast.error(t('companyInvoices.toastLoadFailed', { error: (error as Error).message }));
+      })
+      .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyId]);
+
+  const loadMore = async () => {
+    if (!cursor) return;
+    setLoadingMore(true);
+    try {
+      const page = await api.getCompanyInvoices(token, companyId, cursor);
+      setInvoices((prev) => [...prev, ...page.invoices]);
+      setCursor(page.nextCursor);
+    } catch (error) {
+      toast.error(t('companyInvoices.toastLoadFailed', { error: (error as Error).message }));
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <h4 className="text-sm font-medium">{t('companyInvoices.heading')}</h4>
+      {loading ? (
+        <TableSkeleton rows={2} />
+      ) : noAccess ? (
+        <p className="text-xs text-ink-muted dark:text-dark-ink-muted">{t('companyInvoices.noAccess')}</p>
+      ) : invoices.length === 0 ? (
+        <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('companyInvoices.empty')}</p>
+      ) : (
+        <div className="entity-card-list" style={{ display: 'flex' }}>
+          {invoices.map((invoice) => {
+            const chip = invoiceStatusChip(invoice);
+            return (
+              <div key={invoice.id} className="entity-card" style={{ alignItems: 'flex-start' }}>
+                <span className="entity-card-body">
+                  <span className="flex items-center justify-between gap-2">
+                    <span className="entity-card-name">
+                      {invoice.number ?? invoice.id} · {formatMoney(invoice.amountDueCents, invoice.currency.toUpperCase())}
+                    </span>
+                    <span className={chip.className}>{t(chip.labelKey)}</span>
+                  </span>
+                  <span className="entity-card-meta" style={{ whiteSpace: 'normal' }}>
+                    {invoice.dueDate
+                      ? t('companyInvoices.due', { date: new Date(invoice.dueDate).toLocaleDateString() })
+                      : new Date(invoice.createdAt).toLocaleDateString()}
+                    {invoice.sentFromNorthstack && <> · {t('companyInvoices.sentFromNorthstack')}</>}
+                    {invoice.hostedInvoiceUrl && (
+                      <>
+                        {' · '}
+                        <a href={invoice.hostedInvoiceUrl} target="_blank" rel="noreferrer" className="table-link">
+                          {t('companyInvoices.paymentPage')}
+                        </a>
+                      </>
+                    )}
+                    {' · '}
+                    <a href={invoice.dashboardUrl} target="_blank" rel="noreferrer" className="table-link">
+                      {t('companyInvoices.viewInStripe')}
+                    </a>
+                  </span>
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      {cursor && (
+        <button type="button" className="btn-secondary btn-sm self-start" onClick={loadMore} disabled={loadingMore}>
+          {loadingMore ? t('common.loading') : t('companyInvoices.loadMore')}
+        </button>
+      )}
+    </div>
   );
 }

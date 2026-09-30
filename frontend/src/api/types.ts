@@ -309,6 +309,48 @@ export interface StripePaymentEventsPage {
   nextCursor: string | null;
 }
 
+// Payments v1 Unidad 8 — Stripe-hosted invoices sent from Northstack.
+export type StripeInvoiceStatus = 'draft' | 'open' | 'paid' | 'uncollectible' | 'void';
+
+export interface SendCompanyInvoiceInput {
+  currency: string;
+  lines: { description: string; amountCents: number }[];
+  daysUntilDue: number;
+  memo?: string;
+  requestId: string;
+}
+
+export interface SentStripeInvoice {
+  id: string;
+  number: string | null;
+  status: StripeInvoiceStatus;
+  amountDueCents: number;
+  currency: string;
+  dueDate: string | null;
+  hostedInvoiceUrl: string | null;
+  dashboardUrl: string;
+  emailSent: boolean;
+}
+
+export interface CompanyStripeInvoice {
+  id: string;
+  number: string | null;
+  status: StripeInvoiceStatus;
+  amountDueCents: number;
+  amountRemainingCents: number;
+  currency: string;
+  createdAt: string;
+  dueDate: string | null;
+  hostedInvoiceUrl: string | null;
+  dashboardUrl: string;
+  sentFromNorthstack: boolean;
+}
+
+export interface CompanyStripeInvoicesPage {
+  invoices: CompanyStripeInvoice[];
+  nextCursor: string | null;
+}
+
 export interface PaymentsOverviewRow {
   companyId: string;
   companyName: string;
@@ -524,7 +566,8 @@ export type ActivityEntityType =
   | 'invitation'
   | 'subscription'
   | 'googleCalendarConnection'
-  | 'stripeConnection';
+  | 'stripeConnection'
+  | 'stripeInvoice';
 
 export interface ActivityChange {
   field: string;
@@ -578,6 +621,7 @@ export type NotificationType =
   | 'stripe_payment_failed'
   | 'stripe_subscription_past_due'
   | 'stripe_subscription_canceled'
+  | 'stripe_invoice_paid'
   | 'time_off_requested'
   | 'time_off_decided';
 

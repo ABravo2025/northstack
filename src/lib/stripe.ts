@@ -38,6 +38,7 @@ async function stripeRequest<T>(
   method: 'GET' | 'POST' | 'DELETE',
   path: string,
   params?: Record<string, unknown>,
+  idempotencyKey?: string,
 ): Promise<T> {
   const pairs = params ? toFormPairs(params) : [];
   const query = method === 'GET' && pairs.length ? `?${pairs.join('&')}` : '';
@@ -48,6 +49,7 @@ async function stripeRequest<T>(
     headers: {
       Authorization: `Bearer ${apiKey}`,
       ...(body ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}),
+      ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
     },
     body,
   });
@@ -157,3 +159,87 @@ export async function listEvents(
     starting_after: params.starting_after,
   });
 }
+
+// ---------------------------------------------------------------------------
+// Payments v1 Unidad 8 — sending Stripe-hosted invoices (the first write calls in this file).
+// Needs the Restricted Key's "Invoices" resource set to Write; a read-only key gets a 403 here.
+// ---------------------------------------------------------------------------
+
+export interface StripeInvoice {
+  id: string;
+  number: string | null; // assigned by Stripe at finalization, null while draft
+  status: 'draft' | 'open' | 'paid' | 'uncollectible' | 'void';
+  currency: string;
+  amount_due: number; // smallest currency unit
+  amount_remaining: number;
+  created: number;
+  due_date: number | null;
+  hosted_invoice_url: string | null; // customer-facing payment page, set once finalized
+  description: string | null;
+  metadata: Record<string, string>;
+}
+
+// pending_invoice_items_behavior: 'exclude' (also Stripe's default, stated explicitly so it can't
+// silently flip) keeps any unrelated pending invoice items already on this customer out of it —
+// our own lines are attached by id in createInvoiceItem below.
+export async function createInvoice(
+  apiKey: string,
+  params: {
+    customer: string;
+    currency: string;
+    daysUntilDue: number;
+    description?: string;
+    metadata?: Record<string, string>;
+  },
+  idempotencyKey: string,
+): Promise<StripeInvoice> {
+  return stripeRequest<StripeInvoice>(
+    apiKey,
+    'POST',
+    '/invoices',
+    {
+      customer: params.customer,
+      currency: params.currency,
+      collection_method: 'send_invoice',
+      days_until_due: params.daysUntilDue,
+      description: params.description,
+      auto_advance: false,
+      pending_invoice_items_behavior: 'exclude',
+      metadata: params.metadata,
+    },
+    idempotencyKey,
+  );
+}
+
+export async function createInvoiceItem(
+  apiKey: string,
+  params: { customer: string; invoice: string; amount: number; currency: string; description: string },
+  idempotencyKey: string,
+): Promise<{ id: string }> {
+  return stripeRequest<{ id: string }>(apiKey, 'POST', '/invoiceitems', params, idempotencyKey);
+}
+
+export async function finalizeInvoice(apiKey: string, invoiceId: string, idempotencyKey: string): Promise<StripeInvoice> {
+  return stripeRequest<StripeInvoice>(apiKey, 'POST', `/invoices/${invoiceId}/finalize`, { auto_advance: false }, idempotencyKey);
+}
+
+// Emails the finalized invoice (with its hosted payment link) to the customer's email on file.
+export async function sendInvoice(apiKey: string, invoiceId: string, idempotencyKey: string): Promise<StripeInvoice> {
+  return stripeRequest<StripeInvoice>(apiKey, 'POST', `/invoices/${invoiceId}/send`, undefined, idempotencyKey);
+}
+
+// Only drafts can be deleted — used to clean up a half-built invoice when a later step fails.
+export async function deleteDraftInvoice(apiKey: string, invoiceId: string): Promise<void> {
+  await stripeRequest<unknown>(apiKey, 'DELETE', `/invoices/${invoiceId}`);
+}
+
+export async function listInvoices(
+  apiKey: string,
+  params: { customer: string; limit?: number; starting_after?: string },
+): Promise<StripeList<StripeInvoice>> {
+  return stripeRequest<StripeList<StripeInvoice>>(apiKey, 'GET', '/invoices', params);
+}
+
+// Set on every invoice Northstack creates, so the event poll can tell "an invoice we sent was
+// paid" apart from the tenant's own subscription/renewal invoices (which must not notify).
+export const NORTHSTACK_SENT_METADATA_KEY = 'northstack_sent';

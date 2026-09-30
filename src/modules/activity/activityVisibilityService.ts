@@ -39,6 +39,7 @@ const ACTIVITY_MODULE_GATE: Partial<Record<ActivityEntityType, (role: RoleContex
   employeeTermination: canManageEmployee,
   subscription: canManageBilling,
   stripeConnection: canManagePayments,
+  stripeInvoice: canManagePayments,
   statusDefinition: canManageCustomFields,
   customFieldDefinition: canManageCustomFields,
   fieldCatalogDefinition: canManageCustomFields,

@@ -41,8 +41,15 @@ activityRouter.get('/api/activity', async (req, res) => {
     return res.status(access.status).json({ error: access.status === 404 ? 'Entity not found' : 'Insufficient permissions' });
   }
 
+  // Child entries (parentEntityType/parentEntityId) can be a different module than the record
+  // itself — e.g. a Stripe invoice under a Company — so they need the same per-entry module gate
+  // the tenant-wide feed applies, or anyone who can open the Company would see invoice amounts.
   const entries = await listActivityForEntity(user.tenantId!, entityType as ActivityEntityType, entityId);
-  return res.json(entries.map((entry) => filterActivityEntryForRole(entry, user.roleContext)));
+  return res.json(
+    entries
+      .filter((entry) => canViewEntryModule(user.roleContext, entry.entityType))
+      .map((entry) => filterActivityEntryForRole(entry, user.roleContext)),
+  );
 });
 
 // Tenant-wide feed, Settings → Activity Log. owner/admin only today (canViewActivityLog), until a

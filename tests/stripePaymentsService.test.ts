@@ -460,6 +460,45 @@ describe('processStripeWebhookEvent', () => {
     );
   });
 
+  it('notifies on invoice.paid for an invoice Northstack sent', async () => {
+    companies = [{ id: 'c1', tenantId: 't1', name: 'Acme', stripeCustomerId: 'cus_1', accountOwnerId: 'u1' }];
+    const result = await processStripeWebhookEvent(
+      't1',
+      stripeEvent('invoice.paid', {
+        customer: 'cus_1',
+        amount_paid: 15000,
+        currency: 'usd',
+        number: 'INV-0042',
+        metadata: { northstack_sent: 'true' },
+      }),
+    );
+    expect(result).toBe('notified');
+    expect(createNotificationMock).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'stripe_invoice_paid', message: 'Invoice INV-0042 was paid by Acme (150.00 USD)' }),
+    );
+  });
+
+  it('ignores invoice.paid for invoices Northstack did not send (e.g. subscription renewals)', async () => {
+    companies = [{ id: 'c1', tenantId: 't1', name: 'Acme', stripeCustomerId: 'cus_1', accountOwnerId: 'u1' }];
+    const result = await processStripeWebhookEvent(
+      't1',
+      stripeEvent('invoice.paid', { customer: 'cus_1', amount_paid: 15000, currency: 'usd', metadata: {} }),
+    );
+    expect(result).toBe('not a Northstack-sent invoice');
+    expect(createNotificationMock).not.toHaveBeenCalled();
+  });
+
+  it('scales a zero-decimal currency correctly in the invoice.paid message', async () => {
+    companies = [{ id: 'c1', tenantId: 't1', name: 'Acme', stripeCustomerId: 'cus_1', accountOwnerId: 'u1' }];
+    await processStripeWebhookEvent(
+      't1',
+      stripeEvent('invoice.paid', { customer: 'cus_1', amount_paid: 5000, currency: 'jpy', metadata: { northstack_sent: 'true' } }),
+    );
+    expect(createNotificationMock).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'Invoice was paid by Acme (5000.00 JPY)' }),
+    );
+  });
+
   it('notifies on payment_intent.payment_failed', async () => {
     companies = [{ id: 'c1', tenantId: 't1', name: 'Acme', stripeCustomerId: 'cus_1', accountOwnerId: 'u1' }];
     const result = await processStripeWebhookEvent('t1', stripeEvent('payment_intent.payment_failed', { customer: 'cus_1' }));

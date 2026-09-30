@@ -384,7 +384,8 @@
       "status": "Status",
       "receipt": "Receipt"
     },
-    "loadMore": "Load more"
+    "loadMore": "Load more",
+    "paymentsHeading": "Payments"
   },
   "companyStripe": {
     "toastSummaryFailed": "Failed to load payment summary: {{error}}",
@@ -406,7 +407,8 @@
     },
     "searchButton": "Search on Stripe",
     "noMatches": "No matching Stripe customers found for this Company's contacts. Create the customer in Stripe first, or double-check the contact emails.",
-    "matchedVia": "(via {{email}})"
+    "matchedVia": "(via {{email}})",
+    "sendInvoice": "Send invoice"
   },
   "contactDetail": {
     "groups": {
@@ -505,6 +507,49 @@
       "stageUpdateFailed": "Failed to update stage.",
       "contactLinkFailed": "Failed to link contact: {{error}}",
       "contactUnlinkFailed": "Failed to unlink contact: {{error}}"
+    }
+  },
+  "sendInvoice": {
+    "title": "Send an invoice to {{companyName}}",
+    "intro": "Stripe emails this invoice to the customer with a link to pay online. It is created and sent right away — to change it afterwards, use Stripe.",
+    "fields": {
+      "description": "Description",
+      "amount": "Amount",
+      "currency": "Currency",
+      "daysUntilDue": "Days until due",
+      "memo": "Memo (optional)"
+    },
+    "descriptionPlaceholder": "e.g. Consulting — September",
+    "memoPlaceholder": "Shown on the invoice",
+    "addLine": "+ Add line",
+    "removeLine": "Remove",
+    "send": "Send invoice",
+    "sendWithTotal": "Send invoice · {{total}}",
+    "sending": "Sending…",
+    "openIntegrations": "Open Integrations settings →",
+    "sentTitle": "Invoice sent",
+    "sentBody": "Invoice {{number}} for {{amount}} was emailed to {{companyName}}. You will get a notification when it is paid.",
+    "sentNoEmailBody": "Invoice {{number}} for {{amount}} was created, but Stripe could not email it — usually because this customer has no email in Stripe. Share the payment page link below, or send it from Stripe.",
+    "viewPaymentPage": "Open payment page →",
+    "viewInStripe": "View in Stripe →",
+    "done": "Done"
+  },
+  "companyInvoices": {
+    "heading": "Invoices",
+    "empty": "No invoices for this company yet.",
+    "noAccess": "Your Stripe key can't read invoices. Set \"Invoices\" to Read (or Write, to send them) on the key in Stripe.",
+    "toastLoadFailed": "Failed to load invoices: {{error}}",
+    "due": "Due {{date}}",
+    "sentFromNorthstack": "Sent from Northstack",
+    "paymentPage": "Payment page",
+    "viewInStripe": "View in Stripe",
+    "loadMore": "Load more invoices",
+    "status": {
+      "paid": "Paid",
+      "open": "Open",
+      "overdue": "Overdue",
+      "uncollectible": "Uncollectible",
+      "void": "Void"
     }
   }
 }

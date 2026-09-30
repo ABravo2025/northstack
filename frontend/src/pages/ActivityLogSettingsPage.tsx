@@ -41,6 +41,7 @@ const ENTITY_TYPE_VALUES: ActivityEntityType[] = [
   'subscription',
   'googleCalendarConnection',
   'stripeConnection',
+  'stripeInvoice',
 ];
 
 const ACTION_VALUES: ('create' | 'update' | 'delete')[] = ['create', 'update', 'delete'];

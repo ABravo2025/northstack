@@ -199,7 +199,7 @@ const FAQ_CATEGORIES: FaqCategory[] = [
     items: [
       {
         q: 'Is the Payments module the same as my Northstack subscription?',
-        a: 'No, they\'re unrelated. Your Northstack subscription is billed through Dodo Payments or Mercado Pago (see Billing & plans). Payments is a Growth-plan add-on where you connect your own Stripe account to track your customers\' payments.',
+        a: 'No, they\'re unrelated. Your Northstack subscription is billed through Dodo Payments or Mercado Pago (see Billing & plans). Payments is a Growth-plan add-on where you connect your own Stripe account to track your customers\' payments and send them invoices.',
       },
       {
         q: 'Does Google Calendar sync go both ways?',
@@ -407,7 +407,7 @@ const FAQ_CATEGORIES_ES: FaqCategory[] = [
     items: [
       {
         q: '¿El módulo de Pagos es lo mismo que mi suscripción a Northstack?',
-        a: 'No, no tienen relación. Tu suscripción a Northstack se factura a través de Dodo Payments o Mercado Pago (ver Facturación y planes). Pagos es un complemento del plan Growth donde conectás tu propia cuenta de Stripe para seguir los pagos de tus clientes.',
+        a: 'No, no tienen relación. Tu suscripción a Northstack se factura a través de Dodo Payments o Mercado Pago (ver Facturación y planes). Pagos es un complemento del plan Growth donde conectás tu propia cuenta de Stripe para seguir los pagos de tus clientes y enviarles facturas.',
       },
       {
         q: '¿La sincronización con Google Calendar funciona en los dos sentidos?',

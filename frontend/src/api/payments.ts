@@ -1,5 +1,13 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
-import type { PaymentsOverview, StripeCustomerMatch, StripePaymentEventsPage, StripePaymentSummary } from './types.js';
+import type {
+  CompanyStripeInvoicesPage,
+  PaymentsOverview,
+  SendCompanyInvoiceInput,
+  SentStripeInvoice,
+  StripeCustomerMatch,
+  StripePaymentEventsPage,
+  StripePaymentSummary,
+} from './types.js';
 
 export const paymentsApi = {
   searchStripeCustomersForCompany: async (token: string, companyId: string): Promise<{ matches: StripeCustomerMatch[] }> => {
@@ -41,6 +49,27 @@ export const paymentsApi = {
     // frontend+backend), and new URL() throws on a relative-only string with no base.
     const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
     const res = await apiFetch(`${API_BASE_URL}/api/payments/companies/${companyId}/events${query}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  // A 400 with ApiError.field === 'stripe_key_permission' means the tenant's Stripe key lacks
+  // Invoices: Write — the message already says how to fix it in Stripe.
+  sendCompanyInvoice: async (token: string, companyId: string, input: SendCompanyInvoiceInput): Promise<SentStripeInvoice> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/payments/companies/${companyId}/invoices`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(input),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  getCompanyInvoices: async (token: string, companyId: string, cursor?: string): Promise<CompanyStripeInvoicesPage> => {
+    const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : '';
+    const res = await apiFetch(`${API_BASE_URL}/api/payments/companies/${companyId}/invoices${query}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);

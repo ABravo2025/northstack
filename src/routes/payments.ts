@@ -10,6 +10,13 @@ import {
   searchStripeCustomersForCompany,
   StripeCustomerConflictError,
 } from '../modules/integrations/stripePaymentsService.js';
+import {
+  CompanyNotLinkedError,
+  InvoiceValidationError,
+  listCompanyInvoices,
+  sendCompanyInvoice,
+  StripeKeyPermissionError,
+} from '../modules/integrations/stripeInvoiceService.js';
 
 export const paymentsRouter = createAsyncRouter();
 
@@ -131,4 +138,60 @@ paymentsRouter.get('/api/payments/overview', async (req, res) => {
 
   const overview = await getPaymentsOverview(user.tenantId!);
   return res.json(overview);
+});
+
+// Payments v1 Unidad 8 — send a Stripe-hosted invoice. Same owner-only/Growth gate as viewing
+// payments (requirePaymentsAccess); the tenant's own Stripe key must allow Invoices: Write.
+paymentsRouter.post('/api/payments/companies/:companyId/invoices', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) return;
+  if (!requirePaymentsAccess(user, res)) return;
+
+  const company = await loadOwnedCompany(req.params.companyId, user.tenantId!);
+  if (!company) {
+    return res.status(404).json({ error: 'Company not found' });
+  }
+
+  try {
+    const invoice = await sendCompanyInvoice({
+      tenantId: user.tenantId!,
+      userId: user.id,
+      company,
+      currency: req.body?.currency,
+      lines: req.body?.lines,
+      daysUntilDue: req.body?.daysUntilDue,
+      memo: req.body?.memo,
+      requestId: req.body?.requestId,
+    });
+    return res.status(201).json(invoice);
+  } catch (error) {
+    if (error instanceof StripeKeyPermissionError) {
+      return res.status(400).json({ error: error.message, field: 'stripe_key_permission' });
+    }
+    if (error instanceof InvoiceValidationError || error instanceof CompanyNotLinkedError) {
+      return res.status(400).json({ error: error.message });
+    }
+    return res.status(400).json({ error: (error as Error).message });
+  }
+});
+
+paymentsRouter.get('/api/payments/companies/:companyId/invoices', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) return;
+  if (!requirePaymentsAccess(user, res)) return;
+
+  const company = await loadOwnedCompany(req.params.companyId, user.tenantId!);
+  if (!company) {
+    return res.status(404).json({ error: 'Company not found' });
+  }
+
+  const cursor = typeof req.query.cursor === 'string' ? req.query.cursor : undefined;
+  try {
+    return res.json(await listCompanyInvoices(user.tenantId!, company, cursor));
+  } catch (error) {
+    if (error instanceof StripeKeyPermissionError) {
+      return res.status(400).json({ error: error.message, field: 'stripe_key_permission' });
+    }
+    return res.status(400).json({ error: (error as Error).message });
+  }
 });

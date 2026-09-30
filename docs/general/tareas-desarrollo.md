@@ -438,6 +438,10 @@ Resumen por unidad (detalle técnico completo en `docs/general/database-schema.m
   recibo de Stripe, paginado; el resumen dentro del perfil de Company se simplificó a solo
   totales — Payments/Refunds/Disputes (cantidad + monto) y fecha del primer pago, pedido explícito
   del usuario para sacar el detalle de ahí y dejarlo solo en el modal.
+- **U8 — Enviar facturas (2026-09-30, en `staging`)**: primera escritura — factura hospedada por
+  Stripe desde el perfil de una Company, sección Invoices en el historial, notificación de
+  `invoice.paid`. Requiere `Invoices: Write` en la clave del tenant. Pendiente al promover: `db push`
+  de 2 valores de enum a producción. Detalle en la spec, Unidad 8.
 
 **Tier 3.8 — Employee Termination (baja de empleados) — COMPLETO y en `staging`, 2026-08-29,
 plan en `C:\Users\aleja\.claude\plans\bueno-yo-te-voy-valiant-whisper.md`.** Ítem que venía del

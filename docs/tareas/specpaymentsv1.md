@@ -20,7 +20,7 @@ Mismo criterio de ejecución que el resto de las specs del proyecto: cada unidad
 8. **Webhook — alcance reducido:** se mantiene, pero solo para **notificaciones proactivas**, no para alimentar un store histórico. Dispara una `Notification` — **corregido 2026-08-26, verificado contra el código real**: el modelo `Notification` ya no es algo planeado, ya existe (`prisma/schema.prisma`, Sales v2 Unidad 7/8, en `staging` desde 2026-08-25/26, junto con el bell icon y los endpoints de listar/marcar leída). Esta unidad solo necesita sumar valores nuevos a `enum NotificationType` — ver Unidad 4.
 9. **Permisos:** gate por rol — **corregido 2026-08-26, confirmado con Alejandro**: owner-only (no "owner/admin" como decía originalmente esta decisión, citando mal el precedente de Payroll — el gate real de `canManagePayroll` también es owner-only). Enrutado vía un permiso nombrado (`canManagePayments`, `permissionService.ts`), no un chequeo inline, para no tener que tocar cada endpoint/componente cuando exista el sistema de roles custom (backlog Tier 5).
 10. **Auditoría del match:** `Company.stripeCustomerMatchedVia` — se guarda el email de Contact que produjo el match.
-11. **Permisos de la Restricted Key:** estrictamente de **lectura** en v1 — nada de escritura por adelantado. Se amplía recién cuando se construya la unidad de cobros.
+11. **Permisos de la Restricted Key:** estrictamente de **lectura** en v1 — nada de escritura por adelantado. Se amplía recién cuando se construya la unidad de cobros. **Ampliado 2026-09-30 (Unidad 8):** `Invoices` pasa a Write para quien quiera enviar facturas; todo lo demás sigue en Read.
 
 ---
 
@@ -267,3 +267,56 @@ sin recibos ni fechas por evento salvo la del primer pago.
   existiendo en el tipo/backend, solo dejaron de mostrarse acá).
 - [x] **Verificado**: `npm run build`/`npm test` (175/175) en verde. Con esto el usuario dio por
   cerrado Payments v1.
+
+### Unidad 8 — Enviar facturas de Stripe desde Northstack (escritura) — ✅ completa (2026-09-30, en `staging`)
+
+Primera unidad de escritura ("la unidad de cobros" que la decisión #11 dejaba para después).
+Decisiones cerradas con Alejandro el 2026-09-26/30: **factura hospedada por Stripe**
+(`collection_method: send_invoice` — Stripe la manda por email con link de pago; descartados
+cobrar la tarjeta guardada off-session y Payment Links), **mismo permiso que ver Payments**
+(`canManagePayments`, owner-only por default + plan Growth, sin permiso nuevo), **sin store local**
+(Stripe sigue siendo la fuente de verdad, igual que las Unidades 1-7).
+
+- [x] **`lib/stripe.ts`**: `createInvoice`/`createInvoiceItem`/`finalizeInvoice`/`sendInvoice`/
+  `deleteDraftInvoice`/`listInvoices`, y `stripeRequest` acepta un `Idempotency-Key`. Parámetros
+  confirmados contra la documentación real de Stripe (2026-09-30): el draft se crea con
+  `pending_invoice_items_behavior: 'exclude'` y cada línea se adjunta por `invoice=<id>` — nunca
+  arrastra invoice items pendientes ajenos que el cliente ya tuviera en Stripe.
+- [x] **`stripeInvoiceService.ts`** (nuevo): draft → líneas → finalize → send. Si algo falla antes de
+  finalizar, se borra el draft (nunca queda una factura a medias en el Stripe del tenant). Si
+  finaliza pero Stripe no puede mandar el email (típico: el customer no tiene email), **no es un
+  error**: devuelve `emailSent: false` + el link de pago para compartir a mano. Idempotencia por
+  intento (`requestId` generado en el cliente, regenerado tras cada fallo). Validación: 1-20
+  líneas, montos enteros > 0, sin decimales en monedas zero-decimal (JPY, etc.), 0-365 días.
+- [x] **403 ≠ conexión rota**: un 403 de Stripe en una Restricted Key significa "a esta clave le
+  falta ese permiso", no "la clave está mal". A diferencia de `withNeedsAttentionTracking`
+  (Unidades 2-4), acá **no** marca `needsAttention` — si no, todo tenant conectado antes de esta
+  unidad (claves de solo lectura) vería el banner rojo de conexión rota al primer intento. Solo un
+  401 la marca. La UI muestra "poné Invoices en Write" + link a Integraciones.
+- [x] **Rutas**: `POST/GET /api/payments/companies/:companyId/invoices` (mismo gate
+  `requirePaymentsAccess` + ownership 404 que el resto de `routes/payments.ts`).
+- [x] **Visibilidad**: una factura impaga no tiene Charge todavía, así que nunca aparecía en el
+  historial (basado en Charges). El modal de historial suma una sección **Invoices**
+  (Open/Overdue/Paid/Uncollectible/Void, link a la página de pago y a Stripe). Drafts ocultos.
+- [x] **Notificación**: `invoice.paid` en el cron diario, **solo** para facturas con
+  `metadata.northstack_sent` — si no, cada renovación de suscripción notificaría. Los intentos
+  fallidos ya los cubren `charge.failed`/`payment_intent.payment_failed`. `invoice.overdue`
+  descartado: depende de las Automations de Stripe y no es confiable por polling.
+- [x] **Activity Log**: `ActivityEntityType.stripeInvoice` (entityId = id de Stripe), con
+  `parentEntityType: 'company'` → aparece en el tab Activity de la Company. **Gap real encontrado
+  y cerrado**: el tab Activity por registro no aplicaba el gate por módulo a las entradas hijas
+  (`canViewEntryModule`, que el feed global sí usaba) — sin el fix, cualquiera que pudiera abrir
+  la Company hubiera visto montos de facturas sin tener acceso a Payments.
+- [x] **Schema**: `ActivityEntityType.stripeInvoice` + `NotificationType.stripe_invoice_paid`
+  (aditivos). Aplicados a `STAGING_DATABASE_URL` el 2026-09-30 (diff previo: exactamente esos dos
+  valores). **Pendiente al promover: el mismo `db push` contra producción.**
+- [x] **Copy**: card de Stripe en Integraciones (ya no dice "solo lectura"; Invoices → Write), los
+  pasos del ícono de ayuda, User Guide, FAQ y el subtítulo de Payments en la comparación de
+  planes — EN + ES.
+- [x] **Verificado 2026-09-30**: `npm test` 503/503 (17 tests nuevos del servicio + 3 de
+  `invoice.paid`), build/lint backend y frontend en verde. UI probada en navegador (desktop +
+  375px, EN + ES) contra un tenant descartable en staging: validación del form, total en el
+  botón, error real del backend sin conexión, error de permiso con link, pantalla de éxito,
+  secciones de facturas y "clave sin acceso". Las respuestas de Stripe se simularon a nivel de
+  red. **No probado contra Stripe real** — el clasificador de seguridad bloqueó usar la test key
+  desde este entorno; la prueba de punta a punta queda para Alejandro en staging.

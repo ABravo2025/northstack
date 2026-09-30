@@ -1640,7 +1640,7 @@ export default function GuidePage() {
                 dentro de Northstack.
               </p>
               <ol className="help-steps">
-                <li>En Stripe, creá una <strong>Restricted API key</strong> (clave de API restringida) con acceso de solo lectura — el ícono de información junto al campo de la clave te guía paso a paso.</li>
+                <li>En Stripe, creá una <strong>Restricted API key</strong> (clave de API restringida) con acceso de lectura (y <strong>Invoices</strong> en Write si vas a enviar facturas) — el ícono de información junto al campo de la clave te guía paso a paso.</li>
                 <li>Pegala en <strong>Configuración → Integraciones → Stripe</strong> (Owner, o un rol con el permiso de Pagos).</li>
                 <li>Las Empresas se emparejan automáticamente con clientes de Stripe por email cuando hay exactamente una coincidencia; si podría haber varias, se te va a pedir que elijas manualmente desde el perfil de una Empresa.</li>
               </ol>
@@ -1649,6 +1649,13 @@ export default function GuidePage() {
                 links de vuelta al recibo de Stripe, y vas a recibir una notificación dentro de la app por un
                 reembolso, un cobro fallido, o una suscripción que pasa a estar vencida o se cancela. Estas
                 verificaciones corren una vez al día, no al instante.
+              </p>
+              <p>
+                <strong>Enviar facturas:</strong> desde el perfil de una Empresa emparejada, <strong>Enviar factura</strong> arma una
+                factura de Stripe (líneas, moneda, días hasta el vencimiento y una nota opcional) y Stripe se la manda por email
+                al cliente con un link para pagar online. Se envía en el momento; para editarla o anularla después, usá Stripe.
+                Las facturas (pagas y pendientes) aparecen en el historial de pagos de la Empresa, y recibís una notificación
+                cuando se paga una que enviaste desde Northstack.
               </p>
             </div>
 
@@ -1719,7 +1726,7 @@ export default function GuidePage() {
                 Northstack.
               </p>
               <ol className="help-steps">
-                <li>In Stripe, create a <strong>Restricted API key</strong> with read-only access — the info icon next to the API key field walks you through it step by step.</li>
+                <li>In Stripe, create a <strong>Restricted API key</strong> with read access (plus <strong>Invoices</strong> set to Write if you'll send invoices) — the info icon next to the API key field walks you through it step by step.</li>
                 <li>Paste it into <strong>Settings → Integrations → Stripe</strong> (Owner, or a role with the Payments permission).</li>
                 <li>Companies are matched to Stripe customers automatically by email when there's exactly one match; if several could match, you'll be asked to pick manually from a Company's profile.</li>
               </ol>
@@ -1727,6 +1734,12 @@ export default function GuidePage() {
                 Each matched Company's profile then shows a full, paginated payment history with links back to the
                 Stripe receipt, and you'll get an in-app notification for a refund, a failed charge, or a
                 subscription going past-due or being cancelled. These checks run once a day, not instantly.
+              </p>
+              <p>
+                <strong>Sending invoices:</strong> from a matched Company's profile, <strong>Send invoice</strong> builds a Stripe
+                invoice (line items, currency, days until due and an optional memo), and Stripe emails it to the customer with a
+                link to pay online. It's sent right away; to edit or void it afterwards, use Stripe. Invoices (paid and unpaid)
+                show up in the Company's payment history, and you get a notification when one you sent from Northstack is paid.
               </p>
             </div>
 

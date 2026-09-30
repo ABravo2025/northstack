@@ -1098,6 +1098,10 @@ enum ActivityEntityType {
   subscription
   googleCalendarConnection
   stripeConnection
+  // Payments v1 Unidad 8 — an invoice sent to a Company through the tenant's own Stripe. Lives
+  // only in Stripe (no local row), so entityId is the Stripe invoice id; always logged with
+  // parentEntityType 'company' so it shows on that Company's Activity tab.
+  stripeInvoice
 }
 
 enum ActivityAction {
@@ -1490,6 +1494,8 @@ enum NotificationType {
   stripe_payment_failed
   stripe_subscription_past_due
   stripe_subscription_canceled
+  // Payments v1 Unidad 8 — only for invoices Northstack itself sent (metadata.northstack_sent).
+  stripe_invoice_paid
   // Time Off — mirrors the recipients of the existing pending/decided emails
   // (timeOffRequestService.ts), entityType is always 'timeOffRequest'.
   time_off_requested

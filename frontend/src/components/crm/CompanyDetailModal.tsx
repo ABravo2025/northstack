@@ -323,6 +323,7 @@ export default function CompanyDetailModal({
             <CompanyStripeSection
               token={token}
               company={company}
+              tenantCurrency={tenantCurrency}
               onLinked={(patch) => {
                 onSaved({ ...company, ...patch });
                 onChanged();

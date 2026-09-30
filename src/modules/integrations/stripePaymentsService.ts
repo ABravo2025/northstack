@@ -4,6 +4,7 @@ import {
   listCustomers,
   listEvents,
   listSubscriptions,
+  NORTHSTACK_SENT_METADATA_KEY,
   StripeApiError,
   type StripeCharge,
   type StripeEvent,
@@ -170,8 +171,18 @@ const STRIPE_ZERO_DECIMAL_CURRENCIES = new Set([
   'bif', 'clp', 'djf', 'gnf', 'jpy', 'kmf', 'krw', 'mga', 'pyg', 'rwf', 'ugx', 'vnd', 'vuv', 'xaf', 'xof', 'xpf',
 ]);
 
-function stripeAmountToCents(amount: number, currency: string): number {
+export function stripeAmountToCents(amount: number, currency: string): number {
   return STRIPE_ZERO_DECIMAL_CURRENCIES.has(currency.toLowerCase()) ? amount * 100 : amount;
+}
+
+// Inverse of the above, for amounts going TO Stripe (Unidad 8's invoice lines). Only called with
+// values already validated as whole units for zero-decimal currencies (see stripeInvoiceService).
+export function centsToStripeAmount(amountCents: number, currency: string): number {
+  return STRIPE_ZERO_DECIMAL_CURRENCIES.has(currency.toLowerCase()) ? amountCents / 100 : amountCents;
+}
+
+export function isZeroDecimalCurrency(currency: string): boolean {
+  return STRIPE_ZERO_DECIMAL_CURRENCIES.has(currency.toLowerCase());
 }
 
 function summarizeCharges(charges: StripeCharge[]): Omit<StripePaymentSummary, 'linked' | 'subscriptionStatus'> {
@@ -486,6 +497,27 @@ export async function processStripeWebhookEvent(tenantId: string, event: any): P
     case 'customer.subscription.deleted':
       await notifyCompanyStripeEvent(tenantId, company, 'stripe_subscription_canceled', `${company.name}'s subscription was canceled`);
       return 'notified';
+    case 'invoice.paid': {
+      // Only invoices Northstack itself sent (Unidad 8) — every subscription renewal also fires
+      // invoice.paid, and notifying on each of those would drown out everything else. Failed
+      // attempts on our invoices are already covered by charge.failed/payment_intent.payment_failed.
+      if (dataObject.metadata?.[NORTHSTACK_SENT_METADATA_KEY] !== 'true') {
+        return 'not a Northstack-sent invoice';
+      }
+      const invoiceCurrency = typeof dataObject.currency === 'string' ? dataObject.currency : '';
+      const paidCents =
+        typeof dataObject.amount_paid === 'number' && invoiceCurrency
+          ? stripeAmountToCents(dataObject.amount_paid, invoiceCurrency)
+          : null;
+      const label = typeof dataObject.number === 'string' ? ` ${dataObject.number}` : '';
+      await notifyCompanyStripeEvent(
+        tenantId,
+        company,
+        'stripe_invoice_paid',
+        `Invoice${label} was paid by ${company.name}${paidCents !== null ? formatAmount(paidCents) : ''}`
+      );
+      return 'notified';
+    }
     default:
       return 'unhandled event type';
   }

@@ -4,6 +4,7 @@ import { api, ApiError, type Company, type StripeCustomerMatch, type StripePayme
 import { useToast } from '../common/ToastProvider';
 import ConfirmDialog from '../common/ConfirmDialog';
 import CompanyPaymentHistoryModal from './CompanyPaymentHistoryModal';
+import SendStripeInvoiceModal from './SendStripeInvoiceModal';
 import { formatMoney } from '../../lib/currencies';
 
 interface CompanyStripeSectionProps {
@@ -12,13 +13,15 @@ interface CompanyStripeSectionProps {
   // Patches company.stripeCustomerId/stripeCustomerMatchedVia in the parent's list — same
   // "instant patch from the response, no full round-trip" pattern the rest of this modal uses.
   onLinked: (patch: Partial<Company>) => void;
+  // Fallback for the invoice form when this customer has no charges yet to take a currency from.
+  tenantCurrency: string;
 }
 
 function dashboardCustomerUrl(customerId: string, apiKeyMode: 'test' | 'live' | null): string {
   return `https://dashboard.stripe.com/${apiKeyMode === 'test' ? 'test/' : ''}customers/${customerId}`;
 }
 
-export default function CompanyStripeSection({ token, company, onLinked }: CompanyStripeSectionProps) {
+export default function CompanyStripeSection({ token, company, onLinked, tenantCurrency }: CompanyStripeSectionProps) {
   const { t } = useTranslation('crm');
   const toast = useToast();
   const [apiKeyMode, setApiKeyMode] = useState<'test' | 'live' | null>(null);
@@ -28,6 +31,9 @@ export default function CompanyStripeSection({ token, company, onLinked }: Compa
   const [pendingOverwrite, setPendingOverwrite] = useState<StripeCustomerMatch | null>(null);
   const [summary, setSummary] = useState<StripePaymentSummary | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
+  // Bumped after an invoice is sent so the history modal refetches if it's opened next.
+  const [historyVersion, setHistoryVersion] = useState(0);
 
   useEffect(() => {
     api
@@ -86,9 +92,11 @@ export default function CompanyStripeSection({ token, company, onLinked }: Compa
   };
 
   if (company.stripeCustomerId) {
+    // One full-width block: field-group-body is a 2-column grid, and sibling elements here would
+    // otherwise be split across its columns.
     return (
-      <>
-        <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-col gap-2" style={{ gridColumn: '1 / -1' }}>
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="integration-status-dot integration-status-dot-ok" />
             <a
@@ -111,7 +119,7 @@ export default function CompanyStripeSection({ token, company, onLinked }: Compa
         </div>
 
         {summary && (
-          <div className="mt-2 flex flex-wrap gap-4 text-xs text-ink-muted dark:text-dark-ink-muted">
+          <div className="flex flex-wrap gap-4 text-xs text-ink-muted dark:text-dark-ink-muted">
             <span>
               {t('companyStripe.summary.payments', { count: summary.paymentsCount })}
               {summary.paymentsCount > 0 && summary.currency && ` (${formatMoney(summary.paymentsAmountCents, summary.currency.toUpperCase())})`}
@@ -132,6 +140,10 @@ export default function CompanyStripeSection({ token, company, onLinked }: Compa
           </div>
         )}
 
+        <button type="button" className="btn-secondary btn-sm self-start" onClick={() => setInvoiceOpen(true)}>
+          {t('companyStripe.sendInvoice')}
+        </button>
+
         {matches !== null && (
           <StripeMatchList
             matches={matches}
@@ -151,8 +163,21 @@ export default function CompanyStripeSection({ token, company, onLinked }: Compa
           />
         )}
 
+        {invoiceOpen && (
+          <SendStripeInvoiceModal
+            open={invoiceOpen}
+            onClose={() => setInvoiceOpen(false)}
+            onSent={() => setHistoryVersion((v) => v + 1)}
+            token={token}
+            companyId={company.id}
+            companyName={company.name}
+            defaultCurrency={summary?.currency ?? tenantCurrency}
+          />
+        )}
+
         {historyOpen && (
           <CompanyPaymentHistoryModal
+            key={historyVersion}
             open={historyOpen}
             onClose={() => setHistoryOpen(false)}
             token={token}
@@ -160,7 +185,7 @@ export default function CompanyStripeSection({ token, company, onLinked }: Compa
             companyName={company.name}
           />
         )}
-      </>
+      </div>
     );
   }
 

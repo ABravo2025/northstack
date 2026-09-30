@@ -35,6 +35,7 @@ const ENTITY_TYPE_LABELS: Record<ActivityEntityType, string> = {
   subscription: 'Subscription',
   googleCalendarConnection: 'Google Calendar Connection',
   stripeConnection: 'Stripe Connection',
+  stripeInvoice: 'Stripe Invoice',
 };
 
 // `record` is the full before/after snapshot the value came from (not just the one field) — a

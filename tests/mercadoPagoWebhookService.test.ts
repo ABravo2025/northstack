@@ -286,3 +286,33 @@ describe('plan changes (2026-09-30)', () => {
     expect(invoices[0]).toMatchObject({ amountCents: 1_500_000, baseAmountCents: 1_500_000, extraSeatsAmountCents: 0 });
   });
 });
+
+describe('webhook race on an upgrade (2026-09-30)', () => {
+  it("prices the new preapproval's first charge from its own PlanPrice, not the stale stored plan", async () => {
+    // The upgrade's `authorized` webhook hasn't stored pre_growth yet: still Starter on file.
+    subscriptions.push({
+      id: 'sub1', tenantId: 't1', provider: 'mercadopago', externalSubscriptionId: 'pre_starter', plan: 'starter',
+      status: 'active', lockedPriceCents: 1_500_000, currency: 'ARS', pendingPlanPriceId: null,
+    });
+
+    await handleMercadoPagoAuthorizedPayment(authorizedPayment({
+      preapproval_id: 'pre_growth', transaction_amount: 30000, external_reference: 'sub1:pp_ar_growth',
+    }));
+
+    expect(invoices[0]).toMatchObject({ amountCents: 3_000_000, baseAmountCents: 3_000_000, extraSeatsAmountCents: 0 });
+    // Status/period are the preapproval webhook's job for a not-yet-stored preapproval.
+    expect(syncMock).not.toHaveBeenCalled();
+  });
+
+  it("takes the card brand from the preapproval (the charge only says 'card')", async () => {
+    subscriptions.push({
+      id: 'sub1', tenantId: 't1', provider: 'mercadopago', externalSubscriptionId: 'pre_new', plan: 'starter',
+      status: 'active', lockedPriceCents: 3_000_000, currency: 'ARS', pendingPlanPriceId: null,
+    });
+    getPreapprovalMock.mockResolvedValueOnce({ id: 'pre_new', status: 'authorized', payment_method_id: 'master', next_payment_date: '2026-10-30T10:00:00.000-04:00' } as any);
+
+    await handleMercadoPagoAuthorizedPayment(authorizedPayment({ payment_method_id: 'card' }));
+
+    expect(syncMock).toHaveBeenCalledWith(expect.objectContaining({ paymentMethodBrand: 'master' }));
+  });
+});

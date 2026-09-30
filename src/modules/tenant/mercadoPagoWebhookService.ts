@@ -67,6 +67,7 @@ export async function handleMercadoPagoPreapproval(preapproval: MercadoPagoPreap
       // Without this, Subscription.currency stays at its USD placeholder (set at signup) for an AR
       // tenant actually billed in ARS — every invoice would inherit the wrong currency label.
       ...(preapproval.auto_recurring ? { currency: preapproval.auto_recurring.currency_id } : {}),
+      ...(preapproval.payment_method_id ? { paymentMethodBrand: preapproval.payment_method_id, paymentMethodLast4: null } : {}),
       ...(planFields ?? {}),
       // No trial: MP charges this preapproval right away, so the paid period starts now and runs to
       // its next charge (the authorized_payment webhook sets the same dates; this covers it arriving
@@ -165,7 +166,14 @@ export async function handleMercadoPagoAuthorizedPayment(payment: MercadoPagoAut
       isCurrent && subscription.pendingPlanPriceId
         ? await prisma.planPrice.findUnique({ where: { id: subscription.pendingPlanPriceId } })
         : null;
-    const lockedPriceCents = pending ? pending.launchPriceCents : subscription.lockedPriceCents;
+    // The base price this charge paid. For the current preapproval it's what's stored (or the
+    // downgrade applying now). A charge on a preapproval not stored yet is the FIRST charge of a
+    // replacement (upgrade) whose own `authorized` webhook is racing this one — they arrive ~30ms
+    // apart (seen 2026-09-30: the invoice got the old Starter price as base and the rest as "extra
+    // seats"). Its price is the PlanPrice row in its external_reference, not the stale stored one.
+    const refPlanPriceId = payment.external_reference ? parseExternalReference(payment.external_reference).planPriceId : null;
+    const refPrice = !isCurrent && refPlanPriceId ? await prisma.planPrice.findUnique({ where: { id: refPlanPriceId } }) : null;
+    const lockedPriceCents = pending?.launchPriceCents ?? refPrice?.launchPriceCents ?? subscription.lockedPriceCents;
 
     if (isCurrent) {
       await syncSubscriptionAndTenant({
@@ -174,7 +182,7 @@ export async function handleMercadoPagoAuthorizedPayment(payment: MercadoPagoAut
         currentPeriodStart: periodStart,
         currentPeriodEnd: periodEnd,
         gracePeriodEndsAt: null,
-        ...(payment.payment_method_id ? { paymentMethodBrand: payment.payment_method_id } : {}),
+        ...(brandOf(preapproval, payment) ? { paymentMethodBrand: brandOf(preapproval, payment), paymentMethodLast4: null } : {}),
         ...(pending
           ? { plan: pending.plan, lockedPriceCents: pending.launchPriceCents, planPriceId: pending.id, pendingPlanPriceId: null }
           : {}),
@@ -216,6 +224,10 @@ export async function handleMercadoPagoAuthorizedPayment(payment: MercadoPagoAut
   // "scheduled" (not charged yet), a still-pending payment, or anything unrecognised: nothing to
   // record. MP sends another event for the same charge once it settles.
   return `ignored (status ${payment.status}, payment ${result ?? 'none'})`;
+}
+
+function brandOf(preapproval: MercadoPagoPreapproval | null, payment: MercadoPagoAuthorizedPayment): string | undefined {
+  return preapproval?.payment_method_id ?? payment.payment_method_id;
 }
 
 export async function handleMercadoPagoAuthorizedPaymentEvent(authorizedPaymentId: string): Promise<string> {

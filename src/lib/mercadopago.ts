@@ -73,6 +73,9 @@ export interface MercadoPagoPreapproval {
   id: string;
   status: string;
   next_payment_date?: string; // ISO — when MP charges next, i.e. the end of the current period
+  // "master", "visa", "account_money", ... — the brand. A charge (authorized_payment) only says
+  // "card" (verified 2026-09-30), so this is where the display brand comes from.
+  payment_method_id?: string;
   init_point?: string;
   external_reference?: string;
   auto_recurring?: {

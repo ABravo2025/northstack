@@ -1726,6 +1726,30 @@ table.help-ref td.no {
   @apply flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto;
 }
 
+/* A scrolling flex column must never shrink its children: .overview-field sets an explicit
+   min-height (34px), which replaces the default min-height:auto, so once the panel overflowed
+   (contacts list, inline "add" form) those rows were squeezed to 34px and their content spilled
+   over the rows below instead of the panel scrolling. */
+.overview-panel-left > * {
+  @apply shrink-0;
+}
+
+/* Standalone rows placed straight in the panel (Contacts/Opportunities lists), not inside a
+   .field-group-body — they need that same horizontal padding or they sit flush on the edge. */
+.overview-panel-left > .overview-field {
+  @apply px-4 py-2;
+}
+
+.inline-add-form input:not([type='checkbox']),
+.inline-add-form select {
+  @apply rounded-md border border-line-strong bg-surface-1 px-2.5 py-1.5 text-sm text-brand-navy dark:border-gray-600 dark:bg-gray-800 dark:text-dark-ink;
+}
+
+.inline-add-form input:not([type='checkbox']):focus,
+.inline-add-form select:focus {
+  @apply border-brand-blue outline-none ring-2 ring-brand-blue/25;
+}
+
 .overview-field-full {
   @apply col-span-2;
 }

@@ -321,6 +321,11 @@ Decisión de Alejandro. `changePlan` (`subscriptionSelfServeService.ts`):
   `Subscription.pendingPlanPriceId` guarda el cambio hasta que el cobro de renovación lo aplica.
   Elegir de nuevo el plan actual lo cancela (Dodo `cancelChangePlan`, MP restaura el monto).
 - Con `past_due`/`suspended` no se puede cambiar de plan (primero regularizar el pago).
+- **Descuento 100% en Dodo** (2026-09-30, caso Javier): los cobros quedan en $0. Un cobro de $0 fuera
+  del trial se trata como cobro real cubierto por el descuento (renueva el período, aplica upgrade o
+  downgrade programado, sin Invoice), y el evento `subscription.plan_changed` sincroniza el plan con el
+  producto de Dodo aunque no llegue ningún pago. Que el descuento sobreviva al cambio de plan depende
+  del flag `preserve_on_plan_change` del descuento en Dodo — si está apagado, el upgrade se cobra entero.
 
 ## Mapeo de fechas mostradas en UI
 

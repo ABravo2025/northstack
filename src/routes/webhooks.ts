@@ -170,7 +170,13 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
     // subscription billing — narrowing here (rather than after reading .data.metadata) is also
     // what lets TypeScript know `event.data` has a `metadata` field at all, since the full
     // UnwrapWebhookEvent union includes payloads that don't.
-    if (event.type !== 'payment.succeeded' && event.type !== 'payment.failed' && event.type !== 'subscription.active' && event.type !== 'subscription.cancelled') {
+    if (
+      event.type !== 'payment.succeeded' &&
+      event.type !== 'payment.failed' &&
+      event.type !== 'subscription.active' &&
+      event.type !== 'subscription.cancelled' &&
+      event.type !== 'subscription.plan_changed'
+    ) {
       return res.status(200).json({ status: 'ignored event type' });
     }
 
@@ -232,7 +238,38 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
               ...confirmedPlanFields(resolvedPrice0),
             }
           : {};
-        const fields0 = { ...paymentMethodFields, ...planFields0, ...discountCodeFields };
+        // A $0 charge on a subscription past its trial is a real charge fully covered by a discount
+        // (e.g. a 100%-off code — Javier's case, 2026-09-30), not a trial mandate: it advances the
+        // period and carries plan changes exactly like a paid one. Only the Invoice is skipped, as
+        // before. Without this a fully-discounted subscriber never had its period renewed, an
+        // upgrade (full_immediately, $0 after discount) never switched the plan, and a scheduled
+        // downgrade never applied. "Past its trial" allows a day of slack for the trial-end charge.
+        const isDiscountedCharge =
+          !payment.is_update_payment_method &&
+          (subscription.status !== 'trialing' ||
+            (subscription.trialEndsAt !== null && subscription.trialEndsAt.getTime() <= Date.now() + 24 * 60 * 60 * 1000));
+        const planChangePriceId0 = payment.metadata?.planChange === 'upgrade' ? payment.metadata?.planPriceId : null;
+        const changedPrice0 = !isDiscountedCharge
+          ? null
+          : typeof planChangePriceId0 === 'string'
+            ? await prisma.planPrice.findUnique({ where: { id: planChangePriceId0 } })
+            : subscription.pendingPlanPriceId
+              ? await prisma.planPrice.findUnique({ where: { id: subscription.pendingPlanPriceId } })
+              : null;
+        const periodFields0 = isDiscountedCharge
+          ? {
+              status: 'active' as const,
+              currentPeriodStart: new Date(),
+              currentPeriodEnd: subscriptionId0 ? await getNextBillingDate(subscriptionId0) : new Date(Date.now() + ONE_MONTH_MS),
+            }
+          : {};
+        const fields0 = {
+          ...paymentMethodFields,
+          ...planFields0,
+          ...(changedPrice0 ? { ...confirmedPlanFields(changedPrice0), pendingPlanPriceId: null } : {}),
+          ...periodFields0,
+          ...discountCodeFields,
+        };
         if (Object.keys(fields0).length > 0) {
           await syncSubscriptionAndTenant({ tenantId: subscription.tenantId, ...fields0 });
         }
@@ -325,6 +362,19 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
         status: 'past_due',
         gracePeriodEndsAt: new Date(Date.now() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000),
       });
+    } else if (event.type === 'subscription.plan_changed') {
+      // Dodo switched the subscription's product — an upgrade that went through (with or without a
+      // charge: a 100%-off discount means no payment event at all may arrive), or a scheduled
+      // downgrade reaching its date. The product is the source of truth for which plan they're on.
+      // Seat-only updates keep the same product, so a same-plan event is a no-op.
+      const changedTo = await resolvePlanPriceFromDodoProductId(event.data.product_id);
+      if (changedTo && changedTo.plan !== subscription.plan) {
+        await syncSubscriptionAndTenant({
+          tenantId: subscription.tenantId,
+          ...confirmedPlanFields(changedTo),
+          pendingPlanPriceId: null,
+        });
+      }
     } else if (event.type === 'subscription.cancelled') {
       await syncSubscriptionAndTenant({ tenantId: subscription.tenantId, status: 'cancelled' });
     } else if (event.type === 'subscription.active') {

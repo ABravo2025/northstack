@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { api, type PaymentsOverview } from '../api';
+import { api, type PaymentsOverview, type PaymentsOverviewRow } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import TableSkeleton from '../components/common/TableSkeleton';
 import EntityCardList from '../components/common/EntityCardList';
@@ -10,6 +10,49 @@ import { usePermissions } from '../contexts/PermissionsContext';
 
 interface PaymentsOverviewPageProps {
   token: string;
+}
+
+// Unpaid money first: overdue invoices, then any open invoice, so a pending invoice can't get
+// lost further down the list. Otherwise keeps the backend's order.
+function sortByOutstanding(rows: PaymentsOverviewRow[]): PaymentsOverviewRow[] {
+  return [...rows].sort(
+    (a, b) =>
+      b.summary.overdueInvoicesCount - a.summary.overdueInvoicesCount ||
+      b.summary.openInvoicesCount - a.summary.openInvoicesCount,
+  );
+}
+
+function OpenInvoicesCell({ row }: { row: PaymentsOverviewRow }) {
+  const { t } = useTranslation('crm');
+  const { summary } = row;
+  if (!summary.invoicesAccessible) {
+    return (
+      <span className="text-ink-faint" title={t('payments.invoicesUnavailable')}>
+        —
+      </span>
+    );
+  }
+  if (summary.openInvoicesCount === 0) return <span className="text-ink-faint">0</span>;
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1.5">
+      <span className="font-medium">{summary.openInvoicesCount}</span>
+      {summary.openInvoicesCurrency && (
+        <span className="text-xs text-ink-faint">
+          ({formatMoney(summary.openInvoicesAmountCents, summary.openInvoicesCurrency.toUpperCase())})
+        </span>
+      )}
+      {summary.overdueInvoicesCount > 0 && (
+        <span className="category-chip chip-coral">{t('payments.overdueCount', { count: summary.overdueInvoicesCount })}</span>
+      )}
+    </span>
+  );
+}
+
+function openInvoicesMeta(row: PaymentsOverviewRow, t: (key: string, opts?: Record<string, unknown>) => string): string {
+  if (!row.summary.invoicesAccessible || row.summary.openInvoicesCount === 0) return '';
+  const overdue =
+    row.summary.overdueInvoicesCount > 0 ? ` (${t('payments.overdueCount', { count: row.summary.overdueInvoicesCount })})` : '';
+  return `${t('payments.openInvoicesMeta', { count: row.summary.openInvoicesCount })}${overdue} · `;
 }
 
 // Payments v1, Unit 3 (spec-payments-v1.md) — everything here is live against Stripe, no local
@@ -63,7 +106,23 @@ export default function PaymentsOverviewPage({ token }: PaymentsOverviewPageProp
         <p className="mt-4 text-sm text-ink-muted dark:text-dark-ink-muted">{t('payments.connectStripeFirst')}</p>
       ) : (
         <>
-          <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+          <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-5">
+            <div className="card">
+              <p className="text-xs text-ink-muted dark:text-dark-ink-muted">{t('payments.stats.openInvoices')}</p>
+              <p className="text-lg font-semibold">
+                {overview.totals.openInvoicesCount}
+                {overview.totals.openInvoicesCount > 0 && overview.totals.openInvoicesCurrency && (
+                  <span className="ml-1 text-xs text-ink-faint">
+                    ({formatMoney(overview.totals.openInvoicesAmountCents, overview.totals.openInvoicesCurrency.toUpperCase())})
+                  </span>
+                )}
+              </p>
+              {overview.totals.overdueInvoicesCount > 0 && (
+                <span className="category-chip chip-coral mt-1 inline-block">
+                  {t('payments.overdueCount', { count: overview.totals.overdueInvoicesCount })}
+                </span>
+              )}
+            </div>
             <div className="card">
               <p className="text-xs text-ink-muted dark:text-dark-ink-muted">{t('payments.stats.refunds')}</p>
               <p className="text-lg font-semibold">
@@ -94,12 +153,12 @@ export default function PaymentsOverviewPage({ token }: PaymentsOverviewPageProp
           ) : (
             <>
             <EntityCardList
-              items={overview.companies}
+              items={sortByOutstanding(overview.companies)}
               getKey={(row) => row.companyId}
               getInitials={(row) => row.companyName.slice(0, 2).toUpperCase()}
               getName={(row) => row.companyName}
               getMeta={(row) =>
-                `${t('payments.refundsCount', { count: row.summary.refundsCount })} · ${t('payments.failedCountLabel', { count: row.summary.failedCount })} · ${row.summary.subscriptionStatus ?? t('payments.noSubscription')}`
+                `${openInvoicesMeta(row, t)}${t('payments.refundsCount', { count: row.summary.refundsCount })} · ${t('payments.failedCountLabel', { count: row.summary.failedCount })} · ${row.summary.subscriptionStatus ?? t('payments.noSubscription')}`
               }
               onSelect={(row) => setSelectedCompany({ id: row.companyId, name: row.companyName })}
             />
@@ -108,13 +167,14 @@ export default function PaymentsOverviewPage({ token }: PaymentsOverviewPageProp
                 <thead>
                   <tr>
                     <th>{t('payments.columns.company')}</th>
+                    <th>{t('payments.columns.openInvoices')}</th>
                     <th>{t('payments.columns.refunds')}</th>
                     <th>{t('payments.columns.failed')}</th>
                     <th>{t('payments.columns.subscription')}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {overview.companies.map((row) => (
+                  {sortByOutstanding(overview.companies).map((row) => (
                     <tr key={row.companyId}>
                       <td>
                         <button
@@ -124,6 +184,9 @@ export default function PaymentsOverviewPage({ token }: PaymentsOverviewPageProp
                         >
                           {row.companyName}
                         </button>
+                      </td>
+                      <td>
+                        <OpenInvoicesCell row={row} />
                       </td>
                       <td>
                         {row.summary.refundsCount}

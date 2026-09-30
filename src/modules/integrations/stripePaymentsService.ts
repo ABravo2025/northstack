@@ -3,6 +3,7 @@ import {
   listCharges,
   listCustomers,
   listEvents,
+  listInvoices,
   listSubscriptions,
   NORTHSTACK_SENT_METADATA_KEY,
   StripeApiError,
@@ -145,6 +146,15 @@ export interface StripePaymentSummary {
   // simplification as the rest of this summary (see getCompanyPaymentSummary): a customer with
   // more than 100 charges could have an even earlier one that this doesn't see.
   firstPaymentAt: string | null;
+  // Unidad 8 follow-up (2026-09-30): finalized-but-unpaid invoices. An unpaid invoice has no
+  // Charge yet, so without these it's invisible everywhere except the history modal.
+  // invoicesAccessible is false when the tenant's key can't read Invoices (403) — the counts are
+  // then unknown, not zero, and the UI shows a dash instead of claiming "nothing pending".
+  invoicesAccessible: boolean;
+  openInvoicesCount: number;
+  openInvoicesAmountCents: number; // sum of amount_remaining
+  openInvoicesCurrency: string | null;
+  overdueInvoicesCount: number;
 }
 
 const UNLINKED_SUMMARY: StripePaymentSummary = {
@@ -159,6 +169,11 @@ const UNLINKED_SUMMARY: StripePaymentSummary = {
   disputesCount: 0,
   disputesAmountCents: 0,
   firstPaymentAt: null,
+  invoicesAccessible: true,
+  openInvoicesCount: 0,
+  openInvoicesAmountCents: 0,
+  openInvoicesCurrency: null,
+  overdueInvoicesCount: 0,
 };
 
 // Stripe's zero-decimal currencies (https://docs.stripe.com/currencies#zero-decimal) store
@@ -185,7 +200,36 @@ export function isZeroDecimalCurrency(currency: string): boolean {
   return STRIPE_ZERO_DECIMAL_CURRENCIES.has(currency.toLowerCase());
 }
 
-function summarizeCharges(charges: StripeCharge[]): Omit<StripePaymentSummary, 'linked' | 'subscriptionStatus'> {
+type OpenInvoicesSummary = Pick<
+  StripePaymentSummary,
+  'invoicesAccessible' | 'openInvoicesCount' | 'openInvoicesAmountCents' | 'openInvoicesCurrency' | 'overdueInvoicesCount'
+>;
+
+// A 403 here only means the key has no Invoices permission (read-only keys from before Unidad 8
+// may lack it) — caught so the rest of the summary still loads and, unlike other calls, the
+// connection is NOT flagged as needing attention. Anything else propagates as usual.
+async function summarizeOpenInvoices(apiKey: string, customerId: string): Promise<OpenInvoicesSummary> {
+  try {
+    const { data } = await listInvoices(apiKey, { customer: customerId, status: 'open', limit: 100 });
+    const nowUnix = Date.now() / 1000;
+    return {
+      invoicesAccessible: true,
+      openInvoicesCount: data.length,
+      openInvoicesAmountCents: data.reduce((sum, inv) => sum + stripeAmountToCents(inv.amount_remaining, inv.currency), 0),
+      openInvoicesCurrency: data[0]?.currency ?? null,
+      overdueInvoicesCount: data.filter((inv) => inv.due_date !== null && inv.due_date < nowUnix).length,
+    };
+  } catch (error) {
+    if (error instanceof StripeApiError && error.status === 403) {
+      return { invoicesAccessible: false, openInvoicesCount: 0, openInvoicesAmountCents: 0, openInvoicesCurrency: null, overdueInvoicesCount: 0 };
+    }
+    throw error;
+  }
+}
+
+function summarizeCharges(
+  charges: StripeCharge[],
+): Omit<StripePaymentSummary, 'linked' | 'subscriptionStatus' | keyof OpenInvoicesSummary> {
   let refundsCount = 0;
   let refundsAmountCents = 0;
   let failedCount = 0;
@@ -239,10 +283,11 @@ export async function getCompanyPaymentSummary(
   }
 
   const { apiKey } = await getActiveConnectionForTenant(tenantId);
-  const [chargesResult, subscriptionsResult] = await withNeedsAttentionTracking(tenantId, () =>
+  const [chargesResult, subscriptionsResult, openInvoices] = await withNeedsAttentionTracking(tenantId, () =>
     Promise.all([
       listCharges(apiKey, { customer: company.stripeCustomerId!, limit: 100 }),
       listSubscriptions(apiKey, { customer: company.stripeCustomerId!, status: 'all', limit: 10 }),
+      summarizeOpenInvoices(apiKey, company.stripeCustomerId!),
     ])
   );
 
@@ -253,7 +298,7 @@ export async function getCompanyPaymentSummary(
   const relevant = subscriptionsResult.data.find((s) => ['active', 'trialing', 'past_due'].includes(s.status));
   const subscriptionStatus = relevant?.status ?? subscriptionsResult.data[0]?.status ?? null;
 
-  return { linked: true, subscriptionStatus, ...summarizeCharges(chargesResult.data) };
+  return { linked: true, subscriptionStatus, ...summarizeCharges(chargesResult.data), ...openInvoices };
 }
 
 export interface StripePaymentEvent {
@@ -344,6 +389,11 @@ export interface PaymentsOverviewTotals {
   currency: string | null;
   failedCount: number;
   activeSubscriptions: number;
+  openInvoicesCount: number;
+  openInvoicesAmountCents: number;
+  // Same single-currency simplification as `currency` above.
+  openInvoicesCurrency: string | null;
+  overdueInvoicesCount: number;
 }
 
 export interface PaymentsOverview {
@@ -354,7 +404,17 @@ export interface PaymentsOverview {
 
 const EMPTY_OVERVIEW: PaymentsOverview = {
   connected: false,
-  totals: { refundsCount: 0, refundsAmountCents: 0, currency: null, failedCount: 0, activeSubscriptions: 0 },
+  totals: {
+    refundsCount: 0,
+    refundsAmountCents: 0,
+    currency: null,
+    failedCount: 0,
+    activeSubscriptions: 0,
+    openInvoicesCount: 0,
+    openInvoicesAmountCents: 0,
+    openInvoicesCurrency: null,
+    overdueInvoicesCount: 0,
+  },
   companies: [],
 };
 
@@ -396,8 +456,12 @@ export async function getPaymentsOverview(tenantId: string): Promise<PaymentsOve
       currency: acc.currency ?? row.summary.currency,
       failedCount: acc.failedCount + row.summary.failedCount,
       activeSubscriptions: acc.activeSubscriptions + (row.summary.subscriptionStatus === 'active' ? 1 : 0),
+      openInvoicesCount: acc.openInvoicesCount + row.summary.openInvoicesCount,
+      openInvoicesAmountCents: acc.openInvoicesAmountCents + row.summary.openInvoicesAmountCents,
+      openInvoicesCurrency: acc.openInvoicesCurrency ?? row.summary.openInvoicesCurrency,
+      overdueInvoicesCount: acc.overdueInvoicesCount + row.summary.overdueInvoicesCount,
     }),
-    { refundsCount: 0, refundsAmountCents: 0, currency: null, failedCount: 0, activeSubscriptions: 0 }
+    { ...EMPTY_OVERVIEW.totals }
   );
 
   return { connected: true, totals, companies: rows };

@@ -1655,7 +1655,9 @@ export default function GuidePage() {
                 factura de Stripe (líneas, moneda, días hasta el vencimiento y una nota opcional) y Stripe se la manda por email
                 al cliente con un link para pagar online. Se envía en el momento; para editarla o anularla después, usá Stripe.
                 Las facturas (pagas y pendientes) aparecen en el historial de pagos de la Empresa, y recibís una notificación
-                cuando se paga una que enviaste desde Northstack.
+                cuando se paga una que enviaste desde Northstack. Las facturas abiertas (sin pagar) tienen su propia columna en
+                la página <strong>Pagos</strong> y en el resumen de cada Empresa, con las vencidas marcadas — las Empresas con
+                facturas vencidas o abiertas aparecen primero.
               </p>
             </div>
 
@@ -1740,6 +1742,8 @@ export default function GuidePage() {
                 invoice (line items, currency, days until due and an optional memo), and Stripe emails it to the customer with a
                 link to pay online. It's sent right away; to edit or void it afterwards, use Stripe. Invoices (paid and unpaid)
                 show up in the Company's payment history, and you get a notification when one you sent from Northstack is paid.
+                Open (unpaid) invoices have their own column on the <strong>Payments</strong> page and in each Company's summary,
+                with overdue ones flagged — Companies with overdue or open invoices are listed first.
               </p>
             </div>
 

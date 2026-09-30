@@ -292,6 +292,12 @@ export interface StripePaymentSummary {
   disputesCount: number;
   disputesAmountCents: number;
   firstPaymentAt: string | null;
+  // false when the tenant's Stripe key can't read Invoices — the counts below are unknown, not 0.
+  invoicesAccessible: boolean;
+  openInvoicesCount: number;
+  openInvoicesAmountCents: number;
+  openInvoicesCurrency: string | null;
+  overdueInvoicesCount: number;
 }
 
 export interface StripePaymentEvent {
@@ -359,7 +365,17 @@ export interface PaymentsOverviewRow {
 
 export interface PaymentsOverview {
   connected: boolean;
-  totals: { refundsCount: number; refundsAmountCents: number; currency: string | null; failedCount: number; activeSubscriptions: number };
+  totals: {
+    refundsCount: number;
+    refundsAmountCents: number;
+    currency: string | null;
+    failedCount: number;
+    activeSubscriptions: number;
+    openInvoicesCount: number;
+    openInvoicesAmountCents: number;
+    openInvoicesCurrency: string | null;
+    overdueInvoicesCount: number;
+  };
   companies: PaymentsOverviewRow[];
 }
 

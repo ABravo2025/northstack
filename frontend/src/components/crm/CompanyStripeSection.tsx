@@ -119,7 +119,20 @@ export default function CompanyStripeSection({ token, company, onLinked, tenantC
         </div>
 
         {summary && (
-          <div className="flex flex-wrap gap-4 text-xs text-ink-muted dark:text-dark-ink-muted">
+          <div className="flex flex-wrap items-center gap-4 text-xs text-ink-muted dark:text-dark-ink-muted">
+            {summary.invoicesAccessible && (
+              <span className={summary.openInvoicesCount > 0 ? 'font-medium text-ink dark:text-dark-ink' : undefined}>
+                {t('companyStripe.summary.openInvoices', { count: summary.openInvoicesCount })}
+                {summary.openInvoicesCount > 0 &&
+                  summary.openInvoicesCurrency &&
+                  ` (${formatMoney(summary.openInvoicesAmountCents, summary.openInvoicesCurrency.toUpperCase())})`}
+                {summary.overdueInvoicesCount > 0 && (
+                  <span className="category-chip chip-coral ml-1.5">
+                    {t('payments.overdueCount', { count: summary.overdueInvoicesCount })}
+                  </span>
+                )}
+              </span>
+            )}
             <span>
               {t('companyStripe.summary.payments', { count: summary.paymentsCount })}
               {summary.paymentsCount > 0 && summary.currency && ` (${formatMoney(summary.paymentsAmountCents, summary.currency.toUpperCase())})`}

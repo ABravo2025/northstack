@@ -291,6 +291,7 @@
     "toastLoadFailed": "Failed to load payments overview: {{error}}",
     "connectStripeFirst": "Connect your Stripe account first — go to Settings → Integrations.",
     "stats": {
+      "openInvoices": "Open invoices",
       "refunds": "Refunds",
       "failedPayments": "Failed payments",
       "activeSubscriptions": "Active subscriptions",
@@ -299,6 +300,7 @@
     "noCompaniesLinked": "No Companies linked to Stripe yet — open a Company and use \"Search on Stripe\" under Payments.",
     "columns": {
       "company": "Company",
+      "openInvoices": "Open invoices",
       "refunds": "Refunds",
       "failed": "Failed",
       "subscription": "Subscription"
@@ -306,7 +308,12 @@
     "refundsCount_one": "{{count}} refund",
     "refundsCount_other": "{{count}} refunds",
     "failedCountLabel": "{{count}} failed",
-    "noSubscription": "no subscription"
+    "noSubscription": "no subscription",
+    "overdueCount_one": "{{count}} overdue",
+    "overdueCount_other": "{{count}} overdue",
+    "openInvoicesMeta_one": "{{count}} open invoice",
+    "openInvoicesMeta_other": "{{count}} open invoices",
+    "invoicesUnavailable": "Your Stripe key can't read invoices — set \"Invoices\" to Read or Write on the key in Stripe."
   },
   "companyDetail": {
     "groups": {
@@ -395,6 +402,7 @@
     "viewFullHistory": "View full payment history →",
     "changeLink": "Change link",
     "summary": {
+      "openInvoices": "Open invoices: {{count}}",
       "payments": "Payments: {{count}}",
       "refunds": "Refunds: {{count}}",
       "disputes": "Disputes: {{count}}",

@@ -235,7 +235,7 @@ export async function deleteDraftInvoice(apiKey: string, invoiceId: string): Pro
 
 export async function listInvoices(
   apiKey: string,
-  params: { customer: string; limit?: number; starting_after?: string },
+  params: { customer: string; status?: StripeInvoice['status']; limit?: number; starting_after?: string },
 ): Promise<StripeList<StripeInvoice>> {
   return stripeRequest<StripeList<StripeInvoice>>(apiKey, 'GET', '/invoices', params);
 }

@@ -320,3 +320,10 @@ cobrar la tarjeta guardada off-session y Payment Links), **mismo permiso que ver
   secciones de facturas y "clave sin acceso". Las respuestas de Stripe se simularon a nivel de
   red. **No probado contra Stripe real** — el clasificador de seguridad bloqueó usar la test key
   desde este entorno; la prueba de punta a punta queda para Alejandro en staging.
+- [x] **Facturas abiertas como categoría propia (2026-09-30, pedido de Alejandro tras probar en
+  staging)**: "si no, queda perdido que hay una factura sin pagar". `getCompanyPaymentSummary` suma
+  `listInvoices(status: 'open')` → `openInvoicesCount`/`openInvoicesAmountCents` (lo que falta
+  cobrar, `amount_remaining`)/`overdueInvoicesCount`; la página **Pagos** abre con esa tarjeta, tiene
+  columna propia y ordena primero las Empresas con vencidas/abiertas; el resumen de la Company la
+  muestra primero. Un 403 en esa llamada (clave sin permiso de Invoices) no rompe el resumen ni
+  marca la conexión: `invoicesAccessible: false` y la UI muestra "—" en vez de un 0 engañoso.

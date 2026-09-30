@@ -71,11 +71,12 @@ vi.mock('../src/modules/notifications/notificationService.js', () => ({
   createNotification: createNotificationMock,
 }));
 
-const { listCustomersMock, listChargesMock, listSubscriptionsMock, listEventsMock } = vi.hoisted(() => ({
+const { listCustomersMock, listChargesMock, listSubscriptionsMock, listEventsMock, listInvoicesMock } = vi.hoisted(() => ({
   listCustomersMock: vi.fn(async () => ({ data: [], has_more: false })),
   listChargesMock: vi.fn(async () => ({ data: [], has_more: false })),
   listSubscriptionsMock: vi.fn(async () => ({ data: [], has_more: false })),
   listEventsMock: vi.fn(async () => ({ data: [], has_more: false })),
+  listInvoicesMock: vi.fn(async (): Promise<any> => ({ data: [], has_more: false })),
 }));
 vi.mock('../src/lib/stripe.js', async () => {
   const actual = await vi.importActual<typeof import('../src/lib/stripe.js')>('../src/lib/stripe.js');
@@ -85,6 +86,7 @@ vi.mock('../src/lib/stripe.js', async () => {
     listCharges: listChargesMock,
     listSubscriptions: listSubscriptionsMock,
     listEvents: listEventsMock,
+    listInvoices: listInvoicesMock,
   };
 });
 
@@ -122,6 +124,7 @@ function resetMocks() {
   listChargesMock.mockReset().mockResolvedValue({ data: [], has_more: false });
   listSubscriptionsMock.mockReset().mockResolvedValue({ data: [], has_more: false });
   listEventsMock.mockReset().mockResolvedValue({ data: [], has_more: false });
+  listInvoicesMock.mockReset().mockResolvedValue({ data: [], has_more: false });
   createNotificationMock.mockClear();
 }
 
@@ -201,8 +204,14 @@ describe('getCompanyPaymentSummary', () => {
       disputesCount: 0,
       disputesAmountCents: 0,
       firstPaymentAt: null,
+      invoicesAccessible: true,
+      openInvoicesCount: 0,
+      openInvoicesAmountCents: 0,
+      openInvoicesCurrency: null,
+      overdueInvoicesCount: 0,
     });
     expect(listChargesMock).not.toHaveBeenCalled();
+    expect(listInvoicesMock).not.toHaveBeenCalled();
   });
 
   it('counts payments, refunds, disputes, and failed charges from the same Charges list', async () => {
@@ -231,6 +240,11 @@ describe('getCompanyPaymentSummary', () => {
       disputesCount: 1,
       disputesAmountCents: 4000,
       firstPaymentAt: new Date(1 * 1000).toISOString(),
+      invoicesAccessible: true,
+      openInvoicesCount: 0,
+      openInvoicesAmountCents: 0,
+      openInvoicesCurrency: null,
+      overdueInvoicesCount: 0,
     });
     expect(listChargesMock).toHaveBeenCalledWith('sk_test_abc', { customer: 'cus_1', limit: 100 });
     expect(listSubscriptionsMock).toHaveBeenCalledWith('sk_test_abc', { customer: 'cus_1', status: 'all', limit: 10 });
@@ -254,6 +268,41 @@ describe('getCompanyPaymentSummary', () => {
 
     const summary = await getCompanyPaymentSummary('t1', { stripeCustomerId: 'cus_1' });
     expect(summary.subscriptionStatus).toBe('canceled');
+  });
+
+  it('counts open invoices (amount still owed) and flags the overdue ones', async () => {
+    const now = Math.floor(Date.now() / 1000);
+    listInvoicesMock.mockResolvedValue({
+      data: [
+        { id: 'in_1', status: 'open', currency: 'usd', amount_due: 100000, amount_remaining: 100000, due_date: now + 86400 },
+        { id: 'in_2', status: 'open', currency: 'usd', amount_due: 50000, amount_remaining: 20000, due_date: now - 86400 },
+      ],
+      has_more: false,
+    });
+
+    const summary = await getCompanyPaymentSummary('t1', { stripeCustomerId: 'cus_1' });
+
+    expect(listInvoicesMock).toHaveBeenCalledWith('sk_test_abc', { customer: 'cus_1', status: 'open', limit: 100 });
+    expect(summary).toMatchObject({
+      invoicesAccessible: true,
+      openInvoicesCount: 2,
+      openInvoicesAmountCents: 120000,
+      openInvoicesCurrency: 'usd',
+      overdueInvoicesCount: 1,
+    });
+  });
+
+  it('still loads the rest of the summary when the key cannot read invoices, without flagging the connection', async () => {
+    listInvoicesMock.mockRejectedValue(new StripeApiError(403, 'insufficient permissions'));
+    listChargesMock.mockResolvedValue({
+      data: [{ id: 'ch_1', amount: 1000, currency: 'usd', status: 'succeeded', refunded: false, amount_refunded: 0, created: 1, disputed: false }],
+      has_more: false,
+    });
+
+    const summary = await getCompanyPaymentSummary('t1', { stripeCustomerId: 'cus_1' });
+
+    expect(summary).toMatchObject({ linked: true, paymentsCount: 1, invoicesAccessible: false, openInvoicesCount: 0 });
+    expect(connections[0].needsAttention).toBe(false);
   });
 
   it('reports null subscriptionStatus when the customer has no subscriptions at all', async () => {
@@ -346,7 +395,17 @@ describe('getPaymentsOverview', () => {
 
     expect(overview).toEqual({
       connected: false,
-      totals: { refundsCount: 0, refundsAmountCents: 0, currency: null, failedCount: 0, activeSubscriptions: 0 },
+      totals: {
+        refundsCount: 0,
+        refundsAmountCents: 0,
+        currency: null,
+        failedCount: 0,
+        activeSubscriptions: 0,
+        openInvoicesCount: 0,
+        openInvoicesAmountCents: 0,
+        openInvoicesCurrency: null,
+        overdueInvoicesCount: 0,
+      },
       companies: [],
     });
   });
@@ -367,7 +426,41 @@ describe('getPaymentsOverview', () => {
     expect(overview.connected).toBe(true);
     expect(overview.companies).toHaveLength(1);
     expect(overview.companies[0]).toMatchObject({ companyId: 'c1', companyName: 'Linked Co' });
-    expect(overview.totals).toEqual({ refundsCount: 0, refundsAmountCents: 0, currency: 'usd', failedCount: 1, activeSubscriptions: 1 });
+    expect(overview.totals).toEqual({
+      refundsCount: 0,
+      refundsAmountCents: 0,
+      currency: 'usd',
+      failedCount: 1,
+      activeSubscriptions: 1,
+      openInvoicesCount: 0,
+      openInvoicesAmountCents: 0,
+      openInvoicesCurrency: null,
+      overdueInvoicesCount: 0,
+    });
+  });
+
+  it('adds up open and overdue invoices across Companies', async () => {
+    const now = Math.floor(Date.now() / 1000);
+    companies = [
+      { id: 'c1', tenantId: 't1', name: 'A', stripeCustomerId: 'cus_1' },
+      { id: 'c2', tenantId: 't1', name: 'B', stripeCustomerId: 'cus_2' },
+    ];
+    listInvoicesMock.mockImplementation(async (_key: string, params: { customer: string }) => ({
+      data:
+        params.customer === 'cus_1'
+          ? [{ id: 'in_1', status: 'open', currency: 'usd', amount_due: 100000, amount_remaining: 100000, due_date: now - 60 }]
+          : [{ id: 'in_2', status: 'open', currency: 'usd', amount_due: 30000, amount_remaining: 30000, due_date: now + 86400 }],
+      has_more: false,
+    }));
+
+    const overview = await getPaymentsOverview('t1');
+
+    expect(overview.totals).toMatchObject({
+      openInvoicesCount: 2,
+      openInvoicesAmountCents: 130000,
+      openInvoicesCurrency: 'usd',
+      overdueInvoicesCount: 1,
+    });
   });
 
   it('never mixes Companies across tenants', async () => {

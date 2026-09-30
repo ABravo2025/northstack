@@ -291,6 +291,7 @@
     "toastLoadFailed": "No se pudo cargar el resumen de pagos: {{error}}",
     "connectStripeFirst": "Conectá tu cuenta de Stripe primero — andá a Configuración → Integraciones.",
     "stats": {
+      "openInvoices": "Facturas abiertas",
       "refunds": "Reembolsos",
       "failedPayments": "Pagos fallidos",
       "activeSubscriptions": "Suscripciones activas",
@@ -299,6 +300,7 @@
     "noCompaniesLinked": "Todavía no hay Empresas vinculadas a Stripe — abrí una Empresa y usá \"Buscar en Stripe\" en Pagos.",
     "columns": {
       "company": "Empresa",
+      "openInvoices": "Facturas abiertas",
       "refunds": "Reembolsos",
       "failed": "Fallidos",
       "subscription": "Suscripción"
@@ -306,7 +308,12 @@
     "refundsCount_one": "{{count}} reembolso",
     "refundsCount_other": "{{count}} reembolsos",
     "failedCountLabel": "{{count}} fallidos",
-    "noSubscription": "sin suscripción"
+    "noSubscription": "sin suscripción",
+    "overdueCount_one": "{{count}} vencida",
+    "overdueCount_other": "{{count}} vencidas",
+    "openInvoicesMeta_one": "{{count}} factura abierta",
+    "openInvoicesMeta_other": "{{count}} facturas abiertas",
+    "invoicesUnavailable": "Tu clave de Stripe no puede leer facturas — en Stripe, poné \"Invoices\" en Read o Write en esa clave."
   },
   "companyDetail": {
     "groups": {
@@ -395,6 +402,7 @@
     "viewFullHistory": "Ver historial de pagos completo →",
     "changeLink": "Cambiar vínculo",
     "summary": {
+      "openInvoices": "Facturas abiertas: {{count}}",
       "payments": "Pagos: {{count}}",
       "refunds": "Reembolsos: {{count}}",
       "disputes": "Disputas: {{count}}",

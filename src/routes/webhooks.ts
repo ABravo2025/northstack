@@ -1,7 +1,7 @@
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import prisma from '../lib/prisma.js';
-import { getAuthorizedPayment, verifyMercadoPagoSignature } from '../lib/mercadopago.js';
-import { handleMercadoPagoPreapprovalEvent } from '../modules/tenant/mercadoPagoWebhookService.js';
+import { verifyMercadoPagoSignature } from '../lib/mercadopago.js';
+import { handleMercadoPagoAuthorizedPaymentEvent, handleMercadoPagoPreapprovalEvent } from '../modules/tenant/mercadoPagoWebhookService.js';
 import { getNextBillingDate, getSubscriptionProductId, unwrapDodoWebhookEvent } from '../lib/dodopayments.js';
 import { GRACE_PERIOD_DAYS } from '../modules/tenant/planTransitionService.js';
 import { syncSubscriptionAndTenant, resolvePlanPriceFromDodoProductId } from '../modules/tenant/subscriptionService.js';
@@ -64,9 +64,6 @@ webhooksRouter.post('/api/webhooks/mercadopago', async (req, res) => {
     return res.status(401).json({ error: 'Invalid signature' });
   }
 
-  // UNVERIFIED against a real Mercado Pago sandbox (no MP_ACCESS_TOKEN/MP_WEBHOOK_SECRET
-  // configured yet) — confirm the exact `type` string values below (subscription_preapproval vs.
-  // subscription_authorized_payment, or similar) against a real webhook delivery before go-live.
   const body = JSON.parse(rawBodyText(req) || '{}');
   const eventType = String(body.type ?? body.topic ?? '');
   const externalEventId = `${eventType}:${dataId}`;
@@ -77,57 +74,11 @@ webhooksRouter.post('/api/webhooks/mercadopago', async (req, res) => {
   }
 
   try {
+    // Type strings VERIFIED 2026-09-30 against real staging deliveries: `subscription_preapproval`
+    // and `subscription_authorized_payment`.
     if (eventType.includes('authorized_payment')) {
-      const payment = await getAuthorizedPayment(dataId);
-      const subscription = await prisma.subscription.findFirst({ where: { externalSubscriptionId: payment.preapproval_id } });
-      if (!subscription) {
-        return res.status(200).json({ status: 'no matching subscription' });
-      }
-
-      if (payment.status === 'approved') {
-        const periodStart = new Date();
-        const periodEnd = new Date(periodStart.getTime() + ONE_MONTH_MS);
-        // Re-read fresh status right before writing (spec's "race cron vs. webhook: el webhook
-        // manda siempre") — irrelevant to *this* transition specifically since only the webhook
-        // ever moves a subscription into `active`, but kept consistent with every other handler
-        // below rather than special-cased away.
-        await syncSubscriptionAndTenant({
-          tenantId: subscription.tenantId,
-          status: 'active',
-          currentPeriodStart: periodStart,
-          currentPeriodEnd: periodEnd,
-          // UNVERIFIED field names (see MercadoPagoAuthorizedPayment's comment in mercadopago.ts).
-          ...(payment.payment_method_id ? { paymentMethodBrand: payment.payment_method_id } : {}),
-          ...(payment.card?.last_four_digits ? { paymentMethodLast4: payment.card.last_four_digits } : {}),
-        });
-        // Same "first point seat overage is allowed to bill" reconciliation as the Dodo branch
-        // below — MP's own seat surcharge only ever affects the NEXT recurring transaction_amount
-        // (no mid-cycle proration), so this mostly matters once real ARS pricing replaces today's
-        // $0 placeholder, but the trialing-guard in syncSeatBilling applies the same way regardless
-        // of provider.
-        await bestEffort(syncSeatBilling(subscription.tenantId), `syncSeatBilling(${subscription.tenantId})`);
-        await prisma.invoice.create({
-          data: {
-            subscriptionId: subscription.id,
-            provider: 'mercadopago',
-            externalInvoiceId: String(payment.id),
-            amountCents: Math.round(payment.transaction_amount * 100),
-            currency: subscription.currency,
-            status: 'paid',
-            periodStart,
-            periodEnd,
-            paidAt: new Date(),
-          },
-        });
-      } else if (payment.status === 'rejected') {
-        await syncSubscriptionAndTenant({
-          tenantId: subscription.tenantId,
-          status: 'past_due',
-          gracePeriodEndsAt: new Date(Date.now() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000),
-        });
-      }
-
-      return res.status(200).json({ status: 'ok' });
+      const status = await handleMercadoPagoAuthorizedPaymentEvent(dataId);
+      return res.status(200).json({ status });
     }
 
     // preapproval-type event — see mercadoPagoWebhookService.ts for the transitions.

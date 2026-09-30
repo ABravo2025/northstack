@@ -1,5 +1,14 @@
 import prisma from '../../lib/prisma.js';
-import { getPreapproval, parseExternalReference, updatePreapproval, type MercadoPagoPreapproval } from '../../lib/mercadopago.js';
+import {
+  getAuthorizedPayment,
+  getPreapproval,
+  parseExternalReference,
+  updatePreapproval,
+  type MercadoPagoAuthorizedPayment,
+  type MercadoPagoPreapproval,
+} from '../../lib/mercadopago.js';
+import { bestEffort } from '../../lib/bestEffort.js';
+import { syncSeatBilling } from './seatService.js';
 import { syncSubscriptionAndTenant } from './subscriptionService.js';
 import { GRACE_PERIOD_DAYS } from './planTransitionService.js';
 
@@ -99,4 +108,96 @@ export async function handleMercadoPagoPreapproval(preapproval: MercadoPagoPreap
 
 export async function handleMercadoPagoPreapprovalEvent(preapprovalId: string): Promise<string> {
   return handleMercadoPagoPreapproval(await getPreapproval(preapprovalId));
+}
+
+const ONE_MONTH_MS = 30 * 24 * 60 * 60 * 1000;
+
+// Mercado Pago `subscription_authorized_payment` webhook — a recurring charge (the first one
+// included) on a preapproval. Moved here from routes/webhooks.ts 2026-09-30, when the first real
+// charge in staging showed it had never worked: it checked the top-level `status` for "approved",
+// but that field is the charge lifecycle ("processed"); the money result is `payment.status` (see
+// MercadoPagoAuthorizedPayment). So no Invoice was ever created and currentPeriodEnd stayed empty.
+export async function handleMercadoPagoAuthorizedPayment(payment: MercadoPagoAuthorizedPayment): Promise<string> {
+  // external_reference (our Subscription.id) first: the first charge can land before the
+  // preapproval's own `authorized` webhook has stored externalSubscriptionId (they arrive about a
+  // second apart). preapproval_id is the fallback for preapprovals created before
+  // external_reference carried the id.
+  const subscriptionId = payment.external_reference ? parseExternalReference(payment.external_reference).subscriptionId : null;
+  const subscription =
+    (subscriptionId ? await prisma.subscription.findUnique({ where: { id: subscriptionId } }) : null) ??
+    (await prisma.subscription.findFirst({ where: { externalSubscriptionId: payment.preapproval_id } }));
+  if (!subscription) {
+    return 'no matching subscription';
+  }
+  // A charge on a superseded preapproval (card swap, the old one is being cancelled) must not move
+  // the subscription's status; its money is still recorded below if it went through.
+  const isCurrent = !subscription.externalSubscriptionId || subscription.externalSubscriptionId === payment.preapproval_id;
+
+  const result = payment.payment?.status;
+  if (result === 'approved') {
+    const alreadyRecorded = await prisma.invoice.findFirst({
+      where: { provider: 'mercadopago', externalInvoiceId: String(payment.id) },
+      select: { id: true },
+    });
+    if (alreadyRecorded) {
+      return 'already recorded';
+    }
+
+    const periodStart = new Date();
+    // MP's own next charge date is the real end of the period this charge paid for.
+    const preapproval = await getPreapproval(payment.preapproval_id).catch(() => null);
+    const periodEnd = preapproval?.next_payment_date
+      ? new Date(preapproval.next_payment_date)
+      : new Date(periodStart.getTime() + ONE_MONTH_MS);
+
+    if (isCurrent) {
+      await syncSubscriptionAndTenant({
+        tenantId: subscription.tenantId,
+        status: 'active',
+        currentPeriodStart: periodStart,
+        currentPeriodEnd: periodEnd,
+        gracePeriodEndsAt: null,
+        ...(payment.payment_method_id ? { paymentMethodBrand: payment.payment_method_id } : {}),
+      });
+      await bestEffort(syncSeatBilling(subscription.tenantId), `syncSeatBilling(${subscription.tenantId})`);
+    }
+
+    // What MP actually charged, split into the locked base price and the rest (extra seats, the
+    // only other thing folded into transaction_amount, see seatService.ts).
+    const amountCents = Math.round(payment.transaction_amount * 100);
+    const baseAmountCents = Math.min(subscription.lockedPriceCents, amountCents);
+    await prisma.invoice.create({
+      data: {
+        subscriptionId: subscription.id,
+        provider: 'mercadopago',
+        externalInvoiceId: String(payment.id),
+        amountCents,
+        baseAmountCents,
+        extraSeatsAmountCents: amountCents - baseAmountCents,
+        currency: payment.currency_id ?? subscription.currency,
+        status: 'paid',
+        periodStart,
+        periodEnd,
+        paidAt: new Date(),
+      },
+    });
+    return 'ok';
+  }
+
+  if (result === 'rejected' && isCurrent) {
+    await syncSubscriptionAndTenant({
+      tenantId: subscription.tenantId,
+      status: 'past_due',
+      gracePeriodEndsAt: new Date(Date.now() + GRACE_PERIOD_DAYS * 24 * 60 * 60 * 1000),
+    });
+    return 'ok';
+  }
+
+  // "scheduled" (not charged yet), a still-pending payment, or anything unrecognised: nothing to
+  // record. MP sends another event for the same charge once it settles.
+  return `ignored (status ${payment.status}, payment ${result ?? 'none'})`;
+}
+
+export async function handleMercadoPagoAuthorizedPaymentEvent(authorizedPaymentId: string): Promise<string> {
+  return handleMercadoPagoAuthorizedPayment(await getAuthorizedPayment(authorizedPaymentId));
 }

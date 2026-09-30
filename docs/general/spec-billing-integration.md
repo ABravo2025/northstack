@@ -419,8 +419,13 @@ spec fija el contrato de negocio, no un snapshot literal de cada campo de la API
 > ahora solo el preapproval vigente (`externalSubscriptionId`) mueve el status. Además el plan de
 > un primer subscribe ya no se escribe al iniciar el checkout: viaja en `external_reference`
 > (`<subscriptionId>:<plan>`) y se confirma en el webhook, igual que `metadata.plan` en Dodo.
-> Sigue pendiente confirmar contra una entrega real los `type` del webhook y los campos de tarjeta
-> de `authorized_payment` (marcados UNVERIFIED en el código).
+> **Verificado 2026-09-30 contra un cobro real en staging** (Starter ARS 30.000, comprador de
+> prueba, pago con saldo): los `type` son `subscription_preapproval` y
+> `subscription_authorized_payment`. En `authorized_payment` el `status` de arriba es el ciclo del
+> cobro (`processed`/`scheduled`/`recycling`/`cancelled`) y el resultado real es `payment.status`
+> (`approved`/`rejected`) — el código miraba el campo equivocado y nunca registraba el cobro
+> (arreglado, `handleMercadoPagoAuthorizedPayment`). No trae marca ni últimos 4 de tarjeta, solo
+> `payment_method_id`. El fin de período sale de `next_payment_date` del preapproval.
 
 A diferencia de "Fuera de alcance" (abajo, decisiones de producto tomadas antes de construir),
 esto es lo que un code review de 16 hallazgos encontró **después** de construir — 7 se arreglaron

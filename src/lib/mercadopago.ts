@@ -72,6 +72,7 @@ export interface CreatePreapprovalInput {
 export interface MercadoPagoPreapproval {
   id: string;
   status: string;
+  next_payment_date?: string; // ISO — when MP charges next, i.e. the end of the current period
   init_point?: string;
   external_reference?: string;
   auto_recurring?: {
@@ -116,22 +117,21 @@ export async function getPreapproval(id: string): Promise<MercadoPagoPreapproval
   return mpRequest<MercadoPagoPreapproval>('GET', `/preapproval/${id}`);
 }
 
-// Not in the original task-breakdown wrapper list (createPreapproval/getPreapproval/
-// updatePreapproval only) — added because the webhook contract table requires reacting to
-// `authorized_payment` events (recurring payment confirmed/failed) separately from `preapproval`
-// events, and those need their own round-trip: GET /authorized_payments/{id}, not
-// /preapproval/{id}. Without this, "pago recurrente confirmado/falla" can't be verified securely.
-// payment_method_id/card are UNVERIFIED against a real payload (not surfaced in any response
-// seen so far, since sandbox never got past a `pending` preapproval) — best-effort field names
-// following MP's general Payments API convention, confirm against a real authorized_payment
-// before relying on them for anything beyond the display-only paymentMethodBrand/Last4 fields.
+// A recurring charge on a preapproval (`subscription_authorized_payment` webhook) — its own
+// round-trip, GET /authorized_payments/{id}, not /preapproval/{id}. Shape VERIFIED 2026-09-30
+// against a real staging charge: the top-level `status` is the charge's LIFECYCLE ("scheduled",
+// "processed", "recycling" = retrying, "cancelled"), never "approved" — the actual result of the
+// money movement is the nested `payment.status` ("approved" / "rejected" / ...). There is no card
+// brand/last4 on this resource; `payment_method_id` is "account_money", "visa", "master", etc.
 export interface MercadoPagoAuthorizedPayment {
-  id: string;
+  id: number;
   status: string;
   preapproval_id: string;
+  external_reference?: string;
   transaction_amount: number;
-  payment_method_id?: string; // e.g. "visa", "master"
-  card?: { last_four_digits?: string };
+  currency_id?: string;
+  payment_method_id?: string;
+  payment?: { id: number; status: string; status_detail?: string };
 }
 
 export async function getAuthorizedPayment(id: string): Promise<MercadoPagoAuthorizedPayment> {

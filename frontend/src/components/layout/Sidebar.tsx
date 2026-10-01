@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { usePermissions } from '../../contexts/PermissionsContext';
-import { isGrowthFeatureEnabled } from '../../lib/planLimits';
 import { tenantLogoUrl } from '../../lib/tenantLogo';
 import type { Tenant } from '../../api';
 import {
@@ -35,8 +34,8 @@ export default function Sidebar({ mobileOpen, onMobileClose, tenant }: SidebarPr
   // reachable by a custom role granted manage_payroll/manage_payments explicitly).
   const permissions = usePermissions();
   // Plan-tier enforcement (2026-09-07) — Payroll/Payments are Growth-only; a Starter tenant
-  // simply doesn't see the nav item, rather than clicking through to a 403.
-  const growthPlan = isGrowthFeatureEnabled(tenant);
+  // simply doesn't see the nav item, rather than clicking through to a 403. The plan check is
+  // folded into permissions.has() itself (PermissionsContext, 2026-10-01).
   // "Protect internal company data" rework — Companies/Contacts/Opportunities are no longer
   // default Member access (see MEMBER_SEED_PERMISSIONS's comment in roleService.ts), so these
   // links need the same has()-gating Payroll/Payments already got in Fase J, instead of always
@@ -45,7 +44,7 @@ export default function Sidebar({ mobileOpen, onMobileClose, tenant }: SidebarPr
   const canSeeCompany = permissions.has('view_company');
   const canSeeContact = permissions.has('view_contact');
   const canSeeOpportunity = canSeeCompany && canSeeContact;
-  const canSeePayments = permissions.has('manage_payments') && growthPlan;
+  const canSeePayments = permissions.has('manage_payments');
   const showSalesGroup = canSeeCompany || canSeeContact || canSeeOpportunity || canSeePayments;
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
@@ -102,7 +101,7 @@ export default function Sidebar({ mobileOpen, onMobileClose, tenant }: SidebarPr
             <CalendarIcon className="h-4 w-4 shrink-0" />
             {label(t('sidebar.timeOff'))}
           </NavLink>
-          {permissions.has('manage_payroll') && growthPlan && (
+          {permissions.has('manage_payroll') && (
             <NavLink to="/hr/payroll" className={linkClass} title={`${t('sidebar.humanResources')} – ${t('sidebar.payroll')}`} onClick={onMobileClose}>
               <BriefcaseIcon className="h-4 w-4 shrink-0" />
               {label(t('sidebar.payroll'))}

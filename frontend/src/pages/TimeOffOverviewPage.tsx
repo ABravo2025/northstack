@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { api, type TimeOffBalance, type TimeOffPolicy, type TimeOffRequest } from '../api';
+import { api, type TimeOffBalance, type TimeOffDayCount, type TimeOffLedger, type TimeOffPolicy, type TimeOffRequest, type TimeOffRequestPreview } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Modal from '../components/common/Modal';
@@ -13,15 +13,18 @@ import MyTimeOffView from '../components/timeOff/MyTimeOffView';
 import TeamTimeOffView, { type TeamPerson } from '../components/timeOff/TeamTimeOffView';
 import TimeOffPoliciesView from '../components/timeOff/TimeOffPoliciesView';
 import {
+  ADJUST_FORM_ID,
+  AdjustBalanceForm,
   NEW_REQUEST_FORM_ID,
   NewRequestForm,
   PolicyDetailBody,
   RequestDetailBody,
   TeamMemberDetailBody,
-  requestFormProblem,
+  requestBlocked,
+  type AdjustFormValue,
   type NewRequestFormValue,
 } from '../components/timeOff/TimeOffPanels';
-import { countRequestDays, isoDay, useDateRangeFormatter } from '../components/timeOff/timeOffShared';
+import { isoDay, useDateRangeFormatter } from '../components/timeOff/timeOffShared';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { usePrimaryAction } from '../contexts/PrimaryActionContext';
 import { useTimeOffTab } from '../contexts/TimeOffTabContext';
@@ -41,6 +44,7 @@ type Panel =
   | { type: 'new' }
   | { type: 'person'; employeeId: string }
   | { type: 'policy'; id: string }
+  | { type: 'adjust'; employeeId: string }
   | null;
 
 const EMPTY_POLICY_FORM = {
@@ -50,6 +54,12 @@ const EMPTY_POLICY_FORM = {
   daysPerYear: '15',
   isPaid: true,
   requiresApproval: true,
+  // 2026-10 company rules — defaults keep the old behavior (company's day counting, no asking
+  // in advance, unused days expire).
+  dayCount: 'inherit' as TimeOffPolicy['dayCount'],
+  allowAdvance: false,
+  unusedAction: 'expire' as TimeOffPolicy['unusedAction'],
+  carryOverMax: '',
 };
 
 // Time Off, redesigned 2026-10 from 7 tabs into 3 views (TimeOffTabContext):
@@ -76,6 +86,13 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
   const [myFilterPolicyId, setMyFilterPolicyId] = useState<string | null>(null);
   const [newRequest, setNewRequest] = useState<NewRequestFormValue>({ timeOffPolicyId: '', startDate: '', endDate: '', note: '' });
   const [submittingRequest, setSubmittingRequest] = useState(false);
+  const [preview, setPreview] = useState<TimeOffRequestPreview | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [companyDayCount, setCompanyDayCount] = useState<TimeOffDayCount>('calendar');
+  const [ledger, setLedger] = useState<TimeOffLedger | null>(null);
+  const [adjustForm, setAdjustForm] = useState<AdjustFormValue>({ timeOffPolicyId: '', direction: 'add', days: '1', reason: '' });
+  const [savingAdjust, setSavingAdjust] = useState(false);
   const [cancellingRequestId, setCancellingRequestId] = useState<string | null>(null);
 
   const [slideOverMode, setSlideOverMode] = useState<'add' | 'edit' | null>(null);
@@ -185,6 +202,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
         api.listTimeOffRequests(token, isAdmin ? 'all' : 'team'),
         api.listTimeOffBalances(token, isAdmin ? undefined : 'team'),
       ]);
+      api.getTimeOffSettings(token).then((s) => setCompanyDayCount(s.defaultDayCount)).catch(() => {});
       setEmployees(employeeData);
       setTimeOffPolicies(policyData);
       setMyRequests(myRequestData);
@@ -202,6 +220,71 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
   };
   const refresh = () => loadData(true);
 
+  // The request form's numbers come from the server (company rules: day counting, holidays, days
+  // off, the person's religious holidays, advance/negative-balance rule) — debounced so typing a
+  // date doesn't fire a request per keystroke.
+  useEffect(() => {
+    if (panel?.type !== 'new') return;
+    const { timeOffPolicyId, startDate, endDate } = newRequest;
+    setPreview(null);
+    setPreviewError(null);
+    if (!timeOffPolicyId || !startDate || !endDate) return;
+    if (endDate < startDate) {
+      setPreviewError(t('timeOff.requestForm.endBeforeStart'));
+      return;
+    }
+    let cancelled = false;
+    setPreviewLoading(true);
+    const timer = setTimeout(() => {
+      api
+        .previewTimeOffRequest(token, { timeOffPolicyId, startDate, endDate })
+        .then((p) => !cancelled && setPreview(p))
+        .catch((error) => !cancelled && setPreviewError((error as Error).message))
+        .finally(() => !cancelled && setPreviewLoading(false));
+    }, 300);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [panel?.type, newRequest.timeOffPolicyId, newRequest.startDate, newRequest.endDate, token]);
+
+  // A person's adjustments and year-end closes, loaded when their panel opens.
+  const personId = panel?.type === 'person' || panel?.type === 'adjust' ? panel.employeeId : null;
+  useEffect(() => {
+    setLedger(null);
+    if (!personId) return;
+    api.getTimeOffLedger(token, personId).then(setLedger).catch(() => setLedger({ adjustments: [], yearCloses: [] }));
+  }, [personId, token]);
+
+  const openAdjust = (employeeId: string) => {
+    const first = teamBalances.find((b) => b.employeeId === employeeId);
+    setAdjustForm({ timeOffPolicyId: first?.timeOffPolicyId ?? '', direction: 'add', days: '1', reason: '' });
+    setPanel({ type: 'adjust', employeeId });
+  };
+
+  const handleAdjust = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (panel?.type !== 'adjust') return;
+    const days = Number(adjustForm.days);
+    if (!adjustForm.timeOffPolicyId || !Number.isFinite(days) || days <= 0 || !adjustForm.reason.trim()) return;
+    setSavingAdjust(true);
+    try {
+      await api.createTimeOffAdjustment(token, panel.employeeId, {
+        timeOffPolicyId: adjustForm.timeOffPolicyId,
+        days: adjustForm.direction === 'add' ? days : -days,
+        reason: adjustForm.reason.trim(),
+      });
+      toast.success(t('timeOff.rules.adjust.saved'));
+      setPanel({ type: 'person', employeeId: panel.employeeId });
+      refresh();
+    } catch (error) {
+      toast.error(t('timeOff.rules.adjust.failed', { message: (error as Error).message }));
+    } finally {
+      setSavingAdjust(false);
+    }
+  };
+
   // ---- My time off ----
   const openNewRequest = () => {
     const firstAvailable = myBalances.find((b) => b.timeOffPolicyId === myFilterPolicyId) ?? myBalances[0];
@@ -211,7 +294,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
 
   const handleCreateRequest = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (requestFormProblem(newRequest, myBalances, t) || countRequestDays(newRequest.startDate, newRequest.endDate) === 0) return;
+    if (requestBlocked(preview) || previewLoading) return;
     setSubmittingRequest(true);
     try {
       await api.createTimeOffRequest(token, {
@@ -281,6 +364,10 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
       daysPerYear: String(policy.daysPerYear),
       isPaid: policy.isPaid,
       requiresApproval: policy.requiresApproval,
+      dayCount: policy.dayCount,
+      allowAdvance: policy.allowAdvance,
+      unusedAction: policy.unusedAction,
+      carryOverMax: policy.carryOverMax == null ? '' : String(policy.carryOverMax),
     });
     setEditingPolicyId(policy.id);
     setPanel(null);
@@ -297,6 +384,10 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
       daysPerYear: Number(policyForm.daysPerYear),
       isPaid: policyForm.isPaid,
       requiresApproval: policyForm.requiresApproval,
+      dayCount: policyForm.dayCount,
+      allowAdvance: policyForm.accrualMethod === 'monthly' && policyForm.allowAdvance,
+      unusedAction: policyForm.unusedAction,
+      carryOverMax: policyForm.unusedAction === 'carry' && policyForm.carryOverMax !== '' ? Number(policyForm.carryOverMax) : null,
     };
     try {
       if (slideOverMode === 'edit' && editingPolicyId) {
@@ -425,14 +516,22 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
       }
     }
   } else if (panel?.type === 'new') {
-    const blocked = !!requestFormProblem(newRequest, myBalances, t) || countRequestDays(newRequest.startDate, newRequest.endDate) === 0;
+    const blocked = requestBlocked(preview) || previewLoading;
     panelTitle = t('timeOff.requestForm.title');
     panelBody = (
       <>
         <p className="to-modal-lead">
           {myManagerName ? t('timeOff.requestForm.subtitleApprover', { name: myManagerName }) : t('timeOff.requestForm.subtitleNoApprover')}
         </p>
-        <NewRequestForm value={newRequest} onChange={setNewRequest} onSubmit={handleCreateRequest} balances={myBalances} />
+        <NewRequestForm
+          value={newRequest}
+          onChange={setNewRequest}
+          onSubmit={handleCreateRequest}
+          balances={myBalances}
+          preview={preview}
+          previewLoading={previewLoading}
+          previewError={previewError}
+        />
       </>
     );
     panelFooter = (
@@ -462,11 +561,39 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
             balances={teamBalances.filter((b) => b.employeeId === emp.id)}
             requests={teamRequests.filter((r) => r.employeeId === emp.id)}
             pendingApprovals={awaitingDecision.filter((r) => r.employeeId === emp.id)}
+            ledger={ledger}
             onDecide={handleDecideRequest}
+            onAdjust={isAdmin && teamBalances.some((b) => b.employeeId === emp.id) ? () => openAdjust(emp.id) : undefined}
           />
         </>
       );
     }
+  } else if (panel?.type === 'adjust') {
+    const emp: any = employees.find((e) => e.id === panel.employeeId);
+    panelTitle = t('timeOff.rules.adjust.title', { name: emp ? `${emp.firstName} ${emp.lastName}` : '' });
+    panelBody = (
+      <AdjustBalanceForm
+        value={adjustForm}
+        onChange={setAdjustForm}
+        onSubmit={handleAdjust}
+        balances={teamBalances.filter((b) => b.employeeId === panel.employeeId)}
+      />
+    );
+    panelFooter = (
+      <>
+        <button type="button" className="btn-secondary" onClick={() => setPanel({ type: 'person', employeeId: panel.employeeId })}>
+          {t('timeOff.slideOver.cancel')}
+        </button>
+        <button
+          type="submit"
+          form={ADJUST_FORM_ID}
+          className="btn-primary"
+          disabled={savingAdjust || !adjustForm.reason.trim() || !(Number(adjustForm.days) > 0)}
+        >
+          {t('timeOff.rules.adjust.save')}
+        </button>
+      </>
+    );
   } else if (panel?.type === 'policy') {
     const p = timeOffPolicies.find((x) => x.id === panel.id);
     if (p) {
@@ -475,6 +602,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
         <PolicyDetailBody
           policy={p}
           accrualLabel={t(`timeOff.accrual.${ACCRUAL_KEY_MAP[p.accrualMethod] || 'fixed'}`)}
+          companyDayCountLabel={t(companyDayCount === 'business' ? 'timeOff.rules.request.modeBusiness' : 'timeOff.rules.request.modeCalendar')}
           assignees={policyAssignees(p.id)}
           onRemove={(employeeId) => handleUnassign(employeeId, p.id)}
           onAssign={() => handleOpenBulkAssign(p)}
@@ -650,6 +778,69 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                 {t('timeOff.policyForm.requiresApproval')}
               </label>
             </div>
+            <h4 className="rules-subtitle">{t('timeOff.rules.policy.rulesTitle')}</h4>
+            <div className="form-group">
+              <label htmlFor="policy-daycount">{t('timeOff.rules.policy.dayCount')}</label>
+              <select
+                id="policy-daycount"
+                value={policyForm.dayCount}
+                onChange={(e) => setPolicyForm({ ...policyForm, dayCount: e.target.value as TimeOffPolicy['dayCount'] })}
+              >
+                <option value="inherit">
+                  {t('timeOff.rules.policy.inherit', { mode: t(companyDayCount === 'business' ? 'timeOff.rules.request.modeBusiness' : 'timeOff.rules.request.modeCalendar') })}
+                </option>
+                <option value="business">{t('timeOff.rules.policy.business')}</option>
+                <option value="calendar">{t('timeOff.rules.policy.calendar')}</option>
+              </select>
+            </div>
+            {policyForm.accrualMethod === 'monthly' && (
+              <div className="form-group">
+                <label className="flex items-center gap-1.5">
+                  <input
+                    type="checkbox"
+                    className="w-auto"
+                    checked={policyForm.allowAdvance}
+                    onChange={(e) => setPolicyForm({ ...policyForm, allowAdvance: e.target.checked })}
+                  />
+                  {t('timeOff.rules.policy.allowAdvance')}
+                </label>
+                <p className="rules-hint">{t('timeOff.rules.policy.allowAdvanceHint')}</p>
+              </div>
+            )}
+            <div className="form-group">
+              <span className="rules-label">{t('timeOff.rules.policy.unused')}</span>
+              <div className="mini-toggle-row">
+                <button
+                  type="button"
+                  className={`mini-toggle-opt ${policyForm.unusedAction === 'carry' ? 'active' : ''}`}
+                  onClick={() => setPolicyForm({ ...policyForm, unusedAction: 'carry' })}
+                >
+                  {t('timeOff.rules.policy.carry')}
+                </button>
+                <button
+                  type="button"
+                  className={`mini-toggle-opt ${policyForm.unusedAction === 'expire' ? 'active' : ''}`}
+                  onClick={() => setPolicyForm({ ...policyForm, unusedAction: 'expire' })}
+                >
+                  {t('timeOff.rules.policy.expire')}
+                </button>
+              </div>
+              <p className="rules-hint">{t('timeOff.rules.policy.unusedHint')}</p>
+            </div>
+            {policyForm.unusedAction === 'carry' && (
+              <div className="form-group">
+                <label htmlFor="policy-carry-max">{t('timeOff.rules.policy.carryMax')}</label>
+                <input
+                  id="policy-carry-max"
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={policyForm.carryOverMax}
+                  onChange={(e) => setPolicyForm({ ...policyForm, carryOverMax: e.target.value })}
+                />
+                <p className="rules-hint">{t('timeOff.rules.policy.carryMaxHint')}</p>
+              </div>
+            )}
           </form>
         )}
       </Modal>

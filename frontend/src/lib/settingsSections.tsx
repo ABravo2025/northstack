@@ -3,6 +3,7 @@ import i18n from './i18n';
 import {
   BriefcaseIcon,
   BuildingIcon,
+  CalendarIcon,
   ClockIcon,
   GridIcon,
   ListIcon,
@@ -55,6 +56,9 @@ export function getSettingsSections(permissions: SettingsSectionsPermissions): S
   const companyItems: SettingsSectionItem[] = [];
   if (permissions.has('manage_tenant_settings')) {
     companyItems.push({ to: 'company', label: t('settings.companyProfile.label'), desc: t('settings.companyProfile.desc'), icon: <BuildingIcon /> });
+    // Time Off company rules (2026-10) — holiday calendar, work week, days off. Same bar as the
+    // company profile: these are company-wide settings.
+    companyItems.push({ to: 'time-off', label: t('settings.timeOffRules.label'), desc: t('settings.timeOffRules.desc'), icon: <CalendarIcon /> });
   }
   if (permissions.has('manage_users')) {
     companyItems.push({ to: 'users', label: t('settings.users.label'), desc: t('settings.users.desc'), icon: <TeamIcon /> });

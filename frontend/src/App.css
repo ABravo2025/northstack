@@ -3333,3 +3333,138 @@ textarea.overview-field-input {
 .app-main .container {
   @apply mx-0 max-w-none;
 }
+
+/* ---------- Settings → Time Off (TimeOffSettingsPage, 2026-10) ---------- */
+.rules-page {
+  @apply flex flex-col gap-5;
+}
+.rules-card {
+  @apply mb-0 flex flex-col gap-3;
+}
+.rules-card .card-title {
+  @apply mb-0;
+}
+.rules-lead {
+  @apply m-0 max-w-[75ch] text-[13px] text-ink-muted dark:text-dark-ink-muted;
+}
+.rules-hint {
+  @apply m-0 text-xs text-ink-faint dark:text-dark-ink-faint;
+}
+.rules-note {
+  @apply m-0 rounded-lg border border-dashed border-line-strong bg-surface-2 px-3.5 py-3 text-[13px] text-ink-muted dark:border-dark-line dark:bg-dark-raised dark:text-dark-ink-muted;
+}
+.rules-subtitle {
+  @apply m-0 mt-2 text-[13px] font-semibold text-ink dark:text-dark-ink;
+}
+.rules-label {
+  @apply mb-1 text-[13px] font-medium text-ink dark:text-dark-ink;
+}
+.rules-row {
+  @apply flex flex-wrap items-end gap-4;
+}
+.rules-row .form-group select {
+  @apply w-80;
+}
+.rules-grid {
+  @apply grid gap-5 lg:grid-cols-2;
+}
+.rules-days {
+  @apply flex flex-wrap gap-1.5;
+}
+.rules-day {
+  @apply relative flex h-9 w-12 cursor-pointer items-center justify-center rounded-lg border border-line-strong bg-input text-[13px] font-medium text-ink-muted dark:border-gray-700 dark:bg-dark-input dark:text-dark-ink-muted;
+}
+.rules-day input {
+  @apply pointer-events-none absolute opacity-0;
+}
+.rules-day.on {
+  @apply border-accent bg-accent-tint font-semibold text-accent dark:text-brand-blue-light;
+}
+.rules-day:focus-within {
+  box-shadow: 0 0 0 3px var(--ns-ring);
+}
+.rules-switch {
+  @apply inline-flex cursor-pointer items-center gap-2 text-[13px] text-ink-muted dark:text-dark-ink-muted;
+}
+.rules-switch input {
+  @apply relative h-[22px] w-[38px] shrink-0 cursor-pointer appearance-none rounded-full bg-line-strong transition-colors dark:bg-gray-600;
+  box-shadow: none;
+  border: 0;
+  padding: 0;
+}
+.rules-switch input::after {
+  content: '';
+  @apply absolute top-[3px] left-[3px] h-4 w-4 rounded-full bg-white transition-transform;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+.rules-switch input:checked {
+  @apply bg-accent;
+}
+.rules-switch input:checked::after {
+  transform: translateX(16px);
+}
+.rules-faiths {
+  @apply flex flex-col gap-2;
+}
+.rules-faith {
+  @apply flex flex-col gap-2.5 rounded-xl border border-line bg-surface-2 px-3.5 py-3 dark:border-dark-line dark:bg-dark-raised;
+}
+.rules-faith.off {
+  @apply opacity-80;
+}
+.rules-faith-head {
+  @apply flex flex-wrap items-center justify-between gap-2.5 text-sm text-ink dark:text-dark-ink;
+}
+.rules-chips {
+  @apply flex flex-wrap items-center gap-1.5;
+}
+.rules-chip {
+  @apply inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold whitespace-nowrap;
+}
+.rules-chip button {
+  @apply cursor-pointer border-0 bg-transparent p-0 text-sm leading-none text-current opacity-70 hover:opacity-100;
+}
+.rules-chip-holiday {
+  @apply bg-orange-100 text-orange-800 dark:bg-orange-400/15 dark:text-orange-300;
+}
+.rules-chip-company {
+  @apply bg-teal-100 text-teal-800 dark:bg-teal-400/15 dark:text-teal-300;
+}
+.rules-chip-religious {
+  @apply bg-fuchsia-100 text-fuchsia-800 dark:bg-fuchsia-400/15 dark:text-fuchsia-300;
+}
+.rules-pick {
+  @apply inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-full border border-line-strong bg-input px-2.5 text-xs text-ink-muted dark:border-gray-700 dark:bg-dark-input dark:text-dark-ink-muted;
+}
+.rules-pick input {
+  accent-color: var(--color-accent);
+}
+.rules-pick.on {
+  @apply border-fuchsia-400 bg-fuchsia-100 font-semibold text-fuchsia-800 dark:border-fuchsia-400/50 dark:bg-fuchsia-400/15 dark:text-fuchsia-300;
+}
+
+/* Time Off request form + person ledger (company rules, 2026-10). */
+.to-ok {
+  @apply m-0 text-[13px] font-medium text-emerald-700 dark:text-emerald-300;
+}
+.to-excluded {
+  @apply m-0 flex list-none flex-col gap-1.5 p-0 text-[13px];
+}
+.to-excluded li {
+  @apply flex items-center justify-between gap-2.5;
+}
+.to-ledger-row {
+  @apply items-start;
+}
+.to-ledger-row > span:first-child {
+  @apply flex min-w-0 flex-col gap-0.5;
+}
+.to-ledger-row small {
+  @apply text-xs text-ink-faint dark:text-dark-ink-faint;
+}
+.to-plus {
+  @apply font-semibold text-emerald-700 dark:text-emerald-300;
+}
+.to-minus {
+  @apply font-semibold text-red-700 dark:text-red-300;
+}

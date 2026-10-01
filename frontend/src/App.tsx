@@ -36,6 +36,7 @@ import OpportunitiesPage from './pages/OpportunitiesPage';
 import ProfileSettingsPage from './pages/ProfileSettingsPage';
 import IntegrationsSettingsPage from './pages/IntegrationsSettingsPage';
 import CompanyPage from './pages/CompanyPage';
+import TimeOffSettingsPage from './pages/TimeOffSettingsPage';
 import CompanyUsersPage from './pages/CompanyUsersPage';
 import PublicFormsSettingsPage from './pages/PublicFormsSettingsPage';
 import ActivityLogSettingsPage from './pages/ActivityLogSettingsPage';
@@ -364,6 +365,7 @@ export default function App() {
             element={<IntegrationsSettingsPage token={token ?? ''} tenant={tenant} />}
           />
           <Route path="company" element={<CompanyPage token={token ?? ''} onTenantUpdated={setTenant} />} />
+          <Route path="time-off" element={<TimeOffSettingsPage token={token ?? ''} />} />
           {/* Old Settings → Appearance URL — currency now lives in Company, theme in Profile. */}
           <Route path="appearance" element={<Navigate to="/settings/company" replace />} />
           <Route

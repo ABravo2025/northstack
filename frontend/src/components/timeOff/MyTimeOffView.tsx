@@ -68,6 +68,8 @@ export default function MyTimeOffView({ linked, balances, requests, filterPolicy
                   <span>{t('timeOff.mine.used', { count: b.used })}</span>
                   {b.pending > 0 && <span>{t('timeOff.mine.inReview', { count: b.pending })}</span>}
                 </span>
+                {b.carriedIn > 0 && <span className="to-faint">{t('timeOff.rules.request.carriedNote', { count: b.carriedIn, year: b.year - 1 })}</span>}
+                {b.adjusted !== 0 && <span className="to-faint">{t('timeOff.rules.request.adjustedNote', { count: b.adjusted })}</span>}
               </button>
             );
           })}

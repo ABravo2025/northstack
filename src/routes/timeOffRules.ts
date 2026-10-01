@@ -176,3 +176,22 @@ timeOffRulesRouter.get('/api/hr/employees/:employeeId/time-off-ledger', async (r
   }
   return res.json(await getTimeOffLedger(user.tenantId!, employeeId));
 });
+
+// ---- The caller's own religious holidays (Settings → Profile) ----
+timeOffRulesRouter.get('/api/time-off/my-religious-holidays', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) return;
+  const me = await findEmployeeByUserId(user.id);
+  const settings = await getTimeOffSettings(user.tenantId!);
+  return res.json({ linked: !!me, enabledReligions: settings.enabledReligions, religions: me ? await getEmployeeReligions(user.tenantId!, me.id) : [] });
+});
+
+timeOffRulesRouter.put('/api/time-off/my-religious-holidays', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) return;
+  const me = await findEmployeeByUserId(user.id);
+  if (!me) return res.status(400).json({ error: 'Your account is not linked to an employee record' });
+  const result = await setEmployeeReligions(user.tenantId!, me.id, req.body?.religions);
+  if (!result.success) return res.status(400).json({ error: result.error, field: result.field });
+  return res.json(result.value);
+});

@@ -8,6 +8,7 @@ import { timeOffPoliciesApi } from './timeOffPolicies.js';
 import { timeOffPolicyAssignmentsApi } from './timeOffPolicyAssignments.js';
 import { timeOffRequestsApi } from './timeOffRequests.js';
 import { timeOffBalancesApi } from './timeOffBalances.js';
+import { timeOffRulesApi } from './timeOffRules.js';
 import { companiesApi } from './companies.js';
 import { contactsApi } from './contacts.js';
 import { pipelinesApi } from './pipelines.js';
@@ -48,6 +49,7 @@ export const api = {
   ...timeOffPolicyAssignmentsApi,
   ...timeOffRequestsApi,
   ...timeOffBalancesApi,
+  ...timeOffRulesApi,
   ...companiesApi,
   ...contactsApi,
   ...pipelinesApi,

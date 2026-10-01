@@ -6,22 +6,16 @@ import type { TimeOffBalance, TimeOffRequest } from '../../api';
 export const FALLBACK_POLICY_COLOR = '#9ca3af';
 export const policyColor = (color: string | null | undefined) => color || FALLBACK_POLICY_COLOR;
 
-const round2 = (n: number) => Math.round(n * 100) / 100;
-
-// The backend's `remaining` is allocated − used; days still in review haven't been subtracted
-// yet. What a person can actually still ask for is remaining − pending.
-export const availableDays = (b: TimeOffBalance) => round2(b.remaining - b.pending);
+// Usable now: accrued + carried over + manual adjustments − used − in review, computed by the
+// server with the company's rules (never below 0).
+export const availableDays = (b: TimeOffBalance) => b.available;
+// Everything this year grants so far, the bar's 100%.
+export const grantedDays = (b: TimeOffBalance) => Math.round((b.allocated + b.carriedIn + b.adjusted) * 100) / 100;
 
 // Request dates come back as ISO timestamps at UTC midnight — reading only the date part (and
 // pinning it to noon) keeps a "13 Oct" request from showing as "12 Oct" west of UTC.
 export const toDate = (iso: string) => new Date(`${iso.slice(0, 10)}T12:00:00`);
 export const isoDay = (iso: string) => iso.slice(0, 10);
-
-// Mirrors countInclusiveDays() in timeOffRequestService.ts: calendar days, both ends included.
-export function countRequestDays(start: string, end: string): number {
-  if (!start || !end || end < start) return 0;
-  return Math.round((toDate(end).getTime() - toDate(start).getTime()) / 86_400_000) + 1;
-}
 
 export function useDateRangeFormatter() {
   const { i18n } = useTranslation();
@@ -42,7 +36,7 @@ export function useDateRangeFormatter() {
 
 export function BalanceMeter({ balance, color }: { balance: TimeOffBalance; color: string }) {
   const { t } = useTranslation('tasks');
-  const total = Math.max(balance.allocated, balance.used + balance.pending, 1);
+  const total = Math.max(grantedDays(balance), balance.used + balance.pending, 1);
   return (
     <div
       className="to-meter"

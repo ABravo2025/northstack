@@ -6,6 +6,7 @@ import PasswordInput from '../components/common/PasswordInput';
 import PasswordChecklist from '../components/common/PasswordChecklist';
 import { SUPPORTED_LOCALES, type SupportedLocale } from '../lib/i18n';
 import { getStoredThemePreference, setThemePreference, type ThemePreference } from '../theme';
+import MyReligiousHolidaysCard from '../components/timeOff/MyReligiousHolidaysCard';
 
 // Moved here from the old Settings → Appearance page (2026-09-25): the theme is stored per
 // device, not per tenant, so it belongs with the user's own preferences — and every user can
@@ -155,6 +156,8 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
           </select>
         </div>
       </div>
+
+      <MyReligiousHolidaysCard token={token} />
 
       <div className="card">
         <h3 className="card-title">{tSettings('appearance.appearanceCardTitle')}</h3>

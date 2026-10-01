@@ -20,6 +20,10 @@ export const timeOffPoliciesApi = {
       daysPerYear: number;
       isPaid?: boolean;
       requiresApproval?: boolean;
+      dayCount?: TimeOffPolicy['dayCount'];
+      allowAdvance?: boolean;
+      unusedAction?: TimeOffPolicy['unusedAction'];
+      carryOverMax?: number | null;
     },
   ): Promise<TimeOffPolicy> => {
     const res = await apiFetch(`${API_BASE_URL}/api/time-off-policies`, {
@@ -45,6 +49,10 @@ export const timeOffPoliciesApi = {
       isPaid?: boolean;
       requiresApproval?: boolean;
       isActive?: boolean;
+      dayCount?: TimeOffPolicy['dayCount'];
+      allowAdvance?: boolean;
+      unusedAction?: TimeOffPolicy['unusedAction'];
+      carryOverMax?: number | null;
     },
   ): Promise<TimeOffPolicy> => {
     const res = await apiFetch(`${API_BASE_URL}/api/time-off-policies/${policyId}`, {

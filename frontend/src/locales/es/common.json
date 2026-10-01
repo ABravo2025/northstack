@@ -213,6 +213,7 @@
     "integrations": { "label": "Integraciones", "desc": "Conectá Northstack con otras herramientas." },
     "billing": { "label": "Facturación", "desc": "Plan, facturas y método de pago." },
     "companyProfile": { "label": "Datos de la empresa", "desc": "Nombre, logo, datos de contacto y moneda." },
+    "timeOffRules": { "label": "Time Off", "desc": "Calendario de feriados, semana laboral, días libres." },
     "users": { "label": "Usuarios", "desc": "Invitá personas y gestioná roles." },
     "publicForms": { "label": "Formularios públicos", "desc": "Formularios externos de carga por módulo." },
     "pipelines": { "label": "Pipelines", "desc": "Etapas de venta y sus resultados." },

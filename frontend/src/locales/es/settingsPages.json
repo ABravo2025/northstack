@@ -590,6 +590,8 @@
       "opportunity": "Oportunidad",
       "timeOffPolicy": "Política de ausencias",
       "timeOffRequest": "Solicitud de ausencia",
+      "timeOffAdjustment": "Ajuste de saldo de ausencias",
+      "timeOffSettings": "Configuración de ausencias",
       "employeeCompensation": "Compensación",
       "employeeTermination": "Baja",
       "payrollRun": "Corrida de nómina",

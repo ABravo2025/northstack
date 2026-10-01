@@ -583,7 +583,9 @@ export type ActivityEntityType =
   | 'subscription'
   | 'googleCalendarConnection'
   | 'stripeConnection'
-  | 'stripeInvoice';
+  | 'stripeInvoice'
+  | 'timeOffAdjustment'
+  | 'timeOffSettings';
 
 export interface ActivityChange {
   field: string;
@@ -717,6 +719,10 @@ export interface TimeOffPolicy {
   isPaid: boolean;
   requiresApproval: boolean;
   isActive: boolean;
+  dayCount: 'inherit' | TimeOffDayCount;
+  allowAdvance: boolean;
+  unusedAction: 'carry' | 'expire';
+  carryOverMax: number | null;
 }
 
 export interface EmployeeTimeOffPolicyAssignment {
@@ -736,10 +742,80 @@ export interface TimeOffBalance {
   color: string | null;
   accrualMethod: 'fixed_annual' | 'monthly';
   daysPerYear: number;
+  year: number;
+  // Granted so far this year, and what the whole year grants.
   allocated: number;
+  fullYear: number;
+  // Carried from last year's unused days; net of manual adjustments this year.
+  carriedIn: number;
+  adjusted: number;
   used: number;
   pending: number;
   remaining: number;
+  // Usable now with what's accrued, and the most a new request can take (never below 0).
+  available: number;
+  maxRequestable: number;
+  allowAdvance: boolean;
+}
+
+export type TimeOffDayCount = 'calendar' | 'business';
+export type TimeOffHolidayKind = 'national' | 'non_working' | 'company' | 'religious';
+export type ReligionKey = 'jewish' | 'muslim' | 'armenian' | 'orthodox';
+export const RELIGION_KEYS: ReligionKey[] = ['jewish', 'muslim', 'armenian', 'orthodox'];
+
+export interface TimeOffSettings {
+  holidayCountry: string | null;
+  workWeek: number[];
+  defaultDayCount: TimeOffDayCount;
+  enabledReligions: ReligionKey[];
+}
+
+export interface TimeOffHoliday {
+  id: string;
+  date: string;
+  name: string;
+  kind: TimeOffHolidayKind;
+  religion: ReligionKey | null;
+  countryCode: string | null;
+  isOff: boolean;
+  source: string;
+}
+
+export interface TimeOffRequestPreview {
+  days: number;
+  dayCount: TimeOffDayCount;
+  excluded: { date: string; reason: 'non_working_weekday' | TimeOffHolidayKind; name: string | null }[];
+  available: number;
+  maxRequestable: number;
+  inAdvance: number;
+}
+
+export interface TimeOffAdjustment {
+  id: string;
+  employeeId: string;
+  timeOffPolicyId: string;
+  policyName: string;
+  year: number;
+  days: number;
+  reason: string;
+  createdByName: string | null;
+  createdAt: string;
+}
+
+export interface TimeOffYearClose {
+  id: string;
+  timeOffPolicyId: string;
+  policyName: string;
+  year: number;
+  unusedDays: number;
+  carriedDays: number;
+  expiredDays: number;
+  closedAt: string;
+}
+
+export interface TimeOffLedger {
+  adjustments: TimeOffAdjustment[];
+  yearCloses: TimeOffYearClose[];
 }
 
 export interface TimeOffRequest {

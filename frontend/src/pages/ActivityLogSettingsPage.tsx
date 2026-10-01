@@ -21,6 +21,8 @@ const ENTITY_TYPE_VALUES: ActivityEntityType[] = [
   'opportunity',
   'timeOffPolicy',
   'timeOffRequest',
+  'timeOffAdjustment',
+  'timeOffSettings',
   'employeeCompensation',
   'employeeTermination',
   'payrollRun',
@@ -55,6 +57,7 @@ const ENTITY_TYPE_PERMISSION: Partial<Record<ActivityEntityType, string>> = {
   paymentMethod: 'manage_payroll',
   stripeConnection: 'manage_payments',
   stripeInvoice: 'manage_payments',
+  timeOffAdjustment: 'manage_custom_fields',
 };
 
 const ACTION_VALUES: ('create' | 'update' | 'delete')[] = ['create', 'update', 'delete'];

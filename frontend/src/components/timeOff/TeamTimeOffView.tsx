@@ -4,7 +4,7 @@ import type { TimeOffBalance, TimeOffRequest } from '../../api';
 import TableBody from '../common/TableBody';
 import Avatar from '../common/Avatar';
 import { SearchIcon, TeamIcon } from '../common/Icons';
-import { BalanceMeter, PolicyName, availableDays, policyColor, useDateRangeFormatter } from './timeOffShared';
+import { BalanceMeter, PolicyName, availableDays, grantedDays, policyColor, useDateRangeFormatter } from './timeOffShared';
 
 export interface TeamPerson {
   employeeId: string;
@@ -155,7 +155,7 @@ export default function TeamTimeOffView({ isAdmin, people, pendingApprovals, bal
                         <span className="to-mini-meter num">
                           <BalanceMeter balance={main} color={policyColor(main.color)} />
                           <span>
-                            <b>{availableDays(main)}</b> <span className="to-faint">{t('timeOff.team.ofTotal2', { total: main.allocated })}</span>
+                            <b>{availableDays(main)}</b> <span className="to-faint">{t('timeOff.team.ofTotal2', { total: grantedDays(main) })}</span>
                           </span>
                         </span>
                       ) : (
@@ -236,7 +236,7 @@ export function ApprovalCard({ request: r, balance, dateRange, onDecide, onOpenP
         </div>
         <div>
           {t('timeOff.team.wouldLeave')}
-          <strong>{balance ? t('timeOff.team.ofTotal', { left: availableDays(balance), total: balance.allocated }) : '—'}</strong>
+          <strong>{balance ? t('timeOff.team.ofTotal', { left: availableDays(balance), total: grantedDays(balance) }) : '—'}</strong>
         </div>
       </div>
       {r.note && <p className="to-ap-note">“{r.note}”</p>}

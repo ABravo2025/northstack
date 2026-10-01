@@ -1147,14 +1147,34 @@ export default function GuidePage() {
                 vuelta de la misma forma.
               </p>
               <p>
-                Los saldos (Asignados / Usados / Pendientes / Restantes) se calculan en el momento y se reinician
-                cada 1° de enero — cambiar la política de alguien nunca reescribe sus solicitudes pasadas, y una
-                política eliminada simplemente se desactiva en vez de borrar el historial.
+                Los saldos se calculan en el momento. Cambiar la política de alguien nunca reescribe sus
+                solicitudes pasadas, y una política eliminada simplemente se desactiva en vez de borrar el
+                historial. Un saldo nunca puede quedar en negativo: no se puede pedir más de lo disponible.
               </p>
               <p>
                 El calendario de Resumen muestra las ausencias aprobadas de todo el equipo junto con tareas y
                 cumpleaños, y conectar Google Calendar (ver Integraciones y API) envía automáticamente tus propias
                 ausencias aprobadas a tu calendario personal.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Reglas de la empresa</h3>
+              <p>
+                En <strong>Configuración → Time Off</strong> el owner define las reglas de toda la empresa:
+              </p>
+              <ul>
+                <li><strong>Calendario de feriados</strong>: se elige según dónde trabaja el equipo (puede no ser el país de la empresa) y se importa; los días no laborables se marcan como libres o trabajados.</li>
+                <li><strong>Semana laboral</strong> y <strong>cómo se cuentan los días</strong>: corridos o hábiles. Con días hábiles no se descuentan fines de semana, feriados ni días libres. Cada política puede usar otro conteo.</li>
+                <li><strong>Días libres de la empresa</strong>: fechas que se dan libres a todos (compensatorios, Nochebuena) y no descuentan saldo.</li>
+                <li><strong>Feriados religiosos</strong>: se habilitan por religión y aplican solo a las personas que la profesan. Cada persona puede elegirlos desde su perfil; es un dato que ve solo RR.HH.</li>
+              </ul>
+              <p>
+                Cada política define además si se pueden <strong>pedir días a cuenta</strong> (con acumulación
+                mensual, hasta el total del año) y qué pasa con los <strong>días sin usar</strong> al 31 de
+                diciembre: pasan al año siguiente (con un tope opcional) o se pierden. En los dos casos queda
+                registrado. RR.HH. puede <strong>ajustar el saldo</strong> de una persona sumando o restando días
+                con un motivo, que la persona ve en su historial.
               </p>
             </div>
           </section>
@@ -1235,14 +1255,34 @@ export default function GuidePage() {
                 have a manager assigned); a decision — approved or rejected — notifies you back the same way.
               </p>
               <p>
-                Balances (Allocated / Used / Pending / Remaining) are calculated live and reset every January 1st —
-                changing someone's policy never rewrites their past requests, and a deleted policy just deactivates
-                rather than erasing history.
+                Balances are calculated live. Changing someone's policy never rewrites their past requests, and a
+                deleted policy just deactivates rather than erasing history. A balance can never go negative: you
+                can't request more than what's available.
               </p>
               <p>
                 The Overview calendar shows the whole team's approved time off alongside tasks and birthdays, and
                 connecting Google Calendar (see Integrations &amp; API) pushes your own approved time off onto your
                 personal calendar automatically.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Company rules</h3>
+              <p>
+                In <strong>Settings → Time Off</strong> the owner sets the rules for the whole company:
+              </p>
+              <ul>
+                <li><strong>Holiday calendar</strong>: picked by where the team works (it can differ from the company's country) and imported; non-working days are marked as given off or worked.</li>
+                <li><strong>Work week</strong> and <strong>how days are counted</strong>: calendar or business days. With business days, weekends, holidays and days off aren't deducted. Each policy can use a different count.</li>
+                <li><strong>Company days off</strong>: dates everyone gets off (compensatory days, Christmas Eve) that don't touch balances.</li>
+                <li><strong>Religious holidays</strong>: enabled per religion and applied only to the people who profess it. Each person can pick theirs from their profile; only HR can see it.</li>
+              </ul>
+              <p>
+                Each policy also decides whether people can <strong>ask for days in advance</strong> (monthly
+                accrual, up to the year's total) and what happens to <strong>unused days</strong> on Dec 31: carry
+                over to next year (with an optional limit) or expire — recorded either way. HR can
+                <strong> adjust a person's balance</strong>, adding or removing days with a reason the person sees
+                in their history.
               </p>
             </div>
           </section>

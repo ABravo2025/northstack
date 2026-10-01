@@ -112,7 +112,8 @@ export function NewRequestForm({ value, onChange, onSubmit, balances, preview, p
                 : 'timeOff.rules.request.reasonNational',
         );
 
-  let message: React.ReactNode = <p className="to-hint">{t('timeOff.requestForm.daysHint')}</p>;
+  // The server says how days are counted for this policy (shown under the numbers once known).
+  let message: React.ReactNode = null;
   if (previewError) message = <p className="field-error" role="alert">{previewError}</p>;
   else if (preview && preview.days === 0) message = <p className="field-error" role="alert">{t('timeOff.rules.request.nothingToRequest')}</p>;
   else if (preview && preview.days > preview.maxRequestable)

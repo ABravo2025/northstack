@@ -8,7 +8,10 @@ import { timeOffRequestActivityFieldConfig } from '../activity/fieldConfigs/time
 import { createNotification } from '../notifications/notificationService.js';
 import { canDecideTimeOff } from '../auth/permissionService.js';
 import type { AuthenticatedUser } from '../auth/authService.js';
-import type { TimeOffRequest, TimeOffRequestStatus } from '@prisma/client';
+import type { TimeOffDayCount, TimeOffRequest, TimeOffRequestStatus } from '@prisma/client';
+import { calculatePolicyBalance } from './timeOffBalanceService.js';
+import { loadDaysOffFor } from './timeOffSettingsService.js';
+import { countRequestDays, resolveDayCount, type ExcludedDay } from './timeOffRules.js';
 
 // Employee doesn't carry its own `.locale` (that lives on User) — only worth the extra lookup
 // here since Time Off emails are frequent; other call sites elsewhere default to English instead
@@ -23,12 +26,6 @@ async function localeForEmployee(employee: { userId: string | null } | null): Pr
 function timeOffRequestLabel(employeeName: string, startDate: Date, endDate: Date): string {
   const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   return `${employeeName} — ${fmt(startDate)} to ${fmt(endDate)}`;
-}
-
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
-function countInclusiveDays(startDate: Date, endDate: Date): number {
-  return Math.round((endDate.getTime() - startDate.getTime()) / MS_PER_DAY) + 1;
 }
 
 function formatDate(date: Date): string {
@@ -48,6 +45,46 @@ export interface CreateTimeOffRequestResult {
   success: boolean;
   request?: TimeOffRequest;
   error?: string;
+}
+
+export interface TimeOffRequestPreview {
+  days: number;
+  dayCount: TimeOffDayCount;
+  excluded: ExcludedDay[];
+  available: number;
+  maxRequestable: number;
+  // How many of the requested days go beyond what's accrued (asked in advance).
+  inAdvance: number;
+}
+
+// What a request for this range would take from the person's balance, counted with the company's
+// rules (2026-10): calendar or business days, skipping the person's days off — the same numbers
+// createTimeOffRequest enforces, so the form and the server can never disagree.
+export async function previewTimeOffRequest(
+  tenantId: string,
+  employeeId: string,
+  timeOffPolicyId: string,
+  startDate: Date,
+  endDate: Date,
+): Promise<{ success: true; preview: TimeOffRequestPreview } | { success: false; error: string }> {
+  const policy = await prisma.timeOffPolicyDefinition.findUnique({ where: { id: timeOffPolicyId } });
+  if (!policy || policy.tenantId !== tenantId) return { success: false, error: 'Time off policy not found' };
+  const balance = await calculatePolicyBalance(tenantId, employeeId, timeOffPolicyId);
+  if (!balance) return { success: false, error: 'This time off policy is not assigned to you' };
+  const { settings, daysOff } = await loadDaysOffFor(tenantId, employeeId, startDate, endDate);
+  const dayCount = resolveDayCount(policy.dayCount, settings.defaultDayCount);
+  const { days, excluded } = countRequestDays(startDate, endDate, dayCount, settings.workWeek, daysOff);
+  return {
+    success: true,
+    preview: {
+      days,
+      dayCount,
+      excluded,
+      available: balance.available,
+      maxRequestable: balance.maxRequestable,
+      inAdvance: Math.max(0, Math.round((days - balance.available) * 100) / 100),
+    },
+  };
 }
 
 export async function createTimeOffRequest(
@@ -82,7 +119,20 @@ export async function createTimeOffRequest(
     return { success: false, error: 'This time off policy is not assigned to you' };
   }
 
-  const daysRequested = countInclusiveDays(startDate, endDate);
+  // Company rules (2026-10): count the days the way the policy/company says, and never let a
+  // request take the balance below zero.
+  const preview = await previewTimeOffRequest(input.tenantId, input.employeeId, input.timeOffPolicyId, startDate, endDate);
+  if (!preview.success) return { success: false, error: preview.error };
+  const daysRequested = preview.preview.days;
+  if (daysRequested === 0) {
+    return { success: false, error: 'Every day in that range is already a day off — there is nothing to request' };
+  }
+  if (daysRequested > preview.preview.maxRequestable) {
+    return {
+      success: false,
+      error: `Not enough balance: this request takes ${daysRequested} days and you can request up to ${preview.preview.maxRequestable}`,
+    };
+  }
   const autoApprove = !policy.requiresApproval;
 
   const request = await client.timeOffRequest.create({

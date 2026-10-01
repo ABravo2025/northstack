@@ -15,6 +15,8 @@ const ENTITY_TYPE_LABELS: Record<ActivityEntityType, string> = {
   opportunity: 'Opportunity',
   timeOffPolicy: 'Time Off Policy',
   timeOffRequest: 'Time Off Request',
+  timeOffAdjustment: 'Time Off Adjustment',
+  timeOffSettings: 'Time Off Settings',
   employeeCompensation: 'Compensation',
   employeeTermination: 'Termination',
   payrollRun: 'Payroll Run',

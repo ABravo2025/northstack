@@ -1,7 +1,15 @@
 import prisma from '../../lib/prisma.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { timeOffPolicyActivityFieldConfig } from '../activity/fieldConfigs/timeOffPolicyFieldConfig.js';
-import type { TimeOffAccrualMethod, TimeOffPolicyDefinition } from '@prisma/client';
+import type { TimeOffAccrualMethod, TimeOffPolicyDayCount, TimeOffPolicyDefinition, TimeOffUnusedAction } from '@prisma/client';
+
+// Company rules per policy (2026-10) — see TimeOffPolicyDefinition in schema.prisma.
+export interface TimeOffPolicyRules {
+  dayCount?: TimeOffPolicyDayCount;
+  allowAdvance?: boolean;
+  unusedAction?: TimeOffUnusedAction;
+  carryOverMax?: number | null;
+}
 
 export interface CreateTimeOffPolicyInput {
   tenantId: string;
@@ -11,6 +19,7 @@ export interface CreateTimeOffPolicyInput {
   daysPerYear: number;
   isPaid?: boolean;
   requiresApproval?: boolean;
+  rules?: TimeOffPolicyRules;
 }
 
 export async function createTimeOffPolicy(
@@ -26,6 +35,7 @@ export async function createTimeOffPolicy(
       daysPerYear: input.daysPerYear,
       isPaid: input.isPaid ?? true,
       requiresApproval: input.requiresApproval ?? true,
+      ...input.rules,
     },
   });
 
@@ -62,6 +72,10 @@ export interface UpdateTimeOffPolicyInput {
   isPaid?: boolean;
   requiresApproval?: boolean;
   isActive?: boolean;
+  dayCount?: TimeOffPolicyDayCount;
+  allowAdvance?: boolean;
+  unusedAction?: TimeOffUnusedAction;
+  carryOverMax?: number | null;
 }
 
 export interface TimeOffPolicyUpdateResult {

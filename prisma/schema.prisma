@@ -194,6 +194,32 @@ enum TimeOffRequestStatus {
   cancelled
 }
 
+// Time Off company rules (2026-10). calendar = every day in the range counts (the original
+// behavior, so it's the default); business = skips non-working weekdays and the days off that
+// apply to the person (holidays, company days off, their religious holidays).
+enum TimeOffDayCount {
+  calendar
+  business
+}
+
+enum TimeOffPolicyDayCount {
+  inherit
+  calendar
+  business
+}
+
+enum TimeOffUnusedAction {
+  carry
+  expire
+}
+
+enum TimeOffHolidayKind {
+  national
+  non_working
+  company
+  religious
+}
+
 enum SavedViewType {
   grid
   kanban
@@ -352,6 +378,11 @@ model Tenant {
   timeOffPolicies           TimeOffPolicyDefinition[]
   employeeTimeOffPolicies   EmployeeTimeOffPolicy[]
   timeOffRequests           TimeOffRequest[]
+  timeOffSettings           TimeOffSettings?
+  timeOffHolidays           TimeOffHoliday[]
+  employeeReligiousHolidays EmployeeReligiousHoliday[]
+  timeOffAdjustments        TimeOffAdjustment[]
+  timeOffYearCloses         TimeOffYearClose[]
   savedViews                SavedView[]
   forms                     Form[]
   fieldCatalogDefinitions   FieldCatalogDefinition[]
@@ -624,14 +655,14 @@ model EmailVerification {
 }
 
 model Employee {
-  id                       String                  @id @default(uuid())
+  id                       String                     @id @default(uuid())
   firstName                String
   lastName                 String
   email                    String
   departmentId             String?
-  departmentDefn           FieldCatalogDefinition? @relation("EmployeeDepartment", fields: [departmentId], references: [id])
+  departmentDefn           FieldCatalogDefinition?    @relation("EmployeeDepartment", fields: [departmentId], references: [id])
   jobTitleId               String?
-  jobTitleDefn             FieldCatalogDefinition? @relation("EmployeeJobTitle", fields: [jobTitleId], references: [id])
+  jobTitleDefn             FieldCatalogDefinition?    @relation("EmployeeJobTitle", fields: [jobTitleId], references: [id])
   // hourlyRateCents/monthlyRateCents/compensationType (Tier 2, predates Payroll)
   // retired here (Payroll Unidad 4) in favor of the versioned
   // EmployeeCompensation model — see scripts/backfill-legacy-employee-compensation.ts
@@ -647,21 +678,24 @@ model Employee {
   personType               PersonType? // Payroll (Unidad 4): profile/contractor/employee — nullable because pre-existing rows predate this field; the People alta form (Unidad 4/5) makes it a required first choice going forward
   nationality              String? // Payroll (Unidad 5): profile data, not part of any EmployeeCompensation contract
   countryOfResidence       String? // Payroll (Unidad 7): filled by the person themselves at contract confirmation, never by the owner
-  birthdate                DateTime?               @db.Date // shown as a recurring annual entry on the Overview calendar (month+day only, year ignored)
+  birthdate                DateTime?                  @db.Date // shown as a recurring annual entry on the Overview calendar (month+day only, year ignored)
   statusId                 String
-  statusDefn               StatusDefinition        @relation(fields: [statusId], references: [id])
+  statusDefn               StatusDefinition           @relation(fields: [statusId], references: [id])
   managerId                String?
-  manager                  Employee?               @relation("EmployeeManager", fields: [managerId], references: [id])
-  reports                  Employee[]              @relation("EmployeeManager")
+  manager                  Employee?                  @relation("EmployeeManager", fields: [managerId], references: [id])
+  reports                  Employee[]                 @relation("EmployeeManager")
   tenantId                 String
-  tenant                   Tenant                  @relation(fields: [tenantId], references: [id])
-  createdAt                DateTime                @default(now())
-  userId                   String?                 @unique
-  user                     User?                   @relation(fields: [userId], references: [id])
+  tenant                   Tenant                     @relation(fields: [tenantId], references: [id])
+  createdAt                DateTime                   @default(now())
+  userId                   String?                    @unique
+  user                     User?                      @relation(fields: [userId], references: [id])
   invitations              Invitation[]
   timeOffPolicies          EmployeeTimeOffPolicy[]
-  timeOffRequestsMade      TimeOffRequest[]        @relation("TimeOffRequestEmployee")
-  timeOffRequestsToApprove TimeOffRequest[]        @relation("TimeOffRequestApprover")
+  timeOffRequestsMade      TimeOffRequest[]           @relation("TimeOffRequestEmployee")
+  timeOffRequestsToApprove TimeOffRequest[]           @relation("TimeOffRequestApprover")
+  religiousHolidays        EmployeeReligiousHoliday[]
+  timeOffAdjustments       TimeOffAdjustment[]
+  timeOffYearCloses        TimeOffYearClose[]
   compensations            EmployeeCompensation[]
   payrollEntries           PayrollEntry[]
   terminations             EmployeeTermination[]
@@ -1075,6 +1109,8 @@ enum ActivityEntityType {
   // Tier 2 — HR/Payroll, settings-wide feed only
   timeOffPolicy
   timeOffRequest
+  timeOffAdjustment
+  timeOffSettings
   employeeCompensation
   employeeTermination
   payrollRun
@@ -1168,8 +1204,17 @@ model TimeOffPolicyDefinition {
   requiresApproval    Boolean                 @default(true)
   isActive            Boolean                 @default(true)
   createdAt           DateTime                @default(now())
+  // 2026-10 rules: how a request's days are counted (inherit = TimeOffSettings.defaultDayCount),
+  // whether a monthly-accrual policy lets people ask for days not accrued yet (never past the
+  // year's total: balances can't go negative), and what happens to unused days on Dec 31.
+  dayCount            TimeOffPolicyDayCount   @default(inherit)
+  allowAdvance        Boolean                 @default(false)
+  unusedAction        TimeOffUnusedAction     @default(expire)
+  carryOverMax        Float?
   employeeAssignments EmployeeTimeOffPolicy[]
   requests            TimeOffRequest[]
+  adjustments         TimeOffAdjustment[]
+  yearCloses          TimeOffYearClose[]
 
   @@index([tenantId])
 }
@@ -1196,6 +1241,96 @@ model TimeOffRequest {
 
   @@index([tenantId, employeeId])
   @@index([tenantId, status])
+}
+
+// Company-wide Time Off rules, one row per tenant (created on first save; absent = defaults).
+model TimeOffSettings {
+  id               String          @id @default(uuid())
+  tenantId         String          @unique
+  tenant           Tenant          @relation(fields: [tenantId], references: [id])
+  // ISO 3166-1 alpha-2 of the holiday calendar the owner picked — independent of the company's
+  // own country (a team based in Colombia can follow the US calendar). Null = no calendar.
+  holidayCountry   String?
+  // Working weekdays, 0 = Sunday … 6 = Saturday.
+  workWeek         Int[]           @default([1, 2, 3, 4, 5])
+  defaultDayCount  TimeOffDayCount @default(calendar)
+  // Religions whose holidays apply in this company (keys from religiousHolidays.ts).
+  enabledReligions String[]        @default([])
+  updatedAt        DateTime        @updatedAt
+}
+
+// Every non-working date the company knows about: national holidays (imported from Nager.Date for
+// holidayCountry, editable), días no laborables (isOff = whether the company gives them off),
+// company days off (off for everyone) and religious holidays (off only for people who have that
+// religion, see EmployeeReligiousHoliday).
+model TimeOffHoliday {
+  id          String             @id @default(uuid())
+  tenantId    String
+  tenant      Tenant             @relation(fields: [tenantId], references: [id])
+  date        DateTime           @db.Date
+  name        String
+  kind        TimeOffHolidayKind
+  religion    String?
+  countryCode String?
+  isOff       Boolean            @default(true)
+  source      String             @default("manual")
+  createdAt   DateTime           @default(now())
+
+  @@index([tenantId, date])
+}
+
+// Which religions' holidays apply to a person. Sensitive: only HR (manage_custom_fields) and the
+// person themselves can read or change it.
+model EmployeeReligiousHoliday {
+  id         String   @id @default(uuid())
+  tenantId   String
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id])
+  religion   String
+  createdAt  DateTime @default(now())
+
+  @@unique([employeeId, religion])
+  @@index([tenantId])
+}
+
+// A manual +/- days change to one person's balance of one policy for one year, with the reason
+// (e.g. compensation for an on-call weekend). Never allowed to leave the balance negative.
+model TimeOffAdjustment {
+  id              String                  @id @default(uuid())
+  tenantId        String
+  tenant          Tenant                  @relation(fields: [tenantId], references: [id])
+  employeeId      String
+  employee        Employee                @relation(fields: [employeeId], references: [id])
+  timeOffPolicyId String
+  timeOffPolicy   TimeOffPolicyDefinition @relation(fields: [timeOffPolicyId], references: [id])
+  year            Int
+  days            Float
+  reason          String
+  createdByUserId String
+  createdAt       DateTime                @default(now())
+
+  @@index([tenantId, employeeId])
+}
+
+// What happened to a person's unused days of a policy when a year ended: how many were left, how
+// many carried into the next year and how many expired. Written once per person/policy/year.
+model TimeOffYearClose {
+  id              String                  @id @default(uuid())
+  tenantId        String
+  tenant          Tenant                  @relation(fields: [tenantId], references: [id])
+  employeeId      String
+  employee        Employee                @relation(fields: [employeeId], references: [id])
+  timeOffPolicyId String
+  timeOffPolicy   TimeOffPolicyDefinition @relation(fields: [timeOffPolicyId], references: [id])
+  year            Int
+  unusedDays      Float
+  carriedDays     Float
+  expiredDays     Float
+  closedAt        DateTime                @default(now())
+
+  @@unique([employeeId, timeOffPolicyId, year])
+  @@index([tenantId, year])
 }
 
 // One row per (approved TimeOffRequest, connected user who can see it) —

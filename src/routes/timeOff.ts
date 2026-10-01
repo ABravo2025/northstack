@@ -1,7 +1,7 @@
 import { canManageCustomFields } from '../modules/auth/permissionService.js';
 import { findEmployeeByUserId } from '../modules/hr/employeeService.js';
 import { calculateAllTimeOffBalances, calculateTeamTimeOffBalances } from '../modules/hr/timeOffBalanceService.js';
-import { createTimeOffPolicy, listTimeOffPolicies, updateTimeOffPolicy } from '../modules/hr/timeOffPolicyService.js';
+import { createTimeOffPolicy, listTimeOffPolicies, updateTimeOffPolicy, type TimeOffPolicyRules } from '../modules/hr/timeOffPolicyService.js';
 import {
   cancelTimeOffRequest,
   createTimeOffRequest,
@@ -18,6 +18,31 @@ import { createAsyncRouter } from '../lib/asyncRouter.js';
 import prisma from '../lib/prisma.js';
 
 export const timeOffRouter = createAsyncRouter();
+
+// The 2026-10 per-policy rules, validated once for both create and update. Only the keys present
+// in the body are returned, so a PATCH leaves the others alone.
+function parsePolicyRules(body: Record<string, unknown>): { error: string } | { rules: TimeOffPolicyRules } {
+  const rules: TimeOffPolicyRules = {};
+  if (body.dayCount !== undefined) {
+    if (body.dayCount !== 'inherit' && body.dayCount !== 'calendar' && body.dayCount !== 'business') return { error: 'Day counting must be inherit, calendar or business' };
+    rules.dayCount = body.dayCount;
+  }
+  if (body.allowAdvance !== undefined) {
+    if (typeof body.allowAdvance !== 'boolean') return { error: 'allowAdvance must be true or false' };
+    rules.allowAdvance = body.allowAdvance;
+  }
+  if (body.unusedAction !== undefined) {
+    if (body.unusedAction !== 'carry' && body.unusedAction !== 'expire') return { error: 'Unused days must carry over or expire' };
+    rules.unusedAction = body.unusedAction;
+  }
+  if (body.carryOverMax !== undefined) {
+    if (body.carryOverMax !== null && (typeof body.carryOverMax !== 'number' || !Number.isFinite(body.carryOverMax) || body.carryOverMax < 0)) {
+      return { error: 'The carry-over limit must be empty or a non-negative number' };
+    }
+    rules.carryOverMax = body.carryOverMax as number | null;
+  }
+  return { rules };
+}
 
 timeOffRouter.get('/api/time-off-policies', async (req, res) => {
   const user = await validateSession(req, res);
@@ -49,6 +74,11 @@ timeOffRouter.post('/api/time-off-policies', async (req, res) => {
     return res.status(400).json({ error: 'Days per year must be a non-negative number' });
   }
 
+  const parsedRules = parsePolicyRules(req.body ?? {});
+  if ('error' in parsedRules) {
+    return res.status(400).json({ error: parsedRules.error });
+  }
+
   const maxTimeOffPolicies = getPlanLimits(user.tenant).maxTimeOffPolicies;
   if (maxTimeOffPolicies !== null) {
     const existingCount = await prisma.timeOffPolicyDefinition.count({
@@ -70,6 +100,7 @@ timeOffRouter.post('/api/time-off-policies', async (req, res) => {
       daysPerYear,
       isPaid: req.body.isPaid,
       requiresApproval: req.body.requiresApproval,
+      rules: parsedRules.rules,
     },
     user.id,
   );
@@ -95,6 +126,11 @@ timeOffRouter.patch('/api/time-off-policies/:policyId', async (req, res) => {
     req.body.daysPerYear = daysPerYear;
   }
 
+  const parsedRules = parsePolicyRules(req.body ?? {});
+  if ('error' in parsedRules) {
+    return res.status(400).json({ error: parsedRules.error });
+  }
+
   const result = await updateTimeOffPolicy(
     req.params.policyId,
     user.tenantId!,
@@ -106,6 +142,7 @@ timeOffRouter.patch('/api/time-off-policies/:policyId', async (req, res) => {
       isPaid: req.body.isPaid,
       requiresApproval: req.body.requiresApproval,
       isActive: req.body.isActive,
+      ...parsedRules.rules,
     },
     user.id,
   );

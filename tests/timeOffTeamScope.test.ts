@@ -7,6 +7,9 @@ vi.mock('../src/lib/prisma.js', () => ({
   default: {
     employeeTimeOffPolicy: { findMany: (...args: unknown[]) => assignmentFindMany(...args) },
     timeOffRequest: { findMany: (...args: unknown[]) => requestFindMany(...args) },
+    // 2026-10 rules: manual adjustments and year-end closes (none in these fixtures).
+    timeOffAdjustment: { findMany: async () => [] },
+    timeOffYearClose: { findMany: async () => [], createMany: async () => ({ count: 0 }) },
   },
 }));
 

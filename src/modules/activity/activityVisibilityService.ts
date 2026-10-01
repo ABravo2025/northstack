@@ -43,6 +43,8 @@ const ACTIVITY_MODULE_GATE: Partial<Record<ActivityEntityType, (role: RoleContex
   statusDefinition: canManageCustomFields,
   customFieldDefinition: canManageCustomFields,
   fieldCatalogDefinition: canManageCustomFields,
+  // A person's manual balance changes — HR data, same gate as the policies themselves.
+  timeOffAdjustment: canManageCustomFields,
   pipeline: canManageCustomFields,
   pipelineStage: canManageCustomFields,
   publicForm: canManageCustomFields,

@@ -46,7 +46,7 @@ interface PermissionGroup {
 // A function (not a module-level const) so the labels/descriptions/hints re-resolve on every
 // render against the active language — same reason settingsSections.tsx/dashboardsSections.tsx
 // are functions, not static arrays (docs/general/spec-i18n.md).
-const GROWTH_ONLY_PERMISSION_KEYS = ['manage_payroll', 'manage_payments'];
+const GROWTH_ONLY_PERMISSION_KEYS = ['manage_payroll', 'manage_payments', 'manage_api_access'];
 
 function getGroups(t: TFunction): PermissionGroup[] {
   return [

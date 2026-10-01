@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getEffectivePlan, getPlanLimits, isPaymentsAllowed, isPayrollAllowed } from '../src/modules/tenant/planLimits.js';
+import { getEffectivePlan, getPlanLimits, isApiAccessAllowed, isPaymentsAllowed, isPayrollAllowed } from '../src/modules/tenant/planLimits.js';
 
 describe('getEffectivePlan', () => {
   it('a null plan (Free Trial, unchosen) resolves to growth — full access while exploring', () => {
@@ -33,6 +33,7 @@ describe('getPlanLimits', () => {
       activityLogRetentionDays: 7,
       payrollEnabled: false,
       paymentsEnabled: false,
+      apiAccessEnabled: false,
     });
   });
 
@@ -58,5 +59,16 @@ describe('isPayrollAllowed / isPaymentsAllowed', () => {
     expect(isPaymentsAllowed({ plan: 'growth' })).toBe(true);
     expect(isPayrollAllowed({ plan: null })).toBe(true);
     expect(isPaymentsAllowed({ plan: null })).toBe(true);
+  });
+});
+
+describe('isApiAccessAllowed', () => {
+  it('is false on Starter', () => {
+    expect(isApiAccessAllowed({ plan: 'starter' })).toBe(false);
+  });
+
+  it('is true on Growth and on an unchosen Free Trial', () => {
+    expect(isApiAccessAllowed({ plan: 'growth' })).toBe(true);
+    expect(isApiAccessAllowed({ plan: null })).toBe(true);
   });
 });

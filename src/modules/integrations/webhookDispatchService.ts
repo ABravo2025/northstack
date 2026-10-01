@@ -1,6 +1,7 @@
 import { createHmac, randomUUID } from 'node:crypto';
 import prisma from '../../lib/prisma.js';
 import { decryptWebhookSecret } from '../../lib/webhookEncryption.js';
+import { isApiAccessAllowed } from '../tenant/planLimits.js';
 import type { WebhookDelivery } from '@prisma/client';
 
 // Private API + Webhooks Unit 4 (spec §7) — outbound webhooks. Northstack signs and pushes a POST
@@ -50,6 +51,11 @@ export async function emitWebhookEvent(input: EmitWebhookEventInput): Promise<vo
     where: { tenantId: input.tenantId, isActive: true, events: { has: input.type } },
   });
   if (subscriptions.length === 0) return;
+
+  // Webhooks are Growth-only (2026-10-01). Checked only once a subscription exists, so tenants
+  // without webhooks (the vast majority) pay no extra query on every emitted event.
+  const tenant = await prisma.tenant.findUnique({ where: { id: input.tenantId }, select: { plan: true } });
+  if (!isApiAccessAllowed(tenant)) return;
 
   const payload = {
     id: `evt_${randomUUID()}`,

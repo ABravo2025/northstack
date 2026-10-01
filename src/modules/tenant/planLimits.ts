@@ -11,6 +11,9 @@ export interface PlanLimits {
   activityLogRetentionDays: number | null;
   payrollEnabled: boolean;
   paymentsEnabled: boolean;
+  // Private API keys + outbound webhooks (and, later, AI assistants via MCP —
+  // spec-mcp-server.md). Growth-only (Alejandro, 2026-10-01); was ungated until then.
+  apiAccessEnabled: boolean;
 }
 
 export type EffectivePlan = 'starter' | 'growth';
@@ -23,6 +26,7 @@ export const PLAN_LIMITS: Record<EffectivePlan, PlanLimits> = {
     activityLogRetentionDays: 7,
     payrollEnabled: false,
     paymentsEnabled: false,
+    apiAccessEnabled: false,
   },
   growth: {
     maxPipelines: null,
@@ -31,6 +35,7 @@ export const PLAN_LIMITS: Record<EffectivePlan, PlanLimits> = {
     activityLogRetentionDays: 30,
     payrollEnabled: true,
     paymentsEnabled: true,
+    apiAccessEnabled: true,
   },
 };
 
@@ -56,4 +61,8 @@ export function isPayrollAllowed(tenant: { plan: PlanTier | null } | null): bool
 
 export function isPaymentsAllowed(tenant: { plan: PlanTier | null } | null): boolean {
   return getPlanLimits(tenant).paymentsEnabled;
+}
+
+export function isApiAccessAllowed(tenant: { plan: PlanTier | null } | null): boolean {
+  return getPlanLimits(tenant).apiAccessEnabled;
 }

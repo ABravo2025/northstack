@@ -2,6 +2,7 @@ import type express from 'express';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { canManageApiAccess } from '../modules/auth/permissionService.js';
+import { isApiAccessAllowed } from '../modules/tenant/planLimits.js';
 import { createApiKey, listApiKeys, revokeApiKey } from '../modules/integrations/apiKeyService.js';
 import {
   createSubscription,
@@ -21,9 +22,18 @@ import {
 
 export const apiAccessIntegrationRouter = createAsyncRouter();
 
-function requireApiAccess(user: { roleContext: import('../modules/auth/roleService.js').RoleContext }, res: express.Response): boolean {
+// Role check plus the plan-tier check (Growth-only since 2026-10-01), same shape as
+// requirePayrollAccess/requirePaymentsAccess.
+function requireApiAccess(
+  user: { roleContext: import('../modules/auth/roleService.js').RoleContext; tenant: { plan: import('@prisma/client').PlanTier | null } | null },
+  res: express.Response,
+): boolean {
   if (!canManageApiAccess(user.roleContext)) {
     res.status(403).json({ error: 'Only the workspace owner (or a role granted API access) can manage API keys.' });
+    return false;
+  }
+  if (!isApiAccessAllowed(user.tenant)) {
+    res.status(403).json({ error: 'API access requires the Growth plan. Upgrade to Growth to use API keys and webhooks.', code: 'plan_upgrade_required' });
     return false;
   }
   return true;

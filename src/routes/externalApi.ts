@@ -6,6 +6,7 @@ import { bestEffort } from '../lib/bestEffort.js';
 import { isRateLimited } from '../lib/rateLimit.js';
 import prismaExternal from '../lib/prismaExternal.js';
 import { authenticateApiKey, hasScope, type AuthenticatedApiKey } from '../lib/externalApiAuth.js';
+import { isApiAccessAllowed } from '../modules/tenant/planLimits.js';
 import { findEntityTenantId, isSupportedCrossModuleEntityType } from '../modules/crossModule/entityLookup.js';
 import type { EntityType } from '@prisma/client';
 import { findUserById } from '../modules/tenant/tenantService.js';
@@ -91,6 +92,13 @@ externalApiRouter.use('/api/external/v1', async (req: express.Request, res: expr
   try {
     const apiKey = await authenticateApiKey(req, res);
     if (!apiKey) return; // authenticateApiKey already sent the 401 — never logged (spec §6: only authenticated calls are)
+
+    // Growth-only (2026-10-01). A tenant that drops to Starter keeps its keys (not revoked) — they
+    // just stop working here until it's back on Growth.
+    if (!isApiAccessAllowed({ plan: apiKey.tenantPlan })) {
+      await respond(req, res, apiKey, 403, { error: 'API access requires the Growth plan.', code: 'plan_upgrade_required' });
+      return;
+    }
 
     if (await isRateLimited(`apikey:${apiKey.id}`, RATE_LIMIT)) {
       res.setHeader('Retry-After', String(Math.ceil(RATE_LIMIT.windowMs / 1000)));

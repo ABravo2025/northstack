@@ -222,6 +222,10 @@ const FAQ_CATEGORIES: FaqCategory[] = [
         a: "No — /developers requires being signed in to Northstack. It isn't reachable without an account.",
       },
       {
+        q: 'Which plan includes the API?',
+        a: "Growth (and the Free Trial). On Starter, API keys and webhooks are hidden; existing keys stop working until you upgrade, but they aren't deleted.",
+      },
+      {
         q: 'I lost my API key — can I see it again?',
         a: 'No — the full key is only ever shown once, at creation. If it\'s lost, revoke it and create a new one.',
       },
@@ -428,6 +432,10 @@ const FAQ_CATEGORIES_ES: FaqCategory[] = [
       {
         q: '¿La documentación de la API es pública?',
         a: 'No — /developers requiere estar con la sesión iniciada en Northstack. No se puede acceder sin una cuenta.',
+      },
+      {
+        q: '¿Qué plan incluye la API?',
+        a: 'Growth (y la prueba gratuita). En Starter, las claves de API y los webhooks no aparecen; las claves que ya existían dejan de funcionar hasta que hagas upgrade, pero no se borran.',
       },
       {
         q: 'Perdí mi clave de API — ¿puedo volver a verla?',

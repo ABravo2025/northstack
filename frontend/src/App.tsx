@@ -321,7 +321,7 @@ export default function App() {
           production rewrite (/api/(.*)) needs a literal trailing slash so it wouldn't have hit
           this in prod, but /developers avoids the footgun in both environments instead of relying
           on that regex boundary. */}
-      <Route path="/developers" element={isAuthenticated ? <ApiDocsPage /> : <Navigate to="/login" replace />} />
+      <Route path="/developers" element={isAuthenticated ? growthOnly(<ApiDocsPage />, '/settings/integrations') : <Navigate to="/login" replace />} />
 
       <Route
         element={

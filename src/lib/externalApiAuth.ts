@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import type express from 'express';
+import type { PlanTier } from '@prisma/client';
 import { getBearerToken } from './httpAuth.js';
 import { bestEffort } from './bestEffort.js';
 import prismaExternal from './prismaExternal.js';
@@ -82,6 +83,9 @@ export interface AuthenticatedApiKey {
   // the key (createdById/changedByUserId — every existing service function requires a User id
   // there, and an ApiKey isn't a User/session, so it has none of its own to supply).
   createdByUserId: string;
+  // The key's tenant's plan, read in the same query — externalApi.ts's entry middleware rejects
+  // Starter tenants (API access is Growth-only since 2026-10-01).
+  tenantPlan: PlanTier | null;
 }
 
 // 401s immediately on any failure, no anonymous fallback — every route under /api/external/v1/*
@@ -94,7 +98,10 @@ export async function authenticateApiKey(req: express.Request, res: express.Resp
     return null;
   }
 
-  const apiKey = await prismaExternal.apiKey.findUnique({ where: { keyHash: hashApiKey(token) } });
+  const apiKey = await prismaExternal.apiKey.findUnique({
+    where: { keyHash: hashApiKey(token) },
+    include: { tenant: { select: { plan: true } } },
+  });
   if (!apiKey || apiKey.revokedAt) {
     res.status(401).json({ error: 'Invalid or revoked API key', code: 'invalid_api_key' });
     return null;
@@ -107,7 +114,13 @@ export async function authenticateApiKey(req: express.Request, res: express.Resp
     `Failed to update ApiKey.lastUsedAt for ${apiKey.id}`,
   );
 
-  return { id: apiKey.id, tenantId: apiKey.tenantId, scopes: apiKey.scopes, createdByUserId: apiKey.createdByUserId };
+  return {
+    id: apiKey.id,
+    tenantId: apiKey.tenantId,
+    scopes: apiKey.scopes,
+    createdByUserId: apiKey.createdByUserId,
+    tenantPlan: apiKey.tenant.plan,
+  };
 }
 
 export function hasScope(apiKey: AuthenticatedApiKey, scope: string): boolean {

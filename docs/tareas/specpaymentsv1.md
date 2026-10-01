@@ -268,7 +268,7 @@ sin recibos ni fechas por evento salvo la del primer pago.
 - [x] **Verificado**: `npm run build`/`npm test` (175/175) en verde. Con esto el usuario dio por
   cerrado Payments v1.
 
-### Unidad 8 — Enviar facturas de Stripe desde Northstack (escritura) — ✅ completa (2026-09-30, en `staging`)
+### Unidad 8 — Enviar facturas de Stripe desde Northstack (escritura) — ✅ completa, LIVE en producción desde 2026-10-01
 
 Primera unidad de escritura ("la unidad de cobros" que la decisión #11 dejaba para después).
 Decisiones cerradas con Alejandro el 2026-09-26/30: **factura hospedada por Stripe**
@@ -309,7 +309,7 @@ cobrar la tarjeta guardada off-session y Payment Links), **mismo permiso que ver
   la Company hubiera visto montos de facturas sin tener acceso a Payments.
 - [x] **Schema**: `ActivityEntityType.stripeInvoice` + `NotificationType.stripe_invoice_paid`
   (aditivos). Aplicados a `STAGING_DATABASE_URL` el 2026-09-30 (diff previo: exactamente esos dos
-  valores). **Pendiente al promover: el mismo `db push` contra producción.**
+  valores). Aplicados a producción el 2026-10-01 (Alejandro corrió los 2 `ALTER TYPE` en el SQL editor de Neon — el clasificador de seguridad bloquea que Claude escriba en la base de producción; diff posterior vacío).
 - [x] **Copy**: card de Stripe en Integraciones (ya no dice "solo lectura"; Invoices → Write), los
   pasos del ícono de ayuda, User Guide, FAQ y el subtítulo de Payments en la comparación de
   planes — EN + ES.

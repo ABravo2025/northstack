@@ -5,19 +5,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // wrapper, dodopayments.ts delegates the actual HTTP/response-shape handling to the official SDK,
 // so what's worth regression-testing here is that OUR wrapper calls it with the right arguments
 // and handles its response/errors correctly, not the SDK's own internals.
-const { mockCheckoutCreate, mockUnwrap } = vi.hoisted(() => ({
+const { mockCheckoutCreate, mockUnwrap, mockRetrieve, mockChangePlan } = vi.hoisted(() => ({
   mockCheckoutCreate: vi.fn(),
   mockUnwrap: vi.fn(),
+  mockRetrieve: vi.fn(),
+  mockChangePlan: vi.fn(async () => ({})),
 }));
 
 vi.mock('dodopayments', () => ({
   default: class {
     checkoutSessions = { create: mockCheckoutCreate };
     webhooks = { unwrap: mockUnwrap };
+    subscriptions = { retrieve: mockRetrieve, changePlan: mockChangePlan };
   },
 }));
 
-const { createCheckoutSession, unwrapDodoWebhookEvent } = await import('../src/lib/dodopayments.js');
+const { createCheckoutSession, unwrapDodoWebhookEvent, changeSubscriptionPlan } = await import('../src/lib/dodopayments.js');
 
 describe('createCheckoutSession', () => {
   beforeEach(() => {
@@ -98,5 +101,44 @@ describe('unwrapDodoWebhookEvent', () => {
       headers: { 'webhook-id': 'msg_1', 'webhook-signature': 'v1,abc' },
       key: 'whsec_test',
     });
+  });
+});
+
+describe('changeSubscriptionPlan — keeping lifetime discounts', () => {
+  beforeEach(() => {
+    process.env.DODO_PAYMENTS_API_KEY = 'test-key';
+    mockChangePlan.mockClear();
+  });
+  afterEach(() => {
+    delete process.env.DODO_PAYMENTS_API_KEY;
+  });
+
+  const upgrade = () =>
+    changeSubscriptionPlan('sub_1', { productId: 'pdt_growth', extraSeatAddonId: 'adn', extraSeats: 0, mode: 'upgrade_now' });
+
+  it('re-sends a lifetime discount that Dodo would otherwise drop on the plan change', async () => {
+    mockRetrieve.mockResolvedValue({ discounts: [{ code: 'FRIEND100', subscription_cycles: null, preserve_on_plan_change: false }] });
+    await upgrade();
+    expect(mockChangePlan).toHaveBeenCalledWith('sub_1', expect.objectContaining({ discount_codes: ['FRIEND100'], proration_billing_mode: 'full_immediately' }));
+  });
+
+  it('leaves a discount with a cycle limit to Dodo (re-applying could restart its count)', async () => {
+    mockRetrieve.mockResolvedValue({
+      discounts: [
+        { code: 'FRIEND100', subscription_cycles: null, preserve_on_plan_change: false },
+        { code: 'LAUNCH3', subscription_cycles: 3, preserve_on_plan_change: false },
+      ],
+    });
+    await upgrade();
+    expect(mockChangePlan.mock.calls[0][1]).not.toHaveProperty('discount_codes');
+  });
+
+  it('sends nothing extra when Dodo already preserves it, or there is no discount', async () => {
+    mockRetrieve.mockResolvedValue({ discounts: [{ code: 'FRIEND100', subscription_cycles: null, preserve_on_plan_change: true }] });
+    await upgrade();
+    mockRetrieve.mockResolvedValue({ discounts: [] });
+    await upgrade();
+    expect(mockChangePlan.mock.calls[0][1]).not.toHaveProperty('discount_codes');
+    expect(mockChangePlan.mock.calls[1][1]).not.toHaveProperty('discount_codes');
   });
 });

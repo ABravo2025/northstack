@@ -3325,3 +3325,11 @@ textarea.overview-field-input {
 .toolbar-search {
   max-width: 28rem;
 }
+
+/* Inside the app shell, .container pages (Overview, Time Off, Payroll, Payments) start right at
+   the sidebar and use the full width, like every table page (.page-full) — centered with a max
+   width they floated away from the sidebar on wide screens. Public pages (accept invite, reset
+   password, contract confirmation) render outside .app-main and stay centered. */
+.app-main .container {
+  @apply mx-0 max-w-none;
+}

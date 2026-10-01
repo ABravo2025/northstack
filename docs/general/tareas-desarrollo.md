@@ -1,6 +1,12 @@
 # Tareas de desarrollo
 
 - Fecha de creación: 2026-07-02
+- **2026-10-01 — MCP Server / Asistentes de IA (SPEC, sin código)**: spec en `docs/general/spec-mcp-server.md`.
+  Los clientes Growth (incluye trial) conectan su propio Claude, ChatGPT, Cursor, etc. a su workspace vía MCP remoto
+  (OAuth 2.1 + token personal). La IA actúa como el usuario y respeta sus Custom Roles. Payroll queda en solo lectura;
+  los deletes piden confirmación del lado del servidor y todo queda en el Activity Log como "vía IA". Hallazgo: la Private
+  API REST no está limitada a Growth en el código; se corrige en la Unidad 0. 8 unidades, ~8½ sesiones. **Spec aprobada
+  por Alejandro el 2026-10-01**; vive dentro de Integrations. Arranca la Unidad 0.
 - **2026-10-01 — Ocultar en Starter lo que es solo de Growth (EN STAGING, pendiente de revisión)**: el
   sidebar ya ocultaba Payroll/Payments, pero el resto de la UI los seguía mostrando y daba 403 al usarlos.
   Ahora `PermissionsContext.has('manage_payroll' | 'manage_payments')` también mira el plan (igual que

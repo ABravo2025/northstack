@@ -1,6 +1,18 @@
 # Tareas de desarrollo
 
 - Fecha de creación: 2026-07-02
+- **2026-10-01 — Ocultar en Starter lo que es solo de Growth (EN STAGING, pendiente de revisión)**: el
+  sidebar ya ocultaba Payroll/Payments, pero el resto de la UI los seguía mostrando y daba 403 al usarlos.
+  Ahora `PermissionsContext.has('manage_payroll' | 'manage_payments')` también mira el plan (igual que
+  `requirePayrollAccess`/`requirePaymentsAccess` en el backend), así que en Starter desaparecen: sección
+  Payroll de Dashboards, Payment History y "pago final" del empleado, Stripe en Compañía e Integraciones,
+  columnas/filtros de contrato y frecuencia de pago, toggles de esos permisos en Roles, filtros de Activity
+  Log y el módulo payroll en Adoption; las URLs directas redirigen. **Bug corregido**: dar de alta un
+  Employee/Contractor sin acceso a Payroll exigía la compensación inicial, creaba el empleado y fallaba
+  con 403 en la compensación; ahora ese bloque se oculta. **Pendiente (decisión del usuario, bloqueado
+  por el clasificador)**: el CSV de empleados sigue bloqueado en Starter por el gate de plan de
+  `requirePayrollAccess` aunque no tiene columnas de compensación — opción A aprobada: dejar solo el
+  permiso `manage_payroll` en las 3 rutas CSV de `src/routes/employees.ts` y mostrar el menú CSV en Starter.
 - **2026-09-25 — Settings → Company profile (EN PRODUCCIÓN desde 2026-09-25; `db push` a prod hecho)**: datos de
   la empresa editables (nombre, razón social, industria, tamaño, país, dirección, teléfono, web) +
   logo guardado en la DB (PNG/JPG, achicado en el navegador a ≤512 px) + moneda, en una página que

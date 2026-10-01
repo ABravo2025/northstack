@@ -1,6 +1,6 @@
 # Spec MCP Server (Asistentes de IA)
 
-**Estado:** ✅ Spec aprobada por Alejandro (2026-10-01). **Unidad 0 completa, en `staging`** (pendiente de revisión de Alejandro).
+**Estado:** ✅ Spec aprobada por Alejandro (2026-10-01). **Unidad 0 en producción** (2026-10-01). **Unidad 1 completa, en `staging`** (`db push` a la DB de staging hecho; prod pendiente), esperando la revisión de Alejandro.
 **Fecha:** 2026-10-01.
 **Contexto:** Alejandro quiere que los clientes conecten **su propio Claude, o la IA que prefieran**,
 a su workspace de Northstack, y que esa IA pueda leer y operar (crear tareas, notas, mover
@@ -217,6 +217,12 @@ Pérez"*.
   tampoco se distingue.
 - UI: el feed de Settings → Activity Log y el tab Activity de cada modal muestran un chip "IA ·
   Claude" junto al usuario, con un filtro por origen.
+
+**Implementado (Unidad 1, 2026-10-01):** `src/lib/requestContext.ts`; enum `ActivitySource` +
+columnas `source`/`sourceClientName`; la Private API envuelve sus handlers con `source: api` y el nombre
+de la key; `GET /api/activity/feed?source=` filtra; `ActivitySourceTag` muestra el chip en el feed y en
+el tab Activity de cada modal; filtro "Origen" en Settings → Activity Log (EN/ES). Se verificó con un test
+real de Express que el contexto sobrevive a `next()` y a los `await` del handler.
 
 ### 6.2 Confirmación de deletes (del lado del servidor)
 No dependemos de que la IA respete `destructiveHint`; algunos clientes lo ignoran.

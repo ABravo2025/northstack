@@ -7,6 +7,7 @@ import { isRateLimited } from '../lib/rateLimit.js';
 import prismaExternal from '../lib/prismaExternal.js';
 import { authenticateApiKey, hasScope, type AuthenticatedApiKey } from '../lib/externalApiAuth.js';
 import { isApiAccessAllowed } from '../modules/tenant/planLimits.js';
+import { runWithRequestContext } from '../lib/requestContext.js';
 import { findEntityTenantId, isSupportedCrossModuleEntityType } from '../modules/crossModule/entityLookup.js';
 import type { EntityType } from '@prisma/client';
 import { findUserById } from '../modules/tenant/tenantService.js';
@@ -107,7 +108,9 @@ externalApiRouter.use('/api/external/v1', async (req: express.Request, res: expr
     }
 
     (req as unknown as ExternalApiRequest).apiKey = apiKey;
-    next();
+    // Every handler below runs inside this context (AsyncLocalStorage follows the async chain
+    // next() starts), so recordActivity tags their writes as `api` — spec-mcp-server.md §6.1.
+    runWithRequestContext({ source: 'api', sourceClientName: apiKey.name }, () => next());
   } catch (err) {
     console.error('externalApiRouter entry middleware failed:', err);
     if (!res.headersSent) {

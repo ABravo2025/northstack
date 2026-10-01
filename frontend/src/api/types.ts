@@ -604,7 +604,13 @@ export interface ActivityLogEntry {
   changedByUserId: string;
   changedBy: { id: string; firstName: string; lastName: string };
   changedAt: string;
+  // Where the change came from (spec-mcp-server.md §6.1): the app, the Private API, or an AI
+  // assistant over MCP. sourceClientName is the API key's or AI client's name.
+  source: ActivitySource;
+  sourceClientName: string | null;
 }
+
+export type ActivitySource = 'ui' | 'api' | 'ai';
 
 export interface ActivityFeedPage {
   items: ActivityLogEntry[];

@@ -4,6 +4,7 @@ import { api, type ActivityLogEntry, type TaskEntityType } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import Avatar from '../common/Avatar';
 import { PencilIcon, PlusIcon, TrashIcon } from '../common/Icons';
+import ActivitySourceTag from './ActivitySourceTag';
 
 interface EntityActivityListProps {
   token: string;
@@ -35,7 +36,8 @@ function ActivityRow({ entry }: { entry: ActivityLogEntry }) {
             {entry.summary}
           </p>
           <span className="activity-row-meta">
-            {entry.changedBy.firstName} {entry.changedBy.lastName} · {new Date(entry.changedAt).toLocaleString()}
+            {entry.changedBy.firstName} {entry.changedBy.lastName}
+            <ActivitySourceTag entry={entry} /> · {new Date(entry.changedAt).toLocaleString()}
           </span>
         </div>
         {hasDetail && (

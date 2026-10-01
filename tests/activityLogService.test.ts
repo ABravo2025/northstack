@@ -25,6 +25,7 @@ vi.mock('../src/lib/prisma.js', () => ({
           if (where.tenantId && e.tenantId !== where.tenantId) return false;
           if (where.changedByUserId && e.changedByUserId !== where.changedByUserId) return false;
           if (where.action && e.action !== where.action) return false;
+          if (where.source && e.source !== where.source) return false;
           if (where.changedAt?.gte && e.changedAt < where.changedAt.gte) return false;
           if (where.changedAt?.lte && e.changedAt > where.changedAt.lte) return false;
           if (where.OR) {
@@ -52,6 +53,7 @@ vi.mock('../src/lib/prisma.js', () => ({
 
 import { diffEntity, listActivityFeed, listActivityForEntity, recordActivity, summarizeChanges } from '../src/modules/activity/activityLogService.js';
 import prisma from '../src/lib/prisma.js';
+import { runWithRequestContext } from '../src/lib/requestContext.js';
 
 beforeEach(() => {
   entries = [];
@@ -165,6 +167,27 @@ describe('recordActivity', () => {
     expect(entries).toHaveLength(1);
     expect(entries[0].summary).toBe('Changed Name: Old name → New name');
     expect(JSON.parse(entries[0].changes)).toEqual([{ field: 'name', label: 'Name', oldValue: 'Old name', newValue: 'New name' }]);
+  });
+
+  it('tags an entry as ui with no client name outside any request context (normal app traffic)', async () => {
+    await recordActivity({
+      tenantId: 't1', entityType: 'company', entityId: 'c1', entityLabel: 'Acme', action: 'create',
+      changedByUserId: 'u1', after: { name: 'Acme' }, fieldConfig,
+    });
+    expect(entries[0].source).toBe('ui');
+    expect(entries[0].sourceClientName).toBeNull();
+  });
+
+  it('tags an entry with the source and client name of the surrounding request context', async () => {
+    await runWithRequestContext({ source: 'ai', sourceClientName: 'Claude' }, async () => {
+      await Promise.resolve(); // context must survive an await, not just the synchronous call
+      await recordActivity({
+        tenantId: 't1', entityType: 'company', entityId: 'c1', entityLabel: 'Acme', action: 'delete',
+        changedByUserId: 'u1', before: { name: 'Acme' }, fieldConfig,
+      });
+    });
+    expect(entries[0].source).toBe('ai');
+    expect(entries[0].sourceClientName).toBe('Claude');
   });
 
   it('does not write anything for an update with no actual field changes', async () => {
@@ -293,5 +316,17 @@ describe('listActivityForEntity / listActivityFeed', () => {
     const page = await listActivityFeed({ tenantId: 't1', entityType: 'company' as any });
     expect(page.items).toHaveLength(1);
     expect(page.items[0].entityLabel).toBe('Acme Inc');
+  });
+
+  it('filters the tenant-wide feed by source', async () => {
+    await seed();
+    await runWithRequestContext({ source: 'api', sourceClientName: 'Zapier' }, () =>
+      recordActivity({
+        tenantId: 't1', entityType: 'company', entityId: 'c2', entityLabel: 'Via API', action: 'create',
+        changedByUserId: 'u1', after: { name: 'Via API' }, fieldConfig,
+      }),
+    );
+    const page = await listActivityFeed({ tenantId: 't1', source: 'api' });
+    expect(page.items.map((i) => i.entityLabel)).toEqual(['Via API']);
   });
 });

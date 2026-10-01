@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { api, type ActivityEntityType, type ActivityLogEntry, type TenantUser } from '../api';
+import { api, type ActivityEntityType, type ActivityLogEntry, type ActivitySource, type TenantUser } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import TableSkeleton from '../components/common/TableSkeleton';
 import Avatar from '../components/common/Avatar';
@@ -8,6 +8,7 @@ import { PencilIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
 import DateRangeFilter, { DEFAULT_PRESET, rangeForPreset } from '../components/metrics/DateRangeFilter';
 import type { DateRange, PresetKey } from '../lib/dateRangePresets';
 import { usePermissions } from '../contexts/PermissionsContext';
+import ActivitySourceTag from '../components/activity/ActivitySourceTag';
 
 interface ActivityLogSettingsPageProps {
   token: string;
@@ -57,6 +58,7 @@ const ENTITY_TYPE_PERMISSION: Partial<Record<ActivityEntityType, string>> = {
 };
 
 const ACTION_VALUES: ('create' | 'update' | 'delete')[] = ['create', 'update', 'delete'];
+const SOURCE_VALUES: ActivitySource[] = ['ui', 'api', 'ai'];
 
 function ActionIcon({ action }: { action: ActivityLogEntry['action'] }) {
   if (action === 'create') return <PlusIcon className="h-3.5 w-3.5" />;
@@ -83,7 +85,8 @@ function FeedRow({ entry }: { entry: ActivityLogEntry }) {
           {entry.summary}
         </p>
         <span className="activity-row-meta">
-          {entry.changedBy.firstName} {entry.changedBy.lastName} · {new Date(entry.changedAt).toLocaleString()}
+          {entry.changedBy.firstName} {entry.changedBy.lastName}
+          <ActivitySourceTag entry={entry} /> · {new Date(entry.changedAt).toLocaleString()}
         </span>
         {hasDetail && expanded && (
           <ul className="activity-row-changes">
@@ -128,6 +131,7 @@ export default function ActivityLogSettingsPage({ token }: ActivityLogSettingsPa
   const [entityType, setEntityType] = useState<ActivityEntityType | ''>('');
   const [action, setAction] = useState<'create' | 'update' | 'delete' | ''>('');
   const [userId, setUserId] = useState('');
+  const [source, setSource] = useState<ActivitySource | ''>('');
   const [presetKey, setPresetKey] = useState<PresetKey>(DEFAULT_PRESET);
   const [range, setRange] = useState<DateRange>(() => rangeForPreset(DEFAULT_PRESET));
 
@@ -149,6 +153,7 @@ export default function ActivityLogSettingsPage({ token }: ActivityLogSettingsPa
       .listActivityFeed(token, {
         entityType: entityType || undefined,
         action: action || undefined,
+        source: source || undefined,
         userId: userId || undefined,
         from: range.since.toISOString(),
         to: range.until.toISOString(),
@@ -160,7 +165,7 @@ export default function ActivityLogSettingsPage({ token }: ActivityLogSettingsPa
       .catch((error) => toast.error(t('activityLogSettings.loadFailed', { message: (error as Error).message })))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, isAdmin, entityType, action, userId, range.since, range.until]);
+  }, [token, isAdmin, entityType, action, source, userId, range.since, range.until]);
 
   const loadMore = async () => {
     if (!cursor) return;
@@ -169,6 +174,7 @@ export default function ActivityLogSettingsPage({ token }: ActivityLogSettingsPa
       const page = await api.listActivityFeed(token, {
         entityType: entityType || undefined,
         action: action || undefined,
+        source: source || undefined,
         userId: userId || undefined,
         from: range.since.toISOString(),
         to: range.until.toISOString(),
@@ -217,6 +223,14 @@ export default function ActivityLogSettingsPage({ token }: ActivityLogSettingsPa
           {ACTION_VALUES.map((value) => (
             <option key={value} value={value}>
               {t(`activityLogSettings.actions.${value}`)}
+            </option>
+          ))}
+        </select>
+        <select className="select-compact" value={source} onChange={(e) => setSource(e.target.value as ActivitySource | '')}>
+          <option value="">{t('activityLogSettings.allSources')}</option>
+          {SOURCE_VALUES.map((value) => (
+            <option key={value} value={value}>
+              {t(`activityLogSettings.sources.${value}`)}
             </option>
           ))}
         </select>

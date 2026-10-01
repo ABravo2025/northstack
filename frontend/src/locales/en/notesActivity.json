@@ -29,6 +29,10 @@
       "hideDetail": "Hide detail",
       "emptyValue": "empty",
       "toastLoadFailed": "Failed to load activity: {{message}}"
+    },
+    "source": {
+      "api": "API",
+      "ai": "AI"
     }
   }
 }

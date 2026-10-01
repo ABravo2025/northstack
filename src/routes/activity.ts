@@ -1,4 +1,4 @@
-import { ActivityAction, ActivityEntityType } from '@prisma/client';
+import { ActivityAction, ActivityEntityType, ActivitySource } from '@prisma/client';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import { canViewActivityLog } from '../modules/auth/permissionService.js';
@@ -10,6 +10,7 @@ export const activityRouter = createAsyncRouter();
 
 const ACTIVITY_ENTITY_TYPES = new Set<string>(Object.values(ActivityEntityType));
 const ACTIVITY_ACTIONS = new Set<string>(Object.values(ActivityAction));
+const ACTIVITY_SOURCES = new Set<string>(Object.values(ActivitySource));
 
 // Per-record "Activity" tab (Employee/Company/Contact/Opportunity detail modals). Only the 4
 // Tier-1 entity types have a detail modal, so this reuses the same cross-module entity type
@@ -75,6 +76,11 @@ activityRouter.get('/api/activity/feed', async (req, res) => {
     return res.status(400).json({ error: 'Unsupported action' });
   }
 
+  const sourceRaw = req.query.source as string | undefined;
+  if (sourceRaw && !ACTIVITY_SOURCES.has(sourceRaw)) {
+    return res.status(400).json({ error: 'Unsupported source' });
+  }
+
   const fromRaw = req.query.from as string | undefined;
   const toRaw = req.query.to as string | undefined;
   const from = fromRaw ? new Date(fromRaw) : undefined;
@@ -88,6 +94,7 @@ activityRouter.get('/api/activity/feed', async (req, res) => {
     entityType: entityTypeRaw as ActivityEntityType | undefined,
     userId: (req.query.userId as string | undefined) || undefined,
     action: actionRaw as ActivityAction | undefined,
+    source: sourceRaw as ActivitySource | undefined,
     from,
     to,
     cursor: (req.query.cursor as string | undefined) || undefined,

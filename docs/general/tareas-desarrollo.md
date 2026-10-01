@@ -8,7 +8,9 @@
   API REST no está limitada a Growth en el código; se corrige en la Unidad 0. 8 unidades, ~8½ sesiones. **Spec aprobada
   por Alejandro el 2026-10-01**; vive dentro de Integrations. **Unidad 0 (Private API + webhooks solo Growth) completa,
   en `staging`, pendiente de revisión.** En Starter, la sección API & Webhooks, el toggle de Roles y `/developers` se
-  ocultan; las keys existentes devuelven 403 `plan_upgrade_required` y no se emiten webhooks.
+  ocultan; las keys existentes devuelven 403 `plan_upgrade_required` y no se emiten webhooks. **Unidad 0 EN PRODUCCIÓN
+  (2026-10-01).** **Unidad 1 (origen en el Activity Log: app / API / IA) en `staging`**, con `db push` a la DB de staging
+  hecho; **falta `db push` a prod antes de promover** (2 columnas + 1 enum, aditivo).
 - **2026-10-01 — Ocultar en Starter lo que es solo de Growth (EN STAGING, pendiente de revisión)**: el
   sidebar ya ocultaba Payroll/Payments, pero el resto de la UI los seguía mostrando y daba 403 al usarlos.
   Ahora `PermissionsContext.has('manage_payroll' | 'manage_payments')` también mira el plan (igual que

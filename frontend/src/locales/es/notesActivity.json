@@ -29,6 +29,10 @@
       "hideDetail": "Ocultar detalle",
       "emptyValue": "vacío",
       "toastLoadFailed": "No se pudo cargar la actividad: {{message}}"
+    },
+    "source": {
+      "api": "API",
+      "ai": "IA"
     }
   }
 }

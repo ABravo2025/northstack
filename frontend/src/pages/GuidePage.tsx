@@ -1664,6 +1664,7 @@ export default function GuidePage() {
             <div className="help-sub">
               <h3>Claves de API y documentación para desarrolladores</h3>
               <div className="help-tagrow">
+                <span className="help-pill help-pill-plan">Plan Growth</span>
                 <span className="help-pill help-pill-role">Owner, o un rol con acceso de Gestionar API</span>
               </div>
               <p>
@@ -1750,6 +1751,7 @@ export default function GuidePage() {
             <div className="help-sub">
               <h3>API keys &amp; developer docs</h3>
               <div className="help-tagrow">
+                <span className="help-pill help-pill-plan">Growth plan</span>
                 <span className="help-pill help-pill-role">Owner, or a role with Manage API access</span>
               </div>
               <p>
@@ -1911,6 +1913,7 @@ export default function GuidePage() {
                   <tr><td>Historial del registro de actividad</td><td className="num">7 días</td><td className="num">30 días</td></tr>
                   <tr><td>Nómina</td><td className="no">—</td><td className="yes">Incluido</td></tr>
                   <tr><td>Pagos (tu Stripe)</td><td className="no">—</td><td className="yes">Incluido</td></tr>
+                  <tr><td>API y webhooks</td><td className="no">—</td><td className="yes">Incluido</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1921,7 +1924,7 @@ export default function GuidePage() {
               igual. Si te pasás, cada puesto extra cuesta {seatPrice}/mes, facturado automáticamente; no hay un tope duro
               una vez que estás en un plan real. La prueba gratuita (sin plan elegido todavía) está limitada a {trialCap}{' '}
               personas porque todavía no hay facturación configurada para cubrir a nadie más allá de eso — elegí un
-              plan para agregar más. En Starter, Nómina y Pagos no aparecen en ningún lado (menú, dashboards,
+              plan para agregar más. En Starter, Nómina, Pagos y la API no aparecen en ningún lado (menú, dashboards,
               ficha del empleado, roles, integraciones) — si pasás a Growth se muestran solas, y los permisos que ya
               tenían tus roles se mantienen.
             </p>
@@ -1990,6 +1993,7 @@ export default function GuidePage() {
                   <tr><td>Activity log history</td><td className="num">7 days</td><td className="num">30 days</td></tr>
                   <tr><td>Payroll</td><td className="no">—</td><td className="yes">Included</td></tr>
                   <tr><td>Payments (your Stripe)</td><td className="no">—</td><td className="yes">Included</td></tr>
+                  <tr><td>API &amp; webhooks</td><td className="no">—</td><td className="yes">Included</td></tr>
                 </tbody>
               </table>
             </div>
@@ -1999,7 +2003,7 @@ export default function GuidePage() {
               regardless of role — owner, admin, or member all count the same. Go over and each extra seat is
               {seatPrice}/mo, billed automatically; no hard cap once you're on a real plan. Free Trial (no plan chosen yet)
               is capped at {trialCap} people since there's no billing in place yet to cover anyone past that — pick a plan to
-              add more. On Starter, Payroll and Payments don't appear anywhere (menu, dashboards, employee profile,
+              add more. On Starter, Payroll, Payments and the API don't appear anywhere (menu, dashboards, employee profile,
               roles, integrations) — upgrade to Growth and they show up on their own, with any permissions your roles
               already had kept as they were.
             </p>

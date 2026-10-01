@@ -1,6 +1,6 @@
 # Spec MCP Server (Asistentes de IA)
 
-**Estado:** ✅ Spec aprobada por Alejandro (2026-10-01). Unidad 0 en curso.
+**Estado:** ✅ Spec aprobada por Alejandro (2026-10-01). **Unidad 0 completa, en `staging`** (pendiente de revisión de Alejandro).
 **Fecha:** 2026-10-01.
 **Contexto:** Alejandro quiere que los clientes conecten **su propio Claude, o la IA que prefieran**,
 a su workspace de Northstack, y que esa IA pueda leer y operar (crear tareas, notas, mover
@@ -38,7 +38,14 @@ Alejandro entiende que la Private API es solo para Growth, pero **el código no 
 2. Cada request a `/api/external/v1/*` → 403 con el mismo `code` (las keys existentes de un tenant que
    baja a Starter quedan bloqueadas, no borradas, y vuelven a funcionar si sube a Growth).
 3. Entregas de webhooks salientes → se saltean para tenants Starter.
-4. UI: la sección muestra un bloqueo con CTA de upgrade, igual que Payroll/Payments.
+4. UI: en Starter la sección API & Webhooks, el toggle `manage_api_access` en Roles y `/developers`
+   **desaparecen** (no se muestra un CTA). Es el mismo criterio que se aplicó a Payroll/Payments ese mismo día
+   (`GROWTH_ONLY_PERMISSIONS` en `PermissionsContext.tsx`), para que la UI sea consistente.
+
+**Implementado (2026-10-01):** `apiAccessEnabled` + `isApiAccessAllowed` en `planLimits.ts`;
+`requireApiAccess` (`apiAccessIntegration.ts`) chequea el plan; `authenticateApiKey` devuelve `tenantPlan`
+y el middleware de `/api/external/v1` responde 403 `plan_upgrade_required` (queda en `ApiRequestLog`);
+`emitWebhookEvent` no crea entregas para Starter. Guide y FAQ actualizados (EN/ES). Tests: 513/513.
 
 **Tenants Starter con keys o webhooks activos:** Alejandro confirmó (2026-10-01) que no hay ninguno,
 así que el bloqueo se puede activar sin afectar a nadie.

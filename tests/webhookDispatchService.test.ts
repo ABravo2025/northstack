@@ -6,6 +6,7 @@ process.env.WEBHOOK_SECRET_ENCRYPTION_KEY = randomBytes(32).toString('hex');
 let subscriptions: any[] = [];
 let deliveries: any[] = [];
 let nextDeliveryId = 1;
+let tenantPlans: Record<string, string | null> = {};
 
 vi.mock('../src/lib/prisma.js', () => ({
   default: {
@@ -40,6 +41,9 @@ vi.mock('../src/lib/prisma.js', () => ({
         return take ? rows.slice(0, take) : rows;
       }),
     },
+    tenant: {
+      findUnique: vi.fn(async ({ where }: any) => ({ plan: tenantPlans[where.id] ?? null })),
+    },
     $transaction: vi.fn(async (ops: any[]) => Promise.all(ops)),
   },
 }));
@@ -66,6 +70,7 @@ beforeEach(() => {
   subscriptions = [];
   deliveries = [];
   nextDeliveryId = 1;
+  tenantPlans = {};
   vi.restoreAllMocks();
 });
 
@@ -94,6 +99,13 @@ describe('emitWebhookEvent', () => {
 
   it('creates no delivery for an inactive subscription even if it lists the event', async () => {
     makeSubscription({ isActive: false, events: ['task.created'] });
+    await emitWebhookEvent({ tenantId: 'tenant_1', type: 'task.created', entity: { type: 'task', id: 't1' }, data: {} });
+    expect(deliveries).toHaveLength(0);
+  });
+
+  it('creates no delivery for a Starter tenant — webhooks are Growth-only', async () => {
+    makeSubscription({ events: ['task.created'] });
+    tenantPlans.tenant_1 = 'starter';
     await emitWebhookEvent({ tenantId: 'tenant_1', type: 'task.created', entity: { type: 'task', id: 't1' }, data: {} });
     expect(deliveries).toHaveLength(0);
   });

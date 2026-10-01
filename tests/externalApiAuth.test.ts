@@ -5,7 +5,10 @@ let apiKeys: any[] = [];
 vi.mock('../src/lib/prismaExternal.js', () => ({
   default: {
     apiKey: {
-      findUnique: vi.fn(async ({ where }: any) => apiKeys.find((k) => k.keyHash === where.keyHash) ?? null),
+      findUnique: vi.fn(async ({ where }: any) => {
+        const key = apiKeys.find((k) => k.keyHash === where.keyHash);
+        return key ? { ...key, tenant: key.tenant ?? { plan: null } } : null;
+      }),
       update: vi.fn(async ({ where, data }: any) => {
         const existing = apiKeys.find((k) => k.id === where.id);
         if (!existing) throw new Error('not found');
@@ -126,13 +129,30 @@ describe('authenticateApiKey', () => {
 
     const res = fakeRes();
     const result = await authenticateApiKey(fakeReq(fullKey), res);
-    expect(result).toEqual({ id: 'key_1', tenantId: 'tenant_1', scopes: ['tasks:read', 'tasks:write'], createdByUserId: 'user_1' });
+    expect(result).toEqual({ id: 'key_1', tenantId: 'tenant_1', scopes: ['tasks:read', 'tasks:write'], createdByUserId: 'user_1', tenantPlan: null });
     expect(apiKeys[0].lastUsedAt).toBeInstanceOf(Date);
+  });
+
+  it("returns the key's tenant plan so the router can reject Starter tenants", async () => {
+    const { fullKey } = generateApiKey();
+    apiKeys.push({
+      id: 'key_1',
+      tenantId: 'tenant_1',
+      keyHash: hashApiKey(fullKey),
+      scopes: ['tasks:read'],
+      revokedAt: null,
+      lastUsedAt: null,
+      createdByUserId: 'user_1',
+      tenant: { plan: 'starter' },
+    });
+
+    const result = await authenticateApiKey(fakeReq(fullKey), fakeRes());
+    expect(result?.tenantPlan).toBe('starter');
   });
 });
 
 describe('requireScope', () => {
-  const key = { id: 'key_1', tenantId: 'tenant_1', scopes: ['tasks:read'], createdByUserId: 'user_1' };
+  const key = { id: 'key_1', tenantId: 'tenant_1', scopes: ['tasks:read'], createdByUserId: 'user_1', tenantPlan: null };
 
   it('allows a key that has the required scope', () => {
     const res = fakeRes();

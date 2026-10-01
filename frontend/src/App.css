@@ -2309,8 +2309,11 @@ table.help-ref td.no {
   background: transparent !important;
 }
 
+/* Pinned to the visible left edge: on wide tables (People has 8+ columns) the cell spans the
+   whole scroll width, so the message and its actions must not drift off-screen to the right. */
 .table-empty {
-  @apply flex flex-wrap items-center gap-x-4 gap-y-3;
+  @apply sticky left-4 flex w-fit flex-wrap items-center gap-x-4 gap-y-3;
+  max-width: calc(100vw - 4rem);
 }
 
 .table-empty-icon {
@@ -2322,7 +2325,7 @@ table.help-ref td.no {
 }
 
 .table-empty-text {
-  @apply flex min-w-0 flex-1 flex-col gap-0.5;
+  @apply flex min-w-0 flex-col gap-0.5;
 }
 
 .table-empty-title {

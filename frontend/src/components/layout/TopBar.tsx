@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ChevronDownIcon, MenuIcon, UserCircleIcon } from '../common/Icons';
-import SlideOver from '../common/SlideOver';
+import Modal from '../common/Modal';
 import NotificationBell from './NotificationBell';
 import { useToast } from '../common/ToastProvider';
 import { api } from '../../api';
@@ -182,7 +182,7 @@ export default function TopBar({ user, token, onLogout, onMenuClick, onReplayTou
       </div>
       </div>
 
-      <SlideOver
+      <Modal
         open={feedbackOpen}
         title={t('topbar.feedback.title')}
         onClose={() => setFeedbackOpen(false)}
@@ -253,7 +253,7 @@ export default function TopBar({ user, token, onLogout, onMenuClick, onReplayTou
             disabled={sendingFeedback}
           />
         </div>
-      </SlideOver>
+      </Modal>
     </div>
   );
 }

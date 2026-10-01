@@ -25,17 +25,10 @@ const STATUS_LABEL_KEYS: Record<StripePaymentEvent['type'], string> = {
   charge_pending: 'companyPaymentHistory.statusLabels.charge_pending',
 };
 
-// Reached from PaymentsOverviewPage's Company link and from CompanyStripeSection's "View full
-// payment history" link — the full, paginated version of the abbreviated list that already lives
-// inline in CompanyDetailModal. A Modal, not a route, to match every other detail view in this app
-// (CompanyDetailModal/EmployeeOverviewPanel/etc. are all overlays, not page navigations).
-export default function CompanyPaymentHistoryModal({
-  open,
-  onClose,
-  token,
-  companyId,
-  companyName,
-}: CompanyPaymentHistoryModalProps) {
+// The full, paginated invoices + payments history of one company. Lives inline in the company's
+// own "Payments" tab (CompanyDetailModal, 2026-10) and inside CompanyPaymentHistoryModal below,
+// which PaymentsOverviewPage still opens from its Company link.
+export function CompanyPaymentHistory({ token, companyId }: { token: string; companyId: string }) {
   const { t } = useTranslation('crm');
   const toast = useToast();
   const [events, setEvents] = useState<StripePaymentEvent[]>([]);
@@ -44,7 +37,6 @@ export default function CompanyPaymentHistoryModal({
   const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
     setLoading(true);
     api
       .getCompanyPaymentEvents(token, companyId)
@@ -55,7 +47,7 @@ export default function CompanyPaymentHistoryModal({
       .catch((error) => toast.error(t('companyPaymentHistory.toastLoadFailed', { error: (error as Error).message })))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, companyId]);
+  }, [companyId]);
 
   const loadMore = async () => {
     if (!cursor) return;
@@ -72,12 +64,7 @@ export default function CompanyPaymentHistoryModal({
   };
 
   return (
-    <Modal open={open} title={t('companyPaymentHistory.title', { companyName })} onClose={onClose} wide>
       <div className="flex flex-col gap-3">
-        <Link to={`/companies?open=${companyId}`} onClick={onClose} className="table-link text-sm self-start">
-          {t('companyPaymentHistory.viewCompanyProfile')}
-        </Link>
-
         <CompanyInvoicesSection token={token} companyId={companyId} />
 
         <h4 className="text-sm font-medium">{t('companyPaymentHistory.paymentsHeading')}</h4>
@@ -148,6 +135,21 @@ export default function CompanyPaymentHistoryModal({
             {loadingMore ? t('common.loading') : t('companyPaymentHistory.loadMore')}
           </button>
         )}
+      </div>
+  );
+}
+
+// Reached from PaymentsOverviewPage's Company link: the same history in a Modal, plus a way into
+// the company's profile.
+export default function CompanyPaymentHistoryModal({ open, onClose, token, companyId, companyName }: CompanyPaymentHistoryModalProps) {
+  const { t } = useTranslation('crm');
+  return (
+    <Modal open={open} title={t('companyPaymentHistory.title', { companyName })} onClose={onClose} wide>
+      <div className="flex flex-col gap-3">
+        <Link to={`/companies?open=${companyId}`} onClick={onClose} className="table-link text-sm self-start">
+          {t('companyPaymentHistory.viewCompanyProfile')}
+        </Link>
+        {open && <CompanyPaymentHistory token={token} companyId={companyId} />}
       </div>
     </Modal>
   );

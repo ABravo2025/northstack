@@ -4,7 +4,7 @@ import { api } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Pagination, { paginate } from '../components/common/Pagination';
-import SlideOver from '../components/common/SlideOver';
+import Modal from '../components/common/Modal';
 import RequiredMark from '../components/common/RequiredMark';
 import { CheckIcon, CopyIcon, LockIcon, SearchIcon, TrashIcon } from '../components/common/Icons';
 import ColumnResizeHandle from '../components/entity-views/ColumnResizeHandle';
@@ -293,7 +293,7 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
         />
       )}
 
-      <SlideOver
+      <Modal
         open={inviteOpen}
         title={t('users.inviteSlideOver.title')}
         onClose={() => setInviteOpen(false)}
@@ -337,7 +337,7 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
             </select>
           </div>
         </form>
-      </SlideOver>
+      </Modal>
 
       <div className="page-toolbar">
         <h2>{t('users.title')}</h2>

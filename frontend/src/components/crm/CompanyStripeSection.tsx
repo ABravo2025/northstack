@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { api, ApiError, type Company, type StripeCustomerMatch, type StripePaymentSummary } from '../../api';
 import { useToast } from '../common/ToastProvider';
 import ConfirmDialog from '../common/ConfirmDialog';
-import CompanyPaymentHistoryModal from './CompanyPaymentHistoryModal';
+import { CompanyPaymentHistory } from './CompanyPaymentHistoryModal';
 import SendStripeInvoiceModal from './SendStripeInvoiceModal';
 import { formatMoney } from '../../lib/currencies';
 
@@ -30,7 +30,6 @@ export default function CompanyStripeSection({ token, company, onLinked, tenantC
   const [linkingId, setLinkingId] = useState<string | null>(null);
   const [pendingOverwrite, setPendingOverwrite] = useState<StripeCustomerMatch | null>(null);
   const [summary, setSummary] = useState<StripePaymentSummary | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   // Bumped after an invoice is sent so the history modal refetches if it's opened next.
   const [historyVersion, setHistoryVersion] = useState(0);
@@ -109,9 +108,6 @@ export default function CompanyStripeSection({ token, company, onLinked, tenantC
             </a>
           </div>
           <div className="flex items-center gap-3">
-            <button type="button" className="table-link text-xs" onClick={() => setHistoryOpen(true)}>
-              {t('companyStripe.viewFullHistory')}
-            </button>
             <button type="button" className="table-link text-xs" onClick={handleSearch} disabled={searching}>
               {searching ? t('common.searching') : t('companyStripe.changeLink')}
             </button>
@@ -188,16 +184,9 @@ export default function CompanyStripeSection({ token, company, onLinked, tenantC
           />
         )}
 
-        {historyOpen && (
-          <CompanyPaymentHistoryModal
-            key={historyVersion}
-            open={historyOpen}
-            onClose={() => setHistoryOpen(false)}
-            token={token}
-            companyId={company.id}
-            companyName={company.name}
-          />
-        )}
+        {/* The full history, right here in the company's Payments tab (2026-10) — re-keyed after
+            sending an invoice so the new one shows up. */}
+        <CompanyPaymentHistory key={historyVersion} token={token} companyId={company.id} />
       </div>
     );
   }

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { api, type TimeOffBalance, type TimeOffPolicy, type TimeOffRequest } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import ConfirmDialog from '../components/common/ConfirmDialog';
-import SlideOver from '../components/common/SlideOver';
+import Modal from '../components/common/Modal';
 import Popover from '../components/common/Popover';
 import ColorPicker from '../components/common/ColorPicker';
 import TableSkeleton from '../components/common/TableSkeleton';
@@ -57,7 +57,7 @@ const EMPTY_POLICY_FORM = {
 //  - "team"     → TeamTimeOffView    (was Approvals + Balances + All Requests) — admins see the
 //                 whole tenant; a manager sees their direct reports (?scope=team on the API)
 //  - "policies" → TimeOffPoliciesView (was Policies + Assignments) — manage_custom_fields
-// Every detail opens in one SlideOver (`panel`); the policy create/edit/bulk-assign SlideOver
+// Every detail opens in one Modal (`panel`); the policy create/edit/bulk-assign Modal
 // is unchanged from before.
 export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPageProps) {
   const { t } = useTranslation('tasks');
@@ -407,7 +407,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
     : [];
   const deletingPolicyAssignedCount = deletingPolicy ? policyAssignees(deletingPolicy.id).length : 0;
 
-  // ---- Detail panel (one SlideOver for every "click to see more") ----
+  // ---- Detail modal (one Modal for every "click to see more") ----
   let panelTitle = '';
   let panelBody: React.ReactNode = null;
   let panelFooter: React.ReactNode = undefined;
@@ -429,7 +429,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
     panelTitle = t('timeOff.requestForm.title');
     panelBody = (
       <>
-        <p className="to-subtitle -mt-1 mb-4">
+        <p className="to-modal-lead">
           {myManagerName ? t('timeOff.requestForm.subtitleApprover', { name: myManagerName }) : t('timeOff.requestForm.subtitleNoApprover')}
         </p>
         <NewRequestForm value={newRequest} onChange={setNewRequest} onSubmit={handleCreateRequest} balances={myBalances} />
@@ -511,11 +511,11 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
         />
       )}
 
-      <SlideOver open={panel !== null && panelBody !== null} title={panelTitle} onClose={() => setPanel(null)} footer={panelFooter}>
+      <Modal open={panel !== null && panelBody !== null} title={panelTitle} onClose={() => setPanel(null)} footer={panelFooter}>
         {panelBody}
-      </SlideOver>
+      </Modal>
 
-      <SlideOver
+      <Modal
         open={slideOverMode !== null || assignStepPolicy !== null}
         title={
           assignStepPolicy
@@ -652,7 +652,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
             </div>
           </form>
         )}
-      </SlideOver>
+      </Modal>
 
       {loading ? (
         <TableSkeleton />

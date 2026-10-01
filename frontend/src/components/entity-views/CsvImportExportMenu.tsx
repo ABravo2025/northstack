@@ -1,7 +1,7 @@
 import { forwardRef, useImperativeHandle, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useToast } from '../common/ToastProvider';
-import SlideOver from '../common/SlideOver';
+import Modal from '../common/Modal';
 import RequiredMark from '../common/RequiredMark';
 import { DownloadIcon, UploadIcon } from '../common/Icons';
 
@@ -160,7 +160,7 @@ const CsvImportExportMenu = forwardRef<CsvImportExportMenuHandle, CsvImportExpor
         </button>
       )}
 
-      <SlideOver
+      <Modal
         open={importOpen && canImport}
         title={t('csvImport.importSlideOverTitle', { entity: entityLabelPlural })}
         onClose={() => setImportOpen(false)}
@@ -212,7 +212,7 @@ const CsvImportExportMenu = forwardRef<CsvImportExportMenuHandle, CsvImportExpor
             )}
           </div>
         )}
-      </SlideOver>
+      </Modal>
     </>
   );
 });

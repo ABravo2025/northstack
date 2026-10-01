@@ -41,6 +41,7 @@ export default function SearchableSelect({ id, options, value, onChange, placeho
     <div ref={anchorRef}>
       <input
         id={id}
+        className="searchable-select-input"
         type="text"
         value={open ? query : selected?.label ?? ''}
         onChange={(e) => {

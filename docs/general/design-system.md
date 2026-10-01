@@ -251,6 +251,24 @@ refactorizando `ColorPicker` para usar `Popover` en vez de su div a mano — la 
 `.color-picker-popover` se borró de `App.css`, el contenido visual ahora lo da `.popover-panel`
 (la misma clase que ya usan todos los otros popovers de la app).
 
+## 8b. Campos y ventanas (2026-10, pedido por Alejandro)
+
+- **Todo se abre en un modal centrado.** Formularios, detalles y "click para ver más" usan
+  `components/common/Modal.tsx` (`wide`/`xwide` si necesitan más espacio). El panel lateral
+  `SlideOver` se eliminó; no volver a crear paneles que entren desde el costado. Los detalles de
+  entidad (Company/Contact/Opportunity/Employee) ya son overlays centrados (`.overview-panel`).
+- **Ningún campo sin caja.** Un estilo base en `index.css` (`@layer base`) le da a todo
+  `input`/`select`/`textarea` caja hundida, borde visible y foco violeta, así un campo nuevo sin
+  clase nunca aparece como texto suelto. Cualquier clase propia lo reemplaza (por diseño está en
+  la capa base). Los valores de solo lectura (`.overview-field-value`) quedan como texto plano:
+  eso es justamente lo que los distingue de lo editable.
+- **Ancho según el dato** en superficies anchas: texto 26rem, select 20rem, fecha/número 11rem,
+  textarea 40rem; en detalles de entidad, 20rem (32rem si el campo ocupa la fila completa); buscador
+  de barra 28rem. Dentro de un modal chico los campos ocupan el ancho del modal.
+- **Una entidad con información de otro dominio la muestra en su propia pestaña**, no como un
+  grupo más de Overview: Employee → "Payment History", Company → "Payments" (conexión con Stripe,
+  resumen e historial completo en la misma pestaña).
+
 ## 9. Estados de carga y vacíos
 
 **Regla (2026-10, pedida por Alejandro): una lista nunca esconde su tabla.** Toda lista/tabla de la

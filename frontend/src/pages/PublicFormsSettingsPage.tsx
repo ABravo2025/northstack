@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api, type Pipeline, type Form, type PublicFormFieldConfig } from '../api';
 import { useToast } from '../components/common/ToastProvider';
-import SlideOver from '../components/common/SlideOver';
+import Modal from '../components/common/Modal';
 import TableBody from '../components/common/TableBody';
 import RequiredMark from '../components/common/RequiredMark';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
@@ -286,9 +286,8 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
 
   return (
     <div>
-      <SlideOver
+      <Modal
         open={slideOverMode !== null}
-        side="left"
         wide
         title={slideOverMode === 'edit' ? t('publicForms.editTitle') : t('publicForms.newTitle')}
         onClose={() => setSlideOverMode(null)}
@@ -499,7 +498,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
             <p className="mt-1 text-xs text-ink-muted dark:text-dark-ink-muted">{t('publicForms.thankYouHelp')}</p>
           </div>
         </form>
-      </SlideOver>
+      </Modal>
 
       <div className="page-toolbar no-border">
         <h2>{t('publicForms.title')}</h2>

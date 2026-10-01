@@ -75,6 +75,37 @@
   --text-sm: 0.8125rem;
 }
 
+/* Default look for EVERY form field (2026-10): a sunken box with a visible border, so no field
+   anywhere renders as bare text with no edges. Lives in the base layer on purpose — any
+   component class or utility that styles a field its own way (toolbar search, inline table
+   editors) still wins over it; this only catches fields nobody styled. */
+@layer base {
+  input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']):not([type='hidden']),
+  select,
+  textarea {
+    border: 1px solid var(--color-line-strong);
+    border-radius: 0.5rem;
+    background-color: var(--color-input);
+    color: var(--color-ink);
+    padding: 0.4rem 0.7rem;
+    box-shadow: inset 0 1px 2px rgba(27, 23, 51, 0.06);
+  }
+  html.dark input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='color']):not([type='hidden']),
+  html.dark select,
+  html.dark textarea {
+    border-color: var(--color-gray-700);
+    background-color: var(--color-dark-input);
+    color: var(--color-dark-ink);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+  }
+  input:not([type='checkbox']):not([type='radio']):focus,
+  select:focus,
+  textarea:focus {
+    outline: none;
+    border-color: var(--color-accent);
+  }
+}
+
 html,
 body,
 #root {

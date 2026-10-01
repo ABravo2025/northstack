@@ -16,11 +16,9 @@ interface ModalProps {
   xwide?: boolean;
 }
 
-// Centered, backdrop-covered modal for small standalone forms — distinct
-// from SlideOver, which is the default for "entity" forms living inside a
-// page's existing flow. Same open/title/onClose/footer API as SlideOver so
-// call sites read the same way; reach for this only when a design
-// explicitly calls for a centered dialog instead of a side panel.
+// The one way to open a form or a detail in the app: a centered, backdrop-covered dialog
+// (2026-10, requested by Alejandro — the side SlideOver panel was removed so every "open
+// something" looks and behaves the same). `wide`/`xwide` for content that needs more room.
 export default function Modal({ open, title, onClose, children, footer, wide = false, xwide = false }: ModalProps) {
   const { t } = useTranslation();
   useEffect(() => {

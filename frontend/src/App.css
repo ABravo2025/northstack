@@ -1510,56 +1510,10 @@ table.help-ref td.no {
 }
 
 
-.slideover-overlay {
-  @apply pointer-events-none fixed inset-0 z-40 bg-black/40 opacity-0 transition-opacity duration-200;
-}
-
-.slideover-overlay.open {
-  @apply pointer-events-auto opacity-100;
-}
-
-.slideover-panel {
-  @apply fixed top-0 right-0 bottom-0 z-50 flex w-full max-w-md translate-x-full flex-col border-l border-line bg-surface-1 shadow-xl transition-transform duration-300 ease-out dark:border-dark-line dark:bg-dark-surface;
-}
-
-.slideover-panel.open {
-  @apply translate-x-0;
-}
-
-.slideover-panel.side-left {
-  @apply right-auto left-0 -translate-x-full border-r border-l-0;
-}
-
-/* .open and .side-left both set `translate`, with equal specificity (2 classes
-   each) — without this 3-class rule, whichever rule is later in the stylesheet
-   wins regardless of which state is actually active, leaving the left-docked
-   panel stuck off-screen even when open. */
-.slideover-panel.side-left.open {
-  @apply translate-x-0;
-}
-
-.slideover-panel.wide {
-  @apply max-w-3xl;
-}
-
-.slideover-head {
-  @apply flex items-center justify-between border-b border-line px-6 py-4 dark:border-dark-line;
-}
-
-.slideover-title {
-  @apply m-0 text-base font-semibold text-brand-navy dark:text-dark-ink;
-}
-
+/* Close (×) button of the detail modals (Company/Contact/Opportunity/Employee). The side
+   panel this class came from is gone (2026-10): everything opens in a centered Modal now. */
 .slideover-close {
   @apply cursor-pointer rounded-md border-none bg-transparent p-1 text-ink-faint hover:bg-surface-2 hover:text-brand-navy dark:hover:bg-white/[0.06] dark:hover:text-gray-100;
-}
-
-.slideover-body {
-  @apply flex-1 overflow-y-auto px-6 py-4;
-}
-
-.slideover-foot {
-  @apply flex justify-end gap-2 border-t border-line px-6 py-4 dark:border-dark-line;
 }
 
 /* ---------- Modal: centered, backdrop-covered form ----------
@@ -2770,11 +2724,6 @@ input[type='number'] {
     @apply h-5 w-5;
   }
 
-  .slideover-panel {
-    @apply max-w-none;
-    width: 100%;
-  }
-
   .modal-overlay {
     @apply p-0;
   }
@@ -3315,4 +3264,64 @@ html.dark {
 /* Phones: keep the columns readable and let the table scroll sideways instead of squeezing. */
 .to-table {
   min-width: 640px;
+}
+
+/* ---------- Fields in detail modals (Company / Contact / Opportunity / Employee), 2026-10 ----------
+   Every editable value is a visible sunken box with its own width — no more bare text over a
+   long underline that ran across half the panel. Read-only values (.overview-field-value) stay
+   plain text, which is exactly what tells them apart from what you can edit. */
+.overview-field {
+  @apply border-b-0 py-1;
+  min-height: 42px;
+}
+.overview-field-input {
+  @apply m-0 h-[34px] max-w-[20rem] flex-1 rounded-lg border-line-strong bg-input px-2.5 py-0 text-[13px] hover:border-ink-faint hover:bg-input dark:border-gray-700 dark:bg-dark-input dark:hover:border-gray-500 dark:hover:bg-dark-input;
+  box-shadow: var(--ns-shadow-inset);
+}
+.overview-field-input:focus {
+  @apply border-accent bg-input ring-0 dark:bg-dark-input;
+  box-shadow: 0 0 0 3px var(--ns-ring);
+}
+.overview-field-input[type='date'],
+.overview-field-input[type='number'] {
+  max-width: 11rem;
+}
+textarea.overview-field-input {
+  @apply h-auto py-2;
+}
+.overview-field-full .overview-field-input {
+  max-width: 32rem;
+}
+.searchable-select-input {
+  @apply h-[34px] w-full max-w-[20rem] text-[13px];
+}
+.select-compact {
+  @apply rounded-lg dark:border-gray-700 dark:bg-dark-input;
+  box-shadow: var(--ns-shadow-inset);
+}
+
+/* Small modals are already narrow: fields fill them, so a select never ends up shorter than the
+   text field next to it. The width scale (26/20/11rem) applies on wide surfaces only. */
+.modal-panel:not(.wide):not(.xwide) .form-group input,
+.modal-panel:not(.wide):not(.xwide) .form-group select,
+.modal-panel:not(.wide):not(.xwide) .form-group textarea {
+  max-width: none;
+}
+
+/* "+ Add tag" in a detail header: a quiet inline affordance, not a form field — no box until
+   you hover or start typing. */
+.tag-add-input {
+  @apply h-7 rounded-md border border-transparent bg-transparent px-2 text-xs text-ink-muted shadow-none hover:border-line-strong dark:text-dark-ink-muted dark:hover:border-gray-700;
+}
+.tag-add-input:focus {
+  @apply border-accent;
+}
+/* Lead sentence at the top of a modal body (e.g. who approves a time off request). */
+.to-modal-lead {
+  @apply m-0 mb-4 text-[13.5px] text-ink-muted dark:text-dark-ink-muted;
+}
+
+/* Toolbar search: wide enough for a name or an email, not the whole screen. */
+.toolbar-search {
+  max-width: 28rem;
 }

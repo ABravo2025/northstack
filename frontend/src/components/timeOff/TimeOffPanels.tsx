@@ -6,7 +6,7 @@ import { ApprovalCard } from './TeamTimeOffView';
 import { BalanceMeter, PolicyName, RequestStatusChip, availableDays, countRequestDays, policyColor, useDateRangeFormatter } from './timeOffShared';
 
 // Bodies of the Time Off slide-overs (2026-10 redesign). TimeOffOverviewPage owns the
-// SlideOver shell, titles and footers; these render what goes inside.
+// Modal shell, titles and footers; these render what goes inside.
 
 export function RequestDetailBody({ request: r, approverName }: { request: TimeOffRequest; approverName: string | null }) {
   const { t } = useTranslation('tasks');

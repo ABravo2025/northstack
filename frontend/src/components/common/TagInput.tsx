@@ -74,7 +74,7 @@ export default function TagInput({ token, entityType, entityId, tags, onChanged 
         <div ref={inputRef} className="inline-block">
           <input
             type="text"
-            className="overview-field-input"
+            className="tag-add-input"
             style={{ minWidth: 140 }}
             value={query}
             placeholder="+ Add tag"

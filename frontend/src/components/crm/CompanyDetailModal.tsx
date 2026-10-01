@@ -79,11 +79,11 @@ export default function CompanyDetailModal({
   const [tags, setTags] = useState<TagAssignmentLite[]>([]);
 
   // Mobile (2026-09-08): see EmployeeOverviewPanel.tsx's longer comment on the same pattern —
-  // unifies DetailSidebar's Notes/Tasks/Activity with "Overview" into one tab strip on mobile
-  // only; desktop keeps the existing 2-column layout untouched. Company's own "Payments" section
-  // (Stripe connection) stays exactly where it already is, inline within Overview — it's a field
-  // group among others here, not a separate top-level view the way Employee's Payment History is.
-  const [mobileSection, setMobileSection] = useState<'overview' | 'notes' | 'tasks' | 'activity'>('overview');
+  // unifies DetailSidebar's Notes/Tasks/Activity with "Overview" into one tab strip on mobile.
+  // 2026-10 (Alejandro): Payments moved out of Overview into its own tab, the way Employee's
+  // Payment History is — Stripe connection, summary and the full history all live there.
+  const [mobileSection, setMobileSection] = useState<'overview' | 'payments' | 'notes' | 'tasks' | 'activity'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'payments'>('overview');
   const [sidebarCounts, setSidebarCounts] = useState({ notes: 0, tasks: 0, activity: 0 });
   const isMobile = useIsMobile();
 
@@ -94,6 +94,7 @@ export default function CompanyDetailModal({
   useEffect(() => {
     loadTags();
     setMobileSection('overview');
+    setActiveTab('overview');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [company.id]);
 
@@ -316,22 +317,6 @@ export default function CompanyDetailModal({
         </div>
       </div>
 
-      {canManagePayments && (
-        <div className="field-group">
-          <h4 className="field-group-title">{t('companyDetail.groups.payments')}</h4>
-          <div className="field-group-body">
-            <CompanyStripeSection
-              token={token}
-              company={company}
-              tenantCurrency={tenantCurrency}
-              onLinked={(patch) => {
-                onSaved({ ...company, ...patch });
-                onChanged();
-              }}
-            />
-          </div>
-        </div>
-      )}
 
       <div className="field-group">
         <h4 className="field-group-title">{t('companyDetail.groups.hierarchy')}</h4>
@@ -602,6 +587,25 @@ export default function CompanyDetailModal({
     </div>
   );
 
+  const paymentsContent = canManagePayments ? (
+    <div className="overview-panel-left">
+      <div className="field-group border-b-0">
+        <h4 className="field-group-title">{t('companyDetail.groups.payments')}</h4>
+        <div className="field-group-body">
+          <CompanyStripeSection
+            token={token}
+            company={company}
+            tenantCurrency={tenantCurrency}
+            onLinked={(patch) => {
+              onSaved({ ...company, ...patch });
+              onChanged();
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  ) : null;
+
   return (
     <div className="detail-modal-overlay" onClick={onClose}>
       <div
@@ -630,6 +634,25 @@ export default function CompanyDetailModal({
           </div>
         </div>
 
+        {!isMobile && paymentsContent && (
+          <div className="mini-toggle-row mx-4 mt-3">
+            <button
+              type="button"
+              className={`mini-toggle-opt ${activeTab === 'overview' ? 'active' : ''}`}
+              onClick={() => setActiveTab('overview')}
+            >
+              {t('detail.mobileTabs.overview')}
+            </button>
+            <button
+              type="button"
+              className={`mini-toggle-opt ${activeTab === 'payments' ? 'active' : ''}`}
+              onClick={() => setActiveTab('payments')}
+            >
+              {t('companyDetail.groups.payments')}
+            </button>
+          </div>
+        )}
+
         {isMobile ? (
           <div className="overview-panel-mobile-body">
             <div className="overview-panel-tabs">
@@ -640,6 +663,15 @@ export default function CompanyDetailModal({
               >
                 {t('detail.mobileTabs.overview')}
               </button>
+              {paymentsContent && (
+                <button
+                  type="button"
+                  className={mobileSection === 'payments' ? 'active' : ''}
+                  onClick={() => setMobileSection('payments')}
+                >
+                  {t('companyDetail.groups.payments')}
+                </button>
+              )}
               <button
                 type="button"
                 className={mobileSection === 'notes' ? 'active' : ''}
@@ -669,6 +701,7 @@ export default function CompanyDetailModal({
               </button>
             </div>
             <div style={{ display: mobileSection === 'overview' ? 'contents' : 'none' }}>{overviewContent}</div>
+            {mobileSection === 'payments' && paymentsContent}
             <DetailSidebar
               token={token}
               entityType="company"
@@ -676,12 +709,12 @@ export default function CompanyDetailModal({
               tenantUsers={tenantUsers}
               currentUserId={currentUserId}
               onCountsChange={setSidebarCounts}
-              mobileActiveSection={mobileSection === 'overview' ? null : mobileSection}
+              mobileActiveSection={mobileSection === 'overview' || mobileSection === 'payments' ? null : mobileSection}
             />
           </div>
         ) : (
           <div className="overview-panel-main">
-            {overviewContent}
+            {activeTab === 'payments' && paymentsContent ? paymentsContent : overviewContent}
             <DetailSidebar
               token={token}
               entityType="company"

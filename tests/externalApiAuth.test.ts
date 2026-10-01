@@ -121,6 +121,7 @@ describe('authenticateApiKey', () => {
       id: 'key_1',
       tenantId: 'tenant_1',
       keyHash: hashApiKey(fullKey),
+      name: 'Zapier',
       scopes: ['tasks:read', 'tasks:write'],
       revokedAt: null,
       lastUsedAt: null,
@@ -129,7 +130,7 @@ describe('authenticateApiKey', () => {
 
     const res = fakeRes();
     const result = await authenticateApiKey(fakeReq(fullKey), res);
-    expect(result).toEqual({ id: 'key_1', tenantId: 'tenant_1', scopes: ['tasks:read', 'tasks:write'], createdByUserId: 'user_1', tenantPlan: null });
+    expect(result).toEqual({ id: 'key_1', name: 'Zapier', tenantId: 'tenant_1', scopes: ['tasks:read', 'tasks:write'], createdByUserId: 'user_1', tenantPlan: null });
     expect(apiKeys[0].lastUsedAt).toBeInstanceOf(Date);
   });
 
@@ -152,7 +153,7 @@ describe('authenticateApiKey', () => {
 });
 
 describe('requireScope', () => {
-  const key = { id: 'key_1', tenantId: 'tenant_1', scopes: ['tasks:read'], createdByUserId: 'user_1', tenantPlan: null };
+  const key = { id: 'key_1', name: 'Zapier', tenantId: 'tenant_1', scopes: ['tasks:read'], createdByUserId: 'user_1', tenantPlan: null };
 
   it('allows a key that has the required scope', () => {
     const res = fakeRes();

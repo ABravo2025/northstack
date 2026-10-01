@@ -565,6 +565,7 @@
     "ownerAdminOnly": "El Registro de actividad solo es visible para dueños y administradores del espacio de trabajo.",
     "allTypes": "Todos los tipos",
     "allActions": "Todas las acciones",
+    "allSources": "Todos los orígenes",
     "anyone": "Cualquiera",
     "noActivity": "No hay actividad en este rango.",
     "loading": "Cargando…",
@@ -574,6 +575,7 @@
     "emptyValue": "vacío",
     "loadFailed": "Error al cargar la actividad: {{message}}",
     "loadMoreFailed": "Error al cargar más actividad: {{message}}",
+    "sources": { "ui": "En la app", "api": "API", "ai": "Asistente de IA" },
     "actions": {
       "create": "Creado",
       "update": "Actualizado",

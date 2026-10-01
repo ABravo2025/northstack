@@ -565,6 +565,7 @@
     "ownerAdminOnly": "Activity Log is only visible to workspace owners and admins.",
     "allTypes": "All types",
     "allActions": "All actions",
+    "allSources": "All sources",
     "anyone": "Anyone",
     "noActivity": "No activity in this range.",
     "loading": "Loading…",
@@ -574,6 +575,7 @@
     "emptyValue": "empty",
     "loadFailed": "Failed to load activity: {{message}}",
     "loadMoreFailed": "Failed to load more activity: {{message}}",
+    "sources": { "ui": "In the app", "api": "API", "ai": "AI assistant" },
     "actions": {
       "create": "Created",
       "update": "Updated",

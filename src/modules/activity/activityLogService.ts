@@ -1,6 +1,7 @@
 import prisma from '../../lib/prisma.js';
+import { getRequestContext } from '../../lib/requestContext.js';
 import { bestEffort } from '../../lib/bestEffort.js';
-import type { ActivityEntityType, ActivityAction, ActivityLogEntry } from '@prisma/client';
+import type { ActivityEntityType, ActivityAction, ActivityLogEntry, ActivitySource } from '@prisma/client';
 
 // Human label per entity type, used both in auto-generated summaries ("Created Opportunity
 // 'Acme Renewal'") and by the frontend feed's filter dropdown. Kept exhaustive against the full
@@ -159,6 +160,7 @@ async function recordActivityInternal(input: RecordActivityInput): Promise<void>
   if (input.action === 'update' && changes.length === 0) return; // nothing in the tracked fields actually changed
 
   const summary = summarizeChanges(changes, input.action, input.entityType, input.entityLabel);
+  const context = getRequestContext();
 
   await prisma.activityLogEntry.create({
     data: {
@@ -172,6 +174,8 @@ async function recordActivityInternal(input: RecordActivityInput): Promise<void>
       changedByUserId: input.changedByUserId,
       parentEntityType: input.parentEntityType,
       parentEntityId: input.parentEntityId,
+      source: context?.source ?? 'ui',
+      sourceClientName: context?.sourceClientName ?? null,
     },
   });
 }
@@ -208,6 +212,7 @@ export interface ListActivityFeedInput {
   entityType?: ActivityEntityType;
   userId?: string;
   action?: ActivityAction;
+  source?: ActivitySource;
   from?: Date;
   to?: Date;
   cursor?: string;
@@ -233,6 +238,7 @@ export async function listActivityFeed(input: ListActivityFeedInput): Promise<Ac
       ...(input.entityType ? { entityType: input.entityType } : {}),
       ...(input.userId ? { changedByUserId: input.userId } : {}),
       ...(input.action ? { action: input.action } : {}),
+      ...(input.source ? { source: input.source } : {}),
       ...(input.from || input.to
         ? { changedAt: { ...(input.from ? { gte: input.from } : {}), ...(input.to ? { lte: input.to } : {}) } }
         : {}),

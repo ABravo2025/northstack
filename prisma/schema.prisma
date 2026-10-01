@@ -1110,6 +1110,14 @@ enum ActivityAction {
   delete
 }
 
+// Where an ActivityLogEntry's action came from (spec-mcp-server.md §6.1): the app itself, the
+// Private API (/api/external/v1/*), or an AI assistant over MCP. Set via src/lib/requestContext.ts.
+enum ActivitySource {
+  ui
+  api
+  ai
+}
+
 // Generic, tenant-wide audit trail — feeds both the per-record "Activity" tab (Employee/Company/
 // Contact/Opportunity detail modals) and the tenant-wide feed in Settings. Same
 // tenantId+entityType+entityId polymorphic pattern as Task/Note/StatusHistoryEntry above, no live
@@ -1137,6 +1145,11 @@ model ActivityLogEntry {
   changedByUserId  String
   changedBy        User                @relation(fields: [changedByUserId], references: [id])
   changedAt        DateTime            @default(now())
+  // Existing rows predate this column and are all genuinely `ui` or `api` — the default backfills
+  // them as `ui`, since the API's own traffic was never distinguishable before 2026-10-01.
+  source           ActivitySource      @default(ui)
+  // API key name or AI client name ("Claude") — shown next to the user. Snapshot, like entityLabel.
+  sourceClientName String?
 
   @@index([tenantId, entityType, entityId, changedAt])
   @@index([tenantId, changedAt])

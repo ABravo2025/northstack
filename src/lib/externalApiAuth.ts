@@ -77,6 +77,8 @@ export type ApiScope = (typeof API_SCOPES)[number];
 
 export interface AuthenticatedApiKey {
   id: string;
+  // Shown in the Activity Log as "API · <name>" (requestContext.ts).
+  name: string;
   tenantId: string;
   scopes: string[];
   // Unit 3 (write endpoints) attributes every entity this key creates/edits to whoever created
@@ -116,6 +118,7 @@ export async function authenticateApiKey(req: express.Request, res: express.Resp
 
   return {
     id: apiKey.id,
+    name: apiKey.name,
     tenantId: apiKey.tenantId,
     scopes: apiKey.scopes,
     createdByUserId: apiKey.createdByUserId,

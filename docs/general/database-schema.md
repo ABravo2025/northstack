@@ -1097,10 +1097,17 @@ erDiagram
         string changes "nullable, JSON de {field,label,oldValue,newValue}[]"
         string changedByUserId FK
         datetime changedAt
+        enum source "ActivitySource ui/api/ai, default ui (2026-10-01)"
+        string sourceClientName "nullable — nombre de la API key o de la IA (2026-10-01)"
     }
 ```
 
 Notas:
+- **`source`/`sourceClientName` (2026-10-01, push aditivo, MCP Unidad 1, `spec-mcp-server.md` §6.1)** —
+  de dónde vino la acción: la app (`ui`), la Private API (`api`, con el nombre de la key) o un asistente
+  de IA vía MCP (`ai`, con el nombre del cliente, ej. "Claude"). Lo setea `src/lib/requestContext.ts`
+  (AsyncLocalStorage) en el borde de cada entrada no-UI y lo lee `recordActivity`, así ningún service
+  cambió de firma. Las filas previas quedan como `ui` (antes no se distinguía la API).
 - **`ActivityEntityType` es un enum propio, no una extensión de `EntityType`** (grupo 2) — `EntityType`
   está acoplado a qué módulos soportan custom fields/status/tags; la mayoría de los 27 valores de
   `ActivityEntityType` (`payrollRun`, `invitation`, `subscription`...) nunca tendrían sentido ahí. Los
@@ -1645,6 +1652,7 @@ Notas:
 | `PlatformRole` | `platform_admin`, `platform_support`, `platform_viewer` | `User.platformRole` (nullable — null = no es staff de Northstack; usado por Admin Center, repo separado `northstack-devtasks`) |
 | `ActivityEntityType` | 27 valores (employee/company/contact/opportunity + HR/Payroll + CRM/cross-module + cuenta/plataforma, ver grupo 13) | `ActivityLogEntry.entityType` (grupo 13) |
 | `ActivityAction` | `create`, `update`, `delete` | `ActivityLogEntry.action` (grupo 13) |
+| `ActivitySource` | `ui`, `api`, `ai` | `ActivityLogEntry.source` (grupo 13, 2026-10-01) |
 
 ## Qué falta / deuda conocida
 

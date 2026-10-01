@@ -1,10 +1,10 @@
 # Spec: API Privada + Webhooks Salientes — Integraciones Externas
 
-**Estado:** 📝 Spec técnico — no implementado todavía. Responde al ítem de `docs/tareas/backlog.md`
+**Estado (corregido 2026-10-01):** ✅ Implementado y en `main` (Units 2-3: endpoints `/api/external/v1/*` de lectura y escritura; webhooks salientes; rate limit con Upstash). **Gap conocido:** no está limitado a Growth en el código, aunque esa es la intención; lo resuelve la Unidad 0 de `docs/general/spec-mcp-server.md`. Texto original de la cabecera, dejado como contexto: "Spec técnico — no implementado todavía. Responde al ítem de `docs/tareas/backlog.md`
 ("Panel de Integraciones... Incluye también la contraparte entrante: API pública protegida por
 token para integraciones externas. Sin spec técnico todavía, explícitamente no bloqueante para el
 beta") y al pedido explícito del usuario de definir esta pieza. No bloqueante para el beta — queda
-lista para construirse cuando se priorice.
+lista para construirse cuando se priorice."
 **Fecha:** 2026-09-02.
 **Contexto:** hoy Northstack no tiene ninguna vía para que un sistema externo (Zapier, Make, un
 script del propio tenant, otro SaaS) lea o escriba datos de un tenant, ni para que Northstack avise

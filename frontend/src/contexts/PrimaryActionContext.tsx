@@ -30,7 +30,7 @@ export function usePrimaryActionValue(): PrimaryAction | null {
   return ctx.action;
 }
 
-// A page calls this with its main "Add X" handler (the same one its toolbar/EmptyState button
+// A page calls this with its main "Add X" handler (the same one its table's "+ Add" row
 // already uses) to put it behind the mobile FAB too. Cleared automatically on unmount or when the
 // action changes, so navigating away never leaves the FAB pointing at a different page's handler.
 // Pass null (or omit the call) on pages with no single primary action — dashboards, detail views,

@@ -375,6 +375,8 @@
     "description": "Sales pipelines for Opportunities. Each pipeline has its own stages — archiving a pipeline keeps its Opportunities visible read-only, it just disappears from creation menus.",
     "newPipelineButton": "New Pipeline",
     "addPipelineAction": "Add pipeline",
+    "emptyActive": "No pipelines yet.",
+    "emptyArchived": "No archived pipelines.",
     "loading": "Loading...",
     "tabs": {
       "active": "Active",

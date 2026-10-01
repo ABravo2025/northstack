@@ -15,6 +15,7 @@ import ColorPicker from '../components/common/ColorPicker';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Modal from '../components/common/Modal';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
+import TableBody from '../components/common/TableBody';
 import MultiSelectDropdown, { type MultiSelectOption } from '../components/common/MultiSelectDropdown';
 import Popover from '../components/common/Popover';
 import RequiredMark from '../components/common/RequiredMark';
@@ -833,6 +834,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
   // (loading) return` below), so this — and the sortPipelines it depends on — moved up here.
   const activePipelines = useMemo(() => sortPipelines(pipelines.filter((p) => p.isActive)), [pipelines, sortField, sortDirection]);
   const archivedPipelines = useMemo(() => sortPipelines(pipelines.filter((p) => !p.isActive)), [pipelines, sortField, sortDirection]);
+  const visiblePipelines = pipelineTab === 'archived' ? archivedPipelines : activePipelines;
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createName, setCreateName] = useState('');
@@ -1089,19 +1091,8 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
             {t('pipelines.description')}
           </p>
         </div>
-        {/* Hidden below md: the mobile FAB (usePrimaryAction below) already exposes this same
-            "Add pipeline" action there — showing both would be two ways to do one thing.
-            `hidden` goes on this wrapper, not the button — .btn-primary is unlayered custom CSS
-            (App.css) that also sets `display`, which beats the `hidden` utility on the same
-            element (Tailwind's utilities layer loses to unlayered CSS either way). */}
-        <span className="hidden md:inline-block">
-          <button type="button" className="btn-primary" onClick={openCreate}>
-            <span className="inline-flex items-center gap-1.5">
-              <PlusIcon className="h-4 w-4" />
-              {t('pipelines.newPipelineButton')}
-            </span>
-          </button>
-        </span>
+        {/* "New pipeline" is the table's "+ New pipeline" row (and the mobile FAB,
+            usePrimaryAction above), so there is no toolbar duplicate. */}
       </div>
 
       {archivedPipelines.length > 0 && (
@@ -1125,7 +1116,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
       <HorizontalScrollbar targetRef={viewsBarRef} />
 
       <div className="entity-card-list">
-        {(pipelineTab === 'archived' ? archivedPipelines : activePipelines).map((pipeline) => (
+        {visiblePipelines.map((pipeline) => (
           <div key={pipeline.id} className="entity-card">
             <span className="entity-card-body">
               <span className="flex items-center gap-2">
@@ -1156,7 +1147,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
           </div>
         ))}
       </div>
-      <div className="full-table-wrap has-mobile-cards">
+      <div className={`full-table-wrap${visiblePipelines.length === 0 ? '' : ' has-mobile-cards'}`}>
         <table className="table full-table">
           <thead>
             <tr>
@@ -1178,7 +1169,15 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
               <th></th>
             </tr>
           </thead>
-          <tbody>{(pipelineTab === 'archived' ? archivedPipelines : activePipelines).map(renderPipelineRow)}</tbody>
+          <TableBody
+            colSpan={6}
+            isEmpty={visiblePipelines.length === 0}
+            empty={{ title: pipelineTab === 'archived' ? t('pipelines.emptyArchived') : t('pipelines.emptyActive') }}
+            onAdd={pipelineTab === 'archived' ? undefined : openCreate}
+            addLabel={t('pipelines.newPipelineButton')}
+          >
+            {visiblePipelines.map(renderPipelineRow)}
+          </TableBody>
         </table>
       </div>
 

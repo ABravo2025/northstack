@@ -5,7 +5,7 @@ import { useToast } from '../components/common/ToastProvider';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Pagination, { paginate } from '../components/common/Pagination';
 import Modal from '../components/common/Modal';
-import EmptyState from '../components/common/EmptyState';
+import { KanbanAddCard, TableAddRow, TableEmptyRow } from '../components/common/TableBody';
 import TableSkeleton from '../components/common/TableSkeleton';
 import EntityCardList from '../components/common/EntityCardList';
 import ViewsBar from '../components/entity-views/ViewsBar';
@@ -982,13 +982,13 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
 
   const groupFieldForKanban = activeView?.groupByField ? findField(fields, activeView.groupByField) : undefined;
 
-  // The ghost "Add" row/card only exists inside the rendered table/Kanban
-  // body — these are the states where that body never renders, so the add
-  // affordance would otherwise disappear entirely. Restored as a toolbar
-  // fallback only in these cases; the normal ghost-row-only UX is unchanged.
+  // The table (and its "+ Add" row) always renders now, even with no rows (TableBody
+  // standard). The one state with no table/board body at all is a view grouped by a
+  // field that no longer exists — the toolbar button covers only that.
   const groupByBroken = (viewType === 'kanban' || viewType === 'list') && !groupFieldForKanban;
-  const noResultsInGridOrList = viewType !== 'kanban' && sortedEmployees.length === 0;
-  const showAddFallback = canEditEmployees && employees.length > 0 && (groupByBroken || noResultsInGridOrList);
+  const showAddFallback = canEditEmployees && groupByBroken;
+  const isFirstRun = employees.length === 0;
+  const tableIsEmpty = sortedEmployees.length === 0;
 
   const totalColumnCount =
     visibleColumns.length +
@@ -1095,16 +1095,52 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   );
 
   const ghostAddRow = canEditEmployees && (
-    <tr className="ghost-row">
-      <td colSpan={totalColumnCount} className="ghost-row-cell" onClick={handleOpenAdd}>
-        <span className="ghost-row-inner">
-          <span className="ghost-plus-box">
-            <PlusIcon className="h-3 w-3" />
-          </span>
-          {t('common.add')}
-        </span>
-      </td>
-    </tr>
+    <TableAddRow colSpan={totalColumnCount} label={t('common.add')} onAdd={handleOpenAdd} />
+  );
+
+  // Empty table: first run (no employees at all) offers the onboarding shortcuts; a
+  // search/filter with no matches offers to clear them. Either way the header and the
+  // "+ Add" row stay.
+  const emptyRow = isFirstRun ? (
+    <TableEmptyRow
+      colSpan={totalColumnCount}
+      icon={<PeopleIcon />}
+      title={t('employees.emptyState.title')}
+      body={t('employees.emptyState.body')}
+      actions={
+        <>
+          {canManagePayroll && (
+            <button type="button" className="btn-secondary btn-md" onClick={() => csvMenuRef.current?.openImport()}>
+              {t('employees.emptyState.importCsv')}
+            </button>
+          )}
+          {canEditEmployees && (
+            <button type="button" className="btn-ghost btn-md" onClick={handleLoadSampleData} disabled={seedingSample}>
+              {seedingSample ? t('common.loading') : t('employees.emptyState.loadSampleData')}
+            </button>
+          )}
+        </>
+      }
+    />
+  ) : (
+    <TableEmptyRow
+      colSpan={totalColumnCount}
+      icon={<SearchIcon />}
+      title={t('employees.noMatches.title', { search: employeeSearch })}
+      body={t('employees.noMatches.body')}
+      actions={
+        <button
+          type="button"
+          className="btn-secondary btn-md"
+          onClick={() => {
+            setEmployeeSearch('');
+            setViewFilters([]);
+          }}
+        >
+          {t('employees.noMatches.clearFilters')}
+        </button>
+      }
+    />
   );
 
   return (
@@ -1563,20 +1599,6 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
 
       {loading ? (
         <TableSkeleton />
-      ) : employees.length === 0 ? (
-        <EmptyState
-          icon={<PeopleIcon />}
-          title={t('employees.emptyState.title')}
-          body={t('employees.emptyState.body')}
-          primaryLabel={t('employees.emptyState.primaryLabel')}
-          onPrimary={handleOpenAdd}
-          secondaryLabel={canManagePayroll ? t('employees.emptyState.importCsv') : undefined}
-          onSecondary={canManagePayroll ? () => csvMenuRef.current?.openImport() : undefined}
-        >
-          <button type="button" className="btn-ghost btn-md" onClick={handleLoadSampleData} disabled={seedingSample}>
-            {seedingSample ? t('common.loading') : t('employees.emptyState.loadSampleData')}
-          </button>
-        </EmptyState>
       ) : viewType === 'kanban' ? (
         !groupFieldForKanban ? (
           <p className="mt-4">{t('employees.groupByBroken')}</p>
@@ -1608,32 +1630,13 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
             )}
             renderColumnFooter={
               canEditEmployees
-                ? () => (
-                    <div className="kanban-ghost-card" onClick={handleOpenAdd}>
-                      <span className="ghost-plus-box">
-                        <PlusIcon className="h-3 w-3" />
-                      </span>
-                      {t('common.add')}
-                    </div>
-                  )
+                ? () => <KanbanAddCard label={t('common.add')} onAdd={handleOpenAdd} />
                 : undefined
             }
           />
         )
       ) : viewType === 'list' && !groupFieldForKanban ? (
         <p className="mt-4">{t('employees.groupByBroken')}</p>
-      ) : sortedEmployees.length === 0 ? (
-        <EmptyState
-          icon={<SearchIcon />}
-          title={t('employees.noMatches.title', { search: employeeSearch })}
-          body={t('employees.noMatches.body')}
-          primaryLabel={t('employees.noMatches.clearFilters')}
-          primaryVariant="secondary"
-          onPrimary={() => {
-            setEmployeeSearch('');
-            setViewFilters([]);
-          }}
-        />
       ) : (
         <>
           <EntityCardList
@@ -1645,7 +1648,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
             getStatusColor={(emp) => emp.statusDefn?.color || '#6b7280'}
             onSelect={(emp) => setOverviewEmployeeId(emp.id)}
           />
-          <div className="full-table-wrap has-mobile-cards" ref={tableWrapRef}>
+          <div className={`full-table-wrap${tableIsEmpty ? '' : ' has-mobile-cards'}`} ref={tableWrapRef}>
             <table className="table full-table">
               <colgroup>
                 {visibleColumns.map((col) => (
@@ -1781,7 +1784,12 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                   <th></th>
                 </tr>
               </thead>
-              {viewType === 'list'
+              {tableIsEmpty ? (
+                <tbody>
+                  {emptyRow}
+                  {ghostAddRow}
+                </tbody>
+              ) : viewType === 'list'
                 ? listSections.map((section) => (
                     <tbody key={section.key}>
                       <tr className="list-section-row">

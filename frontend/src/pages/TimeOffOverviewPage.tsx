@@ -6,7 +6,7 @@ import ConfirmDialog from '../components/common/ConfirmDialog';
 import SlideOver from '../components/common/SlideOver';
 import Popover from '../components/common/Popover';
 import ColorPicker from '../components/common/ColorPicker';
-import EmptyState from '../components/common/EmptyState';
+import TableBody from '../components/common/TableBody';
 import TableSkeleton from '../components/common/TableSkeleton';
 import RequiredMark from '../components/common/RequiredMark';
 import { CalendarIcon, ChevronDownIcon, DotsVerticalIcon, PlusIcon } from '../components/common/Icons';
@@ -652,11 +652,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
         {!loading && tab === 'assignments' && canManagePolicies && (
           <>
             <p className="text-sm text-ink-muted dark:text-dark-ink-muted mb-3">{t('timeOff.assignments.description')}</p>
-            {activeTimeOffPolicies.length === 0 ? (
-              <p>{t('timeOff.assignments.noPoliciesDefined')}</p>
-            ) : employees.length === 0 ? (
-              <p>{t('timeOff.assignments.noEmployees')}</p>
-            ) : (
+            {(
               <>
                 <div className="entity-card-list">
                   {employees.map((emp) => {
@@ -711,7 +707,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                     );
                   })}
                 </div>
-                <div className="full-table-wrap has-mobile-cards">
+                <div className={`full-table-wrap${(activeTimeOffPolicies.length === 0 || employees.length === 0) ? '' : ' has-mobile-cards'}`}>
                 <table className="table full-table">
                   <thead>
                     <tr>
@@ -720,7 +716,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                       <th>{t('timeOff.assignments.table.assignedPolicies')}</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <TableBody colSpan={3} isEmpty={(activeTimeOffPolicies.length === 0 || employees.length === 0)} empty={{ title: activeTimeOffPolicies.length === 0 ? t('timeOff.assignments.noPoliciesDefined') : t('timeOff.assignments.noEmployees') }}>
                     {employees.map((emp) => {
                       const assignedIds = (emp.timeOffPolicies || []).map((a: any) => a.timeOffPolicyId);
                       const availableToAdd = activeTimeOffPolicies.filter((p) => !assignedIds.includes(p.id));
@@ -771,7 +767,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                         </tr>
                       );
                     })}
-                  </tbody>
+                  </TableBody>
                 </table>
                 </div>
               </>
@@ -887,9 +883,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                   </>
                 )}
 
-                {myRequests.length === 0 ? (
-                  <p>{t('timeOff.myRequests.noneYet')}</p>
-                ) : (
+                {(
                   <>
                   <div className="entity-card-list">
                     {myRequests.map((req) => (
@@ -916,7 +910,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                       </div>
                     ))}
                   </div>
-                  <div className="full-table-wrap has-mobile-cards">
+                  <div className={`full-table-wrap${myRequests.length === 0 ? '' : ' has-mobile-cards'}`}>
                   <table className="table full-table">
                     <thead>
                       <tr>
@@ -928,7 +922,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                         <th>{t('timeOff.myRequests.table.actions')}</th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <TableBody colSpan={6} isEmpty={myRequests.length === 0} empty={{ title: t('timeOff.myRequests.noneYet') }}>
                       {myRequests.map((req) => (
                         <tr key={req.id}>
                           <td>{req.timeOffPolicy.name}</td>
@@ -950,7 +944,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                           </td>
                         </tr>
                       ))}
-                    </tbody>
+                    </TableBody>
                   </table>
                   </div>
                   </>
@@ -962,9 +956,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
 
         {!loading && tab === 'approvals' && (
           <>
-            {pendingApprovals.length === 0 ? (
-              <p>{t('timeOff.approvals.empty')}</p>
-            ) : (
+            {(
               <>
               <div className="entity-card-list">
                 {pendingApprovals.map((req) => (
@@ -996,7 +988,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                   </div>
                 ))}
               </div>
-              <div className="full-table-wrap has-mobile-cards">
+              <div className={`full-table-wrap${pendingApprovals.length === 0 ? '' : ' has-mobile-cards'}`}>
               <table className="table full-table">
                 <thead>
                   <tr>
@@ -1008,7 +1000,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                     <th>{t('timeOff.approvals.table.actions')}</th>
                   </tr>
                 </thead>
-                <tbody>
+                <TableBody colSpan={6} isEmpty={pendingApprovals.length === 0} empty={{ title: t('timeOff.approvals.empty') }}>
                   {pendingApprovals.map((req) => (
                     <tr key={req.id}>
                       <td>
@@ -1036,7 +1028,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                       </td>
                     </tr>
                   ))}
-                </tbody>
+                </TableBody>
               </table>
               </div>
               </>
@@ -1046,9 +1038,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
 
         {!loading && tab === 'all-requests' && canManagePolicies && (
           <>
-            {allRequests.length === 0 ? (
-              <p>{t('timeOff.allRequests.empty')}</p>
-            ) : (
+            {(
               <>
               <div className="entity-card-list">
                 {allRequests.map((req) => (
@@ -1087,7 +1077,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                   </div>
                 ))}
               </div>
-              <div className="full-table-wrap has-mobile-cards">
+              <div className={`full-table-wrap${allRequests.length === 0 ? '' : ' has-mobile-cards'}`}>
               <table className="table full-table">
                 <thead>
                   <tr>
@@ -1101,7 +1091,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                     <th>{t('timeOff.allRequests.table.actions')}</th>
                   </tr>
                 </thead>
-                <tbody>
+                <TableBody colSpan={8} isEmpty={allRequests.length === 0} empty={{ title: t('timeOff.allRequests.empty') }}>
                   {allRequests.map((req) => (
                     <tr key={req.id}>
                       <td>
@@ -1135,7 +1125,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                       </td>
                     </tr>
                   ))}
-                </tbody>
+                </TableBody>
               </table>
               </div>
               </>
@@ -1145,9 +1135,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
 
         {!loading && tab === 'balances' && canManagePolicies && (
           <>
-            {balancesByEmployee.length === 0 ? (
-              <p>{t('timeOff.balances.empty')}</p>
-            ) : (
+            {(
               <>
                 <EntityCardList
                   items={balancesByEmployee}
@@ -1159,7 +1147,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                   }
                   onSelect={(row) => setBalancesDetailEmployeeId(row.employeeId)}
                 />
-                <div className="full-table-wrap has-mobile-cards">
+                <div className={`full-table-wrap${balancesByEmployee.length === 0 ? '' : ' has-mobile-cards'}`}>
                 <table className="table full-table">
                   <thead>
                     <tr>
@@ -1169,7 +1157,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                       <th>{t('timeOff.balances.table.totalRemaining', { year: new Date().getFullYear() })}</th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <TableBody colSpan={4} isEmpty={balancesByEmployee.length === 0} empty={{ title: t('timeOff.balances.empty') }}>
                     {balancesByEmployee.map((row) => (
                       <tr key={row.employeeId}>
                         <td>
@@ -1186,7 +1174,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                         <td>{row.totalRemaining}</td>
                       </tr>
                     ))}
-                  </tbody>
+                  </TableBody>
                 </table>
                 </div>
               </>
@@ -1285,17 +1273,9 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
 
         {!loading && tab === 'policies' && canManagePolicies && (
           <>
-            {timeOffPolicies.length === 0 ? (
-              <EmptyState
-                icon={<CalendarIcon />}
-                title={t('timeOff.policies.emptyState.title')}
-                body={t('timeOff.policies.emptyState.body')}
-                primaryLabel={t('timeOff.policies.emptyState.primaryLabel')}
-                onPrimary={handleOpenAddPolicy}
-              />
-            ) : (
+            {(
               <>
-                <div className="mini-toggle-row mb-3">
+                {timeOffPolicies.length > 0 && <div className="mini-toggle-row mb-3">
                   <button
                     type="button"
                     className={`mini-toggle-opt ${policiesFilter === 'active' ? 'active' : ''}`}
@@ -1310,12 +1290,8 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                   >
                     {t('timeOff.policies.deactivatedCount', { count: timeOffPolicies.filter((p) => !p.isActive).length })}
                   </button>
-                </div>
-                {filteredTimeOffPolicies.length === 0 ? (
-                  <p className="text-sm text-ink-muted dark:text-dark-ink-muted">
-                    {policiesFilter === 'active' ? t('timeOff.policies.noActive') : t('timeOff.policies.noDeactivated')}
-                  </p>
-                ) : (
+                </div>}
+                {(
                   <>
                   <div className="entity-card-list">
                     {filteredTimeOffPolicies.map((policy) => {
@@ -1351,7 +1327,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                       );
                     })}
                   </div>
-                  <div className="full-table-wrap has-mobile-cards">
+                  <div className={`full-table-wrap${filteredTimeOffPolicies.length === 0 ? '' : ' has-mobile-cards'}`}>
                     <table className="table full-table">
                       <thead>
                         <tr>
@@ -1364,7 +1340,11 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                           <th>{t('timeOff.policies.table.actions')}</th>
                         </tr>
                       </thead>
-                      <tbody>
+                      <TableBody colSpan={7} isEmpty={filteredTimeOffPolicies.length === 0}
+                      onAdd={handleOpenAddPolicy}
+                      addLabel={t('timeOff.policies.addRow')} empty={timeOffPolicies.length === 0
+                        ? { icon: <CalendarIcon />, title: t('timeOff.policies.emptyState.title'), body: t('timeOff.policies.emptyState.body') }
+                        : { title: policiesFilter === 'active' ? t('timeOff.policies.noActive') : t('timeOff.policies.noDeactivated') }}>
                         {filteredTimeOffPolicies.map((policy) => {
                           const employeeCount = employees.filter((emp) =>
                             (emp.timeOffPolicies || []).some((a: any) => a.timeOffPolicyId === policy.id),
@@ -1397,17 +1377,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
                             </tr>
                           );
                         })}
-                        <tr className="ghost-row">
-                          <td colSpan={7} className="ghost-row-cell" onClick={handleOpenAddPolicy}>
-                            <span className="ghost-row-inner">
-                              <span className="ghost-plus-box">
-                                <PlusIcon className="h-3 w-3" />
-                              </span>
-                              {t('timeOff.policies.addRow')}
-                            </span>
-                          </td>
-                        </tr>
-                      </tbody>
+                      </TableBody>
                     </table>
                   </div>
                   </>

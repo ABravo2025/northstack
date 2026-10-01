@@ -18,7 +18,7 @@ import type {
 import { useToast } from '../components/common/ToastProvider';
 import Modal from '../components/common/Modal';
 import RequiredMark from '../components/common/RequiredMark';
-import EmptyState from '../components/common/EmptyState';
+import TableBody from '../components/common/TableBody';
 import Field from '../components/common/Field';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { usePrimaryAction } from '../contexts/PrimaryActionContext';
@@ -591,35 +591,13 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                       <PlusIcon className="h-3.5 w-3.5" />
                       {t('payroll.page.timeline.oneOffPayment')}
                     </button>
-                    {/* Hidden below md: the mobile FAB (usePrimaryAction below) already exposes
-                        this same "New Run" action there. Hidden entirely once the list is empty:
-                        the EmptyState below has its own "New Run" button then. Either way it'd be
-                        two ways to do one thing. "One-off Payment" above has no equivalent in
-                        either place, so it always stays. `hidden` goes on this wrapper, not the
-                        button — .btn-primary is unlayered custom CSS (App.css) that also sets
-                        `display`, which beats the `hidden` utility on the same element (Tailwind's
-                        utilities layer loses to unlayered CSS either way). */}
-                    {timelineItems.length > 0 && (
-                      <span className="hidden md:inline-block">
-                        <button type="button" className="btn-primary gap-1.5" onClick={openNewRunModal}>
-                          <PlusIcon className="h-3.5 w-3.5" />
-                          {t('payroll.page.timeline.newRun')}
-                        </button>
-                      </span>
-                    )}
+                    {/* "New Run" is the "+ New run" row at the foot of the timeline table (and the
+                        mobile FAB, usePrimaryAction below), so there is no toolbar duplicate. */}
                   </div>
                 )}
               </div>
 
-              {timelineItems.length === 0 ? (
-                <EmptyState
-                  icon={<CalendarIcon />}
-                  title={t('payroll.page.timeline.emptyTitle')}
-                  body={t('payroll.page.timeline.emptyBody')}
-                  primaryLabel={t('payroll.page.timeline.newRun')}
-                  onPrimary={openNewRunModal}
-                />
-              ) : (
+              {(
                 <>
                 <div className="entity-card-list">
                   {timelineItems.map((item) =>
@@ -666,7 +644,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                     ),
                   )}
                 </div>
-                <div className="full-table-wrap has-mobile-cards" ref={timelineTableRef}>
+                <div className={`full-table-wrap${timelineItems.length === 0 ? '' : ' has-mobile-cards'}`} ref={timelineTableRef}>
                   <table className="table full-table">
                     <thead>
                       <tr>
@@ -677,7 +655,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                         <th></th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <TableBody colSpan={5} isEmpty={timelineItems.length === 0} empty={{ icon: <CalendarIcon />, title: t('payroll.page.timeline.emptyTitle'), body: t('payroll.page.timeline.emptyBody') }} onAdd={canManagePayroll ? openNewRunModal : undefined} addLabel={t('payroll.page.timeline.newRun')}>
                       {timelineItems.map((item) =>
                         item.kind === 'run' ? (
                           <tr key={`run-${item.run.id}`}>
@@ -729,7 +707,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                           </tr>
                         ),
                       )}
-                    </tbody>
+                    </TableBody>
                   </table>
                 </div>
                 </>
@@ -755,17 +733,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                 )}
               </div>
 
-              {compensationStatus.length === 0 && terminatedCompensations.length === 0 ? (
-                <EmptyState
-                  icon={<TeamIcon />}
-                  title={t('payroll.page.assignments.emptyTitle')}
-                  body={t('payroll.page.assignments.emptyBody')}
-                  primaryLabel={t('payroll.page.assignments.goToPeople')}
-                  onPrimary={() => {
-                    window.location.href = '/hr/people';
-                  }}
-                />
-              ) : (
+              {(
                 <>
                   <div className="mini-toggle-row mb-3 mt-3">
                     <button
@@ -801,9 +769,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                   </div>
 
                   {assignmentSubTab === 'terminated' ? (
-                    terminatedCompensations.length === 0 ? (
-                      <p className="text-sm text-ink-muted">{t('payroll.page.assignments.noTerminated')}</p>
-                    ) : (
+                    (
                       <>
                       <div className="entity-card-list">
                         {terminatedCompensations.map((entry) => (
@@ -823,7 +789,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                           </div>
                         ))}
                       </div>
-                      <div className="full-table-wrap has-mobile-cards" ref={assignmentsTableRef}>
+                      <div className={`full-table-wrap${terminatedCompensations.length === 0 ? '' : ' has-mobile-cards'}`} ref={assignmentsTableRef}>
                         <table className="table full-table">
                           <thead>
                             <tr>
@@ -833,7 +799,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                               <th>{t('payroll.page.assignments.columns.status')}</th>
                             </tr>
                           </thead>
-                          <tbody>
+                          <TableBody colSpan={4} isEmpty={terminatedCompensations.length === 0} empty={{ title: t('payroll.page.assignments.noTerminated') }}>
                             {terminatedCompensations.map((entry) => (
                               <tr key={entry.compensationId}>
                                 <td>
@@ -850,15 +816,11 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                                 </td>
                               </tr>
                             ))}
-                          </tbody>
+                          </TableBody>
                         </table>
                       </div>
                       </>
                     )
-                  ) : visibleAssignments.length === 0 ? (
-                    <p className="text-sm text-ink-muted">
-                      {assignmentSubTab === 'draft' ? t('payroll.page.assignments.noDraft') : t('payroll.page.assignments.noConfirmed')}
-                    </p>
                   ) : (
                     <>
                     <div className="entity-card-list">
@@ -901,7 +863,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                         </div>
                       ))}
                     </div>
-                    <div className="full-table-wrap has-mobile-cards" ref={assignmentsTableRef}>
+                    <div className={`full-table-wrap${visibleAssignments.length === 0 ? '' : ' has-mobile-cards'}`} ref={assignmentsTableRef}>
                       <table className="table full-table">
                         <thead>
                           <tr>
@@ -920,7 +882,18 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                             <th>{t('payroll.page.assignments.columns.status')}</th>
                           </tr>
                         </thead>
-                        <tbody>
+                        <TableBody colSpan={5} isEmpty={visibleAssignments.length === 0} empty={compensationStatus.length === 0
+                            ? {
+                                icon: <TeamIcon />,
+                                title: t('payroll.page.assignments.emptyTitle'),
+                                body: t('payroll.page.assignments.emptyBody'),
+                                actions: (
+                                  <button type="button" className="btn-secondary btn-md" onClick={() => navigate('/hr/people')}>
+                                    {t('payroll.page.assignments.goToPeople')}
+                                  </button>
+                                ),
+                              }
+                            : { title: assignmentSubTab === 'draft' ? t('payroll.page.assignments.noDraft') : t('payroll.page.assignments.noConfirmed') }}>
                           {visibleAssignments.map((entry) => (
                             <tr key={entry.employeeId}>
                               {canManagePayroll && (
@@ -955,7 +928,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                               </td>
                             </tr>
                           ))}
-                        </tbody>
+                        </TableBody>
                       </table>
                     </div>
                     </>
@@ -976,17 +949,9 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                 </div>
               </div>
 
-              {frequencies.length === 0 ? (
-                <EmptyState
-                  icon={<CalendarIcon />}
-                  title={t('payroll.page.policies.emptyTitle')}
-                  body={t('payroll.page.policies.emptyBody')}
-                  primaryLabel={t('payroll.page.policies.newPolicy')}
-                  onPrimary={openAddFrequency}
-                />
-              ) : (
+              {(
                 <>
-                  <div className="mini-toggle-row mb-3 mt-3">
+                  {frequencies.length > 0 && <div className="mini-toggle-row mb-3 mt-3">
                     <button
                       type="button"
                       className={`mini-toggle-opt ${frequencyFilter === 'active' ? 'active' : ''}`}
@@ -1001,13 +966,9 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                     >
                       {t('payroll.page.policies.deactivatedTab', { count: inactiveFrequencies.length })}
                     </button>
-                  </div>
+                  </div>}
 
-                  {filteredFrequencies.length === 0 ? (
-                    <p className="text-sm text-ink-muted">
-                      {frequencyFilter === 'active' ? t('payroll.page.policies.noActive') : t('payroll.page.policies.noDeactivated')}
-                    </p>
-                  ) : (
+                  {(
                     <>
                     <div className="entity-card-list">
                       {filteredFrequencies.map((freq) => (
@@ -1031,7 +992,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                         </div>
                       ))}
                     </div>
-                    <div className="full-table-wrap has-mobile-cards" ref={frequenciesTableRef}>
+                    <div className={`full-table-wrap${filteredFrequencies.length === 0 ? '' : ' has-mobile-cards'}`} ref={frequenciesTableRef}>
                       <table className="table full-table">
                         <thead>
                           <tr>
@@ -1043,7 +1004,9 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                             {canManagePayroll && <th>{t('payroll.page.policies.columns.actions')}</th>}
                           </tr>
                         </thead>
-                        <tbody>
+                        <TableBody colSpan={6} isEmpty={filteredFrequencies.length === 0} empty={frequencies.length === 0
+                            ? { icon: <CalendarIcon />, title: t('payroll.page.policies.emptyTitle'), body: t('payroll.page.policies.emptyBody') }
+                            : { title: frequencyFilter === 'active' ? t('payroll.page.policies.noActive') : t('payroll.page.policies.noDeactivated') }} onAdd={canManagePayroll ? openAddFrequency : undefined} addLabel={t('payroll.page.add')}>
                           {filteredFrequencies.map((freq) => (
                             <tr key={freq.id} className={!freq.isActive ? 'table-row-inactive' : ''}>
                               <td>
@@ -1068,19 +1031,7 @@ export default function PayrollPage({ token }: PayrollPageProps) {
                               )}
                             </tr>
                           ))}
-                          {canManagePayroll && (
-                            <tr className="ghost-row">
-                              <td colSpan={6} className="ghost-row-cell" onClick={openAddFrequency}>
-                                <span className="ghost-row-inner">
-                                  <span className="ghost-plus-box">
-                                    <PlusIcon className="h-3 w-3" />
-                                  </span>
-                                  {t('payroll.page.add')}
-                                </span>
-                              </td>
-                            </tr>
-                          )}
-                        </tbody>
+                        </TableBody>
                       </table>
                     </div>
                     </>

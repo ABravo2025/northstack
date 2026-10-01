@@ -7,7 +7,7 @@ import { App as CapacitorApp } from '@capacitor/app';
 import { api, type ApiKeySummary, type GoogleCalendarStatus, type StripeConnectionStatus, type Tenant } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import { usePermissions } from '../contexts/PermissionsContext';
-import EmptyState from '../components/common/EmptyState';
+import TableBody from '../components/common/TableBody';
 import TableSkeleton from '../components/common/TableSkeleton';
 import Modal from '../components/common/Modal';
 import ConfirmDialog from '../components/common/ConfirmDialog';
@@ -376,24 +376,9 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
         </div>
       </div>
 
-      {keys && keys.length > 0 && (
-        <div className="mb-3 flex justify-end">
-          <button type="button" className="btn-primary btn-md" onClick={() => setShowCreateModal(true)}>
-            {t('integrations.apiKeys.createKey')}
-          </button>
-        </div>
-      )}
 
       {keys === null ? (
         <TableSkeleton rows={2} columns={4} />
-      ) : keys.length === 0 ? (
-        <EmptyState
-          icon={<LockIcon />}
-          title={t('integrations.apiKeys.emptyTitle')}
-          body={t('integrations.apiKeys.emptyBody')}
-          primaryLabel={t('integrations.apiKeys.createKey')}
-          onPrimary={() => setShowCreateModal(true)}
-        />
       ) : (
         <>
         <div className="full-table-wrap" ref={tableWrapRef}>
@@ -408,7 +393,13 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
                 <th></th>
               </tr>
             </thead>
-            <tbody>
+            <TableBody
+              colSpan={6}
+              isEmpty={keys.length === 0}
+              empty={{ icon: <LockIcon />, title: t('integrations.apiKeys.emptyTitle'), body: t('integrations.apiKeys.emptyBody') }}
+              onAdd={() => setShowCreateModal(true)}
+              addLabel={t('integrations.apiKeys.createKey')}
+            >
               {keys.map((key) => (
                 <tr key={key.id}>
                   <td>
@@ -453,7 +444,7 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
                   </td>
                 </tr>
               ))}
-            </tbody>
+            </TableBody>
           </table>
         </div>
         <HorizontalScrollbar targetRef={tableWrapRef} />

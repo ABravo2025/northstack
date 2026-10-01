@@ -253,22 +253,34 @@ refactorizando `ColorPicker` para usar `Popover` en vez de su div a mano — la 
 
 ## 9. Estados de carga y vacíos
 
-`EmptyState.tsx` y `TableSkeleton.tsx` (`components/common/`), agregados 2026-07-31 — reemplazan
-`<p>Loading...</p>` / `<p>No X yet.</p>` en Employees, Companies, Contacts, Opportunities, Public
-Forms, Time Off Policies, Overview y el chequeo de sesión de `App.tsx`.
+**Regla (2026-10, pedida por Alejandro): una lista nunca esconde su tabla.** Toda lista/tabla de la
+plataforma se ve igual que People: encabezado con las columnas, las filas, y al pie la fila
+punteada "+ Add". Vacía, la tabla sigue ahí: el encabezado se mantiene, una fila de vacío ocupa el
+lugar de las filas y "+ Add" sigue abajo. Ya no existe la tarjeta centrada que reemplazaba la tabla
+(`EmptyState.tsx` se borró en esta migración, junto con `.empty-state`).
 
-- **`EmptyState`** — `icon` (de `Icons.tsx`, sin wrapper) + `title` + `body` + `primaryLabel`/`onPrimary`
-  (siempre requerido, `.btn-primary` salvo `primaryVariant="secondary"` — usar ese variant para una
-  acción *correctiva*, no de creación, como "Clear filters" en un estado de "sin resultados") +
-  `secondaryLabel`/`onSecondary` opcionales (`.btn-secondary`) + `children` para acciones extra que no
-  entran en el par primary/secondary (ej. "Load sample data" en `.btn-ghost`, junto a "Import CSV" en
-  Employees). `.empty-state` usa grid con `1fr` en la fila del body — así el CTA cae siempre a la
-  misma altura aunque el texto de ayuda tenga largo distinto.
+Todo vive en `components/common/TableBody.tsx` — una página declara columnas y qué hace "Add", y
+no arma su propio vacío ni su propia fila:
+
+- **`<TableBody colSpan isEmpty empty onAdd addLabel>`** — el `<tbody>` estándar. `empty` =
+  `{ icon?, title, body?, actions? }`. Sin `onAdd` (sin permiso de crear, o tabla de solo lectura
+  como Approvals/Balances) no hay fila "+ Add".
+- **`TableAddRow` / `TableEmptyRow`** — las mismas piezas sueltas, para tablas con varios `<tbody>`
+  (vista List agrupada de People/Companies/Contacts: "+ Add" al pie de cada sección).
+- **`KanbanAddCard`** — la misma acción al pie de cada columna de un tablero Kanban.
+- "+ Add" es un `<button>` real (navegable con teclado), no una celda con `onClick`.
+- **Sin duplicados en la barra:** en escritorio crear es la fila "+ Add"; en celular, el FAB
+  (`usePrimaryAction`). No se agrega además un botón "New X" en el toolbar. Excepción: acciones que
+  no son "crear una fila" (One-off Payment en Payroll) o el caso en que no hay cuerpo de tabla
+  (vista agrupada por un campo que ya no existe).
+- **Celular:** las tablas con lista de tarjetas (`has-mobile-cards`) muestran la tabla cuando está
+  vacía, para que el mensaje de vacío se vea también en el teléfono.
+- Primera vez vs. sin resultados son estados distintos con copy distinto: el primero puede ofrecer
+  atajos de onboarding como `actions` (Import CSV, Load sample data en People); el segundo ofrece
+  "Clear filters" (`.btn-secondary`), nunca un CTA de creación.
 - **`TableSkeleton`** — `rows`/`columns` (default 5/4), anchos de columna fijos (170/110/64/64px,
   se repite 64px si hay más columnas) para que no haya salto de layout al llegar los datos reales.
   Pulso opcional vía `animation: skeleton-pulse`, con delay escalonado por fila.
-- Regla de conteo (igual que botones): el "no resultados de búsqueda" (`primaryVariant="secondary"`)
-  es un estado distinto del vacío real (sin filtros, sin datos) — no reusar el mismo copy.
 
 ## 10. Panel de detalle — campos agrupados
 

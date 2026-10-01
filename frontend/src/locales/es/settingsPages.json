@@ -375,6 +375,8 @@
     "description": "Pipelines de ventas para Oportunidades. Cada pipeline tiene sus propias etapas — archivar un pipeline mantiene sus Oportunidades visibles en modo lectura, solo desaparece de los menús de creación.",
     "newPipelineButton": "Nuevo Pipeline",
     "addPipelineAction": "Agregar pipeline",
+    "emptyActive": "Todavía no hay pipelines.",
+    "emptyArchived": "No hay pipelines archivados.",
     "loading": "Cargando...",
     "tabs": {
       "active": "Activos",

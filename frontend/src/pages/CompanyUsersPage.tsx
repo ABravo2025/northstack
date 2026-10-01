@@ -6,7 +6,7 @@ import ConfirmDialog from '../components/common/ConfirmDialog';
 import Pagination, { paginate } from '../components/common/Pagination';
 import SlideOver from '../components/common/SlideOver';
 import RequiredMark from '../components/common/RequiredMark';
-import { CheckIcon, CopyIcon, LockIcon, PlusIcon, SearchIcon, TrashIcon } from '../components/common/Icons';
+import { CheckIcon, CopyIcon, LockIcon, SearchIcon, TrashIcon } from '../components/common/Icons';
 import ColumnResizeHandle from '../components/entity-views/ColumnResizeHandle';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
 import { useResizableColumns } from '../hooks/useResizableColumns';
@@ -16,8 +16,10 @@ import { useColumnOrder } from '../hooks/useColumnOrder';
 import Avatar, { getInitials } from '../components/common/Avatar';
 import RoleChip from '../components/common/RoleChip';
 import StatusChip from '../components/common/StatusChip';
+import TableBody from '../components/common/TableBody';
 import EntityCardList from '../components/common/EntityCardList';
 import { usePermissions } from '../contexts/PermissionsContext';
+import { usePrimaryAction } from '../contexts/PrimaryActionContext';
 
 const PAGE_SIZE = 20;
 // Frozen columns stay pinned to the left through horizontal scroll and can't
@@ -80,6 +82,8 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
   const [pendingOwnerTransfer, setPendingOwnerTransfer] = useState<string | null>(null);
 
   const [inviteOpen, setInviteOpen] = useState(false);
+  // Desktop invites from the table's "+ Invite" row; this puts the same action behind the mobile FAB.
+  usePrimaryAction({ label: t('users.invite'), onClick: () => setInviteOpen(true) });
   // `role` here holds a real roleId once assignableRoles has loaded (set once fetched, below) —
   // starts empty rather than a hardcoded 'member' guess, since the tenant may not even have a
   // role by that name anymore.
@@ -353,18 +357,9 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
           </div>
         )}
         <ColumnVisibilityMenu columns={COLUMNS} isHidden={isColumnHidden} onToggle={toggleColumn} />
-        <button className="btn-primary" onClick={() => setInviteOpen(true)}>
-          <span className="inline-flex items-center gap-1.5">
-            <PlusIcon className="h-4 w-4" />
-            {t('users.invite')}
-          </span>
-        </button>
       </div>
 
-      {sortedUsers.length === 0 ? (
-        <p className="mt-4">{t('users.noMatch')}</p>
-      ) : (
-        <>
+      <>
           <EntityCardList
             items={pagedUsers}
             getKey={(u) => u.id}
@@ -373,7 +368,7 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
             getMeta={(u) => displayRoleName(u)}
             getStatusColor={(u) => (u.status === 'active' ? '#047857' : '#6b7280')}
           />
-          <div className="full-table-wrap has-mobile-cards" ref={tableWrapRef}>
+          <div className={`full-table-wrap${sortedUsers.length === 0 ? '' : ' has-mobile-cards'}`} ref={tableWrapRef}>
             <table className="table full-table">
               <colgroup>
                 {visibleColumns.map((col) => (
@@ -431,7 +426,13 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
                   <th></th>
                 </tr>
               </thead>
-              <tbody>
+              <TableBody
+                colSpan={visibleColumns.length + 1}
+                isEmpty={sortedUsers.length === 0}
+                empty={{ icon: <SearchIcon />, title: t('users.noMatch') }}
+                onAdd={() => setInviteOpen(true)}
+                addLabel={t('users.invite')}
+              >
                 {pagedUsers.map((u) => {
                   const isSelf = u.id === user.id;
                   const canEditRole = !isSelf && (isOwner || u.role !== 'owner');
@@ -502,23 +503,12 @@ export default function CompanyUsersPage({ user, token, onUserUpdated }: Company
                     </tr>
                   );
                 })}
-                <tr className="ghost-row">
-                  <td colSpan={visibleColumns.length + 1} className="ghost-row-cell" onClick={() => setInviteOpen(true)}>
-                    <span className="ghost-row-inner">
-                      <span className="ghost-plus-box">
-                        <PlusIcon className="h-3 w-3" />
-                      </span>
-                      {t('users.invite')}
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
+              </TableBody>
             </table>
           </div>
           <HorizontalScrollbar targetRef={tableWrapRef} />
           <Pagination page={page} pageCount={pageCount} onPageChange={setPage} />
         </>
-      )}
 
       {invitations.length > 0 && (
         <div className="mt-6">

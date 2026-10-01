@@ -15,7 +15,7 @@ import { useToast } from '../components/common/ToastProvider';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Pagination, { paginate } from '../components/common/Pagination';
 import Modal from '../components/common/Modal';
-import EmptyState from '../components/common/EmptyState';
+import { KanbanAddCard, TableAddRow, TableEmptyRow } from '../components/common/TableBody';
 import TableSkeleton from '../components/common/TableSkeleton';
 import EntityCardList from '../components/common/EntityCardList';
 import ViewsBar from '../components/entity-views/ViewsBar';
@@ -673,8 +673,10 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
 
   const groupFieldForKanban = activeView?.groupByField ? findField(fields, activeView.groupByField) : undefined;
   const groupByBroken = (viewType === 'kanban' || viewType === 'list') && !groupFieldForKanban;
-  const noResultsInGridOrList = viewType !== 'kanban' && sortedContacts.length === 0;
-  const showAddFallback = canEditContacts && contacts.length > 0 && (groupByBroken || noResultsInGridOrList);
+  // Table + "+ Add" row always render (TableBody standard); only a broken group-by view
+  // has no body to hold them, so the toolbar button covers just that case.
+  const showAddFallback = canEditContacts && groupByBroken;
+  const tableIsEmpty = sortedContacts.length === 0;
 
   const totalColumnCount = visibleColumns.length + visibleCustomFields.length + (canManageCustomFields ? 1 : 0) + 1;
 
@@ -749,17 +751,37 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
   );
 
   const ghostAddRow = canEditContacts && (
-    <tr className="ghost-row">
-      <td colSpan={totalColumnCount} className="ghost-row-cell" onClick={handleOpenAdd}>
-        <span className="ghost-row-inner">
-          <span className="ghost-plus-box">
-            <PlusIcon className="h-3 w-3" />
-          </span>
-          {t('common.add')}
-        </span>
-      </td>
-    </tr>
+    <TableAddRow colSpan={totalColumnCount} label={t('common.add')} onAdd={handleOpenAdd} />
   );
+
+  const emptyRow =
+    contacts.length === 0 ? (
+      <TableEmptyRow
+        colSpan={totalColumnCount}
+        icon={<UserCircleIcon />}
+        title={canEditContacts ? t('contacts.emptyState.title') : t('contacts.emptyState.plain')}
+        body={canEditContacts ? t('contacts.emptyState.body') : undefined}
+      />
+    ) : (
+      <TableEmptyRow
+        colSpan={totalColumnCount}
+        icon={<SearchIcon />}
+        title={t('contacts.noMatches.title', { search })}
+        body={t('contacts.noMatches.body')}
+        actions={
+          <button
+            type="button"
+            className="btn-secondary btn-md"
+            onClick={() => {
+              setSearch('');
+              setViewFilters([]);
+            }}
+          >
+            {t('contacts.noMatches.clearFilters')}
+          </button>
+        }
+      />
+    );
 
   return (
     <div className="page-full">
@@ -1140,21 +1162,9 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
 
       {loading ? (
         <TableSkeleton />
-      ) : contacts.length === 0 ? (
-        canEditContacts ? (
-          <EmptyState
-            icon={<UserCircleIcon />}
-            title="No contacts yet"
-            body="Add the people you work with at your companies."
-            primaryLabel="Add contact"
-            onPrimary={handleOpenAdd}
-          />
-        ) : (
-          <p className="mt-4">No contacts yet.</p>
-        )
       ) : viewType === 'kanban' ? (
         !groupFieldForKanban ? (
-          <p className="mt-4">This view's group-by field no longer exists.</p>
+          <p className="mt-4">{t('contacts.groupByBroken')}</p>
         ) : (
           <KanbanBoard
             columns={groupFieldForKanban.selectOptions?.map((opt) => ({ key: opt.value, label: opt.value, color: opt.color })) ?? []}
@@ -1172,32 +1182,13 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
             )}
             renderColumnFooter={
               canEditContacts
-                ? () => (
-                    <div className="kanban-ghost-card" onClick={handleOpenAdd}>
-                      <span className="ghost-plus-box">
-                        <PlusIcon className="h-3 w-3" />
-                      </span>
-                      Add
-                    </div>
-                  )
+                ? () => <KanbanAddCard label={t('common.add')} onAdd={handleOpenAdd} />
                 : undefined
             }
           />
         )
       ) : viewType === 'list' && !groupFieldForKanban ? (
-        <p className="mt-4">This view's group-by field no longer exists.</p>
-      ) : sortedContacts.length === 0 ? (
-        <EmptyState
-          icon={<SearchIcon />}
-          title={`No matches for "${search}"`}
-          body="Try a different term, or clear the filters."
-          primaryLabel="Clear filters"
-          primaryVariant="secondary"
-          onPrimary={() => {
-            setSearch('');
-            setViewFilters([]);
-          }}
-        />
+        <p className="mt-4">{t('contacts.groupByBroken')}</p>
       ) : (
         <>
           <EntityCardList
@@ -1208,7 +1199,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
             getMeta={(contact) => [contact.title, contact.company?.name].filter(Boolean).join(' · ')}
             onSelect={(contact) => setViewingContactId(contact.id)}
           />
-          <div className="full-table-wrap has-mobile-cards" ref={tableWrapRef}>
+          <div className={`full-table-wrap${tableIsEmpty ? '' : ' has-mobile-cards'}`} ref={tableWrapRef}>
             <table className="table full-table">
               <colgroup>
                 {visibleColumns.map((col) => (
@@ -1294,7 +1285,12 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
                   <th></th>
                 </tr>
               </thead>
-              {viewType === 'list'
+              {tableIsEmpty ? (
+                <tbody>
+                  {emptyRow}
+                  {ghostAddRow}
+                </tbody>
+              ) : viewType === 'list'
                 ? listSections.map((section) => (
                     <tbody key={section.key}>
                       <tr className="list-section-row">

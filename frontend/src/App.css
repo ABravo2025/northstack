@@ -1188,37 +1188,6 @@ table.help-ref td.no {
   @apply mt-4 flex items-center justify-center gap-3;
 }
 
-.empty-state {
-  @apply grid justify-items-center gap-0 border border-line bg-surface-1 text-center dark:border-dark-line dark:bg-dark-surface;
-  grid-template-rows: 44px auto 1fr var(--size-control-md) 16px;
-  padding: 36px 20px 28px;
-}
-
-.empty-state-icon {
-  @apply flex h-11 w-11 items-center justify-center rounded-full text-accent;
-  background: var(--color-accent-tint);
-}
-
-.empty-state-icon svg {
-  @apply h-5 w-5;
-}
-
-.empty-state-title {
-  @apply mt-3.5 mb-1 text-sm font-bold text-ink dark:text-dark-ink;
-}
-
-.empty-state-body {
-  @apply mx-auto max-w-[240px] text-xs leading-relaxed text-ink-muted dark:text-dark-ink-muted;
-}
-
-.empty-state-actions {
-  @apply mt-5 flex items-center gap-2;
-}
-
-.empty-state-hint {
-  @apply mt-2.5 text-[11px] text-ink-faint dark:text-dark-ink-faint;
-}
-
 /* ---------- Loading skeleton (TableSkeleton.tsx) ---------- */
 
 .skeleton-head {
@@ -2312,16 +2281,64 @@ table.help-ref td.no {
 
 /* Always-visible "Add" affordance (Airtable-style ghost row/card) — replaces
    the toolbar's primary "Add X" button in Grid/List/Kanban. */
-.full-table .ghost-row-cell {
+.table .ghost-row-cell {
   @apply cursor-pointer overflow-visible border-2 border-dashed border-line-strong py-0 text-ink-faint transition-colors hover:border-accent hover:text-accent dark:border-dark-line dark:text-dark-ink-faint dark:hover:border-brand-blue-light dark:hover:text-brand-blue-light;
 }
 
 .ghost-row-inner {
-  @apply flex items-center gap-2 px-1 py-2.5 text-sm font-medium;
+  @apply flex w-full cursor-pointer items-center gap-2 border-0 bg-transparent px-1 py-2.5 text-left text-sm font-medium text-inherit;
+}
+
+.ghost-row-inner:focus-visible {
+  outline: none;
+}
+
+.table .ghost-row-cell:focus-within {
+  @apply border-accent text-accent dark:border-brand-blue-light dark:text-brand-blue-light;
+}
+
+/* Empty table (TableBody.tsx): the header stays, this row takes the place of the
+   rows — never a separate card that hides the table. */
+.table-empty-row td,
+.full-table .table-empty-row td {
+  @apply border-b border-line-soft px-4 py-8 whitespace-normal dark:border-dark-line;
+}
+
+.table-empty-row:hover,
+.full-table tbody .table-empty-row:hover td {
+  background: transparent !important;
+}
+
+.table-empty {
+  @apply flex flex-wrap items-center gap-x-4 gap-y-3;
+}
+
+.table-empty-icon {
+  @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent-tint text-accent dark:text-brand-blue-light;
+}
+
+.table-empty-icon svg {
+  @apply h-4 w-4;
+}
+
+.table-empty-text {
+  @apply flex min-w-0 flex-1 flex-col gap-0.5;
+}
+
+.table-empty-title {
+  @apply text-sm font-semibold text-ink dark:text-dark-ink;
+}
+
+.table-empty-body {
+  @apply text-[13px] text-ink-muted dark:text-dark-ink-muted;
+}
+
+.table-empty-actions {
+  @apply flex flex-wrap gap-2;
 }
 
 .kanban-ghost-card {
-  @apply flex cursor-pointer items-center gap-2 rounded-md border-2 border-dashed border-line-strong p-2.5 text-sm font-medium text-ink-faint transition-colors hover:border-accent hover:text-accent dark:border-dark-line dark:text-dark-ink-faint dark:hover:border-brand-blue-light dark:hover:text-brand-blue-light;
+  @apply flex w-full cursor-pointer items-center gap-2 bg-transparent text-left rounded-md border-2 border-dashed border-line-strong p-2.5 text-sm font-medium text-ink-faint transition-colors hover:border-accent hover:text-accent dark:border-dark-line dark:text-dark-ink-faint dark:hover:border-brand-blue-light dark:hover:text-brand-blue-light;
 }
 
 /* ---------- Tasks (EntityTasksList) ---------- */
@@ -3037,4 +3054,10 @@ html.dark {
 }
 .auth-blob-2 {
   background: radial-gradient(circle, #6b47dc 0%, transparent 70%);
+}
+
+/* Ghost "+ Add" affordances are real <button>s now (TableBody.tsx) — keep the cell's type. */
+.ghost-row-inner,
+.kanban-ghost-card {
+  font-family: inherit;
 }

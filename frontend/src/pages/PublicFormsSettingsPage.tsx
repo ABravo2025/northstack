@@ -3,10 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { api, type Pipeline, type Form, type PublicFormFieldConfig } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import SlideOver from '../components/common/SlideOver';
-import EmptyState from '../components/common/EmptyState';
+import TableBody from '../components/common/TableBody';
 import RequiredMark from '../components/common/RequiredMark';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
-import { GripIcon, ListIcon, PlusIcon, XIcon } from '../components/common/Icons';
+import { GripIcon, ListIcon, XIcon } from '../components/common/Icons';
 import { usePrimaryAction } from '../contexts/PrimaryActionContext';
 
 interface PublicFormsSettingsPageProps {
@@ -503,21 +503,8 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
 
       <div className="page-toolbar no-border">
         <h2>{t('publicForms.title')}</h2>
-        {/* Hidden below md: the mobile FAB (usePrimaryAction below) already exposes this same
-            "New Form" action there. Hidden entirely once the current tab has no forms: the
-            EmptyState below has its own "Build a form" button then. Either way it'd be two ways
-            to do one thing. `hidden` goes on this wrapper, not the button — .btn-outline is
-            unlayered custom CSS (App.css) that also sets `display`, which beats the `hidden`
-            utility on the same element (Tailwind's utilities layer loses to unlayered CSS
-            either way). */}
-        {filteredForms.length > 0 && (
-          <span className="hidden ml-auto md:inline-block">
-            <button type="button" className="btn-outline gap-1.5" onClick={handleOpenCreate}>
-              <PlusIcon className="h-3.5 w-3.5" />
-              {t('publicForms.newForm')}
-            </button>
-          </span>
-        )}
+        {/* "New form" is the table's "+ New form" row (and the mobile FAB, usePrimaryAction
+            above), so there is no toolbar duplicate. */}
       </div>
       <div className="views-bar" ref={viewsBarRef}>
         <button type="button" className={`view-tab ${tab === 'employee' ? 'active' : ''}`} onClick={() => setTab('employee')}>
@@ -534,16 +521,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
 
       <div className="mt-4">
         {loading && <p>{t('publicForms.loading')}</p>}
-        {!loading && filteredForms.length === 0 && (
-          <EmptyState
-            icon={<ListIcon />}
-            title={t('publicForms.emptyTitle')}
-            body={t('publicForms.emptyBody')}
-            primaryLabel={t('publicForms.buildForm')}
-            onPrimary={handleOpenCreate}
-          />
-        )}
-        {!loading && filteredForms.length > 0 && (
+        {!loading && (
           <>
           <div className="entity-card-list">
             {filteredForms.map((form) => (
@@ -574,7 +552,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
               </div>
             ))}
           </div>
-          <div className="full-table-wrap has-mobile-cards">
+          <div className={`full-table-wrap${filteredForms.length === 0 ? '' : ' has-mobile-cards'}`}>
             <table className="table full-table">
               <thead>
                 <tr>
@@ -584,7 +562,13 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
                   <th>{t('publicForms.columns.actions')}</th>
                 </tr>
               </thead>
-              <tbody>
+              <TableBody
+                colSpan={4}
+                isEmpty={filteredForms.length === 0}
+                empty={{ icon: <ListIcon />, title: t('publicForms.emptyTitle'), body: t('publicForms.emptyBody') }}
+                onAdd={handleOpenCreate}
+                addLabel={t('publicForms.newForm')}
+              >
                 {filteredForms.map((form) => (
                   <tr key={form.id} className={!form.isActive ? 'table-row-inactive' : ''}>
                     <td>{form.name}</td>
@@ -608,7 +592,7 @@ export default function PublicFormsSettingsPage({ token }: PublicFormsSettingsPa
                     </td>
                   </tr>
                 ))}
-              </tbody>
+              </TableBody>
             </table>
           </div>
           </>

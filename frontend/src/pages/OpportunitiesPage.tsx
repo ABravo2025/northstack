@@ -12,7 +12,7 @@ import TableSkeleton from '../components/common/TableSkeleton';
 import Field from '../components/common/Field';
 import { formatMoney } from '../lib/currencies';
 import { getInitials } from '../components/common/Avatar';
-import { PlusIcon } from '../components/common/Icons';
+import { KanbanAddCard } from '../components/common/TableBody';
 import { useAutoCreateGuard } from '../hooks/useAutoCreateGuard';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { usePrimaryAction } from '../contexts/PrimaryActionContext';
@@ -964,12 +964,7 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
           renderColumnFooter={
             canEdit
               ? (columnKey) => (
-                  <div className="kanban-ghost-card" onClick={() => handleOpenAdd(columnKey)}>
-                    <span className="ghost-plus-box">
-                      <PlusIcon className="h-3 w-3" />
-                    </span>
-                    {t('common.add')}
-                  </div>
+                  <KanbanAddCard label={t('common.add')} onAdd={() => handleOpenAdd(columnKey)} />
                 )
               : undefined
           }

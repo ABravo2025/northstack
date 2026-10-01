@@ -6,7 +6,7 @@ import { useToast } from '../components/common/ToastProvider';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Pagination, { paginate } from '../components/common/Pagination';
 import Modal from '../components/common/Modal';
-import EmptyState from '../components/common/EmptyState';
+import { KanbanAddCard, TableAddRow, TableEmptyRow } from '../components/common/TableBody';
 import TableSkeleton from '../components/common/TableSkeleton';
 import EntityCardList from '../components/common/EntityCardList';
 import ViewsBar from '../components/entity-views/ViewsBar';
@@ -699,8 +699,10 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
 
   const groupFieldForKanban = activeView?.groupByField ? findField(fields, activeView.groupByField) : undefined;
   const groupByBroken = (viewType === 'kanban' || viewType === 'list') && !groupFieldForKanban;
-  const noResultsInGridOrList = viewType !== 'kanban' && sortedCompanies.length === 0;
-  const showAddFallback = canEditCompanies && companies.length > 0 && (groupByBroken || noResultsInGridOrList);
+  // Table + "+ Add" row always render (TableBody standard); only a broken group-by view
+  // has no body to hold them, so the toolbar button covers just that case.
+  const showAddFallback = canEditCompanies && groupByBroken;
+  const tableIsEmpty = sortedCompanies.length === 0;
 
   const totalColumnCount = visibleColumns.length + visibleCustomFields.length + (canManageCustomFields ? 1 : 0) + 1;
 
@@ -778,17 +780,37 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
   );
 
   const ghostAddRow = canEditCompanies && (
-    <tr className="ghost-row">
-      <td colSpan={totalColumnCount} className="ghost-row-cell" onClick={handleOpenAdd}>
-        <span className="ghost-row-inner">
-          <span className="ghost-plus-box">
-            <PlusIcon className="h-3 w-3" />
-          </span>
-          {t('common.add')}
-        </span>
-      </td>
-    </tr>
+    <TableAddRow colSpan={totalColumnCount} label={t('common.add')} onAdd={handleOpenAdd} />
   );
+
+  const emptyRow =
+    companies.length === 0 ? (
+      <TableEmptyRow
+        colSpan={totalColumnCount}
+        icon={<BuildingIcon />}
+        title={canEditCompanies ? t('companies.emptyState.title') : t('companies.emptyState.plain')}
+        body={canEditCompanies ? t('companies.emptyState.body') : undefined}
+      />
+    ) : (
+      <TableEmptyRow
+        colSpan={totalColumnCount}
+        icon={<SearchIcon />}
+        title={t('companies.noMatches.title', { search })}
+        body={t('companies.noMatches.body')}
+        actions={
+          <button
+            type="button"
+            className="btn-secondary btn-md"
+            onClick={() => {
+              setSearch('');
+              setViewFilters([]);
+            }}
+          >
+            {t('companies.noMatches.clearFilters')}
+          </button>
+        }
+      />
+    );
 
   return (
     <div className="page-full">
@@ -1130,18 +1152,6 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
 
       {loading ? (
         <TableSkeleton />
-      ) : companies.length === 0 ? (
-        canEditCompanies ? (
-          <EmptyState
-            icon={<BuildingIcon />}
-            title={t('companies.emptyState.title')}
-            body={t('companies.emptyState.body')}
-            primaryLabel={t('companies.emptyState.primaryLabel')}
-            onPrimary={handleOpenAdd}
-          />
-        ) : (
-          <p className="mt-4">{t('companies.emptyState.plain')}</p>
-        )
       ) : viewType === 'kanban' ? (
         !groupFieldForKanban ? (
           <p className="mt-4">{t('companies.groupByBroken')}</p>
@@ -1160,32 +1170,13 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
             )}
             renderColumnFooter={
               canEditCompanies
-                ? () => (
-                    <div className="kanban-ghost-card" onClick={handleOpenAdd}>
-                      <span className="ghost-plus-box">
-                        <PlusIcon className="h-3 w-3" />
-                      </span>
-                      {t('common.add')}
-                    </div>
-                  )
+                ? () => <KanbanAddCard label={t('common.add')} onAdd={handleOpenAdd} />
                 : undefined
             }
           />
         )
       ) : viewType === 'list' && !groupFieldForKanban ? (
         <p className="mt-4">{t('companies.groupByBroken')}</p>
-      ) : sortedCompanies.length === 0 ? (
-        <EmptyState
-          icon={<SearchIcon />}
-          title={t('companies.noMatches.title', { search })}
-          body={t('companies.noMatches.body')}
-          primaryLabel={t('companies.noMatches.clearFilters')}
-          primaryVariant="secondary"
-          onPrimary={() => {
-            setSearch('');
-            setViewFilters([]);
-          }}
-        />
       ) : (
         <>
           <EntityCardList
@@ -1197,7 +1188,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
             getStatusColor={(company) => company.statusDefn?.color || '#6b7280'}
             onSelect={(company) => setViewingCompanyId(company.id)}
           />
-          <div className="full-table-wrap has-mobile-cards" ref={tableWrapRef}>
+          <div className={`full-table-wrap${tableIsEmpty ? '' : ' has-mobile-cards'}`} ref={tableWrapRef}>
             <table className="table full-table">
               <colgroup>
                 {visibleColumns.map((col) => (
@@ -1302,7 +1293,12 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
                   <th></th>
                 </tr>
               </thead>
-              {viewType === 'list'
+              {tableIsEmpty ? (
+                <tbody>
+                  {emptyRow}
+                  {ghostAddRow}
+                </tbody>
+              ) : viewType === 'list'
                 ? listSections.map((section) => (
                     <tbody key={section.key}>
                       <tr className="list-section-row">

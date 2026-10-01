@@ -1286,7 +1286,7 @@ model EmployeeReligiousHoliday {
   tenantId   String
   tenant     Tenant   @relation(fields: [tenantId], references: [id])
   employeeId String
-  employee   Employee @relation(fields: [employeeId], references: [id])
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   religion   String
   createdAt  DateTime @default(now())
 
@@ -1301,7 +1301,7 @@ model TimeOffAdjustment {
   tenantId        String
   tenant          Tenant                  @relation(fields: [tenantId], references: [id])
   employeeId      String
-  employee        Employee                @relation(fields: [employeeId], references: [id])
+  employee        Employee                @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   timeOffPolicyId String
   timeOffPolicy   TimeOffPolicyDefinition @relation(fields: [timeOffPolicyId], references: [id])
   year            Int
@@ -1320,7 +1320,7 @@ model TimeOffYearClose {
   tenantId        String
   tenant          Tenant                  @relation(fields: [tenantId], references: [id])
   employeeId      String
-  employee        Employee                @relation(fields: [employeeId], references: [id])
+  employee        Employee                @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   timeOffPolicyId String
   timeOffPolicy   TimeOffPolicyDefinition @relation(fields: [timeOffPolicyId], references: [id])
   year            Int

@@ -1921,7 +1921,9 @@ export default function GuidePage() {
               igual. Si te pasás, cada puesto extra cuesta {seatPrice}/mes, facturado automáticamente; no hay un tope duro
               una vez que estás en un plan real. La prueba gratuita (sin plan elegido todavía) está limitada a {trialCap}{' '}
               personas porque todavía no hay facturación configurada para cubrir a nadie más allá de eso — elegí un
-              plan para agregar más.
+              plan para agregar más. En Starter, Nómina y Pagos no aparecen en ningún lado (menú, dashboards,
+              ficha del empleado, roles, integraciones) — si pasás a Growth se muestran solas, y los permisos que ya
+              tenían tus roles se mantienen.
             </p>
 
             <div className="help-sub">
@@ -1997,7 +1999,9 @@ export default function GuidePage() {
               regardless of role — owner, admin, or member all count the same. Go over and each extra seat is
               {seatPrice}/mo, billed automatically; no hard cap once you're on a real plan. Free Trial (no plan chosen yet)
               is capped at {trialCap} people since there's no billing in place yet to cover anyone past that — pick a plan to
-              add more.
+              add more. On Starter, Payroll and Payments don't appear anywhere (menu, dashboards, employee profile,
+              roles, integrations) — upgrade to Growth and they show up on their own, with any permissions your roles
+              already had kept as they were.
             </p>
 
             <div className="help-sub">

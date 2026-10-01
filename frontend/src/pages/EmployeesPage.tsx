@@ -155,8 +155,12 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   );
 
   const fields = useMemo(
-    () => buildEmployeeFields(employeeStatuses, employeeCustomFields, employeeDepartments, employeeJobTitles),
-    [employeeStatuses, employeeCustomFields, employeeDepartments, employeeJobTitles],
+    () =>
+      buildEmployeeFields(employeeStatuses, employeeCustomFields, employeeDepartments, employeeJobTitles).filter(
+        // Pay Frequency is a Payroll value — no filter/group-by on it without Payroll access.
+        (field) => canManagePayroll || field.key !== 'payFrequencyName',
+      ),
+    [employeeStatuses, employeeCustomFields, employeeDepartments, employeeJobTitles, canManagePayroll],
   );
   const groupable = useMemo(() => groupableFields(fields), [fields]);
 
@@ -243,6 +247,12 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
   });
 
   const [employeeForm, setEmployeeForm] = useState(getEmptyEmployeeForm);
+  // The initial contract is a Payroll record (POST /api/hr/payroll/compensation, gated by
+  // requirePayrollAccess) — without manage_payroll, or on the Starter plan (folded into has(), see
+  // PermissionsContext), the block is hidden and skipped instead of creating the employee and then
+  // 403ing on the compensation half (2026-10-01).
+  const needsInitialCompensation =
+    canManagePayroll && (employeeForm.personType === 'contractor' || employeeForm.personType === 'employee');
   const autoCreateGuard = useAutoCreateGuard();
   const [createdEmployeeId, setCreatedEmployeeId] = useState<string | null>(null);
   const sentEmployeeCustomFieldIds = useRef<Set<string>>(new Set());
@@ -256,7 +266,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     loadEmployeeDepartments();
     loadEmployeeJobTitles();
     loadTimeOffPolicies();
-    loadPayFrequencies();
+    if (canManagePayroll) loadPayFrequencies();
     loadViews();
     api
       .listTenantUsers(token)
@@ -466,8 +476,9 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     if (!employeeForm.startDate) return false;
     if (!employeeForm.contractType) return false;
     // Contractor/Employee can't be saved without a complete initial contract
-    // (docs/spec-payroll.md Unidad 4/5) — Profile never shows or needs this.
-    if (employeeForm.personType === 'contractor' || employeeForm.personType === 'employee') {
+    // (docs/spec-payroll.md Unidad 4/5) — Profile never shows or needs this. Only when the
+    // initial-compensation block is actually shown (needsInitialCompensation below).
+    if (needsInitialCompensation) {
       if (!employeeForm.compensationType) return false;
       if (!employeeForm.rateAmount.trim() || Number.isNaN(Number.parseFloat(employeeForm.rateAmount))) return false;
       if (!employeeForm.currency.trim()) return false;
@@ -537,7 +548,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       nationality: employeeForm.nationality || undefined,
     });
 
-    if (employeeForm.personType === 'contractor' || employeeForm.personType === 'employee') {
+    if (needsInitialCompensation) {
       await api.createCompensation(token, {
         employeeId: employee.id,
         compensationType: employeeForm.compensationType as 'hourly' | 'fixed',
@@ -835,7 +846,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     );
   };
 
-  const columns = [
+  const allColumns = [
     {
       key: 'name',
       label: t('employees.columns.name'),
@@ -931,6 +942,11 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       render: (emp: any) => emp.payFrequencyName || '—',
     },
   ];
+
+  // Contract Status / Pay Frequency come from Payroll compensation records — always empty (—)
+  // without Payroll access, so they aren't offered at all then.
+  const PAYROLL_COLUMN_KEYS = ['contractStatus', 'payFrequencyName'];
+  const columns = canManagePayroll ? allColumns : allColumns.filter((col) => !PAYROLL_COLUMN_KEYS.includes(col.key));
 
   const toggleableColumns = [
     ...columns,
@@ -1321,7 +1337,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
               </div>
             </div>
 
-            {(employeeForm.personType === 'contractor' || employeeForm.personType === 'employee') && (
+            {needsInitialCompensation && (
               <div className="field-group">
                 <h4 className="field-group-title">{t('employees.groups.initialCompensation')}</h4>
                 <div className="field-group-body">

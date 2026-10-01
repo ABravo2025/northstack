@@ -6,6 +6,7 @@ import { setActiveSessionToken, setUnauthorizedHandler } from './api/http';
 import i18n from './lib/i18n';
 import { useToast } from './components/common/ToastProvider';
 import { PermissionsProvider } from './contexts/PermissionsContext';
+import { isGrowthFeatureEnabled } from './lib/planLimits';
 import TableSkeleton from './components/common/TableSkeleton';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
@@ -245,9 +246,15 @@ export default function App() {
   }
 
   const isAuthenticated = Boolean(token && user);
+  // Plan-tier hiding (2026-10-01) — a Starter tenant guessing a Growth-only URL is sent back
+  // instead of landing on a page whose "no permission / owner only" copy would misread as a
+  // role problem. Sidebar/sections already hide the links themselves (see PermissionsContext).
+  const growthPlan = isGrowthFeatureEnabled(tenant);
+  const growthOnly = (element: React.ReactElement, fallback: string) =>
+    growthPlan ? element : <Navigate to={fallback} replace />;
 
   return (
-    <PermissionsProvider payload={permissions}>
+    <PermissionsProvider payload={permissions} growthPlan={growthPlan}>
     <Routes>
       <Route
         path="/login"
@@ -330,7 +337,7 @@ export default function App() {
           <Route index element={<DashboardsHomePage />} />
           <Route path="hr" element={<DashboardsHrPage />} />
           <Route path="time-off" element={<DashboardsTimeOffPage />} />
-          <Route path="payroll" element={<DashboardsPayrollPage />} />
+          <Route path="payroll" element={growthOnly(<DashboardsPayrollPage />, '/dashboards')} />
           <Route path="sales" element={<DashboardsSalesPage />} />
           <Route path="tasks" element={<DashboardsTasksPage />} />
           <Route path="adoption" element={<DashboardsAdoptionPage />} />
@@ -338,12 +345,12 @@ export default function App() {
         <Route path="/hr/people" element={<EmployeesPage user={user} token={token ?? ''} />} />
         <Route path="/hr/employees" element={<Navigate to="/hr/people" replace />} />
         <Route path="/hr/time-off" element={<TimeOffOverviewPage user={user} token={token ?? ''} />} />
-        <Route path="/hr/payroll" element={<PayrollPage token={token ?? ''} />} />
-        <Route path="/hr/payroll/runs/:runId" element={<PayrollRunDetailPage token={token ?? ''} />} />
+        <Route path="/hr/payroll" element={growthOnly(<PayrollPage token={token ?? ''} />, '/')} />
+        <Route path="/hr/payroll/runs/:runId" element={growthOnly(<PayrollRunDetailPage token={token ?? ''} />, '/')} />
         <Route path="/companies" element={<CompaniesPage user={user} token={token ?? ''} />} />
         <Route path="/contacts" element={<ContactsPage user={user} token={token ?? ''} />} />
         <Route path="/opportunities" element={<OpportunitiesPage user={user} token={token ?? ''} />} />
-        <Route path="/payments" element={<PaymentsOverviewPage token={token ?? ''} />} />
+        <Route path="/payments" element={growthOnly(<PaymentsOverviewPage token={token ?? ''} />, '/')} />
         <Route path="/profile" element={<Navigate to="/settings/profile" replace />} />
         <Route path="/company" element={<Navigate to="/settings/company" replace />} />
         <Route path="/settings" element={<WorkspaceSettingsLayout />}>

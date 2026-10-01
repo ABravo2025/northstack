@@ -2,12 +2,15 @@ import { useOutletContext } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import StatTile from '../../components/metrics/StatTile';
 import { useTenantMetrics } from '../../lib/useTenantMetrics';
+import { usePermissions } from '../../contexts/PermissionsContext';
 import type { DashboardsOutletContext } from '../../layouts/DashboardsLayout';
 
 export default function DashboardsAdoptionPage() {
   const { t } = useTranslation('dashboards');
   const { token, range } = useOutletContext<DashboardsOutletContext>();
   const { metrics, loading } = useTenantMetrics(token, range);
+  // Payroll isn't part of the Starter plan — don't list it as an "unused" module there.
+  const { growthPlan } = usePermissions();
 
   // Module keys ('hr', 'sales', 'time_off', 'payroll') come from the API — the snake_case
   // 'time_off' is the one that doesn't match a JSON key directly, hence the lookup below instead
@@ -46,7 +49,7 @@ export default function DashboardsAdoptionPage() {
       <div className="card">
         <h3 className="card-title">{t('adoption.moduleUsage')}</h3>
         <div className="flex flex-wrap gap-2">
-          {adoption.moduleUsage.map((m) => (
+          {adoption.moduleUsage.filter((m) => growthPlan || m.module !== 'payroll').map((m) => (
             <div
               key={m.module}
               className={`rounded-full border px-3 py-1 text-xs font-medium ${

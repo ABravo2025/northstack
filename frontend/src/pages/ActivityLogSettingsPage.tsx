@@ -44,6 +44,18 @@ const ENTITY_TYPE_VALUES: ActivityEntityType[] = [
   'stripeInvoice',
 ];
 
+// Same gates as the backend's ACTIVITY_MODULE_GATE (activityVisibilityService.ts) for the Payroll/
+// Payments entity types — not offered as a filter when has() is false (no permission, or the
+// Starter plan, see PermissionsContext), since they'd always come back empty.
+const ENTITY_TYPE_PERMISSION: Partial<Record<ActivityEntityType, string>> = {
+  employeeCompensation: 'manage_payroll',
+  payrollRun: 'manage_payroll',
+  payFrequency: 'manage_payroll',
+  paymentMethod: 'manage_payroll',
+  stripeConnection: 'manage_payments',
+  stripeInvoice: 'manage_payments',
+};
+
 const ACTION_VALUES: ('create' | 'update' | 'delete')[] = ['create', 'update', 'delete'];
 
 function ActionIcon({ action }: { action: ActivityLogEntry['action'] }) {
@@ -191,7 +203,10 @@ export default function ActivityLogSettingsPage({ token }: ActivityLogSettingsPa
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <select className="select-compact" value={entityType} onChange={(e) => setEntityType(e.target.value as ActivityEntityType | '')}>
           <option value="">{t('activityLogSettings.allTypes')}</option>
-          {ENTITY_TYPE_VALUES.map((value) => (
+          {ENTITY_TYPE_VALUES.filter((value) => {
+            const permission = ENTITY_TYPE_PERMISSION[value];
+            return !permission || permissions.has(permission);
+          }).map((value) => (
             <option key={value} value={value}>
               {t(`activityLogSettings.entityTypes.${value}`)}
             </option>

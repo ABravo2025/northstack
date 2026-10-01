@@ -3,8 +3,9 @@ import type { TimeOffBalance, CustomFieldValue } from './types.js';
 
 export const timeOffBalancesApi = {
   // Time off balances
-  listTimeOffBalances: async (token: string): Promise<TimeOffBalance[]> => {
-    const res = await apiFetch(`${API_BASE_URL}/api/hr/time-off-balances`, {
+  // scope 'team' = the caller's direct reports (any employee); no scope = whole tenant (admins).
+  listTimeOffBalances: async (token: string, scope?: 'team'): Promise<TimeOffBalance[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/hr/time-off-balances${scope ? `?scope=${scope}` : ''}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);

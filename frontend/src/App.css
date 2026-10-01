@@ -3064,3 +3064,255 @@ html.dark {
 .kanban-ghost-card {
   font-family: inherit;
 }
+
+/* ---------- Time Off (2026-10 redesign: TimeOffOverviewPage + components/timeOff/) ---------- */
+.to-view {
+  @apply flex flex-col gap-6;
+}
+.to-section {
+  @apply flex flex-col gap-2.5;
+}
+.to-head {
+  @apply flex flex-wrap items-end justify-between gap-3;
+}
+.to-title {
+  @apply m-0 text-[22px] font-semibold tracking-tight text-ink dark:text-dark-ink;
+}
+.to-subtitle {
+  @apply mt-1 mb-0 text-[13.5px] text-ink-muted dark:text-dark-ink-muted;
+}
+.to-section-title {
+  @apply m-0 flex items-center gap-2 text-sm font-semibold text-ink dark:text-dark-ink;
+}
+.to-muted {
+  @apply text-ink-muted dark:text-dark-ink-muted;
+}
+.to-faint {
+  @apply text-xs font-medium text-ink-faint dark:text-dark-ink-faint;
+}
+.to-hint {
+  @apply m-0 text-xs text-ink-faint dark:text-dark-ink-faint;
+}
+.to-link {
+  @apply cursor-pointer border-0 bg-transparent p-0 text-[13px] font-semibold text-accent hover:underline dark:text-brand-blue-light;
+}
+.to-filter-note {
+  @apply flex items-center gap-2 text-[13px] text-ink-muted dark:text-dark-ink-muted;
+}
+.to-policy-name {
+  @apply inline-flex items-center gap-2 font-medium;
+}
+.to-person {
+  @apply flex items-center gap-3;
+}
+.to-person-text {
+  @apply flex min-w-0 flex-col;
+}
+.to-person-text b {
+  @apply font-semibold text-ink dark:text-dark-ink;
+}
+.to-person-text span {
+  @apply text-xs text-ink-faint dark:text-dark-ink-faint;
+}
+.to-search {
+  @apply w-72 max-w-full flex-none;
+}
+
+/* Balance cards — one per policy; picking one filters "My requests". */
+.to-balances {
+  @apply grid gap-3.5;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+.to-bal {
+  @apply flex cursor-pointer flex-col gap-2.5 rounded-xl border border-line bg-surface-1 p-4 text-left text-ink transition-colors hover:border-line-strong dark:border-dark-line dark:bg-dark-surface dark:text-dark-ink dark:hover:border-gray-600;
+  box-shadow: var(--ns-shadow-card);
+  font-family: inherit;
+}
+.to-bal[aria-pressed='true'] {
+  @apply border-accent;
+  box-shadow: 0 0 0 3px var(--ns-ring);
+}
+.to-bal-top {
+  @apply flex items-center justify-between gap-2;
+}
+.to-bal-big {
+  @apply text-[30px] leading-none font-semibold tracking-tight;
+}
+.to-bal-big small {
+  @apply ml-1 text-[13px] font-medium tracking-normal text-ink-muted dark:text-dark-ink-muted;
+}
+.to-bal-legend {
+  @apply flex flex-wrap gap-3 text-xs text-ink-muted dark:text-dark-ink-muted;
+}
+.to-meter {
+  @apply flex h-2 overflow-hidden rounded bg-line-soft dark:bg-dark-line;
+}
+.to-meter span {
+  @apply block h-full;
+}
+.to-meter-pending {
+  background-image: repeating-linear-gradient(135deg, currentColor 0 3px, transparent 3px 6px);
+  opacity: 0.55;
+}
+.to-mini-meter {
+  @apply flex items-center gap-2.5;
+}
+.to-mini-meter .to-meter {
+  @apply w-24;
+}
+
+/* Tables: rows open a detail panel. */
+.to-table td {
+  @apply text-[13px] whitespace-nowrap;
+}
+.to-table .to-note-cell {
+  @apply max-w-[280px] truncate;
+}
+.to-row {
+  @apply cursor-pointer;
+}
+.to-row:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+/* Request status chips (tokens, not the per-tenant status colors). */
+.to-chip {
+  @apply inline-flex h-6 items-center gap-1.5 rounded-full px-2.5 text-xs font-semibold whitespace-nowrap;
+}
+.to-chip::before {
+  content: '';
+  @apply h-1.5 w-1.5 rounded-full bg-current;
+}
+.to-chip-pending {
+  @apply bg-amber-100 text-amber-800 dark:bg-amber-400/15 dark:text-amber-300;
+}
+.to-chip-approved {
+  @apply bg-emerald-100 text-emerald-800 dark:bg-emerald-400/15 dark:text-emerald-300;
+}
+.to-chip-rejected {
+  @apply bg-red-100 text-red-800 dark:bg-red-400/15 dark:text-red-300;
+}
+.to-chip-cancelled {
+  @apply bg-gray-100 text-ink-muted dark:bg-gray-800 dark:text-dark-ink-muted;
+}
+
+/* Team: approvals first. */
+.to-approvals {
+  @apply grid gap-3;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+}
+.to-ap {
+  @apply flex flex-col gap-3 rounded-xl border border-line border-t-[3px] border-t-amber-500 bg-surface-1 p-3.5 dark:border-dark-line dark:border-t-amber-400 dark:bg-dark-surface;
+  box-shadow: var(--ns-shadow-card);
+}
+.to-ap-compact {
+  @apply border-line-strong shadow-none dark:border-dark-line;
+}
+.to-ap-facts {
+  @apply grid grid-cols-3 gap-2 text-xs text-ink-faint dark:text-dark-ink-faint;
+}
+.to-ap-facts strong {
+  @apply mt-0.5 block text-[13px] font-semibold text-ink dark:text-dark-ink;
+}
+.to-ap-note {
+  @apply m-0 text-[13px] text-ink-muted dark:text-dark-ink-muted;
+}
+.to-ap-actions {
+  @apply flex flex-wrap items-center gap-2;
+}
+.to-ap-reject {
+  @apply flex flex-col gap-2.5;
+}
+.to-all-clear {
+  @apply rounded-xl bg-emerald-50 px-4 py-3.5 text-sm font-semibold text-emerald-800 dark:bg-emerald-400/10 dark:text-emerald-300;
+}
+
+/* Slide-over bodies. */
+.to-panel {
+  @apply flex flex-col gap-5;
+}
+.to-panel-block {
+  @apply flex flex-col gap-2.5;
+}
+.to-panel-block h4 {
+  @apply m-0 text-[13px] font-semibold text-ink dark:text-dark-ink;
+}
+.to-panel-block p {
+  @apply m-0 text-[13px];
+}
+.to-facts {
+  @apply grid grid-cols-2 gap-3;
+}
+.to-facts > div {
+  @apply rounded-lg border border-line bg-surface-2 px-3 py-2.5 dark:border-dark-line dark:bg-dark-raised;
+}
+.to-facts span {
+  @apply block text-xs text-ink-faint dark:text-dark-ink-faint;
+}
+.to-facts strong {
+  @apply text-sm font-semibold text-ink dark:text-dark-ink;
+}
+.to-field-row {
+  @apply flex flex-wrap gap-3.5;
+}
+.to-field-row .form-group input {
+  max-width: 11rem;
+}
+.to-timeline {
+  @apply m-0 flex list-none flex-col gap-3 p-0;
+}
+.to-timeline li {
+  @apply flex gap-2.5 text-[13.5px] text-ink dark:text-dark-ink;
+}
+.to-timeline small {
+  @apply block text-xs text-ink-faint dark:text-dark-ink-faint;
+}
+.to-tdot {
+  @apply mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-line-strong dark:bg-gray-600;
+}
+.to-timeline li.done .to-tdot {
+  @apply bg-accent;
+}
+.to-pol-list {
+  @apply flex flex-col gap-3;
+}
+.to-pol-row {
+  @apply grid items-center gap-x-3 gap-y-1.5 text-[13.5px];
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.to-pol-row .to-meter {
+  grid-column: 1 / -1;
+}
+.to-hist > div {
+  @apply flex items-center justify-between gap-2.5 border-b border-line-soft py-2.5 text-[13px] dark:border-dark-line;
+}
+.to-assignees {
+  @apply flex flex-wrap gap-1.5;
+}
+.to-assignee {
+  @apply inline-flex h-7 items-center gap-1.5 rounded-full border border-line bg-surface-2 py-0 pr-1.5 pl-1 text-xs text-ink dark:border-dark-line dark:bg-dark-raised dark:text-dark-ink;
+}
+.to-assignee-avatar {
+  @apply inline-flex h-5 w-5 items-center justify-center rounded-full bg-avatar-bg text-[9px] font-bold text-ink dark:bg-gray-700 dark:text-dark-ink;
+}
+.to-assignee-remove {
+  @apply ml-0.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-sm leading-none text-ink-faint hover:bg-line hover:text-ink dark:hover:bg-dark-line dark:hover:text-dark-ink;
+}
+
+/* Count pill next to a sidebar item (Time Off › Team). */
+.sidebar-count {
+  @apply ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-[11px] font-semibold text-white;
+}
+
+/* Digits that line up in columns (balances, dates, counts). */
+.num {
+  font-variant-numeric: tabular-nums;
+}
+.to-panel > .to-chip {
+  @apply self-start;
+}
+/* Phones: keep the columns readable and let the table scroll sideways instead of squeezing. */
+.to-table {
+  min-width: 640px;
+}

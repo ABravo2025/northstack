@@ -400,14 +400,28 @@ mobile de `App.css`) estira el último tile en vez de dejar el hueco. Arreglado 
     `.settings-tile`, no son clases exclusivas de Settings pese al nombre). La fuente única de
     verdad (label/desc/ícono/permiso) vive en `lib/dashboardsSections.tsx`, consumida tanto por el
     home como por el sidebar — mismo rol que `settingsSections.tsx`.
-  - **Time Off** (7 tabs son `useState` interno de `TimeOffOverviewPage.tsx`, no rutas): el sidebar es
+  - **Time Off** (las vistas son `useState` interno de `TimeOffOverviewPage.tsx`, no rutas): el sidebar es
     un hermano de `<Outlet>`, no un descendiente de la página, así que no puede leer/escribir ese
     estado directo — se comparte vía `TimeOffTabContext` (mismo problema que resuelve
     `PrimaryActionContext` para el FAB, pero de ida y vuelta: el sidebar escribe `tab`, la página lo
     lee). El provider vive montado siempre en `AppLayout.tsx`, no por-ruta, así que
-    `TimeOffOverviewPage` resetea el tab a `'my-timeoff'` en su propio `useEffect` de montaje — si no,
-    volver a la página después de haber estado en otra tab la dejaría abierta ahí en vez de arrancar
-    en "My Timeoff", cambiando el comportamiento de antes de este refactor.
+    `TimeOffOverviewPage` resetea el tab a `'mine'` en su propio `useEffect` de montaje — si no,
+    volver a la página la dejaría abierta en la última vista en vez de arrancar en "My time off".
+  - **Time Off, 3 vistas (2026-10, pedido por Alejandro)** en lugar de 7 tabs, separando *lo mío* de
+    *mi equipo* — componentes en `components/timeOff/`:
+    - **My time off** (todos): una tarjeta por política (disponibles = `remaining − pending`, barra con
+      usados y "en revisión" rayado; tocarla filtra la tabla) + tabla de mis solicitudes con
+      "+ Request time off" al pie. Reemplaza My Timeoff + My Requests (el formulario siempre abierto
+      pasó a un panel).
+    - **Team** (admins, managers con reportes directos o quien tenga aprobaciones pendientes; la página
+      publica `showTeam` en el contexto): primero las tarjetas "esperan tu aprobación" (aprobar, o
+      rechazar con motivo opcional que ve la persona), después una tabla de personas con el saldo de la
+      política principal del tenant. Un manager ve solo sus reportes directos vía `?scope=team` en
+      `/api/hr/time-off-balances` y `/api/hr/time-off-requests` (el directorio de empleados no le
+      expone `managerId`). Reemplaza Approvals + Balances + All Requests.
+    - **Policies** (`manage_custom_fields`): tabla de políticas; tocar una abre su configuración y a
+      quién está asignada (quitar / "+ Assign people"). Reemplaza Policies + Assignments.
+    - Todo detalle (solicitud, persona, política, formulario de pedido) abre en un único `SlideOver`.
   - Alejandro pidió explícitamente que el swap de sidebar aplique igual en mobile que en desktop (no
     solo desktop) para mantener consistencia con Settings, aun a costa de un tap extra (abrir el
     drawer) para cambiar de tab en una sección de uso diario como Time Off.

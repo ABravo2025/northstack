@@ -1,6 +1,7 @@
+import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ChevronLeftIcon, XIcon } from '../common/Icons';
+import { CalendarIcon, ChevronLeftIcon, FormIcon, TeamIcon, XIcon } from '../common/Icons';
 import { usePermissions } from '../../contexts/PermissionsContext';
 import { useTimeOffTab, type TimeOffTab } from '../../contexts/TimeOffTabContext';
 
@@ -9,34 +10,28 @@ interface TimeOffSidebarProps {
   onMobileClose: () => void;
 }
 
-interface TimeOffTabItem {
+interface TimeOffNavItem {
   key: TimeOffTab;
   labelKey: string;
-  permission?: string;
+  icon: ReactNode;
 }
 
-const TIME_OFF_TABS: TimeOffTabItem[] = [
-  { key: 'my-timeoff', labelKey: 'timeOff.tabs.myTimeoff' },
-  { key: 'my-requests', labelKey: 'timeOff.tabs.myRequests' },
-  { key: 'approvals', labelKey: 'timeOff.tabs.approvals' },
-  { key: 'balances', labelKey: 'timeOff.tabs.balances', permission: 'manage_custom_fields' },
-  { key: 'all-requests', labelKey: 'timeOff.tabs.allRequests', permission: 'manage_custom_fields' },
-  { key: 'policies', labelKey: 'timeOff.tabs.policies', permission: 'manage_custom_fields' },
-  { key: 'assignments', labelKey: 'timeOff.tabs.assignments', permission: 'manage_custom_fields' },
-];
-
-// Swapped in for the main Sidebar while on /hr/time-off (see AppLayout.tsx),
-// same mechanism as SettingsSidebar/DashboardsSidebar — but these 7 sections
-// aren't routes, they're TimeOffOverviewPage's `tab` state, shared here via
-// TimeOffTabContext. Replaces the old .views-bar tab strip, which got
-// cramped with 7 tabs on a phone screen (2026-09-09).
+// Swapped in for the main Sidebar while on /hr/time-off (see AppLayout.tsx), same mechanism as
+// SettingsSidebar/DashboardsSidebar — but these sections aren't routes, they're
+// TimeOffOverviewPage's `tab` state, shared via TimeOffTabContext. Three views since 2026-10:
+// everyone gets "My time off"; "Team" only for admins/managers/approvers; "Policies" only with
+// manage_custom_fields (the same permission the policy routes check server-side).
 export default function TimeOffSidebar({ mobileOpen, onMobileClose }: TimeOffSidebarProps) {
   const { t } = useTranslation('tasks');
   const navigate = useNavigate();
   const permissions = usePermissions();
-  const { tab, setTab, pendingApprovalsCount } = useTimeOffTab();
+  const { tab, setTab, pendingApprovalsCount, showTeam } = useTimeOffTab();
 
-  const items = TIME_OFF_TABS.filter((item) => !item.permission || permissions.has(item.permission));
+  const items: TimeOffNavItem[] = [{ key: 'mine', labelKey: 'timeOff.nav.mine', icon: <CalendarIcon className="h-4 w-4 shrink-0" /> }];
+  if (showTeam) items.push({ key: 'team', labelKey: 'timeOff.nav.team', icon: <TeamIcon className="h-4 w-4 shrink-0" /> });
+  if (permissions.has('manage_custom_fields')) {
+    items.push({ key: 'policies', labelKey: 'timeOff.nav.policies', icon: <FormIcon className="h-4 w-4 shrink-0" /> });
+  }
 
   return (
     <>
@@ -65,8 +60,9 @@ export default function TimeOffSidebar({ mobileOpen, onMobileClose }: TimeOffSid
                 onMobileClose();
               }}
             >
+              {item.icon}
               {t(item.labelKey)}
-              {item.key === 'approvals' && pendingApprovalsCount > 0 ? ` (${pendingApprovalsCount})` : ''}
+              {item.key === 'team' && pendingApprovalsCount > 0 && <span className="sidebar-count num">{pendingApprovalsCount}</span>}
             </button>
           ))}
         </div>

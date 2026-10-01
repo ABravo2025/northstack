@@ -5,7 +5,7 @@ export const timeOffRequestsApi = {
   // Time off requests
   listTimeOffRequests: async (
     token: string,
-    scope: 'mine' | 'pending-approval' | 'all' | 'calendar' = 'mine',
+    scope: 'mine' | 'pending-approval' | 'team' | 'all' | 'calendar' = 'mine',
   ): Promise<TimeOffRequest[]> => {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/time-off-requests?scope=${scope}`, {
       headers: { Authorization: `Bearer ${token}` },

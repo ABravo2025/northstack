@@ -1,6 +1,6 @@
 import { canManageCustomFields } from '../modules/auth/permissionService.js';
 import { findEmployeeByUserId } from '../modules/hr/employeeService.js';
-import { calculateAllTimeOffBalances } from '../modules/hr/timeOffBalanceService.js';
+import { calculateAllTimeOffBalances, calculateTeamTimeOffBalances } from '../modules/hr/timeOffBalanceService.js';
 import { createTimeOffPolicy, listTimeOffPolicies, updateTimeOffPolicy } from '../modules/hr/timeOffPolicyService.js';
 import {
   cancelTimeOffRequest,
@@ -9,6 +9,7 @@ import {
   listAllTimeOffRequests,
   listMyTimeOffRequests,
   listPendingApprovals,
+  listTeamTimeOffRequests,
   listTimeOffRequestsForCalendar,
 } from '../modules/hr/timeOffRequestService.js';
 import { getPlanLimits } from '../modules/tenant/planLimits.js';
@@ -177,6 +178,13 @@ timeOffRouter.get('/api/hr/time-off-requests', async (req, res) => {
     return res.json(requests);
   }
 
+  // Direct reports of the caller's own employee record only — never a managerId from the
+  // request, so a manager can't read another team's history.
+  if (scope === 'team') {
+    const requests = await listTeamTimeOffRequests(user.tenantId!, employee.id);
+    return res.json(requests);
+  }
+
   const requests = await listMyTimeOffRequests(user.tenantId!, employee.id);
   return res.json(requests);
 });
@@ -223,6 +231,17 @@ timeOffRouter.get('/api/hr/time-off-balances', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) {
     return;
+  }
+
+  // ?scope=team — a manager's own direct reports (same rule as requests ?scope=team), open to
+  // any employee: someone with no reports simply gets an empty list.
+  if (req.query.scope === 'team') {
+    const employee = await findEmployeeByUserId(user.id);
+    if (!employee) {
+      return res.json([]);
+    }
+    const balances = await calculateTeamTimeOffBalances(user.tenantId!, employee.id);
+    return res.json(balances);
   }
 
   if (!canManageCustomFields(user.roleContext)) {

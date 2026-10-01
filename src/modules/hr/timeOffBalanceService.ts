@@ -114,6 +114,17 @@ export async function calculateEmployeeTimeOffBalances(tenantId: string, employe
   return buildBalances(assignments, tenantId);
 }
 
+// A manager's direct reports only (employee.managerId = the manager's own employee record) —
+// what the Time Off "Team" view shows a manager who isn't a tenant-wide admin. Same balance
+// math as the admin-wide list, just a narrower set of assignments.
+export async function calculateTeamTimeOffBalances(tenantId: string, managerEmployeeId: string): Promise<TimeOffBalance[]> {
+  const assignments = await prisma.employeeTimeOffPolicy.findMany({
+    where: { tenantId, employee: { managerId: managerEmployeeId } },
+    include: { employee: { select: { firstName: true, lastName: true } }, timeOffPolicy: true },
+  });
+  return buildBalances(assignments, tenantId);
+}
+
 export async function calculateAllTimeOffBalances(tenantId: string): Promise<TimeOffBalance[]> {
   const assignments = await prisma.employeeTimeOffPolicy.findMany({
     where: { tenantId },

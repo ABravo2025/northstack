@@ -257,6 +257,20 @@ export async function listTimeOffRequestsForCalendar(tenantId: string) {
   });
 }
 
+// Every request (any status) from a manager's direct reports — the per-person history in the
+// Time Off "Team" view for a manager who can't see the tenant-wide list.
+export async function listTeamTimeOffRequests(tenantId: string, managerEmployeeId: string) {
+  return prisma.timeOffRequest.findMany({
+    where: { tenantId, employee: { managerId: managerEmployeeId } },
+    include: {
+      timeOffPolicy: true,
+      employee: { select: { id: true, firstName: true, lastName: true } },
+      approver: { select: { id: true, firstName: true, lastName: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
 export async function listAllTimeOffRequests(tenantId: string, client: ExtendedPrismaClient = prisma) {
   return client.timeOffRequest.findMany({
     where: { tenantId },

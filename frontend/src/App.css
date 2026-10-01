@@ -2821,3 +2821,220 @@ input[type='number'] {
     @apply -mx-5 px-5;
   }
 }
+
+/* =====================================================================
+   UI refresh 2026-10 (propuesta, rama ui-refresh) — violeta, profundidad
+   por capas y anchos de campo según el dato. Todo vive en este bloque
+   (más los tokens de index.css) para poder evaluarlo o revertirlo junto.
+   Capas: página (lavanda) → sidebar (tinte propio) → tarjeta (blanca,
+   con sombra) → elevado (thead/popover) → input (hundido, sombra interna).
+   ===================================================================== */
+:root {
+  --ns-shadow-card: 0 1px 2px rgba(27, 23, 51, 0.05), 0 6px 18px -6px rgba(27, 23, 51, 0.1);
+  --ns-shadow-sm: 0 1px 2px rgba(27, 23, 51, 0.07);
+  --ns-shadow-inset: inset 0 1px 2px rgba(27, 23, 51, 0.06);
+  --ns-shadow-btn: 0 1px 2px rgba(27, 23, 51, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  --ns-ring: rgba(107, 71, 220, 0.22);
+}
+html.dark {
+  --ns-shadow-card: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 28px -8px rgba(0, 0, 0, 0.6);
+  --ns-shadow-sm: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 1px 2px rgba(0, 0, 0, 0.4);
+  --ns-shadow-inset: inset 0 1px 2px rgba(0, 0, 0, 0.45);
+  --ns-shadow-btn: 0 1px 2px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  --ns-ring: rgba(140, 114, 255, 0.35);
+}
+
+/* ---- Profundidad: tarjetas, modales, popovers ---- */
+.card {
+  @apply rounded-xl bg-surface-1 dark:bg-dark-surface;
+  box-shadow: var(--ns-shadow-card);
+}
+.modal-panel,
+.overview-panel {
+  @apply rounded-xl;
+  box-shadow: var(--ns-shadow-card), 0 24px 60px -12px rgba(15, 10, 40, 0.35);
+}
+.popover-panel,
+.user-menu-dropdown {
+  box-shadow: var(--ns-shadow-card);
+}
+.modal-overlay,
+.detail-modal-overlay {
+  background: rgba(17, 12, 38, 0.55);
+}
+
+/* ---- Sidebar: plano propio, item activo "levantado" en vez de tinte ---- */
+.sidebar {
+  @apply bg-sidebar dark:bg-dark-sidebar;
+}
+.sidebar-link {
+  @apply text-[13px] text-ink-muted dark:text-dark-ink-muted;
+}
+.sidebar-link:hover {
+  @apply text-ink dark:text-dark-ink;
+}
+.sidebar-link.active {
+  @apply bg-surface-1 font-semibold text-ink dark:text-dark-ink;
+  box-shadow: var(--ns-shadow-sm);
+}
+.dark .sidebar-link.active {
+  background: var(--color-dark-raised);
+}
+.sidebar-link.active svg {
+  @apply text-accent dark:text-brand-blue-light;
+}
+
+/* ---- Botones ---- */
+.btn {
+  @apply rounded-lg;
+}
+.btn-primary {
+  box-shadow: var(--ns-shadow-btn);
+}
+.btn-secondary {
+  @apply bg-surface-1 dark:border-gray-700 dark:bg-dark-surface;
+  box-shadow: var(--ns-shadow-sm);
+}
+
+/* ---- Inputs: hundidos, 38px, foco violeta con anillo ---- */
+.form-group label {
+  @apply text-[13px] font-medium text-ink dark:text-dark-ink;
+}
+.form-group input,
+.form-group select,
+.form-group textarea,
+.multi-select-trigger,
+.nv-field input,
+.nv-field select,
+.nv-field textarea,
+.color-hex-input {
+  @apply rounded-lg border-line-strong bg-input text-ink dark:border-gray-700 dark:bg-dark-input dark:text-dark-ink;
+  box-shadow: var(--ns-shadow-inset);
+}
+.form-group input:not([type='checkbox']):not([type='radio']):not([type='color']),
+.form-group select,
+.multi-select-trigger {
+  @apply px-3 text-sm;
+  min-height: 38px;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus,
+.nv-field input:focus,
+.nv-field select:focus,
+.nv-field textarea:focus {
+  @apply border-accent ring-0;
+  outline: none;
+  box-shadow: 0 0 0 3px var(--ns-ring);
+}
+.toolbar-search {
+  @apply rounded-lg bg-input dark:border-gray-700 dark:bg-dark-input;
+  box-shadow: var(--ns-shadow-inset);
+}
+.toolbar-search:focus-within {
+  @apply border-accent;
+  box-shadow: 0 0 0 3px var(--ns-ring);
+}
+
+/* ---- Anchos según el dato: los campos dejan de estirarse a toda la fila.
+   Escala: S 11rem (fecha, teléfono, número) · M 20rem (selects)
+   · L 26rem (texto, email, URL) · textarea hasta 40rem. Utilidades
+   .field-xs/.field-s/.field-m/.field-l para forzar un ancho puntual. ---- */
+.form-group input:not([type='checkbox']):not([type='radio']):not([type='color']) {
+  max-width: 26rem;
+}
+.form-group select,
+.multi-select-trigger {
+  max-width: 20rem;
+}
+.form-group input[type='date'],
+.form-group input[type='time'],
+.form-group input[type='datetime-local'],
+.form-group input[type='number'],
+.form-group input[type='tel'] {
+  max-width: 11rem;
+}
+.form-group textarea {
+  max-width: 40rem;
+}
+.field-xs { max-width: 6rem !important; }
+.field-s { max-width: 11rem !important; }
+.field-m { max-width: 20rem !important; }
+.field-l { max-width: 26rem !important; }
+.auth-left .form-group input,
+.auth-left .form-group select {
+  max-width: none;
+}
+
+/* ---- Formularios "Agregar" (modal): label arriba, input visible y con ancho propio,
+   en vez de texto plano con un subrayado que cruza media pantalla ---- */
+.modal-panel .field-group-body {
+  @apply gap-y-4 pt-1 pb-5;
+}
+.modal-panel .overview-field {
+  @apply flex-col items-start gap-1.5 border-b-0;
+  min-height: 0;
+}
+.modal-panel .overview-field-label {
+  @apply w-auto text-[13px] font-medium text-ink dark:text-dark-ink;
+}
+.modal-panel .overview-field > :not(.overview-field-label) {
+  @apply w-full;
+  max-width: 22rem;
+}
+.modal-panel .overview-field-input {
+  @apply m-0 h-[38px] flex-none rounded-lg border-line-strong bg-input px-3 py-0 text-sm hover:bg-input dark:border-gray-700 dark:bg-dark-input dark:hover:bg-dark-input;
+  box-shadow: var(--ns-shadow-inset);
+}
+.modal-panel .overview-field-input:focus {
+  @apply border-accent ring-0;
+  box-shadow: 0 0 0 3px var(--ns-ring);
+}
+.modal-panel .overview-field-input[type='date'],
+.modal-panel .overview-field-input[type='number'],
+.modal-panel .overview-field-input[type='tel'] {
+  max-width: 11rem;
+}
+
+/* ---- Tablas: la tabla es una tarjeta sobre la página; tipografía legible ---- */
+.full-table-wrap {
+  @apply rounded-xl border border-line bg-surface-1 dark:border-dark-line dark:bg-dark-surface;
+  box-shadow: var(--ns-shadow-card);
+}
+.full-table thead th {
+  @apply bg-surface-2 dark:bg-dark-raised;
+}
+.full-table th {
+  @apply text-[11.5px] font-semibold;
+}
+.full-table td {
+  @apply text-[13px];
+}
+.name-cell {
+  @apply text-[13.5px];
+}
+.full-table tbody tr:hover td {
+  @apply bg-accent-soft;
+}
+
+/* ---- Pestañas de vista ---- */
+.view-tab.active {
+  @apply bg-surface-1 text-ink dark:bg-dark-surface dark:text-dark-ink;
+}
+
+/* Field wrappers that pair a control with a side action (Department + catalog menu) —
+   the control fills the wrapper instead of collapsing to its content width. */
+.modal-panel .overview-field > div:has(> .overview-field-input) {
+  @apply flex items-center gap-1.5;
+}
+.modal-panel .overview-field > div > .overview-field-input {
+  @apply min-w-0 flex-1;
+}
+
+/* Login/registro: el panel de marca pasa del degradé azul al violeta */
+.auth-right {
+  background: linear-gradient(160deg, #efeaff 0%, #cdbdff 55%, #9a80ff 100%);
+}
+.auth-blob-2 {
+  background: radial-gradient(circle, #6b47dc 0%, transparent 70%);
+}

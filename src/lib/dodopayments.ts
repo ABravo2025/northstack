@@ -114,8 +114,15 @@ export interface ChangeSubscriptionPlanInput {
 // always wins over an earlier scheduled downgrade.
 export async function changeSubscriptionPlan(externalSubscriptionId: string, input: ChangeSubscriptionPlanInput): Promise<void> {
   const addons = input.extraSeats > 0 ? [{ addon_id: extraSeatAddonId(input.extraSeatAddonId), quantity: input.extraSeats }] : [];
-  const base = { product_id: input.productId, quantity: 1, addons, cancel_scheduled_change_plan: true };
   const client = getClient();
+  const discountCodes = await lifetimeDiscountCodesToKeep(client, externalSubscriptionId);
+  const base = {
+    product_id: input.productId,
+    quantity: 1,
+    addons,
+    cancel_scheduled_change_plan: true,
+    ...(discountCodes ? { discount_codes: discountCodes } : {}),
+  };
   if (input.mode === 'upgrade_now') {
     await client.subscriptions.changePlan(externalSubscriptionId, {
       ...base,
@@ -129,6 +136,22 @@ export async function changeSubscriptionPlan(externalSubscriptionId: string, inp
   } else {
     await client.subscriptions.changePlan(externalSubscriptionId, { ...base, proration_billing_mode: 'do_not_bill', effective_at: 'immediately' });
   }
+}
+
+// A plan change drops every discount not flagged preserve_on_plan_change in Dodo — so a lifetime
+// discount given to a customer (Alejandro, 2026-10-01: e.g. a 100%-off-forever code) could vanish
+// on an upgrade and turn a $0 charge into a full one. When every discount on the subscription is
+// lifetime (no subscription_cycles), re-sending their codes keeps them: there's no cycle count to
+// reset. Anything with a cycle limit is left to Dodo's own preserve flag (re-applying it could
+// restart its count), so in that case this returns null and the request carries no discount_codes,
+// which is Dodo's default behavior.
+async function lifetimeDiscountCodesToKeep(client: DodoPayments, externalSubscriptionId: string): Promise<string[] | null> {
+  const subscription = await client.subscriptions.retrieve(externalSubscriptionId);
+  const discounts = subscription.discounts ?? [];
+  if (discounts.length === 0) return null;
+  const allLifetime = discounts.every((d) => d.subscription_cycles == null);
+  const someWouldBeDropped = discounts.some((d) => !d.preserve_on_plan_change);
+  return allLifetime && someWouldBeDropped ? discounts.map((d) => d.code) : null;
 }
 
 // Drops a scheduled (next_billing_date) plan change — the tenant changed their mind about a

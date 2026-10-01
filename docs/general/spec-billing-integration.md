@@ -326,6 +326,10 @@ Decisión de Alejandro. `changePlan` (`subscriptionSelfServeService.ts`):
   downgrade programado, sin Invoice), y el evento `subscription.plan_changed` sincroniza el plan con el
   producto de Dodo aunque no llegue ningún pago. Que el descuento sobreviva al cambio de plan depende
   del flag `preserve_on_plan_change` del descuento en Dodo — si está apagado, el upgrade se cobra entero.
+  **2026-10-01:** si todos los descuentos de la suscripción son de por vida (sin `subscription_cycles`)
+  y alguno no tiene ese flag, `changeSubscriptionPlan` vuelve a mandar sus códigos en el cambio de
+  plan para que no se pierdan. Con algún descuento de meses limitados no se toca (re-aplicarlo podría
+  reiniciar su cuenta) y decide el flag de Dodo.
 
 ## Mapeo de fechas mostradas en UI
 

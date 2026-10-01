@@ -1127,16 +1127,18 @@ export default function GuidePage() {
                 <li><strong>Mensual</strong> — los días se acumulan progresivamente al empezar cada mes, con un tope de 12 meses.</li>
               </ul>
               <p>
-                Asigná una política a personas de a una o en bloque desde la pestaña <strong>Asignaciones</strong>,
-                o justo después de crear una política nueva.
+                Tocá una política en <strong>Políticas</strong> para ver a quién está asignada: quitá personas desde
+                ahí o sumalas en bloque con <strong>+ Asignar personas</strong> (también se ofrece justo después de
+                crear una política nueva).
               </p>
             </div>
 
             <div className="help-sub">
               <h3>Solicitar y aprobar ausencias</h3>
               <ol className="help-steps">
-                <li>Desde <strong>Mis solicitudes</strong>, elegí una de tus políticas asignadas, un rango de fechas, y una nota opcional.</li>
+                <li>En <strong>Mi tiempo libre</strong> ves una tarjeta por política con tus días disponibles; tocá <strong>+ Solicitar días</strong> al pie de tus solicitudes, elegí la política, el rango de fechas y una nota opcional. Se cuentan días corridos, y el panel te muestra cuántos te quedarían.</li>
                 <li>Si la política requiere aprobación, se dirige automáticamente a tu manager directo. Si no, se aprueba al instante.</li>
+                <li>Si tenés personas a cargo, lo que espera tu decisión aparece primero en <strong>Equipo</strong>: aprobá o rechazá ahí mismo (con un motivo opcional que la persona ve), y tocá a cualquiera para ver sus saldos e historial.</li>
                 <li>Owner, Admin, o cualquiera con el permiso de decisión sobre ausencias puede aprobar o rechazar cualquier solicitud como excepción, sin importar la línea de reporte.</li>
               </ol>
               <p>
@@ -1214,16 +1216,18 @@ export default function GuidePage() {
                 <li><strong>Monthly</strong> — days accrue gradually as each month begins, capped at 12 months.</li>
               </ul>
               <p>
-                Assign a policy to people one at a time or in bulk from the <strong>Assignments</strong> tab, or
-                right after creating a new policy.
+                Open a policy in <strong>Policies</strong> to see who it's assigned to: remove people from there, or
+                add them in bulk with <strong>+ Assign people</strong> (also offered right after creating a new
+                policy).
               </p>
             </div>
 
             <div className="help-sub">
               <h3>Requesting &amp; approving time off</h3>
               <ol className="help-steps">
-                <li>From <strong>My Requests</strong>, pick one of your assigned policies, a date range, and an optional note.</li>
+                <li><strong>My time off</strong> shows a card per policy with the days you have available; click <strong>+ Request time off</strong> at the foot of your requests, pick the policy, a date range, and an optional note. Days are counted as calendar days, and the panel shows what you'd have left.</li>
                 <li>If the policy requires approval, it routes to your direct manager automatically. If not, it's approved instantly.</li>
+                <li>If people report to you, whatever is waiting on your decision comes first in <strong>Team</strong>: approve or reject right there (with an optional reason the person sees), and click anyone to see their balances and history.</li>
                 <li>Owner, Admin, or anyone with the time-off decision permission can approve or reject any request as an override, regardless of the reporting line.</li>
               </ol>
               <p>

@@ -1,7 +1,7 @@
 # Tareas de desarrollo
 
 - Fecha de creación: 2026-07-02
-- **2026-10-02 — Fix: alta de empleado sin departamentos creados (EN STAGING)**: el formulario "Add Person" exigía
+- **2026-10-02 — Fix: alta de empleado sin departamentos creados (EN PRODUCCIÓN)**: el formulario "Add Person" exigía
   elegir un departamento, y un tenant nuevo arranca con el catálogo vacío, así que no se podía dar de alta a nadie.
   Ahora el select trae una opción fija "Sin departamento" / "No department" (no editable, no es un registro en DB:
   guarda `departmentId = null`, mismo patrón que "Sin responsable"). El campo sigue siendo obligatorio (hay que elegir

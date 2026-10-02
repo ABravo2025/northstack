@@ -1487,21 +1487,18 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                       assignableRoles stays empty otherwise and the server keeps Member. */}
                   {assignableRoles.length > 0 && (
                     <Field label={t('employees.fields.platformRole')}>
-                      <div className="flex min-w-0 flex-1 flex-col gap-1">
-                        <select
-                          id="emp-invite-role"
-                          className="overview-field-input"
-                          value={employeeForm.inviteRoleId || defaultInviteRoleId}
-                          onChange={(e) => setEmployeeForm({ ...employeeForm, inviteRoleId: e.target.value })}
-                        >
-                          {assignableRoles.map((r) => (
-                            <option key={r.id} value={r.id}>
-                              {r.name}
-                            </option>
-                          ))}
-                        </select>
-                        <span className="text-xs text-ink-faint dark:text-dark-ink-faint">{t('employees.fields.platformRoleHint')}</span>
-                      </div>
+                      <select
+                        id="emp-invite-role"
+                        className="overview-field-input"
+                        value={employeeForm.inviteRoleId || defaultInviteRoleId}
+                        onChange={(e) => setEmployeeForm({ ...employeeForm, inviteRoleId: e.target.value })}
+                      >
+                        {assignableRoles.map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.name}
+                          </option>
+                        ))}
+                      </select>
                     </Field>
                   )}
                 </div>

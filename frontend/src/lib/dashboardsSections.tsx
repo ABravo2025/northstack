@@ -51,7 +51,6 @@ export function getDashboardSections(permissions: DashboardSectionsPermissions):
       desc: t('sections.payments.desc', { ns: 'dashboards' }),
       icon: <CreditCardIcon />,
       permission: 'manage_payments',
-      noDateRange: true,
     },
     {
       to: '/dashboards/sales',

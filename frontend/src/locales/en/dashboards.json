@@ -89,7 +89,7 @@
     "notVisibleOwnerOnly": "Payroll data is only visible to the workspace owner."
   },
   "payments": {
-    "liveNote": "Live from Stripe right now — the date range doesn't apply here. The per-company detail is on the Payments page.",
+    "liveNote": "Live from Stripe for the selected period. Active subscriptions are counted as of today; the per-company detail is on the Payments page.",
     "loadFailed": "Couldn't load the numbers from Stripe."
   },
   "sales": {

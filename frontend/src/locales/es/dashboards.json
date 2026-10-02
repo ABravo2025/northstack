@@ -89,7 +89,7 @@
     "notVisibleOwnerOnly": "Los datos de nómina solo son visibles para el propietario del espacio de trabajo."
   },
   "payments": {
-    "liveNote": "En vivo desde Stripe — el rango de fechas no aplica acá. El detalle por empresa está en la página de Pagos.",
+    "liveNote": "En vivo desde Stripe para el período elegido. Las suscripciones activas se cuentan a hoy; el detalle por empresa está en la página de Pagos.",
     "loadFailed": "No se pudieron cargar los números desde Stripe."
   },
   "sales": {

@@ -1796,6 +1796,15 @@ table.help-ref td.no {
   @apply w-full pr-9;
 }
 
+/* The wrapper carries the field width (the input's own L cap would leave the eye button stranded
+   at the far right of a full-width wrapper, 2026-10). */
+.password-input-wrap {
+  max-width: 26rem;
+}
+.password-input-wrap input {
+  max-width: none !important;
+}
+
 .password-toggle {
   @apply absolute right-1.5 inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded border-none bg-transparent text-ink-faint hover:text-brand-navy dark:hover:text-gray-100;
 }
@@ -2267,8 +2276,30 @@ table.help-ref td.no {
 html.dark .stage-table-row {
   box-shadow: inset 0 -1px 0 var(--color-dark-line-soft);
 }
+.stage-table-row input.input-invalid {
+  @apply border-red-500 dark:border-red-400;
+}
 .stage-table-add-form {
   @apply flex items-center gap-2 px-4 py-2.5;
+}
+/* Settings → Profile (2026-10): personal data and social profiles side by side on wide screens,
+   stacked on narrow ones; autosaves, so the head shows a quiet status instead of a Save button. */
+.profile-card-head {
+  @apply mb-4 flex items-baseline justify-between gap-3;
+}
+.profile-save-status {
+  @apply text-xs text-ink-faint dark:text-dark-ink-faint;
+}
+.profile-grid {
+  @apply grid grid-cols-1 gap-x-10;
+}
+@media (min-width: 1024px) {
+  .profile-grid {
+    grid-template-columns: minmax(0, 26rem) minmax(0, 26rem);
+  }
+  .profile-grid .profile-social {
+    @apply mt-0 border-t-0 border-l pt-0 pl-10;
+  }
 }
 .profile-social {
   @apply mt-2 border-t border-line pt-4 dark:border-dark-line;
@@ -2514,6 +2545,25 @@ input[type='number'] {
 
 .task-hub-main {
   @apply flex min-w-0 flex-1 flex-col gap-4 px-1;
+}
+
+/* 2026-10: the folders column reads as its own panel (white card on the page tint, accent-tinted
+   active folder) with real space before the search + table, instead of a hairline flush against them. */
+.task-hub-layout {
+  @apply items-start gap-6;
+}
+.task-folders-rail {
+  @apply self-stretch rounded-xl border border-line bg-surface-1 px-2 py-4 dark:border-dark-line dark:bg-dark-surface;
+  box-shadow: var(--ns-shadow-card);
+}
+.task-folders-rail.collapsed {
+  @apply px-1;
+}
+.task-folder-row.active {
+  @apply bg-accent-tint text-accent dark:bg-violet-500/15 dark:text-violet-200;
+}
+.task-hub-main {
+  @apply px-0 pt-1;
 }
 
 .task-hub-filters {
@@ -3389,6 +3439,52 @@ textarea.overview-field-input {
   max-width: 90rem;
 }
 /* Short tables (few columns, e.g. Payments, My Tasks) — wider just spreads 4-5 columns apart. */
+/* Payments: per-Company table + the period report on its right (stacks under it when narrow). */
+.payments-layout {
+  @apply grid items-start gap-5;
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 1100px) {
+  .payments-layout {
+    grid-template-columns: minmax(0, 1fr) 20rem;
+  }
+}
+.payments-report {
+  @apply rounded-xl border border-line bg-surface-1 p-4 dark:border-dark-line dark:bg-dark-surface;
+  box-shadow: var(--ns-shadow-card);
+}
+.payments-report-head {
+  @apply mb-3 flex flex-wrap items-center justify-between gap-2;
+}
+.payments-report-list {
+  @apply m-0 flex flex-col;
+}
+.payments-report-row {
+  @apply flex items-start justify-between gap-3 border-b border-line-soft py-2.5 last:border-b-0 dark:border-dark-line-soft;
+}
+.payments-report-row dt {
+  @apply flex flex-wrap items-center gap-x-2 gap-y-0.5 text-sm text-ink dark:text-dark-ink;
+}
+.payments-report-row dd {
+  @apply m-0 flex flex-col items-end text-sm font-semibold text-ink dark:text-dark-ink;
+}
+.payments-report-amount {
+  @apply text-xs font-normal text-ink-muted dark:text-dark-ink-muted;
+}
+.payments-report-note {
+  @apply text-xs text-ink-faint dark:text-dark-ink-faint;
+}
+.payments-report-dot {
+  @apply h-2 w-2 shrink-0 rounded-full bg-gray-400;
+}
+.tone-succeeded .payments-report-dot { @apply bg-emerald-500; }
+.tone-open .payments-report-dot { @apply bg-amber-500; }
+.tone-refunded .payments-report-dot { @apply bg-sky-500; }
+.tone-failed .payments-report-dot { @apply bg-red-500; }
+.tone-subscriptions .payments-report-dot { @apply bg-accent; }
+.payments-report-foot {
+  @apply mb-0 mt-3 text-xs text-ink-faint dark:text-dark-ink-faint;
+}
 .meet-link {
   @apply inline-flex items-center gap-1 rounded-md bg-accent-tint px-2 py-0.5 text-xs font-medium text-accent hover:underline dark:text-violet-300;
 }

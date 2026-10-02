@@ -287,7 +287,17 @@
   },
   "payments": {
     "pageTitle": "Pagos",
-    "viewDashboard": "Ver dashboard",
+    "report": {
+      "title": "Informe",
+      "succeeded": "Cobrado",
+      "open": "Facturas abiertas",
+      "refunded": "Reembolsado",
+      "failed": "Fallidos",
+      "subscriptions": "Suscripciones activas",
+      "now": "hoy",
+      "companies_one": "{{count}} empresa vinculada a Stripe",
+      "companies_other": "{{count}} empresas vinculadas a Stripe"
+    },
     "noPermission": "No tenés permiso para ver Pagos.",
     "toastLoadFailed": "No se pudo cargar el resumen de pagos: {{error}}",
     "connectStripeFirst": "Conectá tu cuenta de Stripe primero — andá a Configuración → Integraciones.",
@@ -301,6 +311,7 @@
     "noCompaniesLinked": "Todavía no hay Empresas vinculadas a Stripe — abrí una Empresa y usá \"Buscar en Stripe\" en Pagos.",
     "columns": {
       "company": "Empresa",
+      "succeeded": "Cobrados",
       "openInvoices": "Facturas abiertas",
       "refunds": "Reembolsos",
       "failed": "Fallidos",

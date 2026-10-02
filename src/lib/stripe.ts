@@ -114,9 +114,15 @@ export interface StripeCharge {
   disputed: boolean;
 }
 
+// Stripe's `created[gte]`/`created[lte]` list filter, in unix seconds (toFormPairs nests it).
+export interface StripeCreatedFilter {
+  gte?: number;
+  lte?: number;
+}
+
 export async function listCharges(
   apiKey: string,
-  params: { customer: string; limit?: number; starting_after?: string },
+  params: { customer: string; limit?: number; starting_after?: string; created?: StripeCreatedFilter },
 ): Promise<StripeList<StripeCharge>> {
   return stripeRequest<StripeList<StripeCharge>>(apiKey, 'GET', '/charges', params);
 }
@@ -235,7 +241,7 @@ export async function deleteDraftInvoice(apiKey: string, invoiceId: string): Pro
 
 export async function listInvoices(
   apiKey: string,
-  params: { customer: string; status?: StripeInvoice['status']; limit?: number; starting_after?: string },
+  params: { customer: string; status?: StripeInvoice['status']; limit?: number; starting_after?: string; created?: StripeCreatedFilter },
 ): Promise<StripeList<StripeInvoice>> {
   return stripeRequest<StripeList<StripeInvoice>>(apiKey, 'GET', '/invoices', params);
 }

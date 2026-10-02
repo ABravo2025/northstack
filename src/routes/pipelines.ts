@@ -221,6 +221,11 @@ pipelinesRouter.patch('/api/pipelines/:pipelineId/stages/:stageId', async (req, 
     return res.status(404).json({ error: 'Stage not found' });
   }
 
+  // A stage always has a name — a rename can't blank it (create already enforces the same).
+  if (req.body.name !== undefined && (typeof req.body.name !== 'string' || !req.body.name.trim())) {
+    return res.status(400).json({ error: 'Name is required' });
+  }
+
   if (req.body.outcome !== undefined && !VALID_OUTCOMES.includes(req.body.outcome)) {
     return res.status(400).json({ error: "outcome must be 'open', 'won', or 'lost'" });
   }
@@ -237,7 +242,7 @@ pipelinesRouter.patch('/api/pipelines/:pipelineId/stages/:stageId', async (req, 
     req.params.stageId,
     user.tenantId!,
     {
-      name: req.body.name,
+      name: typeof req.body.name === 'string' ? req.body.name.trim() : undefined,
       color: req.body.color,
       order: req.body.order,
       outcome: req.body.outcome,

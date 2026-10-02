@@ -484,6 +484,7 @@
       "inactiveNote": "(inactive)"
     },
     "errors": {
+      "stageNameRequired": "Every stage needs a name.",
       "addStage": "Failed to add stage: {{message}}",
       "updateStageColor": "Failed to update stage color: {{message}}",
       "updateStageOutcome": "Failed to update stage outcome: {{message}}",

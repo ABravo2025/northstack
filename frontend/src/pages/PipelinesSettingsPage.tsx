@@ -857,6 +857,8 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
   const [createName, setCreateName] = useState('');
   const [createType, setCreateType] = useState<'lead' | 'account'>('lead');
   const [createStages, setCreateStages] = useState<DraftStage[]>([draftStage()]);
+  // Set by a submit attempt with a blank stage name — only then are blank rows outlined red.
+  const [stageNamesTouched, setStageNamesTouched] = useState(false);
   const [creating, setCreating] = useState(false);
   // Automations, available from creation on (user feedback 2026-08-25: an
   // edit-only Automations section meant nobody would ever discover it).
@@ -911,6 +913,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
   };
 
   const closePipelineModal = () => {
+    setStageNamesTouched(false);
     setCreateOpen(false);
     setEditingPipelineId(null);
   };
@@ -939,6 +942,13 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
       toast.error(t('pipelines.errors.roundRobinRequiresParticipant'));
       return;
     }
+    // Every stage needs a name (2026-10: blank rows used to be silently dropped, which read as
+    // "saved a stage with no name"). Zero stages is still fine — they can be added later.
+    if (createStages.some((s) => !s.name.trim())) {
+      setStageNamesTouched(true);
+      toast.error(t('pipelines.errors.stageNameRequired'));
+      return;
+    }
     setCreating(true);
     try {
       const trimmedStalled = createStalledThresholdDraft.trim();
@@ -950,7 +960,7 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
         assignmentMode: createAssignmentMode,
         stalledThresholdDays: parsedStalled !== null && Number.isFinite(parsedStalled) ? parsedStalled : null,
       });
-      const stagesToCreate = createStages.filter((s) => s.name.trim());
+      const stagesToCreate = createStages;
       for (let i = 0; i < stagesToCreate.length; i++) {
         const stage = stagesToCreate[i];
         const parsedProbability = Number.parseInt(stage.probability, 10);
@@ -1375,7 +1385,8 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
                     <div key={stage.key} className="stage-table-row">
                       <input
                         type="text"
-                        className="flex-1"
+                        className={`flex-1 ${stageNamesTouched && !stage.name.trim() ? 'input-invalid' : ''}`}
+                        aria-invalid={stageNamesTouched && !stage.name.trim()}
                         placeholder={t('pipelines.stageEditor.stageNPlaceholder', { n: i + 1 })}
                         value={stage.name}
                         onChange={(e) => updateDraftStage(stage.key, { name: e.target.value })}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
+import DateRangeFilter, { rangeForPreset } from '../components/metrics/DateRangeFilter';
+import type { DateRange, PresetKey } from '../lib/dateRangePresets';
 import { api, type PaymentsOverview, type PaymentsOverviewRow } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import TableSkeleton from '../components/common/TableSkeleton';
@@ -56,6 +57,61 @@ function openInvoicesMeta(row: PaymentsOverviewRow, t: (key: string, opts?: Reco
   return `${t('payments.openInvoicesMeta', { count: row.summary.openInvoicesCount })}${overdue} · `;
 }
 
+// The report beside the table (2026-10): what happened in each collection state during the chosen
+// period. Subscriptions are a "right now" count — a subscription isn't an event inside a period.
+function PaymentsReport({
+  overview,
+  presetKey,
+  range,
+  onRangeChange,
+}: {
+  overview: PaymentsOverview;
+  presetKey: PresetKey;
+  range: DateRange;
+  onRangeChange: (range: DateRange, preset: PresetKey) => void;
+}) {
+  const { t } = useTranslation('crm');
+  const { totals } = overview;
+  const money = (cents: number, currency: string | null) => (currency ? formatMoney(cents, currency.toUpperCase()) : null);
+  const rows: { key: string; label: string; count: number; amount?: string | null; note?: string }[] = [
+    { key: 'succeeded', label: t('payments.report.succeeded'), count: totals.paymentsCount, amount: money(totals.paymentsAmountCents, totals.currency) },
+    {
+      key: 'open',
+      label: t('payments.report.open'),
+      count: totals.openInvoicesCount,
+      amount: money(totals.openInvoicesAmountCents, totals.openInvoicesCurrency),
+      note: totals.overdueInvoicesCount > 0 ? t('payments.overdueCount', { count: totals.overdueInvoicesCount }) : undefined,
+    },
+    { key: 'refunded', label: t('payments.report.refunded'), count: totals.refundsCount, amount: money(totals.refundsAmountCents, totals.currency) },
+    { key: 'failed', label: t('payments.report.failed'), count: totals.failedCount },
+    { key: 'subscriptions', label: t('payments.report.subscriptions'), count: totals.activeSubscriptions, note: t('payments.report.now') },
+  ];
+  return (
+    <aside className="payments-report">
+      <div className="payments-report-head">
+        <h3 className="card-title m-0">{t('payments.report.title')}</h3>
+        <DateRangeFilter presetKey={presetKey} range={range} onChange={onRangeChange} />
+      </div>
+      <dl className="payments-report-list">
+        {rows.map((row) => (
+          <div key={row.key} className={`payments-report-row tone-${row.key}`}>
+            <dt>
+              <span className="payments-report-dot" />
+              {row.label}
+              {row.note && <span className="payments-report-note">{row.note}</span>}
+            </dt>
+            <dd>
+              <span className="num">{row.count}</span>
+              {row.amount && row.count > 0 && <span className="payments-report-amount num">{row.amount}</span>}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <p className="payments-report-foot">{t('payments.report.companies', { count: overview.companies.length })}</p>
+    </aside>
+  );
+}
+
 // Payments v1, Unit 3 (spec-payments-v1.md) — everything here is live against Stripe, no local
 // store (see the spec's decision #7): a page load fans out one summary call per linked Company
 // (src/modules/integrations/stripePaymentsService.ts's getPaymentsOverview), so the loading state
@@ -66,6 +122,9 @@ export default function PaymentsOverviewPage({ token }: PaymentsOverviewPageProp
   const [overview, setOverview] = useState<PaymentsOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedCompany, setSelectedCompany] = useState<{ id: string; name: string } | null>(null);
+  // The report period (2026-10) — applies to the table too, so the rows and the report always add up.
+  const [presetKey, setPresetKey] = useState<PresetKey>('mtd');
+  const [range, setRange] = useState<DateRange>(() => rangeForPreset('mtd'));
   // Custom Roles Fase J — migrated off `user.role === 'owner'` to the real backend gate,
   // canManagePayments (owner-only by default, but a real toggleable permission).
   const permissions = usePermissions();
@@ -75,12 +134,12 @@ export default function PaymentsOverviewPage({ token }: PaymentsOverviewPageProp
     if (!canManagePayments) return;
     setLoading(true);
     api
-      .getPaymentsOverview(token)
+      .getPaymentsOverview(token, { since: range.since, until: range.until })
       .then(setOverview)
       .catch((error) => toast.error(t('payments.toastLoadFailed', { error: (error as Error).message })))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, canManagePayments]);
+  }, [token, canManagePayments, range]);
 
   // Same client-side guard pattern as PayrollPage.tsx — a role without access guessing the URL
   // sees a clean message instead of a broken page, on top of the 403 the endpoints already give.
@@ -96,21 +155,18 @@ export default function PaymentsOverviewPage({ token }: PaymentsOverviewPageProp
   }
 
   return (
-    <div className="page-full page-narrow">
+    <div className="page-full page-capped">
       <div className="page-toolbar">
         <h2>{t('payments.pageTitle')}</h2>
-        {/* The headline numbers live in Dashboards → Payments since 2026-10; this page is the per-Company list. */}
-        <Link to="/dashboards/payments" className="btn-secondary ml-auto">
-          {t('payments.viewDashboard')}
-        </Link>
       </div>
 
-      {loading ? (
+      {loading && !overview ? (
         <TableSkeleton rows={5} />
       ) : !overview?.connected ? (
         <p className="mt-4 text-sm text-ink-muted dark:text-dark-ink-muted">{t('payments.connectStripeFirst')}</p>
       ) : (
-        <>
+        <div className={`payments-layout ${loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}`}>
+          <div className="min-w-0">
           {overview.companies.length === 0 ? (
             <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('payments.noCompaniesLinked')}</p>
           ) : (
@@ -130,6 +186,7 @@ export default function PaymentsOverviewPage({ token }: PaymentsOverviewPageProp
                 <thead>
                   <tr>
                     <th>{t('payments.columns.company')}</th>
+                    <th>{t('payments.columns.succeeded')}</th>
                     <th>{t('payments.columns.openInvoices')}</th>
                     <th>{t('payments.columns.refunds')}</th>
                     <th>{t('payments.columns.failed')}</th>
@@ -147,6 +204,14 @@ export default function PaymentsOverviewPage({ token }: PaymentsOverviewPageProp
                         >
                           {row.companyName}
                         </button>
+                      </td>
+                      <td>
+                        {row.summary.paymentsCount}
+                        {row.summary.paymentsCount > 0 && row.summary.currency && (
+                          <span className="ml-1 text-xs text-ink-faint">
+                            ({formatMoney(row.summary.paymentsAmountCents, row.summary.currency.toUpperCase())})
+                          </span>
+                        )}
                       </td>
                       <td>
                         <OpenInvoicesCell row={row} />
@@ -168,7 +233,17 @@ export default function PaymentsOverviewPage({ token }: PaymentsOverviewPageProp
             </div>
             </>
           )}
-        </>
+          </div>
+          <PaymentsReport
+            overview={overview}
+            presetKey={presetKey}
+            range={range}
+            onRangeChange={(next, preset) => {
+              setRange(next);
+              setPresetKey(preset);
+            }}
+          />
+        </div>
       )}
       {selectedCompany && (
         <CompanyPaymentHistoryModal

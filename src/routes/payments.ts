@@ -136,7 +136,18 @@ paymentsRouter.get('/api/payments/overview', async (req, res) => {
   if (!user) return;
   if (!requirePaymentsAccess(user, res)) return;
 
-  const overview = await getPaymentsOverview(user.tenantId!);
+  // Optional ?since=&until= (ISO) — the Payments page's report period. Both or neither.
+  let period: { since: Date; until: Date } | undefined;
+  if (req.query.since !== undefined || req.query.until !== undefined) {
+    const since = new Date(String(req.query.since));
+    const until = new Date(String(req.query.until));
+    if (Number.isNaN(since.getTime()) || Number.isNaN(until.getTime()) || since > until) {
+      return res.status(400).json({ error: 'Invalid period' });
+    }
+    period = { since, until };
+  }
+
+  const overview = await getPaymentsOverview(user.tenantId!, period);
   return res.json(overview);
 });
 

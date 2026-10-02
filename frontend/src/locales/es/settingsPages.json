@@ -484,6 +484,7 @@
       "inactiveNote": "(inactivo)"
     },
     "errors": {
+      "stageNameRequired": "Cada etapa necesita un nombre.",
       "addStage": "No se pudo agregar la etapa: {{message}}",
       "updateStageColor": "No se pudo actualizar el color de la etapa: {{message}}",
       "updateStageOutcome": "No se pudo actualizar el resultado de la etapa: {{message}}",

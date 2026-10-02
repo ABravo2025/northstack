@@ -370,6 +370,8 @@ export interface PaymentsOverview {
     refundsAmountCents: number;
     currency: string | null;
     failedCount: number;
+    paymentsCount: number;
+    paymentsAmountCents: number;
     activeSubscriptions: number;
     openInvoicesCount: number;
     openInvoicesAmountCents: number;

@@ -208,9 +208,22 @@ type OpenInvoicesSummary = Pick<
 // A 403 here only means the key has no Invoices permission (read-only keys from before Unidad 8
 // may lack it) — caught so the rest of the summary still loads and, unlike other calls, the
 // connection is NOT flagged as needing attention. Anything else propagates as usual.
-async function summarizeOpenInvoices(apiKey: string, customerId: string): Promise<OpenInvoicesSummary> {
+// Payments page report (2026-10): an optional period, applied as Stripe's own `created` filter —
+// charges made, and still-open invoices issued, inside it. Omitted = the original unfiltered view.
+export interface PaymentsPeriod {
+  since: Date;
+  until: Date;
+}
+
+function createdFilter(period?: PaymentsPeriod) {
+  return period
+    ? { created: { gte: Math.floor(period.since.getTime() / 1000), lte: Math.floor(period.until.getTime() / 1000) } }
+    : {};
+}
+
+async function summarizeOpenInvoices(apiKey: string, customerId: string, period?: PaymentsPeriod): Promise<OpenInvoicesSummary> {
   try {
-    const { data } = await listInvoices(apiKey, { customer: customerId, status: 'open', limit: 100 });
+    const { data } = await listInvoices(apiKey, { customer: customerId, status: 'open', limit: 100, ...createdFilter(period) });
     const nowUnix = Date.now() / 1000;
     return {
       invoicesAccessible: true,
@@ -276,7 +289,8 @@ function summarizeCharges(
 // properly for anyone who needs to see the full history, not just the summary.
 export async function getCompanyPaymentSummary(
   tenantId: string,
-  company: { stripeCustomerId: string | null }
+  company: { stripeCustomerId: string | null },
+  period?: PaymentsPeriod
 ): Promise<StripePaymentSummary> {
   if (!company.stripeCustomerId) {
     return UNLINKED_SUMMARY;
@@ -285,9 +299,9 @@ export async function getCompanyPaymentSummary(
   const { apiKey } = await getActiveConnectionForTenant(tenantId);
   const [chargesResult, subscriptionsResult, openInvoices] = await withNeedsAttentionTracking(tenantId, () =>
     Promise.all([
-      listCharges(apiKey, { customer: company.stripeCustomerId!, limit: 100 }),
+      listCharges(apiKey, { customer: company.stripeCustomerId!, limit: 100, ...createdFilter(period) }),
       listSubscriptions(apiKey, { customer: company.stripeCustomerId!, status: 'all', limit: 10 }),
-      summarizeOpenInvoices(apiKey, company.stripeCustomerId!),
+      summarizeOpenInvoices(apiKey, company.stripeCustomerId!, period),
     ])
   );
 
@@ -388,6 +402,9 @@ export interface PaymentsOverviewTotals {
   // first Company with a charge to report, not a true multi-currency breakdown across the tenant.
   currency: string | null;
   failedCount: number;
+  // Succeeded charges (count + amount) — the "collected" figure on the Payments report.
+  paymentsCount: number;
+  paymentsAmountCents: number;
   activeSubscriptions: number;
   openInvoicesCount: number;
   openInvoicesAmountCents: number;
@@ -409,6 +426,8 @@ const EMPTY_OVERVIEW: PaymentsOverview = {
     refundsAmountCents: 0,
     currency: null,
     failedCount: 0,
+    paymentsCount: 0,
+    paymentsAmountCents: 0,
     activeSubscriptions: 0,
     openInvoicesCount: 0,
     openInvoicesAmountCents: 0,
@@ -421,7 +440,7 @@ const EMPTY_OVERVIEW: PaymentsOverview = {
 // Checks the connection once upfront rather than letting every Company in the fan-out below fail
 // independently — a tenant that disconnected Stripe after linking some Companies would otherwise
 // see N identical "no active connection" failures instead of one clear state.
-export async function getPaymentsOverview(tenantId: string): Promise<PaymentsOverview> {
+export async function getPaymentsOverview(tenantId: string, period?: PaymentsPeriod): Promise<PaymentsOverview> {
   try {
     await getActiveConnectionForTenant(tenantId);
   } catch {
@@ -441,7 +460,7 @@ export async function getPaymentsOverview(tenantId: string): Promise<PaymentsOve
       return {
         companyId: company.id,
         companyName: company.name,
-        summary: await getCompanyPaymentSummary(tenantId, company),
+        summary: await getCompanyPaymentSummary(tenantId, company, period),
       };
     } catch (error) {
       console.error(`Failed to fetch payment summary for company ${company.id}:`, error);
@@ -455,6 +474,8 @@ export async function getPaymentsOverview(tenantId: string): Promise<PaymentsOve
       refundsAmountCents: acc.refundsAmountCents + row.summary.refundsAmountCents,
       currency: acc.currency ?? row.summary.currency,
       failedCount: acc.failedCount + row.summary.failedCount,
+      paymentsCount: acc.paymentsCount + row.summary.paymentsCount,
+      paymentsAmountCents: acc.paymentsAmountCents + row.summary.paymentsAmountCents,
       activeSubscriptions: acc.activeSubscriptions + (row.summary.subscriptionStatus === 'active' ? 1 : 0),
       openInvoicesCount: acc.openInvoicesCount + row.summary.openInvoicesCount,
       openInvoicesAmountCents: acc.openInvoicesAmountCents + row.summary.openInvoicesAmountCents,

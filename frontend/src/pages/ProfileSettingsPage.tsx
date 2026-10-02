@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api, SOCIAL_NETWORKS, type SocialLinks } from '../api';
 import { useToast } from '../components/common/ToastProvider';
@@ -31,7 +31,6 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
   });
   const [socialLinks, setSocialLinks] = useState<SocialLinks>(user.socialLinks ?? {});
   const [profileError, setProfileError] = useState<{ message: string; field?: string } | null>(null);
-  const [profileSaving, setProfileSaving] = useState(false);
   const [localeSaving, setLocaleSaving] = useState(false);
 
   const handleLocaleChange = async (locale: SupportedLocale) => {
@@ -50,25 +49,32 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
   const [passwordError, setPasswordError] = useState<{ message: string; field?: string } | null>(null);
   const [passwordSaving, setPasswordSaving] = useState(false);
 
-  const handleProfileSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setProfileError(null);
-    setProfileSaving(true);
+  // Autosave (2026-10): each field saves when you leave it (or press Enter) — no Save button. Only
+  // sends when something actually changed since the last successful save.
+  const lastSaved = useRef(JSON.stringify({ ...profileForm, socialLinks }));
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+
+  const saveProfile = async () => {
+    const payload = { ...profileForm, socialLinks };
+    if (JSON.stringify(payload) === lastSaved.current) return;
+    setSaveStatus('saving');
     try {
-      const result = await api.updateProfile(token, { ...profileForm, socialLinks });
+      const result = await api.updateProfile(token, payload);
       onUserUpdated(result.user);
       // Show what the server stored (it adds https:// to bare links).
-      setSocialLinks(result.user.socialLinks ?? {});
-      toast.success(t('profile.toastProfileUpdated'));
+      const storedLinks = result.user.socialLinks ?? {};
+      setSocialLinks(storedLinks);
+      lastSaved.current = JSON.stringify({ ...profileForm, socialLinks: storedLinks });
+      setProfileError(null);
+      setSaveStatus('saved');
     } catch (error) {
+      setSaveStatus('idle');
       const field = (error as any).field;
       if (field) {
         setProfileError({ message: (error as Error).message, field });
       } else {
         toast.error((error as Error).message);
       }
-    } finally {
-      setProfileSaving(false);
     }
   };
 
@@ -95,42 +101,52 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
   return (
     <div className="max-w-6xl">
       <div className="card">
-        <h3 className="card-title">{t('profile.cardTitle')}</h3>
-        <form onSubmit={handleProfileSubmit}>
-          <div className="form-group">
-            <label htmlFor="profile-firstName">{t('profile.firstName')}</label>
-            <input
-              id="profile-firstName"
-              value={profileForm.firstName}
-              onChange={(e) => setProfileForm({ ...profileForm, firstName: e.target.value })}
-            />
-            {profileError?.field === 'firstName' && (
-              <p className="field-error">{profileError.message}</p>
-            )}
-          </div>
-          <div className="form-group">
-            <label htmlFor="profile-lastName">{t('profile.lastName')}</label>
-            <input
-              id="profile-lastName"
-              value={profileForm.lastName}
-              onChange={(e) => setProfileForm({ ...profileForm, lastName: e.target.value })}
-            />
-            {profileError?.field === 'lastName' && (
-              <p className="field-error">{profileError.message}</p>
-            )}
-          </div>
-          <div className="form-group">
-            <label htmlFor="profile-phone">{t('profile.phone')}</label>
-            <input
-              id="profile-phone"
-              value={profileForm.phone}
-              onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
-            />
-            {profileError?.field === 'phone' && <p className="field-error">{profileError.message}</p>}
-          </div>
-          <div className="form-group">
-            <label htmlFor="profile-email">{t('profile.email')}</label>
-            <input id="profile-email" value={user.email} disabled />
+        <div className="profile-card-head">
+          <h3 className="card-title m-0">{t('profile.cardTitle')}</h3>
+          <span className="profile-save-status" aria-live="polite">
+            {saveStatus === 'saving' ? t('profile.saving') : saveStatus === 'saved' ? t('profile.saved') : ''}
+          </span>
+        </div>
+        <form
+          className="profile-grid"
+          onSubmit={(e) => {
+            e.preventDefault();
+            saveProfile();
+          }}
+          onBlur={() => saveProfile()}
+        >
+          <div>
+            <div className="form-group">
+              <label htmlFor="profile-firstName">{t('profile.firstName')}</label>
+              <input
+                id="profile-firstName"
+                value={profileForm.firstName}
+                onChange={(e) => setProfileForm({ ...profileForm, firstName: e.target.value })}
+              />
+              {profileError?.field === 'firstName' && <p className="field-error">{profileError.message}</p>}
+            </div>
+            <div className="form-group">
+              <label htmlFor="profile-lastName">{t('profile.lastName')}</label>
+              <input
+                id="profile-lastName"
+                value={profileForm.lastName}
+                onChange={(e) => setProfileForm({ ...profileForm, lastName: e.target.value })}
+              />
+              {profileError?.field === 'lastName' && <p className="field-error">{profileError.message}</p>}
+            </div>
+            <div className="form-group">
+              <label htmlFor="profile-phone">{t('profile.phone')}</label>
+              <input
+                id="profile-phone"
+                value={profileForm.phone}
+                onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+              />
+              {profileError?.field === 'phone' && <p className="field-error">{profileError.message}</p>}
+            </div>
+            <div className="form-group">
+              <label htmlFor="profile-email">{t('profile.email')}</label>
+              <input id="profile-email" value={user.email} disabled />
+            </div>
           </div>
           <div className="profile-social">
             <h4 className="profile-social-title">{t('profile.social.title')}</h4>
@@ -144,7 +160,7 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
                     type="text"
                     inputMode="url"
                     className="field-l flex-1"
-                    placeholder={network === 'website' ? 'https://' : `https://${network === 'x' ? 'x' : network}.com/…`}
+                    placeholder={network === 'website' ? 'https://' : `https://${network}.com/…`}
                     value={socialLinks[network] ?? ''}
                     onChange={(e) => setSocialLinks({ ...socialLinks, [network]: e.target.value })}
                   />
@@ -157,11 +173,6 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
                 {profileError?.field === `socialLinks.${network}` && <p className="field-error">{t('profile.social.invalid')}</p>}
               </div>
             ))}
-          </div>
-          <div className="form-actions">
-            <button type="submit" className="btn-primary" disabled={profileSaving}>
-              {profileSaving ? t('profile.saving') : t('profile.saveChanges')}
-            </button>
           </div>
         </form>
       </div>

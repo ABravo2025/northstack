@@ -214,6 +214,21 @@ describe('getCompanyPaymentSummary', () => {
     expect(listInvoicesMock).not.toHaveBeenCalled();
   });
 
+  it('applies a report period as Stripe created[gte]/[lte] on charges and open invoices', async () => {
+    listChargesMock.mockResolvedValue({ data: [], has_more: false });
+    listSubscriptionsMock.mockResolvedValue({ data: [], has_more: false });
+    listInvoicesMock.mockResolvedValue({ data: [], has_more: false });
+
+    await getCompanyPaymentSummary('t1', { stripeCustomerId: 'cus_1' }, {
+      since: new Date('2026-10-01T00:00:00Z'),
+      until: new Date('2026-10-31T23:59:59Z'),
+    });
+
+    const created = { gte: 1790812800, lte: 1793491199 };
+    expect(listChargesMock).toHaveBeenCalledWith('sk_test_abc', { customer: 'cus_1', limit: 100, created });
+    expect(listInvoicesMock).toHaveBeenCalledWith('sk_test_abc', { customer: 'cus_1', status: 'open', limit: 100, created });
+  });
+
   it('counts payments, refunds, disputes, and failed charges from the same Charges list', async () => {
     listChargesMock.mockResolvedValue({
       data: [
@@ -400,6 +415,8 @@ describe('getPaymentsOverview', () => {
         refundsAmountCents: 0,
         currency: null,
         failedCount: 0,
+        paymentsCount: 0,
+        paymentsAmountCents: 0,
         activeSubscriptions: 0,
         openInvoicesCount: 0,
         openInvoicesAmountCents: 0,
@@ -431,6 +448,8 @@ describe('getPaymentsOverview', () => {
       refundsAmountCents: 0,
       currency: 'usd',
       failedCount: 1,
+      paymentsCount: 0,
+      paymentsAmountCents: 0,
       activeSubscriptions: 1,
       openInvoicesCount: 0,
       openInvoicesAmountCents: 0,

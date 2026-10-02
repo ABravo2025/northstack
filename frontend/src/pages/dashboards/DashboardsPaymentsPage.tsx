@@ -6,22 +6,21 @@ import { api, type PaymentsOverview } from '../../api';
 import { formatMoney } from '../../lib/currencies';
 import type { DashboardsOutletContext } from '../../layouts/DashboardsLayout';
 
-// Payments headline numbers — moved here from the /payments page (2026-10) so that page is just
-// the per-Company table. Live from Stripe like the page itself (no local store), so it's a
-// snapshot of "right now" and ignores the dashboards date range.
+// Payments headline numbers for the dashboards period — live from Stripe (no local store), same
+// numbers as the report beside the /payments table. Subscriptions are counted as of today.
 export default function DashboardsPaymentsPage() {
   const { t } = useTranslation('dashboards');
   const { t: tc } = useTranslation('crm');
-  const { token } = useOutletContext<DashboardsOutletContext>();
+  const { token, range } = useOutletContext<DashboardsOutletContext>();
   const [overview, setOverview] = useState<PaymentsOverview | null>(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     api
-      .getPaymentsOverview(token)
+      .getPaymentsOverview(token, range)
       .then(setOverview)
       .catch(() => setFailed(true));
-  }, [token]);
+  }, [token, range]);
 
   if (failed) return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('payments.loadFailed')}</p>;
   if (!overview) return <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('common.loading')}</p>;
@@ -39,7 +38,12 @@ export default function DashboardsPaymentsPage() {
   return (
     <div>
       <p className="mb-4 text-sm text-ink-muted dark:text-dark-ink-muted">{t('payments.liveNote')}</p>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <StatTile
+          label={tc('payments.report.succeeded')}
+          value={String(totals.paymentsCount)}
+          subtitle={totals.paymentsCount > 0 ? money(totals.paymentsAmountCents, totals.currency) : undefined}
+        />
         <StatTile label={tc('payments.stats.openInvoices')} value={String(totals.openInvoicesCount)} subtitle={openSubtitle || undefined} />
         <StatTile
           label={tc('payments.stats.refunds')}

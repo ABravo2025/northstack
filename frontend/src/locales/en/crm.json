@@ -287,7 +287,17 @@
   },
   "payments": {
     "pageTitle": "Payments",
-    "viewDashboard": "View dashboard",
+    "report": {
+      "title": "Report",
+      "succeeded": "Collected",
+      "open": "Open invoices",
+      "refunded": "Refunded",
+      "failed": "Failed",
+      "subscriptions": "Active subscriptions",
+      "now": "now",
+      "companies_one": "{{count}} company linked to Stripe",
+      "companies_other": "{{count}} companies linked to Stripe"
+    },
     "noPermission": "You don't have permission to view Payments.",
     "toastLoadFailed": "Failed to load payments overview: {{error}}",
     "connectStripeFirst": "Connect your Stripe account first — go to Settings → Integrations.",
@@ -301,6 +311,7 @@
     "noCompaniesLinked": "No Companies linked to Stripe yet — open a Company and use \"Search on Stripe\" under Payments.",
     "columns": {
       "company": "Company",
+      "succeeded": "Succeeded",
       "openInvoices": "Open invoices",
       "refunds": "Refunds",
       "failed": "Failed",

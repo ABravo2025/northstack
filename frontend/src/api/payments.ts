@@ -76,8 +76,9 @@ export const paymentsApi = {
     return res.json();
   },
 
-  getPaymentsOverview: async (token: string): Promise<PaymentsOverview> => {
-    const res = await apiFetch(`${API_BASE_URL}/api/payments/overview`, {
+  getPaymentsOverview: async (token: string, period?: { since: Date; until: Date }): Promise<PaymentsOverview> => {
+    const query = period ? `?since=${encodeURIComponent(period.since.toISOString())}&until=${encodeURIComponent(period.until.toISOString())}` : '';
+    const res = await apiFetch(`${API_BASE_URL}/api/payments/overview${query}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!res.ok) await throwApiError(res);

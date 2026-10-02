@@ -1131,53 +1131,92 @@ table.help-ref td.no {
   @apply flex justify-end gap-2;
 }
 
+/* Legal documents (Terms / Privacy / Refund) — fetched live from joinnorthstack.com and shown in the
+   same reading format as the landing's legal pages (2026-10-02): narrow column, effective-date pill,
+   clear section headings, dividers and tables. */
 .legal-modal-overlay {
-  @apply fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4;
+  @apply fixed inset-0 z-[60] flex items-center justify-center bg-[rgba(14,10,30,0.55)] p-4 backdrop-blur-[2px];
 }
 
 .legal-modal {
-  @apply flex max-h-[85vh] w-full max-w-2xl flex-col rounded-lg bg-surface-1 shadow-xl dark:bg-dark-surface;
+  @apply flex max-h-[88vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-line bg-surface-1 dark:border-dark-line dark:bg-dark-surface;
+  box-shadow: var(--ns-shadow-card), 0 24px 60px -12px rgba(15, 10, 40, 0.35);
 }
 
 .legal-modal-header {
-  @apply flex items-center justify-between border-b border-line px-5 py-4 dark:border-dark-line;
+  @apply flex items-center justify-between gap-3 border-b border-line px-6 py-4 dark:border-dark-line;
 }
 
 .legal-modal-header h3 {
-  @apply text-[15px] font-bold text-brand-navy dark:text-dark-ink;
+  @apply m-0 text-base font-semibold text-ink dark:text-dark-ink;
 }
 
 .legal-modal-close {
-  @apply cursor-pointer border-none bg-transparent p-1 text-ink-faint hover:text-gray-700 dark:hover:text-gray-200;
+  @apply cursor-pointer rounded-md border-none bg-transparent p-1.5 text-ink-faint hover:bg-surface-2 hover:text-ink dark:hover:bg-white/[0.06] dark:hover:text-dark-ink;
 }
 
 .legal-modal-body {
-  @apply overflow-y-auto px-6 py-5 text-sm leading-relaxed text-gray-700 dark:text-dark-ink-muted;
+  @apply overflow-y-auto px-6 py-8 text-[15px] leading-[1.7] text-ink-muted sm:px-10 dark:text-dark-ink-muted;
+}
+
+.legal-modal-body > div {
+  @apply mx-auto max-w-[680px];
 }
 
 .legal-modal-body h1 {
-  @apply mb-2 text-xl font-semibold text-brand-navy dark:text-dark-ink;
+  @apply m-0 mb-1.5 text-[28px] font-bold leading-tight tracking-tight text-ink dark:text-dark-ink;
+  text-wrap: balance;
+}
+
+.legal-modal-body .effective-date {
+  @apply mb-6 inline-block rounded-full bg-accent-tint px-3 py-1 text-[13px] font-semibold text-accent dark:text-brand-blue-light;
 }
 
 .legal-modal-body h2 {
-  @apply mb-2 mt-8 text-base font-semibold text-brand-navy dark:text-dark-ink;
+  @apply mb-2 mt-9 text-lg font-bold tracking-tight text-ink dark:text-dark-ink;
 }
 
 .legal-modal-body h3 {
-  @apply mb-1 mt-4 text-sm font-semibold text-brand-navy dark:text-dark-ink;
+  @apply mb-1.5 mt-6 text-[15px] font-semibold text-ink dark:text-dark-ink;
 }
 
 .legal-modal-body p,
 .legal-modal-body li {
-  @apply text-sm text-gray-700 dark:text-dark-ink-muted;
+  @apply text-[15px] text-ink-muted dark:text-dark-ink-muted;
+}
+
+.legal-modal-body strong {
+  @apply text-ink dark:text-dark-ink;
+}
+
+.legal-modal-body ul,
+.legal-modal-body ol {
+  @apply pl-5;
+}
+
+.legal-modal-body li {
+  @apply my-1;
+}
+
+.legal-modal-body hr {
+  @apply my-8 border-0 border-t border-line dark:border-dark-line;
 }
 
 .legal-modal-body table {
-  @apply my-4 w-full border-collapse text-sm;
+  @apply my-4 block w-full overflow-x-auto border-collapse text-sm;
+}
+
+.legal-modal-body th,
+.legal-modal-body td {
+  @apply border-b border-line px-3 py-2.5 text-left align-top dark:border-dark-line;
+}
+
+.legal-modal-body th {
+  @apply bg-surface-2 font-semibold text-ink dark:bg-dark-raised dark:text-dark-ink;
 }
 
 .legal-modal-body a {
-  @apply text-brand-blue hover:underline;
+  @apply text-accent hover:underline dark:text-brand-blue-light;
 }
 
 .legal-modal-status {

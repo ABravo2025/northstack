@@ -129,7 +129,9 @@
       "contractJobTitle": "Puesto (contrato)",
       "effectiveFrom": "Vigente desde",
       "roleDescription": "Descripción del rol",
-      "note": "Nota"
+      "note": "Nota",
+      "platformRole": "Rol en la plataforma",
+      "platformRoleHint": "Se aplica cuando confirma el contrato y obtiene acceso a la app."
     },
     "personTypeOptions": {
       "profile": "Perfil",

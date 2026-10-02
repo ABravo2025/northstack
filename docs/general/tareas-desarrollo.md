@@ -25,6 +25,13 @@
   con "Gestionar API" podía crear una key con permisos que su rol no tiene (ej. leer nómina sin acceso a Payroll). Ahora cada
   scope exige el mismo permiso que la pantalla equivalente de la app y la UI solo muestra los permitidos. Botones del modal fijos
   en el pie. Al owner no le cambia nada.
+- **2026-10-02 — Rol en la plataforma al dar de alta con contrato (EN PRODUCCIÓN 2026-10-25)**: al crear un Contractor/Empleado
+  con contrato inicial, el envío del contrato es la invitación (confirmarlo crea el User), pero siempre salía con
+  rol Member y no había dónde elegirlo. Ahora "Add Person" trae "Rol en la plataforma" junto al contrato (visible
+  solo para quien puede invitar; default Member); `POST /api/hr/payroll/compensation` acepta `inviteRoleId`
+  (valida permiso de invitar, rol del tenant y que no sea Owner) y lo pasa a la invitación. Bug arreglado de paso:
+  `confirmContract` creaba el User **sin `roleId`** (siempre caía al seed Member por el enum); ahora lo copia de la
+  invitación. "Reenviar contrato" con invitación vencida conserva el rol elegido. 3 tests nuevos.
 - **2026-10-02 — Avisos internos de signup por email (EN PRODUCCIÓN)**: nuevo `sendSignupAlertEmail` (mailer.ts) manda
   un correo a `SIGNUP_ALERT_EMAIL` (variable nueva en Vercel; si no está seteada no se envía nada) en dos momentos:
   (1) cuando un email pide la verificación por primera vez — los reenvíos dentro de las 24hs reutilizan el token y

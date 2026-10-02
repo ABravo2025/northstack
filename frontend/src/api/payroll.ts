@@ -109,6 +109,8 @@ export const payrollApi = {
       description: string;
       effectiveFrom: string;
       note?: string;
+      // Platform role for the contract-confirmation invitation (first-ever contract only).
+      inviteRoleId?: string;
     },
   ): Promise<EmployeeCompensation> => {
     const res = await apiFetch(`${API_BASE_URL}/api/hr/payroll/compensation`, {

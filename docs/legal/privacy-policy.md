@@ -65,6 +65,11 @@ which makes Stripe email the Tenant's client), not just read it. Rewrote the Str
 sentence in 4.5 and added a new Processed Data bullet to 2.2 for the invoice line-item/
 amount/memo data that flows to Stripe when a Tenant does this.
 
+2026-10-02 (still later same day) — same Stripe-permission refinement as
+terms-of-service.md's matching dated note (read that one for the full reasoning): write
+access is gated entirely by the Tenant's own Stripe API key permissions, and invoice
+create/send is currently the only write action — no Payment Intent/direct charging.
+
 Also flagging: this policy distinguishes two categories of personal data —
 (1) "Account Data" about the people who actually use Northstack (Tenant owners/admins/
 members) that we collect directly, where Northstack is the controller, and
@@ -223,10 +228,14 @@ subject to a different privacy policy.
 
 The Service offers integrations that a Tenant may choose, at its own option, to connect to
 its own third-party accounts — currently Google Calendar (to sync Tasks and Time Off as
-calendar events) and Stripe. For Stripe: a Tenant connects its own Stripe account, and the
-Service can then create and send Stripe-hosted invoices to that Tenant's own clients on the
-Tenant's behalf, using the Tenant's own Stripe credentials — Stripe itself delivers the
-invoice and collects payment on it. When a Tenant connects one of these integrations, the
+calendar events) and Stripe. For Stripe: a Tenant connects its own Stripe account by
+providing its own Stripe API key, and the Service only does what that key's own
+permissions allow — read-only if the Tenant's key is read-only, or, if the key grants write
+access, the Service can also create and send Stripe-hosted invoices to that Tenant's own
+clients on the Tenant's behalf. Creating and sending an invoice is currently the only write
+action the Service performs — it does not create a Payment Intent or otherwise directly
+charge or collect a card itself; Stripe's own hosted invoice page is what actually delivers
+the invoice and collects payment. When a Tenant connects one of these integrations, the
 third party it connects — not Northstack — receives and processes the data exposed through
 that connection, under that third party's own privacy practices; see Section 8.2 of our
 Terms of Service.

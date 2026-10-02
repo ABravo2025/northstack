@@ -185,6 +185,19 @@ next to it, so it needed its own sentence rather than being folded into the gene
 stripeInvoiceService.ts (createInvoice/finalizeInvoice/sendInvoice) before writing this,
 not from memory. Added the same correction to privacy-policy.md's 4.5, plus a new Processed
 Data bullet in its 2.2 for the invoice line-item/amount/memo data this writes to Stripe.
+
+2026-10-02 (still later same day) — Alejandro refined the Stripe write further: the
+Service's write access is entirely gated by the permissions on the Tenant's own Stripe API
+key (read-only key -> read-only; write-capable key -> invoice create/send too) — matches
+`StripeKeyPermissionError`'s `access: 'read' | 'write'` branch in stripeInvoiceService.ts
+exactly, a 403 on a restricted key means "this key lacks that permission," not "broken."
+Also made explicit that invoice creation/sending is the *only* write action currently
+supported — no Payment Intent creation, no direct card charging (confirmed zero
+`payment_intent.create`-type calls anywhere in src/; the only existing Payment Intent
+reference is a webhook *listener*, `payment_intent.payment_failed`, which is read-side).
+Alejandro flagged direct charging as a possible future capability — deliberately did not
+add a forward-looking "coming soon" promise about it the way MCP/2FA got one, since he
+didn't ask for that framing here, only for the current scope to be stated accurately.
 -->
 
 # Northstack Terms of Service
@@ -470,15 +483,19 @@ providers.
 
 The Service also offers integrations that a Tenant may choose, at its own option, to
 connect to its own third-party accounts — currently Google Calendar (to sync Tasks and Time
-Off as calendar events) and Stripe. For Stripe: a Tenant connects its own Stripe account,
-and the Service can then **create and send Stripe-hosted invoices to that Tenant's own
-clients on the Tenant's behalf**, using the Tenant's own Stripe credentials — Stripe itself
-is the one that delivers the invoice and collects payment on it, not Northstack.
-**Connecting an integration, and anything the Service does through it (including sending
-an invoice), is the Tenant's own choice and the Tenant's own responsibility.** The third
-party the Tenant connects, not Northstack, receives and processes the data exposed through
-that connection, under that third party's own terms and privacy practices, and Northstack
-is not responsible for how it handles that data.
+Off as calendar events) and Stripe. For Stripe: a Tenant connects its own Stripe account by
+providing its own Stripe API key, and **the Service only does what that key's own
+permissions allow** — if the Tenant's key is read-only, the Service only reads Stripe data;
+if the key grants write access, the Service can also **create and send Stripe-hosted
+invoices to that Tenant's own clients on the Tenant's behalf**. Creating and sending an
+invoice is currently the only write action the Service performs — it does not create a
+Payment Intent or otherwise directly charge or collect a card itself; Stripe's own hosted
+invoice page is what actually delivers the invoice and collects payment, not Northstack.
+**Connecting an integration, the permissions given to it, and anything the Service does
+through it (including sending an invoice), are the Tenant's own choice and the Tenant's own
+responsibility.** The third party the Tenant connects, not Northstack, receives and
+processes the data exposed through that connection, under that third party's own terms and
+privacy practices, and Northstack is not responsible for how it handles that data.
 
 We are also building an integration, using the open Model Context Protocol ("**MCP**"),
 that will let a Tenant's own users connect a third-party AI assistant of their choice (such

@@ -136,6 +136,42 @@ category of data is untouched. Worth reconfirming with Alejandro whether "encryp
 alone is a sufficient security representation to make in a public legal document, versus
 also naming access controls/who can decrypt it — flagging as a smaller follow-up, not
 blocking this fix.
+
+2026-10-02 — Alejandro asked for an evaluation pass against everything shipped since
+2026-09-07 (3+ weeks, a lot: Dodo replacing Paddle, MCP spec, UI refresh, pricing single
+source, i18n, etc.), plus two specific additions: MCP, and an upcoming 2FA feature. Checked
+current code/specs rather than trusting memory (per [[feedback_fetch_before_diagnosing]]-
+style discipline) before writing anything:
+- **Dodo vs. Paddle: already fixed in this file on 2026-09-13**, by someone/some session
+  other than this one (Section 5.4 already said "Dodo Payments" before I touched anything
+  today) — see that dated note above. Not changed further here.
+- **Real gap found: the public HTML pages on the `landing` branch (terms.html, privacy.html,
+  refund.html) never got that 2026-09-13 fix — they were still live on joinnorthstack.com
+  saying "Paddle."** That's a live, user-facing inaccuracy on a production legal page,
+  predating today, found during this evaluation. Fixed in the same pass (see landing branch
+  commit).
+- **MCP: added to Section 8.2 as NOT YET AVAILABLE**, not as a live capability, even though
+  Alejandro's request phrased it in the present tense ("hay MCP para conectar AI"). Verified
+  against the actual code (docs/general/spec-mcp-server.md's own construction-unit table, and
+  grepping for AiConnection/mcpIntegration/OAuthClient — none exist yet): only Unit 0 (Private
+  API restricted to Growth) and Unit 1 (Activity Log source attribution, ui/api/ai) are live.
+  The actual `/mcp` endpoint, the tool registry, and OAuth (Units 2-4, the part that lets a
+  Tenant actually connect an AI) are 100% unbuilt — ~6.5 of the spec's ~8.5 estimated sessions
+  remain. Publishing a ToS clause that says a Tenant *can* connect their AI today, when no
+  such endpoint exists, would be a real misleading-claim risk, not just an inaccuracy — chose
+  "we are building this, not yet available" over the literal ask and flagged the discrepancy
+  to Alejandro rather than silently reframing it.
+- **2FA: added to Section 2.2, same "not yet available" framing**, consistent with Alejandro's
+  own phrasing this time ("aún no está activo, pero lo estará en breves") — zero 2FA code
+  exists anywhere in src/ (checked). Deliberately did not commit to a timeframe ("en breves"
+  is vague on purpose) — a legal document shouldn't promise a ship date neither of us controls.
+- **New Section 8.2 ("Integrations you choose")**: while grounding MCP, found that Google
+  Calendar sync and Stripe Payments v1 (Tenant-connects-its-own-Stripe-account invoicing) —
+  both real, live, shipped features — had *no* ToS/Privacy Policy coverage at all before today.
+  That's a pre-existing gap, not something today's asks created, surfaced only because MCP
+  needed the same "Tenant's own choice, Tenant's own third party, not Northstack's problem"
+  framing and it made sense to write one section covering all three (two live, one upcoming)
+  instead of three near-duplicate ones. Mirrored to privacy-policy.md's new Section 4.5.
 -->
 
 # Northstack Terms of Service
@@ -208,6 +244,10 @@ You are responsible for maintaining the confidentiality of account credentials f
 users under your Tenant, and for all activity that occurs under those accounts. You must
 notify us promptly at info@joinnorthstack.com if you become aware of any unauthorized
 access to or use of an account.
+
+We are also building two-factor authentication (2FA) as an additional, optional account
+security feature. **It is not yet available in the Service.** We will announce it, and
+update these Terms if needed, once it is.
 
 ### 2.3 Accuracy
 
@@ -404,11 +444,33 @@ notice).
 
 ## 8. Third-Party Services
 
-The Service relies on third-party infrastructure and service providers to operate,
-including cloud hosting and database providers and an email delivery provider. We select
-these providers with reasonable care, but we do not control them and are not responsible
-for their acts, omissions, or outages. Use of the Service is subject to the availability
-and performance of these underlying providers.
+### 8.1 Infrastructure we choose
+
+The Service relies on third-party infrastructure and service providers that we select to
+operate it, including cloud hosting and database providers, an email delivery provider, and
+our payment processors (Section 5.4). We select these providers with reasonable care, but
+we do not control them and are not responsible for their acts, omissions, or outages. Use
+of the Service is subject to the availability and performance of these underlying
+providers.
+
+### 8.2 Integrations you choose
+
+The Service also offers integrations that a Tenant may choose, at its own option, to
+connect to its own third-party accounts — currently Google Calendar (to sync Tasks and Time
+Off as calendar events) and Stripe (for a Tenant to issue invoices to its own clients
+through its own Stripe account). **Connecting an integration is the Tenant's own choice and
+the Tenant's own responsibility.** The third party the Tenant connects, not Northstack,
+receives and processes the data exposed through that connection, under that third party's
+own terms and privacy practices, and Northstack is not responsible for how it handles that
+data.
+
+We are also building an integration, using the open Model Context Protocol ("**MCP**"),
+that will let a Tenant's own users connect a third-party AI assistant of their choice (such
+as Claude, ChatGPT, or similar tools) to that Tenant's own data in the Service. **This
+feature is not yet available.** Once available: it will act with the connecting user's own
+permissions, every action it takes will be recorded in the Activity Log, it will be limited
+to the Growth plan, and the Tenant's-own-choice-and-responsibility principle above will
+apply to it in the same way.
 
 ---
 

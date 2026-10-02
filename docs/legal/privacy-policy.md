@@ -48,6 +48,16 @@ full bank account numbers, but Payroll's contract-confirmation flow collects an 
 one on purpose. **Resolved same day** — see terms-of-service.md's Section 3.4, which now
 carries an explicit, narrow exception for that one native Payroll field.
 
+2026-10-02 — same evaluation pass as terms-of-service.md's matching dated note (read that one
+for the full reasoning). Summary as it applies to this file: added new Section 4.5
+("Integrations you choose to connect") covering Google Calendar and Stripe Payments v1 (live,
+previously undocumented here) and MCP (NOT yet available — verified against
+spec-mcp-server.md and the actual code, only the foundational Units 0-1 exist, no `/mcp`
+endpoint or AiConnection model yet); added a 2FA "not yet available" sentence to Section 8.
+Dodo-vs-Paddle was already fixed here on 2026-09-13 by an earlier session — not touched
+again. Real gap found and fixed in the same pass: the public privacy.html on the `landing`
+branch still said "Paddle" in its subprocessor table; this .md source did not.
+
 Also flagging: this policy distinguishes two categories of personal data —
 (1) "Account Data" about the people who actually use Northstack (Tenant owners/admins/
 members) that we collect directly, where Northstack is the controller, and
@@ -199,6 +209,21 @@ If Northstack is involved in a merger, acquisition, or sale of assets, informati
 transferred as part of that transaction. We will provide notice before information becomes
 subject to a different privacy policy.
 
+### 4.5 Integrations you choose to connect
+
+The Service offers integrations that a Tenant may choose, at its own option, to connect to
+its own third-party accounts — currently Google Calendar (to sync Tasks and Time Off as
+calendar events) and Stripe (for a Tenant to issue invoices to its own clients through its
+own Stripe account). When a Tenant connects one of these, the third party it connects —
+not Northstack — receives and processes the data exposed through that connection, under
+that third party's own privacy practices; see Section 8.2 of our Terms of Service.
+
+We are also building an integration, using the Model Context Protocol ("MCP"), that will
+let a Tenant's own users connect a third-party AI assistant of their choice to that
+Tenant's own data in the Service. **This feature is not yet available.** We will update
+this Policy with more detail — including which categories of data it can access — once it
+is.
+
 ---
 
 ## 5. Data Retention
@@ -267,7 +292,9 @@ for your compliance needs.
 We use reasonable technical and organizational measures designed to protect Account Data
 and Processed Data, including encryption of data in transit (HTTPS/TLS), salted
 cryptographic password hashing (scrypt), and tenant-scoped access controls enforced at the
-application layer. No method of transmission or storage is 100% secure, and we cannot
+application layer. We are also building two-factor authentication (2FA) as an additional,
+optional account security feature; **it is not yet available**, and we will announce it
+once it is. No method of transmission or storage is 100% secure, and we cannot
 guarantee absolute security. If we become aware of a security incident affecting your data
 that we are required by law to notify you of, we will do so without undue delay.
 

@@ -50,6 +50,7 @@ const FEATURE_OF_PERMISSION: Record<string, 'payroll' | 'payments' | 'apiAccess'
   manage_payroll: 'payroll',
   manage_payments: 'payments',
   manage_api_access: 'apiAccess',
+  use_ai_assistants: 'apiAccess',
 };
 
 function getGroups(t: TFunction): PermissionGroup[] {
@@ -152,6 +153,7 @@ function getGroups(t: TFunction): PermissionGroup[] {
         { key: 'manage_billing', label: t('roles.groups.money.manage_billing.label'), description: t('roles.groups.money.manage_billing.description') },
         { key: 'manage_payments', label: t('roles.groups.money.manage_payments.label'), description: t('roles.groups.money.manage_payments.description') },
         { key: 'manage_api_access', label: t('roles.groups.money.manage_api_access.label'), description: t('roles.groups.money.manage_api_access.description') },
+        { key: 'use_ai_assistants', label: t('roles.groups.money.use_ai_assistants.label'), description: t('roles.groups.money.use_ai_assistants.description') },
       ],
     },
     {

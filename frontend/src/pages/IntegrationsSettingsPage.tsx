@@ -15,6 +15,7 @@ import Popover from '../components/common/Popover';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
 import { CopyIcon, InfoIcon, LockIcon, TrashIcon } from '../components/common/Icons';
 import i18n from '../lib/i18n';
+import AiAssistantsCard from '../components/integrations/AiAssistantsCard';
 
 interface IntegrationsSettingsPageProps {
   token: string;
@@ -725,6 +726,7 @@ export default function IntegrationsSettingsPage({ token }: IntegrationsSettings
 
       <StripeCard token={token} canManagePayments={permissions.has('manage_payments')} />
       <ApiKeysCard token={token} canManageApiAccess={permissions.has('manage_api_access')} />
+      <AiAssistantsCard token={token} canUseAiAssistants={permissions.has('use_ai_assistants')} />
     </div>
   );
 }

@@ -13,6 +13,8 @@ const PERMISSION_FEATURE: Record<string, keyof PlanFeatures> = {
   manage_payroll: 'payroll',
   manage_payments: 'payments',
   manage_api_access: 'apiAccess',
+  // use_ai_assistants joined 2026-10-02 (spec-mcp-server.md §2b) — same module as the API.
+  use_ai_assistants: 'apiAccess',
 };
 
 // Custom Roles Fase G — the frontend counterpart to permissionService.ts/fieldVisibilityService.ts.

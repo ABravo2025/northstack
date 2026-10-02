@@ -65,3 +65,31 @@ export function canGrantApiScope(role: RoleContext, scope: ApiScope): boolean {
 export function listGrantableApiScopes(role: RoleContext): ApiScope[] {
   return API_SCOPES.filter((scope) => canGrantApiScope(role, scope));
 }
+
+// What an AI assistant token may call (spec-mcp-server.md §2b). Unlike a key, it acts as one
+// person, so it doesn't need to see whole entities: the handlers narrow employees to the user's
+// Employee scope and redact their hidden fields, same as the app — a module permission is enough.
+// Time Off is open to everyone because the handlers limit a user without manage_custom_fields to
+// their OWN requests (and deciding to the requests they're the approver for).
+const AI_SCOPE_RULES: Record<ApiScope, (role: RoleContext) => boolean> = {
+  'hr.employees:read': (role) => canViewEmployee(role),
+  'hr.employees:write': (role) => canManageEmployee(role),
+  'hr.timeoff:read': () => true,
+  'hr.timeoff:write': () => true,
+  'hr.payroll:read': (role) => canManagePayroll(role),
+  'crm.companies:read': (role) => canViewCompany(role),
+  'crm.companies:write': (role) => canManageCompany(role),
+  'crm.contacts:read': (role) => canViewContact(role),
+  'crm.contacts:write': (role) => canManageContact(role),
+  'crm.opportunities:read': (role) => canViewOpportunity(role),
+  'crm.opportunities:write': (role) => canManageOpportunity(role),
+  'crm.pipelines:read': (role) => canViewOpportunity(role),
+  'tasks:read': () => true,
+  'tasks:write': () => true,
+  'notes:read': () => true,
+  'notes:write': () => true,
+};
+
+export function aiScopesForRole(role: RoleContext): ApiScope[] {
+  return API_SCOPES.filter((scope) => AI_SCOPE_RULES[scope](role));
+}

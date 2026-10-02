@@ -121,6 +121,11 @@ export function canManageApiAccess(role: RoleContext): boolean {
   return has(role, 'manage_api_access');
 }
 
+// Connect one's own AI assistant (spec-mcp-server.md §2b). Growth-only by plan, checked separately.
+export function canUseAiAssistants(role: RoleContext): boolean {
+  return has(role, 'use_ai_assistants');
+}
+
 // Owner-only, same reasoning as canManagePayroll — deals-by-owner is
 // per-person performance data inside the tenant (who's closing, who isn't),
 // not something every member should see about their teammates.

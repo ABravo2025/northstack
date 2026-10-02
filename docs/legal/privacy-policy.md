@@ -76,6 +76,13 @@ and today's edits, contradicting Section 10's own promise to post a new effectiv
 every real change. Bumped to October 2, 2026. Going forward, every substantive edit to
 this file should bump it too.
 
+2026-10-02 (still later same day) — Alejandro decided to drop email from the change-
+notification promise: Section 10 now says "with an in-app notification," not "by email
+and by an in-app notification." Same change mirrored to terms-of-service.md's Section 14
+and refund-policy.md's Section 7 — see the former's dated note for the full reasoning,
+including why Section 16's separate "Notices" clause (which does use email, for a
+different purpose) was deliberately left untouched.
+
 Also flagging: this policy distinguishes two categories of personal data —
 (1) "Account Data" about the people who actually use Northstack (Tenant owners/admins/
 members) that we collect directly, where Northstack is the controller, and
@@ -341,9 +348,9 @@ info@joinnorthstack.com and we will take appropriate steps to delete it.
 
 We may add, remove, or modify any provision of this Policy at any time and **without prior
 notice, except where applicable law requires otherwise.** When we make a change, we will
-post the updated Policy with a new effective date and notify Tenant owners **by email and
-by an in-app notification within the Service.** That notification may arrive at or after
-the time the change takes effect, not necessarily before it. Your continued use of the
+post the updated Policy with a new effective date and notify Tenant owners **with an
+in-app notification within the Service.** That notification may arrive at or after the
+time the change takes effect, not necessarily before it. Your continued use of the
 Service after a change takes effect constitutes acceptance of the updated Policy.
 
 ---

@@ -30,10 +30,22 @@
         'seats-starter': String(pricing.includedSeats.starter),
         'seats-growth': String(pricing.includedSeats.growth),
       };
+      // The team-size calculator on the landing (v2) needs the raw numbers, not just the labels.
+      var detail = {
+        currency: market.currency,
+        plans: { starter: market.plans.starter, growth: market.plans.growth },
+        extraSeat: market.extraSeat,
+        included: { starter: pricing.includedSeats.starter, growth: pricing.includedSeats.growth },
+        money: function (cents) { return money(cents, market.currency); },
+      };
       document.querySelectorAll('[data-pricing]').forEach(function (el) {
         var value = values[el.getAttribute('data-pricing')];
         if (value != null) el.textContent = value;
       });
+
+      // After the [data-pricing] labels above, so the calculator's per-team totals win over the base price.
+      window.northstackPricing = detail;
+      window.dispatchEvent(new CustomEvent('northstack:pricing', { detail: detail }));
 
       var ld = document.getElementById('ld-app');
       if (ld) {

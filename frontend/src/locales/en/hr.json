@@ -130,8 +130,7 @@
       "effectiveFrom": "Effective From",
       "roleDescription": "Role Description",
       "note": "Note",
-      "platformRole": "Platform role",
-      "platformRoleHint": "Applied when they confirm the contract and get access to the app."
+      "platformRole": "Platform role"
     },
     "personTypeOptions": {
       "profile": "Profile",

@@ -186,7 +186,7 @@ export default function BillingPage({ token, tenant }: BillingPageProps) {
     const m = pricing?.markets[market];
     if (!pricing || !m || (plan !== 'starter' && plan !== 'growth')) return '—';
     const extraSeats = Math.max(0, subscription.activeSeats - pricing.includedSeats[plan]);
-    return formatPlanPrice(m.plans[plan] + extraSeats * m.extraSeat, m.currency);
+    return formatPlanPrice(m.plans[plan] + extraSeats * (m.extraSeatByPlan?.[plan] ?? m.extraSeat), m.currency);
   };
   const planChangeMessage = (plan: PlanTier): string => {
     const values = { plan: PLAN_LABEL[plan], current: currentPlan ? PLAN_LABEL[currentPlan] : '', price: monthlyPriceFor(plan) };

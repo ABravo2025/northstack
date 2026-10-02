@@ -223,6 +223,8 @@
     "lastStep": "Último paso",
     "introTrial": "Todos los planes incluyen una prueba gratuita real de {{count}} días. Prueba gratuita no pide tarjeta; Starter y Growth sí piden una por adelantado, pero no se te cobra hasta que termine la prueba. Podés cambiar de plan cuando quieras desde Configuración.",
     "introExpired": "Tu prueba gratuita terminó. Starter y Growth se cobran de inmediato apenas agregás una tarjeta — Prueba gratuita mantiene tu espacio de trabajo funcionando un poco más, pero no elimina la necesidad de elegir un plan pago eventualmente. Podés cambiar de plan cuando quieras desde Configuración.",
+    "launchTag": "Lanzamiento",
+    "launchBanner": "Precio de lanzamiento para los equipos que se suman hasta el {{date}} — y lo mantenés mientras sigas suscripto.",
     "priceLockedBanner": "El precio con el que arrancás es el precio que mantenés, mientras sigas suscripto.",
     "currentPlanBadge": "Plan actual",
     "recommendedBadge": "Recomendado para vos",
@@ -251,13 +253,13 @@
       },
       "starter": {
         "tagline": "Para equipos chicos que recién están empezando",
-        "priceSuffix": "/mes",
-        "cap": "{{included}} puestos incluidos · {{seatPrice}}/mes por puesto extra"
+        "priceSuffix": "/ usuario / mes",
+        "cap": "Se cobra por usuario activo · mínimo {{min}} usuarios ({{minTotal}}/mes)"
       },
       "growth": {
         "tagline": "Para equipos en crecimiento que necesitan Nómina",
-        "priceSuffix": "/mes",
-        "cap": "{{included}} puestos incluidos · {{seatPrice}}/mes por puesto extra"
+        "priceSuffix": "/ usuario / mes",
+        "cap": "Se cobra por usuario activo · mínimo {{min}} usuarios ({{minTotal}}/mes)"
       }
     },
     "features": {

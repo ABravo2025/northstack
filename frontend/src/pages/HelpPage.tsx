@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useScrollSpy } from '../hooks/useScrollSpy';
-import { extraSeatPriceLabel, usePlanPricing, type PlanPricing } from '../lib/planPrices';
+import { perUserPriceLabel, usePlanPricing, type PlanPricing } from '../lib/planPrices';
 import LegalDocumentModal from '../components/common/LegalDocumentModal';
 import {
   BriefcaseIcon,
@@ -83,11 +83,11 @@ const FAQ_CATEGORIES: FaqCategory[] = [
     items: [
       {
         q: "What's different between Starter and Growth?",
-        a: "Growth removes the caps on pipelines, time off policies, and custom roles, raises included seats from {starterSeats} to {growthSeats}, keeps activity history for 30 days instead of 7, and is the only plan with Payroll and Payments (your own Stripe) included.",
+        a: "Growth removes the caps on pipelines, time off policies, and custom roles, keeps activity history for 30 days instead of 7, and is the only plan with Payroll and Payments (your own Stripe) included. Both plans are priced per active user: {starterPrice} on Starter and {growthPrice} on Growth per user per month.",
       },
       {
         q: 'How do seats work?',
-        a: "Every active person in your workspace counts as a seat, regardless of role. Starter includes {starterSeats}, Growth includes {growthSeats} — go over and each extra seat is billed automatically at {seatPrice}/mo, no hard limit once you're on a real plan. Free Trial (before you've picked a plan) is capped at {trialCap} people, since there's no billing set up yet to cover anyone past that.",
+        a: "Every active person in your workspace counts as one user, regardless of role, and you pay per user per month ({starterPrice} on Starter, {growthPrice} on Growth), with a minimum of {minUsers} users per team. Add or remove people and the bill adjusts on its own — no hard limit. Free Trial (before you've picked a plan) is capped at {trialCap} people, since there's no billing set up yet to cover anyone past that.",
       },
       {
         q: 'Do I choose between Dodo Payments and Mercado Pago myself?',
@@ -295,11 +295,11 @@ const FAQ_CATEGORIES_ES: FaqCategory[] = [
     items: [
       {
         q: '¿Qué diferencia hay entre Starter y Growth?',
-        a: 'Growth saca los topes de pipelines, políticas de ausencias y roles personalizados, sube los puestos incluidos de {starterSeats} a {growthSeats}, guarda el historial de actividad 30 días en vez de 7, y es el único plan que incluye Nómina y Pagos (tu propia cuenta de Stripe).',
+        a: 'Growth saca los topes de pipelines, políticas de ausencias y roles personalizados, guarda el historial de actividad 30 días en vez de 7, y es el único plan que incluye Nómina y Pagos (tu propia cuenta de Stripe). Los dos planes se cobran por usuario activo: {starterPrice} en Starter y {growthPrice} en Growth por usuario por mes.',
       },
       {
         q: '¿Cómo funcionan los puestos (seats)?',
-        a: 'Cada persona activa en tu espacio de trabajo cuenta como un puesto, sin importar el rol. Starter incluye {starterSeats}, Growth incluye {growthSeats} — si te pasás, cada puesto extra se factura automáticamente a {seatPrice}/mes, sin límite duro una vez que estás en un plan real. La prueba gratuita (antes de elegir un plan) está limitada a {trialCap} personas, porque todavía no hay facturación configurada para cubrir a nadie por encima de eso.',
+        a: 'Cada persona activa en tu espacio de trabajo cuenta como un usuario, sin importar el rol, y pagás por usuario por mes ({starterPrice} en Starter, {growthPrice} en Growth), con un mínimo de {minUsers} usuarios por equipo. Si sumás o sacás gente, el total se ajusta solo — sin límite duro. La prueba gratuita (antes de elegir un plan) está limitada a {trialCap} personas, porque todavía no hay facturación configurada para cubrir a nadie por encima de eso.',
       },
       {
         q: '¿Elijo yo mismo entre Dodo Payments y Mercado Pago?',
@@ -450,10 +450,10 @@ const NAV_IDS = [...FAQ_CATEGORIES.map((c) => c.id), 'f-contact', 'f-legal'];
 
 function fillPricingTokens(categories: typeof FAQ_CATEGORIES, pricing: PlanPricing | null): typeof FAQ_CATEGORIES {
   const values: Record<string, string> = {
-    starterSeats: String(pricing?.includedSeats.starter ?? '—'),
-    growthSeats: String(pricing?.includedSeats.growth ?? '—'),
+    starterPrice: perUserPriceLabel(pricing, 'international', 'starter'),
+    growthPrice: perUserPriceLabel(pricing, 'international', 'growth'),
+    minUsers: String(pricing?.minUsers ?? '—'),
     trialCap: String(pricing?.freeTrialSeatCap ?? '—'),
-    seatPrice: extraSeatPriceLabel(pricing, 'international'),
   };
   const fill = (text: string) => text.replace(/\{(\w+)\}/g, (token, key: string) => values[key] ?? token);
   return categories.map((cat) => ({ ...cat, items: cat.items.map((item) => ({ ...item, a: fill(item.a) })) }));

@@ -74,8 +74,38 @@ export function planPriceLabel(pricing: PlanPricing | null, market: Market, plan
   return formatPlanPrice(m.plans[plan], m.currency);
 }
 
-export function extraSeatPriceLabel(pricing: PlanPricing | null, market: Market): string {
+export function extraSeatPriceLabel(pricing: PlanPricing | null, market: Market, plan: PricedPlan = 'starter'): string {
   const m = pricing?.markets[market];
   if (!m) return '—';
-  return formatPlanPrice(m.extraSeat, m.currency);
+  return formatPlanPrice(m.extraSeatByPlan?.[plan] ?? m.extraSeat, m.currency);
+}
+
+// Per-user pricing (2026-10-02): the price per active user per month a NEW team gets today, and the
+// regular price it's discounted from while the launch offer runs.
+export function perUserPriceLabel(pricing: PlanPricing | null, market: Market, plan: PricedPlan, tier?: 'launch' | 'regular'): string {
+  const m = pricing?.markets[market];
+  if (!pricing || !m?.perUser) return '—';
+  const which = tier ?? (pricing.isLaunch ? 'launch' : 'regular');
+  return formatPlanPrice(m.perUser[which][plan], m.currency);
+}
+
+export function launchDiscountPct(pricing: PlanPricing | null, market: Market, plan: PricedPlan): number | null {
+  const m = pricing?.markets[market];
+  if (!pricing?.isLaunch || !m?.perUser) return null;
+  const { launch, regular } = m.perUser;
+  return regular[plan] > 0 ? Math.round((1 - launch[plan] / regular[plan]) * 100) : null;
+}
+
+// Smallest monthly bill for a plan today: the per-user price × the minimum team size.
+export function minMonthlyLabel(pricing: PlanPricing | null, market: Market, plan: PricedPlan): string {
+  const m = pricing?.markets[market];
+  if (!pricing || !m?.perUser) return '—';
+  const per = m.perUser[pricing.isLaunch ? 'launch' : 'regular'][plan];
+  return formatPlanPrice(per * pricing.minUsers, m.currency);
+}
+
+// "December 31, 2026" / "31 de diciembre de 2026"
+export function launchEndLabel(pricing: PlanPricing | null, locale: string): string {
+  if (!pricing) return '—';
+  return new Date(`${pricing.launchEndsAt}T12:00:00Z`).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
 }

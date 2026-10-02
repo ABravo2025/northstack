@@ -85,7 +85,7 @@ describe('ensurePlanPricesSynced', () => {
 
     expect(rows).toHaveLength(4);
     expect(rows).toContainEqual(
-      expect.objectContaining({ plan: 'growth', market: 'international', currency: 'USD', launchPriceCents: intl.plans.growth, extraSeatPriceCents: intl.extraSeat }),
+      expect.objectContaining({ plan: 'growth', market: 'international', currency: 'USD', launchPriceCents: intl.plans.growth, extraSeatPriceCents: intl.extraSeat.growth }),
     );
     expect(rows).toContainEqual(expect.objectContaining({ plan: 'starter', market: 'ar', currency: 'ARS' }));
   });
@@ -100,7 +100,7 @@ describe('ensurePlanPricesSynced', () => {
   });
 
   it('inserts a new row on a price change (history kept) and drops the Dodo product priced at the old amount', async () => {
-    row({ plan: 'starter', market: 'international', launchPriceCents: 1500, extraSeatPriceCents: intl.extraSeat, dodoProductId: 'pdt_old', dodoExtraSeatAddonId: 'adn_seat' });
+    row({ plan: 'starter', market: 'international', launchPriceCents: 1500, extraSeatPriceCents: intl.extraSeat.starter, dodoProductId: 'pdt_old', dodoExtraSeatAddonId: 'adn_seat' });
     const { ensurePlanPricesSynced } = await load();
     await ensurePlanPricesSynced();
 
@@ -116,7 +116,7 @@ describe('ensurePlanPricesSynced', () => {
     await ensurePlanPricesSynced();
 
     const newest = rows.filter((r) => r.plan === 'growth' && r.market === 'international').at(-1);
-    expect(newest).toMatchObject({ extraSeatPriceCents: intl.extraSeat, dodoProductId: 'pdt_growth', dodoExtraSeatAddonId: null });
+    expect(newest).toMatchObject({ extraSeatPriceCents: intl.extraSeat.growth, dodoProductId: 'pdt_growth', dodoExtraSeatAddonId: null });
   });
 });
 
@@ -136,7 +136,7 @@ describe('currentPlanPrice', () => {
     const result = await currentPlanPrice('starter', 'international');
 
     expect(createRecurringProductMock).toHaveBeenCalledWith({ name: 'Northstack — starter', priceCents: intl.plans.starter });
-    expect(createExtraSeatAddonMock).toHaveBeenCalledWith(intl.extraSeat);
+    expect(createExtraSeatAddonMock).toHaveBeenCalledWith(intl.extraSeat.starter);
     expect(result).toMatchObject({ dodoProductId: 'pdt_new', dodoExtraSeatAddonId: 'adn_new' });
   });
 
@@ -149,12 +149,21 @@ describe('currentPlanPrice', () => {
     expect(result?.dodoExtraSeatAddonId).toBe('adn_legacy');
   });
 
-  it("reuses the other plan's addon for the same seat price", async () => {
+  it("reuses another row's addon for the same seat price", async () => {
+    row({ plan: 'starter', market: 'international', launchPriceCents: 999, extraSeatPriceCents: intl.extraSeat.growth, dodoExtraSeatAddonId: 'adn_same_price' });
+    const { currentPlanPrice } = await load();
+    const result = await currentPlanPrice('growth', 'international');
+
+    expect(result?.dodoExtraSeatAddonId).toBe('adn_same_price');
+  });
+
+  it('gives each plan its own per-user seat addon when their prices differ (per-user pricing)', async () => {
     const { currentPlanPrice } = await load();
     await currentPlanPrice('starter', 'international');
     await currentPlanPrice('growth', 'international');
 
-    expect(createExtraSeatAddonMock).toHaveBeenCalledTimes(1);
+    expect(createExtraSeatAddonMock).toHaveBeenCalledWith(intl.extraSeat.starter);
+    expect(createExtraSeatAddonMock).toHaveBeenCalledWith(intl.extraSeat.growth);
   });
 });
 
@@ -185,6 +194,31 @@ describe('lockedPlanPrice', () => {
     await lockedPlanPrice({ id: 's1', planPriceId: null, plan: 'starter', provider: 'dodopayments', lockedPriceCents: 2900 }, 'international');
 
     expect(subscriptionUpdates).toHaveLength(0);
+  });
+});
+
+describe('per-user pricing (2026-10-02)', () => {
+  it('bills MIN_USERS in the base and every user beyond at the same per-user price', async () => {
+    const { billingMarkets, MIN_USERS, PER_USER } = await import('../src/config/pricing.js');
+    const m = billingMarkets(new Date('2026-11-01T12:00:00Z')).international;
+    expect(m.plans.starter).toBe(PER_USER.international.launch.starter * MIN_USERS);
+    expect(m.extraSeat.growth).toBe(PER_USER.international.launch.growth);
+  });
+
+  it('switches new teams to the regular price after the launch window', async () => {
+    const { billingMarkets, PER_USER } = await import('../src/config/pricing.js');
+    expect(billingMarkets(new Date('2026-12-31T23:00:00Z')).ar.extraSeat.starter).toBe(PER_USER.ar.launch.starter);
+    expect(billingMarkets(new Date('2027-01-01T00:00:01Z')).ar.extraSeat.starter).toBe(PER_USER.ar.regular.starter);
+  });
+
+  it('keeps Starter cheaper than Growth for every team size, launch and regular, in both markets', async () => {
+    const { PER_USER, MIN_USERS } = await import('../src/config/pricing.js');
+    for (const market of ['international', 'ar'] as const) {
+      for (const tier of ['launch', 'regular'] as const) {
+        const p = PER_USER[market][tier];
+        for (let users = MIN_USERS; users <= 200; users++) expect(p.starter * users).toBeLessThan(p.growth * users);
+      }
+    }
   });
 });
 

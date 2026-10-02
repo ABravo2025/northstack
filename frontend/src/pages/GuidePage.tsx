@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useScrollSpy } from '../hooks/useScrollSpy';
-import { extraSeatPriceLabel, planPriceLabel, usePlanPricing } from '../lib/planPrices';
+import { launchEndLabel, perUserPriceLabel, usePlanPricing } from '../lib/planPrices';
 import {
   AlertCircleIcon,
   AlertTriangleIcon,
@@ -160,11 +160,13 @@ export default function GuidePage() {
   const activeId = useScrollSpy(SECTION_IDS);
   // Every price/seat number below comes from the backend's src/config/pricing.ts — never type one here.
   const pricing = usePlanPricing();
-  const usd = (plan: 'starter' | 'growth') => planPriceLabel(pricing, 'international', plan);
-  const seatPrice = extraSeatPriceLabel(pricing, 'international');
-  const included = (plan: 'starter' | 'growth') => pricing?.includedSeats[plan] ?? '—';
+  // Per-user pricing (2026-10-02): price per active user per month, minimum team size, launch offer.
+  const usd = (plan: 'starter' | 'growth') => perUserPriceLabel(pricing, 'international', plan);
+  const usdRegular = (plan: 'starter' | 'growth') => perUserPriceLabel(pricing, 'international', plan, 'regular');
+  const minUsers = pricing?.minUsers ?? '—';
   const trialCap = pricing?.freeTrialSeatCap ?? '—';
   const { i18n } = useTranslation();
+  const launchEnd = launchEndLabel(pricing, i18n.language);
   const isSpanish = i18n.language.startsWith('es');
 
   // Same ids/order as the English arrays (see NAV_GROUPS_ES/MODULE_MAP_ES above, which share
@@ -1946,13 +1948,13 @@ export default function GuidePage() {
                 </thead>
                 <tbody>
                   <tr>
-                    <td>Precio</td>
-                    <td className="num">{usd('starter')}/mes</td>
-                    <td className="num">{usd('growth')}/mes</td>
+                    <td>Precio por usuario</td>
+                    <td className="num">{usd('starter')}/mes{pricing?.isLaunch && <> <s>{usdRegular('starter')}</s></>}</td>
+                    <td className="num">{usd('growth')}/mes{pricing?.isLaunch && <> <s>{usdRegular('growth')}</s></>}</td>
                   </tr>
                   <tr><td>Pipelines</td><td className="num">2</td><td className="num">Ilimitados</td></tr>
                   <tr><td>Políticas de ausencias</td><td className="num">3</td><td className="num">Ilimitadas</td></tr>
-                  <tr><td>Puestos incluidos</td><td className="num">{included('starter')}</td><td className="num">{included('growth')}</td></tr>
+                  <tr><td>Mínimo de usuarios</td><td className="num">{minUsers}</td><td className="num">{minUsers}</td></tr>
                   <tr><td>Roles personalizados</td><td className="num">2</td><td className="num">Ilimitados</td></tr>
                   <tr><td>Historial del registro de actividad</td><td className="num">7 días</td><td className="num">30 días</td></tr>
                   <tr><td>Nómina</td><td className="no">—</td><td className="yes">Incluido</td></tr>
@@ -1962,11 +1964,11 @@ export default function GuidePage() {
               </table>
             </div>
             <p className="help-intro" style={{ marginTop: '-8px' }}>
-              Precios mostrados en USD (en Argentina se cobra en pesos vía Mercado Pago). Un tercer nivel, <strong>Scale</strong>, está disponible hablando con
-              nosotros directamente en vez de por checkout de autoservicio. "Puestos incluidos" cuenta a toda
-              persona activa en tu espacio de trabajo sin importar el rol — owner, admin, o member cuentan todos
-              igual. Si te pasás, cada puesto extra cuesta {seatPrice}/mes, facturado automáticamente; no hay un tope duro
-              una vez que estás en un plan real. La prueba gratuita (sin plan elegido todavía) está limitada a {trialCap}{' '}
+              Precios por usuario activo por mes, en USD (en Argentina se cobra en pesos vía Mercado Pago). Cada
+              persona activa cuenta igual, sin importar el rol, con un mínimo de {minUsers} usuarios por equipo; si sumás
+              o sacás gente, el total se ajusta solo. {pricing?.isLaunch && <>Los equipos que se suscriben hasta el {launchEnd} tienen
+              el precio de lanzamiento (tachado, el regular) y lo mantienen mientras sigan suscriptos. </>}Un tercer nivel,
+              <strong> Scale</strong>, está disponible hablando con nosotros directamente. La prueba gratuita (sin plan elegido todavía) está limitada a {trialCap}{' '}
               personas porque todavía no hay facturación configurada para cubrir a nadie más allá de eso — elegí un
               plan para agregar más. En Starter, Nómina, Pagos y la API no aparecen en ningún lado (menú, dashboards,
               ficha del empleado, roles, integraciones) — si pasás a Growth se muestran solas, y los permisos que ya
@@ -2026,13 +2028,13 @@ export default function GuidePage() {
                 </thead>
                 <tbody>
                   <tr>
-                    <td>Price</td>
-                    <td className="num">{usd('starter')}/mo</td>
-                    <td className="num">{usd('growth')}/mo</td>
+                    <td>Price per user</td>
+                    <td className="num">{usd('starter')}/mo{pricing?.isLaunch && <> <s>{usdRegular('starter')}</s></>}</td>
+                    <td className="num">{usd('growth')}/mo{pricing?.isLaunch && <> <s>{usdRegular('growth')}</s></>}</td>
                   </tr>
                   <tr><td>Pipelines</td><td className="num">2</td><td className="num">Unlimited</td></tr>
                   <tr><td>Time off policies</td><td className="num">3</td><td className="num">Unlimited</td></tr>
-                  <tr><td>Seats included</td><td className="num">{included('starter')}</td><td className="num">{included('growth')}</td></tr>
+                  <tr><td>Minimum users</td><td className="num">{minUsers}</td><td className="num">{minUsers}</td></tr>
                   <tr><td>Custom roles</td><td className="num">2</td><td className="num">Unlimited</td></tr>
                   <tr><td>Activity log history</td><td className="num">7 days</td><td className="num">30 days</td></tr>
                   <tr><td>Payroll</td><td className="no">—</td><td className="yes">Included</td></tr>
@@ -2042,10 +2044,11 @@ export default function GuidePage() {
               </table>
             </div>
             <p className="help-intro" style={{ marginTop: '-8px' }}>
-              Prices shown in USD (Argentina is billed in pesos via Mercado Pago). A third tier, <strong>Scale</strong>, is available by talking to us directly
-              rather than self-serve checkout. "Seats included" counts every active person in your workspace
-              regardless of role — owner, admin, or member all count the same. Go over and each extra seat is
-              {seatPrice}/mo, billed automatically; no hard cap once you're on a real plan. Free Trial (no plan chosen yet)
+              Prices are per active user per month, in USD (Argentina is billed in pesos via Mercado Pago). Every
+              active person counts the same regardless of role, with a minimum of {minUsers} users per team; add or remove
+              people and the total adjusts on its own. {pricing?.isLaunch && <>Teams that subscribe by {launchEnd} get the launch
+              price (the regular one is struck through) and keep it for as long as they stay subscribed. </>}A third tier,
+              <strong> Scale</strong>, is available by talking to us directly. Free Trial (no plan chosen yet)
               is capped at {trialCap} people since there's no billing in place yet to cover anyone past that — pick a plan to
               add more. On Starter, Payroll, Payments and the API don't appear anywhere (menu, dashboards, employee profile,
               roles, integrations) — upgrade to Growth and they show up on their own, with any permissions your roles

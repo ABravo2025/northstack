@@ -6,7 +6,7 @@ import { useToast } from './ToastProvider';
 import type { PlanTier, Tenant } from '../../api/types';
 import { daysRemainingUntil } from '../../lib/trial';
 import { COMPANY_SIZE_1_10, COMPANY_SIZE_11_50 } from '../../lib/companySize';
-import { extraSeatPriceLabel, marketForCountry, planPriceLabel, usePlanPricing, type Market, type PlanPricing } from '../../lib/planPrices';
+import { launchDiscountPct, launchEndLabel, marketForCountry, minMonthlyLabel, perUserPriceLabel, usePlanPricing, type Market, type PlanPricing } from '../../lib/planPrices';
 
 interface FeatureRow {
   label: string;
@@ -61,10 +61,11 @@ function planCtaLabel(t: ReturnType<typeof useTranslation>['t'], card: PlanCardC
 // proprietary/brand-like name isn't run through t()). "Free Trial" is a generic concept already
 // translated elsewhere (common.json's trial banners), so it does go through t() here.
 function getPlanCards(t: ReturnType<typeof useTranslation>['t'], pricing: PlanPricing | null, market: Market): PlanCardConfig[] {
+  // Per-user pricing (2026-10-02): one price per active user, with a minimum team size.
   const seatCap = (plan: 'starter' | 'growth') =>
     t(`plansModal.cards.${plan}.cap`, {
-      included: pricing ? pricing.includedSeats[plan] : '—',
-      seatPrice: extraSeatPriceLabel(pricing, market),
+      min: pricing ? pricing.minUsers : '—',
+      minTotal: minMonthlyLabel(pricing, market, plan),
     });
   return [
     {
@@ -162,7 +163,7 @@ interface PlansModalProps {
 // way, this is an upsell, not a gate).
 export default function PlansModal({ open, tenant, onClose, onSelectPlan, currentPlan }: PlansModalProps) {
   const toast = useToast();
-  const { t } = useTranslation('settingsPages');
+  const { t, i18n } = useTranslation('settingsPages');
   const [loadingKey, setLoadingKey] = useState<string | null>(null);
 
   // Fetched lazily on first open rather than on mount — this component stays mounted
@@ -214,15 +215,26 @@ export default function PlansModal({ open, tenant, onClose, onSelectPlan, curren
       </div>
 
       <div className="text-center text-sm font-medium rounded-lg border border-line bg-accent-tint px-4 py-2.5 my-4 mx-auto max-w-xl dark:border-dark-line">
-        {t('plansModal.priceLockedBanner')}
+        {pricing?.isLaunch ? (
+          <>
+            <span className="mr-2 inline-block rounded-full bg-orange-600 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-white">
+              {t('plansModal.launchTag')}
+            </span>
+            {t('plansModal.launchBanner', { date: launchEndLabel(pricing, i18n.language) })}
+          </>
+        ) : (
+          t('plansModal.priceLockedBanner')
+        )}
       </div>
 
       <div className={`grid gap-4 ${visibleCards.length === 2 ? 'md:grid-cols-2 max-w-xl mx-auto' : 'md:grid-cols-3'}`}>
         {visibleCards.map((card) => {
           const isCurrent = card.key === currentPlan;
           const isRecommended = !isCurrent && card.key === recommended;
-          const displayPrice =
-            card.key === 'starter' || card.key === 'growth' ? planPriceLabel(pricing, market, card.key) : card.price;
+          const paid = card.key === 'starter' || card.key === 'growth';
+          const displayPrice = paid ? perUserPriceLabel(pricing, market, card.key as 'starter' | 'growth') : card.price;
+          const regularPrice = paid && pricing?.isLaunch ? perUserPriceLabel(pricing, market, card.key as 'starter' | 'growth', 'regular') : null;
+          const discount = paid ? launchDiscountPct(pricing, market, card.key as 'starter' | 'growth') : null;
           return (
             <div
               key={card.key}
@@ -246,9 +258,15 @@ export default function PlansModal({ open, tenant, onClose, onSelectPlan, curren
               <h3 className="card-title mt-1">{card.name}</h3>
               <p className="text-xs text-ink-muted mb-4 min-h-[2rem]">{card.tagline}</p>
 
-              <p className="mb-0.5">
+              <p className="mb-0.5 flex flex-wrap items-baseline gap-x-2">
+                {regularPrice && <s className="text-sm text-ink-faint">{regularPrice}</s>}
                 <span className="text-2xl font-bold">{displayPrice}</span>
-                {card.priceSuffix && <span className="text-sm font-normal text-ink-muted"> {card.priceSuffix}</span>}
+                {card.priceSuffix && <span className="text-sm font-normal text-ink-muted">{card.priceSuffix}</span>}
+                {discount ? (
+                  <span className="rounded-full bg-orange-100 px-2 py-0.5 text-[11px] font-bold text-orange-700 dark:bg-orange-500/15 dark:text-orange-300">
+                    -{discount}%
+                  </span>
+                ) : null}
               </p>
               <p className="text-xs text-ink-faint mb-3">{card.cap}</p>
 

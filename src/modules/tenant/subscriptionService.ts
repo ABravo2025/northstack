@@ -102,7 +102,7 @@ export async function getBillingSummary(tenantId: string) {
   // today (src/config/pricing.ts) — display only, no provider call from this read path.
   const extraSeatPriceCents =
     subscription?.planPrice?.extraSeatPriceCents ??
-    PRICING.markets[marketForProvider(subscription?.provider ?? null, tenant.country)].extraSeat;
+    PRICING.markets[marketForProvider(subscription?.provider ?? null, tenant.country)].extraSeat[tenant.plan === 'growth' ? 'growth' : 'starter'];
   const seatInfo = {
     tenantPlan: tenant.plan,
     activeSeats,

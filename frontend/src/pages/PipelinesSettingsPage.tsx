@@ -108,10 +108,11 @@ interface StageEditorProps {
 function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
   const toast = useToast();
   const { t } = useTranslation('settingsPages');
-  const [newStageName, setNewStageName] = useState('');
-  // The "+ Add stage" row turns into an inline name input; it stays open after each add so
-  // several stages can be typed in a row, and closes on Escape or when left empty.
-  const [addingStage, setAddingStage] = useState(false);
+  // "+ Add stage" adds a full stage row right away (same columns as the others); it's saved once it
+  // has a name — on Enter (which opens the next blank row) or when focus leaves the row. Left
+  // without a name, or on Escape, the row just disappears. Never saves a nameless stage.
+  const [newStage, setNewStage] = useState<{ name: string; outcome: DraftStage['outcome']; probability: string; notifyOwnerOnEnter: boolean } | null>(null);
+  const savingNewStage = useRef(false);
   // Local draft while editing a stage's win probability — committed onBlur
   // (docs/tareas/specredisenosalesv2.md §3.5), keyed by stage.id so multiple
   // stages can be mid-edit independently.
@@ -125,16 +126,31 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
   // comment above).
   const sortedStages = useMemo(() => [...pipeline.stages].sort((a, b) => a.order - b.order), [pipeline.stages]);
 
-  const handleAddStage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const name = newStageName.trim();
-    if (!name) return;
+  const blankNewStage = () => ({ name: '', outcome: 'open' as const, probability: '50', notifyOwnerOnEnter: true });
+
+  const commitNewStage = async (openAnother: boolean) => {
+    if (!newStage || savingNewStage.current) return;
+    const name = newStage.name.trim();
+    if (!name) {
+      setNewStage(openAnother ? newStage : null);
+      return;
+    }
+    savingNewStage.current = true;
+    const parsedProbability = Number.parseInt(newStage.probability, 10);
     try {
-      await api.createPipelineStage(token, pipeline.id, { name, order: pipeline.stages.length, outcome: 'open' });
-      setNewStageName('');
+      await api.createPipelineStage(token, pipeline.id, {
+        name,
+        order: pipeline.stages.length,
+        outcome: newStage.outcome,
+        probability: Number.isFinite(parsedProbability) ? parsedProbability : undefined,
+        notifyOwnerOnEnter: newStage.notifyOwnerOnEnter,
+      });
+      setNewStage(openAnother ? blankNewStage() : null);
       onChanged();
     } catch (error) {
       toast.error(t('pipelines.errors.addStage', { message: (error as Error).message }));
+    } finally {
+      savingNewStage.current = false;
     }
   };
 
@@ -335,33 +351,75 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
         </div>
       </CompactRowGroup>
 
-      {addingStage ? (
-        <form className="stage-table-add-form" onSubmit={handleAddStage}>
+      {newStage && (
+        <div
+          className="stage-table-row stage-table-row-new"
+          onBlur={(e) => {
+            // Only when focus leaves the whole row — moving from the name to Outcome stays a draft.
+            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) commitNewStage(false);
+          }}
+        >
+          <span style={{ width: STAGE_GRIP_COLUMN_WIDTH }} />
+          <span className="stage-new-swatch" />
           <input
             type="text"
-            className="field-m"
+            className="flex-1"
             autoFocus
             placeholder={t('pipelines.stageEditor.newStageNamePlaceholder')}
-            value={newStageName}
-            onChange={(e) => setNewStageName(e.target.value)}
-            onBlur={() => {
-              if (!newStageName.trim()) setAddingStage(false);
-            }}
+            value={newStage.name}
+            onChange={(e) => setNewStage({ ...newStage, name: e.target.value })}
             onKeyDown={(e) => {
-              if (e.key === 'Escape') {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                commitNewStage(true);
+              } else if (e.key === 'Escape') {
                 e.stopPropagation();
-                setNewStageName('');
-                setAddingStage(false);
+                setNewStage(null);
               }
             }}
           />
-          <button type="submit" className="btn-primary" disabled={!newStageName.trim()}>
-            {t('pipelines.stageEditor.addStage')}
-          </button>
-        </form>
-      ) : (
-        <ListAddRow label={t('pipelines.stageEditor.addStage')} onAdd={() => setAddingStage(true)} />
+          <select
+            className="select-compact"
+            style={{ width: 110 }}
+            value={newStage.outcome}
+            onChange={(e) => setNewStage({ ...newStage, outcome: e.target.value as DraftStage['outcome'] })}
+          >
+            {OUTCOME_VALUES.map((value) => (
+              <option key={value} value={value}>
+                {t(`pipelines.outcome.${value}`)}
+              </option>
+            ))}
+          </select>
+          {newStage.outcome === 'open' ? (
+            <input
+              type="number"
+              min={0}
+              max={100}
+              className="select-compact"
+              style={{ width: 56 }}
+              value={newStage.probability}
+              onChange={(e) => setNewStage({ ...newStage, probability: e.target.value })}
+              title={t('pipelines.stageEditor.winProbabilityTooltip')}
+            />
+          ) : (
+            <span className="text-xs text-ink-faint" style={{ width: 56, textAlign: 'center' }}>
+              {newStage.outcome === 'won' ? 100 : 0}%
+            </span>
+          )}
+          <span style={{ width: 56, display: 'flex', justifyContent: 'center' }}>
+            <input
+              type="checkbox"
+              checked={newStage.notifyOwnerOnEnter}
+              onChange={(e) => setNewStage({ ...newStage, notifyOwnerOnEnter: e.target.checked })}
+              title={t('pipelines.stageEditor.notifyTooltip')}
+            />
+          </span>
+          <span className="icon-btn invisible" aria-hidden="true">
+            <EyeIcon className="h-3.5 w-3.5" />
+          </span>
+        </div>
       )}
+      {!newStage && <ListAddRow label={t('pipelines.stageEditor.addStage')} onAdd={() => setNewStage(blankNewStage())} />}
       </div>
     </>
   );

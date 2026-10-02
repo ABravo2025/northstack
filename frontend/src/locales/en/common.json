@@ -228,6 +228,7 @@
     "email": "Email",
     "saving": "Saving…",
     "saved": "Saved",
+    "personalTitle": "Personal details",
     "saveChanges": "Save changes",
     "changePassword": "Change password",
     "currentPassword": "Current password",
@@ -237,7 +238,7 @@
     "toastProfileUpdated": "Profile updated.",
     "social": {
       "title": "Social profiles",
-      "hint": "Optional. Paste the link to your profile.",
+      "hint": "Optional — paste the link to your profile",
       "invalid": "Enter a valid link, e.g. https://linkedin.com/in/your-name",
       "open": "Open",
       "linkedin": "LinkedIn",

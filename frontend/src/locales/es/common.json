@@ -228,6 +228,7 @@
     "email": "Correo electrónico",
     "saving": "Guardando…",
     "saved": "Guardado",
+    "personalTitle": "Datos personales",
     "saveChanges": "Guardar cambios",
     "changePassword": "Cambiar contraseña",
     "currentPassword": "Contraseña actual",
@@ -237,7 +238,7 @@
     "toastProfileUpdated": "Perfil actualizado.",
     "social": {
       "title": "Redes sociales",
-      "hint": "Opcional. Pegá el link a tu perfil.",
+      "hint": "Opcional — pegá el link a tu perfil",
       "invalid": "Ingresá un link válido, por ej. https://linkedin.com/in/tu-nombre",
       "open": "Abrir",
       "linkedin": "LinkedIn",

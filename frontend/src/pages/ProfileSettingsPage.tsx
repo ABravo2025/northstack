@@ -116,6 +116,9 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
           onBlur={() => saveProfile()}
         >
           <div>
+            <div className="profile-col-head">
+              <h4 className="profile-social-title">{t('profile.personalTitle')}</h4>
+            </div>
             <div className="form-group">
               <label htmlFor="profile-firstName">{t('profile.firstName')}</label>
               <input
@@ -149,8 +152,11 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
             </div>
           </div>
           <div className="profile-social">
-            <h4 className="profile-social-title">{t('profile.social.title')}</h4>
-            <p className="profile-social-hint">{t('profile.social.hint')}</p>
+            {/* Same one-line head as the left column, so both columns' fields sit on the same rows. */}
+            <div className="profile-col-head">
+              <h4 className="profile-social-title">{t('profile.social.title')}</h4>
+              <span className="profile-social-hint">{t('profile.social.hint')}</span>
+            </div>
             {SOCIAL_NETWORKS.map((network) => (
               <div className="form-group" key={network}>
                 <label htmlFor={`profile-social-${network}`}>{t(`profile.social.${network}`)}</label>

@@ -1,6 +1,10 @@
 # Tareas de desarrollo
 
 - Fecha de creación: 2026-07-02
+- **2026-10-02 — Fix de seguridad: scopes de API key limitados al rol del creador (EN PRODUCCIÓN 2026-10-03)**: un rol personalizado
+  con "Gestionar API" podía crear una key con permisos que su rol no tiene (ej. leer nómina sin acceso a Payroll). Ahora cada
+  scope exige el mismo permiso que la pantalla equivalente de la app y la UI solo muestra los permitidos. Botones del modal fijos
+  en el pie. Al owner no le cambia nada.
 - **2026-10-02 — Avisos internos de signup por email (EN PRODUCCIÓN)**: nuevo `sendSignupAlertEmail` (mailer.ts) manda
   un correo a `SIGNUP_ALERT_EMAIL` (variable nueva en Vercel; si no está seteada no se envía nada) en dos momentos:
   (1) cuando un email pide la verificación por primera vez — los reenvíos dentro de las 24hs reutilizan el token y

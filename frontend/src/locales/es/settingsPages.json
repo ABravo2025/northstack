@@ -81,7 +81,7 @@
       "doneCopiedIt": "Listo — ya la copié",
       "name": "Nombre",
       "namePlaceholder": "ej. Zapier — nuevas Tareas",
-      "scopesHelp": "Una clave arranca sin ningún acceso — marcá exactamente lo que necesita.",
+      "scopesHelp": "Una clave arranca sin ningún acceso — marcá exactamente lo que necesita. Solo podés otorgar lo que tu propio rol ya puede hacer.",
       "scopeGroups": {
         "tasksNotes": "Tareas y Notas",
         "crm": "CRM",

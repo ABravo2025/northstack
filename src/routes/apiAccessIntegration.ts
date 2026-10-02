@@ -4,6 +4,7 @@ import { validateSession } from '../lib/httpAuth.js';
 import { canManageApiAccess } from '../modules/auth/permissionService.js';
 import { isApiAccessAllowed } from '../modules/tenant/planLimits.js';
 import { createApiKey, listApiKeys, revokeApiKey } from '../modules/integrations/apiKeyService.js';
+import { listGrantableApiScopes } from '../modules/integrations/apiScopePermissions.js';
 import {
   createSubscription,
   deleteSubscription,
@@ -48,6 +49,16 @@ apiAccessIntegrationRouter.get('/api/integrations/api-keys', async (req, res) =>
   return res.json(keys);
 });
 
+// The scopes this user's role lets them put on a key — drives which checkboxes the create form
+// shows, so the UI never offers a scope createApiKey would then reject.
+apiAccessIntegrationRouter.get('/api/integrations/api-keys/grantable-scopes', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) return;
+  if (!requireApiAccess(user, res)) return;
+
+  return res.json(listGrantableApiScopes(user.roleContext));
+});
+
 apiAccessIntegrationRouter.post('/api/integrations/api-keys', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) return;
@@ -57,7 +68,7 @@ apiAccessIntegrationRouter.post('/api/integrations/api-keys', async (req, res) =
   const scopes = Array.isArray(req.body?.scopes) ? req.body.scopes.filter((s: unknown) => typeof s === 'string') : [];
 
   try {
-    const created = await createApiKey(user.tenantId!, user.id, { name, scopes });
+    const created = await createApiKey(user.tenantId!, user.id, user.roleContext, { name, scopes });
     return res.status(201).json(created);
   } catch (error) {
     return res.status(400).json({ error: (error as Error).message });

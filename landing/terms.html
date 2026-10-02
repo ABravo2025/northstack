@@ -233,6 +233,11 @@
         <a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a> if you become
         aware of any unauthorized access to or use of an account.
       </p>
+      <p>
+        We are also building two-factor authentication (2FA) as an additional, optional
+        account security feature. <strong>It is not yet available in the Service.</strong>
+        We will announce it, and update these Terms if needed, once it is.
+      </p>
 
       <h3>2.3 Accuracy</h3>
       <p>
@@ -411,7 +416,7 @@
       <h3>5.4 Payment processors</h3>
       <p>
         Payments are processed by third-party payment processors, not Northstack directly:
-        <strong>Paddle</strong> for Tenants billed internationally in USD, and
+        <strong>Dodo Payments</strong> for Tenants billed internationally in USD, and
         <strong>Mercado Pago</strong> for Tenants billed in Argentina in ARS. These
         processors collect and store your payment card or bank account details directly,
         under their own terms of service and privacy policies — Northstack does not receive
@@ -469,12 +474,40 @@
       <hr />
 
       <h2>8. Third-Party Services</h2>
+
+      <h3>8.1 Infrastructure we choose</h3>
       <p>
-        The Service relies on third-party infrastructure and service providers to operate,
-        including cloud hosting and database providers and an email delivery provider. We
-        select these providers with reasonable care, but we do not control them and are not
-        responsible for their acts, omissions, or outages. Use of the Service is subject to
-        the availability and performance of these underlying providers.
+        The Service relies on third-party infrastructure and service providers that we
+        select to operate it, including cloud hosting and database providers, an email
+        delivery provider, and our payment processors (Section 5.4). We select these
+        providers with reasonable care, but we do not control them and are not responsible
+        for their acts, omissions, or outages. Use of the Service is subject to the
+        availability and performance of these underlying providers.
+      </p>
+
+      <h3>8.2 Integrations you choose</h3>
+      <p>
+        The Service also offers integrations that a Tenant may choose, at its own option,
+        to connect to its own third-party accounts — currently Google Calendar (to sync
+        Tasks and Time Off as calendar events) and Stripe (for a Tenant to issue invoices to
+        its own clients through its own Stripe account).
+        <strong
+          >Connecting an integration is the Tenant's own choice and the Tenant's own
+          responsibility.</strong
+        >
+        The third party the Tenant connects, not Northstack, receives and processes the
+        data exposed through that connection, under that third party's own terms and
+        privacy practices, and Northstack is not responsible for how it handles that data.
+      </p>
+      <p>
+        We are also building an integration, using the open Model Context Protocol
+        ("<strong>MCP</strong>"), that will let a Tenant's own users connect a third-party
+        AI assistant of their choice (such as Claude, ChatGPT, or similar tools) to that
+        Tenant's own data in the Service. <strong>This feature is not yet available.</strong>
+        Once available: it will act with the connecting user's own permissions, every
+        action it takes will be recorded in the Activity Log, it will be limited to the
+        Growth plan, and the Tenant's-own-choice-and-responsibility principle above will
+        apply to it in the same way.
       </p>
 
       <hr />

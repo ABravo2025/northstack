@@ -10,168 +10,65 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
-    <meta name="theme-color" content="#0d2a48" />
+    <meta name="theme-color" content="#5b21e6" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet" />
 
     <style>
-      /*
-        Brand palette — kept in sync by hand with frontend/src/index.css
-        (`@theme` block, --color-brand-*) on the main branch, and with
-        index.html/about.html on this same static site (no build step /
-        shared module system to import a single definition from). If you
-        change a color here, update the other files too.
-      */
-      :root {
-        --ink: #0d2a48;
-        --ink-muted: #6f6a62;
-        --ink-faint: #a09a90;
-        --accent: #b8502f;
-        --accent-hover: #9c4227;
-        --surface-0: #f8f5f0;
-        --surface-1: #fffefb;
-        --surface-2: #f3efe8;
-        --line: #e6e0d6;
-        --line-strong: #d8d1c5;
-      }
+/* Landing v2 look (2026-10-02) — same tokens as index.html. */
+:root {
+  --violet: #5b21e6; --violet-deep: #3d12a8; --lilac: #a98bff; --lilac-soft: #efe9ff;
+  --ink: #14102b; --ink-2: #4a4566; --ink-3: #6f6a8a;
+  --page: #fbfaff; --surface: #ffffff; --surface-2: #f4f1fd; --line: #e6e1f5;
+  --shadow: 0 1px 2px rgba(30,14,80,.06), 0 12px 32px -12px rgba(40,18,110,.18);
+  --font: "Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif: "Instrument Serif", Georgia, "Times New Roman", serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root { color-scheme: dark;
+    --violet: #7c4dff; --violet-deep: #5b21e6; --lilac: #b9a1ff; --lilac-soft: #241a45;
+    --ink: #f1eeff; --ink-2: #bdb6da; --ink-3: #958fb3;
+    --page: #0c0a16; --surface: #16121f; --surface-2: #1d1830; --line: #2b2542;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px -12px rgba(0,0,0,.6); }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 16px/1.65 var(--font); -webkit-font-smoothing: antialiased; }
+a { color: var(--violet); }
+h1, h2, h3 { text-wrap: balance; letter-spacing: -0.02em; line-height: 1.15; color: var(--ink); }
+.container { max-width: 1180px; margin: 0 auto; padding-inline: 20px; }
+.brand { display: inline-flex; align-items: center; gap: 9px; font-weight: 700; font-size: 18px; color: var(--ink); text-decoration: none; }
+.brand img { width: 28px; height: 28px; display: block; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font: 600 15px/1 var(--font); padding: 13px 20px; border-radius: 12px; text-decoration: none; border: 1px solid transparent; transition: transform .15s, background .15s, border-color .15s; }
+.btn:focus-visible, a:focus-visible { outline: 3px solid var(--lilac); outline-offset: 2px; }
+.btn-primary { background: var(--violet); color: #fff; box-shadow: 0 8px 22px -8px rgba(91,33,230,.7), inset 0 1px 0 rgba(255,255,255,.2); }
+.btn-primary:hover { background: var(--violet-deep); transform: translateY(-1px); }
+.btn-secondary { background: var(--surface); color: var(--ink); border-color: var(--line); }
+.btn-secondary:hover { border-color: var(--lilac); }
+.btn-sm { padding: 10px 14px; font-size: 14px; }
+.eyebrow { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--violet); }
 
-      * {
-        box-sizing: border-box;
-      }
-
-      body {
-        margin: 0;
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-        background: var(--surface-0);
-        color: var(--ink);
-        line-height: 1.6;
-      }
-
-      a {
-        color: var(--accent);
-        text-decoration: none;
-      }
-      a:hover {
-        color: var(--accent-hover);
-      }
-
-      .container {
-        max-width: 1120px;
-        margin: 0 auto;
-        padding: 0 24px;
-      }
-
-      .btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        padding: 14px 26px;
-        border-radius: 10px;
-        font-weight: 600;
-        font-size: 15px;
-        cursor: pointer;
-        border: 1px solid transparent;
-        white-space: nowrap;
-      }
-      .btn-primary {
-        background: var(--accent);
-        color: #fff;
-      }
-      .btn-primary:hover {
-        background: var(--accent-hover);
-        color: #fff;
-      }
-      .btn-secondary {
-        background: transparent;
-        color: var(--ink);
-        border-color: var(--line-strong);
-      }
-      .btn-secondary:hover {
-        background: var(--surface-2);
-        color: var(--ink);
-      }
-
-      .nav {
-        background: var(--surface-1);
-        border-bottom: 1px solid var(--line);
-      }
-      .nav .container {
-        height: 76px;
-        display: flex;
-        align-items: center;
-      }
-      .nav-logo img {
-        height: 24px;
-        display: block;
-      }
-
-      main {
-        flex: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 64px 0;
-      }
-      .error-wrap {
-        max-width: 480px;
-        text-align: center;
-      }
-      .error-code {
-        font-size: 15px;
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: var(--accent);
-        margin-bottom: 16px;
-      }
-      h1 {
-        font-size: 32px;
-        font-weight: 800;
-        letter-spacing: -0.02em;
-        margin: 0 0 14px;
-      }
-      .error-wrap p.lead {
-        font-size: 15.5px;
-        line-height: 1.6;
-        color: var(--ink-muted);
-        margin: 0 0 32px;
-      }
-      .error-actions {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 14px;
-        flex-wrap: wrap;
-      }
-
-      footer {
-        border-top: 1px solid var(--line);
-        padding: 24px 0;
-        text-align: center;
-        font-size: 12.5px;
-        color: var(--ink-faint);
-      }
-
-      @media (max-width: 480px) {
-        h1 {
-          font-size: 26px;
-        }
-      }
-    </style>
+.nav { border-bottom: 1px solid var(--line); }
+.nav .container { display: flex; align-items: center; height: 64px; }
+.nav-logo { text-decoration: none; }
+body { min-height: 100vh; display: flex; flex-direction: column; }
+.error-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 48px 20px; position: relative; overflow: hidden; }
+.error-wrap::before { content: ""; position: absolute; inset: 10% 20% auto; height: 520px; background: radial-gradient(closest-side, color-mix(in srgb, var(--lilac) 32%, transparent), transparent 70%); pointer-events: none; }
+.error-wrap > * { position: relative; }
+.error-code { font-size: clamp(56px, 9vw, 96px); font-weight: 700; letter-spacing: -0.05em; line-height: 1; background: linear-gradient(135deg, var(--violet), #9b6bff); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.error-wrap h1 { font-size: clamp(26px, 3.6vw, 36px); margin: 12px 0 0; }
+.lead { color: var(--ink-2); font-size: 18px; max-width: 46ch; margin: 12px auto 0; }
+main { flex: 1; display: flex; } main > .container { flex: 1; display: flex; } .error-wrap { flex: 1; }
+footer { text-align: center; color: var(--ink-3); font-size: 13.5px; padding: 24px 20px; border-top: 1px solid var(--line); }
+.error-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 28px; }
+</style>
   </head>
   <body>
     <header class="nav">
       <div class="container">
-        <a class="nav-logo" href="/es/"><img src="/logo-horizontal-light.svg" alt="Northstack" /></a>
+        <a class="nav-logo" href="/es/"><span class="brand"><img src="/icon-color.svg" alt="" width="28" height="28" />Northstack</span></a>
       </div>
     </header>
 

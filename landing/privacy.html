@@ -11,145 +11,70 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
-    <meta name="theme-color" content="#0d2a48" />
+    <meta name="theme-color" content="#5b21e6" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet" />
 
     <style>
-      /*
-        Brand palette — kept in sync by hand with frontend/src/index.css
-        (`@theme` block, --color-brand-*) on the main branch. This is a
-        static site with no build step and no shared module system with
-        the app, so there's no way to import one definition into both;
-        if you change a color here, update the other file too.
-      */
-      :root {
-        --navy: #0d2a48;
-        --blue: #3c6da1;
-        --cream: #fdfcf8;
-      }
+/* Landing v2 look (2026-10-02) — same tokens as index.html. */
+:root {
+  --violet: #5b21e6; --violet-deep: #3d12a8; --lilac: #a98bff; --lilac-soft: #efe9ff;
+  --ink: #14102b; --ink-2: #4a4566; --ink-3: #6f6a8a;
+  --page: #fbfaff; --surface: #ffffff; --surface-2: #f4f1fd; --line: #e6e1f5;
+  --shadow: 0 1px 2px rgba(30,14,80,.06), 0 12px 32px -12px rgba(40,18,110,.18);
+  --font: "Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif: "Instrument Serif", Georgia, "Times New Roman", serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root { color-scheme: dark;
+    --violet: #7c4dff; --violet-deep: #5b21e6; --lilac: #b9a1ff; --lilac-soft: #241a45;
+    --ink: #f1eeff; --ink-2: #bdb6da; --ink-3: #958fb3;
+    --page: #0c0a16; --surface: #16121f; --surface-2: #1d1830; --line: #2b2542;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px -12px rgba(0,0,0,.6); }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 16px/1.65 var(--font); -webkit-font-smoothing: antialiased; }
+a { color: var(--violet); }
+h1, h2, h3 { text-wrap: balance; letter-spacing: -0.02em; line-height: 1.15; color: var(--ink); }
+.container { max-width: 1180px; margin: 0 auto; padding-inline: 20px; }
+.brand { display: inline-flex; align-items: center; gap: 9px; font-weight: 700; font-size: 18px; color: var(--ink); text-decoration: none; }
+.brand img { width: 28px; height: 28px; display: block; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font: 600 15px/1 var(--font); padding: 13px 20px; border-radius: 12px; text-decoration: none; border: 1px solid transparent; transition: transform .15s, background .15s, border-color .15s; }
+.btn:focus-visible, a:focus-visible { outline: 3px solid var(--lilac); outline-offset: 2px; }
+.btn-primary { background: var(--violet); color: #fff; box-shadow: 0 8px 22px -8px rgba(91,33,230,.7), inset 0 1px 0 rgba(255,255,255,.2); }
+.btn-primary:hover { background: var(--violet-deep); transform: translateY(-1px); }
+.btn-secondary { background: var(--surface); color: var(--ink); border-color: var(--line); }
+.btn-secondary:hover { border-color: var(--lilac); }
+.btn-sm { padding: 10px 14px; font-size: 14px; }
+.eyebrow { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--violet); }
 
-      * {
-        box-sizing: border-box;
-      }
-
-      body {
-        margin: 0;
-        font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-        background: var(--cream);
-        color: var(--navy);
-        line-height: 1.6;
-      }
-
-      a {
-        color: var(--blue);
-      }
-
-      header {
-        padding: 28px 0;
-      }
-
-      header .container {
-        max-width: 780px;
-        margin: 0 auto;
-        padding: 0 24px;
-      }
-
-      header img {
-        height: 32px;
-      }
-
-      main {
-        background: white;
-        border-radius: 20px;
-        max-width: 780px;
-        margin: 0 auto 64px;
-        padding: 48px;
-      }
-
-      h1 {
-        font-size: 2rem;
-        margin: 0 0 8px;
-      }
-
-      h2 {
-        font-size: 1.3rem;
-        margin: 40px 0 12px;
-      }
-
-      h3 {
-        font-size: 1.05rem;
-        margin: 24px 0 8px;
-      }
-
-      p,
-      li {
-        color: #374151;
-        font-size: 0.95rem;
-      }
-
-      ul {
-        padding-left: 22px;
-      }
-
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 16px 0;
-        font-size: 0.9rem;
-      }
-
-      th,
-      td {
-        text-align: left;
-        padding: 8px 12px;
-        border: 1px solid #e5e7eb;
-      }
-
-      th {
-        background: var(--cream);
-      }
-
-      hr {
-        border: none;
-        border-top: 1px solid #e5e7eb;
-        margin: 32px 0;
-      }
-
-      .effective-date {
-        color: #6b7280;
-        font-weight: 600;
-        margin-bottom: 32px;
-      }
-
-      footer {
-        padding: 40px 0 60px;
-        text-align: center;
-        color: #6b7280;
-        font-size: 0.85rem;
-      }
-
-      footer a {
-        margin: 0 8px;
-      }
-
-      @media (max-width: 640px) {
-        main {
-          border-radius: 0;
-          padding: 32px 20px;
-        }
-      }
-    </style>
+header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: color-mix(in srgb, var(--page) 82%, transparent); backdrop-filter: saturate(1.4) blur(12px); border-bottom: 1px solid var(--line); }
+header .container { display: flex; align-items: center; height: 64px; }
+header a { text-decoration: none; }
+main { max-width: 760px; margin: 0 auto; padding: 56px 20px 80px; }
+main h1 { font-size: clamp(32px, 4.6vw, 44px); margin: 0 0 6px; }
+.effective-date { color: var(--ink-3); font-size: 14.5px; margin: 0 0 28px; display: inline-block; padding: 4px 12px; border-radius: 99px; background: var(--lilac-soft); color: var(--violet); font-weight: 600; }
+main h2 { font-size: 23px; margin: 40px 0 10px; scroll-margin-top: 80px; }
+main h3 { font-size: 18px; margin: 26px 0 8px; }
+main p, main li { color: var(--ink-2); }
+main strong { color: var(--ink); }
+main ul, main ol { padding-left: 22px; } main li { margin: 4px 0; }
+main hr { border: 0; border-top: 1px solid var(--line); margin: 36px 0; }
+main table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14.5px; display: block; overflow-x: auto; }
+main th, main td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+main th { background: var(--surface-2); color: var(--ink); font-weight: 600; }
+main code { font-size: .92em; background: var(--surface-2); padding: 1px 5px; border-radius: 5px; }
+footer { border-top: 1px solid var(--line); padding: 28px 20px; text-align: center; color: var(--ink-3); font-size: 14px; }
+footer a { color: var(--ink-3); }
+</style>
   </head>
   <body>
     <header>
       <div class="container">
-        <a href="/"><img src="/logo-horizontal-light.svg" alt="Northstack" /></a>
+        <a href="/"><span class="brand"><img src="/icon-color.svg" alt="" width="28" height="28" />Northstack</span></a>
       </div>
     </header>
 
@@ -545,7 +470,7 @@
       <a href="/">Home</a> · <a href="/terms.html">Terms of Service</a> ·
       <a href="/privacy.html">Privacy Policy</a> ·
       <a href="/refund.html">Refund Policy</a>
-      <p>© 2026 Northstack. Todos los derechos reservados.</p>
+      <p>© 2026 Northstack. All rights reserved.</p>
     </footer>
   </body>
 </html>

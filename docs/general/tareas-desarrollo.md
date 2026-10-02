@@ -1,6 +1,12 @@
 # Tareas de desarrollo
 
 - Fecha de creación: 2026-07-02
+- **2026-10-02 — MCP Unidad 2: Private API acepta tokens de IA (EN STAGING)**: cada usuario de un tenant Growth puede
+  crear un token personal para su propio asistente de IA (Settings → Integraciones → Asistentes de IA). El token actúa
+  como esa persona: la Private API aplica su rol actual (permisos, scope de empleados, campos ocultos, licencias
+  propias). Las API keys ahora también se recortan en cada request al rol actual de su creador. Permiso nuevo "Usar
+  asistentes de IA" (on por defecto). Endpoints nuevos `/me`, aprobar/rechazar licencias (solo IA) y detalle de corrida
+  de payroll. Staging DB: `db push` + backfill hechos. **Prod: falta `db push` + backfill antes de promover.**
 - **2026-10-02 — Avisos internos de signup por email (EN PRODUCCIÓN)**: nuevo `sendSignupAlertEmail` (mailer.ts) manda
   un correo a `SIGNUP_ALERT_EMAIL` (variable nueva en Vercel; si no está seteada no se envía nada) en dos momentos:
   (1) cuando un email pide la verificación por primera vez — los reenvíos dentro de las 24hs reutilizan el token y

@@ -235,6 +235,23 @@ export interface ApiKeySummary {
 }
 
 // Only the create response carries the full key — never seen again after this.
+// Settings → Integrations → AI assistants (spec-mcp-server.md §2b) — one assistant a user
+// connected to their own account. Acts as that user; never more than their role.
+export interface AiConnectionSummary {
+  id: string;
+  kind: 'personal_token' | 'oauth';
+  clientName: string;
+  tokenPrefix: string | null;
+  lastUsedAt: string | null;
+  createdAt: string;
+  revokedAt: string | null;
+  user: { id: string; firstName: string; lastName: string };
+}
+
+export interface CreateAiTokenResult extends AiConnectionSummary {
+  fullToken: string;
+}
+
 export interface CreateApiKeyResult extends ApiKeySummary {
   fullKey: string;
 }

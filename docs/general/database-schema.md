@@ -1653,6 +1653,7 @@ Notas:
 | `ActivityEntityType` | 27 valores (employee/company/contact/opportunity + HR/Payroll + CRM/cross-module + cuenta/plataforma, ver grupo 13) | `ActivityLogEntry.entityType` (grupo 13) |
 | `ActivityAction` | `create`, `update`, `delete` | `ActivityLogEntry.action` (grupo 13) |
 | `ActivitySource` | `ui`, `api`, `ai` | `ActivityLogEntry.source` (grupo 13, 2026-10-01) |
+| `AiConnectionKind` | `personal_token`, `oauth` | `AiConnection.kind` (2026-10-02, `spec-mcp-server.md` §2b) |
 
 ## Qué falta / deuda conocida
 

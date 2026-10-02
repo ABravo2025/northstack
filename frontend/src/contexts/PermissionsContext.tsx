@@ -6,7 +6,8 @@ import type { PermissionsPayload } from '../api';
 // backend gate exactly, so every screen that already checks has('manage_payroll'|'manage_payments')
 // hides Payroll/Payments for a Starter tenant instead of showing UI that 403s on click.
 // manage_api_access joined 2026-10-01 (Private API keys + webhooks became Growth-only).
-const GROWTH_ONLY_PERMISSIONS = new Set(['manage_payroll', 'manage_payments', 'manage_api_access']);
+// use_ai_assistants joined 2026-10-02 (spec-mcp-server.md §2b).
+const GROWTH_ONLY_PERMISSIONS = new Set(['manage_payroll', 'manage_payments', 'manage_api_access', 'use_ai_assistants']);
 
 // Custom Roles Fase G — the frontend counterpart to permissionService.ts/fieldVisibilityService.ts.
 // `has`/`isFieldHidden` mirror those backend functions exactly (isOwner bypasses everything, a

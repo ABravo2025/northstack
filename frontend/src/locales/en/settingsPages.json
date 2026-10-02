@@ -50,6 +50,35 @@
       "connecting": "Connecting…",
       "testConnection": "Test connection"
     },
+    "aiAssistants": {
+      "title": "AI assistants",
+      "description": "Connect your own AI assistant (Claude, ChatGPT, Cursor…) to Northstack. It acts as you: it can only see and do what your role already allows, and everything it changes shows in the Activity Log as \"AI · <name>\".",
+      "loadError": "Failed to load AI assistants: {{message}}",
+      "createToken": "Create token",
+      "createTitle": "Connect an AI assistant",
+      "createdTitle": "Token created",
+      "name": "Name",
+      "namePlaceholder": "e.g. Claude Desktop",
+      "nameHelp": "So you can tell your connections apart. It's also how the Activity Log labels what this assistant does.",
+      "creating": "Creating…",
+      "copyNowWarning": "Copy this token now — it won't be shown again. Paste it in your assistant's settings. If you lose it, revoke it and create a new one.",
+      "copy": "Copy",
+      "copied": "Token copied to clipboard.",
+      "copyError": "Failed to copy token: {{message}}",
+      "doneCopiedIt": "Done — I've copied it",
+      "emptyTitle": "No AI assistants connected",
+      "emptyBody": "Create a token to let your own AI assistant work in Northstack on your behalf.",
+      "columns": { "name": "Name", "token": "Token", "status": "Status", "lastUsed": "Last used" },
+      "active": "Active",
+      "revoked": "Revoked",
+      "never": "Never",
+      "revoke": "Revoke",
+      "revoking": "Revoking…",
+      "revokedToast": "\"{{name}}\" disconnected.",
+      "revokeError": "Failed to revoke: {{message}}",
+      "revokeConfirmTitle": "Disconnect \"{{name}}\"?",
+      "revokeConfirmMessage": "The assistant will immediately lose access to your workspace. This can't be undone — you'd need to create a new token."
+    },
     "apiKeys": {
       "never": "Never",
       "loadError": "Failed to load API keys: {{message}}",
@@ -712,7 +741,11 @@
         "manage_payroll": { "label": "Manage payroll", "description": "Compensation, payroll runs, and the CSV export of employee data." },
         "manage_billing": { "label": "Manage billing", "description": "Change plan, payment method, and cancel the subscription." },
         "manage_payments": { "label": "Manage payments", "description": "Connect Stripe and view customer payment history." },
-        "manage_api_access": { "label": "Manage API & webhooks", "description": "Create and revoke private API keys and outbound webhooks." }
+        "manage_api_access": { "label": "Manage API & webhooks", "description": "Create and revoke private API keys and outbound webhooks." },
+        "use_ai_assistants": {
+          "label": "Use AI assistants",
+          "description": "Connect their own AI assistant (Claude, ChatGPT…). It acts as them and can only see and do what this role already allows."
+        }
       },
       "reporting": {
         "title": "Reporting",

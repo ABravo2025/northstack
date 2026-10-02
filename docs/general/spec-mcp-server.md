@@ -75,6 +75,27 @@ solo puede llevar scopes que el creador ve completos (scope de empleados `all` p
 en la entidad para los scopes de lectura). La UI solo muestra esos scopes
 (`GET /api/integrations/api-keys/grantable-scopes`).
 
+**Unidad 2 implementada (2026-10-02, en `staging`):**
+- `AiConnection` (+ `AiConnectionKind`) y `ApiRequestLog.aiConnectionId`. Token personal `nk_mcp_…`, guardado como SHA-256.
+  Las columnas OAuth (access/refresh) ya existen para la Unidad 4.
+- Permiso `use_ai_assistants` (toggleable, Growth-only, **on por defecto** en Admin/Member; backfill
+  `scripts/backfill-use-ai-assistants.ts` para roles existentes).
+- `authenticateApiKey` distingue la credencial por prefijo y siempre resuelve el **actor** (creador de la key o
+  usuario de la conexión) con su rol **actual**. API key: scopes ∩ lo que el rol del creador puede otorgar hoy;
+  creador desactivado → `401 key_creator_inactive`. Token de IA: scopes derivados del rol (`aiScopesForRole`), sin
+  `use_ai_assistants` → `403 ai_not_allowed`.
+- Handlers: scope de empleados (404 fuera de scope) y campos ocultos por rol en empleados/empresas/contactos/
+  oportunidades; Time Off propio para quien no administra licencias; tenant suspendido → escrituras `403
+  tenant_suspended` (aplica también a API keys).
+- Endpoints nuevos: `GET /me`, `PATCH /hr/timeoff/:id` (aprobar/rechazar, **solo token de IA**: requiere ser el
+  aprobador), `GET /hr/payroll/:id`. OpenAPI (`/developers`) actualizado.
+- Gestión: `GET/POST/DELETE /api/integrations/ai-connections` (`src/routes/mcpIntegration.ts`) y tarjeta "Asistentes
+  de IA" en Integraciones (`AiAssistantsCard.tsx`, EN/ES). Toggle "Usar asistentes de IA" en Roles.
+- Activity Log: lo que hace un token de IA queda como `source: ai` con el nombre de la conexión.
+- **Resúmenes (`my_day`, `pipeline_summary`, `who_is_off`) pasan a la Unidad 3**: el MCP los arma combinando
+  endpoints existentes, no hacen falta endpoints nuevos.
+- **Pendiente para prod:** `db push` aditivo (1 tabla, 1 enum, 1 columna) + correr el backfill del permiso.
+
 **Unidades reordenadas:** 2 = Private API con token de IA (tabla de conexiones, permiso nuevo, roles por
 endpoint, endpoints faltantes) · 3 = función MCP separada + tools + confirmación de borrados · 4 = OAuth ·
 5-7 sin cambios.

@@ -3,13 +3,14 @@
   "info": {
     "title": "Northstack Private API",
     "version": "1.0.0",
-    "description": "A REST API for your own scripts, Zapier, Make, or anything else you want to connect to your Northstack workspace. Manage keys from Settings → Integrations → API Keys.\n\nAn API key is not a person: it carries no role and no session. The scopes on the key are the only thing that determines what it can do — internal workspace roles/permissions don't apply to this traffic at all.\n\nEvery error response is the same shape: `{ \"error\": string, \"code\": string }`. A `400` from bad input additionally includes `details`, an array of `{ path, message }` naming exactly which field(s) failed."
+    "description": "A REST API for your own scripts, Zapier, Make, or anything else you want to connect to your Northstack workspace. Manage keys from Settings → Integrations → API Keys.\n\nAn API key represents your company's integration, not a person — but it can never do more than the person who created it: you can only grant scopes your own role allows, and every request is re-checked against the creator's **current** role (narrow that role and the key narrows with it; deactivate the creator and the key stops working with `401 key_creator_inactive`). A workspace in view-only mode (suspended subscription) answers writes with `403 tenant_suspended`.\n\n**AI assistant tokens** (`nk_mcp_…`, created by each user under Settings → Integrations → AI assistants) use this same API but act **as that user**: what they can do follows the user's role — Employee visibility, hidden fields and own-only Time Off included — instead of key scopes.\n\nEvery error response is the same shape: `{ \"error\": string, \"code\": string }`. A `400` from bad input additionally includes `details`, an array of `{ path, message }` naming exactly which field(s) failed."
   },
   "servers": [
     { "url": "https://app.joinnorthstack.com/api/external/v1", "description": "Production" }
   ],
   "security": [{ "bearerAuth": [] }],
   "tags": [
+    { "name": "Identity" },
     { "name": "Tasks" },
     { "name": "Notes" },
     { "name": "Companies" },
@@ -21,6 +22,9 @@
     { "name": "Payroll" }
   ],
   "paths": {
+    "/me": {
+      "get": { "tags": ["Identity"], "summary": "Who this credential acts as", "description": "No scope required. Returns the credential (API key or AI assistant token), the user it acts as, their role, the workspace plan/status, and the effective scopes for this request — after narrowing to the acting user's current role.", "responses": { "200": { "description": "The calling credential and its effective scopes" }, "401": { "$ref": "#/components/responses/Unauthorized" } } }
+    },
     "/tasks": {
       "get": {
         "tags": ["Tasks"],
@@ -207,10 +211,10 @@
       "delete": { "tags": ["Employees"], "summary": "Delete an employee", "description": "Requires scope `hr.employees:write`. No request body. Hard delete.", "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "204": { "description": "Deleted" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } } }
     },
     "/hr/timeoff": {
-      "get": { "tags": ["Time off"], "summary": "List time off requests", "description": "Requires scope `hr.timeoff:read`.", "parameters": [{ "$ref": "#/components/parameters/cursor" }, { "$ref": "#/components/parameters/limit" }], "responses": { "200": { "description": "A page of Time Off Requests", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TimeOffRequestListResponse" } } } }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" } } },
+      "get": { "tags": ["Time off"], "summary": "List time off requests", "description": "Requires scope `hr.timeoff:read`. Everyone's requests need the acting user to administer time off (the same permission as the app's all-requests view); otherwise — typically an AI assistant for a regular employee — only that user's own requests are returned.", "parameters": [{ "$ref": "#/components/parameters/cursor" }, { "$ref": "#/components/parameters/limit" }], "responses": { "200": { "description": "A page of Time Off Requests", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TimeOffRequestListResponse" } } } }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" } } },
       "post": {
         "tags": ["Time off"], "summary": "Request time off",
-        "description": "Requires scope `hr.timeoff:write`. Creates a request only — there is no way to approve or reject one through this API: deciding a request is gated by \"is this person's assigned manager\", a relationship an API key doesn't have. The Employee must already have `timeOffPolicyId` assigned to them. If that policy doesn't require approval, the request comes back already `approved`.",
+        "description": "Requires scope `hr.timeoff:write`. Creates a request only. A user who doesn't administer time off can only request for themselves (`employeeId` may then be omitted). Deciding is gated by \"is this person's assigned manager\", so only an AI assistant token (which acts as a person) can approve or reject — see `PATCH /hr/timeoff/{id}`. The Employee must already have `timeOffPolicyId` assigned to them. If that policy doesn't require approval, the request comes back already `approved`.",
         "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TimeOffCreateInput" }, "example": { "employeeId": "3f9a1c2e-4b7d-4a1e-9c3a-employee0001", "timeOffPolicyId": "f7562e91-d4eb-48da-a130-policy000001", "startDate": "2026-10-01", "endDate": "2026-10-03" } } } },
         "responses": {
           "201": { "description": "Request created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TimeOffRequest" }, "example": { "id": "015fcc2c-ad0e-49fc-a280-timeoff00001", "tenantId": "88da8bee-a050-42c2-8b94-tenant00001", "employeeId": "3f9a1c2e-4b7d-4a1e-9c3a-employee0001", "timeOffPolicyId": "f7562e91-d4eb-48da-a130-policy000001", "startDate": "2026-10-01T00:00:00.000Z", "endDate": "2026-10-03T00:00:00.000Z", "daysRequested": 3, "note": null, "status": "approved", "approverId": null, "decidedAt": "2026-09-07T21:59:04.128Z", "decisionNote": "Auto-approved — this policy does not require approval", "createdAt": "2026-09-07T21:59:04.129Z" } } } },
@@ -219,12 +223,18 @@
         }
       }
     },
+    "/hr/timeoff/{id}": {
+      "patch": { "tags": ["Time off"], "summary": "Approve or reject a time off request (AI assistant tokens only)", "description": "Requires scope `hr.timeoff:write` and acting as the request's approver, so it only works with an AI assistant token — an API key gets `403 not_allowed_for_api_key`. Body: `{ \"status\": \"approved\" | \"rejected\", \"decisionNote\"?: string }`.", "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "The decided request", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TimeOffRequest" } } } }, "400": { "$ref": "#/components/responses/BadRequest" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" } } }
+    },
     "/hr/payroll": {
       "get": {
         "tags": ["Payroll"], "summary": "List payroll runs", "description": "Requires scope `hr.payroll:read`. Runs only — no payment-account data. No write scope exists for Payroll in this API; none can ever be requested on a key.",
         "parameters": [{ "$ref": "#/components/parameters/cursor" }, { "$ref": "#/components/parameters/limit" }],
         "responses": { "200": { "description": "A page of Payroll Runs", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/PayrollRunListResponse" } } } }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" } }
       }
+    },
+    "/hr/payroll/{id}": {
+      "get": { "tags": ["Payroll"], "summary": "Get one payroll run with its per-employee rows", "description": "Requires scope `hr.payroll:read`. Same data as a run's detail in the Payroll page — no payment-account data.", "parameters": [{ "$ref": "#/components/parameters/id" }], "responses": { "200": { "description": "The run, its employee rows and totals" }, "401": { "$ref": "#/components/responses/Unauthorized" }, "403": { "$ref": "#/components/responses/Forbidden" }, "404": { "$ref": "#/components/responses/NotFound" } } }
     }
   },
   "components": {

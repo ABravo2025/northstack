@@ -417,6 +417,7 @@ model Tenant {
   roleFieldRestrictions     RoleFieldRestriction[]
   apiKeys                   ApiKey[]
   apiRequestLogs            ApiRequestLog[]
+  aiConnections             AiConnection[]
   webhookSubscriptions      WebhookSubscription[]
 }
 
@@ -619,6 +620,7 @@ model User {
   activityLogEntries          ActivityLogEntry[]
   subscriptionsLastActedOn    Subscription[]
   apiKeysCreated              ApiKey[]
+  aiConnections               AiConnection[]
   webhookSubscriptionsCreated WebhookSubscription[]
 
   @@index([emailDomain])
@@ -1887,6 +1889,9 @@ model ApiRequestLog {
   tenant     Tenant   @relation(fields: [tenantId], references: [id])
   apiKeyId   String?
   apiKey     ApiKey?  @relation(fields: [apiKeyId], references: [id])
+  // Set instead of apiKeyId when the call came from an AI assistant (spec-mcp-server.md §2b).
+  aiConnectionId String?
+  aiConnection   AiConnection? @relation(fields: [aiConnectionId], references: [id])
   method     String
   path       String
   statusCode Int
@@ -1895,6 +1900,43 @@ model ApiRequestLog {
 
   @@index([tenantId, createdAt])
   @@index([apiKeyId, createdAt])
+  @@index([aiConnectionId, createdAt])
+}
+
+enum AiConnectionKind {
+  personal_token
+  oauth
+}
+
+// One AI assistant a user connected to their own account (spec-mcp-server.md §2b, §4.4). Unlike an
+// ApiKey (the company's integration, authorized by scopes), this acts AS `user`: the Private API
+// resolves the user's current role on every request, so it can never do more than they can in the
+// app. `personal_token` today; `oauth` (Unit 4) fills the access/refresh columns instead. Every
+// token is stored only as a SHA-256 hash, same reasoning as ApiKey.keyHash.
+model AiConnection {
+  id                    String           @id @default(uuid())
+  tenantId              String
+  tenant                Tenant           @relation(fields: [tenantId], references: [id])
+  userId                String
+  user                  User             @relation(fields: [userId], references: [id])
+  kind                  AiConnectionKind
+  // Shown in the Activity Log as "AI · <clientName>" — the user's own label for a personal token,
+  // the registered client's name ("Claude", "ChatGPT") for OAuth.
+  clientName            String
+  tokenPrefix           String?          // "nk_mcp_ab12cd" — the only fragment shown again
+  personalTokenHash     String?          @unique
+  oauthClientId         String?
+  accessTokenHash       String?          @unique
+  accessTokenExpiresAt  DateTime?
+  refreshTokenHash      String?          @unique
+  refreshTokenExpiresAt DateTime?
+  lastUsedAt            DateTime?
+  revokedAt             DateTime?
+  createdAt             DateTime         @default(now())
+
+  requestLogs ApiRequestLog[]
+
+  @@index([tenantId, userId])
 }
 
 // Private API + outbound webhooks, Unit 4 (docs/tareas/spec-private-api-webhooks.md §7) — Northstack

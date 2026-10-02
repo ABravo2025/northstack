@@ -62,7 +62,15 @@ import { VALID_CONTRACT_TYPES, VALID_PERSON_TYPES } from '../routes/employees.js
 import { findFieldCatalogDefinitionById } from '../modules/hr/fieldCatalogService.js';
 import { findStatusDefinitionById } from '../modules/hr/statusService.js';
 import { listAllTimeOffRequests, createTimeOffRequest } from '../modules/hr/timeOffRequestService.js';
-import { listRuns } from '../modules/hr/payrollRunService.js';
+import { getRunDetail, listRuns } from '../modules/hr/payrollRunService.js';
+import {
+  decideTimeOffRequest,
+  listMyTimeOffRequests,
+} from '../modules/hr/timeOffRequestService.js';
+import { findEmployeeByUserId, resolveVisibleEmployeeIds } from '../modules/hr/employeeService.js';
+import { redactEntityFields, redactEntityListFields } from '../modules/auth/fieldVisibilityService.js';
+import { canManageCustomFields } from '../modules/auth/permissionService.js';
+import { serializeRoleContext } from '../modules/auth/roleService.js';
 
 // Private API (spec-private-api-webhooks.md, Units 2-3) — endpoints under /api/external/v1/*.
 // This router wraps the already-existing internal services (same principle the rest of the app
@@ -101,7 +109,14 @@ externalApiRouter.use('/api/external/v1', async (req: express.Request, res: expr
       return;
     }
 
-    if (await isRateLimited(`apikey:${apiKey.id}`, RATE_LIMIT)) {
+    // Same rule as validateSession (httpAuth.ts): a suspended workspace stays readable, but no
+    // writes — applies to API keys and AI assistants alike.
+    if (req.method !== 'GET' && apiKey.tenantStatus === 'suspended') {
+      await respond(req, res, apiKey, 403, { error: 'This workspace is in view-only mode until its subscription is renewed.', code: 'tenant_suspended' });
+      return;
+    }
+
+    if (await isRateLimited(`${apiKey.kind === 'ai' ? 'ai' : 'apikey'}:${apiKey.id}`, RATE_LIMIT)) {
       res.setHeader('Retry-After', String(Math.ceil(RATE_LIMIT.windowMs / 1000)));
       await respond(req, res, apiKey, 429, { error: 'Too many requests. Slow down and try again shortly.', code: 'rate_limited' });
       return;
@@ -110,7 +125,7 @@ externalApiRouter.use('/api/external/v1', async (req: express.Request, res: expr
     (req as unknown as ExternalApiRequest).apiKey = apiKey;
     // Every handler below runs inside this context (AsyncLocalStorage follows the async chain
     // next() starts), so recordActivity tags their writes as `api` — spec-mcp-server.md §6.1.
-    runWithRequestContext({ source: 'api', sourceClientName: apiKey.name }, () => next());
+    runWithRequestContext({ source: apiKey.kind === 'ai' ? 'ai' : 'api', sourceClientName: apiKey.name }, () => next());
   } catch (err) {
     console.error('externalApiRouter entry middleware failed:', err);
     if (!res.headersSent) {
@@ -129,7 +144,8 @@ async function respond(req: express.Request, res: express.Response, apiKey: Auth
     prismaExternal.apiRequestLog.create({
       data: {
         tenantId: apiKey.tenantId,
-        apiKeyId: apiKey.id,
+        apiKeyId: apiKey.kind === 'api_key' ? apiKey.id : null,
+        aiConnectionId: apiKey.kind === 'ai' ? apiKey.id : null,
         method: req.method,
         path: req.path,
         statusCode: status,
@@ -149,7 +165,10 @@ async function respond(req: express.Request, res: express.Response, apiKey: Auth
 async function requireScopeLogged(req: express.Request, res: express.Response, apiKey: AuthenticatedApiKey, scope: string): Promise<boolean> {
   if (hasScope(apiKey, scope)) return true;
   await respond(req, res, apiKey, 403, {
-    error: `This API key is missing the required scope: ${scope}`,
+    error:
+      apiKey.kind === 'ai'
+        ? `Your role in this workspace doesn't allow this action (${scope}).`
+        : `This API key is missing the required scope: ${scope}`,
     code: 'missing_scope',
     required: scope,
   });
@@ -262,6 +281,42 @@ async function verifyCrossModuleEntity(req: express.Request, res: express.Respon
   }
   return true;
 }
+
+// Field-level redaction by the acting user's role (spec-mcp-server.md §2b) — the same
+// redactEntityFields the app's own routes apply. A no-op for an owner, and for a key whose creator
+// sees the whole entity (which key creation requires); it bites when an AI assistant acts for a
+// restricted role, or a key's creator was restricted after the key was made.
+function redact<T extends Record<string, unknown>>(apiKey: AuthenticatedApiKey, entityType: 'company' | 'contact' | 'opportunity' | 'employee', entity: T): T {
+  return redactEntityFields(entity, entityType, apiKey.actor.roleContext);
+}
+
+function redactList<T extends Record<string, unknown>>(apiKey: AuthenticatedApiKey, entityType: 'company' | 'contact' | 'opportunity' | 'employee', entities: T[]): T[] {
+  return redactEntityListFields(entities, entityType, apiKey.actor.roleContext);
+}
+
+// Employee scope (self/reports/department/all) of the acting user — same as routes/employees.ts's
+// isEmployeeInScope. Out-of-scope reads as 404, never 403, same criterion as an ownership check.
+async function isEmployeeVisible(apiKey: AuthenticatedApiKey, employeeId: string): Promise<boolean> {
+  const visibleIds = await resolveVisibleEmployeeIds(apiKey.tenantId, apiKey.actor.roleContext, apiKey.actor.id);
+  return visibleIds === null || visibleIds.has(employeeId);
+}
+
+// ---- Identity ----
+
+// Who this credential acts as and what it may call — the MCP server's `whoami` tool reads this to
+// tell the assistant (and the person) what it can do before it tries anything.
+externalApiRouter.get('/api/external/v1/me', async (req, res) => {
+  const { apiKey } = req as unknown as ExternalApiRequest;
+  const { actor } = apiKey;
+  const role = serializeRoleContext(actor.roleContext);
+  return respond(req, res, apiKey, 200, {
+    credential: { kind: apiKey.kind, name: apiKey.name },
+    user: { id: actor.id, firstName: actor.firstName, lastName: actor.lastName, email: actor.email, locale: actor.locale },
+    role: { name: role.name, isOwner: role.isOwner },
+    tenant: { id: apiKey.tenantId, plan: apiKey.tenantPlan, status: apiKey.tenantStatus },
+    scopes: apiKey.scopes,
+  });
+});
 
 // ---- Tasks ----
 
@@ -439,7 +494,7 @@ externalApiRouter.get('/api/external/v1/crm/companies', async (req, res) => {
   const { apiKey } = req as unknown as ExternalApiRequest;
   if (!(await requireScopeLogged(req, res, apiKey, 'crm.companies:read'))) return;
   const companies = await listCompanies(apiKey.tenantId, prismaExternal);
-  return respondPaginated(req, res, apiKey, companies);
+  return respondPaginated(req, res, apiKey, redactList(apiKey, 'company', companies));
 });
 
 externalApiRouter.get('/api/external/v1/crm/companies/:id', async (req, res) => {
@@ -447,7 +502,7 @@ externalApiRouter.get('/api/external/v1/crm/companies/:id', async (req, res) => 
   if (!(await requireScopeLogged(req, res, apiKey, 'crm.companies:read'))) return;
   const company = await findCompanyById(req.params.id, prismaExternal);
   if (!company || company.tenantId !== apiKey.tenantId) return notFound(req, res, apiKey);
-  return respond(req, res, apiKey, 200, company);
+  return respond(req, res, apiKey, 200, redact(apiKey, 'company', company));
 });
 
 const companyContactSchema = z.union([
@@ -505,7 +560,7 @@ externalApiRouter.post('/api/external/v1/crm/companies', async (req, res) => {
   }
 
   const company = await createCompany({ ...body, contact, tenantId: apiKey.tenantId }, apiKey.createdByUserId, prismaExternal);
-  return respond(req, res, apiKey, 201, company);
+  return respond(req, res, apiKey, 201, redact(apiKey, 'company', company));
 });
 
 externalApiRouter.patch('/api/external/v1/crm/companies/:id', async (req, res) => {
@@ -530,7 +585,7 @@ externalApiRouter.patch('/api/external/v1/crm/companies/:id', async (req, res) =
   }
 
   const updated = await updateCompany(req.params.id, body, apiKey.createdByUserId, prismaExternal);
-  return respond(req, res, apiKey, 200, updated);
+  return respond(req, res, apiKey, 200, redact(apiKey, 'company', updated));
 });
 
 externalApiRouter.delete('/api/external/v1/crm/companies/:id', async (req, res) => {
@@ -554,7 +609,7 @@ externalApiRouter.get('/api/external/v1/crm/contacts', async (req, res) => {
   const { apiKey } = req as unknown as ExternalApiRequest;
   if (!(await requireScopeLogged(req, res, apiKey, 'crm.contacts:read'))) return;
   const contacts = await listContacts(apiKey.tenantId, false, prismaExternal);
-  return respondPaginated(req, res, apiKey, contacts);
+  return respondPaginated(req, res, apiKey, redactList(apiKey, 'contact', contacts));
 });
 
 externalApiRouter.get('/api/external/v1/crm/contacts/:id', async (req, res) => {
@@ -562,7 +617,7 @@ externalApiRouter.get('/api/external/v1/crm/contacts/:id', async (req, res) => {
   if (!(await requireScopeLogged(req, res, apiKey, 'crm.contacts:read'))) return;
   const contact = await findContactById(req.params.id, prismaExternal);
   if (!contact || contact.tenantId !== apiKey.tenantId) return notFound(req, res, apiKey);
-  return respond(req, res, apiKey, 200, contact);
+  return respond(req, res, apiKey, 200, redact(apiKey, 'contact', contact));
 });
 
 const contactCreateSchema = z.object({
@@ -601,7 +656,7 @@ externalApiRouter.post('/api/external/v1/crm/contacts', async (req, res) => {
 
   try {
     const contact = await createContact({ ...body, tenantId: apiKey.tenantId } as any, apiKey.createdByUserId, prismaExternal);
-    return respond(req, res, apiKey, 201, contact);
+    return respond(req, res, apiKey, 201, redact(apiKey, 'contact', contact));
   } catch (error) {
     // Contact.email is unique per tenant — same P2002 handled by the internal route.
     if ((error as { code?: string }).code === 'P2002') {
@@ -625,7 +680,7 @@ externalApiRouter.patch('/api/external/v1/crm/contacts/:id', async (req, res) =>
 
   try {
     const updated = await updateContact(req.params.id, body as any, apiKey.createdByUserId, prismaExternal);
-    return respond(req, res, apiKey, 200, updated);
+    return respond(req, res, apiKey, 200, redact(apiKey, 'contact', updated));
   } catch (error) {
     if ((error as { code?: string }).code === 'P2002') {
       return badRequest(req, res, apiKey, `A contact with email "${body.email}" already exists`);
@@ -653,7 +708,7 @@ externalApiRouter.get('/api/external/v1/crm/opportunities', async (req, res) => 
   const { apiKey } = req as unknown as ExternalApiRequest;
   if (!(await requireScopeLogged(req, res, apiKey, 'crm.opportunities:read'))) return;
   const opportunities = await listOpportunities(apiKey.tenantId, false, prismaExternal);
-  return respondPaginated(req, res, apiKey, opportunities);
+  return respondPaginated(req, res, apiKey, redactList(apiKey, 'opportunity', opportunities));
 });
 
 externalApiRouter.get('/api/external/v1/crm/opportunities/:id', async (req, res) => {
@@ -661,7 +716,7 @@ externalApiRouter.get('/api/external/v1/crm/opportunities/:id', async (req, res)
   if (!(await requireScopeLogged(req, res, apiKey, 'crm.opportunities:read'))) return;
   const opportunity = await findOpportunityById(req.params.id, prismaExternal);
   if (!opportunity || opportunity.tenantId !== apiKey.tenantId) return notFound(req, res, apiKey);
-  return respond(req, res, apiKey, 200, opportunity);
+  return respond(req, res, apiKey, 200, redact(apiKey, 'opportunity', opportunity));
 });
 
 const opportunityCreateSchema = z.object({
@@ -721,7 +776,7 @@ externalApiRouter.post('/api/external/v1/crm/opportunities', async (req, res) =>
   if (refError) return badRequest(req, res, apiKey, refError.error);
 
   const opportunity = await createOpportunity({ ...body, ownerId, tenantId: apiKey.tenantId }, apiKey.createdByUserId, prismaExternal);
-  return respond(req, res, apiKey, 201, opportunity);
+  return respond(req, res, apiKey, 201, redact(apiKey, 'opportunity', opportunity));
 });
 
 externalApiRouter.patch('/api/external/v1/crm/opportunities/:id', async (req, res) => {
@@ -754,7 +809,7 @@ externalApiRouter.patch('/api/external/v1/crm/opportunities/:id', async (req, re
     { ...body, ownerId, changedByUserId: apiKey.createdByUserId },
     prismaExternal,
   );
-  return respond(req, res, apiKey, 200, updated);
+  return respond(req, res, apiKey, 200, redact(apiKey, 'opportunity', updated));
 });
 
 externalApiRouter.delete('/api/external/v1/crm/opportunities/:id', async (req, res) => {
@@ -782,19 +837,20 @@ externalApiRouter.get('/api/external/v1/crm/pipelines', async (req, res) => {
 externalApiRouter.get('/api/external/v1/hr/employees', async (req, res) => {
   const { apiKey } = req as unknown as ExternalApiRequest;
   if (!(await requireScopeLogged(req, res, apiKey, 'hr.employees:read'))) return;
-  // No visibleIds filter — the internal Employee-scope permission (self/department/all, Fase E)
-  // gates what a logged-in *person* sees; a key's scope is the sole source of authorization for
-  // this API (spec decision #4), so a key with hr.employees:read sees every Employee in the tenant.
-  const employees = await listEmployees(apiKey.tenantId, null, prismaExternal);
-  return respondPaginated(req, res, apiKey, employees);
+  // The acting user's Employee scope (self/reports/department/all) — a key's creator needs `all`
+  // to grant this scope at all, so for keys this is normally unfiltered; an AI assistant sees what
+  // its user sees in the app (spec-mcp-server.md §2b).
+  const visibleIds = await resolveVisibleEmployeeIds(apiKey.tenantId, apiKey.actor.roleContext, apiKey.actor.id);
+  const employees = await listEmployees(apiKey.tenantId, visibleIds, prismaExternal);
+  return respondPaginated(req, res, apiKey, redactList(apiKey, 'employee', employees));
 });
 
 externalApiRouter.get('/api/external/v1/hr/employees/:id', async (req, res) => {
   const { apiKey } = req as unknown as ExternalApiRequest;
   if (!(await requireScopeLogged(req, res, apiKey, 'hr.employees:read'))) return;
   const employee = await findEmployeeById(req.params.id, prismaExternal);
-  if (!employee || employee.tenantId !== apiKey.tenantId) return notFound(req, res, apiKey);
-  return respond(req, res, apiKey, 200, employee);
+  if (!employee || employee.tenantId !== apiKey.tenantId || !(await isEmployeeVisible(apiKey, employee.id))) return notFound(req, res, apiKey);
+  return respond(req, res, apiKey, 200, redact(apiKey, 'employee', employee));
 });
 
 const employeeCreateSchema = z.object({
@@ -844,7 +900,7 @@ externalApiRouter.post('/api/external/v1/hr/employees', async (req, res) => {
   }
 
   const employee = await createEmployee({ ...body, tenantId: apiKey.tenantId } as any, apiKey.createdByUserId, prismaExternal);
-  return respond(req, res, apiKey, 201, employee);
+  return respond(req, res, apiKey, 201, redact(apiKey, 'employee', employee));
 });
 
 externalApiRouter.patch('/api/external/v1/hr/employees/:id', async (req, res) => {
@@ -857,7 +913,7 @@ externalApiRouter.patch('/api/external/v1/hr/employees/:id', async (req, res) =>
   if (!validEnumOrNull(body.personType, VALID_PERSON_TYPES)) return badRequest(req, res, apiKey, 'Invalid person type');
 
   const existing = await findEmployeeById(req.params.id, prismaExternal);
-  if (!existing || existing.tenantId !== apiKey.tenantId) return notFound(req, res, apiKey);
+  if (!existing || existing.tenantId !== apiKey.tenantId || !(await isEmployeeVisible(apiKey, existing.id))) return notFound(req, res, apiKey);
 
   // Same guard as the internal PATCH — a terminated employee's status can't be changed back
   // through the generic update (that would silently reopen a second real termination/payment).
@@ -885,7 +941,7 @@ externalApiRouter.patch('/api/external/v1/hr/employees/:id', async (req, res) =>
   }
 
   const updated = await updateEmployee(req.params.id, body as any, apiKey.createdByUserId, prismaExternal);
-  return respond(req, res, apiKey, 200, updated);
+  return respond(req, res, apiKey, 200, redact(apiKey, 'employee', updated));
 });
 
 externalApiRouter.delete('/api/external/v1/hr/employees/:id', async (req, res) => {
@@ -893,7 +949,7 @@ externalApiRouter.delete('/api/external/v1/hr/employees/:id', async (req, res) =
   if (!(await requireScopeLogged(req, res, apiKey, 'hr.employees:write'))) return;
 
   const existing = await findEmployeeById(req.params.id, prismaExternal);
-  if (!existing || existing.tenantId !== apiKey.tenantId) return notFound(req, res, apiKey);
+  if (!existing || existing.tenantId !== apiKey.tenantId || !(await isEmployeeVisible(apiKey, existing.id))) return notFound(req, res, apiKey);
 
   await deleteEmployee(req.params.id, apiKey.createdByUserId, prismaExternal);
   return respond(req, res, apiKey, 204, {});
@@ -904,12 +960,20 @@ externalApiRouter.delete('/api/external/v1/hr/employees/:id', async (req, res) =
 externalApiRouter.get('/api/external/v1/hr/timeoff', async (req, res) => {
   const { apiKey } = req as unknown as ExternalApiRequest;
   if (!(await requireScopeLogged(req, res, apiKey, 'hr.timeoff:read'))) return;
-  const requests = await listAllTimeOffRequests(apiKey.tenantId, prismaExternal);
+  // Everyone's requests need the same permission the app's "all" view does (manage_custom_fields);
+  // otherwise only the acting user's OWN requests — an AI assistant for a regular employee.
+  if (canManageCustomFields(apiKey.actor.roleContext)) {
+    const requests = await listAllTimeOffRequests(apiKey.tenantId, prismaExternal);
+    return respondPaginated(req, res, apiKey, requests);
+  }
+  const ownEmployee = await findEmployeeByUserId(apiKey.actor.id);
+  const requests = ownEmployee ? await listMyTimeOffRequests(apiKey.tenantId, ownEmployee.id) : [];
   return respondPaginated(req, res, apiKey, requests);
 });
 
 const timeOffCreateSchema = z.object({
-  employeeId: z.string().min(1),
+  // Optional only for a user without manage_custom_fields, who can request for themselves alone.
+  employeeId: z.string().min(1).optional(),
   timeOffPolicyId: z.string().min(1),
   startDate: dateString,
   endDate: dateString,
@@ -927,9 +991,42 @@ externalApiRouter.post('/api/external/v1/hr/timeoff', async (req, res) => {
   const body = await parseBody(req, res, apiKey, timeOffCreateSchema);
   if (!body) return;
 
-  const result = await createTimeOffRequest({ ...body, tenantId: apiKey.tenantId }, apiKey.createdByUserId, prismaExternal);
+  // Same split as the list above: HR admins request for anyone, everyone else only for themselves.
+  let employeeId = body.employeeId;
+  if (!canManageCustomFields(apiKey.actor.roleContext)) {
+    const ownEmployee = await findEmployeeByUserId(apiKey.actor.id);
+    if (!ownEmployee) return badRequest(req, res, apiKey, 'Your account is not linked to an employee record');
+    if (employeeId && employeeId !== ownEmployee.id) return notFound(req, res, apiKey);
+    employeeId = ownEmployee.id;
+  }
+  if (!employeeId) return badRequest(req, res, apiKey, 'employeeId is required');
+
+  const result = await createTimeOffRequest({ ...body, employeeId, tenantId: apiKey.tenantId }, apiKey.createdByUserId, prismaExternal);
   if (!result.success) return badRequest(req, res, apiKey, result.error ?? 'Could not create time off request');
   return respond(req, res, apiKey, 201, result.request);
+});
+
+const timeOffDecisionSchema = z.object({
+  status: z.enum(['approved', 'rejected']),
+  decisionNote: z.string().optional(),
+});
+
+// Approve/reject — AI assistants only (spec-mcp-server.md §2b). Deciding is gated by "is this
+// person the request's approver" (timeOffRequestService.ts's decideTimeOffRequest), which needs a
+// real user: an AI token acts as one; an ApiKey is the company's integration, not a person, so it
+// still can't (original spec decision #4 stands for keys).
+externalApiRouter.patch('/api/external/v1/hr/timeoff/:id', async (req, res) => {
+  const { apiKey } = req as unknown as ExternalApiRequest;
+  if (apiKey.kind !== 'ai') {
+    return respond(req, res, apiKey, 403, { error: 'Deciding time off requires acting as a person — use an AI assistant connection, not an API key.', code: 'not_allowed_for_api_key' });
+  }
+  if (!(await requireScopeLogged(req, res, apiKey, 'hr.timeoff:write'))) return;
+  const body = await parseBody(req, res, apiKey, timeOffDecisionSchema);
+  if (!body) return;
+
+  const result = await decideTimeOffRequest(req.params.id, apiKey.tenantId, apiKey.actor, body.status, body.decisionNote);
+  if (!result.success) return badRequest(req, res, apiKey, result.error ?? 'Could not decide this time off request');
+  return respond(req, res, apiKey, 200, result.request);
 });
 
 // ---- HR: Payroll (runs only — no payment-account data, spec §4) ----
@@ -939,4 +1036,14 @@ externalApiRouter.get('/api/external/v1/hr/payroll', async (req, res) => {
   if (!(await requireScopeLogged(req, res, apiKey, 'hr.payroll:read'))) return;
   const runs = await listRuns(apiKey.tenantId, prismaExternal);
   return respondPaginated(req, res, apiKey, runs);
+});
+
+// One run with its per-employee rows (gross/net by employee) — same payload the Payroll page's run
+// detail shows; still no payment-account data (spec §4).
+externalApiRouter.get('/api/external/v1/hr/payroll/:id', async (req, res) => {
+  const { apiKey } = req as unknown as ExternalApiRequest;
+  if (!(await requireScopeLogged(req, res, apiKey, 'hr.payroll:read'))) return;
+  const result = await getRunDetail(apiKey.tenantId, req.params.id);
+  if (!result.success || !result.detail) return notFound(req, res, apiKey);
+  return respond(req, res, apiKey, 200, result.detail);
 });

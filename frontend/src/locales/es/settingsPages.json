@@ -50,6 +50,35 @@
       "connecting": "Conectando…",
       "testConnection": "Probar conexión"
     },
+    "aiAssistants": {
+      "title": "Asistentes de IA",
+      "description": "Conectá tu propio asistente de IA (Claude, ChatGPT, Cursor…) a Northstack. Actúa como vos: solo puede ver y hacer lo que tu rol ya permite, y todo lo que cambie aparece en el Registro de actividad como \"IA · <nombre>\".",
+      "loadError": "No se pudieron cargar los asistentes de IA: {{message}}",
+      "createToken": "Crear token",
+      "createTitle": "Conectar un asistente de IA",
+      "createdTitle": "Token creado",
+      "name": "Nombre",
+      "namePlaceholder": "ej. Claude Desktop",
+      "nameHelp": "Para distinguir tus conexiones. También es como el Registro de actividad identifica lo que hace este asistente.",
+      "creating": "Creando…",
+      "copyNowWarning": "Copiá este token ahora — no se vuelve a mostrar. Pegalo en la configuración de tu asistente. Si lo perdés, revocalo y creá uno nuevo.",
+      "copy": "Copiar",
+      "copied": "Token copiado al portapapeles.",
+      "copyError": "No se pudo copiar el token: {{message}}",
+      "doneCopiedIt": "Listo — ya lo copié",
+      "emptyTitle": "No hay asistentes de IA conectados",
+      "emptyBody": "Creá un token para que tu propio asistente de IA trabaje en Northstack en tu nombre.",
+      "columns": { "name": "Nombre", "token": "Token", "status": "Estado", "lastUsed": "Último uso" },
+      "active": "Activo",
+      "revoked": "Revocado",
+      "never": "Nunca",
+      "revoke": "Revocar",
+      "revoking": "Revocando…",
+      "revokedToast": "\"{{name}}\" desconectado.",
+      "revokeError": "No se pudo revocar: {{message}}",
+      "revokeConfirmTitle": "¿Desconectar \"{{name}}\"?",
+      "revokeConfirmMessage": "El asistente pierde el acceso a tu espacio de trabajo al instante. No se puede deshacer — tendrías que crear un token nuevo."
+    },
     "apiKeys": {
       "never": "Nunca",
       "loadError": "No se pudieron cargar las claves de API: {{message}}",
@@ -712,7 +741,11 @@
         "manage_payroll": { "label": "Gestionar nómina", "description": "Compensación, corridas de nómina, y la exportación CSV de datos de empleados." },
         "manage_billing": { "label": "Gestionar facturación", "description": "Cambiar de plan, método de pago, y cancelar la suscripción." },
         "manage_payments": { "label": "Gestionar pagos", "description": "Conectar Stripe y ver el historial de pagos de clientes." },
-        "manage_api_access": { "label": "Gestionar API y webhooks", "description": "Crear y revocar claves de API privadas y webhooks salientes." }
+        "manage_api_access": { "label": "Gestionar API y webhooks", "description": "Crear y revocar claves de API privadas y webhooks salientes." },
+        "use_ai_assistants": {
+          "label": "Usar asistentes de IA",
+          "description": "Conectar su propio asistente de IA (Claude, ChatGPT…). Actúa como esa persona y solo puede ver y hacer lo que este rol ya permite."
+        }
       },
       "reporting": {
         "title": "Reportes",

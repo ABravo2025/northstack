@@ -58,6 +58,12 @@ export const DECIDE_TIME_OFF = 'decide_time_off';
 // & Permissions since it IS in TOGGLEABLE_PERMISSION_KEYS.
 export const MANAGE_API_ACCESS = 'manage_api_access';
 
+// AI assistants over MCP (spec-mcp-server.md §2b) — lets a user connect their OWN assistant, which
+// then acts as them (never more than their role). On by default for every seeded role (unlike
+// MANAGE_API_ACCESS, which hands out company-level access): it adds no data access the user
+// doesn't already have, so it's opt-out — an owner can switch it off per role.
+export const USE_AI_ASSISTANTS = 'use_ai_assistants';
+
 // Gates the company-wide `/dashboards/*` section (HR/Time Off/Sales/Tasks/Adoption KPI pages) and
 // the equivalent aggregate sections of GET /api/tenant-metrics/overview — everything in that
 // combined endpoint except `payroll` (its own manage_payroll gate) and `sales.dealsByOwner` (its
@@ -87,6 +93,7 @@ export const PERMISSION_KEYS = [
   'manage_billing',
   'manage_payments',
   MANAGE_API_ACCESS,
+  USE_AI_ASSISTANTS,
   'view_sales_leaderboard',
   'view_activity_log',
   VIEW_DASHBOARDS,
@@ -125,6 +132,7 @@ export const TOGGLEABLE_PERMISSION_KEYS = [
   'manage_billing',
   'manage_payments',
   MANAGE_API_ACCESS,
+  USE_AI_ASSISTANTS,
   'view_sales_leaderboard',
   'view_activity_log',
   VIEW_DASHBOARDS,
@@ -201,6 +209,7 @@ export const ADMIN_SEED_PERMISSIONS: string[] = [
   VIEW_EMPLOYEE_CUSTOM_FIELDS,
   EDIT_EMPLOYEE_CUSTOM_FIELDS,
   EMPLOYEE_SCOPE_ALL,
+  USE_AI_ASSISTANTS,
 ];
 
 // Deliberately NOT a superset of the old default — Member no longer gets CRM visibility
@@ -213,6 +222,7 @@ export const MEMBER_SEED_PERMISSIONS: string[] = [
   VIEW_EMPLOYEE,
   VIEW_EMPLOYEE_CUSTOM_FIELDS,
   EMPLOYEE_SCOPE_REPORTS,
+  USE_AI_ASSISTANTS,
 ];
 
 export interface RoleContext {

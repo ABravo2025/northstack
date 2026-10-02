@@ -264,7 +264,8 @@
     "nav": {
       "mine": "My time off",
       "team": "Team",
-      "policies": "Policies"
+      "policies": "Policies",
+      "settings": "Settings"
     },
     "mine": {
       "title": "My time off",

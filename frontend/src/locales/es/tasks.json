@@ -264,7 +264,8 @@
     "nav": {
       "mine": "Mi tiempo libre",
       "team": "Equipo",
-      "policies": "Políticas"
+      "policies": "Políticas",
+      "settings": "Configuración"
     },
     "mine": {
       "title": "Mi tiempo libre",

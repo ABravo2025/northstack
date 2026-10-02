@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { CalendarIcon, ChevronLeftIcon, FormIcon, TeamIcon, XIcon } from '../common/Icons';
+import { CalendarIcon, ChevronLeftIcon, FormIcon, GearIcon, TeamIcon, XIcon } from '../common/Icons';
 import { usePermissions } from '../../contexts/PermissionsContext';
 import { useTimeOffTab, type TimeOffTab } from '../../contexts/TimeOffTabContext';
 
@@ -65,6 +65,21 @@ export default function TimeOffSidebar({ mobileOpen, onMobileClose }: TimeOffSid
               {item.key === 'team' && pendingApprovalsCount > 0 && <span className="sidebar-count num">{pendingApprovalsCount}</span>}
             </button>
           ))}
+          {/* The company rules (holiday calendar, work week, days off) live in Settings → Time Off;
+              linked from here too so they're found where people manage time off. */}
+          {permissions.has('manage_tenant_settings') && (
+            <button
+              type="button"
+              className="sidebar-link w-full text-left"
+              onClick={() => {
+                navigate('/settings/time-off');
+                onMobileClose();
+              }}
+            >
+              <GearIcon className="h-4 w-4 shrink-0" />
+              {t('timeOff.nav.settings')}
+            </button>
+          )}
         </div>
       </aside>
     </>

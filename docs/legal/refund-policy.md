@@ -73,6 +73,11 @@ covers only Northstack's own subscription fees, not a Tenant's payroll/employee-
 activity — same "Payroll is tracking, not payments" disambiguation added to
 terms-of-service.md's new Section 1.3, requested because "Refund Policy" sitting next to a
 product that has a "Payroll" module invites exactly that mix-up.
+
+2026-10-02 — Alejandro decided to drop email from the change-notification promise: Section
+7 now says "with an in-app notification," not "by email and by an in-app notification."
+Same change mirrored to terms-of-service.md's Section 14 and privacy-policy.md's Section
+10 — see terms-of-service.md's dated note for the full reasoning.
 -->
 
 # Northstack Refund Policy
@@ -204,8 +209,8 @@ error and does not itself create a refund entitlement — see Section 5 for what
 We may add, remove, or modify any provision of this Policy at any time and **without prior
 notice, except where applicable law requires otherwise**, consistent with Section 14 of our
 Terms of Service. When we make a change, we will post the updated Policy with a new
-effective date and notify Tenant owners **by email and by an in-app notification within the
-Service.** That notification may arrive at or after the time the change takes effect, not
+effective date and notify Tenant owners **with an in-app notification within the Service.**
+That notification may arrive at or after the time the change takes effect, not
 necessarily before it. Changes to this Policy apply prospectively and do not affect charges
 already made under the version of this Policy in effect at the time of that charge.
 

@@ -210,6 +210,18 @@ as a bug the same way a stale "Paddle" reference was. This also means Section 14
 email + in-app notification to Tenant owners is now overdue for two rounds of real changes
 (9/13 and today), not just the fee-introduction one flagged back on 2026-09-07 — still an
 open product/ops action, not something fixed by this doc edit alone.
+
+2026-10-02 (still later same day) — Alejandro decided to drop email from the change-
+notification promise in Section 14: it now says "with an in-app notification," not "by
+email and by an in-app notification." This also resolves the "email + in-app is overdue"
+note two paragraphs up — it's just in-app now, so whatever in-app mechanism exists is what
+needs to actually fire, not an email campaign. Mirrored the same removal into
+privacy-policy.md's Section 10 and refund-policy.md's Section 7. Deliberately did **not**
+touch Section 16's "Notices" clause ("Notices to you will be sent to the email address
+associated with your Tenant's owner account") — that's a different, general-purpose
+contractual notices mechanism (breach, termination, etc.), not the specific "we changed
+this document" promise, and an in-app-only channel is a bad fit for a notice a suspended
+Tenant might not be able to log in to see. Left untouched unless Alejandro says otherwise.
 -->
 
 # Northstack Terms of Service
@@ -617,8 +629,8 @@ less advance warning, than a mature, generally-available product.
 We may add, remove, or modify any provision of these Terms — including fees, plans, and
 features — at any time and **without prior notice, except where applicable law requires
 otherwise.** When we make a change, we will post the updated Terms with a new effective
-date and notify Tenant owners **by email and by an in-app notification within the
-Service.** That notification may arrive at or after the time the change takes effect, not
+date and notify Tenant owners **with an in-app notification within the Service.** That
+notification may arrive at or after the time the change takes effect, not
 necessarily before it. Continued use of the Service after a change takes effect constitutes
 acceptance of the updated Terms. If you do not agree to an updated Term, you must stop
 using the Service and may request account deletion.

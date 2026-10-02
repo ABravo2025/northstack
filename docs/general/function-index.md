@@ -78,6 +78,7 @@ Todas siguen el mismo patrón: `if (!mailerConfigured()) return;` (no rompen el 
 - **sendPasswordResetEmail(input)** — link de "¿olvidaste tu contraseña?" (2026-08-09), expira en 1 hora.
 - **sendTicketNoteCreatedEmail(input)** — Admin Center: aviso al reporter de un Ticket cuando staff de plataforma responde.
 - **sendSignupVerificationEmail(input)** — Tenant Signup (`docs/spec-tenant-signup.md`), link de verificación de email antes de crear el Tenant/User, expira en 24hs.
+- **sendSignupAlertEmail(input)** — aviso interno al staff de la plataforma (solo español) a `SIGNUP_ALERT_EMAIL`: uno cuando un email pide verificación por primera vez (token nuevo; reenvíos dentro de las 24hs no avisan) y otro cuando se completa el alta del tenant (con todos los datos del formulario). Sin la variable seteada, no envía nada. Best-effort vía `dispatchMail`.
 - **sendPolicyChangeEmail(input)** (2026-09-09) — mitad email de la promesa del ToS §14 ("notified via email and an in-app notification" ante un cambio de política, sin previo aviso). Llamada desde `platformAnnouncementService.createAnnouncement` a cada usuario activo cuando `type: 'policy_change'`, nunca para `feature_update`.
 
 ### `src/modules/notifications/` (bell in-app, `docs/tareas/specredisenosalesv2.md` §3.9 + `docs/Skills/Skills-Development.md`)

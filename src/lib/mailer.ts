@@ -411,6 +411,36 @@ export async function sendSignupVerificationEmail(input: SendSignupVerificationE
   }, 'Failed to send signup verification email:');
 }
 
+export interface SendSignupAlertEmailInput {
+  subject: string;
+  // Label/value rows rendered in order; null/empty values show as "—".
+  fields: [label: string, value: string | null | undefined][];
+}
+
+// Internal platform-staff alert (not tenant-facing, so Spanish-only like the Admin Center's
+// audience) — one when a new email first asks for a signup verification link, one when the full
+// tenant registration form is submitted. Recipient comes from SIGNUP_ALERT_EMAIL; unset means
+// the alert is simply off (staging/local don't need to configure it). Best-effort like the rest
+// of this file: a failed alert must never fail or slow down someone's signup beyond the send.
+export async function sendSignupAlertEmail(input: SendSignupAlertEmailInput): Promise<void> {
+  const to = process.env.SIGNUP_ALERT_EMAIL;
+  if (!to || !mailerConfigured()) return;
+
+  const rows = input.fields.map(([label, value]) => [label, value?.toString().trim() || '—'] as const);
+
+  await dispatchMail({
+    from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
+    to,
+    subject: input.subject,
+    text: rows.map(([label, value]) => `${label}: ${value}`).join('\n'),
+    html: [
+      '<table cellpadding="4" style="border-collapse:collapse">',
+      ...rows.map(([label, value]) => `<tr><td><strong>${escapeHtml(label)}</strong></td><td>${escapeHtml(value)}</td></tr>`),
+      '</table>',
+    ].join('\n'),
+  }, 'Failed to send signup alert email:');
+}
+
 export interface SendOpportunityStageChangedEmailInput {
   to: string;
   ownerFirstName: string;

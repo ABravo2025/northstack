@@ -1,6 +1,12 @@
 # Tareas de desarrollo
 
 - Fecha de creación: 2026-07-02
+- **2026-10-02 — Avisos internos de signup por email (EN STAGING)**: nuevo `sendSignupAlertEmail` (mailer.ts) manda
+  un correo a `SIGNUP_ALERT_EMAIL` (variable nueva en Vercel; si no está seteada no se envía nada) en dos momentos:
+  (1) cuando un email pide la verificación por primera vez — los reenvíos dentro de las 24hs reutilizan el token y
+  no avisan; si el link expiró y vuelve a pedirlo, avisa de nuevo; (2) cuando se completa el formulario de alta del
+  tenant, con empresa, owner, email, teléfono, tamaño, industria, país, canal, función, fin del trial y tenant ID.
+  Ambos con await + best-effort (un fallo de SMTP no rompe el signup). 2 tests nuevos en `tenantSignup.test.ts`.
 - **2026-10-02 — Fix: alta de empleado sin departamentos creados (EN PRODUCCIÓN)**: el formulario "Add Person" exigía
   elegir un departamento, y un tenant nuevo arranca con el catálogo vacío, así que no se podía dar de alta a nadie.
   Ahora el select trae una opción fija "Sin departamento" / "No department" (no editable, no es un registro en DB:

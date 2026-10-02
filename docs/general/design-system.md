@@ -38,11 +38,13 @@ de 3 planos y patrón mobile agregados 2026-07-31 (`docs/tareas-ux-ui.md`).
 
 | Token | Hex | Uso |
 |---|---|---|
-| `accent` | `#b8502f` | `.btn-primary`, `.btn-outline`, links de acción, foco de teclado (`:focus-visible`) |
-| `accent-hover` | `#9c4227` | Hover de `.btn-primary` |
-| `accent-tint` | `rgba(184,80,47,.14)` | Fondos de estado activo (uso puntual, no `.sidebar-link.active` en claro — ver regla abajo) |
-| `accent-soft` | `rgba(184,80,47,.06)` | Reservado para la celda "hoy" del calendario (token definido, no cableado todavía) |
+| `accent` | `#5b21e6` (violeta "Eléctrico", 2026-10-02) | `.btn-primary`, `.btn-outline`, links de acción, foco de teclado (`:focus-visible`) |
+| `accent-hover` | `#4a14c7` | Hover de `.btn-primary` |
+| `accent-tint` | `rgba(91,33,230,.12)` | Fondos de estado activo (uso puntual, no `.sidebar-link.active` en claro — ver regla abajo) |
+| `accent-soft` | `rgba(91,33,230,.06)` | Reservado para la celda "hoy" del calendario (token definido, no cableado todavía) |
 | `avatar-bg` | `#e8c9a0` | Fondo de `.avatar`, `.kc-owner`, `.entity-card-avatar` en claro |
+
+En modo oscuro el acento es `brand-blue-light` (`#a98bff`). Tipografía: **Instrument Sans** (`--font-sans` en `index.css` + el link de Google Fonts en `index.html`; Geist queda de respaldo), elegida 2026-10-02 junto con el violeta — se compararon en un artifact (https://claude.ai/artifact/TyXVc5TsZ6vQ3Uis6akNxA). Los gráficos mantienen su paleta categórica propia (`--chart-series-*`), validada para daltonismo: no se tiñe de violeta.
 
 **Regla de selección vs. acción**: `brand-blue` se reserva para *selección/activo persistente* — `.sidebar-link.active`, `.view-tab.active`, `.toggle-opt.active`, `.mini-toggle-opt.active`, `.dropdown-trigger.dt-status`, `.role-chip.chip-blue`, `.task-checkbox`, `.col-resize-handle:hover`, `.hscrollbar-thumb:hover`. Todo lo demás que antes era `brand-blue` (botón primario, links de "add filter"/"manage options", el punto del changelog, `.tb-btn .filter-count`) pasa a `accent`. Antes de agregar un uso nuevo de color en un botón o link de acción: es `accent`, no `brand-blue`.
 

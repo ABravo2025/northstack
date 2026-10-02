@@ -49,7 +49,7 @@ type Panel =
 
 const EMPTY_POLICY_FORM = {
   name: '',
-  color: '#6b47dc',
+  color: '#5b21e6',
   accrualMethod: 'fixed_annual',
   daysPerYear: '15',
   isPaid: true,

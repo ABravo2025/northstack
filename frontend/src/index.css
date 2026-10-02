@@ -5,8 +5,8 @@
 @theme {
   /* --- marca, sin cambios --- */
   --color-brand-navy: #1b1733;
-  --color-brand-blue: #6b47dc;
-  --color-brand-blue-light: #b3a1ff;
+  --color-brand-blue: #5b21e6;
+  --color-brand-blue-light: #a98bff;
   --color-brand-cream: #f3f2f8; /* alias de --color-surface-0 durante la migración */
 
   /* --- ground / superficies cálidas (reemplazan brand-cream + gray-50/100) --- */
@@ -25,10 +25,10 @@
   --color-ink-faint: #706b88; /* labels, placeholders, metadata */
 
   /* --- acento de acción --- */
-  --color-accent: #6b47dc;
-  --color-accent-hover: #5a38c4;
-  --color-accent-tint: rgba(107, 71, 220, 0.12); /* fondo de estado activo */
-  --color-accent-soft: rgba(107, 71, 220, 0.06); /* celda "hoy" del calendario */
+  --color-accent: #5b21e6; /* "Eléctrico", elegido 2026-10-02 (antes #6b47dc) */
+  --color-accent-hover: #4a14c7;
+  --color-accent-tint: rgba(91, 33, 230, 0.12); /* fondo de estado activo */
+  --color-accent-soft: rgba(91, 33, 230, 0.06); /* celda "hoy" del calendario */
 
   /* --- avatar --- */
   --color-avatar-bg: #e9e3ff; /* reemplaza brand-blue-light como fondo de .avatar */
@@ -68,7 +68,7 @@
   --size-control-md: 32px; /* dentro de tarjeta o panel: Add note, Review, Cancel, iconos de contenido */
   --size-control-sm: 28px; /* inline: acciones de fila, paginación, nav de calendario, dropdown de panel */
 
-  --font-sans: "Geist", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-sans: "Instrument Sans", "Geist", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
 
   /* ClickUp visual direction (1.2): base type scale 14px -> 13px, app-wide —
      line-height stays the default unitless ratio, so it scales with the new size. */

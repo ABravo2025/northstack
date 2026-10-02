@@ -2325,7 +2325,7 @@ html.dark .stage-table-row {
   @apply mb-3 flex h-5 min-w-0 items-baseline gap-2;
 }
 .list-add-row {
-  @apply m-2 flex w-[calc(100%-1rem)] cursor-pointer items-center gap-2 rounded-md border-2 border-dashed border-line-strong bg-transparent px-3 py-2.5 text-left text-sm font-medium text-ink-faint transition-colors hover:border-accent hover:text-accent dark:border-dark-line dark:text-dark-ink-faint dark:hover:border-violet-400 dark:hover:text-violet-300;
+  @apply m-2 flex w-[calc(100%-1rem)] cursor-pointer items-center gap-2 rounded-md border-2 border-dashed border-line-strong bg-transparent px-3 py-2.5 text-left text-sm font-medium text-ink-faint transition-colors hover:border-accent hover:text-accent dark:border-dark-line dark:text-dark-ink-faint dark:hover:border-brand-blue-light dark:hover:text-brand-blue-light;
   font-family: inherit;
 }
 .ghost-row-inner {
@@ -2574,7 +2574,7 @@ input[type='number'] {
   @apply px-1;
 }
 .task-folder-row.active {
-  @apply bg-accent-tint text-accent dark:bg-violet-500/15 dark:text-violet-200;
+  @apply bg-accent-tint text-accent dark:bg-brand-blue-light/15 dark:text-brand-blue-light;
 }
 .task-hub-main {
   @apply px-0 pt-1;
@@ -2801,7 +2801,7 @@ input[type='number'] {
   @apply fixed right-4 z-30 flex h-[52px] w-[52px] cursor-pointer items-center justify-center rounded-full border-none text-white md:hidden;
   bottom: 76px;
   background: var(--color-accent);
-  box-shadow: 0 6px 18px rgba(107, 71, 220, 0.4);
+  box-shadow: 0 6px 18px rgba(91, 33, 230, 0.4);
 }
 
 .primary-action-fab:hover {
@@ -2911,7 +2911,7 @@ input[type='number'] {
   --ns-shadow-sm: 0 1px 2px rgba(27, 23, 51, 0.07);
   --ns-shadow-inset: inset 0 1px 2px rgba(27, 23, 51, 0.06);
   --ns-shadow-btn: 0 1px 2px rgba(27, 23, 51, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.14);
-  --ns-ring: rgba(107, 71, 220, 0.22);
+  --ns-ring: rgba(91, 33, 230, 0.22);
 }
 html.dark {
   --ns-shadow-card: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 28px -8px rgba(0, 0, 0, 0.6);
@@ -3116,7 +3116,7 @@ html.dark {
   background: linear-gradient(160deg, #efeaff 0%, #cdbdff 55%, #9a80ff 100%);
 }
 .auth-blob-2 {
-  background: radial-gradient(circle, #6b47dc 0%, transparent 70%);
+  background: radial-gradient(circle, #5b21e6 0%, transparent 70%);
 }
 
 /* Ghost "+ Add" affordances are real <button>s now (TableBody.tsx) — keep the cell's type. */
@@ -3503,7 +3503,7 @@ textarea.overview-field-input {
   @apply mb-0 mt-3 text-xs text-ink-faint dark:text-dark-ink-faint;
 }
 .meet-link {
-  @apply inline-flex items-center gap-1 rounded-md bg-accent-tint px-2 py-0.5 text-xs font-medium text-accent hover:underline dark:text-violet-300;
+  @apply inline-flex items-center gap-1 rounded-md bg-accent-tint px-2 py-0.5 text-xs font-medium text-accent hover:underline dark:text-brand-blue-light;
 }
 .app-main .page-full.page-narrow {
   max-width: 76rem;

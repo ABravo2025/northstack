@@ -474,6 +474,31 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
           setRevealedKey(null);
           resetCreateForm();
         }}
+        // Buttons live in the pinned footer: `wide` modals keep a common minimum height app-wide, so
+        // an in-body button floated mid-panel whenever the role could grant only a few scopes.
+        footer={
+          revealedKey ? (
+            <button
+              type="button"
+              className="btn-primary btn-md"
+              onClick={() => {
+                setShowCreateModal(false);
+                setRevealedKey(null);
+              }}
+            >
+              {t('integrations.apiKeys.doneCopiedIt')}
+            </button>
+          ) : (
+            <button
+              type="submit"
+              form="create-api-key-form"
+              className="btn-primary btn-md"
+              disabled={creating || !newKeyName.trim() || selectedScopes.size === 0}
+            >
+              {creating ? t('integrations.apiKeys.creating') : t('integrations.apiKeys.createKey')}
+            </button>
+          )
+        }
       >
         {revealedKey ? (
           <div className="flex flex-col gap-3">
@@ -489,19 +514,9 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
                 <CopyIcon />
               </button>
             </div>
-            <button
-              type="button"
-              className="btn-primary w-full text-center"
-              onClick={() => {
-                setShowCreateModal(false);
-                setRevealedKey(null);
-              }}
-            >
-              {t('integrations.apiKeys.doneCopiedIt')}
-            </button>
           </div>
         ) : (
-          <form onSubmit={handleCreate} className="flex flex-col gap-3">
+          <form id="create-api-key-form" onSubmit={handleCreate} className="flex flex-col gap-3">
             <div className="nv-field">
               <label htmlFor="new-api-key-name">{t('integrations.apiKeys.name')}</label>
               <input
@@ -558,9 +573,6 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
                 ))}
               </div>
             </div>
-            <button type="submit" className="btn-primary w-full text-center" disabled={creating || !newKeyName.trim() || selectedScopes.size === 0}>
-              {creating ? t('integrations.apiKeys.creating') : t('integrations.apiKeys.createKey')}
-            </button>
           </form>
         )}
       </Modal>

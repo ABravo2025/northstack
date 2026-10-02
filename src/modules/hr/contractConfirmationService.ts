@@ -207,6 +207,10 @@ export async function confirmContract(input: ConfirmContractInput): Promise<Conf
   const signedPdfBuffer = Buffer.from(signedPdfBytes);
 
   const result = await prisma.$transaction(async (tx) => {
+    // Read separately rather than added to findInvitationByToken's select — that helper also backs
+    // the public GET /api/invitations/:token, which returns its result as-is.
+    const { roleId } = await tx.invitation.findUniqueOrThrow({ where: { token: input.token }, select: { roleId: true } });
+
     const user = await tx.user.create({
       data: {
         // Name comes from Employee, not re-collected here — "Persona" is a
@@ -218,6 +222,10 @@ export async function confirmContract(input: ConfirmContractInput): Promise<Conf
         emailDomain: getEmailDomain(invitation.email),
         passwordHash: hashPassword(input.password),
         role: invitation.role,
+        // Same as invitationService.ts's acceptInvitation — roleId is what resolveRoleContextForUser
+        // actually reads. Was missing here, so a contract-confirmed User always fell back to the
+        // seed role matching the `role` enum (Member), whatever role the invitation carried.
+        roleId,
         tenantId: invitation.tenantId,
         acceptedTermsAt: new Date(),
       },

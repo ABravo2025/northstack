@@ -1116,6 +1116,11 @@ export default function GuidePage() {
                 la app) (solo aparece si todavía no tiene uno). Elegí un rol, y sale una invitación por email — el
                 link también se copia a tu portapapeles por si preferís mandarlo vos mismo.
               </p>
+              <p>
+                Un Contractor o Empleado nuevo no necesita este paso: al guardarlo se le envía el contrato, y al
+                confirmarlo se le crea el login. Elegí su <strong>Rol en la plataforma</strong> en el mismo formulario
+                de "Add Person" (junto a los campos del contrato) — Member por defecto.
+              </p>
             </div>
 
             <div className="help-sub">
@@ -1224,6 +1229,11 @@ export default function GuidePage() {
                 From a person's profile, open the "…" menu and choose <strong>Invite to app</strong> (only shown if
                 they don't already have one). Pick a role, and an email invite goes out — the link is also copied
                 to your clipboard in case you'd rather send it yourself.
+              </p>
+              <p>
+                A new Contractor or Employee doesn't need this step: saving them sends their contract, and confirming
+                it creates their login. Choose their <strong>Platform role</strong> in the same "Add Person" form
+                (next to the contract fields) — Member by default.
               </p>
             </div>
 

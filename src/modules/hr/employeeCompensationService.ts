@@ -18,6 +18,10 @@ export interface CreateCompensationInput {
   effectiveFrom: string;
   note?: string | null;
   createdByUserId: string;
+  // Platform role the person gets once they confirm their first contract (the contract-confirmation
+  // invitation below carries it, confirmContract copies it onto the new User). Omitted → seed
+  // Member, the previous fixed behavior. Validated by the route (payroll.ts) before this runs.
+  inviteRoleId?: string;
 }
 
 export interface CreateCompensationResult {
@@ -118,6 +122,7 @@ export async function createCompensation(input: CreateCompensationInput): Promis
       invitedByUserId: input.createdByUserId,
       email: employee.email,
       role: 'member',
+      roleId: input.inviteRoleId,
       employeeId: employee.id,
       acceptPath: '/confirm-contract',
       attachments: [{ filename: 'contract-draft.pdf', content: draftPdfBuffer }],

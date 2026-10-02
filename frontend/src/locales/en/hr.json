@@ -129,7 +129,9 @@
       "contractJobTitle": "Job Title (contract)",
       "effectiveFrom": "Effective From",
       "roleDescription": "Role Description",
-      "note": "Note"
+      "note": "Note",
+      "platformRole": "Platform role",
+      "platformRoleHint": "Applied when they confirm the contract and get access to the app."
     },
     "personTypeOptions": {
       "profile": "Profile",

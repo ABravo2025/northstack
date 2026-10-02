@@ -1,6 +1,13 @@
 # Tareas de desarrollo
 
 - Fecha de creación: 2026-07-02
+- **2026-10-02 — Rol en la plataforma al dar de alta con contrato (EN STAGING)**: al crear un Contractor/Empleado
+  con contrato inicial, el envío del contrato es la invitación (confirmarlo crea el User), pero siempre salía con
+  rol Member y no había dónde elegirlo. Ahora "Add Person" trae "Rol en la plataforma" junto al contrato (visible
+  solo para quien puede invitar; default Member); `POST /api/hr/payroll/compensation` acepta `inviteRoleId`
+  (valida permiso de invitar, rol del tenant y que no sea Owner) y lo pasa a la invitación. Bug arreglado de paso:
+  `confirmContract` creaba el User **sin `roleId`** (siempre caía al seed Member por el enum); ahora lo copia de la
+  invitación. "Reenviar contrato" con invitación vencida conserva el rol elegido. 3 tests nuevos.
 - **2026-10-02 — MCP Unidad 2: Private API acepta tokens de IA (EN STAGING)**: cada usuario de un tenant Growth puede
   crear un token personal para su propio asistente de IA (Settings → Integraciones → Asistentes de IA). El token actúa
   como esa persona: la Private API aplica su rol actual (permisos, scope de empleados, campos ocultos, licencias

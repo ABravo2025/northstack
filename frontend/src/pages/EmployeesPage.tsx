@@ -243,6 +243,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     contractDescription: '',
     effectiveFrom: new Date().toISOString().slice(0, 10),
     contractNote: '',
+    inviteRoleId: '',
     timeOffPolicyIds: [] as string[],
   });
 
@@ -559,6 +560,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         description: employeeForm.contractDescription.trim(),
         effectiveFrom: employeeForm.effectiveFrom,
         note: employeeForm.contractNote || undefined,
+        inviteRoleId: employeeForm.inviteRoleId || defaultInviteRoleId || undefined,
       });
     }
 
@@ -653,9 +655,12 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
     }
   };
 
+  // Same default as the "Invite to app" modal — Member, else the first assignable role.
+  const defaultInviteRoleId = assignableRoles.find((r) => r.name === 'Member')?.id ?? assignableRoles[0]?.id ?? '';
+
   const openInviteEmployee = (employee: any) => {
     setInvitingEmployee(employee);
-    setInviteRoleId(assignableRoles.find((r) => r.name === 'Member')?.id ?? assignableRoles[0]?.id ?? '');
+    setInviteRoleId(defaultInviteRoleId);
   };
 
   const handleInviteEmployee = async () => {
@@ -1476,6 +1481,29 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                       onChange={(e) => setEmployeeForm({ ...employeeForm, contractNote: e.target.value })}
                     />
                   </Field>
+                  {/* Sending the first contract also invites the person to the app (the
+                      contract-confirmation link creates their User), so the role is chosen here,
+                      before they ever log in. Only shown to someone who can invite users —
+                      assignableRoles stays empty otherwise and the server keeps Member. */}
+                  {assignableRoles.length > 0 && (
+                    <Field label={t('employees.fields.platformRole')}>
+                      <div className="flex min-w-0 flex-1 flex-col gap-1">
+                        <select
+                          id="emp-invite-role"
+                          className="overview-field-input"
+                          value={employeeForm.inviteRoleId || defaultInviteRoleId}
+                          onChange={(e) => setEmployeeForm({ ...employeeForm, inviteRoleId: e.target.value })}
+                        >
+                          {assignableRoles.map((r) => (
+                            <option key={r.id} value={r.id}>
+                              {r.name}
+                            </option>
+                          ))}
+                        </select>
+                        <span className="text-xs text-ink-faint dark:text-dark-ink-faint">{t('employees.fields.platformRoleHint')}</span>
+                      </div>
+                    </Field>
+                  )}
                 </div>
               </div>
             )}

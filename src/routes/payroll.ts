@@ -1,3 +1,5 @@
+import prisma from '../lib/prisma.js';
+import { canInviteUsers } from '../modules/auth/permissionService.js';
 import { requirePayrollAccess } from '../lib/payrollAccess.js';
 import {
   createPayFrequency,
@@ -218,6 +220,24 @@ payrollRouter.post('/api/hr/payroll/compensation', async (req, res) => {
     return res.status(400).json({ error: 'jobTitle, description, and effectiveFrom are required' });
   }
 
+  // Optional platform role for the contract-confirmation invitation (first-ever contract only).
+  // Validated here, before anything is written: createCompensation doesn't check createInvitation's
+  // result, so a bad role would otherwise leave a contract with no invitation behind it. Choosing a
+  // role is an invite decision, so it needs the same permission as the "Invite to app" modal.
+  const inviteRoleId = typeof req.body.inviteRoleId === 'string' && req.body.inviteRoleId ? req.body.inviteRoleId : undefined;
+  if (inviteRoleId) {
+    if (!canInviteUsers(user.roleContext)) {
+      return res.status(403).json({ error: 'Insufficient permissions to choose a role' });
+    }
+    const role = await prisma.role.findUnique({ where: { id: inviteRoleId } });
+    if (!role || role.tenantId !== user.tenantId) {
+      return res.status(400).json({ error: 'Role not found' });
+    }
+    if (role.isOwner) {
+      return res.status(400).json({ error: 'Ownership can only be transferred to an existing user, not granted by invitation' });
+    }
+  }
+
   const result = await createCompensation({
     tenantId: user.tenantId!,
     employeeId: employee.id,
@@ -230,6 +250,7 @@ payrollRouter.post('/api/hr/payroll/compensation', async (req, res) => {
     effectiveFrom: req.body.effectiveFrom,
     note: req.body.note || null,
     createdByUserId: user.id,
+    inviteRoleId,
   });
 
   if (!result.success) {

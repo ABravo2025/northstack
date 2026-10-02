@@ -213,6 +213,8 @@ export async function resendEmployeeContract(tenantId: string, employeeId: strin
         invitedByUserId: actingUserId,
         email: employee.email,
         role: 'member',
+        // Keep the role chosen at alta — a resend after expiry must not silently reset it to Member.
+        roleId: pending?.roleId ?? undefined,
         employeeId: employee.id,
         acceptPath: '/confirm-contract',
       });

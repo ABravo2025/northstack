@@ -251,6 +251,12 @@
             Service.</strong
           >
         </li>
+        <li>
+          Invoice records a Tenant creates for its own clients through the Stripe
+          integration (line items, descriptions, amounts, and memos). This data is sent to
+          that Tenant's own connected Stripe account so Stripe can deliver and collect the
+          invoice; see Section 4.5.
+        </li>
       </ul>
 
       <h3>2.3 Information collected automatically</h3>
@@ -386,11 +392,14 @@
       <p>
         The Service offers integrations that a Tenant may choose, at its own option, to
         connect to its own third-party accounts — currently Google Calendar (to sync Tasks
-        and Time Off as calendar events) and Stripe (for a Tenant to issue invoices to its
-        own clients through its own Stripe account). When a Tenant connects one of these,
-        the third party it connects — not Northstack — receives and processes the data
-        exposed through that connection, under that third party's own privacy practices;
-        see Section 8.2 of our <a href="/terms.html">Terms of Service</a>.
+        and Time Off as calendar events) and Stripe. For Stripe: a Tenant connects its own
+        Stripe account, and the Service can then create and send Stripe-hosted invoices to
+        that Tenant's own clients on the Tenant's behalf, using the Tenant's own Stripe
+        credentials — Stripe itself delivers the invoice and collects payment on it. When a
+        Tenant connects one of these integrations, the third party it connects — not
+        Northstack — receives and processes the data exposed through that connection, under
+        that third party's own privacy practices; see Section 8.2 of our
+        <a href="/terms.html">Terms of Service</a>.
       </p>
       <p>
         We are also building an integration, using the Model Context Protocol ("MCP"), that

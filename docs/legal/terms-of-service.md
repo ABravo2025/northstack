@@ -172,6 +172,19 @@ style discipline) before writing anything:
   needed the same "Tenant's own choice, Tenant's own third party, not Northstack's problem"
   framing and it made sense to write one section covering all three (two live, one upcoming)
   instead of three near-duplicate ones. Mirrored to privacy-policy.md's new Section 4.5.
+
+2026-10-02 (later same day) — Alejandro corrected the Stripe description in 8.2: it undersold
+the integration as passive "connect your account," when Payments v1 Unit 8 (shipped
+2026-09-30/10-01, stripeInvoiceService.ts) actually lets the Service **write** to the
+Tenant's Stripe account — create an invoice, add line items, finalize it, and send it,
+which makes Stripe itself email the Tenant's own client. That's a real write action with a
+real external-communication side effect (an email a Northstack user triggers landing in a
+third party's inbox), not just a read/sync integration like the Google Calendar case right
+next to it, so it needed its own sentence rather than being folded into the generic
+"connect to its own third-party accounts" framing. Verified directly against
+stripeInvoiceService.ts (createInvoice/finalizeInvoice/sendInvoice) before writing this,
+not from memory. Added the same correction to privacy-policy.md's 4.5, plus a new Processed
+Data bullet in its 2.2 for the invoice line-item/amount/memo data this writes to Stripe.
 -->
 
 # Northstack Terms of Service
@@ -457,12 +470,15 @@ providers.
 
 The Service also offers integrations that a Tenant may choose, at its own option, to
 connect to its own third-party accounts — currently Google Calendar (to sync Tasks and Time
-Off as calendar events) and Stripe (for a Tenant to issue invoices to its own clients
-through its own Stripe account). **Connecting an integration is the Tenant's own choice and
-the Tenant's own responsibility.** The third party the Tenant connects, not Northstack,
-receives and processes the data exposed through that connection, under that third party's
-own terms and privacy practices, and Northstack is not responsible for how it handles that
-data.
+Off as calendar events) and Stripe. For Stripe: a Tenant connects its own Stripe account,
+and the Service can then **create and send Stripe-hosted invoices to that Tenant's own
+clients on the Tenant's behalf**, using the Tenant's own Stripe credentials — Stripe itself
+is the one that delivers the invoice and collects payment on it, not Northstack.
+**Connecting an integration, and anything the Service does through it (including sending
+an invoice), is the Tenant's own choice and the Tenant's own responsibility.** The third
+party the Tenant connects, not Northstack, receives and processes the data exposed through
+that connection, under that third party's own terms and privacy practices, and Northstack
+is not responsible for how it handles that data.
 
 We are also building an integration, using the open Model Context Protocol ("**MCP**"),
 that will let a Tenant's own users connect a third-party AI assistant of their choice (such

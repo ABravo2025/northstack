@@ -252,6 +252,8 @@
     "lastStep": "Last step",
     "introTrial": "Every plan includes a real {{count}}-day free trial. Free Trial needs no card at all — Starter and Growth ask for one upfront, but you're never charged until the trial is up. You can change plans anytime from Settings.",
     "introExpired": "Your free trial has ended. Starter and Growth are billed right away once you add a card — Free Trial keeps your workspace running a little longer, but doesn't remove the need to eventually pick a paid plan. You can change plans anytime from Settings.",
+    "launchTag": "Launch",
+    "launchBanner": "Launch price for teams that join by {{date}} — and you keep it for as long as you stay subscribed.",
     "priceLockedBanner": "The price you start at is the price you keep, for as long as you stay subscribed.",
     "currentPlanBadge": "Current plan",
     "recommendedBadge": "Recommended for you",
@@ -280,13 +282,13 @@
       },
       "starter": {
         "tagline": "For small teams just getting set up",
-        "priceSuffix": "/month",
-        "cap": "{{included}} seats included · {{seatPrice}}/mo per extra seat"
+        "priceSuffix": "/ user / month",
+        "cap": "Billed per active user · minimum {{min}} users ({{minTotal}}/mo)"
       },
       "growth": {
         "tagline": "For growing teams that need Payroll tracking",
-        "priceSuffix": "/month",
-        "cap": "{{included}} seats included · {{seatPrice}}/mo per extra seat"
+        "priceSuffix": "/ user / month",
+        "cap": "Billed per active user · minimum {{min}} users ({{minTotal}}/mo)"
       }
     },
     "features": {

@@ -1274,11 +1274,17 @@ export type Market = 'international' | 'ar';
 
 export interface MarketPricing {
   currency: string;
-  plans: Record<PricedPlan, number>; // minor units; 0 = not sold in this market yet
-  extraSeat: number; // minor units, per extra seat per month
+  plans: Record<PricedPlan, number>; // minor units — base price covering includedSeats (= minUsers); 0 = not sold here
+  extraSeat: number; // legacy: Starter's per-user price (kept for old clients)
+  extraSeatByPlan: Record<PricedPlan, number>; // minor units, per user beyond the minimum, per plan
+  perUser: { launch: Record<PricedPlan, number>; regular: Record<PricedPlan, number> }; // minor units per user per month
 }
 
 export interface PlanPricing {
+  model: 'per_user';
+  minUsers: number;
+  launchEndsAt: string; // YYYY-MM-DD — launch prices for teams that subscribe up to this date
+  isLaunch: boolean;
   markets: Record<Market, MarketPricing>;
   includedSeats: Record<PricedPlan, number>;
   freeTrialSeatCap: number;

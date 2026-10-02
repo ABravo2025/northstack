@@ -1,6 +1,6 @@
 import prisma from '../../lib/prisma.js';
 import { createExtraSeatAddon, createRecurringProduct, legacyExtraSeatAddonMatching } from '../../lib/dodopayments.js';
-import { PRICING, type Market, type PricedPlan } from '../../config/pricing.js';
+import { ADDONS, LAUNCH_ENDS_AT, MIN_USERS, PER_USER, PRICING, billingMarkets, isLaunchPeriod, type Market, type PricedPlan } from '../../config/pricing.js';
 import type { PaymentProvider, PlanPrice } from '@prisma/client';
 
 // Turns src/config/pricing.ts (the one place prices are defined) into what billing actually
@@ -25,16 +25,18 @@ let syncedConfig: string | null = null;
 
 // Makes the latest row of every plan/market match PRICING. Cheap after the first call.
 export async function ensurePlanPricesSynced(): Promise<void> {
-  const config = JSON.stringify(PRICING.markets);
+  const markets = billingMarkets();
+  const config = JSON.stringify(markets);
   if (syncedConfig === config) return;
 
   await prisma.$transaction(
     async (tx) => {
       await tx.$executeRaw`SELECT pg_advisory_xact_lock(${SYNC_LOCK_KEY})`;
-      for (const market of Object.keys(PRICING.markets) as Market[]) {
-        const { currency, plans, extraSeat } = PRICING.markets[market];
+      for (const market of Object.keys(markets) as Market[]) {
+        const { currency, plans, extraSeat: seatByPlan } = markets[market];
         for (const plan of Object.keys(plans) as PricedPlan[]) {
           const priceCents = plans[plan];
+          const extraSeat = seatByPlan[plan]; // per-user price — per plan since 2026-10-02
           const latest = await tx.planPrice.findFirst({ where: { plan, market }, orderBy: { effectiveFrom: 'desc' } });
           const samePlanPrice = latest?.launchPriceCents === priceCents && latest.currency === currency;
           const sameSeatPrice = latest?.extraSeatPriceCents === extraSeat && latest.currency === currency;
@@ -46,7 +48,8 @@ export async function ensurePlanPricesSynced(): Promise<void> {
               market,
               currency,
               launchPriceCents: priceCents,
-              regularPriceCents: priceCents, // column kept for history only — no launch/regular split since 2026-09-14
+              // Regular (post-launch) base for the same MIN_USERS — display/history; billing uses launchPriceCents.
+              regularPriceCents: PER_USER[market].regular[plan] * MIN_USERS,
               extraSeatPriceCents: extraSeat,
               // Dodo objects are priced, so they carry over only when their own price didn't change.
               dodoProductId: samePlanPrice ? latest!.dodoProductId : null,
@@ -79,7 +82,7 @@ async function ensureDodoObjects(row: PlanPrice): Promise<PlanPrice> {
         data.dodoProductId = await createRecurringProduct({ name: `Northstack — ${fresh.plan}`, priceCents: fresh.launchPriceCents });
       }
       if (fresh.extraSeatPriceCents > 0 && !fresh.dodoExtraSeatAddonId) {
-        // A seat price is market-wide, so the other plan's row may already have an addon for it.
+        // Another row (either plan) with the same seat price may already have an addon for it.
         const sibling = await tx.planPrice.findFirst({
           where: { market: fresh.market, extraSeatPriceCents: fresh.extraSeatPriceCents, dodoExtraSeatAddonId: { not: null } },
           orderBy: { effectiveFrom: 'desc' },
@@ -131,11 +134,24 @@ export function mercadoPagoAmount(row: Pick<PlanPrice, 'launchPriceCents' | 'ext
 
 // What GET /api/plans/prices serves — the app UI and the landing render every price from this.
 export function publicPricing() {
+  const markets = billingMarkets();
+  const withCompat = (m: Market) => ({
+    ...markets[m],
+    // Per-plan since 2026-10-02; extraSeat stays a number (Starter's) for clients built on the old shape.
+    extraSeatByPlan: markets[m].extraSeat,
+    extraSeat: markets[m].extraSeat.starter,
+    perUser: { launch: PER_USER[m].launch, regular: PER_USER[m].regular },
+  });
   return {
-    markets: PRICING.markets,
+    model: 'per_user' as const,
+    minUsers: MIN_USERS,
+    launchEndsAt: LAUNCH_ENDS_AT,
+    isLaunch: isLaunchPeriod(),
+    addons: ADDONS,
+    markets: { international: withCompat('international'), ar: withCompat('ar') },
     includedSeats: PRICING.includedSeats,
     freeTrialSeatCap: PRICING.freeTrialSeatCap,
     // Kept for any client still on the pre-2026-09-26 shape (USD plan prices only).
-    prices: PRICING.markets.international.plans,
+    prices: markets.international.plans,
   };
 }

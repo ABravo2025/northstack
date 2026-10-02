@@ -65,6 +65,7 @@ Store · no hard-coded prices in posts · demo data only (tenant "Acme Latam" on
 ---
 
 ## Changelog (newest first)
+- **2026-10-02** — Internal signup alerts in production: staff email (to `SIGNUP_ALERT_EMAIL`, off if unset) on first verification send and on completed tenant registration. "No department" option in People. API-key scope fix (c35d8c2) is on staging only, not yet in production.
 - **2026-10-02** — Marketing branch created; launch kit (LinkedIn posts ES/EN, 45 s demo videos 1:1 and
   16:9 ES/EN, generated music, OG images) in `2026-10/semana-01/`.
 - **2026-10-02** — Terms/Privacy/Refund as modals everywhere (landing + app); legal pages, About and

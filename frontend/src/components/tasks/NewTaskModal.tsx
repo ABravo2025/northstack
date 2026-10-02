@@ -63,7 +63,7 @@ export default function NewTaskModal({
   };
 
   return (
-    <Modal open={open} title={t('myTasks.newTaskModal.title')} onClose={handleClose}>
+    <Modal open={open} title={t('myTasks.newTaskModal.title')} onClose={handleClose} wide>
       <div className="nv-field">
         <label htmlFor="new-task-modal-entity-type">
           {t('myTasks.newTaskModal.relatedTo')}

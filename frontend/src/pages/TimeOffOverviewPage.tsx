@@ -639,7 +639,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
         />
       )}
 
-      <Modal open={panel !== null && panelBody !== null} title={panelTitle} onClose={() => setPanel(null)} footer={panelFooter}>
+      <Modal open={panel !== null && panelBody !== null} title={panelTitle} onClose={() => setPanel(null)} footer={panelFooter} wide>
         {panelBody}
       </Modal>
 
@@ -653,6 +653,7 @@ export default function TimeOffOverviewPage({ user, token }: TimeOffOverviewPage
               : t('timeOff.slideOver.addTitle')
         }
         onClose={closeSlideOver}
+        wide
         footer={
           assignStepPolicy ? (
             <>

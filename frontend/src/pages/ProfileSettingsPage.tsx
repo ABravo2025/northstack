@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { api } from '../api';
+import { api, SOCIAL_NETWORKS, type SocialLinks } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import PasswordInput from '../components/common/PasswordInput';
 import PasswordChecklist from '../components/common/PasswordChecklist';
@@ -29,6 +29,7 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
     lastName: user.lastName,
     phone: user.phone,
   });
+  const [socialLinks, setSocialLinks] = useState<SocialLinks>(user.socialLinks ?? {});
   const [profileError, setProfileError] = useState<{ message: string; field?: string } | null>(null);
   const [profileSaving, setProfileSaving] = useState(false);
   const [localeSaving, setLocaleSaving] = useState(false);
@@ -54,8 +55,10 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
     setProfileError(null);
     setProfileSaving(true);
     try {
-      const result = await api.updateProfile(token, profileForm);
+      const result = await api.updateProfile(token, { ...profileForm, socialLinks });
       onUserUpdated(result.user);
+      // Show what the server stored (it adds https:// to bare links).
+      setSocialLinks(result.user.socialLinks ?? {});
       toast.success(t('profile.toastProfileUpdated'));
     } catch (error) {
       const field = (error as any).field;
@@ -128,6 +131,32 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
           <div className="form-group">
             <label htmlFor="profile-email">{t('profile.email')}</label>
             <input id="profile-email" value={user.email} disabled />
+          </div>
+          <div className="profile-social">
+            <h4 className="profile-social-title">{t('profile.social.title')}</h4>
+            <p className="profile-social-hint">{t('profile.social.hint')}</p>
+            {SOCIAL_NETWORKS.map((network) => (
+              <div className="form-group" key={network}>
+                <label htmlFor={`profile-social-${network}`}>{t(`profile.social.${network}`)}</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    id={`profile-social-${network}`}
+                    type="text"
+                    inputMode="url"
+                    className="field-l flex-1"
+                    placeholder={network === 'website' ? 'https://' : `https://${network === 'x' ? 'x' : network}.com/…`}
+                    value={socialLinks[network] ?? ''}
+                    onChange={(e) => setSocialLinks({ ...socialLinks, [network]: e.target.value })}
+                  />
+                  {user.socialLinks?.[network] && user.socialLinks[network] === socialLinks[network] && (
+                    <a href={user.socialLinks[network]} target="_blank" rel="noopener noreferrer" className="table-link text-sm">
+                      {t('profile.social.open')}
+                    </a>
+                  )}
+                </div>
+                {profileError?.field === `socialLinks.${network}` && <p className="field-error">{t('profile.social.invalid')}</p>}
+              </div>
+            ))}
           </div>
           <div className="form-actions">
             <button type="submit" className="btn-primary" disabled={profileSaving}>

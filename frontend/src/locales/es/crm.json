@@ -287,6 +287,7 @@
   },
   "payments": {
     "pageTitle": "Pagos",
+    "viewDashboard": "Ver dashboard",
     "noPermission": "No tenés permiso para ver Pagos.",
     "toastLoadFailed": "No se pudo cargar el resumen de pagos: {{error}}",
     "connectStripeFirst": "Conectá tu cuenta de Stripe primero — andá a Configuración → Integraciones.",

@@ -597,6 +597,10 @@ model User {
   // once the user (or an admin acting for them) actually picks one via the Settings > Profile
   // selector. 'en' | 'es' for now; the architecture doesn't block adding more later.
   locale                      String?
+  // The user's own social profiles (Settings → Profile, 2026-10): { linkedin, x, instagram,
+  // facebook, website } → https URL. JSON rather than one column per network so adding a network
+  // is a code change, not a migration. Validated/normalized in authService.normalizeSocialLinks.
+  socialLinks                 Json?
   pipelinesCreated            Pipeline[]                  @relation("PipelineCreatedBy")
   pipelinesUpdated            Pipeline[]                  @relation("PipelineUpdatedBy")
   pipelinesLastAssigned       Pipeline[]                  @relation("PipelineLastAssignedUser")

@@ -64,7 +64,7 @@ export default function TaskDetailModal({
   };
 
   return (
-    <Modal open={!!task} title={task?.entitySummary ? `${task.entitySummary}` : t('myTasks.detail.defaultTitle')} onClose={onClose}>
+    <Modal open={!!task} title={task?.entitySummary ? `${task.entitySummary}` : t('myTasks.detail.defaultTitle')} onClose={onClose} wide>
       {task && (
         <div className="flex flex-col gap-4">
           <div className="task-hub-detail-meta">

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { api, type PaymentsOverview, type PaymentsOverviewRow } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import TableSkeleton from '../components/common/TableSkeleton';
@@ -95,9 +96,13 @@ export default function PaymentsOverviewPage({ token }: PaymentsOverviewPageProp
   }
 
   return (
-    <div className="page-full">
+    <div className="page-full page-narrow">
       <div className="page-toolbar">
         <h2>{t('payments.pageTitle')}</h2>
+        {/* The headline numbers live in Dashboards → Payments since 2026-10; this page is the per-Company list. */}
+        <Link to="/dashboards/payments" className="btn-secondary ml-auto">
+          {t('payments.viewDashboard')}
+        </Link>
       </div>
 
       {loading ? (
@@ -106,48 +111,6 @@ export default function PaymentsOverviewPage({ token }: PaymentsOverviewPageProp
         <p className="mt-4 text-sm text-ink-muted dark:text-dark-ink-muted">{t('payments.connectStripeFirst')}</p>
       ) : (
         <>
-          <div className="mb-5 grid grid-cols-2 gap-3 md:grid-cols-5">
-            <div className="card">
-              <p className="text-xs text-ink-muted dark:text-dark-ink-muted">{t('payments.stats.openInvoices')}</p>
-              <p className="text-lg font-semibold">
-                {overview.totals.openInvoicesCount}
-                {overview.totals.openInvoicesCount > 0 && overview.totals.openInvoicesCurrency && (
-                  <span className="ml-1 text-xs text-ink-faint">
-                    ({formatMoney(overview.totals.openInvoicesAmountCents, overview.totals.openInvoicesCurrency.toUpperCase())})
-                  </span>
-                )}
-              </p>
-              {overview.totals.overdueInvoicesCount > 0 && (
-                <span className="category-chip chip-coral mt-1 inline-block">
-                  {t('payments.overdueCount', { count: overview.totals.overdueInvoicesCount })}
-                </span>
-              )}
-            </div>
-            <div className="card">
-              <p className="text-xs text-ink-muted dark:text-dark-ink-muted">{t('payments.stats.refunds')}</p>
-              <p className="text-lg font-semibold">
-                {overview.totals.refundsCount}
-                {overview.totals.refundsCount > 0 && overview.totals.currency && (
-                  <span className="ml-1 text-xs text-ink-faint">
-                    ({formatMoney(overview.totals.refundsAmountCents, overview.totals.currency.toUpperCase())})
-                  </span>
-                )}
-              </p>
-            </div>
-            <div className="card">
-              <p className="text-xs text-ink-muted dark:text-dark-ink-muted">{t('payments.stats.failedPayments')}</p>
-              <p className="text-lg font-semibold">{overview.totals.failedCount}</p>
-            </div>
-            <div className="card">
-              <p className="text-xs text-ink-muted dark:text-dark-ink-muted">{t('payments.stats.activeSubscriptions')}</p>
-              <p className="text-lg font-semibold">{overview.totals.activeSubscriptions}</p>
-            </div>
-            <div className="card">
-              <p className="text-xs text-ink-muted dark:text-dark-ink-muted">{t('payments.stats.companiesLinked')}</p>
-              <p className="text-lg font-semibold">{overview.companies.length}</p>
-            </div>
-          </div>
-
           {overview.companies.length === 0 ? (
             <p className="text-sm text-ink-muted dark:text-dark-ink-muted">{t('payments.noCompaniesLinked')}</p>
           ) : (

@@ -1,5 +1,5 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
-import type { AuthResponse, PermissionsPayload, PlanPricing, PlanTier, Tenant, TenantProfileUpdate, TenantUser } from './types.js';
+import type { AuthResponse, PermissionsPayload, PlanPricing, PlanTier, Tenant, SocialLinks, TenantProfileUpdate, TenantUser } from './types.js';
 
 // Tenant Signup — email verification (spec-tenant-signup.md). /start and /resend hit distinct
 // backend routes (own rate-limit buckets for the cooldown timer/analytics) but are otherwise
@@ -140,7 +140,7 @@ export const authApi = {
 
   updateProfile: async (
     token: string,
-    data: { firstName: string; lastName: string; phone: string },
+    data: { firstName: string; lastName: string; phone: string; socialLinks?: SocialLinks },
   ): Promise<{ user: TenantUser }> => {
     const res = await apiFetch(`${API_BASE_URL}/api/users/me`, {
       method: 'PATCH',

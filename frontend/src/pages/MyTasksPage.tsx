@@ -70,7 +70,7 @@ export default function MyTasksPage({ token, user }: MyTasksPageProps) {
   };
 
   return (
-    <div className="page-full flex flex-col">
+    <div className="page-full page-narrow flex flex-col">
       <div className="page-toolbar">
         <h2>{t('myTasks.pageTitle')}</h2>
       </div>

@@ -209,7 +209,7 @@
   "settings": {
     "myAccount": "Mi cuenta",
     "company": "Empresa",
-    "profile": { "label": "Perfil", "desc": "Nombre, teléfono y contraseña." },
+    "profile": { "label": "Perfil", "desc": "Nombre, teléfono, redes sociales y contraseña." },
     "integrations": { "label": "Integraciones", "desc": "Conectá Northstack con otras herramientas." },
     "billing": { "label": "Facturación", "desc": "Plan, facturas y método de pago." },
     "companyProfile": { "label": "Datos de la empresa", "desc": "Nombre, logo, datos de contacto y moneda." },
@@ -234,6 +234,17 @@
     "updating": "Actualizando…",
     "updatePassword": "Actualizar contraseña",
     "toastProfileUpdated": "Perfil actualizado.",
+    "social": {
+      "title": "Redes sociales",
+      "hint": "Opcional. Pegá el link a tu perfil.",
+      "invalid": "Ingresá un link válido, por ej. https://linkedin.com/in/tu-nombre",
+      "open": "Abrir",
+      "linkedin": "LinkedIn",
+      "x": "X (Twitter)",
+      "instagram": "Instagram",
+      "facebook": "Facebook",
+      "website": "Sitio web"
+    },
     "toastPasswordUpdated": "Contraseña actualizada."
   }
 }

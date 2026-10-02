@@ -228,6 +228,37 @@ export interface UpdateProfileInput {
   firstName: string;
   lastName: string;
   phone: string;
+  // Omitted → left unchanged (older clients only send the three fields above).
+  socialLinks?: Record<string, unknown>;
+}
+
+export const SOCIAL_NETWORKS = ['linkedin', 'x', 'instagram', 'facebook', 'website'] as const;
+
+// Empty values are dropped; a bare "linkedin.com/in/ana" gets https:// added; anything that isn't
+// an http(s) URL is rejected — these render as links, so a javascript: URL must never get stored.
+export function normalizeSocialLinks(
+  input: Record<string, unknown>,
+): { ok: true; links: Record<string, string> } | { ok: false; network: string } {
+  const links: Record<string, string> = {};
+  for (const network of SOCIAL_NETWORKS) {
+    const raw = input[network];
+    if (raw === undefined || raw === null) continue;
+    if (typeof raw !== 'string') return { ok: false, network };
+    const value = raw.trim();
+    if (!value) continue;
+    const withScheme = /^[a-z][a-z0-9+.-]*:/i.test(value) ? value : `https://${value}`;
+    let url: URL;
+    try {
+      url = new URL(withScheme);
+    } catch {
+      return { ok: false, network };
+    }
+    if ((url.protocol !== 'https:' && url.protocol !== 'http:') || !url.hostname.includes('.') || withScheme.length > 300) {
+      return { ok: false, network };
+    }
+    links[network] = url.toString();
+  }
+  return { ok: true, links };
 }
 
 export async function updateOwnProfile(userId: string, input: UpdateProfileInput): Promise<AuthResult> {
@@ -247,12 +278,25 @@ export async function updateOwnProfile(userId: string, input: UpdateProfileInput
     return { success: false, error: PHONE_POLICY_MESSAGE, field: 'phone' };
   }
 
+  let socialLinks: Record<string, string> | undefined;
+  if (input.socialLinks !== undefined) {
+    if (typeof input.socialLinks !== 'object' || input.socialLinks === null || Array.isArray(input.socialLinks)) {
+      return { success: false, error: 'Invalid social links', field: 'socialLinks' };
+    }
+    const normalized = normalizeSocialLinks(input.socialLinks);
+    if (!normalized.ok) {
+      return { success: false, error: 'Enter a valid link (https://…)', field: `socialLinks.${normalized.network}` };
+    }
+    socialLinks = normalized.links;
+  }
+
   const user = await prisma.user.update({
     where: { id: userId },
     data: {
       firstName: input.firstName.trim(),
       lastName: input.lastName.trim(),
       phone: input.phone.trim(),
+      ...(socialLinks !== undefined ? { socialLinks } : {}),
     },
   });
 

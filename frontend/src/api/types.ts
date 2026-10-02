@@ -890,7 +890,12 @@ export interface TenantUser {
   roleId?: string | null;
   roleRef?: { name: string } | null;
   status: string;
+  socialLinks?: SocialLinks | null;
 }
+
+export const SOCIAL_NETWORKS = ['linkedin', 'x', 'instagram', 'facebook', 'website'] as const;
+export type SocialNetwork = (typeof SOCIAL_NETWORKS)[number];
+export type SocialLinks = Partial<Record<SocialNetwork, string>>;
 
 export interface TenantInvitation {
   id: string;

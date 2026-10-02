@@ -47,7 +47,7 @@ export default function DashboardsLayout({ token }: DashboardsLayoutProps) {
       ) : (
         <div className="page-toolbar">
           <h2 className="text-xl font-semibold">{active?.label ?? t('common.dashboardsTitle')}</h2>
-          <div className="ml-auto">
+          <div className={active?.noDateRange ? 'hidden' : 'ml-auto'}>
             <DateRangeFilter presetKey={presetKey} range={range} onChange={handleRangeChange} />
           </div>
         </div>

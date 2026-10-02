@@ -38,6 +38,7 @@ export default function TaskHubList({ tasks, loading, onToggleComplete, onOpenDe
           <col style={{ width: 140 }} />
           <col style={{ width: 90 }} />
           <col style={{ width: 90 }} />
+          <col style={{ width: 96 }} />
           <col style={{ width: 100 }} />
           <col style={{ width: 70 }} />
         </colgroup>
@@ -48,12 +49,13 @@ export default function TaskHubList({ tasks, loading, onToggleComplete, onOpenDe
             <th>{t('myTasks.table.relationship')}</th>
             <th>{t('myTasks.table.created')}</th>
             <th>{t('myTasks.table.due')}</th>
+            <th>{t('myTasks.table.meet')}</th>
             <th>{t('myTasks.table.completed')}</th>
             <th>{t('myTasks.table.assignee')}</th>
           </tr>
         </thead>
         <TableBody
-          colSpan={7}
+          colSpan={8}
           isEmpty={sorted.length === 0}
           empty={{
             icon: <TaskCheckIcon />,

@@ -26,6 +26,8 @@
       "due": "Due",
       "completed": "Completed",
       "assignee": "Assignee",
+      "meet": "Google Meet",
+      "join": "Join",
       "add": "Add"
     },
     "board": {

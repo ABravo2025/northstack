@@ -76,6 +76,19 @@ export default function TableBody({ colSpan, isEmpty, empty, onAdd, addLabel, ch
   );
 }
 
+// The same dashed "+ Add" row for lists that aren't a <table> (inline-edit row groups like the
+// pipeline stage editor) — so "add one more" looks identical everywhere.
+export function ListAddRow({ label, onAdd }: { label: string; onAdd: () => void }) {
+  return (
+    <button type="button" className="list-add-row" onClick={onAdd}>
+      <span className="ghost-plus-box">
+        <PlusIcon className="h-3 w-3" />
+      </span>
+      {label}
+    </button>
+  );
+}
+
 interface KanbanAddCardProps {
   label: string;
   onAdd: () => void;

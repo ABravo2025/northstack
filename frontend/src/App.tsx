@@ -25,6 +25,7 @@ import DashboardsHrPage from './pages/dashboards/DashboardsHrPage';
 import DashboardsTimeOffPage from './pages/dashboards/DashboardsTimeOffPage';
 import DashboardsPayrollPage from './pages/dashboards/DashboardsPayrollPage';
 import DashboardsSalesPage from './pages/dashboards/DashboardsSalesPage';
+import DashboardsPaymentsPage from './pages/dashboards/DashboardsPaymentsPage';
 import DashboardsTasksPage from './pages/dashboards/DashboardsTasksPage';
 import DashboardsAdoptionPage from './pages/dashboards/DashboardsAdoptionPage';
 import EmployeesPage from './pages/EmployeesPage';
@@ -339,6 +340,7 @@ export default function App() {
           <Route path="hr" element={<DashboardsHrPage />} />
           <Route path="time-off" element={<DashboardsTimeOffPage />} />
           <Route path="payroll" element={growthOnly(<DashboardsPayrollPage />, '/dashboards')} />
+          <Route path="payments" element={growthOnly(<DashboardsPaymentsPage />, '/dashboards')} />
           <Route path="sales" element={<DashboardsSalesPage />} />
           <Route path="tasks" element={<DashboardsTasksPage />} />
           <Route path="adoption" element={<DashboardsAdoptionPage />} />

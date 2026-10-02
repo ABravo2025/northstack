@@ -15,11 +15,11 @@ import ColorPicker from '../components/common/ColorPicker';
 import ConfirmDialog from '../components/common/ConfirmDialog';
 import Modal from '../components/common/Modal';
 import HorizontalScrollbar from '../components/entity-views/HorizontalScrollbar';
-import TableBody from '../components/common/TableBody';
+import TableBody, { ListAddRow } from '../components/common/TableBody';
 import MultiSelectDropdown, { type MultiSelectOption } from '../components/common/MultiSelectDropdown';
 import Popover from '../components/common/Popover';
 import RequiredMark from '../components/common/RequiredMark';
-import { DotsVerticalIcon, EyeIcon, EyeOffIcon, GripIcon, PlusIcon, TrashIcon } from '../components/common/Icons';
+import { DotsVerticalIcon, EyeIcon, EyeOffIcon, GripIcon, TrashIcon } from '../components/common/Icons';
 import CompactRowGroup from '../components/common/CompactRow';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { usePrimaryAction } from '../contexts/PrimaryActionContext';
@@ -109,6 +109,9 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
   const toast = useToast();
   const { t } = useTranslation('settingsPages');
   const [newStageName, setNewStageName] = useState('');
+  // The "+ Add stage" row turns into an inline name input; it stays open after each add so
+  // several stages can be typed in a row, and closes on Escape or when left empty.
+  const [addingStage, setAddingStage] = useState(false);
   // Local draft while editing a stage's win probability — committed onBlur
   // (docs/tareas/specredisenosalesv2.md §3.5), keyed by stage.id so multiple
   // stages can be mid-edit independently.
@@ -237,9 +240,10 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
           hint that Won/Lost are terminal and force the probability, or that Open is the default
           and drives the weighted forecast). */}
       {sortedStages.length > 0 && <p className="mb-2 text-xs text-ink-muted dark:text-dark-ink-muted">{t('pipelines.outcomeHelp')}</p>}
+      <div className="stage-table">
       <CompactRowGroup minWidth={520}>
         {sortedStages.length > 0 && (
-          <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
+          <div className="stage-table-head">
             <span style={{ width: STAGE_GRIP_COLUMN_WIDTH }} />
             <span style={{ width: 28 }} />
             <span className="flex-1">{t('pipelines.stageEditor.columnStageName')}</span>
@@ -250,11 +254,11 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
             </span>
           </div>
         )}
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col">
           {sortedStages.map((stage) => (
             <div
               key={stage.id}
-              className={`flex items-center gap-2 rounded-md border-t-2 border-transparent ${
+              className={`stage-table-row ${
                 draggedStageId === stage.id ? 'opacity-40' : ''
               } ${dragOverStageId === stage.id && draggedStageId && draggedStageId !== stage.id ? 'border-t-brand-blue' : ''}`}
               onDragOver={(e) => handleDragOver(e, stage.id)}
@@ -331,21 +335,34 @@ function StageEditor({ pipeline, token, onChanged }: StageEditorProps) {
         </div>
       </CompactRowGroup>
 
-      <form className="flex items-center gap-2 mt-3" onSubmit={handleAddStage}>
-        <input
-          type="text"
-          placeholder={t('pipelines.stageEditor.newStageNamePlaceholder')}
-          value={newStageName}
-          onChange={(e) => setNewStageName(e.target.value)}
-          style={{ maxWidth: 220 }}
-        />
-        <button type="submit" className="btn-secondary">
-          <span className="inline-flex items-center gap-1.5">
-            <PlusIcon className="h-3.5 w-3.5" />
+      {addingStage ? (
+        <form className="stage-table-add-form" onSubmit={handleAddStage}>
+          <input
+            type="text"
+            className="field-m"
+            autoFocus
+            placeholder={t('pipelines.stageEditor.newStageNamePlaceholder')}
+            value={newStageName}
+            onChange={(e) => setNewStageName(e.target.value)}
+            onBlur={() => {
+              if (!newStageName.trim()) setAddingStage(false);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                e.stopPropagation();
+                setNewStageName('');
+                setAddingStage(false);
+              }
+            }}
+          />
+          <button type="submit" className="btn-primary" disabled={!newStageName.trim()}>
             {t('pipelines.stageEditor.addStage')}
-          </span>
-        </button>
-      </form>
+          </button>
+        </form>
+      ) : (
+        <ListAddRow label={t('pipelines.stageEditor.addStage')} onAdd={() => setAddingStage(true)} />
+      )}
+      </div>
     </>
   );
 }
@@ -1340,9 +1357,10 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
                 {t('pipelines.stagesHelp')}
               </p>
               <p className="mb-2 text-xs text-ink-muted dark:text-dark-ink-muted">{t('pipelines.outcomeHelp')}</p>
+              <div className="stage-table">
               <CompactRowGroup minWidth={460}>
                 {createStages.length > 0 && (
-                  <div className="mb-1 flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-ink-faint">
+                  <div className="stage-table-head">
                     <span className="flex-1">{t('pipelines.stageEditor.columnStageName')}</span>
                     <span style={{ width: 110 }}>{t('pipelines.stageEditor.columnOutcome')}</span>
                     <span style={{ width: 56, textAlign: 'center' }}>{t('pipelines.stageEditor.columnWinPercent')}</span>
@@ -1352,9 +1370,9 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
                     <span style={{ width: 32 }} />
                   </div>
                 )}
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col">
                   {createStages.map((stage, i) => (
-                    <div key={stage.key} className="flex items-center gap-2">
+                    <div key={stage.key} className="stage-table-row">
                       <input
                         type="text"
                         className="flex-1"
@@ -1414,12 +1432,8 @@ export default function PipelinesSettingsPage({ token }: PipelinesSettingsPagePr
                   ))}
                 </div>
               </CompactRowGroup>
-              <button type="button" className="btn-secondary mt-2" onClick={addDraftStage}>
-                <span className="inline-flex items-center gap-1.5">
-                  <PlusIcon className="h-3.5 w-3.5" />
-                  {t('pipelines.stageEditor.addStage')}
-                </span>
-              </button>
+              <ListAddRow label={t('pipelines.stageEditor.addStage')} onAdd={addDraftStage} />
+              </div>
             </div>
           </form>
         )}

@@ -1534,8 +1534,13 @@ table.help-ref td.no {
   @apply flex max-h-[85vh] w-full max-w-md flex-col rounded-lg border border-line bg-surface-1 shadow-xl dark:border-dark-line dark:bg-dark-surface;
 }
 
+/* The standard size for forms and details (2026-10: the "Edit pipeline" frame, which Alejandro
+   picked as the right size app-wide) — same width and a common minimum height, so opening a short
+   form doesn't produce a tiny box and moving between them doesn't jump. The default (narrow) size is
+   left for short confirmations. */
 .modal-panel.wide {
   @apply max-w-3xl;
+  min-height: min(34rem, 85vh);
 }
 
 .modal-panel.xwide {
@@ -2242,6 +2247,42 @@ table.help-ref td.no {
   @apply cursor-pointer overflow-visible border-2 border-dashed border-line-strong py-0 text-ink-faint transition-colors hover:border-accent hover:text-accent dark:border-dark-line dark:text-dark-ink-faint dark:hover:border-brand-blue-light dark:hover:text-brand-blue-light;
 }
 
+/* Inline-edit row groups (pipeline stages): a card with a header strip and real row padding,
+   so selects/inputs don't sit flush against the edges, closed by the shared dashed "+ Add" row. */
+.stage-table {
+  @apply overflow-hidden rounded-lg border border-line bg-surface-1 dark:border-dark-line dark:bg-dark-surface;
+}
+/* CompactRowGroup's scroll wrapper is styled as a table card elsewhere — inside .stage-table the
+   outer card is the frame, so the wrapper goes flat (otherwise it draws a second border). */
+.stage-table .full-table-wrap {
+  @apply rounded-none border-0 bg-transparent shadow-none;
+}
+.stage-table-head {
+  @apply flex items-center gap-2 border-b border-line bg-surface-2 px-4 py-2 text-[10px] font-semibold uppercase tracking-wide text-ink-faint dark:border-dark-line dark:bg-dark-raised dark:text-dark-ink-faint;
+}
+.stage-table-row {
+  @apply flex items-center gap-2 border-t-2 border-transparent px-4 py-2.5;
+  box-shadow: inset 0 -1px 0 var(--color-line-soft);
+}
+html.dark .stage-table-row {
+  box-shadow: inset 0 -1px 0 var(--color-dark-line-soft);
+}
+.stage-table-add-form {
+  @apply flex items-center gap-2 px-4 py-2.5;
+}
+.profile-social {
+  @apply mt-2 border-t border-line pt-4 dark:border-dark-line;
+}
+.profile-social-title {
+  @apply m-0 text-sm font-semibold text-ink dark:text-dark-ink;
+}
+.profile-social-hint {
+  @apply mb-3 mt-0.5 text-xs text-ink-muted dark:text-dark-ink-muted;
+}
+.list-add-row {
+  @apply m-2 flex w-[calc(100%-1rem)] cursor-pointer items-center gap-2 rounded-md border-2 border-dashed border-line-strong bg-transparent px-3 py-2.5 text-left text-sm font-medium text-ink-faint transition-colors hover:border-accent hover:text-accent dark:border-dark-line dark:text-dark-ink-faint dark:hover:border-violet-400 dark:hover:text-violet-300;
+  font-family: inherit;
+}
 .ghost-row-inner {
   @apply flex w-full cursor-pointer items-center gap-2 border-0 bg-transparent px-1 py-2.5 text-left text-sm font-medium text-inherit;
 }
@@ -3346,6 +3387,13 @@ textarea.overview-field-input {
 }
 .app-main .page-full.page-capped {
   max-width: 90rem;
+}
+/* Short tables (few columns, e.g. Payments, My Tasks) — wider just spreads 4-5 columns apart. */
+.meet-link {
+  @apply inline-flex items-center gap-1 rounded-md bg-accent-tint px-2 py-0.5 text-xs font-medium text-accent hover:underline dark:text-violet-300;
+}
+.app-main .page-full.page-narrow {
+  max-width: 76rem;
 }
 .settings-content {
   max-width: 72rem;

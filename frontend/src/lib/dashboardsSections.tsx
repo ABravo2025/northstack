@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import i18n from './i18n';
-import { BriefcaseIcon, CalendarIcon, ListIcon, PeopleIcon, TargetIcon, TrendingIcon } from '../components/common/Icons';
+import { BriefcaseIcon, CalendarIcon, CreditCardIcon, ListIcon, PeopleIcon, TargetIcon, TrendingIcon } from '../components/common/Icons';
 
 export interface DashboardSectionItem {
   to: string;
@@ -8,6 +8,8 @@ export interface DashboardSectionItem {
   desc: string;
   icon: ReactNode;
   permission?: string;
+  // A live snapshot (Stripe), not a period — the layout hides the date range filter for it.
+  noDateRange?: boolean;
 }
 
 export interface DashboardSectionsPermissions {
@@ -42,6 +44,14 @@ export function getDashboardSections(permissions: DashboardSectionsPermissions):
       desc: t('sections.payroll.desc', { ns: 'dashboards' }),
       icon: <BriefcaseIcon />,
       permission: 'manage_payroll',
+    },
+    {
+      to: '/dashboards/payments',
+      label: t('sections.payments.label', { ns: 'dashboards' }),
+      desc: t('sections.payments.desc', { ns: 'dashboards' }),
+      icon: <CreditCardIcon />,
+      permission: 'manage_payments',
+      noDateRange: true,
     },
     {
       to: '/dashboards/sales',

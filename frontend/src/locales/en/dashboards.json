@@ -17,6 +17,7 @@
     "hr": { "label": "HR", "desc": "Headcount, tenure and org composition." },
     "timeOff": { "label": "Time Off", "desc": "Balances, usage and policy trends." },
     "payroll": { "label": "Payroll", "desc": "Runs, cost and payment activity." },
+    "payments": { "label": "Payments", "desc": "Open invoices, refunds and subscriptions from Stripe." },
     "sales": { "label": "Sales", "desc": "Pipeline health and opportunity trends." },
     "tasks": { "label": "Tasks", "desc": "Completion rates and workload." },
     "adoption": { "label": "Adoption", "desc": "Feature usage across the workspace." }
@@ -86,6 +87,10 @@
     "colAvg": "Avg",
     "colSample": "Sample",
     "notVisibleOwnerOnly": "Payroll data is only visible to the workspace owner."
+  },
+  "payments": {
+    "liveNote": "Live from Stripe right now — the date range doesn't apply here. The per-company detail is on the Payments page.",
+    "loadFailed": "Couldn't load the numbers from Stripe."
   },
   "sales": {
     "winRate": "Win rate",

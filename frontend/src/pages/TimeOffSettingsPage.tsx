@@ -397,6 +397,7 @@ export default function TimeOffSettingsPage({ token }: TimeOffSettingsPageProps)
               : t('timeOff.rules.settings.addHoliday')
         }
         onClose={() => setAddTarget(null)}
+        wide
         footer={
           <>
             <button type="button" className="btn-secondary" onClick={() => setAddTarget(null)}>

@@ -17,6 +17,7 @@
     "hr": { "label": "RRHH", "desc": "Dotación, antigüedad y composición organizacional." },
     "timeOff": { "label": "Ausencias", "desc": "Saldos, uso y tendencias de las políticas." },
     "payroll": { "label": "Nómina", "desc": "Corridas, costos y actividad de pagos." },
+    "payments": { "label": "Pagos", "desc": "Facturas abiertas, reembolsos y suscripciones de Stripe." },
     "sales": { "label": "Ventas", "desc": "Salud del pipeline y tendencias de oportunidades." },
     "tasks": { "label": "Tareas", "desc": "Tasas de finalización y carga de trabajo." },
     "adoption": { "label": "Adopción", "desc": "Uso de funciones en todo el espacio de trabajo." }
@@ -86,6 +87,10 @@
     "colAvg": "Prom.",
     "colSample": "Muestra",
     "notVisibleOwnerOnly": "Los datos de nómina solo son visibles para el propietario del espacio de trabajo."
+  },
+  "payments": {
+    "liveNote": "En vivo desde Stripe — el rango de fechas no aplica acá. El detalle por empresa está en la página de Pagos.",
+    "loadFailed": "No se pudieron cargar los números desde Stripe."
   },
   "sales": {
     "winRate": "Tasa de éxito",

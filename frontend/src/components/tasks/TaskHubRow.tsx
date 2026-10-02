@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { Task } from '../../api';
-import { TaskCheckIcon } from '../common/Icons';
+import { TaskCheckIcon, VideoIcon } from '../common/Icons';
 import { formatHubDate, isOverdue } from '../../lib/taskHubDates';
 import i18n from '../../lib/i18n';
 
@@ -50,6 +50,23 @@ export default function TaskHubRow({ task, onToggleComplete, onOpenDetail }: Tas
       <td>{task.createdAt ? formatHubDate(task.createdAt) : '—'}</td>
       <td className={overdue ? '!font-semibold !text-red-600 dark:!text-red-400' : ''}>
         {task.dueDate ? formatHubDate(task.dueDate) : '—'}
+      </td>
+      <td>
+        {task.googleMeetUrl ? (
+          <a
+            href={task.googleMeetUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="meet-link"
+            title={task.googleMeetUrl}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <VideoIcon className="h-3.5 w-3.5" />
+            {t('myTasks.table.join')}
+          </a>
+        ) : (
+          '—'
+        )}
       </td>
       <td>{task.completedAt ? formatHubDate(task.completedAt) : '—'}</td>
       <td>{initials && <span className="avatar">{initials}</span>}</td>

@@ -26,6 +26,8 @@
       "due": "Vencimiento",
       "completed": "Completada",
       "assignee": "Asignado a",
+      "meet": "Google Meet",
+      "join": "Unirse",
       "add": "Agregar"
     },
     "board": {

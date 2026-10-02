@@ -17,6 +17,7 @@ import { seedDefaultPaymentMethods } from '../hr/paymentMethodService.js';
 import { seedDefaultRolesForTenant } from '../auth/roleService.js';
 import { getEmailDomain } from '../../lib/email.js';
 import { CURRENT_PLAN_PRICES_CENTS } from './planService.js';
+import { sendSignupAlertEmail } from '../../lib/mailer.js';
 
 // Personal/free email providers are excluded from the duplicate-domain check below —
 // otherwise the first person to register with @gmail.com would block every other
@@ -271,6 +272,25 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
 
     return { tenant, user, session };
   }, { timeout: 15000 }); // default 5000ms is tight once seeding (statuses + pipelines) adds several round trips over Neon's network latency
+
+  // Platform-staff alert (mailer.ts's sendSignupAlertEmail) — after the commit, so it only fires
+  // for a tenant that really exists. Awaited (Vercel kills un-awaited sends), best-effort inside.
+  await sendSignupAlertEmail({
+    subject: `Nuevo tenant registrado: ${result.tenant.name}`,
+    fields: [
+      ['Empresa', result.tenant.name],
+      ['Owner', `${result.user.firstName} ${result.user.lastName}`],
+      ['Email', result.user.email],
+      ['Teléfono', result.user.phone],
+      ['Tamaño', result.tenant.companySize],
+      ['Industria', result.tenant.industry],
+      ['País', result.tenant.country],
+      ['Cómo nos conoció', result.tenant.acquisitionChannel],
+      ['Función', result.user.jobFunction],
+      ['Trial hasta', result.tenant.trialEndsAt?.toISOString().slice(0, 10)],
+      ['Tenant ID', result.tenant.id],
+    ],
+  });
 
   return {
     success: true,

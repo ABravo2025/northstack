@@ -128,6 +128,7 @@ vi.mock('../src/lib/prisma.js', () => {
 
 vi.mock('../src/lib/mailer.js', () => ({
   sendSignupVerificationEmail: vi.fn(async () => {}),
+  sendSignupAlertEmail: vi.fn(async () => {}),
 }));
 
 import {
@@ -135,6 +136,7 @@ import {
   verifySignupToken,
 } from '../src/modules/tenant/emailVerificationService.js';
 import { checkEmailDomainNotAlreadyRegistered, registerTenantWithOwner } from '../src/modules/tenant/tenantService.js';
+import { sendSignupAlertEmail } from '../src/lib/mailer.js';
 
 const validPersonFields = {
   tenantName: 'Acme Inc',
@@ -227,6 +229,37 @@ describe('emailVerificationService', () => {
     expect(result.success).toBe(true);
     expect(emailVerifications).toHaveLength(1);
     expect(emailVerifications[0].token).not.toBe('stale-token');
+  });
+
+  it('alerts platform staff only for a freshly minted token, not for a resend inside the 24h window', async () => {
+    vi.mocked(sendSignupAlertEmail).mockClear();
+    await startSignupVerification('alice@acme.com');
+    await startSignupVerification('alice@acme.com'); // resend — reuses the token
+    expect(sendSignupAlertEmail).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(sendSignupAlertEmail).mock.calls[0][0].fields).toContainEqual(['Email', 'alice@acme.com']);
+
+    emailVerifications[0].expiresAt = new Date(Date.now() - 1000);
+    await startSignupVerification('alice@acme.com'); // expired → new attempt, alerts again
+    expect(sendSignupAlertEmail).toHaveBeenCalledTimes(2);
+  });
+
+  it('alerts platform staff with the form details once registration succeeds, and not when it fails', async () => {
+    await startSignupVerification('alice@acme.com');
+    const token = emailVerifications[0].token;
+    vi.mocked(sendSignupAlertEmail).mockClear();
+
+    const rejected = await registerTenantWithOwner({ ...validPersonFields, verificationToken: token });
+    expect(rejected.success).toBe(false); // link never clicked
+    expect(sendSignupAlertEmail).not.toHaveBeenCalled();
+
+    await verifySignupToken(token);
+    const result = await registerTenantWithOwner({ ...validPersonFields, verificationToken: token });
+    expect(result.success).toBe(true);
+    expect(sendSignupAlertEmail).toHaveBeenCalledTimes(1);
+    const { subject, fields } = vi.mocked(sendSignupAlertEmail).mock.calls[0][0];
+    expect(subject).toContain('Acme Inc');
+    expect(fields).toContainEqual(['Teléfono', '+1-555-0100']);
+    expect(fields).toContainEqual(['Industria', 'Software']);
   });
 
   it('verifies a fresh token and is idempotent on a second call', async () => {

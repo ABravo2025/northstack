@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import prisma from '../../lib/prisma.js';
-import { sendSignupVerificationEmail } from '../../lib/mailer.js';
+import { sendSignupAlertEmail, sendSignupVerificationEmail } from '../../lib/mailer.js';
 import { checkEmailDomainNotAlreadyRegistered } from './tenantService.js';
 import { isEmailFormatValid } from '../../lib/email.js';
 
@@ -50,6 +50,11 @@ export async function startSignupVerification(email: string): Promise<StartSignu
   });
 
   let token: string;
+  // Only a freshly minted token alerts platform staff (sendSignupAlertEmail) — a resend or a
+  // duplicate request inside the 24h window reuses the token and stays silent, so one person
+  // tapping "Resend" a few times doesn't spam the inbox. A request after expiry is a genuinely
+  // new attempt and does alert again.
+  let isNewSignupAttempt = false;
   if (existing && existing.expiresAt > new Date()) {
     token = existing.token;
     await prisma.emailVerification.update({
@@ -57,6 +62,7 @@ export async function startSignupVerification(email: string): Promise<StartSignu
       data: { expiresAt: new Date(Date.now() + SIGNUP_VERIFICATION_EXPIRY_MS) },
     });
   } else {
+    isNewSignupAttempt = true;
     token = randomUUID();
     await prisma.emailVerification.deleteMany({ where: { email: normalizedEmail } });
     await prisma.emailVerification.create({
@@ -74,6 +80,16 @@ export async function startSignupVerification(email: string): Promise<StartSignu
     to: normalizedEmail,
     verifyUrl: `${appBaseUrl}/register/complete?token=${token}`,
   });
+
+  if (isNewSignupAttempt) {
+    await sendSignupAlertEmail({
+      subject: `Nuevo signup: verificación enviada a ${normalizedEmail}`,
+      fields: [
+        ['Email', normalizedEmail],
+        ['Fecha (UTC)', new Date().toISOString()],
+      ],
+    });
+  }
 
   return { success: true };
 }

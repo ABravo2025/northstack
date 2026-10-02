@@ -137,6 +137,7 @@
       "employee": "Empleado"
     },
     "noManagerOption": "Sin responsable",
+    "noDepartmentOption": "Sin departamento",
     "compensationTypeOptions": {
       "hourly": "Por hora",
       "fixed": "Fijo"

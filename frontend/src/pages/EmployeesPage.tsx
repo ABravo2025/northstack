@@ -537,7 +537,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       lastName: employeeForm.lastName.trim(),
       email: employeeForm.email.trim(),
       personalEmail: employeeForm.personalEmail || undefined,
-      departmentId: employeeForm.departmentId || null,
+      departmentId: employeeForm.departmentId && employeeForm.departmentId !== 'none' ? employeeForm.departmentId : null,
       jobTitleId: employeeForm.jobTitleId || null,
       managerId: employeeForm.managerId && employeeForm.managerId !== 'none' ? employeeForm.managerId : null,
       startDate: employeeForm.startDate || undefined,
@@ -593,7 +593,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
       lastName: employeeForm.lastName.trim(),
       email: employeeForm.email.trim(),
       personalEmail: employeeForm.personalEmail || undefined,
-      departmentId: employeeForm.departmentId || null,
+      departmentId: employeeForm.departmentId && employeeForm.departmentId !== 'none' ? employeeForm.departmentId : null,
       jobTitleId: employeeForm.jobTitleId || null,
       managerId: employeeForm.managerId && employeeForm.managerId !== 'none' ? employeeForm.managerId : null,
       startDate: employeeForm.startDate || undefined,
@@ -877,7 +877,7 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
         emp.departmentDefn ? (
           <CategoryChip label={emp.departmentDefn.name} seed={emp.departmentDefn.id} />
         ) : (
-          '—'
+          <span className="text-ink-muted dark:text-dark-ink-muted">{t('employees.noDepartmentOption')}</span>
         ),
     },
     {
@@ -1271,6 +1271,10 @@ export default function EmployeesPage({ user, token }: EmployeesPageProps) {
                       required
                     >
                       <option value="">{t('common.selectPlaceholder')}</option>
+                      {/* Built-in, non-editable choice that saves null — so a tenant with no
+                          departments in its catalog can still add employees (Department stays
+                          required: the user has to pick something, even if it's this). */}
+                      <option value="none">{t('employees.noDepartmentOption')}</option>
                       {employeeDepartments
                         .filter((d) => d.isActive)
                         .map((d) => (

@@ -1091,7 +1091,7 @@ export default function GuidePage() {
                 </div>
               </dl>
               <p>
-                Otros campos incluyen departamento y puesto (de tus catálogos), manager directo, fechas de
+                Otros campos incluyen departamento (de tu catálogo, o la opción fija "Sin departamento" si todavía no creaste ninguno) y puesto (de tus catálogos), manager directo, fechas de
                 inicio/fin, tipo de contrato, nacionalidad, país de residencia, un cumpleaños opcional, un link al
                 contrato, un email personal además del laboral, más cualquier campo personalizado y tag que tu
                 equipo haya agregado.
@@ -1201,7 +1201,7 @@ export default function GuidePage() {
                 </div>
               </dl>
               <p>
-                Other fields include department and job title (from your catalogs), reporting manager, start/end
+                Other fields include department (from your catalog, or the built-in "No department" option if you haven't created any yet) and job title (from your catalogs), reporting manager, start/end
                 dates, contract type, nationality, country of residence, an optional birthday, a contract link, a
                 personal email alongside the work one, plus any custom fields and tags your team has added.
               </p>

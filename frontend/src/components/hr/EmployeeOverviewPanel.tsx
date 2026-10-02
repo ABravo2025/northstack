@@ -346,6 +346,7 @@ export default function EmployeeOverviewPanel({
               value={employee.departmentId || ''}
               onSave={(v) => save({ departmentId: v || null })}
               options={departments.filter((d) => d.isActive).map((d) => ({ value: d.id, label: d.name }))}
+              emptyLabel={t('employees.noDepartmentOption')}
             />
           </Field>
           <Field label={t('employeeOverview.fields.jobTitle')}>

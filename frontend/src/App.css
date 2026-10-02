@@ -2045,6 +2045,9 @@ table.help-ref td.no {
 /* Compact segmented control (e.g. Active/Deactivated filter above a table) */
 .mini-toggle-row {
   @apply inline-flex gap-1 rounded-md border border-line-strong p-0.5 dark:border-gray-600;
+  /* A segmented control is as wide as its options — never stretched by a flex/grid parent. */
+  align-self: flex-start;
+  width: fit-content;
 }
 
 .mini-toggle-opt {
@@ -3330,8 +3333,22 @@ textarea.overview-field-input {
    the sidebar and use the full width, like every table page (.page-full) — centered with a max
    width they floated away from the sidebar on wide screens. Public pages (accept invite, reset
    password, contract confirmation) render outside .app-main and stay centered. */
+/* ---------- Content width (2026-10) ----------
+   Content always starts at the sidebar (never centered — that left a gap on wide screens), but
+   stops at a width that still reads well instead of stretching edge to edge:
+   - Settings pages (forms, rules):                      72rem
+   - Overview / Time Off / Payroll / Payments / Dashboards: 90rem
+   - Data tables (People, Companies, Contacts, Tasks…):  full width — many columns use the room.
+   Public pages (accept invite, reset password) render outside .app-main and stay centered. */
 .app-main .container {
-  @apply mx-0 max-w-none;
+  @apply mx-0;
+  max-width: 90rem;
+}
+.app-main .page-full.page-capped {
+  max-width: 90rem;
+}
+.settings-content {
+  max-width: 72rem;
 }
 
 /* ---------- Settings → Time Off (TimeOffSettingsPage, 2026-10) ---------- */

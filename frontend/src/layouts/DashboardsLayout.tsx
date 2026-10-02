@@ -41,7 +41,7 @@ export default function DashboardsLayout({ token }: DashboardsLayoutProps) {
   };
 
   return (
-    <div className="page-full">
+    <div className="page-full page-capped">
       {isIndex ? (
         <h2 className="mb-5 text-xl font-semibold">{t('common.dashboardsTitle')}</h2>
       ) : (

@@ -2302,7 +2302,7 @@ html.dark .stage-table-row {
 }
 @media (min-width: 1024px) {
   .profile-grid {
-    grid-template-columns: minmax(0, 26rem) minmax(0, 26rem);
+    grid-template-columns: minmax(0, 20rem) minmax(0, 24rem);
   }
   .profile-grid .profile-social {
     @apply mt-0 border-t-0 border-l pt-0 pl-10;
@@ -2316,6 +2316,10 @@ html.dark .stage-table-row {
 }
 .profile-social-hint {
   @apply truncate text-xs text-ink-muted dark:text-dark-ink-muted;
+}
+/* Settings → Profile fields sized to their data (2026-10). */
+.profile-page .password-input-wrap {
+  max-width: 16rem;
 }
 .profile-col-head {
   @apply mb-3 flex h-5 min-w-0 items-baseline gap-2;
@@ -3034,6 +3038,9 @@ html.dark {
 .field-s { max-width: 11rem !important; }
 .field-m { max-width: 20rem !important; }
 .field-l { max-width: 26rem !important; }
+.field-ml { max-width: 16rem !important; }
+/* As wide as its content (a select sizes to its longest option), e.g. Language. */
+.field-fit { width: auto !important; max-width: none !important; align-self: flex-start; min-width: 9rem; }
 .auth-left .form-group input,
 .auth-left .form-group select {
   max-width: none;

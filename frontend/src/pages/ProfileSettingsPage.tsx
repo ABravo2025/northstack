@@ -99,7 +99,7 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
   };
 
   return (
-    <div className="max-w-6xl">
+    <div className="max-w-6xl profile-page">
       <div className="card">
         <div className="profile-card-head">
           <h3 className="card-title m-0">{t('profile.cardTitle')}</h3>
@@ -123,6 +123,7 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
               <label htmlFor="profile-firstName">{t('profile.firstName')}</label>
               <input
                 id="profile-firstName"
+                className="field-ml"
                 value={profileForm.firstName}
                 onChange={(e) => setProfileForm({ ...profileForm, firstName: e.target.value })}
               />
@@ -132,6 +133,7 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
               <label htmlFor="profile-lastName">{t('profile.lastName')}</label>
               <input
                 id="profile-lastName"
+                className="field-ml"
                 value={profileForm.lastName}
                 onChange={(e) => setProfileForm({ ...profileForm, lastName: e.target.value })}
               />
@@ -141,6 +143,7 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
               <label htmlFor="profile-phone">{t('profile.phone')}</label>
               <input
                 id="profile-phone"
+                className="field-s"
                 value={profileForm.phone}
                 onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
               />
@@ -148,7 +151,7 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
             </div>
             <div className="form-group">
               <label htmlFor="profile-email">{t('profile.email')}</label>
-              <input id="profile-email" value={user.email} disabled />
+              <input id="profile-email" className="field-m" value={user.email} disabled />
             </div>
           </div>
           <div className="profile-social">
@@ -165,7 +168,7 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
                     id={`profile-social-${network}`}
                     type="text"
                     inputMode="url"
-                    className="field-l flex-1"
+                    className="field-m flex-1"
                     placeholder={network === 'website' ? 'https://' : `https://${network}.com/…`}
                     value={socialLinks[network] ?? ''}
                     onChange={(e) => setSocialLinks({ ...socialLinks, [network]: e.target.value })}
@@ -189,6 +192,7 @@ export default function ProfileSettingsPage({ user, token, onUserUpdated }: Prof
           <label htmlFor="profile-locale">{t('language.label')}</label>
           <select
             id="profile-locale"
+            className="field-fit"
             value={user.locale ?? ''}
             disabled={localeSaving}
             onChange={(e) => handleLocaleChange(e.target.value as SupportedLocale)}

@@ -1,7 +1,7 @@
 # Tareas de desarrollo
 
 - Fecha de creación: 2026-07-02
-- **2026-10-02 — Avisos internos de signup por email (EN STAGING)**: nuevo `sendSignupAlertEmail` (mailer.ts) manda
+- **2026-10-02 — Avisos internos de signup por email (EN PRODUCCIÓN)**: nuevo `sendSignupAlertEmail` (mailer.ts) manda
   un correo a `SIGNUP_ALERT_EMAIL` (variable nueva en Vercel; si no está seteada no se envía nada) en dos momentos:
   (1) cuando un email pide la verificación por primera vez — los reenvíos dentro de las 24hs reutilizan el token y
   no avisan; si el link expiró y vuelve a pedirlo, avisa de nuevo; (2) cuando se completa el formulario de alta del

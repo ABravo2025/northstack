@@ -419,16 +419,21 @@ footer a { color: var(--ink-3); }
         The Service also offers integrations that a Tenant may choose, at its own option,
         to connect to its own third-party accounts — currently Google Calendar (to sync
         Tasks and Time Off as calendar events) and Stripe. For Stripe: a Tenant connects its
-        own Stripe account, and the Service can then
+        own Stripe account by providing its own Stripe API key, and
+        <strong>the Service only does what that key's own permissions allow</strong> — if
+        the Tenant's key is read-only, the Service only reads Stripe data; if the key grants
+        write access, the Service can also
         <strong
           >create and send Stripe-hosted invoices to that Tenant's own clients on the
           Tenant's behalf</strong
-        >, using the Tenant's own Stripe credentials — Stripe itself is the one that
-        delivers the invoice and collects payment on it, not Northstack.
+        >. Creating and sending an invoice is currently the only write action the Service
+        performs — it does not create a Payment Intent or otherwise directly charge or
+        collect a card itself; Stripe's own hosted invoice page is what actually delivers
+        the invoice and collects payment, not Northstack.
         <strong
-          >Connecting an integration, and anything the Service does through it (including
-          sending an invoice), is the Tenant's own choice and the Tenant's own
-          responsibility.</strong
+          >Connecting an integration, the permissions given to it, and anything the Service
+          does through it (including sending an invoice), are the Tenant's own choice and
+          the Tenant's own responsibility.</strong
         >
         The third party the Tenant connects, not Northstack, receives and processes the
         data exposed through that connection, under that third party's own terms and

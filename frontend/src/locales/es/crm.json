@@ -311,7 +311,7 @@
     "noCompaniesLinked": "Todavía no hay Empresas vinculadas a Stripe — abrí una Empresa y usá \"Buscar en Stripe\" en Pagos.",
     "columns": {
       "company": "Empresa",
-      "succeeded": "Cobrados",
+      "succeeded": "Cobrado",
       "openInvoices": "Facturas abiertas",
       "refunds": "Reembolsos",
       "failed": "Fallidos",

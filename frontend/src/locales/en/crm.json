@@ -311,7 +311,7 @@
     "noCompaniesLinked": "No Companies linked to Stripe yet — open a Company and use \"Search on Stripe\" under Payments.",
     "columns": {
       "company": "Company",
-      "succeeded": "Succeeded",
+      "succeeded": "Collected",
       "openInvoices": "Open invoices",
       "refunds": "Refunds",
       "failed": "Failed",

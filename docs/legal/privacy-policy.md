@@ -70,6 +70,12 @@ terms-of-service.md's matching dated note (read that one for the full reasoning)
 access is gated entirely by the Tenant's own Stripe API key permissions, and invoice
 create/send is currently the only write action — no Payment Intent/direct charging.
 
+2026-10-02 (still later same day) — same Effective Date fix as terms-of-service.md's
+matching dated note: it was stuck at "September 7, 2026" through the 2026-09-13 Dodo swap
+and today's edits, contradicting Section 10's own promise to post a new effective date on
+every real change. Bumped to October 2, 2026. Going forward, every substantive edit to
+this file should bump it too.
+
 Also flagging: this policy distinguishes two categories of personal data —
 (1) "Account Data" about the people who actually use Northstack (Tenant owners/admins/
 members) that we collect directly, where Northstack is the controller, and
@@ -83,7 +89,7 @@ doesn't actually control the purpose/use of.
 
 # Northstack Privacy Policy
 
-**Effective Date:** September 7, 2026
+**Effective Date:** October 2, 2026
 
 This Privacy Policy explains how Northstack ("**Northstack**," "**we**," "**us**," or
 "**our**"), operated by Alejandro Bravo, an individual based in Buenos Aires, Argentina,

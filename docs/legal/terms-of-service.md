@@ -198,11 +198,23 @@ reference is a webhook *listener*, `payment_intent.payment_failed`, which is rea
 Alejandro flagged direct charging as a possible future capability — deliberately did not
 add a forward-looking "coming soon" promise about it the way MCP/2FA got one, since he
 didn't ask for that framing here, only for the current scope to be stated accurately.
+
+2026-10-02 (still later same day) — Alejandro caught that **Effective Date** had been stuck
+at "September 7, 2026" through every substantive edit since then: the 2026-09-13 Dodo swap,
+and today's MCP/2FA/Integrations/Stripe-permission additions. That's a real inconsistency,
+not a style nitpick — Section 14 of this very document promises to "post the updated Terms
+with a new effective date" whenever a real change is made, and that promise wasn't being
+kept. Bumped to October 2, 2026 (today) now. Going forward: **every substantive edit to
+this file should bump Effective Date**, not just today's catch-up — treat a stale date here
+as a bug the same way a stale "Paddle" reference was. This also means Section 14's
+email + in-app notification to Tenant owners is now overdue for two rounds of real changes
+(9/13 and today), not just the fee-introduction one flagged back on 2026-09-07 — still an
+open product/ops action, not something fixed by this doc edit alone.
 -->
 
 # Northstack Terms of Service
 
-**Effective Date:** September 7, 2026
+**Effective Date:** October 2, 2026
 
 Welcome to Northstack. These Terms of Service ("**Terms**") are a binding agreement between
 Alejandro Bravo, an individual operating under the trade name "Northstack" and based in

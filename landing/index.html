@@ -306,6 +306,29 @@ footer a { display: block; text-decoration: none; padding: 3px 0; } footer a:hov
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .scene.on .track i { width: var(--w); } .scene.on .bars div { height: var(--h); }
 }
+
+.launch { display: inline-flex; align-items: center; gap: 10px; padding: 6px 14px 6px 6px; border-radius: 99px; background: #fff1e6; color: #b4400a; font-weight: 600; font-size: 14px; width: fit-content; margin-top: 4px; }
+.launch[hidden] { display: none; }
+.launch b { background: #ea580c; color: #fff; padding: 3px 9px; border-radius: 99px; font-size: 11.5px; letter-spacing: .05em; text-transform: uppercase; }
+.cur { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 2px; }
+.cur button { border: 0; background: transparent; font: 600 13.5px/1 var(--font); color: var(--ink-3); padding: 8px 12px; border-radius: 7px; cursor: pointer; }
+.cur button[aria-pressed="true"] { background: var(--violet); color: #fff; }
+.cur button:focus-visible { outline: 3px solid var(--lilac); outline-offset: 1px; }
+.price s.reg { color: var(--ink-3); font-size: 18px; margin-right: 2px; }
+.price s.reg:empty { display: none; }
+.off { display: inline-block; width: fit-content; margin-top: 6px; font-size: 12.5px; font-weight: 700; color: #b4400a; background: #fff1e6; padding: 2px 9px; border-radius: 99px; }
+.off[hidden] { display: none; }
+.calcnote .was { color: var(--ink-3); }
+.plans { grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 900px) { .plans { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.plan { min-width: 0; }
+.price { flex-wrap: wrap; row-gap: 2px; }
+.price b { font-size: clamp(32px, 3.4vw, 46px); }
+.plans.is-ars .price b { font-size: clamp(28px, 2.6vw, 36px); }
+.price > span { flex-basis: 100%; }
+.price s.reg { flex-basis: 100%; font-size: 16px; }
+.calcnote b { color: var(--ink); }
+@media (prefers-color-scheme: dark) { .launch, .off { background: rgba(255,140,60,.14); color: #ffb27a; } }
 </style>
     <script type="application/ld+json">
       {"@context":"https://schema.org","@type":"WebSite","name":"Northstack","url":"https://joinnorthstack.com/","inLanguage":["en","es"]}
@@ -447,37 +470,42 @@ footer a { display: block; text-decoration: none; padding: 3px 0; } footer a:hov
 
 <section class="block" id="pricing" style="padding-top:20px">
   <div class="wrap">
-    <div class="head"><span class="eyebrow">Pricing</span><h2>Simple pricing that <em class="s">grows with you</em>.</h2><p class="lede">Move the slider to see what your team would pay. Start free for 15 days on any plan.</p></div>
+    <div class="head"><span class="eyebrow">Pricing</span><h2>Simple pricing that <em class="s">grows with you</em>.</h2><p class="lede">Move the slider to see what your team would pay. Start free for 15 days on any plan.</p>
+      <span class="launch" id="launch" hidden><b>Launch</b><span id="launch-text"></span></span></div>
     <div class="seats">
       <label for="team">Team size</label>
       <output id="team-out" for="team">8</output>
-      <input type="range" id="team" min="1" max="40" value="8" aria-describedby="team-help">
-      <small id="team-help">Each plan includes a set number of users; extra users are <span data-pricing="seat-price">—</span>/month each.</small>
+      <input type="range" id="team" min="1" max="50" value="8" aria-describedby="team-help">
+      <div class="cur" role="group" aria-label="Currency"><button type="button" data-cur="international" aria-pressed="true">USD</button><button type="button" data-cur="ar" aria-pressed="false">ARS</button></div>
+      <small id="team-help">Billed per active user · minimum <span data-pricing="min-users">3</span> users per team.</small>
     </div>
     <div class="plans">
       <div class="plan">
         <h3>Free trial</h3><div class="for">Every feature, no strings attached</div>
-        <div class="price"><b>$0</b><span>for 15 days</span></div>
-        <div class="calcnote">Up to 5 users while you try it.</div>
+        <div class="price"><b id="p-free">0</b><span>for 15 days</span></div>
+        
+        <div class="calcnote">Up to <span data-pricing="trial-cap">5</span> users while you try it.</div>
         <ul><li>Full access to every module</li><li>Unlimited pipelines</li><li>Payroll tracking included</li><li>Google Calendar sync</li></ul>
         <a class="btn btn-g" href="https://app.joinnorthstack.com/register">Start free trial</a>
       </div>
       <div class="plan">
         <h3>Starter</h3><div class="for">For small teams getting organized</div>
-        <div class="price"><b id="p-starter" data-pricing="price-starter">—</b><span>/month</span></div>
+        <div class="price"><s class="reg" id="r-starter"></s><b id="p-starter">—</b><span>/ user / month</span></div>
+        <span class="off" id="o-starter" hidden></span>
         <div class="calcnote" id="n-starter">&nbsp;</div>
         <ul><li>Sales CRM, up to 2 pipelines</li><li>HR + Time Off, up to 3 policies</li><li>Tasks, notes &amp; Activity Log</li><li>Up to 2 custom roles</li><li>Email support</li><li class="no">Payroll tracking</li></ul>
         <a class="btn btn-g" href="https://app.joinnorthstack.com/register">Start free trial</a>
       </div>
       <div class="plan hot"><span class="badge">Most popular</span>
         <h3>Growth</h3><div class="for">For teams ready to scale</div>
-        <div class="price"><b id="p-growth" data-pricing="price-growth">—</b><span>/month</span></div>
+        <div class="price"><s class="reg" id="r-growth"></s><b id="p-growth">—</b><span>/ user / month</span></div>
+        <span class="off" id="o-growth" hidden></span>
         <div class="calcnote" id="n-growth">&nbsp;</div>
         <ul><li>Everything in Starter</li><li>Unlimited pipelines &amp; policies</li><li>Payroll tracking</li><li>Unlimited custom roles</li><li>Priority support</li></ul>
         <a class="btn btn-p" href="https://app.joinnorthstack.com/register">Start free trial <span class="arrow">→</span></a>
       </div>
     </div>
-    <p class="lock">The price you start at is <b>the price you keep</b>, for as long as you stay subscribed.</p>
+    <p class="lock">Sign up during the launch and <b>keep the launch price</b> for as long as you stay subscribed.</p>
   </div>
 </section>
 
@@ -566,18 +594,47 @@ footer a { display: block; text-decoration: none; padding: 3px 0; } footer a:hov
 
   // Team-size calculator — prices come from pricing.js (the app's single price source); until they
   // arrive the plan cards show "—" like the rest of the page.
+  // Per-user pricing (2026-10-02): price per active user, minimum team size, launch offer, and a
+  // USD | ARS switch — ARS by default for visitors whose browser is set to Argentina.
   var team = document.getElementById('team'), out = document.getElementById('team-out');
   var P = null;
-  var note = (incl, extra, seat, room) => extra ? `${incl} users included + ${extra} extra × ${seat}.` : `${incl} users included${room ? ` — room for ${room} more` : ''}.`;
+  var totalNote = (n, per, total, reg) => `${n} users × ${per} = <b>${total}/month</b>${reg ? ` <span class="was">(regular ${reg})</span>` : ''}`;
+  var minNote = (min, total) => `Minimum ${min} users — <b>${total}/month</b>`;
+  var market = 'international';
+  try {
+    var tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+    if (tz.indexOf('America/Argentina') === 0 || tz === 'America/Buenos_Aires' || /-AR$/i.test(navigator.language || '')) market = 'ar';
+  } catch (e) {}
+  var curButtons = Array.prototype.slice.call(document.querySelectorAll('[data-cur]'));
+  curButtons.forEach(function (b) { b.addEventListener('click', function () { market = b.getAttribute('data-cur'); calc(); }); });
   function calc() {
     var n = Number(team.value);
     out.textContent = n;
-    if (!P) return;
+    curButtons.forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-cur') === market)); });
+    if (!P || !P.pricing.markets[market] || !P.pricing.markets[market].perUser) return;
+    var pr = P.pricing, m = pr.markets[market], money = function (c) { return P.money(c, m.currency); };
+    var tier = pr.isLaunch ? 'launch' : 'regular', maxPct = 0;
+    document.getElementById('p-free').textContent = money(0);
+    document.querySelector('.plans').classList.toggle('is-ars', m.currency === 'ARS');
     ['starter', 'growth'].forEach(function (plan) {
-      var incl = P.included[plan], extra = Math.max(0, n - incl);
-      document.getElementById('p-' + plan).textContent = P.money(P.plans[plan] + extra * P.extraSeat);
-      document.getElementById('n-' + plan).textContent = note(incl, extra, P.money(P.extraSeat), n < incl ? incl - n : 0);
+      var per = m.perUser[tier][plan], reg = m.perUser.regular[plan];
+      var users = Math.max(n, pr.minUsers);
+      var pct = pr.isLaunch && reg > 0 ? Math.round((1 - per / reg) * 100) : 0;
+      if (pct > maxPct) maxPct = pct;
+      document.getElementById('p-' + plan).textContent = money(per);
+      var r = document.getElementById('r-' + plan), o = document.getElementById('o-' + plan);
+      r.textContent = pct ? money(reg) : '';
+      o.hidden = !pct; o.textContent = "{pct}% off".replace('{pct}', pct);
+      document.getElementById('n-' + plan).innerHTML = n < pr.minUsers
+        ? minNote(pr.minUsers, money(per * users))
+        : totalNote(n, money(per), money(per * users), pct ? money(reg * users) : '');
     });
+    var launch = document.getElementById('launch');
+    launch.hidden = !pr.isLaunch;
+    if (pr.isLaunch) {
+      var date = new Date(pr.launchEndsAt + 'T12:00:00Z').toLocaleDateString("en-US", { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+      document.getElementById('launch-text').textContent = "Launch price for teams that join by {date} — up to {pct}% off, yours for as long as you stay subscribed.".replace('{date}', date).replace('{pct}', maxPct);
+    }
   }
   team.addEventListener('input', calc);
   window.addEventListener('northstack:pricing', function (e) { P = e.detail; calc(); });

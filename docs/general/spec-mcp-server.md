@@ -52,6 +52,33 @@ así que el bloqueo se puede activar sin afectar a nadie.
 
 ---
 
+## 2b. Cambio de diseño (Alejandro, 2026-10-02): dos credenciales, una sola API
+
+**Decisión:** el MCP corre como una **función de Vercel separada** (`api/mcp.ts`) y sus tools llaman por
+HTTP a la Private API (`/api/external/v1/*`), no a las rutas del frontend ni a los services. Si el MCP se
+cae, la app no se entera; además el MCP no tiene acceso directo a la DB y usa el pool separado
+`prismaExternal`. Reemplaza lo que §3 dice sobre "las tools llaman a los services".
+
+La Private API acepta **dos credenciales con reglas distintas**:
+
+| | API key (integraciones) | Token de IA (MCP) |
+|---|---|---|
+| Representa | A la empresa (Zapier, Make, scripts) | A una persona |
+| Quién la crea | Owner o rol con `manage_api_access` | Cualquier usuario de un tenant Growth con el permiso "Usar asistentes de IA" (on por defecto) |
+| Autoriza por | Scopes de la key, **limitados a lo que el rol del creador puede hacer** | El rol del usuario (permisos, scope de empleados, campos ocultos) |
+| Activity Log | "API · nombre de la key" | "IA · Claude" por el usuario |
+
+**Fix de seguridad encontrado al diseñar esto (2026-10-02):** un rol personalizado con `manage_api_access`
+podía crear una key con scopes que su rol no tiene (ej. `hr.payroll:read` sin acceso a Payroll). Ahora
+`apiScopePermissions.ts` mapea cada scope al mismo chequeo que la ruta interna equivalente, y una key
+solo puede llevar scopes que el creador ve completos (scope de empleados `all` para HR, sin campos ocultos
+en la entidad para los scopes de lectura). La UI solo muestra esos scopes
+(`GET /api/integrations/api-keys/grantable-scopes`).
+
+**Unidades reordenadas:** 2 = Private API con token de IA (tabla de conexiones, permiso nuevo, roles por
+endpoint, endpoints faltantes) · 3 = función MCP separada + tools + confirmación de borrados · 4 = OAuth ·
+5-7 sin cambios.
+
 ## 3. Arquitectura
 
 **Vive dentro de Integrations (decisión de Alejandro, 2026-10-01)**, junto a Google Calendar, Stripe

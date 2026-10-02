@@ -81,7 +81,7 @@
       "doneCopiedIt": "Done — I've copied it",
       "name": "Name",
       "namePlaceholder": "e.g. Zapier — new Tasks",
-      "scopesHelp": "A key starts with no access — tick exactly what it needs.",
+      "scopesHelp": "A key starts with no access — tick exactly what it needs. You can only grant what your own role can already do.",
       "scopeGroups": {
         "tasksNotes": "Tasks & Notes",
         "crm": "CRM",
@@ -484,7 +484,7 @@
       "inactiveNote": "(inactive)"
     },
     "errors": {
-      "stageNameRequired": "Every stage needs a name.",
+      "stageNameRequired": "Every stage needs a name.",
       "addStage": "Failed to add stage: {{message}}",
       "updateStageColor": "Failed to update stage color: {{message}}",
       "updateStageOutcome": "Failed to update stage outcome: {{message}}",

@@ -1,6 +1,11 @@
 # Tareas de desarrollo
 
 - Fecha de creación: 2026-07-02
+- **2026-10-02 — Fix de seguridad: scopes de API key limitados al rol del creador (EN STAGING)**: un rol personalizado
+  con "Gestionar API" podía crear una key con permisos que su rol no tiene (ej. leer nómina sin acceso a Payroll).
+  Ahora cada scope exige el mismo permiso que la pantalla equivalente de la app, y la UI de crear key solo muestra los
+  scopes permitidos. Al owner no le cambia nada. También: diseño del MCP actualizado (función separada que usa la
+  Private API, token de IA atado al usuario) — ver `spec-mcp-server.md` §2b.
 - **2026-10-01 — MCP Server / Asistentes de IA (SPEC, sin código)**: spec en `docs/general/spec-mcp-server.md`.
   Los clientes Growth (incluye trial) conectan su propio Claude, ChatGPT, Cursor, etc. a su workspace vía MCP remoto
   (OAuth 2.1 + token personal). La IA actúa como el usuario y respeta sus Custom Roles. Payroll queda en solo lectura;

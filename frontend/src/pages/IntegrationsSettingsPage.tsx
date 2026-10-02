@@ -274,6 +274,8 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
   const toast = useToast();
   const { t } = useTranslation('settingsPages');
   const [keys, setKeys] = useState<ApiKeySummary[] | null>(null);
+  // Only the scopes this user's role can grant get a checkbox (2026-10-02) — null while loading.
+  const [grantableScopes, setGrantableScopes] = useState<Set<string> | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newKeyName, setNewKeyName] = useState('');
   const [selectedScopes, setSelectedScopes] = useState<Set<string>>(new Set());
@@ -293,8 +295,20 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
 
   useEffect(() => {
     loadKeys();
+    if (canManageApiAccess) {
+      api
+        .listGrantableApiScopes(token)
+        .then((scopes) => setGrantableScopes(new Set(scopes)))
+        .catch(() => setGrantableScopes(new Set()));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canManageApiAccess]);
+
+  const canGrant = (scope: string) => grantableScopes?.has(scope) ?? false;
+  const visibleScopeGroups = API_SCOPE_GROUPS.map((group) => ({
+    ...group,
+    resources: group.resources.filter((r) => canGrant(`${r.key}:read`) || (r.write && canGrant(`${r.key}:write`))),
+  })).filter((group) => group.resources.length > 0);
 
   if (!canManageApiAccess) {
     return null;
@@ -506,7 +520,7 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
                 {t('integrations.apiKeys.scopesHelp')}
               </p>
               <div className="flex flex-col gap-3">
-                {API_SCOPE_GROUPS.map((group) => (
+                {visibleScopeGroups.map((group) => (
                   <div key={group.groupKey}>
                     <div className="mb-1 text-xs font-medium text-ink-muted dark:text-dark-ink-muted">
                       {t(`integrations.apiKeys.scopeGroups.${group.groupKey}`)}
@@ -517,15 +531,17 @@ function ApiKeysCard({ token, canManageApiAccess }: { token: string; canManageAp
                           <span className="text-sm" style={{ minWidth: '9rem' }}>
                             {t(`integrations.apiKeys.scopeResources.${resource.labelKey}`)}
                           </span>
-                          <label className="flex items-center gap-1 text-xs">
-                            <input
-                              type="checkbox"
-                              checked={selectedScopes.has(`${resource.key}:read`)}
-                              onChange={() => toggleScope(`${resource.key}:read`)}
-                            />
-                            {t('integrations.apiKeys.read')}
-                          </label>
-                          {resource.write && (
+                          {canGrant(`${resource.key}:read`) && (
+                            <label className="flex items-center gap-1 text-xs">
+                              <input
+                                type="checkbox"
+                                checked={selectedScopes.has(`${resource.key}:read`)}
+                                onChange={() => toggleScope(`${resource.key}:read`)}
+                              />
+                              {t('integrations.apiKeys.read')}
+                            </label>
+                          )}
+                          {resource.write && canGrant(`${resource.key}:write`) && (
                             <label className="flex items-center gap-1 text-xs">
                               <input
                                 type="checkbox"

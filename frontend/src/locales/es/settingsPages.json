@@ -81,7 +81,7 @@
       "doneCopiedIt": "Listo — ya la copié",
       "name": "Nombre",
       "namePlaceholder": "ej. Zapier — nuevas Tareas",
-      "scopesHelp": "Una clave arranca sin ningún acceso — marcá exactamente lo que necesita.",
+      "scopesHelp": "Una clave arranca sin ningún acceso — marcá exactamente lo que necesita. Solo podés otorgar lo que tu propio rol ya puede hacer.",
       "scopeGroups": {
         "tasksNotes": "Tareas y Notas",
         "crm": "CRM",
@@ -484,7 +484,7 @@
       "inactiveNote": "(inactivo)"
     },
     "errors": {
-      "stageNameRequired": "Cada etapa necesita un nombre.",
+      "stageNameRequired": "Cada etapa necesita un nombre.",
       "addStage": "No se pudo agregar la etapa: {{message}}",
       "updateStageColor": "No se pudo actualizar el color de la etapa: {{message}}",
       "updateStageOutcome": "No se pudo actualizar el resultado de la etapa: {{message}}",

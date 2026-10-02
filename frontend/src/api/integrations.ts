@@ -73,6 +73,15 @@ export const integrationsApi = {
     return res.json();
   },
 
+  // Scopes the signed-in user's role may put on a key (backend apiScopePermissions.ts).
+  listGrantableApiScopes: async (token: string): Promise<string[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/integrations/api-keys/grantable-scopes`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
   // Returns the full key in `fullKey` — the only time it's ever visible after this.
   createApiKey: async (token: string, input: { name: string; scopes: string[] }): Promise<CreateApiKeyResult> => {
     const res = await apiFetch(`${API_BASE_URL}/api/integrations/api-keys`, {

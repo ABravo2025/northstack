@@ -1,5 +1,7 @@
 import prisma from '../../lib/prisma.js';
 import { API_SCOPES, generateApiKey, hashApiKey, type ApiScope } from '../../lib/externalApiAuth.js';
+import type { RoleContext } from '../auth/roleService.js';
+import { canGrantApiScope } from './apiScopePermissions.js';
 
 // Management CRUD for Settings → Integrations → API & Webhooks (spec §2, §8). Uses the shared
 // `prisma` client, not `prismaExternal` — these endpoints are normal Session-authenticated SPA
@@ -54,7 +56,7 @@ function sanitize(key: ApiKeyRow): ApiKeySummary {
 // almost certainly a mistake, and the spec's own security model (decision #1: every key is
 // scopeless until the owner explicitly grants scopes) is about ensuring nothing is granted by
 // default, not about permitting a genuinely useless key.
-export async function createApiKey(tenantId: string, userId: string, input: CreateApiKeyInput): Promise<CreateApiKeyResult> {
+export async function createApiKey(tenantId: string, userId: string, role: RoleContext, input: CreateApiKeyInput): Promise<CreateApiKeyResult> {
   const name = input.name.trim();
   if (!name) {
     throw new Error('Name is required.');
@@ -67,6 +69,11 @@ export async function createApiKey(tenantId: string, userId: string, input: Crea
   const unknownScopes = scopes.filter((scope) => !API_SCOPES.includes(scope as ApiScope));
   if (unknownScopes.length > 0) {
     throw new Error(`Unknown scope(s): ${unknownScopes.join(', ')}`);
+  }
+  // A key can't carry more than its creator can do in the app (apiScopePermissions.ts).
+  const forbiddenScopes = scopes.filter((scope) => !canGrantApiScope(role, scope as ApiScope));
+  if (forbiddenScopes.length > 0) {
+    throw new Error(`Your role can't grant these scope(s): ${forbiddenScopes.join(', ')}`);
   }
 
   const { fullKey, keyPrefix } = generateApiKey();

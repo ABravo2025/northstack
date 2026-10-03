@@ -2,9 +2,24 @@
   "redirects": [
     {
       "source": "/:path*",
-      "has": [{ "type": "host", "value": "www.joinnorthstack.com" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "www.joinnorthstack.com"
+        }
+      ],
       "destination": "https://joinnorthstack.com/:path*",
       "permanent": true
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/time-off-software",
+      "destination": "/time-off-software.html"
+    },
+    {
+      "source": "/es/software-vacaciones",
+      "destination": "/es/software-vacaciones.html"
     }
   ]
 }

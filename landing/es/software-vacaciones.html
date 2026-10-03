@@ -3,39 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Software de RR.HH., vacaciones y CRM para pymes — Northstack</title>
-    <meta name="description" content="Software de RR.HH., vacaciones, CRM y seguimiento de nómina para pymes de 5 a 50 personas. Probalo gratis 15 días, sin tarjeta." />
+    <title>Software de vacaciones para empleados — Northstack</title>
+    <meta name="description" content="Controlá vacaciones y licencias de tu equipo: pedidos, aprobaciones, saldos y feriados de tu país. Probalo gratis 15 días, sin tarjeta." />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
-    <link rel="canonical" href="https://joinnorthstack.com/es/" />
-    <link rel="alternate" hreflang="en" href="https://joinnorthstack.com/" />
-    <link rel="alternate" hreflang="es" href="https://joinnorthstack.com/es/" />
-    <link rel="alternate" hreflang="x-default" href="https://joinnorthstack.com/" />
+    <link rel="canonical" href="https://joinnorthstack.com/es/software-vacaciones" />
+    <link rel="alternate" hreflang="en" href="https://joinnorthstack.com/time-off-software" />
+    <link rel="alternate" hreflang="es" href="https://joinnorthstack.com/es/software-vacaciones" />
+    <link rel="alternate" hreflang="x-default" href="https://joinnorthstack.com/time-off-software" />
     <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
     <meta name="theme-color" content="#5b21e6" />
-    <meta property="og:title" content="Software de RR.HH., vacaciones y CRM para pymes — Northstack" />
-    <meta property="og:description" content="Una plataforma para equipos en crecimiento — personas, ausencias, ventas y seguimiento de nómina, sin la complejidad de un software empresarial." />
+    <meta property="og:title" content="Software de vacaciones para empleados — Northstack" />
+    <meta property="og:description" content="Pedidos, aprobaciones, saldos y feriados de tu país en un solo lugar. Para equipos de 5 a 50 personas." />
     <meta property="og:site_name" content="Northstack" />
     <meta property="og:image" content="https://joinnorthstack.com/og-image-es.jpg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Northstack — todo tu equipo en un solo lugar: personas, ausencias, ventas y seguimiento de nómina." />
-    <meta property="og:url" content="https://joinnorthstack.com/es/" />
+    <meta property="og:url" content="https://joinnorthstack.com/es/software-vacaciones" />
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="es_AR" />
     <meta property="og:locale:alternate" content="en_US" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Software de RR.HH., vacaciones y CRM para pymes — Northstack" />
-    <meta name="twitter:description" content="Una plataforma para equipos en crecimiento — personas, ausencias, ventas y seguimiento de nómina, sin la complejidad de un software empresarial." />
+    <meta name="twitter:title" content="Software de vacaciones para empleados — Northstack" />
+    <meta name="twitter:description" content="Pedidos, aprobaciones, saldos y feriados de tu país en un solo lugar. Para equipos de 5 a 50 personas." />
     <meta name="twitter:image" content="https://joinnorthstack.com/og-image-es.jpg" />
-    <meta name="twitter:image:alt" content="Northstack — todo tu equipo en un solo lugar: personas, ausencias, ventas y seguimiento de nómina." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet" />
-    <!-- Landing v2 (2026-10-02): violet #5b21e6 + Instrument Sans, kept in sync by hand with the
-         app's frontend/src/index.css. EN and ES are generated from one template — edit both together. -->
+    <!-- Module page (SEO, 2026-10-03). Shared tokens/components copied from index.html; EN twin is
+         /time-off-software.html — edit both together. -->
     <style>
 :root {
   --violet: #5b21e6;
@@ -302,153 +300,104 @@ footer b { color: var(--ink); display: block; margin-bottom: 8px; font-size: 14p
 footer a { display: block; text-decoration: none; padding: 3px 0; } footer a:hover { color: var(--ink); }
 .copy { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 18px; font-size: 13px; }
 
-.hero h1 .kicker { display: block; font: 600 14px/1.4 var(--font); letter-spacing: .08em; text-transform: uppercase; color: var(--violet); margin-bottom: 14px; }
-.bandlink { grid-column: 1 / -1; justify-self: start; color: var(--lilac); font-weight: 600; text-decoration: none; }
-.bandlink:hover { color: #fff; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .scene.on .track i { width: var(--w); } .scene.on .bars div { height: var(--h); }
 }
-
-.launch { display: inline-flex; align-items: center; gap: 10px; padding: 6px 14px 6px 6px; border-radius: 99px; background: #fff1e6; color: #b4400a; font-weight: 600; font-size: 14px; width: fit-content; margin-top: 4px; }
-.launch[hidden] { display: none; }
-.launch b { background: #ea580c; color: #fff; padding: 3px 9px; border-radius: 99px; font-size: 11.5px; letter-spacing: .05em; text-transform: uppercase; }
-.cur { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 2px; }
-.cur button { border: 0; background: transparent; font: 600 13.5px/1 var(--font); color: var(--ink-3); padding: 8px 12px; border-radius: 7px; cursor: pointer; }
-.cur button[aria-pressed="true"] { background: var(--violet); color: #fff; }
-.cur button:focus-visible { outline: 3px solid var(--lilac); outline-offset: 1px; }
-.price s.reg { color: var(--ink-3); font-size: 18px; margin-right: 2px; }
-.price s.reg:empty { display: none; }
-.off { display: inline-block; width: fit-content; margin-top: 6px; font-size: 12.5px; font-weight: 700; color: #b4400a; background: #fff1e6; padding: 2px 9px; border-radius: 99px; }
-.off[hidden] { display: none; }
-.calcnote .was { color: var(--ink-3); }
-.plans { grid-template-columns: minmax(0, 1fr); }
-@media (min-width: 900px) { .plans { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-.plan { min-width: 0; }
-.price { flex-wrap: wrap; row-gap: 2px; }
-.price b { font-size: clamp(32px, 3.4vw, 46px); }
-.plans.is-ars .price b { font-size: clamp(28px, 2.6vw, 36px); }
-.price > span { flex-basis: 100%; }
-.price s.reg { flex-basis: 100%; font-size: 16px; }
-.calcnote b { color: var(--ink); }
-@media (prefers-color-scheme: dark) { .launch, .off { background: rgba(255,140,60,.14); color: #ffb27a; } }
+/* Module page */
+.crumbs { display: flex; flex-wrap: wrap; gap: 8px; font-size: 13.5px; color: var(--ink-3); }
+.crumbs a { text-decoration: none; } .crumbs a:hover { color: var(--ink); }
+.crumbs [aria-current] { color: var(--violet); font-weight: 600; }
+.navlinks a[aria-current] { color: var(--ink); font-weight: 600; }
+.steps .step p { font-size: 15px; }
+.feats { display: grid; gap: 0; grid-template-columns: 1fr; border-top: 1px solid var(--line); }
+@media (min-width: 700px) { .feats { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 40px; } }
+@media (min-width: 1000px) { .feats { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.feat { padding-block: 22px; border-bottom: 1px solid var(--line); }
+.feat h3 { font-size: 18px; display: flex; gap: 10px; align-items: baseline; }
+.feat h3::before { content: ""; flex-shrink: 0; width: 8px; height: 8px; border-radius: 2px; background: var(--violet); transform: translateY(-2px) rotate(45deg); }
+.feat p { margin: 8px 0 0; color: var(--ink-2); font-size: 15.5px; }
+.related { display: flex; flex-wrap: wrap; gap: 20px 32px; align-items: center; justify-content: space-between; padding: 28px; border-radius: 20px; background: var(--surface-2); }
+.related > div { display: grid; gap: 8px; max-width: 60ch; min-width: 0; }
+.related h3 { font-size: 22px; } .related p { margin: 0; color: var(--ink-2); }
 </style>
     <script type="application/ld+json">
-      {"@context":"https://schema.org","@type":"WebSite","name":"Northstack","url":"https://joinnorthstack.com/","inLanguage":["en","es"]}
+      {"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Northstack","item":"https://joinnorthstack.com/es/"},{"@type":"ListItem","position":2,"name":"Software de vacaciones","item":"https://joinnorthstack.com/es/software-vacaciones"}]}
     </script>
     <script type="application/ld+json">
-      {"@context":"https://schema.org","@type":"Organization","name":"Northstack","url":"https://joinnorthstack.com/","logo":"https://joinnorthstack.com/logo-horizontal-light.svg","email":"info@joinnorthstack.com","contactPoint":{"@type":"ContactPoint","contactType":"customer support","email":"info@joinnorthstack.com","availableLanguage":["English","Spanish"]},"founder":{"@type":"Person","name":"Alejandro Bravo"}}
-    </script>
-    <script type="application/ld+json" id="ld-app">
-      {"@context":"https://schema.org","@type":"SoftwareApplication","name":"Northstack","url":"https://joinnorthstack.com/","applicationCategory":"BusinessApplication","applicationSubCategory":"HR and CRM software","operatingSystem":"Web","inLanguage":"es","description":"Software de RR.HH., vacaciones, CRM y seguimiento de nómina para pymes de 5 a 50 personas. Probalo gratis 15 días, sin tarjeta."}
+      {"@context":"https://schema.org","@type":"SoftwareApplication","name":"Northstack — Ausencias","url":"https://joinnorthstack.com/es/software-vacaciones","applicationCategory":"BusinessApplication","applicationSubCategory":"Software de vacaciones y licencias","operatingSystem":"Web","inLanguage":"es","description":"Controlá vacaciones y licencias de tu equipo: pedidos, aprobaciones, saldos y feriados de tu país en un solo lugar."}
     </script>
     <script type="application/ld+json">
-      {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"¿Hay una prueba gratis?","acceptedAnswer":{"@type":"Answer","text":"Sí. Todos los planes empiezan con 15 días de acceso completo, y no hace falta tarjeta de crédito."}},{"@type":"Question","name":"¿Puedo cambiar de plan después?","acceptedAnswer":{"@type":"Answer","text":"Cuando quieras. Subí, bajá o cancelá desde la configuración de facturación; los cambios se aplican en tu próximo ciclo."}},{"@type":"Question","name":"¿Mis datos están separados de otras empresas?","acceptedAnswer":{"@type":"Answer","text":"Sí. Los datos de cada empresa están aislados a nivel de base de datos y nunca se comparten con otro espacio."}},{"@type":"Question","name":"¿Qué pasa cuando termina mi prueba?","acceptedAnswer":{"@type":"Answer","text":"Te vamos a pedir que elijas un plan y cargues tus datos de facturación. Si no lo hacés, tu cuenta entra en un período de gracia antes de limitar el acceso."}},{"@type":"Question","name":"¿Northstack les paga a mis empleados?","acceptedAnswer":{"@type":"Answer","text":"No. La nómina en Northstack es un registro de compensaciones, liquidaciones y recibos. Northstack nunca procesa ni envía pagos; vos seguís pagándole a tu equipo con tu banco o proveedor de nómina."}}]}
+      {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"¿Puedo usar el calendario de feriados de otro país?","acceptedAnswer":{"@type":"Answer","text":"Sí. El calendario se elige según dónde trabaja tu equipo, que puede no ser el país de la empresa, y se importa en un clic. Después podés marcar cada día no laborable como libre o trabajado."}},{"@type":"Question","name":"¿Cuenta días hábiles o días corridos?","acceptedAnswer":{"@type":"Answer","text":"Los dos. Cada política define cómo cuenta los días. Con días hábiles, los fines de semana, los feriados y los días libres de la empresa no se descuentan del saldo."}},{"@type":"Question","name":"¿Quién aprueba los pedidos de vacaciones?","acceptedAnswer":{"@type":"Answer","text":"El jefe directo de la persona. Además, el owner, los administradores o quien tenga el permiso de decidir ausencias pueden aprobar o rechazar cualquier pedido. Si una política no requiere aprobación, el pedido se aprueba al instante."}},{"@type":"Question","name":"¿Qué pasa con los días de vacaciones que no se usan?","acceptedAnswer":{"@type":"Answer","text":"Cada política lo decide: al 31 de diciembre los días se trasladan al año siguiente, con un tope opcional, o vencen. En los dos casos queda registrado."}},{"@type":"Question","name":"¿Cuántas políticas de ausencia puedo crear?","acceptedAnswer":{"@type":"Answer","text":"En el plan Starter, hasta 3. En Growth, ilimitadas. Durante la prueba gratis de 15 días tenés acceso a todo."}},{"@type":"Question","name":"¿Se sincroniza con Google Calendar?","acceptedAnswer":{"@type":"Answer","text":"Sí. Cuando conectás tu cuenta de Google, tus ausencias aprobadas se agregan solas a tu calendario personal."}}]}
     </script>
-    <script src="/pricing.js" defer></script>
     <script src="/legal-modal.js" defer></script>
   </head>
   <body>
 <nav class="top" aria-label="Main">
   <div class="wrap">
     <a class="brand" href="/es/"><img class="mark" src="/icon-color.svg" alt="" width="28" height="28">Northstack</a>
-    <div class="navlinks"><a href="#product">Producto</a><a href="#timeoff">Ausencias</a><a href="#pricing">Precios</a><a href="#faq">Preguntas</a></div>
-    <div class="navr"><span class="lang"><a href="/" hreflang="en">EN</a> · <a href="/es/" aria-current="page" hreflang="es">ES</a></span><a class="signin" href="https://app.joinnorthstack.com/login">Iniciar sesión</a><a class="btn btn-p" href="https://app.joinnorthstack.com/register">Empezar gratis</a></div>
+    <div class="navlinks"><a href="/es/#product">Producto</a><a href="/es/software-vacaciones" aria-current="page">Ausencias</a><a href="/es/#pricing">Precios</a><a href="#faq">Preguntas</a></div>
+    <div class="navr"><span class="lang"><a href="/time-off-software" hreflang="en">EN</a> · <a href="/es/software-vacaciones" aria-current="page" hreflang="es">ES</a></span><a class="signin" href="https://app.joinnorthstack.com/login">Iniciar sesión</a><a class="btn btn-p" href="https://app.joinnorthstack.com/register">Empezar gratis</a></div>
   </div>
 </nav>
 
 <header class="hero" id="top">
   <div class="wrap">
     <div>
-      <span class="pill"><b>Nuevo</b> Calendarios de feriados en Ausencias</span>
-      <h1><span class="kicker">Software de RR.HH. y CRM para pymes</span>Todo tu equipo, en <em class="s">un solo</em> lugar.</h1>
-      <p class="lede">Personas, ausencias, ventas y seguimiento de nómina en un mismo espacio — pensado para equipos de 5 a 50 que ya superaron las planillas, no para empresas grandes.</p>
+      <nav class="crumbs" aria-label="Ruta"><a href="/es/">Northstack</a><span aria-hidden="true">/</span><a href="/es/#product">Producto</a><span aria-hidden="true">/</span><span aria-current="page">Ausencias</span></nav>
+      <h1>Software de vacaciones para empleados, con <em class="s">tus</em> reglas.</h1>
+      <p class="lede">Pedidos, aprobaciones y saldos en un solo lugar. Northstack cuenta los días con el calendario de feriados de tu país, así nadie vuelve a hacer cuentas a mano.</p>
       <div class="ctas">
-        <a class="btn btn-p" href="https://app.joinnorthstack.com/register">Empezar gratis — 15 días <span class="arrow">→</span></a>
-        <a class="btn btn-g" href="#product">Ver qué incluye</a>
+        <a class="btn btn-p" href="https://app.joinnorthstack.com/register">Probalo gratis — 15 días <span class="arrow">→</span></a>
+        <a class="btn btn-g" href="#como-funciona">Cómo funciona</a>
       </div>
-      <div class="trust"><span>Sin tarjeta de crédito</span><span>Listo en una tarde</span><span>Cancelás cuando quieras</span></div>
+      <div class="trust"><span>Sin tarjeta de crédito</span><span>Listo en una tarde</span><span>Para equipos de 5 a 50</span></div>
     </div>
 
-    <div class="win" id="win" style="--cycle:4.5s" data-approve="Aprobar" data-approved="Aprobada ✓">
-      <div class="win-bar">
-        <i></i><i></i><i></i>
-        <div class="win-tabs" role="tablist" aria-label="Vista previa del producto">
-          <button role="tab" id="t-people" aria-selected="true" aria-controls="s-people">Personas</button>
-          <button role="tab" id="t-timeoff" aria-selected="false" aria-controls="s-timeoff">Ausencias</button>
-          <button role="tab" id="t-pipeline" aria-selected="false" aria-controls="s-pipeline">Pipeline</button>
-          <button role="tab" id="t-payroll" aria-selected="false" aria-controls="s-payroll">Nómina</button>
-        </div>
-      </div>
-      <div class="win-body">
-        <div class="scene on" id="s-people" role="tabpanel" aria-labelledby="t-people">
-          <div class="scene-h">Personas <small>12 activas · 3 áreas</small></div>
-          <div class="prow"><span class="av">MG</span><div>Martina Gómez<small>Jefa de Operaciones · Buenos Aires</small></div><span class="chip">Operaciones</span></div>
-          <div class="prow"><span class="av">DC</span><div>Devon Carter<small>Software Engineer · Bogotá</small></div><span class="chip">Ingeniería</span></div>
-          <div class="prow"><span class="av">PS</span><div>Priya Shah<small>Account Executive · Austin</small></div><span class="chip">Ventas</span></div>
-          <div class="prow"><span class="av">CM</span><div>Casey Moreno<small>Empieza el 14 oct · onboarding</small></div><span class="chip wait">Invitada</span></div>
-          <div class="prow"><span class="av">JV</span><div>Jordan Vega<small>Account Executive · Ciudad de México</small></div><span class="chip">Ventas</span></div>
-        </div>
-        <div class="scene" id="s-timeoff" role="tabpanel" aria-labelledby="t-timeoff">
+    <div class="win" aria-label="Ejemplo: saldos y una solicitud pendiente">
+      <div class="win-bar"><i></i><i></i><i></i><div class="win-tabs"><button type="button" aria-selected="true" tabindex="-1">Mis ausencias</button></div></div>
+      <div class="win-body" style="min-height:0">
+        <div class="scene on">
           <div class="scene-h">Mis ausencias <small>2026</small></div>
           <div class="meter">
-            <div class="bal"><div class="bal-top">Vacaciones <span>14 días/año</span></div><div class="big">9<small>disponibles</small></div><div class="track"><i style="--w:36%"></i></div></div>
-            <div class="bal"><div class="bal-top">Enfermedad <span>10 días/año</span></div><div class="big">10<small>disponibles</small></div><div class="track"><i style="--w:0%"></i></div></div>
+            <div class="bal"><div class="bal-top">Vacaciones <span>14 días/año · hábiles</span></div><div class="big">9<small>disponibles</small></div><div class="track"><i style="--w:36%"></i></div></div>
+            <div class="bal"><div class="bal-top">Día de estudio <span>5 días/año · corridos</span></div><div class="big">3<small>disponibles</small></div><div class="track"><i style="--w:40%"></i></div></div>
           </div>
-          <div class="approve" id="approve"><div class="who"><span class="av">MG</span><div><b>Martina</b> · Vacaciones, 13–17 oct<br><small style="color:var(--ink-3)">5 días hábiles · el 12 es feriado</small></div></div><button class="btn-mini" type="button" tabindex="-1">Aprobar</button></div>
-        </div>
-        <div class="scene" id="s-pipeline" role="tabpanel" aria-labelledby="t-pipeline">
-          <div class="scene-h">Pipeline de ventas <small>$86.400 abiertos</small></div>
-          <div class="kanban">
-            <div class="col"><b>Lead <span>3</span></b><div class="deal">Andes Logistics<small>$12,000</small></div><div class="deal mover">Mercado Norte<small>$24,500</small></div><div class="deal">Pampa Foods<small>$8,200</small></div></div>
-            <div class="col"><b>Propuesta <span>2</span></b><div class="deal">Globant Studio<small>$31,000</small></div><div class="deal">Río Tech<small>$10,700</small></div></div>
-            <div class="col"><b>Ganada <span>1</span></b><div class="deal">Sur Capital<small>$18,900</small></div></div>
-          </div>
-        </div>
-        <div class="scene" id="s-payroll" role="tabpanel" aria-labelledby="t-payroll">
-          <div class="pay">
-            <div class="pay-head"><div><div class="scene-h" style="margin:0">Seguimiento de nómina</div><small style="color:var(--ink-3)">Liquidación de octubre · 12 personas</small></div><div class="big">$48,200</div></div>
-            <div class="bars"><div style="--h:58%"></div><div style="--h:62%"></div><div style="--h:60%"></div><div style="--h:71%"></div><div style="--h:74%"></div><div style="--h:82%"></div></div>
-            <div class="months"><span>May</span><span>Jun</span><span>Jul</span><span>Ago</span><span>Sep</span><span>Oct</span></div>
-            <div class="note">Un registro de qué pagás y cuándo — Northstack nunca mueve dinero.</div>
-          </div>
+          <div class="approve done"><div class="who"><span class="av">MG</span><div><b>Martina</b> · Vacaciones, 9–16 oct<br><small style="color:var(--ink-3)">5 días hábiles · el 12 es feriado</small></div></div><button class="btn-mini" type="button" tabindex="-1">Aprobada ✓</button></div>
         </div>
       </div>
     </div>
   </div>
 </header>
 
-<div class="swap" aria-label="Lo que reemplaza Northstack">
+<div class="swap" aria-label="Lo que reemplaza">
   <div class="wrap">
-    <span class="old">Planilla de RR.HH.</span><span class="old">Mails de vacaciones</span><span class="old">Un CRM aparte</span><span class="old">Planilla de sueldos</span>
-    <span class="eq">→</span><span class="new">Un solo login de Northstack</span>
+    <span class="old">Planilla de vacaciones</span><span class="old">Pedidos por mail o WhatsApp</span><span class="old">Cuentas a mano con el calendario</span>
+    <span class="eq">→</span><span class="new">Ausencias en Northstack</span>
   </div>
 </div>
 
-<section class="block" id="product">
+<section class="block" id="como-funciona" style="padding-top:20px">
   <div class="wrap">
-    <div class="head"><span class="eyebrow">Qué incluye</span><h2>Todo lo que usa un equipo que crece, <em class="s">conectado</em>.</h2><p class="lede">Legajo digital, control de vacaciones, CRM de ventas y registro de sueldos. Empezá con lo que necesitás hoy: todos los módulos comparten las mismas personas, así que nada se carga dos veces.</p></div>
-    <div class="pillars">
-      <article class="card"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c.6-3.3 3-5 6-5s5.4 1.7 6 5"/><circle cx="17.5" cy="9" r="2.4"/><path d="M16 14.2c2.6.2 4.3 1.8 4.8 4.8"/></svg></div><h3>Personas y RR.HH.</h3><p>Un legajo por persona, con los campos que tu empresa realmente usa.</p><ul><li>Perfiles, áreas y campos personalizados</li><li>Autogestión para cada empleado</li><li>Roles y permisos personalizados</li></ul></article>
-      <article class="card"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h6"/><circle cx="18" cy="16" r="3"/></svg></div><h3>CRM de ventas</h3><p>Empresas, contactos y oportunidades avanzando por las etapas que vos definís.</p><ul><li>Pipelines con tus propias etapas</li><li>Vistas en grilla y Kanban</li><li>Tareas, notas y seguimientos</li></ul></article>
-      <article class="card"><div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3 10h18M7 15h4"/></svg></div><h3>Seguimiento de nómina</h3><p>Un registro claro de compensaciones, liquidaciones y recibos.</p><ul><li>Liquidaciones e historial</li><li>Recibos de sueldo para tu equipo</li><li>Solo registro — seguís pagando como hoy</li></ul></article>
-    </div>
-    <div class="marquee" aria-label="Más funciones">
-      <div class="row"><span>Ausencias con aprobaciones</span><span>Calendarios de feriados</span><span>Sincronización con Google Calendar</span><span>Links de Google Meet en tareas</span><span>Registro de actividad</span><span>Importar y exportar CSV</span><span>Roles personalizados</span><span>Dashboards</span><span aria-hidden="true">Ausencias con aprobaciones</span><span aria-hidden="true">Calendarios de feriados</span><span aria-hidden="true">Sincronización con Google Calendar</span><span aria-hidden="true">Links de Google Meet en tareas</span><span aria-hidden="true">Registro de actividad</span><span aria-hidden="true">Importar y exportar CSV</span><span aria-hidden="true">Roles personalizados</span><span aria-hidden="true">Dashboards</span></div>
+    <div class="head"><span class="eyebrow">Cómo funciona</span><h2>Del pedido a la aprobación, sin perseguir a nadie.</h2></div>
+    <div class="steps">
+      <div class="step"><div class="n">1</div><h3>Definís las políticas</h3><p>Vacaciones, enfermedad, estudio o las que uses: días por año, si son pagas, si necesitan aprobación y si se acreditan todas juntas o mes a mes.</p></div>
+      <div class="step"><div class="n">2</div><h3>Tu equipo pide sus días</h3><p>Cada persona elige la política y las fechas, y antes de enviar ve cuántos días le van a quedar.</p></div>
+      <div class="step"><div class="n">3</div><h3>Su responsable aprueba</h3><p>El pedido le llega a su jefe directo, que aprueba o rechaza con un motivo. Los dos reciben aviso en la app.</p></div>
     </div>
   </div>
 </section>
 
-<section class="band" id="timeoff">
+<section class="band" id="feriados">
   <div class="wrap">
     <div>
-      <span class="eyebrow">Ausencias, bien resueltas</span>
-      <h2>Tus feriados, tu semana laboral, <em class="s" style="color:var(--lilac)">tus reglas</em>.</h2>
-      <p class="lede">Northstack cuenta los días como los cuenta tu empresa, para que nadie vuelva a hacer cuentas en un calendario.</p>
+      <span class="eyebrow">Feriados y días hábiles</span>
+      <h2>Los días se cuentan como los <em class="s" style="color:var(--lilac)">cuenta tu empresa</em>.</h2>
+      <p class="lede">Elegí si cada política cuenta días hábiles o corridos. Con días hábiles, los fines de semana, los feriados y los días libres de la empresa no se descuentan.</p>
       <div class="facts">
-        <div class="fact"><i>31</i><div><b>Elegí tu calendario de feriados</b><span>Importá los feriados de cualquier país — aunque tu equipo trabaje con clientes de otro lado.</span></div></div>
-        <div class="fact"><i>±</i><div><b>Nunca un saldo negativo</b><span>Permití adelantar días hasta el total del año, o no. Los días sin usar se trasladan o vencen — vos decidís.</span></div></div>
-        <div class="fact"><i>✦</i><div><b>Días libres de la empresa, para todos</b><span>Cargás un día libre una vez y se aplica a todo el equipo automáticamente.</span></div></div>
+        <div class="fact"><i>31</i><div><b>Calendario de feriados por país</b><span>Se elige según dónde trabaja tu equipo, aunque no sea el país de la empresa, y se importa en un clic.</span></div></div>
+        <div class="fact"><i>✦</i><div><b>Días libres de la empresa</b><span>Un día puente o el 24 de diciembre: lo cargás una vez y aplica a todos, sin tocar los saldos.</span></div></div>
+        <div class="fact"><i>☾</i><div><b>Feriados religiosos opcionales</b><span>Se activan por religión y aplican solo a quien los elige en su perfil. Es un dato que ve solo RR.HH.</span></div></div>
       </div>
     </div>
     <div class="cal" aria-label="Ejemplo: una solicitud de octubre 2026">
@@ -457,84 +406,42 @@ footer a { display: block; text-decoration: none; padding: 3px 0; } footer a:hov
       <div class="legend"><span style="--c:#5b21e6">Solicitado</span><span style="--c:#ffc46b">Feriado</span><span style="--c:rgba(185,177,217,.4)">Fin de semana</span></div>
       <div class="calc-line"><span>9 oct → 16 oct · se cuentan</span><b>5 días</b></div>
     </div>
-    <a class="bandlink" href="/es/software-vacaciones">Todo sobre el software de vacaciones <span class="arrow">→</span></a>
   </div>
 </section>
 
-<section class="block" id="start">
+<section class="block" id="funciones">
   <div class="wrap">
-    <div class="head"><span class="eyebrow">Cómo empezar</span><h2>Andando en una tarde.</h2></div>
-    <div class="steps">
-      <div class="step"><div class="n">1</div><span class="t">2 min</span><h3>Creá tu espacio</h3><p>Tu correo y el nombre de tu empresa. Sin tarjeta.</p></div>
-      <div class="step"><div class="n">2</div><span class="t">20 min</span><h3>Sumá a tu equipo</h3><p>Importá personas desde un CSV, invitá administradores, elegí tu calendario de feriados.</p></div>
-      <div class="step"><div class="n">3</div><span class="t">cuando quieras</span><h3>Activá más</h3><p>Pipelines, seguimiento de nómina e integraciones, a medida que crecés.</p></div>
+    <div class="head"><span class="eyebrow">Control de vacaciones</span><h2>Todo lo que necesitás para gestionar licencias.</h2></div>
+    <div class="feats">
+      <article class="feat"><h3>Saldos en tiempo real</h3><p>Cada persona ve sus días disponibles por política. Un saldo nunca queda en negativo.</p></article>
+      <article class="feat"><h3>Adelantar días, o no</h3><p>Con acreditación mensual, decidís si se pueden pedir días por adelantado, hasta el total del año.</p></article>
+      <article class="feat"><h3>Traspaso o vencimiento</h3><p>Al 31 de diciembre los días sin usar pasan al año siguiente, con un tope opcional, o vencen.</p></article>
+      <article class="feat"><h3>Calendario del equipo</h3><p>Las ausencias aprobadas de todos, junto con tareas y cumpleaños, en una sola vista.</p></article>
+      <article class="feat"><h3>Google Calendar</h3><p>Al conectar tu cuenta, tus ausencias aprobadas aparecen solas en tu calendario personal.</p></article>
+      <article class="feat"><h3>Historial que no se pierde</h3><p>RR.HH. puede ajustar un saldo con un motivo visible. Cambiar una política nunca reescribe pedidos pasados.</p></article>
     </div>
   </div>
 </section>
 
-<section class="block" id="pricing" style="padding-top:20px">
+<section class="block" style="padding-top:0">
   <div class="wrap">
-    <div class="head"><span class="eyebrow">Precios</span><h2>Precios simples que <em class="s">crecen con vos</em>.</h2><p class="lede">Mové el control para ver cuánto pagaría tu equipo. Empezá gratis por 15 días en cualquier plan.</p>
-      <span class="launch" id="launch" hidden><b>Lanzamiento</b><span id="launch-text"></span></span></div>
-    <div class="seats">
-      <label for="team">Tamaño del equipo</label>
-      <output id="team-out" for="team">8</output>
-      <input type="range" id="team" min="1" max="50" value="8" aria-describedby="team-help">
-      <div class="cur" role="group" aria-label="Moneda"><button type="button" data-cur="international" aria-pressed="true">USD</button><button type="button" data-cur="ar" aria-pressed="false">ARS</button></div>
-      <small id="team-help">Se cobra por usuario activo · mínimo <span data-pricing="min-users">3</span> usuarios por equipo.</small>
-    </div>
-    <div class="plans">
-      <div class="plan">
-        <h3>Prueba gratis</h3><div class="for">Todas las funciones, sin compromiso</div>
-        <div class="price"><b id="p-free">0</b><span>por 15 días</span></div>
-        
-        <div class="calcnote">Hasta <span data-pricing="trial-cap">5</span> usuarios mientras lo probás.</div>
-        <ul><li>Acceso completo a todos los módulos</li><li>Pipelines ilimitados</li><li>Seguimiento de nómina incluido</li><li>Sincronización con Google Calendar</li></ul>
-        <a class="btn btn-g" href="https://app.joinnorthstack.com/register">Empezar gratis</a>
-      </div>
-      <div class="plan">
-        <h3>Starter</h3><div class="for">Para equipos chicos que se están organizando</div>
-        <div class="price"><s class="reg" id="r-starter"></s><b id="p-starter">—</b><span>/ usuario / mes</span></div>
-        <span class="off" id="o-starter" hidden></span>
-        <div class="calcnote" id="n-starter">&nbsp;</div>
-        <ul><li>CRM de ventas, hasta 2 pipelines</li><li>RR.HH. + Ausencias, hasta 3 políticas</li><li>Tareas, notas y Registro de actividad</li><li>Hasta 2 roles personalizados</li><li>Soporte por correo</li><li class="no">Seguimiento de nómina</li></ul>
-        <a class="btn btn-g" href="https://app.joinnorthstack.com/register">Empezar gratis</a>
-      </div>
-      <div class="plan hot"><span class="badge">El más elegido</span>
-        <h3>Growth</h3><div class="for">Para equipos listos para escalar</div>
-        <div class="price"><s class="reg" id="r-growth"></s><b id="p-growth">—</b><span>/ usuario / mes</span></div>
-        <span class="off" id="o-growth" hidden></span>
-        <div class="calcnote" id="n-growth">&nbsp;</div>
-        <ul><li>Todo lo de Starter</li><li>Pipelines y políticas ilimitados</li><li>Seguimiento de nómina</li><li>Roles personalizados ilimitados</li><li>Soporte prioritario</li></ul>
-        <a class="btn btn-p" href="https://app.joinnorthstack.com/register">Empezar gratis <span class="arrow">→</span></a>
-      </div>
-    </div>
-    <p class="lock">Si te sumás durante el lanzamiento, <b>mantenés ese precio</b> mientras sigas suscripto.</p>
-  </div>
-</section>
-
-<section class="block" style="padding-top:20px">
-  <div class="wrap">
-    <div class="founder">
-      <div class="ph" aria-hidden="true">AB</div>
-      <div>
-        <blockquote>“Vi lo mismo en cada startup: RR.HH., clientes y facturación sostenidos con planillas sueltas y herramientas que no se hablan entre sí. Northstack es la plataforma que yo quería — cada empresa funcionando a su manera, sin doblarse para entrar en un sistema rígido.”</blockquote>
-        <cite>Alejandro Bravo · Fundador de Northstack</cite>
-        <a href="/es/about.html" style="display:inline-block;margin-top:10px;color:var(--violet);font-weight:600;text-decoration:none">Leé más sobre nuestra misión →</a>
-      </div>
+    <div class="related">
+      <div><span class="eyebrow">Parte de Northstack</span><h3>Las ausencias viven junto al resto de tu equipo.</h3><p>El mismo legajo de cada persona alimenta ausencias, CRM de ventas y seguimiento de nómina. Nada se carga dos veces.</p></div>
+      <a class="btn btn-g" href="/es/#product">Ver todos los módulos <span class="arrow">→</span></a>
     </div>
   </div>
 </section>
 
 <section class="block" id="faq" style="padding-top:20px">
   <div class="wrap">
-    <div class="head"><span class="eyebrow">Preguntas</span><h2>Respuestas a tus preguntas.</h2></div>
+    <div class="head"><span class="eyebrow">Preguntas</span><h2>Preguntas sobre vacaciones y licencias.</h2></div>
     <div class="faq">
-      <details open><summary>¿Hay una prueba gratis?</summary><p>Sí. Todos los planes empiezan con 15 días de acceso completo, y no hace falta tarjeta de crédito.</p></details>
-      <details><summary>¿Puedo cambiar de plan después?</summary><p>Cuando quieras. Subí, bajá o cancelá desde la configuración de facturación; los cambios se aplican en tu próximo ciclo.</p></details>
-      <details><summary>¿Mis datos están separados de otras empresas?</summary><p>Sí. Los datos de cada empresa están aislados a nivel de base de datos y nunca se comparten con otro espacio.</p></details>
-      <details><summary>¿Qué pasa cuando termina mi prueba?</summary><p>Te vamos a pedir que elijas un plan y cargues tus datos de facturación. Si no lo hacés, tu cuenta entra en un período de gracia antes de limitar el acceso.</p></details>
-      <details><summary>¿Northstack les paga a mis empleados?</summary><p>No. La nómina en Northstack es un registro de compensaciones, liquidaciones y recibos. Northstack nunca procesa ni envía pagos; vos seguís pagándole a tu equipo con tu banco o proveedor de nómina.</p></details>
+      <details open><summary>¿Puedo usar el calendario de feriados de otro país?</summary><p>Sí. El calendario se elige según dónde trabaja tu equipo, que puede no ser el país de la empresa, y se importa en un clic. Después podés marcar cada día no laborable como libre o trabajado.</p></details>
+      <details><summary>¿Cuenta días hábiles o días corridos?</summary><p>Los dos. Cada política define cómo cuenta los días. Con días hábiles, los fines de semana, los feriados y los días libres de la empresa no se descuentan del saldo.</p></details>
+      <details><summary>¿Quién aprueba los pedidos de vacaciones?</summary><p>El jefe directo de la persona. Además, el owner, los administradores o quien tenga el permiso de decidir ausencias pueden aprobar o rechazar cualquier pedido. Si una política no requiere aprobación, el pedido se aprueba al instante.</p></details>
+      <details><summary>¿Qué pasa con los días de vacaciones que no se usan?</summary><p>Cada política lo decide: al 31 de diciembre los días se trasladan al año siguiente, con un tope opcional, o vencen. En los dos casos queda registrado.</p></details>
+      <details><summary>¿Cuántas políticas de ausencia puedo crear?</summary><p>En el plan Starter, hasta 3. En Growth, ilimitadas. Durante la prueba gratis de 15 días tenés acceso a todo.</p></details>
+      <details><summary>¿Se sincroniza con Google Calendar?</summary><p>Sí. Cuando conectás tu cuenta de Google, tus ausencias aprobadas se agregan solas a tu calendario personal.</p></details>
     </div>
   </div>
 </section>
@@ -542,7 +449,7 @@ footer a { display: block; text-decoration: none; padding: 3px 0; } footer a:hov
 <div class="final">
   <span class="orbit" aria-hidden="true"></span>
   <div class="wrap">
-    <h2>Uní a tu equipo esta semana.</h2>
+    <h2>Dejá la planilla de vacaciones esta semana.</h2>
     <p>15 días gratis. Sin tarjeta. Listo en una tarde.</p>
     <a class="btn btn-w" href="https://app.joinnorthstack.com/register">Empezar gratis <span class="arrow">→</span></a>
   </div>
@@ -551,7 +458,7 @@ footer a { display: block; text-decoration: none; padding: 3px 0; } footer a:hov
 <footer>
   <div class="wrap">
     <div><a class="brand" href="/es/"><img class="mark" src="/icon-color.svg" alt="" width="28" height="28">Northstack</a><p style="margin:10px 0 0;max-width:34ch">Personas, ausencias, ventas y seguimiento de nómina — una plataforma para equipos que crecen.</p></div>
-    <div><b>Producto</b><a href="#product">Funciones</a><a href="/es/software-vacaciones">Software de vacaciones</a><a href="#pricing">Precios</a><a href="#faq">Preguntas</a></div>
+    <div><b>Producto</b><a href="/es/#product">Funciones</a><a href="/es/software-vacaciones">Software de vacaciones</a><a href="/es/#pricing">Precios</a><a href="/es/#faq">Preguntas</a></div>
     <div><b>Empresa</b><a href="/es/about.html">Nosotros</a><a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a></div>
     <div><b>Legal</b><a href="/terms.html">Términos de Servicio</a><a href="/privacy.html">Política de Privacidad</a><a href="/refund.html">Política de Reembolsos</a></div>
     <div class="copy">© 2026 Northstack. Todos los derechos reservados.</div>
@@ -560,30 +467,6 @@ footer a { display: block; text-decoration: none; padding: 3px 0; } footer a:hov
 
 <script>
 (function () {
-  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  // Product window: cycles the four scenes; hovering pauses it, clicking a tab jumps there.
-  var win = document.getElementById('win');
-  var tabs = Array.prototype.slice.call(document.querySelectorAll('.win-tabs [role=tab]'));
-  var ap = document.getElementById('approve'), apBtn = ap.querySelector('.btn-mini');
-  var i = 0, timer = null, paused = false;
-  function show(n) {
-    i = n;
-    tabs.forEach(function (t, k) {
-      var on = k === n;
-      t.setAttribute('aria-selected', String(on));
-      var panel = document.getElementById(t.getAttribute('aria-controls'));
-      panel.classList.toggle('on', on);
-      if (on) panel.querySelectorAll('.mover').forEach(function (m) { m.style.animation = 'none'; void m.offsetWidth; m.style.animation = ''; });
-    });
-    ap.classList.remove('done'); apBtn.textContent = win.dataset.approve;
-    if (n === 1) setTimeout(function () { if (i === 1) { ap.classList.add('done'); apBtn.textContent = win.dataset.approved; } }, 2200);
-  }
-  function schedule() { clearInterval(timer); if (reduce) return; timer = setInterval(function () { if (!paused) show((i + 1) % tabs.length); }, 4500); }
-  tabs.forEach(function (t, k) { t.addEventListener('click', function () { show(k); schedule(); }); });
-  win.addEventListener('mouseenter', function () { paused = true; win.classList.add('paused'); });
-  win.addEventListener('mouseleave', function () { paused = false; win.classList.remove('paused'); });
-  show(0); schedule();
-
   // October 2026 (Oct 1 is a Thursday): request Oct 9–16, Oct 12 is a national holiday in Argentina.
   var days = document.getElementById('days');
   var html = days.dataset.dn.split(',').map(function (n) { return '<div class="dn">' + n + '</div>'; }).join('');
@@ -595,55 +478,6 @@ footer a { display: block; text-decoration: none; padding: 3px 0; } footer a:hov
     html += '<div class="' + cls + '" style="--i:' + req + '">' + d + '</div>';
   }
   days.innerHTML = html;
-
-  // Team-size calculator — prices come from pricing.js (the app's single price source); until they
-  // arrive the plan cards show "—" like the rest of the page.
-  // Per-user pricing (2026-10-02): price per active user, minimum team size, launch offer, and a
-  // USD | ARS switch — ARS by default for visitors whose browser is set to Argentina.
-  var team = document.getElementById('team'), out = document.getElementById('team-out');
-  var P = null;
-  var totalNote = (n, per, total, reg) => `${n} usuarios × ${per} = <b>${total}/mes</b>${reg ? ` <span class="was">(regular ${reg})</span>` : ''}`;
-  var minNote = (min, total) => `Mínimo ${min} usuarios — <b>${total}/mes</b>`;
-  var market = 'international';
-  try {
-    var tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-    if (tz.indexOf('America/Argentina') === 0 || tz === 'America/Buenos_Aires' || /-AR$/i.test(navigator.language || '')) market = 'ar';
-  } catch (e) {}
-  var curButtons = Array.prototype.slice.call(document.querySelectorAll('[data-cur]'));
-  curButtons.forEach(function (b) { b.addEventListener('click', function () { market = b.getAttribute('data-cur'); calc(); }); });
-  function calc() {
-    var n = Number(team.value);
-    out.textContent = n;
-    curButtons.forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-cur') === market)); });
-    if (!P || !P.pricing.markets[market] || !P.pricing.markets[market].perUser) return;
-    var pr = P.pricing, m = pr.markets[market], money = function (c) { return P.money(c, m.currency); };
-    var tier = pr.isLaunch ? 'launch' : 'regular', maxPct = 0;
-    document.getElementById('p-free').textContent = money(0);
-    document.querySelector('.plans').classList.toggle('is-ars', m.currency === 'ARS');
-    ['starter', 'growth'].forEach(function (plan) {
-      var per = m.perUser[tier][plan], reg = m.perUser.regular[plan];
-      var users = Math.max(n, pr.minUsers);
-      var pct = pr.isLaunch && reg > 0 ? Math.round((1 - per / reg) * 100) : 0;
-      if (pct > maxPct) maxPct = pct;
-      document.getElementById('p-' + plan).textContent = money(per);
-      var r = document.getElementById('r-' + plan), o = document.getElementById('o-' + plan);
-      r.textContent = pct ? money(reg) : '';
-      o.hidden = !pct; o.textContent = "{pct}% off".replace('{pct}', pct);
-      document.getElementById('n-' + plan).innerHTML = n < pr.minUsers
-        ? minNote(pr.minUsers, money(per * users))
-        : totalNote(n, money(per), money(per * users), pct ? money(reg * users) : '');
-    });
-    var launch = document.getElementById('launch');
-    launch.hidden = !pr.isLaunch;
-    if (pr.isLaunch) {
-      var date = new Date(pr.launchEndsAt + 'T12:00:00Z').toLocaleDateString("es-AR", { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
-      document.getElementById('launch-text').textContent = "Precio de lanzamiento para los equipos que se suman hasta el {date} — hasta {pct}% off, y lo mantenés mientras sigas suscripto.".replace('{date}', date).replace('{pct}', maxPct);
-    }
-  }
-  team.addEventListener('input', calc);
-  window.addEventListener('northstack:pricing', function (e) { P = e.detail; calc(); });
-  if (window.northstackPricing) { P = window.northstackPricing; }
-  calc();
 })();
 </script>
   </body>

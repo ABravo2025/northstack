@@ -81,6 +81,7 @@ SEO is part of marketing: every SEO change is logged in `seo/README.md` + a chan
 ---
 
 ## Changelog (newest first)
+- **2026-10-03** — Northstack listed on **G2** (profile approved). Directory kit: `2026-10/semana-01/directorios/`.
 - **2026-10-03** — Pricing fixes LIVE: landing currency by visitor IP (ARS for Argentina via app `/api/public/geo` = Vercel x-vercel-ip-country, USD elsewhere; no currency switch), prices added to the Time Off module pages (EN/ES), Free Trial capped at 3 users (= minimum team). App main 4d91de4, landing dcb2f58.
 - **2026-10-03** — `www.joinnorthstack.com` now 308-redirects to `joinnorthstack.com`.
 - **2026-10-03** — **Per-user pricing LIVE** (app `main` 5c8d86e + redeploy 75bf7c0, landing 15d995d): launch offer until 2026-12-31 (Starter USD 4 / Growth USD 6 per user, regular 6 / 10; ARS 6.000 / 9.000, regular 9.000 / 15.000), minimum 3 users, plans modal with struck-through regular price and launch banner, landing USD/ARS switch. Previous deploy on 2026-10-02 failed on Vercel's daily build limit (Hobby plan; Vercel Hobby is non-commercial per its terms — Pro recommended).

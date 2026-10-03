@@ -108,4 +108,10 @@ mencionarlo, usar "payroll tracking / records".
 
 | Directorio | Fecha | Estado | Link al perfil |
 |---|---|---|---|
-| _(completar al publicar)_ | | | |
+| G2 | 2026-10-03 | ✅ Perfil aprobado (textos EN de este archivo, logo `icon-color.svg`) | _(pegar link)_ |
+| Capterra / GetApp / Software Advice | | ⬜ Pendiente | |
+| SaaSworthy | | ⬜ Pendiente | |
+| Product Hunt | | ⬜ Pendiente (lanzamiento, preparar aparte) | |
+| AlternativeTo | | ⬜ Pendiente | |
+| LinkedIn (página de empresa con link al sitio) | | ⬜ Pendiente | |
+| Google Business Profile | | ⬜ Pendiente | |

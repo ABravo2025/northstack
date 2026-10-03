@@ -17,7 +17,7 @@ Starter launch USD 4 / ARS 6.000 (regular USD 6 / ARS 9.000), Growth launch USD 
 USD 10 / ARS 15.000). Launch price for teams subscribing until 2026-12-31, locked while subscribed; new
 teams get the regular price automatically from 2027-01-01. Existing subscribers keep their old locked
 price. Argentina billed in ARS via Mercado Pago, everyone else in USD via Dodo. Add-ons (modules sold
-separately, per user or flat) have a ready but empty structure ().
+separately, per user or flat) have a ready but empty structure (ADDONS in pricing.ts).
 
 ## Where things live
 | What | Where |

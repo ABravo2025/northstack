@@ -207,8 +207,35 @@ export async function authenticateToken(token: string): Promise<AuthenticatedUse
     });
   }
 
+  await recordUserSeen(session.user);
+
   const roleContext = await resolveRoleContextForUser(session.user);
   return { ...session.user, roleContext };
+}
+
+// Admin Center v2 (2026-10-03): "last activity" + one UserActivityDay row per user per UTC day.
+// Same write-only-when-meaningful idea as the sliding expiry above: at most one write every
+// SEEN_WRITE_INTERVAL_MS per user, plus the day row the first time each day. Never fails a request.
+const SEEN_WRITE_INTERVAL_MS = 10 * 60 * 1000;
+
+export async function recordUserSeen(user: { id: string; tenantId: string | null; lastSeenAt?: Date | null }, now = new Date()) {
+  // undefined = the row was loaded without this column (partial selects, test doubles): skip.
+  if (user.lastSeenAt === undefined) return;
+  const last = user.lastSeenAt;
+  if (last && now.getTime() - last.getTime() < SEEN_WRITE_INTERVAL_MS) return;
+  try {
+    await prisma.user.update({ where: { id: user.id }, data: { lastSeenAt: now } });
+    if (!last || last.toISOString().slice(0, 10) !== now.toISOString().slice(0, 10)) {
+      const day = new Date(now.toISOString().slice(0, 10) + 'T00:00:00.000Z');
+      await prisma.userActivityDay.upsert({
+        where: { userId_day: { userId: user.id, day } },
+        create: { userId: user.id, tenantId: user.tenantId, day },
+        update: {},
+      });
+    }
+  } catch (error) {
+    console.error('recordUserSeen failed', error);
+  }
 }
 
 export async function logoutUser(token: string): Promise<boolean> {

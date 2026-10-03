@@ -1,5 +1,8 @@
 # Admin Center — Contexto para el developer
 
+> **2026-10-03: reemplazado por Admin Center v2** — ver `spec-admin-center-v2.md`. Este documento
+> describe el Admin anterior (`northstack-devtasks`), que se retira al mudar el dominio.
+
 Este documento junta todo lo decidido hasta ahora sobre Admin Center: qué ya existe,
 qué está confirmado como hecho, y el roadmap punto por punto de lo que falta. Specs
 detalladas y mockups están linkeados en cada bloque — este archivo es el mapa, no

@@ -8,6 +8,9 @@ https://claude.ai/artifact/MuqVmwK4WQwqDTwK2hdw4X
 
 ## Decisions (2026-10-03)
 
+- **Production only (Alejandro, 2026-10-03):** Admin changes skip the staging review and go straight
+  to `main`. Cherry-pick only the Admin commit; schema changes are pushed to the prod DB first.
+
 - **Where it lives:** `admin.joinnorthstack.com`. The code lives in this repo, as a separate
   frontend chunk (`frontend/src/admin/`, lazy-loaded, so customers never download it). It is
   served by the same Vercel project as the app:
@@ -44,7 +47,7 @@ https://claude.ai/artifact/MuqVmwK4WQwqDTwK2hdw4X
 
 ## Stages
 
-1. **Clients + client page, read only.** In staging since 2026-10-03.
+1. **Clients + client page, read only.** LIVE IN PRODUCTION since 2026-10-03 (app.joinnorthstack.com/admin).
 2. Actions with a log:
    - extend trial, change plan, credit, resend emails, reset password, retry charge,
      suspend/reactivate, export;

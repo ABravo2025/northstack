@@ -39,8 +39,25 @@ vi.mock('../src/modules/hr/timeOffRequestService.js', async (importOriginal) => 
     ...actual,
     listAllTimeOffRequests: vi.fn(async () => [{ id: 'tor_a' }, { id: 'tor_b' }]),
     listMyTimeOffRequests: vi.fn(async (_t: string, employeeId: string) => [{ id: `tor_of_${employeeId}` }]),
+    listTimeOffRequestsForCalendar: vi.fn(async () => [
+      { id: 'cal_1', status: 'approved', startDate: '2026-11-01', endDate: '2026-11-05' },
+      { id: 'cal_2', status: 'approved', startDate: '2026-12-01', endDate: '2026-12-02' },
+    ]),
+    listPendingApprovals: vi.fn(async () => [{ id: 'pend_1', status: 'pending' }]),
     createTimeOffRequest: (input: any, ...rest: any[]) => createTimeOffRequest(input, ...rest),
     decideTimeOffRequest: vi.fn(async (id: string) => ({ success: true, request: { id, status: 'approved' } })),
+  };
+});
+
+vi.mock('../src/modules/tasks/taskService.js', async (importOriginal) => {
+  const actual: any = await importOriginal();
+  return {
+    ...actual,
+    listAllTasksForTenant: vi.fn(async () => [
+      { id: 'tk1', title: 'Call Acme', assigneeId: 'u_ana', completedAt: null, dueDate: '2026-10-01T10:00:00Z', entityType: 'company', entityId: 'c1' },
+      { id: 'tk2', title: 'Send Acme proposal', assigneeId: 'u_ana', completedAt: '2026-09-30T10:00:00Z', dueDate: null, entityType: 'company', entityId: 'c1' },
+      { id: 'tk3', title: 'Payroll check', assigneeId: 'u_other', completedAt: null, dueDate: '2026-12-01T10:00:00Z', entityType: 'employee', entityId: 'e1' },
+    ]),
   };
 });
 
@@ -160,5 +177,34 @@ describe('missing role permission', () => {
     const res = await call('GET', '/hr/payroll');
     expect(res.status).toBe(403);
     expect(res.body.error).toContain('Your role');
+  });
+});
+
+describe('list filters (used by the MCP search tools)', () => {
+  it('tasks: assigneeId=me, status=open and text search', async () => {
+    caller = aiCaller(role([]), ['tasks:read']);
+    const mine = await call('GET', '/tasks?assigneeId=me&status=open');
+    expect(mine.body.data.map((t: any) => t.id)).toEqual(['tk1']);
+    const search = await call('GET', '/tasks?q=acme');
+    expect(search.body.data.map((t: any) => t.id)).toEqual(['tk1', 'tk2']);
+    const due = await call('GET', '/tasks?dueBefore=2026-11-01T00:00:00Z');
+    expect(due.body.data.map((t: any) => t.id)).toEqual(['tk1']);
+  });
+
+  it('no filter params → the full list, unchanged for existing integrations', async () => {
+    caller = aiCaller(role([]), ['tasks:read']);
+    expect((await call('GET', '/tasks')).body.data).toHaveLength(3);
+  });
+
+  it('time off: team calendar for anyone, filtered by an overlapping date window', async () => {
+    caller = aiCaller(role([]), ['hr.timeoff:read']);
+    const { body } = await call('GET', '/hr/timeoff?scope=calendar&from=2026-11-03&to=2026-11-03');
+    expect(body.data.map((r: any) => r.id)).toEqual(['cal_1']);
+  });
+
+  it('time off: pending-approval for the acting approver', async () => {
+    caller = aiCaller(role([]), ['hr.timeoff:read']);
+    const { body } = await call('GET', '/hr/timeoff?scope=pending-approval');
+    expect(body.data.map((r: any) => r.id)).toEqual(['pend_1']);
   });
 });

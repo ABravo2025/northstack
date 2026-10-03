@@ -15,6 +15,25 @@ import { CopyIcon, SparklesIcon, TrashIcon } from '../common/Icons';
 // folds the Growth plan into. Personal tokens only for now; OAuth connections (Unit 4) will show
 // up in this same list.
 
+// The MCP endpoint lives on the same host as the app (vercel.json rewrites /mcp to api/mcp.ts),
+// so staging shows the staging URL and production the production one.
+function mcpServerUrl(): string {
+  return `${window.location.origin}/mcp`;
+}
+
+// Ready-to-paste setup for clients that accept a fixed Authorization header. claude.ai and ChatGPT
+// connectors need OAuth (spec-mcp-server.md Unit 4), so they aren't offered here yet.
+function setupSnippets(token: string): { key: 'claudeCode' | 'cursor'; text: string }[] {
+  const url = mcpServerUrl();
+  return [
+    { key: 'claudeCode', text: `claude mcp add --transport http northstack ${url} --header "Authorization: Bearer ${token}"` },
+    {
+      key: 'cursor',
+      text: JSON.stringify({ mcpServers: { northstack: { url, headers: { Authorization: `Bearer ${token}` } } } }, null, 2),
+    },
+  ];
+}
+
 function formatDate(iso: string | null, never: string): string {
   if (!iso) return never;
   return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
@@ -68,10 +87,9 @@ export default function AiAssistantsCard({ token, canUseAiAssistants }: { token:
     }
   };
 
-  const handleCopy = async () => {
-    if (!revealedToken) return;
+  const copyText = async (value: string) => {
     try {
-      await navigator.clipboard.writeText(revealedToken);
+      await navigator.clipboard.writeText(value);
       toast.success(t('integrations.aiAssistants.copied'));
     } catch (error) {
       toast.error(t('integrations.aiAssistants.copyError', { message: (error as Error).message }));
@@ -104,6 +122,20 @@ export default function AiAssistantsCard({ token, canUseAiAssistants }: { token:
           </h3>
           <p className="text-xs text-ink-muted dark:text-dark-ink-muted">{t('integrations.aiAssistants.description')}</p>
         </div>
+      </div>
+
+      <div className="mb-3 flex flex-col gap-1">
+        <span className="text-xs font-medium">{t('integrations.aiAssistants.serverUrl')}</span>
+        <div className="flex items-center gap-2">
+          <code className="text-xs" style={{ wordBreak: 'break-all' }}>
+            {mcpServerUrl()}
+          </code>
+          <button type="button" className="icon-btn" onClick={() => copyText(mcpServerUrl())}>
+            <span className="tip">{t('integrations.aiAssistants.copy')}</span>
+            <CopyIcon />
+          </button>
+        </div>
+        <p className="text-xs text-ink-muted dark:text-dark-ink-muted">{t('integrations.aiAssistants.oauthSoon')}</p>
       </div>
 
       {connections === null ? (
@@ -187,11 +219,26 @@ export default function AiAssistantsCard({ token, canUseAiAssistants }: { token:
               <code className="text-xs" style={{ wordBreak: 'break-all', flex: 1 }}>
                 {revealedToken}
               </code>
-              <button type="button" className="icon-btn" onClick={handleCopy}>
+              <button type="button" className="icon-btn" onClick={() => copyText(revealedToken)}>
                 <span className="tip">{t('integrations.aiAssistants.copy')}</span>
                 <CopyIcon />
               </button>
             </div>
+            <p className="text-sm font-medium">{t('integrations.aiAssistants.setupTitle')}</p>
+            {setupSnippets(revealedToken).map((snippet) => (
+              <div key={snippet.key} className="flex flex-col gap-1">
+                <span className="text-xs text-ink-muted dark:text-dark-ink-muted">{t(`integrations.aiAssistants.setup.${snippet.key}`)}</span>
+                <div className="flex items-start gap-2">
+                  <pre className="text-xs" style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-all', flex: 1, margin: 0 }}>
+                    {snippet.text}
+                  </pre>
+                  <button type="button" className="icon-btn" onClick={() => copyText(snippet.text)}>
+                    <span className="tip">{t('integrations.aiAssistants.copy')}</span>
+                    <CopyIcon />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <form id="create-ai-token-form" onSubmit={handleCreate} className="flex flex-col gap-3">

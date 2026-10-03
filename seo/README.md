@@ -13,11 +13,11 @@ _Última actualización: 2026-10-03_
 | Tema | Estado |
 |---|---|
 | Search Console | ✅ Propiedad de **Dominio** `joinnorthstack.com` verificada (TXT en Cloudflare) |
-| Sitemap | ✅ Enviado 2026-10-02, **leído correctamente el 2026-10-03** (`https://joinnorthstack.com/sitemap.xml`, 7 URLs; pasa a 9 cuando se publique el pase 1). El primer "No se ha podido leer" fue el aviso típico de recién enviado |
+| Sitemap | ✅ Enviado 2026-10-02, **leído correctamente el 2026-10-03** (`https://joinnorthstack.com/sitemap.xml`, 9 URLs desde el pase 1). El primer "No se ha podido leer" fue el aviso típico de recién enviado |
 | Indexación | 1 página indexada (`/`). `http://` sin indexar = redirección a https, es correcto. Pedida indexación manual de `/` y `/es/` |
 | Rendimiento (3 meses al 2026-10-02) | 9 impresiones, 0 clics, posición media 17,9 (filtro EE. UU.; revisar sin filtro) |
 | Pase técnico | ✅ Hecho 2026-10-02 (títulos, descripciones, canonical, hreflang, OG por idioma, JSON-LD, robots, sitemap) |
-| Páginas por módulo | 🟡 Pase 1 (Vacaciones ES/EN) **armado, sin publicar** — esperando cupo de deploys de Vercel |
+| Páginas por módulo | ✅ Pase 1 (Vacaciones ES/EN) **en producción desde 2026-10-03** · ⬜ CRM, RR.HH., Nómina |
 | Backlinks / directorios | ⬜ Pendiente (lo hace Alejandro) |
 | Analítica del sitio | ⬜ No hay (ni Analytics ni Plausible/Vercel Analytics) |
 
@@ -39,14 +39,14 @@ _Última actualización: 2026-10-03_
 
    | Módulo | ES | EN | Búsquedas objetivo | Estado |
    |---|---|---|---|---|
-   | Ausencias | `/es/software-vacaciones` | `/time-off-software` | software de vacaciones para empleados, control de vacaciones y licencias, calendario de feriados / PTO tracker, leave management | 🟡 Armada, sin publicar |
+   | Ausencias | `/es/software-vacaciones` | `/time-off-software` | software de vacaciones para empleados, control de vacaciones y licencias, calendario de feriados / PTO tracker, leave management | ✅ En producción 2026-10-03 |
    | CRM | `/es/crm-para-pymes` | `/crm-for-small-business` | CRM para pymes, CRM simple, pipeline de ventas / simple CRM, sales pipeline software | ⬜ |
    | RR.HH. | `/es/legajo-digital` | `/hr-software` | legajo digital de empleados, software de RR.HH. para pymes / HR software for small business | ⬜ |
    | Nómina | `/es/recibos-de-sueldo` | `/payroll-tracking` | recibos de sueldo digitales, historial de liquidaciones / payroll records, payslip software | ⬜ |
 
    Regla: **nunca** apuntar a "software de liquidación de sueldos" — Northstack solo registra, no
    calcula ni paga (trae tráfico equivocado).
-4. **Retoques en la portada** — 🟡 armados junto con el pase 1 (ver abajo).
+4. **Retoques en la portada** — ✅ publicados con el pase 1 (ver abajo).
 5. **Después**: páginas de comparación ("Alternativa a Factorial / BambooHR / Humand") y guías/blog
    (ej. "Cómo calcular días de vacaciones según la LCT"), 1–2 por mes.
 6. **Medición**: sumar analítica liviana y, a las 4–6 semanas de publicar, usar "Consultas" de Search
@@ -54,9 +54,10 @@ _Última actualización: 2026-10-03_
 
 ## Pase 1 — Vacaciones + retoques de portada (2026-10-03)
 
-**Estado:** commit local `ca1f1ef` en la rama `seo-pass` (worktree `C:/tmp/ns-landing-seo`), basado en
-`origin/landing` 5345e1a. **No pusheado**: el cupo de deploys de Vercel estaba agotado.
-Vista previa aprobable: https://claude.ai/artifact/GjPUvw5mBbLHNGtSYfQfPL
+**Estado:** ✅ **en producción desde 2026-10-03** (`landing` ca1f1ef, aprobado por Alejandro desde la vista
+previa). Verificado en vivo: las 4 páginas responden 200 con su título nuevo, sitemap con 9 URLs,
+`operatingSystem` "Web". `/time-off-software.html` también responde (el canonical apunta a la URL limpia).
+Vista previa: https://claude.ai/artifact/GjPUvw5mBbLHNGtSYfQfPL
 
 Qué incluye:
 - `landing/es/software-vacaciones.html` y `landing/time-off-software.html` (nuevas): hero con mock de
@@ -71,15 +72,8 @@ Qué incluye:
   (solo las páginas nuevas; las existentes no cambian para no chocar con otras sesiones que editan
   las páginas legales).
 
-**Para publicar (cuando haya cupo en Vercel):**
-1. `git fetch` y verificar que `origin/landing` no avanzó; si avanzó, `git rebase origin/landing`
-   en `seo-pass` (otra sesión suele tocar páginas legales y `pricing.js`).
-2. Ojo: en `main` 5c8d86e cambió el modelo de precios (por usuario). Si el landing se actualiza
-   por eso, revisar que no choque con la portada.
-3. `git push origin seo-pass:landing` → verificar en vivo `/time-off-software`, `/es/software-vacaciones`,
-   el sitemap y la portada.
-4. Search Console → Inspección de URLs → "Solicitar indexación" de las 2 páginas nuevas.
-5. Actualizar este archivo y `handoff.md`.
+**Pendiente (Alejandro):** Search Console → Inspección de URLs → "Solicitar indexación" de
+`https://joinnorthstack.com/es/software-vacaciones` y `https://joinnorthstack.com/time-off-software`.
 
 ## Herramientas
 
@@ -90,6 +84,7 @@ Artifact. Fue escrito para el pase 1 (los retoques de portada fallan a propósit
 aplicados); para los próximos módulos, copiar una plantilla y reutilizar `buildModule()`.
 
 ## Changelog SEO (más nuevo arriba)
+- **2026-10-03** — Pase 1 **publicado en producción** (`landing` ca1f1ef): páginas de Vacaciones ES/EN + retoques de portada. Verificado en vivo.
 - **2026-10-03** — Search Console ya reconoce el sitemap (antes mostraba "No se ha podido leer").
 - **2026-10-03** — Pase 1 armado (Vacaciones ES/EN + retoques de portada), commit local `ca1f1ef`,
   vista previa publicada. Pendiente de push por límite de Vercel.

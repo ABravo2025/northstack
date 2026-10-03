@@ -50,16 +50,16 @@ Landing v2 live 2026-10-02: animated product preview, "what it replaces", Time O
 team-size price calculator (prices fetched from the app), founder quote, FAQ; EN + ES generated from
 one template; About / 404 / legal pages restyled; Terms/Privacy/Refund open in a modal everywhere
 (app and site). SEO: per-language OG images, JSON-LD (WebSite, Organization, SoftwareApplication,
-FAQPage), sitemap, hreflang.
+FAQPage), sitemap, hreflang. Module page: Time Off (EN/ES) since 2026-10-03.
 
 ## SEO (full tracker: `seo/README.md`)
 - Search Console: Domain property verified; sitemap submitted 2026-10-02, read OK on 2026-10-03. Only `/` indexed. 3-month stats: 9 impressions, 0 clicks, avg
   position 17.9.
 - Plan: one page per module EN/ES (Time Off → CRM → HR records → payroll tracking), directory
   backlinks (Capterra, G2, Product Hunt, ...), then comparison pages + guides.
-- **Pass 1 (Time Off pages `/time-off-software`, `/es/software-vacaciones` + home keyword tweaks) is
-  built but NOT live**: local commit `ca1f1ef` on branch `seo-pass` (worktree `C:/tmp/ns-landing-seo`),
-  waiting for Vercel deploy quota. Preview: https://claude.ai/artifact/GjPUvw5mBbLHNGtSYfQfPL
+- **Pass 1 LIVE 2026-10-03** (`landing` ca1f1ef): Time Off pages `/time-off-software` + `/es/software-vacaciones`
+  (via vercel.json rewrites), home titles/H1 keyword kicker, internal links, sitemap (9 URLs), Android
+  dropped from JSON-LD. Next: CRM, HR records, payroll-tracking pages.
 - Open: `www.joinnorthstack.com` serves 200 instead of redirecting (fix in Vercel → Domains); no site
   analytics yet.
 
@@ -80,6 +80,7 @@ SEO is part of marketing: every SEO change is logged in `seo/README.md` + a chan
 ---
 
 ## Changelog (newest first)
+- **2026-10-03** — SEO pass 1 LIVE on joinnorthstack.com (Time Off module pages EN/ES + home keyword tweaks).
 - **2026-10-03** — SEO pass 1 built (Time Off module pages EN/ES, home titles/H1 keywords, internal
   links, sitemap, clean-URL rewrites, Android dropped from JSON-LD); local commit `ca1f1ef`, not pushed
   (Vercel deploy limit). SEO tracker `seo/README.md` + tooling `tools/seo/` added.

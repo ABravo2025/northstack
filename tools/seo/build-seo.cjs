@@ -2,8 +2,8 @@
 // tweaks, sitemap + vercel rewrites, and a self-contained preview set for the Artifact.
 const fs = require('fs');
 const path = require('path');
-const LANDING = 'C:/tmp/ns-landing-seo/landing';
-const HERE = __dirname; // templates sit next to this script (marketing branch tools/seo/)
+const LANDING = process.env.LANDING || 'C:/tmp/ns-landing-seo/landing';
+const HERE = __dirname; // templates sit next to this script (marketing branch tools/seo/); LANDING env var = landing folder to read
 const rd = (p) => fs.readFileSync(p, 'utf8').replace(/\r\n/g, '\n');
 const wr = (p, s) => { fs.mkdirSync(path.dirname(p), { recursive: true }); fs.writeFileSync(p, s); };
 function rep(s, from, to, label) {
@@ -159,9 +159,19 @@ function previewize(s) {
   });
   return s;
 }
-const PV = HERE + '/preview';
-wr(PV + '/vacaciones-es.html', previewize(pages['es/software-vacaciones.html']));
-wr(PV + '/vacaciones-en.html', previewize(pages['time-off-software.html']));
-wr(PV + '/inicio-es.html', previewize(pages['es/index.html']));
-wr(PV + '/inicio-en.html', previewize(pages['index.html']));
+const PV = HERE + "/preview";
+// Preview-only page switcher (never shipped): a small floating bar to hop between the 4 pages.
+const SW = [["index.html","Vacaciones ES"],["vacaciones-en.html","Vacaciones EN"],["inicio-es.html","Portada ES"],["inicio-en.html","Portada EN"]];
+function switcher(cur) {
+  const links = SW.map(([f, l]) => `<a href="${f}"${f === cur ? ' aria-current="page"' : ""}>${l}</a>`).join("");
+  return `<div id="pv-switch" style="position:fixed;left:50%;transform:translateX(-50%);bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:200;display:flex;flex-wrap:wrap;justify-content:center;gap:4px;max-width:calc(100% - 24px);padding:5px;border-radius:14px;background:rgba(20,16,43,.92);box-shadow:0 12px 30px -10px rgba(0,0,0,.5);font:600 12.5px/1 'Instrument Sans',system-ui,sans-serif"><span style="color:#b9b1d9;padding:8px 6px 8px 8px">Vista previa</span>${links}</div><style>#pv-switch a{color:#f1edff;text-decoration:none;padding:8px 10px;border-radius:9px}#pv-switch a:hover{background:rgba(255,255,255,.1)}#pv-switch a[aria-current]{background:#5b21e6;color:#fff}footer{padding-bottom:96px}</style>`;
+}
+MAP["/es/software-vacaciones"] = "index.html";
+const full = (src, cur) => previewize(src).replace("\n  </body>", "\n" + switcher(cur) + "\n  </body>");
+// The artifact main page gets wrapped in its own document skeleton, so it carries head + body content only.
+const bare = (doc) => doc.replace(/^<!doctype html>\s*<html[^>]*>\s*<head>\s*/i, "").replace(/<\/head>\s*<body>/i, "").replace(/<\/body>\s*<\/html>\s*$/i, "");
+wr(PV + "/index.html", bare(full(pages["es/software-vacaciones.html"], "index.html")));
+wr(PV + "/vacaciones-en.html", full(pages["time-off-software.html"], "vacaciones-en.html"));
+wr(PV + "/inicio-es.html", full(pages["es/index.html"], "inicio-es.html"));
+wr(PV + "/inicio-en.html", full(pages["index.html"], "inicio-en.html"));
 console.log('ok', Object.keys(pages).join(', '), process.argv.includes('--write') ? '(written)' : '(dry run)');

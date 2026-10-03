@@ -81,6 +81,7 @@ SEO is part of marketing: every SEO change is logged in `seo/README.md` + a chan
 ---
 
 ## Changelog (newest first)
+- **2026-10-03** — **Admin Center v2, stage 1 LIVE** (internal staff tool, `app.joinnorthstack.com/admin`; moves to admin.joinnorthstack.com at stage 4): Home with MRR/conversion/needs-attention, Clients list with health score, per-client page (users, module usage, billing, tickets, notes, timeline). Internal only — nothing to market. Spec: `docs/Admin-platform/spec-admin-center-v2.md` on main (d8832f1).
 - **2026-10-03** — Metric tiles (Overview + every Dashboards page) fixed after a client report: label and value centered, long values (e.g. `$114,900.00`, multi-currency sums) shrink to the tile's width instead of spilling out. Straight to prod as a hotfix (main be7afe6, staging 7e82861).
 - **2026-10-03** — Northstack listed on **G2** (profile approved). Directory kit: `2026-10/semana-01/directorios/`.
 - **2026-10-03** — Pricing fixes LIVE: landing currency by visitor IP (ARS for Argentina via app `/api/public/geo` = Vercel x-vercel-ip-country, USD elsewhere; no currency switch), prices added to the Time Off module pages (EN/ES), Free Trial capped at 3 users (= minimum team). App main 4d91de4, landing dcb2f58.

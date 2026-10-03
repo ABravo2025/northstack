@@ -10,6 +10,7 @@ Lanzamiento del nuevo diseño (violeta "Eléctrico" + Instrument Sans) y de la l
 | Video demo 16:9 (YouTube, no listado) ES / EN | `video/northstack-demo-es-16x9.mp4`, `video/northstack-demo-en-16x9.mp4` | Listo, 45 s |
 | Música de fondo (generada, sin derechos) | `video/musica-fondo-uplifting.mp3` | Usada en los 4 videos |
 | SEO pase 1: página de Vacaciones ES/EN + retoques de portada | `../../seo/README.md` | Publicado en joinnorthstack.com (2026-10-03) |
+| Perfil para directorios (Capterra, G2…): textos ES/EN, categorías, precios, logos SVG/PNG | `directorios/perfil-producto.md`, `directorios/logo/` | Listo; en carga |
 | Imágenes para compartir (OG) ES / EN | `imagenes/og-image-es.jpg`, `imagenes/og-image-en.jpg` | Publicadas en joinnorthstack.com |
 
 ## Cómo publicar el post

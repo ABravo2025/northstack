@@ -18,7 +18,7 @@ _Última actualización: 2026-10-03_
 | Rendimiento (3 meses al 2026-10-02) | 9 impresiones, 0 clics, posición media 17,9 (filtro EE. UU.; revisar sin filtro) |
 | Pase técnico | ✅ Hecho 2026-10-02 (títulos, descripciones, canonical, hreflang, OG por idioma, JSON-LD, robots, sitemap) |
 | Páginas por módulo | ✅ Pase 1 (Vacaciones ES/EN) **en producción desde 2026-10-03** · ⬜ CRM, RR.HH., Nómina |
-| Backlinks / directorios | ⬜ Pendiente (lo hace Alejandro) |
+| Backlinks / directorios | 🟡 En curso: kit de perfil (textos ES/EN + logos) en `2026-10/semana-01/directorios/`; Alejandro carga los perfiles |
 | Analítica del sitio | ⬜ No hay (ni Analytics ni Plausible/Vercel Analytics) |
 
 ## Problemas conocidos
@@ -71,8 +71,7 @@ Qué incluye:
   (solo las páginas nuevas; las existentes no cambian para no chocar con otras sesiones que editan
   las páginas legales).
 
-**Pendiente (Alejandro):** Search Console → Inspección de URLs → "Solicitar indexación" de
-`https://joinnorthstack.com/es/software-vacaciones` y `https://joinnorthstack.com/time-off-software`.
+Indexación de las 2 páginas nuevas pedida en Search Console el 2026-10-03.
 
 ## Herramientas
 
@@ -83,6 +82,7 @@ Artifact. Fue escrito para el pase 1 (los retoques de portada fallan a propósit
 aplicados); para los próximos módulos, copiar una plantilla y reutilizar `buildModule()`.
 
 ## Changelog SEO (más nuevo arriba)
+- **2026-10-03** — Indexación pedida para `/es/software-vacaciones` y `/time-off-software`. Kit para directorios armado (`2026-10/semana-01/directorios/`).
 - **2026-10-03** — `www.joinnorthstack.com` ahora redirige 308 a `joinnorthstack.com` (configurado en el dominio en Vercel).
 - **2026-10-03** — Pase 1 **publicado en producción** (`landing` ca1f1ef): páginas de Vacaciones ES/EN + retoques de portada. Verificado en vivo.
 - **2026-10-03** — Search Console ya reconoce el sitemap (antes mostraba "No se ha podido leer").

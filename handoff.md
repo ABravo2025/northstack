@@ -63,8 +63,7 @@ FAQPage), sitemap, hreflang. Module page: Time Off (EN/ES) since 2026-10-03.
 - **Pass 1 LIVE 2026-10-03** (`landing` ca1f1ef): Time Off pages `/time-off-software` + `/es/software-vacaciones`
   (via vercel.json rewrites), home titles/H1 keyword kicker, internal links, sitemap (9 URLs), Android
   dropped from JSON-LD. Next: CRM, HR records, payroll-tracking pages.
-- Open: `www.joinnorthstack.com` serves 200 instead of redirecting (fix in Vercel → Domains); no site
-  analytics yet.
+- `www` → apex 308 redirect fixed 2026-10-03 (Vercel domain setting). Open: no site analytics yet.
 
 ## Known issues / backlog
 - Employee detail modal: fields collapse to one letter at ~900 px viewport width.
@@ -73,7 +72,6 @@ FAQPage), sitemap, hreflang. Module page: Time Off (EN/ES) since 2026-10-03.
 - Logo (fleur) still navy/blue; chart palette intentionally unchanged.
 - Approve time-off endpoint slow (~6 s, calendar sync + notifications).
 - Notification preferences (opt-in emails) pending; some transactional emails not awaited.
-- Website: `www` subdomain not redirecting to apex (duplicate content, canonical mitigates).
 
 ## Marketing rules (short)
 Payroll = tracking only · no Payments marketing · no "EN & ES" claim · no Android claim until Play
@@ -83,6 +81,7 @@ SEO is part of marketing: every SEO change is logged in `seo/README.md` + a chan
 ---
 
 ## Changelog (newest first)
+- **2026-10-03** — `www.joinnorthstack.com` now 308-redirects to `joinnorthstack.com`.
 - **2026-10-03** — **Per-user pricing LIVE** (app `main` 5c8d86e + redeploy 75bf7c0, landing 15d995d): launch offer until 2026-12-31 (Starter USD 4 / Growth USD 6 per user, regular 6 / 10; ARS 6.000 / 9.000, regular 9.000 / 15.000), minimum 3 users, plans modal with struck-through regular price and launch banner, landing USD/ARS switch. Previous deploy on 2026-10-02 failed on Vercel's daily build limit (Hobby plan; Vercel Hobby is non-commercial per its terms — Pro recommended).
 - **2026-10-03** — SEO pass 1 LIVE on joinnorthstack.com (Time Off module pages EN/ES + home keyword tweaks).
 - **2026-10-03** — SEO pass 1 built (Time Off module pages EN/ES, home titles/H1 keywords, internal

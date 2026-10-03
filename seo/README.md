@@ -23,10 +23,9 @@ _Última actualización: 2026-10-03_
 
 ## Problemas conocidos
 
-- **`www.joinnorthstack.com` responde 200 en vez de redirigir** al dominio sin www, aunque
-  `landing/vercel.json` tiene la redirección (no se aplica). Contenido duplicado; el `canonical` lo
-  mitiga. Arreglo: Vercel → proyecto `landing` → Settings → Domains → `www` → "Redirect to
-  joinnorthstack.com" (308). **Pendiente, lo hace Alejandro.**
+- ✅ **`www` arreglado 2026-10-03**: Vercel → proyecto `northstack-landing` → Settings → Domains → `www` →
+  "Redirect to Another Domain" → `joinnorthstack.com` (308). Verificado: `www` (con cualquier ruta) → 308 al
+  dominio sin www. (La redirección de `landing/vercel.json` nunca se aplicaba; queda como respaldo.)
 - El diagnóstico de fondo: el sitio tiene solo 2 páginas que pueden posicionar (portada EN/ES), un
   dominio nuevo sin enlaces entrantes y H1 sin palabras clave. La parte técnica no es el cuello de botella.
 
@@ -84,6 +83,7 @@ Artifact. Fue escrito para el pase 1 (los retoques de portada fallan a propósit
 aplicados); para los próximos módulos, copiar una plantilla y reutilizar `buildModule()`.
 
 ## Changelog SEO (más nuevo arriba)
+- **2026-10-03** — `www.joinnorthstack.com` ahora redirige 308 a `joinnorthstack.com` (configurado en el dominio en Vercel).
 - **2026-10-03** — Pase 1 **publicado en producción** (`landing` ca1f1ef): páginas de Vacaciones ES/EN + retoques de portada. Verificado en vivo.
 - **2026-10-03** — Search Console ya reconoce el sitemap (antes mostraba "No se ha podido leer").
 - **2026-10-03** — Pase 1 armado (Vacaciones ES/EN + retoques de portada), commit local `ca1f1ef`,

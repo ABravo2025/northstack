@@ -601,6 +601,10 @@ model User {
   // facebook, website } → https URL. JSON rather than one column per network so adding a network
   // is a code change, not a migration. Validated/normalized in authService.normalizeSocialLinks.
   socialLinks                 Json?
+  // Admin Center v2 (2026-10-03): last authenticated request, written at most every 10 minutes
+  // (authService.ts's authenticateToken). Null = never seen since this field existed.
+  lastSeenAt                  DateTime?
+  activityDays                UserActivityDay[]
   pipelinesCreated            Pipeline[]                  @relation("PipelineCreatedBy")
   pipelinesUpdated            Pipeline[]                  @relation("PipelineUpdatedBy")
   pipelinesLastAssigned       Pipeline[]                  @relation("PipelineLastAssignedUser")
@@ -1752,6 +1756,19 @@ model SavedView {
   createdAt       DateTime            @default(now())
 
   @@index([tenantId, entityType])
+}
+
+// One row per user per UTC day they used the app (Admin Center v2, 2026-10-03) — what the
+// "active users per day" chart and the health score's "team access" read. Written by
+// authenticateToken together with User.lastSeenAt, so at most one insert per user per day.
+model UserActivityDay {
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenantId String?
+  day      DateTime @db.Date
+
+  @@id([userId, day])
+  @@index([tenantId, day])
 }
 
 model Session {

@@ -35,6 +35,7 @@ import {
   setTenantTaskCompleted,
 } from '../modules/platform/platformTenantNotesService.js';
 import { listIncompleteSignups } from '../modules/platform/platformSignupService.js';
+import { getClientDetail, getOverview, listClients } from '../modules/platform/adminClientService.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 
 export const platformRouter = createAsyncRouter();
@@ -178,6 +179,35 @@ platformRouter.patch('/api/platform/tenants/:id/tasks/:taskId', async (req, res)
     return res.status(404).json({ error: 'Task not found' });
   }
   return res.json(task);
+});
+
+// Admin Center v2 (2026-10-03) — read-only client views. Platform staff only (any platform role).
+platformRouter.get('/api/platform/admin/overview', async (req, res) => {
+  const user = await requirePlatformRole('platform_support')(req, res);
+  if (!user) {
+    return;
+  }
+  return res.json(await getOverview());
+});
+
+platformRouter.get('/api/platform/admin/clients', async (req, res) => {
+  const user = await requirePlatformRole('platform_support')(req, res);
+  if (!user) {
+    return;
+  }
+  return res.json(await listClients());
+});
+
+platformRouter.get('/api/platform/admin/clients/:id', async (req, res) => {
+  const user = await requirePlatformRole('platform_support')(req, res);
+  if (!user) {
+    return;
+  }
+  const client = await getClientDetail(req.params.id);
+  if (!client) {
+    return res.status(404).json({ error: 'Client not found' });
+  }
+  return res.json(client);
 });
 
 platformRouter.get('/api/platform/signups', async (req, res) => {

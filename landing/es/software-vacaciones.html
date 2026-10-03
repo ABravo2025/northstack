@@ -330,7 +330,22 @@ footer a { display: block; text-decoration: none; padding: 3px 0; } footer a:hov
     <script type="application/ld+json">
       {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"¿Puedo usar el calendario de feriados de otro país?","acceptedAnswer":{"@type":"Answer","text":"Sí. El calendario se elige según dónde trabaja tu equipo, que puede no ser el país de la empresa, y se importa en un clic. Después podés marcar cada día no laborable como libre o trabajado."}},{"@type":"Question","name":"¿Cuenta días hábiles o días corridos?","acceptedAnswer":{"@type":"Answer","text":"Los dos. Cada política define cómo cuenta los días. Con días hábiles, los fines de semana, los feriados y los días libres de la empresa no se descuentan del saldo."}},{"@type":"Question","name":"¿Quién aprueba los pedidos de vacaciones?","acceptedAnswer":{"@type":"Answer","text":"El jefe directo de la persona. Además, el owner, los administradores o quien tenga el permiso de decidir ausencias pueden aprobar o rechazar cualquier pedido. Si una política no requiere aprobación, el pedido se aprueba al instante."}},{"@type":"Question","name":"¿Qué pasa con los días de vacaciones que no se usan?","acceptedAnswer":{"@type":"Answer","text":"Cada política lo decide: al 31 de diciembre los días se trasladan al año siguiente, con un tope opcional, o vencen. En los dos casos queda registrado."}},{"@type":"Question","name":"¿Cuántas políticas de ausencia puedo crear?","acceptedAnswer":{"@type":"Answer","text":"En el plan Starter, hasta 3. En Growth, ilimitadas. Durante la prueba gratis de 15 días tenés acceso a todo."}},{"@type":"Question","name":"¿Se sincroniza con Google Calendar?","acceptedAnswer":{"@type":"Answer","text":"Sí. Cuando conectás tu cuenta de Google, tus ausencias aprobadas se agregan solas a tu calendario personal."}}]}
     </script>
+    <script src="/pricing.js?v=3" defer></script>
     <script src="/legal-modal.js" defer></script>
+<style>
+.price-cta .plans { grid-template-columns: minmax(0,1fr); }
+@media (min-width: 760px) { .price-cta .plans { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+.price-cta .price { flex-wrap: wrap; row-gap: 2px; }
+.price-cta .price s { flex-basis: 100%; color: var(--ink-3); font-size: 16px; }
+.price-cta .price s:empty { display: none; }
+.price-cta .price b { font-size: clamp(30px, 3vw, 42px); }
+.price-cta .price > span { flex-basis: 100%; }
+.price-cta .off { display: inline-block; width: fit-content; margin-top: 6px; font-size: 12.5px; font-weight: 700; color: #b4400a; background: #fff1e6; padding: 2px 9px; border-radius: 99px; }
+.price-cta .off[hidden], .price-cta .launchline[hidden] { display: none; }
+.price-cta .launchline { color: #b4400a; font-weight: 600; margin: 0; }
+.price-cta .foot { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; margin-top: 18px; color: var(--ink-3); font-size: 14.5px; }
+@media (prefers-color-scheme: dark) { .price-cta .off, .price-cta .launchline { color: #ffb27a; } .price-cta .off { background: rgba(255,140,60,.14); } }
+</style>
   </head>
   <body>
 <nav class="top" aria-label="Main">
@@ -429,6 +444,14 @@ footer a { display: block; text-decoration: none; padding: 3px 0; } footer a:hov
       <div><span class="eyebrow">Parte de Northstack</span><h3>Las ausencias viven junto al resto de tu equipo.</h3><p>El mismo legajo de cada persona alimenta ausencias, CRM de ventas y seguimiento de nómina. Nada se carga dos veces.</p></div>
       <a class="btn btn-g" href="/es/#product">Ver todos los módulos <span class="arrow">→</span></a>
     </div>
+  </div>
+</section>
+
+<section class="block price-cta" id="pricing" style="padding-top:20px">
+  <div class="wrap">
+    <div class="head"><span class="eyebrow">Precios</span><h2>Las ausencias vienen en todos los planes.</h2><p class="lede">Pagás por usuario activo. Empezá gratis por 15 días, sin tarjeta.</p><p class="launchline" data-ns-launch="Precio de lanzamiento hasta el {date} — hasta {pct}% off, y lo mantenés mientras sigas suscripto." hidden></p></div>
+    <div class="plans"><div class="plan"><h3>Starter</h3><div class="for">Para equipos chicos que se están organizando</div><div class="price"><s data-ns-reg="starter"></s><b data-ns-now="starter">—</b><span>/ usuario / mes</span></div><span class="off" data-ns-off="starter" hidden></span><ul><li>Ausencias con hasta 3 políticas</li><li>Calendarios de feriados y aprobaciones</li><li>CRM de ventas, tareas y notas</li></ul><a class="btn btn-g" href="https://app.joinnorthstack.com/register">Empezar gratis</a></div><div class="plan hot"><span class="badge">El más elegido</span><h3>Growth</h3><div class="for">Para equipos listos para escalar</div><div class="price"><s data-ns-reg="growth"></s><b data-ns-now="growth">—</b><span>/ usuario / mes</span></div><span class="off" data-ns-off="growth" hidden></span><ul><li>Políticas de ausencias ilimitadas</li><li>Seguimiento de nómina</li><li>Roles personalizados ilimitados</li></ul><a class="btn btn-p" href="https://app.joinnorthstack.com/register">Empezar gratis</a></div></div>
+    <div class="foot"><span>Mínimo <span data-pricing="min-users">3</span> usuarios por equipo.</span><a href="/es/#pricing">Ver todos los precios →</a></div>
   </div>
 </section>
 

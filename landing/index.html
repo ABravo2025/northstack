@@ -345,7 +345,7 @@ footer a { display: block; text-decoration: none; padding: 3px 0; } footer a:hov
     <script type="application/ld+json">
       {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is there a free trial?","acceptedAnswer":{"@type":"Answer","text":"Yes. Every plan starts with 15 days of full access, and you don't need a credit card to begin."}},{"@type":"Question","name":"Can I change plans later?","acceptedAnswer":{"@type":"Answer","text":"Anytime. Upgrade, downgrade or cancel from your billing settings; changes apply on your next billing cycle."}},{"@type":"Question","name":"Is my data kept separate from other companies?","acceptedAnswer":{"@type":"Answer","text":"Yes. Every company's data is isolated at the database level and never shared with another workspace."}},{"@type":"Question","name":"What happens when my trial ends?","acceptedAnswer":{"@type":"Answer","text":"You'll be asked to choose a plan and add your billing details. If you don't, your account moves into a grace period before access is limited."}},{"@type":"Question","name":"Does Northstack pay my employees?","acceptedAnswer":{"@type":"Answer","text":"No. Payroll in Northstack is a record of compensation, pay runs and pay stubs. Northstack never processes or sends any payment; you keep paying your team through your own bank or payroll provider."}}]}
     </script>
-    <script src="/pricing.js" defer></script>
+    <script src="/pricing.js?v=3" defer></script>
     <script src="/legal-modal.js" defer></script>
   </head>
   <body>
@@ -480,7 +480,6 @@ footer a { display: block; text-decoration: none; padding: 3px 0; } footer a:hov
       <label for="team">Team size</label>
       <output id="team-out" for="team">8</output>
       <input type="range" id="team" min="1" max="50" value="8" aria-describedby="team-help">
-      <div class="cur" role="group" aria-label="Currency"><button type="button" data-cur="international" aria-pressed="true">USD</button><button type="button" data-cur="ar" aria-pressed="false">ARS</button></div>
       <small id="team-help">Billed per active user · minimum <span data-pricing="min-users">3</span> users per team.</small>
     </div>
     <div class="plans">
@@ -604,17 +603,11 @@ footer a { display: block; text-decoration: none; padding: 3px 0; } footer a:hov
   var P = null;
   var totalNote = (n, per, total, reg) => `${n} users × ${per} = <b>${total}/month</b>${reg ? ` <span class="was">(regular ${reg})</span>` : ''}`;
   var minNote = (min, total) => `Minimum ${min} users — <b>${total}/month</b>`;
+  // Currency comes from pricing.js: ARS for visitors in Argentina (by IP), USD for everyone else.
   var market = 'international';
-  try {
-    var tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
-    if (tz.indexOf('America/Argentina') === 0 || tz === 'America/Buenos_Aires' || /-AR$/i.test(navigator.language || '')) market = 'ar';
-  } catch (e) {}
-  var curButtons = Array.prototype.slice.call(document.querySelectorAll('[data-cur]'));
-  curButtons.forEach(function (b) { b.addEventListener('click', function () { market = b.getAttribute('data-cur'); calc(); }); });
   function calc() {
     var n = Number(team.value);
     out.textContent = n;
-    curButtons.forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-cur') === market)); });
     if (!P || !P.pricing.markets[market] || !P.pricing.markets[market].perUser) return;
     var pr = P.pricing, m = pr.markets[market], money = function (c) { return P.money(c, m.currency); };
     var tier = pr.isLaunch ? 'launch' : 'regular', maxPct = 0;
@@ -641,8 +634,8 @@ footer a { display: block; text-decoration: none; padding: 3px 0; } footer a:hov
     }
   }
   team.addEventListener('input', calc);
-  window.addEventListener('northstack:pricing', function (e) { P = e.detail; calc(); });
-  if (window.northstackPricing) { P = window.northstackPricing; }
+  window.addEventListener('northstack:pricing', function (e) { P = e.detail; market = P.market; calc(); });
+  if (window.northstackPricing) { P = window.northstackPricing; market = P.market; }
   calc();
 })();
 </script>

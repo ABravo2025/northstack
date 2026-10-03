@@ -330,7 +330,22 @@ footer a { display: block; text-decoration: none; padding: 3px 0; } footer a:hov
     <script type="application/ld+json">
       {"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Can I use another country's holiday calendar?","acceptedAnswer":{"@type":"Answer","text":"Yes. You pick the calendar by where your team works, which can differ from the company's country, and import it in one click. Then you can mark each non-working day as given off or worked."}},{"@type":"Question","name":"Does it count business days or calendar days?","acceptedAnswer":{"@type":"Answer","text":"Both. Each policy sets how it counts days. With business days, weekends, public holidays and company days off are never deducted from the balance."}},{"@type":"Question","name":"Who approves time off requests?","acceptedAnswer":{"@type":"Answer","text":"The person's direct manager. The owner, admins, or anyone with the time-off decision permission can also approve or reject any request. If a policy doesn't need approval, the request is approved instantly."}},{"@type":"Question","name":"What happens to unused PTO?","acceptedAnswer":{"@type":"Answer","text":"Each policy decides: on December 31, unused days carry over to next year, with an optional cap, or expire. Either way it is recorded."}},{"@type":"Question","name":"How many time off policies can I create?","acceptedAnswer":{"@type":"Answer","text":"Up to 3 on the Starter plan and unlimited on Growth. The 15-day free trial includes everything."}},{"@type":"Question","name":"Does it sync with Google Calendar?","acceptedAnswer":{"@type":"Answer","text":"Yes. Once you connect your Google account, your approved time off is added to your personal calendar automatically."}}]}
     </script>
+    <script src="/pricing.js?v=3" defer></script>
     <script src="/legal-modal.js" defer></script>
+<style>
+.price-cta .plans { grid-template-columns: minmax(0,1fr); }
+@media (min-width: 760px) { .price-cta .plans { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+.price-cta .price { flex-wrap: wrap; row-gap: 2px; }
+.price-cta .price s { flex-basis: 100%; color: var(--ink-3); font-size: 16px; }
+.price-cta .price s:empty { display: none; }
+.price-cta .price b { font-size: clamp(30px, 3vw, 42px); }
+.price-cta .price > span { flex-basis: 100%; }
+.price-cta .off { display: inline-block; width: fit-content; margin-top: 6px; font-size: 12.5px; font-weight: 700; color: #b4400a; background: #fff1e6; padding: 2px 9px; border-radius: 99px; }
+.price-cta .off[hidden], .price-cta .launchline[hidden] { display: none; }
+.price-cta .launchline { color: #b4400a; font-weight: 600; margin: 0; }
+.price-cta .foot { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; margin-top: 18px; color: var(--ink-3); font-size: 14.5px; }
+@media (prefers-color-scheme: dark) { .price-cta .off, .price-cta .launchline { color: #ffb27a; } .price-cta .off { background: rgba(255,140,60,.14); } }
+</style>
   </head>
   <body>
 <nav class="top" aria-label="Main">
@@ -429,6 +444,14 @@ footer a { display: block; text-decoration: none; padding: 3px 0; } footer a:hov
       <div><span class="eyebrow">Part of Northstack</span><h3>Time off lives next to the rest of your team.</h3><p>The same record for each person powers time off, the sales CRM and payroll tracking. Nothing is typed twice.</p></div>
       <a class="btn btn-g" href="/#product">See every module <span class="arrow">→</span></a>
     </div>
+  </div>
+</section>
+
+<section class="block price-cta" id="pricing" style="padding-top:20px">
+  <div class="wrap">
+    <div class="head"><span class="eyebrow">Pricing</span><h2>Time off included in every plan.</h2><p class="lede">Pay per active user. Start free for 15 days, no credit card.</p><p class="launchline" data-ns-launch="Launch price until {date} — up to {pct}% off, locked for as long as you stay subscribed." hidden></p></div>
+    <div class="plans"><div class="plan"><h3>Starter</h3><div class="for">For small teams getting organized</div><div class="price"><s data-ns-reg="starter"></s><b data-ns-now="starter">—</b><span>/ user / month</span></div><span class="off" data-ns-off="starter" hidden></span><ul><li>Time off with up to 3 policies</li><li>Holiday calendars and approvals</li><li>Sales CRM, tasks and notes</li></ul><a class="btn btn-g" href="https://app.joinnorthstack.com/register">Start free trial</a></div><div class="plan hot"><span class="badge">Most popular</span><h3>Growth</h3><div class="for">For teams ready to scale</div><div class="price"><s data-ns-reg="growth"></s><b data-ns-now="growth">—</b><span>/ user / month</span></div><span class="off" data-ns-off="growth" hidden></span><ul><li>Unlimited time off policies</li><li>Payroll tracking</li><li>Unlimited custom roles</li></ul><a class="btn btn-p" href="https://app.joinnorthstack.com/register">Start free trial</a></div></div>
+    <div class="foot"><span>Minimum <span data-pricing="min-users">3</span> users per team.</span><a href="/#pricing">See full pricing →</a></div>
   </div>
 </section>
 

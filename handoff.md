@@ -81,6 +81,7 @@ SEO is part of marketing: every SEO change is logged in `seo/README.md` + a chan
 ---
 
 ## Changelog (newest first)
+- **2026-10-03** — Metric tiles (Overview + every Dashboards page) fixed after a client report: label and value centered, long values (e.g. `$114,900.00`, multi-currency sums) shrink to the tile's width instead of spilling out. Straight to prod as a hotfix (main be7afe6, staging 7e82861).
 - **2026-10-03** — Northstack listed on **G2** (profile approved). Directory kit: `2026-10/semana-01/directorios/`.
 - **2026-10-03** — Pricing fixes LIVE: landing currency by visitor IP (ARS for Argentina via app `/api/public/geo` = Vercel x-vercel-ip-country, USD elsewhere; no currency switch), prices added to the Time Off module pages (EN/ES), Free Trial capped at 3 users (= minimum team). App main 4d91de4, landing dcb2f58.
 - **2026-10-03** — `www.joinnorthstack.com` now 308-redirects to `joinnorthstack.com`.

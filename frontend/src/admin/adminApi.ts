@@ -1,7 +1,7 @@
 import { API_BASE_URL } from '../api/http';
 
-// Admin Center v2 (2026-10-03). Its own token key: on staging/app hosts the Admin lives at /admin
-// next to the customer app, and the two sessions must never overwrite each other.
+// Admin Center v2 (2026-10-03). Its own token key, so an Admin session can never be mistaken for a
+// customer-app session in the same browser storage.
 export const ADMIN_TOKEN_KEY = 'adminToken';
 
 export class AdminApiError extends Error {

@@ -10,16 +10,16 @@ import './index.css'
 initTheme();
 
 // Admin Center v2 (2026-10-03): Northstack's internal tool ships in this same bundle but loads
-// separately (lazy chunk), so customers never download it. It takes over on admin.joinnorthstack.com
-// and on /admin of any other host (staging, local dev).
+// separately (lazy chunk), so customers never download it. It only ever opens on an admin.* host:
+// admin.joinnorthstack.com in production, admin.localhost:5173 locally. Never under the customer
+// app's domain (Alejandro, 2026-10-03).
 const isAdminHost = window.location.hostname.startsWith('admin.');
-const isAdminPath = window.location.pathname === '/admin' || window.location.pathname.startsWith('/admin/');
 const AdminApp = lazy(() => import('./admin/AdminApp'));
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    {isAdminHost || isAdminPath ? (
-      <BrowserRouter basename={isAdminHost ? '/' : '/admin'}>
+    {isAdminHost ? (
+      <BrowserRouter>
         <Suspense fallback={null}>
           <AdminApp />
         </Suspense>

@@ -11,20 +11,18 @@ https://claude.ai/artifact/MuqVmwK4WQwqDTwK2hdw4X
 - **Production only (Alejandro, 2026-10-03):** Admin changes skip the staging review and go straight
   to `main`. Cherry-pick only the Admin commit; schema changes are pushed to the prod DB first.
 
-- **Where it lives:** `admin.joinnorthstack.com`. The code lives in this repo, as a separate
-  frontend chunk (`frontend/src/admin/`, lazy-loaded, so customers never download it). It is
-  served by the same Vercel project as the app:
-  - `main.tsx` renders `AdminApp` on any `admin.*` host;
-  - on any other host it renders `AdminApp` on `/admin` (staging/local).
-- **The domain moves when stage 4 is done**, because that stage rebuilds Tickets/Ideas. Until
-  then the old Admin keeps running on `admin.joinnorthstack.com`, and the new one is used at
-  `app.joinnorthstack.com/admin`.
+- **Where it lives: only `admin.joinnorthstack.com`** (never under app.joinnorthstack.com,
+  Alejandro 2026-10-03). The code lives in this repo as a separate lazy frontend chunk
+  (`frontend/src/admin/`), served by the same Vercel project as the app. `main.tsx` renders
+  `AdminApp` only on an `admin.*` host; locally that's `admin.localhost:5173`. The domain moved
+  from the old `northstack-devtasks` project to the app's project on 2026-10-03, so the old Admin
+  (and its Tickets/Ideas screens) is retired from that day; stage 4 rebuilds Tickets/Ideas.
 - **What's kept from the old Admin:**
   - `User.platformRole`;
   - Ticket/Idea data;
   - the `/api/platform/*` routes and tenant notes/tasks.
 
-  `northstack-devtasks` is retired after the domain moves.
+  `northstack-devtasks` is retired (2026-10-03).
 - **Spanish only.** It's an internal tool and only Alejandro uses it for now.
 - **Staff roles (Admin / Support / Read only):** later (~stage 10). Until then only Alejandro
   uses it.
@@ -47,13 +45,13 @@ https://claude.ai/artifact/MuqVmwK4WQwqDTwK2hdw4X
 
 ## Stages
 
-1. **Clients + client page, read only.** LIVE IN PRODUCTION since 2026-10-03 (app.joinnorthstack.com/admin).
+1. **Clients + client page, read only.** LIVE IN PRODUCTION since 2026-10-03 (admin.joinnorthstack.com).
 2. Actions with a log:
    - extend trial, change plan, credit, resend emails, reset password, retry charge,
      suspend/reactivate, export;
    - **modules and limits per client**.
 3. Home + Billing: business metrics and alerts.
-4. Tickets, Ideas, Announcements and Notes rebuilt and linked to the client page. **Domain move.**
+4. Tickets, Ideas, Announcements and Notes rebuilt and linked to the client page.
 5. Login as support (with consent) and delete client.
 - Later: staff roles.
 

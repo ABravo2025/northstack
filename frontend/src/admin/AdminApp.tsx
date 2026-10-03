@@ -8,8 +8,8 @@ import PasswordInput from '../components/common/PasswordInput';
 import '../App.css';
 
 // Admin Center v2 (2026-10-03) — Northstack's own tool for its staff, rebuilt inside the app's
-// frontend so it shares the design system. Rendered instead of <App/> on admin.joinnorthstack.com
-// and on /admin of any other host (see main.tsx). Only users with a platformRole get past login.
+// frontend so it shares the design system. Rendered instead of <App/> only on an admin.* host
+// (admin.joinnorthstack.com; see main.tsx). Only users with a platformRole get past login.
 
 function readToken(): string | null {
   try {

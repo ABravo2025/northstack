@@ -66,6 +66,8 @@ import { getRunDetail, listRuns } from '../modules/hr/payrollRunService.js';
 import {
   decideTimeOffRequest,
   listMyTimeOffRequests,
+  listPendingApprovals,
+  listTimeOffRequestsForCalendar,
 } from '../modules/hr/timeOffRequestService.js';
 import { findEmployeeByUserId, resolveVisibleEmployeeIds } from '../modules/hr/employeeService.js';
 import { redactEntityFields, redactEntityListFields } from '../modules/auth/fieldVisibilityService.js';
@@ -88,6 +90,9 @@ export interface ExternalApiRequest extends express.Request {
 }
 
 const RATE_LIMIT = { windowMs: 60_000, maxRequests: 120 };
+// AI assistants only (spec-mcp-server.md §6.3): a prompt-injected or looping assistant can't mass-
+// delete — at most 10 DELETEs per hour per connection, on top of the MCP's own confirmation step.
+const AI_DELETE_RATE_LIMIT = { windowMs: 60 * 60_000, maxRequests: 10 };
 const DEFAULT_PAGE_SIZE = 50;
 const MAX_PAGE_SIZE = 200;
 
@@ -119,6 +124,12 @@ externalApiRouter.use('/api/external/v1', async (req: express.Request, res: expr
     if (await isRateLimited(`${apiKey.kind === 'ai' ? 'ai' : 'apikey'}:${apiKey.id}`, RATE_LIMIT)) {
       res.setHeader('Retry-After', String(Math.ceil(RATE_LIMIT.windowMs / 1000)));
       await respond(req, res, apiKey, 429, { error: 'Too many requests. Slow down and try again shortly.', code: 'rate_limited' });
+      return;
+    }
+
+    if (apiKey.kind === 'ai' && req.method === 'DELETE' && (await isRateLimited(`ai-delete:${apiKey.id}`, AI_DELETE_RATE_LIMIT))) {
+      res.setHeader('Retry-After', String(Math.ceil(AI_DELETE_RATE_LIMIT.windowMs / 1000)));
+      await respond(req, res, apiKey, 429, { error: 'Too many deletions by this AI assistant in the last hour. Try again later or do it from the app.', code: 'ai_delete_limit' });
       return;
     }
 
@@ -301,6 +312,37 @@ async function isEmployeeVisible(apiKey: AuthenticatedApiKey, employeeId: string
   return visibleIds === null || visibleIds.has(employeeId);
 }
 
+// Optional list filters (2026-10-02, for the MCP server's search tools — spec-mcp-server.md §5).
+// All query params are optional, so existing integrations that send none get the same full list.
+// Applied in memory before pagination, same "fetch complete, then slice" approach as paginate().
+// `me` resolves to the acting user (the key's creator, or the AI connection's user).
+type ListFilter<T> = (item: T, value: string, apiKey: AuthenticatedApiKey) => boolean;
+
+function applyListFilters<T>(items: T[], req: express.Request, apiKey: AuthenticatedApiKey, filters: Record<string, ListFilter<T>>): T[] {
+  let result = items;
+  for (const [param, matches] of Object.entries(filters)) {
+    const raw = req.query[param];
+    if (typeof raw !== 'string' || raw === '') continue;
+    result = result.filter((item) => matches(item, raw, apiKey));
+  }
+  return result;
+}
+
+function textMatches(value: string, ...fields: (string | null | undefined)[]): boolean {
+  const needle = value.trim().toLowerCase();
+  return fields.some((field) => (field ?? '').toLowerCase().includes(needle));
+}
+
+function resolveMe(value: string, apiKey: AuthenticatedApiKey): string {
+  return value === 'me' ? apiKey.actor.id : value;
+}
+
+function toTime(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  const time = new Date(value as string | Date).getTime();
+  return Number.isNaN(time) ? null : time;
+}
+
 // ---- Identity ----
 
 // Who this credential acts as and what it may call — the MCP server's `whoami` tool reads this to
@@ -343,7 +385,18 @@ externalApiRouter.get('/api/external/v1/tasks', async (req, res) => {
   const { apiKey } = req as unknown as ExternalApiRequest;
   if (!(await requireScopeLogged(req, res, apiKey, 'tasks:read'))) return;
   const tasks = await listAllTasksForTenant(apiKey.tenantId, prismaExternal);
-  return respondPaginated(req, res, apiKey, tasks);
+  const filtered = applyListFilters(tasks as any[], req, apiKey, {
+    q: (t, v) => textMatches(v, t.title, t.description),
+    assigneeId: (t, v, k) => t.assigneeId === resolveMe(v, k),
+    status: (t, v) => (v === 'open' ? !t.completedAt : v === 'completed' ? Boolean(t.completedAt) : true),
+    entityType: (t, v) => t.entityType === v,
+    entityId: (t, v) => t.entityId === v,
+    dueBefore: (t, v) => {
+      const due = toTime(t.dueDate);
+      return due !== null && due <= (toTime(v) ?? Infinity);
+    },
+  });
+  return respondPaginated(req, res, apiKey, filtered);
 });
 
 externalApiRouter.get('/api/external/v1/tasks/:id', async (req, res) => {
@@ -419,7 +472,12 @@ externalApiRouter.get('/api/external/v1/notes', async (req, res) => {
   const { apiKey } = req as unknown as ExternalApiRequest;
   if (!(await requireScopeLogged(req, res, apiKey, 'notes:read'))) return;
   const notes = await listAllNotesForTenant(apiKey.tenantId, prismaExternal);
-  return respondPaginated(req, res, apiKey, notes);
+  const filtered = applyListFilters(notes as any[], req, apiKey, {
+    q: (n, v) => textMatches(v, n.title, n.description),
+    entityType: (n, v) => n.entityType === v,
+    entityId: (n, v) => n.entityId === v,
+  });
+  return respondPaginated(req, res, apiKey, filtered);
 });
 
 externalApiRouter.get('/api/external/v1/notes/:id', async (req, res) => {
@@ -494,7 +552,11 @@ externalApiRouter.get('/api/external/v1/crm/companies', async (req, res) => {
   const { apiKey } = req as unknown as ExternalApiRequest;
   if (!(await requireScopeLogged(req, res, apiKey, 'crm.companies:read'))) return;
   const companies = await listCompanies(apiKey.tenantId, prismaExternal);
-  return respondPaginated(req, res, apiKey, redactList(apiKey, 'company', companies));
+  const filtered = applyListFilters(companies as any[], req, apiKey, {
+    q: (c, v) => textMatches(v, c.name, c.website),
+    accountOwnerId: (c, v, k) => c.accountOwnerId === resolveMe(v, k),
+  });
+  return respondPaginated(req, res, apiKey, redactList(apiKey, 'company', filtered));
 });
 
 externalApiRouter.get('/api/external/v1/crm/companies/:id', async (req, res) => {
@@ -609,7 +671,11 @@ externalApiRouter.get('/api/external/v1/crm/contacts', async (req, res) => {
   const { apiKey } = req as unknown as ExternalApiRequest;
   if (!(await requireScopeLogged(req, res, apiKey, 'crm.contacts:read'))) return;
   const contacts = await listContacts(apiKey.tenantId, false, prismaExternal);
-  return respondPaginated(req, res, apiKey, redactList(apiKey, 'contact', contacts));
+  const filtered = applyListFilters(contacts as any[], req, apiKey, {
+    q: (c, v) => textMatches(v, `${c.firstName ?? ''} ${c.lastName ?? ''}`, c.email),
+    companyId: (c, v) => c.companyId === v,
+  });
+  return respondPaginated(req, res, apiKey, redactList(apiKey, 'contact', filtered));
 });
 
 externalApiRouter.get('/api/external/v1/crm/contacts/:id', async (req, res) => {
@@ -708,7 +774,14 @@ externalApiRouter.get('/api/external/v1/crm/opportunities', async (req, res) => 
   const { apiKey } = req as unknown as ExternalApiRequest;
   if (!(await requireScopeLogged(req, res, apiKey, 'crm.opportunities:read'))) return;
   const opportunities = await listOpportunities(apiKey.tenantId, false, prismaExternal);
-  return respondPaginated(req, res, apiKey, redactList(apiKey, 'opportunity', opportunities));
+  const filtered = applyListFilters(opportunities as any[], req, apiKey, {
+    q: (o, v) => textMatches(v, o.name),
+    companyId: (o, v) => o.companyId === v,
+    pipelineId: (o, v) => o.pipelineId === v,
+    stageId: (o, v) => o.stageId === v,
+    ownerId: (o, v, k) => o.ownerId === resolveMe(v, k),
+  });
+  return respondPaginated(req, res, apiKey, redactList(apiKey, 'opportunity', filtered));
 });
 
 externalApiRouter.get('/api/external/v1/crm/opportunities/:id', async (req, res) => {
@@ -842,7 +915,12 @@ externalApiRouter.get('/api/external/v1/hr/employees', async (req, res) => {
   // its user sees in the app (spec-mcp-server.md §2b).
   const visibleIds = await resolveVisibleEmployeeIds(apiKey.tenantId, apiKey.actor.roleContext, apiKey.actor.id);
   const employees = await listEmployees(apiKey.tenantId, visibleIds, prismaExternal);
-  return respondPaginated(req, res, apiKey, redactList(apiKey, 'employee', employees));
+  const filtered = applyListFilters(employees as any[], req, apiKey, {
+    q: (e, v) => textMatches(v, `${e.firstName ?? ''} ${e.lastName ?? ''}`, e.email),
+    departmentId: (e, v) => e.departmentId === v,
+    managerId: (e, v) => e.managerId === v,
+  });
+  return respondPaginated(req, res, apiKey, redactList(apiKey, 'employee', filtered));
 });
 
 externalApiRouter.get('/api/external/v1/hr/employees/:id', async (req, res) => {
@@ -960,15 +1038,46 @@ externalApiRouter.delete('/api/external/v1/hr/employees/:id', async (req, res) =
 externalApiRouter.get('/api/external/v1/hr/timeoff', async (req, res) => {
   const { apiKey } = req as unknown as ExternalApiRequest;
   if (!(await requireScopeLogged(req, res, apiKey, 'hr.timeoff:read'))) return;
+  // Two views mirroring the app's own Time Off page: the team calendar (approved + pending for the
+  // whole workspace — visible to every member in the app too) and "waiting for my approval".
+  const scope = typeof req.query.scope === 'string' ? req.query.scope : undefined;
+  if (scope === 'calendar' || scope === 'pending-approval') {
+    let scoped: unknown[] = [];
+    if (scope === 'calendar') {
+      scoped = await listTimeOffRequestsForCalendar(apiKey.tenantId);
+    } else {
+      const approver = await findEmployeeByUserId(apiKey.actor.id);
+      scoped = approver ? await listPendingApprovals(apiKey.tenantId, approver.id) : [];
+    }
+    return respondPaginated(req, res, apiKey, applyListFilters(scoped as any[], req, apiKey, {
+      status: (r, v) => r.status === v,
+      employeeId: (r, v) => r.employeeId === v,
+      from: (r, v) => (toTime(r.endDate) ?? -Infinity) >= (toTime(v) ?? -Infinity),
+      to: (r, v) => (toTime(r.startDate) ?? Infinity) <= (toTime(v) ?? Infinity),
+    }));
+  }
+
   // Everyone's requests need the same permission the app's "all" view does (manage_custom_fields);
   // otherwise only the acting user's OWN requests — an AI assistant for a regular employee.
   if (canManageCustomFields(apiKey.actor.roleContext)) {
     const requests = await listAllTimeOffRequests(apiKey.tenantId, prismaExternal);
-    return respondPaginated(req, res, apiKey, requests);
+    return respondPaginated(req, res, apiKey, applyListFilters(requests as any[], req, apiKey, {
+        status: (r, v) => r.status === v,
+        employeeId: (r, v) => r.employeeId === v,
+        // Overlap with [from, to] — a request from the 1st to the 10th is "in" a 5th–6th window.
+        from: (r, v) => (toTime(r.endDate) ?? -Infinity) >= (toTime(v) ?? -Infinity),
+        to: (r, v) => (toTime(r.startDate) ?? Infinity) <= (toTime(v) ?? Infinity),
+      }));
   }
   const ownEmployee = await findEmployeeByUserId(apiKey.actor.id);
   const requests = ownEmployee ? await listMyTimeOffRequests(apiKey.tenantId, ownEmployee.id) : [];
-  return respondPaginated(req, res, apiKey, requests);
+  return respondPaginated(req, res, apiKey, applyListFilters(requests as any[], req, apiKey, {
+    status: (r, v) => r.status === v,
+    employeeId: (r, v) => r.employeeId === v,
+    // Overlap with [from, to] — a request from the 1st to the 10th is "in" a 5th–6th window.
+    from: (r, v) => (toTime(r.endDate) ?? -Infinity) >= (toTime(v) ?? -Infinity),
+    to: (r, v) => (toTime(r.startDate) ?? Infinity) <= (toTime(v) ?? Infinity),
+  }));
 });
 
 const timeOffCreateSchema = z.object({

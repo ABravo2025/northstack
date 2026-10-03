@@ -222,6 +222,14 @@ const FAQ_CATEGORIES: FaqCategory[] = [
         a: "No — /developers requires being signed in to Northstack. It isn't reachable without an account.",
       },
       {
+        q: 'Can I use Claude, ChatGPT or another AI assistant with Northstack?',
+        a: "Yes, on Growth. Go to Settings → Integrations → AI assistants, copy the server URL and create a token for your assistant. It acts as you — it can only see and do what your role allows — and asks you to confirm before deleting anything.",
+      },
+      {
+        q: 'Can an AI assistant see more than I can?',
+        a: "No. It uses your own role on every request: same employees, same hidden fields, same modules. If your role changes, the assistant changes with it. An owner can switch AI assistants off per role in Roles & Permissions.",
+      },
+      {
         q: 'Which plan includes the API?',
         a: "Growth (and the Free Trial). On Starter, API keys and webhooks are hidden; existing keys stop working until you upgrade, but they aren't deleted.",
       },
@@ -432,6 +440,14 @@ const FAQ_CATEGORIES_ES: FaqCategory[] = [
       {
         q: '¿La documentación de la API es pública?',
         a: 'No — /developers requiere estar con la sesión iniciada en Northstack. No se puede acceder sin una cuenta.',
+      },
+      {
+        q: '¿Puedo usar Claude, ChatGPT u otro asistente de IA con Northstack?',
+        a: 'Sí, en Growth. Entrá a Configuración → Integraciones → Asistentes de IA, copiá la URL del servidor y creá un token para tu asistente. Actúa como vos — solo puede ver y hacer lo que tu rol permite — y te pide confirmación antes de borrar algo.',
+      },
+      {
+        q: '¿Un asistente de IA puede ver más que yo?',
+        a: 'No. Usa tu propio rol en cada pedido: los mismos empleados, los mismos campos ocultos, los mismos módulos. Si tu rol cambia, el asistente cambia con él. El owner puede apagar los asistentes de IA por rol en Roles y permisos.',
       },
       {
         q: '¿Qué plan incluye la API?',

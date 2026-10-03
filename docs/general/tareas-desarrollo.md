@@ -1,6 +1,11 @@
 # Tareas de desarrollo
 
 - Fecha de creación: 2026-07-02
+- **2026-10-03 — MCP Unidad 3: servidor MCP (EN STAGING)**: función de Vercel separada (`api/mcp.ts`, en `/mcp`) que
+  expone 39 tools a cualquier asistente compatible (Claude Code, Cursor, VS Code hoy; claude.ai/ChatGPT con OAuth en la
+  Unidad 4). Las tools llaman a la Private API por HTTP con el token del usuario, así que aplican su rol. Borrar,
+  desactivar y aprobar/rechazar piden confirmación en dos pasos; máximo 10 borrados por hora por conexión. La tarjeta de
+  Asistentes de IA ya muestra la URL y la config lista para pegar. Help Center actualizado.
 - **2026-10-02 — Rol en la plataforma al dar de alta con contrato (EN STAGING)**: al crear un Contractor/Empleado
   con contrato inicial, el envío del contrato es la invitación (confirmarlo crea el User), pero siempre salía con
   rol Member y no había dónde elegirlo. Ahora "Add Person" trae "Rol en la plataforma" junto al contrato (visible

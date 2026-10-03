@@ -1745,6 +1745,37 @@ export default function GuidePage() {
                 </p>
               </div>
             </div>
+
+            <div className="help-sub">
+              <h3>Asistentes de IA (Claude, ChatGPT, Cursor…)</h3>
+              <div className="help-tagrow">
+                <span className="help-pill help-pill-plan">Plan Growth</span>
+                <span className="help-pill help-pill-role">Cualquier rol con "Usar asistentes de IA" (activado por defecto)</span>
+              </div>
+              <p>
+                Podés conectar tu propio asistente de IA a Northstack para pedirle cosas como "¿qué tareas tengo
+                vencidas?", "creá una oportunidad para Acme" o "¿quién está de licencia esta semana?". El asistente
+                <strong> actúa como vos</strong>: solo ve y hace lo que tu rol ya permite en la app, y todo lo que
+                cambia aparece en el Registro de actividad como <strong>"IA · nombre de la conexión"</strong>.
+              </p>
+              <p>
+                En <strong>Configuración → Integraciones → Asistentes de IA</strong> copiá la URL del servidor y creá un
+                token. Al crearlo te mostramos la configuración lista para pegar en Claude Code y Cursor. El token se
+                muestra una sola vez; si lo perdés, revocalo y creá otro.
+              </p>
+              <p>
+                Para borrar, desactivar un contacto o aprobar/rechazar una licencia, el asistente siempre te muestra
+                un resumen y te pide confirmación antes de hacerlo. La nómina es de solo lectura, y un asistente no puede
+                borrar más de 10 registros por hora.
+              </p>
+              <div className="help-callout help-callout-note">
+                <InfoIcon />
+                <p>
+                  Hoy funciona con asistentes que aceptan un token (Claude Code, Cursor, VS Code). Conectar desde
+                  claude.ai o los conectores de ChatGPT, iniciando sesión con tu cuenta de Northstack, llega pronto.
+                </p>
+              </div>
+            </div>
           </section>
           ) : (
           <section className="help-section" id="g-integrations">
@@ -1827,6 +1858,37 @@ export default function GuidePage() {
                 <p>
                   Outbound webhooks (Northstack pushing updates to your own URL) aren't available yet — there's no
                   setup screen for them today. If you need to react to changes elsewhere, poll the API for now.
+                </p>
+              </div>
+            </div>
+
+            <div className="help-sub">
+              <h3>AI assistants (Claude, ChatGPT, Cursor…)</h3>
+              <div className="help-tagrow">
+                <span className="help-pill help-pill-plan">Growth plan</span>
+                <span className="help-pill help-pill-role">Any role with "Use AI assistants" (on by default)</span>
+              </div>
+              <p>
+                You can connect your own AI assistant to Northstack and ask it things like "which of my tasks are
+                overdue?", "create an opportunity for Acme" or "who's off this week?". The assistant
+                <strong> acts as you</strong>: it only sees and does what your role already allows in the app, and
+                everything it changes shows in the Activity Log as <strong>"AI · connection name"</strong>.
+              </p>
+              <p>
+                In <strong>Settings → Integrations → AI assistants</strong>, copy the server URL and create a token.
+                When you create it we show ready-to-paste setup for Claude Code and Cursor. The token is shown once;
+                if you lose it, revoke it and create another.
+              </p>
+              <p>
+                To delete something, deactivate a contact or approve/reject time off, the assistant always shows you a
+                summary and asks you to confirm first. Payroll is read-only, and an assistant can't delete more than
+                10 records an hour.
+              </p>
+              <div className="help-callout help-callout-note">
+                <InfoIcon />
+                <p>
+                  It works today with assistants that accept a token (Claude Code, Cursor, VS Code). Connecting from
+                  claude.ai or ChatGPT connectors by signing in with your Northstack account is coming soon.
                 </p>
               </div>
             </div>

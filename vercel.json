@@ -3,6 +3,8 @@
   "buildCommand": "cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/dist",
   "rewrites": [
+    { "source": "/mcp", "destination": "/api/mcp" },
+    { "source": "/api/mcp", "destination": "/api/mcp" },
     { "source": "/api/(.*)", "destination": "/api" },
     { "source": "/health", "destination": "/api" },
     { "source": "/(.*)", "destination": "/index.html" }

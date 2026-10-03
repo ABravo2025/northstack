@@ -11,7 +11,7 @@ _Last updated: 2026-10-03_
 ## What Northstack is
 Multi-tenant SaaS for teams of 5–50: People/HR, Time Off, Sales CRM, Payroll **tracking** (never moves
 money), Tasks, Dashboards, Activity Log, Custom Roles, Google Calendar sync. Bilingual app (EN/ES).
-Plans: Free trial 15 days (no card, up to 5 users) → Starter / Growth. Prices only in
+Plans: Free trial 15 days (no card, up to 3 users) → Starter / Growth. Prices only in
 `src/config/pricing.ts` on `main`. **Per user per month** (live 2026-10-03), minimum 3 users per team:
 Starter launch USD 4 / ARS 6.000 (regular USD 6 / ARS 9.000), Growth launch USD 6 / ARS 9.000 (regular
 USD 10 / ARS 15.000). Launch price for teams subscribing until 2026-12-31, locked while subscribed; new
@@ -50,7 +50,7 @@ Release flow: code → `staging` → user reviews → `main`. Additive DB change
 
 ## Website (joinnorthstack.com)
 Landing v2 live 2026-10-02: animated product preview, "what it replaces", Time Off spotlight,
-team-size per-user price calculator with a USD | ARS switch (ARS by default for visitors in Argentina) and launch banner (prices fetched from the app), founder quote, FAQ; EN + ES generated from
+team-size per-user price calculator in ARS for visitors in Argentina (by IP) and USD elsewhere, no switch and launch banner (prices fetched from the app), founder quote, FAQ; EN + ES generated from
 one template; About / 404 / legal pages restyled; Terms/Privacy/Refund open in a modal everywhere
 (app and site). SEO: per-language OG images, JSON-LD (WebSite, Organization, SoftwareApplication,
 FAQPage), sitemap, hreflang. Module page: Time Off (EN/ES) since 2026-10-03.
@@ -81,6 +81,7 @@ SEO is part of marketing: every SEO change is logged in `seo/README.md` + a chan
 ---
 
 ## Changelog (newest first)
+- **2026-10-03** — Pricing fixes LIVE: landing currency by visitor IP (ARS for Argentina via app `/api/public/geo` = Vercel x-vercel-ip-country, USD elsewhere; no currency switch), prices added to the Time Off module pages (EN/ES), Free Trial capped at 3 users (= minimum team). App main 4d91de4, landing dcb2f58.
 - **2026-10-03** — `www.joinnorthstack.com` now 308-redirects to `joinnorthstack.com`.
 - **2026-10-03** — **Per-user pricing LIVE** (app `main` 5c8d86e + redeploy 75bf7c0, landing 15d995d): launch offer until 2026-12-31 (Starter USD 4 / Growth USD 6 per user, regular 6 / 10; ARS 6.000 / 9.000, regular 9.000 / 15.000), minimum 3 users, plans modal with struck-through regular price and launch banner, landing USD/ARS switch. Previous deploy on 2026-10-02 failed on Vercel's daily build limit (Hobby plan; Vercel Hobby is non-commercial per its terms — Pro recommended).
 - **2026-10-03** — SEO pass 1 LIVE on joinnorthstack.com (Time Off module pages EN/ES + home keyword tweaks).

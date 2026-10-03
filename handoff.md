@@ -53,8 +53,7 @@ one template; About / 404 / legal pages restyled; Terms/Privacy/Refund open in a
 FAQPage), sitemap, hreflang.
 
 ## SEO (full tracker: `seo/README.md`)
-- Search Console: Domain property verified; sitemap submitted 2026-10-02 ("couldn't fetch" on first
-  read — file is valid, recheck 10-04/05). Only `/` indexed. 3-month stats: 9 impressions, 0 clicks, avg
+- Search Console: Domain property verified; sitemap submitted 2026-10-02, read OK on 2026-10-03. Only `/` indexed. 3-month stats: 9 impressions, 0 clicks, avg
   position 17.9.
 - Plan: one page per module EN/ES (Time Off → CRM → HR records → payroll tracking), directory
   backlinks (Capterra, G2, Product Hunt, ...), then comparison pages + guides.

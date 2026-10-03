@@ -13,7 +13,7 @@ _Última actualización: 2026-10-03_
 | Tema | Estado |
 |---|---|
 | Search Console | ✅ Propiedad de **Dominio** `joinnorthstack.com` verificada (TXT en Cloudflare) |
-| Sitemap | Enviado 2026-10-02 (`https://joinnorthstack.com/sitemap.xml`). Search Console mostró "No se ha podido leer" al enviarlo; el archivo está bien (200, XML válido, Googlebot OK) — es el aviso típico de recién enviado. **Revisar el 2026-10-04/05.** |
+| Sitemap | ✅ Enviado 2026-10-02, **leído correctamente el 2026-10-03** (`https://joinnorthstack.com/sitemap.xml`, 7 URLs; pasa a 9 cuando se publique el pase 1). El primer "No se ha podido leer" fue el aviso típico de recién enviado |
 | Indexación | 1 página indexada (`/`). `http://` sin indexar = redirección a https, es correcto. Pedida indexación manual de `/` y `/es/` |
 | Rendimiento (3 meses al 2026-10-02) | 9 impresiones, 0 clics, posición media 17,9 (filtro EE. UU.; revisar sin filtro) |
 | Pase técnico | ✅ Hecho 2026-10-02 (títulos, descripciones, canonical, hreflang, OG por idioma, JSON-LD, robots, sitemap) |
@@ -90,7 +90,7 @@ Artifact. Fue escrito para el pase 1 (los retoques de portada fallan a propósit
 aplicados); para los próximos módulos, copiar una plantilla y reutilizar `buildModule()`.
 
 ## Changelog SEO (más nuevo arriba)
-
+- **2026-10-03** — Search Console ya reconoce el sitemap (antes mostraba "No se ha podido leer").
 - **2026-10-03** — Pase 1 armado (Vacaciones ES/EN + retoques de portada), commit local `ca1f1ef`,
   vista previa publicada. Pendiente de push por límite de Vercel.
 - **2026-10-02** — Search Console: propiedad de Dominio verificada, sitemap enviado, indexación pedida

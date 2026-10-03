@@ -109,6 +109,16 @@ tenantsRouter.get('/api/plans/prices', async (_req, res) => {
   return res.json(publicPricing());
 });
 
+// Visitor's country from Vercel's edge geolocation (x-vercel-ip-country, ISO 3166-1 alpha-2) — the
+// landing shows ARS prices to visitors in Argentina and USD to everyone else (2026-10-03). Separate
+// from the cached price list on purpose: this answer differs per visitor, so it must never be cached.
+// Under /api/public/ so the existing CORS carve-out (app.ts) lets the landing's origin read it.
+tenantsRouter.get('/api/public/geo', (req, res) => {
+  res.set('Cache-Control', 'private, no-store');
+  const country = req.headers['x-vercel-ip-country'];
+  return res.json({ country: typeof country === 'string' && /^[A-Za-z]{2}$/.test(country) ? country.toUpperCase() : null });
+});
+
 // Subscription Plans (spec-subscription-plans.md) — owner-only, same bar as Payroll's
 // manage_payroll. Only starter/growth are selectable here; Scale has no self-serve checkout.
 tenantsRouter.patch('/api/tenants/me/plan', async (req, res) => {

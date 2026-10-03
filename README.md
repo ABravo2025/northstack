@@ -30,6 +30,9 @@ merged** into them.
    `tools/`, so any asset can be re-made later.
 5. **Never commit secrets or real customer data.** Demos use the fictitious "Acme Latam" tenant on
    staging; scripts read tokens from local files outside the repo.
+6. **SEO is marketing.** Everything about search visibility (Search Console status, keyword map,
+   module pages, backlinks) is tracked in `seo/README.md`; update it whenever SEO work happens, plus a
+   changelog line in `handoff.md`. The pages themselves ship on the `landing` branch.
 
 ## Content rules (what we say publicly)
 

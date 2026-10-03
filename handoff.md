@@ -4,7 +4,7 @@ Running context of the whole project, kept current so any session (or person) ca
 last one left off. **Update this file whenever a feature ships or something important changes**
 (newest entries on top in "Changelog"). Rule set in `README.md`.
 
-_Last updated: 2026-10-02_
+_Last updated: 2026-10-03_
 
 ---
 
@@ -13,7 +13,8 @@ Multi-tenant SaaS for teams of 5–50: People/HR, Time Off, Sales CRM, Payroll *
 money), Tasks, Dashboards, Activity Log, Custom Roles, Google Calendar sync. Bilingual app (EN/ES).
 Plans: Free trial 15 days (no card, up to 5 users) → Starter / Growth. Prices only in
 `src/config/pricing.ts` on `main` (currently USD 19 / 39, 5 / 10 users included, USD 4 per extra
-user; Argentina in ARS via Mercado Pago, international via Dodo).
+user; Argentina in ARS via Mercado Pago, international via Dodo). **Possibly stale:** `main` 5c8d86e
+(2026-10-02) switched to a per-user model with a launch offer — check `pricing.ts` before quoting.
 
 ## Where things live
 | What | Where |
@@ -22,6 +23,7 @@ user; Argentina in ARS via Mercado Pago, international via Dodo).
 | Staging | branch `staging` → staging.joinnorthstack.com (Vercel SSO-protected) |
 | Website / landing (static, EN + `/es/`) | branch `landing` → joinnorthstack.com (no staging, goes live on push) |
 | Marketing assets + this handoff | branch `marketing` (orphan, never merged) |
+| SEO tracker (status, plan, keyword map, Search Console) | `seo/README.md` on `marketing` |
 | Android app (Capacitor debug APK) | GitHub Action "Build Android APK" on every push to `main` |
 | Legal texts | `docs/legal/*.md` on `main` + `terms/privacy/refund.html` on `landing` |
 
@@ -50,6 +52,18 @@ one template; About / 404 / legal pages restyled; Terms/Privacy/Refund open in a
 (app and site). SEO: per-language OG images, JSON-LD (WebSite, Organization, SoftwareApplication,
 FAQPage), sitemap, hreflang.
 
+## SEO (full tracker: `seo/README.md`)
+- Search Console: Domain property verified; sitemap submitted 2026-10-02 ("couldn't fetch" on first
+  read — file is valid, recheck 10-04/05). Only `/` indexed. 3-month stats: 9 impressions, 0 clicks, avg
+  position 17.9.
+- Plan: one page per module EN/ES (Time Off → CRM → HR records → payroll tracking), directory
+  backlinks (Capterra, G2, Product Hunt, ...), then comparison pages + guides.
+- **Pass 1 (Time Off pages `/time-off-software`, `/es/software-vacaciones` + home keyword tweaks) is
+  built but NOT live**: local commit `ca1f1ef` on branch `seo-pass` (worktree `C:/tmp/ns-landing-seo`),
+  waiting for Vercel deploy quota. Preview: https://claude.ai/artifact/GjPUvw5mBbLHNGtSYfQfPL
+- Open: `www.joinnorthstack.com` serves 200 instead of redirecting (fix in Vercel → Domains); no site
+  analytics yet.
+
 ## Known issues / backlog
 - Employee detail modal: fields collapse to one letter at ~900 px viewport width.
 - Untranslated strings in ES: Notes/Tasks/Activity tabs, "Actions", "+ Add tag", calendar weekday
@@ -57,14 +71,20 @@ FAQPage), sitemap, hreflang.
 - Logo (fleur) still navy/blue; chart palette intentionally unchanged.
 - Approve time-off endpoint slow (~6 s, calendar sync + notifications).
 - Notification preferences (opt-in emails) pending; some transactional emails not awaited.
+- Website: `www` subdomain not redirecting to apex (duplicate content, canonical mitigates).
 
 ## Marketing rules (short)
 Payroll = tracking only · no Payments marketing · no "EN & ES" claim · no Android claim until Play
 Store · no hard-coded prices in posts · demo data only (tenant "Acme Latam" on staging).
+SEO is part of marketing: every SEO change is logged in `seo/README.md` + a changelog line here.
 
 ---
 
 ## Changelog (newest first)
+- **2026-10-03** — SEO pass 1 built (Time Off module pages EN/ES, home titles/H1 keywords, internal
+  links, sitemap, clean-URL rewrites, Android dropped from JSON-LD); local commit `ca1f1ef`, not pushed
+  (Vercel deploy limit). SEO tracker `seo/README.md` + tooling `tools/seo/` added.
+- **2026-10-02** — Google Search Console set up (Domain property), sitemap submitted, indexing requested.
 - **2026-10-02** — Internal signup alerts in production: staff email (to `SIGNUP_ALERT_EMAIL`, off if unset) on first verification send and on completed tenant registration. "No department" option in People. API-key scope fix (c35d8c2) is on staging only, not yet in production.
 - **2026-10-02** — Marketing branch created; launch kit (LinkedIn posts ES/EN, 45 s demo videos 1:1 and
   16:9 ES/EN, generated music, OG images) in `2026-10/semana-01/`.

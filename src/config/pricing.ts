@@ -69,5 +69,5 @@ export const PRICING = {
   includedSeats: { starter: MIN_USERS, growth: MIN_USERS } as Record<PricedPlan, number>,
   // Hard cap while a tenant is on the Free Trial with no plan chosen yet (nothing to bill extra
   // seats against).
-  freeTrialSeatCap: 5,
+  freeTrialSeatCap: 3, // = MIN_USERS (Alejandro, 2026-10-03)
 };

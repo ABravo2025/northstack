@@ -1,4 +1,152 @@
 {
+  "referrals": {
+    "title": "Referrals",
+    "intro": "Recommend Northstack. You earn {{percent}}% of the first {{payments}} payments of every company that signs up with your link, and they get a {{trialDays}}-day free trial instead of 15.",
+    "introMember": "You earn {{percent}}% of the first {{payments}} payments of every company you bring.",
+    "steps": {
+      "share": {
+        "title": "Share your link",
+        "body": "The company signs up with your link or your code."
+      },
+      "pay": {
+        "title": "They pay their first {{payments}} months",
+        "body": "Each payment earns your {{percent}}%. It becomes payable {{holdDays}} days after the payment."
+      },
+      "transfer": {
+        "title": "We transfer it to you",
+        "body": "Once you reach {{min}}. You'll see the receipt here."
+      }
+    },
+    "join": {
+      "methodTitle": "How do you want to get paid?",
+      "methodHint": "Required to join",
+      "termsLink": "Referral Program Terms and Conditions",
+      "accept": "I have read and accept the",
+      "lockedHint": "Fill in your payout details to accept the terms.",
+      "submit": "Join the program",
+      "joined": "You're in. Here's your link."
+    },
+    "methods": {
+      "wise": {
+        "label": "Wise",
+        "hint": "USD · account email"
+      },
+      "payoneer": {
+        "label": "Payoneer",
+        "hint": "USD · account email"
+      },
+      "paypal": {
+        "label": "PayPal",
+        "hint": "USD · email"
+      },
+      "wire_intl": {
+        "label": "Wire transfer",
+        "hint": "USD · international bank"
+      },
+      "bank_ar": {
+        "label": "Bank transfer (Argentina)",
+        "hint": "ARS · CBU / CVU"
+      }
+    },
+    "fields": {
+      "email": "Account email",
+      "holderName": "Account holder name",
+      "holderAddress": "Account holder address",
+      "bankName": "Bank",
+      "swift": "SWIFT / BIC",
+      "accountNumber": "IBAN or account number",
+      "routingNumber": "Routing / ABA (US only)",
+      "bankCountry": "Bank country",
+      "taxId": "CUIT / CUIL",
+      "cbu": "CBU / CVU",
+      "alias": "Alias",
+      "optional": "(optional)"
+    },
+    "payout": {
+      "current": "Paid by {{method}} · {{summary}}",
+      "edit": "Edit",
+      "editTitle": "Your payout details",
+      "save": "Save",
+      "cancel": "Cancel",
+      "saved": "Payout details saved."
+    },
+    "link": {
+      "title": "Your link",
+      "code": "Code",
+      "copy": "Copy link",
+      "copied": "Link copied",
+      "selectToCopy": "Selected. Copy it with Ctrl+C"
+    },
+    "totals": {
+      "payable": "To collect",
+      "pending": "On hold",
+      "paid": "Collected",
+      "companies": "Companies referred",
+      "missing": "{{amount}} left to reach the minimum",
+      "ready": "Ready. We'll transfer it soon",
+      "nothing": "Nothing yet",
+      "pendingHint": "Payable {{days}} days after each payment",
+      "transfers_one": "{{count}} transfer",
+      "transfers_other": "{{count}} transfers"
+    },
+    "tabs": {
+      "referrals": "Who I referred",
+      "commissions": "Commissions",
+      "payouts": "My transfers"
+    },
+    "table": {
+      "company": "Company",
+      "signedUp": "Signed up",
+      "status": "Status",
+      "commissions": "Commissions",
+      "earned": "Earned",
+      "payment": "Payment",
+      "paymentAmount": "Payment amount",
+      "yourShare": "Your {{percent}}%",
+      "payableOn": "Payable on",
+      "transfer": "Transfer",
+      "date": "Date",
+      "method": "Method",
+      "reference": "Reference",
+      "amount": "Amount",
+      "receipt": "Receipt",
+      "download": "Download",
+      "ofTotal": "{{n}} of {{total}}",
+      "commissionsCount_one": "{{count}} commission",
+      "commissionsCount_other": "{{count}} commissions",
+      "emptyReferrals": "No companies yet. Share your link to get started.",
+      "emptyCommissions": "No commissions yet. They appear when a company you referred pays.",
+      "emptyPayouts": "No transfers yet."
+    },
+    "referralStatus": {
+      "trialing": "On trial",
+      "no_payment": "No payments",
+      "active": "Paying",
+      "completed": "Completed",
+      "void": "Voided"
+    },
+    "commissionStatus": {
+      "pending": "On hold",
+      "payable": "To collect",
+      "paid": "Paid · {{number}}",
+      "void": "Voided"
+    },
+    "terms": {
+      "title": "Referral Program Terms and Conditions",
+      "version": "Version {{version}}",
+      "items": [
+        "Only active Northstack users can take part.",
+        "The commission is {{percent}}% of each of the first {{payments}} payments of the referred company, excluding taxes, in the currency of the payment.",
+        "Each commission becomes payable {{holdDays}} days after the payment is credited. If the payment is refunded or charged back, the commission is voided.",
+        "We transfer once your payable balance reaches {{minUsd}} or {{minArs}}. Balances in different currencies add up separately.",
+        "You can't refer your own company or companies with the same email domain.",
+        "Transfer fees and the tax obligations of receiving the payment are your responsibility.",
+        "Northstack may change or end the program with 30 days' notice. Commissions already earned are kept."
+      ]
+    },
+    "loading": "Loading your referrals…",
+    "loadError": "Couldn't load your referrals: {{message}}"
+  },
   "integrations": {
     "disconnect": "Disconnect",
     "google": {

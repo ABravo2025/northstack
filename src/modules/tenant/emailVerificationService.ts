@@ -3,6 +3,7 @@ import prisma from '../../lib/prisma.js';
 import { sendSignupAlertEmail, sendSignupVerificationEmail } from '../../lib/mailer.js';
 import { checkEmailDomainNotAlreadyRegistered } from './tenantService.js';
 import { isEmailFormatValid } from '../../lib/email.js';
+import { normalizeReferralCode } from '../referral/referralService.js';
 
 // 24h — long enough someone can click the link later the same day from their phone, short
 // enough a stale/unclicked link doesn't sit around forever. Independent of
@@ -18,7 +19,9 @@ export interface StartSignupVerificationResult {
 
 // Backs both POST /api/tenants/signup/start and /resend — spec-tenant-signup.md describes
 // them as functionally identical, so both routes call this same function.
-export async function startSignupVerification(email: string): Promise<StartSignupVerificationResult> {
+// referralCode (2026-10-04): carried into the verification link so a referral link survives the
+// person opening the email on another device. Only well-formed codes are passed along.
+export async function startSignupVerification(email: string, referralCode?: unknown): Promise<StartSignupVerificationResult> {
   const normalizedEmail = email.toLowerCase().trim();
 
   if (!isEmailFormatValid(normalizedEmail)) {
@@ -71,6 +74,8 @@ export async function startSignupVerification(email: string): Promise<StartSignu
   }
 
   const appBaseUrl = process.env.APP_BASE_URL ?? 'http://localhost:5173';
+  const ref = normalizeReferralCode(referralCode);
+  const refParam = ref ? `&ref=${encodeURIComponent(ref)}` : '';
   // The row already exists regardless of whether this particular send succeeds —
   // sendSignupVerificationEmail already swallows its own errors (see mailer.ts's dispatchMail).
   // Must still be awaited, not fire-and-forget (confirmed live 2026-08-25: this exact call site
@@ -78,7 +83,7 @@ export async function startSignupVerification(email: string): Promise<StartSignu
   // awaited).
   await sendSignupVerificationEmail({
     to: normalizedEmail,
-    verifyUrl: `${appBaseUrl}/register/complete?token=${token}`,
+    verifyUrl: `${appBaseUrl}/register/complete?token=${token}${refParam}`,
   });
 
   if (isNewSignupAttempt) {

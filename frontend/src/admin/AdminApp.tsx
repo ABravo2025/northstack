@@ -7,6 +7,7 @@ import AdminClientDetail from './AdminClientDetail';
 import AdminAudit from './AdminAudit';
 import AdminBilling from './AdminBilling';
 import AdminAnnouncements from './AdminAnnouncements';
+import AdminReferrals, { AdminReferralMember } from './AdminReferrals';
 import { AdminFeedbackDetail, AdminFeedbackList } from './AdminFeedback';
 import PasswordInput from '../components/common/PasswordInput';
 import '../App.css';
@@ -78,6 +79,8 @@ export default function AdminApp() {
             <Route path="/audit" element={<AdminAudit session={session} />} />
             <Route path="/billing" element={<AdminBilling session={session} />} />
             <Route path="/announcements" element={<AdminAnnouncements session={session} />} />
+            <Route path="/referrals" element={<AdminReferrals session={session} />} />
+            <Route path="/referrals/:id" element={<AdminReferralMember session={session} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
@@ -102,6 +105,7 @@ function AdminSidebar({ name, role, onLogout }: { name: string; role: string; on
       <NavLink to="/" end className={link}>Inicio</NavLink>
       <NavLink to="/clients" className={link}>Clientes</NavLink>
       <NavLink to="/billing" className={link}>Facturación</NavLink>
+      {role === 'platform_admin' && <NavLink to="/referrals" className={link}>Referidos</NavLink>}
       <div className="px-3 pb-1 pt-4 text-[10px] uppercase tracking-widest text-[#c9c4e0]/70">Soporte</div>
       <NavLink to="/tickets" className={link}>Tickets</NavLink>
       <NavLink to="/ideas" className={link}>Ideas</NavLink>

@@ -11,6 +11,7 @@ import { bestEffort } from '../../lib/bestEffort.js';
 import { syncSeatBilling } from './seatService.js';
 import { syncSubscriptionAndTenant } from './subscriptionService.js';
 import { GRACE_PERIOD_DAYS } from './planTransitionService.js';
+import { recordReferralCommission } from '../referral/referralService.js';
 
 // Mercado Pago `preapproval` webhook (routes/webhooks.ts verifies the signature, dedupes the event
 // and round-trips to MP for the real resource before calling this). Returns a short status string
@@ -194,7 +195,7 @@ export async function handleMercadoPagoAuthorizedPayment(payment: MercadoPagoAut
     // only other thing folded into transaction_amount, see seatService.ts).
     const amountCents = Math.round(payment.transaction_amount * 100);
     const baseAmountCents = Math.min(lockedPriceCents, amountCents);
-    await prisma.invoice.create({
+    const invoice = await prisma.invoice.create({
       data: {
         subscriptionId: subscription.id,
         provider: 'mercadopago',
@@ -209,6 +210,11 @@ export async function handleMercadoPagoAuthorizedPayment(payment: MercadoPagoAut
         paidAt: new Date(),
       },
     });
+    // Referral program: a commission if this tenant was referred (first payments only).
+    await bestEffort(
+      recordReferralCommission({ tenantId: subscription.tenantId, invoiceId: invoice.id, amountCents: invoice.amountCents, currency: invoice.currency, paidAt: invoice.paidAt ?? new Date() }),
+      `recordReferralCommission(${invoice.id})`,
+    );
     return 'ok';
   }
 

@@ -1,4 +1,18 @@
 {
+  "referralCommission": {
+    "subject": "You earned {{amount}} with the Northstack referral program",
+    "greeting": "Hi {{firstName}},",
+    "body": "{{companyName}} made payment {{paymentNumber}} of {{totalPayments}}, and you earned {{amount}}. It becomes payable on {{dueAt}}. We transfer once your payable balance reaches the minimum.",
+    "linkText": "See your referrals"
+  },
+  "referralPayout": {
+    "subject": "We sent you {{amount}} for your referrals",
+    "greeting": "Hi {{firstName}},",
+    "body": "On {{date}} we transferred {{amount}} to you for your referral commissions (transfer {{number}}).",
+    "reference": "Transfer reference: {{reference}}",
+    "receipt": "The transfer receipt is attached. You can also download it from your referrals page.",
+    "linkText": "See your referrals"
+  },
   "invitation": {
     "subject": "You're invited to join {{tenantName}} on Northstack",
     "intro": "You've been invited to join {{tenantName}} on Northstack as {{role}}.",

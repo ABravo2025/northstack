@@ -1,4 +1,18 @@
 {
+  "referralCommission": {
+    "subject": "Ganaste {{amount}} con el programa de referidos de Northstack",
+    "greeting": "Hola {{firstName}}:",
+    "body": "{{companyName}} hizo el pago {{paymentNumber}} de {{totalPayments}} y ganaste {{amount}}. Queda listo para cobrar el {{dueAt}}. Te transferimos cuando tu saldo a cobrar llega al mínimo.",
+    "linkText": "Ver tus referidos"
+  },
+  "referralPayout": {
+    "subject": "Te transferimos {{amount}} por tus referidos",
+    "greeting": "Hola {{firstName}}:",
+    "body": "El {{date}} te transferimos {{amount}} por tus comisiones de referidos (transferencia {{number}}).",
+    "reference": "Referencia de la transferencia: {{reference}}",
+    "receipt": "Te adjuntamos el comprobante. También lo podés descargar desde tu página de referidos.",
+    "linkText": "Ver tus referidos"
+  },
   "invitation": {
     "subject": "Te invitaron a unirte a {{tenantName}} en Northstack",
     "intro": "Te invitaron a unirte a {{tenantName}} en Northstack como {{role}}.",

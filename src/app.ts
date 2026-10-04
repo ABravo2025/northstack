@@ -39,6 +39,7 @@ import { activityRouter } from './routes/activity.js';
 import { rolesRouter } from './routes/roles.js';
 import { apiAccessIntegrationRouter } from './routes/apiAccessIntegration.js';
 import { externalApiRouter } from './routes/externalApi.js';
+import { referralsRouter } from './routes/referrals.js';
 
 dotenv.config();
 
@@ -100,6 +101,8 @@ app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 // (see routes/webhooks.ts's rawBodyText helper). Every other route keeps the normal parsed body.
 app.use('/api/webhooks/dodopayments', express.raw({ type: '*/*', limit: '2mb' }));
 app.use('/api/webhooks/mercadopago', express.raw({ type: '*/*', limit: '2mb' }));
+// Referral payouts carry the transfer receipt (≤2 MB file, base64 in JSON) — Vercel caps bodies at 4.5 MB.
+app.use(/^\/api\/platform\/admin\/referrals\/[^/]+\/payouts$/, express.json({ limit: '4mb' }));
 app.use(express.json({ limit: '2mb' })); // default 100kb is too small for a CSV import body
 
 app.get('/health', (_req, res) => {
@@ -148,6 +151,7 @@ app.use(activityRouter);
 app.use(rolesRouter);
 app.use(apiAccessIntegrationRouter);
 app.use(externalApiRouter);
+app.use(referralsRouter);
 
 // Catches anything an async route handler throws (e.g. Neon/Prisma dropping
 // the connection) so it becomes a clean JSON response instead of crashing

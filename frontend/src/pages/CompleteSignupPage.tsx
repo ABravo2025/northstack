@@ -9,6 +9,7 @@ import { COUNTRIES } from '../lib/countries';
 import { COMPANY_SIZE_OPTIONS } from '../lib/companySize';
 import { api, ApiError } from '../api';
 import type { Tenant } from '../api';
+import { captureReferralCode, forgetReferralCode } from '../lib/referralCode';
 
 const ACQUISITION_CHANNEL_OPTIONS: { value: string; label: string }[] = [
   { value: 'organic', label: 'Organic search' },
@@ -38,6 +39,7 @@ const FIELD_STEP: Record<string, SurveyStep> = {
   industry: 'company',
   country: 'company',
   acquisitionChannel: 'company',
+  referralCode: 'company',
   ownerFirstName: 'you',
   ownerLastName: 'you',
   ownerPhone: 'you',
@@ -75,6 +77,8 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
   const [industry, setIndustry] = useState('');
   const [country, setCountry] = useState('');
   const [acquisitionChannel, setAcquisitionChannel] = useState('');
+  // Referral program: from the email link's &ref= (or this browser's remembered code), editable.
+  const [referralCode, setReferralCode] = useState(() => captureReferralCode() ?? '');
 
   // 3b — You
   const [ownerFirstName, setOwnerFirstName] = useState('');
@@ -133,11 +137,13 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
         acquisitionChannel: acquisitionChannel || undefined,
         jobFunction: jobFunction || undefined,
         verificationToken: token!,
+        referralCode: referralCode.trim() || undefined,
       });
       const sessionToken = response.session?.token;
       if (!sessionToken || !response.tenant) {
         throw new Error('Could not start a session');
       }
+      forgetReferralCode();
       onRegistered(sessionToken, response.user, response.tenant);
     } catch (err) {
       // Only jump to a specific step if that field actually has a step + renderer for it (e.g.
@@ -273,6 +279,21 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
             {fieldErrorFor('acquisitionChannel') && (
               <div className="field-error">{fieldErrorFor('acquisitionChannel')}</div>
             )}
+          </div>
+          <div className="form-group">
+            <label htmlFor="signup-referralCode">Referral code (optional)</label>
+            <input
+              id="signup-referralCode"
+              value={referralCode}
+              onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+              placeholder="e.g. LUCIA-7K2P"
+              maxLength={20}
+              autoComplete="off"
+            />
+            {referralCode.trim() && !fieldErrorFor('referralCode') && (
+              <div className="mt-1 text-xs text-brand-blue-light/70">With a referral code your free trial is 30 days.</div>
+            )}
+            {fieldErrorFor('referralCode') && <div className="field-error">{fieldErrorFor('referralCode')}</div>}
           </div>
           <button type="submit" className="auth-submit">
             Continue

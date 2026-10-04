@@ -36,6 +36,20 @@ export const PER_USER = {
 //     prices: { international: cents, ar: centavos }, includedIn: PricedPlan[] }
 export const ADDONS: Record<string, { perUser: boolean; prices: Record<'international' | 'ar', number>; includedIn: readonly ('starter' | 'growth')[] }> = {};
 
+// Referral program (2026-10-04, Alejandro). A member earns commissionPercent of each of the
+// referred company's first commissionPayments payments; each one becomes payable holdDays after
+// the payment, and staff transfer once a member's payable total in one currency reaches
+// minPayoutCents (no conversion between currencies). The referred company's trial is trialDays.
+// termsVersion is what members accept — bump it when the program terms change.
+export const REFERRAL = {
+  commissionPercent: 10,
+  commissionPayments: 3,
+  holdDays: 30,
+  minPayoutCents: { USD: 5_000, ARS: 5_000_000 } as Record<string, number>,
+  trialDays: 30,
+  termsVersion: '1.0',
+} as const;
+
 export type Market = keyof typeof PER_USER;
 export type PricedPlan = 'starter' | 'growth';
 

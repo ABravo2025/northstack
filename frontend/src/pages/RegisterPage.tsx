@@ -3,6 +3,7 @@ import AuthLayout from '../components/common/AuthLayout';
 import RequiredMark from '../components/common/RequiredMark';
 import { useToast } from '../components/common/ToastProvider';
 import { api, ApiError } from '../api';
+import { captureReferralCode } from '../lib/referralCode';
 
 // spec-tenant-signup.md — Screen 2's cooldown before "Resend email" is clickable again.
 const RESEND_COOLDOWN_SECONDS = 30;
@@ -22,6 +23,8 @@ export default function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
   const [loading, setLoading] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
+  // Referral program: /register?ref=CODE (or one remembered from an earlier visit).
+  const [referralCode] = useState(() => captureReferralCode());
 
   useEffect(() => {
     if (cooldown <= 0) return undefined;
@@ -39,7 +42,7 @@ export default function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
     setEmailError(null);
     setLoading(true);
     try {
-      await api.startSignup(email);
+      await api.startSignup(email, referralCode);
       setStep('sent');
       setCooldown(RESEND_COOLDOWN_SECONDS);
     } catch (error) {
@@ -57,7 +60,7 @@ export default function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
     if (cooldown > 0 || loading) return;
     setLoading(true);
     try {
-      await api.resendSignup(email);
+      await api.resendSignup(email, referralCode);
       setCooldown(RESEND_COOLDOWN_SECONDS);
       toast.success('Verification email sent again.');
     } catch (error) {
@@ -92,6 +95,11 @@ export default function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
     <AuthLayout>
       <h2 className="auth-title">Register your company</h2>
       <p className="text-sm mb-3">Enter your work email — we'll send you a link to verify it before you continue.</p>
+      {referralCode && (
+        <p className="mb-3 rounded-lg border border-brand-blue-light/25 bg-white/5 px-3 py-2 text-sm text-brand-cream">
+          You were invited with code <strong>{referralCode}</strong>: your free trial is 30 days.
+        </p>
+      )}
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="register-email">

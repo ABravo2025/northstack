@@ -2,7 +2,6 @@ import prisma from '../../lib/prisma.js';
 import { currentPlanPrice, marketForProvider, mercadoPagoAmount } from './planPriceService.js';
 import type { PlanTier } from '@prisma/client';
 import { resolveProvider, recordSubscriptionActionAttempt } from './subscriptionService.js';
-import { SIGNUP_TRIAL_DAYS } from './tenantService.js';
 import { buildExternalReference, createPreapproval } from '../../lib/mercadopago.js';
 import { createCheckoutSession, getCustomerPortalUrl } from '../../lib/dodopayments.js';
 import { countActiveSeats, extraSeatsFor } from './seatService.js';
@@ -137,10 +136,9 @@ export async function startCheckout(
   const daysRemaining = tenant.trialEndsAt
     ? Math.ceil((tenant.trialEndsAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000))
     : 0;
-  const trialDays =
-    !isRealProductionBilling || daysRemaining <= 0
-      ? undefined
-      : Math.min(SIGNUP_TRIAL_DAYS, daysRemaining);
+  // Whatever is left of the tenant's own window — no longer also capped at SIGNUP_TRIAL_DAYS, so a
+  // referred company's longer trial (REFERRAL.trialDays) or one extended from the Admin is kept.
+  const trialDays = !isRealProductionBilling || daysRemaining <= 0 ? undefined : daysRemaining;
 
   if (provider === 'mercadopago') {
     const preapproval = await createPreapproval({

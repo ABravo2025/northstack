@@ -12,7 +12,7 @@ export class AdminApiError extends Error {
   }
 }
 
-async function call<T>(path: string, token: string | null, init?: RequestInit): Promise<T> {
+export async function call<T>(path: string, token: string | null, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(init?.headers ?? {}) },

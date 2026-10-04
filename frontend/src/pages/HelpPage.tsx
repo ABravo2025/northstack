@@ -102,6 +102,14 @@ const FAQ_CATEGORIES: FaqCategory[] = [
         a: 'No — you keep full access through the end of the period you already paid for. A "Resume subscription" button stays available until then if you change your mind.',
       },
       {
+        q: 'Can I earn something for recommending Northstack?',
+        a: "Yes. Any user can join the referral program in Settings → Referrals: you add how you want to get paid, accept the program terms, and get a personal link. You earn a commission on the first payments of every company that signs up with it, and they get a longer free trial. The User Guide and the terms page show the current percentage and payout minimum.",
+      },
+      {
+        q: 'When do I get paid for my referrals?',
+        a: "Each commission is on hold for a few weeks after the company's payment, so a refund can still void it. Once your payable balance reaches the minimum, we send it by the method you chose and you'll see the transfer and its receipt in Settings → Referrals.",
+      },
+      {
         q: 'Can I switch plans mid-cycle?',
         a: "Yes. Upgrading charges the new plan's full price right away and restarts your monthly billing cycle from that day (the unused part of your old plan isn't refunded). Downgrading keeps your current plan until your next charge date and applies from then. During your trial, switching is immediate and free; with no card on file yet, choosing a plan goes straight to checkout.",
       },
@@ -293,6 +301,14 @@ const FAQ_CATEGORIES_ES: FaqCategory[] = [
     label: 'Facturación y planes',
     icon: <CreditCardIcon />,
     items: [
+      {
+        q: '¿Puedo ganar algo por recomendar Northstack?',
+        a: "Sí. Cualquier usuario puede unirse al programa de referidos en Configuración → Referidos: cargás cómo querés cobrar, aceptás los términos del programa y recibís un link personal. Cobrás una comisión sobre los primeros pagos de cada empresa que se registre con ese link, y ellos tienen una prueba gratuita más larga. La Guía del usuario y la página de términos muestran el porcentaje y el mínimo vigentes.",
+      },
+      {
+        q: '¿Cuándo cobro mis referidos?',
+        a: "Cada comisión queda en espera unas semanas después del pago de la empresa, por si hay un reembolso. Cuando tu saldo a cobrar llega al mínimo, te lo transferimos por el medio que elegiste y ves la transferencia y su comprobante en Configuración → Referidos.",
+      },
       {
         q: '¿Qué diferencia hay entre Starter y Growth?',
         a: 'Growth saca los topes de pipelines, políticas de ausencias y roles personalizados, guarda el historial de actividad 30 días en vez de 7, y es el único plan que incluye Nómina y Pagos (tu propia cuenta de Stripe). Los dos planes se cobran por usuario activo: {starterPrice} en Starter y {growthPrice} en Growth por usuario por mes.',

@@ -212,6 +212,7 @@
     "profile": { "label": "Profile", "desc": "Name, phone, social profiles and password." },
     "integrations": { "label": "Integrations", "desc": "Connect Northstack to other tools." },
     "billing": { "label": "Billing", "desc": "Plan, invoices and payment method." },
+    "referrals": { "label": "Referrals", "desc": "Recommend Northstack and earn a commission." },
     "companyProfile": { "label": "Company profile", "desc": "Name, logo, contact details and currency." },
     "timeOffRules": { "label": "Time Off", "desc": "Holiday calendar, work week, company days off." },
     "users": { "label": "Users", "desc": "Invite people and manage roles." },

@@ -15,6 +15,9 @@ export interface PlanFeatures {
   payroll: boolean;
   payments: boolean;
   apiAccess: boolean;
+  // Projects module (2026-10-04): "Save as template" (Growth). Optional on the wire — a backend
+  // older than this feature doesn't send it; planFeaturesFor fills it in from the plan name.
+  projectTemplates?: boolean;
 }
 
 export interface AuthResponse {

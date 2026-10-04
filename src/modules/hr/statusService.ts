@@ -35,6 +35,9 @@ const DEFAULT_STATUSES: Record<EntityType, { name: string; order: number; isDefa
   // Admin Center only (platformTenantNotesService.ts) -- notes/tasks about the Tenant itself
   // have no status concept at all, same reasoning as contact/opportunity above.
   tenant: [],
+  // Projects have a fixed ProjectStatus enum (planning/active/on_hold/completed/cancelled), not a
+  // tenant-editable StatusDefinition catalog.
+  project: [],
 };
 
 export async function seedDefaultStatusDefinitions(tx: PrismaTx, tenantId: string): Promise<void> {

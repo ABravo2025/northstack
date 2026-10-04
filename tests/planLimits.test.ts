@@ -35,6 +35,8 @@ describe('getPlanLimits', () => {
       paymentsEnabled: false,
       apiAccessEnabled: false,
       freeTrialSeatCap: 3,
+      maxActiveProjects: 5,
+      customProjectTemplatesEnabled: false,
     });
   });
 
@@ -46,6 +48,8 @@ describe('getPlanLimits', () => {
     expect(limits.activityLogRetentionDays).toBe(30);
     expect(limits.payrollEnabled).toBe(true);
     expect(limits.paymentsEnabled).toBe(true);
+    expect(limits.maxActiveProjects).toBeNull();
+    expect(limits.customProjectTemplatesEnabled).toBe(true);
   });
 });
 

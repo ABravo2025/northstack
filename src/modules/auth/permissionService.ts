@@ -172,3 +172,13 @@ export function canManageSharedViews(role: RoleContext): boolean {
 export function canDecideTimeOff(role: RoleContext): boolean {
   return has(role, 'decide_time_off');
 }
+
+// Projects module — the ROLE-based half only. Seeing/working on a project you belong to doesn't
+// need either; projectAccess.ts layers that membership rule on top (same split as canDecideTimeOff).
+export function canViewProjects(role: RoleContext): boolean {
+  return has(role, 'view_projects');
+}
+
+export function canManageProjects(role: RoleContext): boolean {
+  return has(role, 'manage_projects');
+}

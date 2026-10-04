@@ -29,6 +29,9 @@ export interface CreateTaskInput {
   hasVideoCall?: boolean;
   createdById: string;
   folderId?: string | null;
+  // Projects module (2026-10-04) — only for entityType = project; the route checks the phase
+  // belongs to that very project.
+  projectPhaseId?: string | null;
 }
 
 export interface UpdateTaskInput {
@@ -39,6 +42,7 @@ export interface UpdateTaskInput {
   completedAt?: Date | string | null;
   hasVideoCall?: boolean;
   folderId?: string | null;
+  projectPhaseId?: string | null;
 }
 
 const taskInclude = {
@@ -60,6 +64,7 @@ export async function createTask(input: CreateTaskInput, client: ExtendedPrismaC
       hasVideoCall: input.hasVideoCall ?? false,
       createdById: input.createdById,
       folderId: input.folderId ?? null,
+      projectPhaseId: input.projectPhaseId ?? null,
     },
     include: taskInclude,
   });
@@ -127,6 +132,7 @@ export async function updateTask(id: string, input: UpdateTaskInput, changedByUs
   if (input.completedAt !== undefined) data.completedAt = input.completedAt;
   if (input.hasVideoCall !== undefined) data.hasVideoCall = input.hasVideoCall;
   if (input.folderId !== undefined) data.folderId = input.folderId;
+  if (input.projectPhaseId !== undefined) data.projectPhaseId = input.projectPhaseId;
 
   // Fetched before the write so the Google Calendar sync below can tell what
   // changed (e.g. reassignment, or dueDate/completedAt flipping) — see
@@ -337,6 +343,17 @@ async function summarizeTaskEntities(
     });
     for (const opportunity of opportunities) {
       summaries.set(`opportunity:${opportunity.id}`, opportunity.name);
+    }
+  }
+
+  const projectIds = [...(idsByType.get('project') ?? [])];
+  if (projectIds.length > 0) {
+    const projects = await prisma.project.findMany({
+      where: { tenantId, id: { in: projectIds } },
+      select: { id: true, name: true },
+    });
+    for (const project of projects) {
+      summaries.set(`project:${project.id}`, project.name);
     }
   }
 

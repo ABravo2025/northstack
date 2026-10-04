@@ -1,3 +1,4 @@
+import { countProjectsOwnedBy } from '../modules/projects/projectService.js';
 import type express from 'express';
 import { z } from 'zod';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
@@ -1028,6 +1029,14 @@ externalApiRouter.delete('/api/external/v1/hr/employees/:id', async (req, res) =
 
   const existing = await findEmployeeById(req.params.id, prismaExternal);
   if (!existing || existing.tenantId !== apiKey.tenantId || !(await isEmployeeVisible(apiKey, existing.id))) return notFound(req, res, apiKey);
+
+  const ownedProjects = await countProjectsOwnedBy(existing.id);
+  if (ownedProjects > 0) {
+    return respond(req, res, apiKey, 409, {
+      error: `This person owns ${ownedProjects} project(s); reassign them before deleting this person.`,
+      code: 'employee_owns_projects',
+    });
+  }
 
   await deleteEmployee(req.params.id, apiKey.createdByUserId, prismaExternal);
   return respond(req, res, apiKey, 204, {});

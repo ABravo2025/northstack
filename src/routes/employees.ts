@@ -1,3 +1,4 @@
+import { countProjectsOwnedBy } from '../modules/projects/projectService.js';
 import {
   createCustomFieldValue,
   deleteCustomFieldValue,
@@ -315,6 +316,15 @@ employeesRouter.delete('/api/hr/employees/:employeeId', async (req, res) => {
   const employee = await findEmployeeById(req.params.employeeId);
   if (!employee || employee.tenantId !== user.tenantId || !(await isEmployeeInScope(user, employee.id))) {
     return res.status(404).json({ error: 'Employee not found' });
+  }
+
+  const ownedProjects = await countProjectsOwnedBy(employee.id);
+  if (ownedProjects > 0) {
+    return res.status(409).json({
+      error: `This person owns ${ownedProjects} project(s). Choose a new owner for them before deleting this person.`,
+      code: 'employee_owns_projects',
+      count: ownedProjects,
+    });
   }
 
   await deleteEmployee(req.params.employeeId, user.id);

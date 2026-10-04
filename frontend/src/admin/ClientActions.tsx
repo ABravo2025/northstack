@@ -7,7 +7,7 @@ import { date } from './format';
 // Admin Center v2, stage 2a: the "Acciones" menu on the client page. Every action asks for a
 // reason (it lands in the Registro de acciones and the client's Actividad tab).
 
-type ActionKey = 'extend' | 'plan' | 'suspend' | 'reactivate';
+type ActionKey = 'extend' | 'plan' | 'suspend' | 'reactivate' | 'freeMonths' | 'reminder' | 'export';
 
 interface Props {
   client: ClientDetail;
@@ -21,6 +21,7 @@ export default function ClientActions({ client, session, onDone }: Props) {
   const menuRef = useRef<HTMLDivElement>(null);
   const isAdmin = session.role === 'platform_admin';
   const hasProvider = !!client.subscription?.provider;
+  const isDodo = client.subscription?.provider === 'dodopayments';
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -34,6 +35,9 @@ export default function ClientActions({ client, session, onDone }: Props) {
   const items: { key: ActionKey; label: string; hint: string; show: boolean; tone?: string }[] = [
     { key: 'extend', label: 'Extender prueba', hint: hasProvider ? 'No disponible: ya cargó medio de pago' : 'Suma días a la prueba gratis', show: client.status !== 'cancelled' },
     { key: 'plan', label: 'Cambiar plan', hint: 'Starter ↔ Growth', show: isAdmin && client.status !== 'cancelled' },
+    { key: 'freeMonths', label: 'Dar meses gratis', hint: isDodo ? 'Corre la fecha del próximo cobro' : 'Solo para clientes que pagan con Dodo', show: isAdmin && hasProvider },
+    { key: 'reminder', label: 'Pedir que actualice la tarjeta', hint: 'Le manda un mail con el link a Facturación', show: hasProvider },
+    { key: 'export', label: 'Exportar datos del cliente', hint: 'ZIP con un CSV por módulo', show: isAdmin },
     { key: 'suspend', label: 'Suspender cuenta', hint: 'Queda en solo lectura', show: isAdmin && client.status !== 'suspended' && client.status !== 'cancelled', tone: 'text-amber-700 dark:text-amber-300' },
     { key: 'reactivate', label: 'Reactivar cuenta', hint: 'Vuelven a poder trabajar', show: isAdmin && client.status === 'suspended' },
   ];
@@ -50,7 +54,7 @@ export default function ClientActions({ client, session, onDone }: Props) {
               key={i.key}
               type="button"
               role="menuitem"
-              disabled={i.key === 'extend' && hasProvider}
+              disabled={(i.key === 'extend' && hasProvider) || (i.key === 'freeMonths' && !isDodo)}
               onClick={() => { setMenuOpen(false); setAction(i.key); }}
               className={`block w-full rounded-md px-2.5 py-2 text-left text-sm hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50 dark:hover:bg-dark-raised ${i.tone ?? ''}`}
             >
@@ -69,6 +73,7 @@ function ActionDialog({ action, client, session, onClose, onDone }: { action: Ac
   const [reason, setReason] = useState('');
   const [days, setDays] = useState(7);
   const [plan, setPlan] = useState<'starter' | 'growth'>(client.plan === 'growth' ? 'starter' : 'growth');
+  const [months, setMonths] = useState(1);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -77,6 +82,9 @@ function ActionDialog({ action, client, session, onClose, onDone }: { action: Ac
     plan: 'Cambiar plan',
     suspend: 'Suspender cuenta',
     reactivate: 'Reactivar cuenta',
+    freeMonths: 'Dar meses gratis',
+    reminder: 'Pedir que actualice la tarjeta',
+    export: 'Exportar datos',
   };
   let body: ReactNode = null;
   if (action === 'extend') {
@@ -117,6 +125,32 @@ function ActionDialog({ action, client, session, onClose, onDone }: { action: Ac
         {client.subscription?.provider && ' Ojo: tiene un medio de pago, así que el proveedor sigue cobrando hasta que cancele.'}
       </p>
     );
+  } else if (action === 'freeMonths') {
+    body = (
+      <>
+        <p className="text-sm text-ink-muted dark:text-dark-ink-muted">
+          El próximo cobro {client.nextChargeAt ? `(hoy: ${date(client.nextChargeAt)}) ` : ''}se corre los meses que elijas: no se le cobra nada hasta esa fecha y después sigue normal. Se hace en Dodo al instante.
+        </p>
+        <label className="grid gap-1 text-sm font-medium" htmlFor="act-months">
+          Meses gratis
+          <select id="act-months" value={months} onChange={(e) => setMonths(Number(e.target.value))}>
+            {[1, 2, 3, 6, 12].map((m) => <option key={m} value={m}>{m} {m === 1 ? 'mes' : 'meses'}</option>)}
+          </select>
+        </label>
+      </>
+    );
+  } else if (action === 'reminder') {
+    body = (
+      <p className="text-sm text-ink-muted dark:text-dark-ink-muted">
+        Le llega al dueño ({client.owner?.email ?? '—'}) un mail en su idioma con el link a Configuración → Facturación. Ni Dodo ni Mercado Pago permiten forzar un reintento: el cobro se reintenta solo cuando actualiza la tarjeta.
+      </p>
+    );
+  } else if (action === 'export') {
+    body = (
+      <p className="text-sm text-ink-muted dark:text-dark-ink-muted">
+        Se descarga un ZIP con personas, empresas, contactos, usuarios, ausencias, oportunidades y tareas (un CSV por módulo). Tiene datos personales: queda registrado quién lo bajó y por qué.
+      </p>
+    );
   } else {
     body = <p className="text-sm text-ink-muted dark:text-dark-ink-muted">Vuelven a poder trabajar normalmente.</p>;
   }
@@ -131,8 +165,23 @@ function ActionDialog({ action, client, session, onClose, onDone }: { action: Ac
     setError(null);
     try {
       const r = reason.trim();
+      if (action === 'export') {
+        const { blob, filename } = await adminActions.exportData(session.token, client.id, r);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 10_000);
+        onDone(`Descargado: ${filename}`);
+        return;
+      }
       const res =
-        action === 'extend' ? await adminActions.extendTrial(session.token, client.id, days, r)
+        action === 'freeMonths' ? await adminActions.freeMonths(session.token, client.id, months, r)
+        : action === 'reminder' ? await adminActions.paymentReminder(session.token, client.id, r)
+        : action === 'extend' ? await adminActions.extendTrial(session.token, client.id, days, r)
         : action === 'plan' ? await adminActions.changePlan(session.token, client.id, plan, r)
         : action === 'suspend' ? await adminActions.suspend(session.token, client.id, r)
         : await adminActions.reactivate(session.token, client.id, r);

@@ -223,6 +223,28 @@ export const adminActions = {
     call<ActionResult>(`/api/platform/admin/clients/${cid(id)}/agreement`, token, { method: 'PUT', body: JSON.stringify(body) }),
   clearAgreement: (token: string, id: string, reason: string) =>
     call<ActionResult>(`/api/platform/admin/clients/${cid(id)}/agreement`, token, { method: 'DELETE', body: JSON.stringify({ reason }) }),
+  freeMonths: (token: string, id: string, months: number, reason: string) => post<ActionResult>(`/api/platform/admin/clients/${cid(id)}/free-months`, token, { months, reason }),
+  paymentReminder: (token: string, id: string, reason: string) => post<ActionResult>(`/api/platform/admin/clients/${cid(id)}/payment-reminder`, token, { reason }),
+  // Returns the ZIP itself; the caller turns it into a download.
+  exportData: async (token: string, id: string, reason: string): Promise<{ blob: Blob; filename: string }> => {
+    const res = await fetch(`${API_BASE_URL}/api/platform/admin/clients/${cid(id)}/export`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ reason }),
+    });
+    if (!res.ok) {
+      let message = `Error ${res.status}`;
+      try {
+        message = (await res.json()).error ?? message;
+      } catch {
+        // keep the status text
+      }
+      throw new AdminApiError(message, res.status);
+    }
+    const disposition = res.headers.get('Content-Disposition') ?? '';
+    const filename = /filename="([^"]+)"/.exec(disposition)?.[1] ?? 'northstack-export.zip';
+    return { blob: await res.blob(), filename };
+  },
   audit: (token: string, tenantId?: string) => call<AuditEntry[]>(`/api/platform/admin/audit${tenantId ? `?tenantId=${cid(tenantId)}` : ''}`, token),
 };
 

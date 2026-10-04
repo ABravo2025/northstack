@@ -474,6 +474,9 @@ const KIND_TITLE: Record<string, string> = {
   staff_reset_password: 'Link de contraseña nueva enviado',
   staff_set_agreement: 'Acuerdo especial guardado',
   staff_clear_agreement: 'Acuerdo especial quitado',
+  staff_free_months: 'Meses gratis',
+  staff_payment_reminder: 'Se le pidió actualizar la tarjeta',
+  staff_export_data: 'Datos exportados',
 };
 
 function Timeline({ items }: { items: ClientDetail['timeline'] }) {

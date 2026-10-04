@@ -46,6 +46,9 @@ import {
   suspendClient,
   setAgreement,
   clearAgreement,
+  grantFreeMonths,
+  sendPaymentReminder,
+  exportClientData,
   type AdminActionResult,
 } from '../modules/platform/adminActionService.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
@@ -312,6 +315,51 @@ platformRouter.delete('/api/platform/admin/clients/:id/agreement', async (req, r
     return res.status(400).json({ error: 'Escribí un motivo (queda en el registro).' });
   }
   return sendAction(res, await clearAgreement(req.params.id, user, reason));
+});
+
+// Stage 2c — billing actions (platform_admin only) and data export.
+platformRouter.post('/api/platform/admin/clients/:id/free-months', async (req, res) => {
+  const user = await requirePlatformRole()(req, res);
+  if (!user) {
+    return;
+  }
+  const reason = cleanReason(req.body.reason);
+  if (!reason) {
+    return res.status(400).json({ error: 'Escribí un motivo (queda en el registro).' });
+  }
+  return sendAction(res, await grantFreeMonths(req.params.id, Number(req.body.months), user, reason));
+});
+
+platformRouter.post('/api/platform/admin/clients/:id/payment-reminder', async (req, res) => {
+  const user = await requirePlatformRole('platform_support')(req, res);
+  if (!user) {
+    return;
+  }
+  const reason = cleanReason(req.body.reason);
+  if (!reason) {
+    return res.status(400).json({ error: 'Escribí un motivo (queda en el registro).' });
+  }
+  return sendAction(res, await sendPaymentReminder(req.params.id, user, reason));
+});
+
+// POST (not GET) so the reason travels in the body and the export is never triggered by a link.
+platformRouter.post('/api/platform/admin/clients/:id/export', async (req, res) => {
+  const user = await requirePlatformRole()(req, res);
+  if (!user) {
+    return;
+  }
+  const reason = cleanReason(req.body.reason);
+  if (!reason) {
+    return res.status(400).json({ error: 'Escribí un motivo (queda en el registro).' });
+  }
+  const result = await exportClientData(req.params.id, user, reason);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  res.set('Content-Type', 'application/zip');
+  res.set('Content-Disposition', `attachment; filename="${result.filename}"`);
+  res.set('Cache-Control', 'private, no-store');
+  return res.send(result.zip);
 });
 
 platformRouter.get('/api/platform/admin/audit', async (req, res) => {

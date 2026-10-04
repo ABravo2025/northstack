@@ -375,6 +375,55 @@ export async function sendPaymentMethodReminderEmail(input: SendPaymentMethodRem
   }, 'Failed to send payment method reminder email:');
 }
 
+export interface SendSupportAccessRequestEmailInput {
+  to: string;
+  firstName: string;
+  staffName: string;
+  tenantName: string;
+  reason: string;
+  readOnly: boolean;
+  durationMinutes: number;
+  appUrl: string;
+  locale?: string | null;
+}
+
+// Admin Center v2, stage 5 (2026-10-04): Northstack support asks this user for access to their
+// account. Nothing happens until they accept it in the app.
+export async function sendSupportAccessRequestEmail(input: SendSupportAccessRequestEmailInput): Promise<void> {
+  if (!mailerConfigured()) return;
+
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(key, { lng, ns: 'emails', ...opts });
+  const duration = input.durationMinutes >= 1440 ? t('supportAccess.duration24h') : input.durationMinutes >= 120 ? t('supportAccess.duration2h') : t('supportAccess.duration30m');
+  const mode = input.readOnly ? t('supportAccess.readOnly') : t('supportAccess.edit');
+
+  await dispatchMail({
+    from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
+    to: input.to,
+    subject: t('supportAccess.subject'),
+    text: [
+      t('supportAccess.greeting', { firstName: input.firstName }),
+      '',
+      t('supportAccess.body', { staffName: input.staffName, tenantName: input.tenantName }),
+      `${t('supportAccess.reasonLabel')}: ${input.reason}`,
+      `${t('supportAccess.modeLabel')}: ${mode} · ${duration}`,
+      '',
+      t('supportAccess.howTo'),
+      input.appUrl,
+      '',
+      t('supportAccess.footer'),
+    ].join('\n'),
+    html: [
+      `<p>${t('supportAccess.greeting', { firstName: escapeHtml(input.firstName) })}</p>`,
+      `<p>${t('supportAccess.body', { staffName: strong(input.staffName), tenantName: strong(input.tenantName) })}</p>`,
+      `<p>${t('supportAccess.reasonLabel')}: <em>${escapeHtml(input.reason)}</em><br>${t('supportAccess.modeLabel')}: ${mode} · ${duration}</p>`,
+      `<p>${t('supportAccess.howTo')}</p>`,
+      `<p><a href="${input.appUrl}">${t('supportAccess.openApp')}</a></p>`,
+      `<p>${t('supportAccess.footer')}</p>`,
+    ].join('\n'),
+  }, 'Failed to send support access request email:');
+}
+
 export interface SendPasswordResetEmailInput {
   to: string;
   resetUrl: string;

@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import App from './App.tsx'
 import { ToastProvider } from './components/common/ToastProvider'
 import { initTheme } from './theme'
+import { redeemSupportEntry } from './lib/supportSession'
 import './lib/i18n'
 import './index.css'
 
@@ -15,6 +16,22 @@ initTheme();
 // app's domain (Alejandro, 2026-10-03).
 const isAdminHost = window.location.hostname.startsWith('admin.');
 const AdminApp = lazy(() => import('./admin/AdminApp'));
+
+// Admin Center v2, stage 5: Northstack support opening this account (with the customer's consent)
+// lands on /support-session#<one-time code>; exchange it, then open the app in this tab.
+if (window.location.pathname === '/support-session') {
+  const code = window.location.hash.slice(1);
+  history.replaceState(null, '', '/support-session');
+  redeemSupportEntry(code)
+    .then(() => window.location.replace('/overview'))
+    .catch((err: Error) => {
+      document.body.innerHTML = '';
+      const p = document.createElement('p');
+      p.style.cssText = 'font-family:system-ui,sans-serif;max-width:32rem;margin:4rem auto;padding:0 1rem;color:#1b1733';
+      p.textContent = err.message;
+      document.body.appendChild(p);
+    });
+}
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

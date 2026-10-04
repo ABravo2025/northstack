@@ -162,7 +162,7 @@ async function loadClientRows(now: Date, onlyTenantId?: string) {
       where: onlyTenantId ? { id: onlyTenantId } : {},
       select: {
         id: true, name: true, slug: true, status: true, createdAt: true, country: true, industry: true, companySize: true,
-        currency: true, plan: true, trialEndsAt: true, gracePeriodEndsAt: true, acquisitionChannel: true, legalName: true, website: true, phone: true, planOverride: true,
+        currency: true, plan: true, trialEndsAt: true, gracePeriodEndsAt: true, acquisitionChannel: true, legalName: true, website: true, phone: true, planOverride: true, deletionScheduledAt: true,
         subscription: {
           select: {
             status: true, provider: true, lockedPriceCents: true, currency: true, currentPeriodEnd: true, cancelledAt: true,
@@ -253,6 +253,7 @@ async function loadClientRows(now: Date, onlyTenantId?: string) {
         owner: owner ? { name: `${owner.firstName} ${owner.lastName}`.trim(), email: owner.email } : null,
         openTickets: ticketsByTenant.get(t.id) ?? 0,
         hasAgreement: activeOverride(t.planOverride, now) !== null,
+        deletionScheduledAt: t.deletionScheduledAt,
         attention: attentionFor({ status, plan: t.plan, trialEndsAt: t.trialEndsAt, gracePeriodEndsAt: t.gracePeriodEndsAt, lastSeenAt, createdAt: t.createdAt, now }),
       },
     };

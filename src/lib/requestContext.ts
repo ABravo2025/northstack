@@ -19,6 +19,12 @@ export function runWithRequestContext<T>(context: RequestContext, fn: () => T): 
   return storage.run(context, fn);
 }
 
+// For a context only known after authentication (a support session, Admin Center v2 stage 5): sets
+// it for the rest of the current request's async chain.
+export function enterRequestContext(context: RequestContext): void {
+  storage.enterWith(context);
+}
+
 export function getRequestContext(): RequestContext | undefined {
   return storage.getStore();
 }

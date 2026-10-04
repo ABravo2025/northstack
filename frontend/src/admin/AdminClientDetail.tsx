@@ -8,6 +8,7 @@ import { MODULE_LABEL, STATUS, TONE_COLOR, ago, attentionText, date, daysUntil, 
 import { Avatar, Chip, ErrorBox, Loading, Meter, Panel } from './ui';
 import ClientActions, { ResetPasswordButton } from './ClientActions';
 import AgreementTab from './AgreementTab';
+import SupportAccessPanel from './SupportAccessPanel';
 
 type Tab = 'summary' | 'users' | 'usage' | 'modules' | 'billing' | 'support' | 'notes' | 'activity';
 const TABS: [Tab, string][] = [
@@ -39,6 +40,7 @@ export default function AdminClientDetail({ session }: { session: AdminSession }
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('summary');
   const [flash, setFlash] = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const load = useCallback(() => {
     adminApi
@@ -54,6 +56,7 @@ export default function AdminClientDetail({ session }: { session: AdminSession }
 
   const done = (message: string) => {
     setFlash(message);
+    setRefreshKey((k) => k + 1);
     load();
   };
 
@@ -96,6 +99,13 @@ export default function AdminClientDetail({ session }: { session: AdminSession }
           <button type="button" className="text-xs underline" onClick={() => setFlash(null)}>Cerrar</button>
         </div>
       )}
+
+      {c.deletionScheduledAt && (
+        <div className="rounded-lg bg-rose-50 px-4 py-2.5 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-300">
+          <b>Marcado para eliminar.</b> Nadie del cliente puede entrar. Se puede deshacer hasta el {date(c.deletionScheduledAt)} con "Acciones → Cancelar eliminación".
+        </div>
+      )}
+      <SupportAccessPanel client={c} session={session} refreshKey={refreshKey} onDone={done} />
 
       {c.attention.map((a, i) => {
         const t = attentionText(a);
@@ -477,6 +487,11 @@ const KIND_TITLE: Record<string, string> = {
   staff_free_months: 'Meses gratis',
   staff_payment_reminder: 'Se le pidió actualizar la tarjeta',
   staff_export_data: 'Datos exportados',
+  staff_support_request: 'Se pidió acceso de soporte',
+  staff_support_enter: 'Soporte entró a la cuenta',
+  staff_support_end: 'Soporte terminó el acceso',
+  staff_delete_scheduled: 'Marcado para eliminar',
+  staff_delete_cancelled: 'Eliminación cancelada',
 };
 
 function Timeline({ items }: { items: ClientDetail['timeline'] }) {

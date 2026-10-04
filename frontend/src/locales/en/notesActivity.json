@@ -32,7 +32,8 @@
     },
     "source": {
       "api": "API",
-      "ai": "AI"
+      "ai": "AI",
+      "support": "Northstack support"
     }
   }
 }

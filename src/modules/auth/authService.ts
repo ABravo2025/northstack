@@ -5,6 +5,7 @@ import type { User, Session } from '@prisma/client';
 import { sendPasswordResetEmail } from '../../lib/mailer.js';
 import { getEmailDomain } from '../../lib/email.js';
 import { resolveRoleContextForUser, type RoleContext } from './roleService.js';
+import { enterRequestContext } from '../../lib/requestContext.js';
 
 export interface RegisterUserInput {
   firstName: string;
@@ -172,12 +173,25 @@ export async function loginUser(input: LoginUserInput): Promise<AuthResult> {
 export type AuthenticatedUser = User & {
   tenant: { id: string; status: TenantStatus; plan: PlanTier | null; planOverride: Prisma.JsonValue | null } | null;
   roleContext: RoleContext;
+  // Set only on a support session (Admin Center v2 stage 5): Northstack staff inside this user's
+  // account, under an access the user accepted.
+  support?: SupportSessionInfo | null;
 };
+
+export interface SupportSessionInfo {
+  requestId: string;
+  readOnly: boolean;
+  endsAt: Date;
+  staffName: string;
+}
 
 export async function authenticateToken(token: string): Promise<AuthenticatedUser | null> {
   const session = await prisma.session.findUnique({
     where: { token },
-    include: { user: { include: { tenant: { select: { id: true, status: true, plan: true, planOverride: true } } } } },
+    include: {
+      user: { include: { tenant: { select: { id: true, status: true, plan: true, planOverride: true, deletionScheduledAt: true } } } },
+      supportAccessRequest: { select: { id: true, status: true, accessEndsAt: true, mode: true, requestedBy: { select: { firstName: true, lastName: true } } } },
+    },
   });
 
   if (!session) {
@@ -190,6 +204,30 @@ export async function authenticateToken(token: string): Promise<AuthenticatedUse
 
   if (session.user.status !== 'active') {
     return null;
+  }
+
+  // A client scheduled for deletion (Admin Center "Eliminar cliente") can't get in anymore.
+  if (session.user.tenant?.deletionScheduledAt) {
+    return null;
+  }
+
+  // Support session (Admin Center v2 stage 5): valid only while the access the customer accepted is
+  // still approved and inside its window. No sliding expiry, and it never counts as the customer's
+  // own activity. Changes made in edit mode are tagged as support in the Activity Log.
+  const sar = session.supportAccessRequest;
+  if (session.supportAccessRequestId) {
+    if (!sar || sar.status !== 'approved' || !sar.accessEndsAt || sar.accessEndsAt <= new Date()) return null;
+    const staffName = `${sar.requestedBy.firstName} ${sar.requestedBy.lastName}`.trim();
+    enterRequestContext({ source: 'support', sourceClientName: `Northstack · ${staffName}` });
+    const { supportAccessRequest: _sar, user } = session;
+    const { tenant, ...rest } = user;
+    const roleContext = await resolveRoleContextForUser(user);
+    return {
+      ...rest,
+      tenant: tenant ? { id: tenant.id, status: tenant.status, plan: tenant.plan, planOverride: tenant.planOverride } : null,
+      roleContext,
+      support: { requestId: sar.id, readOnly: session.supportReadOnly, endsAt: sar.accessEndsAt, staffName },
+    };
   }
 
   // Sliding expiration — extend on use instead of letting it count down from
@@ -209,8 +247,14 @@ export async function authenticateToken(token: string): Promise<AuthenticatedUse
 
   await recordUserSeen(session.user);
 
+  const { tenant, ...rest } = session.user;
   const roleContext = await resolveRoleContextForUser(session.user);
-  return { ...session.user, roleContext };
+  return {
+    ...rest,
+    tenant: tenant ? { id: tenant.id, status: tenant.status, plan: tenant.plan, planOverride: tenant.planOverride } : null,
+    roleContext,
+    support: null,
+  };
 }
 
 // Admin Center v2 (2026-10-03): "last activity" + one UserActivityDay row per user per UTC day.

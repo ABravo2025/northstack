@@ -37,6 +37,13 @@ import {
 import { listIncompleteSignups } from '../modules/platform/platformSignupService.js';
 import { getClientDetail, getOverview, listClients } from '../modules/platform/adminClientService.js';
 import { getBillingOverview } from '../modules/platform/adminBillingService.js';
+import { cancelTenantDeletion, scheduleTenantDeletion } from '../modules/platform/tenantDeletionService.js';
+import {
+  endSupportAccessByStaff,
+  issueSupportEntryCode,
+  listSupportRequests,
+  requestSupportAccess,
+} from '../modules/platform/supportAccessService.js';
 import {
   announcementCountries,
   createAdminAnnouncement,
@@ -411,6 +418,83 @@ platformRouter.delete('/api/platform/admin/announcements/:id', async (req, res) 
     return;
   }
   return sendAction(res, await deleteAdminAnnouncement(req.params.id, user));
+});
+
+// The customer app that goes with the Admin the request came from: admin-staging → staging,
+// admin → production, anything else (local dev) → APP_BASE_URL.
+function customerAppUrl(req: import('express').Request): string {
+  const host = String(req.headers['x-forwarded-host'] ?? req.headers.host ?? '');
+  if (host.startsWith('admin-staging.')) return 'https://staging.joinnorthstack.com';
+  if (host.startsWith('admin.')) return 'https://app.joinnorthstack.com';
+  return process.env.APP_BASE_URL ?? 'http://localhost:5173';
+}
+
+// Stage 5 — "Entrar como soporte", only after the customer's user accepts.
+platformRouter.get('/api/platform/admin/clients/:id/support-access', async (req, res) => {
+  const user = await requirePlatformRole('platform_support')(req, res);
+  if (!user) {
+    return;
+  }
+  return res.json(await listSupportRequests(req.params.id));
+});
+
+platformRouter.post('/api/platform/admin/clients/:id/support-access', async (req, res) => {
+  const user = await requirePlatformRole('platform_support')(req, res);
+  if (!user) {
+    return;
+  }
+  const reason = cleanReason(req.body.reason);
+  if (!reason) {
+    return res.status(400).json({ error: 'Escribí el motivo: lo ve el cliente en el pedido.' });
+  }
+  return sendAction(res, await requestSupportAccess(req.params.id, req.body ?? {}, user, reason, customerAppUrl(req)));
+});
+
+platformRouter.post('/api/platform/admin/clients/:id/support-access/:requestId/enter', async (req, res) => {
+  const user = await requirePlatformRole('platform_support')(req, res);
+  if (!user) {
+    return;
+  }
+  const result = await issueSupportEntryCode(req.params.id, req.params.requestId, user);
+  if (!result.success) {
+    return res.status(400).json({ error: result.error });
+  }
+  const appUrl = customerAppUrl(req);
+  // The code travels in the URL fragment: never sent to any server or written to access logs.
+  return res.json({ url: `${appUrl}/support-session#${result.code}` });
+});
+
+platformRouter.post('/api/platform/admin/clients/:id/support-access/:requestId/end', async (req, res) => {
+  const user = await requirePlatformRole('platform_support')(req, res);
+  if (!user) {
+    return;
+  }
+  return sendAction(res, await endSupportAccessByStaff(req.params.id, req.params.requestId, user));
+});
+
+// Stage 5 — "Eliminar cliente": blocks access now, reversible (platform_admin only).
+platformRouter.post('/api/platform/admin/clients/:id/delete', async (req, res) => {
+  const user = await requirePlatformRole()(req, res);
+  if (!user) {
+    return;
+  }
+  const reason = cleanReason(req.body.reason);
+  if (!reason) {
+    return res.status(400).json({ error: 'Escribí un motivo (queda en el registro).' });
+  }
+  return sendAction(res, await scheduleTenantDeletion(req.params.id, String(req.body.confirmName ?? ''), user, reason));
+});
+
+platformRouter.post('/api/platform/admin/clients/:id/cancel-delete', async (req, res) => {
+  const user = await requirePlatformRole()(req, res);
+  if (!user) {
+    return;
+  }
+  const reason = cleanReason(req.body.reason);
+  if (!reason) {
+    return res.status(400).json({ error: 'Escribí un motivo (queda en el registro).' });
+  }
+  return sendAction(res, await cancelTenantDeletion(req.params.id, user, reason));
 });
 
 platformRouter.get('/api/platform/admin/audit', async (req, res) => {

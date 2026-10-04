@@ -370,6 +370,10 @@ model Tenant {
   // plan — modules switched on/off and limits changed, with reason and optional expiry. Shape and
   // merge rules: src/modules/tenant/planLimits.ts (PlanOverride). Null = the plan as sold.
   planOverride              Json?
+  // Admin Center v2, stage 5: "Eliminar cliente" — set = nobody can log in, and the daily job
+  // (planTransitionService.ts) erases every row of this tenant once this date passes. Clearing it
+  // before then undoes the deletion.
+  deletionScheduledAt       DateTime?
   subscription              Subscription?
   users                     User[]
   employees                 Employee[]
@@ -425,6 +429,7 @@ model Tenant {
   platformAuditEntries      PlatformAuditEntry[]
   platformNotes             PlatformNote[]
   platformTasks             PlatformTask[]
+  supportAccessRequests     SupportAccessRequest[]
 }
 
 // Billing Integration (spec-billing-integration.md). plan/lockedPriceCents are deliberately NOT
@@ -614,6 +619,8 @@ model User {
   activityDays                UserActivityDay[]
   platformAuditEntries        PlatformAuditEntry[]        @relation("PlatformAuditActor")
   platformNotes               PlatformNote[]              @relation("PlatformNoteAuthor")
+  supportRequestsMade         SupportAccessRequest[]      @relation("SupportAccessRequester")
+  supportRequestsReceived     SupportAccessRequest[]      @relation("SupportAccessTarget")
   platformTasks               PlatformTask[]              @relation("PlatformTaskAuthor")
   pipelinesCreated            Pipeline[]                  @relation("PipelineCreatedBy")
   pipelinesUpdated            Pipeline[]                  @relation("PipelineUpdatedBy")
@@ -1170,6 +1177,9 @@ enum ActivitySource {
   ui
   api
   ai
+  // Admin Center v2, stage 5 (2026-10-04): a change made by Northstack support inside the customer's
+  // account, during an access the customer accepted (edit mode).
+  support
 }
 
 // Generic, tenant-wide audit trail — feeds both the per-record "Activity" tab (Employee/Company/
@@ -1845,6 +1855,41 @@ model Session {
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
   expiresAt DateTime
+  // Admin Center v2, stage 5: set only on a support session — Northstack staff seeing the customer's
+  // account as `userId`, under an access that user accepted. No sliding expiry, read-only unless the
+  // customer allowed edits, ended the moment the customer ends the access.
+  supportAccessRequestId String?
+  supportAccessRequest   SupportAccessRequest? @relation(fields: [supportAccessRequestId], references: [id], onDelete: Cascade)
+  supportReadOnly        Boolean               @default(false)
+}
+
+// Admin Center v2, stage 5 (2026-10-04): "Entrar como soporte" only with the customer's consent.
+// Staff asks a specific user of the client; that user accepts or rejects (in the app, linked from an
+// email). The access window starts at acceptance; the user can end it at any time.
+model SupportAccessRequest {
+  id               String    @id @default(uuid())
+  tenantId         String
+  tenant           Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  requestedById    String
+  requestedBy      User      @relation("SupportAccessRequester", fields: [requestedById], references: [id])
+  targetUserId     String
+  targetUser       User      @relation("SupportAccessTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  reason           String
+  mode             String // read_only | edit
+  durationMinutes  Int
+  status           String // pending | approved | rejected | expired | ended
+  requestExpiresAt DateTime // a pending request lapses after this
+  decidedAt        DateTime?
+  accessEndsAt     DateTime?
+  endedAt          DateTime?
+  endedBy          String? // customer | staff
+  entryCodeHash    String? // one-time code to open the support session (60 s)
+  entryCodeExpires DateTime?
+  createdAt        DateTime  @default(now())
+  sessions         Session[]
+
+  @@index([tenantId, createdAt])
+  @@index([targetUserId, status])
 }
 
 // One connected Google account per platform user (self-service, personal —

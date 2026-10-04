@@ -86,5 +86,20 @@
     "body": "No pudimos cobrar con la tarjeta cargada para {{tenantName}}. Para seguir usando Northstack sin cortes, actualizá tu medio de pago.",
     "linkText": "Actualizar medio de pago",
     "footer": "Cuando lo actualices, el cobro se reintenta solo. Si tenés dudas, respondé este mail."
+  },
+  "supportAccess": {
+    "subject": "El soporte de Northstack pide acceso a tu cuenta",
+    "greeting": "Hola {{firstName}},",
+    "body": "{{staffName}}, del soporte de Northstack, quiere ver tu cuenta de {{tenantName}} para ayudarte.",
+    "reasonLabel": "Motivo",
+    "modeLabel": "Acceso",
+    "readOnly": "solo lectura",
+    "edit": "ver y editar",
+    "duration30m": "30 minutos desde que aceptás",
+    "duration2h": "2 horas desde que aceptás",
+    "duration24h": "24 horas desde que aceptás",
+    "howTo": "Entrá a Northstack para aceptar o rechazar. No pasa nada si no aceptás, y podés terminar el acceso cuando quieras.",
+    "openApp": "Abrir Northstack",
+    "footer": "Si no lo esperabas, rechazalo y respondé este mail."
   }
 }

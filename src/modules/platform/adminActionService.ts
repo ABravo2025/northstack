@@ -1,9 +1,10 @@
-import type { PlanTier, Prisma, TenantStatus } from '@prisma/client';
+import { Prisma, type PlanTier, type TenantStatus } from '@prisma/client';
 import prisma from '../../lib/prisma.js';
 import { requestPasswordReset } from '../auth/authService.js';
 import { updateTenantPlan } from '../tenant/planService.js';
 import { changePlan as changePaidPlan } from '../tenant/subscriptionSelfServeService.js';
 import { GRACE_PERIOD_DAYS } from '../tenant/planTransitionService.js';
+import { OVERRIDABLE_LIMITS, OVERRIDABLE_MODULES, activeOverride, type OverridableLimit, type OverridableModule, type PlanOverride } from '../tenant/planLimits.js';
 
 // Admin Center v2, stage 2a (2026-10-03): actions Northstack staff can take on a client. Every one
 // needs a written reason and leaves a PlatformAuditEntry (append-only). Each returns
@@ -146,3 +147,76 @@ export async function listAudit(input: { tenantId?: string; take?: number }) {
     tenant: r.tenant,
   }));
 }
+
+// ---------------------------------------------------------------------------------------------
+// Stage 2b: per-client agreements (modules on/off + limits), see planLimits.ts's PlanOverride.
+
+export interface AgreementInput {
+  modules?: Record<string, unknown>;
+  limits?: Record<string, unknown>;
+  expiresAt?: unknown;
+}
+
+// Validates what the Admin sends. Modules: true/false (absent or 'plan' = as the plan says).
+// Limits: a whole number 0..10000, null = unlimited (not for freeTrialSeatCap), absent = the plan.
+export function parseAgreement(input: AgreementInput, now: Date = new Date()): { ok: true; modules: PlanOverride['modules']; limits: PlanOverride['limits']; expiresAt: string | null } | { ok: false; error: string } {
+  const modules: PlanOverride['modules'] = {};
+  const limits: PlanOverride['limits'] = {};
+  for (const [key, value] of Object.entries(input.modules ?? {})) {
+    if (!OVERRIDABLE_MODULES.includes(key as OverridableModule)) return { ok: false, error: `Módulo desconocido: ${key}` };
+    if (value === 'plan' || value === undefined) continue;
+    if (typeof value !== 'boolean') return { ok: false, error: `Valor inválido para ${key}.` };
+    modules[key as OverridableModule] = value;
+  }
+  for (const [key, value] of Object.entries(input.limits ?? {})) {
+    if (!OVERRIDABLE_LIMITS.includes(key as OverridableLimit)) return { ok: false, error: `Límite desconocido: ${key}` };
+    if (value === 'plan' || value === undefined || value === '') continue;
+    if (value === null) {
+      if (key === 'freeTrialSeatCap') return { ok: false, error: 'El tope de usuarios en prueba necesita un número.' };
+      limits[key as OverridableLimit] = null;
+      continue;
+    }
+    const n = typeof value === 'string' ? Number(value) : value;
+    if (typeof n !== 'number' || !Number.isInteger(n) || n < 0 || n > 10000) return { ok: false, error: `Límite inválido para ${key}: usá un número entero.` };
+    limits[key as OverridableLimit] = n;
+  }
+  let expiresAt: string | null = null;
+  if (typeof input.expiresAt === 'string' && input.expiresAt.trim()) {
+    const d = input.expiresAt.trim().slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || Number.isNaN(Date.parse(d))) return { ok: false, error: 'Fecha de vencimiento inválida.' };
+    if (Date.parse(`${d}T23:59:59.999Z`) < now.getTime()) return { ok: false, error: 'La fecha de vencimiento ya pasó.' };
+    expiresAt = d;
+  }
+  return { ok: true, modules, limits, expiresAt };
+}
+
+export async function setAgreement(tenantId: string, input: AgreementInput, actor: Actor, reason: string): Promise<AdminActionResult> {
+  const parsed = parseAgreement(input);
+  if (!parsed.ok) return { success: false, error: parsed.error };
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { planOverride: true } });
+  if (!tenant) return { success: false, error: 'Ese cliente no existe.' };
+  const empty = Object.keys(parsed.modules).length === 0 && Object.keys(parsed.limits).length === 0;
+  if (empty) return clearAgreement(tenantId, actor, reason);
+  const value: PlanOverride = {
+    modules: parsed.modules,
+    limits: parsed.limits,
+    reason,
+    expiresAt: parsed.expiresAt,
+    setAt: new Date().toISOString(),
+    setByUserId: actor.id,
+  };
+  await prisma.tenant.update({ where: { id: tenantId }, data: { planOverride: value as unknown as Prisma.InputJsonValue } });
+  await audit(actor, tenantId, 'set_agreement', reason, { before: tenant.planOverride ?? null, after: value as unknown as Prisma.InputJsonValue });
+  return { success: true, message: 'Acuerdo guardado. Lo ven en su próxima carga de la app.' };
+}
+
+export async function clearAgreement(tenantId: string, actor: Actor, reason: string): Promise<AdminActionResult> {
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { planOverride: true } });
+  if (!tenant) return { success: false, error: 'Ese cliente no existe.' };
+  if (!tenant.planOverride) return { success: false, error: 'No tiene un acuerdo especial.' };
+  await prisma.tenant.update({ where: { id: tenantId }, data: { planOverride: Prisma.DbNull } });
+  await audit(actor, tenantId, 'clear_agreement', reason, { before: tenant.planOverride });
+  return { success: true, message: 'Acuerdo quitado: vuelve a lo que da su plan.' };
+}
+
+export { activeOverride };

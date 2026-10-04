@@ -6,6 +6,15 @@ export interface PermissionsPayload {
   isOwner: boolean;
   permissions: string[];
   hiddenFields: Record<string, string[]>;
+  // Plan-gated modules this tenant actually has (its plan + any Admin Center agreement). Missing on
+  // a backend older than 2026-10-03 — the frontend then derives it from the plan name.
+  planFeatures?: PlanFeatures;
+}
+
+export interface PlanFeatures {
+  payroll: boolean;
+  payments: boolean;
+  apiAccess: boolean;
 }
 
 export interface AuthResponse {
@@ -881,6 +890,15 @@ export interface Role {
   isEditable: boolean;
   permissions: string[];
   hiddenFields: Record<string, string[]>;
+  // Plan-gated modules this tenant actually has (its plan + any Admin Center agreement). Missing on
+  // a backend older than 2026-10-03 — the frontend then derives it from the plan name.
+  planFeatures?: PlanFeatures;
+}
+
+export interface PlanFeatures {
+  payroll: boolean;
+  payments: boolean;
+  apiAccess: boolean;
 }
 
 export interface RestrictableField {

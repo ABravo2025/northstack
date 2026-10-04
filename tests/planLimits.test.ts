@@ -34,6 +34,7 @@ describe('getPlanLimits', () => {
       payrollEnabled: false,
       paymentsEnabled: false,
       apiAccessEnabled: false,
+      freeTrialSeatCap: 3,
     });
   });
 

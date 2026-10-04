@@ -207,7 +207,7 @@ export async function acceptInvitation(input: AcceptInvitationInput): Promise<Te
   // days between sending the invite and it being accepted (INVITATION_EXPIRY_MS is 7 days).
   const tenantForCapCheck = await prisma.tenant.findUnique({
     where: { id: invitation.tenantId },
-    select: { id: true, plan: true },
+    select: { id: true, plan: true, planOverride: true },
   });
   const capError = tenantForCapCheck ? await seatCapError(tenantForCapCheck) : null;
   if (capError) {

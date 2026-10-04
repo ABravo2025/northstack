@@ -109,7 +109,7 @@ externalApiRouter.use('/api/external/v1', async (req: express.Request, res: expr
 
     // Growth-only (2026-10-01). A tenant that drops to Starter keeps its keys (not revoked) — they
     // just stop working here until it's back on Growth.
-    if (!isApiAccessAllowed({ plan: apiKey.tenantPlan })) {
+    if (!isApiAccessAllowed({ plan: apiKey.tenantPlan, planOverride: apiKey.tenantPlanOverride })) {
       await respond(req, res, apiKey, 403, { error: 'API access requires the Growth plan.', code: 'plan_upgrade_required' });
       return;
     }

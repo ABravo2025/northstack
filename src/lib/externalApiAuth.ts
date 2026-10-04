@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import type express from 'express';
-import type { PlanTier, TenantStatus } from '@prisma/client';
+import type { PlanTier, Prisma, TenantStatus } from '@prisma/client';
 import { getBearerToken } from './httpAuth.js';
 import { bestEffort } from './bestEffort.js';
 import prismaExternal from './prismaExternal.js';
@@ -107,6 +107,8 @@ export interface AuthenticatedApiKey {
   // Starter tenants (API access is Growth-only since 2026-10-01).
   tenantPlan: PlanTier | null;
   tenantStatus: TenantStatus;
+  // Per-client agreement (Admin Center v2) — can switch API access on/off regardless of the plan.
+  tenantPlanOverride: Prisma.JsonValue | null;
   // The user this call acts as — the key's creator, or the AI connection's own user — with their
   // CURRENT role, resolved on every request. `scopes` above is already intersected with it, and
   // handlers use it to apply the same Employee scope and hidden-field redaction as the app.
@@ -119,7 +121,7 @@ export interface AuthenticatedApiKey {
 async function loadActor(userId: string, tenantId: string): Promise<AuthenticatedUser | null> {
   const user = await prismaExternal.user.findUnique({
     where: { id: userId },
-    include: { tenant: { select: { id: true, status: true, plan: true } } },
+    include: { tenant: { select: { id: true, status: true, plan: true, planOverride: true } } },
   });
   if (!user || user.status !== 'active' || user.tenantId !== tenantId || !user.tenant) return null;
   const roleContext = await resolveRoleContextForUser(user);
@@ -141,7 +143,7 @@ export async function authenticateApiKey(req: express.Request, res: express.Resp
 
   const apiKey = await prismaExternal.apiKey.findUnique({
     where: { keyHash: hashApiKey(token) },
-    include: { tenant: { select: { plan: true, status: true } } },
+    include: { tenant: { select: { plan: true, status: true, planOverride: true } } },
   });
   if (!apiKey || apiKey.revokedAt) {
     res.status(401).json({ error: 'Invalid or revoked API key', code: 'invalid_api_key' });
@@ -173,6 +175,7 @@ export async function authenticateApiKey(req: express.Request, res: express.Resp
     createdByUserId: apiKey.createdByUserId,
     tenantPlan: apiKey.tenant.plan,
     tenantStatus: apiKey.tenant.status,
+    tenantPlanOverride: apiKey.tenant.planOverride,
     actor,
   };
 }
@@ -181,7 +184,7 @@ async function authenticateAiToken(token: string, res: express.Response): Promis
   const hash = hashApiKey(token);
   const connection = await prismaExternal.aiConnection.findFirst({
     where: { OR: [{ personalTokenHash: hash }, { accessTokenHash: hash }] },
-    include: { tenant: { select: { plan: true, status: true } } },
+    include: { tenant: { select: { plan: true, status: true, planOverride: true } } },
   });
   const expired =
     connection?.accessTokenHash === hash && connection.accessTokenExpiresAt !== null && connection.accessTokenExpiresAt < new Date();
@@ -214,6 +217,7 @@ async function authenticateAiToken(token: string, res: express.Response): Promis
     createdByUserId: connection.userId,
     tenantPlan: connection.tenant.plan,
     tenantStatus: connection.tenant.status,
+    tenantPlanOverride: connection.tenant.planOverride,
     actor,
   };
 }

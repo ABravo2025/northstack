@@ -17,7 +17,7 @@ export interface ActivityLogRetentionResult {
 export async function runActivityLogRetention(now: Date = new Date()): Promise<ActivityLogRetentionResult> {
   const tenants = await prisma.tenant.findMany({
     where: { status: { notIn: ['suspended', 'cancelled'] } },
-    select: { id: true, plan: true },
+    select: { id: true, plan: true, planOverride: true },
   });
 
   let entriesDeleted = 0;

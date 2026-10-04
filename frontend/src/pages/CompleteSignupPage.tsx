@@ -286,7 +286,7 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
               id="signup-referralCode"
               value={referralCode}
               onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-              placeholder="e.g. LUCIA-7K2P"
+              placeholder="e.g. K7QM-4XPA"
               maxLength={20}
               autoComplete="off"
             />

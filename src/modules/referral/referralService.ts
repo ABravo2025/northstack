@@ -93,13 +93,11 @@ function payoutSummary(method: ReferralPayoutMethod, details: PayoutDetails): st
 
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // no 0/O, 1/I/L
 
-function codePrefix(firstName: string): string {
-  const ascii = firstName.normalize('NFD').replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 8);
-  return ascii || 'NS';
-}
-
-function randomSuffix(): string {
-  return Array.from({ length: 4 }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join('');
+// Fully random, e.g. "K7QM-4XPA" — never derived from the member's name, so a shared link says
+// nothing about who sent it (Alejandro, 2026-10-04). 31^8 ≈ 8.5e11 combinations.
+export function generateReferralCode(): string {
+  const chunk = () => Array.from({ length: 4 }, () => CODE_ALPHABET[randomInt(CODE_ALPHABET.length)]).join('');
+  return `${chunk()}-${chunk()}`;
 }
 
 export function normalizeReferralCode(raw: unknown): string | null {
@@ -128,9 +126,8 @@ export async function joinReferralProgram(
     return { success: false, error: 'Accept the program terms to join.', field: 'acceptTerms' };
   }
 
-  const prefix = codePrefix(user.firstName);
   for (let attempt = 0; attempt < 5; attempt++) {
-    const code = `${prefix}-${randomSuffix()}`;
+    const code = generateReferralCode();
     try {
       await prisma.referralMember.create({
         data: {

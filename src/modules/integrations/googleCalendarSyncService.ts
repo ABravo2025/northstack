@@ -35,6 +35,10 @@ async function resolveTaskAttendeeEmail(entityType: EntityType, entityId: string
   } else if (entityType === 'opportunity') {
     const opportunity = await prisma.opportunity.findUnique({ where: { id: entityId }, select: { companyId: true } });
     companyId = opportunity?.companyId;
+  } else if (entityType === 'project') {
+    // Same fallback as an Opportunity: a client project's call invites that Company's Primary Contact.
+    const project = await prisma.project.findUnique({ where: { id: entityId }, select: { companyId: true } });
+    companyId = project?.companyId ?? undefined;
   }
   if (!companyId) return undefined;
 

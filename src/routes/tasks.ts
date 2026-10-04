@@ -11,11 +11,20 @@ import {
   updateTask,
 } from '../modules/tasks/taskService.js';
 import { findTaskFolderById } from '../modules/tasks/taskFolderService.js';
+import { findPhaseById } from '../modules/projects/projectService.js';
 import { findUserById } from '../modules/tenant/tenantService.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 
 export const tasksRouter = createAsyncRouter();
+
+// A task's phase must be one of the phases of the very project the task belongs to (Projects
+// module) — a phase id from another project, or on a non-project task, is rejected.
+async function isPhaseOfProject(phaseId: unknown, entityType: string, entityId: string): Promise<boolean> {
+  if (typeof phaseId !== 'string' || entityType !== 'project') return false;
+  const phase = await findPhaseById(phaseId);
+  return phase?.projectId === entityId;
+}
 
 // Permissions: deliberately open to any authenticated tenant member (not
 // gated behind canCreateHr like Employees/Opportunities) — confirmed with the
@@ -87,7 +96,7 @@ tasksRouter.post('/api/tasks', async (req, res) => {
     return;
   }
 
-  const { entityType, entityId, title, description, assigneeId, dueDate, hasVideoCall, folderId } = req.body;
+  const { entityType, entityId, title, description, assigneeId, dueDate, hasVideoCall, folderId, projectPhaseId } = req.body;
   if (!entityType || !entityId || !title || !assigneeId) {
     return res.status(400).json({ error: 'entityType, entityId, title, and assigneeId are required' });
   }
@@ -112,6 +121,10 @@ tasksRouter.post('/api/tasks', async (req, res) => {
     }
   }
 
+  if (projectPhaseId && !(await isPhaseOfProject(projectPhaseId, entityType, entityId))) {
+    return res.status(400).json({ error: 'Phase not found' });
+  }
+
   const task = await createTask({
     tenantId: user.tenantId!,
     entityType,
@@ -123,6 +136,7 @@ tasksRouter.post('/api/tasks', async (req, res) => {
     hasVideoCall: hasVideoCall ?? false,
     createdById: user.id,
     folderId: folderId ?? null,
+    projectPhaseId: projectPhaseId || null,
   });
   return res.status(201).json(task);
 });
@@ -152,6 +166,10 @@ tasksRouter.patch('/api/tasks/:taskId', async (req, res) => {
     }
   }
 
+  if (req.body.projectPhaseId && !(await isPhaseOfProject(req.body.projectPhaseId, task.entityType, task.entityId))) {
+    return res.status(400).json({ error: 'Phase not found' });
+  }
+
   const updated = await updateTask(
     req.params.taskId,
     {
@@ -162,6 +180,7 @@ tasksRouter.patch('/api/tasks/:taskId', async (req, res) => {
       completedAt: req.body.completedAt,
       hasVideoCall: req.body.hasVideoCall,
       folderId: req.body.folderId,
+      projectPhaseId: req.body.projectPhaseId === undefined ? undefined : req.body.projectPhaseId || null,
     },
     user.id,
   );

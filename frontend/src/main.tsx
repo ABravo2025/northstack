@@ -11,9 +11,10 @@ initTheme();
 
 // Admin Center v2 (2026-10-03): Northstack's internal tool ships in this same bundle but loads
 // separately (lazy chunk), so customers never download it. It only ever opens on an admin.* host:
-// admin.joinnorthstack.com in production, admin.localhost:5173 locally. Never under the customer
-// app's domain (Alejandro, 2026-10-03).
-const isAdminHost = window.location.hostname.startsWith('admin.');
+// admin.joinnorthstack.com in production, admin-staging.joinnorthstack.com on staging (same staging
+// database), admin.localhost:5173 locally. Never under the customer app's domain (Alejandro, 2026-10-03).
+const host = window.location.hostname;
+const isAdminHost = host.startsWith('admin.') || host.startsWith('admin-staging.');
 const AdminApp = lazy(() => import('./admin/AdminApp'));
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

@@ -39,7 +39,7 @@ const handleSignupEmailRequest = (bucketPrefix: string) => async (req: express.R
     return res.status(400).json({ error: 'Email is required', field: 'email' });
   }
 
-  const result = await startSignupVerification(email);
+  const result = await startSignupVerification(email, req.body.referralCode);
   if (!result.success) {
     return res.status(400).json({ error: result.error, field: result.field });
   }
@@ -89,6 +89,7 @@ tenantsRouter.post('/api/tenants/register', async (req, res) => {
     acquisitionChannel: req.body.acquisitionChannel,
     jobFunction: req.body.jobFunction || undefined,
     verificationToken: req.body.verificationToken,
+    referralCode: typeof req.body.referralCode === 'string' ? req.body.referralCode : undefined,
   });
 
   if (!result.success) {

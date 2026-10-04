@@ -4,19 +4,19 @@ import type { AuthResponse, PermissionsPayload, PlanPricing, PlanTier, Tenant, S
 // Tenant Signup — email verification (spec-tenant-signup.md). /start and /resend hit distinct
 // backend routes (own rate-limit buckets for the cooldown timer/analytics) but are otherwise
 // identical requests — one helper instead of two copies that could diverge.
-const postSignupEmail = async (path: 'start' | 'resend', email: string): Promise<{ message: string }> => {
+const postSignupEmail = async (path: 'start' | 'resend', email: string, referralCode?: string | null): Promise<{ message: string }> => {
   const res = await apiFetch(`${API_BASE_URL}/api/tenants/signup/${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email }),
+    body: JSON.stringify({ email, referralCode: referralCode ?? undefined }),
   });
   if (!res.ok) await throwApiError(res);
   return res.json();
 };
 
 export const authApi = {
-  startSignup: (email: string) => postSignupEmail('start', email),
-  resendSignup: (email: string) => postSignupEmail('resend', email),
+  startSignup: (email: string, referralCode?: string | null) => postSignupEmail('start', email, referralCode),
+  resendSignup: (email: string, referralCode?: string | null) => postSignupEmail('resend', email, referralCode),
 
   verifySignup: async (token: string): Promise<{ email: string }> => {
     const res = await apiFetch(`${API_BASE_URL}/api/tenants/signup/verify/${token}`);
@@ -39,6 +39,7 @@ export const authApi = {
     acquisitionChannel?: string;
     jobFunction?: string;
     verificationToken: string;
+    referralCode?: string;
   }): Promise<AuthResponse> => {
     const res = await apiFetch(`${API_BASE_URL}/api/tenants/register`, {
       method: 'POST',

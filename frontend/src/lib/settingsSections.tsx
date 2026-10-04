@@ -8,6 +8,7 @@ import {
   GridIcon,
   ListIcon,
   LockIcon,
+  SparklesIcon,
   TeamIcon,
   TrendingIcon,
   UserCircleIcon,
@@ -47,6 +48,8 @@ export function getSettingsSections(permissions: SettingsSectionsPermissions): S
     { to: 'profile', label: t('settings.profile.label'), desc: t('settings.profile.desc'), icon: <UserCircleIcon /> },
     { to: 'integrations', label: t('settings.integrations.label'), desc: t('settings.integrations.desc'), icon: <GridIcon /> },
   ];
+  // Referral program (2026-10-04): every user can join — the commission goes to the person.
+  accountItems.push({ to: 'referrals', label: t('settings.referrals.label'), desc: t('settings.referrals.desc'), icon: <SparklesIcon /> });
   if (permissions.has('manage_billing')) {
     accountItems.push({ to: 'billing', label: t('settings.billing.label'), desc: t('settings.billing.desc'), icon: <BriefcaseIcon /> });
   }

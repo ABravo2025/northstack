@@ -18,6 +18,8 @@ import { seedDefaultRolesForTenant } from '../auth/roleService.js';
 import { getEmailDomain } from '../../lib/email.js';
 import { CURRENT_PLAN_PRICES_CENTS } from './planService.js';
 import { sendSignupAlertEmail } from '../../lib/mailer.js';
+import { REFERRAL } from '../../config/pricing.js';
+import { attachReferral, findActiveMemberByCode } from '../referral/referralService.js';
 
 // Personal/free email providers are excluded from the duplicate-domain check below —
 // otherwise the first person to register with @gmail.com would block every other
@@ -119,6 +121,9 @@ export interface RegisterTenantWithOwnerInput {
   // required (spec-tenant-signup.md's "Submit final"), checked and consumed below before
   // anything is created.
   verificationToken: string;
+  // Referral program (2026-10-04): a member's code from their link (?ref=) or typed in. Optional;
+  // a bad code is reported on its own field so the person can fix or clear it.
+  referralCode?: string;
 }
 
 // 15 days, spec-subscription-plans.md — set once at registration, independent of whether the
@@ -185,6 +190,11 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
     return { success: false, error: domainCheck.error, field: 'ownerEmail' };
   }
 
+  const referralMember = input.referralCode?.trim() ? await findActiveMemberByCode(input.referralCode) : null;
+  if (input.referralCode?.trim() && !referralMember) {
+    return { success: false, error: 'This referral code is not valid. Check it or leave it empty.', field: 'referralCode' };
+  }
+
   // Deliberately last, right before the transaction — this is the only check that actually
   // consumes (deletes) the EmailVerification row. If it ran earlier and any of the checks
   // above then failed (tenant name taken, email taken, domain blocked), the person would be
@@ -203,11 +213,16 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
         companySize: input.companySize,
         industry: input.industry.trim(),
         country: input.country,
-        acquisitionChannel: input.acquisitionChannel,
+        // A referred company always counts as a referral, whatever they picked in the survey.
+        acquisitionChannel: referralMember ? 'referral' : input.acquisitionChannel,
         status: 'trialing',
-        trialEndsAt: new Date(Date.now() + SIGNUP_TRIAL_DAYS * 24 * 60 * 60 * 1000),
+        trialEndsAt: new Date(Date.now() + (referralMember ? REFERRAL.trialDays : SIGNUP_TRIAL_DAYS) * 24 * 60 * 60 * 1000),
       },
     });
+
+    if (referralMember) {
+      await attachReferral(tx, referralMember, tenant);
+    }
 
     await seedDefaultStatusDefinitions(tx, tenant.id);
     await seedDefaultPipelines(tx, tenant.id);
@@ -288,6 +303,7 @@ export async function registerTenantWithOwner(input: RegisterTenantWithOwnerInpu
       ['Cómo nos conoció', result.tenant.acquisitionChannel],
       ['Función', result.user.jobFunction],
       ['Trial hasta', result.tenant.trialEndsAt?.toISOString().slice(0, 10)],
+      ['Referido por', referralMember ? `${referralMember.name} (${referralMember.code})` : null],
       ['Tenant ID', result.tenant.id],
     ],
   });

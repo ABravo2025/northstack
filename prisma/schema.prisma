@@ -447,6 +447,7 @@ model Tenant {
   employeeAvailabilities    EmployeeAvailability[]
   skills                    Skill[]
   employeeSkills            EmployeeSkill[]
+  referredBy                Referral?
 }
 
 // Billing Integration (spec-billing-integration.md). plan/lockedPriceCents are deliberately NOT
@@ -664,6 +665,7 @@ model User {
   projectTemplatesCreated     ProjectTemplate[]           @relation("ProjectTemplateCreatedBy")
   shiftsCreated               Shift[]                     @relation("ShiftCreatedBy")
   shiftCalendarSyncs          ShiftCalendarSync[]
+  referralMember              ReferralMember?
 
   @@index([emailDomain])
 }
@@ -2629,4 +2631,100 @@ model RoleFieldRestriction {
 
   @@unique([roleId, entityType, fieldKey])
   @@index([tenantId, roleId, entityType])
+}
+
+// Referral program (2026-10-04, Alejandro). Any platform user can join — the reward goes to the
+// PERSON (who may be an employee, not the payer), paid by hand by Northstack staff. Rules (percent,
+// number of payments, hold days, minimum payout) live in src/config/pricing.ts's REFERRAL. Rows keep
+// a name/email snapshot and survive the user or tenant being deleted: they're a money trail.
+enum ReferralPayoutMethod {
+  wise
+  payoneer
+  paypal
+  wire_intl
+  bank_ar
+}
+
+enum ReferralCommissionStatus {
+  pending // earned; becomes "payable" once dueAt passes (derived, not stored)
+  paid
+  void
+}
+
+model ReferralMember {
+  id                     String               @id @default(uuid())
+  userId                 String?              @unique
+  user                   User?                @relation(fields: [userId], references: [id], onDelete: SetNull)
+  name                   String
+  email                  String
+  code                   String               @unique
+  payoutMethod           ReferralPayoutMethod
+  // JSON of the method's fields, AES-256-GCM (src/lib/encryption.ts). Only staff ever see it decrypted.
+  payoutDetailsEncrypted String
+  termsVersion           String
+  termsAcceptedAt        DateTime
+  createdAt              DateTime             @default(now())
+  updatedAt              DateTime             @updatedAt
+  referrals              Referral[]
+  payouts                ReferralPayout[]
+}
+
+// One row per company that signed up with a member's code.
+model Referral {
+  id                 String               @id @default(uuid())
+  memberId           String
+  member             ReferralMember       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  referredTenantId   String?              @unique
+  referredTenant     Tenant?              @relation(fields: [referredTenantId], references: [id], onDelete: SetNull)
+  referredTenantName String
+  createdAt          DateTime             @default(now())
+  commissions        ReferralCommission[]
+
+  @@index([memberId])
+}
+
+// One row per paid invoice of the referred company, up to REFERRAL.commissionPayments. The percent
+// and amount are frozen here, so a later rule change never touches what was already earned.
+model ReferralCommission {
+  id                String                   @id @default(uuid())
+  referralId        String
+  referral          Referral                 @relation(fields: [referralId], references: [id], onDelete: Cascade)
+  // Plain id, no relation: an invoice can go away with its tenant; the commission must not.
+  invoiceId         String                   @unique
+  paymentNumber     Int
+  paymentCents      Int
+  currency          String
+  commissionPercent Int
+  commissionCents   Int
+  paymentPaidAt     DateTime
+  dueAt             DateTime
+  status            ReferralCommissionStatus @default(pending)
+  payoutId          String?
+  payout            ReferralPayout?          @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+  voidReason        String?
+  voidedAt          DateTime?
+  createdAt         DateTime                 @default(now())
+
+  @@unique([referralId, paymentNumber])
+  @@index([payoutId])
+}
+
+// A transfer staff made to a member, with its receipt. Groups the commissions it paid.
+model ReferralPayout {
+  id              String               @id @default(uuid())
+  memberId        String
+  member          ReferralMember       @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  currency        String
+  amountCents     Int
+  payoutMethod    ReferralPayoutMethod
+  transferredAt   DateTime
+  reference       String?
+  receiptData     Bytes
+  receiptMimeType String
+  receiptFileName String
+  createdByUserId String?
+  createdAt       DateTime             @default(now())
+  commissions     ReferralCommission[]
+
+  @@index([memberId])
 }

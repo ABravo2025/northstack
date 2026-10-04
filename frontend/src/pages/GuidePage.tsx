@@ -1,7 +1,10 @@
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useScrollSpy } from '../hooks/useScrollSpy';
 import { launchEndLabel, perUserPriceLabel, usePlanPricing } from '../lib/planPrices';
+import { API_BASE_URL, apiFetch } from '../api/http';
+import type { ReferralRules } from '../api/referrals';
 import {
   AlertCircleIcon,
   AlertTriangleIcon,
@@ -19,6 +22,7 @@ import {
   PeopleIcon,
   PlugIcon,
   RocketIcon,
+  SparklesIcon,
   TeamIcon,
 } from '../components/common/Icons';
 
@@ -35,6 +39,7 @@ const SECTION_IDS = [
   'g-integrations',
   'g-settings',
   'g-billing',
+  'g-referrals',
   'g-data',
   'g-mobile',
 ];
@@ -75,6 +80,7 @@ const NAV_GROUPS: { label: string; items: { id: string; label: string; icon: JSX
     items: [
       { id: 'g-settings', label: 'Settings & appearance', icon: <GearIcon /> },
       { id: 'g-billing', label: 'Billing & plans', icon: <CreditCardIcon /> },
+      { id: 'g-referrals', label: 'Referral program', icon: <SparklesIcon /> },
       { id: 'g-data', label: 'Import & export', icon: <DownloadIcon /> },
       { id: 'g-mobile', label: 'On the go', icon: <DeviceIcon /> },
     ],
@@ -93,6 +99,7 @@ const MODULE_MAP: { id: string; label: string; blurb: string; icon: JSX.Element 
   { id: 'g-integrations', label: 'Integrations & API', blurb: 'Google Calendar, Stripe, API keys.', icon: <PlugIcon /> },
   { id: 'g-settings', label: 'Settings', blurb: 'Company profile, logo, currency, theme.', icon: <GearIcon /> },
   { id: 'g-billing', label: 'Billing & plans', blurb: 'Starter vs. Growth, checkout, failures.', icon: <CreditCardIcon /> },
+  { id: 'g-referrals', label: 'Referral program', blurb: 'Recommend Northstack and earn a commission.', icon: <SparklesIcon /> },
   { id: 'g-data', label: 'Import & export', blurb: 'Bulk CSV for People, Companies, Contacts.', icon: <DownloadIcon /> },
 ];
 
@@ -134,6 +141,7 @@ const NAV_GROUPS_ES: { label: string; items: { id: string; label: string; icon: 
     items: [
       { id: 'g-settings', label: 'Configuración y apariencia', icon: <GearIcon /> },
       { id: 'g-billing', label: 'Facturación y planes', icon: <CreditCardIcon /> },
+      { id: 'g-referrals', label: 'Programa de referidos', icon: <SparklesIcon /> },
       { id: 'g-data', label: 'Importar y exportar', icon: <DownloadIcon /> },
       { id: 'g-mobile', label: 'Desde el celular', icon: <DeviceIcon /> },
     ],
@@ -152,6 +160,7 @@ const MODULE_MAP_ES: { id: string; label: string; blurb: string; icon: JSX.Eleme
   { id: 'g-integrations', label: 'Integraciones y API', blurb: 'Google Calendar, Stripe, claves de API.', icon: <PlugIcon /> },
   { id: 'g-settings', label: 'Configuración', blurb: 'Datos de la empresa, logo, moneda, tema.', icon: <GearIcon /> },
   { id: 'g-billing', label: 'Facturación y planes', blurb: 'Starter vs. Growth, checkout, fallas de pago.', icon: <CreditCardIcon /> },
+  { id: 'g-referrals', label: 'Programa de referidos', blurb: 'Recomendá Northstack y cobrá una comisión.', icon: <SparklesIcon /> },
   { id: 'g-data', label: 'Importar y exportar', blurb: 'CSV masivo para Personas, Empresas, Contactos.', icon: <DownloadIcon /> },
 ];
 
@@ -168,6 +177,20 @@ export default function GuidePage() {
   const { i18n } = useTranslation();
   const launchEnd = launchEndLabel(pricing, i18n.language);
   const isSpanish = i18n.language.startsWith('es');
+  // Referral program numbers come from the backend's REFERRAL config, same rule as prices.
+  const [referral, setReferral] = useState<ReferralRules | null>(null);
+  useEffect(() => {
+    apiFetch(`${API_BASE_URL}/api/public/referral-rules`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then(setReferral)
+      .catch(() => setReferral(null));
+  }, []);
+  const refPct = referral ? `${referral.commissionPercent}%` : '—';
+  const refPayments = referral?.commissionPayments ?? '—';
+  const refHold = referral?.holdDays ?? '—';
+  const refTrial = referral?.trialDays ?? '—';
+  const refMin = (currency: 'USD' | 'ARS') =>
+    referral ? new Intl.NumberFormat(isSpanish ? 'es-AR' : 'en-US', { style: 'currency', currency, currencyDisplay: 'code', maximumFractionDigits: 0 }).format((referral.minPayoutCents[currency] ?? 0) / 100) : '—';
 
   // Same ids/order as the English arrays (see NAV_GROUPS_ES/MODULE_MAP_ES above, which share
   // shape with NAV_GROUPS/MODULE_MAP) — only the display text differs.
@@ -2157,6 +2180,121 @@ export default function GuidePage() {
                 successful payment, your workspace becomes <strong>read-only</strong> — viewing keeps working
                 everywhere, but no one can create, edit, or delete anything until billing is resolved.
               </p>
+            </div>
+          </section>
+          )}
+
+          {/* ===== Referrals ===== */}
+          {isSpanish ? (
+          <section className="help-section" id="g-referrals">
+            <div className="help-eyebrow">
+              <SparklesIcon />
+              Espacio de trabajo
+            </div>
+            <h2>Programa de referidos</h2>
+            <p className="help-intro">
+              Cualquier usuario de Northstack puede recomendar la plataforma y cobrar una comisión por cada empresa que se
+              registre con su link. La comisión es para vos, no para tu empresa.
+            </p>
+
+            <div className="help-sub">
+              <h3>Cómo unirte</h3>
+              <ol className="help-steps">
+                <li>Entrá a <strong>Configuración → Referidos</strong>.</li>
+                <li>
+                  <strong>Elegí cómo querés cobrar</strong> (Wise, Payoneer, PayPal, wire transfer o transferencia bancaria
+                  en Argentina) y cargá tus datos. Es obligatorio antes de aceptar los términos.
+                </li>
+                <li>Aceptá los <strong>Términos y Condiciones del programa</strong>. Ahí aparecen tu link y tu código.</li>
+              </ol>
+            </div>
+
+            <div className="help-sub">
+              <h3>Cuánto y cuándo cobrás</h3>
+              <ul>
+                <li>
+                  Cobrás el <strong>{refPct}</strong> de cada uno de los primeros <strong>{refPayments}</strong> pagos de cada
+                  empresa referida, en la moneda en que pagó.
+                </li>
+                <li>Cada comisión queda <strong>en espera {refHold} días</strong> después del pago y después pasa a "a cobrar".</li>
+                <li>
+                  Te transferimos cuando tu saldo a cobrar llega a <strong>{refMin('USD')}</strong> o{' '}
+                  <strong>{refMin('ARS')}</strong>. Cada moneda se acumula por separado.
+                </li>
+                <li>La empresa que se registra con tu link tiene <strong>{refTrial} días de prueba</strong> en lugar de 15.</li>
+              </ul>
+            </div>
+
+            <div className="help-sub">
+              <h3>Seguimiento</h3>
+              <p>
+                En <strong>Configuración → Referidos</strong> ves a quiénes referiste, cada comisión con su fecha de
+                liberación y tus transferencias, con el comprobante para descargar. También te avisamos por email cuando
+                ganás una comisión y cuando te transferimos.
+              </p>
+              <div className="help-callout help-callout-note">
+                <InfoIcon />
+                <p>
+                  Si una empresa pide un reembolso, la comisión de ese pago se anula. No podés referir a tu propia empresa
+                  ni a empresas del mismo dominio de email.
+                </p>
+              </div>
+            </div>
+          </section>
+          ) : (
+          <section className="help-section" id="g-referrals">
+            <div className="help-eyebrow">
+              <SparklesIcon />
+              Workspace
+            </div>
+            <h2>Referral program</h2>
+            <p className="help-intro">
+              Any Northstack user can recommend the platform and earn a commission for every company that signs up with
+              their link. The commission goes to you, not to your company.
+            </p>
+
+            <div className="help-sub">
+              <h3>How to join</h3>
+              <ol className="help-steps">
+                <li>Go to <strong>Settings → Referrals</strong>.</li>
+                <li>
+                  <strong>Choose how you want to get paid</strong> (Wise, Payoneer, PayPal, wire transfer or bank transfer in
+                  Argentina) and enter your details. This comes before accepting the terms.
+                </li>
+                <li>Accept the <strong>program Terms and Conditions</strong>. Your link and code appear right away.</li>
+              </ol>
+            </div>
+
+            <div className="help-sub">
+              <h3>How much and when you get paid</h3>
+              <ul>
+                <li>
+                  You earn <strong>{refPct}</strong> of each of the first <strong>{refPayments}</strong> payments of every
+                  company you refer, in the currency they paid in.
+                </li>
+                <li>Each commission is <strong>on hold for {refHold} days</strong> after the payment, then becomes payable.</li>
+                <li>
+                  We transfer once your payable balance reaches <strong>{refMin('USD')}</strong> or{' '}
+                  <strong>{refMin('ARS')}</strong>. Each currency adds up separately.
+                </li>
+                <li>A company that signs up with your link gets a <strong>{refTrial}-day trial</strong> instead of 15.</li>
+              </ul>
+            </div>
+
+            <div className="help-sub">
+              <h3>Tracking</h3>
+              <p>
+                In <strong>Settings → Referrals</strong> you see who you referred, each commission with the date it becomes
+                payable, and your transfers with a downloadable receipt. We also email you when you earn a commission and
+                when we transfer.
+              </p>
+              <div className="help-callout help-callout-note">
+                <InfoIcon />
+                <p>
+                  If a company gets a refund, the commission for that payment is voided. You can't refer your own company or
+                  companies with the same email domain.
+                </p>
+              </div>
             </div>
           </section>
           )}

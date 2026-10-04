@@ -1,4 +1,152 @@
 {
+  "referrals": {
+    "title": "Referidos",
+    "intro": "Recomendá Northstack. Cobrás el {{percent}}% de los primeros {{payments}} pagos de cada empresa que se registre con tu link, y ellos reciben {{trialDays}} días de prueba en lugar de 15.",
+    "introMember": "Cobrás el {{percent}}% de los primeros {{payments}} pagos de cada empresa que traigas.",
+    "steps": {
+      "share": {
+        "title": "Compartí tu link",
+        "body": "La empresa se registra con tu link o tu código."
+      },
+      "pay": {
+        "title": "Pagan sus primeros {{payments}} meses",
+        "body": "Cada pago genera tu {{percent}}%. Se libera {{holdDays}} días después del pago."
+      },
+      "transfer": {
+        "title": "Te transferimos",
+        "body": "Cuando acumulás {{min}}. Ves el comprobante acá."
+      }
+    },
+    "join": {
+      "methodTitle": "¿Cómo querés cobrar?",
+      "methodHint": "Paso obligatorio para unirte",
+      "termsLink": "Términos y Condiciones del Programa de Referidos",
+      "accept": "Leí y acepto los",
+      "lockedHint": "Completá tus datos de cobro para poder aceptar los términos.",
+      "submit": "Unirme al programa",
+      "joined": "Listo, ya sos parte del programa. Este es tu link."
+    },
+    "methods": {
+      "wise": {
+        "label": "Wise",
+        "hint": "USD · email de la cuenta"
+      },
+      "payoneer": {
+        "label": "Payoneer",
+        "hint": "USD · email de la cuenta"
+      },
+      "paypal": {
+        "label": "PayPal",
+        "hint": "USD · email"
+      },
+      "wire_intl": {
+        "label": "Wire transfer",
+        "hint": "USD · banco internacional"
+      },
+      "bank_ar": {
+        "label": "Transferencia bancaria AR",
+        "hint": "ARS · CBU / CVU"
+      }
+    },
+    "fields": {
+      "email": "Email de la cuenta",
+      "holderName": "Nombre del titular",
+      "holderAddress": "Dirección del titular",
+      "bankName": "Banco",
+      "swift": "SWIFT / BIC",
+      "accountNumber": "IBAN o n.º de cuenta",
+      "routingNumber": "Routing / ABA (solo EE.UU.)",
+      "bankCountry": "País del banco",
+      "taxId": "CUIT / CUIL",
+      "cbu": "CBU / CVU",
+      "alias": "Alias",
+      "optional": "(opcional)"
+    },
+    "payout": {
+      "current": "Cobro por {{method}} · {{summary}}",
+      "edit": "Editar",
+      "editTitle": "Tus datos de cobro",
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "saved": "Datos de cobro guardados."
+    },
+    "link": {
+      "title": "Tu link",
+      "code": "Código",
+      "copy": "Copiar link",
+      "copied": "Link copiado",
+      "selectToCopy": "Seleccionado: copialo con Ctrl+C"
+    },
+    "totals": {
+      "payable": "A cobrar",
+      "pending": "En espera",
+      "paid": "Cobrado",
+      "companies": "Empresas referidas",
+      "missing": "Faltan {{amount}} para el mínimo",
+      "ready": "Listo: te transferimos pronto",
+      "nothing": "Nada todavía",
+      "pendingHint": "Se libera {{days}} días después de cada pago",
+      "transfers_one": "{{count}} transferencia",
+      "transfers_other": "{{count}} transferencias"
+    },
+    "tabs": {
+      "referrals": "A quiénes referí",
+      "commissions": "Comisiones",
+      "payouts": "Mis transferencias"
+    },
+    "table": {
+      "company": "Empresa",
+      "signedUp": "Se registró",
+      "status": "Estado",
+      "commissions": "Comisiones",
+      "earned": "Generado",
+      "payment": "Pago",
+      "paymentAmount": "Monto del pago",
+      "yourShare": "Tu {{percent}}%",
+      "payableOn": "Se libera",
+      "transfer": "Transferencia",
+      "date": "Fecha",
+      "method": "Medio",
+      "reference": "Referencia",
+      "amount": "Monto",
+      "receipt": "Comprobante",
+      "download": "Descargar",
+      "ofTotal": "{{n}} de {{total}}",
+      "commissionsCount_one": "{{count}} comisión",
+      "commissionsCount_other": "{{count}} comisiones",
+      "emptyReferrals": "Todavía no referiste empresas. Compartí tu link para empezar.",
+      "emptyCommissions": "Todavía no hay comisiones. Aparecen cuando una empresa que referiste paga.",
+      "emptyPayouts": "Todavía no hay transferencias."
+    },
+    "referralStatus": {
+      "trialing": "En prueba",
+      "no_payment": "Sin pagos",
+      "active": "Pagando",
+      "completed": "Completada",
+      "void": "Anulada"
+    },
+    "commissionStatus": {
+      "pending": "En espera",
+      "payable": "A cobrar",
+      "paid": "Pagada · {{number}}",
+      "void": "Anulada"
+    },
+    "terms": {
+      "title": "Términos y Condiciones del Programa de Referidos",
+      "version": "Versión {{version}}",
+      "items": [
+        "Solo pueden participar usuarios activos de Northstack.",
+        "La comisión es el {{percent}}% de cada uno de los primeros {{payments}} pagos de la empresa referida, sin impuestos, en la moneda del pago.",
+        "Cada comisión se libera {{holdDays}} días después de acreditado el pago. Si hay reembolso o contracargo, se anula.",
+        "Transferimos cuando el saldo a cobrar llega a {{minUsd}} o {{minArs}}. Los saldos en monedas distintas se acumulan por separado.",
+        "No se puede referir a la propia empresa ni a empresas del mismo dominio de email.",
+        "Los costos de transferencia y las obligaciones fiscales del cobro corren por cuenta de quien lo recibe.",
+        "Northstack puede modificar o terminar el programa avisando con 30 días de anticipación. Las comisiones ya generadas se respetan."
+      ]
+    },
+    "loading": "Cargando tus referidos…",
+    "loadError": "No se pudieron cargar tus referidos: {{message}}"
+  },
   "integrations": {
     "disconnect": "Desconectar",
     "google": {

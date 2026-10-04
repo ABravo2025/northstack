@@ -12,6 +12,8 @@ import TableSkeleton from './components/common/TableSkeleton';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import CompleteSignupPage from './pages/CompleteSignupPage';
+import ReferralsSettingsPage from './pages/ReferralsSettingsPage';
+import ReferralTermsPage from './pages/ReferralTermsPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import AcceptInvitePage from './pages/AcceptInvitePage';
@@ -312,6 +314,7 @@ export default function App() {
         path="/confirm-contract/:token"
         element={<ContractConfirmationPage onConfirmed={handleContractConfirmed} />}
       />
+      <Route path="/referral-terms" element={<ReferralTermsPage />} />
       <Route
         path="/apply/:tenantSlug/:formSlug"
         element={
@@ -391,6 +394,7 @@ export default function App() {
           <Route path="activity" element={<ActivityLogSettingsPage token={token ?? ''} />} />
           <Route path="roles" element={<RolesPermissionsPage token={token ?? ''} />} />
           <Route path="billing" element={<BillingPage token={token ?? ''} tenant={tenant} onTenantUpdated={setTenant} />} />
+          <Route path="referrals" element={<ReferralsSettingsPage token={token ?? ''} />} />
         </Route>
       </Route>
 

@@ -10,6 +10,7 @@ import { lockedPlanPrice } from '../modules/tenant/planPriceService.js';
 import { bestEffort } from '../lib/bestEffort.js';
 import type { PaymentProvider } from '@prisma/client';
 import type express from 'express';
+import { recordReferralCommission } from '../modules/referral/referralService.js';
 
 export const webhooksRouter = createAsyncRouter();
 
@@ -336,7 +337,7 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
 
       // Trusts our own authoritative price (subscription.lockedPriceCents/currency) rather than
       // payment.total_amount, which includes tax — same reasoning paddle.ts's equivalent used.
-      await prisma.invoice.create({
+      const invoice = await prisma.invoice.create({
         data: {
           subscriptionId: subscription.id,
           provider: 'dodopayments',
@@ -351,6 +352,11 @@ webhooksRouter.post('/api/webhooks/dodopayments', async (req, res) => {
           paidAt: new Date(),
         },
       });
+      // Referral program: a commission if this tenant was referred (first payments only).
+      await bestEffort(
+        recordReferralCommission({ tenantId: subscription.tenantId, invoiceId: invoice.id, amountCents: invoice.amountCents, currency: invoice.currency, paidAt: invoice.paidAt ?? new Date() }),
+        `recordReferralCommission(${invoice.id})`,
+      );
     } else if (event.type === 'payment.failed') {
       // An upgrade's own charge failing (changePlan uses prevent_change): Dodo keeps the old plan,
       // which is still paid for — nothing is overdue.

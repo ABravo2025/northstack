@@ -97,6 +97,111 @@ function dispatchMail(mailOptions: Parameters<typeof transporter.sendMail>[0], e
   return bestEffort(transporter.sendMail(mailOptions), errorLabel);
 }
 
+// Referral program (2026-10-04) — amounts in the commission's own currency, dates in the
+// member's language.
+function formatEmailMoney(cents: number, currency: string, lng: string): string {
+  return new Intl.NumberFormat(lng === 'es' ? 'es-AR' : 'en-US', { style: 'currency', currency, currencyDisplay: 'code' }).format(cents / 100);
+}
+
+function formatEmailDate(value: Date, lng: string): string {
+  return value.toLocaleDateString(lng === 'es' ? 'es-AR' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+}
+
+function referralsUrl(): string {
+  return `${process.env.APP_BASE_URL ?? 'http://localhost:5173'}/settings/referrals`;
+}
+
+export interface SendReferralCommissionEmailInput {
+  to: string;
+  firstName: string;
+  companyName: string;
+  commissionCents: number;
+  currency: string;
+  paymentNumber: number;
+  totalPayments: number;
+  dueAt: Date;
+  locale?: string | null;
+}
+
+export async function sendReferralCommissionEmail(input: SendReferralCommissionEmailInput): Promise<void> {
+  if (!mailerConfigured()) return;
+
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(key, { lng, ns: 'emails', ...opts });
+  const vars = {
+    amount: formatEmailMoney(input.commissionCents, input.currency, lng),
+    paymentNumber: input.paymentNumber,
+    totalPayments: input.totalPayments,
+    dueAt: formatEmailDate(input.dueAt, lng),
+  };
+
+  await dispatchMail({
+    from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
+    to: input.to,
+    subject: t('referralCommission.subject', { amount: vars.amount }),
+    text: [
+      t('referralCommission.greeting', { firstName: input.firstName }),
+      '',
+      t('referralCommission.body', { ...vars, companyName: input.companyName }),
+      '',
+      `${t('referralCommission.linkText')}: ${referralsUrl()}`,
+    ].join('\n'),
+    html: [
+      `<p>${t('referralCommission.greeting', { firstName: escapeHtml(input.firstName), interpolation: { escapeValue: false } })}</p>`,
+      `<p>${t('referralCommission.body', { ...vars, companyName: strong(input.companyName), interpolation: { escapeValue: false } })}</p>`,
+      `<p><a href="${referralsUrl()}">${t('referralCommission.linkText')}</a></p>`,
+    ].join('\n'),
+  }, 'Failed to send referral commission email:');
+}
+
+export interface SendReferralPayoutEmailInput {
+  to: string;
+  firstName: string;
+  payoutNumber: string;
+  amountCents: number;
+  currency: string;
+  transferredAt: Date;
+  reference: string | null;
+  receipt: { fileName: string; content: Buffer; mimeType: string };
+  locale?: string | null;
+}
+
+export async function sendReferralPayoutEmail(input: SendReferralPayoutEmailInput): Promise<void> {
+  if (!mailerConfigured()) return;
+
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(key, { lng, ns: 'emails', ...opts });
+  const vars = {
+    amount: formatEmailMoney(input.amountCents, input.currency, lng),
+    date: formatEmailDate(input.transferredAt, lng),
+    number: input.payoutNumber,
+  };
+  const referenceLine = input.reference ? t('referralPayout.reference', { reference: input.reference }) : '';
+
+  await dispatchMail({
+    from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
+    to: input.to,
+    subject: t('referralPayout.subject', { amount: vars.amount }),
+    text: [
+      t('referralPayout.greeting', { firstName: input.firstName }),
+      '',
+      t('referralPayout.body', vars),
+      ...(referenceLine ? [referenceLine] : []),
+      t('referralPayout.receipt'),
+      '',
+      `${t('referralPayout.linkText')}: ${referralsUrl()}`,
+    ].join('\n'),
+    html: [
+      `<p>${t('referralPayout.greeting', { firstName: escapeHtml(input.firstName), interpolation: { escapeValue: false } })}</p>`,
+      `<p>${t('referralPayout.body', vars)}</p>`,
+      ...(referenceLine ? [`<p>${escapeHtml(referenceLine)}</p>`] : []),
+      `<p>${t('referralPayout.receipt')}</p>`,
+      `<p><a href="${referralsUrl()}">${t('referralPayout.linkText')}</a></p>`,
+    ].join('\n'),
+    attachments: [{ filename: input.receipt.fileName, content: input.receipt.content, contentType: input.receipt.mimeType }],
+  }, 'Failed to send referral payout email:');
+}
+
 export interface SendPublicFormSubmissionEmailInput {
   to: string;
   tenantName: string;

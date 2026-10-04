@@ -138,3 +138,73 @@ export const adminApi = {
   setTaskDone: (token: string, id: string, taskId: string, completed: boolean) =>
     call<StaffTask>(`/api/platform/tenants/${encodeURIComponent(id)}/tasks/${encodeURIComponent(taskId)}`, token, { method: 'PATCH', body: JSON.stringify({ completed }) }),
 };
+
+export type ActionResult = { success: true; message?: string };
+
+export interface AuditEntry {
+  id: string;
+  createdAt: string;
+  action: string;
+  reason: string;
+  details: Record<string, unknown> | null;
+  actor: string;
+  tenant: { id: string; name: string } | null;
+}
+
+export interface PlatformStatus {
+  id: string;
+  key: string;
+  label: string;
+  color: string | null;
+  isTerminal: boolean;
+  isDefault: boolean;
+  order: number;
+  active: boolean;
+}
+
+export type FeedbackKind = 'tickets' | 'ideas';
+
+export interface FeedbackItem {
+  id: string;
+  subject: string;
+  description: string;
+  createdAt: string;
+  createdByType: string;
+  tenant: { id: string; name: string };
+  user: { id: string; firstName: string; lastName: string; email: string } | null;
+  status: PlatformStatus;
+}
+
+export interface FeedbackNote {
+  id: string;
+  description: string;
+  createdAt: string;
+  createdBy: { firstName: string; lastName: string; platformRole: string | null } | null;
+}
+
+const post = <T>(path: string, token: string, body: unknown) => call<T>(path, token, { method: 'POST', body: JSON.stringify(body) });
+const cid = (id: string) => encodeURIComponent(id);
+
+export const adminActions = {
+  extendTrial: (token: string, id: string, days: number, reason: string) => post<ActionResult>(`/api/platform/admin/clients/${cid(id)}/extend-trial`, token, { days, reason }),
+  changePlan: (token: string, id: string, plan: 'starter' | 'growth', reason: string) => post<ActionResult>(`/api/platform/admin/clients/${cid(id)}/change-plan`, token, { plan, reason }),
+  suspend: (token: string, id: string, reason: string) => post<ActionResult>(`/api/platform/admin/clients/${cid(id)}/suspend`, token, { reason }),
+  reactivate: (token: string, id: string, reason: string) => post<ActionResult>(`/api/platform/admin/clients/${cid(id)}/reactivate`, token, { reason }),
+  resetPassword: (token: string, id: string, userId: string, reason: string) =>
+    post<ActionResult>(`/api/platform/admin/clients/${cid(id)}/users/${cid(userId)}/reset-password`, token, { reason }),
+  audit: (token: string, tenantId?: string) => call<AuditEntry[]>(`/api/platform/admin/audit${tenantId ? `?tenantId=${cid(tenantId)}` : ''}`, token),
+};
+
+export const feedbackApi = {
+  list: (token: string, kind: FeedbackKind, opts: { status?: string; search?: string }) => {
+    const q = new URLSearchParams({ sortBy: 'createdAt', sortOrder: 'desc' });
+    if (opts.status) q.set('status', opts.status);
+    if (opts.search) q.set('search', opts.search);
+    return call<FeedbackItem[]>(`/api/platform/${kind}?${q}`, token);
+  },
+  get: (token: string, kind: FeedbackKind, id: string) => call<FeedbackItem & { notes: FeedbackNote[] }>(`/api/platform/${kind}/${cid(id)}`, token),
+  setStatus: (token: string, kind: FeedbackKind, id: string, statusId: string) =>
+    call<FeedbackItem>(`/api/platform/${kind}/${cid(id)}`, token, { method: 'PATCH', body: JSON.stringify({ statusId }) }),
+  addNote: (token: string, kind: FeedbackKind, id: string, description: string) => post<FeedbackNote>(`/api/platform/${kind}/${cid(id)}/notes`, token, { description }),
+  statuses: (token: string, kind: FeedbackKind) => call<PlatformStatus[]>(`/api/platform/statuses?entityType=${kind === 'tickets' ? 'ticket' : 'idea'}`, token),
+};

@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import StatTile from '../components/metrics/StatTile';
 import TableBody from '../components/common/TableBody';
 import { AdminApiError, adminApi, type ClientDetail, type StaffNote, type StaffTask } from './adminApi';
 import type { AdminSession } from './AdminApp';
 import { MODULE_LABEL, STATUS, TONE_COLOR, ago, attentionText, date, daysUntil, healthTone, money, planLabel } from './format';
 import { Avatar, Chip, ErrorBox, Loading, Meter, Panel } from './ui';
+import ClientActions, { ResetPasswordButton } from './ClientActions';
 
 type Tab = 'summary' | 'users' | 'usage' | 'billing' | 'support' | 'notes' | 'activity';
 const TABS: [Tab, string][] = [
@@ -35,14 +36,24 @@ export default function AdminClientDetail({ session }: { session: AdminSession }
   const [c, setC] = useState<ClientDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('summary');
+  const [flash, setFlash] = useState<string | null>(null);
 
-  useEffect(() => {
-    setC(null);
+  const load = useCallback(() => {
     adminApi
       .client(session.token, id)
       .then(setC)
       .catch((e) => (e instanceof AdminApiError && e.status === 401 ? session.onUnauthorized() : setError(e.status === 404 ? 'Ese cliente no existe.' : e.message)));
   }, [session, id]);
+
+  useEffect(() => {
+    setC(null);
+    load();
+  }, [load]);
+
+  const done = (message: string) => {
+    setFlash(message);
+    load();
+  };
 
   if (error) return <ErrorBox message={error} />;
   if (!c) return <Loading />;
@@ -69,11 +80,19 @@ export default function AdminClientDetail({ session }: { session: AdminSession }
               </div>
             </div>
           </div>
-          {c.owner && (
-            <a className="btn-secondary" href={`mailto:${c.owner.email}`}>Escribir al dueño</a>
-          )}
+          <div className="flex flex-wrap gap-2">
+            {c.owner && <a className="btn-secondary" href={`mailto:${c.owner.email}`}>Escribir al dueño</a>}
+            <ClientActions client={c} session={session} onDone={done} />
+          </div>
         </div>
       </div>
+
+      {flash && (
+        <div className="flex items-center justify-between gap-3 rounded-lg bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300" role="status">
+          <span>{flash}</span>
+          <button type="button" className="text-xs underline" onClick={() => setFlash(null)}>Cerrar</button>
+        </div>
+      )}
 
       {c.attention.map((a, i) => {
         const t = attentionText(a);
@@ -111,7 +130,7 @@ export default function AdminClientDetail({ session }: { session: AdminSession }
       </div>
 
       {tab === 'summary' && <SummaryTab c={c} />}
-      {tab === 'users' && <UsersTab c={c} />}
+      {tab === 'users' && <UsersTab c={c} session={session} onDone={done} />}
       {tab === 'usage' && <UsageTab c={c} />}
       {tab === 'billing' && <BillingTab c={c} />}
       {tab === 'support' && <SupportTab c={c} />}
@@ -213,14 +232,14 @@ function DailyChart({ points, max }: { points: ClientDetail['dailyActive']; max:
   );
 }
 
-function UsersTab({ c }: { c: ClientDetail }) {
+function UsersTab({ c, session, onDone }: { c: ClientDetail; session: AdminSession; onDone: (m: string) => void }) {
   return (
     <div className="overflow-x-auto rounded-lg border border-line bg-surface-1 dark:border-dark-line dark:bg-dark-surface">
       <table className="table w-full">
         <thead>
-          <tr><th>Persona</th><th>Email</th><th>Rol</th><th>Última actividad</th><th>Estado</th><th>Alta</th></tr>
+          <tr><th>Persona</th><th>Email</th><th>Rol</th><th>Última actividad</th><th>Estado</th><th>Alta</th><th style={{ textAlign: 'right' }}>Acciones</th></tr>
         </thead>
-        <TableBody colSpan={6} isEmpty={c.users.length === 0} empty={{ title: 'Sin usuarios.' }}>
+        <TableBody colSpan={7} isEmpty={c.users.length === 0} empty={{ title: 'Sin usuarios.' }}>
           {c.users.map((u) => (
             <tr key={u.id}>
               <td className="font-semibold">{u.name}</td>
@@ -229,6 +248,7 @@ function UsersTab({ c }: { c: ClientDetail }) {
               <td>{ago(u.lastSeenAt)}</td>
               <td><Chip tone={u.status === 'active' ? 'good' : 'neutral'}>{u.status === 'active' ? 'Activo' : 'Inactivo'}</Chip></td>
               <td className="tabular-nums">{date(u.createdAt)}</td>
+              <td className="text-right">{u.status === 'active' && <ResetPasswordButton client={c} user={u} session={session} onDone={onDone} />}</td>
             </tr>
           ))}
         </TableBody>
@@ -319,13 +339,14 @@ function BillingTab({ c }: { c: ClientDetail }) {
 }
 
 function SupportTab({ c }: { c: ClientDetail }) {
+  const navigate = useNavigate();
   return (
     <div className="overflow-x-auto rounded-lg border border-line bg-surface-1 dark:border-dark-line dark:bg-dark-surface">
       <table className="table w-full">
         <thead><tr><th>Asunto</th><th>Quién</th><th>Estado</th><th>Creado</th></tr></thead>
         <TableBody colSpan={4} isEmpty={c.tickets.length === 0} empty={{ title: 'Sin tickets.' }}>
           {c.tickets.map((t) => (
-            <tr key={t.id}>
+            <tr key={t.id} className="cursor-pointer" onClick={() => navigate(`/tickets/${t.id}`)}>
               <td className="font-semibold">{t.subject}</td>
               <td>{t.reporter ?? 'Soporte'}</td>
               <td><Chip tone={t.open ? 'info' : 'neutral'}>{t.status}</Chip></td>
@@ -442,6 +463,11 @@ const KIND_TITLE: Record<string, string> = {
   invoice_failed: 'Cobro rechazado',
   invoice_refunded: 'Cobro reembolsado',
   cancel_requested: 'Pidió cancelar',
+  staff_extend_trial: 'Prueba extendida',
+  staff_change_plan: 'Plan cambiado',
+  staff_suspend: 'Cuenta suspendida',
+  staff_reactivate: 'Cuenta reactivada',
+  staff_reset_password: 'Link de contraseña nueva enviado',
 };
 
 function Timeline({ items }: { items: ClientDetail['timeline'] }) {
@@ -455,6 +481,8 @@ function Timeline({ items }: { items: ClientDetail['timeline'] }) {
           const [amount, cur] = e.text.split('|');
           detail = money(Number(amount), cur);
           if (e.by) detail += ` · ${PROVIDER_LABEL[e.by] ?? e.by}`;
+        } else if (e.kind.startsWith('staff_')) {
+          detail = `Motivo: ${e.text}`;
         } else if (e.kind === 'cancel_requested') {
           detail = e.text ? `"${e.text}"` : '';
         } else if (e.kind === 'log') {

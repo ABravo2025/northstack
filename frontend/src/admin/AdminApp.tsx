@@ -4,6 +4,8 @@ import { ADMIN_TOKEN_KEY, AdminApiError, adminApi } from './adminApi';
 import AdminHome from './AdminHome';
 import AdminClients from './AdminClients';
 import AdminClientDetail from './AdminClientDetail';
+import AdminAudit from './AdminAudit';
+import { AdminFeedbackDetail, AdminFeedbackList } from './AdminFeedback';
 import PasswordInput from '../components/common/PasswordInput';
 import '../App.css';
 
@@ -67,6 +69,11 @@ export default function AdminApp() {
             <Route path="/" element={<AdminHome session={session} />} />
             <Route path="/clients" element={<AdminClients session={session} />} />
             <Route path="/clients/:id" element={<AdminClientDetail session={session} />} />
+            <Route path="/tickets" element={<AdminFeedbackList session={session} kind="tickets" />} />
+            <Route path="/tickets/:id" element={<AdminFeedbackDetail session={session} kind="tickets" />} />
+            <Route path="/ideas" element={<AdminFeedbackList session={session} kind="ideas" />} />
+            <Route path="/ideas/:id" element={<AdminFeedbackDetail session={session} kind="ideas" />} />
+            <Route path="/audit" element={<AdminAudit session={session} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </div>
@@ -90,8 +97,11 @@ function AdminSidebar({ name, role, onLogout }: { name: string; role: string; on
       <div className="px-3 pb-1 pt-2 text-[10px] uppercase tracking-widest text-[#c9c4e0]/70">Negocio</div>
       <NavLink to="/" end className={link}>Inicio</NavLink>
       <NavLink to="/clients" className={link}>Clientes</NavLink>
-      <div className="px-3 pb-1 pt-4 text-[10px] uppercase tracking-widest text-[#c9c4e0]/70">Próximamente</div>
-      <span className="block px-3 py-2 text-sm text-[#c9c4e0]/50">Facturación · Tickets · Ideas · Anuncios</span>
+      <div className="px-3 pb-1 pt-4 text-[10px] uppercase tracking-widest text-[#c9c4e0]/70">Soporte</div>
+      <NavLink to="/tickets" className={link}>Tickets</NavLink>
+      <NavLink to="/ideas" className={link}>Ideas</NavLink>
+      <div className="px-3 pb-1 pt-4 text-[10px] uppercase tracking-widest text-[#c9c4e0]/70">Sistema</div>
+      <NavLink to="/audit" className={link}>Registro de acciones</NavLink>
       <div className="mt-auto border-t border-white/10 px-3 pt-3 text-xs text-[#c9c4e0]">
         <div className="font-medium text-white">{name}</div>
         <div className="opacity-70">{role}</div>

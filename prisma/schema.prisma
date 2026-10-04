@@ -418,6 +418,7 @@ model Tenant {
   apiKeys                   ApiKey[]
   apiRequestLogs            ApiRequestLog[]
   webhookSubscriptions      WebhookSubscription[]
+  platformAuditEntries      PlatformAuditEntry[]
 }
 
 // Billing Integration (spec-billing-integration.md). plan/lockedPriceCents are deliberately NOT
@@ -605,6 +606,7 @@ model User {
   // (authService.ts's authenticateToken). Null = never seen since this field existed.
   lastSeenAt                  DateTime?
   activityDays                UserActivityDay[]
+  platformAuditEntries        PlatformAuditEntry[]        @relation("PlatformAuditActor")
   pipelinesCreated            Pipeline[]                  @relation("PipelineCreatedBy")
   pipelinesUpdated            Pipeline[]                  @relation("PipelineUpdatedBy")
   pipelinesLastAssigned       Pipeline[]                  @relation("PipelineLastAssignedUser")
@@ -1769,6 +1771,23 @@ model UserActivityDay {
 
   @@id([userId, day])
   @@index([tenantId, day])
+}
+
+// Admin Center v2 (2026-10-03): every action Northstack staff takes on a client (extend trial,
+// change plan, suspend, ...), with the mandatory reason. Append-only: nothing edits or deletes rows.
+model PlatformAuditEntry {
+  id          String   @id @default(uuid())
+  createdAt   DateTime @default(now())
+  actorUserId String
+  actor       User     @relation("PlatformAuditActor", fields: [actorUserId], references: [id])
+  tenantId    String?
+  tenant      Tenant?  @relation(fields: [tenantId], references: [id])
+  action      String // extend_trial | change_plan | suspend | reactivate | reset_password
+  reason      String
+  details     Json?
+
+  @@index([tenantId, createdAt])
+  @@index([createdAt])
 }
 
 model Session {

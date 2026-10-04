@@ -36,6 +36,16 @@ import {
 } from '../modules/platform/platformTenantNotesService.js';
 import { listIncompleteSignups } from '../modules/platform/platformSignupService.js';
 import { getClientDetail, getOverview, listClients } from '../modules/platform/adminClientService.js';
+import {
+  changeClientPlan,
+  cleanReason,
+  extendTrial,
+  listAudit,
+  reactivateClient,
+  sendPasswordReset,
+  suspendClient,
+  type AdminActionResult,
+} from '../modules/platform/adminActionService.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 
 export const platformRouter = createAsyncRouter();
@@ -208,6 +218,81 @@ platformRouter.get('/api/platform/admin/clients/:id', async (req, res) => {
     return res.status(404).json({ error: 'Client not found' });
   }
   return res.json(client);
+});
+
+// Admin Center v2, stage 2a — client actions. Each needs a written `reason` (logged). Changing
+// the plan and suspending/reactivating are platform_admin only; extending a trial and sending a
+// password reset are open to support as well.
+function sendAction(res: import('express').Response, result: AdminActionResult) {
+  return result.success ? res.json(result) : res.status(400).json({ error: result.error });
+}
+
+platformRouter.post('/api/platform/admin/clients/:id/extend-trial', async (req, res) => {
+  const user = await requirePlatformRole('platform_support')(req, res);
+  if (!user) {
+    return;
+  }
+  const reason = cleanReason(req.body.reason);
+  if (!reason) {
+    return res.status(400).json({ error: 'Escribí un motivo (queda en el registro).' });
+  }
+  return sendAction(res, await extendTrial(req.params.id, Number(req.body.days), user, reason));
+});
+
+platformRouter.post('/api/platform/admin/clients/:id/change-plan', async (req, res) => {
+  const user = await requirePlatformRole()(req, res);
+  if (!user) {
+    return;
+  }
+  const reason = cleanReason(req.body.reason);
+  if (!reason) {
+    return res.status(400).json({ error: 'Escribí un motivo (queda en el registro).' });
+  }
+  return sendAction(res, await changeClientPlan(req.params.id, req.body.plan, user, reason));
+});
+
+platformRouter.post('/api/platform/admin/clients/:id/suspend', async (req, res) => {
+  const user = await requirePlatformRole()(req, res);
+  if (!user) {
+    return;
+  }
+  const reason = cleanReason(req.body.reason);
+  if (!reason) {
+    return res.status(400).json({ error: 'Escribí un motivo (queda en el registro).' });
+  }
+  return sendAction(res, await suspendClient(req.params.id, user, reason));
+});
+
+platformRouter.post('/api/platform/admin/clients/:id/reactivate', async (req, res) => {
+  const user = await requirePlatformRole()(req, res);
+  if (!user) {
+    return;
+  }
+  const reason = cleanReason(req.body.reason);
+  if (!reason) {
+    return res.status(400).json({ error: 'Escribí un motivo (queda en el registro).' });
+  }
+  return sendAction(res, await reactivateClient(req.params.id, user, reason));
+});
+
+platformRouter.post('/api/platform/admin/clients/:id/users/:userId/reset-password', async (req, res) => {
+  const user = await requirePlatformRole('platform_support')(req, res);
+  if (!user) {
+    return;
+  }
+  const reason = cleanReason(req.body.reason);
+  if (!reason) {
+    return res.status(400).json({ error: 'Escribí un motivo (queda en el registro).' });
+  }
+  return sendAction(res, await sendPasswordReset(req.params.id, req.params.userId, user, reason));
+});
+
+platformRouter.get('/api/platform/admin/audit', async (req, res) => {
+  const user = await requirePlatformRole('platform_support')(req, res);
+  if (!user) {
+    return;
+  }
+  return res.json(await listAudit({ tenantId: (req.query.tenantId as string) || undefined }));
 });
 
 platformRouter.get('/api/platform/signups', async (req, res) => {

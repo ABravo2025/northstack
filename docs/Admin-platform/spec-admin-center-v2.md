@@ -56,9 +56,23 @@ https://claude.ai/artifact/MuqVmwK4WQwqDTwK2hdw4X
    - Tickets and Ideas screens (list, detail, status, replies).
    - Not done: Mercado Pago upgrades from the Admin, which need the customer's authorization.
 
-   **2b: modules and limits per client.** It changes what customers see, so it goes through
-   staging review. **2c: credits/discounts, retry charge, export data.** These use the Dodo/MP
-   APIs.
+   - **2b, LIVE IN PRODUCTION since 2026-10-04 (reviewed on staging).** Per-client agreements
+     in `Tenant.planOverride`, layered on top of the plan in `planLimits.ts`
+     (`PlanOverride` / `activeOverride` / `getPlanLimits`):
+     - Payroll, Payments and API/AI switched on or off per client;
+     - limits changed: pipelines, time-off policies, custom roles, activity-log days, trial user
+       cap;
+     - mandatory reason and optional expiry; an expired agreement is ignored automatically.
+
+     The customer app reads `planFeatures` from `GET /api/auth/me` (menu, routes, role editor).
+     Core modules (People, Time Off, Sales, Tasks) have no gate yet, so they can't be switched
+     off.
+   - **2c, LIVE IN PRODUCTION since 2026-10-04.**
+     - Free months (Dodo only): `subscriptions.update` with `next_billing_date`. Not yet exercised
+       against Dodo; check the Dodo dashboard on first use.
+     - Card-update reminder email, instead of "retry charge": neither provider allows a forced
+       retry.
+     - Client data export: a ZIP with one CSV per module, built by `src/lib/zip.ts`.
 3. Home + Billing: business metrics and alerts.
 4. Announcements, internal notes in their own tables, Billing page. (Tickets/Ideas moved to 2a.)
 5. Login as support (with consent) and delete client.

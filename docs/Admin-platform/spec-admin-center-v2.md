@@ -46,12 +46,21 @@ https://claude.ai/artifact/MuqVmwK4WQwqDTwK2hdw4X
 ## Stages
 
 1. **Clients + client page, read only.** LIVE IN PRODUCTION since 2026-10-03 (admin.joinnorthstack.com).
-2. Actions with a log:
-   - extend trial, change plan, credit, resend emails, reset password, retry charge,
-     suspend/reactivate, export;
-   - **modules and limits per client**.
+2. **Stage 2a, LIVE IN PRODUCTION since 2026-10-03.**
+   - Actions with a log (`PlatformAuditEntry`, mandatory reason, shown in the client's Activity
+     tab and in "Registro de acciones"):
+     - extend trial;
+     - change plan (trial: plan choice; paying: same path as the customer's self-serve change);
+     - suspend (view-only) and reactivate;
+     - send a password-reset link.
+   - Tickets and Ideas screens (list, detail, status, replies).
+   - Not done: Mercado Pago upgrades from the Admin, which need the customer's authorization.
+
+   **2b: modules and limits per client.** It changes what customers see, so it goes through
+   staging review. **2c: credits/discounts, retry charge, export data.** These use the Dodo/MP
+   APIs.
 3. Home + Billing: business metrics and alerts.
-4. Tickets, Ideas, Announcements and Notes rebuilt and linked to the client page.
+4. Announcements, internal notes in their own tables, Billing page. (Tickets/Ideas moved to 2a.)
 5. Login as support (with consent) and delete client.
 - Later: staff roles.
 

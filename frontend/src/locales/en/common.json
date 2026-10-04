@@ -215,6 +215,7 @@
     "referrals": { "label": "Referrals", "desc": "Recommend Northstack and earn a commission." },
     "companyProfile": { "label": "Company profile", "desc": "Name, logo, contact details and currency." },
     "timeOffRules": { "label": "Time Off", "desc": "Holiday calendar, work week, company days off." },
+    "shifts": { "label": "Shifts", "desc": "Locations, confirmations and scheduling rules." },
     "users": { "label": "Users", "desc": "Invite people and manage roles." },
     "publicForms": { "label": "Public Forms", "desc": "External intake forms per module." },
     "pipelines": { "label": "Pipelines", "desc": "Sales stages and their outcomes." },

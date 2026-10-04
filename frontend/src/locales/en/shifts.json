@@ -1,0 +1,56 @@
+{
+  "settings": {
+    "title": "Shifts",
+    "subtitle": "Where shifts happen and how people are asked to confirm them. Every change saves right away.",
+    "saveFailed": "Couldn't save: {{message}}",
+    "locations": {
+      "title": "Locations",
+      "lead": "Each location keeps its own time zone, so a shift reads the same for everyone no matter where they open it from.",
+      "name": "Name",
+      "address": "Address",
+      "timezone": "Time zone",
+      "manager": "Manager",
+      "managerHint": "Can schedule this location even without the Manage shifts permission.",
+      "noManager": "No manager",
+      "status": "Status",
+      "active": "Active",
+      "inactive": "Inactive",
+      "add": "Add location",
+      "edit": "Edit location",
+      "save": "Save",
+      "cancel": "Cancel",
+      "actionsAria": "Actions for {{name}}",
+      "deactivate": "Deactivate",
+      "activate": "Activate",
+      "delete": "Delete",
+      "deleteTitle": "Delete {{name}}?",
+      "deleteBody": "This location has never been scheduled, so nothing else is affected.",
+      "deleted": "Location deleted",
+      "emptyTitle": "No locations yet",
+      "emptyBody": "Add the places your team works at: a lab, a branch, a warehouse.",
+      "timezoneLocked": "The time zone can't change once the location has shifts.",
+      "shiftCount_one": "{{count}} shift",
+      "shiftCount_other": "{{count}} shifts",
+      "planLimit": "Your plan includes {{count}} active location. Upgrade to Growth for unlimited locations.",
+      "planLimitReached": "You've reached your plan's active location limit. Deactivate one or upgrade to Growth."
+    },
+    "confirm": {
+      "title": "Confirmations",
+      "lead": "How people find out about their shifts.",
+      "require": "Ask people to accept or decline each shift",
+      "requireHint": "When off, published shifts count as confirmed right away.",
+      "remindUnanswered": "Remind people who haven't answered",
+      "remindDayBefore": "Remind people the day before their shift",
+      "dailyHint": "Reminders go out once a day, in the morning."
+    },
+    "rules": {
+      "title": "Scheduling rules",
+      "lead": "Checked every time someone is assigned. Breaking a rule shows a warning; the scheduler can still go ahead.",
+      "minRest": "Minimum rest between two shifts of the same person",
+      "minRestOff": "No minimum",
+      "hours": "hours",
+      "weekStart": "Week starts on"
+    },
+    "weekdays": ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+  }
+}

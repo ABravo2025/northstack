@@ -63,6 +63,10 @@ export function getSettingsSections(permissions: SettingsSectionsPermissions): S
     // company profile: these are company-wide settings.
     companyItems.push({ to: 'time-off', label: t('settings.timeOffRules.label'), desc: t('settings.timeOffRules.desc'), icon: <CalendarIcon /> });
   }
+  // Shifts module (2026-10-04) — locations, confirmations and scheduling rules.
+  if (permissions.has('manage_shifts')) {
+    companyItems.push({ to: 'shifts', label: t('settings.shifts.label'), desc: t('settings.shifts.desc'), icon: <ClockIcon /> });
+  }
   if (permissions.has('manage_users')) {
     companyItems.push({ to: 'users', label: t('settings.users.label'), desc: t('settings.users.desc'), icon: <TeamIcon /> });
   }

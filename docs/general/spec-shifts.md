@@ -1,6 +1,6 @@
 # Spec Shifts (Turnos y horas)
 
-**Estado:** Unidad 1 en construcción (2026-10-04). Nada en `staging` ni en `main` todavía.
+**Estado:** Unidades 1-2 en `staging` (2026-10-04), esperando la revisión de Alejandro. Nada en `main` todavía.
 **Fecha:** 2026-10-04.
 **Contexto:** un laboratorio químico preguntó si Northstack puede manejar personal en distintos horarios
 y sedes, con turnos que no son bloques fijos, y que avisar y hacer el seguimiento es complicado.

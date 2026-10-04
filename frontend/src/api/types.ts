@@ -1323,3 +1323,29 @@ export interface PlanPricing {
   includedSeats: Record<PricedPlan, number>;
   freeTrialSeatCap: number;
 }
+
+// Shifts module (docs/general/spec-shifts.md, 2026-10-04).
+export interface ShiftsSettings {
+  requireConfirmation: boolean;
+  remindUnanswered: boolean;
+  remindDayBefore: boolean;
+  minRestHours: number | null;
+  weekStartsOn: number;
+  timesheetEnabled: boolean;
+  timesheetReminder: boolean;
+  showScheduleCost: boolean;
+}
+
+export interface ShiftLocation {
+  id: string;
+  tenantId: string;
+  name: string;
+  address: string | null;
+  timezone: string;
+  isActive: boolean;
+  managerEmployeeId: string | null;
+  managerEmployee: { id: string; firstName: string; lastName: string } | null;
+  _count?: { shifts: number };
+  createdAt: string;
+  updatedAt: string;
+}

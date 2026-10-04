@@ -15,6 +15,8 @@ import settingsPagesEn from '../locales/en/settingsPages.json';
 import settingsPagesEs from '../locales/es/settingsPages.json';
 import notesActivityEn from '../locales/en/notesActivity.json';
 import notesActivityEs from '../locales/es/notesActivity.json';
+import shiftsEn from '../locales/en/shifts.json';
+import shiftsEs from '../locales/es/shifts.json';
 
 // docs/general/spec-i18n.md — only these two for now; the detector/fallback chain below doesn't
 // need to change to add a third later.
@@ -34,6 +36,7 @@ i18n
         tasks: tasksEn,
         settingsPages: settingsPagesEn,
         notesActivity: notesActivityEn,
+        shifts: shiftsEn,
       },
       es: {
         common: commonEs,
@@ -43,6 +46,7 @@ i18n
         tasks: tasksEs,
         settingsPages: settingsPagesEs,
         notesActivity: notesActivityEs,
+        shifts: shiftsEs,
       },
     },
     supportedLngs: SUPPORTED_LOCALES,

@@ -48,6 +48,11 @@ const ENTITY_TYPE_VALUES: ActivityEntityType[] = [
   'project',
   'projectPhase',
   'projectTemplate',
+  'location',
+  'shift',
+  'shiftTemplate',
+  'shiftsSettings',
+  'skill',
 ];
 
 // Same gates as the backend's ACTIVITY_MODULE_GATE (activityVisibilityService.ts) for the Payroll/
@@ -64,6 +69,11 @@ const ENTITY_TYPE_PERMISSION: Partial<Record<ActivityEntityType, string>> = {
   project: 'view_projects',
   projectPhase: 'view_projects',
   projectTemplate: 'view_projects',
+  location: 'view_shifts',
+  shift: 'view_shifts',
+  shiftTemplate: 'manage_shifts',
+  shiftsSettings: 'manage_shifts',
+  skill: 'manage_shifts',
 };
 
 const ACTION_VALUES: ('create' | 'update' | 'delete')[] = ['create', 'update', 'delete'];

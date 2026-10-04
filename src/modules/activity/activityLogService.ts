@@ -42,6 +42,11 @@ const ENTITY_TYPE_LABELS: Record<ActivityEntityType, string> = {
   project: 'Project',
   projectPhase: 'Project Phase',
   projectTemplate: 'Project Template',
+  location: 'Location',
+  shift: 'Shift',
+  shiftTemplate: 'Shift Template',
+  shiftsSettings: 'Shift Settings',
+  skill: 'Skill',
 };
 
 // `record` is the full before/after snapshot the value came from (not just the one field) — a

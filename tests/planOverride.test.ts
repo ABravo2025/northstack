@@ -14,7 +14,7 @@ describe('plan + per-client agreement (getPlanLimits)', () => {
   it('turns a module on for Starter or off for Growth', () => {
     const starterWithPayroll = { plan: 'starter' as const, planOverride: agreement({ modules: { payroll: true } }) };
     expect(isPayrollAllowed(starterWithPayroll)).toBe(true);
-    expect(planFeatures(starterWithPayroll)).toEqual({ payroll: true, payments: false, apiAccess: false, projectTemplates: false });
+    expect(planFeatures(starterWithPayroll)).toEqual({ payroll: true, payments: false, apiAccess: false, projectTemplates: false, shiftSkills: false });
     const growthWithoutApi = { plan: 'growth' as const, planOverride: agreement({ modules: { apiAccess: false } }) };
     expect(isApiAccessAllowed(growthWithoutApi)).toBe(false);
     expect(isPayrollAllowed(growthWithoutApi)).toBe(true);

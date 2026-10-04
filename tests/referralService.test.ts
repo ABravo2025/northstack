@@ -22,6 +22,7 @@ import { REFERRAL } from '../src/config/pricing.js';
 import {
   commissionView,
   decodeReceipt,
+  generateReferralCode,
   normalizeReferralCode,
   recordReferralCommission,
   referralView,
@@ -143,9 +144,18 @@ describe('validatePayoutDetails', () => {
 
 describe('codes and receipts', () => {
   it('normalizes codes', () => {
-    expect(normalizeReferralCode(' lucia-7k2p ')).toBe('LUCIA-7K2P');
+    expect(normalizeReferralCode(' k7qm-4xpa ')).toBe('K7QM-4XPA');
     expect(normalizeReferralCode('<script>')).toBeNull();
     expect(normalizeReferralCode(42)).toBeNull();
+  });
+
+  it('generates random codes with nothing from the member', () => {
+    const codes = new Set(Array.from({ length: 200 }, () => generateReferralCode()));
+    expect(codes.size).toBe(200);
+    for (const code of codes) {
+      expect(code).toMatch(/^[A-HJKMNP-Z2-9]{4}-[A-HJKMNP-Z2-9]{4}$/);
+      expect(normalizeReferralCode(code)).toBe(code);
+    }
   });
 
   it('accepts PDF/JPG/PNG up to 2 MB only', () => {

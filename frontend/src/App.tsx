@@ -12,7 +12,7 @@ import TableSkeleton from './components/common/TableSkeleton';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import CompleteSignupPage from './pages/CompleteSignupPage';
-import ReferralsSettingsPage from './pages/ReferralsSettingsPage';
+import ReferralsPage from './pages/ReferralsPage';
 import ReferralTermsPage from './pages/ReferralTermsPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
@@ -367,6 +367,7 @@ export default function App() {
         <Route path="/contacts" element={<ContactsPage user={user} token={token ?? ''} />} />
         <Route path="/opportunities" element={<OpportunitiesPage user={user} token={token ?? ''} />} />
         <Route path="/payments" element={featureOnly('payments', <PaymentsOverviewPage token={token ?? ''} />, '/')} />
+        <Route path="/referrals" element={<ReferralsPage token={token ?? ''} />} />
         <Route path="/profile" element={<Navigate to="/settings/profile" replace />} />
         <Route path="/company" element={<Navigate to="/settings/company" replace />} />
         <Route path="/settings" element={<WorkspaceSettingsLayout />}>
@@ -396,7 +397,7 @@ export default function App() {
           <Route path="activity" element={<ActivityLogSettingsPage token={token ?? ''} />} />
           <Route path="roles" element={<RolesPermissionsPage token={token ?? ''} />} />
           <Route path="billing" element={<BillingPage token={token ?? ''} tenant={tenant} onTenantUpdated={setTenant} />} />
-          <Route path="referrals" element={<ReferralsSettingsPage token={token ?? ''} />} />
+          <Route path="referrals" element={<Navigate to="/referrals" replace />} />
         </Route>
       </Route>
 

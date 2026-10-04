@@ -2200,7 +2200,7 @@ export default function GuidePage() {
             <div className="help-sub">
               <h3>Cómo unirte</h3>
               <ol className="help-steps">
-                <li>Entrá a <strong>Configuración → Referidos</strong>.</li>
+                <li>Entrá a <strong>Referidos</strong> en el menú lateral, justo arriba de Configuración.</li>
                 <li>
                   <strong>Elegí cómo querés cobrar</strong> (Wise, Payoneer, PayPal, wire transfer o transferencia bancaria
                   en Argentina) y cargá tus datos. Es obligatorio antes de aceptar los términos.
@@ -2228,7 +2228,7 @@ export default function GuidePage() {
             <div className="help-sub">
               <h3>Seguimiento</h3>
               <p>
-                En <strong>Configuración → Referidos</strong> ves a quiénes referiste, cada comisión con su fecha de
+                En <strong>Referidos</strong> ves a quiénes referiste, cada comisión con su fecha de
                 liberación y tus transferencias, con el comprobante para descargar. También te avisamos por email cuando
                 ganás una comisión y cuando te transferimos.
               </p>
@@ -2256,7 +2256,7 @@ export default function GuidePage() {
             <div className="help-sub">
               <h3>How to join</h3>
               <ol className="help-steps">
-                <li>Go to <strong>Settings → Referrals</strong>.</li>
+                <li>Open <strong>Referrals</strong> in the sidebar, right above Settings.</li>
                 <li>
                   <strong>Choose how you want to get paid</strong> (Wise, Payoneer, PayPal, wire transfer or bank transfer in
                   Argentina) and enter your details. This comes before accepting the terms.
@@ -2284,7 +2284,7 @@ export default function GuidePage() {
             <div className="help-sub">
               <h3>Tracking</h3>
               <p>
-                In <strong>Settings → Referrals</strong> you see who you referred, each commission with the date it becomes
+                In <strong>Referrals</strong> you see who you referred, each commission with the date it becomes
                 payable, and your transfers with a downloadable receipt. We also email you when you earn a commission and
                 when we transfer.
               </p>

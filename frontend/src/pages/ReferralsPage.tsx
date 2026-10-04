@@ -16,8 +16,9 @@ import {
   type ReferralStatus,
 } from '../api/referrals';
 
-// Referral program (2026-10-04, mockup approved by Alejandro). Settings → My account → Referrals:
-// joining (payout details first, then the terms), then the member's link, balances and history.
+// Referral program (2026-10-04, mockup approved by Alejandro). Its own entry in the main sidebar,
+// right above Settings (Alejandro) — joining (payout details first, then the terms), then the
+// member's link, balances and history.
 
 const METHODS: PayoutMethod[] = ['wise', 'payoneer', 'paypal', 'wire_intl', 'bank_ar'];
 
@@ -83,7 +84,7 @@ function useFormatters() {
   );
 }
 
-export default function ReferralsSettingsPage({ token }: { token: string }) {
+export default function ReferralsPage({ token }: { token: string }) {
   const { t } = useTranslation('settingsPages');
   const [data, setData] = useState<MyReferrals | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -99,7 +100,7 @@ export default function ReferralsSettingsPage({ token }: { token: string }) {
   if (!data) return <div className="py-16 text-center text-sm text-ink-faint dark:text-dark-ink-faint">{t('referrals.loading')}</div>;
 
   return (
-    <div className="flex max-w-6xl flex-col gap-5">
+    <div className="page-full page-capped flex flex-col gap-5">
       {data.member ? (
         <MemberView token={token} rules={data.rules} member={data.member} onChange={setData} />
       ) : (

@@ -12,6 +12,7 @@ import {
   CreditCardIcon,
   DashboardIcon,
   GearIcon,
+  GiftIcon,
   HomeIcon,
   PeopleIcon,
   TargetIcon,
@@ -140,6 +141,10 @@ export default function Sidebar({ mobileOpen, onMobileClose, tenant }: SidebarPr
         )}
 
         <div className="sidebar-footer">
+          <NavLink to="/referrals" className={linkClass} title={t('sidebar.referrals')} onClick={onMobileClose}>
+            <GiftIcon className="h-4 w-4 shrink-0" />
+            {label(t('sidebar.referrals'))}
+          </NavLink>
           <NavLink to="/settings" className={linkClass} title={t('sidebar.settings')} onClick={onMobileClose} data-tour="nav-settings">
             <GearIcon className="h-4 w-4 shrink-0" />
             {label(t('sidebar.settings'))}

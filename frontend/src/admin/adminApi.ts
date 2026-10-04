@@ -261,3 +261,19 @@ export const feedbackApi = {
   addNote: (token: string, kind: FeedbackKind, id: string, description: string) => post<FeedbackNote>(`/api/platform/${kind}/${cid(id)}/notes`, token, { description }),
   statuses: (token: string, kind: FeedbackKind) => call<PlatformStatus[]>(`/api/platform/statuses?entityType=${kind === 'tickets' ? 'ticket' : 'idea'}`, token),
 };
+
+export interface BillingOverview {
+  month: string;
+  totals: Record<string, { paid: number; failed: number; refunded: number; count: number }>;
+  mrrByCurrency: Record<string, number>;
+  payingClients: number;
+  pastDue: { id: string; name: string; amountCents: number; currency: string }[];
+  cancellations: { id: string; name: string; requestedAt: string | null; effectiveAt: string | null; reason: string | null }[];
+  upcoming: { id: string; name: string; at: string; amountCents: number; currency: string }[];
+  monthly: { month: string; paid: Record<string, number> }[];
+  invoices: { id: string; tenant: { id: string; name: string }; amountCents: number; currency: string; status: string; provider: string; at: string; periodStart: string; periodEnd: string }[];
+}
+
+export const adminBillingApi = {
+  overview: (token: string, month: string) => call<BillingOverview>(`/api/platform/admin/billing?month=${encodeURIComponent(month)}`, token),
+};

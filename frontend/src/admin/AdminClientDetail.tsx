@@ -102,7 +102,7 @@ export default function AdminClientDetail({ session }: { session: AdminSession }
 
       {c.deletionScheduledAt && (
         <div className="rounded-lg bg-rose-50 px-4 py-2.5 text-sm text-rose-800 dark:bg-rose-950/50 dark:text-rose-300">
-          <b>Marcado para eliminar.</b> Nadie del cliente puede entrar. Se puede deshacer hasta el {date(c.deletionScheduledAt)} con "Acciones → Cancelar eliminación".
+          <b>Se elimina el {date(c.deletionScheduledAt)}.</b> Nadie del cliente puede entrar y ese día se borran todos sus datos. Hasta entonces se puede deshacer con "Acciones → Cancelar eliminación".
         </div>
       )}
       <SupportAccessPanel client={c} session={session} refreshKey={refreshKey} onDone={done} />
@@ -492,6 +492,7 @@ const KIND_TITLE: Record<string, string> = {
   staff_support_end: 'Soporte terminó el acceso',
   staff_delete_scheduled: 'Marcado para eliminar',
   staff_delete_cancelled: 'Eliminación cancelada',
+  staff_delete_requested_by_owner: 'El dueño pidió eliminar la cuenta',
 };
 
 function Timeline({ items }: { items: ClientDetail['timeline'] }) {

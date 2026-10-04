@@ -43,7 +43,7 @@ export default function ClientActions({ client, session, onDone }: Props) {
     { key: 'export', label: 'Exportar datos del cliente', hint: 'ZIP con un CSV por módulo', show: isAdmin },
     { key: 'suspend', label: 'Suspender cuenta', hint: 'Queda en solo lectura', show: isAdmin && client.status !== 'suspended' && client.status !== 'cancelled', tone: 'text-amber-700 dark:text-amber-300' },
     { key: 'reactivate', label: 'Reactivar cuenta', hint: 'Vuelven a poder trabajar', show: isAdmin && client.status === 'suspended' },
-    { key: 'delete', label: 'Eliminar cliente', hint: 'Bloquea la cuenta; se puede deshacer', show: isAdmin && !deleting, tone: 'text-rose-600' },
+    { key: 'delete', label: 'Eliminar cliente', hint: 'Bloquea ya; borra los datos a los 10 días', show: isAdmin && !deleting, tone: 'text-rose-600' },
     { key: 'cancelDelete', label: 'Cancelar eliminación', hint: 'El cliente vuelve a poder entrar', show: isAdmin && deleting },
   ];
 
@@ -193,7 +193,7 @@ function ActionDialog({ action, client, session, onClose, onDone }: { action: Ac
     body = (
       <>
         <p className="text-sm text-ink-muted dark:text-dark-ink-muted">
-          Desde que confirmás, <b>nadie de {client.name} puede entrar</b> y se cierran sus sesiones. Los datos no se borran: lo podés deshacer con "Cancelar eliminación". Si tiene una suscripción paga activa, primero hay que cancelarla.
+          Desde que confirmás, <b>nadie de {client.name} puede entrar</b> y se cierran sus sesiones. <b>A los 10 días se borran todos sus datos, sin vuelta atrás.</b> Hasta entonces lo podés deshacer con "Cancelar eliminación". Al dueño le llega un mail avisando. Si tiene una suscripción paga activa, primero hay que cancelarla.
         </p>
         <label className="grid gap-1 text-sm font-medium" htmlFor="act-confirm">
           Escribí el nombre de la empresa para confirmar

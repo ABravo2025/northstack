@@ -101,5 +101,10 @@
     "howTo": "Entrá a Northstack para aceptar o rechazar. No pasa nada si no aceptás, y podés terminar el acceso cuando quieras.",
     "openApp": "Abrir Northstack",
     "footer": "Si no lo esperabas, rechazalo y respondé este mail."
+  },
+  "accountDeletion": {
+    "subject": "Tu cuenta de {{tenantName}} se va a eliminar",
+    "body": "La cuenta de {{tenantName}} en Northstack está programada para eliminarse. Ya nadie puede entrar, y todos sus datos se borran definitivamente el {{date}}.",
+    "undo": "Si fue un error, respondé este mail antes de esa fecha y la recuperamos."
   }
 }

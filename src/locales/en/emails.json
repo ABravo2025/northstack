@@ -101,5 +101,10 @@
     "howTo": "Open Northstack to accept or decline. Nothing happens unless you accept, and you can end the access at any time.",
     "openApp": "Open Northstack",
     "footer": "If you weren’t expecting this, decline it and reply to this email."
+  },
+  "accountDeletion": {
+    "subject": "Your {{tenantName}} account will be deleted",
+    "body": "The {{tenantName}} account on Northstack is scheduled for deletion. Nobody can sign in to it anymore, and all its data will be permanently deleted on {{date}}.",
+    "undo": "If this was a mistake, reply to this email before that date and we will restore it."
   }
 }

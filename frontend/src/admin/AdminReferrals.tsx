@@ -25,14 +25,18 @@ const DETAIL_LABEL: Record<string, string> = {
   holderName: 'Titular',
   holderAddress: 'Dirección del titular',
   bankName: 'Banco',
+  wireType: 'Cuenta',
+  iban: 'IBAN',
   swift: 'SWIFT / BIC',
   accountNumber: 'IBAN / n.º de cuenta',
-  routingNumber: 'Routing / ABA',
+  routingNumber: 'Routing number (ABA)',
   bankCountry: 'País del banco',
   taxId: 'CUIT / CUIL',
   cbu: 'CBU / CVU',
   alias: 'Alias',
 };
+
+const WIRE_TYPE_LABEL: Record<string, string> = { ach: 'EE.UU. (ACH)', iban: 'IBAN (Europa)', swift: 'SWIFT (otros países)' };
 
 const REFERRAL_STATUS: Record<ReferralMemberDetail['referrals'][number]['status'], { label: string; tone: Tone }> = {
   trialing: { label: 'En prueba', tone: 'neutral' },
@@ -258,7 +262,7 @@ export function AdminReferralMember({ session }: { session: AdminSession }) {
             {Object.entries(m.payoutDetails).map(([k, v]) => (
               <div key={k} className="contents">
                 <dt className="text-ink-faint dark:text-dark-ink-faint">{DETAIL_LABEL[k] ?? k}</dt>
-                <dd className="m-0 break-words font-mono text-[13px]">{v}</dd>
+                <dd className="m-0 break-words font-mono text-[13px]">{k === 'wireType' ? WIRE_TYPE_LABEL[v] ?? v : v}</dd>
               </div>
             ))}
             <dt className="text-ink-faint dark:text-dark-ink-faint">Email de la cuenta</dt>

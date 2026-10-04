@@ -30,13 +30,25 @@ const FIELDS: Record<PayoutMethod, [string, boolean, string][]> = {
     ['holderName', true, 'text'],
     ['holderAddress', true, 'text'],
     ['bankName', true, 'text'],
-    ['swift', true, 'text'],
-    ['accountNumber', true, 'text'],
-    ['routingNumber', false, 'text'],
     ['bankCountry', true, 'text'],
   ],
   bank_ar: [['holderName', true, 'text'], ['taxId', true, 'text'], ['cbu', true, 'text'], ['alias', false, 'text']],
 };
+
+// Wire transfers, like Payroll's IBAN/ACH: the account fields depend on where the bank is.
+type WireType = 'ach' | 'iban' | 'swift';
+const WIRE_TYPES: WireType[] = ['ach', 'iban', 'swift'];
+const WIRE_FIELDS: Record<WireType, [string, boolean, string][]> = {
+  ach: [['routingNumber', true, 'text'], ['accountNumber', true, 'text']],
+  iban: [['iban', true, 'text']],
+  swift: [['swift', true, 'text'], ['accountNumber', true, 'text']],
+};
+
+function fieldsFor(method: PayoutMethod, values: Record<string, string>): [string, boolean, string][] {
+  if (method !== 'wire_intl') return FIELDS[method];
+  const wireType = values.wireType as WireType | undefined;
+  return wireType && WIRE_FIELDS[wireType] ? [...WIRE_FIELDS[wireType], ...FIELDS.wire_intl] : FIELDS.wire_intl;
+}
 
 const STATUS_TONE: Record<ReferralStatus | CommissionStatus, string> = {
   trialing: 'bg-surface-2 text-ink-muted dark:bg-dark-raised dark:text-dark-ink-muted',
@@ -111,8 +123,23 @@ function PayoutFields({
   fieldError: { field: string; message: string } | null;
 }) {
   const { t } = useTranslation('settingsPages');
-  const fields = FIELDS[method];
+  const fields = fieldsFor(method, values);
   return (
+    <>
+    {method === 'wire_intl' && (
+      <fieldset className="mt-4">
+        <legend className="mb-1.5 text-sm font-medium">{t('referrals.fields.wireType')}</legend>
+        <div className="flex flex-wrap gap-x-5 gap-y-2" role="radiogroup">
+          {WIRE_TYPES.map((wt) => (
+            <label key={wt} className="flex items-center gap-2 text-sm" htmlFor={`wire-${wt}`}>
+              <input id={`wire-${wt}`} type="radio" name="wireType" className="accent-accent" checked={values.wireType === wt} onChange={() => onChange({ ...values, wireType: wt })} />
+              {t(`referrals.wireTypes.${wt}`)}
+            </label>
+          ))}
+        </div>
+        {fieldError?.field === 'wireType' && <div className="field-error">{fieldError.message}</div>}
+      </fieldset>
+    )}
     <div className="mt-4 grid gap-x-4 gap-y-3 sm:grid-cols-2">
       {fields.map(([key, required, type], i) => (
         <div key={key} className={`form-group m-0 min-w-0 ${fields.length % 2 === 1 && i === fields.length - 1 ? 'sm:col-span-2' : ''}`}>
@@ -131,6 +158,7 @@ function PayoutFields({
         </div>
       ))}
     </div>
+    </>
   );
 }
 
@@ -160,7 +188,8 @@ function MethodPicker({ value, onChange }: { value: PayoutMethod; onChange: (m: 
 }
 
 function requiredFilled(method: PayoutMethod, values: Record<string, string>): boolean {
-  return FIELDS[method].every(([key, required]) => !required || (values[key] ?? '').trim() !== '');
+  if (method === 'wire_intl' && !values.wireType) return false;
+  return fieldsFor(method, values).every(([key, required]) => !required || (values[key] ?? '').trim() !== '');
 }
 
 function ruleVars(rules: ReferralRules, money: (c: number, cur: string) => string) {

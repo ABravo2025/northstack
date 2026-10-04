@@ -81,6 +81,14 @@ export const VIEW_DASHBOARDS = 'view_dashboards';
 export const VIEW_PROJECTS = 'view_projects';
 export const MANAGE_PROJECTS = 'manage_projects';
 
+// Shifts module (2026-10-04, spec-shifts.md §2). view_shifts = see the whole schedule, every
+// location; manage_shifts = create/edit/publish/cancel shifts plus locations, templates and the
+// module's settings. Neither is needed to see and answer your OWN shifts, and a location's manager
+// schedules that location without manage_shifts (shiftAccess.ts) — same relationship-on-top idea as
+// Projects and Time Off.
+export const VIEW_SHIFTS = 'view_shifts';
+export const MANAGE_SHIFTS = 'manage_shifts';
+
 // The full permission allowlist — the source a future role-editing endpoint (Fase H) validates
 // incoming permission strings against. Kept here rather than in permissionService.ts since both
 // files need it and this one has no reverse dependency on that one.
@@ -112,6 +120,8 @@ export const PERMISSION_KEYS = [
   EDIT_EMPLOYEE_CUSTOM_FIELDS,
   VIEW_PROJECTS,
   MANAGE_PROJECTS,
+  VIEW_SHIFTS,
+  MANAGE_SHIFTS,
   ...EMPLOYEE_SCOPE_PERMISSIONS,
 ] as const;
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];
@@ -153,6 +163,8 @@ export const TOGGLEABLE_PERMISSION_KEYS = [
   EDIT_EMPLOYEE_CUSTOM_FIELDS,
   VIEW_PROJECTS,
   MANAGE_PROJECTS,
+  VIEW_SHIFTS,
+  MANAGE_SHIFTS,
 ] as const;
 export type ToggleablePermissionKey = (typeof TOGGLEABLE_PERMISSION_KEYS)[number];
 
@@ -172,6 +184,7 @@ export const PERMISSION_PREREQUISITES: Partial<Record<ToggleablePermissionKey, T
   [VIEW_EMPLOYEE_CUSTOM_FIELDS]: [VIEW_EMPLOYEE],
   [EDIT_EMPLOYEE_CUSTOM_FIELDS]: [VIEW_EMPLOYEE_CUSTOM_FIELDS, MANAGE_EMPLOYEE],
   [MANAGE_PROJECTS]: [VIEW_PROJECTS],
+  [MANAGE_SHIFTS]: [VIEW_SHIFTS],
 };
 
 // The inverse of PERMISSION_PREREQUISITES — revoking one of these cascades into revoking whatever
@@ -225,6 +238,8 @@ export const ADMIN_SEED_PERMISSIONS: string[] = [
   USE_AI_ASSISTANTS,
   VIEW_PROJECTS,
   MANAGE_PROJECTS,
+  VIEW_SHIFTS,
+  MANAGE_SHIFTS,
 ];
 
 // Deliberately NOT a superset of the old default — Member no longer gets CRM visibility

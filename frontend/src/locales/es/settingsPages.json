@@ -665,7 +665,12 @@
       "subscription": "Suscripción",
       "googleCalendarConnection": "Conexión de Google Calendar",
       "stripeConnection": "Conexión de Stripe",
-      "stripeInvoice": "Factura de Stripe"
+      "stripeInvoice": "Factura de Stripe",
+      "location": "Locación",
+      "shift": "Turno",
+      "shiftTemplate": "Plantilla de turno",
+      "shiftsSettings": "Configuración de turnos",
+      "skill": "Habilidad"
     }
   },
   "roles": {
@@ -757,6 +762,19 @@
           "label": "Gestionar proyectos",
           "description": "Crear proyectos y editar los datos, fases y equipo de cualquier proyecto.",
           "hint": "Necesita Ver todos los proyectos. El responsable de un proyecto siempre puede editarlo"
+        }
+      },
+      "shifts": {
+        "title": "Turnos",
+        "view_shifts": {
+          "label": "Ver el cronograma completo",
+          "description": "Ver todos los turnos de todas las locaciones, no solo los propios.",
+          "hint": "Sin este permiso, cada persona igual ve y responde los turnos que le asignaron"
+        },
+        "manage_shifts": {
+          "label": "Gestionar turnos",
+          "description": "Crear, editar, publicar y cancelar turnos, y configurar locaciones, plantillas y reglas de turnos.",
+          "hint": "Necesita Ver el cronograma completo. El responsable de una locación siempre puede armar los turnos de esa locación"
         }
       },
       "configuration": {

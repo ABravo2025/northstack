@@ -438,6 +438,15 @@ model Tenant {
   projectPhases             ProjectPhase[]
   projectMembers            ProjectMember[]
   projectTemplates          ProjectTemplate[]
+  shiftsSettings            ShiftsSettings?
+  locations                 Location[]
+  shiftTemplates            ShiftTemplate[]
+  shifts                    Shift[]
+  shiftAssignments          ShiftAssignment[]
+  shiftCalendarSyncs        ShiftCalendarSync[]
+  employeeAvailabilities    EmployeeAvailability[]
+  skills                    Skill[]
+  employeeSkills            EmployeeSkill[]
 }
 
 // Billing Integration (spec-billing-integration.md). plan/lockedPriceCents are deliberately NOT
@@ -653,6 +662,8 @@ model User {
   projectsCreated             Project[]                   @relation("ProjectCreatedBy")
   projectsUpdated             Project[]                   @relation("ProjectUpdatedBy")
   projectTemplatesCreated     ProjectTemplate[]           @relation("ProjectTemplateCreatedBy")
+  shiftsCreated               Shift[]                     @relation("ShiftCreatedBy")
+  shiftCalendarSyncs          ShiftCalendarSync[]
 
   @@index([emailDomain])
 }
@@ -738,6 +749,10 @@ model Employee {
   terminations             EmployeeTermination[]
   projectsOwned            Project[]                  @relation("ProjectOwner")
   projectMemberships       ProjectMember[]
+  locationsManaged         Location[]                 @relation("LocationManager")
+  shiftAssignments         ShiftAssignment[]
+  availabilities           EmployeeAvailability[]
+  skills                   EmployeeSkill[]
 
   @@unique([tenantId, email])
 }
@@ -1183,6 +1198,12 @@ enum ActivityEntityType {
   project
   projectPhase
   projectTemplate
+  // Shifts module (2026-10-04, spec-shifts.md).
+  location
+  shift
+  shiftTemplate
+  shiftsSettings
+  skill
 }
 
 enum ActivityAction {
@@ -1801,6 +1822,222 @@ model ProjectTemplateTask {
   @@index([templatePhaseId, order])
 }
 
+// ---------------------------------------------------------------------------------------------
+// Shifts module (docs/general/spec-shifts.md, 2026-10-04) — shift scheduling with confirmation.
+// Times are stored twice on purpose: as the location's local wall-clock (date + minutes since
+// midnight, what people read and type) AND as the UTC instants that wall-clock resolves to in the
+// location's timezone (what overlap/rest checks and ordering compare). Every write goes through
+// shiftTime.ts so the two never drift apart.
+// ---------------------------------------------------------------------------------------------
+
+// One row per tenant, created with these defaults the first time anything reads it
+// (shiftsSettingsService.ts's getShiftsSettings) — no row = all defaults.
+model ShiftsSettings {
+  id                  String   @id @default(uuid())
+  tenantId            String   @unique
+  tenant              Tenant   @relation(fields: [tenantId], references: [id])
+  // false = assigned shifts are confirmed on publish, nobody is asked to accept.
+  requireConfirmation Boolean  @default(true)
+  // Daily cron (Vercel Hobby = once a day, spec §0.4): nudge whoever hasn't answered yet...
+  remindUnanswered    Boolean  @default(true)
+  // ...and tell everyone about tomorrow's shifts.
+  remindDayBefore     Boolean  @default(true)
+  // Minimum hours between one shift's end and the same person's next start. null = no rule.
+  // Breaking it is a warning the manager can override, never a hard block (spec §3).
+  minRestHours        Int?     @default(12)
+  // 0 = Sunday … 6 = Saturday — first column of the weekly grid and the timesheet week.
+  weekStartsOn        Int      @default(1)
+  timesheetEnabled    Boolean  @default(true)
+  timesheetReminder   Boolean  @default(true)
+  // Schedule cost (hours × rate from EmployeeCompensation) — opt-in, off by default, and only ever
+  // shown to roles with payroll access (Alejandro, 2026-10-04).
+  showScheduleCost    Boolean  @default(false)
+  // Reserved for phase 2 (shift swaps between employees); not read anywhere yet.
+  allowSwaps          Boolean  @default(false)
+  updatedAt           DateTime @updatedAt
+}
+
+model Location {
+  id                String          @id @default(uuid())
+  tenantId          String
+  tenant            Tenant          @relation(fields: [tenantId], references: [id])
+  name              String
+  address           String?
+  // IANA zone (e.g. "America/Argentina/Buenos_Aires"). Every shift at this location is entered and
+  // shown in this zone, whatever the viewer's own browser zone is.
+  timezone          String
+  // Starter allows one ACTIVE location (planLimits.ts maxActiveLocations); deactivating keeps its
+  // past shifts intact instead of deleting them.
+  isActive          Boolean         @default(true)
+  // The location's manager schedules its shifts without needing manage_shifts (shiftAccess.ts).
+  managerEmployeeId String?
+  managerEmployee   Employee?       @relation("LocationManager", fields: [managerEmployeeId], references: [id], onDelete: SetNull)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  shifts            Shift[]
+  templates         ShiftTemplate[]
+
+  @@index([tenantId, isActive])
+}
+
+model ShiftTemplate {
+  id          String    @id @default(uuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  name        String
+  startMinute Int
+  // <= startMinute = ends the next day (same rule as Shift).
+  endMinute   Int
+  // null = usable at every location.
+  locationId  String?
+  location    Location? @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  position    String?
+  createdAt   DateTime  @default(now())
+
+  @@index([tenantId])
+}
+
+enum ShiftStatus {
+  draft // being planned — nobody is notified
+  published // assignees notified (and asked to confirm, if ShiftsSettings.requireConfirmation)
+  cancelled // kept for history; assignees told and calendar events removed
+}
+
+enum ShiftAssignmentStatus {
+  pending
+  accepted
+  declined
+}
+
+model Shift {
+  id               String            @id @default(uuid())
+  tenantId         String
+  tenant           Tenant            @relation(fields: [tenantId], references: [id])
+  locationId       String
+  location         Location          @relation(fields: [locationId], references: [id])
+  // Local calendar day the shift STARTS on, in the location's timezone.
+  date             DateTime          @db.Date
+  startMinute      Int
+  // <= startMinute = ends the next day (22:00 → 06:00).
+  endMinute        Int
+  // UTC instants derived from (date, minutes, location.timezone) — see shiftTime.ts.
+  startsAt         DateTime
+  endsAt           DateTime
+  position         String?
+  notes            String?
+  // People needed. Fewer accepted/pending assignees than this = an open slot on the schedule.
+  headcount        Int               @default(1)
+  status           ShiftStatus       @default(draft)
+  publishedAt      DateTime?
+  // Growth only (Skill catalog). Missing or expired = a warning when assigning, never a block.
+  requiredSkillIds String[]          @default([])
+  createdById      String
+  createdBy        User              @relation("ShiftCreatedBy", fields: [createdById], references: [id])
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  assignments      ShiftAssignment[]
+
+  @@index([tenantId, startsAt])
+  @@index([tenantId, locationId, date])
+}
+
+model ShiftAssignment {
+  id                String                @id @default(uuid())
+  tenantId          String
+  tenant            Tenant                @relation(fields: [tenantId], references: [id])
+  shiftId           String
+  shift             Shift                 @relation(fields: [shiftId], references: [id], onDelete: Cascade)
+  employeeId        String
+  employee          Employee              @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  status            ShiftAssignmentStatus @default(pending)
+  respondedAt       DateTime?
+  declineReason     String?
+  // Set when the assignee was told about this version of the shift (publish, or a later change
+  // that sent it back to pending). null on a draft.
+  notifiedAt        DateTime?
+  lastRemindedAt    DateTime?
+  // sha256 of the one-click accept/decline token emailed to the assignee — the token itself is
+  // never stored. Rotated on every (re)notification so an old email can't answer a changed shift.
+  responseTokenHash String?               @unique
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  calendarSyncs     ShiftCalendarSync[]
+
+  @@unique([shiftId, employeeId])
+  @@index([tenantId, employeeId])
+}
+
+// Same idea as TimeOffCalendarSync, but a shift goes only to its assignee's own calendar, not the
+// whole team's.
+model ShiftCalendarSync {
+  id                    String          @id @default(uuid())
+  tenantId              String
+  tenant                Tenant          @relation(fields: [tenantId], references: [id])
+  assignmentId          String
+  assignment            ShiftAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  userId                String
+  user                  User            @relation(fields: [userId], references: [id])
+  googleCalendarEventId String
+  createdAt             DateTime        @default(now())
+
+  @@unique([assignmentId, userId])
+  @@index([tenantId])
+}
+
+enum AvailabilityKind {
+  available
+  unavailable
+}
+
+// Either recurring (weekday set, date null) or a one-off (date set, weekday null) — enforced in
+// availabilityService.ts. A one-off row on a date overrides that weekday's recurring rows.
+model EmployeeAvailability {
+  id          String           @id @default(uuid())
+  tenantId    String
+  tenant      Tenant           @relation(fields: [tenantId], references: [id])
+  employeeId  String
+  employee    Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  weekday     Int?
+  date        DateTime?        @db.Date
+  startMinute Int
+  endMinute   Int
+  kind        AvailabilityKind
+  note        String?
+  createdAt   DateTime         @default(now())
+
+  @@index([tenantId, employeeId])
+}
+
+// Growth only. A tenant catalog ("Reagent handling", "Driver's license") plus who holds what and
+// until when — a shift can require some, and the daily cron warns before one expires.
+model Skill {
+  id        String          @id @default(uuid())
+  tenantId  String
+  tenant    Tenant          @relation(fields: [tenantId], references: [id])
+  name      String
+  isActive  Boolean         @default(true)
+  createdAt DateTime        @default(now())
+  holders   EmployeeSkill[]
+
+  @@unique([tenantId, name])
+}
+
+model EmployeeSkill {
+  id         String    @id @default(uuid())
+  tenantId   String
+  tenant     Tenant    @relation(fields: [tenantId], references: [id])
+  employeeId String
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  skillId    String
+  skill      Skill     @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  // null = doesn't expire.
+  expiresAt  DateTime? @db.Date
+  createdAt  DateTime  @default(now())
+
+  @@unique([employeeId, skillId])
+  @@index([tenantId, skillId])
+}
+
 // Same polymorphic tenantId+entityType+entityId pattern as Task — a short
 // title + long description (description allows markdown for emphasis, per
 // the user 2026-07-29; field names matched to Task's title/description on
@@ -1847,6 +2084,12 @@ enum NotificationType {
   // (timeOffRequestService.ts), entityType is always 'timeOffRequest'.
   time_off_requested
   time_off_decided
+  // Shifts module (spec-shifts.md) — entityType 'shift' for all five.
+  shift_assigned // published to you, or re-sent after a change that needs re-confirming
+  shift_changed // a change that doesn't need re-confirming (e.g. notes)
+  shift_cancelled
+  shift_declined // to whoever manages the shift: an assignee said they can't make it
+  shift_reminder // daily cron: unanswered, or tomorrow's shift
 }
 
 model Notification {

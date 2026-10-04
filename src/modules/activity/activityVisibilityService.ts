@@ -17,6 +17,8 @@ import {
   canViewEmployeeCustomFields,
   canViewOpportunity,
   canViewProjects,
+  canViewShifts,
+  canManageShifts,
 } from '../auth/permissionService.js';
 import { canViewProject } from '../projects/projectAccess.js';
 import type { RoleContext } from '../auth/roleService.js';
@@ -58,6 +60,13 @@ const ACTIVITY_MODULE_GATE: Partial<Record<ActivityEntityType, (role: RoleContex
   project: canViewProjects,
   projectPhase: canViewProjects,
   projectTemplate: canViewProjects,
+  // Shifts module — the tenant-wide feed shows schedule changes to whoever sees the whole schedule;
+  // the module's setup (templates, rules, skills catalog) only to whoever manages it.
+  location: canViewShifts,
+  shift: canViewShifts,
+  shiftTemplate: canManageShifts,
+  shiftsSettings: canManageShifts,
+  skill: canManageShifts,
 };
 
 export function canViewEntryModule(role: RoleContext, entityType: ActivityEntityType): boolean {

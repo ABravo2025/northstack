@@ -37,6 +37,8 @@ describe('getPlanLimits', () => {
       freeTrialSeatCap: 3,
       maxActiveProjects: 5,
       customProjectTemplatesEnabled: false,
+      maxActiveLocations: 1,
+      shiftSkillsEnabled: false,
     });
   });
 
@@ -50,6 +52,8 @@ describe('getPlanLimits', () => {
     expect(limits.paymentsEnabled).toBe(true);
     expect(limits.maxActiveProjects).toBeNull();
     expect(limits.customProjectTemplatesEnabled).toBe(true);
+    expect(limits.maxActiveLocations).toBeNull();
+    expect(limits.shiftSkillsEnabled).toBe(true);
   });
 });
 

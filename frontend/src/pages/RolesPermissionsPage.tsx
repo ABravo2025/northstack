@@ -107,6 +107,23 @@ function getGroups(t: TFunction): PermissionGroup[] {
       ],
     },
     {
+      title: t('roles.groups.shifts.title'),
+      rows: [
+        {
+          key: 'view_shifts',
+          label: t('roles.groups.shifts.view_shifts.label'),
+          description: t('roles.groups.shifts.view_shifts.description'),
+          hint: t('roles.groups.shifts.view_shifts.hint'),
+        },
+        {
+          key: 'manage_shifts',
+          label: t('roles.groups.shifts.manage_shifts.label'),
+          description: t('roles.groups.shifts.manage_shifts.description'),
+          hint: t('roles.groups.shifts.manage_shifts.hint'),
+        },
+      ],
+    },
+    {
       title: t('roles.groups.configuration.title'),
       rows: [
         {
@@ -216,6 +233,7 @@ const DEPENDENCIES: Record<string, string[]> = {
   view_employee_custom_fields: ['view_employee'],
   edit_employee_custom_fields: ['view_employee_custom_fields', 'manage_employee'],
   manage_projects: ['view_projects'],
+  manage_shifts: ['view_shifts'],
 };
 
 const COLUMN_WIDTH = 88;

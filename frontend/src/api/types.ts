@@ -18,6 +18,9 @@ export interface PlanFeatures {
   // Projects module (2026-10-04): "Save as template" (Growth). Optional on the wire — a backend
   // older than this feature doesn't send it; planFeaturesFor fills it in from the plan name.
   projectTemplates?: boolean;
+  // Shifts module (2026-10-04): skills/certifications catalog (Growth). Optional on the wire for the
+  // same reason as projectTemplates.
+  shiftSkills?: boolean;
 }
 
 export interface AuthResponse {
@@ -616,7 +619,12 @@ export type ActivityEntityType =
   | 'stripeConnection'
   | 'stripeInvoice'
   | 'timeOffAdjustment'
-  | 'timeOffSettings';
+  | 'timeOffSettings'
+  | 'location'
+  | 'shift'
+  | 'shiftTemplate'
+  | 'shiftsSettings'
+  | 'skill';
 
 export interface ActivityChange {
   field: string;
@@ -678,7 +686,12 @@ export type NotificationType =
   | 'stripe_subscription_canceled'
   | 'stripe_invoice_paid'
   | 'time_off_requested'
-  | 'time_off_decided';
+  | 'time_off_decided'
+  | 'shift_assigned'
+  | 'shift_changed'
+  | 'shift_cancelled'
+  | 'shift_declined'
+  | 'shift_reminder';
 
 export interface Notification {
   id: string;

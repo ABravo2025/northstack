@@ -665,7 +665,12 @@
       "subscription": "Subscription",
       "googleCalendarConnection": "Google Calendar Connection",
       "stripeConnection": "Stripe Connection",
-      "stripeInvoice": "Stripe Invoice"
+      "stripeInvoice": "Stripe Invoice",
+      "location": "Location",
+      "shift": "Shift",
+      "shiftTemplate": "Shift Template",
+      "shiftsSettings": "Shift Settings",
+      "skill": "Skill"
     }
   },
   "roles": {
@@ -757,6 +762,19 @@
           "label": "Manage projects",
           "description": "Create projects and edit any project's details, phases and team.",
           "hint": "Needs View all projects. A project's owner can always edit it"
+        }
+      },
+      "shifts": {
+        "title": "Shifts",
+        "view_shifts": {
+          "label": "View the whole schedule",
+          "description": "See every shift at every location, not just their own.",
+          "hint": "Without it, people still see and answer the shifts assigned to them"
+        },
+        "manage_shifts": {
+          "label": "Manage shifts",
+          "description": "Create, edit, publish and cancel shifts, and set up locations, templates and shift rules.",
+          "hint": "Needs View the whole schedule. A location's manager can always schedule that location"
         }
       },
       "configuration": {

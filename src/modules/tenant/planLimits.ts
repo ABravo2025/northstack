@@ -22,6 +22,11 @@ export interface PlanLimits {
   // on every plan. Not Admin-overridable yet (would need the Admin Center's override UI to list them).
   maxActiveProjects: number | null;
   customProjectTemplatesEnabled: boolean;
+  // Shifts module (2026-10-04, spec-shifts.md §0.3): active locations at once (inactive ones keep
+  // their history and don't count), and the skills/certifications catalog. Not Admin-overridable yet,
+  // same as the Projects limits above.
+  maxActiveLocations: number | null;
+  shiftSkillsEnabled: boolean;
 }
 
 export type EffectivePlan = 'starter' | 'growth';
@@ -38,6 +43,8 @@ export const PLAN_LIMITS: Record<EffectivePlan, PlanLimits> = {
     freeTrialSeatCap: PRICING.freeTrialSeatCap,
     maxActiveProjects: 5,
     customProjectTemplatesEnabled: false,
+    maxActiveLocations: 1,
+    shiftSkillsEnabled: false,
   },
   growth: {
     maxPipelines: null,
@@ -50,6 +57,8 @@ export const PLAN_LIMITS: Record<EffectivePlan, PlanLimits> = {
     freeTrialSeatCap: PRICING.freeTrialSeatCap,
     maxActiveProjects: null,
     customProjectTemplatesEnabled: true,
+    maxActiveLocations: null,
+    shiftSkillsEnabled: true,
   },
 };
 
@@ -160,5 +169,6 @@ export function planFeatures(tenant: TenantLike) {
     payments: l.paymentsEnabled,
     apiAccess: l.apiAccessEnabled,
     projectTemplates: l.customProjectTemplatesEnabled,
+    shiftSkills: l.shiftSkillsEnabled,
   };
 }

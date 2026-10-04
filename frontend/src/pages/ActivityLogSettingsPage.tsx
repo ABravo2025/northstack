@@ -45,6 +45,11 @@ const ENTITY_TYPE_VALUES: ActivityEntityType[] = [
   'googleCalendarConnection',
   'stripeConnection',
   'stripeInvoice',
+  'location',
+  'shift',
+  'shiftTemplate',
+  'shiftsSettings',
+  'skill',
 ];
 
 // Same gates as the backend's ACTIVITY_MODULE_GATE (activityVisibilityService.ts) for the Payroll/
@@ -58,6 +63,11 @@ const ENTITY_TYPE_PERMISSION: Partial<Record<ActivityEntityType, string>> = {
   stripeConnection: 'manage_payments',
   stripeInvoice: 'manage_payments',
   timeOffAdjustment: 'manage_custom_fields',
+  location: 'view_shifts',
+  shift: 'view_shifts',
+  shiftTemplate: 'manage_shifts',
+  shiftsSettings: 'manage_shifts',
+  skill: 'manage_shifts',
 };
 
 const ACTION_VALUES: ('create' | 'update' | 'delete')[] = ['create', 'update', 'delete'];

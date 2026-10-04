@@ -13,6 +13,12 @@ export function isGrowthFeatureEnabled(tenant: Tenant | null): boolean {
 // it says it, otherwise the plan name alone.
 export function planFeaturesFor(tenant: Tenant | null, payload: PermissionsPayload | null): PlanFeatures {
   const growth = isGrowthFeatureEnabled(tenant);
-  if (payload?.planFeatures) return { ...payload.planFeatures, projectTemplates: payload.planFeatures.projectTemplates ?? growth };
-  return { payroll: growth, payments: growth, apiAccess: growth, projectTemplates: growth };
+  if (payload?.planFeatures) {
+    return {
+      ...payload.planFeatures,
+      projectTemplates: payload.planFeatures.projectTemplates ?? growth,
+      shiftSkills: payload.planFeatures.shiftSkills ?? growth,
+    };
+  }
+  return { payroll: growth, payments: growth, apiAccess: growth, projectTemplates: growth, shiftSkills: growth };
 }

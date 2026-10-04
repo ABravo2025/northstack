@@ -182,3 +182,13 @@ export function canViewProjects(role: RoleContext): boolean {
 export function canManageProjects(role: RoleContext): boolean {
   return has(role, 'manage_projects');
 }
+
+// Shifts module — the ROLE-based half only. Your own shifts need neither, and a location's manager
+// schedules it without manage_shifts; shiftAccess.ts layers those relationship rules on top.
+export function canViewShifts(role: RoleContext): boolean {
+  return has(role, 'view_shifts');
+}
+
+export function canManageShifts(role: RoleContext): boolean {
+  return has(role, 'manage_shifts');
+}

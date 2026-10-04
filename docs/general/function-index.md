@@ -265,6 +265,8 @@ Employee en sí tapa también sus custom fields aunque el bundle siga prendido. 
 endpoints `.../custom-fields` de `routes/employees.ts`, que antes usaban `canManageCustomFields`
 — el permiso de SCHEMA de custom fields, no el de valores por-empleado — y en el caso del `GET` de
 listar, ningún chequeo en absoluto).
+**canViewShifts**/**canManageShifts** (Shifts, 2026-10-04, `docs/general/spec-shifts.md` §2 — la mitad
+por rol; ver tus propios turnos no necesita ninguno, y `shiftAccess.ts` suma la regla del responsable de locación).
 
 ### `src/modules/auth/roleService.ts` (Custom Roles, `docs/tareas/backlog.md` "Sistema de roles custom", Fase A-B, 2026-09)
 - **seedDefaultRolesForTenant(tx, tenantId)** — crea los 3 roles semilla (Owner/Admin/Member) de un
@@ -537,6 +539,23 @@ CRUD estándar: **createTimeOffPolicy**, **listTimeOffPolicies(tenantId)**, **fi
 - **listMyTimeOffRequests**, **listPendingApprovals**, **listTimeOffRequestsForCalendar**, **listAllTimeOffRequests(tenantId, client?)** (`client?`: Private API + Webhooks Unit 2, acepta `prismaExternal` — ver `routes/externalApi.ts`).
 - **findActiveTimeOffRequestsForEmployees(tenantId, employeeIds)** — solo solicitudes activas *hoy*, no el historial completo.
 - **decideTimeOffRequest(...)** / **cancelTimeOffRequest(...)** — ambas disparan `syncTimeOffCalendarEvent` (best-effort) tras la escritura.
+
+### `src/modules/shifts/shiftTime.ts` (Shifts, `docs/general/spec-shifts.md`, Unidad 1 — 2026-10-04)
+Hora local de una locación ↔ UTC, solo con `Intl` (sin librería de fechas), con DST resuelto en la fecha del turno.
+- **zonedToUtc(date, minute, timeZone)** — instante UTC en que el reloj de esa zona marca `date` + `minute`; una hora inexistente (salto de DST) cae después del salto.
+- **shiftInstants(date, startMinute, endMinute, timeZone)** — `{ startsAt, endsAt }`; `endMinute <= startMinute` = termina al día siguiente.
+- **zonedParts(instant, tz)**, **offsetMinutes(instant, tz)**, **zonedDateString(instant, tz)** (día local como `YYYY-MM-DD`).
+- **shiftDurationMinutes**, **endsNextDay**, **addDays(date, n)**, **formatMinute(m)** (`420` → `"07:00"`), **rangesOverlap(aStart, aEnd, bStart, bEnd)** (rangos semiabiertos: pegados no se superponen).
+- Validadores: **isValidTimeZone**, **isValidMinute**, **isValidDateString**.
+
+### `src/modules/shifts/shiftAccess.ts` (Shifts, Unidad 1)
+Capa de relación sobre `canViewShifts`/`canManageShifts` (mismo esquema que `projectAccess.ts`): el responsable de una locación (`Location.managerEmployeeId`) la gestiona sin el permiso.
+- **findOwnEmployeeIdForShifts(user)**, **managedLocationIds(user)**, **canManageLocationShifts(user, locationId)**, **canViewLocationShifts(user, locationId)**, **viewableLocationIds(user)** (`null` = todas).
+
+### `src/modules/shifts/shiftsSettingsService.ts` (Shifts, Unidad 1)
+- **getShiftsSettings(tenantId)** — sin fila = `DEFAULT_SHIFTS_SETTINGS`.
+- **updateShiftsSettings(tenantId, input, changedByUserId)** — upsert + Activity Log (`shiftsSettings`).
+- **parseShiftsSettingsInput(input)** — validación pura (testeada).
 
 ### `src/modules/integrations/apiKeyService.ts` (Private API + Webhooks, `docs/tareas/spec-private-api-webhooks.md`, Unit 1 — 2026-09-07)
 - **createApiKey(tenantId, userId, {name, scopes})** — rechaza nombre vacío, scopes vacío, y

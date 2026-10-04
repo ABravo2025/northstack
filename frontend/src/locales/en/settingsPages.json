@@ -54,8 +54,10 @@
       "holderAddress": "Account holder address",
       "bankName": "Bank",
       "swift": "SWIFT / BIC",
-      "accountNumber": "IBAN or account number",
-      "routingNumber": "Routing / ABA (US only)",
+      "accountNumber": "Account number",
+      "routingNumber": "Routing number (ABA)",
+      "iban": "IBAN",
+      "wireType": "Where is the bank account?",
       "bankCountry": "Bank country",
       "taxId": "CUIT / CUIL",
       "cbu": "CBU / CVU",
@@ -118,6 +120,7 @@
       "emptyCommissions": "No commissions yet. They appear when a company you referred pays.",
       "emptyPayouts": "No transfers yet."
     },
+    "wireTypes": { "ach": "United States (routing + account number)", "iban": "Europe (IBAN)", "swift": "Other countries (SWIFT)" },
     "referralStatus": {
       "trialing": "On trial",
       "no_payment": "No payments",

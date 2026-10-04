@@ -135,10 +135,26 @@ describe('validatePayoutDetails', () => {
     expect(validatePayoutDetails('bank_ar', { holderName: 'M', taxId: '20314589227', cbu: '123' })).toMatchObject({ success: false, field: 'cbu' });
   });
 
-  it('checks SWIFT for wires, routing optional', () => {
-    const base = { holderName: 'A', holderAddress: 'B', bankName: 'C', accountNumber: 'DE89370400440532013000', bankCountry: 'DE' };
-    expect(validatePayoutDetails('wire_intl', { ...base, swift: 'COBADEFFXXX' })).toMatchObject({ success: true });
-    expect(validatePayoutDetails('wire_intl', { ...base, swift: 'COBA' })).toMatchObject({ success: false, field: 'swift' });
+  it('wires ask for the account by type: US routing + account, IBAN, or SWIFT + account', () => {
+    const base = { holderName: 'A', holderAddress: 'B', bankName: 'C', bankCountry: 'X' };
+    expect(validatePayoutDetails('wire_intl', base)).toMatchObject({ success: false, field: 'wireType' });
+
+    expect(validatePayoutDetails('wire_intl', { ...base, wireType: 'ach', routingNumber: '021000021', accountNumber: '123456789' })).toMatchObject({
+      success: true,
+      details: { wireType: 'ach', routingNumber: '021000021', accountNumber: '123456789' },
+    });
+    expect(validatePayoutDetails('wire_intl', { ...base, wireType: 'ach', routingNumber: '12345', accountNumber: '123456789' })).toMatchObject({ success: false, field: 'routingNumber' });
+    expect(validatePayoutDetails('wire_intl', { ...base, wireType: 'ach', routingNumber: '021000021' })).toMatchObject({ success: false, field: 'accountNumber' });
+
+    expect(validatePayoutDetails('wire_intl', { ...base, wireType: 'iban', iban: 'DE89 3704 0044 0532 0130 00' })).toMatchObject({ success: true });
+    expect(validatePayoutDetails('wire_intl', { ...base, wireType: 'iban', iban: 'NOT-AN-IBAN' })).toMatchObject({ success: false, field: 'iban' });
+
+    expect(validatePayoutDetails('wire_intl', { ...base, wireType: 'swift', swift: 'COBADEFFXXX', accountNumber: '0532013000' })).toMatchObject({ success: true });
+    expect(validatePayoutDetails('wire_intl', { ...base, wireType: 'swift', swift: 'COBA', accountNumber: '1' })).toMatchObject({ success: false, field: 'swift' });
+
+    // Fields of another wire type are never stored.
+    const ok = validatePayoutDetails('wire_intl', { ...base, wireType: 'iban', iban: 'DE89370400440532013000', routingNumber: '021000021' });
+    expect(ok.success && 'routingNumber' in ok.details).toBe(false);
   });
 });
 

@@ -30,20 +30,30 @@ export const PAYOUT_FIELDS: Record<ReferralPayoutMethod, FieldRule[]> = {
   wise: [emailRule('email'), text('holderName')],
   payoneer: [emailRule('email'), text('holderName')],
   paypal: [emailRule('email'), text('holderName')],
-  wire_intl: [
-    text('holderName'),
-    text('holderAddress'),
-    text('bankName'),
-    { key: 'swift', required: true, check: (v) => /^[A-Za-z0-9]{8}([A-Za-z0-9]{3})?$/.test(v) },
-    text('accountNumber'),
-    text('routingNumber', false),
-    text('bankCountry'),
-  ],
+  // Common wire fields; the account itself depends on wireType (WIRE_ACCOUNT_FIELDS below).
+  wire_intl: [text('holderName'), text('holderAddress'), text('bankName'), text('bankCountry')],
   bank_ar: [
     text('holderName'),
     { key: 'taxId', required: true, check: (v) => /^\d{11}$/.test(v.replace(/\D/g, '')) },
     { key: 'cbu', required: true, check: (v) => /^\d{22}$/.test(v.replace(/\D/g, '')) },
     text('alias', false),
+  ],
+};
+
+// Wire transfers, like Payroll's IBAN/ACH (Alejandro, 2026-10-04): a US account gives routing +
+// account number, a European one its IBAN, anywhere else SWIFT/BIC + account number.
+export const WIRE_TYPES = ['ach', 'iban', 'swift'] as const;
+export type WireType = (typeof WIRE_TYPES)[number];
+const compact = (v: string) => v.replace(/[\s-]/g, '').toUpperCase();
+export const WIRE_ACCOUNT_FIELDS: Record<WireType, FieldRule[]> = {
+  ach: [
+    { key: 'routingNumber', required: true, check: (v) => /^\d{9}$/.test(compact(v)) },
+    { key: 'accountNumber', required: true, check: (v) => /^\d{4,17}$/.test(compact(v)) },
+  ],
+  iban: [{ key: 'iban', required: true, check: (v) => /^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/.test(compact(v)) }],
+  swift: [
+    { key: 'swift', required: true, check: (v) => /^[A-Z0-9]{8}([A-Z0-9]{3})?$/.test(compact(v)) },
+    text('accountNumber'),
   ],
 };
 
@@ -56,7 +66,16 @@ export function validatePayoutDetails(method: unknown, raw: unknown): Result<{ m
   }
   const input = raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {};
   const details: PayoutDetails = {};
-  for (const rule of PAYOUT_FIELDS[method as ReferralPayoutMethod]) {
+  let rules = PAYOUT_FIELDS[method as ReferralPayoutMethod];
+  if (method === 'wire_intl') {
+    const wireType = input.wireType;
+    if (typeof wireType !== 'string' || !WIRE_TYPES.includes(wireType as WireType)) {
+      return { success: false, error: 'Choose where the bank account is.', field: 'wireType' };
+    }
+    details.wireType = wireType;
+    rules = [...rules, ...WIRE_ACCOUNT_FIELDS[wireType as WireType]];
+  }
+  for (const rule of rules) {
     const value = typeof input[rule.key] === 'string' ? (input[rule.key] as string).trim().slice(0, 200) : '';
     if (!value) {
       if (rule.required) return { success: false, error: 'This field is required.', field: rule.key };
@@ -86,7 +105,7 @@ function payoutSummary(method: ReferralPayoutMethod, details: PayoutDetails): st
     return `${name.slice(0, 2)}•••@${domain}`;
   }
   if (method === 'bank_ar') return details.alias || last4(details.cbu);
-  return last4(details.accountNumber);
+  return last4(details.iban ?? details.accountNumber);
 }
 
 // ---------- codes ----------

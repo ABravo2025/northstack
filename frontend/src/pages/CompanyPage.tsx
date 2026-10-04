@@ -6,6 +6,7 @@ import { CURRENCY_CODES, currencyLabel } from '../lib/currencies';
 import { COMPANY_SIZE_OPTIONS } from '../lib/companySize';
 import { COUNTRIES } from '../lib/countries';
 import { resizeLogoFile, tenantLogoUrl } from '../lib/tenantLogo';
+import DeleteCompanyAccount from '../components/settings/DeleteCompanyAccount';
 
 // Settings → Company (2026-09-25) — replaces the old Settings → Appearance page, which only held
 // currency + the theme picker. The theme moved to Settings → Profile, since it's a per-device
@@ -270,6 +271,8 @@ export default function CompanyPage({ token, onTenantUpdated }: CompanyPageProps
           </select>
         </div>
       </div>
+
+      {tenant && <DeleteCompanyAccount token={token} companyName={tenant.name} />}
     </div>
   );
 }

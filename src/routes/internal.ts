@@ -1,4 +1,5 @@
 import { timingSafeEqual } from 'node:crypto';
+import { purgeDueTenants } from '../modules/platform/tenantPurgeService.js';
 import { runPlanTransitions } from '../modules/tenant/planTransitionService.js';
 import { renewExpiringWatchChannels } from '../modules/integrations/googleCalendarWatchService.js';
 import { runStalledOpportunityReminders } from '../modules/crm/stalledOpportunityService.js';
@@ -57,7 +58,9 @@ internalRouter.get('/api/internal/plan-transitions/run', async (req, res) => {
   if (!checkCronSecret(req, res, '/api/internal/plan-transitions/run')) return;
 
   const result = await runPlanTransitions();
-  return res.json(result);
+  // Account deletions whose 10 days are up (tenantPurgeService.ts) — same daily run.
+  const deletions = await purgeDueTenants();
+  return res.json({ ...result, deletions });
 });
 
 // Triggered once a day by Vercel Cron — Google Calendar watch channels (the

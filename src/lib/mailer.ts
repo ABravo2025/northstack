@@ -424,6 +424,34 @@ export async function sendSupportAccessRequestEmail(input: SendSupportAccessRequ
   }, 'Failed to send support access request email:');
 }
 
+export interface SendAccountDeletionScheduledEmailInput {
+  to: string;
+  tenantName: string;
+  deleteOn: Date;
+  locale?: string | null;
+}
+
+// Admin Center v2, stage 5: the company account was scheduled for deletion (by its owner from the
+// app, or by Northstack staff). Lets the owner react within the 10 days if it was a mistake.
+export async function sendAccountDeletionScheduledEmail(input: SendAccountDeletionScheduledEmailInput): Promise<void> {
+  if (!mailerConfigured()) return;
+
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(key, { lng, ns: 'emails', ...opts });
+  const date = input.deleteOn.toLocaleDateString(lng.startsWith('es') ? 'es-AR' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+
+  await dispatchMail({
+    from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
+    to: input.to,
+    subject: t('accountDeletion.subject', { tenantName: input.tenantName }),
+    text: [t('accountDeletion.body', { tenantName: input.tenantName, date }), '', t('accountDeletion.undo')].join('\n'),
+    html: [
+      `<p>${t('accountDeletion.body', { tenantName: strong(input.tenantName), date: strong(date) })}</p>`,
+      `<p>${t('accountDeletion.undo')}</p>`,
+    ].join('\n'),
+  }, 'Failed to send account deletion email:');
+}
+
 export interface SendPasswordResetEmailInput {
   to: string;
   resetUrl: string;

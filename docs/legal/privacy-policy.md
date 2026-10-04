@@ -10,12 +10,6 @@ the product actively markets to or signs EU-based tenants, this policy needs a G
 (legal basis articulation, EU representative, SCCs for transfers, etc.) before that happens,
 not after.
 
-2026-10-04 update — new Section 4.6 (Northstack support access with the customer's consent, plus
-staff visibility of administrative data through the Admin Center). Drafted with the Admin Center v2
-stage 5 build; NOT yet published: needs Alejandro's approval of the wording, then (1) the same text
-on the landing's privacy.html (EN + ES — the app's legal modal fetches that page), (2) a new
-Effective Date, (3) a policy_change announcement from the Admin (emails every user).
-
 2026-09-13 update — Section 4.1's subprocessor table now lists Dodo Payments instead of Paddle
 (replaced as the international payment processor). Same merchant-of-record role, so the
 data-flow description is unchanged — only the name. Pending legal review same as the rest of
@@ -266,29 +260,6 @@ this Policy with more detail — including which categories of data it can acces
 is.
 
 ---
-
-### 4.6 Northstack support access to your account (only with your permission)
-
-Northstack staff never sign in to your account, or see it the way you do, unless a user of
-your account explicitly accepts a request to do so. When our support team needs to look at
-your account to help you:
-
-- We send the request to one specific user of your account, inside the Service and by email.
-  It states who is asking, why, whether the access is view-only or also allows changes, and
-  for how long. A request nobody answers lapses after 24 hours.
-- Access starts only when that user accepts it, lasts at most the period shown (30 minutes,
-  2 hours or 24 hours, counted from acceptance), and that user can end it at any time.
-- During the access, our staff see the account with the permissions of the user who accepted
-  it, never more. In view-only mode they cannot change anything. If changes were allowed,
-  every change they make is recorded in your Activity Log as made by Northstack support.
-- We keep a record of every request, acceptance, entry and end of access.
-
-Separately from this, a limited number of authorized Northstack staff can see administrative
-information about each Tenant that we need to operate, support and bill the Service — such as
-company details, the users of the account and their roles, plan and billing status, and how
-much each module is used — through an internal administration tool. Every administrative
-action our staff take on a Tenant (for example extending a trial or changing a plan) is
-recorded with its reason.
 
 ## 5. Data Retention
 

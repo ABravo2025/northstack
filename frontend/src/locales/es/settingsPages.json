@@ -596,6 +596,22 @@
         "size": "La imagen pesa más de 2 MB.",
         "decode": "No pudimos leer esa imagen. Probá con otro archivo."
       }
+    },
+    "deleteAccount": {
+      "title": "Eliminar la cuenta de la empresa",
+      "help": "Borra la cuenta de la empresa y todos sus datos: personas, ausencias, ventas, tareas, nómina y usuarios. Solo lo puede hacer el dueño.",
+      "button": "Eliminar la cuenta de la empresa",
+      "warning": "Desde que confirmás nadie puede entrar, y todos los datos se borran definitivamente 10 días después. Si tenés una suscripción paga, cancelala antes en Facturación.",
+      "typeName": "Escribí el nombre de la empresa para confirmar: {{name}}",
+      "password": "Tu contraseña",
+      "confirm": "Eliminar cuenta",
+      "deleting": "Eliminando…",
+      "cancel": "Cancelar",
+      "close": "Cerrar",
+      "done": "Listo. Ya nadie puede entrar, y los datos se borran el {{date}}. Te mandamos un mail: si fue un error, respondelo antes de esa fecha.",
+      "wrongPassword": "La contraseña no es correcta.",
+      "wrongName": "El nombre de la empresa no coincide.",
+      "cancelFirst": "Tenés una suscripción activa: cancelala antes en Configuración → Facturación, así no te vuelve a cobrar."
     }
   },
   "activityLogSettings": {

@@ -596,6 +596,22 @@
         "size": "The image is larger than 2 MB.",
         "decode": "We couldn't read that image. Try another file."
       }
+    },
+    "deleteAccount": {
+      "title": "Delete company account",
+      "help": "Deletes the company account and all its data: people, time off, sales, tasks, payroll and users. Only the owner can do it.",
+      "button": "Delete company account",
+      "warning": "Nobody will be able to sign in from the moment you confirm, and all the data is permanently deleted 10 days later. If you have a paid subscription, cancel it first in Billing.",
+      "typeName": "Type the company name to confirm: {{name}}",
+      "password": "Your password",
+      "confirm": "Delete account",
+      "deleting": "Deleting…",
+      "cancel": "Cancel",
+      "close": "Close",
+      "done": "Done. Nobody can sign in anymore, and the data will be deleted on {{date}}. We sent you an email: reply to it before that date if it was a mistake.",
+      "wrongPassword": "Wrong password.",
+      "wrongName": "The company name does not match.",
+      "cancelFirst": "You have an active subscription: cancel it first in Settings → Billing, so you are not charged again."
     }
   },
   "activityLogSettings": {

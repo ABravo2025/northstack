@@ -21,6 +21,7 @@ const ACTION_LABEL: Record<string, string> = {
   support_end: 'Terminó el acceso de soporte',
   delete_scheduled: 'Marcó el cliente para eliminar',
   delete_cancelled: 'Canceló la eliminación',
+  delete_requested_by_owner: 'El dueño pidió eliminar la cuenta desde la app',
   announcement_update: 'Editó un anuncio',
   announcement_delete: 'Borró un anuncio',
   payment_reminder: 'Pidió que actualice la tarjeta',

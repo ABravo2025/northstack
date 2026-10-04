@@ -36,6 +36,7 @@ import {
 } from '../modules/platform/platformTenantNotesService.js';
 import { listIncompleteSignups } from '../modules/platform/platformSignupService.js';
 import { getClientDetail, getOverview, listClients } from '../modules/platform/adminClientService.js';
+import { getBillingOverview } from '../modules/platform/adminBillingService.js';
 import {
   changeClientPlan,
   cleanReason,
@@ -360,6 +361,15 @@ platformRouter.post('/api/platform/admin/clients/:id/export', async (req, res) =
   res.set('Content-Disposition', `attachment; filename="${result.filename}"`);
   res.set('Cache-Control', 'private, no-store');
   return res.send(result.zip);
+});
+
+// Stage 3 — Billing page (?month=YYYY-MM, default: current month).
+platformRouter.get('/api/platform/admin/billing', async (req, res) => {
+  const user = await requirePlatformRole('platform_support')(req, res);
+  if (!user) {
+    return;
+  }
+  return res.json(await getBillingOverview((req.query.month as string) || undefined));
 });
 
 platformRouter.get('/api/platform/admin/audit', async (req, res) => {

@@ -1757,7 +1757,10 @@ model ProjectTemplate {
   // null = a system template (seeded by src/modules/projects/systemTemplates.ts, visible to every
   // tenant, read-only); set = saved by that tenant ("Save as template"), visible only to it.
   tenantId    String?
-  tenant      Tenant?                @relation(fields: [tenantId], references: [id])
+  // Cascade, not the default SET NULL: a nulled tenantId would turn a deleted account's private
+  // template into a "system" template visible to every tenant (tenantPurgeService.ts skips SET NULL
+  // links on purpose, leaving those rows alive).
+  tenant      Tenant?                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   // Stable seed key for system templates (e.g. "accounting.monthly-close"), one row per locale so
   // re-running the seed updates in place. Always null for tenant templates.
   systemKey   String?

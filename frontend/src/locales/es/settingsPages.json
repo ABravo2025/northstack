@@ -895,6 +895,19 @@
           "hint": "Necesita Ver empresas + Ver contactos"
         }
       },
+      "projects": {
+        "title": "Proyectos",
+        "view_projects": {
+          "label": "Ver todos los proyectos",
+          "description": "Ver todos los proyectos de la empresa, no solo en los que trabaja.",
+          "hint": "Sin este permiso, cada persona igual ve los proyectos de los que es responsable o miembro"
+        },
+        "manage_projects": {
+          "label": "Gestionar proyectos",
+          "description": "Crear proyectos y editar los datos, fases y equipo de cualquier proyecto.",
+          "hint": "Necesita Ver todos los proyectos. El responsable de un proyecto siempre puede editarlo"
+        }
+      },
       "configuration": {
         "title": "Configuración",
         "manage_custom_fields": {

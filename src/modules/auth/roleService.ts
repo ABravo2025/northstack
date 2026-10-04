@@ -67,6 +67,14 @@ export const MANAGE_API_ACCESS = 'manage_api_access';
 // of "internal company data" a plain Member shouldn't see by default).
 export const VIEW_DASHBOARDS = 'view_dashboards';
 
+// Projects module (2026-10-04). view_projects = see EVERY project in the tenant; manage_projects =
+// create projects and edit any project's details, phases and team. Neither is needed to see a
+// project you're a member (or the owner) of — that's a relationship rule layered on top, same idea
+// as canDecideTimeOff's "or the assigned manager" (see projectAccess.ts). So Member gets neither by
+// default and still sees the projects they work on.
+export const VIEW_PROJECTS = 'view_projects';
+export const MANAGE_PROJECTS = 'manage_projects';
+
 // The full permission allowlist — the source a future role-editing endpoint (Fase H) validates
 // incoming permission strings against. Kept here rather than in permissionService.ts since both
 // files need it and this one has no reverse dependency on that one.
@@ -95,6 +103,8 @@ export const PERMISSION_KEYS = [
   DECIDE_TIME_OFF,
   VIEW_EMPLOYEE_CUSTOM_FIELDS,
   EDIT_EMPLOYEE_CUSTOM_FIELDS,
+  VIEW_PROJECTS,
+  MANAGE_PROJECTS,
   ...EMPLOYEE_SCOPE_PERMISSIONS,
 ] as const;
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];
@@ -133,6 +143,8 @@ export const TOGGLEABLE_PERMISSION_KEYS = [
   DECIDE_TIME_OFF,
   VIEW_EMPLOYEE_CUSTOM_FIELDS,
   EDIT_EMPLOYEE_CUSTOM_FIELDS,
+  VIEW_PROJECTS,
+  MANAGE_PROJECTS,
 ] as const;
 export type ToggleablePermissionKey = (typeof TOGGLEABLE_PERMISSION_KEYS)[number];
 
@@ -151,6 +163,7 @@ export const PERMISSION_PREREQUISITES: Partial<Record<ToggleablePermissionKey, T
   [MANAGE_OPPORTUNITY]: [VIEW_COMPANY, VIEW_CONTACT],
   [VIEW_EMPLOYEE_CUSTOM_FIELDS]: [VIEW_EMPLOYEE],
   [EDIT_EMPLOYEE_CUSTOM_FIELDS]: [VIEW_EMPLOYEE_CUSTOM_FIELDS, MANAGE_EMPLOYEE],
+  [MANAGE_PROJECTS]: [VIEW_PROJECTS],
 };
 
 // The inverse of PERMISSION_PREREQUISITES — revoking one of these cascades into revoking whatever
@@ -201,6 +214,8 @@ export const ADMIN_SEED_PERMISSIONS: string[] = [
   VIEW_EMPLOYEE_CUSTOM_FIELDS,
   EDIT_EMPLOYEE_CUSTOM_FIELDS,
   EMPLOYEE_SCOPE_ALL,
+  VIEW_PROJECTS,
+  MANAGE_PROJECTS,
 ];
 
 // Deliberately NOT a superset of the old default — Member no longer gets CRM visibility

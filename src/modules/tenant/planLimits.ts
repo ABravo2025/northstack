@@ -17,6 +17,11 @@ export interface PlanLimits {
   apiAccessEnabled: boolean;
   // Active users allowed while on the Free Trial with no plan chosen (seatService.ts's seatCapError).
   freeTrialSeatCap: number;
+  // Projects module (2026-10-04): open projects (planning/active/on hold) at once — completed and
+  // cancelled ones don't count — and whether "Save as template" is available. System templates are
+  // on every plan. Not Admin-overridable yet (would need the Admin Center's override UI to list them).
+  maxActiveProjects: number | null;
+  customProjectTemplatesEnabled: boolean;
 }
 
 export type EffectivePlan = 'starter' | 'growth';
@@ -31,6 +36,8 @@ export const PLAN_LIMITS: Record<EffectivePlan, PlanLimits> = {
     paymentsEnabled: false,
     apiAccessEnabled: false,
     freeTrialSeatCap: PRICING.freeTrialSeatCap,
+    maxActiveProjects: 5,
+    customProjectTemplatesEnabled: false,
   },
   growth: {
     maxPipelines: null,
@@ -41,6 +48,8 @@ export const PLAN_LIMITS: Record<EffectivePlan, PlanLimits> = {
     paymentsEnabled: true,
     apiAccessEnabled: true,
     freeTrialSeatCap: PRICING.freeTrialSeatCap,
+    maxActiveProjects: null,
+    customProjectTemplatesEnabled: true,
   },
 };
 
@@ -146,5 +155,10 @@ export function isApiAccessAllowed(tenant: TenantLike): boolean {
 // What the customer app's UI needs to show/hide plan-gated modules (GET /api/auth/me).
 export function planFeatures(tenant: TenantLike) {
   const l = getPlanLimits(tenant);
-  return { payroll: l.payrollEnabled, payments: l.paymentsEnabled, apiAccess: l.apiAccessEnabled };
+  return {
+    payroll: l.payrollEnabled,
+    payments: l.paymentsEnabled,
+    apiAccess: l.apiAccessEnabled,
+    projectTemplates: l.customProjectTemplatesEnabled,
+  };
 }

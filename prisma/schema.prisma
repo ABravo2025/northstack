@@ -116,6 +116,9 @@ enum EntityType {
   // (which would log it to the tenant's own ActivityLogEntry / fire their webhooks) -- written
   // directly instead, deliberately invisible to the tenant it's about.
   tenant
+  // Projects module (2026-10-04) — entityId === Project.id; Tasks/Notes/Tags/Custom Fields attach
+  // to a project the same polymorphic way they attach to a Company.
+  project
 }
 
 // Platform-wide (Alejandro/soporte), not per-tenant -- unlike StatusDefinition
@@ -431,6 +434,10 @@ model Tenant {
   platformTasks             PlatformTask[]
   supportAccessRequests     SupportAccessRequest[]
   referredBy                Referral?
+  projects                  Project[]
+  projectPhases             ProjectPhase[]
+  projectMembers            ProjectMember[]
+  projectTemplates          ProjectTemplate[]
 }
 
 // Billing Integration (spec-billing-integration.md). plan/lockedPriceCents are deliberately NOT
@@ -648,6 +655,9 @@ model User {
   apiKeysCreated              ApiKey[]
   webhookSubscriptionsCreated WebhookSubscription[]
   referralMember              ReferralMember?
+  projectsCreated             Project[]                   @relation("ProjectCreatedBy")
+  projectsUpdated             Project[]                   @relation("ProjectUpdatedBy")
+  projectTemplatesCreated     ProjectTemplate[]           @relation("ProjectTemplateCreatedBy")
 
   @@index([emailDomain])
 }
@@ -731,6 +741,8 @@ model Employee {
   compensations            EmployeeCompensation[]
   payrollEntries           PayrollEntry[]
   terminations             EmployeeTermination[]
+  projectsOwned            Project[]                  @relation("ProjectOwner")
+  projectMemberships       ProjectMember[]
 
   @@unique([tenantId, email])
 }
@@ -839,6 +851,7 @@ model Company {
   createdAt                DateTime                @default(now())
   contacts                 Contact[]
   opportunities            Opportunity[]
+  projects                 Project[]
 
   // Nulls don't count toward Postgres uniqueness, so any number of Companies with no Stripe
   // customer linked yet are still allowed — this only blocks two Companies in the same tenant
@@ -1170,6 +1183,11 @@ enum ActivityEntityType {
   // only in Stripe (no local row), so entityId is the Stripe invoice id; always logged with
   // parentEntityType 'company' so it shows on that Company's Activity tab.
   stripeInvoice
+  // Projects module (2026-10-04) — phases are logged with parentEntityType 'project' so they show
+  // on the project's own Activity tab; a tenant-saved template has its own entry.
+  project
+  projectPhase
+  projectTemplate
 }
 
 enum ActivityAction {
@@ -1586,21 +1604,21 @@ model TagAssignment {
 // tenantId + entityType + entityId pattern already used by CustomFieldValue —
 // no per-module FK. See docs/tareas-desarrollo.md, "Módulo de Tasks", item 1.
 model Task {
-  id                    String      @id @default(uuid())
+  id                    String        @id @default(uuid())
   tenantId              String
-  tenant                Tenant      @relation(fields: [tenantId], references: [id])
+  tenant                Tenant        @relation(fields: [tenantId], references: [id])
   entityType            EntityType
   entityId              String
   title                 String
   description           String?
   assigneeId            String
-  assignee              User        @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  assignee              User          @relation("TaskAssignee", fields: [assigneeId], references: [id])
   dueDate               DateTime?
   completedAt           DateTime? // presence/absence is the done/pending state, not a separate enum
   createdById           String
-  createdBy             User        @relation("TaskCreatedBy", fields: [createdById], references: [id])
-  createdAt             DateTime    @default(now())
-  updatedAt             DateTime    @updatedAt
+  createdBy             User          @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
   googleCalendarEventId String? // set once this task's dueDate has been pushed to the assignee's connected Google Calendar; see googleCalendarSyncService.ts
   // Client-call Meet link (2026-09-16) — hasVideoCall is the user's request ("give this task a
   // Google Meet"), googleMeetUrl is the actual link once Google generates one. Kept separate
@@ -1608,13 +1626,17 @@ model Task {
   // one before it's ever synced (no Calendar connection yet, or dueDate not set yet) — the two
   // fields track intent vs. outcome. Once set, googleMeetUrl is never cleared even if hasVideoCall
   // is later unchecked (see googleCalendarSyncService.ts's comment on why removal isn't handled).
-  hasVideoCall          Boolean     @default(false)
+  hasVideoCall          Boolean       @default(false)
   googleMeetUrl         String?
   // Optional user-defined grouping (2026-09-18, My Tasks hub) — orthogonal to entityType/entityId,
   // which record a Task is *about*; a folder is purely an organizational bucket the assignee/creator
   // chooses, with no bearing on the underlying Company/Contact/Employee/Opportunity relationship.
   folderId              String?
-  folder                TaskFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  folder                TaskFolder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  // Projects module (2026-10-04) — only meaningful when entityType = project; groups the task under
+  // one of that project's phases. Null = "no phase" (a blank project's loose tasks), never an error.
+  projectPhaseId        String?
+  projectPhase          ProjectPhase? @relation(fields: [projectPhaseId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, entityType, entityId])
   @@index([tenantId, assigneeId])
@@ -1635,6 +1657,150 @@ model TaskFolder {
   tasks       Task[]
 
   @@index([tenantId])
+}
+
+// ---------------------------------------------------------------------------------------------
+// Projects module (2026-10-04, plan: one generic engine + templates as data).
+// A Project optionally belongs to a Company, is owned by an Employee, and has ordered phases and a
+// team. Its tasks are ordinary Task rows (entityType = project, projectPhaseId = the phase), so
+// /tasks, Google Calendar sync, notes, tags and custom fields all work without project-specific code.
+// A template is a saved shape (phases + tasks with a relative due date and a suggested role) that is
+// copied into a new project; after that the project never reads its template again.
+// ---------------------------------------------------------------------------------------------
+
+enum ProjectStatus {
+  planning
+  active
+  on_hold
+  completed
+  cancelled
+}
+
+enum ProjectTemplateNiche {
+  agency
+  accounting
+  consulting
+  internal
+  custom // saved by a tenant from one of its own projects
+}
+
+model Project {
+  id              String           @id @default(uuid())
+  tenantId        String
+  tenant          Tenant           @relation(fields: [tenantId], references: [id])
+  name            String
+  description     String?
+  companyId       String?
+  company         Company?         @relation(fields: [companyId], references: [id])
+  ownerEmployeeId String
+  ownerEmployee   Employee         @relation("ProjectOwner", fields: [ownerEmployeeId], references: [id])
+  status          ProjectStatus    @default(active)
+  startDate       DateTime?        @db.Date
+  dueDate         DateTime?        @db.Date
+  completedAt     DateTime?
+  // Informational only (the project is a copy, never re-synced): which template it came from.
+  // SetNull so deleting a tenant template never touches the projects made from it.
+  templateId      String?
+  template        ProjectTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  isActive        Boolean          @default(true) // archived when false
+  createdById     String
+  createdBy       User             @relation("ProjectCreatedBy", fields: [createdById], references: [id])
+  updatedById     String?
+  updatedBy       User?            @relation("ProjectUpdatedBy", fields: [updatedById], references: [id])
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  phases          ProjectPhase[]
+  members         ProjectMember[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, companyId])
+  @@index([tenantId, ownerEmployeeId])
+}
+
+model ProjectPhase {
+  id          String    @id @default(uuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id])
+  projectId   String
+  project     Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  name        String
+  color       String?
+  order       Int       @default(0)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  tasks       Task[]
+
+  @@index([projectId, order])
+}
+
+model ProjectMember {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id])
+  projectId   String
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  employeeId  String
+  // Cascade: deleting an Employee just takes them off every team. Owning a project (Project.ownerEmployee,
+  // Restrict) is different — the project has to be reassigned first.
+  employee    Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  // Free text ("Contador", "Diseñador") — matched against ProjectTemplateTask.projectRole when a
+  // project is created from a template, to pick each task's assignee.
+  projectRole String?
+  createdAt   DateTime @default(now())
+
+  @@unique([projectId, employeeId])
+  @@index([tenantId, employeeId])
+}
+
+model ProjectTemplate {
+  id          String                 @id @default(uuid())
+  // null = a system template (seeded by src/modules/projects/systemTemplates.ts, visible to every
+  // tenant, read-only); set = saved by that tenant ("Save as template"), visible only to it.
+  tenantId    String?
+  tenant      Tenant?                @relation(fields: [tenantId], references: [id])
+  // Stable seed key for system templates (e.g. "accounting.monthly-close"), one row per locale so
+  // re-running the seed updates in place. Always null for tenant templates.
+  systemKey   String?
+  locale      String? // 'en' | 'es' for system templates; null for tenant templates (shown in any language)
+  name        String
+  description String?
+  niche       ProjectTemplateNiche
+  isActive    Boolean                @default(true)
+  createdById String?
+  createdBy   User?                  @relation("ProjectTemplateCreatedBy", fields: [createdById], references: [id])
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  phases      ProjectTemplatePhase[]
+  projects    Project[]
+
+  @@unique([systemKey, locale])
+  @@index([tenantId])
+}
+
+model ProjectTemplatePhase {
+  id         String                @id @default(uuid())
+  templateId String
+  template   ProjectTemplate       @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  name       String
+  color      String?
+  order      Int                   @default(0)
+  tasks      ProjectTemplateTask[]
+
+  @@index([templateId, order])
+}
+
+model ProjectTemplateTask {
+  id              String               @id @default(uuid())
+  templatePhaseId String
+  templatePhase   ProjectTemplatePhase @relation(fields: [templatePhaseId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  // Days from the project's startDate (can be negative: "prepare laptop 3 days before day 1").
+  dueOffsetDays   Int?
+  projectRole     String?
+  order           Int                  @default(0)
+
+  @@index([templatePhaseId, order])
 }
 
 // Same polymorphic tenantId+entityType+entityId pattern as Task — a short

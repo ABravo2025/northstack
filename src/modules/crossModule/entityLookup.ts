@@ -7,7 +7,9 @@ import type { EntityType } from '@prisma/client';
 // docs/tareas-desarrollo.md, Rediseño de Clients). Shared by taskService.ts
 // and noteService.ts so this list and the lookup below can't drift between
 // the two the way VALID_CATALOG_KINDS once did (see docs/tareas-desarrollo.md).
-export const CROSS_MODULE_ENTITY_TYPES: EntityType[] = ['employee', 'company', 'contact', 'opportunity'];
+// 'project' joined 2026-10-04 (Projects module) — a project's tasks/notes/tags are ordinary
+// cross-module rows, same as a Company's.
+export const CROSS_MODULE_ENTITY_TYPES: EntityType[] = ['employee', 'company', 'contact', 'opportunity', 'project'];
 
 export function isSupportedCrossModuleEntityType(entityType: string): entityType is EntityType {
   return (CROSS_MODULE_ENTITY_TYPES as string[]).includes(entityType);
@@ -34,6 +36,10 @@ export async function findEntityTenantId(entityType: EntityType, entityId: strin
     case 'opportunity': {
       const opportunity = await prisma.opportunity.findUnique({ where: { id: entityId }, select: { tenantId: true } });
       return opportunity?.tenantId ?? null;
+    }
+    case 'project': {
+      const project = await prisma.project.findUnique({ where: { id: entityId }, select: { tenantId: true } });
+      return project?.tenantId ?? null;
     }
     default:
       return null;

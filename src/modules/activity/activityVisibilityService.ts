@@ -16,7 +16,9 @@ import {
   canViewEmployee,
   canViewEmployeeCustomFields,
   canViewOpportunity,
+  canViewProjects,
 } from '../auth/permissionService.js';
+import { canViewProject } from '../projects/projectAccess.js';
 import type { RoleContext } from '../auth/roleService.js';
 import type { AuthenticatedUser } from '../auth/authService.js';
 
@@ -51,6 +53,11 @@ const ACTIVITY_MODULE_GATE: Partial<Record<ActivityEntityType, (role: RoleContex
   tenant: canManageTenantSettings,
   user: canManageUsers,
   invitation: canManageUsers,
+  // Tenant-wide feed only — a project member without view_projects still sees their project's
+  // history on its own Activity tab (canAccessEntityActivity below), just not in the global feed.
+  project: canViewProjects,
+  projectPhase: canViewProjects,
+  projectTemplate: canViewProjects,
 };
 
 export function canViewEntryModule(role: RoleContext, entityType: ActivityEntityType): boolean {
@@ -130,5 +137,6 @@ export async function canAccessEntityActivity(
   if (entityType === 'company') return { allowed: canViewCompany(user.roleContext), status: 403 };
   if (entityType === 'contact') return { allowed: canViewContact(user.roleContext), status: 403 };
   if (entityType === 'opportunity') return { allowed: canViewOpportunity(user.roleContext), status: 403 };
-  return { allowed: true, status: 403 }; // unreachable — isSupportedCrossModuleEntityType only allows the 4 above
+  if (entityType === 'project') return { allowed: await canViewProject(user, entityId), status: 404 };
+  return { allowed: true, status: 403 }; // unreachable — isSupportedCrossModuleEntityType only allows the 5 above
 }

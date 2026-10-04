@@ -895,6 +895,19 @@
           "hint": "Needs View companies + View contacts"
         }
       },
+      "projects": {
+        "title": "Projects",
+        "view_projects": {
+          "label": "View all projects",
+          "description": "See every project in the company, not just the ones they work on.",
+          "hint": "Without it, people still see the projects they own or are a member of"
+        },
+        "manage_projects": {
+          "label": "Manage projects",
+          "description": "Create projects and edit any project's details, phases and team.",
+          "hint": "Needs View all projects. A project's owner can always edit it"
+        }
+      },
       "configuration": {
         "title": "Configuration",
         "manage_custom_fields": {

@@ -12,7 +12,7 @@ export function isGrowthFeatureEnabled(tenant: Tenant | null): boolean {
 // The plan-gated modules a tenant has: what the backend says (plan + Admin Center agreement) when
 // it says it, otherwise the plan name alone.
 export function planFeaturesFor(tenant: Tenant | null, payload: PermissionsPayload | null): PlanFeatures {
-  if (payload?.planFeatures) return payload.planFeatures;
   const growth = isGrowthFeatureEnabled(tenant);
-  return { payroll: growth, payments: growth, apiAccess: growth };
+  if (payload?.planFeatures) return { ...payload.planFeatures, projectTemplates: payload.planFeatures.projectTemplates ?? growth };
+  return { payroll: growth, payments: growth, apiAccess: growth, projectTemplates: growth };
 }

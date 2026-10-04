@@ -350,6 +350,17 @@ export function SparklesIcon({ className }: IconProps) {
   );
 }
 
+// Referral program — sidebar entry, a gift box (Alejandro, 2026-10-04).
+export function GiftIcon({ className }: IconProps) {
+  return (
+    <svg {...base} className={className}>
+      <rect x="3" y="8" width="18" height="4" rx="1" />
+      <path d="M12 8v13M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7" />
+      <path d="M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5" />
+    </svg>
+  );
+}
+
 // Payments v1 (spec-payments-v1.md) — sidebar entry for the Payments overview page.
 export function CreditCardIcon({ className }: IconProps) {
   return (

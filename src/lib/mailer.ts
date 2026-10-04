@@ -119,7 +119,7 @@ function formatEmailDate(value: Date, lng: string): string {
 }
 
 function referralsUrl(): string {
-  return `${process.env.APP_BASE_URL ?? 'http://localhost:5173'}/settings/referrals`;
+  return `${process.env.APP_BASE_URL ?? 'http://localhost:5173'}/referrals`;
 }
 
 export interface SendReferralCommissionEmailInput {

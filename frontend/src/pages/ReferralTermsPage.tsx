@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import AuthLayout from '../components/common/AuthLayout';
 import { API_BASE_URL, apiFetch, throwApiError } from '../api/http';
 import type { ReferralRules } from '../api/referrals';
-import { TermsList } from './ReferralsSettingsPage';
+import { TermsList } from './ReferralsPage';
 
 // Referral program terms (2026-10-04) — public, linked from the join form. The numbers come from
 // the backend's REFERRAL config, so this page can't drift from what's actually applied.

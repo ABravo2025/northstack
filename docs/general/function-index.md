@@ -557,6 +557,21 @@ Capa de relación sobre `canViewShifts`/`canManageShifts` (mismo esquema que `pr
 - **updateShiftsSettings(tenantId, input, changedByUserId)** — upsert + Activity Log (`shiftsSettings`).
 - **parseShiftsSettingsInput(input)** — validación pura (testeada).
 
+### `src/modules/shifts/shiftRules.ts` (Shifts, Unidad 3)
+Reglas de asignación (spec §3) como funciones puras, testeadas sin base.
+- **evaluateCandidate(shift, ctx, settings)** → `{ blocks, warnings }`. Bloqueos: `no_user`, `overlap`, `already_assigned`. Avisos: `time_off`, `holiday`, `unavailable`, `outside_availability`, `rest`, `missing_skill`, `expired_skill`.
+- **availabilityWarnings(shift, rows)** (una fila puntual de la fecha reemplaza a las recurrentes de ese día), **restViolated(shift, held, minRestHours)**.
+
+### `src/modules/shifts/shiftEvents.ts` (Shifts, Unidad 3)
+- **ShiftEvent** / **dispatchShiftEvents(events)** — lo que hay que avisar después de una escritura (`assigned`, `reconfirm`, `changed`, `unassigned`, `cancelled`, `declined`). Las escrituras devuelven eventos y la ruta los entrega con `await`. La entrega real es la Unidad 4 (hoy no hace nada).
+
+### `src/modules/shifts/shiftService.ts` (Shifts, Unidad 3)
+- Lectura: **findShiftById**, **listShifts(tenantId, { from, to, locationIds, includeDrafts, includeCancelled })**, **listEmployeeShifts**, **serializeShift** (nunca expone `responseTokenHash`), **toDateString**.
+- Candidatos: **evaluateCandidates(shift, employeeIds, settings, skillsEnabled, override?)** (un lote de queries para N personas), **listCandidates(shift, ...)** (todos los empleados con usuario activo).
+- Escritura: **createShift**, **updateShift** (cambio de fecha/hora/locación en un turno publicado → vuelve a pedir confirmación con token nuevo; rechaza si superpone a alguien asignado), **deleteDraftShift** (solo borradores), **cancelShift**, **assignEmployees** (bloqueos siempre rechazan; avisos piden `force`), **unassignEmployee**, **publishShifts**, **findDraftsForPublish**, **copyWeek** (a borradores, saltea asignaciones que superpondrían o sin usuario activo).
+- Respuesta: **respondToAssignment(assignmentId, response, reason)**, **findAssignmentByToken**, **newResponseToken** / **hashResponseToken** (solo se guarda el sha256, rota en cada nuevo aviso), **isShiftResponse**.
+- Plantillas: **listTemplates**, **createTemplate**, **deleteTemplate**. Validación pura: **parseShiftInput**, **parseDateRange** (máx. 62 días).
+
 ### `src/modules/shifts/locationService.ts` (Shifts, Unidad 2)
 - **listLocations(tenantId, { includeInactive?, ids? })** — con responsable y conteo de turnos.
 - **createLocation / updateLocation / deleteLocation** — validan zona horaria, responsable del mismo tenant y el tope de locaciones activas que pasa la ruta (`maxActive`, de `planLimits`); la zona no cambia si ya hay turnos; solo se borra una locación sin turnos (si no, se desactiva). Todo al Activity Log.

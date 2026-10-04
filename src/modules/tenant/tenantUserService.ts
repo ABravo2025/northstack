@@ -59,7 +59,7 @@ export async function updateTenantUser(
   // (invitationService.ts) — checked before either branch below so it covers both the
   // owner-transfer path and the plain role/status path.
   if (input.status === 'active' && target.status !== 'active') {
-    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true, plan: true } });
+    const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { id: true, plan: true, planOverride: true } });
     const capError = tenant ? await seatCapError(tenant) : null;
     if (capError) {
       return { success: false, error: capError };

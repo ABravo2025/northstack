@@ -12,6 +12,7 @@ import {
   validatePasswordResetToken,
 } from '../modules/auth/authService.js';
 import { serializeRoleContext } from '../modules/auth/roleService.js';
+import { planFeatures } from '../modules/tenant/planLimits.js';
 import { AUTH_RATE_LIMIT, isRateLimited } from '../lib/rateLimit.js';
 import { authenticateUser, getBearerToken, getClientIp } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
@@ -116,7 +117,13 @@ authRouter.get('/api/auth/me', async (req, res) => {
   // response, so it's never sent as-is. Fase G: serializeRoleContext converts it to a real,
   // serializable `permissions` payload the frontend's PermissionsContext consumes.
   const { roleContext, ...userWithoutRoleContext } = user;
-  return res.json({ user: sanitizeUser(userWithoutRoleContext), permissions: serializeRoleContext(roleContext) });
+  // planFeatures (2026-10-03): which plan-gated modules this tenant actually has — its plan plus any
+  // Admin Center agreement (planLimits.ts's PlanOverride) — so the UI hides/shows them exactly as
+  // the backend gates them, instead of re-deriving it from the plan name.
+  return res.json({
+    user: sanitizeUser(userWithoutRoleContext),
+    permissions: { ...serializeRoleContext(roleContext), planFeatures: planFeatures(user.tenant) },
+  });
 });
 
 authRouter.patch('/api/users/me', async (req, res) => {

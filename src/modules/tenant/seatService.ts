@@ -1,4 +1,6 @@
+import type { PlanTier, Prisma } from '@prisma/client';
 import prisma from '../../lib/prisma.js';
+import { getPlanLimits } from './planLimits.js';
 import { changeSubscriptionPlan, updateSubscriptionSeats } from '../../lib/dodopayments.js';
 import { updatePreapproval } from '../../lib/mercadopago.js';
 import { PRICING } from '../../config/pricing.js';
@@ -29,11 +31,13 @@ export function extraSeatsFor(plan: 'starter' | 'growth', activeSeats: number): 
 // error message (never throws) to match this module family's `{ success, error }` convention.
 export const FREE_TRIAL_SEAT_CAP = PRICING.freeTrialSeatCap;
 
-export async function seatCapError(tenant: { id: string; plan: string | null }): Promise<string | null> {
+export async function seatCapError(tenant: { id: string; plan: PlanTier | null; planOverride?: Prisma.JsonValue | null }): Promise<string | null> {
   if (tenant.plan !== null) return null;
+  // The cap can be raised per client by an Admin Center agreement (planLimits.ts's PlanOverride).
+  const cap = getPlanLimits(tenant).freeTrialSeatCap;
   const activeSeats = await countActiveSeats(tenant.id);
-  if (activeSeats < FREE_TRIAL_SEAT_CAP) return null;
-  return `Free Trial is limited to ${FREE_TRIAL_SEAT_CAP} users — choose a plan to add more.`;
+  if (activeSeats < cap) return null;
+  return `Free Trial is limited to ${cap} users — choose a plan to add more.`;
 }
 
 // Called whenever the tenant's active-seat count could have changed (invite accepted, a user's

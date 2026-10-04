@@ -1,7 +1,8 @@
 import prisma from '../../lib/prisma.js';
 import { getInvoiceUrl } from '../../lib/dodopayments.js';
 import { CURRENT_PLAN_PRICES_CENTS } from './planService.js';
-import { countActiveSeats, extraSeatsFor, INCLUDED_SEATS, FREE_TRIAL_SEAT_CAP } from './seatService.js';
+import { countActiveSeats, extraSeatsFor, INCLUDED_SEATS } from './seatService.js';
+import { getPlanLimits } from './planLimits.js';
 import { marketForProvider } from './planPriceService.js';
 import { PRICING } from '../../config/pricing.js';
 import { recordActivity } from '../activity/activityLogService.js';
@@ -83,7 +84,7 @@ export async function getBillingSummary(tenantId: string) {
     prisma.subscription.findUnique({ where: { tenantId }, select: BILLING_SUMMARY_SELECT }),
     prisma.tenant.findUnique({
       where: { id: tenantId },
-      select: { status: true, plan: true, trialEndsAt: true, gracePeriodEndsAt: true, lockedPriceCents: true, country: true },
+      select: { status: true, plan: true, planOverride: true, trialEndsAt: true, gracePeriodEndsAt: true, lockedPriceCents: true, country: true },
     }),
   ]);
   if (!tenant) {
@@ -96,7 +97,7 @@ export async function getBillingSummary(tenantId: string) {
   // comment): subscription.plan can still be the 'starter' signup placeholder for a tenant on
   // Free Trial (tenant.plan === null) whose checkout hasn't been confirmed by a webhook yet.
   const activeSeats = await countActiveSeats(tenantId);
-  const includedSeats = tenant.plan === 'starter' || tenant.plan === 'growth' ? INCLUDED_SEATS[tenant.plan] : FREE_TRIAL_SEAT_CAP;
+  const includedSeats = tenant.plan === 'starter' || tenant.plan === 'growth' ? INCLUDED_SEATS[tenant.plan] : getPlanLimits(tenant).freeTrialSeatCap;
   const extraSeats = tenant.plan === 'starter' || tenant.plan === 'growth' ? extraSeatsFor(tenant.plan, activeSeats) : 0;
   // The subscription's own pinned seat price when it has one; otherwise what its market charges
   // today (src/config/pricing.ts) — display only, no provider call from this read path.

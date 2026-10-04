@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'crypto';
 import prisma from '../../lib/prisma.js';
-import type { PlanTier, TenantStatus } from '@prisma/client';
+import type { PlanTier, Prisma, TenantStatus } from '@prisma/client';
 import type { User, Session } from '@prisma/client';
 import { sendPasswordResetEmail } from '../../lib/mailer.js';
 import { getEmailDomain } from '../../lib/email.js';
@@ -170,14 +170,14 @@ export async function loginUser(input: LoginUserInput): Promise<AuthResult> {
 // `plan` (2026-09-07, plan-tier enforcement) rides along the same way — every route that needs
 // getPlanLimits/getEffectivePlan (planLimits.ts) already has this on `user.tenant`, no extra query.
 export type AuthenticatedUser = User & {
-  tenant: { id: string; status: TenantStatus; plan: PlanTier | null } | null;
+  tenant: { id: string; status: TenantStatus; plan: PlanTier | null; planOverride: Prisma.JsonValue | null } | null;
   roleContext: RoleContext;
 };
 
 export async function authenticateToken(token: string): Promise<AuthenticatedUser | null> {
   const session = await prisma.session.findUnique({
     where: { token },
-    include: { user: { include: { tenant: { select: { id: true, status: true, plan: true } } } } },
+    include: { user: { include: { tenant: { select: { id: true, status: true, plan: true, planOverride: true } } } } },
   });
 
   if (!session) {

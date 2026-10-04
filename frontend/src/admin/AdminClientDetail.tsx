@@ -7,12 +7,14 @@ import type { AdminSession } from './AdminApp';
 import { MODULE_LABEL, STATUS, TONE_COLOR, ago, attentionText, date, daysUntil, healthTone, money, planLabel } from './format';
 import { Avatar, Chip, ErrorBox, Loading, Meter, Panel } from './ui';
 import ClientActions, { ResetPasswordButton } from './ClientActions';
+import AgreementTab from './AgreementTab';
 
-type Tab = 'summary' | 'users' | 'usage' | 'billing' | 'support' | 'notes' | 'activity';
+type Tab = 'summary' | 'users' | 'usage' | 'modules' | 'billing' | 'support' | 'notes' | 'activity';
 const TABS: [Tab, string][] = [
   ['summary', 'Resumen'],
   ['users', 'Usuarios'],
   ['usage', 'Uso'],
+  ['modules', 'Módulos y límites'],
   ['billing', 'Facturación'],
   ['support', 'Soporte'],
   ['notes', 'Notas y tareas'],
@@ -75,6 +77,7 @@ export default function AdminClientDetail({ session }: { session: AdminSession }
               <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-ink-muted dark:text-dark-ink-muted">
                 <Chip tone={STATUS[c.status].tone}>{STATUS[c.status].label}</Chip>
                 <Chip tone={c.plan ? 'accent' : 'neutral'} dot={false}>{planLabel(c.plan)}</Chip>
+                {c.hasAgreement && <Chip tone="warn" dot={false}>Acuerdo especial</Chip>}
                 <span>{[c.country, c.industry].filter(Boolean).join(' · ') || '—'}</span>
                 <span>Cliente desde {date(c.createdAt)}</span>
               </div>
@@ -132,6 +135,7 @@ export default function AdminClientDetail({ session }: { session: AdminSession }
       {tab === 'summary' && <SummaryTab c={c} />}
       {tab === 'users' && <UsersTab c={c} session={session} onDone={done} />}
       {tab === 'usage' && <UsageTab c={c} />}
+      {tab === 'modules' && <AgreementTab key={c.agreement?.setAt ?? 'none'} c={c} session={session} onDone={done} />}
       {tab === 'billing' && <BillingTab c={c} />}
       {tab === 'support' && <SupportTab c={c} />}
       {tab === 'notes' && <NotesTab c={c} session={session} />}
@@ -468,6 +472,8 @@ const KIND_TITLE: Record<string, string> = {
   staff_suspend: 'Cuenta suspendida',
   staff_reactivate: 'Cuenta reactivada',
   staff_reset_password: 'Link de contraseña nueva enviado',
+  staff_set_agreement: 'Acuerdo especial guardado',
+  staff_clear_agreement: 'Acuerdo especial quitado',
 };
 
 function Timeline({ items }: { items: ClientDetail['timeline'] }) {

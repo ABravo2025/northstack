@@ -13,6 +13,8 @@ const ACTION_LABEL: Record<string, string> = {
   suspend: 'Suspendió la cuenta',
   reactivate: 'Reactivó la cuenta',
   reset_password: 'Mandó link de contraseña nueva',
+  set_agreement: 'Guardó un acuerdo especial',
+  clear_agreement: 'Quitó el acuerdo especial',
 };
 
 function detailText(e: AuditEntry): string {

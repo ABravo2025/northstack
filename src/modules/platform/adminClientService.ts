@@ -1,7 +1,7 @@
 import type { ActivityEntityType, PlanTier, SubscriptionStatus, TenantStatus } from '@prisma/client';
 import prisma from '../../lib/prisma.js';
 import { PRICING, MIN_USERS } from '../../config/pricing.js';
-import { getPlanLimits } from '../tenant/planLimits.js';
+import { PLAN_LIMITS, activeOverride, getEffectivePlan, getPlanLimits } from '../tenant/planLimits.js';
 import { listAudit } from './adminActionService.js';
 
 // Admin Center v2 (2026-10-03) — the read side of the new Admin Center: client list, client
@@ -162,7 +162,7 @@ async function loadClientRows(now: Date, onlyTenantId?: string) {
       where: onlyTenantId ? { id: onlyTenantId } : {},
       select: {
         id: true, name: true, slug: true, status: true, createdAt: true, country: true, industry: true, companySize: true,
-        currency: true, plan: true, trialEndsAt: true, gracePeriodEndsAt: true, acquisitionChannel: true, legalName: true, website: true, phone: true,
+        currency: true, plan: true, trialEndsAt: true, gracePeriodEndsAt: true, acquisitionChannel: true, legalName: true, website: true, phone: true, planOverride: true,
         subscription: {
           select: {
             status: true, provider: true, lockedPriceCents: true, currency: true, currentPeriodEnd: true, cancelledAt: true,
@@ -252,6 +252,7 @@ async function loadClientRows(now: Date, onlyTenantId?: string) {
         nextChargeAt: sub?.provider && status !== 'cancelling' ? sub.currentPeriodEnd : null,
         owner: owner ? { name: `${owner.firstName} ${owner.lastName}`.trim(), email: owner.email } : null,
         openTickets: ticketsByTenant.get(t.id) ?? 0,
+        hasAgreement: activeOverride(t.planOverride, now) !== null,
         attention: attentionFor({ status, plan: t.plan, trialEndsAt: t.trialEndsAt, gracePeriodEndsAt: t.gracePeriodEndsAt, lastSeenAt, createdAt: t.createdAt, now }),
       },
     };
@@ -325,8 +326,16 @@ export async function getClientDetail(tenantId: string, now = new Date()) {
   if (sub?.cancelledAt) timeline.push({ at: sub.cancelledAt, kind: 'cancel_requested', text: sub.cancellationReason ?? '', by: row.owner?.name ?? null });
   timeline.sort((a, b) => b.at.getTime() - a.at.getTime());
 
+  const rawAgreement = tenant.planOverride && typeof tenant.planOverride === 'object' ? (tenant.planOverride as Record<string, unknown>) : null;
+  const agreement = rawAgreement
+    ? { ...rawAgreement, active: activeOverride(tenant.planOverride, now) !== null }
+    : null;
+
   return {
     ...row,
+    planLimits: PLAN_LIMITS[getEffectivePlan(tenant)],
+    effectiveLimits: getPlanLimits(tenant, now),
+    agreement,
     company: {
       legalName: tenant.legalName,
       website: tenant.website,

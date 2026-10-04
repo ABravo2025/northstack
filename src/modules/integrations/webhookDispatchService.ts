@@ -54,7 +54,7 @@ export async function emitWebhookEvent(input: EmitWebhookEventInput): Promise<vo
 
   // Webhooks are Growth-only (2026-10-01). Checked only once a subscription exists, so tenants
   // without webhooks (the vast majority) pay no extra query on every emitted event.
-  const tenant = await prisma.tenant.findUnique({ where: { id: input.tenantId }, select: { plan: true } });
+  const tenant = await prisma.tenant.findUnique({ where: { id: input.tenantId }, select: { plan: true, planOverride: true } });
   if (!isApiAccessAllowed(tenant)) return;
 
   const payload = {

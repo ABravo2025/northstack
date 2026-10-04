@@ -67,10 +67,37 @@ export interface ClientRow {
   nextChargeAt: string | null;
   owner: { name: string; email: string } | null;
   openTickets: number;
+  hasAgreement: boolean;
   attention: Attention[];
 }
 
+export type AgreementModule = 'payroll' | 'payments' | 'apiAccess';
+export type AgreementLimit = 'maxPipelines' | 'maxTimeOffPolicies' | 'maxCustomRoles' | 'activityLogRetentionDays' | 'freeTrialSeatCap';
+
+export interface PlanLimitsView {
+  maxPipelines: number | null;
+  maxTimeOffPolicies: number | null;
+  maxCustomRoles: number | null;
+  activityLogRetentionDays: number | null;
+  payrollEnabled: boolean;
+  paymentsEnabled: boolean;
+  apiAccessEnabled: boolean;
+  freeTrialSeatCap: number;
+}
+
+export interface Agreement {
+  modules: Partial<Record<AgreementModule, boolean>>;
+  limits: Partial<Record<AgreementLimit, number | null>>;
+  reason: string;
+  expiresAt: string | null;
+  setAt: string;
+  active: boolean;
+}
+
 export interface ClientDetail extends ClientRow {
+  planLimits: PlanLimitsView;
+  effectiveLimits: PlanLimitsView;
+  agreement: Agreement | null;
   company: { legalName: string | null; website: string | null; phone: string | null; companySize: string | null; acquisitionChannel: string | null; currency: string };
   subscription: {
     status: string;
@@ -192,6 +219,10 @@ export const adminActions = {
   reactivate: (token: string, id: string, reason: string) => post<ActionResult>(`/api/platform/admin/clients/${cid(id)}/reactivate`, token, { reason }),
   resetPassword: (token: string, id: string, userId: string, reason: string) =>
     post<ActionResult>(`/api/platform/admin/clients/${cid(id)}/users/${cid(userId)}/reset-password`, token, { reason }),
+  setAgreement: (token: string, id: string, body: { modules: Record<string, boolean | 'plan'>; limits: Record<string, number | null | 'plan'>; expiresAt: string | null; reason: string }) =>
+    call<ActionResult>(`/api/platform/admin/clients/${cid(id)}/agreement`, token, { method: 'PUT', body: JSON.stringify(body) }),
+  clearAgreement: (token: string, id: string, reason: string) =>
+    call<ActionResult>(`/api/platform/admin/clients/${cid(id)}/agreement`, token, { method: 'DELETE', body: JSON.stringify({ reason }) }),
   audit: (token: string, tenantId?: string) => call<AuditEntry[]>(`/api/platform/admin/audit${tenantId ? `?tenantId=${cid(tenantId)}` : ''}`, token),
 };
 

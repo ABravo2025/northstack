@@ -10,7 +10,7 @@ export default function DashboardsAdoptionPage() {
   const { token, range } = useOutletContext<DashboardsOutletContext>();
   const { metrics, loading } = useTenantMetrics(token, range);
   // Payroll isn't part of the Starter plan — don't list it as an "unused" module there.
-  const { growthPlan } = usePermissions();
+  const { features } = usePermissions();
 
   // Module keys ('hr', 'sales', 'time_off', 'payroll') come from the API — the snake_case
   // 'time_off' is the one that doesn't match a JSON key directly, hence the lookup below instead
@@ -49,7 +49,7 @@ export default function DashboardsAdoptionPage() {
       <div className="card">
         <h3 className="card-title">{t('adoption.moduleUsage')}</h3>
         <div className="flex flex-wrap gap-2">
-          {adoption.moduleUsage.filter((m) => growthPlan || m.module !== 'payroll').map((m) => (
+          {adoption.moduleUsage.filter((m) => features.payroll || m.module !== 'payroll').map((m) => (
             <div
               key={m.module}
               className={`rounded-full border px-3 py-1 text-xs font-medium ${

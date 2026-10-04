@@ -1,12 +1,19 @@
 import { createContext, useContext, useMemo } from 'react';
-import type { PermissionsPayload } from '../api';
+import type { PermissionsPayload, PlanFeatures } from '../api';
 
 // Plan-tier hiding (2026-10-01) — permissions whose backend gate is "permission AND Growth plan"
 // (requirePayrollAccess / requirePaymentsAccess). Folding the plan into has() here mirrors that
 // backend gate exactly, so every screen that already checks has('manage_payroll'|'manage_payments')
 // hides Payroll/Payments for a Starter tenant instead of showing UI that 403s on click.
 // manage_api_access joined 2026-10-01 (Private API keys + webhooks became Growth-only).
-const GROWTH_ONLY_PERMISSIONS = new Set(['manage_payroll', 'manage_payments', 'manage_api_access']);
+// Since 2026-10-03 the gate is per module (`features`, from the backend: plan + any Admin Center
+// agreement), so a Starter client given Payroll by agreement sees it, and a Growth client with it
+// switched off doesn't.
+const PERMISSION_FEATURE: Record<string, keyof PlanFeatures> = {
+  manage_payroll: 'payroll',
+  manage_payments: 'payments',
+  manage_api_access: 'apiAccess',
+};
 
 // Custom Roles Fase G — the frontend counterpart to permissionService.ts/fieldVisibilityService.ts.
 // `has`/`isFieldHidden` mirror those backend functions exactly (isOwner bypasses everything, a
@@ -19,6 +26,8 @@ interface PermissionsContextValue {
   // false only for a tenant on Starter — null plan (Free Trial) counts as Growth, same as
   // isGrowthFeatureEnabled/getEffectivePlan.
   growthPlan: boolean;
+  // Plan-gated modules this tenant has (plan + Admin Center agreement).
+  features: PlanFeatures;
   roleName: string;
   has: (permission: string) => boolean;
   isFieldHidden: (entityType: string, fieldKey: string) => boolean;
@@ -31,6 +40,7 @@ interface PermissionsContextValue {
 const DEFAULT_VALUE: PermissionsContextValue = {
   isOwner: false,
   growthPlan: true,
+  features: { payroll: true, payments: true, apiAccess: true },
   roleName: '',
   has: () => false,
   isFieldHidden: () => false,
@@ -41,25 +51,31 @@ const PermissionsContext = createContext<PermissionsContextValue>(DEFAULT_VALUE)
 export function PermissionsProvider({
   payload,
   growthPlan,
+  features,
   children,
 }: {
   payload: PermissionsPayload | null;
   growthPlan: boolean;
+  features: PlanFeatures;
   children: React.ReactNode;
 }) {
+  // Primitive deps: callers build `features` fresh on every render.
+  const { payroll, payments, apiAccess } = features;
   const value = useMemo<PermissionsContextValue>(() => {
     if (!payload) return DEFAULT_VALUE;
+    const features = { payroll, payments, apiAccess };
     return {
       isOwner: payload.isOwner,
       growthPlan,
+      features,
       roleName: payload.name,
       has: (permission: string) =>
-        (growthPlan || !GROWTH_ONLY_PERMISSIONS.has(permission)) &&
+        (!(permission in PERMISSION_FEATURE) || features[PERMISSION_FEATURE[permission]]) &&
         (payload.isOwner || payload.permissions.includes(permission)),
       isFieldHidden: (entityType: string, fieldKey: string) =>
         !payload.isOwner && (payload.hiddenFields[entityType]?.includes(fieldKey) ?? false),
     };
-  }, [payload, growthPlan]);
+  }, [payload, growthPlan, payroll, payments, apiAccess]);
 
   return <PermissionsContext.Provider value={value}>{children}</PermissionsContext.Provider>;
 }

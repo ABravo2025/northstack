@@ -366,6 +366,10 @@ model Tenant {
   gracePeriodEndsAt         DateTime?
   lockedPriceCents          Int?
   lockedPriceSetAt          DateTime?
+  // Admin Center v2, stage 2b (2026-10-03): a per-client "special agreement" layered on top of the
+  // plan — modules switched on/off and limits changed, with reason and optional expiry. Shape and
+  // merge rules: src/modules/tenant/planLimits.ts (PlanOverride). Null = the plan as sold.
+  planOverride              Json?
   subscription              Subscription?
   users                     User[]
   employees                 Employee[]

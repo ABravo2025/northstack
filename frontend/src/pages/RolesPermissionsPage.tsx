@@ -46,7 +46,11 @@ interface PermissionGroup {
 // A function (not a module-level const) so the labels/descriptions/hints re-resolve on every
 // render against the active language — same reason settingsSections.tsx/dashboardsSections.tsx
 // are functions, not static arrays (docs/general/spec-i18n.md).
-const GROWTH_ONLY_PERMISSION_KEYS = ['manage_payroll', 'manage_payments', 'manage_api_access'];
+const FEATURE_OF_PERMISSION: Record<string, 'payroll' | 'payments' | 'apiAccess'> = {
+  manage_payroll: 'payroll',
+  manage_payments: 'payments',
+  manage_api_access: 'apiAccess',
+};
 
 function getGroups(t: TFunction): PermissionGroup[] {
   return [
@@ -465,7 +469,7 @@ export default function RolesPermissionsPage({ token }: RolesPermissionsPageProp
   const { t } = useTranslation('settingsPages');
   // Custom Roles Fase J — migrated off `user.role === 'owner'` to PermissionsContext's isOwner
   // (same underlying fact, read from the resolved RoleContext instead of the legacy enum).
-  const { isOwner, growthPlan } = usePermissions();
+  const { isOwner, features } = usePermissions();
   const toast = useToast();
   const [roles, setRoles] = useState<Role[]>([]);
   const [fieldCatalog, setFieldCatalog] = useState<Record<string, RestrictableField[]>>({});
@@ -510,9 +514,10 @@ export default function RolesPermissionsPage({ token }: RolesPermissionsPageProp
 
   // Plan-tier hiding (2026-10-01) — Payroll/Payments don't exist on Starter, so their toggles
   // aren't offered there either (a stored grant stays untouched and applies again on upgrade).
-  const groups = getGroups(t).map((group) =>
-    growthPlan ? group : { ...group, rows: group.rows.filter((row) => !GROWTH_ONLY_PERMISSION_KEYS.includes(row.key)) },
-  );
+  const groups = getGroups(t).map((group) => ({
+    ...group,
+    rows: group.rows.filter((row) => !(row.key in FEATURE_OF_PERMISSION) || features[FEATURE_OF_PERMISSION[row.key]]),
+  }));
   const entityLabels = getEntityLabels(t);
 
   // Owner is always first (listRolesForTenant sorts isOwner first) — everything after it is a

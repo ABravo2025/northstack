@@ -44,6 +44,8 @@ import {
   reactivateClient,
   sendPasswordReset,
   suspendClient,
+  setAgreement,
+  clearAgreement,
   type AdminActionResult,
 } from '../modules/platform/adminActionService.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
@@ -285,6 +287,31 @@ platformRouter.post('/api/platform/admin/clients/:id/users/:userId/reset-passwor
     return res.status(400).json({ error: 'Escribí un motivo (queda en el registro).' });
   }
   return sendAction(res, await sendPasswordReset(req.params.id, req.params.userId, user, reason));
+});
+
+// Stage 2b — per-client agreement (modules on/off + limits). platform_admin only.
+platformRouter.put('/api/platform/admin/clients/:id/agreement', async (req, res) => {
+  const user = await requirePlatformRole()(req, res);
+  if (!user) {
+    return;
+  }
+  const reason = cleanReason(req.body.reason);
+  if (!reason) {
+    return res.status(400).json({ error: 'Escribí el acuerdo o motivo (queda en el registro).' });
+  }
+  return sendAction(res, await setAgreement(req.params.id, { modules: req.body.modules, limits: req.body.limits, expiresAt: req.body.expiresAt }, user, reason));
+});
+
+platformRouter.delete('/api/platform/admin/clients/:id/agreement', async (req, res) => {
+  const user = await requirePlatformRole()(req, res);
+  if (!user) {
+    return;
+  }
+  const reason = cleanReason(req.body?.reason);
+  if (!reason) {
+    return res.status(400).json({ error: 'Escribí un motivo (queda en el registro).' });
+  }
+  return sendAction(res, await clearAgreement(req.params.id, user, reason));
 });
 
 platformRouter.get('/api/platform/admin/audit', async (req, res) => {

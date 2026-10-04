@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
 import type express from 'express';
-import type { PlanTier } from '@prisma/client';
+import type { PlanTier, Prisma } from '@prisma/client';
 import { getBearerToken } from './httpAuth.js';
 import { bestEffort } from './bestEffort.js';
 import prismaExternal from './prismaExternal.js';
@@ -88,6 +88,8 @@ export interface AuthenticatedApiKey {
   // The key's tenant's plan, read in the same query — externalApi.ts's entry middleware rejects
   // Starter tenants (API access is Growth-only since 2026-10-01).
   tenantPlan: PlanTier | null;
+  // Per-client agreement (Admin Center v2) — can switch API access on/off regardless of the plan.
+  tenantPlanOverride: Prisma.JsonValue | null;
 }
 
 // 401s immediately on any failure, no anonymous fallback — every route under /api/external/v1/*
@@ -102,7 +104,7 @@ export async function authenticateApiKey(req: express.Request, res: express.Resp
 
   const apiKey = await prismaExternal.apiKey.findUnique({
     where: { keyHash: hashApiKey(token) },
-    include: { tenant: { select: { plan: true } } },
+    include: { tenant: { select: { plan: true, planOverride: true } } },
   });
   if (!apiKey || apiKey.revokedAt) {
     res.status(401).json({ error: 'Invalid or revoked API key', code: 'invalid_api_key' });
@@ -123,6 +125,7 @@ export async function authenticateApiKey(req: express.Request, res: express.Resp
     scopes: apiKey.scopes,
     createdByUserId: apiKey.createdByUserId,
     tenantPlan: apiKey.tenant.plan,
+    tenantPlanOverride: apiKey.tenant.planOverride,
   };
 }
 

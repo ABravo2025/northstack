@@ -6,13 +6,14 @@ import type { AdminSession } from './AdminApp';
 import { STATUS, ago, date, daysUntil, healthTone, money, planLabel } from './format';
 import { Avatar, Chip, ErrorBox, Loading } from './ui';
 
-type Filter = 'all' | 'attention' | 'trialing' | 'paying' | 'risk';
+type Filter = 'all' | 'attention' | 'trialing' | 'paying' | 'risk' | 'agreement';
 
 const FILTERS: { key: Filter; label: string; test: (c: ClientRow) => boolean }[] = [
   { key: 'all', label: 'Todos', test: () => true },
   { key: 'attention', label: 'Necesitan atención', test: (c) => c.attention.length > 0 },
   { key: 'trialing', label: 'En prueba', test: (c) => c.status === 'trialing' },
   { key: 'paying', label: 'Pagan', test: (c) => c.mrrCents > 0 },
+  { key: 'agreement', label: 'Con acuerdo especial', test: (c) => c.hasAgreement },
   { key: 'risk', label: 'En riesgo', test: (c) => c.health.score < 45 && ['active', 'trialing', 'past_due', 'cancelling'].includes(c.status) },
 ];
 
@@ -103,7 +104,10 @@ export default function AdminClients({ session }: { session: AdminSession }) {
                     </div>
                   </td>
                   <td><Chip tone={STATUS[c.status].tone}>{STATUS[c.status].label}</Chip></td>
-                  <td><Chip tone={c.plan ? 'accent' : 'neutral'} dot={false}>{planLabel(c.plan)}</Chip></td>
+                  <td className="whitespace-nowrap">
+                    <Chip tone={c.plan ? 'accent' : 'neutral'} dot={false}>{planLabel(c.plan)}</Chip>
+                    {c.hasAgreement && <span className="ml-1"><Chip tone="warn" dot={false}>+ acuerdo</Chip></span>}
+                  </td>
                   <td className="text-right tabular-nums">{c.activeUsers}</td>
                   <td className="text-right tabular-nums">{c.mrrCents ? money(c.mrrCents, c.currency) : '—'}</td>
                   <td><Chip tone={healthTone(c.health.score)}>{c.health.score}</Chip></td>

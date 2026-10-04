@@ -379,3 +379,39 @@ Alejandro antes de `main` (gate vigente).
 4. **Landing.** ¿Se publicita en la landing? Queda para decidir cuando el MCP esté en prod.
 5. **MCP de operador** (cross-tenant para Alejandro): fuera de este spec. Si se hace, va como servidor
    aparte, en principio solo lectura.
+
+---
+
+## 10. Pendiente para construir: tools de Turnos y horas (Alejandro, 2026-10-04)
+
+El módulo **Turnos y horas** (planificación de turnos con confirmación + timesheet, para todos los
+rubros) está en diseño y todavía no tiene código. Alejandro pidió dejar asentado acá que, cuando ese
+módulo exista, el MCP tiene que sumar sus tools. **No se construyen antes que el módulo**: dependen de sus
+modelos (`Location`, `Shift`, `ShiftAssignment`, `TimeEntry`) y de sus permisos (`shifts.manage`,
+`shifts.view_own`, aprobación de horas).
+
+Casos de uso que tienen que poder resolverse desde la IA:
+- *"¿Quién está libre el jueves a la tarde en Sede Norte?"* (cruza disponibilidad, turnos asignados y Time Off)
+- *"Armame un borrador de turnos para la semana que viene respetando la disponibilidad"* (crea turnos en
+  **borrador**; publicar y notificar queda siempre en manos de una persona desde la UI)
+- *"¿Qué turnos de esta semana siguen sin confirmar o sin cubrir?"*
+- *"¿Cuántas horas le dedicamos a Farmacéutica Sur este mes? ¿Cuántas son facturables?"*
+- *"Cargame 1h 30m de hoy en la tarea X"* / *"¿Qué me falta confirmar en mi timesheet?"*
+
+Tools candidatas (el nombre final se define en el spec del módulo):
+
+| Área | Tools | Permiso |
+|---|---|---|
+| Turnos | `list_shifts` (rango, locación, persona, estado), `get_shift`, `create_shift_draft`, `update_shift_draft`, `who_is_available` | `shifts.manage` para crear/editar; `shifts.view_own` ve solo los propios |
+| Mis turnos | `my_shifts`, `respond_to_shift` (aceptar/rechazar con motivo) | solo el asignado |
+| Horas | `list_time_entries`, `log_time` (crea una entrada propia), `timesheet_status` (pendientes de confirmar), `hours_summary` (por cliente/proyecto/persona, facturable vs. no) | entradas propias; resúmenes de otros según el scope del rol |
+
+Reglas que heredan de este spec:
+- **Publicar una semana, cancelar un turno y aprobar horas de otra persona** afectan a terceros (notifican,
+  tocan Payroll). Van con la confirmación del lado del servidor de §6.2, o directamente quedan fuera del MCP
+  y se hacen solo desde la UI. Se decide en el spec del módulo.
+- Costos y tarifas (costo del cronograma, tarifa por hora) **nunca** se devuelven a un rol que no tenga
+  permiso de payroll, y solo existen si el tenant activó esa opción en la configuración del módulo.
+- Las semanas cerradas no se modifican vía MCP. Las correcciones siguen el mismo flujo de ajuste que la UI.
+- Todo queda en el Activity Log con origen `ai` (§6.1). Tienen que respetar el tope de ≤ 35 tools de §5:
+  si se pasa, se agrupan (por ejemplo `list_shifts` con filtro `mine` en vez de `my_shifts`).

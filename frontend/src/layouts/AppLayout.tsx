@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import SupportAccessBanner from '../components/common/SupportAccessBanner';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import Sidebar from '../components/layout/Sidebar';
@@ -131,6 +132,7 @@ export default function AppLayout({ user, token, tenant, onLogout }: AppLayoutPr
           <Sidebar mobileOpen={mobileSidebarOpen} onMobileClose={() => setMobileSidebarOpen(false)} tenant={tenant} />
         )}
         <main className="app-main">
+          {token && <SupportAccessBanner token={token} user={user} onLogout={onLogout} />}
           {newVersionAvailable && (
             <div className="alert alert-info mx-4 mt-4 sm:mx-6 flex items-center justify-between gap-3">
               <span>{t('banners.newVersion')}</span>

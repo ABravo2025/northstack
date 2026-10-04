@@ -86,5 +86,20 @@
     "body": "We couldn’t charge the card on file for {{tenantName}}. To keep using Northstack without interruptions, please update your payment method.",
     "linkText": "Update payment method",
     "footer": "Once it’s updated, the payment is retried automatically. If you have any questions, just reply to this email."
+  },
+  "supportAccess": {
+    "subject": "Northstack support is asking for access to your account",
+    "greeting": "Hi {{firstName}},",
+    "body": "{{staffName}} from Northstack support would like to see your {{tenantName}} account to help you.",
+    "reasonLabel": "Reason",
+    "modeLabel": "Access",
+    "readOnly": "view only",
+    "edit": "view and edit",
+    "duration30m": "30 minutes from when you accept",
+    "duration2h": "2 hours from when you accept",
+    "duration24h": "24 hours from when you accept",
+    "howTo": "Open Northstack to accept or decline. Nothing happens unless you accept, and you can end the access at any time.",
+    "openApp": "Open Northstack",
+    "footer": "If you weren’t expecting this, decline it and reply to this email."
   }
 }

@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import Modal from '../components/common/Modal';
-import { adminActions, type ClientDetail } from './adminApi';
+import { adminActions, supportApi, type ClientDetail } from './adminApi';
 import type { AdminSession } from './AdminApp';
 import { date } from './format';
 
 // Admin Center v2, stage 2a: the "Acciones" menu on the client page. Every action asks for a
 // reason (it lands in the Registro de acciones and the client's Actividad tab).
 
-type ActionKey = 'extend' | 'plan' | 'suspend' | 'reactivate' | 'freeMonths' | 'reminder' | 'export';
+type ActionKey = 'extend' | 'plan' | 'suspend' | 'reactivate' | 'freeMonths' | 'reminder' | 'export' | 'support' | 'delete' | 'cancelDelete';
 
 interface Props {
   client: ClientDetail;
@@ -32,7 +32,10 @@ export default function ClientActions({ client, session, onDone }: Props) {
     return () => document.removeEventListener('mousedown', close);
   }, [menuOpen]);
 
+  const deleting = !!client.deletionScheduledAt;
+  const activeUsers = client.users.filter((u) => u.status === 'active');
   const items: { key: ActionKey; label: string; hint: string; show: boolean; tone?: string }[] = [
+    { key: 'support', label: 'Pedir acceso de soporte', hint: 'La persona tiene que aceptarlo', show: !deleting && activeUsers.length > 0 },
     { key: 'extend', label: 'Extender prueba', hint: hasProvider ? 'No disponible: ya cargó medio de pago' : 'Suma días a la prueba gratis', show: client.status !== 'cancelled' },
     { key: 'plan', label: 'Cambiar plan', hint: 'Starter ↔ Growth', show: isAdmin && client.status !== 'cancelled' },
     { key: 'freeMonths', label: 'Dar meses gratis', hint: isDodo ? 'Corre la fecha del próximo cobro' : 'Solo para clientes que pagan con Dodo', show: isAdmin && hasProvider },
@@ -40,6 +43,8 @@ export default function ClientActions({ client, session, onDone }: Props) {
     { key: 'export', label: 'Exportar datos del cliente', hint: 'ZIP con un CSV por módulo', show: isAdmin },
     { key: 'suspend', label: 'Suspender cuenta', hint: 'Queda en solo lectura', show: isAdmin && client.status !== 'suspended' && client.status !== 'cancelled', tone: 'text-amber-700 dark:text-amber-300' },
     { key: 'reactivate', label: 'Reactivar cuenta', hint: 'Vuelven a poder trabajar', show: isAdmin && client.status === 'suspended' },
+    { key: 'delete', label: 'Eliminar cliente', hint: 'Bloquea la cuenta; se puede deshacer', show: isAdmin && !deleting, tone: 'text-rose-600' },
+    { key: 'cancelDelete', label: 'Cancelar eliminación', hint: 'El cliente vuelve a poder entrar', show: isAdmin && deleting },
   ];
 
   return (
@@ -74,6 +79,11 @@ function ActionDialog({ action, client, session, onClose, onDone }: { action: Ac
   const [days, setDays] = useState(7);
   const [plan, setPlan] = useState<'starter' | 'growth'>(client.plan === 'growth' ? 'starter' : 'growth');
   const [months, setMonths] = useState(1);
+  const activeUsers = client.users.filter((u) => u.status === 'active');
+  const [targetUserId, setTargetUserId] = useState(activeUsers.find((u) => u.role === 'owner')?.id ?? activeUsers[0]?.id ?? '');
+  const [supportMode, setSupportMode] = useState<'read_only' | 'edit'>('read_only');
+  const [duration, setDuration] = useState(30);
+  const [confirmName, setConfirmName] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -85,6 +95,9 @@ function ActionDialog({ action, client, session, onClose, onDone }: { action: Ac
     freeMonths: 'Dar meses gratis',
     reminder: 'Pedir que actualice la tarjeta',
     export: 'Exportar datos',
+    support: 'Pedir acceso de soporte',
+    delete: 'Eliminar cliente',
+    cancelDelete: 'Cancelar eliminación',
   };
   let body: ReactNode = null;
   if (action === 'extend') {
@@ -145,6 +158,51 @@ function ActionDialog({ action, client, session, onClose, onDone }: { action: Ac
         Le llega al dueño ({client.owner?.email ?? '—'}) un mail en su idioma con el link a Configuración → Facturación. Ni Dodo ni Mercado Pago permiten forzar un reintento: el cobro se reintenta solo cuando actualiza la tarjeta.
       </p>
     );
+  } else if (action === 'support') {
+    body = (
+      <>
+        <p className="text-sm text-ink-muted dark:text-dark-ink-muted">
+          Le llega un pedido a esa persona: un aviso dentro de Northstack y un mail. Recién cuando lo acepta podés entrar, viendo lo mismo que ella con sus permisos. Puede terminar el acceso cuando quiera. <b>El motivo lo ve el cliente.</b>
+        </p>
+        <label className="grid gap-1 text-sm font-medium" htmlFor="act-target">
+          ¿A quién le pedís permiso?
+          <select id="act-target" value={targetUserId} onChange={(e) => setTargetUserId(e.target.value)}>
+            {activeUsers.map((u) => <option key={u.id} value={u.id}>{u.name} · {u.email}{u.role === 'owner' ? ' (dueño)' : ''}</option>)}
+          </select>
+        </label>
+        <div className="flex flex-wrap gap-3">
+          <label className="grid gap-1 text-sm font-medium" htmlFor="act-mode">
+            Modo
+            <select id="act-mode" value={supportMode} onChange={(e) => setSupportMode(e.target.value as 'read_only' | 'edit')}>
+              <option value="read_only">Solo lectura (recomendado)</option>
+              <option value="edit">Ver y editar</option>
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm font-medium" htmlFor="act-duration">
+            Duración (desde que acepta)
+            <select id="act-duration" value={duration} onChange={(e) => setDuration(Number(e.target.value))}>
+              <option value={30}>30 minutos</option>
+              <option value={120}>2 horas</option>
+              <option value={1440}>24 horas</option>
+            </select>
+          </label>
+        </div>
+      </>
+    );
+  } else if (action === 'delete') {
+    body = (
+      <>
+        <p className="text-sm text-ink-muted dark:text-dark-ink-muted">
+          Desde que confirmás, <b>nadie de {client.name} puede entrar</b> y se cierran sus sesiones. Los datos no se borran: lo podés deshacer con "Cancelar eliminación". Si tiene una suscripción paga activa, primero hay que cancelarla.
+        </p>
+        <label className="grid gap-1 text-sm font-medium" htmlFor="act-confirm">
+          Escribí el nombre de la empresa para confirmar
+          <input id="act-confirm" autoComplete="off" value={confirmName} onChange={(e) => setConfirmName(e.target.value)} placeholder={client.name} />
+        </label>
+      </>
+    );
+  } else if (action === 'cancelDelete') {
+    body = <p className="text-sm text-ink-muted dark:text-dark-ink-muted">La cuenta se desbloquea y vuelven a poder entrar con sus usuarios de siempre.</p>;
   } else if (action === 'export') {
     body = (
       <p className="text-sm text-ink-muted dark:text-dark-ink-muted">
@@ -178,8 +236,16 @@ function ActionDialog({ action, client, session, onClose, onDone }: { action: Ac
         onDone(`Descargado: ${filename}`);
         return;
       }
+      if (action === 'delete' && confirmName.trim() !== client.name.trim()) {
+        setError('El nombre no coincide.');
+        setBusy(false);
+        return;
+      }
       const res =
-        action === 'freeMonths' ? await adminActions.freeMonths(session.token, client.id, months, r)
+        action === 'support' ? await supportApi.request(session.token, client.id, { targetUserId, mode: supportMode, durationMinutes: duration, reason: r })
+        : action === 'delete' ? await supportApi.scheduleDelete(session.token, client.id, confirmName, r)
+        : action === 'cancelDelete' ? await supportApi.cancelDelete(session.token, client.id, r)
+        : action === 'freeMonths' ? await adminActions.freeMonths(session.token, client.id, months, r)
         : action === 'reminder' ? await adminActions.paymentReminder(session.token, client.id, r)
         : action === 'extend' ? await adminActions.extendTrial(session.token, client.id, days, r)
         : action === 'plan' ? await adminActions.changePlan(session.token, client.id, plan, r)

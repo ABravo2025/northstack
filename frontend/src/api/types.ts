@@ -640,7 +640,7 @@ export interface ActivityLogEntry {
   sourceClientName: string | null;
 }
 
-export type ActivitySource = 'ui' | 'api' | 'ai';
+export type ActivitySource = 'ui' | 'api' | 'ai' | 'support';
 
 export interface ActivityFeedPage {
   items: ActivityLogEntry[];

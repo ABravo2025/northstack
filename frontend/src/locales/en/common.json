@@ -248,5 +248,33 @@
       "website": "Website"
     },
     "toastPasswordUpdated": "Password updated."
+  },
+  "supportAccess": {
+    "readOnly": "view only",
+    "edit": "view and edit",
+    "endAccess": "End access",
+    "active": "Northstack support ({{staffName}}) has access to your account until {{time}}",
+    "duration": {
+      "30": "30 minutes",
+      "120": "2 hours",
+      "1440": "24 hours"
+    },
+    "request": {
+      "title": "Northstack support is asking for access to your account",
+      "body": "{{staffName}} wants to see your account to help you with:",
+      "canEnd": "counted from when you accept. You can end it at any time.",
+      "accept": "Accept access",
+      "decline": "Decline"
+    },
+    "done": {
+      "approve": "Access granted. You can end it at any time.",
+      "reject": "Request declined.",
+      "end": "Support access ended."
+    },
+    "session": {
+      "title": "You are seeing {{name}}’s account as Northstack support",
+      "until": "ends at {{time}}",
+      "exit": "Exit"
+    }
   }
 }

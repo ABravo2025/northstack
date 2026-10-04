@@ -22,8 +22,17 @@ export async function authenticateUser(req: express.Request, res: express.Respon
     return null;
   }
 
+  // Read-only support session (Admin Center v2 stage 5): only reads, plus the few housekeeping
+  // writes the app makes on its own (marking announcements/notifications seen) and ending it.
+  if (user.support?.readOnly && req.method !== 'GET' && !SUPPORT_READ_ONLY_ALLOWED.some((p) => req.path.startsWith(p))) {
+    res.status(403).json({ error: 'Support session is read-only.', code: 'support_read_only' });
+    return null;
+  }
+
   return user;
 }
+
+const SUPPORT_READ_ONLY_ALLOWED = ['/api/auth/logout', '/api/announcements/mark-seen', '/api/notifications', '/api/support-access/'];
 
 export async function validateSession(req: express.Request, res: express.Response) {
   const user = await authenticateUser(req, res);

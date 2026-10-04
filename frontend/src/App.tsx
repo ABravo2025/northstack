@@ -3,6 +3,7 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-
 import { api } from './api';
 import type { PermissionsPayload, Tenant } from './api';
 import { setActiveSessionToken, setUnauthorizedHandler } from './api/http';
+import { SUPPORT_TOKEN_KEY, getSupportToken } from './lib/supportSession';
 import i18n from './lib/i18n';
 import { useToast } from './components/common/ToastProvider';
 import { PermissionsProvider } from './contexts/PermissionsContext';
@@ -63,7 +64,8 @@ export default function App() {
   const isResetPasswordRoute = location.pathname.startsWith('/reset-password');
   const isRegisterCompleteRoute = location.pathname.startsWith('/register/complete');
 
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
+  // A support session (Admin Center v2) lives in this tab only: see lib/supportSession.ts.
+  const [token, setToken] = useState<string | null>(getSupportToken() ?? localStorage.getItem('token'));
   const [user, setUser] = useState<any>(null);
   const [permissions, setPermissions] = useState<PermissionsPayload | null>(null);
   const [tenant, setTenant] = useState<Tenant | null>(null);
@@ -74,7 +76,7 @@ export default function App() {
       !isConfirmContractRoute &&
       !isResetPasswordRoute &&
       !isRegisterCompleteRoute &&
-      Boolean(localStorage.getItem('token')),
+      Boolean(getSupportToken() ?? localStorage.getItem('token')),
   );
 
   // Keeps http.ts's copy of "which token is the app's active session" current — apiFetch uses it
@@ -215,6 +217,11 @@ export default function App() {
     setUser(null);
     setPermissions(null);
     setTenant(null);
+    if (getSupportToken()) {
+      // Ending a support session must not log out whoever is signed in normally in this browser.
+      sessionStorage.removeItem(SUPPORT_TOKEN_KEY);
+      return;
+    }
     localStorage.removeItem('token');
   };
 

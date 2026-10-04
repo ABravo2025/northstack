@@ -68,6 +68,7 @@ export interface ClientRow {
   owner: { name: string; email: string } | null;
   openTickets: number;
   hasAgreement: boolean;
+  deletionScheduledAt: string | null;
   attention: Attention[];
 }
 
@@ -304,4 +305,34 @@ export const announcementsApi = {
   update: (token: string, id: string, body: Record<string, unknown>) =>
     call<ActionResult>(`/api/platform/admin/announcements/${encodeURIComponent(id)}`, token, { method: 'PATCH', body: JSON.stringify(body) }),
   remove: (token: string, id: string) => call<ActionResult>(`/api/platform/admin/announcements/${encodeURIComponent(id)}`, token, { method: 'DELETE' }),
+};
+
+export interface SupportRequest {
+  id: string;
+  status: 'pending' | 'approved' | 'rejected' | 'expired' | 'ended';
+  mode: 'read_only' | 'edit';
+  durationMinutes: number;
+  reason: string;
+  createdAt: string;
+  requestExpiresAt: string;
+  decidedAt: string | null;
+  accessEndsAt: string | null;
+  endedAt: string | null;
+  endedBy: string | null;
+  target: { name: string; email: string };
+  requestedBy: string;
+}
+
+export const supportApi = {
+  list: (token: string, id: string) => call<SupportRequest[]>(`/api/platform/admin/clients/${encodeURIComponent(id)}/support-access`, token),
+  request: (token: string, id: string, body: { targetUserId: string; mode: 'read_only' | 'edit'; durationMinutes: number; reason: string }) =>
+    call<ActionResult>(`/api/platform/admin/clients/${encodeURIComponent(id)}/support-access`, token, { method: 'POST', body: JSON.stringify(body) }),
+  enter: (token: string, id: string, requestId: string) =>
+    call<{ url: string }>(`/api/platform/admin/clients/${encodeURIComponent(id)}/support-access/${encodeURIComponent(requestId)}/enter`, token, { method: 'POST' }),
+  end: (token: string, id: string, requestId: string) =>
+    call<ActionResult>(`/api/platform/admin/clients/${encodeURIComponent(id)}/support-access/${encodeURIComponent(requestId)}/end`, token, { method: 'POST' }),
+  scheduleDelete: (token: string, id: string, confirmName: string, reason: string) =>
+    call<ActionResult>(`/api/platform/admin/clients/${encodeURIComponent(id)}/delete`, token, { method: 'POST', body: JSON.stringify({ confirmName, reason }) }),
+  cancelDelete: (token: string, id: string, reason: string) =>
+    call<ActionResult>(`/api/platform/admin/clients/${encodeURIComponent(id)}/cancel-delete`, token, { method: 'POST', body: JSON.stringify({ reason }) }),
 };

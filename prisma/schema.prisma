@@ -423,6 +423,8 @@ model Tenant {
   apiRequestLogs            ApiRequestLog[]
   webhookSubscriptions      WebhookSubscription[]
   platformAuditEntries      PlatformAuditEntry[]
+  platformNotes             PlatformNote[]
+  platformTasks             PlatformTask[]
 }
 
 // Billing Integration (spec-billing-integration.md). plan/lockedPriceCents are deliberately NOT
@@ -611,6 +613,8 @@ model User {
   lastSeenAt                  DateTime?
   activityDays                UserActivityDay[]
   platformAuditEntries        PlatformAuditEntry[]        @relation("PlatformAuditActor")
+  platformNotes               PlatformNote[]              @relation("PlatformNoteAuthor")
+  platformTasks               PlatformTask[]              @relation("PlatformTaskAuthor")
   pipelinesCreated            Pipeline[]                  @relation("PipelineCreatedBy")
   pipelinesUpdated            Pipeline[]                  @relation("PipelineUpdatedBy")
   pipelinesLastAssigned       Pipeline[]                  @relation("PipelineLastAssignedUser")
@@ -1717,6 +1721,17 @@ model PlatformAnnouncement {
   policyType  LegalPolicyType? // set only when type = policy_change
   publishedAt DateTime                 @default(now())
   createdAt   DateTime                 @default(now())
+  // Admin Center v2, stage 4 (2026-10-04): written from the Admin instead of only by script.
+  // title/summary/body above are the English text; the Es fields are optional Spanish versions
+  // (users with locale "es" see them when present). publishedAt in the future = scheduled.
+  // Targets: an empty list means "everyone" for that dimension; plan uses "trial" for no plan.
+  titleEs         String?
+  summaryEs       String?
+  bodyEs          String?
+  targetPlans     String[]  @default([])
+  targetCountries String[]  @default([])
+  targetTenantIds String[]  @default([])
+  createdByUserId String?
 
   @@index([publishedAt])
 }
@@ -1792,6 +1807,35 @@ model PlatformAuditEntry {
 
   @@index([tenantId, createdAt])
   @@index([createdAt])
+}
+
+// Admin Center v2, stage 4 (2026-10-04): Northstack staff's own notes and follow-up tasks about a
+// client. Own tables (not the tenant's Note/Task), so they can never show up in the customer's
+// app, activity log, webhooks or exports.
+model PlatformNote {
+  id          String   @id @default(uuid())
+  tenantId    String
+  tenant      Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  body        String
+  createdById String
+  createdBy   User     @relation("PlatformNoteAuthor", fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId, createdAt])
+}
+
+model PlatformTask {
+  id          String    @id @default(uuid())
+  tenantId    String
+  tenant      Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  title       String
+  dueDate     DateTime?
+  completedAt DateTime?
+  createdById String
+  createdBy   User      @relation("PlatformTaskAuthor", fields: [createdById], references: [id])
+  createdAt   DateTime  @default(now())
+
+  @@index([tenantId, completedAt])
 }
 
 model Session {

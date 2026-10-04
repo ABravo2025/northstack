@@ -38,6 +38,13 @@ import { listIncompleteSignups } from '../modules/platform/platformSignupService
 import { getClientDetail, getOverview, listClients } from '../modules/platform/adminClientService.js';
 import { getBillingOverview } from '../modules/platform/adminBillingService.js';
 import {
+  announcementCountries,
+  createAdminAnnouncement,
+  deleteAdminAnnouncement,
+  listAdminAnnouncements,
+  updateAdminAnnouncement,
+} from '../modules/platform/adminAnnouncementService.js';
+import {
   changeClientPlan,
   cleanReason,
   extendTrial,
@@ -370,6 +377,40 @@ platformRouter.get('/api/platform/admin/billing', async (req, res) => {
     return;
   }
   return res.json(await getBillingOverview((req.query.month as string) || undefined));
+});
+
+// Stage 4 — in-app announcements. Reading is open to support; writing is platform_admin only.
+platformRouter.get('/api/platform/admin/announcements', async (req, res) => {
+  const user = await requirePlatformRole('platform_support')(req, res);
+  if (!user) {
+    return;
+  }
+  const [announcements, countries] = await Promise.all([listAdminAnnouncements(), announcementCountries()]);
+  return res.json({ announcements, countries });
+});
+
+platformRouter.post('/api/platform/admin/announcements', async (req, res) => {
+  const user = await requirePlatformRole()(req, res);
+  if (!user) {
+    return;
+  }
+  return sendAction(res, await createAdminAnnouncement(req.body ?? {}, user));
+});
+
+platformRouter.patch('/api/platform/admin/announcements/:id', async (req, res) => {
+  const user = await requirePlatformRole()(req, res);
+  if (!user) {
+    return;
+  }
+  return sendAction(res, await updateAdminAnnouncement(req.params.id, req.body ?? {}, user));
+});
+
+platformRouter.delete('/api/platform/admin/announcements/:id', async (req, res) => {
+  const user = await requirePlatformRole()(req, res);
+  if (!user) {
+    return;
+  }
+  return sendAction(res, await deleteAdminAnnouncement(req.params.id, user));
 });
 
 platformRouter.get('/api/platform/admin/audit', async (req, res) => {

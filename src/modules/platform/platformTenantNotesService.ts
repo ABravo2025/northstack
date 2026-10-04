@@ -1,69 +1,44 @@
 import prisma from '../../lib/prisma.js';
-import { listNotesForEntity } from '../notes/noteService.js';
-import { listTasksForEntity } from '../tasks/taskService.js';
 
-// Platform staff notes/tasks about a Tenant -- reuses the Note/Task models and their read-side
-// listers (no side effects), but writes go straight to prisma instead of noteService.createNote /
-// taskService.createTask: those also call recordActivity (would land in the *tenant's own*
-// ActivityLogEntry feed, tenantId: this same tenant) and, for tasks, emitWebhookEvent (would fire
-// the tenant's configured Private API webhooks) and syncTaskCalendarEvent. All three would leak an
-// internal admin annotation to the customer it's about -- never appropriate here, so this module
-// deliberately bypasses them.
+// Platform staff notes/tasks about a Tenant. Since Admin Center v2 stage 4 (2026-10-04) they live
+// in their own tables (PlatformNote / PlatformTask) instead of the tenant's Note/Task: nothing the
+// customer can see — their app, activity log, webhooks, Google Calendar sync or data export —
+// ever reads these tables. Responses keep the shape the Admin already used (description, title).
+
+const author = { select: { id: true, firstName: true, lastName: true, platformRole: true } } as const;
 
 export async function listTenantNotes(tenantId: string) {
-  return listNotesForEntity(tenantId, 'tenant', tenantId);
+  const notes = await prisma.platformNote.findMany({ where: { tenantId }, orderBy: { createdAt: 'desc' }, include: { createdBy: author } });
+  return notes.map((n) => ({ id: n.id, title: 'Nota', description: n.body, createdAt: n.createdAt, createdBy: n.createdBy }));
 }
 
-export async function createTenantNote(tenantId: string, createdById: string, title: string, description: string) {
-  return prisma.note.create({
-    data: { tenantId, entityType: 'tenant', entityId: tenantId, title, description, createdById },
-    include: { createdBy: { select: { id: true, firstName: true, lastName: true, platformRole: true } } },
-  });
+export async function createTenantNote(tenantId: string, createdById: string, _title: string, description: string) {
+  const n = await prisma.platformNote.create({ data: { tenantId, body: description, createdById }, include: { createdBy: author } });
+  return { id: n.id, title: 'Nota', description: n.body, createdAt: n.createdAt, createdBy: n.createdBy };
 }
 
 export async function listTenantTasks(tenantId: string) {
-  return listTasksForEntity(tenantId, 'tenant', tenantId);
+  return prisma.platformTask.findMany({
+    where: { tenantId },
+    orderBy: [{ completedAt: { sort: 'asc', nulls: 'first' } }, { dueDate: { sort: 'asc', nulls: 'last' } }, { createdAt: 'desc' }],
+    include: { createdBy: author },
+  });
 }
 
-// assigneeId defaults to the creator -- platform staff tasks are personal reminders, not a
-// team-assignment workflow (unlike tenant-facing Tasks, which assign across a whole team).
 export async function createTenantTask(
   tenantId: string,
   createdById: string,
   input: { title: string; description?: string | null; dueDate?: Date | null; assigneeId?: string },
 ) {
-  return prisma.task.create({
-    data: {
-      tenantId,
-      entityType: 'tenant',
-      entityId: tenantId,
-      title: input.title,
-      description: input.description ?? null,
-      dueDate: input.dueDate ?? null,
-      assigneeId: input.assigneeId ?? createdById,
-      createdById,
-    },
-    include: {
-      assignee: { select: { id: true, firstName: true, lastName: true } },
-      createdBy: { select: { id: true, firstName: true, lastName: true } },
-    },
+  return prisma.platformTask.create({
+    data: { tenantId, title: input.title, dueDate: input.dueDate ?? null, createdById },
+    include: { createdBy: author },
   });
 }
 
 export async function setTenantTaskCompleted(taskId: string, tenantId: string, completed: boolean) {
-  // tenantId in the where clause doubles as the ownership check -- a task id from another
-  // tenant's note/task set (or a non-'tenant' entityType) never matches, same convention
-  // updateTenantUser (tenantUserService.ts) uses for a global-id lookup.
-  const result = await prisma.task.updateMany({
-    where: { id: taskId, tenantId, entityType: 'tenant' },
-    data: { completedAt: completed ? new Date() : null },
-  });
+  // tenantId in the where clause doubles as the ownership check.
+  const result = await prisma.platformTask.updateMany({ where: { id: taskId, tenantId }, data: { completedAt: completed ? new Date() : null } });
   if (result.count === 0) return null;
-  return prisma.task.findUnique({
-    where: { id: taskId },
-    include: {
-      assignee: { select: { id: true, firstName: true, lastName: true } },
-      createdBy: { select: { id: true, firstName: true, lastName: true } },
-    },
-  });
+  return prisma.platformTask.findUnique({ where: { id: taskId }, include: { createdBy: author } });
 }

@@ -8,8 +8,8 @@ https://claude.ai/artifact/MuqVmwK4WQwqDTwK2hdw4X
 
 ## Decisions (2026-10-03)
 
-- **Production only (Alejandro, 2026-10-03):** Admin changes skip the staging review and go straight
-  to `main`. Cherry-pick only the Admin commit; schema changes are pushed to the prod DB first.
+- **Production only (Alejandro, 2026-10-03; repeated 2026-10-04): there is no test Admin.** Admin
+  changes skip the staging review and go straight to `main`. Cherry-pick only the Admin commit; schema changes are pushed to the prod DB first.
 
 - **Where it lives: only `admin.joinnorthstack.com`** (never under app.joinnorthstack.com,
   Alejandro 2026-10-03). The code lives in this repo as a separate lazy frontend chunk
@@ -73,9 +73,27 @@ https://claude.ai/artifact/MuqVmwK4WQwqDTwK2hdw4X
      - Card-update reminder email, instead of "retry charge": neither provider allows a forced
        retry.
      - Client data export: a ZIP with one CSV per module, built by `src/lib/zip.ts`.
-3. Home + Billing: business metrics and alerts.
-4. Announcements, internal notes in their own tables, Billing page. (Tickets/Ideas moved to 2a.)
-5. Login as support (with consent) and delete client.
+3. **Billing page. LIVE 2026-10-04.** Charges per month for both providers (collected / failed /
+   refunded per currency), MRR, 6-month chart, next charges, failed payments and pending
+   cancellations.
+4. **Announcements and staff notes. LIVE 2026-10-04.**
+   - Announcements written from the Admin: English required, Spanish optional, an audience
+     (plans / countries / clients) and a schedule. The customer bell shows only the ones aimed at
+     them, in their language.
+   - Staff notes and tasks in their own tables (`PlatformNote` / `PlatformTask`).
+5. **Support access and account deletion. LIVE 2026-10-04.**
+   - **Support access with consent** (`SupportAccessRequest`): staff asks one user (in-app prompt
+     plus email, lapses in 24 h) and access starts when that user accepts (30 min / 2 h / 24 h).
+     It is read-only unless edits were allowed, and the user can end it any time. Staff enters
+     with a one-time code (60 s, in the URL fragment), and the session lives in that browser tab
+     only, with a violet bar. Edits are tagged "Northstack support" in the Activity Log.
+   - **Account deletion, 10 days either way** (Alejandro, 2026-10-04): the owner can do it from
+     Settings -> Company (name + password), or staff from the Admin. Access is blocked at once,
+     the owner gets an email, and staff can undo it until the date. Then the daily cron erases
+     everything (`tenantPurgeService.ts`, which walks the DB's foreign keys from Tenant). Staff
+     users are detached, and the platform audit log survives.
+   - **Pending:** the privacy-policy wording is going through Alejandro's legal agent. Don't use
+     support access with real clients until it's published.
 - Later: staff roles.
 
 ## Stage 1: what was built

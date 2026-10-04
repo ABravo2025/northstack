@@ -242,6 +242,13 @@ export async function getNextBillingDate(externalSubscriptionId: string): Promis
   return new Date(subscription.next_billing_date);
 }
 
+// Admin Center v2, stage 2c (2026-10-04): "free months" credit — moves the subscription's next
+// charge to a later date, so nothing is charged until then. Returns the date Dodo now reports.
+export async function setNextBillingDate(externalSubscriptionId: string, date: Date): Promise<Date> {
+  const updated = await getClient().subscriptions.update(externalSubscriptionId, { next_billing_date: date.toISOString() });
+  return new Date(updated.next_billing_date);
+}
+
 // Fallback plan signal for the webhook (2026-09-16, QA-91 — a real test payment's
 // metadata.plan came back empty on the Payment resource; checkoutService.ts's metadata IS sent
 // at checkout creation, but Dodo propagating arbitrary custom metadata onto every later

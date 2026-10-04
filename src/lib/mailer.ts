@@ -341,6 +341,40 @@ export async function sendContractSignedEmail(input: SendContractSignedEmailInpu
   }, 'Failed to send contract signed email:');
 }
 
+export interface SendPaymentMethodReminderEmailInput {
+  to: string;
+  tenantName: string;
+  billingUrl: string;
+  locale?: string | null;
+}
+
+// Admin Center v2, stage 2c (2026-10-04): sent by Northstack staff when a charge failed — neither
+// Dodo nor Mercado Pago lets us force a retry, both retry on their own once the card is fixed.
+export async function sendPaymentMethodReminderEmail(input: SendPaymentMethodReminderEmailInput): Promise<void> {
+  if (!mailerConfigured()) return;
+
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(key, { lng, ns: 'emails', ...opts });
+
+  await dispatchMail({
+    from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
+    to: input.to,
+    subject: t('paymentMethodReminder.subject'),
+    text: [
+      t('paymentMethodReminder.body', { tenantName: input.tenantName }),
+      '',
+      `${t('paymentMethodReminder.linkText')}: ${input.billingUrl}`,
+      '',
+      t('paymentMethodReminder.footer'),
+    ].join('\n'),
+    html: [
+      `<p>${t('paymentMethodReminder.body', { tenantName: strong(input.tenantName), interpolation: { escapeValue: false } })}</p>`,
+      `<p><a href="${input.billingUrl}">${t('paymentMethodReminder.linkText')}</a></p>`,
+      `<p>${t('paymentMethodReminder.footer')}</p>`,
+    ].join('\n'),
+  }, 'Failed to send payment method reminder email:');
+}
+
 export interface SendPasswordResetEmailInput {
   to: string;
   resetUrl: string;

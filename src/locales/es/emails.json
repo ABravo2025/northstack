@@ -80,5 +80,11 @@
       "refund_policy": "la Política de Reembolsos",
       "default": "nuestras políticas"
     }
+  },
+  "paymentMethodReminder": {
+    "subject": "No pudimos cobrar tu último pago de Northstack",
+    "body": "No pudimos cobrar con la tarjeta cargada para {{tenantName}}. Para seguir usando Northstack sin cortes, actualizá tu medio de pago.",
+    "linkText": "Actualizar medio de pago",
+    "footer": "Cuando lo actualices, el cobro se reintenta solo. Si tenés dudas, respondé este mail."
   }
 }

@@ -1,6 +1,11 @@
 import { Prisma, type PlanTier, type TenantStatus } from '@prisma/client';
 import prisma from '../../lib/prisma.js';
 import { requestPasswordReset } from '../auth/authService.js';
+import { getNextBillingDate, setNextBillingDate } from '../../lib/dodopayments.js';
+import { sendPaymentMethodReminderEmail } from '../../lib/mailer.js';
+import { toCsv } from '../../lib/csv.js';
+import { buildZip } from '../../lib/zip.js';
+import { exportCompaniesToCsv, exportContactsToCsv, exportEmployeesToCsv } from '../csv/csvService.js';
 import { updateTenantPlan } from '../tenant/planService.js';
 import { changePlan as changePaidPlan } from '../tenant/subscriptionSelfServeService.js';
 import { GRACE_PERIOD_DAYS } from '../tenant/planTransitionService.js';
@@ -220,3 +225,133 @@ export async function clearAgreement(tenantId: string, actor: Actor, reason: str
 }
 
 export { activeOverride };
+
+// ---------------------------------------------------------------------------------------------
+// Stage 2c (2026-10-04): billing actions and data export.
+
+const MAX_FREE_MONTHS = 12;
+
+// "N months free": moves the next charge N months later in Dodo. Mercado Pago has no way to skip
+// charges on a preapproval, so it's Dodo-only.
+export async function grantFreeMonths(tenantId: string, months: number, actor: Actor, reason: string): Promise<AdminActionResult> {
+  if (!Number.isInteger(months) || months < 1 || months > MAX_FREE_MONTHS) return { success: false, error: `Elegí entre 1 y ${MAX_FREE_MONTHS} meses.` };
+  const sub = await prisma.subscription.findUnique({ where: { tenantId } });
+  if (!sub?.provider || !sub.externalSubscriptionId) return { success: false, error: 'Este cliente no tiene una suscripción paga.' };
+  if (sub.provider !== 'dodopayments') {
+    return { success: false, error: 'Mercado Pago no permite saltear cobros de una suscripción. Para clientes de Argentina, por ahora no hay meses gratis desde el Admin.' };
+  }
+  if (sub.status !== 'active') return { success: false, error: 'La suscripción no está activa (puede tener un pago pendiente).' };
+  const current = await getNextBillingDate(sub.externalSubscriptionId);
+  const target = addMonths(current, months);
+  const confirmed = await setNextBillingDate(sub.externalSubscriptionId, target);
+  await prisma.subscription.update({ where: { tenantId }, data: { currentPeriodEnd: confirmed } });
+  await audit(actor, tenantId, 'free_months', reason, { months, from: current.toISOString(), to: confirmed.toISOString() });
+  return { success: true, message: `Listo: el próximo cobro pasa al ${confirmed.toISOString().slice(0, 10)}.` };
+}
+
+// Same day N months later, clamped to the end of a shorter month (31 Jan + 1 = 28/29 Feb).
+export function addMonths(date: Date, months: number): Date {
+  const d = new Date(date.getTime());
+  const day = d.getUTCDate();
+  d.setUTCDate(1);
+  d.setUTCMonth(d.getUTCMonth() + months);
+  const last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+  d.setUTCDate(Math.min(day, last));
+  return d;
+}
+
+// Neither provider lets us force a retry; both retry on their own once the card is fixed. This
+// emails the owner a link to Settings -> Billing.
+export async function sendPaymentReminder(tenantId: string, actor: Actor, reason: string): Promise<AdminActionResult> {
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, include: { subscription: true } });
+  if (!tenant) return { success: false, error: 'Ese cliente no existe.' };
+  if (!tenant.subscription?.provider) return { success: false, error: 'Este cliente todavía no cargó un medio de pago.' };
+  const owners = await prisma.user.findMany({ where: { tenantId, status: 'active', role: 'owner' }, select: { email: true, locale: true } });
+  if (owners.length === 0) return { success: false, error: 'No encontré al dueño de la cuenta.' };
+  const billingUrl = `${process.env.APP_BASE_URL ?? 'https://app.joinnorthstack.com'}/settings/billing`;
+  for (const o of owners) await sendPaymentMethodReminderEmail({ to: o.email, tenantName: tenant.name, billingUrl, locale: o.locale });
+  await audit(actor, tenantId, 'payment_reminder', reason, { to: owners.map((o) => o.email) });
+  return { success: true, message: `Mail enviado a ${owners.map((o) => o.email).join(', ')}.` };
+}
+
+const ymd = (d: Date | null | undefined) => (d ? d.toISOString().slice(0, 10) : '');
+const fullName = (u: { firstName: string; lastName: string } | null | undefined) => (u ? `${u.firstName} ${u.lastName}`.trim() : '');
+
+// One ZIP with a CSV per module (the same exports the customer has, plus users, time off,
+// opportunities and tasks). Logged: it carries the client's personal data.
+export async function exportClientData(
+  tenantId: string,
+  actor: Actor,
+  reason: string,
+): Promise<{ success: true; filename: string; zip: Buffer } | { success: false; error: string }> {
+  const tenant = await prisma.tenant.findUnique({ where: { id: tenantId }, select: { name: true, slug: true } });
+  if (!tenant) return { success: false, error: 'Ese cliente no existe.' };
+
+  const [employees, companies, contacts, users, timeOff, opportunities, tasks] = await Promise.all([
+    exportEmployeesToCsv(tenantId),
+    exportCompaniesToCsv(tenantId),
+    exportContactsToCsv(tenantId),
+    prisma.user.findMany({
+      where: { tenantId },
+      orderBy: { createdAt: 'asc' },
+      select: { firstName: true, lastName: true, email: true, role: true, status: true, createdAt: true, lastSeenAt: true },
+    }),
+    prisma.timeOffRequest.findMany({
+      where: { tenantId },
+      orderBy: { startDate: 'asc' },
+      select: {
+        startDate: true, endDate: true, daysRequested: true, status: true, note: true, decidedAt: true, decisionNote: true, createdAt: true,
+        employee: { select: { firstName: true, lastName: true } },
+        timeOffPolicy: { select: { name: true } },
+      },
+    }),
+    prisma.opportunity.findMany({
+      where: { tenantId },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        name: true, amountCents: true, currency: true, estimatedCloseDate: true, isActive: true, createdAt: true,
+        company: { select: { name: true } },
+        pipeline: { select: { name: true } },
+        stage: { select: { name: true } },
+        owner: { select: { firstName: true, lastName: true } },
+      },
+    }),
+    prisma.task.findMany({
+      where: { tenantId, entityType: { not: 'tenant' } }, // staff notes about the client never leave the Admin
+      orderBy: { createdAt: 'asc' },
+      select: { title: true, description: true, dueDate: true, completedAt: true, createdAt: true, assignee: { select: { firstName: true, lastName: true } } },
+    }),
+  ]);
+
+  const files = [
+    { name: 'personas.csv', content: employees },
+    { name: 'empresas.csv', content: companies },
+    { name: 'contactos.csv', content: contacts },
+    {
+      name: 'usuarios.csv',
+      content: toCsv([['Nombre', 'Email', 'Rol', 'Estado', 'Alta', 'Última actividad'], ...users.map((u) => [fullName(u), u.email, u.role, u.status, ymd(u.createdAt), ymd(u.lastSeenAt)])]),
+    },
+    {
+      name: 'ausencias.csv',
+      content: toCsv([
+        ['Persona', 'Política', 'Desde', 'Hasta', 'Días', 'Estado', 'Nota', 'Decidida', 'Nota de decisión', 'Pedida'],
+        ...timeOff.map((r) => [fullName(r.employee), r.timeOffPolicy?.name ?? '', ymd(r.startDate), ymd(r.endDate), r.daysRequested, r.status, r.note ?? '', ymd(r.decidedAt), r.decisionNote ?? '', ymd(r.createdAt)]),
+      ]),
+    },
+    {
+      name: 'oportunidades.csv',
+      content: toCsv([
+        ['Oportunidad', 'Empresa', 'Pipeline', 'Etapa', 'Monto', 'Moneda', 'Cierre estimado', 'Responsable', 'Activa', 'Creada'],
+        ...opportunities.map((o) => [o.name, o.company?.name ?? '', o.pipeline?.name ?? '', o.stage?.name ?? '', (o.amountCents / 100).toFixed(2), o.currency, ymd(o.estimatedCloseDate), fullName(o.owner), o.isActive ? 'sí' : 'no', ymd(o.createdAt)]),
+      ]),
+    },
+    {
+      name: 'tareas.csv',
+      content: toCsv([['Tarea', 'Descripción', 'Responsable', 'Vence', 'Completada', 'Creada'], ...tasks.map((t) => [t.title, t.description ?? '', fullName(t.assignee), ymd(t.dueDate), ymd(t.completedAt), ymd(t.createdAt)])]),
+    },
+  ];
+  const zip = buildZip(files);
+  await audit(actor, tenantId, 'export_data', reason, { files: files.map((f) => f.name), bytes: zip.length });
+  const date = new Date().toISOString().slice(0, 10);
+  return { success: true, filename: `northstack-${tenant.slug || 'cliente'}-${date}.zip`, zip };
+}

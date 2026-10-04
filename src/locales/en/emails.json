@@ -80,5 +80,11 @@
       "refund_policy": "Refund Policy",
       "default": "our policies"
     }
+  },
+  "paymentMethodReminder": {
+    "subject": "Your last Northstack payment didn’t go through",
+    "body": "We couldn’t charge the card on file for {{tenantName}}. To keep using Northstack without interruptions, please update your payment method.",
+    "linkText": "Update payment method",
+    "footer": "Once it’s updated, the payment is retried automatically. If you have any questions, just reply to this email."
   }
 }

@@ -8,6 +8,15 @@ import { canManageProjects, canViewProjects } from '../modules/auth/permissionSe
 import { canEditProject, canViewProject, findOwnEmployeeId } from '../modules/projects/projectAccess.js';
 import { getPlanLimits } from '../modules/tenant/planLimits.js';
 import {
+  deleteTenantTemplate,
+  findTemplateForTenant,
+  getTemplateDetail,
+  instantiateTemplate,
+  listTemplates,
+  resolveTemplateLocale,
+  saveProjectAsTemplate,
+} from '../modules/projects/projectTemplateService.js';
+import {
   addMember,
   countOpenProjects,
   createPhase,
@@ -370,4 +379,121 @@ projectsRouter.delete('/api/projects/:projectId/members/:memberId', async (req, 
   }
   await removeMember(project, member.id, user.id);
   return res.status(204).end();
+});
+
+// ---- Templates -----------------------------------------------------------------------------
+// Only people who can create projects need the gallery. System templates come in the requested
+// language (?locale=en|es, the UI's current language); the tenant's own templates in any.
+
+projectsRouter.get('/api/project-templates', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) return;
+  if (!canManageProjects(user.roleContext)) return res.status(403).json({ error: 'Insufficient permissions' });
+
+  const templates = await listTemplates(user.tenantId!, resolveTemplateLocale(req.query.locale));
+  return res.json({ templates, customTemplatesEnabled: getPlanLimits(user.tenant).customProjectTemplatesEnabled });
+});
+
+projectsRouter.get('/api/project-templates/:templateId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) return;
+  if (!canManageProjects(user.roleContext)) return res.status(403).json({ error: 'Insufficient permissions' });
+
+  const template = await getTemplateDetail(String(req.params.templateId), user.tenantId!);
+  if (!template) return res.status(404).json({ error: 'Template not found' });
+  return res.json(template);
+});
+
+projectsRouter.delete('/api/project-templates/:templateId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) return;
+  if (!canManageProjects(user.roleContext)) return res.status(403).json({ error: 'Insufficient permissions' });
+
+  const template = await findTemplateForTenant(String(req.params.templateId), user.tenantId!);
+  if (!template) return res.status(404).json({ error: 'Template not found' });
+  if (template.tenantId === null) return res.status(400).json({ error: 'System templates cannot be deleted' });
+  await deleteTenantTemplate(template.id, user.tenantId!, user.id);
+  return res.status(204).end();
+});
+
+projectsRouter.post('/api/projects/from-template', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) return;
+  if (!canManageProjects(user.roleContext)) return res.status(403).json({ error: 'Insufficient permissions' });
+
+  if (typeof req.body.templateId !== 'string' || !(await findTemplateForTenant(req.body.templateId, user.tenantId!))) {
+    return res.status(404).json({ error: 'Template not found' });
+  }
+  const name = parseName(req.body.name);
+  if (!name) return res.status(400).json({ error: 'Name is required' });
+
+  const status = req.body.status ?? 'active';
+  if (!isProjectStatus(status)) return res.status(400).json({ error: 'Invalid status' });
+
+  const startDate = parseProjectDate(req.body.startDate);
+  const dueDate = parseProjectDate(req.body.dueDate);
+  if (startDate === 'invalid' || dueDate === 'invalid') return res.status(400).json({ error: 'Dates must be YYYY-MM-DD' });
+
+  const ownerEmployeeId = req.body.ownerEmployeeId;
+  if (typeof ownerEmployeeId !== 'string') return res.status(400).json({ error: 'ownerEmployeeId is required' });
+  const members = parseMembers(req.body.members);
+  if (members === 'invalid') return res.status(400).json({ error: 'Invalid members' });
+  if (!(await employeesBelongToTenant(user.tenantId!, [ownerEmployeeId, ...members.map((m) => m.employeeId)]))) {
+    return res.status(400).json({ error: 'Employee not found' });
+  }
+
+  const companyId = req.body.companyId || null;
+  if (companyId && !(await companyBelongsToTenant(user.tenantId!, companyId))) {
+    return res.status(400).json({ error: 'Company not found' });
+  }
+
+  if (wouldBeOpen(status, true)) {
+    const room = await hasRoomForOpenProject(user.tenant, user.tenantId!);
+    if (!room.allowed) return res.status(403).json(planLimitError(room.max!));
+  }
+
+  const project = await instantiateTemplate(
+    {
+      templateId: req.body.templateId,
+      tenantId: user.tenantId!,
+      name,
+      description: typeof req.body.description === 'string' ? req.body.description : null,
+      companyId,
+      ownerEmployeeId,
+      status,
+      startDate: startDate ?? null,
+      dueDate: dueDate ?? null,
+      members,
+    },
+    user.id,
+  );
+  return res.status(201).json(project);
+});
+
+projectsRouter.post('/api/projects/:projectId/save-as-template', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) return;
+  if (!canManageProjects(user.roleContext)) return res.status(403).json({ error: 'Insufficient permissions' });
+  const project = await loadProject(req, res, user, 'view');
+  if (!project) return;
+
+  if (!getPlanLimits(user.tenant).customProjectTemplatesEnabled) {
+    return res.status(403).json({
+      error: 'Saving your own templates is part of the Growth plan.',
+      code: 'plan_feature_project_templates',
+    });
+  }
+  const name = parseName(req.body.name);
+  if (!name) return res.status(400).json({ error: 'Name is required' });
+
+  const template = await saveProjectAsTemplate(
+    project.id,
+    {
+      name,
+      description: typeof req.body.description === 'string' ? req.body.description : null,
+      noPhaseName: resolveTemplateLocale(req.body.locale) === 'es' ? 'Otras tareas' : 'Other tasks',
+    },
+    user.id,
+  );
+  return res.status(201).json(template);
 });

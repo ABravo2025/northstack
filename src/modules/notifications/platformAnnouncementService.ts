@@ -58,22 +58,55 @@ export interface AnnouncementWithReadState extends PlatformAnnouncement {
   isUnread: boolean;
 }
 
-// Newest first — same idiom as the bell dropdown for personal notifications.
+// Admin Center v2, stage 4 (2026-10-04): who an announcement is for. An empty list means "everyone"
+// for that dimension; all non-empty dimensions must match. Plan "trial" = no plan chosen yet.
+export interface AnnouncementAudience {
+  tenantId: string | null;
+  plan: string | null;
+  country: string | null;
+}
+
+export function isForAudience(
+  a: Pick<PlatformAnnouncement, 'targetPlans' | 'targetCountries' | 'targetTenantIds'>,
+  who: AnnouncementAudience,
+): boolean {
+  if (a.targetTenantIds.length && (!who.tenantId || !a.targetTenantIds.includes(who.tenantId))) return false;
+  if (a.targetPlans.length && !a.targetPlans.includes(who.plan ?? 'trial')) return false;
+  if (a.targetCountries.length) {
+    const c = (who.country ?? '').trim().toLowerCase();
+    if (!c || !a.targetCountries.some((t) => t.trim().toLowerCase() === c)) return false;
+  }
+  return true;
+}
+
+// The user's language version when there is one (Spanish fields are optional).
+export function localizeAnnouncement<T extends PlatformAnnouncement>(a: T, locale: string | null | undefined): T {
+  if (!locale?.toLowerCase().startsWith('es') || !a.titleEs) return a;
+  return { ...a, title: a.titleEs, summary: a.summaryEs || a.summary, body: a.bodyEs || a.body };
+}
+
+async function visibleAnnouncements(userId: string, now: Date = new Date()) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { lastAnnouncementSeenAt: true, locale: true, tenant: { select: { id: true, plan: true, country: true } } },
+  });
+  const all = await prisma.platformAnnouncement.findMany({ where: { publishedAt: { lte: now } }, orderBy: { publishedAt: 'desc' } });
+  const who: AnnouncementAudience = { tenantId: user?.tenant?.id ?? null, plan: user?.tenant?.plan ?? null, country: user?.tenant?.country ?? null };
+  return { user, announcements: all.filter((a) => isForAudience(a, who)) };
+}
+
+// Newest first — same idiom as the bell dropdown for personal notifications. Scheduled ones
+// (publishedAt in the future) and ones aimed at other clients are left out.
 export async function listAnnouncementsForUser(userId: string): Promise<AnnouncementWithReadState[]> {
-  const [user, announcements] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { lastAnnouncementSeenAt: true } }),
-    prisma.platformAnnouncement.findMany({ orderBy: { publishedAt: 'desc' } }),
-  ]);
+  const { user, announcements } = await visibleAnnouncements(userId);
   const lastSeen = user?.lastAnnouncementSeenAt ?? null;
-  return announcements.map((a) => ({ ...a, isUnread: !lastSeen || a.publishedAt > lastSeen }));
+  return announcements.map((a) => ({ ...localizeAnnouncement(a, user?.locale), isUnread: !lastSeen || a.publishedAt > lastSeen }));
 }
 
 export async function countUnreadAnnouncements(userId: string): Promise<number> {
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { lastAnnouncementSeenAt: true } });
-  if (!user?.lastAnnouncementSeenAt) {
-    return prisma.platformAnnouncement.count();
-  }
-  return prisma.platformAnnouncement.count({ where: { publishedAt: { gt: user.lastAnnouncementSeenAt } } });
+  const { user, announcements } = await visibleAnnouncements(userId);
+  const lastSeen = user?.lastAnnouncementSeenAt ?? null;
+  return announcements.filter((a) => !lastSeen || a.publishedAt > lastSeen).length;
 }
 
 // Bumps the cursor to now — same "opening the list clears the badge" behavior the old

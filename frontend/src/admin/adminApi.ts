@@ -277,3 +277,31 @@ export interface BillingOverview {
 export const adminBillingApi = {
   overview: (token: string, month: string) => call<BillingOverview>(`/api/platform/admin/billing?month=${encodeURIComponent(month)}`, token),
 };
+
+export interface AdminAnnouncement {
+  id: string;
+  type: 'feature_update' | 'policy_change';
+  policyType: 'terms_of_service' | 'privacy_policy' | 'refund_policy' | null;
+  title: string;
+  summary: string;
+  body: string;
+  titleEs: string | null;
+  summaryEs: string | null;
+  bodyEs: string | null;
+  targetPlans: string[];
+  targetCountries: string[];
+  targetTenantIds: string[];
+  targetTenants: { id: string; name: string }[];
+  publishedAt: string;
+  scheduled: boolean;
+  reach: number;
+  read: number;
+}
+
+export const announcementsApi = {
+  list: (token: string) => call<{ announcements: AdminAnnouncement[]; countries: string[] }>('/api/platform/admin/announcements', token),
+  create: (token: string, body: Record<string, unknown>) => call<ActionResult>('/api/platform/admin/announcements', token, { method: 'POST', body: JSON.stringify(body) }),
+  update: (token: string, id: string, body: Record<string, unknown>) =>
+    call<ActionResult>(`/api/platform/admin/announcements/${encodeURIComponent(id)}`, token, { method: 'PATCH', body: JSON.stringify(body) }),
+  remove: (token: string, id: string) => call<ActionResult>(`/api/platform/admin/announcements/${encodeURIComponent(id)}`, token, { method: 'DELETE' }),
+};

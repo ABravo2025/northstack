@@ -4934,3 +4934,33 @@ que correr Alejandro manualmente (el clasificador de seguridad de Claude Code bl
 6. **Permisos por API:** un Member que llame `PATCH /api/shifts/settings` o `POST /api/shifts/locations` → 403; `GET /api/shifts/locations` → lista vacía.
 7. **Aislamiento:** `PATCH`/`DELETE /api/shifts/locations/<id de otro tenant>` → 404.
 8. **Activity Log:** filtros nuevos "Location", "Shift Settings", etc.; los cambios aparecen con etiquetas legibles.
+
+---
+
+## QA-103 — Shifts, Unidad 3: backend de turnos (armar, asignar, publicar, responder) (2026-10-04, en `staging`)
+
+### Qué cambió
+
+Solo backend (sin pantallas todavía: la grilla es la Unidad 5 y "Mis turnos" la 6). Los avisos (campana, email con `.ics`, Google Calendar) son la Unidad 4: hoy publicar no le avisa a nadie.
+
+- **Turnos:** `GET /api/shifts?from&to&locationId` (publicados + cancelados de las locaciones visibles; borradores solo donde se puede gestionar), `POST /api/shifts`, `PATCH/DELETE /api/shifts/:id` (borrar solo borradores), `POST /api/shifts/:id/cancel`.
+- **Asignar:** `GET /api/shifts/:id/candidates` (cada persona con bloqueos/avisos), `POST /api/shifts/:id/assignments { employeeIds, force }`, `DELETE /api/shifts/:id/assignments/:assignmentId`. Bloquea: sin usuario activo, superposición, ya asignado. Avisa (requiere `force`): Time Off aprobado, feriado, fuera de disponibilidad, descanso menor al mínimo, habilidad faltante o vencida (solo Growth).
+- **Publicar y copiar:** `POST /api/shifts/publish { shiftIds }`, `POST /api/shifts/copy-week { fromWeekStart, toWeekStart, locationId? }`.
+- **Responder:** `GET /api/shifts/mine`, `POST /api/shifts/assignments/:id/respond { response, reason }` (solo el propio), y el link del email sin sesión: `GET/POST /api/public/shifts/respond/:token` (token de un clic, solo se guarda el hash, rota en cada nuevo aviso, rate limit por IP).
+- **Plantillas:** `GET/POST /api/shifts/templates`, `DELETE /api/shifts/templates/:id`.
+- Cambiar fecha/hora/locación de un turno publicado lo devuelve a "pendiente" para todos los asignados (si se piden confirmaciones); cambiar notas/puesto/cupo no.
+
+**Verificado en esta sesión:** 64 archivos de tests en verde (21 tests nuevos de reglas y validación); escenario de 37 pasos por API contra la base de `staging` (backend local, tenant "QA Shifts 1791139702185"), todo en verde: conversión de hora local a UTC (incluye turno nocturno), superposición bloqueada, aviso de descanso y asignación forzada, Member sin acceso al cronograma ni a borradores, publicar, aceptar desde la app, cambio de hora que vuelve a pendiente, link público (ver + rechazar con motivo, token inválido → 404), cancelar, borrar borrador, plantillas y copiar semana. **Bug encontrado y corregido en la misma sesión:** la ruta pública con dos segmentos (`/api/public/shift-response/:token`) la capturaba la de Public Forms (`/api/public/:tenantSlug/:formSlug`); se movió a tres segmentos.
+
+### Qué probar
+
+1. **Hora local:** un turno 07:00–11:30 en una locación de Buenos Aires guarda `startsAt` 10:00Z; un 22:00–06:00 termina al día siguiente (`endsNextDay: true`).
+2. **Bloqueos:** asignar a alguien que ya tiene un turno superpuesto → 409 `blocked` `overlap`; asignar a un empleado sin usuario → `no_user`.
+3. **Avisos:** con descanso mínimo de 12 h, un turno 4 h después de otro → 409 `warnings` `rest`; con `force: true` → 201. Probar también Time Off aprobado y un feriado del calendario de Time Off.
+4. **Permisos:** un Member no crea turnos (403), ve `[]` en `GET /api/shifts`, no ve borradores en `/mine`, y no puede responder la asignación de otro (404). Un responsable de locación (sin `manage_shifts`) gestiona solo su locación.
+5. **Publicar:** solo publica borradores de locaciones que el usuario puede gestionar; los asignados quedan "pending" (o "accepted" si las confirmaciones están apagadas).
+6. **Re-confirmación:** aceptar, cambiar la hora del turno → vuelve a "pending"; cambiar solo las notas → se mantiene.
+7. **Link público:** un token viejo (de antes de un cambio de hora) da 404; uno vigente muestra el turno sin datos internos y permite aceptar/rechazar; después de empezado el turno ya no se puede responder (409 `started`).
+8. **Cancelar/borrar:** borrar un publicado → 409; cancelarlo → sigue visible como cancelado en `/mine`.
+9. **Copiar semana:** crea borradores en la semana destino, sin los cancelados ni quienes habían rechazado; reporta cuántas asignaciones salteó.
+10. **Aislamiento:** cualquier `:id` de otro tenant → 404.

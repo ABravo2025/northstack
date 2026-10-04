@@ -2,6 +2,7 @@ import type { ActivityEntityType, PlanTier, SubscriptionStatus, TenantStatus } f
 import prisma from '../../lib/prisma.js';
 import { PRICING, MIN_USERS } from '../../config/pricing.js';
 import { getPlanLimits } from '../tenant/planLimits.js';
+import { listAudit } from './adminActionService.js';
 
 // Admin Center v2 (2026-10-03) — the read side of the new Admin Center: client list, client
 // detail and the business overview. Read-only on purpose (stage 1): nothing here writes, calls a
@@ -269,7 +270,7 @@ export async function getClientDetail(tenantId: string, now = new Date()) {
   const { tenant, users, row } = found;
   const since30 = new Date(now.getTime() - 30 * DAY);
 
-  const [days, activity, invoices, tickets, recentEvents] = await Promise.all([
+  const [days, activity, invoices, tickets, recentEvents, staffActions] = await Promise.all([
     prisma.userActivityDay.groupBy({ by: ['day'], where: { tenantId, day: { gte: since30 } }, _count: { _all: true } }),
     prisma.activityLogEntry.findMany({
       where: { tenantId, changedAt: { gte: since30 } },
@@ -293,6 +294,7 @@ export async function getClientDetail(tenantId: string, now = new Date()) {
       take: 30,
       select: { id: true, summary: true, changedAt: true, entityType: true, changedBy: { select: { firstName: true, lastName: true, platformRole: true } } },
     }),
+    listAudit({ tenantId, take: 50 }),
   ]);
 
   // Active users per UTC day, last 30 days (zeros filled in).
@@ -317,6 +319,7 @@ export async function getClientDetail(tenantId: string, now = new Date()) {
   const timeline: { at: Date; kind: string; text: string; by: string | null }[] = [
     { at: tenant.createdAt, kind: 'signup', text: 'signup', by: row.owner?.name ?? null },
     ...invoices.map((inv) => ({ at: inv.paidAt ?? inv.createdAt, kind: inv.status === 'paid' ? 'invoice_paid' : inv.status === 'failed' ? 'invoice_failed' : 'invoice_' + inv.status, text: `${inv.amountCents}|${inv.currency}`, by: inv.provider })),
+    ...staffActions.map((a) => ({ at: a.createdAt, kind: 'staff_' + a.action, text: a.reason, by: `${a.actor} (Northstack)` })),
     ...recentEvents.map((e) => ({ at: e.changedAt, kind: 'log', text: e.summary, by: `${e.changedBy.firstName} ${e.changedBy.lastName}`.trim() + (e.changedBy.platformRole ? ' (Northstack)' : '') })),
   ];
   if (sub?.cancelledAt) timeline.push({ at: sub.cancelledAt, kind: 'cancel_requested', text: sub.cancellationReason ?? '', by: row.owner?.name ?? null });

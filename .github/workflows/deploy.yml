@@ -75,11 +75,6 @@ jobs:
             --build-env VITE_TURNSTILE_SITE_KEY="$TURNSTILE_TEST_SITE_KEY")
           echo "Deployed to: $DEPLOY_URL"
           npx vercel alias set "$DEPLOY_URL" staging.joinnorthstack.com --token="$VERCEL_TOKEN"
-          # Admin Center v2 on staging (2026-10-04): the internal Admin only opens on an admin* host
-          # (frontend/src/main.tsx), so staging gets its own one, on the same staging deployment
-          # and database. Behind the same Vercel SSO protection as staging itself.
-          npx vercel domains add admin-staging.joinnorthstack.com --token="$VERCEL_TOKEN" || true
-          npx vercel alias set "$DEPLOY_URL" admin-staging.joinnorthstack.com --token="$VERCEL_TOKEN"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           STAGING_DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}

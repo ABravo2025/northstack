@@ -4909,3 +4909,28 @@ que correr Alejandro manualmente (el clasificador de seguridad de Claude Code bl
 12. **Activity Log:** los cambios de datos y de logo aparecen con etiquetas legibles ("Legal name", "Logo: Uploaded …").
 13. **Guide/Help:** la sección de Settings y la de recibos de sueldo (EN y ES) describen Company profile y el tema en Profile; FAQ nueva sobre logo en recibos.
 
+
+---
+
+## QA-102 — Shifts, Unidades 1-2: permisos, límites de plan y Settings → Shifts (locaciones + reglas) (2026-10-04, en `staging`)
+
+### Qué cambió
+
+- **Schema (aditivo, aplicado a la base de `staging` con SQL filtrado — no con `db push`, porque `staging` tiene tablas `Referral*` de otra rama que `db push` habría borrado):** `ShiftsSettings`, `Location`, `ShiftTemplate`, `Shift`, `ShiftAssignment`, `ShiftCalendarSync`, `EmployeeAvailability`, `Skill`, `EmployeeSkill`, más valores nuevos en `ActivityEntityType` y `NotificationType`. Spec: `docs/general/spec-shifts.md`.
+- **Permisos:** `view_shifts` y `manage_shifts`, grupo "Shifts" en Settings → Roles & Permissions. Admin los tiene por defecto (backfill corrido en `staging`: 199 roles Admin). Member no.
+- **Planes:** Starter = 1 locación activa; Growth = ilimitadas.
+- **Backend:** `GET/PATCH /api/shifts/settings`, `GET/POST /api/shifts/locations`, `PATCH/DELETE /api/shifts/locations/:id`.
+- **Frontend:** Settings → **Shifts** (`/settings/shifts`): tabla de locaciones (estándar TableBody), confirmaciones y reglas de asignación. Bilingüe.
+
+**Verificado en esta sesión** (backend local contra la base de `staging`, tenant QA "QA Shifts 1791139702185"): tests y build en verde; con Playwright, el Owner ve la tarjeta y guarda, los cambios persisten tras recargar, ES y modo oscuro OK, sin errores de consola; el Member no ve la tarjeta. Por API: Member → 403 en PATCH settings y POST locación; zona horaria inválida → 400; Starter bloquea una 2.ª locación activa y su reactivación (403 `plan_limit_locations`); borrar una locación sin turnos → 204; todo aparece en el Activity Log.
+
+### Qué probar
+
+1. **Roles:** Settings → Roles & Permissions muestra el grupo "Shifts" con "View the whole schedule" y "Manage shifts"; prender Manage prende View; un Admin existente ya los tiene.
+2. **Nav:** con Owner/Admin, Settings muestra la tarjeta "Shifts" (ES: "Turnos"); un Member no la ve.
+3. **Locaciones:** agregar, editar (nombre, dirección, zona horaria, responsable), desactivar/activar y eliminar una sin turnos. La zona horaria por defecto es la del navegador.
+4. **Plan Starter:** con 1 locación activa, desaparece "+ Agregar locación", aparece el aviso del límite y el interruptor de una inactiva queda deshabilitado. En Growth no hay límite.
+5. **Reglas:** apagar "Pedir que cada persona acepte…" muestra la aclaración y oculta "Recordar a quien no respondió"; descanso mínimo y día de inicio de semana se guardan y persisten al recargar.
+6. **Permisos por API:** un Member que llame `PATCH /api/shifts/settings` o `POST /api/shifts/locations` → 403; `GET /api/shifts/locations` → lista vacía.
+7. **Aislamiento:** `PATCH`/`DELETE /api/shifts/locations/<id de otro tenant>` → 404.
+8. **Activity Log:** filtros nuevos "Location", "Shift Settings", etc.; los cambios aparecen con etiquetas legibles.

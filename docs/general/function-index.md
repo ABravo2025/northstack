@@ -557,6 +557,11 @@ Capa de relación sobre `canViewShifts`/`canManageShifts` (mismo esquema que `pr
 - **updateShiftsSettings(tenantId, input, changedByUserId)** — upsert + Activity Log (`shiftsSettings`).
 - **parseShiftsSettingsInput(input)** — validación pura (testeada).
 
+### `src/modules/shifts/locationService.ts` (Shifts, Unidad 2)
+- **listLocations(tenantId, { includeInactive?, ids? })** — con responsable y conteo de turnos.
+- **createLocation / updateLocation / deleteLocation** — validan zona horaria, responsable del mismo tenant y el tope de locaciones activas que pasa la ruta (`maxActive`, de `planLimits`); la zona no cambia si ya hay turnos; solo se borra una locación sin turnos (si no, se desactiva). Todo al Activity Log.
+- **parseLocationInput(input, mode)** (validación pura, testeada), **findLocationById**, **countActiveLocations**.
+
 ### `src/modules/integrations/apiKeyService.ts` (Private API + Webhooks, `docs/tareas/spec-private-api-webhooks.md`, Unit 1 — 2026-09-07)
 - **createApiKey(tenantId, userId, {name, scopes})** — rechaza nombre vacío, scopes vacío, y
   cualquier scope fuera de `externalApiAuth.ts`'s `API_SCOPES`; dedupea scopes repetidos. Devuelve

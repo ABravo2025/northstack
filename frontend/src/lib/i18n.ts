@@ -19,6 +19,8 @@ import authEn from '../locales/en/auth.json';
 import authEs from '../locales/es/auth.json';
 import projectsEn from '../locales/en/projects.json';
 import projectsEs from '../locales/es/projects.json';
+import shiftsEn from '../locales/en/shifts.json';
+import shiftsEs from '../locales/es/shifts.json';
 
 // docs/general/spec-i18n.md — only these two for now; the detector/fallback chain below doesn't
 // need to change to add a third later.
@@ -40,6 +42,7 @@ i18n
         notesActivity: notesActivityEn,
         auth: authEn,
         projects: projectsEn,
+        shifts: shiftsEn,
       },
       es: {
         common: commonEs,
@@ -51,6 +54,7 @@ i18n
         notesActivity: notesActivityEs,
         auth: authEs,
         projects: projectsEs,
+        shifts: shiftsEs,
       },
     },
     supportedLngs: SUPPORTED_LOCALES,

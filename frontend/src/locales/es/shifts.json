@@ -1,0 +1,56 @@
+{
+  "settings": {
+    "title": "Turnos",
+    "subtitle": "Dónde se trabaja y cómo se le pide a cada persona que confirme sus turnos. Cada cambio se guarda al instante.",
+    "saveFailed": "No se pudo guardar: {{message}}",
+    "locations": {
+      "title": "Locaciones",
+      "lead": "Cada locación tiene su propia zona horaria, así un turno se lee igual para todos, sin importar desde dónde lo abran.",
+      "name": "Nombre",
+      "address": "Dirección",
+      "timezone": "Zona horaria",
+      "manager": "Responsable",
+      "managerHint": "Puede armar los turnos de esta locación aunque no tenga el permiso Gestionar turnos.",
+      "noManager": "Sin responsable",
+      "status": "Estado",
+      "active": "Activa",
+      "inactive": "Inactiva",
+      "add": "Agregar locación",
+      "edit": "Editar locación",
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "actionsAria": "Acciones de {{name}}",
+      "deactivate": "Desactivar",
+      "activate": "Activar",
+      "delete": "Eliminar",
+      "deleteTitle": "¿Eliminar {{name}}?",
+      "deleteBody": "Esta locación nunca tuvo turnos, así que no afecta a nada más.",
+      "deleted": "Locación eliminada",
+      "emptyTitle": "Todavía no hay locaciones",
+      "emptyBody": "Agregá los lugares donde trabaja tu equipo: un laboratorio, una sucursal, un depósito.",
+      "timezoneLocked": "La zona horaria no se puede cambiar una vez que la locación tiene turnos.",
+      "shiftCount_one": "{{count}} turno",
+      "shiftCount_other": "{{count}} turnos",
+      "planLimit": "Tu plan incluye {{count}} locación activa. Pasá a Growth para tener locaciones ilimitadas.",
+      "planLimitReached": "Llegaste al límite de locaciones activas de tu plan. Desactivá una o pasá a Growth."
+    },
+    "confirm": {
+      "title": "Confirmaciones",
+      "lead": "Cómo se enteran las personas de sus turnos.",
+      "require": "Pedir que cada persona acepte o rechace sus turnos",
+      "requireHint": "Si está apagado, los turnos publicados quedan confirmados automáticamente.",
+      "remindUnanswered": "Recordar a quien todavía no respondió",
+      "remindDayBefore": "Recordar el turno el día anterior",
+      "dailyHint": "Los recordatorios salen una vez por día, a la mañana."
+    },
+    "rules": {
+      "title": "Reglas de asignación",
+      "lead": "Se revisan cada vez que se asigna a alguien. Si una regla no se cumple aparece un aviso, pero quien arma el cronograma puede seguir igual.",
+      "minRest": "Descanso mínimo entre dos turnos de la misma persona",
+      "minRestOff": "Sin mínimo",
+      "hours": "horas",
+      "weekStart": "La semana empieza el"
+    },
+    "weekdays": ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"]
+  }
+}

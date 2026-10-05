@@ -5017,3 +5017,25 @@ Solo backend (sin pantallas todavía: la grilla es la Unidad 5 y "Mis turnos" la
 8. **Disponibilidad:** cargar semanal y por fecha; aparece como aviso al asignar.
 9. **Vista por persona:** una fila por persona y "Sin asignar" para turnos vacíos.
 10. **Español, modo oscuro y celular** en las tres pantallas y en la página pública.
+
+---
+
+## QA-106 — Shifts: cronograma como calendario por horas (2026-10-05, en `staging`, pedido de Alejandro tras revisar QA-105)
+
+### Qué cambió
+
+- **Vista Calendario (la nueva por defecto):** columnas = días, filas = horas (como Google Calendar); cada turno es un bloque del alto de su duración. Los turnos que se superponen comparten el ancho del día uno al lado del otro. Un turno nocturno se dibuja hasta medianoche y sigue en el día siguiente (también el del domingo anterior, que aparece el lunes). Abre con scroll cerca del primer turno de la semana.
+- **Locación:** lista desplegable arriba con "Todas las locaciones" (se recuerda la elección). Con "Todas", cada bloque dice su locación.
+- **Crear:** clic en un hueco vacío → formulario con ese día y esa hora (fin propuesto 4 h después) y la locación como primer campo; también botón "+ Agregar turno" en la barra.
+- La vista **Por persona** se mantiene como alternativa. Se quitaron las filas por locación y el botón "+ Agregar turno" por celda (cuyo violeta se leía mal en modo oscuro; el resaltado de hueco usa el violeta claro en oscuro).
+
+**Verificado en esta sesión** (local contra `staging`, Playwright, 10/10): calendario por defecto, desplegable en "Todas", lunes con 4 bloques (3 superpuestos lado a lado + la continuación del nocturno del domingo), nombre de locación visible con "Todas", filtrar a una locación muestra solo sus turnos, clic en jueves 15:00 abre el formulario con 22/10 15:00–19:00 y las 2 locaciones para elegir, celular sin desplazamiento lateral, sin errores de consola. Revisado en modo claro, oscuro y español.
+
+### Qué probar
+
+1. Semana con turnos superpuestos en una misma locación y entre locaciones: se ven lado a lado y se pueden abrir todos.
+2. Turno 22:00–06:00: aparece partido en dos días; el del domingo se ve el lunes de la semana siguiente.
+3. Cambiar de locación y recargar: se mantiene la elegida.
+4. Clic en un hueco: día y hora correctos; elegir otra locación en el formulario.
+5. Con una sola locación activa no aparece el desplegable.
+6. Un responsable de una sola locación: el clic en el hueco propone su locación; Member sin permisos no puede crear (el hueco no es clickeable).

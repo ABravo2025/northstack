@@ -107,7 +107,6 @@
     "nextWeek": "Next week",
     "thisWeek": "This week",
     "allLocations": "All locations",
-    "byLocation": "By location",
     "byPerson": "By person",
     "copyWeek": "Copy last week",
     "copyConfirmTitle": "Copy last week into this one?",
@@ -117,7 +116,6 @@
     "publishNone": "Everything published",
     "publishConfirmBody": "Everyone on these shifts gets a notification and an email to confirm.",
     "addShift": "Add shift",
-    "addShiftOn": "Add a shift on {{day}}",
     "noLocationsTitle": "Add a location first",
     "noLocationsBody": "Shifts happen at a location. Set up where your team works in Settings → Shifts.",
     "goToSettings": "Go to Settings",
@@ -140,7 +138,9 @@
     "publishConfirmTitle_one": "Publish {{count}} draft?",
     "publishConfirmTitle_other": "Publish {{count}} drafts?",
     "published_one": "Published {{count}} shift. Everyone on it was notified.",
-    "published_other": "Published {{count}} shifts. Everyone on them was notified."
+    "published_other": "Published {{count}} shifts. Everyone on them was notified.",
+    "calendarView": "Calendar",
+    "clickToAdd": "Click to add a shift here"
   },
   "form": {
     "newTitle": "New shift",

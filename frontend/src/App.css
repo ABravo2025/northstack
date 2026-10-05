@@ -3834,18 +3834,6 @@ textarea.overview-field-input {
 .sh-open {
   @apply mt-1 text-[11px] font-semibold text-red-600 dark:text-red-300;
 }
-.sh-add {
-  @apply w-full cursor-pointer rounded-md border border-dashed border-line bg-transparent py-1 text-[11px] text-ink-faint opacity-0 transition-opacity hover:border-accent hover:text-accent focus-visible:opacity-100 dark:border-dark-line dark:text-dark-ink-faint;
-  font-family: inherit;
-}
-.sh-cell:hover .sh-add {
-  @apply opacity-100;
-}
-@media (hover: none) {
-  .sh-add {
-    @apply opacity-100;
-  }
-}
 .sh-legend {
   @apply flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-ink-muted dark:text-dark-ink-muted;
 }
@@ -3906,4 +3894,109 @@ textarea.overview-field-input {
 .sh-template-chip {
   @apply inline-flex cursor-pointer items-center gap-1 rounded-full border border-line-strong bg-surface-1 px-2.5 py-1 text-xs text-ink hover:border-accent dark:border-dark-line dark:bg-dark-surface dark:text-dark-ink;
   font-family: inherit;
+}
+
+/* Week calendar (Alejandro, 2026-10-05): days across, hours down, Google Calendar style. */
+.sh-cal {
+  @apply overflow-x-auto rounded-xl border border-line bg-surface-1 dark:border-dark-line dark:bg-dark-surface;
+}
+.sh-cal-head,
+.sh-cal-body {
+  display: grid;
+  grid-template-columns: 3.5rem repeat(7, minmax(120px, 1fr));
+  min-width: 900px;
+}
+.sh-cal-head {
+  @apply border-b border-line bg-surface-2 dark:border-dark-line dark:bg-dark-raised;
+}
+.sh-cal-dayhead {
+  @apply min-w-0 border-l border-line-soft px-2.5 py-2 text-xs font-semibold text-ink-muted dark:border-dark-line-soft dark:text-dark-ink-muted;
+}
+.sh-cal-dayhead b {
+  @apply block text-[13px] text-ink dark:text-dark-ink;
+}
+.sh-cal-dayhead.sh-today,
+.sh-cal-dayhead.sh-today b {
+  @apply text-accent dark:text-brand-blue-light;
+}
+.sh-cal-scroll {
+  @apply overflow-y-auto;
+  max-height: min(70vh, 640px);
+  min-width: 900px;
+}
+.sh-cal-body {
+  @apply relative;
+}
+.sh-cal-gutter {
+  @apply relative;
+}
+.sh-cal-hour {
+  @apply absolute right-1.5 -translate-y-1/2 text-[11px] text-ink-faint dark:text-dark-ink-faint;
+}
+.sh-cal-day {
+  @apply relative border-l border-line-soft dark:border-dark-line-soft;
+  /* One line per hour; background-size is set inline from HOUR_PX. */
+  background-image: linear-gradient(to bottom, var(--color-line-soft) 1px, transparent 1px);
+}
+.dark .sh-cal-day {
+  background-image: linear-gradient(to bottom, var(--color-dark-line-soft) 1px, transparent 1px);
+}
+.sh-cal-day.sh-today {
+  background-color: var(--color-accent-soft);
+}
+.sh-cal-day-clickable {
+  @apply cursor-copy;
+}
+.sh-cal-day-clickable:hover {
+  box-shadow: inset 0 0 0 1px var(--color-accent-tint);
+}
+.dark .sh-cal-day-clickable:hover {
+  box-shadow: inset 0 0 0 1px rgba(169, 139, 255, 0.35);
+}
+.sh-block {
+  @apply absolute flex cursor-pointer flex-col overflow-hidden rounded-md border border-line bg-surface-1 px-1.5 py-1 text-left text-ink dark:border-dark-line dark:bg-dark-raised dark:text-dark-ink;
+  border-left-width: 3px;
+  font-family: inherit;
+  box-shadow: 0 1px 2px rgba(27, 23, 51, 0.08);
+  z-index: 1;
+}
+.sh-block:hover,
+.sh-block:focus-visible {
+  @apply border-accent dark:border-brand-blue-light;
+  z-index: 2;
+}
+.sh-block.sh-ok {
+  @apply border-l-emerald-500;
+}
+.sh-block.sh-warn {
+  @apply border-l-amber-400;
+}
+.sh-block.sh-bad {
+  @apply border-l-red-500;
+}
+.sh-block.sh-draft {
+  @apply border-dashed border-l-gray-400 bg-surface-2 dark:bg-dark-surface;
+  border-left-style: solid;
+}
+.sh-block.sh-cancelled {
+  @apply opacity-60;
+}
+.sh-block.sh-cancelled .sh-block-time {
+  @apply line-through;
+}
+.sh-block-cont-top {
+  @apply rounded-t-none border-t-0;
+}
+.sh-block-cont-bottom {
+  @apply rounded-b-none border-b-0;
+}
+.sh-block-time {
+  /* Wraps instead of truncating: three overlapping shifts in one day leave ~50px each. */
+  @apply text-[11.5px] leading-tight font-semibold break-words;
+}
+.sh-block-sub {
+  @apply truncate text-[11px] text-ink-faint dark:text-dark-ink-faint;
+}
+.sh-block-people {
+  @apply mt-0.5 flex min-w-0 flex-col gap-0.5;
 }

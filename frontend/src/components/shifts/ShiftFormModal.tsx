@@ -11,7 +11,8 @@ interface ShiftFormModalProps {
   open: boolean;
   // null = new shift, prefilled from `defaults`.
   shift: Shift | null;
-  defaults: { locationId: string; date: string };
+  // startMinute: where the person clicked on the calendar (the end is proposed 4 hours later).
+  defaults: { locationId: string; date: string; startMinute?: number };
   locations: ShiftLocation[];
   onClose: () => void;
   onSaved: (shift: Shift) => void;
@@ -28,6 +29,7 @@ interface FormState {
 }
 
 const MAX_HEADCOUNT = 100;
+const DEFAULT_LENGTH_MINUTES = 4 * 60;
 
 export default function ShiftFormModal({ token, open, shift, defaults, locations, onClose, onSaved }: ShiftFormModalProps) {
   const { t } = useTranslation('shifts');
@@ -38,7 +40,9 @@ export default function ShiftFormModal({ token, open, shift, defaults, locations
   const [templateName, setTemplateName] = useState<string | null>(null);
 
   function blankForm(): FormState {
-    return { locationId: defaults.locationId, date: defaults.date, start: '08:00', end: '16:00', position: '', headcount: '1', notes: '' };
+    const start = defaults.startMinute ?? 8 * 60;
+    const end = (start + DEFAULT_LENGTH_MINUTES) % 1440;
+    return { locationId: defaults.locationId, date: defaults.date, start: formatMinute(start), end: formatMinute(end), position: '', headcount: '1', notes: '' };
   }
 
   useEffect(() => {
@@ -59,7 +63,7 @@ export default function ShiftFormModal({ token, open, shift, defaults, locations
     );
     api.listShiftTemplates(token).then(setTemplates).catch(() => setTemplates([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, shift, defaults.locationId, defaults.date, token]);
+  }, [open, shift, defaults.locationId, defaults.date, defaults.startMinute, token]);
 
   const startMinute = parseTimeInput(form.start);
   const endMinute = parseTimeInput(form.end);

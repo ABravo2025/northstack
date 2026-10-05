@@ -8,13 +8,6 @@ import type { ReferralRules } from '../../api/referrals';
 // config, instead of a page on the landing.
 export type LegalDoc = 'terms' | 'privacy' | 'refund' | 'referral';
 
-const DOC_TITLES: Record<LegalDoc, string> = {
-  terms: 'Terms of Service',
-  privacy: 'Privacy Policy',
-  refund: 'Refund Policy',
-  referral: 'Referral Program Terms and Conditions',
-};
-
 const DOC_URLS: Record<Exclude<LegalDoc, 'referral'>, string> = {
   terms: 'https://joinnorthstack.com/terms.html',
   privacy: 'https://joinnorthstack.com/privacy.html',
@@ -117,21 +110,20 @@ export default function LegalDocumentModal({ initialDoc, onClose }: LegalDocumen
         onClick={(e) => e.stopPropagation()}
       >
         <div className="legal-modal-header">
-          <h3 id="legal-modal-title">{doc === 'referral' ? t('referrals.terms.title') : DOC_TITLES[doc]}</h3>
-          <button type="button" className="legal-modal-close" onClick={onClose} aria-label="Close">
+          <h3 id="legal-modal-title">{doc === 'referral' ? t('referrals.terms.title') : t(`common:ui.legal.${doc}`)}</h3>
+          <button type="button" className="legal-modal-close" onClick={onClose} aria-label={t('common:ui.close')}>
             &#10005;
           </button>
         </div>
         <div className="legal-modal-body">
-          {loading && <p className="legal-modal-status">Loading…</p>}
-          {error && doc === 'referral' && <p className="legal-modal-status">Couldn't load this document right now.</p>}
+          {loading && <p className="legal-modal-status">{t('common:ui.loading')}</p>}
+          {error && doc === 'referral' && <p className="legal-modal-status">{t('common:ui.legal.loadFailed')}</p>}
           {error && doc !== 'referral' && (
             <p className="legal-modal-status">
-              Couldn't load this document right now.{' '}
+              {t('common:ui.legal.loadFailed')}{' '}
               <a href={DOC_URLS[doc]} target="_blank" rel="noopener noreferrer">
-                Open it in a new tab
-              </a>{' '}
-              instead.
+                {t('common:ui.legal.openNewTab')}
+              </a>
             </p>
           )}
           {doc === 'referral' && rules && <ReferralTerms rules={rules} />}

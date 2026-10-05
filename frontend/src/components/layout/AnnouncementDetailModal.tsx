@@ -1,12 +1,13 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Modal from '../common/Modal';
 import LegalDocumentModal from '../common/LegalDocumentModal';
 import type { LegalPolicyType, PlatformAnnouncement } from '../../api';
 
-const POLICY_DOC: Record<LegalPolicyType, { doc: 'terms' | 'privacy' | 'refund'; label: string }> = {
-  terms_of_service: { doc: 'terms', label: 'Terms of Service' },
-  privacy_policy: { doc: 'privacy', label: 'Privacy Policy' },
-  refund_policy: { doc: 'refund', label: 'Refund Policy' },
+const POLICY_DOC: Record<LegalPolicyType, 'terms' | 'privacy' | 'refund'> = {
+  terms_of_service: 'terms',
+  privacy_policy: 'privacy',
+  refund_policy: 'refund',
 };
 
 interface AnnouncementDetailModalProps {
@@ -18,6 +19,7 @@ interface AnnouncementDetailModalProps {
 // which itself carries an "Effective Date" line) instead of duplicating policy text here —
 // this modal's own `body` is just a summary of what changed, not the document itself.
 export default function AnnouncementDetailModal({ announcement, onClose }: AnnouncementDetailModalProps) {
+  const { t, i18n } = useTranslation();
   const [viewingDoc, setViewingDoc] = useState(false);
   const policyDoc = announcement.policyType ? POLICY_DOC[announcement.policyType] : null;
 
@@ -25,16 +27,16 @@ export default function AnnouncementDetailModal({ announcement, onClose }: Annou
     <>
       <Modal open={!viewingDoc} title={announcement.title} onClose={onClose}>
         <p className="text-ink-muted text-xs mb-2">
-          {new Date(announcement.publishedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+          {new Date(announcement.publishedAt).toLocaleDateString(i18n.language.startsWith('es') ? 'es-AR' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
         </p>
         <p className="whitespace-pre-line">{announcement.body}</p>
         {policyDoc && (
           <button type="button" className="table-link text-sm mt-3" onClick={() => setViewingDoc(true)}>
-            View the full {policyDoc.label}
+            {t('ui.legal.viewFull', { doc: t(`ui.legal.${policyDoc}`) })}
           </button>
         )}
       </Modal>
-      {viewingDoc && policyDoc && <LegalDocumentModal initialDoc={policyDoc.doc} onClose={() => setViewingDoc(false)} />}
+      {viewingDoc && policyDoc && <LegalDocumentModal initialDoc={policyDoc} onClose={() => setViewingDoc(false)} />}
     </>
   );
 }

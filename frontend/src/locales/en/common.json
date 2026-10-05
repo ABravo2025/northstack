@@ -280,5 +280,146 @@
       "until": "ends at {{time}}",
       "exit": "Exit"
     }
+  },
+  "ui": {
+    "close": "Close",
+    "loading": "Loading…",
+    "none": "-- none --",
+    "next": "Next",
+    "back": "Back",
+    "delete": "Delete",
+    "noMatches": "No matches.",
+    "resizeColumn": "Resize column",
+    "settingsTitle": "Settings",
+    "saveFieldFailed": "Couldn't update {{field}}: {{error}}",
+    "deleted": "{{name}} deleted.",
+    "deleteFailed": "Couldn't delete: {{error}}",
+    "colorPicker": {
+      "choose": "Choose color",
+      "standard": "Standard",
+      "custom": "Custom",
+      "addCustom": "Add custom",
+      "pickCustom": "Pick a custom color",
+      "hex": "Custom color hex code",
+      "use": "Use color {{color}}"
+    },
+    "tags": {
+      "add": "+ Add tag",
+      "addFailed": "Couldn't add the tag: {{error}}",
+      "removeFailed": "Couldn't remove the tag: {{error}}",
+      "filter": "Filter by tag",
+      "none": "No tags yet."
+    },
+    "legal": {
+      "terms": "Terms of Service",
+      "privacy": "Privacy Policy",
+      "refund": "Refund Policy",
+      "viewFull": "View the full {{doc}}",
+      "loadFailed": "Couldn't load this document right now.",
+      "openNewTab": "Open it in a new tab"
+    },
+    "roles": {
+      "deleteRole": "Delete role",
+      "roleName": "Role name",
+      "deleteMessage": "Delete \"{{name}}\"? This can't be undone. Anyone still assigned to this role (or with a pending invitation to it) needs to be moved to a different role first."
+    },
+    "opportunities": {
+      "deleteTitle": "Delete opportunity",
+      "deleteMessage": "Are you sure you want to delete \"{{name}}\"? This can't be undone."
+    },
+    "contacts": {
+      "search": "Search contacts",
+      "searchPlaceholder": "Search by name, email or company…"
+    },
+    "calendar": {
+      "today": "Today",
+      "prevMonth": "Previous month",
+      "nextMonth": "Next month",
+      "loadFailed": "Couldn't load the team calendar: {{error}}"
+    },
+    "tasks": {
+      "updated": "Task updated.",
+      "deleted": "Task deleted.",
+      "saveFailed": "Couldn't save the task: {{error}}",
+      "deleteFailed": "Couldn't delete the task: {{error}}"
+    },
+    "tour": {
+      "close": "Close tour",
+      "skip": "Skip",
+      "take": "Take the tour",
+      "skipTour": "Skip tour", "finishButton": "Finish",
+      "finish": {
+        "title": "You're all set",
+        "body": "Want to start adding your real data, or explore with sample data first?"
+      },
+      "step": "Step {{n}} of {{total}}",
+      "welcomeName": "Welcome to Northstack, {{name}}",
+      "addFirstEmployee": "Add my first employee",
+      "loadSample": "Load sample data instead",
+      "sampleAdded": "Added {{employees}} sample employees and {{companies}} sample companies.",
+      "sampleFailed": "Couldn't load sample data: {{error}}",
+      "welcome": {
+        "title": "Welcome to Northstack",
+        "body": "Take a 60-second look around before you dive in — the sidebar, notifications, and where to find help."
+      },
+      "nav-overview": {
+        "title": "Your home base",
+        "body": "This is Overview — tasks, time off, and your calendar all in one place."
+      },
+      "nav-hr": {
+        "title": "Manage your team",
+        "body": "Employees and time off live here."
+      },
+      "nav-sales": {
+        "title": "Track your pipeline",
+        "body": "Companies, contacts, and deals — everything Sales needs."
+      },
+      "topbar-bell": {
+        "title": "You'll get notified here",
+        "body": "Deal updates, time off requests, and teammate approvals all land in this bell."
+      },
+      "topbar-usermenu": {
+        "title": "Guide, help, and replay",
+        "body": "Stuck later? The full guide and FAQ live here — and you can replay this tour anytime from the same menu."
+      },
+      "nav-settings": {
+        "title": "Your workspace controls",
+        "body": "Roles, billing, integrations, and company settings all live here."
+      }
+    },
+    "viewFields": {
+      "Name": "Name",
+      "Business Email": "Business Email",
+      "Personal Email": "Personal Email",
+      "Department": "Department",
+      "Job Title": "Job Title",
+      "Status": "Status",
+      "Start Date": "Start Date",
+      "End Date": "End Date",
+      "Birthdate": "Birthdate",
+      "Contract URL": "Contract URL",
+      "Contract Type": "Contract Type",
+      "Pay Frequency": "Pay Frequency",
+      "Industry": "Industry",
+      "Website": "Website",
+      "Phone": "Phone",
+      "Size": "Size",
+      "Account Owner": "Account Owner",
+      "Email": "Email",
+      "Company": "Company",
+      "Title": "Title",
+      "Lead Status": "Lead Status",
+      "Lead Source": "Lead Source"
+    },
+    "operators": {
+      "contains": "contains",
+      "eq": "=",
+      "gt": ">",
+      "lt": "<",
+      "before": "before",
+      "after": "after",
+      "is": "is",
+      "is_not": "is not"
+    }
   }
 }

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { usePermissions } from '../../contexts/PermissionsContext';
 import { useToast } from '../common/ToastProvider';
@@ -112,6 +113,7 @@ interface ProductTourProps {
 export default function ProductTour({ token, user, replaySignal }: ProductTourProps) {
   const permissions = usePermissions();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const toast = useToast();
   const [active, setActive] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
@@ -194,9 +196,9 @@ export default function ProductTour({ token, user, replaySignal }: ProductTourPr
     finishTour();
     try {
       const result = await api.seedSampleData(token);
-      toast.success(`Added ${result.employees} sample employees and ${result.companies} sample companies.`);
+      toast.success(t('ui.tour.sampleAdded', { employees: result.employees, companies: result.companies }));
     } catch (error) {
-      toast.error('Failed to load sample data: ' + (error as Error).message);
+      toast.error(t('ui.tour.sampleFailed', { error: (error as Error).message }));
     }
   };
 
@@ -207,28 +209,28 @@ export default function ProductTour({ token, user, replaySignal }: ProductTourPr
     return (
       <div className="modal-overlay tour-center-overlay">
         <div className="modal-panel tour-center-card">
-          <button type="button" className="modal-close tour-close" onClick={finishTour} aria-label="Close tour">
+          <button type="button" className="modal-close tour-close" onClick={finishTour} aria-label={t('ui.tour.close')}>
             <XIcon className="h-4 w-4" />
           </button>
           <span className="tour-emoji">{isWelcome ? '👋' : '🎉'}</span>
-          <h3 className="modal-title">{isWelcome ? `Welcome to Northstack${user?.firstName ? `, ${user.firstName}` : ''}` : step.title}</h3>
-          <p className="tour-body">{step.body}</p>
+          <h3 className="modal-title">{isWelcome ? (user?.firstName ? t('ui.tour.welcomeName', { name: user.firstName }) : t('ui.tour.welcome.title')) : t(`ui.tour.${step.id}.title`)}</h3>
+          <p className="tour-body">{t(`ui.tour.${step.id}.body`)}</p>
           {isWelcome ? (
             <div className="tour-nav tour-nav-center">
               <button type="button" className="btn-secondary" onClick={finishTour}>
-                Skip
+                {t('ui.tour.skip')}
               </button>
               <button type="button" className="btn-primary" onClick={goNext}>
-                Take the tour
+                {t('ui.tour.take')}
               </button>
             </div>
           ) : (
             <div className="tour-finish-actions">
               <button type="button" className="btn-primary" onClick={handleAddEmployee}>
-                Add my first employee
+                {t('ui.tour.addFirstEmployee')}
               </button>
               <button type="button" className="btn-secondary" onClick={handleLoadSample}>
-                Load sample data instead
+                {t('ui.tour.loadSample')}
               </button>
             </div>
           )}
@@ -250,26 +252,26 @@ export default function ProductTour({ token, user, replaySignal }: ProductTourPr
         style={{ top: rect.top - pad, left: rect.left - pad, width: rect.width + pad * 2, height: rect.height + pad * 2 }}
       />
       <div className="tour-tooltip" style={{ top: tooltipPos.top, left: tooltipPos.left, width: TOOLTIP_WIDTH }}>
-        <button type="button" className="modal-close tour-close" onClick={finishTour} aria-label="Close tour">
+        <button type="button" className="modal-close tour-close" onClick={finishTour} aria-label={t('ui.tour.close')}>
           <XIcon className="h-3.5 w-3.5" />
         </button>
         <span className="tour-step-label">
-          Step {stepIndex} of {steps.length - 1}
+          {t('ui.tour.step', { n: stepIndex, total: steps.length - 1 })}
         </span>
-        <h4 className="tour-tooltip-title">{step.title}</h4>
-        <p className="tour-body">{step.body}</p>
+        <h4 className="tour-tooltip-title">{t(`ui.tour.${step.id}.title`)}</h4>
+        <p className="tour-body">{t(`ui.tour.${step.id}.body`)}</p>
         <div className="tour-actions">
           <button type="button" className="tour-skip" onClick={finishTour}>
-            Skip tour
+            {t('ui.tour.skipTour')}
           </button>
           <div className="tour-nav">
             {stepIndex > 1 && (
               <button type="button" className="btn-secondary btn-sm" onClick={goBack}>
-                Back
+                {t('ui.back')}
               </button>
             )}
             <button type="button" className="btn-primary btn-sm" onClick={goNext}>
-              {stepIndex === steps.length - 2 ? 'Finish' : 'Next'}
+              {stepIndex === steps.length - 2 ? t('ui.tour.finishButton') : t('ui.next')}
             </button>
           </div>
         </div>

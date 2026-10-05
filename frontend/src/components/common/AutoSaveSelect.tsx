@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useToast } from './ToastProvider';
 
 interface AutoSaveSelectProps {
@@ -11,7 +12,8 @@ interface AutoSaveSelectProps {
 
 // A <select> commits immediately on change (no blur ambiguity like text
 // inputs) — reverts on failure, same contract as AutoSaveField.
-export default function AutoSaveSelect({ value, onSave, options, emptyLabel = '-- none --', label }: AutoSaveSelectProps) {
+export default function AutoSaveSelect({ value, onSave, options, emptyLabel, label }: AutoSaveSelectProps) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [current, setCurrent] = useState(value);
   const [saving, setSaving] = useState(false);
@@ -28,7 +30,7 @@ export default function AutoSaveSelect({ value, onSave, options, emptyLabel = '-
       await onSave(next);
     } catch (error) {
       setCurrent(previous);
-      toast.error(`Failed to update ${label.toLowerCase()}: ` + (error as Error).message);
+      toast.error(t('ui.saveFieldFailed', { field: label.toLowerCase(), error: (error as Error).message }));
     } finally {
       setSaving(false);
     }
@@ -42,7 +44,7 @@ export default function AutoSaveSelect({ value, onSave, options, emptyLabel = '-
       onChange={(e) => handleChange(e.target.value)}
       aria-label={label}
     >
-      <option value="">{emptyLabel}</option>
+      <option value="">{emptyLabel ?? t('ui.none')}</option>
       {options.map((opt) => (
         <option key={opt.value} value={opt.value}>
           {opt.label}

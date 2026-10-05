@@ -19,6 +19,8 @@ import shiftsEn from '../locales/en/shifts.json';
 import shiftsEs from '../locales/es/shifts.json';
 import projectsEn from '../locales/en/projects.json';
 import projectsEs from '../locales/es/projects.json';
+import authEn from '../locales/en/auth.json';
+import authEs from '../locales/es/auth.json';
 
 // docs/general/spec-i18n.md — only these two for now; the detector/fallback chain below doesn't
 // need to change to add a third later.
@@ -40,6 +42,7 @@ i18n
         notesActivity: notesActivityEn,
         shifts: shiftsEn,
         projects: projectsEn,
+        auth: authEn,
       },
       es: {
         common: commonEs,
@@ -51,9 +54,13 @@ i18n
         notesActivity: notesActivityEs,
         shifts: shiftsEs,
         projects: projectsEs,
+        auth: authEs,
       },
     },
     supportedLngs: SUPPORTED_LOCALES,
+    // es-AR, es-MX, en-GB… count as their base language (2026-10-05): without this an Argentine
+    // browser (es-AR) fell back to English on every screen before login.
+    nonExplicitSupportedLngs: true,
     fallbackLng: 'en',
     defaultNS: 'common',
     interpolation: { escapeValue: false },

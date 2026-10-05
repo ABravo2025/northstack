@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import AuthLayout from '../components/common/AuthLayout';
 import RequiredMark from '../components/common/RequiredMark';
 import { useToast } from '../components/common/ToastProvider';
@@ -17,6 +18,7 @@ interface RegisterPageProps {
 // password) now lives in CompleteSignupPage.tsx, reached only after the email link is
 // clicked — this page's only job is collecting an email and getting a verification link sent.
 export default function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
+  const { t } = useTranslation('auth');
   const toast = useToast();
   const [step, setStep] = useState<'email' | 'sent'>('email');
   const [email, setEmail] = useState('');
@@ -62,7 +64,7 @@ export default function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
     try {
       await api.resendSignup(email, referralCode);
       setCooldown(RESEND_COOLDOWN_SECONDS);
-      toast.success('Verification email sent again.');
+      toast.success(t('register.resent'));
     } catch (error) {
       toast.error((error as Error).message);
     } finally {
@@ -73,18 +75,17 @@ export default function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
   if (step === 'sent') {
     return (
       <AuthLayout>
-        <h2 className="auth-title">Check your inbox</h2>
+        <h2 className="auth-title">{t('register.sentTitle')}</h2>
         <p className="text-sm mb-3">
-          We sent a verification link to <strong>{email}</strong>. Click it to continue setting up your account. The
-          link expires in 24 hours.
+          {t('register.sentBefore')} <strong>{email}</strong>. {t('register.sentAfter')}
         </p>
         <button type="button" className="auth-submit" onClick={handleResend} disabled={loading || cooldown > 0}>
-          {cooldown > 0 ? `Resend email (${cooldown}s)` : loading ? 'Sending…' : 'Resend email'}
+          {cooldown > 0 ? t('register.resendIn', { seconds: cooldown }) : loading ? t('common.sending') : t('register.resend')}
         </button>
         <div className="auth-foot">
-          <span>Wrong email?</span>
+          <span>{t('register.wrongEmail')}</span>
           <button type="button" onClick={() => setStep('email')}>
-            Start over
+            {t('register.startOver')}
           </button>
         </div>
       </AuthLayout>
@@ -93,17 +94,17 @@ export default function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
 
   return (
     <AuthLayout>
-      <h2 className="auth-title">Register your company</h2>
-      <p className="text-sm mb-3">Enter your work email — we'll send you a link to verify it before you continue.</p>
+      <h2 className="auth-title">{t('register.title')}</h2>
+      <p className="text-sm mb-3">{t('register.intro')}</p>
       {referralCode && (
         <p className="mb-3 rounded-lg border border-brand-blue-light/25 bg-white/5 px-3 py-2 text-sm text-brand-cream">
-          You were invited with code <strong>{referralCode}</strong>: your free trial is 30 days.
+          {t('register.referralBefore')} <strong>{referralCode}</strong>{t('register.referralAfter')}
         </p>
       )}
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="register-email">
-            Work Email
+            {t('register.workEmail')}
             <RequiredMark />
           </label>
           <input
@@ -111,20 +112,20 @@ export default function RegisterPage({ onSwitchToLogin }: RegisterPageProps) {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="your@company.com"
+            placeholder={t('register.workEmailPlaceholder')}
             required
             disabled={loading}
           />
           {emailError && <div className="field-error">{emailError}</div>}
         </div>
         <button type="submit" className="auth-submit" disabled={loading}>
-          {loading ? 'Sending…' : 'Continue'}
+          {loading ? t('common.sending') : t('common.continue')}
         </button>
       </form>
       <div className="auth-foot">
-        <span>Already have an account?</span>
+        <span>{t('register.haveAccount')}</span>
         <button type="button" onClick={onSwitchToLogin}>
-          Login
+          {t('login.submit')}
         </button>
       </div>
     </AuthLayout>

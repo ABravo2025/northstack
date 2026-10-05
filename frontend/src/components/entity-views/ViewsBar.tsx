@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SavedView } from '../../api';
-import type { ViewField } from '../../lib/viewFields';
+import { viewFieldLabel, type ViewField } from '../../lib/viewFields';
 import ConfirmDialog from '../common/ConfirmDialog';
 import Popover from '../common/Popover';
 import RequiredMark from '../common/RequiredMark';
@@ -235,7 +235,7 @@ export default function ViewsBar({
             <select id="nv-groupby" value={nvGroupBy} onChange={(e) => setNvGroupBy(e.target.value)}>
               {groupableFields.map((f) => (
                 <option key={f.key} value={f.key}>
-                  {f.label}
+                  {viewFieldLabel(f, t)}
                 </option>
               ))}
             </select>

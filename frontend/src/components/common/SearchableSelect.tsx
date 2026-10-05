@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Popover from './Popover';
 
 export interface SearchableSelectOption {
@@ -19,6 +20,7 @@ interface SearchableSelectProps {
 // on the existing Popover for positioning/outside-click/Escape handling
 // rather than reimplementing that.
 export default function SearchableSelect({ id, options, value, onChange, placeholder }: SearchableSelectProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const anchorRef = useRef<HTMLDivElement>(null);
@@ -57,7 +59,7 @@ export default function SearchableSelect({ id, options, value, onChange, placeho
       />
       <Popover open={open} onClose={() => setOpen(false)} anchorRef={anchorRef} width={280}>
         <div className="status-manage-list">
-          {filtered.length === 0 && <p className="text-xs text-ink-muted dark:text-dark-ink-muted px-2 py-1">No matches.</p>}
+          {filtered.length === 0 && <p className="text-xs text-ink-muted dark:text-dark-ink-muted px-2 py-1">{t('ui.noMatches')}</p>}
           {filtered.map((opt) => (
             <button
               key={opt.value}

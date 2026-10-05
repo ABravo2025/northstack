@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../api';
 import { useToast } from '../components/common/ToastProvider';
@@ -11,6 +12,7 @@ interface ResetPasswordPageProps {
 }
 
 export default function ResetPasswordPage({ onReset }: ResetPasswordPageProps) {
+  const { t } = useTranslation('auth');
   const toast = useToast();
   const { token } = useParams<{ token: string }>();
   const [loading, setLoading] = useState(false);
@@ -22,7 +24,7 @@ export default function ResetPasswordPage({ onReset }: ResetPasswordPageProps) {
 
   useEffect(() => {
     if (!token) {
-      setTokenError('Missing reset token');
+      setTokenError(t('reset.missingToken'));
       setChecking(false);
       return;
     }
@@ -31,7 +33,7 @@ export default function ResetPasswordPage({ onReset }: ResetPasswordPageProps) {
       .validateResetToken(token)
       .catch((err) => setTokenError((err as Error).message))
       .finally(() => setChecking(false));
-  }, [token]);
+  }, [token, t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +43,7 @@ export default function ResetPasswordPage({ onReset }: ResetPasswordPageProps) {
       const response = await api.resetPassword(token, password);
       const sessionToken = response.session?.token;
       if (!sessionToken) {
-        throw new Error('Could not start a session');
+        throw new Error(t('common.sessionError'));
       }
       onReset(sessionToken, response.user);
     } catch (err) {
@@ -59,22 +61,22 @@ export default function ResetPasswordPage({ onReset }: ResetPasswordPageProps) {
       </div>
       <div className="container">
         <div className="card mx-auto mt-10 max-w-md">
-          <h2 className="text-center">Set a new password</h2>
+          <h2 className="text-center">{t('reset.title')}</h2>
 
           {checking ? (
-            <p className="text-center">Checking your link…</p>
+            <p className="text-center">{t('common.checkingLink')}</p>
           ) : tokenError ? (
             <>
               <div className="alert alert-error">{tokenError}</div>
               <p className="text-center text-sm mt-3">
-                <Link to="/forgot-password">Request a new reset link</Link>
+                <Link to="/forgot-password">{t('reset.requestNew')}</Link>
               </p>
             </>
           ) : (
             <form onSubmit={handleSubmit}>
               <div className="form-group">
                 <label htmlFor="reset-password">
-                  New Password
+                  {t('reset.newPassword')}
                   <RequiredMark />
                 </label>
                 <PasswordInput
@@ -90,7 +92,7 @@ export default function ResetPasswordPage({ onReset }: ResetPasswordPageProps) {
               </div>
               <div className="form-actions">
                 <button type="submit" className="btn btn-primary" disabled={loading}>
-                  {loading ? 'Please wait…' : 'Set new password'}
+                  {loading ? t('common.pleaseWait') : t('reset.submit')}
                 </button>
               </div>
             </form>

@@ -371,3 +371,14 @@ export function parseSort(raw: string | null): ViewSort | null {
     return null;
   }
 }
+
+// UI language for the built-in field names and filter operators (the strings above are English).
+// Custom fields (key "cf:<id>") are the customer's own data and are shown as they wrote them.
+export function viewFieldLabel(field: { key: string; label: string }, t: (key: string, opts?: Record<string, unknown>) => string): string {
+  if (field.key.startsWith('cf:')) return field.label;
+  return t(`ui.viewFields.${field.label}`, { defaultValue: field.label });
+}
+
+export function operatorLabel(op: { value: string; label: string }, t: (key: string, opts?: Record<string, unknown>) => string): string {
+  return t(`ui.operators.${op.value}`, { defaultValue: op.label });
+}

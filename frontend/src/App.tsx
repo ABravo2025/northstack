@@ -13,7 +13,6 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import CompleteSignupPage from './pages/CompleteSignupPage';
 import ReferralsPage from './pages/ReferralsPage';
-import ReferralTermsPage from './pages/ReferralTermsPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import AcceptInvitePage from './pages/AcceptInvitePage';
@@ -315,7 +314,6 @@ export default function App() {
         path="/confirm-contract/:token"
         element={<ContractConfirmationPage onConfirmed={handleContractConfirmed} />}
       />
-      <Route path="/referral-terms" element={<ReferralTermsPage />} />
       <Route
         path="/apply/:tenantSlug/:formSlug"
         element={

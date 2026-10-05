@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import StatTile from '../components/metrics/StatTile';
 import TableBody from '../components/common/TableBody';
 import { CopyIcon, DownloadIcon } from '../components/common/Icons';
 import { useToast } from '../components/common/ToastProvider';
+import LegalDocumentModal from '../components/common/LegalDocumentModal';
 import { ApiError } from '../api/http';
 import {
   referralsApi,
@@ -211,6 +211,7 @@ function JoinView({ token, rules, onJoined }: { token: string; rules: ReferralRu
   const [method, setMethod] = useState<PayoutMethod>('wise');
   const [values, setValues] = useState<Record<string, string>>({});
   const [accepted, setAccepted] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
   const [busy, setBusy] = useState(false);
   const [fieldError, setFieldError] = useState<{ field: string; message: string } | null>(null);
   const vars = ruleVars(rules, money);
@@ -257,10 +258,7 @@ function JoinView({ token, rules, onJoined }: { token: string; rules: ReferralRu
         <MethodPicker value={method} onChange={(m) => { setMethod(m); setFieldError(null); }} />
         <PayoutFields method={method} values={values} onChange={setValues} fieldError={fieldError} />
 
-        <div className="mt-5 max-h-44 overflow-auto rounded-lg border border-line bg-surface-2 px-4 py-3 text-xs text-ink-muted dark:border-dark-line dark:bg-dark-raised dark:text-dark-ink-muted" tabIndex={0}>
-          <TermsList rules={rules} />
-        </div>
-        <label className="mt-3 flex items-start gap-2 text-sm" htmlFor="referral-terms">
+        <label className="mt-5 flex items-start gap-2 text-sm" htmlFor="referral-terms">
           <input
             id="referral-terms"
             type="checkbox"
@@ -271,38 +269,25 @@ function JoinView({ token, rules, onJoined }: { token: string; rules: ReferralRu
           />
           <span>
             {t('referrals.join.accept')}{' '}
-            <Link to="/referral-terms" target="_blank" className="font-medium text-accent hover:underline dark:text-brand-blue-light">
+            {/* Same link style and modal as the Terms of Service in AcceptTermsCheckbox. */}
+            <button
+              type="button"
+              className="text-brand-blue underline underline-offset-2 hover:text-brand-navy dark:hover:text-brand-blue-light"
+              onClick={() => setShowTerms(true)}
+            >
               {t('referrals.join.termsLink')}
-            </Link>
+            </button>
           </span>
         </label>
         {!filled && <p className="mt-1 text-xs text-ink-faint dark:text-dark-ink-faint">{t('referrals.join.lockedHint')}</p>}
         {fieldError?.field === 'acceptTerms' && <div className="field-error">{fieldError.message}</div>}
+        {showTerms && <LegalDocumentModal initialDoc="referral" onClose={() => setShowTerms(false)} />}
         <div className="mt-4 flex justify-end">
           <button type="submit" className="btn-primary btn-md" disabled={!filled || !accepted || busy}>
             {t('referrals.join.submit')}
           </button>
         </div>
       </form>
-    </>
-  );
-}
-
-// onDark: on the always-navy auth panel (the public terms page).
-export function TermsList({ rules, onDark = false }: { rules: ReferralRules; onDark?: boolean }) {
-  const { t } = useTranslation('settingsPages');
-  const { money } = useFormatters();
-  const items = t('referrals.terms.items', { ...ruleVars(rules, money), returnObjects: true }) as string[];
-  return (
-    <>
-      <p className={`font-semibold ${onDark ? 'text-brand-cream' : 'text-ink dark:text-dark-ink'}`}>
-        {t('referrals.terms.title')} ({t('referrals.terms.version', { version: rules.termsVersion })})
-      </p>
-      <ol className={`mt-2 flex list-decimal flex-col gap-1 pl-5 ${onDark ? 'text-brand-blue-light/90' : ''}`}>
-        {items.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ol>
     </>
   );
 }

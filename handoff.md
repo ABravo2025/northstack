@@ -4,7 +4,7 @@ Running context of the whole project, kept current so any session (or person) ca
 last one left off. **Update this file whenever a feature ships or something important changes**
 (newest entries on top in "Changelog"). Rule set in `README.md`.
 
-_Last updated: 2026-10-03_
+_Last updated: 2026-10-05_
 
 ---
 
@@ -47,6 +47,7 @@ Release flow: code → `staging` → user reviews → `main`. Additive DB change
 - **Sales**: pipelines with own stages (required names, inline "+ Add stage" row), Kanban, opportunities.
 - **Payroll tracking**: pay runs, compensation, pay stubs, contract confirmation by the employee.
 - Plan limits enforced (Starter vs Growth); MCP / AI-assistant integration in progress (not announced).
+- **Projects** (in **staging** only, awaiting Alejandro's review — not in production, don't market yet): phases, tasks, team with roles and progress, per client or internal; 9 niche templates EN/ES (agencies, accounting firms, consulting, internal) with tasks assigned by role; "Save as template" on Growth; Starter max 5 open projects. Spec: `docs/general/spec-projects.md` on staging.
 
 ## Website (joinnorthstack.com)
 Landing v2 live 2026-10-02: animated product preview, "what it replaces", Time Off spotlight,
@@ -81,6 +82,7 @@ SEO is part of marketing: every SEO change is logged in `seo/README.md` + a chan
 ---
 
 ## Changelog (newest first)
+- **2026-10-05** — **Projects module** built (units 1–7) and on **staging** (`eb7ec02`), not in production yet: projects with phases, tasks, team and progress, linked to a Company or internal; start blank or from 9 system templates by niche with a role-based task preview; "Save as template" (Growth); Projects section inside each Company and person; Help Center (Guide + FAQ) updated. Prod checklist in `spec-projects.md` (schema via migrate diff, permissions backfill, template seed). Marketing angle for later: "from a blank board or your niche's template in one click" — accounting firms' monthly close is the strongest example.
 - **2026-10-04** — Admin Center v2 stages 3–5 LIVE: Billing page, announcements from the Admin (bilingual, targeted, scheduled), support access only with the customer's consent, and **account deletion in 10 days** — customers can now delete their company account themselves (Settings → Company, owner only); data is erased automatically after 10 days. Privacy policy update pending (legal agent). Nothing to market yet.
 - **2026-10-04** — Admin Center v2 stages 2a–2c LIVE on **admin.joinnorthstack.com** (old Admin retired): client actions with a mandatory-reason audit log (extend trial, change plan, suspend/reactivate, password-reset link, free months on Dodo, card-update reminder, ZIP data export), Tickets/Ideas screens, and per-client special agreements (Payroll/Payments/API on or off + limits, optional expiry). Internal only — nothing to market.
 - **2026-10-03** — **Admin Center v2, stage 1 LIVE** (internal staff tool, `app.joinnorthstack.com/admin`; moves to admin.joinnorthstack.com at stage 4): Home with MRR/conversion/needs-attention, Clients list with health score, per-client page (users, module usage, billing, tickets, notes, timeline). Internal only — nothing to market. Spec: `docs/Admin-platform/spec-admin-center-v2.md` on main (d8832f1).

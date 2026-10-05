@@ -5,6 +5,7 @@ import TableBody from '../components/common/TableBody';
 import { CopyIcon, DownloadIcon } from '../components/common/Icons';
 import { useToast } from '../components/common/ToastProvider';
 import LegalDocumentModal from '../components/common/LegalDocumentModal';
+import { LEGAL_LINK_CLASS } from '../components/common/AcceptTermsCheckbox';
 import { ApiError } from '../api/http';
 import {
   referralsApi,
@@ -272,7 +273,7 @@ function JoinView({ token, rules, onJoined }: { token: string; rules: ReferralRu
             {/* Same link style and modal as the Terms of Service in AcceptTermsCheckbox. */}
             <button
               type="button"
-              className="text-brand-blue underline underline-offset-2 hover:text-brand-navy dark:hover:text-brand-blue-light"
+              className={LEGAL_LINK_CLASS}
               onClick={() => setShowTerms(true)}
             >
               {t('referrals.join.termsLink')}

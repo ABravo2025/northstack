@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { api, type ShiftLocation, type ShiftsSettings } from '../api';
+import { api, type ShiftLocation, type ShiftsSettings, type ShiftTemplate } from '../api';
 import type { ShiftLocationInput } from '../api/shifts';
 import { useToast } from '../components/common/ToastProvider';
 import Modal from '../components/common/Modal';
@@ -8,7 +8,8 @@ import ConfirmDialog from '../components/common/ConfirmDialog';
 import TableBody from '../components/common/TableBody';
 import TableSkeleton from '../components/common/TableSkeleton';
 import RequiredMark from '../components/common/RequiredMark';
-import { BuildingIcon, PencilIcon, TrashIcon } from '../components/common/Icons';
+import { BuildingIcon, ClockIcon, PencilIcon, TrashIcon } from '../components/common/Icons';
+import { formatMinute } from '../lib/shiftDates';
 
 interface ShiftsSettingsPageProps {
   token: string;
@@ -45,6 +46,7 @@ export default function ShiftsSettingsPage({ token }: ShiftsSettingsPageProps) {
   const [form, setForm] = useState<LocationForm>({ name: '', address: '', timezone: BROWSER_TIME_ZONE, managerEmployeeId: '' });
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<ShiftLocation | null>(null);
+  const [templates, setTemplates] = useState<ShiftTemplate[] | null>(null);
   const zones = useMemo(timeZoneOptions, []);
   const weekdays = t('settings.weekdays', { returnObjects: true }) as string[];
 
@@ -61,9 +63,12 @@ export default function ShiftsSettingsPage({ token }: ShiftsSettingsPageProps) {
 
   useEffect(() => {
     api.getShiftsSettings(token).then(setSettings).catch(fail);
+    api.listShiftTemplates(token).then(setTemplates).catch(() => setTemplates([]));
     loadLocations();
+    // The unscoped directory: whoever sets up locations must be able to pick any manager, not only
+    // the people their own employee-view scope shows.
     api
-      .listEmployees(token)
+      .listEmployeeDirectory(token)
       .then((emps) => setEmployees(emps.map((e) => ({ id: e.id, firstName: e.firstName, lastName: e.lastName }))))
       .catch(() => setEmployees([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -140,6 +145,17 @@ export default function ShiftsSettingsPage({ token }: ShiftsSettingsPageProps) {
       loadLocations();
     } catch (error) {
       fail(error);
+    }
+  };
+
+  const removeTemplate = async (template: ShiftTemplate) => {
+    setTemplates((prev) => prev?.filter((x) => x.id !== template.id) ?? prev);
+    try {
+      await api.deleteShiftTemplate(token, template.id);
+      toast.success(t('settings.templates.deleted'));
+    } catch (error) {
+      fail(error);
+      api.listShiftTemplates(token).then(setTemplates).catch(() => {});
     }
   };
 
@@ -267,6 +283,48 @@ export default function ShiftsSettingsPage({ token }: ShiftsSettingsPageProps) {
           </div>
         </section>
       </div>
+
+      <section className="card rules-card">
+        <h3 className="card-title">{t('settings.templates.title')}</h3>
+        <p className="rules-lead">{t('settings.templates.lead')}</p>
+        <div className="full-table-wrap">
+          <table className="table full-table !mt-0 to-table">
+            <thead>
+              <tr>
+                <th>{t('settings.templates.name')}</th>
+                <th>{t('settings.templates.time')}</th>
+                <th>{t('settings.locations.title')}</th>
+                <th aria-label={t('settings.templates.removeAria', { name: '' })} />
+              </tr>
+            </thead>
+            <TableBody
+              colSpan={4}
+              isEmpty={templates !== null && templates.length === 0}
+              empty={{ icon: <ClockIcon />, title: t('settings.templates.empty') }}
+            >
+              {(templates ?? []).map((tpl) => (
+                <tr key={tpl.id}>
+                  <td>
+                    <div className="font-medium">{tpl.name}</div>
+                    {tpl.position && <div className="text-xs text-ink-faint dark:text-dark-ink-faint">{tpl.position}</div>}
+                  </td>
+                  <td className="num">
+                    {formatMinute(tpl.startMinute)}–{formatMinute(tpl.endMinute)}
+                  </td>
+                  <td>{tpl.locationId ? (locations.find((l) => l.id === tpl.locationId)?.name ?? '—') : t('schedule.allLocations')}</td>
+                  <td>
+                    <div className="flex justify-end">
+                      <button type="button" className="icon-btn" onClick={() => removeTemplate(tpl)} aria-label={t('settings.templates.removeAria', { name: tpl.name })}>
+                        <TrashIcon />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </TableBody>
+          </table>
+        </div>
+      </section>
 
       <Modal
         open={editing !== null}

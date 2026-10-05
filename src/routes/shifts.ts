@@ -39,6 +39,7 @@ import {
   updateShift,
 } from '../modules/shifts/shiftService.js';
 import { getShiftsSettings, updateShiftsSettings } from '../modules/shifts/shiftsSettingsService.js';
+import { createAvailability, deleteAvailability, listAvailability } from '../modules/shifts/availabilityService.js';
 import {
   createLocation,
   deleteLocation,
@@ -89,7 +90,10 @@ shiftsRouter.get('/api/shifts/locations', async (req, res) => {
   const ids = await viewableLocationIds(user);
   const includeInactive = req.query.includeInactive === 'true' && canManageShifts(user.roleContext);
   const locations = await listLocations(user.tenantId!, { includeInactive, ids });
-  return res.json({ locations, maxActiveLocations: getPlanLimits(user.tenant).maxActiveLocations });
+  // Which of these the caller can schedule — every one with manage_shifts, otherwise the ones they
+  // manage — so the schedule screen shows edit controls only where they'd work.
+  const managed = canManageShifts(user.roleContext) ? locations.map((l) => l.id) : await managedLocationIds(user);
+  return res.json({ locations, maxActiveLocations: getPlanLimits(user.tenant).maxActiveLocations, managedLocationIds: managed });
 });
 
 shiftsRouter.post('/api/shifts/locations', async (req, res) => {
@@ -321,6 +325,35 @@ shiftsRouter.post('/api/shifts/assignments/:assignmentId/respond', async (req, r
   if (!result.success) return res.status(result.code === 'not_found' ? 404 : 409).json({ error: result.error, code: result.code });
   await dispatchShiftEvents(result.value.events);
   return res.json(ownView(serializeShift(result.value.shift), employeeId));
+});
+
+// ---- My availability (Unidad 6) — each person reads and edits only their own rows ----
+shiftsRouter.get('/api/shifts/availability', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) return;
+  const employeeId = await findOwnEmployeeIdForShifts(user);
+  if (!employeeId) return res.json([]);
+  return res.json(await listAvailability(user.tenantId!, employeeId));
+});
+
+shiftsRouter.post('/api/shifts/availability', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) return;
+  const employeeId = await findOwnEmployeeIdForShifts(user);
+  if (!employeeId) return res.status(409).json({ error: 'Your login isn\'t linked to an employee record' });
+  const result = await createAvailability(user.tenantId!, employeeId, req.body ?? {});
+  if (!result.success) return res.status(400).json({ error: result.error, field: result.field });
+  return res.status(201).json(result.value);
+});
+
+shiftsRouter.delete('/api/shifts/availability/:availabilityId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) return;
+  const employeeId = await findOwnEmployeeIdForShifts(user);
+  if (!employeeId || !(await deleteAvailability(employeeId, String(req.params.availabilityId)))) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  return res.status(204).end();
 });
 
 // ---- Templates ----

@@ -9,6 +9,7 @@ import {
   BuildingIcon,
   CalendarIcon,
   ChevronLeftIcon,
+  ClockIcon,
   CreditCardIcon,
   DashboardIcon,
   FolderIcon,
@@ -106,6 +107,11 @@ export default function Sidebar({ mobileOpen, onMobileClose, tenant }: SidebarPr
           <NavLink to="/hr/time-off" className={linkClass} title={`${t('sidebar.humanResources')} – ${t('sidebar.timeOff')}`} onClick={onMobileClose}>
             <CalendarIcon className="h-4 w-4 shrink-0" />
             {label(t('sidebar.timeOff'))}
+          </NavLink>
+          {/* Shifts module (2026-10-04) — everyone has "My shifts"; schedulers also get the schedule. */}
+          <NavLink to="/shifts" className={linkClass} title={`${t('sidebar.humanResources')} – ${t('sidebar.shifts')}`} onClick={onMobileClose}>
+            <ClockIcon className="h-4 w-4 shrink-0" />
+            {label(t('sidebar.shifts'))}
           </NavLink>
           {permissions.has('manage_payroll') && (
             <NavLink to="/hr/payroll" className={linkClass} title={`${t('sidebar.humanResources')} – ${t('sidebar.payroll')}`} onClick={onMobileClose}>

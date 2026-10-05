@@ -12,11 +12,15 @@ export class ApiError extends Error {
   // "already linked to a different customer, retry with confirmOverwrite"), but generically
   // useful for any caller that needs to branch on more than just the error message string.
   status?: number;
+  // The parsed JSON error body, for callers that need more than `error`/`field` — e.g. Shifts'
+  // assignment refusal ({ code: 'warnings' | 'blocked', details }) to show each person's issues.
+  body?: unknown;
 
-  constructor(message: string, field?: string, status?: number) {
+  constructor(message: string, field?: string, status?: number, body?: unknown) {
     super(message);
     this.field = field;
     this.status = status;
+    this.body = body;
   }
 }
 
@@ -90,12 +94,14 @@ export async function apiFetch(url: string, init?: RequestInit): Promise<Respons
 export async function throwApiError(res: Response): Promise<never> {
   let message = res.statusText || 'Request failed';
   let field: string | undefined;
+  let body: unknown;
   try {
-    const body = await res.json();
-    if (body?.error) message = body.error;
-    if (body?.field) field = body.field;
+    body = await res.json();
+    const parsed = body as { error?: string; field?: string } | null;
+    if (parsed?.error) message = parsed.error;
+    if (parsed?.field) field = parsed.field;
   } catch {
     // response body wasn't JSON, fall back to statusText
   }
-  throw new ApiError(message, field, res.status);
+  throw new ApiError(message, field, res.status, body);
 }

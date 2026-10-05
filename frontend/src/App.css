@@ -3687,3 +3687,223 @@ textarea.overview-field-input {
 .to-minus {
   @apply font-semibold text-red-700 dark:text-red-300;
 }
+
+/* ---------- Shifts (spec-shifts.md, Unidad 5): weekly schedule ---------- */
+.sh-page {
+  @apply flex flex-col gap-4;
+}
+.sh-toolbar {
+  @apply flex flex-wrap items-center gap-2;
+}
+.sh-toolbar .sh-grow {
+  @apply flex-1;
+}
+.sh-weeknav {
+  @apply flex items-center gap-1 text-sm font-semibold text-ink dark:text-dark-ink;
+}
+.sh-weeknav-label {
+  @apply min-w-[11rem] px-1.5 text-center;
+}
+.sh-kpis {
+  @apply grid gap-3;
+  /* Two per row on a phone (~390px) instead of four tall stacked boxes pushing the grid down. */
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+}
+.sh-kpi {
+  @apply flex flex-col gap-1 rounded-xl border border-line bg-surface-1 px-4 py-3 dark:border-dark-line dark:bg-dark-surface;
+}
+.sh-kpi-label {
+  @apply text-[11px] font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint;
+}
+.sh-kpi-value {
+  @apply text-[22px] leading-tight font-semibold text-ink dark:text-dark-ink;
+}
+.sh-kpi-value small {
+  @apply ml-1 text-xs font-medium text-ink-faint dark:text-dark-ink-faint;
+}
+.sh-kpi-hint {
+  @apply text-xs text-ink-faint dark:text-dark-ink-faint;
+}
+.sh-meter {
+  @apply mt-1 flex h-1.5 overflow-hidden rounded-full bg-line-soft dark:bg-dark-line;
+}
+.sh-meter span {
+  @apply block h-full;
+}
+.sh-grid-wrap {
+  @apply overflow-x-auto rounded-xl border border-line bg-surface-1 dark:border-dark-line dark:bg-dark-surface;
+}
+.sh-grid {
+  @apply w-full border-collapse;
+  min-width: 960px;
+  table-layout: fixed;
+}
+.sh-grid th,
+.sh-grid td {
+  @apply border-r border-b border-line-soft align-top dark:border-dark-line-soft;
+}
+.sh-grid thead th {
+  @apply bg-surface-2 px-2.5 py-2 text-left text-xs font-semibold text-ink-muted dark:bg-dark-raised dark:text-dark-ink-muted;
+}
+.sh-grid thead th b {
+  @apply block text-[13px] text-ink dark:text-dark-ink;
+}
+.sh-grid thead th.sh-today,
+.sh-grid thead th.sh-today b {
+  @apply text-accent dark:text-brand-blue-light;
+}
+.sh-grid thead th.sh-today {
+  background: var(--color-accent-soft);
+}
+.sh-holiday {
+  @apply mt-0.5 block truncate text-[11px] font-medium text-amber-700 dark:text-amber-300;
+}
+.sh-grid .sh-rowhead {
+  @apply w-40 bg-surface-2 px-2.5 py-2.5 text-left text-xs font-normal text-ink-faint dark:bg-dark-raised dark:text-dark-ink-faint;
+}
+.sh-grid .sh-rowhead b {
+  @apply block truncate text-[13px] font-semibold text-ink dark:text-dark-ink;
+}
+.sh-cell {
+  @apply p-1.5;
+}
+.sh-cell-inner {
+  @apply flex min-h-[3.25rem] flex-col gap-1.5;
+}
+.sh-card {
+  @apply block w-full cursor-pointer rounded-lg border border-line bg-surface-1 px-2 py-1.5 text-left text-ink transition-colors hover:border-accent dark:border-dark-line dark:bg-dark-surface dark:text-dark-ink;
+  border-left-width: 3px;
+  font-family: inherit;
+}
+.sh-card:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 1px;
+}
+.sh-card.sh-ok {
+  @apply border-l-emerald-500;
+}
+.sh-card.sh-warn {
+  @apply border-l-amber-400;
+}
+.sh-card.sh-bad {
+  @apply border-l-red-500;
+}
+.sh-card.sh-draft {
+  @apply border-dashed border-l-gray-400 bg-surface-2 dark:bg-dark-raised;
+  border-left-style: solid;
+}
+.sh-card.sh-cancelled {
+  @apply border-l-gray-300 opacity-60 dark:border-l-gray-600;
+}
+.sh-card.sh-cancelled .sh-card-time {
+  @apply line-through;
+}
+.sh-card-time {
+  @apply flex items-baseline justify-between gap-1 text-xs font-semibold;
+}
+.sh-card-time em {
+  @apply text-[11px] font-medium text-ink-faint not-italic dark:text-dark-ink-faint;
+}
+.sh-card-sub {
+  @apply mt-0.5 truncate text-[11px] text-ink-faint dark:text-dark-ink-faint;
+}
+.sh-card-people {
+  @apply mt-1 flex flex-col gap-0.5;
+}
+.sh-person {
+  @apply flex min-w-0 items-center gap-1.5 text-[11.5px];
+}
+.sh-person span {
+  @apply min-w-0 truncate;
+}
+.sh-dot {
+  @apply h-1.5 w-1.5 shrink-0 rounded-full;
+}
+.sh-dot-accepted {
+  @apply bg-emerald-500;
+}
+.sh-dot-pending {
+  @apply bg-amber-400;
+}
+.sh-dot-declined {
+  @apply bg-red-500;
+}
+.sh-dot-draft {
+  @apply bg-gray-400;
+}
+.sh-open {
+  @apply mt-1 text-[11px] font-semibold text-red-600 dark:text-red-300;
+}
+.sh-add {
+  @apply w-full cursor-pointer rounded-md border border-dashed border-line bg-transparent py-1 text-[11px] text-ink-faint opacity-0 transition-opacity hover:border-accent hover:text-accent focus-visible:opacity-100 dark:border-dark-line dark:text-dark-ink-faint;
+  font-family: inherit;
+}
+.sh-cell:hover .sh-add {
+  @apply opacity-100;
+}
+@media (hover: none) {
+  .sh-add {
+    @apply opacity-100;
+  }
+}
+.sh-legend {
+  @apply flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-ink-muted dark:text-dark-ink-muted;
+}
+.sh-legend span {
+  @apply inline-flex items-center gap-1.5;
+}
+
+/* Shift detail */
+.sh-detail {
+  @apply flex flex-col gap-4;
+}
+.sh-detail-meta {
+  @apply grid gap-x-4 gap-y-1.5 text-[13px];
+  grid-template-columns: 7.5rem 1fr;
+}
+.sh-detail-meta dt {
+  @apply text-ink-faint dark:text-dark-ink-faint;
+}
+.sh-detail-meta dd {
+  @apply m-0 text-ink dark:text-dark-ink;
+}
+.sh-assignee {
+  @apply flex items-center gap-2.5 border-b border-line-soft py-2 last:border-0 dark:border-dark-line-soft;
+}
+.sh-assignee-name {
+  @apply min-w-0 flex-1;
+}
+.sh-assignee-name small {
+  @apply block text-xs text-ink-faint dark:text-dark-ink-faint;
+}
+.sh-candidates {
+  @apply flex max-h-72 flex-col overflow-y-auto rounded-lg border border-line dark:border-dark-line;
+}
+.sh-candidate {
+  @apply flex cursor-pointer items-start gap-2.5 border-b border-line-soft px-3 py-2 last:border-0 hover:bg-surface-2 dark:border-dark-line-soft dark:hover:bg-dark-raised;
+}
+.sh-candidate.sh-blocked {
+  @apply cursor-not-allowed opacity-60 hover:bg-transparent;
+}
+.sh-candidate input {
+  @apply mt-0.5;
+}
+.sh-issue {
+  @apply mt-0.5 flex items-center gap-1 text-xs;
+}
+.sh-issue-warn {
+  @apply text-amber-700 dark:text-amber-300;
+}
+.sh-issue-block {
+  @apply text-red-700 dark:text-red-300;
+}
+.sh-note-box {
+  @apply rounded-lg border border-dashed border-line-strong bg-surface-2 px-3 py-2 text-[13px] text-ink-muted dark:border-dark-line dark:bg-dark-raised dark:text-dark-ink-muted;
+}
+.sh-templates {
+  @apply flex flex-wrap gap-1.5;
+}
+.sh-template-chip {
+  @apply inline-flex cursor-pointer items-center gap-1 rounded-full border border-line-strong bg-surface-1 px-2.5 py-1 text-xs text-ink hover:border-accent dark:border-dark-line dark:bg-dark-surface dark:text-dark-ink;
+  font-family: inherit;
+}

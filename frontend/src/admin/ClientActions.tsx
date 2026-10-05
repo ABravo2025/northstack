@@ -38,7 +38,7 @@ export default function ClientActions({ client, session, onDone }: Props) {
     { key: 'support', label: 'Pedir acceso de soporte', hint: 'La persona tiene que aceptarlo', show: !deleting && activeUsers.length > 0 },
     { key: 'extend', label: 'Extender prueba', hint: hasProvider ? 'No disponible: ya cargó medio de pago' : 'Suma días a la prueba gratis', show: client.status !== 'cancelled' },
     { key: 'plan', label: 'Cambiar plan', hint: 'Starter ↔ Growth', show: isAdmin && client.status !== 'cancelled' },
-    { key: 'freeMonths', label: 'Dar meses gratis', hint: isDodo ? 'Corre la fecha del próximo cobro' : 'Solo para clientes que pagan con Dodo', show: isAdmin && hasProvider },
+    { key: 'freeMonths', label: 'Cambiar fecha del próximo cobro', hint: isDodo ? 'Para dar meses gratis o acomodar el cobro' : 'Solo para clientes que pagan con Dodo', show: isAdmin && hasProvider },
     { key: 'reminder', label: 'Pedir que actualice la tarjeta', hint: 'Le manda un mail con el link a Facturación', show: hasProvider },
     { key: 'export', label: 'Exportar datos del cliente', hint: 'ZIP con un CSV por módulo', show: isAdmin },
     { key: 'suspend', label: 'Suspender cuenta', hint: 'Queda en solo lectura', show: isAdmin && client.status !== 'suspended' && client.status !== 'cancelled', tone: 'text-amber-700 dark:text-amber-300' },
@@ -78,7 +78,18 @@ function ActionDialog({ action, client, session, onClose, onDone }: { action: Ac
   const [reason, setReason] = useState('');
   const [days, setDays] = useState(7);
   const [plan, setPlan] = useState<'starter' | 'growth'>(client.plan === 'growth' ? 'starter' : 'growth');
-  const [months, setMonths] = useState(1);
+  const nextBase = client.nextChargeAt ? new Date(client.nextChargeAt) : new Date();
+  const plusMonths = (n: number) => {
+    const d = new Date(nextBase.getTime());
+    const day = d.getUTCDate();
+    d.setUTCDate(1);
+    d.setUTCMonth(d.getUTCMonth() + n);
+    d.setUTCDate(Math.min(day, new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate()));
+    return d.toISOString().slice(0, 10);
+  };
+  const [chargeDate, setChargeDate] = useState(plusMonths(1));
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  const inAYear = new Date(Date.now() + 365 * 86400000).toISOString().slice(0, 10);
   const activeUsers = client.users.filter((u) => u.status === 'active');
   const [targetUserId, setTargetUserId] = useState(activeUsers.find((u) => u.role === 'owner')?.id ?? activeUsers[0]?.id ?? '');
   const [supportMode, setSupportMode] = useState<'read_only' | 'edit'>('read_only');
@@ -92,7 +103,7 @@ function ActionDialog({ action, client, session, onClose, onDone }: { action: Ac
     plan: 'Cambiar plan',
     suspend: 'Suspender cuenta',
     reactivate: 'Reactivar cuenta',
-    freeMonths: 'Dar meses gratis',
+    freeMonths: 'Cambiar fecha del próximo cobro',
     reminder: 'Pedir que actualice la tarjeta',
     export: 'Exportar datos',
     support: 'Pedir acceso de soporte',
@@ -139,17 +150,22 @@ function ActionDialog({ action, client, session, onClose, onDone }: { action: Ac
       </p>
     );
   } else if (action === 'freeMonths') {
+    const later = !client.nextChargeAt || chargeDate > client.nextChargeAt.slice(0, 10);
     body = (
       <>
         <p className="text-sm text-ink-muted dark:text-dark-ink-muted">
-          El próximo cobro {client.nextChargeAt ? `(hoy: ${date(client.nextChargeAt)}) ` : ''}se corre los meses que elijas: no se le cobra nada hasta esa fecha y después sigue normal. Se hace en Dodo al instante.
+          Hoy el próximo cobro es el <b>{date(client.nextChargeAt)}</b>. Elegí la fecha nueva: no se cobra nada hasta ese día y después sigue normal, con el mismo precio y la misma tarjeta. Se cambia en Dodo al instante.
         </p>
-        <label className="grid gap-1 text-sm font-medium" htmlFor="act-months">
-          Meses gratis
-          <select id="act-months" value={months} onChange={(e) => setMonths(Number(e.target.value))}>
-            {[1, 2, 3, 6, 12].map((m) => <option key={m} value={m}>{m} {m === 1 ? 'mes' : 'meses'}</option>)}
-          </select>
+        <div className="flex flex-wrap gap-2">
+          {[1, 2, 3].map((n) => (
+            <button key={n} type="button" className="btn-secondary" onClick={() => setChargeDate(plusMonths(n))}>+{n} {n === 1 ? 'mes' : 'meses'}</button>
+          ))}
+        </div>
+        <label className="grid gap-1 text-sm font-medium" htmlFor="act-charge-date">
+          Fecha del próximo cobro
+          <input id="act-charge-date" type="date" min={tomorrow} max={inAYear} value={chargeDate} onChange={(e) => setChargeDate(e.target.value)} />
         </label>
+        {!later && <p className="m-0 text-sm text-amber-700 dark:text-amber-300">Es antes que la fecha actual: el cobro se adelanta.</p>}
       </>
     );
   } else if (action === 'reminder') {
@@ -245,7 +261,7 @@ function ActionDialog({ action, client, session, onClose, onDone }: { action: Ac
         action === 'support' ? await supportApi.request(session.token, client.id, { targetUserId, mode: supportMode, durationMinutes: duration, reason: r })
         : action === 'delete' ? await supportApi.scheduleDelete(session.token, client.id, confirmName, r)
         : action === 'cancelDelete' ? await supportApi.cancelDelete(session.token, client.id, r)
-        : action === 'freeMonths' ? await adminActions.freeMonths(session.token, client.id, months, r)
+        : action === 'freeMonths' ? await adminActions.nextChargeDate(session.token, client.id, chargeDate, r)
         : action === 'reminder' ? await adminActions.paymentReminder(session.token, client.id, r)
         : action === 'extend' ? await adminActions.extendTrial(session.token, client.id, days, r)
         : action === 'plan' ? await adminActions.changePlan(session.token, client.id, plan, r)

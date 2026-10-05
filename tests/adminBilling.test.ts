@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addMonths } from '../src/modules/platform/adminActionService.js';
+import { addMonths, targetChargeDate } from '../src/modules/platform/adminActionService.js';
 import { buildZip, crc32 } from '../src/lib/zip.js';
 
 describe('addMonths (free months credit)', () => {
@@ -11,6 +11,25 @@ describe('addMonths (free months credit)', () => {
     expect(addMonths(new Date('2027-01-31T00:00:00Z'), 1).toISOString()).toBe('2027-02-28T00:00:00.000Z');
     expect(addMonths(new Date('2028-01-31T00:00:00Z'), 1).toISOString()).toBe('2028-02-29T00:00:00.000Z');
     expect(addMonths(new Date('2026-08-31T00:00:00Z'), 1).toISOString()).toBe('2026-09-30T00:00:00.000Z');
+  });
+});
+
+describe('targetChargeDate (next charge on a specific date)', () => {
+  const now = new Date('2026-10-05T12:00:00Z');
+  const current = new Date('2026-10-12T09:30:00Z');
+  it('takes an exact date, keeping the charge time of day', () => {
+    const r = targetChargeDate(current, { date: '2026-12-01' }, now);
+    expect(r.ok && r.date.toISOString()).toBe('2026-12-01T09:30:00.000Z');
+  });
+  it('or N months after the current next charge', () => {
+    const r = targetChargeDate(current, { months: 2 }, now);
+    expect(r.ok && r.date.toISOString()).toBe('2026-12-12T09:30:00.000Z');
+  });
+  it('only from tomorrow and up to a year ahead', () => {
+    expect(targetChargeDate(current, { date: '2026-10-05' }, now).ok).toBe(false);
+    expect(targetChargeDate(current, { date: '2027-11-01' }, now).ok).toBe(false);
+    expect(targetChargeDate(current, { date: 'hola' }, now).ok).toBe(false);
+    expect(targetChargeDate(current, { date: '2026-10-08' }, now).ok).toBe(true); // earlier than the current charge = charge sooner
   });
 });
 

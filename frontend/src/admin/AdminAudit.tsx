@@ -15,6 +15,7 @@ const ACTION_LABEL: Record<string, string> = {
   reset_password: 'Mandó link de contraseña nueva',
   set_agreement: 'Guardó un acuerdo especial',
   free_months: 'Dio meses gratis',
+  next_charge_date: 'Cambió la fecha del próximo cobro',
   announcement_create: 'Publicó un anuncio',
   support_request: 'Pidió acceso de soporte',
   support_enter: 'Entró como soporte',
@@ -34,6 +35,7 @@ function detailText(e: AuditEntry): string {
   if (e.action === 'extend_trial' && typeof d.days === 'number') return `+${d.days} días, hasta ${String(d.to).slice(0, 10)}`;
   if (e.action === 'change_plan') return `${d.from ?? 'sin plan'} → ${d.to}`;
   if (e.action === 'reset_password' && d.email) return String(d.email);
+  if (e.action === 'next_charge_date') return `del ${String(d.from).slice(0, 10)} al ${String(d.to).slice(0, 10)}`;
   if (e.action === 'free_months') return `${d.months} ${d.months === 1 ? 'mes' : 'meses'}: próximo cobro ${String(d.to).slice(0, 10)}`;
   if (e.action === 'payment_reminder' && Array.isArray(d.to)) return d.to.join(', ');
   return '';

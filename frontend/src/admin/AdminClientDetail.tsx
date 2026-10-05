@@ -485,6 +485,7 @@ const KIND_TITLE: Record<string, string> = {
   staff_set_agreement: 'Acuerdo especial guardado',
   staff_clear_agreement: 'Acuerdo especial quitado',
   staff_free_months: 'Meses gratis',
+  staff_next_charge_date: 'Cambió la fecha del próximo cobro',
   staff_payment_reminder: 'Se le pidió actualizar la tarjeta',
   staff_export_data: 'Datos exportados',
   staff_support_request: 'Se pidió acceso de soporte',

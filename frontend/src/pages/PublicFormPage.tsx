@@ -124,7 +124,7 @@ export default function PublicFormPage() {
     return (
       <AuthLayout>
         <h2 className="auth-title">Form not found</h2>
-        <p className="text-sm text-ink-muted dark:text-dark-ink-muted">
+        <p className="text-sm">
           This form doesn't exist or is no longer accepting submissions.
         </p>
       </AuthLayout>
@@ -135,7 +135,7 @@ export default function PublicFormPage() {
     return (
       <AuthLayout>
         <h2 className="auth-title">Thank you!</h2>
-        <p className="text-sm text-ink-muted dark:text-dark-ink-muted">
+        <p className="text-sm">
           {config.thankYouMessage || 'Your submission has been received.'}
         </p>
       </AuthLayout>

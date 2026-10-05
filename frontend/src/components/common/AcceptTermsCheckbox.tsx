@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import LegalDocumentModal from './LegalDocumentModal';
 
+// Links to legal documents. Readable on all three backgrounds they appear on: the light app, the
+// dark app, and the always-navy auth panel (.auth-left), where the brand violet was hard to see.
+export const LEGAL_LINK_CLASS =
+  'text-accent underline underline-offset-2 hover:text-accent-hover dark:text-brand-blue-light dark:hover:text-brand-cream [.auth-left_&]:text-brand-blue-light [.auth-left_&]:hover:text-brand-cream';
+
 interface AcceptTermsCheckboxProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
@@ -29,7 +34,7 @@ export default function AcceptTermsCheckbox({ checked, onChange, disabled, error
           I agree to the{' '}
           <button
             type="button"
-            className="text-brand-blue underline underline-offset-2 hover:text-brand-navy dark:hover:text-brand-blue-light"
+            className={LEGAL_LINK_CLASS}
             onClick={() => setLegalDoc('terms')}
           >
             Terms of Service
@@ -37,7 +42,7 @@ export default function AcceptTermsCheckbox({ checked, onChange, disabled, error
           and{' '}
           <button
             type="button"
-            className="text-brand-blue underline underline-offset-2 hover:text-brand-navy dark:hover:text-brand-blue-light"
+            className={LEGAL_LINK_CLASS}
             onClick={() => setLegalDoc('privacy')}
           >
             Privacy Policy

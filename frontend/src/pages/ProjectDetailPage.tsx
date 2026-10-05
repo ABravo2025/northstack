@@ -22,6 +22,8 @@ import EntityNotesList from '../components/notes/EntityNotesList';
 import EntityActivityList from '../components/activity/EntityActivityList';
 import TaskDetailModal from '../components/tasks/TaskDetailModal';
 import ProjectFormModal from '../components/projects/ProjectFormModal';
+import SaveAsTemplateModal from '../components/projects/SaveAsTemplateModal';
+import { usePermissions } from '../contexts/PermissionsContext';
 import { ProgressBar, ProjectStatusChip, isPastDue, useProjectDateFormat } from '../components/projects/projectUi';
 import { useTaskFolders } from '../hooks/useTaskFolders';
 import { useGoogleCalendarConnected } from '../hooks/useGoogleCalendarConnected';
@@ -58,6 +60,8 @@ export default function ProjectDetailPage({ token, user }: { token: string; user
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [editing, setEditing] = useState(false);
   const [confirmArchive, setConfirmArchive] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const canManageProjects = usePermissions().has('manage_projects');
   const { folders } = useTaskFolders(token);
   const googleCalendarConnected = useGoogleCalendarConnected(token);
 
@@ -176,6 +180,11 @@ export default function ProjectDetailPage({ token, user }: { token: string; user
                 <PencilIcon className="h-3.5 w-3.5" />
                 {t('detail.edit')}
               </button>
+              {canManageProjects && (
+                <button type="button" className="btn-secondary btn-sm" onClick={() => setSavingTemplate(true)}>
+                  {t('saveTemplate.action')}
+                </button>
+              )}
               {project.isActive ? (
                 <button type="button" className="btn-secondary btn-sm" onClick={() => setConfirmArchive(true)}>
                   {t('detail.archive')}
@@ -334,6 +343,17 @@ export default function ProjectDetailPage({ token, user }: { token: string; user
           setProject(p);
           setEditing(false);
           toast.success(t('detail.saved'));
+          changed();
+        }}
+      />
+      <SaveAsTemplateModal
+        open={savingTemplate}
+        token={token}
+        project={project}
+        taskCount={tasks.length}
+        onClose={() => setSavingTemplate(false)}
+        onSaved={() => {
+          setSavingTemplate(false);
           changed();
         }}
       />

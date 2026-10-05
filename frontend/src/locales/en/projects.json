@@ -153,5 +153,56 @@
       "note": "Tasks can only be assigned to people with access to Northstack. Template tasks for someone without access go to the project's owner.",
       "noAccessShort": "No access"
     }
+  },
+  "new": {
+    "title": "New project",
+    "stepPick": "1 · Starting point",
+    "stepDetails": "2 · Details and team",
+    "blankTag": "From scratch",
+    "blankTitle": "Blank",
+    "blankBody": "No phases or tasks. Build it your way.",
+    "niches": {
+      "all": "All",
+      "accounting": "Accounting firms",
+      "agency": "Agencies",
+      "consulting": "Consulting",
+      "internal": "Internal",
+      "custom": "My templates"
+    },
+    "meta": "{{phases}} phases · {{tasks}} tasks · {{roles}} roles",
+    "lockedTitle": "Your own templates are part of the Growth plan",
+    "lockedBody": "Save any project as a template and reuse it with your whole team.",
+    "noOwnTitle": "You haven't saved any templates yet",
+    "noOwnBody": "Open a project and use “Save as template”.",
+    "deleteTemplate": "Delete template",
+    "deleteTemplateTitle": "Delete the “{{name}}” template?",
+    "deleteTemplateBody": "Projects already created from it are not affected.",
+    "templateDeleted": "Template deleted",
+    "continue": "Continue",
+    "back": "Back",
+    "create": "Create project",
+    "hint": "Template tasks get their dates from the project's start date.",
+    "rolesTitle": "Team · template roles",
+    "roleUnassigned": "Unassigned",
+    "previewTitle": "Preview · {{count}} tasks",
+    "fallbackRole": "{{role}} unassigned or without access → owner",
+    "fallbackNoRole": "No role → owner",
+    "you": "You",
+    "loadError": "Couldn't load the templates: {{message}}",
+    "atLimitTitle": "You've reached the {{max}} open projects of the Starter plan",
+    "atLimitBody": "Complete or archive a project, or upgrade to Growth for unlimited projects."
+  },
+  "saveTemplate": {
+    "action": "Save as template",
+    "title": "Save as template",
+    "name": "Template name",
+    "description": "Description",
+    "summary": "Saves {{phases}} phases and {{tasks}} tasks. Due dates are kept as days from the start, and each assignee as their role on the team. Notes, history and done marks are not copied.",
+    "save": "Save template",
+    "saved": "Template saved. You’ll find it under “My templates”.",
+    "upsellTitle": "Available on the Growth plan",
+    "upsellBody": "With Growth you can save any project as a template and reuse it with your whole team. System templates stay available on Starter.",
+    "close": "Close",
+    "error": "Couldn't save the template: {{message}}"
   }
 }

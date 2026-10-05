@@ -153,5 +153,56 @@
       "note": "Las tareas solo se pueden asignar a personas con acceso a Northstack. Las tareas de template de alguien sin acceso quedan a cargo del responsable del proyecto.",
       "noAccessShort": "Sin acceso"
     }
+  },
+  "new": {
+    "title": "Nuevo proyecto",
+    "stepPick": "1 · Punto de partida",
+    "stepDetails": "2 · Datos y equipo",
+    "blankTag": "Desde cero",
+    "blankTitle": "En blanco",
+    "blankBody": "Sin fases ni tareas. Lo armás a tu manera.",
+    "niches": {
+      "all": "Todos",
+      "accounting": "Estudios contables",
+      "agency": "Agencias",
+      "consulting": "Consultoras",
+      "internal": "Interno",
+      "custom": "Mis templates"
+    },
+    "meta": "{{phases}} fases · {{tasks}} tareas · {{roles}} roles",
+    "lockedTitle": "Tus propios templates están en el plan Growth",
+    "lockedBody": "Guardá cualquier proyecto como template y reutilizalo con todo tu equipo.",
+    "noOwnTitle": "Todavía no guardaste templates",
+    "noOwnBody": "Abrí un proyecto y usá “Guardar como template”.",
+    "deleteTemplate": "Eliminar template",
+    "deleteTemplateTitle": "¿Eliminar el template “{{name}}”?",
+    "deleteTemplateBody": "Los proyectos que ya se crearon con él no cambian.",
+    "templateDeleted": "Template eliminado",
+    "continue": "Continuar",
+    "back": "Atrás",
+    "create": "Crear proyecto",
+    "hint": "Las tareas del template toman sus fechas de la fecha de inicio del proyecto.",
+    "rolesTitle": "Equipo · roles del template",
+    "roleUnassigned": "Sin asignar",
+    "previewTitle": "Vista previa · {{count}} tareas",
+    "fallbackRole": "{{role}} sin asignar o sin acceso → responsable",
+    "fallbackNoRole": "Sin rol → responsable",
+    "you": "Vos",
+    "loadError": "No se pudieron cargar los templates: {{message}}",
+    "atLimitTitle": "Llegaste a los {{max}} proyectos abiertos del plan Starter",
+    "atLimitBody": "Completá o archivá un proyecto, o pasate a Growth para tener proyectos ilimitados."
+  },
+  "saveTemplate": {
+    "action": "Guardar como template",
+    "title": "Guardar como template",
+    "name": "Nombre del template",
+    "description": "Descripción",
+    "summary": "Se guardan {{phases}} fases y {{tasks}} tareas. Las fechas quedan como días desde el inicio y cada responsable como su rol en el equipo. No se copian notas, historial ni tareas marcadas como hechas.",
+    "save": "Guardar template",
+    "saved": "Template guardado. Lo vas a encontrar en “Mis templates”.",
+    "upsellTitle": "Disponible en el plan Growth",
+    "upsellBody": "Con Growth podés guardar cualquier proyecto como template y reutilizarlo con todo tu equipo. Los templates del sistema siguen disponibles en Starter.",
+    "close": "Cerrar",
+    "error": "No se pudo guardar el template: {{message}}"
   }
 }

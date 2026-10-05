@@ -7,7 +7,7 @@ import { toLocalCalendarDate } from '../../lib/taskHubDates';
 
 export const PROJECT_STATUS_COLOR: Record<ProjectStatus, string> = {
   planning: '#8f8aa8',
-  active: '#5b21e6',
+  active: '#7c5cff', // mid violet: readable as a dot on both the light and dark surfaces
   on_hold: '#d97706',
   completed: '#059669',
   cancelled: '#dc2626',
@@ -31,7 +31,7 @@ export function ProgressBar({ done, total, label }: { done: number; total: numbe
         aria-valuemax={100}
         aria-label={label}
       >
-        <div className={`h-full rounded-full ${complete ? 'bg-emerald-600 dark:bg-emerald-400' : 'bg-accent'}`} style={{ width: `${pct}%` }} />
+        <div className={`h-full rounded-full ${complete ? 'bg-emerald-600 dark:bg-emerald-400' : 'bg-accent dark:bg-brand-blue-light'}`} style={{ width: `${pct}%` }} />
       </div>
       <span className="w-9 text-right text-xs tabular-nums text-ink-muted dark:text-dark-ink-muted">{pct}%</span>
     </div>

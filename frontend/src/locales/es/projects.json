@@ -204,5 +204,10 @@
     "upsellBody": "Con Growth podés guardar cualquier proyecto como template y reutilizarlo con todo tu equipo. Los templates del sistema siguen disponibles en Starter.",
     "close": "Cerrar",
     "error": "No se pudo guardar el template: {{message}}"
+  },
+  "section": {
+    "title": "Proyectos ({{count}})",
+    "emptyCompany": "Todavía no hay proyectos para esta empresa.",
+    "emptyPerson": "Todavía no participa en ningún proyecto."
   }
 }

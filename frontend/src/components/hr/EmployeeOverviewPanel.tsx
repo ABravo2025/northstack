@@ -17,6 +17,7 @@ import { EyeIcon, XIcon } from '../common/Icons';
 import TagInput from '../common/TagInput';
 import type { TagAssignmentLite, EmployeeTerminationOptions } from '../../api';
 import { useIsMobile } from '../../hooks/useIsMobile';
+import EntityProjectsSection from '../projects/EntityProjectsSection';
 
 interface EmployeeOverviewPanelProps {
   employee: any;
@@ -564,6 +565,8 @@ export default function EmployeeOverviewPanel({
           </div>
         </div>
       )}
+
+      <EntityProjectsSection token={token} employeeId={employee.id} />
     </div>
   );
 

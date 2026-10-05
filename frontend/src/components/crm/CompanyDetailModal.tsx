@@ -12,6 +12,7 @@ import RequiredMark from '../common/RequiredMark';
 import OverviewActionsMenu from '../common/OverviewActionsMenu';
 import SearchableSelect from '../common/SearchableSelect';
 import CompanyStripeSection from './CompanyStripeSection';
+import EntityProjectsSection from '../projects/EntityProjectsSection';
 import { PlusIcon, TrashIcon, XIcon } from '../common/Icons';
 import { formatMoney } from '../../lib/currencies';
 import TagInput from '../common/TagInput';
@@ -393,6 +394,8 @@ export default function CompanyDetailModal({
           </div>
         </div>
       )}
+
+      <EntityProjectsSection token={token} companyId={company.id} />
 
       <div className="overview-field overview-field-full">
         <div className="min-w-0 flex-1">

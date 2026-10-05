@@ -10,6 +10,7 @@ import { useToast } from '../components/common/ToastProvider';
 import { usePermissions } from '../contexts/PermissionsContext';
 import { usePrimaryAction } from '../contexts/PrimaryActionContext';
 import ProjectFormModal from '../components/projects/ProjectFormModal';
+import NewProjectModal from '../components/projects/NewProjectModal';
 import { PROJECT_STATUS_COLOR, ProgressBar, ProjectStatusChip, isPastDue, useProjectDateFormat } from '../components/projects/projectUi';
 import { projectsApi, type ProjectLimits, type ProjectStatus, type ProjectSummary } from '../api/projects';
 
@@ -36,6 +37,7 @@ export default function ProjectsPage({ token }: { token: string }) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<Filter>('open');
   const [search, setSearch] = useState('');
+  const [picking, setPicking] = useState(false);
   const [creating, setCreating] = useState(false);
 
   const archived = filter === 'archived';
@@ -55,13 +57,8 @@ export default function ProjectsPage({ token }: { token: string }) {
   useEffect(load, [load]);
 
   const atLimit = !!limits && limits.maxActiveProjects !== null && limits.openCount >= limits.maxActiveProjects;
-  const openNew = () => {
-    if (atLimit) {
-      toast.error(t('list.atLimit', { max: limits!.maxActiveProjects }));
-      return;
-    }
-    setCreating(true);
-  };
+  // The starting-point gallery opens even at the Starter limit — it explains the limit there.
+  const openNew = () => setPicking(true);
   usePrimaryAction(canCreate ? { label: t('list.primaryAction'), onClick: openNew } : null);
 
   const visible = useMemo(() => {
@@ -218,6 +215,20 @@ export default function ProjectsPage({ token }: { token: string }) {
         </>
       )}
 
+      <NewProjectModal
+        open={picking}
+        token={token}
+        limits={limits}
+        onClose={() => setPicking(false)}
+        onBlank={() => {
+          setPicking(false);
+          setCreating(true);
+        }}
+        onCreated={(project) => {
+          setPicking(false);
+          navigate(`/projects/${project.id}`);
+        }}
+      />
       <ProjectFormModal
         open={creating}
         token={token}

@@ -107,7 +107,6 @@
     "nextWeek": "Semana siguiente",
     "thisWeek": "Esta semana",
     "allLocations": "Todas las locaciones",
-    "byLocation": "Por locación",
     "byPerson": "Por persona",
     "copyWeek": "Copiar semana anterior",
     "copyConfirmTitle": "¿Copiar la semana anterior en esta?",
@@ -117,7 +116,6 @@
     "publishNone": "Todo publicado",
     "publishConfirmBody": "Cada persona asignada recibe una notificación y un email para confirmar.",
     "addShift": "Agregar turno",
-    "addShiftOn": "Agregar un turno el {{day}}",
     "noLocationsTitle": "Primero agregá una locación",
     "noLocationsBody": "Los turnos se hacen en una locación. Configurá dónde trabaja tu equipo en Configuración → Turnos.",
     "goToSettings": "Ir a Configuración",
@@ -140,7 +138,9 @@
     "publishConfirmTitle_one": "¿Publicar {{count}} borrador?",
     "publishConfirmTitle_other": "¿Publicar {{count}} borradores?",
     "published_one": "Se publicó {{count}} turno. Se avisó a cada persona asignada.",
-    "published_other": "Se publicaron {{count}} turnos. Se avisó a cada persona asignada."
+    "published_other": "Se publicaron {{count}} turnos. Se avisó a cada persona asignada.",
+    "calendarView": "Calendario",
+    "clickToAdd": "Hacé clic para agregar un turno acá"
   },
   "form": {
     "newTitle": "Nuevo turno",

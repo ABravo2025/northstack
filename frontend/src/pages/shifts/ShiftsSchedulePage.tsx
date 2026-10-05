@@ -9,24 +9,35 @@ import { BuildingIcon, ChevronLeftIcon, ChevronRightIcon, CopyIcon } from '../..
 import ShiftCard, { filledSlots } from '../../components/shifts/ShiftCard';
 import ShiftDetailModal from '../../components/shifts/ShiftDetailModal';
 import ShiftFormModal from '../../components/shifts/ShiftFormModal';
+import ShiftWeekCalendar from '../../components/shifts/ShiftWeekCalendar';
 import { addDays, formatDay, formatWeekRange, shiftDurationMinutes, todayString, weekDays, weekStartOf } from '../../lib/shiftDates';
 
 interface ShiftsSchedulePageProps {
   token: string;
 }
 
-type ViewMode = 'location' | 'person';
+type ViewMode = 'calendar' | 'person';
 const VIEW_KEY = 'northstack:shifts:view';
+const LOCATION_KEY = 'northstack:shifts:location';
 
-function readView(): ViewMode {
+// Per-viewer conveniences only: the page works the same without storage.
+function readStored(key: string): string | null {
   try {
-    return localStorage.getItem(VIEW_KEY) === 'person' ? 'person' : 'location';
+    return localStorage.getItem(key);
   } catch {
-    return 'location';
+    return null;
+  }
+}
+function store(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // ignore
   }
 }
 
-// Shifts → Schedule (spec-shifts.md, Unidad 5): the week as a grid, by location or by person.
+// Shifts → Schedule (spec-shifts.md, Unidad 5): the week as a calendar (days across, hours down,
+// Alejandro 2026-10-05) or as rows per person. One location at a time or all together.
 // Drafts are dashed and reach nobody until published.
 export default function ShiftsSchedulePage({ token }: ShiftsSchedulePageProps) {
   const { t, i18n } = useTranslation('shifts');
@@ -35,12 +46,12 @@ export default function ShiftsSchedulePage({ token }: ShiftsSchedulePageProps) {
   const [locations, setLocations] = useState<ShiftLocation[] | null>(null);
   const [managed, setManaged] = useState<string[]>([]);
   const [weekStart, setWeekStart] = useState<string | null>(null);
-  const [locationFilter, setLocationFilter] = useState('');
-  const [view, setView] = useState<ViewMode>(readView);
+  const [locationFilter, setLocationFilter] = useState(() => readStored(LOCATION_KEY) ?? '');
+  const [view, setView] = useState<ViewMode>(() => (readStored(VIEW_KEY) === 'person' ? 'person' : 'calendar'));
   const [shifts, setShifts] = useState<Shift[] | null>(null);
   const [holidays, setHolidays] = useState<TimeOffHoliday[]>([]);
   const [detail, setDetail] = useState<Shift | null>(null);
-  const [form, setForm] = useState<{ shift: Shift | null; locationId: string; date: string } | null>(null);
+  const [form, setForm] = useState<{ shift: Shift | null; locationId: string; date: string; startMinute?: number } | null>(null);
   const [confirm, setConfirm] = useState<'publish' | 'copy' | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -52,6 +63,8 @@ export default function ShiftsSchedulePage({ token }: ShiftsSchedulePageProps) {
         setSettings(s);
         setLocations(l.locations);
         setManaged(l.managedLocationIds);
+        // A remembered location that no longer exists (or was deactivated) falls back to all.
+        setLocationFilter((prev) => (prev && l.locations.some((x) => x.id === prev && x.isActive) ? prev : ''));
         // Only the first time: a slow (or repeated) load must not yank the person back to this week
         // after they already moved to another one.
         setWeekStart((prev) => prev ?? weekStartOf(todayString(), s.weekStartsOn));
@@ -67,8 +80,9 @@ export default function ShiftsSchedulePage({ token }: ShiftsSchedulePageProps) {
   const load = useCallback((refresh = false) => {
     if (!weekStart) return;
     if (!refresh) setShifts(null);
+    // From the day before: a Sunday-night shift that ends on Monday shows on this week's first day.
     api
-      .listShifts(token, weekStart, addDays(weekStart, 6), locationFilter || undefined)
+      .listShifts(token, addDays(weekStart, -1), addDays(weekStart, 6), locationFilter || undefined)
       .then(setShifts)
       .catch(fail);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -86,18 +100,21 @@ export default function ShiftsSchedulePage({ token }: ShiftsSchedulePageProps) {
 
   const setViewMode = (mode: ViewMode) => {
     setView(mode);
-    try {
-      localStorage.setItem(VIEW_KEY, mode);
-    } catch {
-      // per-viewer convenience only
-    }
+    store(VIEW_KEY, mode);
+  };
+  const chooseLocation = (id: string) => {
+    setLocationFilter(id);
+    store(LOCATION_KEY, id);
   };
 
   const canManage = (locationId: string) => managed.includes(locationId);
   const anyManaged = managed.length > 0;
   const today = todayString();
-  const activeLocations = (locations ?? []).filter((l) => l.isActive && (!locationFilter || l.id === locationFilter));
-  const visible = shifts ?? [];
+  const weekEnd = weekStart ? addDays(weekStart, 6) : '';
+  // This week's own shifts (the extra day loaded before it only feeds the calendar's first column).
+  const visible = (shifts ?? []).filter((s) => weekStart !== null && s.date >= weekStart && s.date <= weekEnd);
+  const calendarShifts = (shifts ?? []).filter((s) => s.date >= (weekStart ?? '') || s.endsNextDay);
+  const manageableActive = (locations ?? []).filter((l) => l.isActive && canManage(l.id));
   const drafts = visible.filter((s) => s.status === 'draft' && canManage(s.locationId));
 
   // Header numbers count published shifts only — drafts haven't asked anyone anything yet.
@@ -116,7 +133,8 @@ export default function ShiftsSchedulePage({ token }: ShiftsSchedulePageProps) {
     setShifts((prev) => {
       if (!prev) return prev;
       const without = prev.filter((s) => s.id !== (removedId ?? saved?.id));
-      if (!saved || saved.date < (weekStart ?? '') || saved.date > addDays(weekStart ?? '', 6)) return without;
+      if (!saved || saved.date < addDays(weekStart ?? '', -1) || saved.date > addDays(weekStart ?? '', 6)) return without;
+      if (locationFilter && saved.locationId !== locationFilter) return without;
       return [...without, saved].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
     });
     setDetail(saved);
@@ -200,17 +218,15 @@ export default function ShiftsSchedulePage({ token }: ShiftsSchedulePageProps) {
     return [...map.entries()].sort((a, b) => a[1].localeCompare(b[1]));
   })();
 
-  const addButton = (locationId: string, date: string) =>
-    canManage(locationId) ? (
-      <button
-        type="button"
-        className="sh-add"
-        onClick={() => setForm({ shift: null, locationId, date })}
-        aria-label={t('schedule.addShiftOn', { day: formatDay(date, i18n.language, { weekday: 'long', day: 'numeric', month: 'long' }) })}
-      >
-        + {t('schedule.addShift')}
-      </button>
-    ) : null;
+  // Clicking an empty slot: that day and time, at the location being viewed (or the first one this
+  // person can schedule when viewing all). The form lets them pick any other.
+  const createAt =
+    manageableActive.length > 0
+      ? (date: string, startMinute: number) => {
+          const locationId = locationFilter && canManage(locationFilter) ? locationFilter : manageableActive[0].id;
+          setForm({ shift: null, locationId, date, startMinute });
+        }
+      : null;
 
   return (
     <div className="page-full sh-page">
@@ -272,7 +288,7 @@ export default function ShiftsSchedulePage({ token }: ShiftsSchedulePageProps) {
           )}
         </div>
         {locations.filter((l) => l.isActive).length > 1 && (
-          <select id="shifts-location-filter" aria-label={t('form.location')} className="max-w-[14rem]" value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)}>
+          <select id="shifts-location-filter" aria-label={t('form.location')} className="h-9 max-w-[14rem] !py-0 text-[13px]" value={locationFilter} onChange={(e) => chooseLocation(e.target.value)}>
             <option value="">{t('schedule.allLocations')}</option>
             {locations
               .filter((l) => l.isActive)
@@ -284,8 +300,8 @@ export default function ShiftsSchedulePage({ token }: ShiftsSchedulePageProps) {
           </select>
         )}
         <div className="mini-toggle-row" role="group">
-          <button type="button" className={`mini-toggle-opt ${view === 'location' ? 'active' : ''}`} onClick={() => setViewMode('location')}>
-            {t('schedule.byLocation')}
+          <button type="button" className={`mini-toggle-opt ${view === 'calendar' ? 'active' : ''}`} onClick={() => setViewMode('calendar')}>
+            {t('schedule.calendarView')}
           </button>
           <button type="button" className={`mini-toggle-opt ${view === 'person' ? 'active' : ''}`} onClick={() => setViewMode('person')}>
             {t('schedule.byPerson')}
@@ -294,6 +310,11 @@ export default function ShiftsSchedulePage({ token }: ShiftsSchedulePageProps) {
         <span className="sh-grow" />
         {anyManaged && (
           <>
+            {createAt && (
+              <button type="button" className="btn-secondary" disabled={busy} onClick={() => createAt(today >= weekStart && today <= weekEnd ? today : weekStart, 9 * 60)}>
+                + {t('schedule.addShift')}
+              </button>
+            )}
             <button type="button" className="btn-secondary inline-flex items-center gap-1.5" disabled={busy} onClick={() => setConfirm('copy')}>
               <CopyIcon className="h-4 w-4" />
               {t('schedule.copyWeek')}
@@ -307,79 +328,66 @@ export default function ShiftsSchedulePage({ token }: ShiftsSchedulePageProps) {
 
       {shifts === null ? (
         <TableSkeleton />
+      ) : view === 'calendar' ? (
+        <ShiftWeekCalendar
+          days={days}
+          shifts={calendarShifts}
+          holidays={holidays}
+          today={today}
+          showLocation={!locationFilter && (locations ?? []).filter((l) => l.isActive).length > 1}
+          onOpen={setDetail}
+          onCreateAt={createAt}
+        />
       ) : (
         <div className="sh-grid-wrap">
           <table className="sh-grid">
             <thead>
               <tr>
                 <th className="sh-rowhead" scope="col">
-                  {view === 'location' ? t('form.location') : t('detail.people')}
+                  {t('detail.people')}
                 </th>
                 {days.map(dayHeader)}
               </tr>
             </thead>
             <tbody>
-              {view === 'location' &&
-                activeLocations.map((l) => (
-                  <tr key={l.id}>
-                    <th className="sh-rowhead" scope="row">
-                      <b>{l.name}</b>
-                      {l.address}
-                    </th>
-                    {days.map((d) => (
-                      <td key={d} className="sh-cell">
-                        <div className="sh-cell-inner">
-                          {shiftsOn(d, (s) => s.locationId === l.id).map((s) => (
-                            <ShiftCard key={s.id} shift={s} mode="location" onOpen={setDetail} />
-                          ))}
-                          {addButton(l.id, d)}
-                        </div>
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              {view === 'person' && (
-                <>
-                  {people.length === 0 && (
-                    <tr>
-                      <td colSpan={8} className="p-6 text-center text-ink-muted dark:text-dark-ink-muted">
-                        {t('schedule.noPeopleThisWeek')}
-                      </td>
-                    </tr>
-                  )}
-                  {people.map(([id, name]) => (
-                    <tr key={id}>
-                      <th className="sh-rowhead" scope="row">
-                        <b>{name}</b>
-                      </th>
-                      {days.map((d) => (
-                        <td key={d} className="sh-cell">
-                          <div className="sh-cell-inner">
-                            {shiftsOn(d, (s) => s.assignments.some((a) => a.employeeId === id)).map((s) => (
-                              <ShiftCard key={s.id} shift={s} mode="person" onOpen={setDetail} />
-                            ))}
-                          </div>
-                        </td>
-                      ))}
-                    </tr>
+              {people.length === 0 && (
+                <tr>
+                  <td colSpan={8} className="p-6 text-center text-ink-muted dark:text-dark-ink-muted">
+                    {t('schedule.noPeopleThisWeek')}
+                  </td>
+                </tr>
+              )}
+              {people.map(([id, name]) => (
+                <tr key={id}>
+                  <th className="sh-rowhead" scope="row">
+                    <b>{name}</b>
+                  </th>
+                  {days.map((d) => (
+                    <td key={d} className="sh-cell">
+                      <div className="sh-cell-inner">
+                        {shiftsOn(d, (s) => s.assignments.some((a) => a.employeeId === id)).map((s) => (
+                          <ShiftCard key={s.id} shift={s} mode="person" onOpen={setDetail} />
+                        ))}
+                      </div>
+                    </td>
                   ))}
-                  {visible.some((s) => s.assignments.length === 0) && (
-                    <tr>
-                      <th className="sh-rowhead" scope="row">
-                        <b>{t('schedule.unassigned')}</b>
-                      </th>
-                      {days.map((d) => (
-                        <td key={d} className="sh-cell">
-                          <div className="sh-cell-inner">
-                            {shiftsOn(d, (s) => s.assignments.length === 0).map((s) => (
-                              <ShiftCard key={s.id} shift={s} mode="person" onOpen={setDetail} />
-                            ))}
-                          </div>
-                        </td>
-                      ))}
-                    </tr>
-                  )}
-                </>
+                </tr>
+              ))}
+              {visible.some((s) => s.assignments.length === 0) && (
+                <tr>
+                  <th className="sh-rowhead" scope="row">
+                    <b>{t('schedule.unassigned')}</b>
+                  </th>
+                  {days.map((d) => (
+                    <td key={d} className="sh-cell">
+                      <div className="sh-cell-inner">
+                        {shiftsOn(d, (s) => s.assignments.length === 0).map((s) => (
+                          <ShiftCard key={s.id} shift={s} mode="person" onOpen={setDetail} />
+                        ))}
+                      </div>
+                    </td>
+                  ))}
+                </tr>
               )}
             </tbody>
           </table>
@@ -420,7 +428,7 @@ export default function ShiftsSchedulePage({ token }: ShiftsSchedulePageProps) {
         token={token}
         open={form !== null}
         shift={form?.shift ?? null}
-        defaults={{ locationId: form?.locationId ?? activeLocations[0]?.id ?? '', date: form?.date ?? weekStart }}
+        defaults={{ locationId: form?.locationId ?? manageableActive[0]?.id ?? '', date: form?.date ?? weekStart, startMinute: form?.startMinute }}
         locations={locations.filter((l) => canManage(l.id))}
         onClose={() => setForm(null)}
         onSaved={(saved) => {

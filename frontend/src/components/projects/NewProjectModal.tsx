@@ -210,9 +210,9 @@ function Steps({ step }: { step: 1 | 2 }) {
   const { t } = useTranslation('projects');
   return (
     <div className="flex items-center gap-2 text-xs text-ink-faint dark:text-dark-ink-faint">
-      <span className={step === 1 ? 'font-semibold text-accent' : ''}>{t('new.stepPick')}</span>
+      <span className={step === 1 ? 'font-semibold text-accent dark:text-brand-blue-light' : ''}>{t('new.stepPick')}</span>
       <span aria-hidden="true">›</span>
-      <span className={step === 2 ? 'font-semibold text-accent' : ''}>{t('new.stepDetails')}</span>
+      <span className={step === 2 ? 'font-semibold text-accent dark:text-brand-blue-light' : ''}>{t('new.stepDetails')}</span>
     </div>
   );
 }
@@ -234,11 +234,13 @@ function TemplateCard({ tag, title, body, meta, colors, dashed, selected, onSele
   return (
     <div
       className={`relative flex flex-col gap-2 rounded-lg border bg-surface-1 p-3 text-left transition dark:bg-dark-surface ${
-        selected ? 'border-accent ring-2 ring-accent-tint' : `${dashed ? 'border-dashed' : ''} border-line hover:border-accent dark:border-dark-line`
+        selected
+          ? 'border-accent ring-2 ring-accent-tint dark:border-brand-blue-light dark:ring-brand-blue-light/20'
+          : `${dashed ? 'border-dashed' : ''} border-line hover:border-accent dark:border-dark-line dark:hover:border-brand-blue-light`
       }`}
     >
       <button type="button" className="absolute inset-0 rounded-lg" aria-pressed={selected} aria-label={title} onClick={onSelect} />
-      <span className="text-[10.5px] font-semibold uppercase tracking-wider text-accent">{tag}</span>
+      <span className="text-[10.5px] font-semibold uppercase tracking-wider text-accent dark:text-brand-blue-light">{tag}</span>
       <span className="pr-6 text-sm font-semibold">{title}</span>
       {body && <span className="text-xs text-ink-muted dark:text-dark-ink-muted">{body}</span>}
       {colors && colors.length > 0 && (

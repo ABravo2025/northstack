@@ -373,7 +373,7 @@ export default function ProjectDetailPage({ token, user }: { token: string; user
 function BackLink() {
   const { t } = useTranslation('projects');
   return (
-    <Link to="/projects" className="inline-flex w-fit items-center gap-1 text-sm text-ink-muted hover:text-accent dark:text-dark-ink-muted">
+    <Link to="/projects" className="inline-flex w-fit items-center gap-1 text-sm text-ink-muted hover:text-accent dark:text-dark-ink-muted dark:hover:text-brand-blue-light">
       <ChevronLeftIcon className="h-4 w-4" />
       {t('detail.back')}
     </Link>
@@ -731,7 +731,7 @@ function TeamTab({ token, project, tasks, canEdit, onChanged }: { token: string;
                       <Avatar firstName={m.employee.firstName} lastName={m.employee.lastName} />
                       <span className="min-w-0">
                         <span className="block truncate">{name(m)}</span>
-                        {isOwner && <span className="block text-[11px] font-semibold text-accent">{t('detail.team.ownerTag')}</span>}
+                        {isOwner && <span className="block text-[11px] font-semibold text-accent dark:text-brand-blue-light">{t('detail.team.ownerTag')}</span>}
                       </span>
                     </span>
                   </td>

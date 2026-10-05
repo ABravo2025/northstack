@@ -1,14 +1,21 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { API_BASE_URL, apiFetch } from '../../api/http';
+import type { ReferralRules } from '../../api/referrals';
 
-type LegalDoc = 'terms' | 'privacy' | 'refund';
+// 'referral' (2026-10-04): the referral program terms. Same modal and styles as the other legal
+// documents, but its text lives in the app (EN/ES) with the numbers from the backend's REFERRAL
+// config, instead of a page on the landing.
+export type LegalDoc = 'terms' | 'privacy' | 'refund' | 'referral';
 
 const DOC_TITLES: Record<LegalDoc, string> = {
   terms: 'Terms of Service',
   privacy: 'Privacy Policy',
   refund: 'Refund Policy',
+  referral: 'Referral Program Terms and Conditions',
 };
 
-const DOC_URLS: Record<LegalDoc, string> = {
+const DOC_URLS: Record<Exclude<LegalDoc, 'referral'>, string> = {
   terms: 'https://joinnorthstack.com/terms.html',
   privacy: 'https://joinnorthstack.com/privacy.html',
   refund: 'https://joinnorthstack.com/refund.html',
@@ -24,12 +31,34 @@ export default function LegalDocumentModal({ initialDoc, onClose }: LegalDocumen
   const [html, setHtml] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [rules, setRules] = useState<ReferralRules | null>(null);
+  const { t } = useTranslation('settingsPages');
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(false);
     setHtml(null);
+
+    if (doc === 'referral') {
+      apiFetch(`${API_BASE_URL}/api/public/referral-rules`)
+        .then((res) => {
+          if (!res.ok) throw new Error('Failed to load rules');
+          return res.json();
+        })
+        .then((r: ReferralRules) => {
+          if (!cancelled) setRules(r);
+        })
+        .catch(() => {
+          if (!cancelled) setError(true);
+        })
+        .finally(() => {
+          if (!cancelled) setLoading(false);
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
 
     fetch(DOC_URLS[doc])
       .then((res) => {
@@ -88,14 +117,15 @@ export default function LegalDocumentModal({ initialDoc, onClose }: LegalDocumen
         onClick={(e) => e.stopPropagation()}
       >
         <div className="legal-modal-header">
-          <h3 id="legal-modal-title">{DOC_TITLES[doc]}</h3>
+          <h3 id="legal-modal-title">{doc === 'referral' ? t('referrals.terms.title') : DOC_TITLES[doc]}</h3>
           <button type="button" className="legal-modal-close" onClick={onClose} aria-label="Close">
             &#10005;
           </button>
         </div>
         <div className="legal-modal-body">
           {loading && <p className="legal-modal-status">Loading…</p>}
-          {error && (
+          {error && doc === 'referral' && <p className="legal-modal-status">Couldn't load this document right now.</p>}
+          {error && doc !== 'referral' && (
             <p className="legal-modal-status">
               Couldn't load this document right now.{' '}
               <a href={DOC_URLS[doc]} target="_blank" rel="noopener noreferrer">
@@ -104,9 +134,37 @@ export default function LegalDocumentModal({ initialDoc, onClose }: LegalDocumen
               instead.
             </p>
           )}
+          {doc === 'referral' && rules && <ReferralTerms rules={rules} />}
           {html && <div onClick={handleContentClick} dangerouslySetInnerHTML={{ __html: html }} />}
         </div>
       </div>
+    </div>
+  );
+}
+
+function ReferralTerms({ rules }: { rules: ReferralRules }) {
+  const { t, i18n } = useTranslation('settingsPages');
+  const money = (currency: 'USD' | 'ARS') =>
+    new Intl.NumberFormat(i18n.language === 'es' ? 'es-AR' : 'en-US', { style: 'currency', currency, currencyDisplay: 'code', maximumFractionDigits: 0 }).format(
+      (rules.minPayoutCents[currency] ?? 0) / 100,
+    );
+  const items = t('referrals.terms.items', {
+    percent: rules.commissionPercent,
+    payments: rules.commissionPayments,
+    holdDays: rules.holdDays,
+    minUsd: money('USD'),
+    minArs: money('ARS'),
+    returnObjects: true,
+  }) as string[];
+  return (
+    <div>
+      <h1>{t('referrals.terms.title')}</h1>
+      <span className="effective-date">{t('referrals.terms.version', { version: rules.termsVersion })}</span>
+      <ol className="list-decimal">
+        {items.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ol>
     </div>
   );
 }

@@ -103,7 +103,7 @@ const FAQ_CATEGORIES: FaqCategory[] = [
       },
       {
         q: 'Can I earn something for recommending Northstack?',
-        a: "Yes. Any user can join the referral program from Referrals in the sidebar: you add how you want to get paid, accept the program terms, and get a personal link. You earn a commission on the first payments of every company that signs up with it, and they get a longer free trial. The User Guide and the terms page show the current percentage and payout minimum.",
+        a: "Yes. Any user can join the referral program from Referrals in the sidebar: you add how you want to get paid, accept the program terms, and get a personal link. You earn a commission on the first payments of every company that signs up with it, and they get a longer free trial. The User Guide and the program terms (linked when you join) show the current percentage and payout minimum.",
       },
       {
         q: 'When do I get paid for my referrals?',
@@ -303,7 +303,7 @@ const FAQ_CATEGORIES_ES: FaqCategory[] = [
     items: [
       {
         q: '¿Puedo ganar algo por recomendar Northstack?',
-        a: "Sí. Cualquier usuario puede unirse al programa desde Referidos, en el menú lateral: cargás cómo querés cobrar, aceptás los términos del programa y recibís un link personal. Cobrás una comisión sobre los primeros pagos de cada empresa que se registre con ese link, y ellos tienen una prueba gratuita más larga. La Guía del usuario y la página de términos muestran el porcentaje y el mínimo vigentes.",
+        a: "Sí. Cualquier usuario puede unirse al programa desde Referidos, en el menú lateral: cargás cómo querés cobrar, aceptás los términos del programa y recibís un link personal. Cobrás una comisión sobre los primeros pagos de cada empresa que se registre con ese link, y ellos tienen una prueba gratuita más larga. La Guía del usuario y los términos del programa (en el link al unirte) muestran el porcentaje y el mínimo vigentes.",
       },
       {
         q: '¿Cuándo cobro mis referidos?',

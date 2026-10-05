@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Popover from './Popover';
 
 // Brand colors first, then a general-purpose set covering common
@@ -47,6 +48,7 @@ interface ColorPickerProps {
 }
 
 export default function ColorPicker({ value, onChange }: ColorPickerProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [customColors, setCustomColors] = useState<string[]>(() => loadCustomColors());
   const [draftHex, setDraftHex] = useState(value || '#3c6da1');
@@ -78,11 +80,11 @@ export default function ColorPicker({ value, onChange }: ColorPickerProps) {
           setOpen((o) => !o);
         }}
         title={value}
-        aria-label="Choose color"
+        aria-label={t('ui.colorPicker.choose')}
       />
       <Popover open={open} onClose={() => setOpen(false)} anchorRef={triggerRef} width={256}>
         <div onClick={(e) => e.stopPropagation()}>
-          <div className="color-picker-section-label">Standard</div>
+          <div className="color-picker-section-label">{t('ui.colorPicker.standard')}</div>
           <div className="color-picker-swatches">
             {PRESET_COLORS.map((color) => (
               <button
@@ -95,14 +97,14 @@ export default function ColorPicker({ value, onChange }: ColorPickerProps) {
                   setOpen(false);
                 }}
                 title={color}
-                aria-label={`Use color ${color}`}
+                aria-label={t('ui.colorPicker.use', { color })}
               />
             ))}
           </div>
 
           {customColors.length > 0 && (
             <>
-              <div className="color-picker-section-label">Custom</div>
+              <div className="color-picker-section-label">{t('ui.colorPicker.custom')}</div>
               <div className="color-picker-swatches">
                 {customColors.map((color) => (
                   <button
@@ -115,14 +117,14 @@ export default function ColorPicker({ value, onChange }: ColorPickerProps) {
                       setOpen(false);
                     }}
                     title={color}
-                    aria-label={`Use color ${color}`}
+                    aria-label={t('ui.colorPicker.use', { color })}
                   />
                 ))}
               </div>
             </>
           )}
 
-          <div className="color-picker-section-label">Add custom</div>
+          <div className="color-picker-section-label">{t('ui.colorPicker.addCustom')}</div>
           <div className="color-picker-custom-row">
             <label
               className="color-swatch-preview"
@@ -132,7 +134,7 @@ export default function ColorPicker({ value, onChange }: ColorPickerProps) {
                 type="color"
                 value={isDraftValid ? draftHex : '#3c6da1'}
                 onChange={(e) => setDraftHex(e.target.value)}
-                aria-label="Pick a custom color"
+                aria-label={t('ui.colorPicker.pickCustom')}
               />
             </label>
             <input
@@ -142,7 +144,7 @@ export default function ColorPicker({ value, onChange }: ColorPickerProps) {
               placeholder="#3c6da1"
               maxLength={7}
               className="color-hex-input"
-              aria-label="Custom color hex code"
+              aria-label={t('ui.colorPicker.hex')}
             />
             <button
               type="button"

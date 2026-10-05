@@ -623,7 +623,7 @@ export default function HelpPage() {
           </div>
 
           <div className="card help-contact-card" id="f-legal">
-            <h3 className="card-title">Legal</h3>
+            <h3 className="card-title">{i18n.language.startsWith('es') ? 'Legales' : 'Legal'}</h3>
             <p className="text-sm text-brand-navy dark:text-dark-ink mb-2">
               {isSpanish
                 ? 'Te vamos a avisar acá y por correo cada vez que alguno de estos documentos cambie.'

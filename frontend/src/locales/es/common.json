@@ -277,5 +277,146 @@
       "until": "termina a las {{time}}",
       "exit": "Salir"
     }
+  },
+  "ui": {
+    "close": "Cerrar",
+    "loading": "Cargando…",
+    "none": "-- ninguno --",
+    "next": "Siguiente",
+    "back": "Volver",
+    "delete": "Eliminar",
+    "noMatches": "Sin resultados.",
+    "resizeColumn": "Cambiar el ancho de la columna",
+    "settingsTitle": "Configuración",
+    "saveFieldFailed": "No se pudo actualizar {{field}}: {{error}}",
+    "deleted": "Se eliminó {{name}}.",
+    "deleteFailed": "No se pudo eliminar: {{error}}",
+    "colorPicker": {
+      "choose": "Elegir color",
+      "standard": "Estándar",
+      "custom": "Personalizados",
+      "addCustom": "Agregar color",
+      "pickCustom": "Elegir un color propio",
+      "hex": "Código hexadecimal del color",
+      "use": "Usar el color {{color}}"
+    },
+    "tags": {
+      "add": "+ Agregar etiqueta",
+      "addFailed": "No se pudo agregar la etiqueta: {{error}}",
+      "removeFailed": "No se pudo quitar la etiqueta: {{error}}",
+      "filter": "Filtrar por etiqueta",
+      "none": "Todavía no hay etiquetas."
+    },
+    "legal": {
+      "terms": "Términos y condiciones",
+      "privacy": "Política de privacidad",
+      "refund": "Política de reembolsos",
+      "viewFull": "Ver {{doc}} completa",
+      "loadFailed": "No se pudo cargar el documento en este momento.",
+      "openNewTab": "Abrilo en una pestaña nueva"
+    },
+    "roles": {
+      "deleteRole": "Eliminar rol",
+      "roleName": "Nombre del rol",
+      "deleteMessage": "¿Eliminar \"{{name}}\"? No se puede deshacer. Quien tenga este rol (o una invitación pendiente con él) tiene que pasar antes a otro rol."
+    },
+    "opportunities": {
+      "deleteTitle": "Eliminar oportunidad",
+      "deleteMessage": "¿Seguro que querés eliminar \"{{name}}\"? No se puede deshacer."
+    },
+    "contacts": {
+      "search": "Buscar contactos",
+      "searchPlaceholder": "Buscar por nombre, email o empresa…"
+    },
+    "calendar": {
+      "today": "Hoy",
+      "prevMonth": "Mes anterior",
+      "nextMonth": "Mes siguiente",
+      "loadFailed": "No se pudo cargar el calendario del equipo: {{error}}"
+    },
+    "tasks": {
+      "updated": "Tarea actualizada.",
+      "deleted": "Tarea eliminada.",
+      "saveFailed": "No se pudo guardar la tarea: {{error}}",
+      "deleteFailed": "No se pudo eliminar la tarea: {{error}}"
+    },
+    "tour": {
+      "close": "Cerrar el recorrido",
+      "skip": "Saltar",
+      "take": "Hacer el recorrido",
+      "skipTour": "Saltar el recorrido", "finishButton": "Terminar",
+      "finish": {
+        "title": "¡Listo!",
+        "body": "¿Querés empezar a cargar tus datos reales, o preferís explorar primero con datos de ejemplo?"
+      },
+      "step": "Paso {{n}} de {{total}}",
+      "welcomeName": "Te damos la bienvenida a Northstack, {{name}}",
+      "addFirstEmployee": "Agregar mi primera persona",
+      "loadSample": "Cargar datos de ejemplo",
+      "sampleAdded": "Se agregaron {{employees}} personas y {{companies}} empresas de ejemplo.",
+      "sampleFailed": "No se pudieron cargar los datos de ejemplo: {{error}}",
+      "welcome": {
+        "title": "Te damos la bienvenida a Northstack",
+        "body": "Date una vuelta de 60 segundos antes de arrancar: el menú, las notificaciones y dónde encontrar ayuda."
+      },
+      "nav-overview": {
+        "title": "Tu punto de partida",
+        "body": "Esto es el Overview: tareas, ausencias y tu calendario en un solo lugar."
+      },
+      "nav-hr": {
+        "title": "Gestioná tu equipo",
+        "body": "Acá están las personas y las ausencias."
+      },
+      "nav-sales": {
+        "title": "Seguí tus ventas",
+        "body": "Empresas, contactos y oportunidades: todo lo que necesita Ventas."
+      },
+      "topbar-bell": {
+        "title": "Acá te llegan los avisos",
+        "body": "Novedades de oportunidades, pedidos de ausencia y aprobaciones llegan a esta campanita."
+      },
+      "topbar-usermenu": {
+        "title": "Guía, ayuda y repetir el recorrido",
+        "body": "¿Te trabás más adelante? La guía completa y las preguntas frecuentes están acá, y desde este mismo menú podés repetir el recorrido."
+      },
+      "nav-settings": {
+        "title": "La configuración de tu espacio",
+        "body": "Roles, facturación, integraciones y datos de la empresa están acá."
+      }
+    },
+    "viewFields": {
+      "Name": "Nombre",
+      "Business Email": "Email laboral",
+      "Personal Email": "Email personal",
+      "Department": "Área",
+      "Job Title": "Puesto",
+      "Status": "Estado",
+      "Start Date": "Fecha de ingreso",
+      "End Date": "Fecha de egreso",
+      "Birthdate": "Fecha de nacimiento",
+      "Contract URL": "Link al contrato",
+      "Contract Type": "Tipo de contrato",
+      "Pay Frequency": "Frecuencia de pago",
+      "Industry": "Rubro",
+      "Website": "Sitio web",
+      "Phone": "Teléfono",
+      "Size": "Tamaño",
+      "Account Owner": "Responsable de la cuenta",
+      "Email": "Email",
+      "Company": "Empresa",
+      "Title": "Cargo",
+      "Lead Status": "Estado del lead",
+      "Lead Source": "Origen del lead"
+    },
+    "operators": {
+      "contains": "contiene",
+      "eq": "=",
+      "gt": ">",
+      "lt": "<",
+      "before": "antes de",
+      "after": "después de",
+      "is": "es",
+      "is_not": "no es"
+    }
   }
 }

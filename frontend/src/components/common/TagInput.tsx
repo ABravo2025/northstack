@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, type TagAssignmentLite, type TagDefinition, type TaskEntityType } from '../../api';
 import { useToast } from './ToastProvider';
 import Popover from './Popover';
@@ -18,6 +19,7 @@ interface TagInputProps {
 // every tag already used anywhere in the tenant); typing a new one creates
 // it on the fly — see tagService.ts's assignTag.
 export default function TagInput({ token, entityType, entityId, tags, onChanged }: TagInputProps) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [allTags, setAllTags] = useState<TagDefinition[]>([]);
   const [query, setQuery] = useState('');
@@ -45,7 +47,7 @@ export default function TagInput({ token, entityType, entityId, tags, onChanged 
       setOpen(false);
       onChanged();
     } catch (error) {
-      toast.error('Failed to add tag: ' + (error as Error).message);
+      toast.error(t('ui.tags.addFailed', { error: (error as Error).message }));
     } finally {
       setSaving(false);
     }
@@ -56,7 +58,7 @@ export default function TagInput({ token, entityType, entityId, tags, onChanged 
       await api.removeTag(token, tag.tagAssignmentId);
       onChanged();
     } catch (error) {
-      toast.error('Failed to remove tag: ' + (error as Error).message);
+      toast.error(t('ui.tags.removeFailed', { error: (error as Error).message }));
     }
   };
 
@@ -77,7 +79,7 @@ export default function TagInput({ token, entityType, entityId, tags, onChanged 
             className="tag-add-input"
             style={{ minWidth: 140 }}
             value={query}
-            placeholder="+ Add tag"
+            placeholder={t('ui.tags.add')}
             disabled={saving}
             onChange={(e) => {
               setQuery(e.target.value);

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import { api } from '../api';
 import { useToast } from '../components/common/ToastProvider';
@@ -14,6 +15,7 @@ interface AcceptInvitePageProps {
 type Mode = 'login' | 'register';
 
 export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) {
+  const { t } = useTranslation('auth');
   const toast = useToast();
   const { token: invitationToken } = useParams<{ token: string }>();
   const [mode, setMode] = useState<Mode>('register');
@@ -32,7 +34,7 @@ export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) 
 
   useEffect(() => {
     if (!invitationToken) {
-      setInvitationError('Missing invitation token');
+      setInvitationError(t('invite.missingToken'));
       setInvitationLoading(false);
       return;
     }
@@ -41,7 +43,7 @@ export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) 
       .getInvitation(invitationToken)
       .then((invitation) => {
         if (invitation.status !== 'pending' || new Date(invitation.expiresAt) < new Date()) {
-          setInvitationError('This invitation is no longer valid.');
+          setInvitationError(t('invite.notValid'));
           return;
         }
         setEmail(invitation.email);
@@ -49,11 +51,11 @@ export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) 
       })
       .catch((err) => setInvitationError((err as Error).message))
       .finally(() => setInvitationLoading(false));
-  }, [invitationToken]);
+  }, [invitationToken, t]);
 
   const acceptWithSessionToken = async (sessionToken: string) => {
     if (!invitationToken) {
-      throw new Error('Missing invitation token');
+      throw new Error(t('invite.missingToken'));
     }
     const result = await api.acceptInvitation(sessionToken, invitationToken);
     onAccepted(sessionToken, result.user);
@@ -70,7 +72,7 @@ export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) 
 
       const sessionToken = response.session?.token;
       if (!sessionToken) {
-        throw new Error('Could not start a session');
+        throw new Error(t('common.sessionError'));
       }
 
       await acceptWithSessionToken(sessionToken);
@@ -89,25 +91,27 @@ export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) 
       </div>
       <div className="container">
         <div className="card mx-auto mt-10 max-w-md">
-          <h2 className="text-center">You've been invited</h2>
+          <h2 className="text-center">{t('invite.title')}</h2>
 
           {invitationLoading ? (
-            <p className="text-center">Loading invitation…</p>
+            <p className="text-center">{t('invite.loading')}</p>
           ) : invitationError ? (
             <div className="alert alert-error">{invitationError}</div>
           ) : (
             <>
               <p className="text-center">
                 {mode === 'register'
-                  ? `Create your account to join your team${invitationRole ? ` as ${invitationRole}` : ''}.`
-                  : 'Log in to accept the invitation.'}
+                  ? invitationRole
+                    ? t('invite.createAsRole', { role: invitationRole })
+                    : t('invite.create')
+                  : t('invite.loginToAccept')}
               </p>
               <form onSubmit={handleSubmit}>
                 {mode === 'register' && (
                   <>
                     <div className="form-group">
                       <label htmlFor="invite-firstName">
-                        First Name
+                        {t('fields.firstName')}
                         <RequiredMark />
                       </label>
                       <input
@@ -121,7 +125,7 @@ export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) 
                     </div>
                     <div className="form-group">
                       <label htmlFor="invite-lastName">
-                        Last Name
+                        {t('fields.lastName')}
                         <RequiredMark />
                       </label>
                       <input
@@ -135,7 +139,7 @@ export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) 
                     </div>
                     <div className="form-group">
                       <label htmlFor="invite-phone">
-                        Phone
+                        {t('fields.phone')}
                         <RequiredMark />
                       </label>
                       <input
@@ -151,12 +155,12 @@ export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) 
                   </>
                 )}
                 <div className="form-group">
-                  <label htmlFor="invite-email">Email</label>
+                  <label htmlFor="invite-email">{t('fields.email')}</label>
                   <input id="invite-email" type="email" value={email} disabled />
                 </div>
                 <div className="form-group">
                   <label htmlFor="invite-password">
-                    Password
+                    {t('fields.password')}
                     <RequiredMark />
                   </label>
                   <PasswordInput
@@ -176,21 +180,21 @@ export default function AcceptInvitePage({ onAccepted }: AcceptInvitePageProps) 
                 <div className="form-actions">
                   <button type="submit" className="btn btn-primary" disabled={loading}>
                     {loading
-                      ? 'Please wait...'
+                      ? t('common.pleaseWait')
                       : mode === 'register'
-                        ? 'Create account & accept'
-                        : 'Log in & accept'}
+                        ? t('invite.createAndAccept')
+                        : t('invite.loginAndAccept')}
                   </button>
                 </div>
               </form>
               <div className="mt-20 text-center">
                 <p>
-                  {mode === 'register' ? 'Already have an account?' : "Don't have an account?"}{' '}
+                  {mode === 'register' ? t('register.haveAccount') : t('login.noAccount')}{' '}
                   <button
                     className="btn btn-secondary ml-1"
                     onClick={() => setMode(mode === 'register' ? 'login' : 'register')}
                   >
-                    {mode === 'register' ? 'Login' : 'Register'}
+                    {mode === 'register' ? t('login.submit') : t('login.register')}
                   </button>
                 </p>
               </div>

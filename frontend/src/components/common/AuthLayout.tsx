@@ -1,8 +1,11 @@
+import { useTranslation } from 'react-i18next';
+
 interface AuthLayoutProps {
   children: React.ReactNode;
 }
 
 export default function AuthLayout({ children }: AuthLayoutProps) {
+  const { t } = useTranslation('auth');
   return (
     <div className="auth-screen">
       <div className="auth-left">
@@ -14,7 +17,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         <div className="auth-blob auth-blob-3" />
         <div className="auth-brand">
           <img src="/logo-horizontal-light.svg" alt="Northstack" className="auth-brand-logo" />
-          <p className="auth-tagline">HR management platform</p>
+          <p className="auth-tagline">{t('tagline')}</p>
         </div>
       </div>
     </div>

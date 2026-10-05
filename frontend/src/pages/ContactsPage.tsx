@@ -857,7 +857,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
                     required
                   />
                 </Field>
-                <Field label="Last Name" required>
+                <Field label={t('contacts.fields.lastName')} required>
                   <input
                     id="contact-lastName"
                     className="overview-field-input"
@@ -1072,17 +1072,17 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
 
       {deletingOpportunity && (
         <ConfirmDialog
-          title="Delete opportunity"
-          message={`Are you sure you want to delete "${deletingOpportunity.name}"? This can't be undone.`}
-          confirmLabel="Delete"
+          title={t('common:ui.opportunities.deleteTitle')}
+          message={t('common:ui.opportunities.deleteMessage', { name: deletingOpportunity.name })}
+          confirmLabel={t('common:ui.delete')}
           onConfirm={async () => {
             try {
               await api.deleteOpportunity(token, deletingOpportunity.id);
-              toast.success(`${deletingOpportunity.name} deleted.`);
+              toast.success(t('common:ui.deleted', { name: deletingOpportunity.name }));
               setDeletingOpportunity(null);
               refreshAssociatedData();
             } catch (error) {
-              toast.error('Failed to delete: ' + (error as Error).message);
+              toast.error(t('common:ui.deleteFailed', { error: (error as Error).message }));
               setDeletingOpportunity(null);
             }
           }}
@@ -1105,19 +1105,19 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
       />
 
       <div className="page-toolbar">
-        <h2>Contacts</h2>
+        <h2>{t('common:sidebar.contacts', { defaultValue: 'Contacts' })}</h2>
         {contacts.length > 0 && (
           <div className="toolbar-search">
             <SearchIcon />
             <label htmlFor="contact-search" className="sr-only">
-              Search contacts
+              {t('common:ui.contacts.search')}
             </label>
             <input
               id="contact-search"
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name, email or company..."
+              placeholder={t('common:ui.contacts.searchPlaceholder')}
             />
           </div>
         )}
@@ -1127,8 +1127,8 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
             options={allTagOptions}
             selected={selectedTagFilter}
             onChange={setSelectedTagFilter}
-            placeholder="Filter by tag"
-            emptyMessage="No tags yet."
+            placeholder={t('common:ui.tags.filter')}
+            emptyMessage={t('common:ui.tags.none')}
           />
         )}
         {viewType !== 'kanban' && <FilterBar fields={fields} filters={viewFilters} onChange={setViewFilters} />}

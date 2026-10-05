@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import LegalDocumentModal from './LegalDocumentModal';
 
 // Links to legal documents. Readable on all three backgrounds they appear on: the light app, the
@@ -17,6 +18,7 @@ interface AcceptTermsCheckboxProps {
 // places someone accepts the Terms of Service / Privacy Policy while creating or confirming an
 // account. Owns its own legalDoc modal state so callers don't each need to wire that up.
 export default function AcceptTermsCheckbox({ checked, onChange, disabled, error }: AcceptTermsCheckboxProps) {
+  const { t } = useTranslation('auth');
   const [legalDoc, setLegalDoc] = useState<'terms' | 'privacy' | null>(null);
 
   return (
@@ -31,21 +33,21 @@ export default function AcceptTermsCheckbox({ checked, onChange, disabled, error
           disabled={disabled}
         />
         <span>
-          I agree to the{' '}
+          {t('terms.agreeTo')}{' '}
           <button
             type="button"
             className={LEGAL_LINK_CLASS}
             onClick={() => setLegalDoc('terms')}
           >
-            Terms of Service
+            {t('terms.terms')}
           </button>{' '}
-          and{' '}
+          {t('terms.and')}{' '}
           <button
             type="button"
             className={LEGAL_LINK_CLASS}
             onClick={() => setLegalDoc('privacy')}
           >
-            Privacy Policy
+            {t('terms.privacy')}
           </button>
         </span>
       </label>

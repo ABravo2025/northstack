@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import { api } from '../api';
 import type { ContractConfirmationDetails } from '../api/contractConfirmationPublic';
@@ -14,9 +15,9 @@ interface ContractConfirmationPageProps {
   onConfirmed: (token: string, user: any) => void;
 }
 
-const COMPENSATION_TYPE_LABELS: Record<string, string> = { hourly: 'Hourly', fixed: 'Fixed' };
 
 export default function ContractConfirmationPage({ onConfirmed }: ContractConfirmationPageProps) {
+  const { t } = useTranslation('auth');
   const toast = useToast();
   const { token } = useParams<{ token: string }>();
   const [loading, setLoading] = useState(true);
@@ -38,7 +39,7 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
 
   useEffect(() => {
     if (!token) {
-      setLoadError('Missing token');
+      setLoadError(t('contract.missingToken'));
       setLoading(false);
       return;
     }
@@ -47,7 +48,7 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
       .then(setDetails)
       .catch((err) => setLoadError((err as Error).message))
       .finally(() => setLoading(false));
-  }, [token]);
+  }, [token, t]);
 
   const selectedMethod = details?.paymentMethods.find((m) => m.id === paymentMethodId);
   // "Wire transfer" is matched by name, not a dedicated flag — this is the
@@ -92,7 +93,7 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
 
       const sessionToken = response.session?.token;
       if (!sessionToken) {
-        throw new Error('Could not start a session');
+        throw new Error(t('common.sessionError'));
       }
       onConfirmed(sessionToken, response.user);
     } catch (err) {
@@ -110,74 +111,72 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
       </div>
       <div className="container">
         <div className="card mx-auto mt-10 max-w-2xl">
-          <h2 className="text-center">Confirm your contract</h2>
+          <h2 className="text-center">{t('contract.title')}</h2>
 
           {loading ? (
-            <p className="text-center">Loading contract…</p>
+            <p className="text-center">{t('contract.loading')}</p>
           ) : loadError || !details ? (
-            <div className="alert alert-error">{loadError || 'Contract not found'}</div>
+            <div className="alert alert-error">{loadError || t('contract.notFound')}</div>
           ) : (
             <>
               <p className="text-center">
-                {details.tenantName} has invited you to join as {details.employeeFirstName} {details.employeeLastName}.
-                Review the contract below, complete your details, and confirm.
+                {t('contract.intro', { company: details.tenantName, name: `${details.employeeFirstName} ${details.employeeLastName}` })}
               </p>
 
               <div className="field-group">
-                <h4 className="field-group-title">Contract</h4>
+                <h4 className="field-group-title">{t('contract.section')}</h4>
                 <div className="field-group-body">
                   <div className="overview-field">
-                    <span className="overview-field-label">Person</span>
+                    <span className="overview-field-label">{t('contract.person')}</span>
                     {details.employeeFirstName} {details.employeeLastName}
                   </div>
                   <div className="overview-field">
-                    <span className="overview-field-label">Job Title</span>
+                    <span className="overview-field-label">{t('contract.jobTitle')}</span>
                     {details.jobTitle}
                   </div>
                   <div className="overview-field overview-field-full">
-                    <span className="overview-field-label">Role Description</span>
+                    <span className="overview-field-label">{t('contract.roleDescription')}</span>
                     {details.description}
                   </div>
                   <div className="overview-field">
-                    <span className="overview-field-label">Compensation Type</span>
-                    {COMPENSATION_TYPE_LABELS[details.compensationType] || details.compensationType}
+                    <span className="overview-field-label">{t('contract.compensationType')}</span>
+                    {t(`contract.compensation.${details.compensationType}`, { defaultValue: details.compensationType })}
                   </div>
                   <div className="overview-field">
-                    <span className="overview-field-label">Amount</span>
+                    <span className="overview-field-label">{t('contract.amount')}</span>
                     {formatMoney(details.rateCents, details.currency)}
                   </div>
                   <div className="overview-field">
-                    <span className="overview-field-label">Pay Frequency</span>
+                    <span className="overview-field-label">{t('contract.payFrequency')}</span>
                     {details.payFrequencyName}
                   </div>
                   <div className="overview-field">
-                    <span className="overview-field-label">Effective From</span>
+                    <span className="overview-field-label">{t('contract.effectiveFrom')}</span>
                     {details.effectiveFrom.slice(0, 10)}
                   </div>
                   <div className="overview-field">
-                    <span className="overview-field-label">Nationality</span>
+                    <span className="overview-field-label">{t('contract.nationality')}</span>
                     {details.nationality || '-'}
                   </div>
                   <div className="overview-field overview-field-full">
-                    <span className="overview-field-label">Time Off Policies</span>
+                    <span className="overview-field-label">{t('contract.timeOffPolicies')}</span>
                     {details.timeOffPolicyNames.length > 0 ? details.timeOffPolicyNames.join(', ') : '-'}
                   </div>
                 </div>
               </div>
 
               <p className="text-sm text-ink-muted mt-3">
-                At confirmation, we record your acceptance with date, time, and IP address — this contract is frozen
-                exactly as you see it here.
+                {t('contract.frozenNotice')}
               </p>
 
               <form onSubmit={handleSubmit}>
                 <div className="form-group">
-                  <label htmlFor="confirm-email">Email</label>
+                  <label htmlFor="confirm-email">{t('fields.email')}</label>
                   <input id="confirm-email" type="email" value={details.email} disabled />
                 </div>
                 <div className="form-group">
                   <label htmlFor="confirm-phone">
-                    Phone
+                    {t('fields.phone')}
                     <RequiredMark />
                   </label>
                   <input
@@ -192,7 +191,7 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
                 </div>
                 <div className="form-group">
                   <label htmlFor="confirm-password">
-                    Password
+                    {t('fields.password')}
                     <RequiredMark />
                   </label>
                   <PasswordInput
@@ -208,7 +207,7 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
                 </div>
                 <div className="form-group">
                   <label htmlFor="confirm-country">
-                    Country of Residence
+                    {t('contract.countryOfResidence')}
                     <RequiredMark />
                   </label>
                   <select
@@ -218,7 +217,7 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
                     required
                     disabled={submitting}
                   >
-                    <option value="">-- select --</option>
+                    <option value="">{t('common.select')}</option>
                     {COUNTRIES.map((country) => (
                       <option key={country} value={country}>
                         {country}
@@ -228,7 +227,7 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
                 </div>
                 <div className="form-group">
                   <label htmlFor="confirm-payment-method">
-                    Payment Method
+                    {t('contract.paymentMethod')}
                     <RequiredMark />
                   </label>
                   <select
@@ -238,7 +237,7 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
                     required
                     disabled={submitting}
                   >
-                    <option value="">-- select --</option>
+                    <option value="">{t('common.select')}</option>
                     {details.paymentMethods.map((method) => (
                       <option key={method.id} value={method.id}>
                         {method.name}
@@ -288,7 +287,7 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
                       <>
                         <div className="form-group">
                           <label htmlFor="confirm-routing">
-                            Routing Number
+                            {t('contract.routingNumber')}
                             <RequiredMark />
                           </label>
                           <input
@@ -302,7 +301,7 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
                         </div>
                         <div className="form-group">
                           <label htmlFor="confirm-account">
-                            Account Number
+                            {t('contract.accountNumber')}
                             <RequiredMark />
                           </label>
                           <input
@@ -322,7 +321,7 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
                 {paymentMethodId && !isWireTransfer && (
                   <div className="form-group">
                     <label htmlFor="confirm-username">
-                      Username / Email on {selectedMethod?.name}
+                      {t('contract.usernameOn', { method: selectedMethod?.name ?? '' })}
                       <RequiredMark />
                     </label>
                     <input
@@ -338,7 +337,7 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
 
                 {paymentMethodId && (
                   <p className="text-xs text-ink-muted inline-flex items-center gap-1">
-                    🔒 This data is stored with restricted access.
+                    🔒 {t('contract.restricted')}
                   </p>
                 )}
 
@@ -352,14 +351,14 @@ export default function ContractConfirmationPage({ onConfirmed }: ContractConfir
                       required
                       disabled={submitting}
                     />
-                    <span>I accept the contract as shown above.</span>
+                    <span>{t('contract.accept')}</span>
                   </label>
                 </div>
                 <AcceptTermsCheckbox checked={acceptedTerms} onChange={setAcceptedTerms} disabled={submitting} />
 
                 <div className="form-actions">
                   <button type="submit" className="btn btn-primary" disabled={submitting || !canSubmit}>
-                    {submitting ? 'Confirming…' : 'Confirm Contract'}
+                    {submitting ? t('contract.confirming') : t('contract.confirm')}
                   </button>
                 </div>
               </form>

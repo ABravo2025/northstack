@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api } from '../api';
 import AuthLayout from '../components/common/AuthLayout';
 import RequiredMark from '../components/common/RequiredMark';
@@ -9,6 +10,7 @@ interface ForgotPasswordPageProps {
 }
 
 export default function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPageProps) {
+  const { t } = useTranslation('auth');
   const toast = useToast();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -31,19 +33,18 @@ export default function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPage
 
   return (
     <AuthLayout>
-      <h2 className="auth-title">Reset your password</h2>
+      <h2 className="auth-title">{t('forgot.title')}</h2>
       {sent ? (
         <p className="text-sm">
-          If an account exists for <strong>{email}</strong>, we've sent a link to reset your password. Check your
-          inbox — the link expires in 1 hour.
+          {t('forgot.sentBefore')} <strong>{email}</strong>{t('forgot.sentAfter')}
         </p>
       ) : (
         <>
-          <p className="text-sm mb-3">Enter your email and we'll send you a link to set a new password.</p>
+          <p className="text-sm mb-3">{t('forgot.intro')}</p>
           <form onSubmit={handleSubmit}>
             <div className="form-group">
               <label htmlFor="forgot-email">
-                Email
+                {t('fields.email')}
                 <RequiredMark />
               </label>
               <input
@@ -51,21 +52,21 @@ export default function ForgotPasswordPage({ onBackToLogin }: ForgotPasswordPage
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
+                placeholder={t('fields.emailPlaceholder')}
                 required
                 disabled={loading}
               />
             </div>
             <button type="submit" className="auth-submit" disabled={loading}>
-              {loading ? 'Sending…' : 'Send reset link'}
+              {loading ? t('common.sending') : t('forgot.submit')}
             </button>
           </form>
         </>
       )}
       <div className="auth-foot">
-        <span>Remembered your password?</span>
+        <span>{t('forgot.remembered')}</span>
         <button type="button" onClick={onBackToLogin}>
-          Back to login
+          {t('forgot.backToLogin')}
         </button>
       </div>
     </AuthLayout>

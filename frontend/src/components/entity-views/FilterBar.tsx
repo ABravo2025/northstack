@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ViewFilter } from '../../api';
-import { OPERATORS, type ViewField } from '../../lib/viewFields';
+import { OPERATORS, operatorLabel, viewFieldLabel, type ViewField } from '../../lib/viewFields';
 import Popover from '../common/Popover';
 import { FilterIcon, PlusIcon, XIcon } from '../common/Icons';
 
@@ -64,14 +64,14 @@ export default function FilterBar({ fields, filters, onChange }: FilterBarProps)
               >
                 {fields.map((f) => (
                   <option key={f.key} value={f.key}>
-                    {f.label}
+                    {viewFieldLabel(f, t)}
                   </option>
                 ))}
               </select>
               <select className="op-sel" value={filter.operator} onChange={(e) => updateFilter(index, { operator: e.target.value })}>
                 {ops.map((op) => (
                   <option key={op.value} value={op.value}>
-                    {op.label}
+                    {operatorLabel(op, t)}
                   </option>
                 ))}
               </select>

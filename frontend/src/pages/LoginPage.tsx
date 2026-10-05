@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import PasswordInput from '../components/common/PasswordInput';
 import AuthLayout from '../components/common/AuthLayout';
 import RequiredMark from '../components/common/RequiredMark';
@@ -11,6 +12,7 @@ interface LoginPageProps {
 }
 
 export default function LoginPage({ onLogin, onSwitchToRegister, onForgotPassword, loading }: LoginPageProps) {
+  const { t } = useTranslation('auth');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
@@ -21,11 +23,11 @@ export default function LoginPage({ onLogin, onSwitchToRegister, onForgotPasswor
 
   return (
     <AuthLayout>
-      <h2 className="auth-title">Login</h2>
+      <h2 className="auth-title">{t('login.title')}</h2>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="login-email">
-            Email
+            {t('fields.email')}
             <RequiredMark />
           </label>
           <input
@@ -33,14 +35,14 @@ export default function LoginPage({ onLogin, onSwitchToRegister, onForgotPasswor
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="your@email.com"
+            placeholder={t('fields.emailPlaceholder')}
             required
             disabled={loading}
           />
         </div>
         <div className="form-group">
           <label htmlFor="login-password">
-            Password
+            {t('fields.password')}
             <RequiredMark />
           </label>
           <PasswordInput
@@ -53,17 +55,17 @@ export default function LoginPage({ onLogin, onSwitchToRegister, onForgotPasswor
             autoComplete="current-password"
           />
           <button type="button" className="auth-forgot-link" onClick={onForgotPassword}>
-            Forgot your password?
+            {t('login.forgot')}
           </button>
         </div>
         <button type="submit" className="auth-submit" disabled={loading}>
-          {loading ? 'Logging in...' : 'Login'}
+          {loading ? t('login.submitting') : t('login.submit')}
         </button>
       </form>
       <div className="auth-foot">
-        <span>Don't have an account?</span>
+        <span>{t('login.noAccount')}</span>
         <button type="button" onClick={onSwitchToRegister}>
-          Register
+          {t('login.register')}
         </button>
       </div>
     </AuthLayout>

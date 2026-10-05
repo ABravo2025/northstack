@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { api, type EmployeeBirthday, type GoogleCalendarViewEvent, type Task } from '../api';
 import { useToast } from '../components/common/ToastProvider';
 import TableSkeleton from '../components/common/TableSkeleton';
@@ -15,21 +16,15 @@ interface OverviewPageProps {
   user: any;
 }
 
-const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-const MONTH_LABELS = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
-];
+// Weekday and month names in the user's language (Intl), Sunday first like the grid below.
+function weekdayLabels(locale: string): string[] {
+  const fmt = new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' });
+  return Array.from({ length: 7 }, (_, i) => fmt.format(new Date(Date.UTC(2026, 0, 4 + i)))); // 2026-01-04 is a Sunday
+}
+function monthLabel(locale: string, year: number, month: number): string {
+  const s = new Intl.DateTimeFormat(locale, { month: 'long', timeZone: 'UTC' }).format(new Date(Date.UTC(year, month, 15)));
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
 function pad(n: number): string {
   return n < 10 ? `0${n}` : `${n}`;
@@ -65,6 +60,8 @@ function buildMonthGrid(year: number, month: number): (number | null)[][] {
 }
 
 export default function OverviewPage({ token, user }: OverviewPageProps) {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language.startsWith('es') ? 'es-AR' : 'en-US';
   const permissions = usePermissions();
   const toast = useToast();
   const [requests, setRequests] = useState<any[]>([]);
@@ -137,7 +134,7 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
       setCalendarTasks(tasks);
       setBirthdays(employeeBirthdays);
     } catch (error) {
-      toast.error('Failed to load the team calendar: ' + (error as Error).message);
+      toast.error(t('ui.calendar.loadFailed', { error: (error as Error).message }));
     } finally {
       setLoading(false);
     }
@@ -170,11 +167,11 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
     if (!editingTask) return;
     try {
       await api.updateTask(token, editingTask.id, payload);
-      toast.success('Task updated.');
+      toast.success(t('ui.tasks.updated'));
       setFormOpen(false);
       await loadCalendar();
     } catch (error) {
-      toast.error('Failed to save task: ' + (error as Error).message);
+      toast.error(t('ui.tasks.saveFailed', { error: (error as Error).message }));
     }
   };
 
@@ -182,11 +179,11 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
     if (!editingTask) return;
     try {
       await api.deleteTask(token, editingTask.id);
-      toast.success('Task deleted.');
+      toast.success(t('ui.tasks.deleted'));
       setFormOpen(false);
       await loadCalendar();
     } catch (error) {
-      toast.error('Failed to delete task: ' + (error as Error).message);
+      toast.error(t('ui.tasks.deleteFailed', { error: (error as Error).message }));
     }
   };
 
@@ -271,16 +268,16 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
         <div className="min-w-0 flex-1">
           <div className="page-toolbar">
             <h2>
-              {MONTH_LABELS[cursor.month]} {cursor.year}
+              {monthLabel(locale, cursor.year, cursor.month)} {cursor.year}
             </h2>
             <div className="seg-nav ml-auto">
-              <button type="button" onClick={goToPrevMonth} aria-label="Previous month">
+              <button type="button" onClick={goToPrevMonth} aria-label={t('ui.calendar.prevMonth')}>
                 <ChevronLeftIcon className="h-3.5 w-3.5" />
               </button>
               <button type="button" onClick={goToToday}>
-                Today
+                {t('ui.calendar.today')}
               </button>
-              <button type="button" onClick={goToNextMonth} aria-label="Next month">
+              <button type="button" onClick={goToNextMonth} aria-label={t('ui.calendar.nextMonth')}>
                 <ChevronRightIcon className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -293,7 +290,7 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
               <table className="calendar-table">
                 <thead>
                   <tr>
-                    {WEEKDAY_LABELS.map((label) => (
+                    {weekdayLabels(locale).map((label) => (
                       <th key={label}>{label}</th>
                     ))}
                   </tr>

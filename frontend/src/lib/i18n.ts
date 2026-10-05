@@ -15,6 +15,8 @@ import settingsPagesEn from '../locales/en/settingsPages.json';
 import settingsPagesEs from '../locales/es/settingsPages.json';
 import notesActivityEn from '../locales/en/notesActivity.json';
 import notesActivityEs from '../locales/es/notesActivity.json';
+import authEn from '../locales/en/auth.json';
+import authEs from '../locales/es/auth.json';
 
 // docs/general/spec-i18n.md — only these two for now; the detector/fallback chain below doesn't
 // need to change to add a third later.
@@ -34,6 +36,7 @@ i18n
         tasks: tasksEn,
         settingsPages: settingsPagesEn,
         notesActivity: notesActivityEn,
+        auth: authEn,
       },
       es: {
         common: commonEs,
@@ -43,9 +46,13 @@ i18n
         tasks: tasksEs,
         settingsPages: settingsPagesEs,
         notesActivity: notesActivityEs,
+        auth: authEs,
       },
     },
     supportedLngs: SUPPORTED_LOCALES,
+    // es-AR, es-MX, en-GB… count as their base language (2026-10-05): without this an Argentine
+    // browser (es-AR) fell back to English on every screen before login.
+    nonExplicitSupportedLngs: true,
     fallbackLng: 'en',
     defaultNS: 'common',
     interpolation: { escapeValue: false },

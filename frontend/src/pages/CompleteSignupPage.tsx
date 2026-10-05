@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Link, useSearchParams } from 'react-router-dom';
 import AuthLayout from '../components/common/AuthLayout';
 import PasswordInput from '../components/common/PasswordInput';
@@ -11,23 +12,9 @@ import { api, ApiError } from '../api';
 import type { Tenant } from '../api';
 import { captureReferralCode, forgetReferralCode } from '../lib/referralCode';
 
-const ACQUISITION_CHANNEL_OPTIONS: { value: string; label: string }[] = [
-  { value: 'organic', label: 'Organic search' },
-  { value: 'paid_ads', label: 'Paid ads' },
-  { value: 'referral', label: 'Referral' },
-  { value: 'content', label: 'Content (blog, video, etc.)' },
-  { value: 'outbound_sales', label: 'Outbound sales' },
-  { value: 'partnership', label: 'Partnership' },
-  { value: 'other', label: 'Other' },
-];
-
-const JOB_FUNCTION_OPTIONS: { value: string; label: string }[] = [
-  { value: 'founder_ceo', label: 'Founder / CEO' },
-  { value: 'hr', label: 'HR' },
-  { value: 'ops_finance', label: 'Operations / Finance' },
-  { value: 'sales', label: 'Sales' },
-  { value: 'other', label: 'Other' },
-];
+// Labels: auth.json → signup.channels.* / signup.jobFunctions.*
+const ACQUISITION_CHANNEL_OPTIONS = ['organic', 'paid_ads', 'referral', 'content', 'outbound_sales', 'partnership', 'other'];
+const JOB_FUNCTION_OPTIONS = ['founder_ceo', 'hr', 'ops_finance', 'sales', 'other'];
 
 // Maps a field name the backend can reject (registerTenantWithOwner's `field` on error) back
 // to the survey step it belongs to, so an error surfaced at final submit (Screen 3c) jumps
@@ -60,6 +47,7 @@ interface CompleteSignupPageProps {
 // until the final submit on Security, same "no orphaned Tenant/User" discipline the rest of
 // the app already follows for multi-step flows.
 export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageProps) {
+  const { t } = useTranslation('auth');
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
 
@@ -94,7 +82,7 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
 
   useEffect(() => {
     if (!token) {
-      setTokenError('This link is missing a verification token.');
+      setTokenError(t('signup.missingToken'));
       setChecking(false);
       return;
     }
@@ -104,7 +92,7 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
       .then((response) => setEmail(response.email))
       .catch((err) => setTokenError((err as Error).message))
       .finally(() => setChecking(false));
-  }, [token]);
+  }, [token, t]);
 
   const fieldErrorFor = (name: string) => (fieldError?.field === name ? fieldError.message : null);
 
@@ -141,7 +129,7 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
       });
       const sessionToken = response.session?.token;
       if (!sessionToken || !response.tenant) {
-        throw new Error('Could not start a session');
+        throw new Error(t('common.sessionError'));
       }
       forgetReferralCode();
       onRegistered(sessionToken, response.user, response.tenant);
@@ -165,7 +153,7 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
   if (checking) {
     return (
       <AuthLayout>
-        <p className="text-center text-sm">Verifying your email…</p>
+        <p className="text-center text-sm">{t('signup.verifying')}</p>
       </AuthLayout>
     );
   }
@@ -173,10 +161,10 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
   if (tokenError) {
     return (
       <AuthLayout>
-        <h2 className="auth-title">This link isn't valid</h2>
+        <h2 className="auth-title">{t('signup.invalidLink')}</h2>
         <div className="alert alert-error">{tokenError}</div>
         <p className="text-sm mt-3">
-          <Link to="/register">Start over</Link>
+          <Link to="/register">{t('register.startOver')}</Link>
         </p>
       </AuthLayout>
     );
@@ -185,12 +173,12 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
   return (
     <AuthLayout>
       <h2 className="auth-title">
-        {surveyStep === 'company' && 'Tell us about your company'}
-        {surveyStep === 'you' && 'Tell us about you'}
-        {surveyStep === 'security' && 'Secure your account'}
+        {surveyStep === 'company' && t('signup.companyTitle')}
+        {surveyStep === 'you' && t('signup.youTitle')}
+        {surveyStep === 'security' && t('signup.securityTitle')}
       </h2>
       <p className="text-xs text-ink-faint mb-3">
-        Step {surveyStep === 'company' ? 1 : surveyStep === 'you' ? 2 : 3} of 3 — {email}
+        {t('signup.step', { n: surveyStep === 'company' ? 1 : surveyStep === 'you' ? 2 : 3 })} — {email}
       </p>
 
       {fieldError && !fieldError.field && <div className="alert alert-error mb-3">{fieldError.message}</div>}
@@ -199,7 +187,7 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
         <form onSubmit={goToStep('you')}>
           <div className="form-group">
             <label htmlFor="signup-tenantName">
-              Company Name
+              {t('signup.companyName')}
               <RequiredMark />
             </label>
             <input
@@ -207,14 +195,14 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
               type="text"
               value={tenantName}
               onChange={(e) => setTenantName(e.target.value)}
-              placeholder="My Company"
+              placeholder={t('signup.companyNamePlaceholder')}
               required
             />
             {fieldErrorFor('tenantName') && <div className="field-error">{fieldErrorFor('tenantName')}</div>}
           </div>
           <div className="form-group">
             <label htmlFor="signup-industry">
-              Industry
+              {t('signup.industry')}
               <RequiredMark />
             </label>
             <input
@@ -222,14 +210,14 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
               type="text"
               value={industry}
               onChange={(e) => setIndustry(e.target.value)}
-              placeholder="e.g. Software, Retail, Healthcare"
+              placeholder={t('signup.industryPlaceholder')}
               required
             />
             {fieldErrorFor('industry') && <div className="field-error">{fieldErrorFor('industry')}</div>}
           </div>
           <div className="form-group">
             <label htmlFor="signup-companySize">
-              Company size
+              {t('signup.companySize')}
               <RequiredMark />
             </label>
             <select
@@ -238,10 +226,10 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
               onChange={(e) => setCompanySize(e.target.value)}
               required
             >
-              <option value="">-- select --</option>
+              <option value="">{t('common.select')}</option>
               {COMPANY_SIZE_OPTIONS.map((band) => (
                 <option key={band} value={band}>
-                  {band} employees
+                  {t('signup.employees', { band })}
                 </option>
               ))}
             </select>
@@ -249,11 +237,11 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
           </div>
           <div className="form-group">
             <label htmlFor="signup-country">
-              Country
+              {t('signup.country')}
               <RequiredMark />
             </label>
             <select id="signup-country" value={country} onChange={(e) => setCountry(e.target.value)} required>
-              <option value="">-- select --</option>
+              <option value="">{t('common.select')}</option>
               {COUNTRIES.map((name) => (
                 <option key={name} value={name}>
                   {name}
@@ -263,16 +251,16 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
             {fieldErrorFor('country') && <div className="field-error">{fieldErrorFor('country')}</div>}
           </div>
           <div className="form-group">
-            <label htmlFor="signup-acquisitionChannel">How did you hear about us? (optional)</label>
+            <label htmlFor="signup-acquisitionChannel">{t('signup.heardFrom')}</label>
             <select
               id="signup-acquisitionChannel"
               value={acquisitionChannel}
               onChange={(e) => setAcquisitionChannel(e.target.value)}
             >
-              <option value="">-- select --</option>
-              {ACQUISITION_CHANNEL_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
+              <option value="">{t('common.select')}</option>
+              {ACQUISITION_CHANNEL_OPTIONS.map((value) => (
+                <option key={value} value={value}>
+                  {t(`signup.channels.${value}`)}
                 </option>
               ))}
             </select>
@@ -296,7 +284,7 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
             {fieldErrorFor('referralCode') && <div className="field-error">{fieldErrorFor('referralCode')}</div>}
           </div>
           <button type="submit" className="auth-submit">
-            Continue
+            {t('common.continue')}
           </button>
         </form>
       )}
@@ -305,7 +293,7 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
         <form onSubmit={goToStep('security')}>
           <div className="form-group">
             <label htmlFor="signup-firstName">
-              First Name
+              {t('fields.firstName')}
               <RequiredMark />
             </label>
             <input
@@ -313,14 +301,14 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
               type="text"
               value={ownerFirstName}
               onChange={(e) => setOwnerFirstName(e.target.value)}
-              placeholder="John"
+              placeholder={t('signup.firstNamePlaceholder')}
               required
             />
             {fieldErrorFor('ownerFirstName') && <div className="field-error">{fieldErrorFor('ownerFirstName')}</div>}
           </div>
           <div className="form-group">
             <label htmlFor="signup-lastName">
-              Last Name
+              {t('fields.lastName')}
               <RequiredMark />
             </label>
             <input
@@ -328,14 +316,14 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
               type="text"
               value={ownerLastName}
               onChange={(e) => setOwnerLastName(e.target.value)}
-              placeholder="Doe"
+              placeholder={t('signup.lastNamePlaceholder')}
               required
             />
             {fieldErrorFor('ownerLastName') && <div className="field-error">{fieldErrorFor('ownerLastName')}</div>}
           </div>
           <div className="form-group">
             <label htmlFor="signup-phone">
-              Phone
+              {t('fields.phone')}
               <RequiredMark />
             </label>
             <input
@@ -349,12 +337,12 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
             {fieldErrorFor('ownerPhone') && <div className="field-error">{fieldErrorFor('ownerPhone')}</div>}
           </div>
           <div className="form-group">
-            <label htmlFor="signup-jobFunction">Your role (optional)</label>
+            <label htmlFor="signup-jobFunction">{t('signup.yourRole')}</label>
             <select id="signup-jobFunction" value={jobFunction} onChange={(e) => setJobFunction(e.target.value)}>
-              <option value="">-- select --</option>
-              {JOB_FUNCTION_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
+              <option value="">{t('common.select')}</option>
+              {JOB_FUNCTION_OPTIONS.map((value) => (
+                <option key={value} value={value}>
+                  {t(`signup.jobFunctions.${value}`)}
                 </option>
               ))}
             </select>
@@ -362,10 +350,10 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
           </div>
           <div className="form-actions flex gap-2">
             <button type="button" className="btn btn-secondary" onClick={() => setSurveyStep('company')}>
-              Back
+              {t('common.back')}
             </button>
             <button type="submit" className="auth-submit">
-              Continue
+              {t('common.continue')}
             </button>
           </div>
         </form>
@@ -375,7 +363,7 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
         <form onSubmit={handleFinalSubmit}>
           <div className="form-group">
             <label htmlFor="signup-password">
-              Password
+              {t('fields.password')}
               <RequiredMark />
             </label>
             <PasswordInput
@@ -392,7 +380,7 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
           </div>
           <div className="form-group">
             <label htmlFor="signup-confirmPassword">
-              Confirm Password
+              {t('signup.confirmPassword')}
               <RequiredMark />
             </label>
             <PasswordInput
@@ -407,7 +395,7 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
               disabled={submitting}
               autoComplete="new-password"
             />
-            {passwordMismatch && <div className="field-error">Passwords don't match.</div>}
+            {passwordMismatch && <div className="field-error">{t('signup.passwordMismatch')}</div>}
           </div>
           <AcceptTermsCheckbox
             checked={acceptedTerms}
@@ -417,10 +405,10 @@ export default function CompleteSignupPage({ onRegistered }: CompleteSignupPageP
           />
           <div className="form-actions flex gap-2">
             <button type="button" className="btn btn-secondary" onClick={() => setSurveyStep('you')} disabled={submitting}>
-              Back
+              {t('common.back')}
             </button>
             <button type="submit" className="auth-submit" disabled={submitting}>
-              {submitting ? 'Creating your account…' : 'Create account'}
+              {submitting ? t('signup.creating') : t('signup.create')}
             </button>
           </div>
         </form>

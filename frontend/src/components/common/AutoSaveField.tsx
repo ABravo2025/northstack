@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useToast } from './ToastProvider';
 
 interface AutoSaveFieldProps {
@@ -13,6 +14,7 @@ interface AutoSaveFieldProps {
 // and toasts on failure, so a rejected PATCH never leaves the field showing
 // something the server didn't actually accept.
 export default function AutoSaveField({ value, onSave, type = 'text', placeholder, label }: AutoSaveFieldProps) {
+  const { t } = useTranslation();
   const toast = useToast();
   const [draft, setDraft] = useState(value);
   const [saving, setSaving] = useState(false);
@@ -28,7 +30,7 @@ export default function AutoSaveField({ value, onSave, type = 'text', placeholde
       await onSave(draft);
     } catch (error) {
       setDraft(value);
-      toast.error(`Failed to update ${label.toLowerCase()}: ` + (error as Error).message);
+      toast.error(t('ui.saveFieldFailed', { field: label.toLowerCase(), error: (error as Error).message }));
     } finally {
       setSaving(false);
     }

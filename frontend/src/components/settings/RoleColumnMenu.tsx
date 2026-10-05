@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import ConfirmDialog from '../common/ConfirmDialog';
 import Popover from '../common/Popover';
 import { DotsVerticalIcon } from '../common/Icons';
@@ -15,6 +16,7 @@ interface RoleColumnMenuProps {
 // its own header" interaction as a custom-field column, just for a Role instead of a
 // CustomFieldDefinition.
 export default function RoleColumnMenu({ role, onRename, onDelete }: RoleColumnMenuProps) {
+  const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(role.name);
@@ -47,9 +49,9 @@ export default function RoleColumnMenu({ role, onRename, onDelete }: RoleColumnM
     <>
       {confirmingDelete && (
         <ConfirmDialog
-          title="Delete role"
-          message={`Delete "${role.name}"? This can't be undone. Anyone still assigned to this role (or with a pending invitation to it) needs to be moved to a different role first.`}
-          confirmLabel="Delete"
+          title={t('ui.roles.deleteRole')}
+          message={t('ui.roles.deleteMessage', { name: role.name })}
+          confirmLabel={t('ui.delete')}
           danger
           onConfirm={async () => {
             await onDelete(role.id);
@@ -83,13 +85,13 @@ export default function RoleColumnMenu({ role, onRename, onDelete }: RoleColumnM
                 setConfirmingDelete(true);
               }}
             >
-              Delete role
+              {t('ui.roles.deleteRole')}
             </div>
           </>
         ) : (
           <div onClick={(e) => e.stopPropagation()}>
             <div className="nv-field">
-              <label htmlFor={`role-rename-${role.id}`}>Role name</label>
+              <label htmlFor={`role-rename-${role.id}`}>{t('ui.roles.roleName')}</label>
               <input
                 id={`role-rename-${role.id}`}
                 type="text"

@@ -48,6 +48,7 @@ Release flow: code → `staging` → user reviews → `main`. Additive DB change
 - **Payroll tracking**: pay runs, compensation, pay stubs, contract confirmation by the employee.
 - Plan limits enforced (Starter vs Growth); MCP / AI-assistant integration in progress (not announced).
 - **Projects** (in **staging** only, awaiting Alejandro's review — not in production, don't market yet): phases, tasks, team with roles and progress, per client or internal; 9 niche templates EN/ES (agencies, accounting firms, consulting, internal) with tasks assigned by role; "Save as template" on Growth; Starter max 5 open projects. Spec: `docs/general/spec-projects.md` on staging.
+- **Shifts / Turnos** (in **staging** only, units 1–6 of 14, awaiting Alejandro's review — not in production, don't market yet): locations with their own time zone (Starter 1, Growth unlimited), weekly schedule by location or by person, drafts → publish, assignment rules (overlap blocks; time off, holidays, availability, minimum rest and skills warn), confirm/decline from the app or a one-click email link (with .ics), Google Calendar event for connected users, "My shifts" + availability. Reminders will be once a day (Vercel Hobby). Next: skills catalog, daily reminders cron, then timesheet (hours auto-suggested from shifts, completed tasks and meetings). Spec: `docs/general/spec-shifts.md` on staging.
 
 ## Website (joinnorthstack.com)
 Landing v2 live 2026-10-02: animated product preview, "what it replaces", Time Off spotlight,
@@ -73,6 +74,7 @@ FAQPage), sitemap, hreflang. Module page: Time Off (EN/ES) since 2026-10-03.
 - Logo (fleur) still navy/blue; chart palette intentionally unchanged.
 - Approve time-off endpoint slow (~6 s, calendar sync + notifications).
 - Notification preferences (opt-in emails) pending; some transactional emails not awaited.
+- In-app notifications from Time Off / Sales are stored in English only (Shifts notifications already use each person's language).
 
 ## Marketing rules (short)
 Payroll = tracking only · no Payments marketing · no "EN & ES" claim · no Android claim until Play
@@ -82,6 +84,7 @@ SEO is part of marketing: every SEO change is logged in `seo/README.md` + a chan
 ---
 
 ## Changelog (newest first)
+- **2026-10-05** — **Shifts module** units 1–6 on **staging** (`5644ca9`), not in production yet. Asked by a chemistry lab but built for every niche (labs, clinics, security, retail, cleaning…). Schedule a week across locations with irregular hours (overnight included), publish, and each person confirms from the app or a one-click email; managers see who confirmed, who didn't answer and what's still uncovered. Marketing angle for later: "stop chasing people on WhatsApp to confirm shifts — they get it in their calendar and answer with one click". Interactive prototype (private): https://claude.ai/artifact/3DGWHCMcZvqDQ2U6jjL9N6
 - **2026-10-05** — **Projects module** built (units 1–7) and on **staging** (`eb7ec02`), not in production yet: projects with phases, tasks, team and progress, linked to a Company or internal; start blank or from 9 system templates by niche with a role-based task preview; "Save as template" (Growth); Projects section inside each Company and person; Help Center (Guide + FAQ) updated. Prod checklist in `spec-projects.md` (schema via migrate diff, permissions backfill, template seed). Marketing angle for later: "from a blank board or your niche's template in one click" — accounting firms' monthly close is the strongest example.
 - **2026-10-04** — Admin Center v2 stages 3–5 LIVE: Billing page, announcements from the Admin (bilingual, targeted, scheduled), support access only with the customer's consent, and **account deletion in 10 days** — customers can now delete their company account themselves (Settings → Company, owner only); data is erased automatically after 10 days. Privacy policy update pending (legal agent). Nothing to market yet.
 - **2026-10-04** — Admin Center v2 stages 2a–2c LIVE on **admin.joinnorthstack.com** (old Admin retired): client actions with a mandatory-reason audit log (extend trial, change plan, suspend/reactivate, password-reset link, free months on Dodo, card-update reminder, ZIP data export), Tickets/Ideas screens, and per-client special agreements (Payroll/Payments/API on or off + limits, optional expiry). Internal only — nothing to market.

@@ -224,7 +224,7 @@ export const adminActions = {
     call<ActionResult>(`/api/platform/admin/clients/${cid(id)}/agreement`, token, { method: 'PUT', body: JSON.stringify(body) }),
   clearAgreement: (token: string, id: string, reason: string) =>
     call<ActionResult>(`/api/platform/admin/clients/${cid(id)}/agreement`, token, { method: 'DELETE', body: JSON.stringify({ reason }) }),
-  freeMonths: (token: string, id: string, months: number, reason: string) => post<ActionResult>(`/api/platform/admin/clients/${cid(id)}/free-months`, token, { months, reason }),
+  nextChargeDate: (token: string, id: string, date: string, reason: string) => post<ActionResult>(`/api/platform/admin/clients/${cid(id)}/next-charge-date`, token, { date, reason }),
   paymentReminder: (token: string, id: string, reason: string) => post<ActionResult>(`/api/platform/admin/clients/${cid(id)}/payment-reminder`, token, { reason }),
   // Returns the ZIP itself; the caller turns it into a download.
   exportData: async (token: string, id: string, reason: string): Promise<{ blob: Blob; filename: string }> => {

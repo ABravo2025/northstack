@@ -231,22 +231,42 @@ export { activeOverride };
 
 const MAX_FREE_MONTHS = 12;
 
-// "N months free": moves the next charge N months later in Dodo. Mercado Pago has no way to skip
-// charges on a preapproval, so it's Dodo-only.
-export async function grantFreeMonths(tenantId: string, months: number, actor: Actor, reason: string): Promise<AdminActionResult> {
-  if (!Number.isInteger(months) || months < 1 || months > MAX_FREE_MONTHS) return { success: false, error: `Elegí entre 1 y ${MAX_FREE_MONTHS} meses.` };
+// Where the next charge goes (Alejandro, 2026-10-05: "mandar la orden de pago para una fecha
+// específica"): an exact date, or N months after the current next charge. Kept at the current
+// charge's time of day. Between tomorrow and one year from today; earlier than the current date
+// means charging sooner.
+export function targetChargeDate(current: Date, input: { date?: unknown; months?: unknown }, now: Date = new Date()): { ok: true; date: Date } | { ok: false; error: string } {
+  let target: Date;
+  if (typeof input.date === 'string' && input.date.trim()) {
+    const d = input.date.trim().slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || Number.isNaN(Date.parse(`${d}T00:00:00Z`))) return { ok: false, error: 'Fecha inválida.' };
+    target = new Date(`${d}T${current.toISOString().slice(11)}`);
+  } else {
+    const months = Number(input.months);
+    if (!Number.isInteger(months) || months < 1 || months > MAX_FREE_MONTHS) return { ok: false, error: `Elegí entre 1 y ${MAX_FREE_MONTHS} meses, o una fecha.` };
+    target = addMonths(current, months);
+  }
+  if (target.getTime() < now.getTime() + 24 * 60 * 60 * 1000) return { ok: false, error: 'La fecha tiene que ser de mañana en adelante.' };
+  if (target.getTime() > now.getTime() + 366 * 24 * 60 * 60 * 1000) return { ok: false, error: 'La fecha no puede ser a más de un año.' };
+  return { ok: true, date: target };
+}
+
+// Moves the next charge in Dodo (nothing is charged until then; then it goes on as usual).
+// Mercado Pago has no way to move a preapproval's charge date, so it's Dodo-only.
+export async function setNextChargeDate(tenantId: string, input: { date?: unknown; months?: unknown }, actor: Actor, reason: string): Promise<AdminActionResult> {
   const sub = await prisma.subscription.findUnique({ where: { tenantId } });
   if (!sub?.provider || !sub.externalSubscriptionId) return { success: false, error: 'Este cliente no tiene una suscripción paga.' };
   if (sub.provider !== 'dodopayments') {
-    return { success: false, error: 'Mercado Pago no permite saltear cobros de una suscripción. Para clientes de Argentina, por ahora no hay meses gratis desde el Admin.' };
+    return { success: false, error: 'Mercado Pago no permite mover la fecha de cobro de una suscripción. Para clientes de Argentina no está disponible desde el Admin.' };
   }
   if (sub.status !== 'active') return { success: false, error: 'La suscripción no está activa (puede tener un pago pendiente).' };
   const current = await getNextBillingDate(sub.externalSubscriptionId);
-  const target = addMonths(current, months);
-  const confirmed = await setNextBillingDate(sub.externalSubscriptionId, target);
+  const target = targetChargeDate(current, input);
+  if (!target.ok) return { success: false, error: target.error };
+  const confirmed = await setNextBillingDate(sub.externalSubscriptionId, target.date);
   await prisma.subscription.update({ where: { tenantId }, data: { currentPeriodEnd: confirmed } });
-  await audit(actor, tenantId, 'free_months', reason, { months, from: current.toISOString(), to: confirmed.toISOString() });
-  return { success: true, message: `Listo: el próximo cobro pasa al ${confirmed.toISOString().slice(0, 10)}.` };
+  await audit(actor, tenantId, 'next_charge_date', reason, { from: current.toISOString(), to: confirmed.toISOString(), requested: target.date.toISOString() });
+  return { success: true, message: `Listo: el próximo cobro pasa al ${confirmed.toISOString().slice(0, 10)} (antes: ${current.toISOString().slice(0, 10)}).` };
 }
 
 // Same day N months later, clamped to the end of a shorter month (31 Jan + 1 = 28/29 Feb).

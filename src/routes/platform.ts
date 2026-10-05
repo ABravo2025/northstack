@@ -61,7 +61,7 @@ import {
   suspendClient,
   setAgreement,
   clearAgreement,
-  grantFreeMonths,
+  setNextChargeDate,
   sendPaymentReminder,
   exportClientData,
   type AdminActionResult,
@@ -333,7 +333,7 @@ platformRouter.delete('/api/platform/admin/clients/:id/agreement', async (req, r
 });
 
 // Stage 2c — billing actions (platform_admin only) and data export.
-platformRouter.post('/api/platform/admin/clients/:id/free-months', async (req, res) => {
+platformRouter.post('/api/platform/admin/clients/:id/next-charge-date', async (req, res) => {
   const user = await requirePlatformRole()(req, res);
   if (!user) {
     return;
@@ -342,7 +342,7 @@ platformRouter.post('/api/platform/admin/clients/:id/free-months', async (req, r
   if (!reason) {
     return res.status(400).json({ error: 'Escribí un motivo (queda en el registro).' });
   }
-  return sendAction(res, await grantFreeMonths(req.params.id, Number(req.body.months), user, reason));
+  return sendAction(res, await setNextChargeDate(req.params.id, { date: req.body.date, months: req.body.months }, user, reason));
 });
 
 platformRouter.post('/api/platform/admin/clients/:id/payment-reminder', async (req, res) => {

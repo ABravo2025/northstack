@@ -411,3 +411,71 @@ export async function backfillCalendarSyncForUser(userId: string, tenantId: stri
     console.error('backfillCalendarSyncForUser failed unexpectedly:', err);
   }
 }
+
+// Shifts module, Unidad 4 (docs/general/spec-shifts.md) — a published shift goes onto its
+// ASSIGNEE's own calendar only (not team-wide like time off), one event per assignment, tracked
+// in ShiftCalendarSync. Same best-effort contract as everything above: never throws.
+export interface ShiftCalendarEventInput {
+  tenantId: string;
+  assignmentId: string;
+  userId: string;
+  summary: string;
+  location: string | null;
+  description: string | null;
+  startsAt: Date;
+  endsAt: Date;
+  timeZone: string;
+}
+
+export async function upsertShiftCalendarEvent(input: ShiftCalendarEventInput): Promise<void> {
+  try {
+    const calendar = await getAuthorizedClientForUser(input.userId);
+    if (!calendar) return;
+    const existing = await prisma.shiftCalendarSync.findUnique({
+      where: { assignmentId_userId: { assignmentId: input.assignmentId, userId: input.userId } },
+    });
+    const requestBody: calendar_v3.Schema$Event = {
+      summary: input.summary,
+      location: input.location ?? undefined,
+      description: input.description ?? undefined,
+      start: { dateTime: input.startsAt.toISOString(), timeZone: input.timeZone },
+      end: { dateTime: input.endsAt.toISOString(), timeZone: input.timeZone },
+    };
+    try {
+      if (existing) {
+        await calendar.events.patch({ calendarId: 'primary', eventId: existing.googleCalendarEventId, requestBody });
+      } else {
+        const { data } = await calendar.events.insert({ calendarId: 'primary', requestBody });
+        if (data.id) {
+          await prisma.shiftCalendarSync.create({
+            data: { tenantId: input.tenantId, assignmentId: input.assignmentId, userId: input.userId, googleCalendarEventId: data.id },
+          });
+        }
+      }
+    } catch (err) {
+      await markNeedsReconnectIfRevoked(input.userId, err);
+      console.error('Failed to sync shift to Google Calendar:', err);
+    }
+  } catch (err) {
+    console.error('upsertShiftCalendarEvent failed unexpectedly:', err);
+  }
+}
+
+// `eventId` is passed in rather than looked up because an unassignment deletes the
+// ShiftAssignment (and its ShiftCalendarSync rows, by cascade) before delivery runs.
+export async function removeShiftCalendarEvent(userId: string, eventId: string, syncId?: string): Promise<void> {
+  try {
+    const calendar = await getAuthorizedClientForUser(userId);
+    if (calendar) {
+      try {
+        await deleteGoogleEvent(calendar, eventId);
+      } catch (err) {
+        await markNeedsReconnectIfRevoked(userId, err);
+        console.error('Failed to delete shift Google Calendar event:', err);
+      }
+    }
+    if (syncId) await prisma.shiftCalendarSync.delete({ where: { id: syncId } }).catch(() => {});
+  } catch (err) {
+    console.error('removeShiftCalendarEvent failed unexpectedly:', err);
+  }
+}

@@ -13,7 +13,7 @@ import {
   managedLocationIds,
   viewableLocationIds,
 } from '../modules/shifts/shiftAccess.js';
-import { dispatchShiftEvents } from '../modules/shifts/shiftEvents.js';
+import { dispatchShiftEvents } from '../modules/shifts/shiftNotifier.js';
 import {
   assignEmployees,
   cancelShift,

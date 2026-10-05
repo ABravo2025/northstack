@@ -833,3 +833,134 @@ export async function sendPolicyChangeEmail(input: SendPolicyChangeEmailInput): 
     ].join('\n'),
   }, 'Failed to send policy change email:');
 }
+
+// Shifts module, Unidad 4 (docs/general/spec-shifts.md). One email per person per batch: a
+// publish that gives someone five shifts sends one email listing all five, with one .ics holding
+// all of them. Times and dates arrive already formatted in the recipient's language (`when`).
+export interface ShiftEmailShift {
+  when: string;
+  location: string;
+  address?: string | null;
+  position?: string | null;
+  notes?: string | null;
+  acceptUrl?: string | null;
+  declineUrl?: string | null;
+}
+
+export type ShiftEmailKind = 'assigned' | 'reconfirm' | 'changed' | 'cancelled' | 'unassigned' | 'declined';
+
+export interface SendShiftEmailInput {
+  to: string;
+  locale?: string | null;
+  kind: ShiftEmailKind;
+  firstName: string;
+  companyName: string;
+  shifts: ShiftEmailShift[];
+  // 'declined' only — who can't make it and why.
+  employeeName?: string;
+  reason?: string | null;
+  scheduleUrl?: string | null;
+  ics?: string | null;
+}
+
+function shiftButton(url: string, label: string, primary: boolean): string {
+  const style = primary
+    ? 'background:#5b21e6;color:#ffffff;border:1px solid #5b21e6;'
+    : 'background:#ffffff;color:#1b1733;border:1px solid #d3cfe3;';
+  return `<a href="${url}" style="${style}display:inline-block;padding:8px 14px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;margin-right:6px">${escapeHtml(label)}</a>`;
+}
+
+export async function sendShiftEmail(input: SendShiftEmailInput): Promise<void> {
+  if (!mailerConfigured()) return;
+  if (input.shifts.length === 0) return;
+
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(`shifts.${key}`, { lng, ns: 'emails', ...opts });
+  const first = input.shifts[0];
+  const count = input.shifts.length;
+
+  const subject = {
+    assigned: count === 1 ? t('subjectAssignedOne', { when: first.when }) : t('subjectAssignedMany', { count }),
+    reconfirm: t('subjectReconfirm', { when: first.when }),
+    changed: t('subjectChanged', { when: first.when }),
+    cancelled: t('subjectCancelled', { when: first.when }),
+    unassigned: t('subjectCancelled', { when: first.when }),
+    declined: t('subjectDeclined', { when: first.when, employeeName: input.employeeName ?? '' }),
+  }[input.kind];
+
+  const introKey = {
+    assigned: count === 1 ? 'introAssignedOne' : 'introAssignedMany',
+    reconfirm: 'introReconfirm',
+    changed: 'introChanged',
+    cancelled: 'introCancelled',
+    unassigned: 'introUnassigned',
+    declined: 'introDeclined',
+  }[input.kind];
+  const introVars = { companyName: input.companyName, count, employeeName: input.employeeName ?? '' };
+  const intro = t(introKey, introVars);
+  const introHtml = t(introKey, {
+    ...introVars,
+    companyName: strong(input.companyName),
+    employeeName: strong(input.employeeName ?? ''),
+  });
+
+  const textBlocks: string[] = [t('greeting', { firstName: input.firstName }), '', intro, ''];
+  const htmlBlocks: string[] = [`<p>${t('greeting', { firstName: escapeHtml(input.firstName) })}</p>`, `<p>${introHtml}</p>`];
+  let anyAnswerLinks = false;
+
+  for (const s of input.shifts) {
+    const place = [s.location, s.address].filter(Boolean).join(' · ');
+    textBlocks.push(s.when, ...(s.position ? [s.position] : []), place);
+    if (s.notes) textBlocks.push(t('notes', { notes: s.notes }));
+    if (s.acceptUrl) textBlocks.push(`${t('accept')}: ${s.acceptUrl}`);
+    if (s.declineUrl) textBlocks.push(`${s.acceptUrl ? t('decline') : t('cantMakeIt')}: ${s.declineUrl}`);
+    textBlocks.push('');
+
+    const buttons = [
+      s.acceptUrl ? shiftButton(s.acceptUrl, t('accept'), true) : '',
+      s.declineUrl ? shiftButton(s.declineUrl, s.acceptUrl ? t('decline') : t('cantMakeIt'), false) : '',
+    ].join('');
+    if (s.acceptUrl || s.declineUrl) anyAnswerLinks = true;
+    htmlBlocks.push(
+      `<div style="border:1px solid #e3e0ee;border-radius:10px;padding:12px 14px;margin:12px 0;background:#f5f3fb">` +
+        `<div style="font-weight:600;font-size:15px">${escapeHtml(s.when)}</div>` +
+        (s.position ? `<div>${escapeHtml(s.position)}</div>` : '') +
+        `<div style="color:#58536f">${escapeHtml(place)}</div>` +
+        (s.notes ? `<div style="color:#58536f;margin-top:4px">${escapeHtml(t('notes', { notes: s.notes }))}</div>` : '') +
+        (buttons ? `<div style="margin-top:10px">${buttons}</div>` : '') +
+        `</div>`,
+    );
+  }
+
+  if (input.kind === 'declined') {
+    const reason = input.reason ? t('reason', { reason: input.reason }) : t('noReason');
+    textBlocks.push(reason, '');
+    htmlBlocks.push(`<p>${escapeHtml(reason)}</p>`);
+  }
+  if (anyAnswerLinks) {
+    textBlocks.push(t('linksNoLogin'));
+    htmlBlocks.push(`<p style="color:#706b88;font-size:12px">${t('linksNoLogin')}</p>`);
+  }
+  if (input.ics) {
+    textBlocks.push(t('calendarHint'));
+    htmlBlocks.push(`<p style="color:#706b88;font-size:12px">${t('calendarHint')}</p>`);
+  }
+  if (input.scheduleUrl) {
+    textBlocks.push(`${t('openSchedule')}: ${input.scheduleUrl}`);
+    htmlBlocks.push(`<p><a href="${input.scheduleUrl}">${t('openSchedule')}</a></p>`);
+  }
+
+  await dispatchMail(
+    {
+      from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
+      to: input.to,
+      subject,
+      text: textBlocks.join('\n'),
+      html: htmlBlocks.join('\n'),
+      attachments: input.ics
+        ? [{ filename: 'shift.ics', content: input.ics, contentType: `text/calendar; charset=utf-8; method=${input.kind === 'cancelled' || input.kind === 'unassigned' ? 'CANCEL' : 'PUBLISH'}` }]
+        : undefined,
+    },
+    `Failed to send shift ${input.kind} email:`,
+  );
+}

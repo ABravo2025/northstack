@@ -563,7 +563,20 @@ Reglas de asignación (spec §3) como funciones puras, testeadas sin base.
 - **availabilityWarnings(shift, rows)** (una fila puntual de la fecha reemplaza a las recurrentes de ese día), **restViolated(shift, held, minRestHours)**.
 
 ### `src/modules/shifts/shiftEvents.ts` (Shifts, Unidad 3)
-- **ShiftEvent** / **dispatchShiftEvents(events)** — lo que hay que avisar después de una escritura (`assigned`, `reconfirm`, `changed`, `unassigned`, `cancelled`, `declined`). Las escrituras devuelven eventos y la ruta los entrega con `await`. La entrega real es la Unidad 4 (hoy no hace nada).
+- **ShiftEvent** — lo que hay que avisar después de una escritura (`assigned`, `reconfirm`, `changed`, `unassigned`, `cancelled`, `declined`). Las escrituras de `shiftService.ts` devuelven eventos y la ruta los entrega con `await dispatchShiftEvents(...)`.
+
+### `src/modules/shifts/shiftNotifier.ts` (Shifts, Unidad 4)
+- **dispatchShiftEvents(events)** — nunca tira. Por cada evento: notificación en la campana **en el idioma del destinatario**, un email por persona y tipo (una semana publicada = un email) con botones de un clic y `.ics` adjunto, y el evento en el Google Calendar del asignado si lo conectó. Un rechazo avisa al responsable de la locación y a quien creó el turno.
+- **formatShiftWhen(shift, locale)** — "Mon, Oct 12 · 07:00–11:30" / "lun, 12 oct · …", marca "(ends the next day)". **shiftAnswerUrl(token, answer)** — link de la página pública de respuesta (`/shift-response/:token`, Unidad 6).
+
+### `src/modules/shifts/shiftIcs.ts` (Shifts, Unidad 4)
+- **buildIcs(events)** (RFC 5545 a mano: escape, plegado a 75 bytes, `METHOD:PUBLISH|CANCEL`), **shiftEventUid(assignmentId)** (UID estable por asignación: un cambio o cancelación reemplaza la misma entrada), **escapeIcsText**, **formatIcsUtc**, **foldIcsLine**.
+
+### `src/lib/mailer.ts` → **sendShiftEmail(input)** (Shifts, Unidad 4)
+Email de turnos para todos los casos (`assigned`, `reconfirm`, `changed`, `cancelled`, `unassigned`, `declined`), bilingüe (`emails.json` → `shifts.*`), con `.ics` opcional como adjunto `text/calendar`.
+
+### `src/modules/integrations/googleCalendarSyncService.ts` → **upsertShiftCalendarEvent** / **removeShiftCalendarEvent** (Shifts, Unidad 4)
+Evento del turno solo en el calendario del asignado (`ShiftCalendarSync`), con la zona horaria de la locación. Best-effort, nunca tiran. La sincronización de vuelta (watch) ignora estos eventos porque solo toca eventos de Tasks.
 
 ### `src/modules/shifts/shiftService.ts` (Shifts, Unidad 3)
 - Lectura: **findShiftById**, **listShifts(tenantId, { from, to, locationIds, includeDrafts, includeCancelled })**, **listEmployeeShifts**, **serializeShift** (nunca expone `responseTokenHash`), **toDateString**.

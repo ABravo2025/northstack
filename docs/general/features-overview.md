@@ -138,6 +138,19 @@ modelo `Notification` (ver Payments arriba, todavía en staging).
 - **Notes**: registro de texto libre (no es un to-do) por entidad, con formato básico
   `**bold**`/`*italic*`. Mismo tab que Tasks en el panel de detalle.
 
+## Proyectos — solo en `staging` (2026-10-05)
+
+- **Proyectos**: trabajo de un equipo organizado en fases, con tareas, responsable, equipo con
+  roles y fechas, para un cliente (Company) o interno. Lista con progreso, fase actual y próximo
+  vencimiento; página del proyecto con tareas por fase, tablero, equipo, notas y actividad.
+- **Templates**: 9 del sistema (Agencias, Estudios contables, Consultoras, Interno) en EN/ES; al
+  crear desde uno, cada tarea toma su fecha de la fecha de inicio y su responsable del rol elegido
+  en el equipo, con vista previa. "Guardar como template" para templates propios (Growth).
+- **Integración**: sección Proyectos en el detalle de cada Company y de cada persona; las tareas de
+  proyecto aparecen en Mis tareas y Google Calendar. Starter: hasta 5 proyectos abiertos. Permisos
+  "Ver todos los proyectos" / "Gestionar proyectos"; responsable y miembros siempre ven su proyecto.
+  Spec: `docs/general/spec-projects.md`.
+
 ## Public Forms — captura externa sin login — en producción
 
 - Builder drag-and-drop con preview en vivo, un form por módulo (Employee, Contact) — pensado para

@@ -1,6 +1,14 @@
 # Tareas de desarrollo
 
 - Fecha de creación: 2026-07-02
+- **2026-10-05 — Módulo de Proyectos, unidades 1-7 (EN STAGING)**: proyectos con fases, tareas, equipo y progreso,
+  vinculados opcionalmente a una Company; alta en blanco o desde 9 templates del sistema por nicho (EN/ES) con
+  asignación de tareas por rol y vista previa; "Guardar como template" (Growth); sección Proyectos en Company y en cada
+  persona; permisos `view_projects`/`manage_projects` + regla de responsable/miembro; Starter hasta 5 abiertos. Guía y
+  FAQ actualizados. Spec: `spec-projects.md`. Staging DB: schema (unidad 1, después solo un ALTER puntual de la FK de
+  templates — **staging tiene tablas de otras ramas, no hacer `db push` a ciegas**), backfill de permisos y seed de
+  templates hechos. **Prod: falta schema (con `migrate diff`), `backfill-projects-permissions.ts` y
+  `seed-project-templates.ts` antes de promover.** Commits `1cba601`…`6bd7e1f` + docs.
 - **2026-10-03 — MCP Unidad 3: servidor MCP (EN STAGING)**: función de Vercel separada (`api/mcp.ts`, en `/mcp`) que
   expone 39 tools a cualquier asistente compatible (Claude Code, Cursor, VS Code hoy; claude.ai/ChatGPT con OAuth en la
   Unidad 4). Las tools llaman a la Private API por HTTP con el token del usuario, así que aplican su rol. Borrar,

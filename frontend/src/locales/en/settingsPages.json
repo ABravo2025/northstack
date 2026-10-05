@@ -821,7 +821,10 @@
       "shift": "Shift",
       "shiftTemplate": "Shift Template",
       "shiftsSettings": "Shift Settings",
-      "skill": "Skill"
+      "skill": "Skill",
+      "project": "Project",
+      "projectPhase": "Project Phase",
+      "projectTemplate": "Project Template"
     }
   },
   "roles": {

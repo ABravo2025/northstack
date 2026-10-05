@@ -19,6 +19,8 @@ import AcceptInvitePage from './pages/AcceptInvitePage';
 import ContractConfirmationPage from './pages/ContractConfirmationPage';
 import OverviewPage from './pages/OverviewPage';
 import MyTasksPage from './pages/MyTasksPage';
+import ProjectsPage from './pages/ProjectsPage';
+import ProjectDetailPage from './pages/ProjectDetailPage';
 import HelpPage from './pages/HelpPage';
 import GuidePage from './pages/GuidePage';
 import DashboardsLayout from './layouts/DashboardsLayout';
@@ -343,6 +345,8 @@ export default function App() {
       >
         <Route path="/overview" element={<OverviewPage token={token ?? ''} user={user} />} />
         <Route path="/tasks" element={<MyTasksPage token={token ?? ''} user={user} />} />
+        <Route path="/projects" element={<ProjectsPage token={token ?? ''} />} />
+        <Route path="/projects/:projectId" element={<ProjectDetailPage token={token ?? ''} user={user} />} />
         <Route path="/help" element={<HelpPage />} />
         <Route path="/guide" element={<GuidePage />} />
         <Route path="/hr/dashboard" element={<Navigate to="/dashboards/hr" replace />} />

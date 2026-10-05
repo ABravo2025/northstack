@@ -11,6 +11,7 @@ import {
   ChevronLeftIcon,
   CreditCardIcon,
   DashboardIcon,
+  FolderIcon,
   GearIcon,
   GiftIcon,
   HomeIcon,
@@ -85,6 +86,10 @@ export default function Sidebar({ mobileOpen, onMobileClose, tenant }: SidebarPr
           <NavLink to="/tasks" className={linkClass} title={t('sidebar.myTasks')} onClick={onMobileClose} data-tour="nav-tasks">
             <TaskCircleIcon className="h-4 w-4 shrink-0" />
             {label(t('sidebar.myTasks'))}
+          </NavLink>
+          <NavLink to="/projects" className={linkClass} title={t('sidebar.projects')} onClick={onMobileClose}>
+            <FolderIcon className="h-4 w-4 shrink-0" />
+            {label(t('sidebar.projects'))}
           </NavLink>
           <NavLink to="/dashboards" className={linkClass} title={t('sidebar.dashboards')} onClick={onMobileClose}>
             <DashboardIcon className="h-4 w-4 shrink-0" />

@@ -77,6 +77,7 @@ export default function NewTaskFromCalendarPopover({
             <option value="company">{TASK_ENTITY_TYPE_LABELS.company}</option>
             <option value="employee">{TASK_ENTITY_TYPE_LABELS.employee}</option>
             <option value="opportunity">{TASK_ENTITY_TYPE_LABELS.opportunity}</option>
+            <option value="project">{TASK_ENTITY_TYPE_LABELS.project}</option>
           </select>
         </div>
         {entityType && (

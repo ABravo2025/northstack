@@ -528,7 +528,7 @@ export interface Opportunity {
   stageHistory?: { id: string; stageId: string; enteredAt: string }[];
 }
 
-export type TaskEntityType = 'employee' | 'company' | 'contact' | 'opportunity';
+export type TaskEntityType = 'employee' | 'company' | 'contact' | 'opportunity' | 'project';
 
 export interface Task {
   id: string;
@@ -556,6 +556,8 @@ export interface Task {
   entitySummary?: string | null;
   folderId: string | null;
   folder?: { id: string; name: string } | null;
+  // Projects module (2026-10-04) — which of the project's phases the task sits in (project tasks only).
+  projectPhaseId?: string | null;
   // Only present on the My Tasks hub (listTasksForUser) — whether the current user is this
   // task's assignee, its creator, or both.
   relationship?: 'assignee' | 'creator' | 'both' | null;
@@ -624,7 +626,9 @@ export type ActivityEntityType =
   | 'shift'
   | 'shiftTemplate'
   | 'shiftsSettings'
-  | 'skill';
+  | 'skill'
+  | 'projectPhase'
+  | 'projectTemplate';
 
 export interface ActivityChange {
   field: string;

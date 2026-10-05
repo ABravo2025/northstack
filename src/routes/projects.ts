@@ -131,6 +131,42 @@ projectsRouter.get('/api/projects', async (req, res) => {
   });
 });
 
+// The pickers' data (owner, team, company) for people who create or edit projects. Deliberately
+// minimal — ids, names, job title and whether they have a login — so picking a teammate or a client
+// never needs view_employee/view_company, and never exposes anything beyond a name.
+projectsRouter.get('/api/projects/options', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) return;
+  const projectId = typeof req.query.projectId === 'string' ? req.query.projectId : null;
+  const allowed = canManageProjects(user.roleContext) || (projectId !== null && (await canEditProject(user, projectId)));
+  if (!allowed) return res.status(403).json({ error: 'Insufficient permissions' });
+
+  const [employees, companies] = await Promise.all([
+    prisma.employee.findMany({
+      where: { tenantId: user.tenantId! },
+      select: { id: true, firstName: true, lastName: true, userId: true, jobTitleDefn: { select: { name: true } } },
+      orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+    }),
+    prisma.company.findMany({
+      where: { tenantId: user.tenantId!, isPlaceholder: false },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
+  ]);
+  return res.json({
+    employees: employees.map((e) => ({
+      id: e.id,
+      firstName: e.firstName,
+      lastName: e.lastName,
+      jobTitle: e.jobTitleDefn?.name ?? null,
+      hasLogin: e.userId !== null,
+      userId: e.userId,
+    })),
+    companies,
+    ownEmployeeId: await findOwnEmployeeId(user),
+  });
+});
+
 projectsRouter.post('/api/projects', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) return;

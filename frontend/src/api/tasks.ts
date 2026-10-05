@@ -61,6 +61,7 @@ export const tasksApi = {
       dueDate?: string | null;
       hasVideoCall?: boolean;
       folderId?: string | null;
+      projectPhaseId?: string | null;
     },
   ): Promise<Task> => {
     const res = await apiFetch(`${API_BASE_URL}/api/tasks`, {
@@ -83,6 +84,7 @@ export const tasksApi = {
       completedAt: string | null;
       hasVideoCall: boolean;
       folderId: string | null;
+      projectPhaseId: string | null;
     }>,
   ): Promise<Task> => {
     const res = await apiFetch(`${API_BASE_URL}/api/tasks/${taskId}`, {

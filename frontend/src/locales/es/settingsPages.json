@@ -821,7 +821,10 @@
       "shift": "Turno",
       "shiftTemplate": "Plantilla de turno",
       "shiftsSettings": "Configuración de turnos",
-      "skill": "Habilidad"
+      "skill": "Habilidad",
+      "project": "Proyecto",
+      "projectPhase": "Fase de proyecto",
+      "projectTemplate": "Template de proyecto"
     }
   },
   "roles": {

@@ -4964,3 +4964,26 @@ Solo backend (sin pantallas todavía: la grilla es la Unidad 5 y "Mis turnos" la
 8. **Cancelar/borrar:** borrar un publicado → 409; cancelarlo → sigue visible como cancelado en `/mine`.
 9. **Copiar semana:** crea borradores en la semana destino, sin los cancelados ni quienes habían rechazado; reporta cuántas asignaciones salteó.
 10. **Aislamiento:** cualquier `:id` de otro tenant → 404.
+
+---
+
+## QA-104 — Shifts, Unidad 4: avisos de turnos (campana, email con `.ics`, Google Calendar) (2026-10-04, en `staging`)
+
+### Qué cambió
+
+- **Campana:** `shift_assigned` (publicado / volvé a confirmar), `shift_changed`, `shift_cancelled` (cancelado o te sacaron), `shift_declined` (al responsable de la locación y a quien creó el turno). Los textos se guardan **en el idioma de cada destinatario** (las notificaciones anteriores del sistema, como Time Off y Sales, siguen solo en inglés).
+- **Email:** uno por persona y tipo de aviso (publicar una semana con 5 turnos = 1 email), bilingüe, con botones "Acepto el turno" / "No puedo" (o solo "¿Al final no podés?" si ya aceptó o si la empresa no pide confirmación) y un `.ics` adjunto que agrega los turnos a Google, Outlook o Apple Calendar. Un cambio o cancelación usa el mismo UID: reemplaza la entrada del calendario en vez de duplicarla.
+- **Google Calendar:** si el asignado conectó su cuenta, el turno aparece en su calendario con la zona horaria de la locación; se actualiza si cambia y se borra si se cancela o lo sacan.
+- Todo es best-effort: si falla el email o Google, el turno se guarda igual.
+
+**Verificado en esta sesión:** tests en verde (5 del `.ics`, 4 del email interceptando el envío SMTP: asunto, botones, escape del nombre de la empresa, adjunto `PUBLISH`/`CANCEL`, versión en español, aviso de rechazo con motivo); en vivo por API contra la base de `staging` (backend local): nada se avisa mientras es borrador; publicar 2 turnos → 2 notificaciones con fecha, hora y locación; turno nocturno marcado "(ends the next day)"; un rechazo le llega a quien creó el turno; cambio de hora → "Please confirm again"; cancelación y "te sacaron" en español para un usuario en español. **No verificado:** el envío real del email (el backend local no tiene SMTP) ni Google Calendar (el usuario QA no tiene cuenta de Google conectada).
+
+### Qué probar
+
+1. **Email real:** con un empleado que tenga un email propio que puedas leer, publicar 2 turnos → llega 1 solo email con los 2 turnos, botones y el `.ics`. Abrir el `.ics` en Google Calendar y en Outlook: hora correcta (también un turno nocturno).
+2. **Links:** en `staging`, revisar que los botones apunten a `staging.joinnorthstack.com` (depende de `APP_BASE_URL` en Vercel Preview; si apuntan a `localhost`, falta esa variable). La página que abre el link es la Unidad 6: hasta entonces el link no muestra nada útil.
+3. **Cambio de hora:** llega "Cambió un turno… confirmalo de nuevo" con botones nuevos; los del email anterior ya no sirven.
+4. **Cancelar / sacar:** llega el aviso de cancelación; el `.ics` (método CANCEL) borra la entrada del calendario.
+5. **Rechazo:** al responsable de la locación y a quien creó el turno les llega la campana y el email con el motivo; al que rechazó, nada.
+6. **Google Calendar:** con un usuario que tenga Google conectado: publicar → aparece el evento; cambiar la hora → se mueve; cancelar → desaparece. Verificar que no aparezca como tarea ni cambie ninguna Task.
+7. **Idioma:** un usuario con idioma español recibe campana y email en español; uno en inglés, en inglés.

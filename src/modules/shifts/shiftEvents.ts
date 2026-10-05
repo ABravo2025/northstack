@@ -1,10 +1,7 @@
 // Shifts module — what happened to a shift that someone needs to hear about. shiftService.ts
 // returns these from every write instead of notifying inline, so the write itself stays a plain
-// DB operation and the route decides when to deliver (after the response data is ready, awaited —
-// Vercel kills un-awaited work).
-//
-// Delivery (in-app notification, email with .ics, Google Calendar event) is Unidad 4
-// (spec-shifts.md). Until then dispatchShiftEvents is deliberately a no-op.
+// DB operation; the route then delivers them with shiftNotifier.ts's dispatchShiftEvents (awaited
+// — Vercel kills un-awaited work).
 
 export type ShiftEventKind =
   | 'assigned' // published to the assignee, or assigned to an already-published shift
@@ -18,13 +15,13 @@ export interface ShiftEvent {
   kind: ShiftEventKind;
   tenantId: string;
   shiftId: string;
+  // For 'unassigned' this is the id of the assignment that was just deleted (kept for the .ics UID).
   assignmentId: string | null;
   employeeId: string;
   // The one-click accept/decline token for the email link — present only on 'assigned' and
   // 'reconfirm', the only moment it exists in clear (only its hash is stored).
   responseToken?: string;
-}
-
-export async function dispatchShiftEvents(events: ShiftEvent[]): Promise<void> {
-  void events; // Unidad 4.
+  // 'unassigned' only: the assignment (and its ShiftCalendarSync rows) is already deleted when
+  // delivery runs, so the Google events to remove travel with the event.
+  calendarEvents?: { userId: string; googleCalendarEventId: string }[];
 }

@@ -593,12 +593,17 @@ export async function unassignEmployee(
   const assignment = existing.assignments.find((a) => a.id === assignmentId);
   if (!assignment) return { success: false, error: 'Assignment not found', code: 'not_found' };
   if (existing.status === 'cancelled') return { success: false, error: 'A cancelled shift can\'t be changed' };
+  // Captured before the delete cascades them away — delivery removes these Google events.
+  const calendarEvents = await prisma.shiftCalendarSync.findMany({
+    where: { assignmentId: assignment.id },
+    select: { userId: true, googleCalendarEventId: true },
+  });
   await prisma.shiftAssignment.delete({ where: { id: assignment.id } });
   const shift = (await findShiftById(existing.id))!;
   await logShift('update', existing, shift, changedByUserId);
   const events: ShiftEvent[] =
     existing.status === 'published' && assignment.status !== 'declined'
-      ? [{ kind: 'unassigned', tenantId: existing.tenantId, shiftId: existing.id, assignmentId: null, employeeId: assignment.employeeId }]
+      ? [{ kind: 'unassigned', tenantId: existing.tenantId, shiftId: existing.id, assignmentId: assignment.id, employeeId: assignment.employeeId, calendarEvents }]
       : [];
   return { success: true, value: { shift, events } };
 }

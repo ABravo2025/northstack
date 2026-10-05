@@ -43,6 +43,10 @@ import IntegrationsSettingsPage from './pages/IntegrationsSettingsPage';
 import CompanyPage from './pages/CompanyPage';
 import TimeOffSettingsPage from './pages/TimeOffSettingsPage';
 import ShiftsSettingsPage from './pages/ShiftsSettingsPage';
+import ShiftsSchedulePage from './pages/shifts/ShiftsSchedulePage';
+import MyShiftsPage from './pages/shifts/MyShiftsPage';
+import ShiftResponsePage from './pages/shifts/ShiftResponsePage';
+import { useCanSchedule } from './components/layout/ShiftsSidebar';
 import CompanyUsersPage from './pages/CompanyUsersPage';
 import PublicFormsSettingsPage from './pages/PublicFormsSettingsPage';
 import ActivityLogSettingsPage from './pages/ActivityLogSettingsPage';
@@ -316,6 +320,8 @@ export default function App() {
         path="/confirm-contract/:token"
         element={<ContractConfirmationPage onConfirmed={handleContractConfirmed} />}
       />
+      {/* Shifts: the emailed one-click answer page — public, the token is the credential. */}
+      <Route path="/shift-response/:token" element={<ShiftResponsePage />} />
       <Route
         path="/apply/:tenantSlug/:formSlug"
         element={
@@ -346,6 +352,8 @@ export default function App() {
         <Route path="/overview" element={<OverviewPage token={token ?? ''} user={user} />} />
         <Route path="/tasks" element={<MyTasksPage token={token ?? ''} user={user} />} />
         <Route path="/projects" element={<ProjectsPage token={token ?? ''} />} />
+        <Route path="/shifts" element={<ShiftsHome token={token ?? ''} />} />
+        <Route path="/shifts/mine" element={<MyShiftsPage token={token ?? ''} />} />
         <Route path="/projects/:projectId" element={<ProjectDetailPage token={token ?? ''} user={user} />} />
         <Route path="/help" element={<HelpPage />} />
         <Route path="/guide" element={<GuidePage />} />
@@ -410,4 +418,11 @@ export default function App() {
     </Routes>
     </PermissionsProvider>
   );
+}
+
+// /shifts opens the schedule for whoever can plan or see shifts, and everyone else's own shifts.
+function ShiftsHome({ token }: { token: string }) {
+  const canSchedule = useCanSchedule(token);
+  if (canSchedule === null) return null;
+  return canSchedule ? <ShiftsSchedulePage token={token} /> : <Navigate to="/shifts/mine" replace />;
 }

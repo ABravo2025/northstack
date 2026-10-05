@@ -1353,3 +1353,82 @@ export interface ShiftLocation {
   createdAt: string;
   updatedAt: string;
 }
+
+export type ShiftStatus = 'draft' | 'published' | 'cancelled';
+export type ShiftAssignmentStatus = 'pending' | 'accepted' | 'declined';
+
+export interface ShiftAssignment {
+  id: string;
+  employeeId: string;
+  employee: { id: string; firstName: string; lastName: string };
+  status: ShiftAssignmentStatus;
+  respondedAt: string | null;
+  declineReason: string | null;
+  notifiedAt: string | null;
+}
+
+export interface Shift {
+  id: string;
+  locationId: string;
+  location: { id: string; name: string; timezone: string; address: string | null };
+  date: string; // local start day, YYYY-MM-DD
+  startMinute: number;
+  endMinute: number;
+  endsNextDay: boolean;
+  startsAt: string;
+  endsAt: string;
+  position: string | null;
+  notes: string | null;
+  headcount: number;
+  status: ShiftStatus;
+  publishedAt: string | null;
+  requiredSkillIds: string[];
+  assignments: ShiftAssignment[];
+}
+
+export type ShiftBlock = 'no_user' | 'overlap' | 'already_assigned';
+export type ShiftWarning = 'time_off' | 'holiday' | 'unavailable' | 'outside_availability' | 'rest' | 'missing_skill' | 'expired_skill';
+
+export interface ShiftCandidate {
+  id: string;
+  firstName: string;
+  lastName: string;
+  blocks: ShiftBlock[];
+  warnings: ShiftWarning[];
+}
+
+export interface ShiftTemplate {
+  id: string;
+  name: string;
+  startMinute: number;
+  endMinute: number;
+  locationId: string | null;
+  position: string | null;
+}
+
+// The emailed one-click answer page (no session).
+export interface PublicShiftResponseView {
+  companyName: string;
+  employeeFirstName: string;
+  status: ShiftAssignmentStatus;
+  shift: {
+    date: string;
+    startMinute: number;
+    endMinute: number;
+    startsAt: string;
+    position: string | null;
+    notes: string | null;
+    status: ShiftStatus;
+    location: { name: string; address: string | null; timezone: string };
+  };
+}
+
+export interface ShiftAvailability {
+  id: string;
+  weekday: number | null;
+  date: string | null;
+  startMinute: number;
+  endMinute: number; // up to 1440 (midnight)
+  kind: 'available' | 'unavailable';
+  note: string | null;
+}

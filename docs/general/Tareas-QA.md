@@ -4987,3 +4987,33 @@ Solo backend (sin pantallas todavía: la grilla es la Unidad 5 y "Mis turnos" la
 5. **Rechazo:** al responsable de la locación y a quien creó el turno les llega la campana y el email con el motivo; al que rechazó, nada.
 6. **Google Calendar:** con un usuario que tenga Google conectado: publicar → aparece el evento; cambiar la hora → se mueve; cancelar → desaparece. Verificar que no aparezca como tarea ni cambie ninguna Task.
 7. **Idioma:** un usuario con idioma español recibe campana y email en español; uno en inglés, en inglés.
+
+---
+
+## QA-105 — Shifts, Unidades 5-6: Cronograma, Mis turnos, disponibilidad y página del link del email (2026-10-05, en `staging`)
+
+### Qué cambió
+
+- **Navegación:** entrada **Shifts / Turnos** en la barra lateral (grupo Recursos Humanos). Bajo `/shifts` la barra se reemplaza por el menú del módulo: **Cronograma** (solo con `view_shifts`/`manage_shifts` o si la persona es responsable de alguna locación), **Mis turnos** (todos) y **Configuración** (con `manage_shifts`, lleva a Settings → Shifts). `/shifts` sin acceso al cronograma redirige a `/shifts/mine`.
+- **Cronograma (`/shifts`):** semana en grilla por locación o por persona (se recuerda la elección), indicadores (confirmados, esperando respuesta, lugares sin cubrir, horas planificadas = duración × personas necesarias), feriados del calendario de Time Off en la cabecera, "+ Agregar turno" en cada celda (al pasar el mouse; siempre visible en táctil), "Copiar semana anterior" y "Publicar N borradores". Al crear un turno se abre su detalle para sumar gente. Los controles de edición solo aparecen en las locaciones que la persona puede gestionar (`managedLocationIds` en `GET /api/shifts/locations`).
+- **Detalle del turno:** personas con su estado (y el motivo si rechazó), selector de candidatos con bloqueos y avisos, "Asignar igual" cuando hay avisos, publicar, editar, cancelar o eliminar borrador.
+- **Mis turnos (`/shifts/mine`):** próximas 4 semanas con "Acepto el turno" / "No puedo" (con motivo opcional) o "¿Al final no podés?" si ya aceptó; los cancelados quedan visibles. **Mi disponibilidad:** horarios semanales y fechas puntuales, disponible o no disponible, con nota (backend nuevo: `GET/POST /api/shifts/availability`, `DELETE /api/shifts/availability/:id`, solo las propias).
+- **Página del link del email (`/shift-response/:token`, pública):** muestra el turno y pide confirmar con un botón. **Abrir el link no responde nada** (los filtros de seguridad del correo abren los links solos); `?answer=declined` solo preselecciona "No puedo". Link vencido → mensaje y botón a la app.
+- **Settings → Shifts:** tarjeta nueva "Plantillas de turno" (ver y borrar). El selector de responsable de locación ahora usa el directorio completo de empleados.
+- `ApiError` (frontend) guarda el cuerpo de la respuesta de error (`body`), para mostrar los avisos de cada persona.
+
+**Verificado en esta sesión** (backend y frontend locales contra la base de `staging`, tenant QA "QA Shifts 1791139702185", Playwright): 22 de 23 checks en verde — el que falló era del script (abría una tarjeta roja por cupo, no la del rechazo; el motivo del rechazo ya estaba verificado por API en QA-103). Dueño: entrada en la barra, menú del módulo, crear turno de 4 h 30 y uno nocturno (aviso "termina al día siguiente"), sumar a la persona desde el detalle, publicar 2 borradores, vista por persona. Miembro: redirigido a Mis turnos, sin Cronograma ni Configuración en el menú, acepta un turno, carga "domingo todo el día no disponible". Página pública: preselecciona "No puedo", rechaza con motivo, link inválido. Dueño: el turno rechazado se ve en rojo. Español, modo oscuro y celular (390 px: la página no se desplaza de costado, la grilla sí dentro de su caja). Sin errores de consola. 68 archivos de tests y build en verde.
+**Corregido en la misma sesión:** "Publish 1 drafts" (plural), horas planificadas que contaban personas asignadas en vez de necesarias, el toast "2 people notified" que contaba asignaciones (ahora cuenta turnos), la semana que volvía sola a la actual si la carga inicial terminaba después de cambiarla, parpadeo de la grilla al publicar o copiar, color del texto de la página pública, indicadores en 2 columnas en el celular, espacio del ícono en "Copiar semana anterior".
+
+### Qué probar
+
+1. **Navegación:** Owner/Admin ven "Shifts" en la barra y, adentro, Cronograma / Mis turnos / Configuración. Un Member ve solo Mis turnos y `/shifts` lo lleva ahí. Un Member que es responsable de una locación (Settings → Shifts → Responsable) ve el Cronograma solo con esa locación, y puede armar turnos allí.
+2. **Armar la semana:** crear turnos desde "+ Agregar turno" en distintos días y locaciones (también uno nocturno), usar una plantilla, guardar un horario como plantilla y borrarla desde Settings → Shifts.
+3. **Asignar:** sumar personas; alguien con otro turno a la misma hora aparece bloqueado; alguien con Time Off, feriado, poco descanso o "no disponible" aparece con aviso y pide "Asignar igual".
+4. **Publicar:** "Publicar N borradores" publica solo lo visible y gestionable; llegan campana y email (ver QA-104). Las tarjetas pasan de punteadas a sólidas.
+5. **Responder:** desde Mis turnos y desde el link del email (abrir el link no debe cambiar nada hasta apretar el botón). El cronograma refleja el estado (verde/ámbar/rojo) y el motivo del rechazo.
+6. **Editar uno publicado:** cambiar la hora → aviso de re-confirmación en el formulario y vuelve a "Esperando respuesta".
+7. **Copiar semana anterior:** crea borradores y avisa si dejó afuera a alguien.
+8. **Disponibilidad:** cargar semanal y por fecha; aparece como aviso al asignar.
+9. **Vista por persona:** una fila por persona y "Sin asignar" para turnos vacíos.
+10. **Español, modo oscuro y celular** en las tres pantallas y en la página pública.

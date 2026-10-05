@@ -79,6 +79,7 @@ export default function NewTaskModal({
           <option value="contact">{TASK_ENTITY_TYPE_LABELS.contact}</option>
           <option value="employee">{TASK_ENTITY_TYPE_LABELS.employee}</option>
           <option value="opportunity">{TASK_ENTITY_TYPE_LABELS.opportunity}</option>
+          <option value="project">{TASK_ENTITY_TYPE_LABELS.project}</option>
         </select>
       </div>
       {entityType && (

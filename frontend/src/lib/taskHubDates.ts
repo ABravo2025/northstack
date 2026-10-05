@@ -4,7 +4,7 @@
 // taskDueDateKey already guards against for the calendar grid. This normalizes either shape to a
 // local Date representing the intended calendar day, so every helper below only has to compare/
 // format local dates.
-function toLocalCalendarDate(iso: string): Date {
+export function toLocalCalendarDate(iso: string): Date {
   const d = new Date(iso);
   const hasTime = d.getUTCHours() !== 0 || d.getUTCMinutes() !== 0 || d.getUTCSeconds() !== 0;
   return hasTime ? d : new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());

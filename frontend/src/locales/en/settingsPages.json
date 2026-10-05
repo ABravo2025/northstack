@@ -814,7 +814,10 @@
       "subscription": "Subscription",
       "googleCalendarConnection": "Google Calendar Connection",
       "stripeConnection": "Stripe Connection",
-      "stripeInvoice": "Stripe Invoice"
+      "stripeInvoice": "Stripe Invoice",
+      "project": "Project",
+      "projectPhase": "Project Phase",
+      "projectTemplate": "Project Template"
     }
   },
   "roles": {

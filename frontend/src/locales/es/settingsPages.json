@@ -814,7 +814,10 @@
       "subscription": "Suscripción",
       "googleCalendarConnection": "Conexión de Google Calendar",
       "stripeConnection": "Conexión de Stripe",
-      "stripeInvoice": "Factura de Stripe"
+      "stripeInvoice": "Factura de Stripe",
+      "project": "Proyecto",
+      "projectPhase": "Fase de proyecto",
+      "projectTemplate": "Template de proyecto"
     }
   },
   "roles": {

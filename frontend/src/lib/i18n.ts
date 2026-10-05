@@ -17,6 +17,8 @@ import notesActivityEn from '../locales/en/notesActivity.json';
 import notesActivityEs from '../locales/es/notesActivity.json';
 import authEn from '../locales/en/auth.json';
 import authEs from '../locales/es/auth.json';
+import projectsEn from '../locales/en/projects.json';
+import projectsEs from '../locales/es/projects.json';
 
 // docs/general/spec-i18n.md — only these two for now; the detector/fallback chain below doesn't
 // need to change to add a third later.
@@ -37,6 +39,7 @@ i18n
         settingsPages: settingsPagesEn,
         notesActivity: notesActivityEn,
         auth: authEn,
+        projects: projectsEn,
       },
       es: {
         common: commonEs,
@@ -47,6 +50,7 @@ i18n
         settingsPages: settingsPagesEs,
         notesActivity: notesActivityEs,
         auth: authEs,
+        projects: projectsEs,
       },
     },
     supportedLngs: SUPPORTED_LOCALES,

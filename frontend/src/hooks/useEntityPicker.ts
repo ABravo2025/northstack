@@ -7,6 +7,7 @@ export const TASK_ENTITY_TYPE_LABELS: Record<TaskEntityType, string> = {
   company: 'Company',
   employee: 'Employee',
   opportunity: 'Opportunity',
+  project: 'Project',
 };
 
 interface EntityOption {
@@ -50,6 +51,10 @@ export function useEntityPicker() {
       } else if (value === 'opportunity') {
         const opportunities = await api.listOpportunities(token);
         setEntityOptions(opportunities.map((o: any) => ({ value: o.id, label: o.name })));
+      } else if (value === 'project') {
+        // Only open projects the user can see (their own, or all with view_projects).
+        const { projects } = await api.listProjects(token);
+        setEntityOptions(projects.map((p) => ({ value: p.id, label: p.name })));
       }
     } catch (error) {
       setEntityOptions([]);

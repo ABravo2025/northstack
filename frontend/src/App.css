@@ -1876,8 +1876,10 @@ table.help-ref td.no {
   @apply flex w-full items-center justify-center bg-brand-navy p-6 md:w-[44%] md:flex-shrink-0;
 }
 
+/* The auth panel is navy in both themes, so its text is light in both — without this, plain
+   paragraphs inherited the light theme's ink (#1b1733, the panel's own color) and vanished. */
 .auth-left-inner {
-  @apply w-full max-w-sm;
+  @apply w-full max-w-sm text-dark-ink;
 }
 
 .auth-title {

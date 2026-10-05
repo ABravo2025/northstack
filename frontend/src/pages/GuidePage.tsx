@@ -12,6 +12,7 @@ import {
   BuildingIcon,
   CreditCardIcon,
   DeviceIcon,
+  FolderIcon,
   DownloadIcon,
   FormIcon,
   GearIcon,
@@ -35,6 +36,7 @@ const SECTION_IDS = [
   'g-hr',
   'g-payroll',
   'g-tasks',
+  'g-projects',
   'g-forms',
   'g-integrations',
   'g-settings',
@@ -66,6 +68,7 @@ const NAV_GROUPS: { label: string; items: { id: string; label: string; icon: JSX
       { id: 'g-hr', label: 'Employees & time off', icon: <PeopleIcon /> },
       { id: 'g-payroll', label: 'Payroll', icon: <BriefcaseIcon /> },
       { id: 'g-tasks', label: 'Tasks & notes', icon: <ListIcon /> },
+      { id: 'g-projects', label: 'Projects', icon: <FolderIcon /> },
     ],
   },
   {
@@ -95,6 +98,7 @@ const MODULE_MAP: { id: string; label: string; blurb: string; icon: JSX.Element 
   { id: 'g-hr', label: 'Employees & time off', blurb: 'Directory, reporting lines, PTO policies.', icon: <PeopleIcon /> },
   { id: 'g-payroll', label: 'Payroll', blurb: 'Compensation, pay runs, payslips.', icon: <BriefcaseIcon /> },
   { id: 'g-tasks', label: 'Tasks & notes', blurb: 'Follow-ups on any record.', icon: <ListIcon /> },
+  { id: 'g-projects', label: 'Projects', blurb: 'Phases, tasks and teams, blank or from a template.', icon: <FolderIcon /> },
   { id: 'g-forms', label: 'Public forms', blurb: 'No-login intake for hiring and leads.', icon: <FormIcon /> },
   { id: 'g-integrations', label: 'Integrations & API', blurb: 'Google Calendar, Stripe, API keys.', icon: <PlugIcon /> },
   { id: 'g-settings', label: 'Settings', blurb: 'Company profile, logo, currency, theme.', icon: <GearIcon /> },
@@ -127,6 +131,7 @@ const NAV_GROUPS_ES: { label: string; items: { id: string; label: string; icon: 
       { id: 'g-hr', label: 'Empleados y ausencias', icon: <PeopleIcon /> },
       { id: 'g-payroll', label: 'Nómina', icon: <BriefcaseIcon /> },
       { id: 'g-tasks', label: 'Tareas y notas', icon: <ListIcon /> },
+      { id: 'g-projects', label: 'Proyectos', icon: <FolderIcon /> },
     ],
   },
   {
@@ -156,6 +161,7 @@ const MODULE_MAP_ES: { id: string; label: string; blurb: string; icon: JSX.Eleme
   { id: 'g-hr', label: 'Empleados y ausencias', blurb: 'Directorio, líneas de reporte, políticas de ausencias.', icon: <PeopleIcon /> },
   { id: 'g-payroll', label: 'Nómina', blurb: 'Compensación, corridas de pago, recibos de sueldo.', icon: <BriefcaseIcon /> },
   { id: 'g-tasks', label: 'Tareas y notas', blurb: 'Seguimientos sobre cualquier registro.', icon: <ListIcon /> },
+  { id: 'g-projects', label: 'Proyectos', blurb: 'Fases, tareas y equipos, en blanco o desde un template.', icon: <FolderIcon /> },
   { id: 'g-forms', label: 'Formularios públicos', blurb: 'Carga sin login para reclutamiento y leads.', icon: <FormIcon /> },
   { id: 'g-integrations', label: 'Integraciones y API', blurb: 'Google Calendar, Stripe, claves de API.', icon: <PlugIcon /> },
   { id: 'g-settings', label: 'Configuración', blurb: 'Datos de la empresa, logo, moneda, tema.', icon: <GearIcon /> },
@@ -1521,7 +1527,7 @@ export default function GuidePage() {
                 <strong>carpetas</strong> que creás vos mismo desde el panel izquierdo — una carpeta es solo una
                 etiqueta para agrupar tareas relacionadas, compartida en todo el tenant. Hacé clic en una tarea
                 donde sea para ver su detalle completo y editarla; la fila "+ Agregar tarea" al final de la lista te
-                deja crear una desde cero, eligiendo a qué Empresa/Contacto/Empleado/Oportunidad corresponde.
+                deja crear una desde cero, eligiendo a qué Empresa/Contacto/Empleado/Oportunidad/Proyecto corresponde.
               </p>
             </div>
 
@@ -1566,7 +1572,7 @@ export default function GuidePage() {
                 <strong> folders</strong> you create yourself from the left rail — a folder is just a label to group
                 related tasks under, shared across the tenant. Click a task anywhere to see its full detail and edit
                 it; the "+ Add task" row at the bottom of the list lets you create one from scratch, picking which
-                Company/Contact/Employee/Opportunity it's about.
+                Company/Contact/Employee/Opportunity/Project it's about.
               </p>
             </div>
 
@@ -1575,6 +1581,169 @@ export default function GuidePage() {
               <p>
                 A title plus a longer description with light formatting — for context you want on the record
                 permanently, not something to check off. Every note and task shows who wrote it and when.
+              </p>
+            </div>
+          </section>
+          )}
+
+          {/* ===== Projects ===== */}
+          {isSpanish ? (
+          <section className="help-section" id="g-projects">
+            <div className="help-eyebrow">
+              <FolderIcon />
+              Trabajo en equipo
+            </div>
+            <h2>Proyectos</h2>
+            <p className="help-intro">
+              Organizá el trabajo de tu equipo en fases, con tareas, responsables y fechas — para un cliente
+              (una Empresa) o interno. Está en la barra lateral, debajo de Mis tareas.
+            </p>
+
+            <div className="help-sub">
+              <h3>Empezar un proyecto</h3>
+              <p>
+                En <strong>Proyectos</strong>, usá la fila <strong>+ Agregar proyecto</strong>. Primero elegís el
+                punto de partida: <strong>En blanco</strong> (sin fases ni tareas, lo armás a tu manera) o un
+                <strong> template</strong>. Hay templates listos para Agencias (Sitio web, Campaña mensual), Estudios
+                contables (Cierre mensual, Declaración anual, Alta de cliente nuevo), Consultoras (Implementación,
+                Onboarding de cliente) e Interno (Onboarding de empleado, Auditoría interna).
+              </p>
+              <p>
+                Con un template, en el segundo paso completás el nombre, la empresa, el responsable y la fecha de
+                inicio, y elegís quién cubre cada <strong>rol</strong> del template (por ejemplo, quién es el
+                Contador). Abajo ves la vista previa de todas las tareas con su fecha y su responsable antes de
+                crear nada. Las fechas salen de la fecha de inicio: una tarea "día +5" vence cinco días después.
+              </p>
+              <p>
+                Las tareas solo se pueden asignar a personas con acceso a Northstack. Si un rol queda sin asignar o
+                la persona elegida no tiene acceso, esas tareas quedan a cargo del responsable del proyecto (la
+                vista previa te lo avisa).
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Fases, tareas y tablero</h3>
+              <p>
+                La página del proyecto muestra el progreso (tareas hechas sobre el total), la fase actual y las
+                fechas. En <strong>Tareas</strong> ves cada fase con sus tareas: marcalas como hechas, agregá nuevas
+                desde la última fila de cada fase, y hacé clic en una para editarla con el mismo detalle de siempre.
+                Las fases se crean, renombran, reordenan y eliminan desde su encabezado (al eliminar una fase, sus
+                tareas quedan en "Sin fase"). En <strong>Tablero</strong> arrastrás una tarea de una fase a otra.
+              </p>
+              <p>
+                Las tareas de un proyecto son tareas comunes: aparecen en <strong>Mis tareas</strong>, en el
+                calendario y en Google Calendar si lo conectaste. A la derecha tenés las <strong>Notas</strong> y la
+                <strong> Actividad</strong> del proyecto.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Equipo y quién ve qué</h3>
+              <p>
+                En <strong>Equipo</strong> sumás o quitás personas y les ponés un rol libre ("Diseñador",
+                "Contador"). El responsable siempre forma parte del equipo. Cada persona ve los proyectos de los que
+                es responsable o miembro. El permiso <strong>Ver todos los proyectos</strong> deja ver todos los de
+                la empresa, y <strong>Gestionar proyectos</strong> deja crearlos y editar cualquiera (Configuración →
+                Roles y permisos). El responsable de un proyecto siempre puede editarlo.
+              </p>
+              <p>
+                También vas a encontrar una sección <strong>Proyectos</strong> dentro de cada Empresa (con un "+"
+                para crear uno ya vinculado) y dentro de cada persona en Personas.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Tus propios templates y planes</h3>
+              <p>
+                Desde un proyecto, <strong>Guardar como template</strong> copia sus fases y tareas: las fechas pasan
+                a "días desde el inicio" y cada responsable pasa a su rol en el equipo. No se copian notas, historial
+                ni tareas hechas. Tus templates aparecen en <strong>Mis templates</strong> al crear un proyecto.
+              </p>
+              <p>
+                En el plan <strong>Starter</strong> podés tener hasta 5 proyectos abiertos a la vez (en
+                planificación, activos o en pausa; los completados, cancelados y archivados no cuentan) y usar los
+                templates del sistema. <strong>Growth</strong> no tiene límite y suma tus propios templates. Los
+                proyectos no se borran: se <strong>archivan</strong>, y se pueden restaurar desde el filtro
+                Archivados.
+              </p>
+            </div>
+          </section>
+          ) : (
+          <section className="help-section" id="g-projects">
+            <div className="help-eyebrow">
+              <FolderIcon />
+              Teamwork
+            </div>
+            <h2>Projects</h2>
+            <p className="help-intro">
+              Organize your team's work in phases, with tasks, owners and dates — for a client (a Company) or
+              internal. It's in the sidebar, below My Tasks.
+            </p>
+
+            <div className="help-sub">
+              <h3>Starting a project</h3>
+              <p>
+                In <strong>Projects</strong>, use the <strong>+ Add project</strong> row. First pick the starting
+                point: <strong>Blank</strong> (no phases or tasks, build it your way) or a <strong>template</strong>.
+                There are ready-made templates for Agencies (Website, Monthly campaign), Accounting firms (Monthly
+                close, Annual return, New client setup), Consulting (Implementation, Client onboarding) and Internal
+                (Employee onboarding, Internal audit).
+              </p>
+              <p>
+                With a template, the second step asks for the name, company, owner and start date, and who fills
+                each of the template's <strong>roles</strong> (for example, who the Accountant is). Below, a preview
+                shows every task with its date and assignee before anything is created. Dates come from the start
+                date: a "day +5" task is due five days later.
+              </p>
+              <p>
+                Tasks can only be assigned to people with access to Northstack. If a role is left unassigned, or
+                the person chosen has no access, those tasks go to the project's owner (the preview tells you).
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Phases, tasks and board</h3>
+              <p>
+                The project page shows progress (tasks done out of the total), the current phase and the dates. In
+                <strong> Tasks</strong> you see each phase with its tasks: check them off, add new ones from the last
+                row of each phase, and click one to edit it in the usual task detail. Phases are added, renamed,
+                reordered and deleted from their header (deleting a phase moves its tasks to "No phase"). In
+                <strong> Board</strong> you drag a task from one phase to another.
+              </p>
+              <p>
+                A project's tasks are ordinary tasks: they show up in <strong>My Tasks</strong>, on the calendar, and
+                in Google Calendar if you connected it. The project's <strong>Notes</strong> and
+                <strong> Activity</strong> are on the right.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Team and who sees what</h3>
+              <p>
+                In <strong>Team</strong> you add or remove people and give them a free-text role ("Designer",
+                "Accountant"). The owner is always on the team. Everyone sees the projects they own or are a member
+                of. The <strong>View all projects</strong> permission shows every project in the company, and
+                <strong> Manage projects</strong> lets someone create projects and edit any of them (Settings → Roles
+                &amp; Permissions). A project's owner can always edit it.
+              </p>
+              <p>
+                You'll also find a <strong>Projects</strong> section inside each Company (with a "+" to create one
+                already linked) and inside each person in People.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Your own templates and plans</h3>
+              <p>
+                From a project, <strong>Save as template</strong> copies its phases and tasks: due dates become
+                "days from the start" and each assignee becomes their team role. Notes, history and done marks are
+                not copied. Your templates appear under <strong>My templates</strong> when creating a project.
+              </p>
+              <p>
+                On the <strong>Starter</strong> plan you can have up to 5 open projects at a time (planning, active
+                or on hold; completed, cancelled and archived ones don't count) and use the system templates.
+                <strong> Growth</strong> has no limit and adds your own templates. Projects aren't deleted: they're
+                <strong> archived</strong>, and can be restored from the Archived filter.
               </p>
             </div>
           </section>

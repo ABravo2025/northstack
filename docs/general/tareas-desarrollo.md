@@ -1,6 +1,13 @@
 # Tareas de desarrollo
 
 - Fecha de creación: 2026-07-02
+- **2026-10-07 — Módulo de Proyectos (EN PRODUCCIÓN)**: proyectos con fases, tareas, equipo y progreso, vinculados
+  opcionalmente a una Company; alta en blanco o desde 9 templates del sistema por nicho (EN/ES) con asignación de tareas
+  por rol y vista previa; "Guardar como template" (Growth); sección Proyectos en Company y en cada persona; chat por
+  tarea con @menciones (notificación in-app); email a invitar en Meet (obligatorio en tareas de proyecto); permisos
+  `view_projects`/`manage_projects` + regla de responsable/miembro; Starter hasta 5 abiertos. Guía y FAQ actualizados.
+  Spec: `spec-projects.md`. Prod: SQL aditivo vía `migrate diff`, `backfill-projects-permissions.ts` y
+  `seed-project-templates.ts`. Llevado a `main` con cherry-pick (sin el resto de staging).
 - **2026-10-02 — Fix de seguridad: scopes de API key limitados al rol del creador (EN PRODUCCIÓN 2026-10-03)**: un rol personalizado
   con "Gestionar API" podía crear una key con permisos que su rol no tiene (ej. leer nómina sin acceso a Payroll). Ahora cada
   scope exige el mismo permiso que la pantalla equivalente de la app y la UI solo muestra los permitidos. Botones del modal fijos

@@ -8,6 +8,7 @@ import {
   BriefcaseIcon,
   ChevronDownIcon,
   CreditCardIcon,
+  FolderIcon,
   FormIcon,
   LockIcon,
   MailIcon,
@@ -174,6 +175,41 @@ const FAQ_CATEGORIES: FaqCategory[] = [
       {
         q: "A new hire isn't showing up in my payroll run — why?",
         a: 'Their first pay contract likely hasn\'t been confirmed yet — check for a "Contract: Pending" (or "Expired," after 3 days) chip on their profile.',
+      },
+    ],
+  },
+  {
+    id: 'f-projects',
+    label: 'Projects',
+    icon: <FolderIcon />,
+    items: [
+      {
+        q: "What's the difference between a blank project and one from a template?",
+        a: 'A blank project starts with no phases or tasks. A template copies a ready-made set of phases and tasks (with dates counted from your start date and a suggested role for each task) into the new project. After that the project is yours to change — it never reads the template again.',
+      },
+      {
+        q: 'Who gets each task when I create a project from a template?',
+        a: "The team member you chose for that task's role. If the role is unassigned, or that person has no access to Northstack, the task goes to the project's owner. The preview in step 2 shows every task's assignee before you create the project.",
+      },
+      {
+        q: 'Who can see a project?',
+        a: 'Its owner and its team members always can. Anyone whose role has "View all projects" sees every project; "Manage projects" also lets them create projects and edit any of them.',
+      },
+      {
+        q: 'How many projects can I have?',
+        a: 'Starter allows 5 open projects at a time (planning, active or on hold). Completed, cancelled and archived projects don\'t count. Growth has no limit.',
+      },
+      {
+        q: 'Can I create my own templates?',
+        a: 'Yes, on Growth: open a project and use "Save as template". Phases and tasks are copied, dates become days from the start, and each assignee becomes their team role. You\'ll find it under "My templates" next time you create a project.',
+      },
+      {
+        q: 'Can I delete a project?',
+        a: 'Projects are archived instead of deleted, so their tasks, notes and history are kept. Archived projects stop counting toward your plan and can be restored from the Archived filter.',
+      },
+      {
+        q: 'Do project tasks show up in My Tasks and Google Calendar?',
+        a: 'Yes. A project task is an ordinary task: it appears in My Tasks, on the Overview calendar, and in Google Calendar for whoever it\'s assigned to, if they connected it.',
       },
     ],
   },
@@ -394,6 +430,41 @@ const FAQ_CATEGORIES_ES: FaqCategory[] = [
       {
         q: 'Una persona recién contratada no aparece en mi corrida de nómina — ¿por qué?',
         a: 'Es probable que su primer contrato de pago todavía no esté confirmado — fijate si tiene un chip "Contrato: pendiente" en su perfil, que pasa a "Vencido" después de 3 días.',
+      },
+    ],
+  },
+  {
+    id: 'f-projects',
+    label: 'Proyectos',
+    icon: <FolderIcon />,
+    items: [
+      {
+        q: '¿Qué diferencia hay entre un proyecto en blanco y uno desde un template?',
+        a: 'Un proyecto en blanco empieza sin fases ni tareas. Un template copia al proyecto nuevo un conjunto listo de fases y tareas (con fechas contadas desde tu fecha de inicio y un rol sugerido para cada tarea). Después el proyecto es tuyo para cambiarlo: nunca vuelve a leer el template.',
+      },
+      {
+        q: '¿A quién se le asigna cada tarea cuando creo un proyecto desde un template?',
+        a: 'A la persona del equipo que elegiste para el rol de esa tarea. Si el rol queda sin asignar, o esa persona no tiene acceso a Northstack, la tarea queda a cargo del responsable del proyecto. La vista previa del paso 2 muestra el responsable de cada tarea antes de crear el proyecto.',
+      },
+      {
+        q: '¿Quién puede ver un proyecto?',
+        a: 'Su responsable y los miembros del equipo, siempre. Quien tenga en su rol "Ver todos los proyectos" ve todos; "Gestionar proyectos" además le deja crear proyectos y editar cualquiera.',
+      },
+      {
+        q: '¿Cuántos proyectos puedo tener?',
+        a: 'Starter permite 5 proyectos abiertos a la vez (en planificación, activos o en pausa). Los completados, cancelados y archivados no cuentan. Growth no tiene límite.',
+      },
+      {
+        q: '¿Puedo crear mis propios templates?',
+        a: 'Sí, en Growth: abrí un proyecto y usá "Guardar como template". Se copian las fases y tareas, las fechas pasan a días desde el inicio y cada responsable pasa a su rol en el equipo. Lo vas a encontrar en "Mis templates" la próxima vez que crees un proyecto.',
+      },
+      {
+        q: '¿Puedo borrar un proyecto?',
+        a: 'Los proyectos se archivan en vez de borrarse, así se conservan sus tareas, notas e historial. Un proyecto archivado deja de contar para tu plan y se puede restaurar desde el filtro Archivados.',
+      },
+      {
+        q: '¿Las tareas de un proyecto aparecen en Mis tareas y en Google Calendar?',
+        a: 'Sí. Una tarea de proyecto es una tarea común: aparece en Mis tareas, en el calendario del Resumen y en el Google Calendar de la persona asignada, si lo conectó.',
       },
     ],
   },

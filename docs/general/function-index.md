@@ -994,7 +994,8 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 - **ShiftFormModal** — alta/edición con plantillas, "guardar como plantilla", aviso de re-confirmación al editar uno publicado.
 - **ShiftDetailModal** — detalle con personas y estados, selector de candidatos con bloqueos/avisos y "Asignar igual" (lee `ApiError.body`), publicar, cancelar, eliminar borrador.
 - **AvailabilityEditor** — "Mi disponibilidad" (semanal + fechas puntuales).
-- **ShiftWeekCalendar** (2026-10-05) — semana como calendario por horas (días × horas, estilo Google Calendar): bloques por duración, nocturnos partidos en dos días, clic en hueco → `onCreateAt(date, minute)` (redondeado a 30 min). Exporta **layoutDay(segments)**: reparte en columnas los turnos que se superponen.
+- **ShiftWeekCalendar** (2026-10-05/06) — calendario por horas de 1 día (vista Día) o 7 (Semana), estilo Google Calendar: bloques por duración, nocturnos partidos en dos días, clic en hueco → `onCreateAt(date, minute)` (redondeado a 30 min). Llena el alto de la ventana sin scroll propio (ajusta los px por hora, mínimo 22). Exporta **layoutDay(segments)**: reparte en columnas los turnos que se superponen.
+- **ShiftMonthView** (2026-10-06) — mes como grilla de días con etiquetas por turno, "+N más" y número de día que abren la vista Día. Exporta **monthGrid(anyDay, weekStartsOn)**: semanas completas que cubren el mes.
 
 ### `frontend/src/components/tour/`
 - **ProductTour** (2026-09-15, reemplaza `OnboardingChecklist`) — tour guiado con spotlight sobre `Sidebar`/`TopBar` reales (anclado por `data-tour="..."`, sin librería nueva). Montado una vez en `AppLayout.tsx`; se auto-lanza si `!user.productTourCompletedAt`, filtra pasos por permiso (ej. salta Companies sin `view_company`+`view_contact`), y expone un `replaySignal` prop para el "Take the tour again" de `TopBar`.

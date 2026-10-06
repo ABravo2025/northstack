@@ -137,15 +137,45 @@
     "terms": {
       "title": "Referral Program Terms and Conditions",
       "version": "Version {{version}}",
-      "items": [
-        "Only active Northstack users can take part.",
-        "The commission is {{percent}}% of each of the first {{payments}} payments of the referred company, excluding taxes, in the currency of the payment.",
-        "Each commission becomes payable {{holdDays}} days after the payment is credited. If the payment is refunded or charged back, the commission is voided.",
-        "We transfer once your payable balance reaches {{minUsd}} or {{minArs}}. Balances in different currencies add up separately.",
-        "You can't refer your own company or companies with the same email domain.",
-        "Transfer fees and the tax obligations of receiving the payment are your responsibility.",
-        "Northstack may change or end the program with 30 days' notice. Commissions already earned are kept."
-      ]
+      "intro": "These Referral Program Terms and Conditions (\"Program Terms\") govern Northstack's Referral Program (the \"Program\") and supplement our Terms of Service. By joining the Program, you agree to these Program Terms in addition to our Terms of Service.",
+      "sections": {
+        "scope": {
+          "heading": "1. Who these Program Terms are for",
+          "body": "These Program Terms apply only to you if you join the Program as a referrer (a \"Member\"). If you were referred by someone else, these Program Terms do not apply to you — your own use of the Service is governed only by our Terms of Service and Privacy Policy."
+        },
+        "eligibility": {
+          "heading": "2. Eligibility",
+          "body": "Only an active user of a Northstack Tenant may join the Program. You may not refer your own Tenant, a Tenant you already belong to, or a company whose users share your own email domain. Northstack may remove you from the Program, and withhold any commission not yet paid, if we reasonably believe you violated this Section or otherwise abused the Program — for example, with fake signups."
+        },
+        "mechanics": {
+          "heading": "3. How a referral works",
+          "body": "When you join, we give you a unique referral code and link. A company that registers a new Tenant using your code or link becomes a referral attributed to you, and that Tenant receives a {{trialDays}}-day free trial (instead of the standard trial) for having signed up this way."
+        },
+        "commissions": {
+          "heading": "4. Commissions",
+          "body": "You earn {{percent}}% of each of the referred company's first {{payments}} successful subscription payments, calculated on the amount actually charged, in the currency of that payment. A commission becomes payable {{holdDays}} days after the underlying payment. We may void a commission at any time before it is paid out — for example, if the underlying payment is refunded or charged back, or if we determine it resulted from fraud or a violation of these Program Terms."
+        },
+        "payouts": {
+          "heading": "5. Payouts",
+          "body": "Commissions accumulate separately by currency. We transfer your payable balance once it reaches the minimum for that currency ({{minUsd}} or {{minArs}}); a balance below the minimum carries forward. Payouts are made to the payout method and account details you provide us, which you are responsible for keeping accurate; see Section 2.1 of our Privacy Policy. We send you proof of each transfer. Transfer fees, currency conversion costs, and any tax withholding or reporting obligations arising from your participation in the Program are your own responsibility, not Northstack's."
+        },
+        "programChanges": {
+          "heading": "6. Changing or ending the Program",
+          "body": "We may change or end the Program at any time, with at least 30 days' notice to Members. A change does not affect a commission you already earned before it takes effect."
+        },
+        "relationship": {
+          "heading": "7. No employment or agency relationship",
+          "body": "Participating in the Program does not make you an employee, contractor, partner, or agent of Northstack, and you have no authority to make representations or commitments on Northstack's behalf when sharing your referral link. These Program Terms supplement, and do not replace, our Terms of Service and Privacy Policy; if these Program Terms conflict with the Terms of Service on a Program-specific matter, these Program Terms control for that matter. These Program Terms are governed by the same law and jurisdiction as our Terms of Service (Section 15)."
+        },
+        "changes": {
+          "heading": "8. Changes to these Program Terms",
+          "body": "We may add, remove, or modify any provision of these Program Terms at any time and without prior notice, except where applicable law requires otherwise, consistent with Section 14 of our Terms of Service. We will notify Members of a change with an in-app notification. Continuing to take part in the Program after a change takes effect constitutes acceptance of the updated Program Terms."
+        },
+        "contact": {
+          "heading": "9. Contact",
+          "body": "Questions about the Program can be sent to info@joinnorthstack.com."
+        }
+      }
     },
     "loading": "Loading your referrals…",
     "loadError": "Couldn't load your referrals: {{message}}"

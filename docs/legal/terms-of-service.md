@@ -222,11 +222,60 @@ associated with your Tenant's owner account") — that's a different, general-pu
 contractual notices mechanism (breach, termination, etc.), not the specific "we changed
 this document" promise, and an in-app-only channel is a bad fit for a notice a suspended
 Tenant might not be able to log in to see. Left untouched unless Alejandro says otherwise.
+
+2026-10-06 — evaluation pass requested by Alejandro for 3 features that shipped 2026-10-03/04
+(verified against origin/main, not his draft, via a direct research pass — the Admin Center
+v2 rebuild spec at docs/Admin-platform/spec-admin-center-v2.md explicitly deferred this exact
+legal-doc update: "Pending: the privacy-policy wording is going through Alejandro's legal
+agent. Don't use support access with real clients until it's published."):
+- New Section 2.5 (support access) and 5.6 (custom arrangements). Rewrote 9.1 and 9.3 — the
+  old text ("contact us to delete," "up to 90 days," discretionary "we may delete") was
+  written before any self-service deletion mechanism existed and is now flatly wrong against
+  tenantDeletionService.ts/tenantPurgeService.ts: deletion is self-service (Settings →
+  Company, name+password) or staff-initiated, blocks login immediately, and purges on a
+  fixed, automatic 10-day clock, not a discretionary up-to-90-day one.
+- Alejandro's own draft text for the Privacy Policy (his message, Section A/B/C) was checked
+  line by line against the actual code (supportAccessService.ts, adminActionService.ts,
+  tenantDeletionService.ts, tenantPurgeService.ts) — accurate except one claim: "our internal
+  record of administrative actions keeps no Account Data... of the deleted Tenant" is false.
+  `reset_password` and `payment_reminder` admin actions store a user's email address directly
+  in PlatformAuditEntry.details (a free-text JSON field staff can put anything in), and that
+  row survives tenant purge (SET NULL, not deleted). Softened to "may still contain limited
+  details a staff member included" in privacy-policy.md's Section 5 — see that file's own
+  dated note for the Privacy-side detail.
+- Invoice retention: Alejandro confirmed (2026-10-06) invoices are "comprobantes fiscales"
+  his own tax/accounting obligations require him to keep — NOT just a documentation mismatch
+  to patch, a real compliance requirement independent of what Dodo Payments/Mercado Pago
+  retain on their own side. Fixed at the source: Invoice.subscriptionId is now nullable +
+  ON DELETE SET NULL (schema + 3-statement migration prepared), so tenantPurgeService's
+  FK-graph walk never reaches Invoice rows — same survival mechanism PlatformAuditEntry
+  already used. Downstream nullability fixes: adminBillingService.ts, subscriptionService.ts's
+  getInvoiceDocumentUrl, frontend adminApi.ts/AdminBilling.tsx (shows "Cliente eliminado" for
+  an orphaned invoice), tests/tenantPurge.test.ts updated to assert Invoice survives.
+- Referral program: live on main since 2026-10-04 (b9e2812..7755c8a) — Alejandro's own memory
+  note calling it "staging only" was stale; checked origin/main directly rather than trusting
+  it. Added a cross-reference in "Entire agreement" below; the actual Referral Program Terms
+  and Conditions is its own document (frontend i18n, not a landing .html page) — see that
+  file's own notes for the full rewrite, since the one it replaces (settingsPages.json's
+  `referrals.terms.items`) also overstated one thing: "if the payment is refunded or charged
+  back, the commission is voided" is NOT automatic — voidCommission is a manual staff-only
+  action (src/routes/referrals.ts), never called from a refund/chargeback webhook.
+- Projects module: staging-only (7 units, not yet on main) — deliberately NOT given any new
+  ToS/Privacy text. Its data (project name, dates, budget, team, linked tasks) already falls
+  under the existing, deliberately broad Section 3.1 Customer Data definition, same as every
+  other module; writing a per-module clause for it would be new precedent this doc doesn't
+  otherwise follow (Sales/CRM/Tasks don't get one either).
+- Timesheet/Turnos: confirmed zero code anywhere (git log has no matching commit on main or
+  staging) — just a plan/prototype artifact. Nothing to write; flagged to Alejandro rather
+  than inventing forward-looking language he didn't ask for here (unlike MCP/2FA, which he
+  explicitly asked to be announced as upcoming).
 -->
+
+
 
 # Northstack Terms of Service
 
-**Effective Date:** October 2, 2026
+**Effective Date:** October 6, 2026
 
 Welcome to Northstack. These Terms of Service ("**Terms**") are a binding agreement between
 Alejandro Bravo, an individual operating under the trade name "Northstack" and based in
@@ -310,6 +359,15 @@ You (through your Tenant's owner/admin users) are solely responsible for decidin
 individuals to invite as users, which roles to assign them, and when to revoke access.
 Northstack has no visibility into, and no responsibility for, whether a given individual
 should have access under your organization's own internal policies.
+
+### 2.5 Northstack support access
+
+If our support team needs to look at your account to help you, we will ask one specific
+user of your Tenant — we never log in without being asked. That user decides whether to
+grant access, for how long (at most 24 hours), and whether we can only view the account or
+also make changes, and can end it at any time. While active, we see the account with that
+user's own permissions, never more, and any change we make is recorded in your Activity
+Log. See Section 4.6 of our [Privacy Policy](./privacy-policy.md) for the full detail.
 
 ---
 
@@ -464,6 +522,14 @@ already charged. **Fees are generally non-refundable — see our
 We encourage you to review the Refund Policy, together with Section 5.1's free trial, before
 adding a payment method or upgrading to a paid plan.
 
+### 5.6 Custom arrangements
+
+We may, at our discretion, agree with a specific Tenant to different modules, usage
+limits, or pricing than what that Tenant's selected plan would otherwise include. Any such
+arrangement is only valid if made in writing (including by email) between an authorized
+Northstack representative and your Tenant's owner or admin, and supplements these Terms
+for your Tenant only — it does not change these Terms for any other Tenant.
+
 ---
 
 ## 6. Intellectual Property
@@ -535,8 +601,13 @@ apply to it in the same way.
 
 ### 9.1 By you
 
-You may stop using the Service and request deletion of your Tenant account at any time by
-contacting info@joinnorthstack.com.
+You may stop using the Service at any time. The owner of your Tenant can delete the
+Tenant account directly from the Service (Settings → Company), by confirming the company
+name and their password. You must cancel any active paid subscription first (Settings →
+Billing) — deletion does not do this for you. Deleting your Tenant account immediately
+blocks access for every user, and the Tenant's owner receives a confirmation email. See
+Section 9.3 and our [Privacy Policy](./privacy-policy.md) (Section 5) for what happens to
+your data afterward.
 
 ### 9.2 By us
 
@@ -557,11 +628,12 @@ Section 1.1, in which case we will provide reasonable advance notice where pract
 
 ### 9.3 Effect of termination
 
-Upon termination, your right to access the Service ends. We will retain Customer Data for
-up to ninety (90) days following termination to allow you to request an export, after which
-we may permanently delete it without further notice or liability to you, unless a longer
-retention period is required by applicable law. See the [Privacy Policy](./privacy-policy.md)
-for more detail on our data retention practices.
+Upon termination, access to the Service ends immediately for every user of the Tenant.
+Your Account Data and Processed Data are permanently deleted ten (10) days after
+termination — whether the Tenant was deleted by its owner or by us — unless you contact us
+at info@joinnorthstack.com before that deadline to reverse it. After the 10 days, deletion
+cannot be undone. See the [Privacy Policy](./privacy-policy.md) (Section 5) for more detail
+on our data retention practices, including what happens to billing records.
 
 ---
 
@@ -650,8 +722,9 @@ and waives any objection to venue there.
 ## 16. General Provisions
 
 **Entire agreement.** These Terms, together with the Privacy Policy and, if applicable to
-you, the Refund Policy, constitute the entire agreement between the parties regarding the
-Service and supersede any prior agreements on the subject.
+you, the Refund Policy and the Referral Program Terms and Conditions, constitute the
+entire agreement between the parties regarding the Service and supersede any prior
+agreements on the subject.
 
 **Severability.** If any provision of these Terms is held unenforceable, the remaining
 provisions will remain in full force and effect, and the unenforceable provision will be

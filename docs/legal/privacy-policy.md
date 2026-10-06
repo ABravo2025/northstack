@@ -92,11 +92,30 @@ This mirrors Section 3.5 of the Terms of Service and is the load-bearing distinc
 lets Northstack correctly say "we're not the right party to field a deletion request from
 your employee — direct them to their employer" instead of taking on obligations for data it
 doesn't actually control the purpose/use of.
+
+2026-10-06 — same evaluation pass as terms-of-service.md's matching dated note (read that one
+first for the full reasoning and the code citations). Summary as it applies to this file:
+- New Section 4.6 (support access + the internal admin tool) and a new Account Data bullet
+  in 2.1 for Referral Program payout details (bank/CBU/tax ID, encrypted, collected directly
+  from the platform user who joins, not from a Tenant).
+- Rewrote Section 5 (Data Retention): fixed deletion mechanics to match
+  tenantDeletionService.ts exactly (10-day fixed window, not "up to 90 days"; self-service
+  from Settings → Company, not an email request) and corrected the one factual error in
+  Alejandro's own draft — the admin audit log is NOT scrubbed of all Account Data on purge
+  (reset_password/payment_reminder actions store a user's email in a free-text JSON field
+  that survives).
+- Invoice retention is now actually true, not just stated: Alejandro confirmed invoices are
+  real fiscal records he's independently obligated to keep, so Invoice.subscriptionId was
+  made nullable + ON DELETE SET NULL (schema fix, same session) — this paragraph describes
+  the code's real behavior now, not a promise ahead of a fix that hadn't happened yet.
+- Rewrote 6.1 to point at self-service deletion instead of "contact us," matching 9.1 of the
+  Terms.
 -->
+
 
 # Northstack Privacy Policy
 
-**Effective Date:** October 2, 2026
+**Effective Date:** October 6, 2026
 
 This Privacy Policy explains how Northstack ("**Northstack**," "**we**," "**us**," or
 "**our**"), operated by Alejandro Bravo, an individual based in Buenos Aires, Argentina,
@@ -148,6 +167,9 @@ such requests if they reach us directly.
   through Dodo Payments or Mercado Pago (Section 4.1). **We do not directly collect or store your
   full payment card or bank account number** — our payment processors collect and hold that
   information directly.
+- If you join our Referral Program: your payout method and the account details it requires
+  (for example, an email, bank account, CBU/CVU, or tax ID), stored encrypted and used only
+  to pay your referral commissions. See our Referral Program Terms and Conditions.
 
 ### 2.2 Processed Data Tenants submit
 
@@ -184,6 +206,8 @@ We use Account Data and Processed Data to:
 
 - provide, operate, secure, and maintain the Service (including authentication, tenant
   isolation, and permissions);
+- provide customer support, including temporary account access a user of your Tenant
+  authorizes (Section 4.6);
 - process subscription payments and manage billing, including free trials, plan changes,
   and cancellations, through our payment processors (Section 4.1);
 - send transactional email, such as invitation emails, password-related notices, and
@@ -259,6 +283,32 @@ Tenant's own data in the Service. **This feature is not yet available.** We will
 this Policy with more detail — including which categories of data it can access — once it
 is.
 
+### 4.6 Northstack support access to your account (only with your permission)
+
+Northstack staff never sign in to your account, or see it the way you do, unless a user of
+your account explicitly accepts a request to do so. When our support team needs to look at
+your account to help you:
+
+- We send the request to one specific user of your account, inside the Service and by
+  email. It states who is asking, why, whether the access is view-only or also allows
+  changes, and for how long. A request nobody answers lapses after 24 hours.
+- Access starts only when that user accepts it, lasts at most the period shown (30 minutes,
+  2 hours, or 24 hours, counted from acceptance), and that user can end it at any time.
+- During the access, our staff see the account with the permissions of the user who
+  accepted it, never more. In view-only mode they cannot change anything. If changes were
+  allowed, every change they make is recorded in your Activity Log as made by Northstack
+  support.
+- We keep a record of every request, acceptance, entry, and end of access.
+
+Separately from this, a limited number of authorized Northstack staff can see
+administrative information about each Tenant that we need to operate, support, and bill
+the Service — such as company details, the users of the account and their roles, plan and
+billing status, and how much each module is used — through an internal administration
+tool. That tool also lets authorized staff take administrative actions such as extending a
+trial, changing a plan, suspending an account, or exporting a copy of a Tenant's data (for
+example, to fulfill a request under Section 6). Every administrative action our staff take
+on a Tenant is recorded together with its reason.
+
 ---
 
 ## 5. Data Retention
@@ -266,11 +316,29 @@ is.
 We retain Account Data for as long as the associated account is active, and for a
 reasonable period afterward to allow for account recovery, comply with legal obligations,
 resolve disputes, and enforce our agreements. We retain Processed Data for as long as the
-Tenant's account is active, and for a reasonable period after a Tenant requests deletion or
-termination, after which it is deleted or anonymized, unless a longer retention period is
-required by applicable law. Billing and transaction records may be retained longer where
-needed to comply with tax, accounting, or financial recordkeeping obligations. You (or your
-Tenant's owner/admin) can request earlier deletion by contacting info@joinnorthstack.com.
+Tenant's account is active.
+
+**Deleting a Tenant account.** The owner of a Tenant can delete the company account from
+the Service (Settings → Company), and Northstack may also delete an account, for example
+at the owner's request or under our Terms of Service. In both cases, nobody can sign in to
+the account from that moment, the owner is notified by email, and all Account Data and
+Processed Data of that Tenant is permanently deleted ten (10) days later. During those 10
+days, the deletion can be reversed by contacting info@joinnorthstack.com; after that, it
+cannot be undone.
+
+We keep our own copies of invoices and billing records for longer, as needed to comply
+with our own tax and accounting obligations, even after the rest of a Tenant's data is
+deleted. Payment records held by our payment processors (Dodo Payments, Mercado Pago) are
+kept by them according to their own obligations, independent of ours.
+
+Our internal record of administrative actions taken on a Tenant (Section 4.6) continues to
+exist after that Tenant's account is deleted, for our own operational and compliance
+purposes. It is no longer linked to the deleted Tenant, but it may still contain limited
+details a staff member included when taking an action — for example, a user's email
+address noted when resetting a password.
+
+You (or your Tenant's owner/admin) can request earlier deletion by contacting
+info@joinnorthstack.com.
 
 ---
 
@@ -280,8 +348,9 @@ Tenant's owner/admin) can request earlier deletion by contacting info@joinnorths
 
 You can access and update most of your own Account Data directly in the Service (Profile
 settings). You may also contact us at info@joinnorthstack.com to request access to,
-correction of, or deletion of your Account Data, or to close your account, subject to
-information we are required to retain by law.
+correction of, or deletion of your Account Data. If you are the owner of a Tenant, you can
+delete the whole company account yourself from Settings → Company; see Section 5 (Data
+Retention).
 
 ### 6.2 If your data appears as Processed Data
 

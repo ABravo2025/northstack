@@ -47,7 +47,13 @@ export const REFERRAL = {
   holdDays: 30,
   minPayoutCents: { USD: 5_000, ARS: 5_000_000 } as Record<string, number>,
   trialDays: 30,
-  termsVersion: '1.0',
+  // 2.0 (2026-10-06): rewrote the program terms as a proper supplementary legal document
+  // (real sections, not a 7-line bullet list) — see docs/legal/terms-of-service.md's dated
+  // note. Existing Members keep whatever version they accepted on their ReferralMember row;
+  // there is no re-acceptance prompt for a version bump today, flagged to Alejandro as a
+  // product gap, not fixed here (this file only defines the number joinReferralProgram checks
+  // against for a *new* join).
+  termsVersion: '2.0',
 } as const;
 
 export type Market = keyof typeof PER_USER;

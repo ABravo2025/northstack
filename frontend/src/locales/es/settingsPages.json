@@ -137,15 +137,45 @@
     "terms": {
       "title": "Términos y Condiciones del Programa de Referidos",
       "version": "Versión {{version}}",
-      "items": [
-        "Solo pueden participar usuarios activos de Northstack.",
-        "La comisión es el {{percent}}% de cada uno de los primeros {{payments}} pagos de la empresa referida, sin impuestos, en la moneda del pago.",
-        "Cada comisión se libera {{holdDays}} días después de acreditado el pago. Si hay reembolso o contracargo, se anula.",
-        "Transferimos cuando el saldo a cobrar llega a {{minUsd}} o {{minArs}}. Los saldos en monedas distintas se acumulan por separado.",
-        "No se puede referir a la propia empresa ni a empresas del mismo dominio de email.",
-        "Los costos de transferencia y las obligaciones fiscales del cobro corren por cuenta de quien lo recibe.",
-        "Northstack puede modificar o terminar el programa avisando con 30 días de anticipación. Las comisiones ya generadas se respetan."
-      ]
+      "intro": "Estos Términos y Condiciones del Programa de Referidos (\"Términos del Programa\") rigen el Programa de Referidos de Northstack (el \"Programa\") y complementan nuestros Términos de Servicio. Al sumarte al Programa, aceptás estos Términos del Programa además de nuestros Términos de Servicio.",
+      "sections": {
+        "scope": {
+          "heading": "1. A quién aplican estos Términos",
+          "body": "Estos Términos del Programa aplican solo si te sumás al Programa como quien refiere (un \"Miembro\"). Si otra persona te refirió a vos, estos Términos del Programa no te aplican — tu propio uso del Servicio se rige únicamente por nuestros Términos de Servicio y Política de Privacidad."
+        },
+        "eligibility": {
+          "heading": "2. Quién puede participar",
+          "body": "Solo puede sumarse al Programa un usuario activo de un Tenant de Northstack. No podés referir a tu propia empresa, a una empresa a la que ya pertenecés, ni a una empresa cuyos usuarios compartan tu mismo dominio de email. Northstack puede sacarte del Programa, y retener cualquier comisión todavía no pagada, si tenemos motivos razonables para creer que violaste esta Sección o abusaste del Programa de cualquier otra forma — por ejemplo, con altas falsas."
+        },
+        "mechanics": {
+          "heading": "3. Cómo funciona una referencia",
+          "body": "Al sumarte, te damos un código y un link de referido únicos. Una empresa que registra un Tenant nuevo usando tu código o link queda atribuida a vos como referencia, y ese Tenant recibe una prueba gratuita de {{trialDays}} días (en lugar de la prueba estándar) por haberse registrado así."
+        },
+        "commissions": {
+          "heading": "4. Comisiones",
+          "body": "Ganás el {{percent}}% de cada uno de los primeros {{payments}} pagos exitosos de la suscripción de la empresa referida, calculado sobre el monto efectivamente cobrado, en la moneda de ese pago. Una comisión queda disponible para cobro {{holdDays}} días después del pago correspondiente. Podemos anular una comisión en cualquier momento antes de pagarla — por ejemplo, si el pago correspondiente se reembolsa o se desconoce (contracargo), o si determinamos que surgió de fraude o de una violación de estos Términos del Programa."
+        },
+        "payouts": {
+          "heading": "5. Pagos",
+          "body": "Las comisiones se acumulan por separado según la moneda. Transferimos tu saldo disponible una vez que alcanza el mínimo para esa moneda ({{minUsd}} o {{minArs}}); un saldo por debajo del mínimo se acumula para la próxima vez. Los pagos se hacen al método y a los datos de cobro que nos proporciones, que es tu responsabilidad mantener correctos; ver la Sección 2.1 de nuestra Política de Privacidad. Te enviamos el comprobante de cada transferencia. Los costos de transferencia, la conversión de moneda, y cualquier obligación de retención o declaración fiscal que surja de tu participación en el Programa son tu propia responsabilidad, no de Northstack."
+        },
+        "programChanges": {
+          "heading": "6. Cambiar o terminar el Programa",
+          "body": "Podemos cambiar o terminar el Programa en cualquier momento, avisando a los Miembros con al menos 30 días de anticipación. Un cambio no afecta una comisión que ya ganaste antes de que entre en vigencia."
+        },
+        "relationship": {
+          "heading": "7. Sin relación de empleo ni de representación",
+          "body": "Participar del Programa no te convierte en empleado, contratista, socio ni agente de Northstack, y no tenés autoridad para hacer declaraciones ni compromisos en nombre de Northstack al compartir tu link de referido. Estos Términos del Programa complementan, y no reemplazan, nuestros Términos de Servicio y Política de Privacidad; si estos Términos del Programa entran en conflicto con los Términos de Servicio en un punto específico del Programa, estos Términos del Programa rigen para ese punto. Estos Términos del Programa se rigen por la misma ley y jurisdicción que nuestros Términos de Servicio (Sección 15)."
+        },
+        "changes": {
+          "heading": "8. Cambios a estos Términos del Programa",
+          "body": "Podemos agregar, quitar o modificar cualquier disposición de estos Términos del Programa en cualquier momento y sin aviso previo, salvo que la ley aplicable exija lo contrario, de forma consistente con la Sección 14 de nuestros Términos de Servicio. Avisaremos a los Miembros de un cambio con una notificación dentro de la app. Seguir participando del Programa después de que un cambio entre en vigencia implica la aceptación de los Términos del Programa actualizados."
+        },
+        "contact": {
+          "heading": "9. Contacto",
+          "body": "Las consultas sobre el Programa se pueden enviar a info@joinnorthstack.com."
+        }
+      }
     },
     "loading": "Cargando tus referidos…",
     "loadError": "No se pudieron cargar tus referidos: {{message}}"

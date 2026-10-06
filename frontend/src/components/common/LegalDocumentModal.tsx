@@ -134,29 +134,37 @@ export default function LegalDocumentModal({ initialDoc, onClose }: LegalDocumen
   );
 }
 
+// Real section structure (2026-10-06), not a flat bullet list — this is a proper supplementary
+// legal document now (see docs/legal/ for its sibling Terms/Privacy/Refund), just rendered from
+// i18n + the live REFERRAL config instead of a landing .html page, so its numbers can never drift
+// from what the program actually pays (checked against referralService.ts/pricing.ts directly).
+const REFERRAL_TERMS_SECTIONS = ['scope', 'eligibility', 'mechanics', 'commissions', 'payouts', 'programChanges', 'relationship', 'changes', 'contact'] as const;
+
 function ReferralTerms({ rules }: { rules: ReferralRules }) {
   const { t, i18n } = useTranslation('settingsPages');
   const money = (currency: 'USD' | 'ARS') =>
     new Intl.NumberFormat(i18n.language === 'es' ? 'es-AR' : 'en-US', { style: 'currency', currency, currencyDisplay: 'code', maximumFractionDigits: 0 }).format(
       (rules.minPayoutCents[currency] ?? 0) / 100,
     );
-  const items = t('referrals.terms.items', {
+  const vars = {
     percent: rules.commissionPercent,
     payments: rules.commissionPayments,
     holdDays: rules.holdDays,
+    trialDays: rules.trialDays,
     minUsd: money('USD'),
     minArs: money('ARS'),
-    returnObjects: true,
-  }) as string[];
+  };
   return (
     <div>
       <h1>{t('referrals.terms.title')}</h1>
       <span className="effective-date">{t('referrals.terms.version', { version: rules.termsVersion })}</span>
-      <ol className="list-decimal">
-        {items.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ol>
+      <p>{t('referrals.terms.intro', vars)}</p>
+      {REFERRAL_TERMS_SECTIONS.map((key) => (
+        <div key={key}>
+          <h2>{t(`referrals.terms.sections.${key}.heading`)}</h2>
+          <p>{t(`referrals.terms.sections.${key}.body`, vars)}</p>
+        </div>
+      ))}
     </div>
   );
 }

@@ -27,6 +27,13 @@ Página nueva de módulo — antes de escribir el JSX, abrí una página hermana
 - Contenedor raíz: page-full (sin max-width) para cualquier pantalla con una tabla ancha de varias columnas — container (max-w-6xl, centrado) es solo para pantallas angostas tipo formulario/dashboard (Overview, Time Off, Help). Usar container en una pantalla de tabla la deja angosta y centrada con márgenes desperdiciados en vez de ocupar el ancho completo como el resto de la app — es el error más fácil de cometer y el más visible a simple vista.
 - Nunca un color de Tailwind sin prefijo semántico (gray-*, blue-*) fuera de los casos ya reservados (danger/success/warning) — los neutros del proyecto son los tokens de design-system.md §1 (ink/ink-muted/ink-faint/surface-*/line*).
 Esto viene de un incidente real (Payroll, 2026-07-31): el módulo se construyó en una sesión larga sin comparar contra el resto de la app ni abrir en navegador, y terminó con container en vez de page-full, text-gray-500 en vez de text-ink-muted, y <p>Loading...</p> en vez de TableSkeleton/EmptyState — mismo día en que esos tokens/componentes se habían terminado de migrar en el resto del proyecto. Ver docs/tareas-desarrollo.md.
+Mails salientes de Northstack — template obligatorio (Alejandro, 2026-10-06)
+
+Todo mail que mande Northstack, sin excepción, usa el template de `src/lib/emailLayout.ts`: logo arriba (PNG embebido como imagen inline), tarjeta blanca con el asunto como título, botón violeta para la acción principal, pie "Este es un mail automático de Northstack" en el idioma del destinatario, y **siempre claro** (declara solo modo claro, nunca una variante oscura). Vista de referencia: claude.ai/artifact/RfSDJoc74AGstbuucZ2WSZ.
+- Un mail nuevo se agrega como `send…Email` en `src/lib/mailer.ts` y se manda por `dispatchMail(opciones, etiqueta, lng)`, que lo envuelve en el template: no armes HTML de mail propio ni llames a `transporter.sendMail` directo.
+- El cuerpo se escribe con `<p>` simples; un `<p>` que contiene solo un link se convierte solo en el botón. Textos en los dos idiomas (`src/locales/{en,es}/emails.json`) y pasando `lng` para el pie.
+- Nada de colores, fuentes o layout propios por mail: si hace falta algo nuevo (un recuadro de datos, una tabla), se agrega al template para que lo usen todos.
+
 Migraciones de DB con datos reales en producción
 
 Para cualquier migración que toque columnas existentes con datos ya cargados (no una tabla nueva vacía):

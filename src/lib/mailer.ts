@@ -878,7 +878,9 @@ function shiftButton(url: string, label: string, primary: boolean): string {
   const style = primary
     ? 'background:#5b21e6;color:#ffffff;border:1px solid #5b21e6;'
     : 'background:#ffffff;color:#1b1733;border:1px solid #d3cfe3;';
-  return `<a href="${url}" style="${style}display:inline-block;padding:8px 14px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;margin-right:6px">${escapeHtml(label)}</a>`;
+  // style before href on purpose: emailLayout.ts's styleEmailBody restyles every `<a href="` as a
+  // plain link, which would override these two side-by-side buttons.
+  return `<a style="${style}display:inline-block;padding:8px 14px;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;margin-right:6px" href="${url}">${escapeHtml(label)}</a>`;
 }
 
 export async function sendShiftEmail(input: SendShiftEmailInput): Promise<void> {
@@ -973,5 +975,6 @@ export async function sendShiftEmail(input: SendShiftEmailInput): Promise<void> 
         : undefined,
     },
     `Failed to send shift ${input.kind} email:`,
+    lng,
   );
 }

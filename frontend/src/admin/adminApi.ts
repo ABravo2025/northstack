@@ -272,7 +272,7 @@ export interface BillingOverview {
   cancellations: { id: string; name: string; requestedAt: string | null; effectiveAt: string | null; reason: string | null }[];
   upcoming: { id: string; name: string; at: string; amountCents: number; currency: string }[];
   monthly: { month: string; paid: Record<string, number> }[];
-  invoices: { id: string; tenant: { id: string; name: string }; amountCents: number; currency: string; status: string; provider: string; at: string; periodStart: string; periodEnd: string }[];
+  invoices: { id: string; tenant: { id: string; name: string } | null; amountCents: number; currency: string; status: string; provider: string; at: string; periodStart: string; periodEnd: string }[];
 }
 
 export const adminBillingApi = {

@@ -91,7 +91,9 @@ export async function getBillingOverview(month: string | undefined, now: Date = 
     monthly: months.map((m) => ({ month: m, paid: byMonth[m] })),
     invoices: invoices.map((inv) => ({
       id: inv.id,
-      tenant: inv.subscription.tenant,
+      // subscription is null for an invoice whose Tenant has since been deleted — the Invoice row
+      // itself survives purge on purpose (2026-10-06: "son comprobantes fiscales"), orphaned.
+      tenant: inv.subscription?.tenant ?? null,
       amountCents: inv.amountCents,
       currency: inv.currency,
       status: inv.status,

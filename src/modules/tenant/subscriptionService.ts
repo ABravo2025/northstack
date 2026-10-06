@@ -165,7 +165,7 @@ export async function getInvoiceDocumentUrl(tenantId: string, invoiceId: string)
     select: { provider: true, externalInvoiceId: true, subscription: { select: { tenantId: true } } },
   });
 
-  if (!invoice || invoice.subscription.tenantId !== tenantId) {
+  if (!invoice || !invoice.subscription || invoice.subscription.tenantId !== tenantId) {
     return { success: false, error: 'Invoice not found' };
   }
   if (invoice.provider !== 'dodopayments' || !invoice.externalInvoiceId) {

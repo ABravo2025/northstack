@@ -18,7 +18,7 @@ const fks: ForeignKey[] = [
   { child: 'Employee', column: 'userId', parent: 'User', deleteRule: 'SET NULL' },
   { child: 'Session', column: 'userId', parent: 'User', deleteRule: 'RESTRICT' },
   { child: 'Subscription', column: 'tenantId', parent: 'Tenant', deleteRule: 'RESTRICT' },
-  { child: 'Invoice', column: 'subscriptionId', parent: 'Subscription', deleteRule: 'RESTRICT' },
+  { child: 'Invoice', column: 'subscriptionId', parent: 'Subscription', deleteRule: 'SET NULL' },
   { child: 'PlatformAuditEntry', column: 'tenantId', parent: 'Tenant', deleteRule: 'SET NULL' },
   { child: 'UserActivityDay', column: 'userId', parent: 'User', deleteRule: 'CASCADE' },
 ];
@@ -32,11 +32,12 @@ describe('planTenantPurge', () => {
   it('collects every row of the tenant, through users and subscriptions, and nothing of other tenants', async () => {
     const { rows, steps } = await planTenantPurge('t1', fks, lookup);
     const got = Object.fromEntries([...rows.entries()].map(([t, s]) => [t, [...s].sort()]));
-    expect(got).toEqual({ Tenant: ['t1'], User: ['u1'], Employee: ['e1'], Session: ['s1'], Subscription: ['sub1'], Invoice: ['i1'] });
+    expect(got).toEqual({ Tenant: ['t1'], User: ['u1'], Employee: ['e1'], Session: ['s1'], Subscription: ['sub1'] });
     expect(steps).toEqual([{ table: 'UserActivityDay', column: 'userId', ids: ['u1'] }]);
   });
-  it('keeps rows linked with SET NULL (e.g. the platform audit log)', async () => {
+  it('keeps rows linked with SET NULL (e.g. the platform audit log and invoices — fiscal records, kept on purpose)', async () => {
     const { rows } = await planTenantPurge('t1', fks, lookup);
     expect(rows.has('PlatformAuditEntry')).toBe(false);
+    expect(rows.has('Invoice')).toBe(false);
   });
 });

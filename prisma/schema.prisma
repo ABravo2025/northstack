@@ -491,8 +491,13 @@ model Subscription {
 
 model Invoice {
   id                    String          @id @default(uuid())
-  subscriptionId        String
-  subscription          Subscription    @relation(fields: [subscriptionId], references: [id])
+  // Nullable + SET NULL (2026-10-06, Alejandro: "son comprobantes fiscales, no podemos
+  // eliminarlos") — survives tenantPurgeService's walk the same way PlatformAuditEntry does.
+  // Tenant deletion purges Subscription (and everything else) normally; Postgres sets this to
+  // null first, so the Invoice row itself is never touched by the purge. See
+  // docs/legal/privacy-policy.md Section 5 for the retention promise this backs.
+  subscriptionId        String?
+  subscription          Subscription?   @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
   provider              PaymentProvider
   externalInvoiceId     String?
   amountCents           Int

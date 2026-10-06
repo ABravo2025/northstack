@@ -136,7 +136,13 @@ export default function AdminBilling({ session }: { session: AdminSession }) {
                   {invoices.map((i) => (
                     <tr key={i.id}>
                       <td className="tabular-nums">{date(i.at)}</td>
-                      <td><Link to={`/clients/${i.tenant.id}`} className="font-semibold hover:underline">{i.tenant.name}</Link></td>
+                      <td>
+                        {i.tenant ? (
+                          <Link to={`/clients/${i.tenant.id}`} className="font-semibold hover:underline">{i.tenant.name}</Link>
+                        ) : (
+                          <span className="text-ink-muted dark:text-dark-ink-muted">Cliente eliminado</span>
+                        )}
+                      </td>
                       <td>{PROVIDER[i.provider] ?? i.provider}</td>
                       <td className="tabular-nums text-ink-muted dark:text-dark-ink-muted">{date(i.periodStart)} – {date(i.periodEnd)}</td>
                       <td className="text-right tabular-nums">{money(i.amountCents, i.currency)}</td>

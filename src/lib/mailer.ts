@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { bestEffort } from './bestEffort.js';
+import { emailLogoAttachment, renderEmailLayout } from './emailLayout.js';
 import i18n, { resolveEmailLocale } from './i18n.js';
 
 // Opportunity/company names, stage labels, and display names are all tenant-user-controlled free
@@ -75,7 +76,7 @@ export async function sendInvitationEmail(input: SendInvitationEmailInput): Prom
       `<p>${t('invitation.expiry')}</p>`,
     ].join('\n'),
     attachments: input.attachments?.map((a) => ({ filename: a.filename, content: a.content, contentType: 'application/pdf' })),
-  }, 'Failed to send invitation email:');
+  }, 'Failed to send invitation email:', lng);
 }
 
 function mailerConfigured(): boolean {
@@ -93,8 +94,18 @@ function mailerConfigured(): boolean {
 // awaited (see bestEffort.ts). Routing every send through this one function means a future email
 // type can't reintroduce that bug by skipping the wrapping some call site forgot to apply —
 // callers just `await sendXEmail(...)` and the safety is already built in.
-function dispatchMail(mailOptions: Parameters<typeof transporter.sendMail>[0], errorLabel: string): Promise<void> {
-  return bestEffort(transporter.sendMail(mailOptions), errorLabel);
+//
+// Also where every email gets Northstack's template (emailLayout.ts, 2026-10-06): the body each
+// function writes is wrapped in the shared layout and the logo goes along as an inline image.
+function dispatchMail(mailOptions: Parameters<typeof transporter.sendMail>[0], errorLabel: string, lng?: string | null): Promise<void> {
+  const options = mailOptions.html
+    ? {
+        ...mailOptions,
+        html: renderEmailLayout(String(mailOptions.html), { subject: String(mailOptions.subject ?? ''), lng }),
+        attachments: [...(mailOptions.attachments ?? []), emailLogoAttachment],
+      }
+    : mailOptions;
+  return bestEffort(transporter.sendMail(options), errorLabel);
 }
 
 export interface SendPublicFormSubmissionEmailInput {
@@ -133,7 +144,7 @@ export async function sendPublicFormSubmissionEmail(input: SendPublicFormSubmiss
         tenantName: escapeHtml(input.tenantName),
       })}</p>`,
     ].join('\n'),
-  }, 'Failed to send public form submission email:');
+  }, 'Failed to send public form submission email:', lng);
 }
 
 export interface SendPublicFormConfirmationEmailInput {
@@ -159,7 +170,7 @@ export async function sendPublicFormConfirmationEmail(input: SendPublicFormConfi
     html: [
       `<p>${t('publicFormConfirmation.body', { tenantName: escapeHtml(input.tenantName), formName: strong(input.formName) })}</p>`,
     ].join('\n'),
-  }, 'Failed to send public form confirmation email:');
+  }, 'Failed to send public form confirmation email:', lng);
 }
 
 export interface SendTimeOffRequestPendingEmailInput {
@@ -206,7 +217,7 @@ export async function sendTimeOffRequestPendingEmail(input: SendTimeOffRequestPe
       })}</p>`,
       `<p>${t('timeOffPending.cta')}</p>`,
     ].join('\n'),
-  }, 'Failed to send time off pending email:');
+  }, 'Failed to send time off pending email:', lng);
 }
 
 export interface SendTimeOffRequestDecidedEmailInput {
@@ -264,7 +275,7 @@ export async function sendTimeOffRequestDecidedEmail(input: SendTimeOffRequestDe
       `<p>${introHtml}</p>`,
       input.decisionNote ? `<p>${t('timeOffDecided.note', { note: escapeHtml(input.decisionNote) })}</p>` : '',
     ].join('\n'),
-  }, 'Failed to send time off decided email:');
+  }, 'Failed to send time off decided email:', lng);
 }
 
 export interface SendFeedbackEmailInput {
@@ -338,7 +349,7 @@ export async function sendContractSignedEmail(input: SendContractSignedEmailInpu
       `<p>${t('contractSigned.attachmentNote')}</p>`,
     ].join('\n'),
     attachments: [{ filename: 'contract-signed.pdf', content: input.pdfBuffer, contentType: 'application/pdf' }],
-  }, 'Failed to send contract signed email:');
+  }, 'Failed to send contract signed email:', lng);
 }
 
 export interface SendPaymentMethodReminderEmailInput {
@@ -372,7 +383,7 @@ export async function sendPaymentMethodReminderEmail(input: SendPaymentMethodRem
       `<p><a href="${input.billingUrl}">${t('paymentMethodReminder.linkText')}</a></p>`,
       `<p>${t('paymentMethodReminder.footer')}</p>`,
     ].join('\n'),
-  }, 'Failed to send payment method reminder email:');
+  }, 'Failed to send payment method reminder email:', lng);
 }
 
 export interface SendSupportAccessRequestEmailInput {
@@ -421,7 +432,7 @@ export async function sendSupportAccessRequestEmail(input: SendSupportAccessRequ
       `<p><a href="${input.appUrl}">${t('supportAccess.openApp')}</a></p>`,
       `<p>${t('supportAccess.footer')}</p>`,
     ].join('\n'),
-  }, 'Failed to send support access request email:');
+  }, 'Failed to send support access request email:', lng);
 }
 
 export interface SendAccountDeletionScheduledEmailInput {
@@ -449,7 +460,7 @@ export async function sendAccountDeletionScheduledEmail(input: SendAccountDeleti
       `<p>${t('accountDeletion.body', { tenantName: strong(input.tenantName), date: strong(date) })}</p>`,
       `<p>${t('accountDeletion.undo')}</p>`,
     ].join('\n'),
-  }, 'Failed to send account deletion email:');
+  }, 'Failed to send account deletion email:', lng);
 }
 
 export interface SendPasswordResetEmailInput {
@@ -480,7 +491,7 @@ export async function sendPasswordResetEmail(input: SendPasswordResetEmailInput)
       `<p><a href="${input.resetUrl}">${t('passwordReset.linkText')}</a></p>`,
       `<p>${t('passwordReset.expiry')}</p>`,
     ].join('\n'),
-  }, 'Failed to send password reset email:');
+  }, 'Failed to send password reset email:', lng);
 }
 
 export interface SendSignupVerificationEmailInput {
@@ -519,7 +530,7 @@ export async function sendSignupVerificationEmail(input: SendSignupVerificationE
       `<p><a href="${input.verifyUrl}">${t('signupVerification.linkText')}</a></p>`,
       `<p>${t('signupVerification.expiry')}</p>`,
     ].join('\n'),
-  }, 'Failed to send signup verification email:');
+  }, 'Failed to send signup verification email:', lng);
 }
 
 export interface SendSignupAlertEmailInput {
@@ -606,7 +617,7 @@ export async function sendOpportunityStageChangedEmail(input: SendOpportunitySta
       })}</p>`,
       `<p><a href="${input.appUrl}">${t('opportunityStageChanged.cta')}</a></p>`,
     ].join('\n'),
-  }, 'Failed to send opportunity stage changed email:');
+  }, 'Failed to send opportunity stage changed email:', lng);
 }
 
 export interface SendOpportunityStalledEmailInput {
@@ -655,7 +666,7 @@ export async function sendOpportunityStalledEmail(input: SendOpportunityStalledE
       })}</p>`,
       `<p><a href="${input.appUrl}">${t('opportunityStalled.cta')}</a></p>`,
     ].join('\n'),
-  }, 'Failed to send opportunity stalled email:');
+  }, 'Failed to send opportunity stalled email:', lng);
 }
 
 export interface SendTicketNoteCreatedEmailInput {
@@ -683,7 +694,7 @@ export async function sendTicketNoteCreatedEmail(input: SendTicketNoteCreatedEma
       `<p>${t('ticketNoteCreated.body', { authorName: strong(input.authorName), ticketSubject: strong(input.ticketSubject) })}</p>`,
       `<p>${escapeHtml(input.noteBody)}</p>`,
     ].join('\n'),
-  }, 'Failed to send ticket note email:');
+  }, 'Failed to send ticket note email:', lng);
 }
 
 export interface SendPolicyChangeEmailInput {
@@ -726,5 +737,5 @@ export async function sendPolicyChangeEmail(input: SendPolicyChangeEmailInput): 
       `<p>${escapeHtml(input.summary)}</p>`,
       `<p><a href="${input.appUrl}">${t('policyChange.cta')}</a></p>`,
     ].join('\n'),
-  }, 'Failed to send policy change email:');
+  }, 'Failed to send policy change email:', lng);
 }

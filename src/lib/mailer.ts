@@ -162,7 +162,7 @@ export async function sendReferralCommissionEmail(input: SendReferralCommissionE
       `<p>${t('referralCommission.body', { ...vars, companyName: strong(input.companyName), interpolation: { escapeValue: false } })}</p>`,
       `<p><a href="${referralsUrl()}">${t('referralCommission.linkText')}</a></p>`,
     ].join('\n'),
-  }, 'Failed to send referral commission email:');
+  }, 'Failed to send referral commission email:', lng);
 }
 
 export interface SendReferralPayoutEmailInput {
@@ -210,7 +210,7 @@ export async function sendReferralPayoutEmail(input: SendReferralPayoutEmailInpu
       `<p><a href="${referralsUrl()}">${t('referralPayout.linkText')}</a></p>`,
     ].join('\n'),
     attachments: [{ filename: input.receipt.fileName, content: input.receipt.content, contentType: input.receipt.mimeType }],
-  }, 'Failed to send referral payout email:');
+  }, 'Failed to send referral payout email:', lng);
 }
 
 export interface SendPublicFormSubmissionEmailInput {

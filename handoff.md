@@ -4,7 +4,7 @@ Running context of the whole project, kept current so any session (or person) ca
 last one left off. **Update this file whenever a feature ships or something important changes**
 (newest entries on top in "Changelog"). Rule set in `README.md`.
 
-_Last updated: 2026-10-05_
+_Last updated: 2026-10-06_
 
 ---
 
@@ -47,6 +47,7 @@ Release flow: code → `staging` → user reviews → `main`. Additive DB change
 - **Sales**: pipelines with own stages (required names, inline "+ Add stage" row), Kanban, opportunities.
 - **Payroll tracking**: pay runs, compensation, pay stubs, contract confirmation by the employee.
 - Plan limits enforced (Starter vs Growth); MCP / AI-assistant integration in progress (not announced).
+- **Referral program** (live 2026-10-06): any app user (not outside affiliates) joins from **Referidos** in the sidebar (above Settings, gift icon): payout method + details first (Wise, Payoneer, PayPal, wire — US routing+account / IBAN / SWIFT — or Argentine bank transfer), then the program terms (legal modal). Gets a random code link `app.joinnorthstack.com/register?ref=XXXX-XXXX`. Referred company gets a 30-day trial; the member earns **10% of its first 3 payments**, payable 30 days after each payment, transferred by hand once ≥ USD 50 / ARS 50.000 (per currency). Staff pay from Admin → Referidos and must attach the receipt; the member sees it in the app. Rules in `REFERRAL` (`src/config/pricing.ts`). Refund voiding is manual (providers don't notify refunds). **Don't announce yet** — terms pending accountant/legal review.
 - **Projects** (in **staging** only, awaiting Alejandro's review — not in production, don't market yet): phases, tasks, team with roles and progress, per client or internal; 9 niche templates EN/ES (agencies, accounting firms, consulting, internal) with tasks assigned by role; "Save as template" on Growth; Starter max 5 open projects. Spec: `docs/general/spec-projects.md` on staging.
 - **Shifts / Turnos** (in **staging** only, units 1–6 of 14, awaiting Alejandro's review — not in production, don't market yet): locations with their own time zone (Starter 1, Growth unlimited), weekly schedule by location or by person, drafts → publish, assignment rules (overlap blocks; time off, holidays, availability, minimum rest and skills warn), confirm/decline from the app or a one-click email link (with .ics), Google Calendar event for connected users, "My shifts" + availability. Reminders will be once a day (Vercel Hobby). Next: skills catalog, daily reminders cron, then timesheet (hours auto-suggested from shifts, completed tasks and meetings). Spec: `docs/general/spec-shifts.md` on staging.
 
@@ -77,13 +78,15 @@ FAQPage), sitemap, hreflang. Module page: Time Off (EN/ES) since 2026-10-03.
 - In-app notifications from Time Off / Sales are stored in English only (Shifts notifications already use each person's language).
 
 ## Marketing rules (short)
-Payroll = tracking only · no Payments marketing · no "EN & ES" claim · no Android claim until Play
+Payroll = tracking only · no Payments marketing · no referral-program promo until its terms are reviewed · no "EN & ES" claim · no Android claim until Play
 Store · no hard-coded prices in posts · demo data only (tenant "Acme Latam" on staging).
 SEO is part of marketing: every SEO change is logged in `seo/README.md` + a changelog line here.
 
 ---
 
 ## Changelog (newest first)
+- **2026-10-06** — **Referral program LIVE in production** (`main` 7755c8a; prod DB got only the additive referral tables first). Users recommend Northstack and earn 10% of a referred company's first 3 payments; the company gets a 30-day trial. Admin → Referidos to pay with receipt. Marketing angle for later: "your users become your sales team" — but **wait for the terms review** before any post or announcement. Mockup: https://claude.ai/artifact/DcECpgxfXvmPKfsXJMbNoN
+- **2026-10-04** — Hotfix LIVE (`main` 7e67075): on the login/register/forgot-password screens the intro text was invisible in light mode (same color as the navy panel) and the Terms/Privacy links were hard to read; both fixed for every theme.
 - **2026-10-05** — **Shifts module** units 1–6 on **staging** (`5644ca9`), not in production yet. Asked by a chemistry lab but built for every niche (labs, clinics, security, retail, cleaning…). Schedule a week across locations with irregular hours (overnight included), publish, and each person confirms from the app or a one-click email; managers see who confirmed, who didn't answer and what's still uncovered. Marketing angle for later: "stop chasing people on WhatsApp to confirm shifts — they get it in their calendar and answer with one click". Interactive prototype (private): https://claude.ai/artifact/3DGWHCMcZvqDQ2U6jjL9N6
 - **2026-10-05** — **Projects module** built (units 1–7) and on **staging** (`eb7ec02`), not in production yet: projects with phases, tasks, team and progress, linked to a Company or internal; start blank or from 9 system templates by niche with a role-based task preview; "Save as template" (Growth); Projects section inside each Company and person; Help Center (Guide + FAQ) updated. Prod checklist in `spec-projects.md` (schema via migrate diff, permissions backfill, template seed). Marketing angle for later: "from a blank board or your niche's template in one click" — accounting firms' monthly close is the strongest example.
 - **2026-10-04** — Admin Center v2 stages 3–5 LIVE: Billing page, announcements from the Admin (bilingual, targeted, scheduled), support access only with the customer's consent, and **account deletion in 10 days** — customers can now delete their company account themselves (Settings → Company, owner only); data is erased automatically after 10 days. Privacy policy update pending (legal agent). Nothing to market yet.

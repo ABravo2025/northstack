@@ -145,7 +145,7 @@
         },
         "eligibility": {
           "heading": "2. Eligibility",
-          "body": "Only an active user of a Northstack Tenant may join the Program. You may not refer your own Tenant, a Tenant you already belong to, or a company whose users share your own email domain. Northstack may remove you from the Program, and withhold any commission not yet paid, if we reasonably believe you violated this Section or otherwise abused the Program — for example, with fake signups."
+          "body": "Only an active user of a Northstack Tenant may join the Program. You may not refer your own Tenant, a Tenant you already belong to, or a company whose users share your own email domain. Northstack may remove you from the Program, and withhold any commission not yet paid, if we reasonably believe you violated this Section or otherwise abused the Program — for example, with fake signups. If your own Northstack user account is deactivated for any other reason (for example, because your employment with your Tenant ends), your referral code and link stop working for new referrals, but it does not affect commissions you already earned before that point — those still become payable, and are still paid out, in the normal course under Sections 4 and 5."
         },
         "mechanics": {
           "heading": "3. How a referral works",

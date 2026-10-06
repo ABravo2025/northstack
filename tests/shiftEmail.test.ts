@@ -54,6 +54,11 @@ describe('sendShiftEmail', () => {
     expect(mail.text).toContain("I'll be there: https://app/x?answer=accepted");
     expect(mail.attachments[0].filename).toBe('shift.ics');
     expect(mail.attachments[0].contentType).toContain('method=PUBLISH');
+    // Shared Northstack template (emailLayout.ts): subject as title, footer, and the two answer
+    // buttons keep their own button style (style written before href).
+    expect(mail.html).toContain('<h1');
+    expect(mail.html).toContain('This is an automatic email from Northstack.');
+    expect(mail.html).toMatch(/<a style="background:#5b21e6;[^"]*" href="https:\/\/app\/x\?answer=accepted"/);
   });
 
   it('Spanish, cancellation: no answer buttons, CANCEL method', async () => {
@@ -87,6 +92,7 @@ describe('sendShiftEmail', () => {
     });
     expect(sent[0].subject).toBe("Mia Member can't make the shift on Mon, Oct 12 · 07:00–11:30");
     expect(sent[0].text).toContain('Reason: Exam that morning');
-    expect(sent[0].attachments).toBeUndefined();
+    // Only the template's inline logo — no .ics on a decline notice.
+    expect(sent[0].attachments.map((a: { filename?: string; cid?: string }) => a.cid ?? a.filename)).toEqual(['northstack-logo']);
   });
 });

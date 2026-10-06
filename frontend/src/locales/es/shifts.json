@@ -103,11 +103,7 @@
   "schedule": {
     "title": "Cronograma",
     "subtitle": "Armá la semana y publicala para avisarle a cada persona.",
-    "prevWeek": "Semana anterior",
-    "nextWeek": "Semana siguiente",
-    "thisWeek": "Esta semana",
     "allLocations": "Todas las locaciones",
-    "byPerson": "Por persona",
     "copyWeek": "Copiar semana anterior",
     "copyConfirmTitle": "¿Copiar la semana anterior en esta?",
     "copyConfirmBody": "Todos los turnos del {{range}} se suman a esta semana como borrador, con las mismas personas. No se envía nada hasta que publiques.",
@@ -139,8 +135,28 @@
     "publishConfirmTitle_other": "¿Publicar {{count}} borradores?",
     "published_one": "Se publicó {{count}} turno. Se avisó a cada persona asignada.",
     "published_other": "Se publicaron {{count}} turnos. Se avisó a cada persona asignada.",
-    "calendarView": "Calendario",
-    "clickToAdd": "Hacé clic para agregar un turno acá"
+    "clickToAdd": "Hacé clic para agregar un turno acá",
+    "views": {
+      "day": "Día",
+      "week": "Semana",
+      "month": "Mes",
+      "person": "Por persona"
+    },
+    "viewLabel": "Vista",
+    "prev": {
+      "day": "Día anterior",
+      "week": "Semana anterior",
+      "month": "Mes anterior",
+      "person": "Semana anterior"
+    },
+    "next": {
+      "day": "Día siguiente",
+      "week": "Semana siguiente",
+      "month": "Mes siguiente",
+      "person": "Semana siguiente"
+    },
+    "more_one": "+{{count}} más",
+    "more_other": "+{{count}} más"
   },
   "form": {
     "newTitle": "Nuevo turno",

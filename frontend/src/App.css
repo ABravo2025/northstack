@@ -3902,9 +3902,8 @@ textarea.overview-field-input {
 }
 .sh-cal-head,
 .sh-cal-body {
+  /* Columns and min-width are set inline: 1 day (Day view) or 7 (Week view). */
   display: grid;
-  grid-template-columns: 3.5rem repeat(7, minmax(120px, 1fr));
-  min-width: 900px;
 }
 .sh-cal-head {
   @apply border-b border-line bg-surface-2 dark:border-dark-line dark:bg-dark-raised;
@@ -3918,11 +3917,6 @@ textarea.overview-field-input {
 .sh-cal-dayhead.sh-today,
 .sh-cal-dayhead.sh-today b {
   @apply text-accent dark:text-brand-blue-light;
-}
-.sh-cal-scroll {
-  @apply overflow-y-auto;
-  max-height: min(70vh, 640px);
-  min-width: 900px;
 }
 .sh-cal-body {
   @apply relative;
@@ -3999,4 +3993,68 @@ textarea.overview-field-input {
 }
 .sh-block-people {
   @apply mt-0.5 flex min-w-0 flex-col gap-0.5;
+}
+
+/* Month view (2026-10-06): a grid of days, shifts as one-line chips. */
+.sh-month {
+  @apply overflow-x-auto rounded-xl border border-line bg-surface-1 dark:border-dark-line dark:bg-dark-surface;
+}
+.sh-month-head,
+.sh-month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(110px, 1fr));
+  min-width: 800px;
+}
+.sh-month-head {
+  @apply border-b border-line bg-surface-2 dark:border-dark-line dark:bg-dark-raised;
+}
+.sh-month-head > div {
+  @apply px-2.5 py-2 text-xs font-semibold text-ink-muted dark:text-dark-ink-muted;
+}
+.sh-month-day {
+  @apply flex min-w-0 flex-col gap-1 overflow-hidden border-r border-b border-line-soft p-1.5 dark:border-dark-line-soft;
+}
+.sh-month-day.sh-outside {
+  @apply bg-surface-2/60 dark:bg-dark-raised/40;
+}
+.sh-month-day.sh-outside .sh-month-num {
+  @apply text-ink-faint dark:text-dark-ink-faint;
+}
+.sh-month-day.sh-today {
+  background-color: var(--color-accent-soft);
+}
+.sh-month-daytop {
+  @apply flex min-w-0 shrink-0 items-center gap-1.5;
+}
+.sh-month-num {
+  @apply cursor-pointer rounded-md border-0 bg-transparent px-1 text-[13px] font-semibold text-ink hover:bg-accent-tint dark:text-dark-ink;
+  font-family: inherit;
+}
+.sh-month-day.sh-today .sh-month-num {
+  @apply text-accent dark:text-brand-blue-light;
+}
+.sh-chip {
+  @apply w-full shrink-0 cursor-pointer truncate rounded border border-line bg-surface-1 px-1.5 py-0.5 text-left text-[11.5px] text-ink hover:border-accent dark:border-dark-line dark:bg-dark-raised dark:text-dark-ink dark:hover:border-brand-blue-light;
+  border-left-width: 3px;
+  font-family: inherit;
+}
+.sh-chip.sh-ok {
+  @apply border-l-emerald-500;
+}
+.sh-chip.sh-warn {
+  @apply border-l-amber-400;
+}
+.sh-chip.sh-bad {
+  @apply border-l-red-500;
+}
+.sh-chip.sh-draft {
+  @apply border-dashed border-l-gray-400;
+  border-left-style: solid;
+}
+.sh-chip.sh-cancelled {
+  @apply line-through opacity-60;
+}
+.sh-month-more {
+  @apply shrink-0 cursor-pointer self-start border-0 bg-transparent p-0 text-[11.5px] font-semibold text-accent hover:underline dark:text-brand-blue-light;
+  font-family: inherit;
 }

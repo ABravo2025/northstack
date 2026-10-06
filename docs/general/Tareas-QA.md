@@ -5039,3 +5039,9 @@ Solo backend (sin pantallas todavía: la grilla es la Unidad 5 y "Mis turnos" la
 4. Clic en un hueco: día y hora correctos; elegir otra locación en el formulario.
 5. Con una sola locación activa no aparece el desplegable.
 6. Un responsable de una sola locación: el clic en el hueco propone su locación; Member sin permisos no puede crear (el hueco no es clickeable).
+
+**Actualización 2026-10-06 (pedido de Alejandro):**
+- El calendario **ocupa todo el alto de la ventana y no tiene scroll propio**: las horas se estiran o achican para entrar (rango 06:00–22:00 ampliado a lo que necesiten los turnos; con nocturnos, las 24 h). Por debajo de 22 px por hora se desplaza la página entera, nunca una caja interna.
+- **Selector Día · Semana · Mes · Por persona** (se recuerda). Día y Semana = calendario por horas; Mes = grilla de días con los turnos como etiquetas de una línea (las que entran según el alto de la fila, el resto en "+N más", que abre ese día); clic en el número de día abre la vista Día; clic en un hueco del día crea un turno a las 09:00. Las flechas avanzan un día, una semana o un mes; "Hoy" vuelve a hoy. "Copiar semana anterior" solo en Semana y Por persona. Los indicadores cuentan el día, la semana o el mes según la vista.
+- Corregido: al cambiar de mes y volver, la vista Semana mostraba la semana del día 1 (ahora se conserva el día del mes); etiquetas del mes que se aplastaban; etiqueta de la primera hora que se pisaba con la segunda.
+- **Verificado** (Playwright contra `staging`, 15/15): sin contenedor con scroll, el calendario llega al borde inferior de la ventana, selector de 4 vistas, vista Día con una columna, nocturno visible y su continuación al día siguiente, etiqueta y "+N más" del mes, el mes llena el alto, "+N más" abre el día, mes siguiente/anterior, vuelta a la misma semana, ventana baja sin scroll interno, sin errores de consola; capturas en claro y oscuro.

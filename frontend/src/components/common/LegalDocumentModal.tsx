@@ -8,11 +8,21 @@ import type { ReferralRules } from '../../api/referrals';
 // config, instead of a page on the landing.
 export type LegalDoc = 'terms' | 'privacy' | 'refund' | 'referral';
 
-const DOC_URLS: Record<Exclude<LegalDoc, 'referral'>, string> = {
-  terms: 'https://joinnorthstack.com/terms.html',
-  privacy: 'https://joinnorthstack.com/privacy.html',
-  refund: 'https://joinnorthstack.com/refund.html',
+// Spanish versions live at the same filename under /es/ (2026-10-06) — joinnorthstack.com's own
+// language-switcher link pattern. Chosen by the app's current i18n language, not the browser's,
+// so it always matches whatever the rest of the UI is showing. Titles/status strings come from
+// i18n (common:ui.legal.*) instead of a DOC_TITLES map — that map was retired the same day this
+// file's hardcoded English was translated (see the i18n rollout commit this was rebased onto).
+const DOC_PATHS: Record<Exclude<LegalDoc, 'referral'>, string> = {
+  terms: 'terms.html',
+  privacy: 'privacy.html',
+  refund: 'refund.html',
 };
+
+function docUrl(doc: Exclude<LegalDoc, 'referral'>, language: string): string {
+  const path = DOC_PATHS[doc];
+  return `https://joinnorthstack.com/${language === 'es' ? 'es/' : ''}${path}`;
+}
 
 interface LegalDocumentModalProps {
   initialDoc: LegalDoc;
@@ -25,7 +35,7 @@ export default function LegalDocumentModal({ initialDoc, onClose }: LegalDocumen
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [rules, setRules] = useState<ReferralRules | null>(null);
-  const { t } = useTranslation('settingsPages');
+  const { t, i18n } = useTranslation('settingsPages');
 
   useEffect(() => {
     let cancelled = false;
@@ -53,7 +63,7 @@ export default function LegalDocumentModal({ initialDoc, onClose }: LegalDocumen
       };
     }
 
-    fetch(DOC_URLS[doc])
+    fetch(docUrl(doc, i18n.language))
       .then((res) => {
         if (!res.ok) throw new Error('Failed to load document');
         return res.text();
@@ -74,7 +84,7 @@ export default function LegalDocumentModal({ initialDoc, onClose }: LegalDocumen
     return () => {
       cancelled = true;
     };
-  }, [doc]);
+  }, [doc, i18n.language]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -87,7 +97,7 @@ export default function LegalDocumentModal({ initialDoc, onClose }: LegalDocumen
   const handleContentClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const anchor = (e.target as HTMLElement).closest('a');
     if (!anchor) return;
-    const href = anchor.getAttribute('href') || '';
+    const href = (anchor.getAttribute('href') || '').replace(/^\/es\//, '/');
     if (href === '/terms.html') {
       e.preventDefault();
       setDoc('terms');
@@ -121,7 +131,7 @@ export default function LegalDocumentModal({ initialDoc, onClose }: LegalDocumen
           {error && doc !== 'referral' && (
             <p className="legal-modal-status">
               {t('common:ui.legal.loadFailed')}{' '}
-              <a href={DOC_URLS[doc]} target="_blank" rel="noopener noreferrer">
+              <a href={docUrl(doc, i18n.language)} target="_blank" rel="noopener noreferrer">
                 {t('common:ui.legal.openNewTab')}
               </a>
             </p>

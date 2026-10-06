@@ -108,6 +108,7 @@ export default function EntityTasksList({
     <div className="flex flex-col gap-3">
       <TaskForm
         task={editingTask}
+        entityType={entityType}
         tenantUsers={tenantUsers}
         defaultAssigneeId={currentUserId}
         googleCalendarConnected={googleCalendarConnected}

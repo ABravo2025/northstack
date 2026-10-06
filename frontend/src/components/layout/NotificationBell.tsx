@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../lib/i18n';
 import { api, type Notification, type PlatformAnnouncement } from '../../api';
@@ -28,6 +29,7 @@ function formatRelativeTime(iso: string): string {
 export default function NotificationBell({ token }: NotificationBellProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
   const [announcementUnreadCount, setAnnouncementUnreadCount] = useState(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -84,7 +86,20 @@ export default function NotificationBell({ token }: NotificationBellProps) {
     }
   };
 
+  // A mention opens the task it's about: inside its project when it belongs to one, otherwise in
+  // My Tasks (2026-10-06). Every other notification type stays informational, as before.
+  const openMentionedTask = async (taskId: string) => {
+    try {
+      const task = await api.getTask(token, taskId);
+      setOpen(false);
+      navigate(task.entityType === 'project' ? `/projects/${task.entityId}?task=${task.id}` : `/tasks?task=${task.id}`);
+    } catch {
+      // The task was deleted since — nothing to open.
+    }
+  };
+
   const handleItemClick = async (notification: Notification) => {
+    if (notification.type === 'task_mention') void openMentionedTask(notification.entityId);
     if (notification.read) return;
     try {
       await api.markNotificationRead(token, notification.id);

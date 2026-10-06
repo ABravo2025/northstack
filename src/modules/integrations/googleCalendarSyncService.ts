@@ -167,7 +167,10 @@ export async function syncTaskCalendarEvent(previous: Task | null, current: Task
       return;
     }
 
-    const attendeeEmail = current.hasVideoCall ? await resolveTaskAttendeeEmail(current.entityType, current.entityId) : undefined;
+    // An email typed on the task itself (required for a project's call) wins over the record's own contact.
+    const attendeeEmail = current.hasVideoCall
+      ? (current.meetAttendeeEmail ?? (await resolveTaskAttendeeEmail(current.entityType, current.entityId)))
+      : undefined;
     const wantsNewConference = current.hasVideoCall && !current.googleMeetUrl;
     const eventBody = taskEventBody(current, attendeeEmail, wantsNewConference);
     // conferenceDataVersion opts into Google actually fulfilling conferenceData.createRequest

@@ -100,6 +100,7 @@ export default function NewTaskModal({
       {entityType && entityId && (
         <TaskForm
           task={null}
+          entityType={entityType}
           tenantUsers={tenantUsers}
           defaultAssigneeId={currentUserId}
           folders={folders}

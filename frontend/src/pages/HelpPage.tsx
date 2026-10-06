@@ -208,6 +208,10 @@ const FAQ_CATEGORIES: FaqCategory[] = [
         a: 'Projects are archived instead of deleted, so their tasks, notes and history are kept. Archived projects stop counting toward your plan and can be restored from the Archived filter.',
       },
       {
+        q: 'How do I talk with someone about a task?',
+        a: 'Open the task and write in its conversation at the bottom. Type @ to mention anyone in the company with access to Northstack, on the project or not; they get a notification that opens the task.',
+      },
+      {
         q: 'Do project tasks show up in My Tasks and Google Calendar?',
         a: 'Yes. A project task is an ordinary task: it appears in My Tasks, on the Overview calendar, and in Google Calendar for whoever it\'s assigned to, if they connected it.',
       },
@@ -461,6 +465,10 @@ const FAQ_CATEGORIES_ES: FaqCategory[] = [
       {
         q: '¿Puedo borrar un proyecto?',
         a: 'Los proyectos se archivan en vez de borrarse, así se conservan sus tareas, notas e historial. Un proyecto archivado deja de contar para tu plan y se puede restaurar desde el filtro Archivados.',
+      },
+      {
+        q: '¿Cómo hablo con alguien sobre una tarea?',
+        a: 'Abrí la tarea y escribí en su conversación, abajo. Con @ mencionás a cualquier persona de la empresa con acceso a Northstack, esté o no en el proyecto; le llega una notificación que abre la tarea.',
       },
       {
         q: '¿Las tareas de un proyecto aparecen en Mis tareas y en Google Calendar?',

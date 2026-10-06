@@ -152,6 +152,12 @@
       "emptyTitle": "Todavía no hay nadie en el equipo",
       "note": "Las tareas solo se pueden asignar a personas con acceso a Northstack. Las tareas de template de alguien sin acceso quedan a cargo del responsable del proyecto.",
       "noAccessShort": "Sin acceso"
+    },
+    "columns": {
+      "task": "Tarea",
+      "assignee": "Responsable",
+      "created": "Creada",
+      "due": "Vence"
     }
   },
   "new": {

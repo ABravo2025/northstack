@@ -510,6 +510,17 @@ export interface Opportunity {
 
 export type TaskEntityType = 'employee' | 'company' | 'contact' | 'opportunity' | 'project';
 
+// Task chat (2026-10-06) — one message in a task's conversation.
+export interface TaskComment {
+  id: string;
+  taskId: string;
+  authorId: string;
+  author: { id: string; firstName: string; lastName: string };
+  body: string;
+  mentionedUserIds: string[];
+  createdAt: string;
+}
+
 export interface Task {
   id: string;
   tenantId: string;
@@ -538,6 +549,8 @@ export interface Task {
   folder?: { id: string; name: string } | null;
   // Projects module (2026-10-04) — which of the project's phases the task sits in (project tasks only).
   projectPhaseId?: string | null;
+  // Who gets the Google Meet invite (2026-10-06): required for a project task's call, optional override elsewhere.
+  meetAttendeeEmail?: string | null;
   // Only present on the My Tasks hub (listTasksForUser) — whether the current user is this
   // task's assignee, its creator, or both.
   relationship?: 'assignee' | 'creator' | 'both' | null;
@@ -665,7 +678,8 @@ export type NotificationType =
   | 'stripe_subscription_canceled'
   | 'stripe_invoice_paid'
   | 'time_off_requested'
-  | 'time_off_decided';
+  | 'time_off_decided'
+  | 'task_mention';
 
 export interface Notification {
   id: string;

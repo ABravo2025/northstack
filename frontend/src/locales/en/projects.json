@@ -152,6 +152,12 @@
       "emptyTitle": "No one on the team yet",
       "note": "Tasks can only be assigned to people with access to Northstack. Template tasks for someone without access go to the project's owner.",
       "noAccessShort": "No access"
+    },
+    "columns": {
+      "task": "Task",
+      "assignee": "Assignee",
+      "created": "Created",
+      "due": "Due"
     }
   },
   "new": {

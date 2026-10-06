@@ -86,9 +86,25 @@ Onboarding de empleado, Auditoría interna.
 - Sección "Proyectos" dentro del detalle de cada Company y de cada persona.
 - Namespace i18n `projects` (EN/ES). Guía (`/guide#g-projects`) y FAQ (categoría Proyectos).
 
+## Ajustes tras la revisión de Alejandro (2026-10-06)
+
+- **Chat por tarea** (`TaskComment`, `TaskChat.tsx`): reemplaza las Notas del panel lateral del
+  proyecto (queda solo Actividad). Cada tarea, de proyecto o no, tiene su conversación; `@` menciona
+  a cualquier usuario activo del tenant (`GET /api/tasks/mentionable-users`, nombres solamente, para
+  cualquiera con sesión). Cada mención crea una notificación `task_mention` in-app en el idioma del
+  destinatario (sin email: las notificaciones por email esperan el backlog de preferencias). Al
+  hacer clic abre la tarea: en su proyecto, o en Mis tareas (`?task=`) si la persona no puede ver el
+  proyecto. Solo el autor borra su mensaje.
+- **Email de Meet** (`Task.meetAttendeeEmail`): al activar Meet aparece "Email a invitar";
+  obligatorio en tareas de proyecto (400 si falta), opcional en el resto (reemplaza al contacto del
+  registro).
+- **Encabezados** en la lista de tareas por fase (Tarea / Responsable / Creada / Vence), con la
+  fecha de creación nueva.
+
 ## Checklist para producción
 
-1. `prisma migrate diff` contra prod y aplicar **solo** lo de Proyectos (nunca `db push` a ciegas).
+1. `prisma migrate diff` contra prod y aplicar **solo** lo de Proyectos + `TaskComment`,
+   `Task.meetAttendeeEmail` y el valor `task_mention` de `NotificationType` (nunca `db push` a ciegas).
 2. `scripts/backfill-projects-permissions.ts` contra prod.
 3. `scripts/seed-project-templates.ts` contra prod.
 4. Push a `main` + disparar el workflow del APK de Android.

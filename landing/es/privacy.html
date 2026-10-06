@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Política de Privacidad — Northstack</title>
+    <meta name="description" content="Política de Privacidad de Northstack." />
+    <link rel="canonical" href="https://joinnorthstack.com/es/privacy.html" />
+    <link rel="alternate" hreflang="en" href="https://joinnorthstack.com/privacy.html" />
+    <link rel="alternate" hreflang="es" href="https://joinnorthstack.com/es/privacy.html" />
+    <link rel="alternate" hreflang="x-default" href="https://joinnorthstack.com/privacy.html" />
+
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
+    <meta name="theme-color" content="#5b21e6" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet" />
+
+    <style>
+/* Landing v2 look (2026-10-02) — same tokens as index.html. */
+:root {
+  --violet: #5b21e6; --violet-deep: #3d12a8; --lilac: #a98bff; --lilac-soft: #efe9ff;
+  --ink: #14102b; --ink-2: #4a4566; --ink-3: #6f6a8a;
+  --page: #fbfaff; --surface: #ffffff; --surface-2: #f4f1fd; --line: #e6e1f5;
+  --shadow: 0 1px 2px rgba(30,14,80,.06), 0 12px 32px -12px rgba(40,18,110,.18);
+  --font: "Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif: "Instrument Serif", Georgia, "Times New Roman", serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root { color-scheme: dark;
+    --violet: #7c4dff; --violet-deep: #5b21e6; --lilac: #b9a1ff; --lilac-soft: #241a45;
+    --ink: #f1eeff; --ink-2: #bdb6da; --ink-3: #958fb3;
+    --page: #0c0a16; --surface: #16121f; --surface-2: #1d1830; --line: #2b2542;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px -12px rgba(0,0,0,.6); }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 16px/1.65 var(--font); -webkit-font-smoothing: antialiased; }
+a { color: var(--violet); }
+h1, h2, h3 { text-wrap: balance; letter-spacing: -0.02em; line-height: 1.15; color: var(--ink); }
+.container { max-width: 1180px; margin: 0 auto; padding-inline: 20px; }
+.brand { display: inline-flex; align-items: center; gap: 9px; font-weight: 700; font-size: 18px; color: var(--ink); text-decoration: none; }
+.brand img { width: 28px; height: 28px; display: block; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font: 600 15px/1 var(--font); padding: 13px 20px; border-radius: 12px; text-decoration: none; border: 1px solid transparent; transition: transform .15s, background .15s, border-color .15s; }
+.btn:focus-visible, a:focus-visible { outline: 3px solid var(--lilac); outline-offset: 2px; }
+.btn-primary { background: var(--violet); color: #fff; box-shadow: 0 8px 22px -8px rgba(91,33,230,.7), inset 0 1px 0 rgba(255,255,255,.2); }
+.btn-primary:hover { background: var(--violet-deep); transform: translateY(-1px); }
+.btn-secondary { background: var(--surface); color: var(--ink); border-color: var(--line); }
+.btn-secondary:hover { border-color: var(--lilac); }
+.btn-sm { padding: 10px 14px; font-size: 14px; }
+.eyebrow { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--violet); }
+.nav-lang { font-size: 14px; color: var(--ink-3); }
+.nav-lang a { color: var(--ink-3); margin: 0 4px; }
+.nav-lang a.active { color: var(--violet); font-weight: 600; }
+
+header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: color-mix(in srgb, var(--page) 82%, transparent); backdrop-filter: saturate(1.4) blur(12px); border-bottom: 1px solid var(--line); }
+header .container { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+header a { text-decoration: none; }
+main { max-width: 760px; margin: 0 auto; padding: 56px 20px 80px; }
+main h1 { font-size: clamp(32px, 4.6vw, 44px); margin: 0 0 6px; }
+.effective-date { color: var(--ink-3); font-size: 14.5px; margin: 0 0 28px; display: inline-block; padding: 4px 12px; border-radius: 99px; background: var(--lilac-soft); color: var(--violet); font-weight: 600; }
+main h2 { font-size: 23px; margin: 40px 0 10px; scroll-margin-top: 80px; }
+main h3 { font-size: 18px; margin: 26px 0 8px; }
+main p, main li { color: var(--ink-2); }
+main strong { color: var(--ink); }
+main ul, main ol { padding-left: 22px; } main li { margin: 4px 0; }
+main hr { border: 0; border-top: 1px solid var(--line); margin: 36px 0; }
+main table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14.5px; display: block; overflow-x: auto; }
+main th, main td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+main th { background: var(--surface-2); color: var(--ink); font-weight: 600; }
+main code { font-size: .92em; background: var(--surface-2); padding: 1px 5px; border-radius: 5px; }
+footer { border-top: 1px solid var(--line); padding: 28px 20px; text-align: center; color: var(--ink-3); font-size: 14px; }
+footer a { color: var(--ink-3); }
+</style>
+      <script src="/legal-modal.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <div class="container">
+        <a href="/es/"><span class="brand"><img src="/icon-color.svg" alt="" width="28" height="28" />Northstack</span></a>
+        <span class="nav-lang"><a href="/privacy.html">EN</a> · <a class="active" href="/es/privacy.html">ES</a></span>
+      </div>
+    </header>
+
+    <main>
+      <h1>Política de Privacidad de Northstack</h1>
+      <p class="effective-date">Fecha de vigencia: 6 de octubre de 2026</p>
+
+      <p>
+        Esta Política de Privacidad explica cómo Northstack ("<strong>Northstack</strong>,"
+        "<strong>nosotros</strong>"), operado por Alejandro Bravo, una persona física con
+        domicilio en Buenos Aires, Argentina, recolecta, usa, comparte y protege información
+        en relación con el servicio Northstack (el "<strong>Servicio</strong>"). Los
+        términos en mayúscula no definidos aquí tienen el significado que les da nuestros
+        <a href="/es/terms.html">Términos de Servicio</a>.
+      </p>
+      <p>
+        <strong>Estado beta.</strong> El Servicio se ofrece actualmente como un producto en
+        beta / acceso anticipado (ver la Sección 1.1 de nuestros Términos de Servicio). Por
+        eso, el Servicio — y esta Política — pueden cambiar más seguido, y con menos aviso
+        previo, que un producto maduro y de disponibilidad general; ver la Sección 10
+        (Cambios a esta Política).
+      </p>
+
+      <hr />
+
+      <h2>1. Alcance y dos tipos de datos</h2>
+      <p>
+        Northstack es una plataforma business-to-business. Por eso, esta Política cubre dos
+        tipos distintos de datos personales, y nuestro rol es diferente para cada uno:
+      </p>
+      <ul>
+        <li>
+          <strong>Datos de Cuenta</strong>: información sobre las personas que se registran
+          y usan Northstack directamente — el owner, los admins y los members de un Tenant
+          (nombre, email, número de teléfono, contraseña, rol, y actividad de cuenta
+          relacionada). <strong>Northstack es el responsable (controller) de los Datos de
+          Cuenta</strong> y es directamente responsable de ellos bajo esta Política.
+        </li>
+        <li>
+          <strong>Datos Procesados</strong>: información que un Tenant ingresa al Servicio
+          sobre sus propios empleados, contratistas o clientes (por ejemplo, registros de
+          RR.HH., registros de clientes/contactos, y valores de campos personalizados).
+          <strong
+            >El Tenant es el responsable (controller) de los Datos Procesados; Northstack
+            solo los procesa en nombre del Tenant</strong
+          >
+          y según la configuración que el Tenant le dé al Servicio, como se describe más en
+          detalle en la Sección 3.5 de nuestros Términos de Servicio.
+        </li>
+      </ul>
+      <p>
+        Si sos empleado o cliente de una empresa que usa Northstack, y tu información
+        aparece como Datos Procesados en la cuenta de esa empresa,
+        <strong>por favor dirigí cualquier pedido sobre tus datos directamente a esa
+        empresa</strong>
+        — generalmente no estamos en posición de actuar sobre eso unilateralmente, ya que la
+        empresa controla esos datos. La Sección 6 más abajo explica cómo manejamos esos
+        pedidos si nos llegan directamente a nosotros.
+      </p>
+
+      <hr />
+
+      <h2>2. Información que recolectamos</h2>
+
+      <h3>2.1 Datos de Cuenta que proporcionás directamente</h3>
+      <ul>
+        <li>
+          Información de registro: nombre de la empresa, tu nombre, dirección de email,
+          número de teléfono, y contraseña (guardada como un hash criptográfico con salt,
+          nunca en texto plano).
+        </li>
+        <li>Información de perfil que actualizás después del registro.</li>
+        <li>Contenido de las comunicaciones de soporte o contacto que nos enviás.</li>
+        <li>
+          Información de facturación y suscripción: el plan que elegís, el estado de la
+          prueba gratuita y la suscripción, y metadatos de transacciones (como monto, fecha
+          y moneda) de pagos procesados a través de Dodo Payments o Mercado Pago (Sección
+          4.1). <strong>No recolectamos ni guardamos directamente tu número completo de
+          tarjeta de pago o cuenta bancaria</strong> — nuestros procesadores de pago
+          recolectan y conservan esa información directamente.
+        </li>
+        <li>
+          Si te sumás a nuestro Programa de Referidos: tu método de cobro y los datos de
+          cuenta que ese método requiere (por ejemplo, un email, una cuenta bancaria, CBU/CVU,
+          o un CUIT/CUIL), guardados encriptados y usados solo para pagarte tus comisiones de
+          referido. Ver nuestros Términos y Condiciones del Programa de Referidos.
+        </li>
+      </ul>
+
+      <h3>2.2 Datos Procesados que los Tenants envían</h3>
+      <ul>
+        <li>
+          Registros de empleados y clientes/contactos ingresados por los usuarios de un
+          Tenant, incluyendo nombres, emails, números de teléfono, departamentos, roles,
+          estado de empleo/cliente, y cualquier campo personalizado que un Tenant configure
+          (sujeto a la restricción de categorías prohibidas en la Sección 3.4 de nuestros
+          Términos de Servicio).
+        </li>
+        <li>
+          Registros de nómina y compensación que un Tenant ingresa para sus propios
+          empleados/contratistas — frecuencia de pago, corridas de pago, recibos de sueldo, y
+          los datos de cuenta de pago usados para indicarle al Tenant adónde depositarle el
+          sueldo a esa persona (guardados encriptados).
+          <strong
+            >Northstack no usa estos datos para ejecutar o transmitir ningún pago — el módulo
+            de Nómina es solo una herramienta de registro; ver la Sección 1.3 de nuestros
+            Términos de Servicio.</strong
+          >
+        </li>
+        <li>
+          Registros de facturas que un Tenant crea para sus propios clientes a través de la
+          integración con Stripe (ítems de línea, descripciones, montos y memos). Estos datos
+          se envían a la propia cuenta de Stripe conectada por ese Tenant para que Stripe
+          pueda entregar y cobrar la factura; ver la Sección 4.5.
+        </li>
+      </ul>
+
+      <h3>2.3 Información recolectada automáticamente</h3>
+      <ul>
+        <li>
+          <strong>Datos de uso y registro (logs)</strong>: dirección IP, tipo de navegador,
+          información del dispositivo, marcas de tiempo, y acciones realizadas dentro del
+          Servicio, recolectados con fines de seguridad, depuración, y confiabilidad.
+        </li>
+        <li>
+          <strong>Almacenamiento local</strong>: guardamos una pequeña cantidad de datos en
+          el almacenamiento local de tu navegador (por ejemplo, tu preferencia de modo
+          oscuro/claro) para recordar configuraciones en ese dispositivo. Estos datos se
+          quedan en tu dispositivo y no se nos transmiten como datos de seguimiento.
+        </li>
+      </ul>
+      <p>
+        Actualmente no usamos rastreadores de publicidad o analítica de terceros, y no
+        usamos cookies para seguimiento entre sitios ni con fines publicitarios.
+      </p>
+
+      <hr />
+
+      <h2>3. Cómo usamos la información</h2>
+      <p>Usamos los Datos de Cuenta y los Datos Procesados para:</p>
+      <ul>
+        <li>
+          proveer, operar, asegurar y mantener el Servicio (incluyendo autenticación,
+          aislamiento entre tenants, y permisos);
+        </li>
+        <li>
+          dar soporte al cliente, incluyendo el acceso temporal a la cuenta que un usuario
+          de tu Tenant autorice (Sección 4.6);
+        </li>
+        <li>
+          procesar pagos de suscripción y gestionar la facturación, incluyendo pruebas
+          gratuitas, cambios de plan, y cancelaciones, a través de nuestros procesadores de
+          pago (Sección 4.1);
+        </li>
+        <li>
+          enviar emails transaccionales, como emails de invitación, avisos relacionados con
+          la contraseña, y anuncios del servicio;
+        </li>
+        <li>diagnosticar problemas técnicos, monitorear abusos, y mejorar la confiabilidad y seguridad;</li>
+        <li>cumplir obligaciones legales y hacer valer nuestros Términos de Servicio; y</li>
+        <li>comunicarnos con vos sobre tu cuenta o, con tu consentimiento, sobre novedades del producto.</li>
+      </ul>
+      <p>
+        No usamos los Datos Procesados para ningún fin fuera de proveer el Servicio al
+        Tenant que los ingresó, y no usamos los Datos Procesados para entrenar modelos de
+        machine learning externos/de terceros.
+      </p>
+
+      <hr />
+
+      <h2>4. Cómo compartimos la información</h2>
+      <p><strong>No vendemos datos personales.</strong> Solo compartimos información de las siguientes formas:</p>
+
+      <h3>4.1 Subprocesadores (infraestructura y proveedores de servicios)</h3>
+      <p>
+        Usamos proveedores externos para operar el Servicio, cada uno actuando bajo
+        obligaciones contractuales consistentes con el fin para el cual les compartimos
+        datos:
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>Proveedor</th>
+            <th>Finalidad</th>
+            <th>Datos involucrados</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Vercel</td>
+            <td>Hosting de la aplicación (frontend y backend)</td>
+            <td>Todos los datos transmitidos a través del Servicio</td>
+          </tr>
+          <tr>
+            <td>Neon</td>
+            <td>Hosting de base de datos (PostgreSQL)</td>
+            <td>Todos los Datos de Cuenta y Datos Procesados almacenados</td>
+          </tr>
+          <tr>
+            <td>Zoho Mail</td>
+            <td>Entrega de email transaccional (ej. invitaciones)</td>
+            <td>Dirección de email, nombre, y contenido del email del destinatario</td>
+          </tr>
+          <tr>
+            <td>Dodo Payments</td>
+            <td>Procesamiento de pagos para Tenants facturados internacionalmente en USD</td>
+            <td>
+              Información de contacto de facturación, datos de plan/suscripción, y datos de
+              transacción. Dodo Payments recolecta y guarda los detalles completos de la
+              tarjeta de pago directamente — nosotros no guardamos tu número completo de
+              tarjeta.
+            </td>
+          </tr>
+          <tr>
+            <td>Mercado Pago</td>
+            <td>Procesamiento de pagos para Tenants facturados en Argentina en ARS</td>
+            <td>
+              Información de contacto de facturación, datos de plan/suscripción, y datos de
+              transacción. Mercado Pago recolecta y guarda los detalles completos de pago/cuenta
+              bancaria directamente — nosotros no guardamos tu número completo de cuenta o
+              tarjeta.
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <p>
+        La infraestructura de estos proveedores está ubicada principalmente en Estados
+        Unidos, excepto Mercado Pago, que tiene su sede en Argentina y procesa las
+        transacciones en ARS correspondientemente; ver la Sección 7 (Transferencias
+        Internacionales de Datos).
+      </p>
+
+      <h3>4.2 Dentro de un Tenant</h3>
+      <p>
+        Los Datos de Cuenta y los Datos Procesados dentro de un Tenant son visibles para los
+        propios usuarios de ese Tenant según los roles y permisos que el Tenant configure
+        (owner/admin/member). No somos responsables de las decisiones internas de un Tenant
+        sobre a quién darle acceso.
+      </p>
+
+      <h3>4.3 Cuestiones legales y de seguridad</h3>
+      <p>
+        Podemos divulgar información si lo exige la ley, una regulación, un proceso legal, o
+        un pedido gubernamental, o cuando creamos de buena fe que la divulgación es
+        necesaria para proteger los derechos, la propiedad, o la seguridad de Northstack,
+        nuestros usuarios, u otros.
+      </p>
+
+      <h3>4.4 Transferencias de negocio</h3>
+      <p>
+        Si Northstack se ve involucrado en una fusión, adquisición, o venta de activos, la
+        información puede transferirse como parte de esa transacción. Vamos a avisar antes
+        de que la información quede sujeta a una política de privacidad diferente.
+      </p>
+
+      <h3>4.5 Integraciones que elegís conectar</h3>
+      <p>
+        El Servicio ofrece integraciones que un Tenant puede elegir, a su propia opción,
+        conectar a sus propias cuentas de terceros — actualmente Google Calendar (para
+        sincronizar Tareas y Licencias como eventos de calendario) y Stripe. Para Stripe: un
+        Tenant conecta su propia cuenta de Stripe proporcionando su propia API key de
+        Stripe, y el Servicio solo hace lo que los permisos de esa key permitan — solo
+        lectura si la key del Tenant es de solo lectura, o, si la key otorga acceso de
+        escritura, el Servicio también puede crear y enviar facturas alojadas en Stripe a
+        los propios clientes de ese Tenant en su nombre. Crear y enviar una factura es por
+        el momento la única acción de escritura que realiza el Servicio — no crea un Payment
+        Intent ni cobra o recauda una tarjeta directamente de ninguna otra forma; la propia
+        página de factura alojada por Stripe es la que efectivamente entrega la factura y
+        cobra el pago. Cuando un Tenant conecta una de estas integraciones, el tercero que
+        conecta — no Northstack — recibe y procesa los datos expuestos a través de esa
+        conexión, bajo las propias prácticas de privacidad de ese tercero; ver la Sección
+        8.2 de nuestros <a href="/es/terms.html">Términos de Servicio</a>.
+      </p>
+      <p>
+        También estamos construyendo una integración, usando el Model Context Protocol
+        ("MCP"), que va a permitir que los propios usuarios de un Tenant conecten un
+        asistente de IA de terceros de su elección a los propios datos de ese Tenant en el
+        Servicio. <strong>Esta función todavía no está disponible.</strong> Vamos a
+        actualizar esta Política con más detalle — incluyendo a qué categorías de datos
+        puede acceder — una vez que lo esté.
+      </p>
+
+      <h3>4.6 Acceso de soporte de Northstack a tu cuenta (solo con tu permiso)</h3>
+      <p>
+        El personal de Northstack nunca inicia sesión en tu cuenta, ni la ve como la ves
+        vos, a menos que un usuario de tu cuenta acepte explícitamente un pedido para
+        hacerlo. Cuando nuestro equipo de soporte necesita revisar tu cuenta para ayudarte:
+      </p>
+      <ul>
+        <li>
+          Le enviamos el pedido a un usuario específico de tu cuenta, dentro del Servicio y
+          por email. Indica quién lo pide, por qué, si el acceso es solo de vista o también
+          permite hacer cambios, y por cuánto tiempo. Un pedido que nadie responde vence a
+          las 24 horas.
+        </li>
+        <li>
+          El acceso empieza solo cuando ese usuario lo acepta, dura como máximo el período
+          indicado (30 minutos, 2 horas, o 24 horas, contadas desde la aceptación), y ese
+          usuario puede terminarlo en cualquier momento.
+        </li>
+        <li>
+          Durante el acceso, nuestro personal ve la cuenta con los permisos del usuario que
+          lo aceptó, nunca más. En modo de solo vista no pueden cambiar nada. Si se
+          permitieron cambios, cada cambio que hagan queda registrado en tu Registro de
+          Actividad como hecho por el soporte de Northstack.
+        </li>
+        <li>Guardamos un registro de cada pedido, aceptación, entrada, y fin del acceso.</li>
+      </ul>
+      <p>
+        Por separado de esto, una cantidad limitada de personal autorizado de Northstack
+        puede ver información administrativa de cada Tenant que necesitamos para operar,
+        dar soporte, y facturar el Servicio — como los datos de la empresa, los usuarios de
+        la cuenta y sus roles, el plan y el estado de facturación, y cuánto se usa cada
+        módulo — a través de una herramienta administrativa interna. Esa herramienta
+        también le permite al personal autorizado tomar acciones administrativas como
+        extender una prueba, cambiar un plan, suspender una cuenta, o exportar una copia de
+        los datos de un Tenant (por ejemplo, para cumplir con un pedido bajo la Sección 6).
+        Cada acción administrativa que nuestro personal toma sobre un Tenant queda
+        registrada junto con su motivo.
+      </p>
+
+      <hr />
+
+      <h2>5. Conservación de datos</h2>
+      <p>
+        Conservamos los Datos de Cuenta mientras la cuenta asociada esté activa, y por un
+        período razonable después para permitir la recuperación de la cuenta, cumplir
+        obligaciones legales, resolver disputas, y hacer valer nuestros acuerdos.
+        Conservamos los Datos Procesados mientras la cuenta del Tenant esté activa.
+      </p>
+      <p>
+        <strong>Eliminar la cuenta de un Tenant.</strong> El owner de un Tenant puede
+        eliminar la cuenta de la empresa desde el Servicio (Configuración → Empresa), y
+        Northstack también puede eliminar una cuenta, por ejemplo a pedido del owner o bajo
+        nuestros Términos de Servicio. En ambos casos, nadie puede iniciar sesión en la
+        cuenta desde ese momento, el owner recibe un aviso por email, y todos los Datos de
+        Cuenta y Datos Procesados de ese Tenant se eliminan permanentemente diez (10) días
+        después. Durante esos 10 días, la eliminación se puede revertir escribiendo a
+        <a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a>; después de
+        eso, no se puede deshacer.
+      </p>
+      <p>
+        Conservamos nuestras propias copias de las facturas y los registros de facturación
+        por más tiempo, según sea necesario para cumplir con nuestras propias obligaciones
+        fiscales y contables, incluso después de que se elimine el resto de los datos de un
+        Tenant. Los registros de pago que tienen nuestros procesadores de pago (Dodo
+        Payments, Mercado Pago) los conservan ellos según sus propias obligaciones,
+        independientes de las nuestras.
+      </p>
+      <p>
+        Nuestro registro interno de acciones administrativas tomadas sobre un Tenant
+        (Sección 4.6) sigue existiendo después de que se elimina la cuenta de ese Tenant,
+        para nuestros propios fines operativos y de cumplimiento. Ya no está vinculado al
+        Tenant eliminado, pero todavía puede contener detalles limitados que un miembro del
+        personal incluyó al tomar una acción — por ejemplo, el email de un usuario anotado
+        al resetear una contraseña.
+      </p>
+      <p>
+        Vos (o el owner/admin de tu Tenant) pueden pedir una eliminación anticipada
+        escribiendo a <a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a>.
+      </p>
+
+      <hr />
+
+      <h2>6. Tus derechos y opciones</h2>
+
+      <h3>6.1 Si sos un usuario de Northstack (Datos de Cuenta)</h3>
+      <p>
+        Podés acceder y actualizar la mayoría de tus propios Datos de Cuenta directamente
+        en el Servicio (Configuración de perfil). También podés escribirnos a
+        <a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a> para pedir
+        acceso, corrección, o eliminación de tus Datos de Cuenta. Si sos el owner de un
+        Tenant, podés eliminar vos mismo toda la cuenta de la empresa desde Configuración →
+        Empresa; ver la Sección 5 (Conservación de datos).
+      </p>
+
+      <h3>6.2 Si tus datos aparecen como Datos Procesados</h3>
+      <p>
+        Si sos empleado o cliente de un Tenant de Northstack, esa empresa controla sus
+        Datos Procesados y es la parte adecuada para manejar tu pedido en primera
+        instancia. Si nos contactás directamente a
+        <a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a>, vamos a hacer
+        un esfuerzo razonable para identificar al Tenant correspondiente y dirigir tu
+        pedido, o darte asistencia técnica para actuar sobre las instrucciones del Tenant,
+        de forma consistente con nuestro rol como procesador.
+      </p>
+
+      <h3>6.3 Derechos de privacidad de estados de EE.UU.</h3>
+      <p>
+        Algunos estados de EE.UU. le dan a sus residentes derechos específicos sobre su
+        información personal (por ejemplo, el derecho a saber qué se recolecta, y el
+        derecho a pedir la eliminación). Si estas leyes aplican formalmente a Northstack
+        depende de factores como umbrales de ingresos y volumen de datos que pueden
+        cumplirse o no en un momento dado.
+        <strong
+          >Independientemente de la aplicabilidad legal estricta, extendemos
+          voluntariamente lo siguiente a todos los titulares de Datos de Cuenta:</strong
+        >
+        el derecho a pedir una copia de los Datos de Cuenta que tenemos sobre vos, y el
+        derecho a pedir su eliminación, escribiendo a
+        <a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a>. No vendemos
+        datos personales ni hacemos publicidad basada en comportamiento, así que los
+        derechos relacionados con optar por no participar en la venta/compartición de datos
+        no aplican a nuestras prácticas.
+      </p>
+
+      <hr />
+
+      <h2>7. Transferencias internacionales de datos</h2>
+      <p>
+        Northstack opera desde Argentina, y nuestros proveedores de infraestructura
+        (Sección 4.1) tienen su sede principalmente en Estados Unidos. Al usar el Servicio,
+        entendés que tu información, y cualquier Dato Procesado que tu Tenant envíe, va a
+        transferirse y almacenarse en Estados Unidos. Tomamos medidas contractuales y
+        técnicas con nuestros proveedores destinadas a proteger los datos en tránsito y en
+        reposo, como se describe en la Sección 8.
+      </p>
+      <p>
+        Esta Política no está actualmente estructurada para soportar mecanismos de
+        transferencia específicos del RGPD (como las Cláusulas Contractuales Estándar) ni
+        un representante con sede en la UE. Si tu organización tiene su sede, o vos estás
+        ubicado, en el Espacio Económico Europeo, el Reino Unido, o Suiza, por favor
+        contactanos a <a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a>
+        antes de enviar datos personales de personas ubicadas ahí, para que podamos
+        conversar si el Servicio es actualmente adecuado para tus necesidades de
+        cumplimiento.
+      </p>
+
+      <hr />
+
+      <h2>8. Seguridad de los datos</h2>
+      <p>
+        Usamos medidas técnicas y organizativas razonables diseñadas para proteger los
+        Datos de Cuenta y los Datos Procesados, incluyendo encriptación de datos en
+        tránsito (HTTPS/TLS), hash criptográfico de contraseñas con salt (scrypt), y
+        controles de acceso por tenant aplicados a nivel de la aplicación. También estamos
+        construyendo la autenticación de dos factores (2FA) como una función de seguridad
+        de cuenta adicional y opcional; <strong>todavía no está disponible</strong>, y la
+        vamos a anunciar cuando lo esté. Ningún método de transmisión o almacenamiento es
+        100% seguro, y no podemos garantizar seguridad absoluta. Si tomamos conocimiento de
+        un incidente de seguridad que afecte tus datos y que la ley nos exija notificarte,
+        lo vamos a hacer sin demora indebida.
+      </p>
+
+      <hr />
+
+      <h2>9. Privacidad de menores</h2>
+      <p>
+        El Servicio está pensado para uso empresarial por parte de adultos y no está
+        dirigido a, ni debe ser usado por, personas menores de 18 años. No recolectamos
+        conscientemente datos personales de menores. Si creés que un menor nos proporcionó
+        datos personales, contactanos a
+        <a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a> y vamos a
+        tomar las medidas adecuadas para eliminarlos.
+      </p>
+
+      <hr />
+
+      <h2>10. Cambios a esta Política</h2>
+      <p>
+        Podemos agregar, quitar, o modificar cualquier disposición de esta Política en
+        cualquier momento y
+        <strong
+          >sin aviso previo, salvo que la ley aplicable exija lo contrario.</strong
+        >
+        Cuando hagamos un cambio, vamos a publicar la Política actualizada con una nueva
+        fecha de vigencia y vamos a avisar a los owners de cada Tenant
+        <strong>con una notificación dentro de la app.</strong> Esa notificación puede
+        llegar en el momento en que el cambio entra en vigencia o después, no
+        necesariamente antes. Tu uso continuado del Servicio después de que un cambio entra
+        en vigencia implica la aceptación de la Política actualizada.
+      </p>
+
+      <hr />
+
+      <h2>11. Contacto</h2>
+      <p>
+        Las consultas, pedidos, o inquietudes sobre esta Política o tus datos se pueden
+        enviar a
+        <strong><a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a></strong
+        >.
+      </p>
+      <p>Northstack es operado por Alejandro Bravo, con domicilio en Buenos Aires, Argentina.</p>
+    </main>
+
+    <footer>
+      <a href="/es/">Inicio</a> · <a href="/es/terms.html">Términos de Servicio</a> ·
+      <a href="/es/privacy.html">Política de Privacidad</a> ·
+      <a href="/es/refund.html">Política de Reembolsos</a>
+      <p>© 2026 Northstack. Todos los derechos reservados.</p>
+    </footer>
+  </body>
+</html>

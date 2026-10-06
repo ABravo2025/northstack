@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Política de Reembolsos — Northstack</title>
+    <meta name="description" content="Política de Reembolsos de Northstack." />
+    <link rel="canonical" href="https://joinnorthstack.com/es/refund.html" />
+    <link rel="alternate" hreflang="en" href="https://joinnorthstack.com/refund.html" />
+    <link rel="alternate" hreflang="es" href="https://joinnorthstack.com/es/refund.html" />
+    <link rel="alternate" hreflang="x-default" href="https://joinnorthstack.com/refund.html" />
+
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
+    <meta name="theme-color" content="#5b21e6" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet" />
+
+    <style>
+/* Landing v2 look (2026-10-02) — same tokens as index.html. */
+:root {
+  --violet: #5b21e6; --violet-deep: #3d12a8; --lilac: #a98bff; --lilac-soft: #efe9ff;
+  --ink: #14102b; --ink-2: #4a4566; --ink-3: #6f6a8a;
+  --page: #fbfaff; --surface: #ffffff; --surface-2: #f4f1fd; --line: #e6e1f5;
+  --shadow: 0 1px 2px rgba(30,14,80,.06), 0 12px 32px -12px rgba(40,18,110,.18);
+  --font: "Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif: "Instrument Serif", Georgia, "Times New Roman", serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root { color-scheme: dark;
+    --violet: #7c4dff; --violet-deep: #5b21e6; --lilac: #b9a1ff; --lilac-soft: #241a45;
+    --ink: #f1eeff; --ink-2: #bdb6da; --ink-3: #958fb3;
+    --page: #0c0a16; --surface: #16121f; --surface-2: #1d1830; --line: #2b2542;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px -12px rgba(0,0,0,.6); }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 16px/1.65 var(--font); -webkit-font-smoothing: antialiased; }
+a { color: var(--violet); }
+h1, h2, h3 { text-wrap: balance; letter-spacing: -0.02em; line-height: 1.15; color: var(--ink); }
+.container { max-width: 1180px; margin: 0 auto; padding-inline: 20px; }
+.brand { display: inline-flex; align-items: center; gap: 9px; font-weight: 700; font-size: 18px; color: var(--ink); text-decoration: none; }
+.brand img { width: 28px; height: 28px; display: block; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font: 600 15px/1 var(--font); padding: 13px 20px; border-radius: 12px; text-decoration: none; border: 1px solid transparent; transition: transform .15s, background .15s, border-color .15s; }
+.btn:focus-visible, a:focus-visible { outline: 3px solid var(--lilac); outline-offset: 2px; }
+.btn-primary { background: var(--violet); color: #fff; box-shadow: 0 8px 22px -8px rgba(91,33,230,.7), inset 0 1px 0 rgba(255,255,255,.2); }
+.btn-primary:hover { background: var(--violet-deep); transform: translateY(-1px); }
+.btn-secondary { background: var(--surface); color: var(--ink); border-color: var(--line); }
+.btn-secondary:hover { border-color: var(--lilac); }
+.btn-sm { padding: 10px 14px; font-size: 14px; }
+.eyebrow { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--violet); }
+.nav-lang { font-size: 14px; color: var(--ink-3); }
+.nav-lang a { color: var(--ink-3); margin: 0 4px; }
+.nav-lang a.active { color: var(--violet); font-weight: 600; }
+
+header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: color-mix(in srgb, var(--page) 82%, transparent); backdrop-filter: saturate(1.4) blur(12px); border-bottom: 1px solid var(--line); }
+header .container { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+header a { text-decoration: none; }
+main { max-width: 760px; margin: 0 auto; padding: 56px 20px 80px; }
+main h1 { font-size: clamp(32px, 4.6vw, 44px); margin: 0 0 6px; }
+.effective-date { color: var(--ink-3); font-size: 14.5px; margin: 0 0 28px; display: inline-block; padding: 4px 12px; border-radius: 99px; background: var(--lilac-soft); color: var(--violet); font-weight: 600; }
+main h2 { font-size: 23px; margin: 40px 0 10px; scroll-margin-top: 80px; }
+main h3 { font-size: 18px; margin: 26px 0 8px; }
+main p, main li { color: var(--ink-2); }
+main strong { color: var(--ink); }
+main ul, main ol { padding-left: 22px; } main li { margin: 4px 0; }
+main hr { border: 0; border-top: 1px solid var(--line); margin: 36px 0; }
+main table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14.5px; display: block; overflow-x: auto; }
+main th, main td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+main th { background: var(--surface-2); color: var(--ink); font-weight: 600; }
+main code { font-size: .92em; background: var(--surface-2); padding: 1px 5px; border-radius: 5px; }
+footer { border-top: 1px solid var(--line); padding: 28px 20px; text-align: center; color: var(--ink-3); font-size: 14px; }
+footer a { color: var(--ink-3); }
+</style>
+      <script src="/legal-modal.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <div class="container">
+        <a href="/es/"><span class="brand"><img src="/icon-color.svg" alt="" width="28" height="28" />Northstack</span></a>
+        <span class="nav-lang"><a href="/refund.html">EN</a> · <a class="active" href="/es/refund.html">ES</a></span>
+      </div>
+    </header>
+
+    <main>
+      <h1>Política de Reembolsos de Northstack</h1>
+      <p class="effective-date">Fecha de vigencia: 6 de octubre de 2026</p>
+
+      <p>
+        Esta Política de Reembolsos explica cómo funcionan los reembolsos para las
+        suscripciones pagas al servicio Northstack (el "<strong>Servicio</strong>"), operado
+        por Alejandro Bravo, una persona física con domicilio en Buenos Aires, Argentina
+        ("<strong>Northstack</strong>," "<strong>nosotros</strong>"). Esta Política
+        complementa nuestros <a href="/es/terms.html">Términos de Servicio</a>, Sección 5
+        (Tarifas y Facturación). Los términos en mayúscula no definidos aquí tienen el
+        significado que les da los Términos de Servicio.
+      </p>
+      <p>
+        <strong>Alcance.</strong> Esta Política cubre únicamente las tarifas que Northstack
+        cobra a un Tenant por el Servicio en sí. No tiene nada que ver con la nómina propia
+        de un Tenant, la compensación de sus empleados, ni ningún pago que un Tenant haga a
+        sus propios empleados, contratistas o clientes — Northstack no procesa ni ejecuta
+        esos pagos en absoluto; ver la Sección 1.3 de nuestros Términos de Servicio.
+      </p>
+
+      <hr />
+
+      <h2>1. Resumen</h2>
+      <p>
+        <strong
+          >Northstack no ofrece reembolsos de tarifas de suscripción, salvo lo descrito en la
+          Sección 5 a continuación.</strong
+        >
+        Esta es una política deliberada, no un descuido, por dos razones:
+      </p>
+      <ul>
+        <li>
+          <strong>El Servicio es autoservicio.</strong> Vos elegís tu propio plan, ingresás
+          tus propios datos de pago o cuenta bancaria, y podés cancelar en cualquier momento
+          directamente desde el Servicio, sin necesitar nuestra intervención. Nada de iniciar
+          o continuar una suscripción paga depende de una acción que nosotros tomemos en tu
+          nombre.
+        </li>
+        <li>
+          <strong
+            >Cada plan incluye un período de evaluación real antes de que se mueva ningún
+            dinero.</strong
+          >
+          Cada Tenant nuevo recibe una prueba gratuita de quince (15) días desde el registro
+          (Sección 2), específicamente para que puedas decidir si el Servicio es adecuado
+          para vos antes de agregar un medio de pago o ser cobrado.
+        </li>
+      </ul>
+      <p>
+        Te pedimos que leas esta Política, junto con los términos de la prueba gratuita en
+        la Sección 2, antes de agregar un medio de pago o suscribirte a un plan pago.
+      </p>
+      <p>
+        <strong>Estado beta.</strong> El Servicio se ofrece actualmente como un producto en
+        beta / acceso anticipado (ver la Sección 1.1 de nuestros Términos de Servicio).
+        Nuestros planes, precios, y esta misma Política pueden cambiar a medida que el
+        producto evoluciona — ver la Sección 7 (Cambios a esta Política).
+      </p>
+
+      <hr />
+
+      <h2>2. Usá primero tu prueba gratuita</h2>
+      <p>
+        Todo Tenant recibe una prueba gratuita del Servicio de
+        <strong>quince (15) días</strong> desde la fecha de registro:
+      </p>
+      <ul>
+        <li>
+          Nuestro plan <strong>Free Trial</strong> no requiere ningún medio de pago — podés
+          usarlo, y decidir si suscribirte, sin ingresar nunca información de pago.
+        </li>
+        <li>
+          Si elegís un plan pago (<strong>Starter</strong> o <strong>Growth</strong>)
+          durante la prueba, podemos pedirte que agregues un medio de pago por adelantado,
+          pero <strong>no se te va a cobrar hasta que termine el período de prueba.</strong>
+          Podés ver en cualquier momento, dentro del Servicio, cuántos días de prueba te
+          quedan.
+        </li>
+      </ul>
+      <p>
+        Diseñamos la prueba para que sea el momento en el que evalúes el Servicio — sus
+        funciones, si se adapta a tu organización, y si querés continuar — precisamente para
+        que un proceso de reembolso no sea el mecanismo para corregir una decisión tomada
+        antes de que se te cobrara. Si no estás seguro de si Northstack es para vos, el
+        período de prueba, y no un pedido de reembolso posterior al pago, es el lugar para
+        averiguarlo.
+      </p>
+
+      <hr />
+
+      <h2>3. Sin reembolsos</h2>
+      <p>
+        <strong
+          >Salvo lo descrito en la Sección 5, todas las tarifas pagadas a Northstack son
+          finales y no reembolsables.</strong
+        >
+        Esto incluye, sin limitación:
+      </p>
+      <ul>
+        <li>
+          tarifas de un período de facturación en el que dejás de usar el Servicio a mitad de
+          camino;
+        </li>
+        <li>tarifas pagadas antes de que cancelés tu suscripción (Sección 4);</li>
+        <li>
+          tarifas de un plan del que bajás a mitad de un período de facturación; y
+        </li>
+        <li>
+          tarifas cobradas porque un medio de pago que agregaste voluntariamente quedó
+          guardado y se cobró automáticamente al terminar tu prueba gratuita o en un período
+          de facturación posterior, de acuerdo con la Sección 5.2 de nuestros Términos de
+          Servicio.
+        </li>
+      </ul>
+      <p>
+        No ofrecemos reembolsos parciales ni créditos por tiempo no utilizado dentro de un
+        período de facturación.
+      </p>
+
+      <hr />
+
+      <h2>4. Cancelar detiene la facturación futura — no reembolsa cargos pasados</h2>
+      <p>
+        Podés cancelar una suscripción paga en cualquier momento desde la sección de
+        Facturación del Servicio, o escribiendo a
+        <a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a>. La
+        cancelación:
+      </p>
+      <ul>
+        <li>
+          entra en vigencia al <strong>final de tu período de facturación actual</strong> —
+          conservás el acceso hasta entonces, y no se te cobra de nuevo después de esa fecha;
+          y
+        </li>
+        <li>
+          <strong>no reembolsa ninguna tarifa ya cobrada</strong>, incluido el período de
+          facturación en el que cancelás.
+        </li>
+      </ul>
+      <p>
+        Si cancelás durante tu prueba gratuita, antes de que se te cobre, no se te va a
+        cobrar nada — no hay nada que reembolsar en ese caso, porque no se cobró ningún
+        pago.
+      </p>
+
+      <hr />
+
+      <h2>5. Excepciones</h2>
+      <p>
+        Hacemos excepciones limitadas a la Sección 3, por iniciativa propia o a pedido en
+        <a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a>:
+      </p>
+      <ul>
+        <li>
+          <strong>Errores de facturación.</strong> Si se te cobró el monto equivocado, se te
+          cobró después de que una suscripción fue cancelada correctamente, o se te cobró
+          por un error demostrable de nuestra parte o de nuestro procesador de pagos,
+          vamos a corregir el error, lo que puede incluir un reembolso total o parcial.
+        </li>
+        <li>
+          <strong>Cargos fraudulentos.</strong> Si tu medio de pago se usó sin tu
+          autorización, contactanos de inmediato a
+          <a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a>. También vamos
+          a cooperar con cualquier investigación que haga tu emisor de tarjeta, tu banco, o
+          Mercado Pago.
+        </li>
+        <li>
+          <strong>Requisitos legales.</strong> Cuando la ley aplicable te dé un derecho
+          irrenunciable a un reembolso que esta Política no pueda anular legalmente,
+          vamos a respetar ese derecho en la medida requerida.
+        </li>
+      </ul>
+      <p>
+        Pedir un contracargo o disputa de pago directamente con tu banco o emisor de
+        tarjeta, sin contactarnos primero, puede resultar en la suspensión de tu cuenta
+        mientras se resuelve la disputa, de forma consistente con la Sección 9.2 de nuestros
+        Términos de Servicio. Te pedimos que nos contactes primero a
+        <a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a> para poder
+        resolver un error de facturación o una disputa directamente.
+      </p>
+
+      <hr />
+
+      <h2>6. Cómo funciona la facturación (para contexto)</h2>
+      <p>
+        Las suscripciones se facturan de forma recurrente (por ejemplo, mensual), por
+        adelantado, a través de <strong>Dodo Payments</strong> (para Tenants facturados
+        internacionalmente en USD) o <strong>Mercado Pago</strong> (para Tenants facturados
+        en Argentina en ARS) — ver la Sección 5.4 de nuestros Términos de Servicio. Si un
+        pago no se puede cobrar con éxito (por ejemplo, una tarjeta vencida o rechazada), tu
+        cuenta puede entrar en un período de gracia durante el cual conservás el acceso
+        mientras actualizás tu medio de pago; si el pago sigue sin cobrarse al final de ese
+        período de gracia, el acceso al Servicio puede suspenderse. Entrar en un período de
+        gracia o quedar suspendido por falta de pago no es un error de facturación y no
+        genera por sí mismo un derecho a reembolso — ver la Sección 5 para lo que sí lo
+        genera.
+      </p>
+
+      <hr />
+
+      <h2>7. Cambios a esta Política</h2>
+      <p>
+        Podemos agregar, quitar o modificar cualquier disposición de esta Política en
+        cualquier momento y <strong>sin aviso previo, salvo que la ley aplicable exija lo
+        contrario</strong>, de forma consistente con la Sección 14 de nuestros Términos de
+        Servicio. Cuando hagamos un cambio, vamos a publicar la Política actualizada con una
+        nueva fecha de vigencia y vamos a avisar a los owners de cada Tenant
+        <strong>con una notificación dentro de la app.</strong> Esa notificación puede
+        llegar en el momento en que el cambio entra en vigencia o después, no
+        necesariamente antes. Los cambios a esta Política aplican hacia adelante y no
+        afectan cargos ya hechos bajo la versión de esta Política vigente en el momento de
+        ese cargo.
+      </p>
+
+      <hr />
+
+      <h2>8. Contacto</h2>
+      <p>
+        Las consultas sobre un cargo específico, o los pedidos bajo la Sección 5, se pueden
+        enviar a
+        <strong><a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a></strong
+        >.
+      </p>
+      <p>Northstack es operado por Alejandro Bravo, con domicilio en Buenos Aires, Argentina.</p>
+    </main>
+
+    <footer>
+      <a href="/es/">Inicio</a> · <a href="/es/terms.html">Términos de Servicio</a> ·
+      <a href="/es/privacy.html">Política de Privacidad</a> ·
+      <a href="/es/refund.html">Política de Reembolsos</a>
+      <p>© 2026 Northstack. Todos los derechos reservados.</p>
+    </footer>
+  </body>
+</html>

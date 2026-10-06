@@ -6,6 +6,9 @@
     <title>Privacy Policy — Northstack</title>
     <meta name="description" content="Northstack Privacy Policy." />
     <link rel="canonical" href="https://joinnorthstack.com/privacy.html" />
+    <link rel="alternate" hreflang="en" href="https://joinnorthstack.com/privacy.html" />
+    <link rel="alternate" hreflang="es" href="https://joinnorthstack.com/es/privacy.html" />
+    <link rel="alternate" hreflang="x-default" href="https://joinnorthstack.com/privacy.html" />
 
     <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
@@ -50,9 +53,12 @@ h1, h2, h3 { text-wrap: balance; letter-spacing: -0.02em; line-height: 1.15; col
 .btn-secondary:hover { border-color: var(--lilac); }
 .btn-sm { padding: 10px 14px; font-size: 14px; }
 .eyebrow { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--violet); }
+.nav-lang { font-size: 14px; color: var(--ink-3); }
+.nav-lang a { color: var(--ink-3); margin: 0 4px; }
+.nav-lang a.active { color: var(--violet); font-weight: 600; }
 
 header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: color-mix(in srgb, var(--page) 82%, transparent); backdrop-filter: saturate(1.4) blur(12px); border-bottom: 1px solid var(--line); }
-header .container { display: flex; align-items: center; height: 64px; }
+header .container { display: flex; align-items: center; justify-content: space-between; height: 64px; }
 header a { text-decoration: none; }
 main { max-width: 760px; margin: 0 auto; padding: 56px 20px 80px; }
 main h1 { font-size: clamp(32px, 4.6vw, 44px); margin: 0 0 6px; }
@@ -76,12 +82,13 @@ footer a { color: var(--ink-3); }
     <header>
       <div class="container">
         <a href="/"><span class="brand"><img src="/icon-color.svg" alt="" width="28" height="28" />Northstack</span></a>
+        <span class="nav-lang"><a class="active" href="/privacy.html">EN</a> · <a href="/es/privacy.html">ES</a></span>
       </div>
     </header>
 
     <main>
       <h1>Northstack Privacy Policy</h1>
-      <p class="effective-date">Effective Date: October 2, 2026</p>
+      <p class="effective-date">Effective Date: October 6, 2026</p>
 
       <p>
         This Privacy Policy explains how Northstack ("<strong>Northstack</strong>,"
@@ -156,6 +163,12 @@ footer a { color: var(--ink-3); }
           >
           — our payment processors collect and hold that information directly.
         </li>
+        <li>
+          If you join our Referral Program: your payout method and the account details it
+          requires (for example, an email, bank account, CBU/CVU, or tax ID), stored
+          encrypted and used only to pay your referral commissions. See our Referral
+          Program Terms and Conditions.
+        </li>
       </ul>
 
       <h3>2.2 Processed Data Tenants submit</h3>
@@ -212,6 +225,10 @@ footer a { color: var(--ink-3); }
         <li>
           provide, operate, secure, and maintain the Service (including authentication,
           tenant isolation, and permissions);
+        </li>
+        <li>
+          provide customer support, including temporary account access a user of your
+          Tenant authorizes (Section 4.6);
         </li>
         <li>
           process subscription payments and manage billing, including free trials, plan
@@ -340,6 +357,43 @@ footer a { color: var(--ink-3); }
         categories of data it can access — once it is.
       </p>
 
+      <h3>4.6 Northstack support access to your account (only with your permission)</h3>
+      <p>
+        Northstack staff never sign in to your account, or see it the way you do, unless a
+        user of your account explicitly accepts a request to do so. When our support team
+        needs to look at your account to help you:
+      </p>
+      <ul>
+        <li>
+          We send the request to one specific user of your account, inside the Service and
+          by email. It states who is asking, why, whether the access is view-only or also
+          allows changes, and for how long. A request nobody answers lapses after 24 hours.
+        </li>
+        <li>
+          Access starts only when that user accepts it, lasts at most the period shown (30
+          minutes, 2 hours, or 24 hours, counted from acceptance), and that user can end it
+          at any time.
+        </li>
+        <li>
+          During the access, our staff see the account with the permissions of the user
+          who accepted it, never more. In view-only mode they cannot change anything. If
+          changes were allowed, every change they make is recorded in your Activity Log as
+          made by Northstack support.
+        </li>
+        <li>We keep a record of every request, acceptance, entry, and end of access.</li>
+      </ul>
+      <p>
+        Separately from this, a limited number of authorized Northstack staff can see
+        administrative information about each Tenant that we need to operate, support, and
+        bill the Service — such as company details, the users of the account and their
+        roles, plan and billing status, and how much each module is used — through an
+        internal administration tool. That tool also lets authorized staff take
+        administrative actions such as extending a trial, changing a plan, suspending an
+        account, or exporting a copy of a Tenant's data (for example, to fulfill a request
+        under Section 6). Every administrative action our staff take on a Tenant is
+        recorded together with its reason.
+      </p>
+
       <hr />
 
       <h2>5. Data Retention</h2>
@@ -347,12 +401,35 @@ footer a { color: var(--ink-3); }
         We retain Account Data for as long as the associated account is active, and for a
         reasonable period afterward to allow for account recovery, comply with legal
         obligations, resolve disputes, and enforce our agreements. We retain Processed Data
-        for as long as the Tenant's account is active, and for a reasonable period after a
-        Tenant requests deletion or termination, after which it is deleted or anonymized,
-        unless a longer retention period is required by applicable law. Billing and
-        transaction records may be retained longer where needed to comply with tax,
-        accounting, or financial recordkeeping obligations. You (or your Tenant's
-        owner/admin) can request earlier deletion by contacting
+        for as long as the Tenant's account is active.
+      </p>
+      <p>
+        <strong>Deleting a Tenant account.</strong> The owner of a Tenant can delete the
+        company account from the Service (Settings → Company), and Northstack may also
+        delete an account, for example at the owner's request or under our Terms of
+        Service. In both cases, nobody can sign in to the account from that moment, the
+        owner is notified by email, and all Account Data and Processed Data of that Tenant
+        is permanently deleted ten (10) days later. During those 10 days, the deletion can
+        be reversed by contacting
+        <a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a>; after that,
+        it cannot be undone.
+      </p>
+      <p>
+        We keep our own copies of invoices and billing records for longer, as needed to
+        comply with our own tax and accounting obligations, even after the rest of a
+        Tenant's data is deleted. Payment records held by our payment processors (Dodo
+        Payments, Mercado Pago) are kept by them according to their own obligations,
+        independent of ours.
+      </p>
+      <p>
+        Our internal record of administrative actions taken on a Tenant (Section 4.6)
+        continues to exist after that Tenant's account is deleted, for our own operational
+        and compliance purposes. It is no longer linked to the deleted Tenant, but it may
+        still contain limited details a staff member included when taking an action — for
+        example, a user's email address noted when resetting a password.
+      </p>
+      <p>
+        You (or your Tenant's owner/admin) can request earlier deletion by contacting
         <a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a>.
       </p>
 
@@ -365,8 +442,9 @@ footer a { color: var(--ink-3); }
         You can access and update most of your own Account Data directly in the Service
         (Profile settings). You may also contact us at
         <a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a> to request
-        access to, correction of, or deletion of your Account Data, or to close your
-        account, subject to information we are required to retain by law.
+        access to, correction of, or deletion of your Account Data. If you are the owner
+        of a Tenant, you can delete the whole company account yourself from Settings →
+        Company; see Section 5 (Data Retention).
       </p>
 
       <h3>6.2 If your data appears as Processed Data</h3>

@@ -1,0 +1,723 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Términos de Servicio — Northstack</title>
+    <meta name="description" content="Términos de Servicio de Northstack." />
+    <link rel="canonical" href="https://joinnorthstack.com/es/terms.html" />
+    <link rel="alternate" hreflang="en" href="https://joinnorthstack.com/terms.html" />
+    <link rel="alternate" hreflang="es" href="https://joinnorthstack.com/es/terms.html" />
+    <link rel="alternate" hreflang="x-default" href="https://joinnorthstack.com/terms.html" />
+
+    <link rel="icon" type="image/x-icon" href="/favicon/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon/favicon-16x16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon/favicon-32x32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/favicon/apple-touch-icon.png" />
+    <meta name="theme-color" content="#5b21e6" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@1&display=swap" rel="stylesheet" />
+
+    <style>
+/* Landing v2 look (2026-10-02) — same tokens as index.html. */
+:root {
+  --violet: #5b21e6; --violet-deep: #3d12a8; --lilac: #a98bff; --lilac-soft: #efe9ff;
+  --ink: #14102b; --ink-2: #4a4566; --ink-3: #6f6a8a;
+  --page: #fbfaff; --surface: #ffffff; --surface-2: #f4f1fd; --line: #e6e1f5;
+  --shadow: 0 1px 2px rgba(30,14,80,.06), 0 12px 32px -12px rgba(40,18,110,.18);
+  --font: "Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif: "Instrument Serif", Georgia, "Times New Roman", serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root { color-scheme: dark;
+    --violet: #7c4dff; --violet-deep: #5b21e6; --lilac: #b9a1ff; --lilac-soft: #241a45;
+    --ink: #f1eeff; --ink-2: #bdb6da; --ink-3: #958fb3;
+    --page: #0c0a16; --surface: #16121f; --surface-2: #1d1830; --line: #2b2542;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 12px 32px -12px rgba(0,0,0,.6); }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 16px/1.65 var(--font); -webkit-font-smoothing: antialiased; }
+a { color: var(--violet); }
+h1, h2, h3 { text-wrap: balance; letter-spacing: -0.02em; line-height: 1.15; color: var(--ink); }
+.container { max-width: 1180px; margin: 0 auto; padding-inline: 20px; }
+.brand { display: inline-flex; align-items: center; gap: 9px; font-weight: 700; font-size: 18px; color: var(--ink); text-decoration: none; }
+.brand img { width: 28px; height: 28px; display: block; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; font: 600 15px/1 var(--font); padding: 13px 20px; border-radius: 12px; text-decoration: none; border: 1px solid transparent; transition: transform .15s, background .15s, border-color .15s; }
+.btn:focus-visible, a:focus-visible { outline: 3px solid var(--lilac); outline-offset: 2px; }
+.btn-primary { background: var(--violet); color: #fff; box-shadow: 0 8px 22px -8px rgba(91,33,230,.7), inset 0 1px 0 rgba(255,255,255,.2); }
+.btn-primary:hover { background: var(--violet-deep); transform: translateY(-1px); }
+.btn-secondary { background: var(--surface); color: var(--ink); border-color: var(--line); }
+.btn-secondary:hover { border-color: var(--lilac); }
+.btn-sm { padding: 10px 14px; font-size: 14px; }
+.eyebrow { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--violet); }
+.nav-lang { font-size: 14px; color: var(--ink-3); }
+.nav-lang a { color: var(--ink-3); margin: 0 4px; }
+.nav-lang a.active { color: var(--violet); font-weight: 600; }
+
+header { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; background: color-mix(in srgb, var(--page) 82%, transparent); backdrop-filter: saturate(1.4) blur(12px); border-bottom: 1px solid var(--line); }
+header .container { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+header a { text-decoration: none; }
+main { max-width: 760px; margin: 0 auto; padding: 56px 20px 80px; }
+main h1 { font-size: clamp(32px, 4.6vw, 44px); margin: 0 0 6px; }
+.effective-date { color: var(--ink-3); font-size: 14.5px; margin: 0 0 28px; display: inline-block; padding: 4px 12px; border-radius: 99px; background: var(--lilac-soft); color: var(--violet); font-weight: 600; }
+main h2 { font-size: 23px; margin: 40px 0 10px; scroll-margin-top: 80px; }
+main h3 { font-size: 18px; margin: 26px 0 8px; }
+main p, main li { color: var(--ink-2); }
+main strong { color: var(--ink); }
+main ul, main ol { padding-left: 22px; } main li { margin: 4px 0; }
+main hr { border: 0; border-top: 1px solid var(--line); margin: 36px 0; }
+main table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14.5px; display: block; overflow-x: auto; }
+main th, main td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+main th { background: var(--surface-2); color: var(--ink); font-weight: 600; }
+main code { font-size: .92em; background: var(--surface-2); padding: 1px 5px; border-radius: 5px; }
+footer { border-top: 1px solid var(--line); padding: 28px 20px; text-align: center; color: var(--ink-3); font-size: 14px; }
+footer a { color: var(--ink-3); }
+</style>
+      <script src="/legal-modal.js" defer></script>
+  </head>
+  <body>
+    <header>
+      <div class="container">
+        <a href="/es/"><span class="brand"><img src="/icon-color.svg" alt="" width="28" height="28" />Northstack</span></a>
+        <span class="nav-lang"><a href="/terms.html">EN</a> · <a class="active" href="/es/terms.html">ES</a></span>
+      </div>
+    </header>
+
+    <main>
+      <h1>Términos de Servicio de Northstack</h1>
+      <p class="effective-date">Fecha de vigencia: 6 de octubre de 2026</p>
+
+      <p>
+        Bienvenido a Northstack. Estos Términos de Servicio ("<strong>Términos</strong>")
+        son un acuerdo vinculante entre Alejandro Bravo, una persona física que opera bajo
+        el nombre comercial "Northstack" con domicilio en Buenos Aires, Argentina
+        ("<strong>Northstack</strong>," "<strong>nosotros</strong>"), y la entidad comercial
+        o persona física que celebra estos Términos al registrar una cuenta de Northstack
+        ("<strong>Cliente</strong>," "<strong>vos</strong>").
+      </p>
+      <p>
+        Al crear una cuenta de Northstack, acceder, o usar el Servicio (definido más abajo),
+        aceptás estos Términos en tu propio nombre y, si corresponde, en nombre de la
+        empresa que representás. Si no estás de acuerdo, no uses el Servicio. Si estás
+        aceptando estos Términos en nombre de una empresa u otra entidad legal, declarás que
+        tenés la autoridad para vincular a esa entidad, en cuyo caso "Cliente" se refiere a
+        esa entidad.
+      </p>
+
+      <hr />
+
+      <h2>1. El Servicio</h2>
+      <p>
+        Northstack es una plataforma de software como servicio (SaaS), multi-tenant,
+        business-to-business, que le permite a una empresa ("<strong>Tenant</strong>")
+        registrar una cuenta independiente y gestionar registros de recursos humanos,
+        registros de clientes/contactos, y campos de datos personalizados relacionados,
+        junto con cuentas de usuario, roles, y permisos para ese Tenant (el
+        "<strong>Servicio</strong>").
+      </p>
+
+      <h3>1.1 Estado beta</h3>
+      <p>
+        <strong
+          >El Servicio se ofrece actualmente como un producto en beta / acceso
+          anticipado.</strong
+        >
+        Puede contener errores, puede cambiar sustancialmente (incluyendo la eliminación o
+        modificación de funciones) sin aviso, y no se garantiza que esté disponible en todo
+        momento. No ofrecemos un acuerdo de nivel de servicio (SLA) ni un compromiso de
+        tiempo de actividad durante esta etapa. No deberías depender del Servicio como el
+        único sistema de registro para información que no podés permitirte perder, y sos
+        responsable de mantener tus propias copias de seguridad de los Datos del Cliente
+        cuando sea posible.
+      </p>
+
+      <h3>1.2 Elegibilidad</h3>
+      <p>
+        El Servicio está destinado únicamente a uso empresarial, no está dirigido a
+        consumidores, y no está dirigido a personas menores de 18 años. Al usar el Servicio
+        declarás que tenés al menos 18 años y que estás usando el Servicio con fines
+        comerciales relacionados con un Tenant, y no con fines personales, domésticos, o de
+        consumidor.
+      </p>
+
+      <h3>1.3 La Nómina es una herramienta de registro, no un servicio de pago</h3>
+      <p>
+        El Servicio incluye un módulo de Nómina que le permite a un Tenant registrar y
+        llevar el control de la compensación, las corridas de pago, los recibos de sueldo, y
+        los registros relacionados de empleados/contratistas.
+        <strong>El módulo de Nómina es solo una herramienta de registro.</strong> Northstack
+        no procesa, transmite, retiene, ni ejecuta ningún pago o desembolso a los empleados
+        o contratistas de un Tenant en nombre de ese Tenant, y el módulo de Nómina no tiene
+        relación con, ni efecto sobre, la propia facturación que Northstack le hace a los
+        Tenants por el Servicio (Sección 5). El Tenant sigue siendo el único responsable de
+        pagarle efectivamente a sus propios empleados y contratistas, a través de sus
+        propios medios bancarios, de nómina, u otros.
+      </p>
+
+      <hr />
+
+      <h2>2. Cuentas, roles y responsabilidades</h2>
+
+      <h3>2.1 Cuentas de Tenant</h3>
+      <p>
+        Una cuenta de Tenant es creada por una persona que se convierte en el "owner"
+        inicial de ese Tenant. El owner (y cualquier usuario al que se le otorgue el rol de
+        "admin") puede invitar usuarios adicionales, asignar roles (owner, admin, member), y
+        gestionar los datos, usuarios, y configuraciones del Tenant. Solo un usuario puede
+        tener el rol de "owner" de un Tenant a la vez.
+      </p>
+
+      <h3>2.2 Seguridad de la cuenta</h3>
+      <p>
+        Sos responsable de mantener la confidencialidad de las credenciales de cuenta de
+        todos los usuarios de tu Tenant, y de toda actividad que ocurra bajo esas cuentas.
+        Tenés que avisarnos de inmediato a
+        <a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a> si tomás
+        conocimiento de cualquier acceso o uso no autorizado de una cuenta.
+      </p>
+      <p>
+        También estamos construyendo la autenticación de dos factores (2FA) como una
+        función de seguridad de cuenta adicional y opcional.
+        <strong>Todavía no está disponible en el Servicio.</strong> La vamos a anunciar, y a
+        actualizar estos Términos si es necesario, una vez que lo esté.
+      </p>
+
+      <h3>2.3 Exactitud</h3>
+      <p>
+        Sos responsable de la exactitud de la información proporcionada durante el
+        registro y de mantenerla actualizada, incluyendo la identidad y la autoridad de los
+        usuarios que invitás.
+      </p>
+
+      <h3>2.4 Responsabilidad interna por la gestión de usuarios</h3>
+      <p>
+        Vos (a través de los usuarios owner/admin de tu Tenant) sos el único responsable de
+        decidir a qué personas invitar como usuarios, qué roles asignarles, y cuándo
+        revocarles el acceso. Northstack no tiene visibilidad, ni responsabilidad, sobre si
+        una persona en particular debería tener acceso según las propias políticas internas
+        de tu organización.
+      </p>
+
+      <h3>2.5 Acceso de soporte de Northstack</h3>
+      <p>
+        Si nuestro equipo de soporte necesita revisar tu cuenta para ayudarte, le vamos a
+        pedir permiso a un usuario específico de tu Tenant — nunca iniciamos sesión sin que
+        nos lo pidan. Ese usuario decide si otorga el acceso, por cuánto tiempo (como máximo
+        24 horas), y si solo podemos ver la cuenta o también hacer cambios, y puede
+        terminarlo en cualquier momento. Mientras está activo, vemos la cuenta con los
+        propios permisos de ese usuario, nunca más, y cualquier cambio que hagamos queda
+        registrado en tu Registro de Actividad. Ver la Sección 4.6 de nuestra
+        <a href="/es/privacy.html">Política de Privacidad</a> para el detalle completo.
+      </p>
+
+      <hr />
+
+      <h2>3. Datos del Cliente</h2>
+
+      <h3>3.1 Definición</h3>
+      <p>
+        "<strong>Datos del Cliente</strong>" significa todos los datos, registros, y
+        contenido que un Tenant o sus usuarios envían, suben, o generan dentro del Servicio,
+        incluyendo registros de empleados, registros de clientes/contactos, definiciones y
+        valores de campos personalizados, y cualquier otra información ingresada al
+        Servicio.
+      </p>
+
+      <h3>3.2 Propiedad y licencia</h3>
+      <p>
+        Entre las partes, los Datos del Cliente siguen siendo propiedad del Tenant
+        correspondiente. Le otorgás a Northstack una licencia limitada, no exclusiva, y
+        mundial, para alojar, almacenar, procesar, transmitir, y mostrar los Datos del
+        Cliente, únicamente en la medida necesaria para proveer, mantener, asegurar, y dar
+        soporte al Servicio, y para cumplir con la ley aplicable.
+      </p>
+
+      <h3>3.3 Tus garantías respecto de los Datos del Cliente</h3>
+      <p>Declarás y garantizás que:</p>
+      <p>
+        (a) tenés todos los derechos, permisos, y bases legales necesarios para enviar
+        Datos del Cliente al Servicio, incluyendo cualquier dato personal de tus empleados,
+        contratistas, clientes, u otros terceros;
+      </p>
+      <p>
+        (b) tu recolección, uso, y envío de Datos del Cliente al Servicio cumple con todas
+        las leyes aplicables, incluyendo las leyes laborales, de empleo, y de protección de
+        datos que te resulten aplicables a vos y a las personas cuyos datos enviás; y
+      </p>
+      <p>
+        (c) tu uso del Servicio, incluyendo cualquier campo personalizado que configurés,
+        no viola los derechos de ningún tercero.
+      </p>
+
+      <h3>3.4 Categorías de datos prohibidas</h3>
+      <p>
+        <strong
+          >No podés enviar, ni configurar campos personalizados para recolectar, nada de lo
+          siguiente al Servicio:</strong
+        >
+        números de identificación emitidos por el gobierno (incluyendo números de Seguro
+        Social, números de identificación nacional, o números de pasaporte), números
+        completos de tarjeta de pago o cuenta bancaria, información de salud o médica,
+        datos biométricos, datos genéticos, o cualquier otra categoría especial de datos
+        que requiera protección reforzada bajo la ley aplicable. El Servicio no está
+        diseñado ni certificado para almacenar estas categorías de datos,
+        <strong>salvo lo descrito en la excepción de Nómina a continuación.</strong> Si
+        enviás esos datos en violación de esta Sección, lo hacés bajo tu propio riesgo y
+        seguís siendo plenamente responsable de esos datos y de cualquier responsabilidad
+        resultante; Northstack rechaza toda responsabilidad por las consecuencias de los
+        Datos del Cliente enviados en violación de esta Sección.
+      </p>
+      <p>
+        <strong>Excepción — datos de cuenta para el desembolso de Nómina.</strong> Esta
+        restricción no aplica a los datos de cuenta de pago/bancaria propios de un empleado
+        o contratista, ingresados a través del módulo de Nómina incorporado en el Servicio,
+        con el único fin de registrar adónde se le debe pagar a esa persona (Sección 1.3).
+        Northstack encripta ese campo específico en reposo (AES-256-GCM) y no lo usa para
+        ningún otro fin más que guardarlo y mostrárselo de nuevo al Tenant. Esta excepción
+        es acotada: cubre únicamente ese campo nativo de Nómina, hecho a propósito para eso,
+        y no ningún otro número de cuenta bancaria o tarjeta de pago, y no se extiende a un
+        campo personalizado configurado por el Tenant, aunque se use con un fin similar.
+      </p>
+
+      <h3>3.5 Datos como procesador</h3>
+      <p>
+        Para los Datos del Cliente que constituyan datos personales de tus empleados,
+        contratistas, o clientes, vos actuás como el responsable (controller o equivalente)
+        de esos datos, y Northstack actúa únicamente como proveedor de servicios /
+        procesador en tu nombre, procesando esos datos solo para proveer el Servicio y según
+        tus instrucciones tal como las configurás a través del Servicio. Ver nuestra
+        <a href="/es/privacy.html">Política de Privacidad</a> para más detalle sobre cómo
+        manejamos los datos.
+      </p>
+
+      <h3>3.6 Datos agregados y anonimizados</h3>
+      <p>
+        Sin perjuicio de la Sección 3.2, Northstack puede generar y conservar datos
+        derivados de los Datos del Cliente y del uso del Servicio que hayan sido agregados
+        y/o anonimizados de forma que ya no te identifiquen a vos, a tu Tenant, o a ninguna
+        persona (por ejemplo, patrones de uso, analítica de producto, o métricas de
+        rendimiento). Northstack es propietario de estos datos agregados/anonimizados y
+        puede usarlos para operar, asegurar, y mejorar el Servicio, incluso después de la
+        terminación de tu cuenta, siempre que no te identifiquen a vos ni a ninguna persona.
+      </p>
+
+      <hr />
+
+      <h2>4. Uso aceptable</h2>
+      <p>No vas a, y no vas a permitir que ningún usuario de tu Tenant:</p>
+      <p>(a) use el Servicio para violar ninguna ley aplicable o los derechos de ningún tercero;</p>
+      <p>
+        (b) intente acceder a los datos, cuentas, o sistemas de otro Tenant sin
+        autorización, incluyendo eludiendo el aislamiento entre tenants, la autenticación, o
+        los controles de permisos;
+      </p>
+      <p>
+        (c) haga ingeniería inversa, decompile, o intente derivar el código fuente del
+        Servicio, excepto en la medida en que la ley aplicable lo permita expresamente;
+      </p>
+      <p>
+        (d) sondee, escanee, o pruebe la vulnerabilidad del Servicio, o interfiera o
+        interrumpa su infraestructura, excepto a través de un proceso de divulgación
+        responsable coordinado con anticipación con nosotros en
+        <a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a>;
+      </p>
+      <p>(e) use el Servicio para transmitir código malicioso, spam, o contenido ilegal;</p>
+      <p>
+        (f) revenda, sublicencie, o le dé el Servicio a terceros fuera de tu propia
+        organización sin nuestro consentimiento previo por escrito; o
+      </p>
+      <p>
+        (g) use medios automatizados para acceder al Servicio (incluyendo scraping o
+        extracción masiva de datos) distintos de las interfaces que proveemos.
+      </p>
+      <p>
+        Podemos investigar y tomar las medidas adecuadas, incluyendo suspender o terminar el
+        acceso, ante cualquier sospecha de violación de esta Sección.
+      </p>
+
+      <hr />
+
+      <h2>5. Tarifas y Facturación</h2>
+      <p>
+        <strong>El Servicio sigue en beta (Sección 1.1).</strong> Mientras eso sea así,
+        deberías esperar que las tarifas, los planes, y esta Sección cambien más seguido, y
+        con menos aviso previo, que en un producto maduro y de disponibilidad general — ver
+        la Sección 14 (Cambios a estos Términos) sobre cómo te avisamos.
+      </p>
+
+      <h3>5.1 Prueba gratuita</h3>
+      <p>
+        Todo Tenant nuevo recibe una prueba gratuita de quince (15) días desde la fecha de
+        registro. Nuestro plan "Free Trial" no requiere ningún medio de pago. Si elegís un
+        plan pago ("Starter" o "Growth") durante la prueba, podemos pedirte que agregues un
+        medio de pago por adelantado, pero no se te va a cobrar hasta que termine la prueba
+        — podés ver en cualquier momento, dentro del Servicio, la cantidad exacta de días
+        que te quedan. Te alentamos a usar el período de prueba para evaluar si el Servicio
+        es adecuado antes de agregar un medio de pago o dejar que empiece una suscripción
+        paga.
+      </p>
+
+      <h3>5.2 Cargos de suscripción</h3>
+      <p>
+        Si estás en un plan pago cuando termina tu prueba, o elegís un plan pago
+        directamente, nos autorizás a nosotros y a nuestros procesadores de pago (Sección
+        5.4) a cobrarle a tu medio de pago designado de forma recurrente (por ejemplo,
+        mensual) por adelantado, hasta que tu suscripción se cancele de acuerdo con la
+        Sección 5.5. Continuar usando un plan pago después de que termine tu prueba, o
+        agregar un medio de pago a un plan pago, constituye tu autorización para estos
+        cargos recurrentes.
+      </p>
+
+      <h3>5.3 Cambios de precio</h3>
+      <p>
+        Podemos cambiar nuestras tarifas de vez en cuando, incluso para tu suscripción
+        existente. Ver la Sección 14 (Cambios a estos Términos) sobre cómo y cuándo te
+        avisamos de un cambio.
+      </p>
+
+      <h3>5.4 Procesadores de pago</h3>
+      <p>
+        Los pagos son procesados por procesadores de pago externos, no por Northstack
+        directamente: <strong>Dodo Payments</strong> para Tenants facturados
+        internacionalmente en USD, y <strong>Mercado Pago</strong> para Tenants facturados
+        en Argentina en ARS. Estos procesadores recolectan y guardan los datos de tu
+        tarjeta de pago o cuenta bancaria directamente, bajo sus propios términos de
+        servicio y políticas de privacidad — Northstack no recibe ni guarda tu número
+        completo de tarjeta o cuenta bancaria. Ver nuestra
+        <a href="/es/privacy.html">Política de Privacidad</a> para más sobre cómo manejamos
+        los datos relacionados con la facturación.
+      </p>
+
+      <h3>5.5 Cancelación y reembolsos</h3>
+      <p>
+        Podés cancelar una suscripción paga en cualquier momento desde la sección de
+        Facturación del Servicio, o escribiendo a
+        <a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a>. La
+        cancelación detiene la facturación futura a partir del final de tu período de
+        facturación actual; no te da, por sí sola, derecho a un reembolso de tarifas ya
+        cobradas.
+        <strong
+          >Las tarifas generalmente no son reembolsables — ver nuestra
+          <a href="/es/refund.html">Política de Reembolsos</a> para la política completa,
+          incluidas las excepciones limitadas.</strong
+        >
+        Te alentamos a revisar la Política de Reembolsos, junto con la prueba gratuita de
+        la Sección 5.1, antes de agregar un medio de pago o pasar a un plan pago.
+      </p>
+
+      <h3>5.6 Acuerdos a medida</h3>
+      <p>
+        Podemos, a nuestra discreción, acordar con un Tenant específico módulos, límites de
+        uso, o precios distintos de los que incluiría de otro modo el plan elegido por ese
+        Tenant. Ese acuerdo solo es válido si se hace por escrito (incluso por email) entre
+        un representante autorizado de Northstack y el owner o admin de tu Tenant, y
+        complementa estos Términos únicamente para tu Tenant — no cambia estos Términos
+        para ningún otro Tenant.
+      </p>
+
+      <hr />
+
+      <h2>6. Propiedad intelectual</h2>
+      <p>
+        El Servicio, incluyendo su software, diseño, el nombre y logo "Northstack", y toda
+        la tecnología subyacente, es propiedad de Northstack y sus licenciantes y está
+        protegido por leyes de propiedad intelectual. Salvo los derechos limitados
+        expresamente otorgados para usar el Servicio bajo estos Términos, no se te otorga
+        ningún derecho por implicancia ni de otra forma. No vas a usar el nombre, logo, o
+        marcas de Northstack sin nuestro consentimiento previo por escrito, excepto en la
+        medida razonablemente necesaria para identificar que eres cliente del Servicio.
+      </p>
+
+      <hr />
+
+      <h2>7. Confidencialidad</h2>
+      <p>
+        Cada parte puede tener acceso a información no pública de la otra parte en
+        relación con el Servicio ("<strong>Información Confidencial</strong>"). Cada parte
+        va a usar la Información Confidencial de la otra únicamente según sea necesario
+        para cumplir con sus obligaciones bajo estos Términos, y la va a proteger usando al
+        menos el mismo grado de cuidado que usa para su propia información confidencial de
+        naturaleza similar, pero no menos que un cuidado razonable. Los Datos del Cliente
+        son Información Confidencial del Cliente. Esta Sección no aplica a información que
+        sea o se vuelva pública sin culpa de la parte receptora, que ya era conocida por la
+        parte receptora sin obligación de confidencialidad, o cuya divulgación sea exigida
+        por ley (en cuyo caso la parte que divulga le va a dar, cuando sea legalmente
+        permitido, un aviso razonable a la otra parte).
+      </p>
+
+      <hr />
+
+      <h2>8. Servicios de terceros</h2>
+
+      <h3>8.1 Infraestructura que elegimos</h3>
+      <p>
+        El Servicio depende de infraestructura y proveedores de servicios externos que
+        elegimos para operarlo, incluyendo proveedores de hosting en la nube y de bases de
+        datos, un proveedor de entrega de email, y nuestros procesadores de pago (Sección
+        5.4). Elegimos estos proveedores con cuidado razonable, pero no los controlamos y no
+        somos responsables de sus actos, omisiones, o interrupciones. El uso del Servicio
+        está sujeto a la disponibilidad y el rendimiento de estos proveedores subyacentes.
+      </p>
+
+      <h3>8.2 Integraciones que elegís</h3>
+      <p>
+        El Servicio también ofrece integraciones que un Tenant puede elegir, a su propia
+        opción, conectar a sus propias cuentas de terceros — actualmente Google Calendar
+        (para sincronizar Tareas y Licencias como eventos de calendario) y Stripe. Para
+        Stripe: un Tenant conecta su propia cuenta de Stripe proporcionando su propia API
+        key de Stripe, y
+        <strong>el Servicio solo hace lo que los permisos de esa key permitan</strong> — si
+        la key del Tenant es de solo lectura, el Servicio solo lee datos de Stripe; si la
+        key otorga acceso de escritura, el Servicio también puede
+        <strong
+          >crear y enviar facturas alojadas en Stripe a los propios clientes de ese Tenant
+          en su nombre</strong
+        >. Crear y enviar una factura es por el momento la única acción de escritura que
+        realiza el Servicio — no crea un Payment Intent ni cobra o recauda una tarjeta
+        directamente de ninguna otra forma; la propia página de factura alojada por Stripe
+        es la que efectivamente entrega la factura y cobra el pago, no Northstack.
+        <strong
+          >Conectar una integración, los permisos que se le otorgan, y todo lo que el
+          Servicio haga a través de ella (incluyendo el envío de una factura), son decisión
+          y responsabilidad propia del Tenant.</strong
+        >
+        El tercero que el Tenant conecta — no Northstack — recibe y procesa los datos
+        expuestos a través de esa conexión, bajo los propios términos y prácticas de
+        privacidad de ese tercero, y Northstack no es responsable de cómo maneja esos
+        datos.
+      </p>
+      <p>
+        También estamos construyendo una integración, usando el Model Context Protocol
+        abierto ("<strong>MCP</strong>"), que va a permitir que los propios usuarios de un
+        Tenant conecten un asistente de IA de terceros de su elección (como Claude, ChatGPT,
+        u otras herramientas similares) a los propios datos de ese Tenant en el Servicio.
+        <strong>Esta función todavía no está disponible.</strong> Una vez disponible: va a
+        actuar con los propios permisos del usuario que la conecta, cada acción que tome va
+        a quedar registrada en el Registro de Actividad, va a estar limitada al plan
+        Growth, y el principio de decisión-y-responsabilidad-propia-del-Tenant de arriba le
+        va a aplicar del mismo modo.
+      </p>
+
+      <hr />
+
+      <h2>9. Suspensión y terminación</h2>
+
+      <h3>9.1 Por vos</h3>
+      <p>
+        Podés dejar de usar el Servicio en cualquier momento. El owner de tu Tenant puede
+        eliminar la cuenta del Tenant directamente desde el Servicio (Configuración →
+        Empresa), confirmando el nombre de la empresa y su contraseña. Tenés que cancelar
+        cualquier suscripción paga activa primero (Configuración → Facturación) — la
+        eliminación no lo hace por vos. Eliminar la cuenta de tu Tenant bloquea el acceso
+        inmediatamente para todos los usuarios, y el owner del Tenant recibe un email de
+        confirmación. Ver la Sección 9.3 y nuestra
+        <a href="/es/privacy.html">Política de Privacidad</a> (Sección 5) sobre qué pasa
+        con tus datos después.
+      </p>
+
+      <h3>9.2 Por nosotros</h3>
+      <p>
+        <strong>Suspensión inmediata.</strong> Podemos suspender o terminar tu acceso al
+        Servicio de inmediato y sin aviso previo si creemos razonablemente que: (a) tu
+        Tenant o alguno de sus usuarios representa un riesgo de seguridad para el Servicio
+        o para otros Tenants; (b) incurriste en fraude, actividad ilegal, o una violación de
+        la Sección 3.4 (categorías de datos prohibidas) o la Sección 4 (uso aceptable); (c)
+        tu cuenta está sujeta a un proceso legal o un pedido de una autoridad policial o
+        gubernamental; o (d) el acceso continuado expondría a Northstack a responsabilidad
+        legal o regulatoria.
+      </p>
+      <p>
+        <strong>Otros incumplimientos.</strong> Para cualquier otro incumplimiento material
+        de estos Términos, te vamos a avisar y te vamos a dar una oportunidad razonable de
+        corregirlo antes de suspender o terminar tu acceso, salvo que apliquen las
+        circunstancias descritas arriba.
+      </p>
+      <p>
+        <strong>Discontinuación.</strong> También podemos discontinuar el Servicio o el
+        programa beta descrito en la Sección 1.1, en cuyo caso vamos a dar aviso previo
+        razonable cuando sea posible.
+      </p>
+
+      <h3>9.3 Efecto de la terminación</h3>
+      <p>
+        Tras la terminación, el acceso al Servicio termina de inmediato para todos los
+        usuarios del Tenant. Tus Datos de Cuenta y Datos Procesados se eliminan
+        permanentemente diez (10) días después de la terminación — ya sea que el Tenant
+        haya sido eliminado por su owner o por nosotros — salvo que nos contactes a
+        <a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a> antes de ese
+        plazo para revertirlo. Después de los 10 días, la eliminación no se puede deshacer.
+        Ver la <a href="/es/privacy.html">Política de Privacidad</a> (Sección 5) para más
+        detalle sobre nuestras prácticas de conservación de datos, incluyendo qué pasa con
+        los registros de facturación.
+      </p>
+
+      <hr />
+
+      <h2>10. Exenciones de responsabilidad</h2>
+      <p>
+        <strong
+          >EL SERVICIO SE PROVEE "TAL CUAL" Y "SEGÚN DISPONIBILIDAD," SIN GARANTÍAS DE
+          NINGÚN TIPO, YA SEAN EXPRESAS, IMPLÍCITAS, O LEGALES, INCLUYENDO SIN LIMITACIÓN
+          CUALQUIER GARANTÍA IMPLÍCITA DE COMERCIABILIDAD, IDONEIDAD PARA UN FIN
+          PARTICULAR, TITULARIDAD, Y NO INFRACCIÓN, EN LA MÁXIMA MEDIDA PERMITIDA POR LA LEY
+          APLICABLE.</strong
+        >
+        No garantizamos que el Servicio sea ininterrumpido, libre de errores, o seguro, ni
+        que no vaya a ocurrir pérdida de datos. Sos el único responsable de determinar si
+        el Servicio es adecuado para el uso que le querés dar, incluido el cumplimiento de
+        las leyes aplicables a tu negocio y tu manejo de los datos de empleados y clientes.
+      </p>
+
+      <hr />
+
+      <h2>11. Limitación de responsabilidad</h2>
+      <p><strong>EN LA MÁXIMA MEDIDA PERMITIDA POR LA LEY APLICABLE:</strong></p>
+      <p>
+        (a) NINGUNA DE LAS PARTES SERÁ RESPONSABLE POR DAÑOS INDIRECTOS, INCIDENTALES,
+        ESPECIALES, CONSECUENTES, O PUNITIVOS, NI POR NINGUNA PÉRDIDA DE GANANCIAS, INGRESOS,
+        REPUTACIÓN COMERCIAL, O DATOS, QUE SURJAN DE O SE RELACIONEN CON ESTOS TÉRMINOS O EL
+        SERVICIO, SIN IMPORTAR LA TEORÍA DE RESPONSABILIDAD, AUNQUE SE HAYA ADVERTIDO DE LA
+        POSIBILIDAD DE TALES DAÑOS; Y
+      </p>
+      <p>
+        (b) LA RESPONSABILIDAD TOTAL AGREGADA DE NORTHSTACK QUE SURJA DE O SE RELACIONE CON
+        ESTOS TÉRMINOS O EL SERVICIO NO VA A SUPERAR EL MAYOR ENTRE (I) EL TOTAL DE TARIFAS
+        QUE LE PAGASTE A NORTHSTACK EN LOS DOCE (12) MESES ANTERIORES AL HECHO QUE ORIGINÓ EL
+        RECLAMO, O (II) CIEN DÓLARES ESTADOUNIDENSES (USD 100).
+      </p>
+      <p>
+        Estas limitaciones no aplican a: (i) las obligaciones de indemnización de ninguna de
+        las partes bajo la Sección 13; (ii) tu incumplimiento de la Sección 3.4 (categorías
+        de datos prohibidas) o la Sección 4 (uso aceptable); (iii) la negligencia grave o
+        conducta dolosa de ninguna de las partes; o (iv) la responsabilidad que no pueda
+        limitarse bajo la ley aplicable.
+      </p>
+
+      <hr />
+
+      <h2>12. Plazo para presentar reclamos</h2>
+      <p>
+        <strong
+          >En la máxima medida permitida por la ley aplicable, cualquier reclamo o causa de
+          acción que surja de o se relacione con estos Términos o el Servicio debe
+          iniciarse dentro de los doce (12) meses posteriores al hecho que originó el
+          reclamo, o quedará permanentemente prescripto</strong
+        >, sin importar ningún plazo de prescripción u otra ley en sentido contrario. Esta
+        Sección no aplica donde esté prohibido por la ley aplicable.
+      </p>
+
+      <hr />
+
+      <h2>13. Indemnización</h2>
+      <p>
+        Vas a defender, indemnizar, y mantener indemne a Northstack (y a Alejandro Bravo
+        personalmente, como la persona física que opera el Servicio) frente a cualquier
+        reclamo, daño, pérdida, y gasto de terceros (incluyendo honorarios legales
+        razonables) que surja de o se relacione con: (a) los Datos del Cliente, incluyendo
+        cualquier reclamo de que violan los derechos de un tercero o la ley aplicable; (b)
+        tu incumplimiento de la Sección 3 (Datos del Cliente) o la Sección 4 (Uso
+        Aceptable); o (c) tu uso del Servicio en violación de estos Términos.
+      </p>
+
+      <hr />
+
+      <h2>14. Cambios a estos Términos</h2>
+      <p>
+        <strong>El Servicio sigue en beta (Sección 1.1).</strong> Mientras eso sea así,
+        deberías esperar que estos Términos, nuestros precios y planes, y el Servicio en sí
+        cambien más seguido, y con menos aviso previo, que en un producto maduro y de
+        disponibilidad general.
+      </p>
+      <p>
+        Podemos agregar, quitar, o modificar cualquier disposición de estos Términos —
+        incluyendo tarifas, planes, y funciones — en cualquier momento y
+        <strong
+          >sin aviso previo, salvo que la ley aplicable exija lo contrario.</strong
+        >
+        Cuando hagamos un cambio, vamos a publicar los Términos actualizados con una nueva
+        fecha de vigencia y vamos a avisar a los owners de cada Tenant
+        <strong>con una notificación dentro de la app.</strong> Esa notificación puede
+        llegar en el momento en que el cambio entra en vigencia o después, no
+        necesariamente antes. El uso continuado del Servicio después de que un cambio entra
+        en vigencia implica la aceptación de los Términos actualizados. Si no estás de
+        acuerdo con un Término actualizado, tenés que dejar de usar el Servicio y podés
+        pedir la eliminación de tu cuenta.
+      </p>
+
+      <hr />
+
+      <h2>15. Ley aplicable y disputas</h2>
+      <p>
+        Estos Términos se rigen por las leyes de Argentina, sin considerar los principios
+        de conflicto de leyes. Cualquier disputa que surja de o se relacione con estos
+        Términos o el Servicio va a estar sujeta a la jurisdicción exclusiva de los
+        tribunales ordinarios de la Ciudad Autónoma de Buenos Aires, Argentina, y cada
+        parte se somete a esa jurisdicción y renuncia a cualquier objeción de competencia
+        territorial.
+      </p>
+
+      <hr />
+
+      <h2>16. Disposiciones generales</h2>
+      <p>
+        <strong>Acuerdo completo.</strong> Estos Términos, junto con la Política de
+        Privacidad y, si corresponde, la Política de Reembolsos y los Términos y
+        Condiciones del Programa de Referidos, constituyen el acuerdo completo entre las
+        partes respecto del Servicio y reemplazan cualquier acuerdo previo sobre el tema.
+      </p>
+      <p>
+        <strong>Divisibilidad.</strong> Si alguna disposición de estos Términos se
+        considera inválida, las disposiciones restantes van a seguir en plena vigencia y
+        efecto, y la disposición inválida se va a modificar en la mínima medida necesaria
+        para hacerla válida.
+      </p>
+      <p>
+        <strong>Sin renuncia.</strong> No hacer valer alguna disposición de estos Términos
+        no es una renuncia al derecho de hacerla valer más adelante.
+      </p>
+      <p>
+        <strong>Cesión.</strong> No podés cederle estos Términos a nadie sin nuestro
+        consentimiento previo por escrito. Nosotros podemos ceder estos Términos en
+        relación con una fusión, adquisición, o venta de la totalidad sustancial de
+        nuestros activos, con aviso previo.
+      </p>
+      <p>
+        <strong>Fuerza mayor.</strong> Ninguna de las partes es responsable por demoras o
+        incumplimientos causados por motivos fuera de su control razonable, incluyendo
+        desastres naturales, interrupciones de internet o de infraestructura, o actos de
+        gobierno.
+      </p>
+      <p>
+        <strong>Contratistas independientes.</strong> Las partes son contratistas
+        independientes. Nada en estos Términos crea una sociedad, joint venture, agencia, o
+        relación de empleo.
+      </p>
+      <p>
+        <strong>Notificaciones.</strong> Las notificaciones a Northstack se tienen que
+        enviar a <a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a>. Las
+        notificaciones hacia vos se van a enviar a la dirección de email asociada a la
+        cuenta del owner de tu Tenant.
+      </p>
+
+      <hr />
+
+      <h2>17. Contacto</h2>
+      <p>
+        Las consultas sobre estos Términos se pueden enviar a
+        <strong><a href="mailto:info@joinnorthstack.com">info@joinnorthstack.com</a></strong
+        >.
+      </p>
+      <p>Northstack es operado por Alejandro Bravo, con domicilio en Buenos Aires, Argentina.</p>
+    </main>
+
+    <footer>
+      <a href="/es/">Inicio</a> · <a href="/es/terms.html">Términos de Servicio</a> ·
+      <a href="/es/privacy.html">Política de Privacidad</a> ·
+      <a href="/es/refund.html">Política de Reembolsos</a>
+      <p>© 2026 Northstack. Todos los derechos reservados.</p>
+    </footer>
+  </body>
+</html>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { api, type Task } from '../api';
 import { useTaskFolders } from '../hooks/useTaskFolders';
@@ -51,6 +52,27 @@ export default function MyTasksPage({ token, user }: MyTasksPageProps) {
   useEffect(() => {
     api.listTenantUsers(token).then(setTenantUsers).catch(() => {});
   }, [token]);
+
+  // ?task=<id> (a mention notification) opens that task, even one you're not assigned to.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const taskParam = searchParams.get('task');
+  useEffect(() => {
+    if (!taskParam) return;
+    api
+      .getTask(token, taskParam)
+      .then(setSelectedTask)
+      .catch(() => {})
+      .finally(() =>
+        setSearchParams(
+          (prev) => {
+            const next = new URLSearchParams(prev);
+            next.delete('task');
+            return next;
+          },
+          { replace: true },
+        ),
+      );
+  }, [taskParam, token, setSearchParams]);
 
   const totalPendingCount = tasks.filter((t) => !t.completedAt).length;
 

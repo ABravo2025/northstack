@@ -448,6 +448,7 @@ model Tenant {
   skills                    Skill[]
   employeeSkills            EmployeeSkill[]
   referredBy                Referral?
+  taskComments              TaskComment[]
 }
 
 // Billing Integration (spec-billing-integration.md). plan/lockedPriceCents are deliberately NOT
@@ -663,6 +664,7 @@ model User {
   projectsCreated             Project[]                   @relation("ProjectCreatedBy")
   projectsUpdated             Project[]                   @relation("ProjectUpdatedBy")
   projectTemplatesCreated     ProjectTemplate[]           @relation("ProjectTemplateCreatedBy")
+  taskComments                TaskComment[]               @relation("TaskCommentAuthor")
   shiftsCreated               Shift[]                     @relation("ShiftCreatedBy")
   shiftCalendarSyncs          ShiftCalendarSync[]
   referralMember              ReferralMember?
@@ -1655,6 +1657,11 @@ model Task {
   // one of that project's phases. Null = "no phase" (a blank project's loose tasks), never an error.
   projectPhaseId        String?
   projectPhase          ProjectPhase? @relation(fields: [projectPhaseId], references: [id], onDelete: SetNull)
+  // Who to invite to the task's Google Meet (2026-10-06, Alejandro). Required for a project task's
+  // call (a project has no natural person to call); optional elsewhere, where it overrides the
+  // record's own contact (googleCalendarSyncService.ts's resolveTaskAttendeeEmail).
+  meetAttendeeEmail     String?
+  comments              TaskComment[]
 
   @@index([tenantId, entityType, entityId])
   @@index([tenantId, assigneeId])
@@ -1675,6 +1682,24 @@ model TaskFolder {
   tasks       Task[]
 
   @@index([tenantId])
+}
+
+// Task chat (2026-10-06, Alejandro: "en cada task un chat chico, con @ a la persona involucrada,
+// sea o no del proyecto"). A short conversation on any task; mentionedUserIds are the users that
+// got a task_mention notification for this message (any login in the tenant, on the project or not).
+model TaskComment {
+  id               String   @id @default(uuid())
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id])
+  taskId           String
+  task             Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId         String
+  author           User     @relation("TaskCommentAuthor", fields: [authorId], references: [id])
+  body             String
+  mentionedUserIds String[] @default([])
+  createdAt        DateTime @default(now())
+
+  @@index([taskId, createdAt])
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -2092,6 +2117,8 @@ enum NotificationType {
   shift_cancelled
   shift_declined // to whoever manages the shift: an assignee said they can't make it
   shift_reminder // daily cron: unanswered, or tomorrow's shift
+  // Task chat (2026-10-06) — someone @mentioned you in a task's conversation. entityType 'task'.
+  task_mention
 }
 
 model Notification {

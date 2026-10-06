@@ -4,6 +4,7 @@ import Modal from '../common/Modal';
 import { useToast } from '../common/ToastProvider';
 import { VideoIcon } from '../common/Icons';
 import TaskForm, { type TaskFormPayload } from './TaskForm';
+import TaskChat from './TaskChat';
 import { formatHubDate } from '../../lib/taskHubDates';
 
 interface TenantUserLite {
@@ -85,7 +86,7 @@ export default function TaskDetailModal({
             {task.googleMeetUrl && (
               <div className="task-hub-detail-row">
                 <span className="task-hub-detail-row-label">{t('myTasks.detail.meet')}</span>
-                <a href={task.googleMeetUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-accent underline">
+                <a href={task.googleMeetUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-accent underline dark:text-brand-blue-light">
                   <VideoIcon className="h-3.5 w-3.5" />
                   {t('myTasks.actions.joinGoogleMeet')}
                 </a>
@@ -104,6 +105,7 @@ export default function TaskDetailModal({
             onSubmit={handleSubmit}
             onDelete={handleDelete}
           />
+          <TaskChat token={token} taskId={task.id} currentUserId={currentUserId} />
         </div>
       )}
     </Modal>

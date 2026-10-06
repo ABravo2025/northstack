@@ -46,6 +46,24 @@ de 3 planos y patrón mobile agregados 2026-07-31 (`docs/tareas-ux-ui.md`).
 
 En modo oscuro el acento es `brand-blue-light` (`#a98bff`). Tipografía: **Instrument Sans** (`--font-sans` en `index.css` + el link de Google Fonts en `index.html`; Geist queda de respaldo), elegida 2026-10-02 junto con el violeta — se compararon en un artifact (https://claude.ai/artifact/TyXVc5TsZ6vQ3Uis6akNxA). Los gráficos mantienen su paleta categórica propia (`--chart-series-*`), validada para daltonismo: no se tiñe de violeta.
 
+**Regla obligatoria — violeta en modo oscuro (Alejandro, 2026-10-06):** todo violeta de acento lleva su
+variante oscura, en todo componente nuevo, sin excepción. El violeta claro (`accent`/`brand-blue`, `#5b21e6`)
+sobre los fondos oscuros no se lee; en dark se usa **`brand-blue-light` (`#a98bff`)**, el mismo lila del
+"+ Add" de las tablas. Patrones:
+
+| Uso | Clases |
+|---|---|
+| Texto / ícono | `text-accent dark:text-brand-blue-light` |
+| Borde / selección | `border-accent dark:border-brand-blue-light` (+ `ring-accent-tint dark:ring-brand-blue-light/20`) |
+| Hover | `hover:text-accent dark:hover:text-brand-blue-light` |
+| Relleno (barra, punto) | `bg-accent dark:bg-brand-blue-light` |
+| Fondo suave / chip | `bg-accent-tint text-accent dark:bg-brand-blue-light/15 dark:text-brand-blue-light` |
+| Color inline (`style`), sin variante | usar un violeta medio que funcione en ambos temas: `#7c5cff` |
+
+Antes de cerrar una UI nueva: buscar `text-accent`, `border-accent`, `bg-accent` y `ring-accent` en los
+archivos tocados y confirmar que cada uno tiene su `dark:`. Origen: el modal de Proyectos salió con las
+etiquetas de nicho en `#5b21e6` y en dark no se leían.
+
 **Regla de selección vs. acción**: `brand-blue` se reserva para *selección/activo persistente* — `.sidebar-link.active`, `.view-tab.active`, `.toggle-opt.active`, `.mini-toggle-opt.active`, `.dropdown-trigger.dt-status`, `.role-chip.chip-blue`, `.task-checkbox`, `.col-resize-handle:hover`, `.hscrollbar-thumb:hover`. Todo lo demás que antes era `brand-blue` (botón primario, links de "add filter"/"manage options", el punto del changelog, `.tb-btn .filter-count`) pasa a `accent`. Antes de agregar un uso nuevo de color en un botón o link de acción: es `accent`, no `brand-blue`.
 
 **Colores semánticos** — nunca son el acento de marca, cada uno tiene un significado fijo:

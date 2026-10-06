@@ -100,7 +100,12 @@
       "save": "Guardar",
       "addTask": "Agregar tarea",
       "cancelEditAria": "Cancelar edición",
-      "deleteTaskAria": "Eliminar tarea"
+      "deleteTaskAria": "Eliminar tarea",
+      "meetEmail": "Email a invitar a la llamada",
+      "meetEmailHint": "Dejalo vacío para invitar al contacto del registro.",
+      "meetEmailProjectHint": "Quién recibe la invitación de Meet.",
+      "meetEmailRequired": "Agregá el email de la persona a invitar a la llamada.",
+      "meetEmailInvalid": "Ingresá un email válido."
     },
     "googleEvent": {
       "openInGoogleCalendar": "Abrir en Google Calendar"
@@ -116,6 +121,16 @@
       "failedToSaveTask": "No se pudo guardar la tarea: {{message}}",
       "failedToCreateTask": "No se pudo crear la tarea: {{message}}",
       "failedToMoveTask": "No se pudo mover la tarea: {{message}}"
+    },
+    "chat": {
+      "title": "Conversación",
+      "placeholder": "Escribí un mensaje… usá @ para mencionar a alguien",
+      "send": "Enviar",
+      "empty": "Todavía no hay mensajes. Usá @ para mencionar a alguien del equipo: le llega una notificación.",
+      "deleteAria": "Eliminar mensaje",
+      "loadError": "No se pudo cargar la conversación: {{message}}",
+      "sendError": "No se pudo enviar el mensaje: {{message}}",
+      "noMatches": "Nadie coincide"
     }
   },
   "timeOff": {

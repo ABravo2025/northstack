@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { api, type Task } from '../api';
 import {
@@ -18,7 +18,6 @@ import TableBody from '../components/common/TableBody';
 import { ChevronDownIcon, ChevronLeftIcon, FolderIcon, PencilIcon, PeopleIcon, PlusIcon, TaskCheckIcon, TrashIcon } from '../components/common/Icons';
 import { useToast } from '../components/common/ToastProvider';
 import KanbanBoard from '../components/entity-views/KanbanBoard';
-import EntityNotesList from '../components/notes/EntityNotesList';
 import EntityActivityList from '../components/activity/EntityActivityList';
 import TaskDetailModal from '../components/tasks/TaskDetailModal';
 import ProjectFormModal from '../components/projects/ProjectFormModal';
@@ -35,7 +34,6 @@ import { useGoogleCalendarConnected } from '../hooks/useGoogleCalendarConnected'
 // being the owner); anyone who can see the project can add and complete tasks.
 
 type Tab = 'tasks' | 'board' | 'team';
-type SideTab = 'notes' | 'activity';
 const NO_PHASE = '__none__';
 
 interface TenantUserLite {
@@ -54,7 +52,7 @@ export default function ProjectDetailPage({ token, user }: { token: string; user
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>('tasks');
-  const [sideTab, setSideTab] = useState<SideTab>('notes');
+  const [searchParams, setSearchParams] = useSearchParams();
   const [activityKey, setActivityKey] = useState(0);
   const [tenantUsers, setTenantUsers] = useState<TenantUserLite[]>([]);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -91,6 +89,27 @@ export default function ProjectDetailPage({ token, user }: { token: string; user
   useEffect(() => {
     api.listTenantUsers(token).then(setTenantUsers).catch(() => {});
   }, [token]);
+
+  // ?task=<id> (a mention notification) opens that task once the list is in.
+  const taskParam = searchParams.get('task');
+  useEffect(() => {
+    if (!taskParam) return;
+    const found = tasks.find((x) => x.id === taskParam);
+    if (!found) return;
+    setSelectedTask(found);
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('task');
+      return next;
+    }, { replace: true });
+  }, [taskParam, tasks, setSearchParams]);
+
+  // Someone @mentioned in a task of a project they can't open (not on it, no view_projects) still
+  // gets the task itself — in My Tasks, where any task of the company opens by id.
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (loadError && taskParam) navigate(`/tasks?task=${taskParam}`, { replace: true });
+  }, [loadError, taskParam, navigate]);
 
   // Every change re-reads the Activity tab so the feed stays in step with what just happened.
   const changed = () => setActivityKey((k) => k + 1);
@@ -302,20 +321,10 @@ export default function ProjectDetailPage({ token, user }: { token: string; user
         </div>
 
         <aside className="card !p-0 min-w-0 overflow-hidden">
-          <div className="overview-panel-tabs px-3 pt-2">
-            <button type="button" className={sideTab === 'notes' ? 'active' : ''} onClick={() => setSideTab('notes')}>
-              {t('detail.side.notes')}
-            </button>
-            <button type="button" className={sideTab === 'activity' ? 'active' : ''} onClick={() => setSideTab('activity')}>
-              {t('detail.side.activity')}
-            </button>
-          </div>
+          {/* Activity only: conversations live inside each task (TaskChat), which replaced the project's notes. */}
+          <h3 className="m-0 border-b border-line px-4 py-3 text-sm font-semibold dark:border-dark-line">{t('detail.side.activity')}</h3>
           <div className="max-h-[640px] overflow-y-auto p-3">
-            {sideTab === 'notes' ? (
-              <EntityNotesList token={token} entityType="project" entityId={project.id} />
-            ) : (
-              <EntityActivityList key={activityKey} token={token} entityType="project" entityId={project.id} />
-            )}
+            <EntityActivityList key={activityKey} token={token} entityType="project" entityId={project.id} />
           </div>
         </aside>
       </div>
@@ -412,11 +421,32 @@ function TaskDue({ task }: { task: Task }) {
   );
 }
 
-function TaskRow({ task, onToggle, onOpen }: { task: Task; onToggle: (task: Task) => void; onOpen: (task: Task) => void }) {
-  const completed = !!task.completedAt;
+// Check · task · assignee · created · due. Phones drop the header and the created column.
+const TASK_GRID =
+  'grid grid-cols-[22px_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 px-3 sm:grid-cols-[22px_minmax(0,1fr)_minmax(0,160px)_76px_76px]';
+
+function TaskColumnsHeader() {
+  const { t } = useTranslation('projects');
   return (
     <li
-      className="grid cursor-pointer grid-cols-[22px_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 border-b border-line-soft px-3 py-2 last:border-b-0 hover:bg-surface-2 sm:grid-cols-[22px_minmax(0,1fr)_minmax(0,160px)_72px] dark:border-dark-line-soft dark:hover:bg-dark-raised"
+      aria-hidden="true"
+      className={`${TASK_GRID} hidden border-b border-line-soft py-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-faint sm:grid dark:border-dark-line-soft dark:text-dark-ink-faint`}
+    >
+      <span />
+      <span>{t('detail.columns.task')}</span>
+      <span>{t('detail.columns.assignee')}</span>
+      <span className="text-right">{t('detail.columns.created')}</span>
+      <span className="text-right">{t('detail.columns.due')}</span>
+    </li>
+  );
+}
+
+function TaskRow({ task, onToggle, onOpen }: { task: Task; onToggle: (task: Task) => void; onOpen: (task: Task) => void }) {
+  const completed = !!task.completedAt;
+  const fmt = useProjectDateFormat();
+  return (
+    <li
+      className={`${TASK_GRID} cursor-pointer border-b border-line-soft py-2 last:border-b-0 hover:bg-surface-2 dark:border-dark-line-soft dark:hover:bg-dark-raised`}
       onClick={() => onOpen(task)}
     >
       <TaskCheck task={task} onToggle={onToggle} />
@@ -431,6 +461,7 @@ function TaskRow({ task, onToggle, onOpen }: { task: Task; onToggle: (task: Task
           </>
         )}
       </span>
+      <span className="hidden text-right text-xs tabular-nums text-ink-muted sm:inline dark:text-dark-ink-muted">{fmt(task.createdAt)}</span>
       <span className="text-right">
         <TaskDue task={task} />
       </span>
@@ -608,6 +639,7 @@ function PhaseList({ token, project, tasks, canEdit, onToggle, onOpen, onAddTask
               )}
             </header>
             <ul className="m-0 list-none p-0">
+              {phaseTasks.length > 0 && <TaskColumnsHeader />}
               {phaseTasks.map((task) => (
                 <TaskRow key={task.id} task={task} onToggle={onToggle} onOpen={onOpen} />
               ))}

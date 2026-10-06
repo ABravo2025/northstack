@@ -100,7 +100,12 @@
       "save": "Save",
       "addTask": "Add task",
       "cancelEditAria": "Cancel edit",
-      "deleteTaskAria": "Delete task"
+      "deleteTaskAria": "Delete task",
+      "meetEmail": "Email to invite to the call",
+      "meetEmailHint": "Leave it empty to invite the record's own contact.",
+      "meetEmailProjectHint": "Who should get the Meet invite.",
+      "meetEmailRequired": "Add the email of the person to invite to the call.",
+      "meetEmailInvalid": "Enter a valid email."
     },
     "googleEvent": {
       "openInGoogleCalendar": "Open in Google Calendar"
@@ -116,6 +121,16 @@
       "failedToSaveTask": "Failed to save task: {{message}}",
       "failedToCreateTask": "Failed to create task: {{message}}",
       "failedToMoveTask": "Failed to move task: {{message}}"
+    },
+    "chat": {
+      "title": "Conversation",
+      "placeholder": "Write a message… use @ to mention someone",
+      "send": "Send",
+      "empty": "No messages yet. Use @ to mention a teammate — they get a notification.",
+      "deleteAria": "Delete message",
+      "loadError": "Couldn't load the conversation: {{message}}",
+      "sendError": "Couldn't send the message: {{message}}",
+      "noMatches": "No one matches"
     }
   },
   "timeOff": {

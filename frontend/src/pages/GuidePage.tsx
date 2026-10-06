@@ -1642,8 +1642,15 @@ export default function GuidePage() {
               </p>
               <p>
                 Las tareas de un proyecto son tareas comunes: aparecen en <strong>Mis tareas</strong>, en el
-                calendario y en Google Calendar si lo conectaste. A la derecha tenés las <strong>Notas</strong> y la
-                <strong> Actividad</strong> del proyecto.
+                calendario y en Google Calendar si lo conectaste. A la derecha tenés la <strong>Actividad</strong> del
+                proyecto.
+              </p>
+              <p>
+                Cada tarea tiene su <strong>conversación</strong>: abrila y escribí abajo. Con <strong>@</strong>
+                mencionás a cualquier persona de la empresa con acceso a Northstack, esté o no en el proyecto, y le
+                llega una notificación que abre esa tarea. Para una llamada, marcá <strong>Agregar videollamada de
+                Google Meet</strong> e ingresá el <strong>email a invitar</strong> (en tareas de proyecto es
+                obligatorio, porque un proyecto no tiene un contacto propio).
               </p>
             </div>
 
@@ -1722,8 +1729,14 @@ export default function GuidePage() {
               </p>
               <p>
                 A project's tasks are ordinary tasks: they show up in <strong>My Tasks</strong>, on the calendar, and
-                in Google Calendar if you connected it. The project's <strong>Notes</strong> and
-                <strong> Activity</strong> are on the right.
+                in Google Calendar if you connected it. The project's <strong>Activity</strong> is on the right.
+              </p>
+              <p>
+                Every task has its own <strong>conversation</strong>: open it and write at the bottom. Type
+                <strong> @</strong> to mention anyone in the company with access to Northstack, on the project or not —
+                they get a notification that opens that task. For a call, check <strong>Add Google Meet video
+                call</strong> and enter the <strong>email to invite</strong> (required on project tasks, since a
+                project has no contact of its own).
               </p>
             </div>
 

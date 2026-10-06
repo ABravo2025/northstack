@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { Task } from '../../api';
+import type { Task, TaskEntityType } from '../../api';
 import RequiredMark from '../common/RequiredMark';
 import { TrashIcon, XIcon } from '../common/Icons';
 
@@ -16,6 +16,8 @@ export interface TaskFormPayload {
   assigneeId: string;
   dueDate: string | null;
   hasVideoCall: boolean;
+  // Who gets the Meet invite — '' / null = the record's own contact (not allowed on a project task).
+  meetAttendeeEmail: string | null;
   // Only present when the `folders` prop was passed — omitted entirely otherwise, so existing
   // callers that never offer folders keep sending exactly the payload shape they always have.
   folderId?: string | null;
@@ -46,6 +48,9 @@ interface TaskFormProps {
   // omitted keeps the icon-only delete and "Add task"/"Save" every other surface already has.
   submitLabel?: string;
   deleteLabel?: string;
+  // Which record a NEW task is about (an existing task carries its own entityType). A project has no
+  // natural person to call, so its Meet calls need an email typed here (2026-10-06).
+  entityType?: TaskEntityType | '';
   onSubmit: (payload: TaskFormPayload) => void | Promise<void>;
   onDelete?: () => void | Promise<void>;
   onCancelEdit?: () => void;
@@ -95,14 +100,18 @@ export default function TaskForm({
   onSubmit,
   onDelete,
   onCancelEdit,
+  entityType,
 }: TaskFormProps) {
   const { t } = useTranslation('tasks');
+  const meetEmailRequired = (task?.entityType ?? entityType) === 'project';
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [assigneeId, setAssigneeId] = useState(defaultAssigneeId);
   const [dueDate, setDueDate] = useState('');
   const [dueTime, setDueTime] = useState('');
   const [hasVideoCall, setHasVideoCall] = useState(false);
+  const [meetEmail, setMeetEmail] = useState('');
+  const [meetEmailError, setMeetEmailError] = useState<string | null>(null);
   const [folderId, setFolderId] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -111,6 +120,8 @@ export default function TaskForm({
     setDescription(task?.description ?? '');
     setAssigneeId(task?.assigneeId ?? defaultAssigneeId);
     setHasVideoCall(task?.hasVideoCall ?? false);
+    setMeetEmail(task?.meetAttendeeEmail ?? '');
+    setMeetEmailError(null);
     setFolderId(task ? task.folderId ?? '' : defaultFolderId ?? '');
     if (task?.dueDate && hasTimeComponent(task.dueDate)) {
       const d = new Date(task.dueDate);
@@ -139,6 +150,16 @@ export default function TaskForm({
   // identical tasks, since nothing disabled the button or blocked re-entry while awaiting.
   const handleSubmit = async () => {
     if (!title.trim() || submitting) return;
+    const email = meetEmail.trim();
+    if (hasVideoCall && email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setMeetEmailError(t('myTasks.form.meetEmailInvalid'));
+      return;
+    }
+    if (hasVideoCall && meetEmailRequired && !email) {
+      setMeetEmailError(t('myTasks.form.meetEmailRequired'));
+      return;
+    }
+    setMeetEmailError(null);
     setSubmitting(true);
     try {
       const wasNew = !task;
@@ -153,6 +174,7 @@ export default function TaskForm({
         assigneeId,
         dueDate: dueDateIso,
         hasVideoCall,
+        meetAttendeeEmail: hasVideoCall && email ? email : null,
         ...(folders ? { folderId: folderId || null } : {}),
       });
       if (wasNew) {
@@ -161,6 +183,7 @@ export default function TaskForm({
         setDueDate('');
         setDueTime('');
         setHasVideoCall(false);
+        setMeetEmail('');
         setAssigneeId(defaultAssigneeId);
         setFolderId(defaultFolderId ?? '');
       }
@@ -247,10 +270,38 @@ export default function TaskForm({
         </div>
       )}
       {googleCalendarConnected ? (
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={hasVideoCall} onChange={(e) => handleVideoCallToggle(e.target.checked)} />
-          {t('myTasks.form.addGoogleMeet')}
-        </label>
+        <>
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={hasVideoCall} onChange={(e) => handleVideoCallToggle(e.target.checked)} />
+            {t('myTasks.form.addGoogleMeet')}
+          </label>
+          {hasVideoCall && (
+            <div className="nv-field">
+              <label htmlFor="task-form-meet-email">
+                {t('myTasks.form.meetEmail')}
+                {meetEmailRequired && <RequiredMark />}
+              </label>
+              <input
+                id="task-form-meet-email"
+                type="email"
+                value={meetEmail}
+                maxLength={254}
+                placeholder="nombre@empresa.com"
+                onChange={(e) => {
+                  setMeetEmail(e.target.value);
+                  setMeetEmailError(null);
+                }}
+              />
+              {meetEmailError ? (
+                <span className="field-error">{meetEmailError}</span>
+              ) : (
+                <span className="text-xs text-ink-faint dark:text-dark-ink-faint">
+                  {meetEmailRequired ? t('myTasks.form.meetEmailProjectHint') : t('myTasks.form.meetEmailHint')}
+                </span>
+              )}
+            </div>
+          )}
+        </>
       ) : (
         <p className="text-xs text-ink-faint dark:text-dark-ink-faint">
           {t('myTasks.form.connectGoogleCalendar')}
@@ -258,7 +309,7 @@ export default function TaskForm({
       )}
       {task?.googleMeetUrl && (
         <div className="nv-field">
-          <a href={task.googleMeetUrl} target="_blank" rel="noopener noreferrer" className="text-accent text-xs underline">
+          <a href={task.googleMeetUrl} target="_blank" rel="noopener noreferrer" className="text-accent text-xs underline dark:text-brand-blue-light">
             {t('myTasks.actions.joinGoogleMeet')}
           </a>
         </div>

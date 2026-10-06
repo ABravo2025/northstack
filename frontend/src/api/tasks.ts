@@ -1,5 +1,5 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
-import type { TaskEntityType, Task } from './types.js';
+import type { TaskEntityType, Task, TaskComment } from './types.js';
 
 export interface ListTasksHubParams {
   includeCompleted?: boolean;
@@ -62,6 +62,7 @@ export const tasksApi = {
       hasVideoCall?: boolean;
       folderId?: string | null;
       projectPhaseId?: string | null;
+      meetAttendeeEmail?: string | null;
     },
   ): Promise<Task> => {
     const res = await apiFetch(`${API_BASE_URL}/api/tasks`, {
@@ -85,6 +86,7 @@ export const tasksApi = {
       hasVideoCall: boolean;
       folderId: string | null;
       projectPhaseId: string | null;
+      meetAttendeeEmail: string | null;
     }>,
   ): Promise<Task> => {
     const res = await apiFetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
@@ -94,6 +96,42 @@ export const tasksApi = {
     });
     if (!res.ok) await throwApiError(res);
     return res.json();
+  },
+
+  getTask: async (token: string, taskId: string): Promise<Task> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/tasks/${taskId}`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  listMentionableUsers: async (token: string): Promise<{ id: string; firstName: string; lastName: string }[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/tasks/mentionable-users`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  listTaskComments: async (token: string, taskId: string): Promise<TaskComment[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/tasks/${taskId}/comments`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  createTaskComment: async (token: string, taskId: string, data: { body: string; mentionedUserIds: string[] }): Promise<TaskComment> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/tasks/${taskId}/comments`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  deleteTaskComment: async (token: string, taskId: string, commentId: string): Promise<void> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/tasks/${taskId}/comments/${commentId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
   },
 
   deleteTask: async (token: string, taskId: string): Promise<void> => {

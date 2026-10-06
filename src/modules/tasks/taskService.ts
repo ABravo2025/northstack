@@ -32,6 +32,7 @@ export interface CreateTaskInput {
   // Projects module (2026-10-04) — only for entityType = project; the route checks the phase
   // belongs to that very project.
   projectPhaseId?: string | null;
+  meetAttendeeEmail?: string | null;
 }
 
 export interface UpdateTaskInput {
@@ -43,6 +44,7 @@ export interface UpdateTaskInput {
   hasVideoCall?: boolean;
   folderId?: string | null;
   projectPhaseId?: string | null;
+  meetAttendeeEmail?: string | null;
 }
 
 const taskInclude = {
@@ -65,6 +67,7 @@ export async function createTask(input: CreateTaskInput, client: ExtendedPrismaC
       createdById: input.createdById,
       folderId: input.folderId ?? null,
       projectPhaseId: input.projectPhaseId ?? null,
+      meetAttendeeEmail: input.meetAttendeeEmail ?? null,
     },
     include: taskInclude,
   });
@@ -133,6 +136,7 @@ export async function updateTask(id: string, input: UpdateTaskInput, changedByUs
   if (input.hasVideoCall !== undefined) data.hasVideoCall = input.hasVideoCall;
   if (input.folderId !== undefined) data.folderId = input.folderId;
   if (input.projectPhaseId !== undefined) data.projectPhaseId = input.projectPhaseId;
+  if (input.meetAttendeeEmail !== undefined) data.meetAttendeeEmail = input.meetAttendeeEmail;
 
   // Fetched before the write so the Google Calendar sync below can tell what
   // changed (e.g. reassignment, or dueDate/completedAt flipping) — see

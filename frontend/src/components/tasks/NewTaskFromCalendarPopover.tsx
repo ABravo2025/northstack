@@ -100,6 +100,7 @@ export default function NewTaskFromCalendarPopover({
         <div className="mt-2">
           <TaskForm
             task={null}
+            entityType={entityType}
             tenantUsers={tenantUsers}
             defaultAssigneeId={defaultAssigneeId}
             defaultDueDate={defaultDueDate}

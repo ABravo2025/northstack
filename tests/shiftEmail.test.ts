@@ -5,6 +5,12 @@ const sent: any[] = [];
 vi.mock('nodemailer', () => ({
   default: { createTransport: () => ({ sendMail: async (opts: unknown) => { sent.push(opts); return {}; } }) },
 }));
+// Preferences without a database: addresses listed here turned every category off.
+const optedOut = new Set<string>();
+vi.mock('../src/lib/emailPreferences.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../src/lib/emailPreferences.js')>()),
+  emailAllowed: async (to: string) => !optedOut.has(to),
+}));
 
 let sendShiftEmail: typeof import('../src/lib/mailer.js').sendShiftEmail;
 let sendSkillExpiryEmail: typeof import('../src/lib/mailer.js').sendSkillExpiryEmail;
@@ -149,5 +155,26 @@ describe('daily reminders (Unidad 8)', () => {
     expect(sent[1].subject).toBe('Tu habilitación Reagent handling vence pronto');
     expect(sent[1].text).toContain('Reagent handling — vence el 19 de octubre de 2026 (en 7 días)');
     expect(sent[1].text).not.toContain('Abrir habilidades');
+  });
+});
+
+describe('email preferences (Unidad 13)', () => {
+  it('an optional email carries the preferences link, and is skipped when turned off', async () => {
+    sent.length = 0;
+    const input = {
+      to: 'pref@example.test',
+      locale: 'en',
+      kind: 'assigned' as const,
+      firstName: 'Pat',
+      companyName: 'Lab',
+      shifts: [{ when: 'Mon, Oct 12 · 07:00–11:30', location: 'Lab Central' }],
+    };
+    await sendShiftEmail(input);
+    expect(sent).toHaveLength(1);
+    expect(sent[0].text).toContain('Email preferences: ');
+    expect(sent[0].text).toContain('/settings/profile#email-notifications');
+    optedOut.add('pref@example.test');
+    await sendShiftEmail(input);
+    expect(sent).toHaveLength(1);
   });
 });

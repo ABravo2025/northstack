@@ -204,5 +204,9 @@
     "subjectReminder_other": "Log yesterday's hours ({{count}} shifts)",
     "introReminder": "Your timesheet at {{companyName}} doesn't have the hours for these shifts yet:",
     "reminderOutro": "It takes a moment: they're already suggested in your timesheet, you only confirm them."
+  },
+  "emailPreferences": {
+    "footer": "You can choose which emails you get.",
+    "link": "Email preferences"
   }
 }

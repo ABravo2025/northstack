@@ -204,5 +204,9 @@
     "subjectReminder_other": "Cargá las horas de ayer ({{count}} turnos)",
     "introReminder": "A tu timesheet en {{companyName}} todavía le faltan las horas de estos turnos:",
     "reminderOutro": "Es un momento: ya están sugeridas en tu timesheet, solo tenés que confirmarlas."
+  },
+  "emailPreferences": {
+    "footer": "Podés elegir qué emails recibís.",
+    "link": "Preferencias de email"
   }
 }

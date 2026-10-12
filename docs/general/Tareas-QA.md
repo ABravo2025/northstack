@@ -5166,3 +5166,25 @@ Solo backend y API; las pantallas llegan en la Unidad 11. Schema nuevo aplicado 
 2. Dos monedas distintas en Payroll: el costo se muestra sumado por moneda.
 3. Un Admin sin acceso a Payroll: ve horas pero no costo.
 4. Facturar horas a una empresa sin vincular a Stripe: el formulario avisa que hay que vincularla.
+
+## QA-113 — Unidad 13: preferencias de notificación por email (2026-10-12, en `staging`)
+
+Resuelve el pendiente de agosto ("un área en el perfil de las notificaciones que desea recibir el usuario, así no lo acosamos").
+
+### Qué cambió
+
+- **Settings → Perfil → Notificaciones por email**: cada persona apaga los emails que no quiere, por tema:
+  - Turnos y timesheet: turnos nuevos/modificados/cancelados; recordatorios (mañana y sin respuesta); alguien no puede cubrir un turno que armé; habilidades por vencer; mi timesheet (devuelto/reabierto, horas sin cargar).
+  - Ausencias: pedidos para decidir y decisiones sobre los míos.
+  - Ventas (solo quien gestiona oportunidades): cambio de etapa y oportunidad sin movimiento.
+- Todo encendido por defecto. **La campana sigue mostrando todo.** Los emails de la cuenta (contraseña, invitaciones, facturación, novedades legales, contratos, pagos de referidos) no se pueden apagar.
+- Cada email opcional trae al pie "Podés elegir qué emails recibís · Preferencias de email", que abre esa tarjeta.
+- Schema: `User.emailOptOuts` (lista, vacía por defecto), aplicada en `staging`.
+
+**Verificado en esta sesión** (API + Playwright contra `staging`, 10/10, inglés claro y español oscuro): 8 categorías encendidas por defecto, categoría desconocida rechazada, un Member ve 6 interruptores (sin Ventas), apagar "Turnos nuevos…" se guarda, el envío real saltea ese email para ella y sigue enviando otras categorías; test de email: el pie trae el link y con la categoría apagada no sale. 779/779 tests.
+
+### Qué probar
+
+1. Apagar "Recordatorios" y disparar el cron de recordatorios: llega la campana, no el email.
+2. Como dueño de una oportunidad, apagar "cambió de etapa": mover la etapa no manda email.
+3. El link del pie de un email abre Perfil en la tarjeta de notificaciones.

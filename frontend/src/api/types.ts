@@ -1555,3 +1555,19 @@ export interface HoursReport {
   withCost: boolean;
   groupBy: 'person' | 'company' | 'project';
 }
+
+// Notification preferences (Unidad 13) — mirrors src/lib/emailPreferences.ts's EMAIL_CATEGORIES.
+export type EmailCategory =
+  | 'shifts'
+  | 'shiftReminders'
+  | 'shiftDeclined'
+  | 'skillsExpiring'
+  | 'timesheet'
+  | 'timeOff'
+  | 'opportunityStage'
+  | 'opportunityStalled';
+
+export interface EmailPreference {
+  key: EmailCategory;
+  email: boolean;
+}

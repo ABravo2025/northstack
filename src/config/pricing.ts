@@ -47,7 +47,7 @@ export const REFERRAL = {
   holdDays: 30,
   minPayoutCents: { USD: 5_000, ARS: 5_000_000 } as Record<string, number>,
   trialDays: 30,
-  termsVersion: '1.0',
+  termsVersion: '1.1', // 1.1 (2026-10-07): closing your account deactivates the link and settles what's earned
 } as const;
 
 export type Market = keyof typeof PER_USER;

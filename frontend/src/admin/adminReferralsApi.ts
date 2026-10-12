@@ -22,6 +22,7 @@ export interface ReferralMemberRow {
   payoutMethod: PayoutMethod;
   joinedAt: string;
   referralCount: number;
+  closed: boolean;
   totals: Record<string, MemberTotals>;
 }
 
@@ -32,6 +33,7 @@ export interface ReferralMemberDetail {
   code: string;
   tenant: { id: string; name: string } | null;
   userActive: boolean;
+  closed: boolean;
   termsVersion: string;
   termsAcceptedAt: string;
   payoutMethod: PayoutMethod;

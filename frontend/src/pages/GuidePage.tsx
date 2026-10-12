@@ -2418,7 +2418,8 @@ export default function GuidePage() {
                 <InfoIcon />
                 <p>
                   Si una empresa pide un reembolso, la comisión de ese pago se anula. No podés referir a tu propia empresa
-                  ni a empresas del mismo dominio de email.
+                  ni a empresas del mismo dominio de email. Si tu cuenta se elimina, tu link se desactiva y te liquidamos lo
+                  ya generado, sin mínimo.
                 </p>
               </div>
             </div>
@@ -2474,7 +2475,8 @@ export default function GuidePage() {
                 <InfoIcon />
                 <p>
                   If a company gets a refund, the commission for that payment is voided. You can't refer your own company or
-                  companies with the same email domain.
+                  companies with the same email domain. If your account is deleted, your link stops working and we settle
+                  what you already earned, with no minimum.
                 </p>
               </div>
             </div>

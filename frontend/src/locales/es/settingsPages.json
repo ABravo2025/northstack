@@ -144,7 +144,8 @@
         "Transferimos cuando el saldo a cobrar llega a {{minUsd}} o {{minArs}}. Los saldos en monedas distintas se acumulan por separado.",
         "No se puede referir a la propia empresa ni a empresas del mismo dominio de email.",
         "Los costos de transferencia y las obligaciones fiscales del cobro corren por cuenta de quien lo recibe.",
-        "Northstack puede modificar o terminar el programa avisando con 30 días de anticipación. Las comisiones ya generadas se respetan."
+        "Northstack puede modificar o terminar el programa avisando con 30 días de anticipación. Las comisiones ya generadas se respetan.",
+      "Si tu cuenta de Northstack se elimina o se da de baja, tu link se desactiva y los pagos posteriores ya no generan comisión. Te liquidamos lo ya generado sin monto mínimo, a medida que cada comisión cumple sus {{holdDays}} días, y conservamos tus datos de cobro para hacerlo."
       ]
     },
     "loading": "Cargando tus referidos…",

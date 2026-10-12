@@ -144,7 +144,8 @@
         "We transfer once your payable balance reaches {{minUsd}} or {{minArs}}. Balances in different currencies add up separately.",
         "You can't refer your own company or companies with the same email domain.",
         "Transfer fees and the tax obligations of receiving the payment are your responsibility.",
-        "Northstack may change or end the program with 30 days' notice. Commissions already earned are kept."
+        "Northstack may change or end the program with 30 days' notice. Commissions already earned are kept.",
+      "If your Northstack account is deleted or deactivated, your link stops working and payments made after that no longer earn commissions. We settle what you already earned with no minimum, as each commission completes its {{holdDays}} days, and keep your payout details for that purpose."
       ]
     },
     "loading": "Loading your referrals…",

@@ -23,6 +23,8 @@ import {
   commissionView,
   decodeReceipt,
   generateReferralCode,
+  isClosedMember,
+  isReadyToPay,
   normalizeReferralCode,
   recordReferralCommission,
   referralView,
@@ -33,11 +35,11 @@ import {
 
 const DAY = 24 * 60 * 60 * 1000;
 
-function referralWith(commissionCount: number) {
+function referralWith(commissionCount: number, user: { locale: string; status: string } | null = { locale: 'es', status: 'active' }) {
   return {
     id: 'ref_1',
     referredTenantName: 'Nube Café',
-    member: { email: 'lucia@example.com', name: 'Lucía Fernández', user: { locale: 'es' } },
+    member: { email: 'lucia@example.com', name: 'Lucía Fernández', user },
     _count: { commissions: commissionCount },
   };
 }
@@ -69,6 +71,15 @@ describe('recordReferralCommission', () => {
   it('stops after the first 3 payments', async () => {
     db.referral.findUnique.mockResolvedValue(referralWith(3));
     await recordReferralCommission({ tenantId: 't1', invoiceId: 'inv_4', amountCents: 24000, currency: 'USD', paidAt });
+    expect(db.referralCommission.create).not.toHaveBeenCalled();
+    expect(emails.commission).not.toHaveBeenCalled();
+  });
+
+  it('a closed account (deleted or deactivated user) earns nothing from later payments', async () => {
+    db.referral.findUnique.mockResolvedValue(referralWith(1, null));
+    await recordReferralCommission({ tenantId: 't1', invoiceId: 'inv_d', amountCents: 24000, currency: 'USD', paidAt });
+    db.referral.findUnique.mockResolvedValue(referralWith(1, { locale: 'es', status: 'inactive' }));
+    await recordReferralCommission({ tenantId: 't1', invoiceId: 'inv_i', amountCents: 24000, currency: 'USD', paidAt });
     expect(db.referralCommission.create).not.toHaveBeenCalled();
     expect(emails.commission).not.toHaveBeenCalled();
   });
@@ -115,6 +126,18 @@ describe('derived states', () => {
     expect(referralView([row('pending', '2027-03-01')], 'active')).toBe('active');
     expect(referralView([row('paid', '2027-01-01'), row('paid', '2027-02-01'), row('pending', '2027-03-01')], 'active')).toBe('completed');
     expect(referralView([row('void', '2027-01-01')], 'cancelled')).toBe('void');
+  });
+});
+
+describe('closed accounts', () => {
+  it('are settled with no minimum, open ones need it', () => {
+    expect(isClosedMember({ user: null })).toBe(true);
+    expect(isClosedMember({ user: { status: 'inactive' } })).toBe(true);
+    expect(isClosedMember({ user: { status: 'active' } })).toBe(false);
+    expect(isReadyToPay(1200, 'USD', false)).toBe(false);
+    expect(isReadyToPay(1200, 'USD', true)).toBe(true);
+    expect(isReadyToPay(5000, 'USD', false)).toBe(true);
+    expect(isReadyToPay(0, 'USD', true)).toBe(false);
   });
 });
 

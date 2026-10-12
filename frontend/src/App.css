@@ -4058,3 +4058,8 @@ textarea.overview-field-input {
   @apply shrink-0 cursor-pointer self-start border-0 bg-transparent p-0 text-[11.5px] font-semibold text-accent hover:underline dark:text-brand-blue-light;
   font-family: inherit;
 }
+
+/* Selected chip (required skills in the shift form). */
+.sh-template-chip.sh-chip-on {
+  @apply border-accent bg-accent-tint font-semibold text-accent dark:border-brand-blue-light dark:text-brand-blue-light;
+}

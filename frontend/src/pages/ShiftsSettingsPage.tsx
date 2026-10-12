@@ -10,6 +10,7 @@ import TableSkeleton from '../components/common/TableSkeleton';
 import RequiredMark from '../components/common/RequiredMark';
 import { BuildingIcon, ClockIcon, PencilIcon, TrashIcon } from '../components/common/Icons';
 import { formatMinute } from '../lib/shiftDates';
+import SkillsSettingsCard from '../components/shifts/SkillsSettingsCard';
 
 interface ShiftsSettingsPageProps {
   token: string;
@@ -283,6 +284,8 @@ export default function ShiftsSettingsPage({ token }: ShiftsSettingsPageProps) {
           </div>
         </section>
       </div>
+
+      <SkillsSettingsCard token={token} />
 
       <section className="card rules-card">
         <h3 className="card-title">{t('settings.templates.title')}</h3>

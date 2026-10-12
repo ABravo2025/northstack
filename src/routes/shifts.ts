@@ -40,6 +40,7 @@ import {
 } from '../modules/shifts/shiftService.js';
 import { getShiftsSettings, updateShiftsSettings } from '../modules/shifts/shiftsSettingsService.js';
 import { createAvailability, deleteAvailability, listAvailability } from '../modules/shifts/availabilityService.js';
+import { createSkill, findSkill, listSkills, removeHolder, setHolder, updateSkill } from '../modules/shifts/skillService.js';
 import {
   createLocation,
   deleteLocation,
@@ -354,6 +355,82 @@ shiftsRouter.delete('/api/shifts/availability/:availabilityId', async (req, res)
     return res.status(404).json({ error: 'Not found' });
   }
   return res.status(204).end();
+});
+
+// ---- Skills catalog (Unidad 7, Growth) ----
+// Reading is open to anyone in the tenant (the shift form and detail show skill names); changing the
+// catalog or who holds what needs manage_shifts and a plan with skills.
+
+function skillsGate(user: AuthenticatedUser, res: Response): boolean {
+  if (!skillsEnabledFor(user)) {
+    res.status(403).json({ error: 'Skills are part of the Growth plan.', code: 'plan_limit_skills' });
+    return false;
+  }
+  if (!canManageShifts(user.roleContext)) {
+    res.status(403).json({ error: 'Insufficient permissions' });
+    return false;
+  }
+  return true;
+}
+
+async function loadSkill(req: Request, res: Response, user: AuthenticatedUser) {
+  const skill = await findSkill(String(req.params.skillId));
+  if (!skill || skill.tenantId !== user.tenantId) {
+    res.status(404).json({ error: 'Skill not found' });
+    return null;
+  }
+  return skill;
+}
+
+shiftsRouter.get('/api/shifts/skills', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) return;
+  const enabled = skillsEnabledFor(user);
+  const includeInactive = req.query.includeInactive === 'true' && canManageShifts(user.roleContext);
+  return res.json({ enabled, skills: enabled ? await listSkills(user.tenantId!, includeInactive) : [] });
+});
+
+shiftsRouter.post('/api/shifts/skills', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) return;
+  if (!skillsGate(user, res)) return;
+  const result = await createSkill(user.tenantId!, req.body ?? {}, user.id);
+  if (!result.success) return res.status(400).json({ error: result.error, field: result.field });
+  return res.status(201).json(result.value);
+});
+
+shiftsRouter.patch('/api/shifts/skills/:skillId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) return;
+  if (!skillsGate(user, res)) return;
+  const skill = await loadSkill(req, res, user);
+  if (!skill) return;
+  const result = await updateSkill(skill, req.body ?? {}, user.id);
+  if (!result.success) return res.status(400).json({ error: result.error, field: result.field });
+  return res.json(result.value);
+});
+
+// { expiresAt: "YYYY-MM-DD" | null } — adds the person or changes their expiry.
+shiftsRouter.put('/api/shifts/skills/:skillId/holders/:employeeId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) return;
+  if (!skillsGate(user, res)) return;
+  const skill = await loadSkill(req, res, user);
+  if (!skill) return;
+  const result = await setHolder(skill, String(req.params.employeeId), req.body?.expiresAt ?? null, user.id);
+  if (!result.success) return res.status(result.code === 'not_found' ? 404 : 400).json({ error: result.error, field: result.field });
+  return res.json(result.value);
+});
+
+shiftsRouter.delete('/api/shifts/skills/:skillId/holders/:employeeId', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) return;
+  if (!skillsGate(user, res)) return;
+  const skill = await loadSkill(req, res, user);
+  if (!skill) return;
+  const result = await removeHolder(skill, String(req.params.employeeId), user.id);
+  if (!result.success) return res.status(404).json({ error: result.error });
+  return res.json(result.value);
 });
 
 // ---- Templates ----

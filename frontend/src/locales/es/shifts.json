@@ -68,6 +68,34 @@
       "time": "Horario",
       "removeAria": "Eliminar la plantilla {{name}}",
       "deleted": "Plantilla eliminada"
+    },
+    "skills": {
+      "title": "Habilidades y habilitaciones",
+      "lead": "Lo que un turno puede requerir y quién tiene cada una. Si a alguien le falta una habilidad requerida o la tiene vencida, quien arma el cronograma ve un aviso al asignarlo.",
+      "growthOnly": "Las habilidades son parte del plan Growth.",
+      "name": "Habilidad",
+      "holders": "Personas",
+      "expiring": "Vencidas o por vencer",
+      "add": "Agregar habilidad",
+      "namePlaceholder": "ej. Manejo de reactivos",
+      "emptyTitle": "Todavía no hay habilidades",
+      "emptyBody": "Agregá las habilitaciones o habilidades que piden tus turnos.",
+      "active": "Activa",
+      "inactive": "Inactiva",
+      "holdersTitle": "Quién tiene {{name}}",
+      "person": "Persona",
+      "expires": "Vence",
+      "never": "No vence",
+      "expired": "Vencida",
+      "addHolder": "Agregar persona",
+      "pickPerson": "Elegí una persona",
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "close": "Cerrar",
+      "rename": "Renombrar",
+      "removeAria": "Quitar a {{name}}",
+      "count_one": "{{count}} persona",
+      "count_other": "{{count}} personas"
     }
   },
   "nav": {
@@ -180,7 +208,9 @@
     "save": "Guardar",
     "cancel": "Cancelar",
     "reconfirmWarning": "Si cambiás la fecha, la hora o la locación, se le pide a cada persona del turno que lo confirme de nuevo.",
-    "saveFailed": "No se pudo guardar: {{message}}"
+    "saveFailed": "No se pudo guardar: {{message}}",
+    "requiredSkills": "Habilidades requeridas",
+    "requiredSkillsHint": "A quien no las tenga (o las tenga vencidas) le aparece un aviso al asignarlo."
   },
   "detail": {
     "people": "Personas",
@@ -208,7 +238,8 @@
     "endsNextDay": "termina al día siguiente",
     "draftHint": "Borrador: todavía no se avisó a nadie. Publicalo cuando esté listo.",
     "cancelledHint": "Este turno fue cancelado.",
-    "actionFailed": "Algo salió mal: {{message}}"
+    "actionFailed": "Algo salió mal: {{message}}",
+    "requiredSkills": "Habilidades requeridas"
   },
   "mine": {
     "title": "Mis turnos",

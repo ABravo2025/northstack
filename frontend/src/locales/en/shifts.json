@@ -68,6 +68,34 @@
       "time": "Time",
       "removeAria": "Delete template {{name}}",
       "deleted": "Template deleted"
+    },
+    "skills": {
+      "title": "Skills and certifications",
+      "lead": "What a shift can require, and who holds each one. If someone is missing a required skill, or theirs has expired, the scheduler sees a warning when assigning them.",
+      "growthOnly": "Skills are part of the Growth plan.",
+      "name": "Skill",
+      "holders": "People",
+      "expiring": "Expired or expiring",
+      "add": "Add skill",
+      "namePlaceholder": "e.g. Reagent handling",
+      "emptyTitle": "No skills yet",
+      "emptyBody": "Add the certifications or abilities your shifts need.",
+      "active": "Active",
+      "inactive": "Inactive",
+      "holdersTitle": "Who holds {{name}}",
+      "person": "Person",
+      "expires": "Expires",
+      "never": "Never",
+      "expired": "Expired",
+      "addHolder": "Add person",
+      "pickPerson": "Choose a person",
+      "save": "Save",
+      "cancel": "Cancel",
+      "close": "Close",
+      "rename": "Rename",
+      "removeAria": "Remove {{name}}",
+      "count_one": "{{count}} person",
+      "count_other": "{{count}} people"
     }
   },
   "nav": {
@@ -180,7 +208,9 @@
     "save": "Save",
     "cancel": "Cancel",
     "reconfirmWarning": "Changing the date, time or location asks everyone on this shift to confirm again.",
-    "saveFailed": "Couldn't save: {{message}}"
+    "saveFailed": "Couldn't save: {{message}}",
+    "requiredSkills": "Required skills",
+    "requiredSkillsHint": "People without them (or with them expired) show a warning when assigned."
   },
   "detail": {
     "people": "People",
@@ -208,7 +238,8 @@
     "endsNextDay": "ends the next day",
     "draftHint": "Draft: nobody has been notified. Publish it when it's ready.",
     "cancelledHint": "This shift was cancelled.",
-    "actionFailed": "Something went wrong: {{message}}"
+    "actionFailed": "Something went wrong: {{message}}",
+    "requiredSkills": "Required skills"
   },
   "mine": {
     "title": "My shifts",

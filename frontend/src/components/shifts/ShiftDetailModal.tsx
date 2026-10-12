@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { api, ApiError, type Shift, type ShiftCandidate, type ShiftWarning } from '../../api';
+import { api, ApiError, type Shift, type ShiftCandidate, type ShiftSkill, type ShiftWarning } from '../../api';
 import Modal from '../common/Modal';
 import ConfirmDialog from '../common/ConfirmDialog';
 import { useToast } from '../common/ToastProvider';
@@ -35,6 +35,15 @@ export default function ShiftDetailModal({ token, shift, canManage, onClose, onC
   const [pendingWarnings, setPendingWarnings] = useState<Record<string, ShiftWarning[]> | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<Confirm>(null);
+  const [skillNames, setSkillNames] = useState<ShiftSkill[]>([]);
+
+  // Names for the shift's required skills (ids on the shift; the catalog has the names).
+  const shiftId = shift?.id;
+  const skillCount = shift?.requiredSkillIds.length ?? 0;
+  useEffect(() => {
+    if (!shiftId || skillCount === 0) return;
+    api.listShiftSkills(token, { includeInactive: true }).then((r) => setSkillNames(r.skills)).catch(() => setSkillNames([]));
+  }, [token, shiftId, skillCount]);
 
   useEffect(() => {
     setPicking(false);
@@ -154,6 +163,12 @@ export default function ShiftDetailModal({ token, shift, canManage, onClose, onC
             </dd>
             <dt>{t('form.headcount')}</dt>
             <dd>{shift.headcount}</dd>
+            {shift.requiredSkillIds.length > 0 && (
+              <>
+                <dt>{t('detail.requiredSkills')}</dt>
+                <dd>{shift.requiredSkillIds.map((id) => skillNames.find((s) => s.id === id)?.name ?? '…').join(' · ')}</dd>
+              </>
+            )}
             {shift.notes && (
               <>
                 <dt>{t('detail.notes')}</dt>

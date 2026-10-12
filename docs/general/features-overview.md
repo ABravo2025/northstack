@@ -138,7 +138,7 @@ modelo `Notification` (ver Payments arriba, todavía en staging).
 - **Notes**: registro de texto libre (no es un to-do) por entidad, con formato básico
   `**bold**`/`*italic*`. Mismo tab que Tasks en el panel de detalle.
 
-## Proyectos — solo en `staging` (2026-10-05)
+## Proyectos — en producción (2026-10-07)
 
 - **Proyectos**: trabajo de un equipo organizado en fases, con tareas, responsable, equipo con
   roles y fechas, para un cliente (Company) o interno. Lista con progreso, fase actual y próximo
@@ -149,6 +149,7 @@ modelo `Notification` (ver Payments arriba, todavía en staging).
 - **Integración**: sección Proyectos en el detalle de cada Company y de cada persona; las tareas de
   proyecto aparecen en Mis tareas y Google Calendar. Starter: hasta 5 proyectos abiertos. Permisos
   "Ver todos los proyectos" / "Gestionar proyectos"; responsable y miembros siempre ven su proyecto.
+  Cada tarea tiene un chat con @menciones (notificación in-app) y Meet con email a invitar.
   Spec: `docs/general/spec-projects.md`.
 
 ## Public Forms — captura externa sin login — en producción

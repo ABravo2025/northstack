@@ -24,6 +24,7 @@ import {
 import { findUserById } from '../modules/tenant/tenantService.js';
 import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
+import { parseTimeSpent, setTaskTimer } from '../modules/tasks/taskTime.js';
 
 export const tasksRouter = createAsyncRouter();
 
@@ -208,6 +209,11 @@ tasksRouter.patch('/api/tasks/:taskId', async (req, res) => {
     return res.status(400).json({ error: 'Phase not found' });
   }
 
+  const timeSpent = parseTimeSpent(req.body.timeSpentMinutes);
+  if (!timeSpent.ok) {
+    return res.status(400).json({ error: 'Time spent must be a whole number of minutes', field: 'timeSpentMinutes' });
+  }
+
   const updated = await updateTask(
     req.params.taskId,
     {
@@ -220,10 +226,34 @@ tasksRouter.patch('/api/tasks/:taskId', async (req, res) => {
       folderId: req.body.folderId,
       projectPhaseId: req.body.projectPhaseId === undefined ? undefined : req.body.projectPhaseId || null,
       meetAttendeeEmail,
+      timeSpentMinutes: timeSpent.value,
     },
     user.id,
   );
   return res.json(updated);
+});
+
+// Time spent, Unidad 10 (spec-shifts.md): the assignee's timer.
+tasksRouter.post('/api/tasks/:taskId/timer', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) {
+    return;
+  }
+  const task = await findTaskById(req.params.taskId);
+  if (!task || task.tenantId !== user.tenantId) {
+    return res.status(404).json({ error: 'Task not found' });
+  }
+  const action = req.body?.action;
+  if (action !== 'start' && action !== 'stop') {
+    return res.status(400).json({ error: 'action must be start or stop', field: 'action' });
+  }
+  if (task.assigneeId !== user.id) {
+    return res.status(403).json({ error: 'Only the person the task is assigned to runs its timer' });
+  }
+  if (action === 'start' && task.completedAt) {
+    return res.status(400).json({ error: 'This task is already completed' });
+  }
+  return res.json(await setTaskTimer(task.id, action, user.id));
 });
 
 tasksRouter.delete('/api/tasks/:taskId', async (req, res) => {

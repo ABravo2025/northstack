@@ -1,5 +1,6 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
 import type { TaskEntityType, Task, TaskComment } from './types.js';
+import { TASK_COMPLETED_EVENT } from '../lib/duration';
 
 export interface ListTasksHubParams {
   includeCompleted?: boolean;
@@ -87,12 +88,26 @@ export const tasksApi = {
       folderId: string | null;
       projectPhaseId: string | null;
       meetAttendeeEmail: string | null;
+      timeSpentMinutes: number | null;
     }>,
   ): Promise<Task> => {
     const res = await apiFetch(`${API_BASE_URL}/api/tasks/${taskId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       body: JSON.stringify(data),
+    });
+    if (!res.ok) await throwApiError(res);
+    const task: Task = await res.json();
+    // Every screen completes tasks through here; TaskTimePrompt listens (Unidad 10).
+    if (data.completedAt) window.dispatchEvent(new CustomEvent(TASK_COMPLETED_EVENT, { detail: task }));
+    return task;
+  },
+
+  setTaskTimer: async (token: string, taskId: string, action: 'start' | 'stop'): Promise<Task> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/tasks/${taskId}/timer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action }),
     });
     if (!res.ok) await throwApiError(res);
     return res.json();

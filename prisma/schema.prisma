@@ -1673,6 +1673,11 @@ model Task {
   // call (a project has no natural person to call); optional elsewhere, where it overrides the
   // record's own contact (googleCalendarSyncService.ts's resolveTaskAttendeeEmail).
   meetAttendeeEmail     String?
+  // Time spent (spec-shifts.md Unidad 10): asked when the task is completed, or added up by the
+  // timer. Feeds the timesheet's task suggestions; null = nobody said.
+  timeSpentMinutes      Int?
+  // Set while the assignee's timer runs; stopping (or completing the task) adds the elapsed time.
+  timerStartedAt        DateTime?
   comments              TaskComment[]
 
   @@index([tenantId, entityType, entityId])

@@ -10,7 +10,7 @@ import { linkedClient, MINUTES_PER_DAY, type TimesheetEmployee } from './timeshe
 // Already-logged and dismissed ones are left out.
 //
 //   shift    — accepted shifts that have ended (minutes = the shift's length)
-//   task     — tasks completed this week (no duration yet: Unidad 10 adds "time spent")
+//   task     — tasks completed this week (minutes = the task's time spent, when someone said)
 //   meeting  — tasks with a time and a video call, once over (1 h, the same block Google shows)
 //   calendar — the person's own Google Calendar events that aren't Northstack tasks or shifts
 
@@ -83,7 +83,7 @@ export async function computeSuggestions(
           { hasVideoCall: true, dueDate: { gte: from, lt: to, lte: new Date(now.getTime() - MEETING_MINUTES * 60000) } },
         ],
       },
-      select: { id: true, title: true, entityType: true, entityId: true, completedAt: true, dueDate: true, hasVideoCall: true },
+      select: { id: true, title: true, entityType: true, entityId: true, completedAt: true, dueDate: true, hasVideoCall: true, timeSpentMinutes: true },
     });
     for (const task of tasks) {
       const meeting = task.hasVideoCall && !!task.dueDate && isTimed(task.dueDate) && task.dueDate >= from && task.dueDate < to;
@@ -96,7 +96,8 @@ export async function computeSuggestions(
         sourceType: meeting ? 'meeting' : 'task',
         sourceId: task.id,
         date: zonedDateString(when, timeZone),
-        minutes: meeting ? MEETING_MINUTES : null,
+        // A task's own time spent wins (also for a meeting that ran longer or shorter).
+        minutes: task.timeSpentMinutes && task.timeSpentMinutes <= MINUTES_PER_DAY ? task.timeSpentMinutes : meeting ? MEETING_MINUTES : null,
         title: task.title,
         detail: meeting ? formatMinute(minuteOfDay(when, timeZone)) : null,
         ...linked,

@@ -600,6 +600,9 @@ Timesheet semanal (uno por persona y semana, se crea con la primera entrada). Pu
 ### `src/modules/shifts/timesheetNotifier.ts` (Shifts, Unidad 9)
 **notifySubmitted** (campana a Owner, `approve_timesheets` y manager directo), **notifyDecided** (campana; devuelto o reabierto también por email, `sendTimesheetReturnedEmail`), **approverRecipients**, **formatWeek**. Rutas en `src/routes/timesheets.ts` (`/api/shifts/timesheet…`); si la empresa apagó el timesheet, 403 `timesheet_disabled`. El cron diario (`shiftReminderService.ts`, paso 4) avisa los turnos de ayer sin cargar (`sendTimesheetReminderEmail`).
 
+### `src/modules/tasks/taskTime.ts` (Shifts, Unidad 10)
+Tiempo dedicado a una tarea: **parseTimeSpent** (minutos enteros 0-60.000 o null), **elapsedMinutes** (redondeado, mínimo 1), **addElapsed**, **setTaskTimer(taskId, 'start' | 'stop', userId)** (`POST /api/tasks/:taskId/timer`, solo el asignado, nunca en una completada). `updateTask` acepta `timeSpentMinutes` y, si se completa la tarea con el timer andando, lo detiene y suma el tiempo. Las sugerencias del timesheet usan `timeSpentMinutes` como minutos. Front: **TaskTimeRow** (fila "Tiempo dedicado" del detalle con timer y edición), **TaskTimePrompt** (aviso global "¿Cuánto te llevó?" que escucha `TASK_COMPLETED_EVENT`, emitido por `api.updateTask` al completar; solo si la empresa usa timesheet, la tarea es tuya y no tiene tiempo), `lib/duration.ts` **formatDuration**.
+
 ### `src/modules/shifts/availabilityService.ts` (Shifts, Unidad 6)
 Disponibilidad propia de cada persona (semanal o por fecha; hasta 24:00 con `endMinute` 1440): **listAvailability**, **createAvailability** (tope 100 filas por persona), **deleteAvailability** (solo las propias), **parseAvailabilityInput** (testeada), **serializeAvailability**. Las reglas de asignación la leen como aviso, nunca como bloqueo.
 

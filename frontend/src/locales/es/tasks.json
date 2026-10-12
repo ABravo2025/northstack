@@ -62,6 +62,25 @@
       "loading": "Cargando…",
       "empty": "No tenés tareas asignadas."
     },
+    "time": {
+      "label": "Tiempo dedicado",
+      "start": "Iniciar timer",
+      "stop": "Detener timer",
+      "running": "timer en marcha",
+      "edit": "Editar",
+      "save": "Guardar",
+      "cancel": "Cancelar",
+      "hours": "Horas",
+      "minutes": "Minutos",
+      "failed": "No se pudo guardar el tiempo: {{message}}"
+    },
+    "timePrompt": {
+      "question": "¡Listo! ¿Cuánto te llevó?",
+      "otherPlaceholder": "Minutos",
+      "save": "Guardar",
+      "skip": "Omitir",
+      "saved": "Tiempo guardado. Se va a sugerir en tu timesheet."
+    },
     "detail": {
       "defaultTitle": "Tarea",
       "created": "Creada",

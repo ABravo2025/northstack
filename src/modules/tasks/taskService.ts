@@ -5,6 +5,7 @@ import { findEntityTenantId, isSupportedCrossModuleEntityType } from '../crossMo
 import { syncTaskCalendarEvent } from '../integrations/googleCalendarSyncService.js';
 import { recordActivity } from '../activity/activityLogService.js';
 import { taskActivityFieldConfig } from '../activity/fieldConfigs/taskFieldConfig.js';
+import { addElapsed } from './taskTime.js';
 import type { ActivityEntityType, EntityType, Prisma } from '@prisma/client';
 
 // Task.entityType is narrower in practice than the full EntityType enum (never client/ticket/idea
@@ -45,6 +46,7 @@ export interface UpdateTaskInput {
   folderId?: string | null;
   projectPhaseId?: string | null;
   meetAttendeeEmail?: string | null;
+  timeSpentMinutes?: number | null;
 }
 
 const taskInclude = {
@@ -137,11 +139,17 @@ export async function updateTask(id: string, input: UpdateTaskInput, changedByUs
   if (input.folderId !== undefined) data.folderId = input.folderId;
   if (input.projectPhaseId !== undefined) data.projectPhaseId = input.projectPhaseId;
   if (input.meetAttendeeEmail !== undefined) data.meetAttendeeEmail = input.meetAttendeeEmail;
+  if (input.timeSpentMinutes !== undefined) data.timeSpentMinutes = input.timeSpentMinutes;
 
   // Fetched before the write so the Google Calendar sync below can tell what
   // changed (e.g. reassignment, or dueDate/completedAt flipping) — see
   // syncTaskCalendarEvent's decision table.
   const previous = await client.task.findUnique({ where: { id } });
+  // Completing a task with its timer running stops the timer and keeps the time (Unidad 10).
+  if (previous?.timerStartedAt && input.completedAt) {
+    data.timeSpentMinutes = addElapsed(input.timeSpentMinutes ?? previous.timeSpentMinutes, previous.timerStartedAt, new Date());
+    data.timerStartedAt = null;
+  }
   const updated = await client.task.update({ where: { id }, data, include: taskInclude });
 
   // Must be awaited, not fired-and-forgotten — see the note above.

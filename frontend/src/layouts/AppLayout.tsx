@@ -20,6 +20,7 @@ import { usePermissions } from '../contexts/PermissionsContext';
 import { PrimaryActionProvider } from '../contexts/PrimaryActionContext';
 import { TimeOffTabProvider } from '../contexts/TimeOffTabContext';
 import { useNewVersionAvailable } from '../hooks/useNewVersionAvailable';
+import TaskTimePrompt from '../components/tasks/TaskTimePrompt';
 
 interface AppLayoutProps {
   user: any;
@@ -200,6 +201,7 @@ export default function AppLayout({ user, token, tenant, onLogout }: AppLayoutPr
         onSelectPlan={handleSelectPlanAndCheckout}
       />
       <ProductTour token={token ?? ''} user={user} replaySignal={tourReplaySignal} />
+      {token && <TaskTimePrompt token={token} userId={user.id} />}
     </div>
     </TimeOffTabProvider>
     </PrimaryActionProvider>

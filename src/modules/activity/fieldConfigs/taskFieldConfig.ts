@@ -7,5 +7,6 @@ export const taskActivityFieldConfig: ActivityFieldConfigMap = {
   assigneeId: { label: 'Assignee', resolve: resolveUserName },
   dueDate: { label: 'Due date' },
   completedAt: { label: 'Completed' },
+  timeSpentMinutes: { label: 'Time spent (minutes)' },
   folderId: { label: 'Folder', resolve: resolveTaskFolderName },
 };

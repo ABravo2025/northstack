@@ -5,6 +5,7 @@ import { useToast } from '../common/ToastProvider';
 import { VideoIcon } from '../common/Icons';
 import TaskForm, { type TaskFormPayload } from './TaskForm';
 import TaskChat from './TaskChat';
+import TaskTimeRow from './TaskTimeRow';
 import { formatHubDate } from '../../lib/taskHubDates';
 
 interface TenantUserLite {
@@ -83,6 +84,7 @@ export default function TaskDetailModal({
                 <span>{formatHubDate(task.completedAt)}</span>
               </div>
             )}
+            <TaskTimeRow key={task.id} token={token} task={task} currentUserId={currentUserId} />
             {task.googleMeetUrl && (
               <div className="task-hub-detail-row">
                 <span className="task-hub-detail-row-label">{t('myTasks.detail.meet')}</span>

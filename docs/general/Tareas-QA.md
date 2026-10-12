@@ -5109,3 +5109,22 @@ Solo backend y API; las pantallas llegan en la Unidad 11. Schema nuevo aplicado 
 2. Enviar, devolver con nota, corregir, aprobar.
 3. Ajuste negativo a una semana aprobada; reabrir otra.
 4. Un manager directo sin `approve_timesheets` aprueba a sus reportes y no a otros.
+
+## QA-110 — Shifts, Unidad 10: tiempo dedicado a las tareas (2026-10-12, en `staging`)
+
+### Qué cambió
+
+- **"¿Cuánto te llevó?"**: al completar una tarea propia desde cualquier pantalla (Mis tareas, tablero, proyecto, ficha de una empresa…), aparece abajo a la derecha una tarjeta con 15 min / 30 min / 45 min / 1 h / 2 h, un campo de minutos y "Omitir". Se va sola a los 20 s. Solo si la empresa usa timesheet y la tarea todavía no tiene tiempo cargado.
+- **Detalle de la tarea → "Tiempo dedicado"**: el total, **Iniciar / Detener timer** (solo quien tiene asignada la tarea; muestra "timer en marcha" y se actualiza solo) y **Editar** (horas + minutos).
+- Completar una tarea con el timer andando lo detiene y guarda el tiempo (y no pregunta).
+- El **timesheet** sugiere las tareas completadas con ese tiempo como minutos.
+- Schema: 2 columnas nullable en `Task` (`timeSpentMinutes`, `timerStartedAt`), aplicadas en `staging`.
+
+**Verificado en esta sesión** (Playwright contra `staging`, 9/9, en inglés claro, inglés oscuro y español oscuro): aparece el aviso al completar, "30 min" queda guardado, iniciar y detener el timer (mínimo 1 min), completar con el timer andando lo detiene y suma, timer rechazado en una tarea completada, minutos negativos rechazados, el timesheet sugiere la tarea con 30 min, sin errores de consola. 773/773 tests.
+
+### Qué probar
+
+1. Completar una tarea desde Mis tareas, desde un proyecto y desde la ficha de una empresa: en los tres aparece el aviso.
+2. Completar una tarea asignada a otra persona: no aparece.
+3. Timer: iniciar, cerrar el modal, volver a abrirlo más tarde: sigue corriendo con el tiempo correcto.
+4. Apagar el timesheet en Settings → Turnos: el aviso deja de aparecer (el timer y la fila siguen).

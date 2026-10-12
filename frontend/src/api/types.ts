@@ -573,6 +573,9 @@ export interface Task {
   projectPhaseId?: string | null;
   // Who gets the Google Meet invite (2026-10-06): required for a project task's call, optional override elsewhere.
   meetAttendeeEmail?: string | null;
+  // Time spent (spec-shifts.md Unidad 10): minutes logged on the task, and the running timer.
+  timeSpentMinutes?: number | null;
+  timerStartedAt?: string | null;
   // Only present on the My Tasks hub (listTasksForUser) — whether the current user is this
   // task's assignee, its creator, or both.
   relationship?: 'assignee' | 'creator' | 'both' | null;

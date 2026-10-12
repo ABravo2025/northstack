@@ -62,6 +62,25 @@
       "loading": "Loading…",
       "empty": "Nothing assigned to you."
     },
+    "time": {
+      "label": "Time spent",
+      "start": "Start timer",
+      "stop": "Stop timer",
+      "running": "timer running",
+      "edit": "Edit",
+      "save": "Save",
+      "cancel": "Cancel",
+      "hours": "Hours",
+      "minutes": "Minutes",
+      "failed": "Couldn't save the time: {{message}}"
+    },
+    "timePrompt": {
+      "question": "Done! How long did it take?",
+      "otherPlaceholder": "Minutes",
+      "save": "Save",
+      "skip": "Skip",
+      "saved": "Time saved. It will be suggested in your timesheet."
+    },
     "detail": {
       "defaultTitle": "Task",
       "created": "Created",

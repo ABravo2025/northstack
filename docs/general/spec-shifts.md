@@ -1,6 +1,6 @@
 # Spec Shifts (Turnos y horas)
 
-**Estado:** Unidades 1-2 en `staging` y revisadas por Alejandro (2026-10-04). Unidades 3 (backend de turnos) y 4 (avisos: campana, email con `.ics`, Google Calendar) en `staging`. Unidades 5 (cronograma) y 6 (Mis turnos, disponibilidad, página pública del link del email) en `staging`, esperando la revisión visual de Alejandro. Nada en `main` todavía.
+**Estado:** Unidades 1-6 **en producción desde el 2026-10-12** (cronograma Día/Semana/Mes, Mis turnos, disponibilidad, avisos por campana/email/Google Calendar, link de respuesta). Promovidas solas, sin el resto de lo que había en `staging`. Schema aplicado a producción con SQL aditivo filtrado (la base de producción ya tenía tablas de Projects que un `db push` habría borrado); backfill de permisos corrido (13 roles Admin). Help Center actualizado (guía + FAQ, EN/ES). Siguiente: Unidad 7 (habilidades).
 **Fecha:** 2026-10-04.
 **Contexto:** un laboratorio químico preguntó si Northstack puede manejar personal en distintos horarios
 y sedes, con turnos que no son bloques fijos, y que avisar y hacer el seguimiento es complicado.

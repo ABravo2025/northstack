@@ -8,6 +8,7 @@ import {
   BriefcaseIcon,
   ChevronDownIcon,
   CreditCardIcon,
+  ClockIcon,
   FolderIcon,
   FormIcon,
   LockIcon,
@@ -214,6 +215,37 @@ const FAQ_CATEGORIES: FaqCategory[] = [
       {
         q: 'Do project tasks show up in My Tasks and Google Calendar?',
         a: 'Yes. A project task is an ordinary task: it appears in My Tasks, on the Overview calendar, and in Google Calendar for whoever it\'s assigned to, if they connected it.',
+      },
+    ],
+  },
+  {
+    id: 'f-shifts',
+    label: 'Shifts',
+    icon: <ClockIcon />,
+    items: [
+      {
+        q: 'How do people find out about their shifts?',
+        a: 'When you publish, each person gets a notification and an email with buttons to accept or say they can\'t make it (no sign-in needed), plus a file that adds the shift to their calendar. If they connected Google Calendar, the shift appears there on its own.',
+      },
+      {
+        q: 'Do drafts reach anyone?',
+        a: 'No. A new shift is a draft (dashed on the schedule) until you publish it. Only then are people told and asked to confirm.',
+      },
+      {
+        q: 'What happens if I change a shift that was already published?',
+        a: 'If you change its date, time or location, everyone on it is asked to confirm again, and their calendar event moves. Changing only the notes, position or people needed just lets them know.',
+      },
+      {
+        q: 'Can someone without a Northstack login get shifts?',
+        a: 'No. Shifts go to people with access to Northstack, so they can see them in My shifts and answer from the app or the email.',
+      },
+      {
+        q: 'Why can\'t I assign someone?',
+        a: 'Because they already have another shift at that time. Approved time off, holidays, availability and minimum rest only show a warning: you can assign them anyway.',
+      },
+      {
+        q: 'How many locations can I have?',
+        a: 'Starter allows 1 active location; Growth has no limit. A location with shifts can\'t be deleted, but it can be deactivated, which keeps its history.',
       },
     ],
   },
@@ -473,6 +505,37 @@ const FAQ_CATEGORIES_ES: FaqCategory[] = [
       {
         q: '¿Las tareas de un proyecto aparecen en Mis tareas y en Google Calendar?',
         a: 'Sí. Una tarea de proyecto es una tarea común: aparece en Mis tareas, en el calendario del Resumen y en el Google Calendar de la persona asignada, si lo conectó.',
+      },
+    ],
+  },
+  {
+    id: 'f-shifts',
+    label: 'Turnos',
+    icon: <ClockIcon />,
+    items: [
+      {
+        q: '¿Cómo se enteran las personas de sus turnos?',
+        a: 'Al publicar, cada persona recibe una notificación y un email con botones para aceptar o avisar que no puede (sin iniciar sesión), más un archivo que agrega el turno a su calendario. Si conectó Google Calendar, el turno aparece ahí solo.',
+      },
+      {
+        q: '¿Los borradores le llegan a alguien?',
+        a: 'No. Un turno nuevo es un borrador (punteado en el cronograma) hasta que lo publicás. Recién ahí se les avisa y se les pide que confirmen.',
+      },
+      {
+        q: '¿Qué pasa si cambio un turno ya publicado?',
+        a: 'Si cambiás la fecha, la hora o la locación, se le pide a cada persona del turno que lo confirme de nuevo, y se mueve el evento de su calendario. Si solo cambiás las indicaciones, el puesto o la cantidad de personas, solo se les avisa.',
+      },
+      {
+        q: '¿Alguien sin usuario de Northstack puede recibir turnos?',
+        a: 'No. Los turnos van a personas con acceso a Northstack, así los ven en Mis turnos y pueden responder desde la app o desde el email.',
+      },
+      {
+        q: '¿Por qué no puedo asignar a alguien?',
+        a: 'Porque ya tiene otro turno en ese horario. Las ausencias aprobadas, los feriados, la disponibilidad y el descanso mínimo solo muestran un aviso: podés asignarlo igual.',
+      },
+      {
+        q: '¿Cuántas locaciones puedo tener?',
+        a: 'Starter permite 1 locación activa; Growth no tiene límite. Una locación con turnos no se puede eliminar, pero sí desactivar, y conserva su historial.',
       },
     ],
   },

@@ -12,6 +12,7 @@ import {
   BuildingIcon,
   CreditCardIcon,
   DeviceIcon,
+  ClockIcon,
   FolderIcon,
   DownloadIcon,
   FormIcon,
@@ -37,6 +38,7 @@ const SECTION_IDS = [
   'g-payroll',
   'g-tasks',
   'g-projects',
+  'g-shifts',
   'g-forms',
   'g-integrations',
   'g-settings',
@@ -69,6 +71,7 @@ const NAV_GROUPS: { label: string; items: { id: string; label: string; icon: JSX
       { id: 'g-payroll', label: 'Payroll', icon: <BriefcaseIcon /> },
       { id: 'g-tasks', label: 'Tasks & notes', icon: <ListIcon /> },
       { id: 'g-projects', label: 'Projects', icon: <FolderIcon /> },
+      { id: 'g-shifts', label: 'Shifts', icon: <ClockIcon /> },
     ],
   },
   {
@@ -99,6 +102,7 @@ const MODULE_MAP: { id: string; label: string; blurb: string; icon: JSX.Element 
   { id: 'g-payroll', label: 'Payroll', blurb: 'Compensation, pay runs, payslips.', icon: <BriefcaseIcon /> },
   { id: 'g-tasks', label: 'Tasks & notes', blurb: 'Follow-ups on any record.', icon: <ListIcon /> },
   { id: 'g-projects', label: 'Projects', blurb: 'Phases, tasks and teams, blank or from a template.', icon: <FolderIcon /> },
+  { id: 'g-shifts', label: 'Shifts', blurb: 'Schedule shifts by location; people confirm by app or email.', icon: <ClockIcon /> },
   { id: 'g-forms', label: 'Public forms', blurb: 'No-login intake for hiring and leads.', icon: <FormIcon /> },
   { id: 'g-integrations', label: 'Integrations & API', blurb: 'Google Calendar, Stripe, API keys.', icon: <PlugIcon /> },
   { id: 'g-settings', label: 'Settings', blurb: 'Company profile, logo, currency, theme.', icon: <GearIcon /> },
@@ -132,6 +136,7 @@ const NAV_GROUPS_ES: { label: string; items: { id: string; label: string; icon: 
       { id: 'g-payroll', label: 'Nómina', icon: <BriefcaseIcon /> },
       { id: 'g-tasks', label: 'Tareas y notas', icon: <ListIcon /> },
       { id: 'g-projects', label: 'Proyectos', icon: <FolderIcon /> },
+      { id: 'g-shifts', label: 'Turnos', icon: <ClockIcon /> },
     ],
   },
   {
@@ -162,6 +167,7 @@ const MODULE_MAP_ES: { id: string; label: string; blurb: string; icon: JSX.Eleme
   { id: 'g-payroll', label: 'Nómina', blurb: 'Compensación, corridas de pago, recibos de sueldo.', icon: <BriefcaseIcon /> },
   { id: 'g-tasks', label: 'Tareas y notas', blurb: 'Seguimientos sobre cualquier registro.', icon: <ListIcon /> },
   { id: 'g-projects', label: 'Proyectos', blurb: 'Fases, tareas y equipos, en blanco o desde un template.', icon: <FolderIcon /> },
+  { id: 'g-shifts', label: 'Turnos', blurb: 'Turnos por locación; cada persona confirma por app o email.', icon: <ClockIcon /> },
   { id: 'g-forms', label: 'Formularios públicos', blurb: 'Carga sin login para reclutamiento y leads.', icon: <FormIcon /> },
   { id: 'g-integrations', label: 'Integraciones y API', blurb: 'Google Calendar, Stripe, claves de API.', icon: <PlugIcon /> },
   { id: 'g-settings', label: 'Configuración', blurb: 'Datos de la empresa, logo, moneda, tema.', icon: <GearIcon /> },
@@ -1757,6 +1763,162 @@ export default function GuidePage() {
                 or on hold; completed, cancelled and archived ones don't count) and use the system templates.
                 <strong> Growth</strong> has no limit and adds your own templates. Projects aren't deleted: they're
                 <strong> archived</strong>, and can be restored from the Archived filter.
+              </p>
+            </div>
+          </section>
+          )}
+
+          {/* ===== Shifts ===== */}
+          {isSpanish ? (
+          <section className="help-section" id="g-shifts">
+            <div className="help-eyebrow">
+              <ClockIcon />
+              Trabajo en equipo
+            </div>
+            <h2>Turnos</h2>
+            <p className="help-intro">
+              Armá los turnos de tu equipo en una o varias locaciones, con horarios libres (también nocturnos), y
+              pedile a cada persona que confirme. Está en la barra lateral, en Recursos Humanos.
+            </p>
+
+            <div className="help-sub">
+              <h3>Antes de empezar: locaciones y reglas</h3>
+              <p>
+                En <strong>Configuración → Turnos</strong> cargás las <strong>locaciones</strong> donde trabaja tu
+                equipo (un laboratorio, una sucursal, un depósito), cada una con su zona horaria y, si querés, un
+                <strong> responsable</strong>: el responsable puede armar los turnos de su locación aunque no tenga el
+                permiso de gestionar turnos. Ahí también elegís si cada persona tiene que aceptar sus turnos, el
+                descanso mínimo entre dos turnos de la misma persona y el día en que empieza la semana. Las
+                <strong> plantillas</strong> de horario se guardan desde el formulario del turno y se borran desde ahí.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Armar el cronograma</h3>
+              <ol className="help-steps">
+                <li>
+                  Abrí <strong>Turnos → Cronograma</strong> y elegí la vista: <strong>Día</strong>,
+                  <strong> Semana</strong> o <strong>Mes</strong> (como un calendario), o <strong>Por persona</strong>.
+                  Arriba elegís una locación o "Todas las locaciones".
+                </li>
+                <li>
+                  Hacé clic en un hueco del calendario para crear un turno en ese día y hora (o usá
+                  <strong> + Agregar turno</strong>). Elegís la locación, el horario, el puesto, cuántas personas hacen
+                  falta y las indicaciones. Un turno de 22:00 a 06:00 termina al día siguiente.
+                </li>
+                <li>
+                  En el detalle del turno, <strong>Agregar personas</strong>. Si alguien ya tiene otro turno en ese
+                  horario no se puede asignar. Si tiene una ausencia aprobada, es feriado, avisó que no está disponible
+                  o le queda poco descanso, ves el aviso y podés asignarlo igual.
+                </li>
+                <li>
+                  Los turnos nuevos son <strong>borradores</strong> (línea punteada): nadie se entera todavía.
+                  Cuando la semana está lista, <strong>Publicar</strong>. Para repetir una semana, usá
+                  <strong> Copiar semana anterior</strong>.
+                </li>
+              </ol>
+            </div>
+
+            <div className="help-sub">
+              <h3>Cómo se enteran y cómo confirman</h3>
+              <p>
+                Al publicar, cada persona recibe una notificación y un email con los botones
+                <strong> Acepto el turno</strong> y <strong>No puedo</strong> (funcionan sin iniciar sesión) y un
+                archivo que agrega el turno a Google, Outlook o Apple Calendar. Si conectó Google Calendar, el turno
+                aparece solo en su calendario. También puede responder desde <strong>Turnos → Mis turnos</strong>,
+                donde además carga su <strong>disponibilidad</strong> (semanal o por fecha).
+              </p>
+              <p>
+                En el cronograma, el color de cada turno dice cómo va: verde, todos confirmaron; ámbar, falta que
+                alguien responda; rojo, alguien no puede o falta gente. Si cambiás la fecha, la hora o la locación de un
+                turno publicado, se le pide a cada persona que lo confirme de nuevo; si lo cancelás, se les avisa y
+                desaparece de su calendario.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Permisos y planes</h3>
+              <p>
+                Cada persona ve y responde sus propios turnos. <strong>Ver el cronograma completo</strong> deja ver
+                todos los turnos, y <strong>Gestionar turnos</strong> deja armarlos y configurar el módulo
+                (Configuración → Roles y permisos). Para recibir turnos, la persona necesita acceso a Northstack. En el
+                plan <strong>Starter</strong> podés tener 1 locación activa; <strong>Growth</strong> no tiene límite.
+              </p>
+            </div>
+          </section>
+          ) : (
+          <section className="help-section" id="g-shifts">
+            <div className="help-eyebrow">
+              <ClockIcon />
+              Teamwork
+            </div>
+            <h2>Shifts</h2>
+            <p className="help-intro">
+              Schedule your team's shifts at one or more locations, with any hours (overnight too), and ask each
+              person to confirm. It's in the sidebar, under Human Resources.
+            </p>
+
+            <div className="help-sub">
+              <h3>Before you start: locations and rules</h3>
+              <p>
+                In <strong>Settings → Shifts</strong> you add the <strong>locations</strong> where your team works (a
+                lab, a branch, a warehouse), each with its time zone and, optionally, a <strong>manager</strong>: the
+                manager can schedule that location even without the Manage shifts permission. There you also choose
+                whether people have to accept their shifts, the minimum rest between two shifts of the same person,
+                and the day the week starts. Time <strong>templates</strong> are saved from the shift form and can be
+                deleted there.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Building the schedule</h3>
+              <ol className="help-steps">
+                <li>
+                  Open <strong>Shifts → Schedule</strong> and pick a view: <strong>Day</strong>, <strong>Week</strong> or
+                  <strong> Month</strong> (like a calendar), or <strong>By person</strong>. At the top, pick a location
+                  or "All locations".
+                </li>
+                <li>
+                  Click an empty slot in the calendar to create a shift at that day and time (or use
+                  <strong> + Add shift</strong>). Choose the location, the hours, the position, how many people are
+                  needed and any notes. A 22:00–06:00 shift ends the next day.
+                </li>
+                <li>
+                  In the shift's detail, <strong>Add people</strong>. Someone who already has a shift at that time
+                  can't be added. If they have approved time off, it's a holiday, they said they're unavailable or
+                  they'd get too little rest, you see a warning and can assign them anyway.
+                </li>
+                <li>
+                  New shifts are <strong>drafts</strong> (dashed): nobody is told yet. When the week is ready,
+                  <strong> Publish</strong>. To repeat a week, use <strong>Copy last week</strong>.
+                </li>
+              </ol>
+            </div>
+
+            <div className="help-sub">
+              <h3>How people find out and confirm</h3>
+              <p>
+                When you publish, each person gets a notification and an email with <strong>I'll be there</strong>{' '}
+                and <strong>I can't make it</strong> buttons (they work without signing in) and a file that adds the
+                shift to Google, Outlook or Apple Calendar. If they connected Google Calendar, the shift shows up there
+                on its own. They can also answer from <strong>Shifts → My shifts</strong>, where they set their
+                <strong> availability</strong> too (weekly or for specific dates).
+              </p>
+              <p>
+                On the schedule, each shift's color tells you where it stands: green, everyone confirmed; amber,
+                someone still has to answer; red, someone can't make it or people are missing. Changing a published
+                shift's date, time or location asks everyone to confirm again; cancelling it tells them and removes it
+                from their calendar.
+              </p>
+            </div>
+
+            <div className="help-sub">
+              <h3>Permissions and plans</h3>
+              <p>
+                Everyone sees and answers their own shifts. <strong>View the whole schedule</strong> shows every
+                shift, and <strong>Manage shifts</strong> lets someone build them and set up the module (Settings →
+                Roles &amp; Permissions). To get shifts, a person needs access to Northstack. The
+                <strong> Starter</strong> plan allows 1 active location; <strong>Growth</strong> has no limit.
               </p>
             </div>
           </section>

@@ -47,6 +47,7 @@ import ShiftsSchedulePage from './pages/shifts/ShiftsSchedulePage';
 import MyShiftsPage from './pages/shifts/MyShiftsPage';
 import TimesheetPage from './pages/shifts/TimesheetPage';
 import TimesheetApprovalsPage from './pages/shifts/TimesheetApprovalsPage';
+import HoursReportPage from './pages/shifts/HoursReportPage';
 import ShiftResponsePage from './pages/shifts/ShiftResponsePage';
 import { useCanSchedule } from './components/layout/ShiftsSidebar';
 import CompanyUsersPage from './pages/CompanyUsersPage';
@@ -370,6 +371,7 @@ export default function App() {
         <Route path="/shifts/mine" element={<MyShiftsPage token={token ?? ''} />} />
         <Route path="/shifts/timesheet" element={<TimesheetPage token={token ?? ''} />} />
         <Route path="/shifts/approvals" element={<TimesheetApprovalsPage token={token ?? ''} />} />
+        <Route path="/shifts/reports" element={<HoursReportPage token={token ?? ''} />} />
         <Route path="/projects/:projectId" element={<ProjectDetailPage token={token ?? ''} user={user} />} />
         <Route path="/help" element={<HelpPage />} />
         <Route path="/guide" element={<GuidePage />} />

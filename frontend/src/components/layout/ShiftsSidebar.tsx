@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../api';
-import { CalendarIcon, CheckIcon, ChevronLeftIcon, ClockIcon, GearIcon, ListIcon, XIcon } from '../common/Icons';
+import { CalendarIcon, CheckIcon, ChevronLeftIcon, ClockIcon, DashboardIcon, GearIcon, ListIcon, XIcon } from '../common/Icons';
 import { usePermissions } from '../../contexts/PermissionsContext';
 
 interface ShiftsSidebarProps {
@@ -88,6 +88,12 @@ export default function ShiftsSidebar({ token, mobileOpen, onMobileClose }: Shif
               <CheckIcon className="h-4 w-4 shrink-0" />
               {t('nav.approvals')}
               {timesheet.pending > 0 && <span className="ml-auto rounded-full bg-accent px-1.5 text-[11px] leading-5 font-semibold text-white dark:bg-brand-blue-light dark:text-dark-page">{timesheet.pending}</span>}
+            </NavLink>
+          )}
+          {timesheet.enabled && permissions.has('approve_timesheets') && (
+            <NavLink to="/shifts/reports" className={linkClass} onClick={onMobileClose}>
+              <DashboardIcon className="h-4 w-4 shrink-0" />
+              {t('nav.reports')}
             </NavLink>
           )}
           {/* Locations and rules live in Settings → Shifts; linked here too so they're found

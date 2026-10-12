@@ -9,6 +9,8 @@ import type {
   ShiftSkill,
   ShiftsSettings,
   ShiftTemplate,
+  HoursReport,
+  ScheduleCost,
   TimeEntry,
   TimesheetApprovalRow,
   TimesheetStatus,
@@ -188,6 +190,13 @@ export const shiftsApi = {
     call<{ canApprove: boolean; timesheets: TimesheetApprovalRow[] }>(token, `/api/shifts/timesheet/approvals?status=${status}`),
   decideTimesheet: (token: string, timesheetId: string, decision: 'approve' | 'return', note?: string) =>
     call<{ status: TimesheetStatus }>(token, `/api/shifts/timesheet/${timesheetId}/decision`, { method: 'POST', body: JSON.stringify({ decision, note }) }),
+  getScheduleCost: (token: string, from: string, to: string, locationId?: string) =>
+    call<ScheduleCost | null>(token, `/api/shifts/cost?from=${from}&to=${to}${locationId ? `&locationId=${locationId}` : ''}`),
+  getHoursReport: (token: string, params: { from: string; to: string; groupBy: HoursReport['groupBy']; approvedOnly: boolean }) =>
+    call<HoursReport>(
+      token,
+      `/api/shifts/timesheet/reports?from=${params.from}&to=${params.to}&groupBy=${params.groupBy}&approvedOnly=${params.approvedOnly}`,
+    ),
   reopenTimesheet: (token: string, timesheetId: string, reason: string) =>
     call<{ status: TimesheetStatus }>(token, `/api/shifts/timesheet/${timesheetId}/reopen`, { method: 'POST', body: JSON.stringify({ reason }) }),
 };

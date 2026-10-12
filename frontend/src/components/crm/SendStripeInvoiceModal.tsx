@@ -12,6 +12,8 @@ interface SendStripeInvoiceModalProps {
   companyId: string;
   companyName: string;
   defaultCurrency: string;
+  // Pre-filled lines (Shifts reports, "Invoice hours"): still editable before sending.
+  initialLines?: { description: string; amount: string }[];
 }
 
 interface LineDraft {
@@ -41,11 +43,14 @@ export default function SendStripeInvoiceModal({
   companyId,
   companyName,
   defaultCurrency,
+  initialLines,
 }: SendStripeInvoiceModalProps) {
   const { t } = useTranslation('crm');
   const [currency, setCurrency] = useState(defaultCurrency.toUpperCase());
-  const [lines, setLines] = useState<LineDraft[]>([{ key: 0, description: '', amount: '' }]);
-  const [nextKey, setNextKey] = useState(1);
+  const [lines, setLines] = useState<LineDraft[]>(
+    initialLines?.length ? initialLines.map((l, i) => ({ key: i, ...l })) : [{ key: 0, description: '', amount: '' }],
+  );
+  const [nextKey, setNextKey] = useState(initialLines?.length ?? 1);
   const [daysUntilDue, setDaysUntilDue] = useState('30');
   const [memo, setMemo] = useState('');
   // One id per submit attempt: a double-click or network retry of the same attempt reaches Stripe

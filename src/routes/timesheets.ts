@@ -4,7 +4,8 @@ import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import type { AuthenticatedUser } from '../modules/auth/authService.js';
 import { getPlanLimits } from '../modules/tenant/planLimits.js';
-import { canApproveTimesheets } from '../modules/auth/permissionService.js';
+import { canApproveTimesheets, canManagePayroll } from '../modules/auth/permissionService.js';
+import { buildHoursReport, type ReportGroup } from '../modules/shifts/timesheetReports.js';
 import { findOwnEmployeeIdForShifts } from '../modules/shifts/shiftAccess.js';
 import { getShiftsSettings, type EffectiveShiftsSettings } from '../modules/shifts/shiftsSettingsService.js';
 import { isValidDateString, isValidTimeZone, zonedDateString } from '../modules/shifts/shiftTime.js';
@@ -289,4 +290,22 @@ timesheetsRouter.post('/api/shifts/timesheet/:timesheetId/reopen', async (req, r
   if (!result.success) return sendResult(res, result);
   await notifyDecided(loaded.employee, result.value, deciderName(ctx.user));
   return res.json({ status: result.value.status });
+});
+
+// Hours reports (Unidad 12): whoever approves anyone's timesheets by role. Cost only for Payroll
+// access, on a plan with Payroll, when the company turned schedule cost on.
+const GROUPS: ReportGroup[] = ['person', 'company', 'project'];
+const MAX_REPORT_DAYS = 370;
+
+timesheetsRouter.get('/api/shifts/timesheet/reports', async (req, res) => {
+  const ctx = await context(req, res);
+  if (!ctx) return;
+  if (!canApproveTimesheets(ctx.user.roleContext)) return res.status(403).json({ error: 'Insufficient permissions' });
+  const { from, to } = req.query;
+  if (!isValidDateString(from) || !isValidDateString(to) || from > to) return res.status(400).json({ error: 'from and to are required (YYYY-MM-DD)', field: 'from' });
+  if ((Date.parse(to) - Date.parse(from)) / 86_400_000 > MAX_REPORT_DAYS) return res.status(400).json({ error: 'Pick a range of a year or less', field: 'to' });
+  const groupBy = GROUPS.includes(req.query.groupBy as ReportGroup) ? (req.query.groupBy as ReportGroup) : 'person';
+  const withCost = ctx.settings.showScheduleCost && canManagePayroll(ctx.user.roleContext) && getPlanLimits(ctx.user.tenant).payrollEnabled;
+  const report = await buildHoursReport(ctx.user.tenantId!, { from, to, groupBy, approvedOnly: req.query.approvedOnly !== 'false', withCost });
+  return res.json({ ...report, withCost, groupBy });
 });

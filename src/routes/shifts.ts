@@ -4,7 +4,8 @@ import { getClientIp, validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import { isRateLimited } from '../lib/rateLimit.js';
 import type { AuthenticatedUser } from '../modules/auth/authService.js';
-import { canManageShifts } from '../modules/auth/permissionService.js';
+import { canManagePayroll, canManageShifts } from '../modules/auth/permissionService.js';
+import { scheduleCost } from '../modules/shifts/timesheetReports.js';
 import { getPlanLimits } from '../modules/tenant/planLimits.js';
 import {
   canManageLocationShifts,
@@ -187,6 +188,21 @@ shiftsRouter.get('/api/shifts/mine', async (req, res) => {
   if (!employeeId) return res.json([]);
   const shifts = await listEmployeeShifts(user.tenantId!, employeeId, range.value.from, range.value.to);
   return res.json(shifts.map((s) => ownView(serializeShift(s), employeeId)));
+});
+
+// Schedule cost (Unidad 12): only for Payroll access, on a plan with Payroll, when the company
+// turned it on in Settings → Shifts; limited to the locations the viewer can see. null = hidden.
+shiftsRouter.get('/api/shifts/cost', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) return;
+  const settings = await getShiftsSettings(user.tenantId!);
+  if (!settings.showScheduleCost || !canManagePayroll(user.roleContext) || !getPlanLimits(user.tenant).payrollEnabled) return res.json(null);
+  const range = parseDateRange(req.query.from, req.query.to);
+  if (!range.success) return res.status(400).json({ error: range.error });
+  const narrow = typeof req.query.locationId === 'string' && req.query.locationId ? [req.query.locationId] : null;
+  const viewable = await viewableLocationIds(user);
+  const ids = narrow ? (viewable ? viewable.filter((id) => narrow.includes(id)) : narrow) : viewable;
+  return res.json(await scheduleCost(user.tenantId!, range.value.from, range.value.to, ids));
 });
 
 function ownView(serialized: ReturnType<typeof serializeShift>, employeeId: string | null) {

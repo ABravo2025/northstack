@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { api, type Shift, type ShiftLocation, type ShiftsSettings, type TimeOffHoliday } from '../../api';
+import { api, type ScheduleCost, type Shift, type ShiftLocation, type ShiftsSettings, type TimeOffHoliday } from '../../api';
 import { useToast } from '../../components/common/ToastProvider';
 import ConfirmDialog from '../../components/common/ConfirmDialog';
 import TableSkeleton from '../../components/common/TableSkeleton';
@@ -11,7 +11,8 @@ import ShiftDetailModal from '../../components/shifts/ShiftDetailModal';
 import ShiftFormModal from '../../components/shifts/ShiftFormModal';
 import ShiftMonthView, { monthGrid } from '../../components/shifts/ShiftMonthView';
 import ShiftWeekCalendar from '../../components/shifts/ShiftWeekCalendar';
-import { addDays, formatDay, formatWeekRange, shiftDurationMinutes, todayString, weekDays, weekStartOf } from '../../lib/shiftDates';
+import { addDays, formatDay, formatDuration, formatWeekRange, shiftDurationMinutes, todayString, weekDays, weekStartOf } from '../../lib/shiftDates';
+import { formatMoney } from '../../lib/currencies';
 
 interface ShiftsSchedulePageProps {
   token: string;
@@ -116,6 +117,21 @@ export default function ShiftsSchedulePage({ token }: ShiftsSchedulePageProps) {
     [token, settings, rangeStart, rangeEnd, locationFilter],
   );
   useEffect(() => load(), [load]);
+
+  // Schedule cost (Unidad 12): the API answers null unless the company turned it on and this
+  // person has Payroll access, so nothing shows otherwise. Refetched with the shifts.
+  const [cost, setCost] = useState<ScheduleCost | null>(null);
+  useEffect(() => {
+    if (!settings) return;
+    if (shifts === null) {
+      setCost(null);
+      return;
+    }
+    api
+      .getScheduleCost(token, rangeStart, rangeEnd, locationFilter || undefined)
+      .then(setCost)
+      .catch(() => setCost(null));
+  }, [token, settings, shifts, rangeStart, rangeEnd, locationFilter]);
 
   // Company days off from Settings → Time Off, marked on the days.
   useEffect(() => {
@@ -313,6 +329,15 @@ export default function ShiftsSchedulePage({ token }: ShiftsSchedulePageProps) {
             <small>h</small>
           </span>
         </div>
+        {cost && (
+          <div className="sh-kpi">
+            <span className="sh-kpi-label">{t('schedule.kpiCost')}</span>
+            <span className="sh-kpi-value">
+              {Object.keys(cost.totals).length === 0 ? '—' : Object.entries(cost.totals).map(([cur, cents]) => formatMoney(cents, cur)).join(' + ')}
+            </span>
+            {cost.minutesWithoutRate > 0 && <span className="sh-kpi-hint">{t('schedule.kpiCostNoRate', { hours: formatDuration(cost.minutesWithoutRate) })}</span>}
+          </div>
+        )}
       </div>
 
       <div className="sh-toolbar">

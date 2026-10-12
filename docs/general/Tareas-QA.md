@@ -5148,3 +5148,21 @@ Solo backend y API; las pantallas llegan en la Unidad 11. Schema nuevo aplicado 
 2. Persona sin empresas visibles: el formulario no muestra "Empresa".
 3. Starter: no aparece la columna ni el interruptor de facturable.
 4. Timesheet apagado en Settings → Turnos: desaparecen Timesheet y Aprobaciones del menú.
+
+## QA-112 — Shifts, Unidad 12: reportes de horas, costo del cronograma y facturar horas (2026-10-12, en `staging`)
+
+### Qué cambió
+
+- **Settings → Turnos → "Timesheet y costo"** (nueva): Usar timesheet, Recordar las horas de turnos de ayer, y **Mostrar el costo del cronograma** (apagado por defecto; en Starter muestra que es de Growth). Hasta ahora estos interruptores existían solo en la base.
+- **Turnos → Reportes** (Owner o rol con "Aprobar timesheets"): un mes con flechas; agrupar por **Persona / Empresa / Proyecto**; **Solo semanas aprobadas** (activado por defecto); indicadores Horas, Facturable (% de las horas) y Costo; **Descargar CSV** con cada entrada.
+- **Costo** (solo si está activado, el plan tiene Payroll y quien mira tiene acceso a Payroll): horas × la tarifa por hora vigente ese día en Payroll. Las horas de sueldos fijos o sin compensación se muestran aparte como "sin tarifa por hora", no se estiman. También como indicador **Costo** en el Cronograma (los turnos publicados del período, menos los rechazados).
+- **Facturar horas** (agrupado por Empresa, con Payments): pide la tarifa por hora (se recuerda por empresa en este navegador) y abre el formulario de factura de Stripe de siempre con la línea "X h de trabajo en <mes> a <tarifa>/h" y el importe calculado; se revisa antes de enviar. Northstack no marca esas horas como facturadas (aviso en el formulario).
+
+**Verificado en esta sesión** (API + Playwright contra `staging`, 18/18 en inglés claro y en español oscuro): semana enviada no cuenta con "Solo aprobadas" y sí sin el filtro, costo apagado por defecto (reporte y cronograma), con costo: Mia 6h, 4h facturables, USD 90 (15/h); por empresa: el cliente 4h facturables y "Sin empresa" 2h; CSV de 2 filas aprobadas; costo del cronograma USD 60; Member sin reportes ni costo; formulario de factura con 200,00 (4h × 50); KPI de $60.00 en el Cronograma; sin errores de consola. 775/775 tests.
+
+### Qué probar
+
+1. Alguien con sueldo fijo: sus horas aparecen como "sin tarifa por hora".
+2. Dos monedas distintas en Payroll: el costo se muestra sumado por moneda.
+3. Un Admin sin acceso a Payroll: ve horas pero no costo.
+4. Facturar horas a una empresa sin vincular a Stripe: el formulario avisa que hay que vincularla.

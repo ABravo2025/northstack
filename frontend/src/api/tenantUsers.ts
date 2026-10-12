@@ -3,6 +3,16 @@ import type { Invitation, TenantUser, TenantInvitation } from './types.js';
 
 export const tenantUsersApi = {
   // Company / tenant users
+  // Names only, any signed-in user (2026-10-12) — for "pick a person" dropdowns (task assignee,
+  // account owner, opportunity owner). listTenantUsers below is the admin-only full list.
+  listUserDirectory: async (token: string): Promise<{ id: string; firstName: string; lastName: string }[]> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/tenants/user-directory`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
   listTenantUsers: async (token: string): Promise<TenantUser[]> => {
     const res = await apiFetch(`${API_BASE_URL}/api/tenants/users`, {
       headers: { Authorization: `Bearer ${token}` },

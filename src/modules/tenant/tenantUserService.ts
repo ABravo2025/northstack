@@ -7,6 +7,17 @@ import { bestEffort } from '../../lib/bestEffort.js';
 import type { AuthenticatedUser } from '../auth/authService.js';
 import type { User, UserRole, UserStatus } from '@prisma/client';
 
+// Names only, active logins only (2026-10-12) — for every "pick a person" dropdown (task assignee,
+// account owner, opportunity owner, @mentions). /api/tenants/users is admin-only and carries roles
+// and status, so a Member used to get an empty dropdown everywhere.
+export async function listUserDirectory(tenantId: string) {
+  return prisma.user.findMany({
+    where: { tenantId, status: 'active' },
+    select: { id: true, firstName: true, lastName: true },
+    orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
+  });
+}
+
 export async function listTenantUsers(tenantId: string) {
   return prisma.user.findMany({
     where: { tenantId },

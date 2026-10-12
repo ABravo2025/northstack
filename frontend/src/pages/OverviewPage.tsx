@@ -90,7 +90,7 @@ export default function OverviewPage({ token, user }: OverviewPageProps) {
   // doing — a transient failure just retries on the next tick.
   useEffect(() => {
     loadCalendar();
-    api.listTenantUsers(token).then(setTenantUsers).catch(() => {});
+    api.listUserDirectory(token).then(setTenantUsers).catch(() => {});
     const interval = setInterval(() => {
       refreshCalendarSilently();
     }, 30000);

@@ -119,19 +119,15 @@ export default function OpportunitiesPage({ user, token }: OpportunitiesPageProp
   const viewsBarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Custom Roles Fase J finding: GET /api/tenants/users (the deal-owner dropdown's source) is
-    // gated by manage_users — a permission independent of manage_opportunity. Before Custom
-    // Roles, every role that could reach this page also had manage_users implicitly (owner/admin
-    // bundled everything), so this Promise.all's all-or-nothing failure mode was never actually
-    // reachable. Guarded here rather than always attempting it, same fix shape as
-    // OverviewPage.tsx's birthdays call — a role without manage_users just gets an empty owner
-    // dropdown instead of the whole page failing to load.
+    // The deal-owner dropdown reads the names-only user directory (2026-10-12), open to every
+    // signed-in role. It used to read GET /api/tenants/users, which needs manage_users — so a role
+    // without it got an empty owner dropdown (Custom Roles Fase J finding).
     Promise.all([
       api.listPipelines(token),
       api.listOpportunities(token),
       api.listCompanies(token),
       api.listContacts(token),
-      permissions.has('manage_users') ? api.listTenantUsers(token) : Promise.resolve([]),
+      api.listUserDirectory(token),
       api.listFieldCatalogDefinitions(token, 'lossReason'),
       api.listFieldCatalogDefinitions(token, 'winReason'),
       api.getCurrentTenant(token),

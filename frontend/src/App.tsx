@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import { api } from './api';
+import { api, ApiError } from './api';
 import type { PermissionsPayload, Tenant } from './api';
 import { setActiveSessionToken, setUnauthorizedHandler } from './api/http';
 import { SUPPORT_TOKEN_KEY, getSupportToken } from './lib/supportSession';
@@ -122,19 +122,31 @@ export default function App() {
       // tenant fetch stays best-effort (powers PlansModal + the past_due banner in AppLayout);
       // a failure there shouldn't block being logged in, so it's swallowed independently rather
       // than failing the whole Promise.all.
-      Promise.all([api.getCurrentUser(token), api.getCurrentTenant(token).catch(() => null)])
-        .then(([userResponse, tenant]) => {
-          setUser(userResponse.user);
-          setPermissions(userResponse.permissions);
-          if (tenant) {
-            setTenant(tenant);
-          }
-        })
-        .catch(() => {
-          setToken(null);
-          localStorage.removeItem('token');
-        })
-        .finally(() => setCheckingSession(false));
+      // Only a server rejection (401/403) ends the stored session. A network error, a request
+      // cut off by a reload, or a 5xx is retried twice and, if it keeps failing, shows the login
+      // without forgetting the token, so the next load restores the session (found 2026-10-12:
+      // reloading while this check was in flight logged people out).
+      const restore = (attempt: number): Promise<void> =>
+        Promise.all([api.getCurrentUser(token), api.getCurrentTenant(token).catch(() => null)])
+          .then(([userResponse, tenant]) => {
+            setUser(userResponse.user);
+            setPermissions(userResponse.permissions);
+            if (tenant) {
+              setTenant(tenant);
+            }
+          })
+          .catch((error: unknown) => {
+            const rejected = error instanceof ApiError && (error.status === 401 || error.status === 403);
+            if (!rejected && attempt < 2) {
+              return new Promise<void>((resolve) => setTimeout(resolve, 800 * (attempt + 1))).then(() => restore(attempt + 1));
+            }
+            setToken(null);
+            if (rejected) {
+              localStorage.removeItem('token');
+            }
+            return undefined;
+          });
+      restore(0).finally(() => setCheckingSession(false));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);

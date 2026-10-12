@@ -159,20 +159,24 @@
           "heading": "5. Payouts",
           "body": "Commissions accumulate separately by currency. We transfer your payable balance once it reaches the minimum for that currency ({{minUsd}} or {{minArs}}); a balance below the minimum carries forward. Payouts are made to the payout method and account details you provide us, which you are responsible for keeping accurate; see Section 2.1 of our Privacy Policy. We send you proof of each transfer. Transfer fees, currency conversion costs, and any tax withholding or reporting obligations arising from your participation in the Program are your own responsibility, not Northstack's."
         },
+        "accountClosure": {
+          "heading": "6. If your account is closed",
+          "body": "If your Northstack user account is deleted or deactivated, your referral code and link stop working, and payments made by referred companies after that date no longer earn commissions. We settle the commissions you had already earned with no minimum balance, as each one completes its {{holdDays}}-day holding period, and keep your payout details only for that purpose."
+        },
         "programChanges": {
-          "heading": "6. Changing or ending the Program",
+          "heading": "7. Changing or ending the Program",
           "body": "We may change or end the Program at any time, with at least 30 days' notice to Members. A change does not affect a commission you already earned before it takes effect."
         },
         "relationship": {
-          "heading": "7. No employment or agency relationship",
+          "heading": "8. No employment or agency relationship",
           "body": "Participating in the Program does not make you an employee, contractor, partner, or agent of Northstack, and you have no authority to make representations or commitments on Northstack's behalf when sharing your referral link. These Program Terms supplement, and do not replace, our Terms of Service and Privacy Policy; if these Program Terms conflict with the Terms of Service on a Program-specific matter, these Program Terms control for that matter. These Program Terms are governed by the same law and jurisdiction as our Terms of Service (Section 15)."
         },
         "changes": {
-          "heading": "8. Changes to these Program Terms",
+          "heading": "9. Changes to these Program Terms",
           "body": "We may add, remove, or modify any provision of these Program Terms at any time and without prior notice, except where applicable law requires otherwise, consistent with Section 14 of our Terms of Service. We will notify Members of a change with an in-app notification. Continuing to take part in the Program after a change takes effect constitutes acceptance of the updated Program Terms."
         },
         "contact": {
-          "heading": "9. Contact",
+          "heading": "10. Contact",
           "body": "Questions about the Program can be sent to info@joinnorthstack.com."
         }
       }

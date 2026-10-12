@@ -153,6 +153,7 @@ export default function AdminReferrals({ session }: { session: AdminSession }) {
                   <td>
                     <Link to={`/referrals/${r.id}`} className="font-semibold hover:underline">{r.name}</Link>
                     <div className="text-xs text-ink-faint dark:text-dark-ink-faint">{r.code}</div>
+                    {r.closed && <div className="mt-1"><Chip tone="warn">Cuenta cerrada · liquidación final</Chip></div>}
                   </td>
                   <td>{r.tenant ? <Link to={`/clients/${r.tenant.id}`} className="hover:underline">{r.tenant.name}</Link> : '—'}</td>
                   <td>{METHOD[r.payoutMethod]}</td>
@@ -168,7 +169,7 @@ export default function AdminReferrals({ session }: { session: AdminSession }) {
                               <div key={cur}>
                                 <span className={t.ready ? 'font-semibold text-emerald-700 dark:text-emerald-300' : ''}>{money(t.payable, cur)}</span>
                                 <div className="text-xs text-ink-faint dark:text-dark-ink-faint">
-                                  {t.ready ? 'Listo para pagar' : `Faltan ${money(t.minPayout - t.payable, cur)}`}
+                                  {t.ready ? (r.closed ? 'Liquidación final' : 'Listo para pagar') : `Faltan ${money(t.minPayout - t.payable, cur)}`}
                                 </div>
                               </div>
                             );
@@ -220,8 +221,13 @@ export function AdminReferralMember({ session }: { session: AdminSession }) {
           <h2 className="text-xl font-semibold">{m.name}</h2>
           <p className="mt-1 text-sm text-ink-muted dark:text-dark-ink-muted">
             {m.tenant ? <>Usuario de <Link to={`/clients/${m.tenant.id}`} className="hover:underline">{m.tenant.name}</Link></> : 'Sin empresa'} · cobra por {METHOD[m.payoutMethod]} · código {m.code}
-            {!m.userActive && ' · usuario inactivo'}
           </p>
+          {m.closed && (
+            <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
+              Cuenta cerrada: el link está desactivado y los pagos nuevos ya no generan comisión. Se le liquida lo ya generado sin mínimo,
+              a medida que cada comisión cumple sus 30 días.
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           {currencies.length === 0 || readyCurrencies.length === 0 ? (
@@ -245,7 +251,7 @@ export function AdminReferralMember({ session }: { session: AdminSession }) {
           subtitle={
             currencies
               .filter((cur) => m.totals[cur].payable > 0)
-              .map((cur) => (m.totals[cur].ready ? `${cur}: superó el mínimo` : `${cur}: faltan ${money(m.totals[cur].minPayout - m.totals[cur].payable, cur)}`))
+              .map((cur) => (m.totals[cur].ready ? (m.closed ? `${cur}: liquidación final` : `${cur}: superó el mínimo`) : `${cur}: faltan ${money(m.totals[cur].minPayout - m.totals[cur].payable, cur)}`))
               .join(' · ') || 'nada liberado'
           }
         />

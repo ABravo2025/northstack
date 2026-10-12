@@ -53,7 +53,9 @@ export const REFERRAL = {
   // there is no re-acceptance prompt for a version bump today, flagged to Alejandro as a
   // product gap, not fixed here (this file only defines the number joinReferralProgram checks
   // against for a *new* join).
-  termsVersion: '2.0',
+  // 2.1 (2026-10-07, Alejandro): new section 6 — a closed account's link is deactivated, later
+  // payments earn nothing, and what was earned is settled with no minimum after each hold.
+  termsVersion: '2.1',
 } as const;
 
 export type Market = keyof typeof PER_USER;

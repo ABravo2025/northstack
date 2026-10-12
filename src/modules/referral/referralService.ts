@@ -226,6 +226,17 @@ export function minPayoutCents(currency: string): number {
   return REFERRAL.minPayoutCents[currency] ?? Number.POSITIVE_INFINITY;
 }
 
+// A member whose account was deleted (user gone) or deactivated is "closed" (Alejandro, 2026-10-07,
+// also in the terms v1.1): their link stops working, payments after that earn nothing, and what they
+// already earned is settled without the minimum — each commission still waits its hold days.
+export function isClosedMember(member: { user: { status: string } | null }): boolean {
+  return !member.user || member.user.status !== 'active';
+}
+
+export function isReadyToPay(payableCents: number, currency: string, closed: boolean): boolean {
+  return payableCents > 0 && (closed || payableCents >= minPayoutCents(currency));
+}
+
 const memberInclude = {
   referrals: {
     orderBy: { createdAt: 'desc' as const },
@@ -251,13 +262,13 @@ async function payoutNumbers(payoutIds: string[]): Promise<Map<string, string>> 
   return new Map(rows.map((r) => [r.id, `TR-${String(r.n).padStart(4, '0')}`]));
 }
 
-async function shapeMember(member: MemberWithAll, now = new Date()) {
+async function shapeMember(member: MemberWithAll, closed = false, now = new Date()) {
   const allCommissions = member.referrals.flatMap((r) => r.commissions);
   const numbers = await payoutNumbers(member.payouts.map((p) => p.id));
   const totals = totalsByCurrency(allCommissions, now);
   return {
     totals: Object.fromEntries(
-      Object.entries(totals).map(([cur, t]) => [cur, { ...t, minPayout: minPayoutCents(cur), ready: t.payable > 0 && t.payable >= minPayoutCents(cur) }]),
+      Object.entries(totals).map(([cur, t]) => [cur, { ...t, minPayout: minPayoutCents(cur), ready: isReadyToPay(t.payable, cur, closed) }]),
     ),
     referrals: member.referrals.map((r) => ({
       id: r.id,
@@ -368,9 +379,11 @@ export async function recordReferralCommission(input: {
   if (input.amountCents <= 0) return;
   const referral = await prisma.referral.findUnique({
     where: { referredTenantId: input.tenantId },
-    include: { member: { include: { user: { select: { locale: true } } } }, _count: { select: { commissions: true } } },
+    include: { member: { include: { user: { select: { locale: true, status: true } } } }, _count: { select: { commissions: true } } },
   });
   if (!referral) return;
+  // Closed member: payments after the account was deleted or deactivated earn nothing.
+  if (isClosedMember(referral.member)) return;
   const paymentNumber = referral._count.commissions + 1;
   if (paymentNumber > REFERRAL.commissionPayments) return;
 
@@ -416,12 +429,13 @@ export async function listMembersForAdmin() {
   const members = await prisma.referralMember.findMany({
     orderBy: { createdAt: 'desc' },
     include: {
-      user: { select: { tenant: { select: { id: true, name: true } } } },
+      user: { select: { status: true, tenant: { select: { id: true, name: true } } } },
       referrals: { select: { commissions: { select: { status: true, dueAt: true, currency: true, commissionCents: true } } } },
     },
   });
   return members.map((m) => {
     const totals = totalsByCurrency(m.referrals.flatMap((r) => r.commissions), now);
+    const closed = isClosedMember(m);
     return {
       id: m.id,
       name: m.name,
@@ -431,8 +445,9 @@ export async function listMembersForAdmin() {
       payoutMethod: m.payoutMethod,
       joinedAt: m.termsAcceptedAt,
       referralCount: m.referrals.length,
+      closed,
       totals: Object.fromEntries(
-        Object.entries(totals).map(([cur, t]) => [cur, { ...t, minPayout: minPayoutCents(cur), ready: t.payable > 0 && t.payable >= minPayoutCents(cur) }]),
+        Object.entries(totals).map(([cur, t]) => [cur, { ...t, minPayout: minPayoutCents(cur), ready: isReadyToPay(t.payable, cur, closed) }]),
       ),
     };
   });
@@ -451,11 +466,12 @@ export async function getMemberForAdmin(memberId: string) {
     code: member.code,
     tenant: member.user?.tenant ?? null,
     userActive: member.user?.status === 'active',
+    closed: isClosedMember(member),
     termsVersion: member.termsVersion,
     termsAcceptedAt: member.termsAcceptedAt,
     payoutMethod: member.payoutMethod,
     payoutDetails: decryptDetails(member.payoutDetailsEncrypted),
-    ...(await shapeMember(member)),
+    ...(await shapeMember(member, isClosedMember(member))),
   };
 }
 
@@ -488,7 +504,7 @@ export async function createPayout(
 
   const now = new Date();
   const payout = await prisma.$transaction(async (tx) => {
-    const member = await tx.referralMember.findUnique({ where: { id: memberId } });
+    const member = await tx.referralMember.findUnique({ where: { id: memberId }, include: { user: { select: { status: true } } } });
     if (!member) return { error: 'No existe ese miembro.' };
     const payable = await tx.referralCommission.findMany({
       where: { status: 'pending', payoutId: null, currency, dueAt: { lte: now }, referral: { memberId } },
@@ -496,7 +512,8 @@ export async function createPayout(
     });
     const amountCents = payable.reduce((sum, c) => sum + c.commissionCents, 0);
     if (amountCents === 0) return { error: `No hay comisiones en ${currency || 'esa moneda'} para pagar.` };
-    if (amountCents < minPayoutCents(currency)) return { error: 'Todavía no llegó al mínimo para pagar.' };
+    // Final settlement of a closed account ignores the minimum.
+    if (!isReadyToPay(amountCents, currency, isClosedMember(member))) return { error: 'Todavía no llegó al mínimo para pagar.' };
     const created = await tx.referralPayout.create({
       data: {
         memberId,

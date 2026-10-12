@@ -148,7 +148,7 @@ export default function LegalDocumentModal({ initialDoc, onClose }: LegalDocumen
 // legal document now (see docs/legal/ for its sibling Terms/Privacy/Refund), just rendered from
 // i18n + the live REFERRAL config instead of a landing .html page, so its numbers can never drift
 // from what the program actually pays (checked against referralService.ts/pricing.ts directly).
-const REFERRAL_TERMS_SECTIONS = ['scope', 'eligibility', 'mechanics', 'commissions', 'payouts', 'programChanges', 'relationship', 'changes', 'contact'] as const;
+const REFERRAL_TERMS_SECTIONS = ['scope', 'eligibility', 'mechanics', 'commissions', 'payouts', 'accountClosure', 'programChanges', 'relationship', 'changes', 'contact'] as const;
 
 function ReferralTerms({ rules }: { rules: ReferralRules }) {
   const { t, i18n } = useTranslation('settingsPages');

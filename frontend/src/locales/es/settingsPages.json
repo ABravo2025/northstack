@@ -159,20 +159,24 @@
           "heading": "5. Pagos",
           "body": "Las comisiones se acumulan por separado según la moneda. Transferimos tu saldo disponible una vez que alcanza el mínimo para esa moneda ({{minUsd}} o {{minArs}}); un saldo por debajo del mínimo se acumula para la próxima vez. Los pagos se hacen al método y a los datos de cobro que nos proporciones, que es tu responsabilidad mantener correctos; ver la Sección 2.1 de nuestra Política de Privacidad. Te enviamos el comprobante de cada transferencia. Los costos de transferencia, la conversión de moneda, y cualquier obligación de retención o declaración fiscal que surja de tu participación en el Programa son tu propia responsabilidad, no de Northstack."
         },
+        "accountClosure": {
+          "heading": "6. Si tu cuenta se cierra",
+          "body": "Si tu cuenta de usuario de Northstack se elimina o se da de baja, tu código y link de referido dejan de funcionar, y los pagos que hagan las empresas referidas después de esa fecha ya no generan comisiones. Te liquidamos las comisiones que ya habías ganado sin saldo mínimo, a medida que cada una cumple su período de espera de {{holdDays}} días, y conservamos tus datos de cobro solo para ese fin."
+        },
         "programChanges": {
-          "heading": "6. Cambiar o terminar el Programa",
+          "heading": "7. Cambiar o terminar el Programa",
           "body": "Podemos cambiar o terminar el Programa en cualquier momento, avisando a los Miembros con al menos 30 días de anticipación. Un cambio no afecta una comisión que ya ganaste antes de que entre en vigencia."
         },
         "relationship": {
-          "heading": "7. Sin relación de empleo ni de representación",
+          "heading": "8. Sin relación de empleo ni de representación",
           "body": "Participar del Programa no te convierte en empleado, contratista, socio ni agente de Northstack, y no tenés autoridad para hacer declaraciones ni compromisos en nombre de Northstack al compartir tu link de referido. Estos Términos del Programa complementan, y no reemplazan, nuestros Términos de Servicio y Política de Privacidad; si estos Términos del Programa entran en conflicto con los Términos de Servicio en un punto específico del Programa, estos Términos del Programa rigen para ese punto. Estos Términos del Programa se rigen por la misma ley y jurisdicción que nuestros Términos de Servicio (Sección 15)."
         },
         "changes": {
-          "heading": "8. Cambios a estos Términos del Programa",
+          "heading": "9. Cambios a estos Términos del Programa",
           "body": "Podemos agregar, quitar o modificar cualquier disposición de estos Términos del Programa en cualquier momento y sin aviso previo, salvo que la ley aplicable exija lo contrario, de forma consistente con la Sección 14 de nuestros Términos de Servicio. Avisaremos a los Miembros de un cambio con una notificación dentro de la app. Seguir participando del Programa después de que un cambio entre en vigencia implica la aceptación de los Términos del Programa actualizados."
         },
         "contact": {
-          "heading": "9. Contacto",
+          "heading": "10. Contacto",
           "body": "Las consultas sobre el Programa se pueden enviar a info@joinnorthstack.com."
         }
       }

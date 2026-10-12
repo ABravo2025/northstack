@@ -10,6 +10,7 @@ import TableSkeleton from '../components/common/TableSkeleton';
 import RequiredMark from '../components/common/RequiredMark';
 import { BuildingIcon, ClockIcon, PencilIcon, TrashIcon } from '../components/common/Icons';
 import { formatMinute } from '../lib/shiftDates';
+import { usePermissions } from '../contexts/PermissionsContext';
 import SkillsSettingsCard from '../components/shifts/SkillsSettingsCard';
 
 interface ShiftsSettingsPageProps {
@@ -38,6 +39,7 @@ const REST_PRESETS = [8, 10, 11, 12];
 // Toggles save on the spot, like Settings → Time Off; locations go through a modal.
 export default function ShiftsSettingsPage({ token }: ShiftsSettingsPageProps) {
   const { t } = useTranslation('shifts');
+  const { features } = usePermissions();
   const toast = useToast();
   const [settings, setSettings] = useState<ShiftsSettings | null>(null);
   const [locations, setLocations] = useState<ShiftLocation[] | null>(null);
@@ -284,6 +286,32 @@ export default function ShiftsSettingsPage({ token }: ShiftsSettingsPageProps) {
           </div>
         </section>
       </div>
+
+      <section className="card rules-card">
+        <h3 className="card-title">{t('settings.timesheet.title')}</h3>
+        <p className="rules-lead">{t('settings.timesheet.lead')}</p>
+        <label className="rules-switch">
+          <input type="checkbox" checked={settings.timesheetEnabled} onChange={() => save({ timesheetEnabled: !settings.timesheetEnabled })} />
+          {t('settings.timesheet.enabled')}
+        </label>
+        {settings.timesheetEnabled && (
+          <label className="rules-switch">
+            <input type="checkbox" checked={settings.timesheetReminder} onChange={() => save({ timesheetReminder: !settings.timesheetReminder })} />
+            {t('settings.timesheet.reminder')}
+          </label>
+        )}
+        {features.payroll ? (
+          <>
+            <label className="rules-switch">
+              <input type="checkbox" checked={settings.showScheduleCost} onChange={() => save({ showScheduleCost: !settings.showScheduleCost })} />
+              {t('settings.timesheet.cost')}
+            </label>
+            <p className="rules-hint">{t('settings.timesheet.costHint')}</p>
+          </>
+        ) : (
+          <p className="rules-note">{t('settings.timesheet.costGrowth')}</p>
+        )}
+      </section>
 
       <SkillsSettingsCard token={token} />
 

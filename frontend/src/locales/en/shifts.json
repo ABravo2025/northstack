@@ -96,6 +96,15 @@
       "removeAria": "Remove {{name}}",
       "count_one": "{{count}} person",
       "count_other": "{{count}} people"
+    },
+    "timesheet": {
+      "title": "Timesheet and cost",
+      "lead": "Weekly hours: everyone confirms theirs, their manager approves them.",
+      "enabled": "Use timesheets",
+      "reminder": "Remind people about yesterday's shift hours they haven't logged",
+      "cost": "Show schedule cost",
+      "costHint": "Hours × each person's hourly rate from Payroll. Only people with Payroll access see it.",
+      "costGrowth": "Schedule cost is part of the Growth plan (it uses Payroll rates)."
     }
   },
   "nav": {
@@ -105,7 +114,8 @@
     "mine": "My shifts",
     "settings": "Settings",
     "timesheet": "Timesheet",
-    "approvals": "Approvals"
+    "approvals": "Approvals",
+    "reports": "Reports"
   },
   "status": {
     "draft": "Draft",
@@ -186,7 +196,9 @@
       "person": "Next week"
     },
     "more_one": "+{{count}} more",
-    "more_other": "+{{count}} more"
+    "more_other": "+{{count}} more",
+    "kpiCost": "Cost",
+    "kpiCostNoRate": "{{hours}} without an hourly rate"
   },
   "form": {
     "newTitle": "New shift",
@@ -439,5 +451,42 @@
       "approved": "No approved weeks yet"
     },
     "nobody": "You don't approve anyone's timesheet: nobody reports to you and your role doesn't include approving timesheets."
+  },
+  "reports": {
+    "title": "Hours reports",
+    "subtitle": "Logged hours by person, company or project. Approved weeks unless you include the rest.",
+    "prevMonth": "Previous month",
+    "nextMonth": "Next month",
+    "groupBy": "Group by",
+    "group": {
+      "person": "Person",
+      "company": "Company",
+      "project": "Project"
+    },
+    "approvedOnly": "Only approved weeks",
+    "csv": "Download CSV",
+    "hours": "Hours",
+    "billable": "Billable",
+    "billableShare": "{{pct}}% of the hours",
+    "cost": "Cost",
+    "withoutRate": "{{hours}} without an hourly rate",
+    "removed": "(removed)",
+    "none": {
+      "person": "—",
+      "company": "No company",
+      "project": "No project"
+    },
+    "emptyTitle": "No hours in this month",
+    "emptyBodyApproved": "Only approved weeks count. Turn off “Only approved weeks” to see the rest.",
+    "truncated": "The CSV includes the first 5,000 entries; pick a shorter period for the rest.",
+    "invoice": "Invoice hours",
+    "invoiceTitle": "Invoice {{name}}",
+    "invoiceBody": "{{hours}} billable in {{month}}.",
+    "rate": "Hourly rate ({{currency}})",
+    "invoiceHint": "Next you'll see the usual invoice form, filled in. Review it before sending. Northstack doesn't mark these hours as invoiced, so mind the period.",
+    "continue": "Continue",
+    "invoiceLine": "{{hours}} of work in {{month}} at {{rate}}/h",
+    "invoiceSent": "Invoice sent",
+    "loadFailed": "Couldn't load the report: {{message}}"
   }
 }

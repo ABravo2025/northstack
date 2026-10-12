@@ -1521,3 +1521,37 @@ export interface TimesheetApprovalRow {
   billableMinutes: number;
   adjustments: number;
 }
+
+// Hours reports and schedule cost (Unidad 12). Cost totals are per currency, in cents.
+export interface ScheduleCost {
+  totals: Record<string, number>;
+  minutesWithoutRate: number;
+}
+
+export interface HoursReportRow {
+  key: string | null;
+  name: string | null;
+  minutes: number;
+  billableMinutes: number;
+  cost: Record<string, number> | null;
+  minutesWithoutRate: number;
+}
+
+export interface HoursReport {
+  rows: HoursReportRow[];
+  totals: HoursReportRow;
+  entries: {
+    date: string;
+    person: string;
+    company: string | null;
+    project: string | null;
+    source: TimeEntrySource;
+    description: string | null;
+    minutes: number;
+    billable: boolean;
+    weekStatus: TimesheetStatus;
+  }[];
+  truncated: boolean;
+  withCost: boolean;
+  groupBy: 'person' | 'company' | 'project';
+}

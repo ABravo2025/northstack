@@ -96,6 +96,15 @@
       "removeAria": "Quitar a {{name}}",
       "count_one": "{{count}} persona",
       "count_other": "{{count}} personas"
+    },
+    "timesheet": {
+      "title": "Timesheet y costo",
+      "lead": "Horas por semana: cada persona confirma las suyas y su manager las aprueba.",
+      "enabled": "Usar timesheet",
+      "reminder": "Recordar las horas de turnos de ayer que no se cargaron",
+      "cost": "Mostrar el costo del cronograma",
+      "costHint": "Horas × la tarifa por hora de cada persona en Payroll. Solo lo ven quienes tienen acceso a Payroll.",
+      "costGrowth": "El costo del cronograma es parte del plan Growth (usa las tarifas de Payroll)."
     }
   },
   "nav": {
@@ -105,7 +114,8 @@
     "mine": "Mis turnos",
     "settings": "Configuración",
     "timesheet": "Timesheet",
-    "approvals": "Aprobaciones"
+    "approvals": "Aprobaciones",
+    "reports": "Reportes"
   },
   "status": {
     "draft": "Borrador",
@@ -186,7 +196,9 @@
       "person": "Semana siguiente"
     },
     "more_one": "+{{count}} más",
-    "more_other": "+{{count}} más"
+    "more_other": "+{{count}} más",
+    "kpiCost": "Costo",
+    "kpiCostNoRate": "{{hours}} sin tarifa por hora"
   },
   "form": {
     "newTitle": "Nuevo turno",
@@ -439,5 +451,42 @@
       "approved": "Todavía no hay semanas aprobadas"
     },
     "nobody": "No aprobás timesheets de nadie: nadie te reporta y tu rol no incluye aprobar timesheets."
+  },
+  "reports": {
+    "title": "Reportes de horas",
+    "subtitle": "Horas cargadas por persona, empresa o proyecto. Semanas aprobadas, salvo que incluyas el resto.",
+    "prevMonth": "Mes anterior",
+    "nextMonth": "Mes siguiente",
+    "groupBy": "Agrupar por",
+    "group": {
+      "person": "Persona",
+      "company": "Empresa",
+      "project": "Proyecto"
+    },
+    "approvedOnly": "Solo semanas aprobadas",
+    "csv": "Descargar CSV",
+    "hours": "Horas",
+    "billable": "Facturable",
+    "billableShare": "{{pct}}% de las horas",
+    "cost": "Costo",
+    "withoutRate": "{{hours}} sin tarifa por hora",
+    "removed": "(eliminado)",
+    "none": {
+      "person": "—",
+      "company": "Sin empresa",
+      "project": "Sin proyecto"
+    },
+    "emptyTitle": "No hay horas en este mes",
+    "emptyBodyApproved": "Solo cuentan las semanas aprobadas. Desactivá “Solo semanas aprobadas” para ver el resto.",
+    "truncated": "El CSV trae las primeras 5.000 entradas; elegí un período más corto para el resto.",
+    "invoice": "Facturar horas",
+    "invoiceTitle": "Facturar a {{name}}",
+    "invoiceBody": "{{hours}} facturables en {{month}}.",
+    "rate": "Tarifa por hora ({{currency}})",
+    "invoiceHint": "Después vas a ver el formulario de factura de siempre, completo. Revisalo antes de enviarlo. Northstack no marca estas horas como facturadas, así que cuidá el período.",
+    "continue": "Continuar",
+    "invoiceLine": "{{hours}} de trabajo en {{month}} a {{rate}}/h",
+    "invoiceSent": "Factura enviada",
+    "loadFailed": "No se pudo cargar el reporte: {{message}}"
   }
 }

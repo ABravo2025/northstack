@@ -5087,3 +5087,25 @@ Solo backend (sin pantallas todavía: la grilla es la Unidad 5 y "Mis turnos" la
 3. Apagar los dos interruptores de recordatorios en Settings → Turnos: no sale nada de turnos.
 4. Habilidad que vence en 7 días: email al titular y al Owner; en Starter no sale.
 5. Recargar varias veces seguidas cualquier página: no te saca de la sesión.
+
+## QA-109 — Shifts, Unidad 9: timesheet (backend) (2026-10-12, en `staging`)
+
+Solo backend y API; las pantallas llegan en la Unidad 11. Schema nuevo aplicado a `staging` (`Timesheet`, `TimeEntry`, `TimeSuggestionDismissal`) y permiso nuevo **`approve_timesheets`** (Admin por defecto; backfill corrido en `staging`). Plan: horas facturables solo Growth.
+
+### Qué hace
+
+- **Semana por persona** (según "La semana empieza el" de Settings → Turnos): entradas con fecha, minutos, descripción, facturable (Growth) y empresa/proyecto.
+- **Sugerencias que se calculan al abrir la semana** (no se guardan, nunca se cargan solas): turnos aceptados ya terminados con su duración, tareas completadas (con su cliente: empresa directa, la de un contacto u oportunidad, o un proyecto y su empresa), reuniones con videollamada (1 h) y eventos propios de Google Calendar. Lo cargado o descartado no vuelve a aparecer (descartar se puede deshacer).
+- **Flujo:** abierta → enviada (queda bloqueada) → aprobada o devuelta con nota obligatoria (vuelve a ser editable). Aprueba el manager directo o quien tenga `approve_timesheets`; nadie su propia semana, salvo el Owner.
+- **Semana aprobada = cerrada.** Se corrige con un **ajuste** (± minutos, motivo obligatorio) que queda en la semana actual de la persona, se aprueba con ella y apunta a la semana que corrige; o un aprobador la **reabre** con motivo.
+- **Avisos:** al enviar, campana a quien aprueba; al aprobar/devolver/reabrir, campana a la persona (devuelta o reabierta también por email con la nota). **Cron diario:** a quien tuvo turnos ayer sin cargar (campana + email), si la empresa tiene activo el recordatorio del timesheet; no se repite el mismo día.
+- Settings → Turnos → timesheet apagado: toda la API responde 403.
+
+**Verificado en esta sesión** (API local contra `staging`, tenant de QA, 39/39): sugerencia del turno con 240 min y de la tarea con su empresa, minutos planificados, cargar desde sugerencia (dos veces → rechazado), facturable en Growth, entrada manual, el Owner no puede cargar la tarea de Mia como propia, totales, nombre de empresa, descartar/restaurar, Mia no ve la semana del Owner, enviar bloquea, campana al Owner, cola de aprobación con totales, Mia no puede aprobarse, devolver sin nota rechazado, devolver → editar → reenviar → aprobar, campanas a Mia, semana aprobada cerrada, ajuste en la semana actual que apunta a la cerrada, ajuste sin motivo rechazado, reabrir con motivo, recordatorio diario una sola vez, Starter sin facturable, timesheet apagado → 403. 771/771 tests.
+
+### Qué probar (cuando estén las pantallas, Unidad 11)
+
+1. Semana con turnos y tareas: aparecen como sugerencias; cargar algunas, descartar otras.
+2. Enviar, devolver con nota, corregir, aprobar.
+3. Ajuste negativo a una semana aprobada; reabrir otra.
+4. Un manager directo sin `approve_timesheets` aprueba a sus reportes y no a otros.

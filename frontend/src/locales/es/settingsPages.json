@@ -823,6 +823,8 @@
       "shiftTemplate": "Plantilla de turno",
       "shiftsSettings": "Configuración de turnos",
       "skill": "Habilidad",
+      "timesheet": "Timesheet",
+      "timeEntry": "Registro de horas",
       "project": "Proyecto",
       "projectPhase": "Fase de proyecto",
       "projectTemplate": "Template de proyecto"
@@ -930,6 +932,11 @@
           "label": "Gestionar turnos",
           "description": "Crear, editar, publicar y cancelar turnos, y configurar locaciones, plantillas y reglas de turnos.",
           "hint": "Necesita Ver el cronograma completo. El responsable de una locación siempre puede armar los turnos de esa locación"
+        },
+        "approve_timesheets": {
+          "label": "Aprobar timesheets",
+          "description": "Aprobar, devolver y reabrir el timesheet de cualquier persona, y ver los reportes de horas.",
+          "hint": "Sin este permiso, el manager directo de cada persona igual aprueba sus semanas"
         }
       },
       "configuration": {

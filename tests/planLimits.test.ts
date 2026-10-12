@@ -39,6 +39,7 @@ describe('getPlanLimits', () => {
       customProjectTemplatesEnabled: false,
       maxActiveLocations: 1,
       shiftSkillsEnabled: false,
+      billableHoursEnabled: false,
     });
   });
 

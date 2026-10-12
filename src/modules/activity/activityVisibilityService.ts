@@ -19,6 +19,7 @@ import {
   canViewProjects,
   canViewShifts,
   canManageShifts,
+  canApproveTimesheets,
 } from '../auth/permissionService.js';
 import { canViewProject } from '../projects/projectAccess.js';
 import type { RoleContext } from '../auth/roleService.js';
@@ -67,6 +68,9 @@ const ACTIVITY_MODULE_GATE: Partial<Record<ActivityEntityType, (role: RoleContex
   shiftTemplate: canManageShifts,
   shiftsSettings: canManageShifts,
   skill: canManageShifts,
+  // Timesheets: the tenant-wide feed shows them to whoever approves anyone's week.
+  timesheet: canApproveTimesheets,
+  timeEntry: canApproveTimesheets,
 };
 
 export function canViewEntryModule(role: RoleContext, entityType: ActivityEntityType): boolean {

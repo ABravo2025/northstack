@@ -1,7 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import prisma from '../../lib/prisma.js';
 import i18n, { resolveEmailLocale } from '../../lib/i18n.js';
-import { sendShiftEmail, sendSkillExpiryEmail, type ShiftEmailShift, type SkillExpiryItem } from '../../lib/mailer.js';
+import { sendShiftEmail, sendSkillExpiryEmail, sendTimesheetReminderEmail, type ShiftEmailShift, type SkillExpiryItem } from '../../lib/mailer.js';
 import { createNotification } from '../notifications/notificationService.js';
 import { getPlanLimits } from '../tenant/planLimits.js';
 import { MANAGE_SHIFTS } from '../auth/roleService.js';
@@ -9,6 +9,7 @@ import { formatShiftWhen, shiftAnswerUrl } from './shiftNotifier.js';
 import { getShiftsSettings, type EffectiveShiftsSettings } from './shiftsSettingsService.js';
 import { newResponseToken } from './shiftService.js';
 import { addDays, zonedDateString } from './shiftTime.js';
+import { weekStartFor } from './timesheetService.js';
 
 // Shifts module, Unidad 8 (spec-shifts.md §0.4) — the one daily run (Vercel Hobby = crons once a
 // day). In order:
@@ -17,7 +18,7 @@ import { addDays, zonedDateString } from './shiftTime.js';
 //      for confirmations), at most once a day per assignment.
 //   3. Skills that expire in 30 days, in 7 days, or today (Growth), to the holder and to whoever
 //      manages shifts.
-// The timesheet reminder joins this run with the timesheet (Unidades 9-11).
+//   4. Yesterday's shift hours not in the timesheet yet (timesheetEnabled + timesheetReminder).
 //
 // Each reminder rotates the assignment's one-click token (only its hash is stored, so the clear
 // token exists only at send time), which retires the buttons of the earlier email; that page
@@ -207,7 +208,7 @@ async function noticeExpiringSkills(now: Date, only?: string): Promise<{ holders
   for (const [tenantId, list] of byTenant) {
     const companyName = list[0].tenant.name;
     const earlier = await prisma.notification.findMany({
-      where: { tenantId, type: 'shift_reminder', entityType: 'skill', createdAt: { gte: since } },
+      where: { tenantId, type: 'skill_expiring', createdAt: { gte: since } },
       select: { userId: true },
       distinct: ['userId'],
     });
@@ -232,7 +233,7 @@ async function noticeExpiringSkills(now: Date, only?: string): Promise<{ holders
       await createNotification({
         tenantId,
         userId: u.id,
-        type: 'shift_reminder',
+        type: 'skill_expiring',
         entityType: 'skill',
         entityId: own[0].skill.id,
         message: t(u.locale, 'notifSkillOwn', { count: own.length, skill: own[0].skill.name }),
@@ -255,7 +256,7 @@ async function noticeExpiringSkills(now: Date, only?: string): Promise<{ holders
       await createNotification({
         tenantId,
         userId: u.id,
-        type: 'shift_reminder',
+        type: 'skill_expiring',
         entityType: 'skill',
         entityId: list[0].skill.id,
         message: t(u.locale, 'notifSkillTeam', { count: list.length }),
@@ -267,11 +268,84 @@ async function noticeExpiringSkills(now: Date, only?: string): Promise<{ holders
   return { holders, managers };
 }
 
+// Unidad 9: yesterday's accepted shifts (the location's yesterday) whose hours aren't in the
+// timesheet yet, when the company has timesheets and their reminder on. Skips shifts already logged
+// or dismissed, and weeks already submitted or approved. One bell + one email per person.
+async function remindTimesheet(now: Date, settingsFor: (id: string) => Promise<EffectiveShiftsSettings>, only?: string): Promise<number> {
+  const utcToday = toDateString(now);
+  const candidates = await prisma.shiftAssignment.findMany({
+    where: {
+      status: 'accepted',
+      tenant: tenantFilter(only),
+      shift: {
+        status: 'published',
+        endsAt: { lte: now },
+        date: { gte: new Date(`${addDays(utcToday, -2)}T00:00:00Z`), lte: new Date(`${utcToday}T00:00:00Z`) },
+      },
+    },
+    include: assignmentInclude,
+  });
+
+  const byUser = new Map<string, { user: NonNullable<ReminderAssignment['employee']['user']>; items: ReminderAssignment[] }>();
+  for (const a of candidates) {
+    const user = a.employee.user;
+    if (!user || user.status !== 'active') continue;
+    const date = toDateString(a.shift.date);
+    if (date !== addDays(zonedDateString(now, a.shift.location.timezone), -1)) continue;
+    const settings = await settingsFor(a.tenantId);
+    if (!settings.timesheetEnabled || !settings.timesheetReminder) continue;
+
+    const [logged, dismissed, week] = await Promise.all([
+      prisma.timeEntry.count({ where: { employeeId: a.employeeId, source: 'shift', sourceId: a.id } }),
+      prisma.timeSuggestionDismissal.count({ where: { employeeId: a.employeeId, sourceType: 'shift', sourceId: a.id } }),
+      prisma.timesheet.findUnique({
+        where: { employeeId_weekStart: { employeeId: a.employeeId, weekStart: new Date(`${weekStartFor(date, settings.weekStartsOn)}T00:00:00Z`) } },
+        select: { status: true },
+      }),
+    ]);
+    if (logged > 0 || dismissed > 0) continue;
+    if (week && (week.status === 'submitted' || week.status === 'approved')) continue;
+
+    const entry = byUser.get(user.id) ?? { user, items: [] };
+    entry.items.push(a);
+    byUser.set(user.id, entry);
+  }
+
+  const since = new Date(now.getTime() - REMIND_GAP_MS);
+  let sent = 0;
+  for (const { user, items } of byUser.values()) {
+    const tenantId = items[0].tenantId;
+    const already = await prisma.notification.count({ where: { tenantId, userId: user.id, type: 'timesheet_reminder', createdAt: { gte: since } } });
+    if (already > 0) continue;
+    items.sort((x, y) => x.shift.startsAt.getTime() - y.shift.startsAt.getTime());
+    const week = weekStartFor(toDateString(items[0].shift.date), (await settingsFor(tenantId)).weekStartsOn);
+    await createNotification({
+      tenantId,
+      userId: user.id,
+      type: 'timesheet_reminder',
+      entityType: 'timesheet',
+      entityId: items[0].id,
+      message: i18n.t('timesheet.notifReminder', { lng: resolveEmailLocale(user.locale), ns: 'emails', count: items.length }),
+    }).catch((err) => console.error('Failed to create timesheet reminder notification:', err));
+    await sendTimesheetReminderEmail({
+      to: user.email,
+      locale: user.locale,
+      firstName: user.firstName,
+      companyName: items[0].shift.tenant.name,
+      shifts: items.map((a) => `${formatShiftWhen(a.shift, user.locale)} · ${a.shift.location.name}`),
+      url: `${appBaseUrl()}/shifts/timesheet?week=${week}`,
+    });
+    sent++;
+  }
+  return sent;
+}
+
 export interface ShiftReminderRunResult {
   tomorrow: number;
   unanswered: number;
   skillHolders: number;
   skillManagers: number;
+  timesheet: number;
 }
 
 export async function runShiftReminders(now: Date = new Date(), only?: string): Promise<ShiftReminderRunResult> {
@@ -288,5 +362,6 @@ export async function runShiftReminders(now: Date = new Date(), only?: string): 
   const tomorrow = await step('tomorrow', () => remindTomorrow(now, settingsFor, only), 0);
   const unanswered = await step('unanswered', () => remindUnanswered(now, settingsFor, only), 0);
   const skills = await step('skills', () => noticeExpiringSkills(now, only), { holders: 0, managers: 0 });
-  return { tomorrow, unanswered, skillHolders: skills.holders, skillManagers: skills.managers };
+  const timesheet = await step('timesheet', () => remindTimesheet(now, settingsFor, only), 0);
+  return { tomorrow, unanswered, skillHolders: skills.holders, skillManagers: skills.managers, timesheet };
 }

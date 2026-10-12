@@ -184,5 +184,25 @@
     "notifSkillOwn_other": "{{count}} of your skills expire soon",
     "notifSkillTeam_one": "1 skill in your team expires soon",
     "notifSkillTeam_other": "{{count}} skills in your team expire soon"
+  },
+  "timesheet": {
+    "greeting": "Hi {{firstName}},",
+    "notifSubmitted": "{{employeeName}} submitted the timesheet for the week of {{week}}",
+    "notifApproved": "{{name}} approved your timesheet for the week of {{week}}",
+    "notifReturned": "{{name}} sent back your timesheet for the week of {{week}}",
+    "notifReopened": "{{name}} reopened your timesheet for the week of {{week}}",
+    "notifReminder_one": "Log your hours: you had a shift yesterday",
+    "notifReminder_other": "Log your hours: you had {{count}} shifts yesterday",
+    "subjectReturned": "Your timesheet for the week of {{week}} needs changes",
+    "subjectReopened": "Your timesheet for the week of {{week}} was reopened",
+    "introReturned": "{{name}} sent back your timesheet for the week of {{week}} at {{companyName}}.",
+    "introReopened": "{{name}} reopened your timesheet for the week of {{week}} at {{companyName}}, so you can correct it and send it again.",
+    "noteLine": "Their note: {{note}}",
+    "reasonLine": "Reason: {{note}}",
+    "open": "Open your timesheet",
+    "subjectReminder_one": "Log yesterday's hours",
+    "subjectReminder_other": "Log yesterday's hours ({{count}} shifts)",
+    "introReminder": "Your timesheet at {{companyName}} doesn't have the hours for these shifts yet:",
+    "reminderOutro": "It takes a moment: they're already suggested in your timesheet, you only confirm them."
   }
 }

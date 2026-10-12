@@ -823,6 +823,8 @@
       "shiftTemplate": "Shift Template",
       "shiftsSettings": "Shift Settings",
       "skill": "Skill",
+      "timesheet": "Timesheet",
+      "timeEntry": "Time entry",
       "project": "Project",
       "projectPhase": "Project Phase",
       "projectTemplate": "Project Template"
@@ -930,6 +932,11 @@
           "label": "Manage shifts",
           "description": "Create, edit, publish and cancel shifts, and set up locations, templates and shift rules.",
           "hint": "Needs View the whole schedule. A location's manager can always schedule that location"
+        },
+        "approve_timesheets": {
+          "label": "Approve timesheets",
+          "description": "Approve, return and reopen anyone's timesheet, and see the hours reports.",
+          "hint": "Without it, each person's direct manager still approves that person's weeks"
         }
       },
       "configuration": {

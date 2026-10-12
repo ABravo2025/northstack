@@ -184,5 +184,25 @@
     "notifSkillOwn_other": "{{count}} de tus habilitaciones vencen pronto",
     "notifSkillTeam_one": "1 habilitación de tu equipo vence pronto",
     "notifSkillTeam_other": "{{count}} habilitaciones de tu equipo vencen pronto"
+  },
+  "timesheet": {
+    "greeting": "Hola {{firstName}},",
+    "notifSubmitted": "{{employeeName}} envió el timesheet de la semana del {{week}}",
+    "notifApproved": "{{name}} aprobó tu timesheet de la semana del {{week}}",
+    "notifReturned": "{{name}} te devolvió el timesheet de la semana del {{week}}",
+    "notifReopened": "{{name}} reabrió tu timesheet de la semana del {{week}}",
+    "notifReminder_one": "Cargá tus horas: ayer tuviste un turno",
+    "notifReminder_other": "Cargá tus horas: ayer tuviste {{count}} turnos",
+    "subjectReturned": "Tu timesheet de la semana del {{week}} necesita cambios",
+    "subjectReopened": "Se reabrió tu timesheet de la semana del {{week}}",
+    "introReturned": "{{name}} te devolvió el timesheet de la semana del {{week}} en {{companyName}}.",
+    "introReopened": "{{name}} reabrió tu timesheet de la semana del {{week}} en {{companyName}} para que lo corrijas y lo vuelvas a enviar.",
+    "noteLine": "Su comentario: {{note}}",
+    "reasonLine": "Motivo: {{note}}",
+    "open": "Abrir tu timesheet",
+    "subjectReminder_one": "Cargá las horas de ayer",
+    "subjectReminder_other": "Cargá las horas de ayer ({{count}} turnos)",
+    "introReminder": "A tu timesheet en {{companyName}} todavía le faltan las horas de estos turnos:",
+    "reminderOutro": "Es un momento: ya están sugeridas en tu timesheet, solo tenés que confirmarlas."
   }
 }

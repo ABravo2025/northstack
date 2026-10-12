@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer';
 import { bestEffort } from './bestEffort.js';
 import { emailLogoAttachment, renderEmailLayout } from './emailLayout.js';
 import i18n, { resolveEmailLocale } from './i18n.js';
+import { emailAllowed, emailPreferencesUrl, type EmailCategory } from './emailPreferences.js';
 
 // Opportunity/company names, stage labels, and display names are all tenant-user-controlled free
 // text that gets interpolated into HTML email bodies below — escape before interpolating so a
@@ -97,7 +98,27 @@ function mailerConfigured(): boolean {
 //
 // Also where every email gets Northstack's template (emailLayout.ts, 2026-10-06): the body each
 // function writes is wrapped in the shared layout and the logo goes along as an inline image.
-function dispatchMail(mailOptions: Parameters<typeof transporter.sendMail>[0], errorLabel: string, lng?: string | null): Promise<void> {
+// `category` marks an optional email (src/lib/emailPreferences.ts): skipped when the recipient
+// turned that category off, and it carries a footer link to change those preferences.
+async function dispatchMail(
+  mailOptions: Parameters<typeof transporter.sendMail>[0],
+  errorLabel: string,
+  lng?: string | null,
+  category?: EmailCategory,
+): Promise<void> {
+  if (category) {
+    if (!(await emailAllowed(String(mailOptions.to), category))) return;
+    const lang = resolveEmailLocale(lng);
+    const note = i18n.t('emailPreferences.footer', { lng: lang, ns: 'emails' });
+    const link = i18n.t('emailPreferences.link', { lng: lang, ns: 'emails' });
+    mailOptions = {
+      ...mailOptions,
+      text: mailOptions.text ? `${String(mailOptions.text)}\n\n${note} ${link}: ${emailPreferencesUrl()}` : mailOptions.text,
+      html: mailOptions.html
+        ? `${String(mailOptions.html)}\n<p style="color:#706b88;font-size:12px">${note} <a href="${emailPreferencesUrl()}">${link}</a></p>`
+        : mailOptions.html,
+    };
+  }
   const options = mailOptions.html
     ? {
         ...mailOptions,
@@ -322,7 +343,7 @@ export async function sendTimeOffRequestPendingEmail(input: SendTimeOffRequestPe
       })}</p>`,
       `<p>${t('timeOffPending.cta')}</p>`,
     ].join('\n'),
-  }, 'Failed to send time off pending email:', lng);
+  }, 'Failed to send time off pending email:', lng, 'timeOff');
 }
 
 export interface SendTimeOffRequestDecidedEmailInput {
@@ -380,7 +401,7 @@ export async function sendTimeOffRequestDecidedEmail(input: SendTimeOffRequestDe
       `<p>${introHtml}</p>`,
       input.decisionNote ? `<p>${t('timeOffDecided.note', { note: escapeHtml(input.decisionNote) })}</p>` : '',
     ].join('\n'),
-  }, 'Failed to send time off decided email:', lng);
+  }, 'Failed to send time off decided email:', lng, 'timeOff');
 }
 
 export interface SendFeedbackEmailInput {
@@ -722,7 +743,7 @@ export async function sendOpportunityStageChangedEmail(input: SendOpportunitySta
       })}</p>`,
       `<p><a href="${input.appUrl}">${t('opportunityStageChanged.cta')}</a></p>`,
     ].join('\n'),
-  }, 'Failed to send opportunity stage changed email:', lng);
+  }, 'Failed to send opportunity stage changed email:', lng, 'opportunityStage');
 }
 
 export interface SendOpportunityStalledEmailInput {
@@ -771,7 +792,7 @@ export async function sendOpportunityStalledEmail(input: SendOpportunityStalledE
       })}</p>`,
       `<p><a href="${input.appUrl}">${t('opportunityStalled.cta')}</a></p>`,
     ].join('\n'),
-  }, 'Failed to send opportunity stalled email:', lng);
+  }, 'Failed to send opportunity stalled email:', lng, 'opportunityStalled');
 }
 
 export interface SendTicketNoteCreatedEmailInput {
@@ -981,6 +1002,7 @@ export async function sendShiftEmail(input: SendShiftEmailInput): Promise<void> 
     },
     `Failed to send shift ${input.kind} email:`,
     lng,
+    input.kind === 'declined' ? 'shiftDeclined' : input.kind === 'tomorrow' || input.kind === 'unanswered' ? 'shiftReminders' : 'shifts',
   );
 }
 
@@ -1040,6 +1062,7 @@ export async function sendTimesheetReturnedEmail(input: SendTimesheetReturnedEma
     },
     'Failed to send timesheet returned email:',
     lng,
+    'timesheet',
   );
 }
 
@@ -1086,6 +1109,7 @@ export async function sendTimesheetReminderEmail(input: SendTimesheetReminderEma
     },
     'Failed to send timesheet reminder email:',
     lng,
+    'timesheet',
   );
 }
 
@@ -1123,5 +1147,6 @@ export async function sendSkillExpiryEmail(input: SendSkillExpiryEmailInput): Pr
     { from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`, to: input.to, subject, text: textBlocks.join('\n'), html: htmlBlocks.join('\n') },
     'Failed to send skill expiry email:',
     lng,
+    'skillsExpiring',
   );
 }

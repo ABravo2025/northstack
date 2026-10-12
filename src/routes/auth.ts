@@ -16,6 +16,8 @@ import { planFeatures } from '../modules/tenant/planLimits.js';
 import { AUTH_RATE_LIMIT, isRateLimited } from '../lib/rateLimit.js';
 import { authenticateUser, getBearerToken, getClientIp } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
+import prisma from '../lib/prisma.js';
+import { applyEmailPreferences, EMAIL_CATEGORIES } from '../lib/emailPreferences.js';
 
 export const authRouter = createAsyncRouter();
 
@@ -152,6 +154,31 @@ authRouter.patch('/api/users/me/locale', async (req, res) => {
   }
 
   return res.json({ user: sanitizeUser(result.user!) });
+});
+
+// Notification preferences (spec-shifts.md Unidad 13): which optional emails this person gets.
+// { categories: [{ key, email }] } — every category, true unless turned off.
+authRouter.get('/api/users/me/email-preferences', async (req, res) => {
+  const user = await authenticateUser(req, res);
+  if (!user) {
+    return;
+  }
+  const row = await prisma.user.findUnique({ where: { id: user.id }, select: { emailOptOuts: true } });
+  return res.json({ categories: EMAIL_CATEGORIES.map((key) => ({ key, email: !row?.emailOptOuts.includes(key) })) });
+});
+
+authRouter.patch('/api/users/me/email-preferences', async (req, res) => {
+  const user = await authenticateUser(req, res);
+  if (!user) {
+    return;
+  }
+  const row = await prisma.user.findUnique({ where: { id: user.id }, select: { emailOptOuts: true } });
+  const result = applyEmailPreferences(row?.emailOptOuts ?? [], req.body);
+  if (!result.ok) {
+    return res.status(400).json({ error: result.error });
+  }
+  await prisma.user.update({ where: { id: user.id }, data: { emailOptOuts: result.value } });
+  return res.json({ categories: EMAIL_CATEGORIES.map((key) => ({ key, email: !result.value.includes(key) })) });
 });
 
 authRouter.patch('/api/users/me/password', async (req, res) => {

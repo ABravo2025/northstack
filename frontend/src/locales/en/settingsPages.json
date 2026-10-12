@@ -985,5 +985,26 @@
         }
       }
     }
+  },
+  "emailPreferences": {
+    "title": "Email notifications",
+    "lead": "Choose which emails you get. You'll still see everything in the bell.",
+    "group": {
+      "shifts": "Shifts and timesheet",
+      "timeOff": "Time off",
+      "sales": "Sales"
+    },
+    "category": {
+      "shifts": "New, changed or cancelled shifts",
+      "shiftReminders": "Reminders: tomorrow's shifts and shifts waiting for my answer",
+      "shiftDeclined": "Someone can't make a shift I scheduled",
+      "skillsExpiring": "Skills and certifications about to expire",
+      "timesheet": "My timesheet: weeks sent back or reopened, hours not logged yet",
+      "timeOff": "Time off requests to decide, and decisions on mine",
+      "opportunityStage": "A deal I own moved stage",
+      "opportunityStalled": "A deal I own hasn't moved in a while"
+    },
+    "always": "Emails about your account (password, invitations, billing and legal updates) always arrive.",
+    "failed": "Couldn't save: {{message}}"
   }
 }

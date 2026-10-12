@@ -985,5 +985,26 @@
         }
       }
     }
+  },
+  "emailPreferences": {
+    "title": "Notificaciones por email",
+    "lead": "Elegí qué emails recibís. En la campana vas a seguir viendo todo.",
+    "group": {
+      "shifts": "Turnos y timesheet",
+      "timeOff": "Ausencias",
+      "sales": "Ventas"
+    },
+    "category": {
+      "shifts": "Turnos nuevos, modificados o cancelados",
+      "shiftReminders": "Recordatorios: turnos de mañana y turnos que esperan mi respuesta",
+      "shiftDeclined": "Alguien no puede cubrir un turno que armé",
+      "skillsExpiring": "Habilidades y habilitaciones por vencer",
+      "timesheet": "Mi timesheet: semanas devueltas o reabiertas, horas sin cargar",
+      "timeOff": "Pedidos de ausencia para decidir y decisiones sobre los míos",
+      "opportunityStage": "Una oportunidad mía cambió de etapa",
+      "opportunityStalled": "Una oportunidad mía lleva tiempo sin moverse"
+    },
+    "always": "Los emails sobre tu cuenta (contraseña, invitaciones, facturación y novedades legales) siempre llegan.",
+    "failed": "No se pudo guardar: {{message}}"
   }
 }

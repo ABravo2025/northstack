@@ -1,5 +1,5 @@
 import { API_BASE_URL, apiFetch, throwApiError } from './http.js';
-import type { AuthResponse, PermissionsPayload, PlanPricing, PlanTier, Tenant, SocialLinks, TenantProfileUpdate, TenantUser } from './types.js';
+import type { AuthResponse, EmailCategory, EmailPreference, PermissionsPayload, PlanPricing, PlanTier, Tenant, SocialLinks, TenantProfileUpdate, TenantUser } from './types.js';
 
 // Tenant Signup — email verification (spec-tenant-signup.md). /start and /resend hit distinct
 // backend routes (own rate-limit buckets for the cooldown timer/analytics) but are otherwise
@@ -163,6 +163,23 @@ export const authApi = {
         Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ locale }),
+    });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  // Notification preferences (spec-shifts.md Unidad 13): which optional emails this person gets.
+  getEmailPreferences: async (token: string): Promise<{ categories: EmailPreference[] }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/users/me/email-preferences`, { headers: { Authorization: `Bearer ${token}` } });
+    if (!res.ok) await throwApiError(res);
+    return res.json();
+  },
+
+  updateEmailPreferences: async (token: string, changes: Partial<Record<EmailCategory, boolean>>): Promise<{ categories: EmailPreference[] }> => {
+    const res = await apiFetch(`${API_BASE_URL}/api/users/me/email-preferences`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(changes),
     });
     if (!res.ok) await throwApiError(res);
     return res.json();

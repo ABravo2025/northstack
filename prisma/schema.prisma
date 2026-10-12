@@ -587,6 +587,10 @@ model User {
   // a btree index. Nullable because it predates existing rows — see
   // scripts/backfill-user-email-domain.ts, run once after this column is added.
   emailDomain                 String?
+  // Notification preferences (spec-shifts.md Unidad 13): the optional email categories this person
+  // turned off (src/lib/emailPreferences.ts). In-app notifications always arrive; account,
+  // security, billing and legal emails can't be turned off.
+  emailOptOuts                String[]                    @default([])
   passwordHash                String
   role                        UserRole                    @default(member)
   // Custom Roles (docs/tareas/backlog.md "Sistema de roles custom") — additive, nullable during

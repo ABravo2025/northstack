@@ -50,7 +50,7 @@ export default function MyTasksPage({ token, user }: MyTasksPageProps) {
   } = useMyTasksHub(token);
 
   useEffect(() => {
-    api.listTenantUsers(token).then(setTenantUsers).catch(() => {});
+    api.listUserDirectory(token).then(setTenantUsers).catch(() => {});
   }, [token]);
 
   // ?task=<id> (a mention notification) opens that task, even one you're not assigned to.

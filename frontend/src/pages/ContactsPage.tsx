@@ -185,7 +185,7 @@ export default function ContactsPage({ user, token }: ContactsPageProps) {
     api.listFieldCatalogDefinitions(token, 'lossReason').then(setLossReasons).catch(() => {});
     api.listFieldCatalogDefinitions(token, 'winReason').then(setWinReasons).catch(() => {});
     api
-      .listTenantUsers(token)
+      .listUserDirectory(token)
       .then(setTenantUsers)
       .catch(() => {
         // Non-critical — the Tasks assignee dropdown just falls back to empty if it fails.

@@ -1,4 +1,3 @@
-import prisma from '../lib/prisma.js';
 import {
   createTask,
   deleteTask,
@@ -13,6 +12,7 @@ import {
 } from '../modules/tasks/taskService.js';
 import { findTaskFolderById } from '../modules/tasks/taskFolderService.js';
 import { findPhaseById } from '../modules/projects/projectService.js';
+import { listUserDirectory } from '../modules/tenant/tenantUserService.js';
 import {
   MAX_COMMENT_LENGTH,
   createTaskComment,
@@ -247,12 +247,7 @@ tasksRouter.delete('/api/tasks/:taskId', async (req, res) => {
 tasksRouter.get('/api/tasks/mentionable-users', async (req, res) => {
   const user = await validateSession(req, res);
   if (!user) return;
-  const users = await prisma.user.findMany({
-    where: { tenantId: user.tenantId!, status: 'active' },
-    select: { id: true, firstName: true, lastName: true },
-    orderBy: [{ firstName: 'asc' }, { lastName: 'asc' }],
-  });
-  return res.json(users);
+  return res.json(await listUserDirectory(user.tenantId!));
 });
 
 // One task by id (2026-10-06) — what a task_mention notification opens. Same tenant-only check as

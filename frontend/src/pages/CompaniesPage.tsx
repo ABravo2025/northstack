@@ -158,7 +158,7 @@ export default function CompaniesPage({ user, token }: CompaniesPageProps) {
     loadCompanySizes();
     loadViews();
     api
-      .listTenantUsers(token)
+      .listUserDirectory(token)
       .then(setTenantUsers)
       .catch(() => {
         // Non-critical — the account owner dropdown just falls back to empty if it fails.

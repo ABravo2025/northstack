@@ -12,7 +12,7 @@ import {
   findInvitationByToken,
   listTenantInvitations,
 } from '../modules/tenant/invitationService.js';
-import { listTenantUsers, updateTenantUser } from '../modules/tenant/tenantUserService.js';
+import { listTenantUsers, listUserDirectory, updateTenantUser } from '../modules/tenant/tenantUserService.js';
 import { AUTH_RATE_LIMIT, isRateLimited } from '../lib/rateLimit.js';
 import { authenticateUser, getClientIp, validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
@@ -209,6 +209,13 @@ tenantsRouter.delete('/api/tenants/current/logo', async (req, res) => {
 
   const result = await removeTenantLogo(user.tenantId!, user.id);
   return res.json({ tenant: result.tenant });
+});
+
+// Anyone signed in — names only, for person pickers (see listUserDirectory).
+tenantsRouter.get('/api/tenants/user-directory', async (req, res) => {
+  const user = await validateSession(req, res);
+  if (!user) return;
+  return res.json(await listUserDirectory(user.tenantId!));
 });
 
 tenantsRouter.get('/api/tenants/users', async (req, res) => {

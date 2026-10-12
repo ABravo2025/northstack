@@ -87,7 +87,7 @@ export default function ProjectDetailPage({ token, user }: { token: string; user
   }, [loadProject, loadTasks]);
 
   useEffect(() => {
-    api.listTenantUsers(token).then(setTenantUsers).catch(() => {});
+    api.listUserDirectory(token).then(setTenantUsers).catch(() => {});
   }, [token]);
 
   // ?task=<id> (a mention notification) opens that task once the list is in.

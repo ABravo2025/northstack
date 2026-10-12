@@ -100,6 +100,12 @@ export default function NotificationBell({ token }: NotificationBellProps) {
 
   const handleItemClick = async (notification: Notification) => {
     if (notification.type === 'task_mention') void openMentionedTask(notification.entityId);
+    // Shifts: your own shifts open My shifts; "someone can't make it" opens the schedule. Skill
+    // expiry notices stay informational.
+    if (notification.entityType === 'shift') {
+      setOpen(false);
+      navigate(notification.type === 'shift_declined' ? '/shifts' : '/shifts/mine');
+    }
     if (notification.read) return;
     try {
       await api.markNotificationRead(token, notification.id);

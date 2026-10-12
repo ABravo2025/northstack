@@ -858,7 +858,8 @@ export interface ShiftEmailShift {
   declineUrl?: string | null;
 }
 
-export type ShiftEmailKind = 'assigned' | 'reconfirm' | 'changed' | 'cancelled' | 'unassigned' | 'declined';
+// 'tomorrow' and 'unanswered' come from the daily reminder run (shiftReminderService.ts, Unidad 8).
+export type ShiftEmailKind = 'assigned' | 'reconfirm' | 'changed' | 'cancelled' | 'unassigned' | 'declined' | 'tomorrow' | 'unanswered';
 
 export interface SendShiftEmailInput {
   to: string;
@@ -899,6 +900,8 @@ export async function sendShiftEmail(input: SendShiftEmailInput): Promise<void> 
     cancelled: t('subjectCancelled', { when: first.when }),
     unassigned: t('subjectCancelled', { when: first.when }),
     declined: t('subjectDeclined', { when: first.when, employeeName: input.employeeName ?? '' }),
+    tomorrow: count === 1 ? t('subjectTomorrowOne', { when: first.when }) : t('subjectTomorrowMany', { count }),
+    unanswered: count === 1 ? t('subjectUnansweredOne', { when: first.when }) : t('subjectUnansweredMany', { count }),
   }[input.kind];
 
   const introKey = {
@@ -908,6 +911,8 @@ export async function sendShiftEmail(input: SendShiftEmailInput): Promise<void> 
     cancelled: 'introCancelled',
     unassigned: 'introUnassigned',
     declined: 'introDeclined',
+    tomorrow: count === 1 ? 'introTomorrowOne' : 'introTomorrowMany',
+    unanswered: count === 1 ? 'introUnansweredOne' : 'introUnansweredMany',
   }[input.kind];
   const introVars = { companyName: input.companyName, count, employeeName: input.employeeName ?? '' };
   const intro = t(introKey, introVars);
@@ -975,6 +980,63 @@ export async function sendShiftEmail(input: SendShiftEmailInput): Promise<void> 
         : undefined,
     },
     `Failed to send shift ${input.kind} email:`,
+    lng,
+  );
+}
+
+// Shifts module, Unidad 8 — a skill that expires in 30 days, 7 days or today. The holder gets
+// their own skills; whoever manages shifts gets one list for the whole company (with names).
+export interface SkillExpiryItem {
+  skill: string;
+  person: string | null;
+  // YYYY-MM-DD, the last valid day.
+  expiresOn: string;
+  daysLeft: number;
+}
+
+export interface SendSkillExpiryEmailInput {
+  to: string;
+  locale?: string | null;
+  firstName: string;
+  companyName: string;
+  items: SkillExpiryItem[];
+  forManager: boolean;
+  url: string | null;
+}
+
+export async function sendSkillExpiryEmail(input: SendSkillExpiryEmailInput): Promise<void> {
+  if (!mailerConfigured()) return;
+  if (input.items.length === 0) return;
+
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(`shifts.${key}`, { lng, ns: 'emails', ...opts });
+  const count = input.items.length;
+  const subject = input.forManager ? t('subjectSkillTeam', { count }) : t('subjectSkillOwn', { count, skill: input.items[0].skill });
+  const introKey = input.forManager ? 'introSkillTeam' : 'introSkillOwn';
+  const day = (iso: string) =>
+    new Date(`${iso}T00:00:00Z`).toLocaleDateString(lng === 'es' ? 'es-AR' : 'en-US', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const line = (i: SkillExpiryItem) => {
+    const when = i.daysLeft === 0 ? t('skillExpiresToday') : t('skillExpiresOn', { date: day(i.expiresOn), count: i.daysLeft });
+    return [i.person, i.skill, when].filter(Boolean).join(' — ');
+  };
+
+  const textBlocks = [t('greeting', { firstName: input.firstName }), '', t(introKey, { companyName: input.companyName, count }), '', ...input.items.map(line), ''];
+  const htmlBlocks = [
+    `<p>${t('greeting', { firstName: escapeHtml(input.firstName) })}</p>`,
+    `<p>${t(introKey, { companyName: strong(input.companyName), count })}</p>`,
+    `<ul>${input.items.map((i) => `<li>${escapeHtml(line(i))}</li>`).join('')}</ul>`,
+  ];
+  const outro = input.forManager ? t('outroSkillTeam') : t('outroSkillOwn');
+  textBlocks.push(outro);
+  htmlBlocks.push(`<p>${escapeHtml(outro)}</p>`);
+  if (input.url) {
+    textBlocks.push('', `${t('openSkills')}: ${input.url}`);
+    htmlBlocks.push(`<p><a href="${input.url}">${t('openSkills')}</a></p>`);
+  }
+
+  await dispatchMail(
+    { from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`, to: input.to, subject, text: textBlocks.join('\n'), html: htmlBlocks.join('\n') },
+    'Failed to send skill expiry email:',
     lng,
   );
 }

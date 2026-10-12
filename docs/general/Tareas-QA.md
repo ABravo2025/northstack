@@ -5045,3 +5045,22 @@ Solo backend (sin pantallas todavía: la grilla es la Unidad 5 y "Mis turnos" la
 - **Selector Día · Semana · Mes · Por persona** (se recuerda). Día y Semana = calendario por horas; Mes = grilla de días con los turnos como etiquetas de una línea (las que entran según el alto de la fila, el resto en "+N más", que abre ese día); clic en el número de día abre la vista Día; clic en un hueco del día crea un turno a las 09:00. Las flechas avanzan un día, una semana o un mes; "Hoy" vuelve a hoy. "Copiar semana anterior" solo en Semana y Por persona. Los indicadores cuentan el día, la semana o el mes según la vista.
 - Corregido: al cambiar de mes y volver, la vista Semana mostraba la semana del día 1 (ahora se conserva el día del mes); etiquetas del mes que se aplastaban; etiqueta de la primera hora que se pisaba con la segunda.
 - **Verificado** (Playwright contra `staging`, 15/15): sin contenedor con scroll, el calendario llega al borde inferior de la ventana, selector de 4 vistas, vista Día con una columna, nocturno visible y su continuación al día siguiente, etiqueta y "+N más" del mes, el mes llena el alto, "+N más" abre el día, mes siguiente/anterior, vuelta a la misma semana, ventana baja sin scroll interno, sin errores de consola; capturas en claro y oscuro.
+
+## QA-107 — Shifts, Unidad 7: habilidades y habilitaciones (Growth) (2026-10-12, en `staging`)
+
+### Qué cambió
+
+- **Settings → Turnos → Habilidades y habilitaciones** (solo Growth): catálogo de habilidades (por ejemplo "Manejo de reactivos"). La tabla muestra cuántas personas tienen cada una, cuántas están vencidas o vencen en los próximos 30 días, y un interruptor para activarla o desactivarla (no se borran, así no se pierde el historial).
+- Clic en una habilidad: renombrarla, ver quién la tiene con su fecha de vencimiento (editable; vacía = no vence; vencida en rojo), quitar a alguien y agregar a otra persona.
+- **Formulario del turno:** "Habilidades requeridas" como chips (solo si hay habilidades). El detalle del turno las lista.
+- **Al asignar:** quien no tiene una habilidad requerida ve el aviso "No tiene una habilidad requerida"; quien la tiene vencida para la fecha del turno, "Una habilidad requerida está vencida". Son avisos, no bloqueos: se puede asignar igual.
+- **Starter:** la tarjeta muestra "Las habilidades son parte del plan Growth"; la API rechaza crear/editar (403) y la lista vuelve vacía, así que el formulario no muestra el selector.
+
+**Verificado en esta sesión** (local contra `staging`, Playwright, 13/13): crear habilidad, agregar titular con vencimiento pasado (se ve "Vencida"), conteo de vencidas, Member no puede crear por API, nombre repetido rechazado (sin distinguir mayúsculas), chip en el formulario, detalle con el nombre, avisos de vencida y de faltante en el selector de personas, nota Growth y API cerrada en Starter, sin errores de consola. Revisado en español y modo oscuro. 750/750 tests de backend.
+
+### Qué probar
+
+1. Crear 2 habilidades, darle una a alguien sin vencimiento y otra con vencimiento la semana que viene.
+2. Turno que requiere ambas: los avisos aparecen según quién tiene qué; un turno después del vencimiento avisa "vencida", uno antes no.
+3. Desactivar una habilidad: deja de aparecer en el formulario del turno, pero los turnos que ya la requerían la siguen nombrando.
+4. Bajar el tenant a Starter: nota Growth, sin chips en el formulario.

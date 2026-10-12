@@ -1446,3 +1446,10 @@ export interface ShiftAvailability {
   kind: 'available' | 'unavailable';
   note: string | null;
 }
+
+export interface ShiftSkill {
+  id: string;
+  name: string;
+  isActive: boolean;
+  holders: { employeeId: string; firstName: string; lastName: string; expiresAt: string | null }[];
+}

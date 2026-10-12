@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { api, type Shift, type ShiftLocation, type ShiftTemplate } from '../../api';
+import { api, type Shift, type ShiftLocation, type ShiftSkill, type ShiftTemplate } from '../../api';
 import Modal from '../common/Modal';
 import RequiredMark from '../common/RequiredMark';
 import { useToast } from '../common/ToastProvider';
@@ -25,6 +25,7 @@ interface FormState {
   end: string;
   position: string;
   headcount: string;
+  requiredSkillIds: string[];
   notes: string;
 }
 
@@ -36,13 +37,14 @@ export default function ShiftFormModal({ token, open, shift, defaults, locations
   const toast = useToast();
   const [form, setForm] = useState<FormState>(() => blankForm());
   const [templates, setTemplates] = useState<ShiftTemplate[]>([]);
+  const [skills, setSkills] = useState<ShiftSkill[]>([]);
   const [saving, setSaving] = useState(false);
   const [templateName, setTemplateName] = useState<string | null>(null);
 
   function blankForm(): FormState {
     const start = defaults.startMinute ?? 8 * 60;
     const end = (start + DEFAULT_LENGTH_MINUTES) % 1440;
-    return { locationId: defaults.locationId, date: defaults.date, start: formatMinute(start), end: formatMinute(end), position: '', headcount: '1', notes: '' };
+    return { locationId: defaults.locationId, date: defaults.date, start: formatMinute(start), end: formatMinute(end), position: '', headcount: '1', notes: '', requiredSkillIds: [] };
   }
 
   useEffect(() => {
@@ -57,11 +59,14 @@ export default function ShiftFormModal({ token, open, shift, defaults, locations
             end: formatMinute(shift.endMinute),
             position: shift.position ?? '',
             headcount: String(shift.headcount),
+            requiredSkillIds: shift.requiredSkillIds,
             notes: shift.notes ?? '',
           }
         : blankForm(),
     );
     api.listShiftTemplates(token).then(setTemplates).catch(() => setTemplates([]));
+    // Empty on plans without skills (Starter), which hides the picker.
+    api.listShiftSkills(token).then((r) => setSkills(r.skills)).catch(() => setSkills([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, shift, defaults.locationId, defaults.date, defaults.startMinute, token]);
 
@@ -86,6 +91,7 @@ export default function ShiftFormModal({ token, open, shift, defaults, locations
       position: form.position.trim() || null,
       headcount,
       notes: form.notes.trim() || null,
+      requiredSkillIds: form.requiredSkillIds,
     };
     setSaving(true);
     try {
@@ -225,6 +231,30 @@ export default function ShiftFormModal({ token, open, shift, defaults, locations
           <label htmlFor="shift-notes">{t('form.notes')}</label>
           <textarea id="shift-notes" rows={3} maxLength={1000} value={form.notes} placeholder={t('form.notesPlaceholder')} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
         </div>
+        {skills.length > 0 && (
+          <div className="form-group">
+            <span className="rules-label">{t('form.requiredSkills')}</span>
+            <div className="sh-templates" role="group" aria-label={t('form.requiredSkills')}>
+              {skills.map((sk) => {
+                const on = form.requiredSkillIds.includes(sk.id);
+                return (
+                  <button
+                    key={sk.id}
+                    type="button"
+                    aria-pressed={on}
+                    className={`sh-template-chip ${on ? 'sh-chip-on' : ''}`}
+                    onClick={() =>
+                      setForm((f) => ({ ...f, requiredSkillIds: on ? f.requiredSkillIds.filter((x) => x !== sk.id) : [...f.requiredSkillIds, sk.id] }))
+                    }
+                  >
+                    {sk.name}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="rules-hint mt-1">{t('form.requiredSkillsHint')}</p>
+          </div>
+        )}
         {shift?.status === 'published' && shift.assignments.length > 0 && <p className="sh-note-box">{t('form.reconfirmWarning')}</p>}
       </form>
     </Modal>

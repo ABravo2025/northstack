@@ -6,6 +6,7 @@ import type {
   ShiftCandidate,
   ShiftAvailability,
   ShiftLocation,
+  ShiftSkill,
   ShiftsSettings,
   ShiftTemplate,
 } from './types.js';
@@ -48,6 +49,7 @@ export interface ShiftInput {
   position?: string | null;
   notes?: string | null;
   headcount?: number;
+  requiredSkillIds?: string[];
 }
 
 export const shiftsApi = {
@@ -119,6 +121,21 @@ export const shiftsApi = {
     call<ShiftAvailability>(token, '/api/shifts/availability', { method: 'POST', body: JSON.stringify(data) }),
 
   deleteMyAvailability: (token: string, id: string) => call<void>(token, `/api/shifts/availability/${id}`, { method: 'DELETE' }),
+
+  // `enabled` is false on plans without skills (Starter): the list is then always empty.
+  listShiftSkills: (token: string, opts: { includeInactive?: boolean } = {}) =>
+    call<{ enabled: boolean; skills: ShiftSkill[] }>(token, `/api/shifts/skills${opts.includeInactive ? '?includeInactive=true' : ''}`),
+
+  createShiftSkill: (token: string, name: string) => call<ShiftSkill>(token, '/api/shifts/skills', { method: 'POST', body: JSON.stringify({ name }) }),
+
+  updateShiftSkill: (token: string, id: string, data: { name?: string; isActive?: boolean }) =>
+    call<ShiftSkill>(token, `/api/shifts/skills/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+
+  setShiftSkillHolder: (token: string, skillId: string, employeeId: string, expiresAt: string | null) =>
+    call<ShiftSkill>(token, `/api/shifts/skills/${skillId}/holders/${employeeId}`, { method: 'PUT', body: JSON.stringify({ expiresAt }) }),
+
+  removeShiftSkillHolder: (token: string, skillId: string, employeeId: string) =>
+    call<ShiftSkill>(token, `/api/shifts/skills/${skillId}/holders/${employeeId}`, { method: 'DELETE' }),
 
   getPublicShiftResponse: (responseToken: string) => publicCall<PublicShiftResponseView>(`/api/public/shifts/respond/${encodeURIComponent(responseToken)}`),
 

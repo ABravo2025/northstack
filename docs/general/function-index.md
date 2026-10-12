@@ -585,6 +585,9 @@ Evento del turno solo en el calendario del asignado (`ShiftCalendarSync`), con l
 - Respuesta: **respondToAssignment(assignmentId, response, reason)**, **findAssignmentByToken**, **newResponseToken** / **hashResponseToken** (solo se guarda el sha256, rota en cada nuevo aviso), **isShiftResponse**.
 - Plantillas: **listTemplates**, **createTemplate**, **deleteTemplate**. Validación pura: **parseShiftInput**, **parseDateRange** (máx. 62 días).
 
+### `src/modules/shifts/skillService.ts` (Shifts, Unidad 7, Growth)
+Catálogo de habilidades y quién las tiene: **listSkills(tenantId, includeInactive)** (con titulares y vencimiento), **createSkill** / **updateSkill** (nombre único sin distinguir mayúsculas; activar/desactivar, nunca se borra), **setHolder(skillId, employeeId, expiresAt)** (alta o cambio de vencimiento, `YYYY-MM-DD` o `null` = no vence), **removeHolder**, **parseSkillName** (testeada), **findSkill**, **serializeSkill**. Todo al Activity Log. Las rutas (`/api/shifts/skills…`) exigen `manage_shifts` y el plan con habilidades (403 `plan_limit_skills`); el GET devuelve `{ enabled, skills }`. Las reglas de asignación usan las habilidades como aviso (`missing_skill`, `expired_skill`).
+
 ### `src/modules/shifts/availabilityService.ts` (Shifts, Unidad 6)
 Disponibilidad propia de cada persona (semanal o por fecha; hasta 24:00 con `endMinute` 1440): **listAvailability**, **createAvailability** (tope 100 filas por persona), **deleteAvailability** (solo las propias), **parseAvailabilityInput** (testeada), **serializeAvailability**. Las reglas de asignación la leen como aviso, nunca como bloqueo.
 
@@ -994,6 +997,7 @@ Métodos por archivo (todas devuelven una Promise, firma `(token, ...) => ...`, 
 - **ShiftFormModal** — alta/edición con plantillas, "guardar como plantilla", aviso de re-confirmación al editar uno publicado.
 - **ShiftDetailModal** — detalle con personas y estados, selector de candidatos con bloqueos/avisos y "Asignar igual" (lee `ApiError.body`), publicar, cancelar, eliminar borrador.
 - **AvailabilityEditor** — "Mi disponibilidad" (semanal + fechas puntuales).
+- **SkillsSettingsCard** (Unidad 7) — Settings → Shifts → Habilidades: catálogo con TableBody (personas, vencidas o por vencer en 30 días, activa), modal de titulares (renombrar, vencimiento por persona, quitar, agregar). Sin el plan muestra la nota "Growth". El formulario del turno elige las habilidades requeridas (chips) y el detalle las nombra.
 - **ShiftWeekCalendar** (2026-10-05/06) — calendario por horas de 1 día (vista Día) o 7 (Semana), estilo Google Calendar: bloques por duración, nocturnos partidos en dos días, clic en hueco → `onCreateAt(date, minute)` (redondeado a 30 min). Llena el alto de la ventana sin scroll propio (ajusta los px por hora, mínimo 22). Exporta **layoutDay(segments)**: reparte en columnas los turnos que se superponen.
 - **ShiftMonthView** (2026-10-06) — mes como grilla de días con etiquetas por turno, "+N más" y número de día que abren la vista Día. Exporta **monthGrid(anyDay, weekStartsOn)**: semanas completas que cubren el mes.
 

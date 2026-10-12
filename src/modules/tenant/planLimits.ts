@@ -27,6 +27,8 @@ export interface PlanLimits {
   // same as the Projects limits above.
   maxActiveLocations: number | null;
   shiftSkillsEnabled: boolean;
+  // Timesheet (Unidad 9): marking hours as billable to a client. Starter logs hours, never billable.
+  billableHoursEnabled: boolean;
 }
 
 export type EffectivePlan = 'starter' | 'growth';
@@ -45,6 +47,7 @@ export const PLAN_LIMITS: Record<EffectivePlan, PlanLimits> = {
     customProjectTemplatesEnabled: false,
     maxActiveLocations: 1,
     shiftSkillsEnabled: false,
+    billableHoursEnabled: false,
   },
   growth: {
     maxPipelines: null,
@@ -59,6 +62,7 @@ export const PLAN_LIMITS: Record<EffectivePlan, PlanLimits> = {
     customProjectTemplatesEnabled: true,
     maxActiveLocations: null,
     shiftSkillsEnabled: true,
+    billableHoursEnabled: true,
   },
 };
 
@@ -170,5 +174,6 @@ export function planFeatures(tenant: TenantLike) {
     apiAccess: l.apiAccessEnabled,
     projectTemplates: l.customProjectTemplatesEnabled,
     shiftSkills: l.shiftSkillsEnabled,
+    billableHours: l.billableHoursEnabled,
   };
 }

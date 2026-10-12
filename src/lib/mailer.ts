@@ -1004,6 +1004,91 @@ export interface SendSkillExpiryEmailInput {
   url: string | null;
 }
 
+// Shifts module, Unidad 9 — a week sent back (or an approved one reopened) has something to fix.
+export interface SendTimesheetReturnedEmailInput {
+  to: string;
+  locale?: string | null;
+  firstName: string;
+  companyName: string;
+  week: string;
+  deciderName: string;
+  note: string | null;
+  reopened: boolean;
+  url: string;
+}
+
+export async function sendTimesheetReturnedEmail(input: SendTimesheetReturnedEmailInput): Promise<void> {
+  if (!mailerConfigured()) return;
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(`timesheet.${key}`, { lng, ns: 'emails', ...opts });
+  const kind = input.reopened ? 'Reopened' : 'Returned';
+  const vars = { week: input.week, name: input.deciderName, companyName: input.companyName };
+  const note = input.note ? t(input.reopened ? 'reasonLine' : 'noteLine', { note: input.note }) : null;
+
+  await dispatchMail(
+    {
+      from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
+      to: input.to,
+      subject: t(`subject${kind}`, vars),
+      text: [t('greeting', { firstName: input.firstName }), '', t(`intro${kind}`, vars), ...(note ? ['', note] : []), '', `${t('open')}: ${input.url}`].join('\n'),
+      html: [
+        `<p>${t('greeting', { firstName: escapeHtml(input.firstName) })}</p>`,
+        `<p>${t(`intro${kind}`, { ...vars, name: strong(input.deciderName), companyName: strong(input.companyName) })}</p>`,
+        note ? `<p>${escapeHtml(note)}</p>` : '',
+        `<p><a href="${input.url}">${t('open')}</a></p>`,
+      ].join('\n'),
+    },
+    'Failed to send timesheet returned email:',
+    lng,
+  );
+}
+
+// Shifts module, Unidad 9 — the daily nudge: yesterday's shifts whose hours aren't logged yet.
+export interface SendTimesheetReminderEmailInput {
+  to: string;
+  locale?: string | null;
+  firstName: string;
+  companyName: string;
+  shifts: string[];
+  url: string;
+}
+
+export async function sendTimesheetReminderEmail(input: SendTimesheetReminderEmailInput): Promise<void> {
+  if (!mailerConfigured()) return;
+  if (input.shifts.length === 0) return;
+  const lng = resolveEmailLocale(input.locale);
+  const t = (key: string, opts?: Record<string, unknown>) => i18n.t(`timesheet.${key}`, { lng, ns: 'emails', ...opts });
+  const count = input.shifts.length;
+
+  await dispatchMail(
+    {
+      from: `"Northstack" <${process.env.ZOHO_SMTP_USER}>`,
+      to: input.to,
+      subject: t('subjectReminder', { count }),
+      text: [
+        t('greeting', { firstName: input.firstName }),
+        '',
+        t('introReminder', { companyName: input.companyName }),
+        '',
+        ...input.shifts,
+        '',
+        t('reminderOutro'),
+        '',
+        `${t('open')}: ${input.url}`,
+      ].join('\n'),
+      html: [
+        `<p>${t('greeting', { firstName: escapeHtml(input.firstName) })}</p>`,
+        `<p>${t('introReminder', { companyName: strong(input.companyName) })}</p>`,
+        `<ul>${input.shifts.map((s) => `<li>${escapeHtml(s)}</li>`).join('')}</ul>`,
+        `<p>${escapeHtml(t('reminderOutro'))}</p>`,
+        `<p><a href="${input.url}">${t('open')}</a></p>`,
+      ].join('\n'),
+    },
+    'Failed to send timesheet reminder email:',
+    lng,
+  );
+}
+
 export async function sendSkillExpiryEmail(input: SendSkillExpiryEmailInput): Promise<void> {
   if (!mailerConfigured()) return;
   if (input.items.length === 0) return;

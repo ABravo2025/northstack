@@ -1,6 +1,6 @@
 # Spec Shifts (Turnos y horas)
 
-**Estado:** Unidades 1-6 en producción desde 2026-10-12 (incluye el calendario Día/Semana/Mes). Unidades 7 (habilidades, Growth) y 8 (cron diario de recordatorios) en `staging`; Alejandro revisa todo junto al terminar las unidades. Unidades 9-14 pendientes.
+**Estado:** Unidades 1-6 en producción desde 2026-10-12 (incluye el calendario Día/Semana/Mes). Unidades 7 (habilidades, Growth), 8 (cron diario de recordatorios) y 9 (timesheet, backend) en `staging`; Alejandro revisa todo junto al terminar las unidades. Unidades 10-14 pendientes. **Para producción, la Unidad 9 necesita SQL aditivo** (tablas `Timesheet`, `TimeEntry`, `TimeSuggestionDismissal`, 2 enums nuevos y valores nuevos en `NotificationType`/`ActivityEntityType`: generarlo con `prisma migrate diff` contra prod y aplicar solo esas sentencias) y correr `scripts/backfill-timesheet-permissions.ts`.
 **Fecha:** 2026-10-04.
 **Contexto:** un laboratorio químico preguntó si Northstack puede manejar personal en distintos horarios
 y sedes, con turnos que no son bloques fijos, y que avisar y hacer el seguimiento es complicado.

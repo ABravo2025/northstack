@@ -53,6 +53,8 @@ const ENTITY_TYPE_VALUES: ActivityEntityType[] = [
   'shiftTemplate',
   'shiftsSettings',
   'skill',
+  'timesheet',
+  'timeEntry',
 ];
 
 // Same gates as the backend's ACTIVITY_MODULE_GATE (activityVisibilityService.ts) for the Payroll/
@@ -74,6 +76,8 @@ const ENTITY_TYPE_PERMISSION: Partial<Record<ActivityEntityType, string>> = {
   shiftTemplate: 'manage_shifts',
   shiftsSettings: 'manage_shifts',
   skill: 'manage_shifts',
+  timesheet: 'approve_timesheets',
+  timeEntry: 'approve_timesheets',
 };
 
 const ACTION_VALUES: ('create' | 'update' | 'delete')[] = ['create', 'update', 'delete'];

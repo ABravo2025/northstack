@@ -187,3 +187,9 @@ export function canViewShifts(role: RoleContext): boolean {
 export function canManageShifts(role: RoleContext): boolean {
   return has(role, 'manage_shifts');
 }
+
+// Timesheets (Unidad 9) — the ROLE-based half: anyone's week. A person's direct manager approves
+// their weeks without it (timesheetAccess.ts), same split as canDecideTimeOff.
+export function canApproveTimesheets(role: RoleContext): boolean {
+  return has(role, 'approve_timesheets');
+}

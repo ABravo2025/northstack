@@ -82,6 +82,9 @@ export const MANAGE_PROJECTS = 'manage_projects';
 // Projects and Time Off.
 export const VIEW_SHIFTS = 'view_shifts';
 export const MANAGE_SHIFTS = 'manage_shifts';
+// Timesheets (Unidad 9): approve, return and reopen anyone's week and see the reports. Without it,
+// someone's direct manager (Employee.managerId) still approves that person's weeks.
+export const APPROVE_TIMESHEETS = 'approve_timesheets';
 
 // The full permission allowlist — the source a future role-editing endpoint (Fase H) validates
 // incoming permission strings against. Kept here rather than in permissionService.ts since both
@@ -115,6 +118,7 @@ export const PERMISSION_KEYS = [
   MANAGE_PROJECTS,
   VIEW_SHIFTS,
   MANAGE_SHIFTS,
+  APPROVE_TIMESHEETS,
   ...EMPLOYEE_SCOPE_PERMISSIONS,
 ] as const;
 export type PermissionKey = (typeof PERMISSION_KEYS)[number];
@@ -157,6 +161,7 @@ export const TOGGLEABLE_PERMISSION_KEYS = [
   MANAGE_PROJECTS,
   VIEW_SHIFTS,
   MANAGE_SHIFTS,
+  APPROVE_TIMESHEETS,
 ] as const;
 export type ToggleablePermissionKey = (typeof TOGGLEABLE_PERMISSION_KEYS)[number];
 
@@ -231,6 +236,7 @@ export const ADMIN_SEED_PERMISSIONS: string[] = [
   MANAGE_PROJECTS,
   VIEW_SHIFTS,
   MANAGE_SHIFTS,
+  APPROVE_TIMESHEETS,
 ];
 
 // Deliberately NOT a superset of the old default — Member no longer gets CRM visibility

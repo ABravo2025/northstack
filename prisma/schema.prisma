@@ -448,6 +448,9 @@ model Tenant {
   employeeAvailabilities    EmployeeAvailability[]
   skills                    Skill[]
   employeeSkills            EmployeeSkill[]
+  timesheets                Timesheet[]
+  timeEntries               TimeEntry[]
+  timeSuggestionDismissals  TimeSuggestionDismissal[]
 }
 
 // Billing Integration (spec-billing-integration.md). plan/lockedPriceCents are deliberately NOT
@@ -670,6 +673,7 @@ model User {
   projectTemplatesCreated     ProjectTemplate[]           @relation("ProjectTemplateCreatedBy")
   taskComments                TaskComment[]               @relation("TaskCommentAuthor")
   shiftsCreated               Shift[]                     @relation("ShiftCreatedBy")
+  timesheetsDecided           Timesheet[]                 @relation("TimesheetDecidedBy")
   shiftCalendarSyncs          ShiftCalendarSync[]
 
   @@index([emailDomain])
@@ -760,6 +764,9 @@ model Employee {
   shiftAssignments         ShiftAssignment[]
   availabilities           EmployeeAvailability[]
   skills                   EmployeeSkill[]
+  timesheets               Timesheet[]
+  timeEntries              TimeEntry[]
+  timeSuggestionDismissals TimeSuggestionDismissal[]
 
   @@unique([tenantId, email])
 }
@@ -1211,6 +1218,8 @@ enum ActivityEntityType {
   shiftTemplate
   shiftsSettings
   skill
+  timesheet
+  timeEntry
 }
 
 enum ActivityAction {
@@ -2068,6 +2077,104 @@ model EmployeeSkill {
   @@index([tenantId, skillId])
 }
 
+// ---------------------------------------------------------------------------------------------
+// Timesheet (spec-shifts.md, Unidad 9). One Timesheet per person per week (weekStart = the first
+// day of the week by ShiftsSettings.weekStartsOn), created on the first entry. Suggestions (from
+// shifts, tasks, meetings, Google Calendar) are computed when the week is opened and never stored;
+// only dismissed ones are remembered, in TimeSuggestionDismissal.
+
+enum TimesheetStatus {
+  open
+  submitted
+  approved // closed: entries can't change; corrections are adjustment entries in an open week
+  returned // sent back by the approver with a note; editable again
+}
+
+enum TimeEntrySource {
+  shift
+  task
+  meeting
+  calendar
+  manual
+  adjustment
+}
+
+model Timesheet {
+  id           String          @id @default(uuid())
+  tenantId     String
+  tenant       Tenant          @relation(fields: [tenantId], references: [id])
+  employeeId   String
+  employee     Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  weekStart    DateTime        @db.Date
+  status       TimesheetStatus @default(open)
+  submittedAt  DateTime?
+  decidedById  String?
+  decidedBy    User?           @relation("TimesheetDecidedBy", fields: [decidedById], references: [id], onDelete: SetNull)
+  decidedAt    DateTime?
+  decisionNote String?
+  reopenedAt   DateTime?
+  reopenReason String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  entries      TimeEntry[]     @relation("TimesheetEntries")
+  // Adjustment entries (in later, open weeks) that correct this closed week.
+  adjustments  TimeEntry[]     @relation("TimesheetAdjustments")
+
+  @@unique([employeeId, weekStart])
+  @@index([tenantId, status])
+}
+
+model TimeEntry {
+  id                 String          @id @default(uuid())
+  tenantId           String
+  tenant             Tenant          @relation(fields: [tenantId], references: [id])
+  timesheetId        String
+  timesheet          Timesheet       @relation("TimesheetEntries", fields: [timesheetId], references: [id], onDelete: Cascade)
+  employeeId         String
+  employee           Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date               DateTime        @db.Date
+  // Negative only on an adjustment that takes hours away from a closed week.
+  minutes            Int
+  source             TimeEntrySource
+  // What the entry came from (assignment id, task id, Google event id); null for manual and
+  // adjustments. Unique per person, so one suggestion can't be logged twice.
+  sourceId           String?
+  // Plain ids, no foreign keys: the hours stay on record if the shift, task, project or company is
+  // deleted later (reports show it as removed).
+  shiftAssignmentId  String?
+  taskId             String?
+  projectId          String?
+  companyId          String?
+  // Growth only (spec §0.3); always false on Starter.
+  billable           Boolean         @default(false)
+  description        String?
+  adjustsTimesheetId String?
+  adjustsTimesheet   Timesheet?      @relation("TimesheetAdjustments", fields: [adjustsTimesheetId], references: [id], onDelete: SetNull)
+  reason             String?
+  createdById        String
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  @@unique([employeeId, source, sourceId])
+  @@index([tenantId, employeeId, date])
+  @@index([tenantId, date])
+  @@index([timesheetId])
+}
+
+model TimeSuggestionDismissal {
+  id         String          @id @default(uuid())
+  tenantId   String
+  tenant     Tenant          @relation(fields: [tenantId], references: [id])
+  employeeId String
+  employee   Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  sourceType TimeEntrySource
+  sourceId   String
+  createdAt  DateTime        @default(now())
+
+  @@unique([employeeId, sourceType, sourceId])
+  @@index([tenantId])
+}
+
 // Same polymorphic tenantId+entityType+entityId pattern as Task — a short
 // title + long description (description allows markdown for emphasis, per
 // the user 2026-07-29; field names matched to Task's title/description on
@@ -2122,6 +2229,10 @@ enum NotificationType {
   shift_cancelled
   shift_declined // to whoever manages the shift: an assignee said they can't make it
   shift_reminder // daily cron: unanswered, or tomorrow's shift
+  skill_expiring // daily cron (Growth): a skill expires in 30/7/0 days. entityType 'skill'.
+  timesheet_submitted // to whoever approves it. entityType 'timesheet'.
+  timesheet_decided // approved or returned, to its owner. entityType 'timesheet'.
+  timesheet_reminder // daily cron: yesterday's shift hours not logged yet. entityType 'timesheet'.
 }
 
 model Notification {

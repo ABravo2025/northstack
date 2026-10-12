@@ -21,6 +21,8 @@ export interface PlanFeatures {
   // Shifts module (2026-10-04): skills/certifications catalog (Growth). Optional on the wire for the
   // same reason as projectTemplates.
   shiftSkills?: boolean;
+  // Timesheet (Unidad 9): billable hours (Growth). Optional on the wire, same as above.
+  billableHours?: boolean;
 }
 
 export interface AuthResponse {
@@ -624,7 +626,9 @@ export type ActivityEntityType =
   | 'shift'
   | 'shiftTemplate'
   | 'shiftsSettings'
-  | 'skill';
+  | 'skill'
+  | 'timesheet'
+  | 'timeEntry';
 
 export interface ActivityChange {
   field: string;
@@ -692,7 +696,11 @@ export type NotificationType =
   | 'shift_changed'
   | 'shift_cancelled'
   | 'shift_declined'
-  | 'shift_reminder';
+  | 'shift_reminder'
+  | 'skill_expiring'
+  | 'timesheet_submitted'
+  | 'timesheet_decided'
+  | 'timesheet_reminder';
 
 export interface Notification {
   id: string;

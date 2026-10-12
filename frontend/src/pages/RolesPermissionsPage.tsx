@@ -120,6 +120,12 @@ function getGroups(t: TFunction): PermissionGroup[] {
           description: t('roles.groups.shifts.manage_shifts.description'),
           hint: t('roles.groups.shifts.manage_shifts.hint'),
         },
+        {
+          key: 'approve_timesheets',
+          label: t('roles.groups.shifts.approve_timesheets.label'),
+          description: t('roles.groups.shifts.approve_timesheets.description'),
+          hint: t('roles.groups.shifts.approve_timesheets.hint'),
+        },
       ],
     },
     {

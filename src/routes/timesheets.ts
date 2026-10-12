@@ -4,6 +4,7 @@ import { validateSession } from '../lib/httpAuth.js';
 import { createAsyncRouter } from '../lib/asyncRouter.js';
 import type { AuthenticatedUser } from '../modules/auth/authService.js';
 import { getPlanLimits } from '../modules/tenant/planLimits.js';
+import { canApproveTimesheets } from '../modules/auth/permissionService.js';
 import { findOwnEmployeeIdForShifts } from '../modules/shifts/shiftAccess.js';
 import { getShiftsSettings, type EffectiveShiftsSettings } from '../modules/shifts/shiftsSettingsService.js';
 import { isValidDateString, isValidTimeZone, zonedDateString } from '../modules/shifts/shiftTime.js';
@@ -242,7 +243,10 @@ timesheetsRouter.get('/api/shifts/timesheet/approvals', async (req, res) => {
   if (!ctx) return;
   const status = APPROVAL_STATUSES.includes(req.query.status as TimesheetStatus) ? (req.query.status as TimesheetStatus) : 'submitted';
   const weekStart = isValidDateString(req.query.weekStart) ? weekStartFor(req.query.weekStart, ctx.settings.weekStartsOn) : null;
-  return res.json({ timesheets: await listApprovals(ctx.user, status, weekStart) });
+  // canApprove drives the Approvals menu entry: the permission, or having anyone report to you.
+  const canApprove =
+    canApproveTimesheets(ctx.user.roleContext) || (!!ctx.own && (await prisma.employee.count({ where: { tenantId: ctx.user.tenantId!, managerId: ctx.own.id } })) > 0);
+  return res.json({ canApprove, timesheets: canApprove ? await listApprovals(ctx.user, status, weekStart) : [] });
 });
 
 async function loadForApprover(ctx: Ctx, res: Response, timesheetId: string) {

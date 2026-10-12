@@ -103,7 +103,9 @@
     "section": "Shifts",
     "schedule": "Schedule",
     "mine": "My shifts",
-    "settings": "Settings"
+    "settings": "Settings",
+    "timesheet": "Timesheet",
+    "approvals": "Approvals"
   },
   "status": {
     "draft": "Draft",
@@ -298,5 +300,144 @@
     "changeAnswer": "Change my answer",
     "cancelled": "This shift was cancelled. You don't need to go.",
     "failed": "Couldn't save your answer: {{message}}"
+  },
+  "timesheet": {
+    "title": "My timesheet",
+    "titleOf": "{{name}}'s timesheet",
+    "subtitle": "Confirm the hours Northstack suggests, add anything missing, and send the week.",
+    "subtitleOf": "Read-only. Approve it, or send it back with a note.",
+    "prevWeek": "Previous week",
+    "nextWeek": "Next week",
+    "thisWeek": "This week",
+    "logged": "Logged",
+    "planned": "Planned (shifts)",
+    "billable": "Billable",
+    "statusLabel": "Status",
+    "status": {
+      "open": "Open",
+      "submitted": "Submitted",
+      "approved": "Approved",
+      "returned": "Sent back"
+    },
+    "banner": {
+      "submitted": "Sent. Waiting for approval; it can't be edited meanwhile.",
+      "approved": "Approved by {{name}}. This week is closed: to correct it, request an adjustment.",
+      "returned": "{{name}} sent it back: “{{note}}”. Fix it and send it again.",
+      "reopened": "Reopened: {{reason}}"
+    },
+    "timeOff": "Time off",
+    "suggestions": {
+      "title": "Suggested from your activity",
+      "lead": "From your shifts, completed tasks, meetings and Google Calendar. Nothing is logged until you add it.",
+      "addAll": "Add all with time",
+      "add": "Add",
+      "dismiss": "Dismiss",
+      "dismissed": "Suggestion dismissed"
+    },
+    "source": {
+      "shift": "Shift",
+      "task": "Task",
+      "meeting": "Meeting",
+      "calendar": "Google Calendar",
+      "manual": "Manual",
+      "adjustment": "Adjustment"
+    },
+    "entries": "Logged hours",
+    "col": {
+      "day": "Day",
+      "what": "What",
+      "source": "From",
+      "billable": "Billable",
+      "time": "Time",
+      "actions": "Actions"
+    },
+    "emptyTitle": "No hours logged this week",
+    "emptyBody": "Add the suggestions above or log time by hand.",
+    "addEntry": "Add hours",
+    "editEntry": "Edit hours",
+    "deleteEntry": "Delete",
+    "adjustmentOf": "Correction to the week of {{week}}: {{reason}}",
+    "adjustedBy": "Corrections filed later",
+    "inWeek": "in the week of {{week}}, {{status}}",
+    "yes": "Yes",
+    "hours": "Hours",
+    "minutes": "Minutes",
+    "minutesShort": "min",
+    "description": "Description",
+    "descriptionPlaceholder": "What you worked on",
+    "project": "Project",
+    "company": "Company",
+    "none": "None",
+    "billableToggle": "Billable to the client",
+    "save": "Save",
+    "added": "Hours added",
+    "addedAll": "Suggestions added",
+    "saved": "Saved",
+    "deleted": "Deleted",
+    "submit": "Send week",
+    "approve": "Approve",
+    "sendBack": "Send back",
+    "reopen": "Reopen",
+    "requestAdjustment": "Request adjustment",
+    "submittedToast": "Week sent for approval",
+    "approvedToast": "Week approved",
+    "returnedToast": "Week sent back",
+    "reopenedToast": "Week reopened",
+    "adjustedToast": "Adjustment added to your current week",
+    "loadFailed": "Couldn't load the timesheet: {{message}}",
+    "failed": "Couldn't save: {{message}}",
+    "dialog": {
+      "submit": {
+        "title": "Send this week?",
+        "body": "You logged {{total}}. Once sent you can't edit it unless it's sent back.",
+        "confirm": "Send",
+        "noteLabel": ""
+      },
+      "return": {
+        "title": "Send back",
+        "body": "They'll be able to edit it again. Tell them what to fix.",
+        "confirm": "Send back",
+        "noteLabel": "What should change"
+      },
+      "reopen": {
+        "title": "Reopen this week",
+        "body": "It goes back to open so it can be corrected and sent again. The reason is kept in the Activity Log.",
+        "confirm": "Reopen",
+        "noteLabel": "Reason"
+      },
+      "adjust": {
+        "title": "Request an adjustment",
+        "body": "This week is closed. The correction goes into your current week, is approved with it, and points back here.",
+        "confirm": "Add adjustment",
+        "noteLabel": "Reason",
+        "direction": "Add or remove",
+        "add": "Add",
+        "remove": "Remove"
+      }
+    }
+  },
+  "approvals": {
+    "title": "Approvals",
+    "subtitle": "Timesheets waiting for your decision. Open one to approve it or send it back.",
+    "tab": {
+      "submitted": "To review",
+      "returned": "Sent back",
+      "approved": "Approved"
+    },
+    "col": {
+      "person": "Person",
+      "week": "Week",
+      "logged": "Logged",
+      "billable": "Billable",
+      "adjustments": "Adjustments",
+      "submitted": "Sent",
+      "decided": "Decided"
+    },
+    "empty": {
+      "submitted": "Nothing to review",
+      "returned": "No weeks sent back",
+      "approved": "No approved weeks yet"
+    },
+    "nobody": "You don't approve anyone's timesheet: nobody reports to you and your role doesn't include approving timesheets."
   }
 }

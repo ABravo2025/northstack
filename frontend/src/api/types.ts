@@ -1447,3 +1447,77 @@ export interface ShiftSkill {
   isActive: boolean;
   holders: { employeeId: string; firstName: string; lastName: string; expiresAt: string | null }[];
 }
+
+// Timesheet (spec-shifts.md Unidades 9 y 11).
+export type TimesheetStatus = 'open' | 'submitted' | 'approved' | 'returned';
+export type TimeEntrySource = 'shift' | 'task' | 'meeting' | 'calendar' | 'manual' | 'adjustment';
+
+export interface TimeEntry {
+  id: string;
+  date: string;
+  minutes: number;
+  source: TimeEntrySource;
+  sourceId: string | null;
+  billable: boolean;
+  description: string | null;
+  companyId: string | null;
+  companyName: string | null;
+  projectId: string | null;
+  projectName: string | null;
+  taskId: string | null;
+  shiftAssignmentId: string | null;
+  adjustsWeekStart: string | null;
+  reason: string | null;
+}
+
+export interface TimeSuggestion {
+  sourceType: Exclude<TimeEntrySource, 'manual' | 'adjustment'>;
+  sourceId: string;
+  date: string;
+  minutes: number | null;
+  title: string;
+  detail: string | null;
+  companyId: string | null;
+  projectId: string | null;
+}
+
+export interface TimesheetWeek {
+  timesheetId: string | null;
+  employee: { id: string; firstName: string; lastName: string };
+  weekStart: string;
+  dates: string[];
+  today: string;
+  status: TimesheetStatus;
+  submittedAt: string | null;
+  decidedAt: string | null;
+  decidedBy: string | null;
+  decisionNote: string | null;
+  reopenedAt: string | null;
+  reopenReason: string | null;
+  entries: TimeEntry[];
+  suggestions: TimeSuggestion[];
+  adjustedBy: { id: string; minutes: number; reason: string | null; inWeek: string; inWeekStatus: TimesheetStatus }[];
+  plannedMinutes: number;
+  loggedMinutes: number;
+  billableMinutes: number;
+  timeOffDates: string[];
+  isOwn: boolean;
+  canEdit: boolean;
+  canDecide: boolean;
+  canReopen: boolean;
+  canAdjust: boolean;
+  billableAllowed: boolean;
+  weekStartsOn: number;
+}
+
+export interface TimesheetApprovalRow {
+  id: string;
+  employee: { id: string; firstName: string; lastName: string };
+  weekStart: string;
+  status: TimesheetStatus;
+  submittedAt: string | null;
+  decidedAt: string | null;
+  loggedMinutes: number;
+  billableMinutes: number;
+  adjustments: number;
+}

@@ -3891,6 +3891,34 @@ textarea.overview-field-input {
 .sh-templates {
   @apply flex flex-wrap gap-1.5;
 }
+.sh-note-warn {
+  @apply border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200;
+}
+/* Timesheet (spec-shifts.md Unidad 11) */
+.ts-days {
+  @apply grid grid-cols-7 gap-1.5 max-sm:grid-cols-4;
+}
+.ts-day {
+  @apply flex flex-col gap-0.5 rounded-lg border border-line bg-surface-1 px-2.5 py-2 dark:border-dark-line dark:bg-dark-surface;
+}
+.ts-day-today {
+  @apply border-accent dark:border-brand-blue-light;
+}
+.ts-day-name {
+  @apply text-[11px] font-semibold tracking-wide text-ink-faint uppercase dark:text-dark-ink-faint;
+}
+.ts-day-total {
+  @apply text-sm font-semibold;
+}
+.ts-day-off {
+  @apply text-[11px] text-amber-700 dark:text-amber-300;
+}
+.ts-suggestion {
+  @apply flex flex-wrap items-center gap-2 border-b border-line py-2 last:border-b-0 dark:border-dark-line;
+}
+.ts-suggestion-day {
+  @apply w-24 shrink-0 text-xs font-semibold text-ink-muted dark:text-dark-ink-muted;
+}
 .sh-template-chip {
   @apply inline-flex cursor-pointer items-center gap-1 rounded-full border border-line-strong bg-surface-1 px-2.5 py-1 text-xs text-ink hover:border-accent dark:border-dark-line dark:bg-dark-surface dark:text-dark-ink;
   font-family: inherit;

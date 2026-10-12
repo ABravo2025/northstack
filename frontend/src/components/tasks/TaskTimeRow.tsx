@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api, type Task } from '../../api';
 import { useToast } from '../common/ToastProvider';
-import { formatDuration } from '../../lib/duration';
+import { formatDuration } from '../../lib/shiftDates';
 
 interface TaskTimeRowProps {
   token: string;
@@ -87,7 +87,7 @@ export default function TaskTimeRow({ token, task, currentUserId }: TaskTimeRowP
       ) : (
         <span className="flex flex-wrap items-center gap-2">
           <span className={startedAt ? 'font-semibold text-accent dark:text-brand-blue-light' : ''}>
-            {spent === null && !startedAt ? '—' : startedAt && total === 0 ? '< 1 min' : formatDuration(total)}
+            {spent === null && !startedAt ? '—' : startedAt && total === 0 ? '< 1m' : formatDuration(total)}
             {startedAt && ` · ${t('myTasks.time.running')}`}
           </span>
           {isAssignee && !task.completedAt && (

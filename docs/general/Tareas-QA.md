@@ -5128,3 +5128,23 @@ Solo backend y API; las pantallas llegan en la Unidad 11. Schema nuevo aplicado 
 2. Completar una tarea asignada a otra persona: no aparece.
 3. Timer: iniciar, cerrar el modal, volver a abrirlo más tarde: sigue corriendo con el tiempo correcto.
 4. Apagar el timesheet en Settings → Turnos: el aviso deja de aparecer (el timer y la fila siguen).
+
+## QA-111 — Shifts, Unidad 11: pantallas del timesheet y aprobaciones (2026-10-12, en `staging`)
+
+### Qué cambió
+
+- **Turnos → Timesheet** (si la empresa lo usa): la semana con flechas y "Esta semana"; indicadores Cargado / Planificado (turnos) / Facturable (Growth) / Estado; los 7 días con su total y las ausencias aprobadas.
+- **"Sugeridas por tu actividad"**: cada sugerencia con su día, origen (Turno, Tarea, Reunión, Google Calendar) y minutos editables; **Agregar**, **Descartar** y **Agregar todas las que tienen tiempo**. Una tarea sin tiempo abre el formulario para completarlo.
+- **Horas cargadas** (estándar de tablas): editar, eliminar y **+ Agregar horas** (día, horas y minutos, descripción, proyecto, empresa si la persona puede ver empresas, facturable en Growth).
+- **Enviar semana** (confirmación con el total). Enviada: se bloquea y lo dice el aviso. Devuelta: el aviso muestra el comentario y vuelve a ser editable. Aprobada: cerrada, con **Pedir un ajuste** (sumar o restar tiempo con motivo; queda en la semana actual) y la lista de correcciones.
+- **Turnos → Aprobaciones** (Owner, rol con "Aprobar timesheets" o quien tiene reportes directos), con el número de semanas por revisar en el menú: pestañas Por revisar / Devueltas / Aprobadas; cada fila abre la semana de esa persona en solo lectura con **Aprobar**, **Devolver** (comentario obligatorio) o **Reabrir** (motivo).
+- La campana: "X envió el timesheet" abre Aprobaciones; aprobado / devuelto / reabierto / recordatorio abren tu timesheet.
+
+**Verificado en esta sesión** (Playwright contra `staging`, 13/13 en inglés claro y 13/13 en español oscuro): sugerencias del turno (240) y de la tarea con tiempo (45), "Agregar todas" carga 2, entrada manual 1h 30m, total 6h 15m, enviar bloquea, Aprobaciones con contador 1, el aprobador no ve sugerencias ni edición, devolver con comentario, Mia ve el comentario y corrige a 1h, reenvío, aprobar, ajuste de −15m listado en la semana cerrada y visible en la semana actual, reabrir; sin errores de consola. 773/773 tests; build OK.
+
+### Qué probar
+
+1. En el celular: los días se acomodan en 2 filas y las sugerencias no se desbordan.
+2. Persona sin empresas visibles: el formulario no muestra "Empresa".
+3. Starter: no aparece la columna ni el interruptor de facturable.
+4. Timesheet apagado en Settings → Turnos: desaparecen Timesheet y Aprobaciones del menú.
